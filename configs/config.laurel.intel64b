@@ -1,9 +1,9 @@
 
 MODEL = model199
 
-FC     = mpif90 
+FC     = mpif90 -f90=ifort
 
-FFLAGS = -r8 -i4 -O2 -xT -align
+FFLAGS = -r8 -i4 -g3 -xT -align
 #FFLAGS = -r8 -i4 -O0 -check bounds -traceback -align -fpe0 -fp-model strict
 
 MYHOME = $(HOME)
@@ -18,7 +18,7 @@ ELEMENTS_DIR   = $(JOREK_DIR)/elements
 SOLVERS_DIR    = $(JOREK_DIR)/solvers
 VACUUM_DIR     = $(JOREK_DIR)/vacuum
 
-LIBSCOTCH   = -L$(MYHOME)/intel/scotch/scotch_5.0/lib -lscotch -lscotcherrexit
+LIBSCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotch -lscotcherrexit
 
 LIBMUMPS  = $(MYHOME)/intel/mumps/MUMPS_4.7.3/lib/libdmumps.a
 LIBZMUMPS = $(MYHOME)/intel/mumps/MUMPS_4.7.3/lib/libzmumps.a
@@ -27,7 +27,7 @@ ORDLIB    = $(MYHOME)/intel/mumps/MUMPS_4.7.3/lib/libpord.a $(LIBSCOTCH)
 
 PPPLIB    = $(MYHOME)/intel/jorek/ppplib.a
 
-LIBPASTIX = -L$(MYHOME)/intel/pastix/install/ -lpastix
+LIBPASTIX = -L$(MYHOME)/intel/pastix/install/ -lpastix_murge -lpastix
 LIBFFTW   = $(MYHOME)/intel/fftw/install/lib/libfftw3.a
 #LIBLAPACK = $(MYHOME)/intel/lapack/LAPACK/lapack_LINUX.a -lblas
 LIBLAPACK = -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core 
@@ -36,9 +36,9 @@ SCALAP    = -L$(MYHOME)/intel/scalapack/SCALAPACK -lscalapack
 BLACS     = $(MYHOME)/intel/blacs/BLACS/LIB/blacs_MPI-LINUX-0.a $(MYHOME)/intel/blacs/BLACS/LIB/blacsF77init_MPI-LINUX-0.a $(MYHOME)/intel/blacs/BLACS/LIB/blacsCinit_MPI-LINUX-0.a
 #BLACS     = -lmkl_blacs_intelmpi20_lp64
 
-LIBS = $(LIBFFTW) $(LIBPASTIX) $(LIBSCOTCH)  $(LIBMUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) -lrt
+LIBS = $(LIBFFTW) $(LIBPASTIX) $(LIBSCOTCH)  $(LIBMUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) -lrt -liomp5
 
-INCLUDES  = -I$(DATATYPES_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(ELEMENTS_DIR) -I$(VACUUM_DIR) -I$(SOLVERS_DIR) -I$(INCMUMPS) -I.
+INCLUDES  = -I$(DATATYPES_DIR) -I$(MAIN_MODEL_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(ELEMENTS_DIR) -I$(SOLVERS_DIR) -I$(INCMUMPS) -I$(VACUUM_DIR) -I. -I$(MYHOME)/intel/pastix/install/
 
 VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 

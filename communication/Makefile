@@ -17,8 +17,9 @@ all: mod_phys_module.o \
      update_deltas.o \
      update_values.o \
      export_boundary.o \
+     vertex_is_local.o \
      export_helena.o
-     
+
 modules :     
 
 clean :

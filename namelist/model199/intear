@@ -4,7 +4,7 @@
  restart = .f.
  regrid  = .f.
  tstep   = 1000.
- nstep   = 2
+ nstep   = 1
 
  nout = 5
 

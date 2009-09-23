@@ -4,7 +4,7 @@ module pastix_module             ! PastiX specific variables
   real*8                :: pastix_dparm(64)
   integer,allocatable   :: pastix_perm_vars(:), pastix_iperm_vars(:)
   integer,allocatable   :: sparskit_work(:)
-  integer, allocatable  :: ihwb(:),iwk(:)
+  integer,allocatable   :: ihwb(:),iwk(:)
 
   logical               :: use_pastix, pastix_initialised, pastix_analysed, pastix_smp_only
 

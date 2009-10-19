@@ -769,21 +769,31 @@ program JOREK2
         mumps_par%JOB = -2                            ! clean up this instance of mumps
         call DMUMPS(mumps_par)
      elseif (use_pastix) then
+        if ( use_murge == .true.) then 
 
-        pastix_iparm(2)     = 7                       ! Clean-up
-        pastix_iparm(3)     = 7
+  
+           IF (use_murge_element == .true.) THEN
+              IF (ALLOCATED(glob2loc)) DEALLOCATE(glob2loc)
+              IF (ALLOCATED(loc2glob)) DEALLOCATE(loc2glob)
+           END IF
+           CALL MURGE_Clean(id, ierr)
+        else
+           pastix_iparm(2)     = 7                       ! Clean-up
+           pastix_iparm(3)     = 7
+           
+           if (trim(method) .eq. 'direct') then
+              
+              call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                   pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+              
+           elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
+              
+              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                   pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+           endif
 
-        if (trim(method) .eq. 'direct') then
-
-           call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
-        elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
-
-           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-        endif
-
+  
+        end if
      endif
   endif
 
@@ -905,13 +915,6 @@ program JOREK2
      if (allocated(xtime))     deallocate(xtime)
 
   endif
-  if ( use_murge == .true.) then 
-     IF (use_murge_element == .true.) THEN
-        IF (ALLOCATED(glob2loc)) DEALLOCATE(glob2loc)
-        IF (ALLOCATED(loc2glob)) DEALLOCATE(loc2glob)
-     END IF
-  end if
-  CALL MURGE_Clean(id, ierr)
   call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 end program JOREK2

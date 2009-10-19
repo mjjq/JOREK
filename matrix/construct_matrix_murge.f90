@@ -28,7 +28,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   ! local variables
   TYPE (type_element)      :: element
-  TYPE (type_node_list)    :: nodes
+  TYPE (type_node)         :: nodes(n_vertex_max)
   REAL*8, ALLOCATABLE :: rhs_loc(:)
   INTEGER :: index_min_loc, index_max_loc, coefnbr
   REAL(KIND=MURGE_COEF_KIND) :: coefmtx(n_tor*n_var*n_tor*n_var)
@@ -76,19 +76,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   ENDDO
 
-  IF (.NOT. ALLOCATED(A_glob))    ALLOCATE(A_glob(nz_glob))
-  IF (.NOT. ALLOCATED(irn_glob))  ALLOCATE(irn_glob(nz_glob))
-  IF (.NOT. ALLOCATED(jcn_glob))  ALLOCATE(jcn_glob(nz_glob))
 
   IF (ALLOCATED(rhs_glob))        DEALLOCATE(rhs_glob)
-
   ALLOCATE(rhs_glob(ndof_glob))
-
   IF (.NOT. ALLOCATED(rhs_loc))   ALLOCATE(rhs_loc(ndof_glob))
 
-  irn_glob = 0
-  jcn_glob = 0
-  A_glob   = 0.d0
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
 
@@ -110,7 +102,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
            index_node1 = node_list%node(inode1)%index(i_order)
 
-           CALL vertex_is_local(index_node1, loc2glob, local_n, is_local)
+           CALL vertex_is_local(index_node1, is_local)
            IF (is_local) THEN 
               coefnbr = coefnbr +  (n_vertex_max)*(n_order+1)* (n_var * n_tor)* (n_var * n_tor)
            ENDIF
@@ -121,7 +113,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   ENDDO
   cnt = 0;
   cnt2 = 0;
-  write (*,*) ":: Premiere phase d'assemblage ::", n_local_elms, coefnbr
+  write (*,*) ":: Murge Assembly phase :: ", coefnbr, " entries"
 
   CALL MURGE_ASSEMBLYBEGIN(id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
        MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
@@ -134,8 +126,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
      DO iv = 1, n_vertex_max
 
-        inode          = element%vertex(iv)
-        nodes%node(iv) = node_list%node(inode)
+        inode     = element%vertex(iv)
+        nodes(iv) = node_list%node(inode)
 
      ENDDO
 
@@ -150,12 +142,13 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
         inode1         = element%vertex(i)
 
         DO i_order = 1, n_order+1
-
+           
+           ! index_node1 is the column
            index_node1 = node_list%node(inode1)%index(i_order)
 
            index_large_i = n_tor * n_var * (index_node1 - 1)
 
-           CALL vertex_is_local(index_node1, loc2glob, local_n, is_local)
+           CALL vertex_is_local(index_node1, is_local)
            IF (is_local) THEN
               
               ! Set RHS member
@@ -180,19 +173,20 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                     coefmtx = 0
                     ! BUILD node Matrix
                     DO j = 1, n_var * n_tor
-                       
-                       index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
+                       ! Row index in the ELM matrix
+                       index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
 
                        DO l = 1, n_var * n_tor
-
-                          index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   ! index in the ELM matrix
-                          coefmtx(j+l*(n_var * n_tor)) = ELM(index_ij,index_kl)
+                          ! Column index in the ELM matrix
+                          index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   
+                          coefmtx(j+(l-1)*(n_var * n_tor)) = ELM(index_ij,index_kl)
 
                        ENDDO
 
                     ENDDO
                     
-                    CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node1, index_node2, &
+                    
+                    CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node2, index_node1, &
                          coefmtx, ierr)
                     IF (ierr /= MURGE_SUCCESS) THEN
                        write (*,*) &
@@ -217,350 +211,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   !----------------------- boundary conditions
 
-  zbig = 1.d10
-  ! Compute coefnbr for boundary values
-  coefnbr = 0
-  DO i=1, n_local_elms
+  call boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
+       xpoint2,psi_axis,psi_bnd,Z_xpoint)
 
-     ielm = local_elms(i)
-     
-     DO iv=1, n_vertex_max
-        
-        inode = element_list%element(ielm)%vertex(iv)
-
-        IF (node_list%node(inode)%boundary .NE. 0) THEN
-           
-           DO in=1, n_tor
-
-              DO k=1, n_var
-
-                 !------------------------------------ the open field lines (in case of x-point grid)
-                 IF ((node_list%node(inode)%boundary .EQ. 1) .OR. (node_list%node(inode)%boundary .EQ. 3)) THEN
-
-                    !            if ((k .eq.   1) .or. (k .eq. 92) .or. (k .eq. 3)  .or. &
-                    !                (k .eq.  4)  .or. (k .eq. 95)  .or. (k .eq. 96) .or. (k .eq.97) ) then
-
-                    IF ((k .EQ.   1) .OR. (k .EQ. 2) .OR. (k .EQ. 3) .OR. &
-                         (k .EQ.  4)  .OR. (k .EQ. 5) .OR. (k .EQ. 6) .OR. (k .EQ.97) ) THEN
-
-                       index_node = node_list%node(inode)%index(1)
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-                          
-                          coefnbr = coefnbr + 1
-
-                       ENDIF
-
-                       index_node = node_list%node(inode)%index(2)
-                       
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-
-                          coefnbr = coefnbr + 1
-
-                       ENDIF
-
-                    ENDIF ! Test on k
-                    
-                    ! Other value of k
-                    IF (k .EQ. 7) THEN
-
-                       index_node  = node_list%node(inode)%index(1)             ! position of value
-
-                       xjac  =  R_s*Z_t - R_t*Z_s
-                       ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
-                       ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
-
-                       u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
-                       u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
-
-                       direction = + ps0_x / ABS(ps0_x)             ! temporary solution for lower x-point only
-
-                       grad_psi = SQRT(ps0_x**2 + ps0_y**2)
-
-                       Btot = SQRT(F0**2 + ps0_x**2 + ps0_y**2) / BigR
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-                         
-                          coefnbr = coefnbr + 1
-
-                       ENDIF
-
-                       index_node = node_list%node(inode)%index(2)
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-
-                          coefnbr = coefnbr + 1
-  
-                       ENDIF
-
-                    ENDIF ! Value of k
-
-                 ENDIF !boundary 1 or 3
-
-                 !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
-                 IF ((node_list%node(inode)%boundary .EQ. 2) .OR. (node_list%node(inode)%boundary .EQ. 3)) THEN
-
-                    !            if ((k .eq. 1) .or. (k .eq. 2) .or. (k .eq. 3) .or. &
-                    !                (k .eq. 4) .or. (k .eq. 5) .or. (k .eq. 96) .or. (k .eq. 7) ) then
-                    IF ((k .EQ. 1) .OR. (k .EQ. 2) .OR. (k .EQ. 3) .OR. &
-                         (k .EQ. 4) .OR. (k .EQ. 5) .OR. (k .EQ. 6) .OR. (k .EQ. 7) ) THEN
-
-                       index_node = node_list%node(inode)%index(1)
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-
-     
-                          coefnbr = coefnbr + 1
-
-                       ENDIF
-
-                       index_node = node_list%node(inode)%index(3)
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-                         
-                          coefnbr = coefnbr + 1
-
-                       ENDIF
-
-                    ENDIF ! value of k
-
-                 ENDIF ! boundary 2 or 3
-
-              ENDDO
-
-           ENDDO
-        ENDIF
-     ENDDO
-  ENDDO
-  coefnbr = coefnbr *  (n_var * n_tor) *  (n_var * n_tor)
-
-  write (*,*) ":: Seconde phase d'assemblage ::", n_local_elms, coefnbr
-  CALL MURGE_ASSEMBLYBEGIN(id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
-       MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-  DO i=1, n_local_elms
-
-     ielm = local_elms(i)
-
-     DO iv=1, n_vertex_max
-
-        inode = element_list%element(ielm)%vertex(iv)
-
-        IF (node_list%node(inode)%boundary .NE. 0) THEN
-     
-           
-           DO in=1, n_tor
-
-              DO k=1, n_var
-
-                 !------------------------------------ the open field lines (in case of x-point grid)
-                 IF ((node_list%node(inode)%boundary .EQ. 1) .OR. (node_list%node(inode)%boundary .EQ. 3)) THEN
-
-                    !            if ((k .eq.   1) .or. (k .eq. 92) .or. (k .eq. 3)  .or. &
-                    !                (k .eq.  4)  .or. (k .eq. 95)  .or. (k .eq. 96) .or. (k .eq.97) ) then
-
-                    IF ((k .EQ.   1) .OR. (k .EQ. 2) .OR. (k .EQ. 3) .OR. &
-                         (k .EQ.  4)  .OR. (k .EQ. 5) .OR. (k .EQ. 6) .OR. (k .EQ.97) ) THEN
-
-                       index_node = node_list%node(inode)%index(1)
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-                                
-                          coefmtx = 0
-                          coefmtx(((k-1)*n_tor + in)*(n_tor * n_var) + ((k-1)*n_tor + in)) = zbig;
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node, index_node, &
-                               coefmtx, ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             write (*,*) 376, &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-
-
-                       ENDIF
-
-                       index_node = node_list%node(inode)%index(2)
-                       
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-
-                          coefmtx = 0
-                          coefmtx(((k-1)*n_tor + in)*(n_tor * n_var) + ((k-1)*n_tor + in)) = zbig;
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node, index_node, &
-                               coefmtx, ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             write (*,*) 396, &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-                       ENDIF
-
-                    ENDIF ! Test on k
-                    
-                    ! Other value of k
-                    IF (k .EQ. 7) THEN
-
-                       index_node  = node_list%node(inode)%index(1)             ! position of value
-                       index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
-
-                       T0        = node_list%node(inode)%values(1,1,6)
-                       Vpar0     = node_list%node(inode)%values(1,1,7)
-                       BigR      = node_list%node(inode)%x(1,1)
-                       dT0_ds    = node_list%node(inode)%values(1,2,6)
-                       dVpar0_ds = node_list%node(inode)%values(1,2,7)
-                       dBigR_ds  = node_list%node(inode)%x(2,1)
-
-                       ps0_s     = node_list%node(inode)%values(1,2,1)
-                       ps0_t     = node_list%node(inode)%values(1,3,1)
-
-                       U0_s      = node_list%node(inode)%values(1,2,2)
-                       U0_t      = node_list%node(inode)%values(1,3,2)
-
-                       R_s       = node_list%node(inode)%x(2,1)
-                       R_t       = node_list%node(inode)%x(3,1)
-                       Z_s       = node_list%node(inode)%x(2,2)
-                       Z_t       = node_list%node(inode)%x(3,2)
-
-                       xjac  =  R_s*Z_t - R_t*Z_s
-                       ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
-                       ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
-
-                       u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
-                       u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
-
-                       direction = + ps0_x / ABS(ps0_x)             ! temporary solution for lower x-point only
-
-                       grad_psi = SQRT(ps0_x**2 + ps0_y**2)
-
-                       Btot = SQRT(F0**2 + ps0_x**2 + ps0_y**2) / BigR
-
-                       IF (in .EQ. 1) THEN
-
-                          !                write(*,'(A,3e14.6,A,e14.6)') ' Boundary : ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot,&
-                          !                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
-
-                       ENDIF
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-
-                          index_large_i = n_tor * n_var * (index_node - 1)
-
-                          ku = 2
-                          kv = 7
-                          kT = 6
-
-                          ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                          ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                          ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
-                          coefmtx = 0
-                          coefmtx(((kv-1)*n_tor + in)*(n_tor * n_var) + ((kv-1)*n_tor + in)) = zbig
-
-                          coefmtx(((kv-1)*n_tor + in)*(n_tor * n_var) + ((kT-1)*n_tor + in)) = &
-                               - zbig / Btot * 0.5d0 * GAMMA / SQRT(GAMMA*T0) * direction
-
-                          coefmtx(((kv-1)*n_tor + in)*(n_tor * n_var) + ((ku-1)*n_tor + in)) = &
-                               - zbig * BigR**2 / ps0_s
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node, index_node, &
-                               coefmtx, ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             write (*,*) 471, &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-                          RHS_glob(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                               Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*SQRT(GAMMA*T0))
-
-                       ENDIF
-
-                       index_node = node_list%node(inode)%index(2)
-
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-
-
-                          index_large_i = n_tor * n_var * (index_node - 1)
-
-                          kv = 7
-                          kT = 6
-
-                          ilarge_vv = ijA_position - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                          ilarge_vT = ijA_position - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-
-                          !coefmtx = 0
-                          !coefmtx(((kv-1)*n_tor + in)*(n_tor * n_var) + ((kv-1)*n_tor + in)) = zbig
-
-                          !coefmtx(((kT-1)*n_tor + in)*(n_tor * n_var) + ((kv-1)*n_tor + in)) = &
-                          ! - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
-                          !CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node, index_node, &
-                          !     coefmtx, ierr)
-                          !               RHS_glob(n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                          !                       Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
-
-                       ENDIF
-
-                    ENDIF ! Value of k
-
-                 ENDIF !boundary 1 or 3
-
-                 !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
-                 IF ((node_list%node(inode)%boundary .EQ. 2) .OR. (node_list%node(inode)%boundary .EQ. 3)) THEN
-
-                    !            if ((k .eq. 1) .or. (k .eq. 2) .or. (k .eq. 3) .or. &
-                    !                (k .eq. 4) .or. (k .eq. 5) .or. (k .eq. 96) .or. (k .eq. 7) ) then
-                    IF ((k .EQ. 1) .OR. (k .EQ. 2) .OR. (k .EQ. 3) .OR. &
-                         (k .EQ. 4) .OR. (k .EQ. 5) .OR. (k .EQ. 6) .OR. (k .EQ. 7) ) THEN
-
-                       index_node = node_list%node(inode)%index(1)
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-                          coefmtx = 0
-                          coefmtx(((k-1)*n_tor + in)*(n_tor * n_var) + ((k-1)*n_tor + in)) = zbig
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node, index_node, &
-                               coefmtx, ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             write (*,*) 527, &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-                       ENDIF
-
-                       index_node = node_list%node(inode)%index(3)
-                       CALL vertex_is_local(index_node, loc2glob, local_n, is_local)
-                       IF (is_local) THEN
-                          coefmtx = 0
-                          coefmtx(((k-1)*n_tor + in)*(n_tor * n_var) + ((k-1)*n_tor + in)) = zbig
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node, index_node, &
-                               coefmtx, ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             write (*,*) 542, &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-                       ENDIF
-
-                    ENDIF ! value of k
-
-                 ENDIF ! boundary 2 or 3
-
-              ENDDO
-
-           ENDDO
-        ENDIF
-     ENDDO
-  ENDDO
-  CALL MURGE_ASSEMBLYEND(id, ierr)
   CALL MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
   !write(*,*) '******** end construct matrix **********'

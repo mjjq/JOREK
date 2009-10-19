@@ -77,8 +77,9 @@ XR_tht_1  = 999.d0 ! 1.d0 !1.d0
 SIG_tht_1 = 999.d0 ! 0.03d0
 
 allocate(S1(nr),S2(nr),SP1(nr),SP2(nr),SP3(nr),SP4(nr))
+S2 = 0
 allocate(T1(np+1),T2(np+1),TP1(np+1),TP2(np+1),TP3(np+1),TP4(np+1))
-
+T2 = 0
 do i=1,nr
   S1(i) = real(i-1)/real(nr-1)
 enddo

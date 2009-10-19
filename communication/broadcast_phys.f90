@@ -166,7 +166,7 @@ if (my_id .ne. 0) then
 
 endif
 
-deallocate(buffer)
+if (allocated(buffer)) deallocate(buffer)
 
 return
 end

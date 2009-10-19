@@ -16,6 +16,7 @@ module parameters
   parameter (n_elements_max = 15001)                   ! the maximum number of elements
   parameter (n_pieces_max   = 10001)                   ! the maximum number of line pieces describing a flux surface
   parameter (n_degrees      = n_order+1)               ! degrees of freedom per variable per node
+  parameter (n_boundary_max = 1001)                    ! the maximum number of boundary elements
 
   character*11 :: variable_names(n_var)
  

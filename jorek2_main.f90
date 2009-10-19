@@ -22,802 +22,896 @@
 !*     - LAPACK, BLAS                                                                              *
 !*     - PPPLIB                                                                                    *
 !*                                                                                                 *
-!*   to be done:                                                                                    *
+!*   to be done:                                                                                   *
 !*     - a lot                                                                                     *
 !*     - boundary integrals                                                                        *
 !*     - sheath transmission factors                                                               *
 !*     - vacuum response (outside grid, external coils)                                            *
 !*     - ...                                                                                       *
 !*                                                                                                 *
-!*  Author : Guido Huysmans (Euratom / CEA Association)                                             *
-!*  Date   : 18-7-2008                                                                              *
+!*  Author : Guido Huysmans (Euratom / CEA Association)                                            *
+!*  Date   : 18-7-2008                                                                             *
 !***************************************************************************************************
 program JOREK2
 
-use mumps_module
-use pastix_module
-use murge_module
-use data_structure
-use phys_module
-use global_distributed_matrix
-use nodes_elements
-use vacuum_response_module
+  use mumps_module
+  use pastix_module
+  use murge_module
+  use data_structure
+  use phys_module
+  use global_distributed_matrix
+  use nodes_elements
+  use vacuum_response_module
 
-implicit none
+  implicit none
 
-include 'mpif.h'
+  include 'mpif.h'
 
-type (type_surface_list) :: surface_list
-logical                  :: grid_changed, ELM_is_local
-real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
-real*8                   :: t_matrix_0, t_matrix_1, t_fact_0, t_fact_1, t_analysis_0, t_analysis_1, t_reduce_0, t_reduce_1, PI
-real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
-real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
-real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
-integer                  :: my_id, my_id_n, my_id_master
-integer                  :: istep,ierr,i,j,k,in,iv, inode, index, index_node, i_elm_axis, i_elm_xpoint
-integer                  :: nznew, first_row, last_row, isize, n_local_ELMs, inext, index_part, index_total
-integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, i_dof, j_dof
-integer                  :: iter_gmres, n_bnd
-integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER
-character*8              :: method, label
-character*14             :: fileout
-integer                  :: required,provided,StatInfo
-integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
-real*8                   :: zjz,dj_dpsi,dj_dz, E_min, E_max
-logical                  :: gmres, solve_only, adaptive_time
+  type (type_surface_list) :: surface_list
+  logical                  :: grid_changed, ELM_is_local
+  real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
+  real*8                   :: t_matrix_0, t_matrix_1, t_fact_0, t_fact_1, t_analysis_0, t_analysis_1, t_reduce_0, t_reduce_1, PI
+  real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
+  real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
+  real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
+  integer                  :: my_id, my_id_n, my_id_master
+  integer                  :: istep,ierr,i,j,k,in,iv, inode, index, index_node, i_elm_axis, i_elm_xpoint
+  integer                  :: nznew, first_row, last_row, isize, n_local_ELMs, inext, index_part, index_total
+  integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, i_dof, j_dof
+  integer                  :: iter_gmres, n_bnd
+  integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER
+  character*8              :: method, label
+  character*14             :: fileout
+  integer                  :: required,provided,StatInfo
+  integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
+  real*8                   :: zjz,dj_dpsi,dj_dz, E_min, E_max
+  logical                  :: gmres, solve_only, adaptive_time
+  integer*4                :: rank, comm_size 
+  real*8 :: zn, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz
+  real*8 :: zT, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz
+  real*8 :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
+  real*8 :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, R, psi
+  real*8 :: Rp_start, Rp_end, Zp_start, Zp_end
+  real*8,allocatable :: xp(:), yp1(:), yp2(:), yp3(:)
+  integer            :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon
+  logical            :: is_local
+  integer            :: i_elem, inode1, inode2, i_order, k_order, index_node1, index_node2, knode
+  TYPE (type_element)      :: element
 
-real*8 :: zn, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz
-real*8 :: zT, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz
-real*8 :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
-real*8 :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, R, psi
-real*8 :: Rp_start, Rp_end, Zp_start, Zp_end
-real*8,allocatable :: xp(:), yp1(:), yp2(:), yp3(:)
-integer            :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon
-logical            :: is_local
+  !***********************************************************************
+  !*                  intialisation                                      *
+  !***********************************************************************
 
-!***********************************************************************
-!*                  intialisation                                      *
-!***********************************************************************
+  !call MPI_INIT(IERR)                                ! initialise MPI
 
-!call MPI_INIT(IERR)                                ! initialise MPI
-
-required=MPI_THREAD_MULTIPLE
-call MPI_Init_thread(required,provided,StatInfo)    ! initialise threaded MPI (openMPI)
+  required=MPI_THREAD_MULTIPLE
+  call MPI_Init_thread(required,provided,StatInfo)    ! initialise threaded MPI (openMPI)
 
 
-
-call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! the id of each cpu
-call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! the number of cpus
-
-method = 'gmres'             ! options 'direct' or 'gmres'
-gmres  = .true.
-if (trim(method) .ne. 'direct') then
-  method = 'gmres'
+  
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)      ! the id of each cpu
+  my_id = rank
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
+  n_cpu = comm_size
+  method = 'gmres'             ! options 'direct' or 'gmres'
   gmres  = .true.
-endif
-
-use_mumps  = .false.
-use_pastix = (.not. use_mumps)
-use_murge  = .true.
-use_murge_element = .true.
-if (method == "gmres") then
-   use_murge  = .false.
-   use_murge_element = .false.
-end if
-pastix_initialised = .false.
-pastix_analysed    = .false.
-murge_initialised  = .false.
-pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!
-                                     ! requires no_mpi for Pastix library
-adaptive_time = .false.
-
-if (n_tor .eq. 1) then
-  method = 'direct'
-  gmres  = .false.
-endif
-
-!---------------------------------------------------------- some checks not to waste any cpu time
-if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
-  write(*,*) ' FATAL : specify a valid solver'
-  call MPI_FINALIZE(IERR)                                ! clean up MPI
-  stop
-endif
-
-if ((n_plane .lt. n_tor + 1) .and. (n_tor .gt. 1)) then
-  write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
-  call MPI_FINALIZE(IERR)                                ! clean up MPI
-  stop
-endif
-
-if (trim(method) .ne. 'direct') then
-  if (n_cpu .lt. (n_tor-1)/2+1) then
-    write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-!    call MPI_FINALIZE(IERR)                                ! clean up MPI
-!    stop
+  if (trim(method) .ne. 'direct') then
+     method = 'gmres'
+     gmres  = .true.
   endif
-  if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
-    write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-!    call MPI_FINALIZE(IERR)                                ! clean up MPI
-!    stop
+
+  use_mumps  = .false.
+  use_pastix = (.not. use_mumps)
+  use_murge  = .true.
+  use_murge_element = .true.
+  if (method == "gmres") then
+     use_murge  = .false.
+     use_murge_element = .false.
+  end if
+  pastix_initialised = .false.
+  pastix_analysed    = .false.
+  murge_initialised  = .false.
+  pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!
+  ! requires no_mpi for Pastix library
+  adaptive_time = .false.
+
+  if (n_tor .eq. 1) then
+     method = 'direct'
+     gmres  = .false.
   endif
-endif
 
-if (my_id .eq. 0) write(*,*) '****************************************'
-if (my_id .eq. 0) write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
-if (my_id .eq. 0) write(*,*) '****************************************'
-if (my_id .eq. 0) write(*,*) ' n_cpu : ',n_cpu
-
-if (my_id .eq. 0)  call begplt('jorek2.ps')        ! initialise ppplib plotting library
-
-call initialise_parameters(my_id)                  ! default values and namelist input
-call initialise_basis                              ! define the basis functions at the Gaussian points
-
-if (my_id .eq. 0) then
-
-  if (restart) then
-
-    call import_restart(node_list,element_list)    ! read restart file
-    tstep = tstep_in
-
-    if (regrid) then                               ! optional redo fluxsurface grid
-
-      if (xpoint)  then
-        call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
-      else
-        call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
-      endif
-
-    endif
+  !---------------------------------------------------------- some checks not to waste any cpu time
+  if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
+     write(*,*) ' FATAL : specify a valid solver'
+     call MPI_FINALIZE(IERR)                                ! clean up MPI
+     stop
   endif
-endif
 
-!***********************************************************************
-!*                  define grid / equilibrium                          *
-!***********************************************************************
+  if ((n_plane .lt. n_tor + 1) .and. (n_tor .gt. 1)) then
+     write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
+     call MPI_FINALIZE(IERR)                                ! clean up MPI
+     stop
+  endif
 
-if (.not. restart) then
+  if (trim(method) .ne. 'direct') then
+     if (n_cpu .lt. (n_tor-1)/2+1) then
+        write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
+        !    call MPI_FINALIZE(IERR)                                ! clean up MPI
+        !    stop
+     endif
+     if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
+        write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
+        !    call MPI_FINALIZE(IERR)                                ! clean up MPI
+        !    stop
+     endif
+  endif
 
-  element_list%n_elements  = 0
-  boundary_list%n_boundary = 0
-  node_list%n_nodes        = 0
+  if (my_id .eq. 0) write(*,*) '****************************************'
+  if (my_id .eq. 0) write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
+  if (my_id .eq. 0) write(*,*) '****************************************'
+  if (my_id .eq. 0) write(*,*) ' n_cpu : ',n_cpu
 
-  call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver
+  if (my_id .eq. 0)  call begplt('jorek2.ps')        ! initialise ppplib plotting library
+
+  call initialise_parameters(my_id)                  ! default values and namelist input
+  call initialise_basis                              ! define the basis functions at the Gaussian points
 
   if (my_id .eq. 0) then
 
-    call define_boundary
+     if (restart) then
 
-    if ((n_R .gt. 0) .and. (n_Z .gt. 0) .and. (n_radial .gt.0)) then
+        call import_restart(node_list,element_list)    ! read restart file
+        tstep = tstep_in
 
-      call grid_bezier_square_polar(n_R,n_Z,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf,.true.,node_list,element_list)
+        if (regrid) then                               ! optional redo fluxsurface grid
 
-    elseif ((n_R .gt. 0) .and. (n_Z .gt. 0) ) then
+           if (xpoint)  then
+              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
+           else
+              call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+           endif
 
-      call grid_bezier_square(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,.true.,node_list,element_list)
+        endif
+     endif
+  endif
 
-    elseif ((n_radial .gt. 0) .and. (n_pol .gt. 0) ) then
+  !***********************************************************************
+  !*                  define grid / equilibrium                          *
+  !***********************************************************************
 
-      call grid_polar_bezier(R_geo,Z_geo,amin,0.d0,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list,boundary_list)
+  if (.not. restart) then
 
-    else
+     element_list%n_elements  = 0
+     boundary_list%n_boundary = 0
+     node_list%n_nodes        = 0
 
-      write(*,*) ' FATAL : no valid combination of grid-sizes specified'
-      call MPI_FINALIZE(IERR)                                ! clean up MPI
-      stop
+     call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver
 
-    endif
+     if (my_id .eq. 0) then
 
-    call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
-!    call print_grid(node_list,element_list,boundary_list)                   ! print the grid
+        call define_boundary
+
+        if ((n_R .gt. 0) .and. (n_Z .gt. 0) .and. (n_radial .gt.0)) then
+
+           call grid_bezier_square_polar(n_R,n_Z,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf,.true.,node_list,element_list)
+
+        elseif ((n_R .gt. 0) .and. (n_Z .gt. 0) ) then
+
+           call grid_bezier_square(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,.true.,node_list,element_list)
+
+        elseif ((n_radial .gt. 0) .and. (n_pol .gt. 0) ) then
+
+           call grid_polar_bezier(R_geo,Z_geo,amin,0.d0,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list,boundary_list)
+
+        else
+
+           write(*,*) ' FATAL : no valid combination of grid-sizes specified'
+           call MPI_FINALIZE(IERR)                                ! clean up MPI
+           stop
+
+        endif
+
+        call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
+        !    call print_grid(node_list,element_list,boundary_list)                   ! print the grid
+
+     endif
+
+     call equilibrium(my_id,node_list,element_list,xpoint)                        ! equilibrium run on all cpus
+     call initial_conditions(my_id,node_list,element_list,xpoint)                 ! initial conditions
+
+     if (n_flux .gt. 1) then                                                      ! flux surface grid
+
+        if (xpoint)  then
+
+           if (my_id .eq. 0) call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
+
+           call broadcast_nodes(my_id,node_list)
+           call broadcast_elements(my_id,element_list)
+           call broadcast_boundary(my_id,boundary_list)
+
+           call poisson(my_id,0,node_list,element_list,3,1,1,xpoint)
+           call poisson(my_id,1,node_list,element_list,4,2,1,xpoint)
+
+        else
+
+           if (my_id .eq. 0) call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+
+        endif
+
+        call equilibrium(my_id,node_list,element_list,xpoint)                         ! equilibrium run on all cpus
+        call initial_conditions(my_id,node_list,element_list,xpoint)                  ! initial conditions
+
+        !    if (my_id .eq. 0) call print_grid(node_list,element_list)                    ! print nodes and elements
+        !    if (my_id .eq. 0) call plot_grid(node_list,element_list,.true.,.false.)      ! plot the grid
+        !    if (my_id .eq. 0) call plot_grid(node_list,element_list,.true.,.true.)       ! plot the grid
+
+     endif
+
+     if (my_id .eq. 0) call energy(node_list,element_list,W_mag,W_kin)
+     if (my_id .eq. 0) write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
+
+     mumps_par%JOB = -2                                    ! clean up this instance of mumps
+     call DMUMPS(mumps_par)
+
+     if (allocated(pastix_perm_vars))  deallocate(pastix_perm_vars)
+     if (allocated(pastix_iperm_vars)) deallocate(pastix_iperm_vars)
 
   endif
 
-  call equilibrium(my_id,node_list,element_list,xpoint)                        ! equilibrium run on all cpus
-  call initial_conditions(my_id,node_list,element_list,xpoint)                 ! initial conditions
 
-  if (n_flux .gt. 1) then                                                      ! flux surface grid
+  call broadcast_elements(my_id,element_list)             ! sending all elements
+  call broadcast_boundary(my_id,boundary_list)            ! sending boundary elements
+  call broadcast_nodes(my_id,node_list)                   ! sending all nodes
+  call broadcast_phys(my_id)                              ! sending the physics parameters
 
-    if (xpoint)  then
-
-      if (my_id .eq. 0) call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
-
-      call broadcast_nodes(my_id,node_list)
-      call broadcast_elements(my_id,element_list)
-      call broadcast_boundary(my_id,boundary_list)
-
-      call poisson(my_id,0,node_list,element_list,3,1,1,xpoint)
-      call poisson(my_id,1,node_list,element_list,4,2,1,xpoint)
-
-    else
-
-      if (my_id .eq. 0) call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
-
-    endif
-
-    call equilibrium(my_id,node_list,element_list,xpoint)                         ! equilibrium run on all cpus
-    call initial_conditions(my_id,node_list,element_list,xpoint)                  ! initial conditions
-
-!    if (my_id .eq. 0) call print_grid(node_list,element_list)                    ! print nodes and elements
-!    if (my_id .eq. 0) call plot_grid(node_list,element_list,.true.,.false.)      ! plot the grid
-!    if (my_id .eq. 0) call plot_grid(node_list,element_list,.true.,.true.)       ! plot the grid
-
-  endif
-
-  if (my_id .eq. 0) call energy(node_list,element_list,W_mag,W_kin)
-  if (my_id .eq. 0) write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
-
-  mumps_par%JOB = -2                                    ! clean up this instance of mumps
-  call DMUMPS(mumps_par)
-
-  if (allocated(pastix_perm_vars))  deallocate(pastix_perm_vars)
-  if (allocated(pastix_iperm_vars)) deallocate(pastix_iperm_vars)
-
-endif
-
-
-call broadcast_elements(my_id,element_list)             ! sending all elements
-call broadcast_boundary(my_id,boundary_list)            ! sending boundary elements
-call broadcast_nodes(my_id,node_list)                   ! sending all nodes
-call broadcast_phys(my_id)                              ! sending the physics parameters
-
-!write(*,*) ' n_elements : ',my_id,element_list%n_elements
-!write(*,*) ' n_nodes    : ',my_id,node_list%n_nodes
-
-call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-!************************************************************************
-!*                        vacuum initialisation                         *
-!************************************************************************
-if (freeboundary) then
-
-  if (my_id .eq. 0) call export_boundary(node_list,boundary_list)
-
-  write(*,*) ' n_boundary : ',boundary_list%n_boundary
-
-  call initialise_mumps(MPI_COMM_WORLD)                  ! start MUMPS sparse matrix solver
-
-  n_dof_bnd = 2*boundary_list%n_boundary                 ! the number of degress of freedomon the boundary not correct for grid-xpoint
-
-  allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
-
-  call ideal_wall(my_id,node_list,boundary_list,n_dof_bnd,vacuum_response)   ! fill the vacuum response matrix
-
-  mumps_par%JOB = -2                                     ! clean up this instance of mumps
-  call DMUMPS(mumps_par)
+  !write(*,*) ' n_elements : ',my_id,element_list%n_elements
+  !write(*,*) ' n_nodes    : ',my_id,node_list%n_nodes
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-endif
-!***********************************************************************
-!*                 end of initilisation/equilibrium                    *
-!***********************************************************************
-t_now         = t_start
-index_now     = index_start
+  !************************************************************************
+  !*                        vacuum initialisation                         *
+  !************************************************************************
+  if (freeboundary) then
 
-if (nstep .gt. 0) then
+     if (my_id .eq. 0) call export_boundary(node_list,boundary_list)
 
-  grid_changed  = .true.
+     write(*,*) ' n_boundary : ',boundary_list%n_boundary
 
-  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+     call initialise_mumps(MPI_COMM_WORLD)                  ! start MUMPS sparse matrix solver
 
-  if (xpoint) then
-    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
-    psi_bnd = psi_xpoint
-  else
-    psi_bnd = 0.d0
+     n_dof_bnd = 2*boundary_list%n_boundary                 ! the number of degress of freedomon the boundary not correct for grid-xpoint
+
+     allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
+
+     call ideal_wall(my_id,node_list,boundary_list,n_dof_bnd,vacuum_response)   ! fill the vacuum response matrix
+
+     mumps_par%JOB = -2                                     ! clean up this instance of mumps
+     call DMUMPS(mumps_par)
+
+     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
   endif
+  !***********************************************************************
+  !*                 end of initilisation/equilibrium                    *
+  !***********************************************************************
+  t_now         = t_start
+  index_now     = index_start
 
-!***********************************************************************
-!*            distribute nodes and elements over cpu's                 *
-!***********************************************************************
+  if (nstep .gt. 0) then
 
-  IF (use_pastix == .true. &
-       .and. use_murge == .true. &
-       .and. use_murge_element == .true.) THEN
-     !
-     ! Murge initialisation and 
-     ! graph definition edge by edge
-     !
-     IF (.NOT. murge_initialised) THEN
+     grid_changed  = .true.
+
+     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+
+     if (xpoint) then
+        call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+        psi_bnd = psi_xpoint
+     else
+        psi_bnd = 0.d0
+     endif
+
+     !***********************************************************************
+     !*            distribute nodes and elements over cpu's                 *
+     !***********************************************************************
+
+     IF (use_pastix == .true. &
+          .and. use_murge == .true. &
+          .and. use_murge_element == .true.) THEN
+
+        write (*,*) "--- Murge initilisation ---"
+
         !
-        ! Init murge
+        ! Murge initialisation and 
+        ! graph definition edge by edge
         !
-        CALL MURGE_Initialize(1, ierr)
-        id = 0;
-        IF (solver == MURGE_SOLVER_PASTIX) THEN
-           CALL MURGE_SetDefaultOptions(id, 0, ierr)
-           CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES,  ierr)
-           CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,          ierr)
-           ! refinement : max number of iterations
-           CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,       ierr) 
-           ! degrees of freedom per node (not correct)
-           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,          n_tor * n_var,    ierr) 
-           CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,      ierr)
-           CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,       ierr)
-           CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,      ierr)
-           CALL MURGE_SetOptionINT(id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,      ierr)
-           CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,          ierr)
-           
-           CALL MURGE_SetOptionREAL(id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,    ierr)
-           
+        IF (.NOT. murge_initialised) THEN
+           !
+           ! Init murge
+           !
+           CALL MURGE_Initialize(1, ierr)
+           id = 0;
+           IF (solver == MURGE_SOLVER_PASTIX) THEN
+              CALL MURGE_SetDefaultOptions(id, 0, ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES,  ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,          ierr)
+              ! refinement : max number of iterations
+              CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,       ierr) 
+              ! degrees of freedom per node (not correct)
+              CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,          n_tor * n_var,    ierr) 
+              CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,      ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,       ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,      ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,      ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,          ierr)
+
+              CALL MURGE_SetOptionREAL(id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,    ierr)
+
+           ENDIF
+
+
+           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
+           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     1,   ierr)
+
+           CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
+
+           murge_initialised = .TRUE.
+
         ENDIF
-        
-        
-        CALL MURGE_SetOptionINT(id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
-        CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     1,   ierr)
-        
-        CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
+        !
+        ! Build the graph
+        !
+        ! TODO: Avoid doubles
+        !
+        if (my_id == 0) then
+           CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
+                element_list%n_elements*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
+           IF (ierr /= MURGE_SUCCESS) THEN
+              write (*,*) "ERROR in MURGE_GRAPHBEGIN"
+              STOP
+           END IF
 
-        murge_initialised = .TRUE.
+           DO i_elem = 1, element_list%n_elements
 
-     ENDIF
-     !
-     ! Build the graph
-     !
-     ! TODO: Avoid doubles
-     !
-     if (my_id == 0) then
-        CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
-             element_list%n_elements*n_vertex_max*n_vertex_max, ierr)
-        ! For all local element add (i,j) to the graph
-        DO i = 1, element_list%n_elements
-           DO j = 1, n_vertex_max
-              DO k = 1, n_vertex_max
-                 CALL MURGE_GRAPHEDGE(id,                                 &
-                      element_list%element(i)%vertex(j)+ i_dof, &
-                      element_list%element(i)%vertex(k)+ j_dof, &
-                      ierr)
-                 IF (ierr /= MURGE_SUCCESS) THEN
-                    write (*,*) "N", mumps_par%n, &
-                         "I", element_list%element(i)%vertex(j)+ i_dof, &
-                         "J", element_list%element(i)%vertex(k)+ j_dof
-                    STOP
+              element = element_list%element(i_elem)
+              DO i=1,n_vertex_max
+                 
+                 inode1         = element%vertex(i)
+              
+                 DO i_order = 1, n_order+1
+
+                    index_node1 = node_list%node(inode1)%index(i_order)
+
+                       
+              
+                    ! Build nodes Matrices
+                    DO k=1,n_vertex_max
+                       
+                       knode         = element%vertex(k)
+                       
+                       DO k_order = 1, n_order+1
+                          
+                          index_node2 = node_list%node(knode)%index(k_order)
+                          
+
+                          CALL MURGE_GRAPHEDGE(id,                                 &
+                               index_node1,                                        &
+                               index_node2,                                        &
+                               ierr)
+                          IF (ierr /= MURGE_SUCCESS) THEN
+                             write (*,*) "N", mumps_par%n, &
+                                  "I", index_node1, &
+                                  "J", index_node2
+                             STOP
+                          END IF
+                 
+                          
+                       END DO
+                    END DO
+                 END DO
+              END DO
+           END DO
+        else
+           CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
+                0, ierr)   
+           IF (ierr /= MURGE_SUCCESS) THEN
+              write (*,*) "ERROR in MURGE_GRAPHBEGIN"
+              STOP
+           END IF
+        end if
+        CALL MURGE_GRAPHEND(id, ierr)
+   
+        IF (ierr /= MURGE_SUCCESS) THEN
+           write (*,*) "ERROR in MURGE_GRAPHEND"
+           STOP
+        END IF
+
+        CALL MURGE_GETLOCALNODENBR(id, local_n, ierr)
+        IF (ierr /= MURGE_SUCCESS) THEN
+           write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
+           STOP
+        END IF
+        ALLOCATE(loc2glob(local_n))
+        global_n = mumps_par%n
+        write (*,*) "Local number of nodes", local_n, "global",  mumps_par%n
+        CALL MURGE_GETLOCALNODELIST(id, loc2glob, ierr)
+        IF (ierr /= MURGE_SUCCESS) THEN
+           write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
+           STOP
+        END IF        
+        ! Build local_elms from loc2glob
+        n_local_elms = 0
+
+        DO i_elem = 1, element_list%n_elements
+          
+           element = element_list%element(i_elem)
+           DO i=1,n_vertex_max
+              
+              inode1         = element%vertex(i)
+              
+              DO i_order = 1, n_order+1
+
+                 index_node1 = node_list%node(inode1)%index(i_order)
+
+                 call vertex_is_local(index_node1, is_local)
+                 IF (is_local) THEN      
+                    n_local_elms = n_local_elms + 1
+                    GOTO 10
                  END IF
               END DO
            END DO
-        END DO
+10      END DO
+
+        ! Build local_elms from loc2glob
+        ALLOCATE(local_elms(n_local_elms))
+
+        n_local_elms = 0
+          DO i_elem = 1, element_list%n_elements
+          
+           element = element_list%element(i_elem)
+           DO i=1,n_vertex_max
+              
+              inode1         = element%vertex(i)
+              
+              DO i_order = 1, n_order+1
+
+                 index_node1 = node_list%node(inode1)%index(i_order)
+
+                    !index_large_i = n_tor * n_var * (index_node1 - 1)
+
+                 !call vertex_is_local(index_node1*n_tor * n_var, loc2glob, local_n, is_local)
+                 call vertex_is_local(index_node1, is_local)
+                 IF (is_local) THEN      
+                    n_local_elms = n_local_elms + 1
+                    local_elms(n_local_elms) = i_elem
+                    GOTO 20
+                 END IF
+              END DO
+           END DO
+20      END DO
+
+!      DO i = 1, element_list%n_elements
+!           DO j = 1, n_vertex_max
+!              ! Look in loc2glob if the vertex is present
+!              k = element_list%element(i)%vertex(j)
+!              call vertex_is_local(k*n_tor * n_var, loc2glob, local_n, is_local)
+!              IF (is_local) THEN
+!                 n_local_elms = n_local_elms + 1
+!                 local_elms(n_local_elms) = i
+!                 GOTO 20
+!              END IF
+!           END DO
+!20      END DO
+
+        index_total = -1
+        do inode=1, node_list%n_nodes
+           index_total = max(index_total,maxval(node_list%node(inode)%index))
+        enddo
+
+        ndof_glob  = index_total * n_tor * n_var
+
+        node_list%n_dof = ndof_glob
      else
-        CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
-             0, ierr)
-     end if
-     CALL MURGE_GRAPHEND(id, ierr)
-     
-     CALL MURGE_GETLOCALNODENBR(id, local_n, ierr)
-     ALLOCATE(loc2glob(local_n))
-     write (*,*) "Local number of nodes", local_n, "global",  mumps_par%n
-     CALL MURGE_GETLOCALNODELIST(id, loc2glob, ierr)
+        allocate(local_elms(element_list%n_elements))
+        allocate(index_min(n_cpu),index_max(n_cpu))
 
-     ! Build local_elms from loc2glob
-     n_local_elms = 0
-     DO i = 1, element_list%n_elements
-        DO j = 1, n_vertex_max
-           ! Look in loc2glob if the vertex is present
-           k = element_list%element(i)%vertex(j)
-           call vertex_is_local(k*n_tor * n_var, loc2glob, local_n, is_local)
-           IF (is_local) THEN
-              n_local_elms = n_local_elms + 1
-              GOTO 10
-           END IF
-        END DO
-10   END DO
+        call distribute_nodes_elements(my_id,n_cpu,node_list,element_list,local_elms,n_local_elms,ndof_glob,index_min,index_max)
 
-     ! Build local_elms from loc2glob
-     ALLOCATE(local_elms(n_local_elms))
+        node_list%n_dof = ndof_glob
 
-     n_local_elms = 0
-     DO i = 1, element_list%n_elements
-        DO j = 1, n_vertex_max
-           ! Look in loc2glob if the vertex is present
-           k = element_list%element(i)%vertex(j)
-           call vertex_is_local(k*n_tor * n_var, loc2glob, local_n, is_local)
-           IF (is_local) THEN
-              n_local_elms = n_local_elms + 1
-              local_elms(n_local_elms) = i
-              GOTO 20
-           END IF
-        END DO
-20   END DO
+        call global_matrix_structure(my_id,node_List,element_list,boundary_list, freeboundary,&
+             local_elms,n_local_elms,index_min(my_id+1),index_max(my_id+1))
+     endif
 
-     index_total = -1
-     do inode=1, node_list%n_nodes
-        index_total = max(index_total,maxval(node_list%node(inode)%index))
+     !*******************************************************
+     !*      create groups /communicators                   *
+     !* MPI_COMM_N      : group for each harmonic           *
+     !* MPI_COMM_MASTER : group of masters of each harmonic *
+     !*                   (i.e id=0 from each MPI_COMM_N)   *
+     !*******************************************************
+
+     if (trim(method) .ne. 'direct') then
+
+
+        M_cpu = n_cpu / ((n_tor+1)/2)
+
+        N_masters = (n_tor+1)/2
+
+        allocate(i_tor(n_cpu))
+
+        do i=1,n_cpu
+           i_tor(i) = (i-1) / M_cpu  + 1
+        enddo
+
+        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),i_tor(my_id+1),MPI_COMM_N,ierr)
+
+        i_rank(1) = 0
+        do i=2,N_masters
+           i_rank(i) = i_rank(i-1) + M_cpu
+        enddo
+
+        call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
+        call MPI_GROUP_INCL(MPI_GROUP_WORLD,N_masters,i_rank,MPI_GROUP_MASTER,ierr)
+        call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MASTER,MPI_COMM_MASTER,ierr)
+
+        call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)                 ! the id of each cpu
+        call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr)                 ! the number of cpus
+
+        if (my_id_n .eq. 0) then
+           call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
+           call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
+        endif
+
+     endif
+
+     if (use_mumps) then
+        if (trim(method) .eq. 'direct') then
+           call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
+        else
+           call initialise_mumps(MPI_COMM_N)        ! start MUMPS sparse matrix solver on local groups
+        endif
+     endif
+
+  endif
+
+
+  !***********************************************************************
+  !***********************************************************************
+  !*                          time stepping                              *
+  !***********************************************************************
+  !***********************************************************************
+
+
+  if (nstep .gt. 0) call update_deltas(my_id,node_list)        ! create list of delta values in local_matrix module
+
+  iter_gmres  = 999
+  iter_big    = 200
+  iter_precon = 22
+
+
+  do istep = 1, nstep
+
+     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+     index_now = index_start + istep
+
+     if (my_id .eq. 0)  write(*,*) '********************************************'
+     if (my_id .eq. 0)  write(*,'(A17,2i7,f8.2,A)') ' *   time step : ',istep,index_now,tstep,'     *'
+     if (my_id .eq. 0)  write(*,*) '********************************************'
+
+     !  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+
+     !  if (xpoint) then
+     !    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+     !    psi_bnd = psi_xpoint
+     !  else
+     !    psi_bnd = 0.d0
+     !  endif
+
+     call cpu_time(t_matrix_0)
+
+     ! Build the matrix 
+     IF (use_pastix == .true. .and. use_murge == .true. &
+          .and. use_murge_element == .true.) THEN
+        call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
+             n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, &
+             psi_axis, psi_bnd, Z_xpoint)        ! construct the matrix from elemental matrices
+
+     ELSE
+        call construct_matrix(my_id, local_elms, &
+             n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
+             xpoint,psi_axis,psi_bnd,Z_xpoint)        ! construct the matrix from elemental matrices
+     END IF
+
+     call cpu_time(t_matrix_1)
+
+     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+     if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' matrix  : ',t_matrix_1-t_matrix_0
+
+     call cpu_time(t_solve_0)
+
+     if (trim(method) .eq. 'direct') then
+
+        if (use_mumps) then
+
+           call solve_mumps_all(my_id)
+
+        else
+
+           ! Recuperer la solution
+           if (use_murge) then
+              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+           else
+              call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+           endif
+
+        endif
+
+     else
+
+        solve_only = .false.
+        if ((gmres) .and. (istep .gt. 1)) then
+           solve_only = .true.
+           if (iter_gmres .gt. iter_precon) then                        ! redo preconditioner
+              solve_only = .false.
+           endif
+        endif
+
+        if (.not. solve_only) then
+
+           call cpu_time(t_send_0)
+
+           call distribute_harmonics(my_id,my_id_n,n_cpu)
+
+           call cpu_time(t_send_1)
+
+           if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0
+
+           call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+        endif
+
+        if (.not. gmres) call update_rhs_n(my_id,my_id_n)      ! correct the RHS with the previous solution (deltas)
+
+        if (use_murge) then
+           call solve_murge_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+        else
+           call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+        end if
+     endif
+
+     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+     call cpu_time(t_solve_1)
+
+     if ((trim(method) .ne. 'direct') .and. (gmres) ) then
+
+        call gmres_driver(my_id,my_id_n,i_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)     ! gmres solution
+
+     endif
+
+     call cpu_time(t_solve_2)
+
+     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+     if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' solve : ',t_solve_1-t_solve_0
+     if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' gmres : ',t_solve_2-t_solve_1
+
+     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (trim(method) .eq. 'direct') ) then
+
+        call update_values(my_id,node_list,deltas)         ! add solution to node values
+
+        call update_deltas(my_id,node_list)
+
+        t_now = t_now + tstep
+
+     else
+        write(*,*) ' TIME STEP SKIPPED !', iter_gmres
+     endif
+
+     !  call boundary_check(node_list,deltas)
+
+     !-------------------------------------------------------- adapt time step (in progress...)
+     mindelta = minval(deltas); maxdelta = maxval(deltas);
+     if (my_id .eq. 0) write(*,'(A,2e16.8,2i12)') ' min/max deltas : ',mindelta,maxdelta,minloc(deltas),maxloc(deltas)
+
+     if ((trim(method) .ne. 'direct') .and. (gmres) .and. (adaptive_time) ) then        ! experimental
+        if (iter_gmres .ge. iter_big) then
+           tstep = tstep /2.d0
+           write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+        elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
+           !      tstep = tstep /2.d0
+           !      iter_gmres = 99999
+           !      write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+        elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
+           !      tstep = tstep * 2.d0
+           !      iter_gmres = 99999
+           !      write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
+        endif
+     endif
+
+     !--------------------------------------------------------- energies
+     if (my_id .eq. 0)  then
+        call energy(node_list,element_list,W_mag,W_kin)
+
+        xtime(index_start+istep) = t_now
+        energies(1:n_tor,1,index_start+istep) = W_mag(1:n_tor)
+        energies(1:n_tor,2,index_start+istep) = W_kin(1:n_tor)
+
+        Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
+
+        if (index_start+istep .gt. 1) then
+           Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_start+istep)/energies(n_tor,1,index_start+istep-1)))/ tstep
+           Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_start+istep)/energies(n_tor,2,index_start+istep-1)))/ tstep
+           Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_start+istep)/energies(1,1,index_start+istep-1)))/ tstep
+           Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_start+istep)/energies(1,2,index_start+istep-1)))/ tstep
+        endif
+
+        write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
+     endif
+
+     if (my_id .eq. 0) then
+        if (mod(index_now,nout) .eq. 0) then
+           write(fileout,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
+           call export_restart(node_list,element_list,fileout)
+        endif
+     endif
+
+  enddo                                              ! end of time stepping
+
+  !***********************************************************************
+  !*                         cleanup  (solvers)                          *
+  !***********************************************************************
+
+  if (nstep .gt.0) then
+     if (use_mumps) then
+        mumps_par%JOB = -2                            ! clean up this instance of mumps
+        call DMUMPS(mumps_par)
+     elseif (use_pastix) then
+
+        pastix_iparm(2)     = 7                       ! Clean-up
+        pastix_iparm(3)     = 7
+
+        if (trim(method) .eq. 'direct') then
+
+           call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+        elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
+
+           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+        endif
+
+     endif
+  endif
+
+  !***********************************************************************
+  !*                          plots etc.                                 *
+  !***********************************************************************
+
+  if (my_id .eq. 0)  then
+
+     call export_restart(node_list,element_list,'jorek_restart.rst')
+
+     PI = 2.d0*asin(1.d0)
+
+     do ivar=1,n_var
+        call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
      enddo
 
-     ndof_glob  = index_total * n_tor * n_var
-     
-     node_list%n_dof = ndof_glob
-  else
-     allocate(local_elms(element_list%n_elements))
-     allocate(index_min(n_cpu),index_max(n_cpu))
+     do i=1,n_tor,2
 
-     call distribute_nodes_elements(my_id,n_cpu,node_list,element_list,local_elms,n_local_elms,ndof_glob,index_min,index_max)
-     
-     node_list%n_dof = ndof_glob
+        write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
 
-     call global_matrix_structure(my_id,node_List,element_list,boundary_list, freeboundary,&
-                        local_elms,n_local_elms,index_min(my_id+1),index_max(my_id+1))
-  endif
+        do ivar=1,n_var
+           if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
+              call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+           endif
+        enddo
 
-!*******************************************************
-!*      create groups /communicators                   *
-!* MPI_COMM_N      : group for each harmonic           *
-!* MPI_COMM_MASTER : group of masters of each harmonic *
-!*                   (i.e id=0 from each MPI_COMM_N)   *
-!*******************************************************
+     enddo
 
-  if (trim(method) .ne. 'direct') then
-     
+     if (index_now .gt. 1) then
 
-    M_cpu = n_cpu / ((n_tor+1)/2)
-    
-    N_masters = (n_tor+1)/2
+        E_min =  1.d20
+        E_max = -1.d20
+        E_max = max(E_max,maxval(energies(1,2,1:index_now)))
+        E_min = min(E_min,minval(energies(1,2,1:index_now)))
+        do i=2,n_tor
+           E_max = max(E_max,maxval(energies(i,1,1:index_now)))
+           E_min = min(E_min,minval(energies(i,1,1:index_now)))
+           E_max = max(E_max,maxval(energies(i,2,1:index_now)))
+           E_min = min(E_min,minval(energies(i,2,1:index_now)))
+        enddo
 
-    allocate(i_tor(n_cpu))
+        call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
 
-    do i=1,n_cpu
-      i_tor(i) = (i-1) / M_cpu  + 1
-    enddo
+        do i=1,n_tor
+           call lincol(1)
+           call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
+           call lincol(2)
+           call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
+        enddo
+        call lincol(3)
+        call lplot(1,1,2,xtime(1:index_now),energies(1,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
+        call lincol(0)
+     endif
 
-    call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),i_tor(my_id+1),MPI_COMM_N,ierr)
+     !---------------------------------------------- plot equilibrium current profile (to be removed)
+     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
 
-    i_rank(1) = 0
-    do i=2,N_masters
-      i_rank(i) = i_rank(i-1) + M_cpu
-    enddo
+     nplot = 501
+     allocate(xp(nplot),yp1(nplot),yp2(nplot),yp3(nplot))
+     iplot = 0
 
-    call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
-    call MPI_GROUP_INCL(MPI_GROUP_WORLD,N_masters,i_rank,MPI_GROUP_MASTER,ierr)
-    call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MASTER,MPI_COMM_MASTER,ierr)
+     if (xpoint) then
+        call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+     else
+        psi_xpoint = psi_bnd
+     endif
 
-    call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)                 ! the id of each cpu
-    call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr)                 ! the number of cpus
+     Rp_start = R_axis - amin*2.d0
+     Rp_end   = R_axis + amin*2.d0
 
-    if (my_id_n .eq. 0) then
-      call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
-      call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
-    endif
+     Zp = Z_axis
 
-  endif
+     do i=1,nplot
 
-  if (use_mumps) then
-    if (trim(method) .eq. 'direct') then
-      call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
-    else
-      call initialise_mumps(MPI_COMM_N)        ! start MUMPS sparse matrix solver on local groups
-    endif
-  endif
+        Rp =  Rp_start + float(i-1)/float(nplot-1) * (Rp_end - Rp_start)
 
-endif
+        call find_RZ(node_list,element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
 
+        if (ifail .eq. 0) then
 
-!***********************************************************************
-!***********************************************************************
-!*                          time stepping                              *
-!***********************************************************************
-!***********************************************************************
+           call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
+           call density(    xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
+                zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+           call temperature(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
+                zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+           call FFprime(    xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
+                zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
-if (nstep .gt. 0) call update_deltas(my_id,node_list)        ! create list of delta values in local_matrix module
+           zjz   = (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
 
-iter_gmres  = 999
-iter_big    = 200
-iter_precon = 22
+           iplot = iplot + 1
 
-do istep = 1, nstep
+           xp(iplot)  = Rp
+           yp1(iplot) = zFFprime / Rp
+           yp2(iplot) = zjz
+           yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
 
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+           !      write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_xpoint,yp2(iplot),yp1(iplot),yp3(iplot)
 
-  index_now = index_start + istep
+        endif
 
-  if (my_id .eq. 0)  write(*,*) '********************************************'
-  if (my_id .eq. 0)  write(*,'(A17,2i7,f8.2,A)') ' *   time step : ',istep,index_now,tstep,'     *'
-  if (my_id .eq. 0)  write(*,*) '********************************************'
+     enddo
 
-!  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+     call lplot6(1,1,xp,yp2,iplot,' ')
+     call lincol(1)
+     call lplot6(1,1,xp,yp1,-iplot,' ')
+     call lincol(2)
+     call lplot6(1,1,xp,yp3,-iplot,' ')
+     call lincol(0)
+     call finplt                                          ! close plot file
 
-!  if (xpoint) then
-!    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
-!    psi_bnd = psi_xpoint
-!  else
-!    psi_bnd = 0.d0
-!  endif
+     !  call export_POV(node_list,element_list,3,1)          ! export to POVray native bezier patch format
 
-  call cpu_time(t_matrix_0)
+     call export_helena(node_list,element_list)
 
-  ! Build the matrix 
-  IF (use_pastix == .true. .and. use_murge == .true. &
-       .and. use_murge_element == .true.) THEN
-     call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
-          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, &
-          psi_axis, psi_bnd, Z_xpoint)        ! construct the matrix from elemental matrices
-
-  ELSE
-     call construct_matrix(my_id, local_elms, &
-          n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
-          xpoint,psi_axis,psi_bnd,Z_xpoint)        ! construct the matrix from elemental matrices
-  END IF
-
-  call cpu_time(t_matrix_1)
-
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-  if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' matrix  : ',t_matrix_1-t_matrix_0
-
-  call cpu_time(t_solve_0)
-
-  if (trim(method) .eq. 'direct') then
-
-    if (use_mumps) then
-
-      call solve_mumps_all(my_id)
-
-    else
-
-! Recuperer la solution
-       if (use_murge) then
-          call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
-       else
-          call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
-       endif
-
-   endif
-
-  else
-
-    solve_only = .false.
-    if ((gmres) .and. (istep .gt. 1)) then
-      solve_only = .true.
-      if (iter_gmres .gt. iter_precon) then                        ! redo preconditioner
-        solve_only = .false.
-      endif
-    endif
-
-    if (.not. solve_only) then
-
-      call cpu_time(t_send_0)
-
-      call distribute_harmonics(my_id,my_id_n,n_cpu)
-
-      call cpu_time(t_send_1)
-
-      if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0
-
-      call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-    endif
-
-    if (.not. gmres) call update_rhs_n(my_id,my_id_n)      ! correct the RHS with the previous solution (deltas)
-
-    call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+     if (allocated(energies))  deallocate(energies)
+     if (allocated(xtime))     deallocate(xtime)
 
   endif
-
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-  call cpu_time(t_solve_1)
-
-  if ((trim(method) .ne. 'direct') .and. (gmres) ) then
-
-    call gmres_driver(my_id,my_id_n,i_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)     ! gmres solution
-
-  endif
-
-  call cpu_time(t_solve_2)
-
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-  if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' solve : ',t_solve_1-t_solve_0
-  if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' gmres : ',t_solve_2-t_solve_1
-
-  if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (trim(method) .eq. 'direct') ) then
-
-    call update_values(my_id,node_list,deltas)         ! add solution to node values
-
-    call update_deltas(my_id,node_list)
-
-    t_now = t_now + tstep
-
-  else
-    write(*,*) ' TIME STEP SKIPPED !', iter_gmres
-  endif
-
-!  call boundary_check(node_list,deltas)
-
-!-------------------------------------------------------- adapt time step (in progress...)
-  mindelta = minval(deltas); maxdelta = maxval(deltas);
-  if (my_id .eq. 0) write(*,'(A,2e16.8,2i12)') ' min/max deltas : ',mindelta,maxdelta,minloc(deltas),maxloc(deltas)
-
-  if ((trim(method) .ne. 'direct') .and. (gmres) .and. (adaptive_time) ) then        ! experimental
-    if (iter_gmres .ge. iter_big) then
-      tstep = tstep /2.d0
-      write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
-    elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
-!      tstep = tstep /2.d0
-!      iter_gmres = 99999
-!      write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
-    elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
-!      tstep = tstep * 2.d0
-!      iter_gmres = 99999
-!      write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
-    endif
-  endif
-
-!--------------------------------------------------------- energies
-  if (my_id .eq. 0)  then
-    call energy(node_list,element_list,W_mag,W_kin)
-
-    xtime(index_start+istep) = t_now
-    energies(1:n_tor,1,index_start+istep) = W_mag(1:n_tor)
-    energies(1:n_tor,2,index_start+istep) = W_kin(1:n_tor)
-
-    Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
-
-    if (index_start+istep .gt. 1) then
-      Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_start+istep)/energies(n_tor,1,index_start+istep-1)))/ tstep
-      Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_start+istep)/energies(n_tor,2,index_start+istep-1)))/ tstep
-      Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_start+istep)/energies(1,1,index_start+istep-1)))/ tstep
-      Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_start+istep)/energies(1,2,index_start+istep-1)))/ tstep
-    endif
-
-    write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
-  endif
-
-  if (my_id .eq. 0) then
-    if (mod(index_now,nout) .eq. 0) then
-     write(fileout,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
-     call export_restart(node_list,element_list,fileout)
-    endif
-  endif
-
-enddo                                              ! end of time stepping
-
-!***********************************************************************
-!*                         cleanup  (solvers)                          *
-!***********************************************************************
-
-if (nstep .gt.0) then
-  if (use_mumps) then
-    mumps_par%JOB = -2                            ! clean up this instance of mumps
-    call DMUMPS(mumps_par)
-  elseif (use_pastix) then
-
-    pastix_iparm(2)     = 7                       ! Clean-up
-    pastix_iparm(3)     = 7
-
-    if (trim(method) .eq. 'direct') then
-
-      call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
-    elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
-
-      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-    endif
-
-  endif
-endif
-
-!***********************************************************************
-!*                          plots etc.                                 *
-!***********************************************************************
-
-if (my_id .eq. 0)  then
-
-  call export_restart(node_list,element_list,'jorek_restart.rst')
-
-  PI = 2.d0*asin(1.d0)
-
-  do ivar=1,n_var
-    call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
-  enddo
-
-  do i=1,n_tor,2
-
-    write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
-
-    do ivar=1,n_var
-      if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
-        call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
-      endif
-    enddo
-
-  enddo
-
-  if (index_now .gt. 1) then
-
-    E_min =  1.d20
-    E_max = -1.d20
-    E_max = max(E_max,maxval(energies(1,2,1:index_now)))
-    E_min = min(E_min,minval(energies(1,2,1:index_now)))
-    do i=2,n_tor
-      E_max = max(E_max,maxval(energies(i,1,1:index_now)))
-      E_min = min(E_min,minval(energies(i,1,1:index_now)))
-      E_max = max(E_max,maxval(energies(i,2,1:index_now)))
-      E_min = min(E_min,minval(energies(i,2,1:index_now)))
-    enddo
-
-    call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
-
-    do i=1,n_tor
-      call lincol(1)
-      call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
-      call lincol(2)
-      call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
-    enddo
-    call lincol(3)
-    call lplot(1,1,2,xtime(1:index_now),energies(1,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
-    call lincol(0)
-  endif
-
-!---------------------------------------------- plot equilibrium current profile (to be removed)
-  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
-
-  nplot = 501
-  allocate(xp(nplot),yp1(nplot),yp2(nplot),yp3(nplot))
-  iplot = 0
-
-  if (xpoint) then
-    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
-  else
-    psi_xpoint = psi_bnd
-  endif
-
-  Rp_start = R_axis - amin*2.d0
-  Rp_end   = R_axis + amin*2.d0
-
-  Zp = Z_axis
-
-  do i=1,nplot
-
-    Rp =  Rp_start + float(i-1)/float(nplot-1) * (Rp_end - Rp_start)
-
-    call find_RZ(node_list,element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
-
-    if (ifail .eq. 0) then
-
-      call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
-
-      call density(    xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
-                       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-      call temperature(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
-                       zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
-      call FFprime(    xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
-                       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-
-      zjz   = (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
-
-      iplot = iplot + 1
-
-      xp(iplot)  = Rp
-      yp1(iplot) = zFFprime / Rp
-      yp2(iplot) = zjz
-      yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
-
-!      write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_xpoint,yp2(iplot),yp1(iplot),yp3(iplot)
-
-    endif
-
-  enddo
-
-  call lplot6(1,1,xp,yp2,iplot,' ')
-  call lincol(1)
-  call lplot6(1,1,xp,yp1,-iplot,' ')
-  call lincol(2)
-  call lplot6(1,1,xp,yp3,-iplot,' ')
-  call lincol(0)
-  call finplt                                          ! close plot file
-
-!  call export_POV(node_list,element_list,3,1)          ! export to POVray native bezier patch format
-
-  call export_helena(node_list,element_list)
-
-if (allocated(energies))  deallocate(energies)
-  if (allocated(xtime))     deallocate(xtime)
-
-endif
-
-call MPI_FINALIZE(IERR)                                ! clean up MPI
-
-end
+  if ( use_murge == .true.) then 
+     IF (use_murge_element == .true.) THEN
+        IF (ALLOCATED(glob2loc)) DEALLOCATE(glob2loc)
+        IF (ALLOCATED(loc2glob)) DEALLOCATE(loc2glob)
+     END IF
+  end if
+  CALL MURGE_Clean(id, ierr)
+  call MPI_FINALIZE(IERR)                                ! clean up MPI
+
+end program JOREK2

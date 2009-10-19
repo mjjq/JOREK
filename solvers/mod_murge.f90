@@ -10,9 +10,13 @@ module murge_module             ! Murge specific variables
 
   ! Local number of element
   INTEGER(KIND=MURGE_INTS_KIND)               :: local_n 
+  ! Global number of element
+  INTEGER(KIND=MURGE_INTS_KIND)               :: global_n 
 
   ! Local element list
   INTEGER(KIND=MURGE_INTS_KIND), allocatable  :: loc2glob(:)
+  ! Global element list
+  INTEGER(KIND=MURGE_INTS_KIND), allocatable  :: glob2loc(:)
 
   ! Indicate if we want to use murge or classical interface
   logical                                     :: use_murge

@@ -40,17 +40,21 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
   IF (ALLOCATED(column_local))    DEALLOCATE(column_local)
   ALLOCATE(column_scaling(mumps_par%N),column_local(mumps_par%N))
 
-  column_local = 1.d-20;   column_scaling = 1.d-20
-  DO k=1,nz_glob
-     j = jcn_glob(k)
-     column_local(j) = MAX(column_local(j),ABS(A_glob(k)))
-  ENDDO
-
-  CALL MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
-  DO k=1,nz_glob
-     j = jcn_glob(k)
-     A_glob(k) = A_glob(k) / column_scaling(j)
-  ENDDO
+  if (.not. use_murge_element) then
+     column_local = 1.d-20;   column_scaling = 1.d-20
+     DO k=1,nz_glob
+        j = jcn_glob(k)
+        column_local(j) = MAX(column_local(j),ABS(A_glob(k)))
+     ENDDO
+     
+     CALL MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
+     DO k=1,nz_glob
+        j = jcn_glob(k)
+        A_glob(k) = A_glob(k) / column_scaling(j)
+     ENDDO
+  else
+     column_local = 1.d0;     column_scaling = 1.d0
+  end if
 
   CALL CPU_TIME(t_scale_1)
 
@@ -95,17 +99,14 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
 
   IF (ALLOCATED(sparskit_work)) DEALLOCATE(sparskit_work)
   ALLOCATE(sparskit_work(mumps_par%N + 1))
- IF ((.NOT. use_murge_element) .AND. (.NOT. murge_initialised)) THEN
+  IF ((.NOT. use_murge_element) .AND. (.NOT. murge_initialised)) THEN
 
-    DO i = 1, 256
-      write (*,*) mumps_par%IRN(i), mumps_par%JCN(i), mumps_par%A(i)
-   END DO
-  CALL coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+     CALL coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
 
-  CALL CPU_TIME(t_comm_1)
+     CALL CPU_TIME(t_comm_1)
 
-  IF (my_id .EQ. 0)  WRITE(*,'(A,f8.3)') ' PASTIX, comm      : ',t_comm_1-t_comm_0
- 
+     IF (my_id .EQ. 0)  WRITE(*,'(A,f8.3)') ' PASTIX, comm      : ',t_comm_1-t_comm_0
+
 
      CALL MURGE_Initialize(1, ierr)
      id = 0;
@@ -146,11 +147,12 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
      ! part of the matrix non-zero pattern
      !CALL MURGE_GraphGlobalIJV(id, n_glob, nz_glob, IRN_glob, JCN_glob, -1, ierr);
      !CALL MURGE_MatrixGlobalIJV(id, n_glob, nz_glob, IRN_glob, JCN_glob, A_glob, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr);
+
      write (*,*) 'colptr[n]-1 ', mumps_par%jcn(mumps_par%n+1)-1
      CALL MURGE_GraphGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
      write (*,*) "ierr", ierr
      CALL MURGE_MatrixGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
-    CALL CPU_TIME(t_analysis_1)
+     CALL CPU_TIME(t_analysis_1)
 
      pastix_analysed = .TRUE.
 
@@ -162,13 +164,16 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
 
 
   WRITE(*,*) '***********************************'
-  WRITE(*,*) '* call PastiX                     *'
+  WRITE(*,*) '* call MURGE_SetGlobalRhs         *'
   WRITE(*,*) '***********************************'
 
   CALL MURGE_SetGlobalRhs(id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
+
+  WRITE(*,*) '***********************************'
+  WRITE(*,*) '* call MURGE_GetGlobalSolution    *'
+  WRITE(*,*) '***********************************'
+
   CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
-
-
   CALL CPU_TIME(t_fact_1)
 
   IF (my_id .EQ. 0) WRITE(*,'(A,f8.3)')  ' PASTIX, fact/solv : ',t_fact_1-t_fact_0

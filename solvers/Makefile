@@ -11,6 +11,7 @@ all: 	modules 		\
 	root.o 			\
 	solve_M2.o 		\
 	solve_matrix_n.o 	\
+	solve_murge_n.o 	\
 	solve_mumps_all.o 	\
 	solve_pastix_all.o 	\
 	solve_pastix_all_dist.o \

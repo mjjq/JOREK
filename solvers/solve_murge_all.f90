@@ -1,4 +1,4 @@
-SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
+SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, my_id_n, mpi_comm_n, mpi_comm_master)
   !---------------------------------------------------------------------
   ! subroutine solves the complete system of equation using pastix with
   ! distributed matrix on the main group mpi_comm_world
@@ -18,6 +18,12 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
   REAL*8                   :: t_scale_0, t_scale_1
   INTEGER                  :: i, k, j, ierr, my_id, m_loc
   INTEGER,ALLOCATABLE      :: counts(:), displacements(:)
+  INTEGER                  :: i_tor(n_cpu)
+  CHARACTER*8              :: method
+  INTEGER                  :: my_id_n
+  INTEGER                  :: mpi_comm_master
+  INTEGER                  :: mpi_comm_n
+  REAL*8, ALLOCATABLE      :: rhs_tmp(:)
 
   WRITE(*,*) my_id,'*********************************'
   WRITE(*,*) my_id,'*  solve global matrix (PastiX) *'
@@ -62,40 +68,42 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
 
 
   CALL CPU_TIME(t_comm_0)
+  IF (.NOT. use_murge_element) THEN
+     !------------------------------------------------------ collect the distributed matrix onto all procs
+     IF (ALLOCATED(counts))        DEALLOCATE(counts)
+     IF (ALLOCATED(displacements)) DEALLOCATE(displacements)
+     
+     ALLOCATE(counts(n_cpu),displacements(n_cpu))
+     
+     CALL MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER,counts,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+     
+     displacements(1) = 0
+     DO i=2,n_cpu
+        displacements(i) = displacements(i-1) + counts(i-1)
+     ENDDO
+     
+     IF (ASSOCIATED(mumps_par%IRN)) DEALLOCATE(mumps_par%IRN)
+     IF (ASSOCIATED(mumps_par%JCN)) DEALLOCATE(mumps_par%JCN)
+     IF (ASSOCIATED(mumps_par%A) )  DEALLOCATE(mumps_par%A)
 
-  !------------------------------------------------------ collect the distributed matrix onto all procs
-  IF (ALLOCATED(counts))        DEALLOCATE(counts)
-  IF (ALLOCATED(displacements)) DEALLOCATE(displacements)
-
-  ALLOCATE(counts(n_cpu),displacements(n_cpu))
-
-  CALL MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER,counts,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-
-  displacements(1) = 0
-  DO i=2,n_cpu
-     displacements(i) = displacements(i-1) + counts(i-1)
-  ENDDO
-
-  IF (ASSOCIATED(mumps_par%IRN)) DEALLOCATE(mumps_par%IRN)
-  IF (ASSOCIATED(mumps_par%JCN)) DEALLOCATE(mumps_par%JCN)
-  IF (ASSOCIATED(mumps_par%A) )  DEALLOCATE(mumps_par%A)
-  IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)
-
-  ALLOCATE(mumps_par%IRN(mumps_par%nz),mumps_par%JCN(mumps_par%nz),mumps_par%A(mumps_par%nz))
-  ALLOCATE(mumps_par%rhs(mumps_par%n))
-
-  CALL MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%IRN, &
-       counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-
-  CALL MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%JCN, &
-       counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-
-  CALL MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
-       counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-
-  CALL MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+     
+     ALLOCATE(mumps_par%IRN(mumps_par%nz),mumps_par%JCN(mumps_par%nz),mumps_par%A(mumps_par%nz))
 
 
+     CALL MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%IRN, &
+          counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+     
+     CALL MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%JCN, &
+          counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+     
+     CALL MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
+          counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+     
+
+  END IF
+  !IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
+  !ALLOCATE(mumps_par%rhs(mumps_par%n))
+  !CALL MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
   IF (ALLOCATED(sparskit_work)) DEALLOCATE(sparskit_work)
   ALLOCATE(sparskit_work(mumps_par%N + 1))
@@ -167,21 +175,87 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max)
   WRITE(*,*) '* call MURGE_SetGlobalRhs         *'
   WRITE(*,*) '***********************************'
 
-  CALL MURGE_SetGlobalRhs(id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
-
+  CALL MURGE_SetGlobalRhs(id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
+  if (method .ne. "direct") then
+     if (my_id_n .eq. 0) then
+        
+        if (allocated(deltas)) deallocate(deltas)
+        allocate(deltas(ndof_glob))
+        deltas = 0.d0
+        
+        allocate(rhs_tmp(ndof_glob))
+        
+        rhs_tmp = 0.d0
+        
+        if (my_id .eq. 0 ) then
+           
+           rhs_tmp(1:ndof_glob:n_tor) = rhs_glob(1:mumps_par%n)
+           
+        else
+           
+           rhs_tmp(2*i_tor(my_id+1)-2:ndof_glob:n_tor) = rhs_glob(1:mumps_par%n:2)
+           rhs_tmp(2*i_tor(my_id+1)-1:ndof_glob:n_tor) = rhs_glob(2:mumps_par%n:2)
+           
+        endif
+        
+        !write (*,*) "ndof_glob", ndof_glob
+        !deallocate(rhs_glob)
+        !allocate(rhs_glob(ndof_glob))
+        !call MPI_AllReduce(RHS_tmp,rhs_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
+        
+        deallocate(rhs_tmp)
+     else
+        !deallocate(rhs_glob)
+        !allocate(rhs_glob(ndof_glob))
+     endif
+     !call MPI_Bcast (Rhs_glob, ndof_glob, MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
+  end if
   WRITE(*,*) '***********************************'
   WRITE(*,*) '* call MURGE_GetGlobalSolution    *'
   WRITE(*,*) '***********************************'
+  IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
+  ALLOCATE(mumps_par%rhs(mumps_par%n))
+  !CALL MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
   CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
   CALL CPU_TIME(t_fact_1)
 
   IF (my_id .EQ. 0) WRITE(*,'(A,f8.3)')  ' PASTIX, fact/solv : ',t_fact_1-t_fact_0
-
-  DO k=1,mumps_par%n
-     deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
-     !  write(*,*) k,deltas(k)
-  ENDDO
-
+  write (*,*) "mumps_par%n", mumps_par%n, ndof_glob
+  write (*,*) "size(deltas)", size(deltas)
+  if (method == "direct") then
+     DO k=1,mumps_par%n
+        deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
+        !  write(*,*) k,deltas(k)
+     ENDDO
+  else
+     if (my_id_n .eq. 0) then
+        
+        if (allocated(deltas)) deallocate(deltas)
+        allocate(deltas(ndof_glob))
+        deltas = 0.d0
+        
+        allocate(rhs_tmp(ndof_glob))
+        
+        rhs_tmp = 0.d0
+        
+        if (my_id .eq. 0 ) then
+           
+           rhs_tmp(1:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n)
+           
+        else
+           
+           rhs_tmp(2*i_tor(my_id+1)-2:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n:2)
+           rhs_tmp(2*i_tor(my_id+1)-1:ndof_glob:n_tor) = mumps_par%rhs(2:mumps_par%n:2)
+           
+        endif
+        
+        call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
+        
+        deallocate(rhs_tmp)
+        
+     endif
+  end if
+  deallocate(mumps_par%rhs)
   RETURN
 END SUBROUTINE solve_murge_all

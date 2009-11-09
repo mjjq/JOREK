@@ -88,7 +88,7 @@ program JOREK2
   call MPI_Init_thread(required,provided,StatInfo)    ! initialise threaded MPI (openMPI)
 
 
-  
+
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)      ! the id of each cpu
   my_id = rank
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
@@ -311,217 +311,6 @@ program JOREK2
         psi_bnd = 0.d0
      endif
 
-     !***********************************************************************
-     !*            distribute nodes and elements over cpu's                 *
-     !***********************************************************************
-
-     IF (use_pastix == .true. &
-          .and. use_murge == .true. &
-          .and. use_murge_element == .true.) THEN
-
-        write (*,*) "--- Murge initilisation ---"
-
-        !
-        ! Murge initialisation and 
-        ! graph definition edge by edge
-        !
-        IF (.NOT. murge_initialised) THEN
-           !
-           ! Init murge
-           !
-           CALL MURGE_Initialize(1, ierr)
-           id = 0;
-           IF (solver == MURGE_SOLVER_PASTIX) THEN
-              CALL MURGE_SetDefaultOptions(id, 0, ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES,  ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,          ierr)
-              ! refinement : max number of iterations
-              CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,       ierr) 
-              ! degrees of freedom per node (not correct)
-              CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,          n_tor * n_var,    ierr) 
-              CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,      ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,       ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,      ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,      ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,          ierr)
-
-              CALL MURGE_SetOptionREAL(id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,    ierr)
-
-           ENDIF
-
-
-           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
-           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     1,   ierr)
-
-           CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
-
-           murge_initialised = .TRUE.
-
-        ENDIF
-        !
-        ! Build the graph
-        !
-        ! TODO: Avoid doubles
-        !
-        if (my_id == 0) then
-           CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
-                element_list%n_elements*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
-           IF (ierr /= MURGE_SUCCESS) THEN
-              write (*,*) "ERROR in MURGE_GRAPHBEGIN"
-              STOP
-           END IF
-
-           DO i_elem = 1, element_list%n_elements
-
-              element = element_list%element(i_elem)
-              DO i=1,n_vertex_max
-                 
-                 inode1         = element%vertex(i)
-              
-                 DO i_order = 1, n_order+1
-
-                    index_node1 = node_list%node(inode1)%index(i_order)
-
-                       
-              
-                    ! Build nodes Matrices
-                    DO k=1,n_vertex_max
-                       
-                       knode         = element%vertex(k)
-                       
-                       DO k_order = 1, n_order+1
-                          
-                          index_node2 = node_list%node(knode)%index(k_order)
-                          
-
-                          CALL MURGE_GRAPHEDGE(id,                                 &
-                               index_node1,                                        &
-                               index_node2,                                        &
-                               ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             write (*,*) "N", mumps_par%n, &
-                                  "I", index_node1, &
-                                  "J", index_node2
-                             STOP
-                          END IF
-                 
-                          
-                       END DO
-                    END DO
-                 END DO
-              END DO
-           END DO
-        else
-           CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
-                0, ierr)   
-           IF (ierr /= MURGE_SUCCESS) THEN
-              write (*,*) "ERROR in MURGE_GRAPHBEGIN"
-              STOP
-           END IF
-        end if
-        CALL MURGE_GRAPHEND(id, ierr)
-   
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GRAPHEND"
-           STOP
-        END IF
-
-        CALL MURGE_GETLOCALNODENBR(id, local_n, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
-           STOP
-        END IF
-        ALLOCATE(loc2glob(local_n))
-        global_n = mumps_par%n
-        write (*,*) "Local number of nodes", local_n, "global",  mumps_par%n
-        CALL MURGE_GETLOCALNODELIST(id, loc2glob, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
-           STOP
-        END IF        
-        ! Build local_elms from loc2glob
-        n_local_elms = 0
-
-        DO i_elem = 1, element_list%n_elements
-          
-           element = element_list%element(i_elem)
-           DO i=1,n_vertex_max
-              
-              inode1         = element%vertex(i)
-              
-              DO i_order = 1, n_order+1
-
-                 index_node1 = node_list%node(inode1)%index(i_order)
-
-                 call vertex_is_local(index_node1, is_local)
-                 IF (is_local) THEN      
-                    n_local_elms = n_local_elms + 1
-                    GOTO 10
-                 END IF
-              END DO
-           END DO
-10      END DO
-
-        ! Build local_elms from loc2glob
-        ALLOCATE(local_elms(n_local_elms))
-
-        n_local_elms = 0
-          DO i_elem = 1, element_list%n_elements
-          
-           element = element_list%element(i_elem)
-           DO i=1,n_vertex_max
-              
-              inode1         = element%vertex(i)
-              
-              DO i_order = 1, n_order+1
-
-                 index_node1 = node_list%node(inode1)%index(i_order)
-
-                    !index_large_i = n_tor * n_var * (index_node1 - 1)
-
-                 !call vertex_is_local(index_node1*n_tor * n_var, loc2glob, local_n, is_local)
-                 call vertex_is_local(index_node1, is_local)
-                 IF (is_local) THEN      
-                    n_local_elms = n_local_elms + 1
-                    local_elms(n_local_elms) = i_elem
-                    GOTO 20
-                 END IF
-              END DO
-           END DO
-20      END DO
-
-!      DO i = 1, element_list%n_elements
-!           DO j = 1, n_vertex_max
-!              ! Look in loc2glob if the vertex is present
-!              k = element_list%element(i)%vertex(j)
-!              call vertex_is_local(k*n_tor * n_var, loc2glob, local_n, is_local)
-!              IF (is_local) THEN
-!                 n_local_elms = n_local_elms + 1
-!                 local_elms(n_local_elms) = i
-!                 GOTO 20
-!              END IF
-!           END DO
-!20      END DO
-
-        index_total = -1
-        do inode=1, node_list%n_nodes
-           index_total = max(index_total,maxval(node_list%node(inode)%index))
-        enddo
-
-        ndof_glob  = index_total * n_tor * n_var
-
-        node_list%n_dof = ndof_glob
-     else
-        allocate(local_elms(element_list%n_elements))
-        allocate(index_min(n_cpu),index_max(n_cpu))
-
-        call distribute_nodes_elements(my_id,n_cpu,node_list,element_list,local_elms,n_local_elms,ndof_glob,index_min,index_max)
-
-        node_list%n_dof = ndof_glob
-
-        call global_matrix_structure(my_id,node_List,element_list,boundary_list, freeboundary,&
-             local_elms,n_local_elms,index_min(my_id+1),index_max(my_id+1))
-     endif
 
      !*******************************************************
      !*      create groups /communicators                   *
@@ -541,8 +330,9 @@ program JOREK2
 
         do i=1,n_cpu
            i_tor(i) = (i-1) / M_cpu  + 1
+           write (*,*) "i_tor(i)", i_tor(i)
         enddo
-
+!        stop
         call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),i_tor(my_id+1),MPI_COMM_N,ierr)
 
         i_rank(1) = 0
@@ -561,9 +351,235 @@ program JOREK2
            call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
            call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
         endif
-
+     else
+        my_id_n = my_id
+        MPI_COMM_N = MPI_COMM_WORLD
      endif
 
+     !***********************************************************************
+     !*            distribute nodes and elements over cpu's                 *
+     !***********************************************************************
+     IF (use_pastix == .true. &
+          .and. use_murge == .true. &
+          .and. use_murge_element == .true.&
+          .and. trim(method) .ne. 'direct') THEN
+        allocate(local_elms(element_list%n_elements))
+        allocate(index_min(n_cpu_n),index_max(n_cpu_n))
+        
+        call distribute_nodes_elements(my_id_n,n_cpu_n,node_list,element_list,local_elms,n_local_elms, &
+             ndof_glob,index_min,index_max)
+     
+        node_list%n_dof = ndof_glob
+        
+        call global_matrix_structure(my_id_n,node_List,element_list,boundary_list, freeboundary,&
+             local_elms,n_local_elms,index_min(my_id_n+1),index_max(my_id_n+1))
+
+     ELSE
+        allocate(local_elms(element_list%n_elements))
+        allocate(index_min(n_cpu),index_max(n_cpu))
+        
+        call distribute_nodes_elements(my_id,n_cpu,node_list,element_list,local_elms,n_local_elms, &
+             ndof_glob,index_min,index_max)
+     
+        node_list%n_dof = ndof_glob
+        
+        call global_matrix_structure(my_id,node_List,element_list,boundary_list, freeboundary,&
+             local_elms,n_local_elms,index_min(my_id+1),index_max(my_id+1))
+     END IF
+
+     IF (use_pastix == .true. &
+          .and. use_murge == .true. &
+          .and. use_murge_element == .true.) THEN
+
+        write (*,*) "--- Murge initilisation ---"
+
+        !
+        ! Murge initialisation and 
+        ! graph definition edge by edge
+        !
+        IF (.NOT. murge_initialised) THEN
+           !
+           ! Init murge
+           !
+           if (trim(method) .ne. 'direct') then
+              CALL MURGE_Initialize(N_masters, ierr)
+              id = i_rank(i_tor(my_id+1))/M_cpu;
+              CALL MURGE_SetCommunicator(id, MPI_COMM_N, ierr)
+           else
+              CALL MURGE_Initialize(1, ierr)
+              id = 0;
+           end if
+
+           IF (solver == MURGE_SOLVER_PASTIX) THEN
+              CALL MURGE_SetDefaultOptions(id, 0, ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES, ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
+              ! refinement : max number of iterations
+              CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,      ierr) 
+              ! degrees of freedom per node (not correct)
+              if (trim(method) .eq. 'gmres') then
+                 if ( i_tor(my_id+1) == 1 ) then
+                    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,    n_var,           ierr) 
+                 else
+                    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,    2 * n_var,       ierr) 
+                 end if
+              else
+                 CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,       n_tor * n_var,   ierr) 
+              end if
+              
+              CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
+              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
+
+              CALL MURGE_SetOptionREAL(id, DPARM_EPSILON_MAGN_CTRL,  murge_pivot,     ierr)
+
+           ENDIF
+
+
+           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
+           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     1,   ierr)
+
+           CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
+           
+           murge_initialised = .TRUE.
+
+        ENDIF
+        !
+        ! Build the graph
+        !
+        ! TODO: Avoid doubles
+        !
+        !if (my_id == 0) then
+        CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
+             n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
+        IF (ierr /= MURGE_SUCCESS) THEN
+           write (*,*) "ERROR in MURGE_GRAPHBEGIN"
+           STOP
+        END IF
+        
+        DO i_elem = 1, n_local_elms
+           
+           element = element_list%element(local_elms(i_elem))
+           DO i=1,n_vertex_max
+              
+              inode1         = element%vertex(i)
+              
+              DO i_order = 1, n_order+1
+                 
+                 index_node1 = node_list%node(inode1)%index(i_order)
+                 
+                 
+                 
+                 ! Build nodes Matrices
+                 DO k=1,n_vertex_max
+                    
+                    knode         = element%vertex(k)
+                    
+                    DO k_order = 1, n_order+1
+                       
+                       index_node2 = node_list%node(knode)%index(k_order)
+                       
+                       
+                       CALL MURGE_GRAPHEDGE(id,                                 &
+                            index_node1,                                        &
+                            index_node2,                                        &
+                            ierr)
+                       IF (ierr /= MURGE_SUCCESS) THEN
+                          write (*,*) "N", mumps_par%n, &
+                               "I", index_node1, &
+                               "J", index_node2
+                          STOP
+                       END IF
+                       
+                       
+                    END DO
+                 END DO
+              END DO
+           END DO
+        END DO
+        CALL MURGE_GRAPHEND(id, ierr)
+        
+        IF (ierr /= MURGE_SUCCESS) THEN
+           write (*,*) "ERROR in MURGE_GRAPHEND"
+           STOP
+        END IF
+
+        CALL MURGE_GETLOCALNODENBR(id, local_n, ierr)
+        IF (ierr /= MURGE_SUCCESS) THEN
+           write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
+           STOP
+        END IF
+        ALLOCATE(loc2glob(local_n))
+        global_n = mumps_par%n
+        write (*,*) "Local number of nodes", local_n, "global",  mumps_par%n
+        CALL MURGE_GETLOCALNODELIST(id, loc2glob, ierr)
+        IF (ierr /= MURGE_SUCCESS) THEN
+           write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
+           STOP
+        END IF
+        ! Build local_elms from loc2glob
+        n_local_elms = 0
+
+        DO i_elem = 1, element_list%n_elements
+
+           element = element_list%element(i_elem)
+           DO i=1,n_vertex_max
+
+              inode1         = element%vertex(i)
+
+              DO i_order = 1, n_order+1
+
+                 index_node1 = node_list%node(inode1)%index(i_order)
+
+                 call vertex_is_local(index_node1, is_local)
+                 IF (is_local) THEN      
+                    n_local_elms = n_local_elms + 1
+                    GOTO 10
+                 END IF
+              END DO
+           END DO
+10      END DO
+        IF (ALLOCATED(local_elms)) DEALLOCATE(local_elms)
+        ! Build local_elms from loc2glob
+        ALLOCATE(local_elms(n_local_elms))
+
+        n_local_elms = 0
+        DO i_elem = 1, element_list%n_elements
+
+           element = element_list%element(i_elem)
+           DO i=1,n_vertex_max
+
+              inode1         = element%vertex(i)
+
+              DO i_order = 1, n_order+1
+
+                 index_node1 = node_list%node(inode1)%index(i_order)
+
+                 !index_large_i = n_tor * n_var * (index_node1 - 1)
+
+                 !call vertex_is_local(index_node1*n_tor * n_var, loc2glob, local_n, is_local)
+                 call vertex_is_local(index_node1, is_local)
+                 IF (is_local) THEN      
+                    n_local_elms = n_local_elms + 1
+                    local_elms(n_local_elms) = i_elem
+                    GOTO 20
+                 END IF
+              END DO
+           END DO
+20      END DO
+
+
+        index_total = -1
+        do inode=1, node_list%n_nodes
+           index_total = max(index_total,maxval(node_list%node(inode)%index))
+        enddo
+
+        ndof_glob  = index_total * n_tor * n_var
+
+        node_list%n_dof = ndof_glob
+     END IF
      if (use_mumps) then
         if (trim(method) .eq. 'direct') then
            call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
@@ -614,8 +630,8 @@ program JOREK2
      IF (use_pastix == .true. .and. use_murge == .true. &
           .and. use_murge_element == .true.) THEN
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
-             n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, &
-             psi_axis, psi_bnd, Z_xpoint)        ! construct the matrix from elemental matrices
+             n_local_ELms,  xpoint, &
+             psi_axis, psi_bnd, Z_xpoint, method, i_tor, n_cpu, mpi_comm_n)        ! construct the matrix from elemental matrices
 
      ELSE
         call construct_matrix(my_id, local_elms, &
@@ -641,7 +657,7 @@ program JOREK2
 
            ! Recuperer la solution
            if (use_murge) then
-              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, method, my_id_n, mpi_comm_n, mpi_comm_master)
            else
               call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
            endif
@@ -661,9 +677,11 @@ program JOREK2
         if (.not. solve_only) then
 
            call cpu_time(t_send_0)
-
-           call distribute_harmonics(my_id,my_id_n,n_cpu)
-
+           IF (.not.( use_pastix == .true. &
+                .and. use_murge  == .true. &
+                .and. use_murge_element == .true.)) THEN
+              call distribute_harmonics(my_id,my_id_n,n_cpu)
+           END IF
            call cpu_time(t_send_1)
 
            if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0
@@ -671,11 +689,11 @@ program JOREK2
            call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
         endif
-
+     
         if (.not. gmres) call update_rhs_n(my_id,my_id_n)      ! correct the RHS with the previous solution (deltas)
 
         if (use_murge) then
-           call solve_murge_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, method, my_id_n, mpi_comm_n, mpi_comm_master)
         else
            call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
         end if
@@ -685,7 +703,7 @@ program JOREK2
 
      call cpu_time(t_solve_1)
 
-     if ((trim(method) .ne. 'direct') .and. (gmres) ) then
+     if ((trim(method) .ne. 'direct') .and. (gmres) .and. .not. use_murge .and. .not. use_murge_element) then
 
         call gmres_driver(my_id,my_id_n,i_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)     ! gmres solution
 
@@ -771,7 +789,7 @@ program JOREK2
      elseif (use_pastix) then
         if ( use_murge == .true.) then 
 
-  
+
            IF (use_murge_element == .true.) THEN
               IF (ALLOCATED(glob2loc)) DEALLOCATE(glob2loc)
               IF (ALLOCATED(loc2glob)) DEALLOCATE(loc2glob)
@@ -780,19 +798,19 @@ program JOREK2
         else
            pastix_iparm(2)     = 7                       ! Clean-up
            pastix_iparm(3)     = 7
-           
+
            if (trim(method) .eq. 'direct') then
-              
+
               call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-              
+
            elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
-              
+
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
            endif
 
-  
+
         end if
      endif
   endif

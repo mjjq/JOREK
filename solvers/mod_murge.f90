@@ -57,5 +57,6 @@ module murge_module             ! Murge specific variables
 
   real*8                                      :: murge_pivot
   parameter (murge_pivot=1.d-32)
+  integer                                     :: murge_comm
 
 endmodule murge_module

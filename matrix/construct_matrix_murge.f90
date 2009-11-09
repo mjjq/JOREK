@@ -315,7 +315,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   
   IF (method == "direct") THEN
      CALL boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
-          xpoint2,psi_axis,psi_bnd,Z_xpoint)
+          psi_bnd)
   END IF
   
   IF (method .EQ. "direct") THEN

@@ -1,5 +1,25 @@
-SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
-     xpoint2,psi_axis,psi_bnd,Z_xpoint)			    
+!*******************************************************************************
+!* Subroutine: boundary_condition_murge                                        *
+!*******************************************************************************
+!*                                                                             *
+!* Add boundary condition on the matrix given to murge (PaStiX) solver.        *
+!*                                                                             *
+!* Important: If this file is modified, boundary_conditions.f90 should also    *
+!*            be modified.                                                     *
+!*            boundary_conditions_murge.f90 in other models folders may also   *
+!*            need modifications.                                              *
+!*                                                                             *
+!* Parameters:                                                                 *
+!*   my_id        - Identifier of the node in MPI_COMM_WORLD                   *
+!*   node_list    - List of nodes                                              *
+!*   element_list - List of all elements                                       *
+!*   local_elms   - List of local elements                                     *
+!*   n_local_elms - Number of local elements                                   *
+!*   psi_bnd      -                                                            *
+!*                                                                             *
+!*******************************************************************************
+SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
+     n_local_elms, psi_bnd)			    
   !---------------------------------------------------------------
   ! add the boundary condition to the global matrix
   !---------------------------------------------------------------
@@ -11,22 +31,22 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_l
   IMPLICIT NONE
   INCLUDE 'mpif.h'
 
+  ! Subroutine parameters
+  INTEGER                  :: my_id
+  INTEGER                  :: local_elms(*)
+  INTEGER                  :: n_local_elms
   TYPE (type_node_list)    :: node_list
   TYPE (type_element_list) :: element_list
-  TYPE (type_element)      :: element
-  TYPE (type_node_list)    :: nodes
+  REAL*8                   :: psi_bnd
 
-  INTEGER :: my_id, local_elms(*), n_local_elms
-  REAL*8  :: zbig, psi_axis, psi_bnd, Z_xpoint, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds
+  ! Internal parameters
+  REAL*8  :: zbig, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds
   REAL*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
-  REAL*8  :: Vpar0_pol_R, Vpar0_pol_Z, Vpol_R, Vpol_Z, znormal_R, znormal_Z
-  REAL*8  :: Vpar0_perp, Vpol_perp, Btot, cs_fraction, ratio
-  REAL*8  :: grad_s, grad_psi, u0_s, u0_t, u0_x, u0_y
-  INTEGER :: i_bnd, i, in, ife, iv, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
-  INTEGER :: index_i, index_large_i, index_large_k, index_node, index_node1, index_node2, i_order, k_order, ic, ielm, ierr
-  INTEGER :: ijA_position,ijA_position2, nz_AA2, n_AA2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
-  INTEGER :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT
-  LOGICAL :: xpoint2
+  REAL*8  :: Btot
+  REAL*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
+  INTEGER :: i, in, iv, inode, k
+  INTEGER :: index_node, index_node2, ielm, ierr
+  INTEGER :: kv, kT, ku
   INTEGER :: coefnbr
   LOGICAL :: is_local
 
@@ -137,7 +157,7 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_l
 
 
 
-  write (*,*) ":: Murge Boundary Assembly phase :: ", coefnbr, " entries"
+  write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", coefnbr, " entries"
 
   CALL MURGE_ASSEMBLYBEGIN(id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
        MURGE_ASSEMBLY_FOOL, murge_sym, ierr)

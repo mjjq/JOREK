@@ -1,3 +1,7 @@
+!*
+!* Important: If there are modifications on boundary condition, 
+!*            do not forget to modify boundary_conditions_murge.f90.
+!*
 subroutine boundary_conditions(my_id,node_list,element_list,local_elms,n_local_elms,index_min,index_max, &
                                xpoint2,psi_axis,psi_bnd,Z_xpoint)			    
 !---------------------------------------------------------------
@@ -10,21 +14,27 @@ use phys_module
 implicit none
 include 'mpif.h'
 
+! Subroutine parameters
+integer                  :: my_id
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
+integer                  :: local_elms(*)
+integer                  :: n_local_elms
+integer                  :: index_min
+integer                  :: index_max
+logical                  :: xpoint2
+real*8                   :: psi_axis
+real*8                   :: psi_bnd
+real*8                   :: Z_xpoint
+
+! Internal parameters
 type (type_element)      :: element
 type (type_node_list)    :: nodes
+real*8  :: zbig
+integer :: i, in, ife, iv, inode, j, k, l
+integer :: index_i, index_large_i, index_node, ielm
+integer :: ijA_position, ilarge2
 
-integer :: my_id, local_elms(*), n_local_elms, index_min, index_max, index_min_loc, index_max_loc
-real*8  :: zbig, psi_axis, psi_bnd, Z_xpoint, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds
-real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
-real*8  :: Vpar0_pol_R, Vpar0_pol_Z, Vpol_R, Vpol_Z, znormal_R, znormal_Z
-real*8  :: Vpar0_perp, Vpol_perp, Btot, cs_fraction, ratio
-real*8  :: grad_s, grad_psi, u0_s, u0_t, u0_x, u0_y
-integer :: i_bnd, i, in, ife, iv, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
-integer :: index_i, index_large_i, index_large_k, index_node, index_node1, index_node2, i_order, k_order, ic, ielm, ierr
-integer :: ijA_position,ijA_position2, nz_AA2, n_AA2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
-logical :: xpoint2
 
 zbig = 1.d12
 

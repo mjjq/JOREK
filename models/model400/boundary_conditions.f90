@@ -1,3 +1,7 @@
+!*
+!* Important: If there are modifications on boundary condition, 
+!*            do not forget to modify boundary_conditions_murge.f90.
+!*
 subroutine boundary_conditions(my_id,node_list,element_list,local_elms,n_local_elms,index_min,index_max, &
                                xpoint2,psi_axis,psi_bnd,Z_xpoint)			    
 !---------------------------------------------------------------

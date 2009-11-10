@@ -3,8 +3,8 @@ MODEL = model199
 
 FC     = mpif90 -f90=ifort
 
-FFLAGS = -r8 -i4 -g3 -xT -align
-FFLAGS_NO_OMP = -r8 -i4 -g3 -xT -align
+FFLAGS = -r8 -i4 -pg -xT -align -check bounds -warn all
+FFLAGS_NO_OMP = -r8 -i4 -pg -xT -align -check bounds -warn all
 #FFLAGS = -r8 -i4 -O0 -check bounds -traceback -align -fpe0 -fp-model strict
 
 MYHOME = $(HOME)

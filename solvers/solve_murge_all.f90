@@ -1,4 +1,25 @@
-SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, my_id_n, mpi_comm_n, mpi_comm_master)
+!*******************************************************************************
+!* Subroutine: solve_murge_all                                                 *
+!*******************************************************************************
+!*                                                                             *
+!* Solves AX=B using Murge interface (PaStiX).                                 *
+!*                                                                             *
+!* Parameters:                                                                 *
+!*   n_cpu           - Number of processes in MPI_COMM_WORLD                   *
+!*   my_id           - Identifier of the node in MPI_COMM_WORLD                *
+!*   index_min       - Minimal index of local nodes                            *
+!*   index_max       - Maximal index of local nodes                            *
+!*   i_tor           - Tor number                                              *
+!*   method          - Solve method ('gmres' or 'direct')                      *
+!*   my_id_n         - Identifier of the node in solver communicator.          *
+!*   mpi_comm_master - masters MPI communicator.                               *
+!*                                                                             *
+!* Authors:                                                                    *
+!*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
+!*                                                                             *
+!*******************************************************************************
+SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, & 
+     my_id_n, mpi_comm_master)
   !---------------------------------------------------------------------
   ! subroutine solves the complete system of equation using pastix with
   ! distributed matrix on the main group mpi_comm_world
@@ -10,19 +31,22 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, my_i
   USE global_distributed_matrix
   IMPLICIT NONE
   INCLUDE 'mpif.h'
-
-  INTEGER                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
-  REAL*8,ALLOCATABLE       :: column_local(:)
-  INTEGER, ALLOCATABLE     :: pastix_loc2glb(:)
-  REAL*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_comm_0, t_comm_1
-  REAL*8                   :: t_scale_0, t_scale_1
-  INTEGER                  :: i, k, j, ierr, my_id, m_loc
-  INTEGER,ALLOCATABLE      :: counts(:), displacements(:)
+  
+  ! Subroutine parameters:
+  INTEGER                  :: n_cpu
+  INTEGER                  :: my_id
+  INTEGER                  :: index_min, index_max       ! global index_min, index_max for this cpu
   INTEGER                  :: i_tor(n_cpu)
   CHARACTER*8              :: method
   INTEGER                  :: my_id_n
   INTEGER                  :: mpi_comm_master
-  INTEGER                  :: mpi_comm_n
+
+  ! local variables:
+  REAL*8,ALLOCATABLE       :: column_local(:)
+  REAL*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_comm_0, t_comm_1
+  REAL*8                   :: t_scale_0, t_scale_1
+  INTEGER                  :: i, k, j, ierr, m_loc
+  INTEGER,ALLOCATABLE      :: counts(:), displacements(:)
   REAL*8, ALLOCATABLE      :: rhs_tmp(:)
 
   WRITE(*,*) my_id,'*********************************'
@@ -198,24 +222,14 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, my_i
            
         endif
         
-        !write (*,*) "ndof_glob", ndof_glob
-        !deallocate(rhs_glob)
-        !allocate(rhs_glob(ndof_glob))
-        !call MPI_AllReduce(RHS_tmp,rhs_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
-        
         deallocate(rhs_tmp)
-     else
-        !deallocate(rhs_glob)
-        !allocate(rhs_glob(ndof_glob))
      endif
-     !call MPI_Bcast (Rhs_glob, ndof_glob, MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
   end if
   WRITE(*,*) '***********************************'
   WRITE(*,*) '* call MURGE_GetGlobalSolution    *'
   WRITE(*,*) '***********************************'
   IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
   ALLOCATE(mumps_par%rhs(mumps_par%n))
-  !CALL MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
   CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
   CALL CPU_TIME(t_fact_1)

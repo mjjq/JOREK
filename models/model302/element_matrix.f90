@@ -273,8 +273,11 @@ do ms=1, n_gauss
            Bgrad_T_star   = ( F0 / BigR * v_p  +  v_x  * ps0_y - v_y  * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_T        = ( F0 / BigR * T0_p +  T0_x * ps0_y - T0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
 
-           BB2 = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2                         ! F0 due to absence of normalisation
+           BB2 = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
 
+!###################################################################################################
+!#  equation 1   (induction equation)                                                              #
+!###################################################################################################
 
 !           rhs_ij_1 = &
 !                      - v * eta_T  * current_source(ms,mt)/ BigR          * xjac * tstep &
@@ -282,30 +285,49 @@ do ms=1, n_gauss
 !                      - v * deta_dT * (T0_x * ps0_x  + T0_y * ps0_y)/BigR * xjac * tstep &
 
 !                      + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
-!                      - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &          ! F0 due to absence of normalisation
+!                      - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
 !                      + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
 !                      + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
 
            rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt))/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
-                      - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &          ! F0 due to absence of normalisation
+                      - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
                       + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
+
+!###################################################################################################
+!#  equation 2   (perpendicular momentum equation)                                                 #
+!###################################################################################################
 
            rhs_ij_2 = - 0.5d0 * vv2 * (v_x * r0_y_hat - v_y * r0_x_hat)   * xjac * tstep &
                       - r0_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)        * tstep &
                       + v * (ps0_s * zj0_t - ps0_t * zj0_s )                     * tstep &
                       - visco_T * BigR * (v_x * w0_x + v_y * w0_y)        * xjac * tstep &
-                      - v * eps_cyl * F0 / BigR * zj0_p                   * xjac * tstep &         ! F0 due to absence of normalisation
+                      - v * eps_cyl * F0 / BigR * zj0_p                   * xjac * tstep &
                       + BigR**2 * (v_s * p0_t - v_t * p0_s)                      * tstep &
+
                       - visco_num_T  * ( (v_ss * (x_t(ms,mt)**2+y_t(ms,mt)**2) + v_tt*(x_s(ms,mt)**2+y_s(ms,mt)**2)   &
                                -2.d0*  v_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) )                       &
                                     * (w0_ss * (x_t(ms,mt)**2+y_t(ms,mt)**2) + w0_tt*(x_s(ms,mt)**2+y_s(ms,mt)**2)    &
                                -2.d0*  w0_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * tstep &
+
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
 
+!###################################################################################################
+!#  equation 3                                                                                     #
+!###################################################################################################
+
            rhs_ij_3 = 0.d0 !- ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * tstep
+
+!###################################################################################################
+!#  equation 4                                                                                     #
+!###################################################################################################
+
            rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
+
+!###################################################################################################
+!#  equation 5 (density equation)                                                                  #
+!###################################################################################################
 
            rhs_ij_5 = v * BigR * (particle_source(ms,mt) + source_pellet)                             * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &
@@ -326,28 +348,35 @@ do ms=1, n_gauss
                             + r0_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                                 &
                      -2.d0 *  r0_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * theta*tstep
 
+!###################################################################################################
+!#  equation 6 (energy  equation)                                                                  #
+!###################################################################################################
 
            rhs_ij_6 = v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
 
                     + v * r0 * BigR**2 * ( T0_s * u0_t - T0_t * u0_s)                         * tstep &
                     + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep &
 
-                    + v * r0 * 2.d0* GAMMA * BigR * T0 * u0_y                   * xjac * tstep &
-                    - v * r0 * F0 / BigR * Vpar0 * T0_p                                * xjac * tstep &
+                    + v * r0 * 2.d0* GAMMA * BigR * T0 * u0_y                          * xjac * tstep &
 
+                    - v * r0 * F0 / BigR * Vpar0 * T0_p                                * xjac * tstep &
                     - v * T0 * F0 / BigR * Vpar0 * r0_p                                * xjac * tstep &
 
                     - v * r0 * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)                          * tstep &
-                    - v * T0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                          * tstep &  !!!!!!!!!!!!!!!!!!!! check!!!!!!!!!!!!!!!!!!!!!!1
+                    - v * T0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                          * tstep &
 
-                    - v * r0 * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * tstep &
-                    - v * r0 * GAMMA * T0 * F0 / BigR * vpar0_p                 * xjac * tstep &
+                    - v * GAMMA * r0 * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * tstep &
+                    - v * GAMMA * r0 * T0 * F0 / BigR * vpar0_p                        * xjac * tstep &
 
-                    - (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T      * xjac * tstep &
-                    - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y + v_p*T0_p /BigR**2 ) * xjac * tstep &
+                    - (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T           * xjac * tstep &
+                    - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y + v_p*T0_p /BigR**2 )      * xjac * tstep &
 
                     + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
                     + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac
+
+!###################################################################################################
+!#  equation 7 (parallel velocity  equation)                                                       #
+!###################################################################################################
 
            rhs_ij_7 = - v * F0 / BigR * P0_p                                      * xjac * tstep &
                       - v * (P0_s * ps0_t - P0_t * ps0_s)                                * tstep &
@@ -424,7 +453,10 @@ do ms=1, n_gauss
 
                  index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
 
-!---------------------------------------------------------------- equation 1
+!###################################################################################################
+!#  equation 1   (induction equation)                                                              #
+!###################################################################################################
+
                  amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                     &
                          - v * (psi_s * u0_t - psi_t * u0_s)                        * theta * tstep
 
@@ -450,14 +482,24 @@ do ms=1, n_gauss
 
 !                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep
 
-!---------------------------------------------------------------- equation 2
+!###################################################################################################
+!#  equation 2   (perpendicular momentum equation)                                                 #
+!###################################################################################################
+
+                 amat_21 = - (v_x * u0_x + v_y * u0_y) * BigR**3 * r0 * (1.d0 + zeta)                      &
+		           - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep  &
+
+                           + (v_x * u0_x + v_y * u0_y)*BigR**2 * Vpar0 * (r0_s * ps_t - r0_t * ps_s)        * theta * tstep &
+                           + (v_x * u0_x + v_y * u0_y)*BigR**2 * r0 * (vpar0_s * ps_t - vpar0_t * ps_s)     * theta * tstep
+
+
                  amat_22 = - BigR * r0_hat * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                                 &
                            + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                              * theta * tstep &
                            + BigR**2 * (u_x * u0_x + u_y * u0_y) * (v_x * r0_y_hat - v_y * r0_x_hat) * xjac * theta * tstep
 
-                 amat_21 = - v * (psi_s * zj0_t - psi_t * zj0_s)               * theta * tstep
-                 amat_23 = - v * (ps0_s * zj_t  - ps0_t * zj_s)                * theta * tstep  &
-                           + eps_cyl * F0 / BigR * v * zj_p  * xjac            * theta * tstep      ! F0 due to absence of normalisation
+
+                 amat_23 = - v * (ps0_s * zj_t  - ps0_t * zj_s)                           * theta * tstep  &
+                           + eps_cyl * F0 / BigR * v * zj_p  * xjac                       * theta * tstep
 
                  amat_24 = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)  * theta * tstep  &
                          + BigR * ( v_x * w_x + v_y * w_y) * visco_T  * xjac   * theta * tstep  &
@@ -475,18 +517,27 @@ do ms=1, n_gauss
                            - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
                            + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep
 
-!---------------------------------------------------------------- equation 3
+!###################################################################################################
+!#  equation 3                                                                                     #
+!###################################################################################################
+
                  amat_33 = v * zj / BigR * xjac                               * tstep
                  amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac         * tstep
 
-!---------------------------------------------------------------- equation 4
+!###################################################################################################
+!#  equation 4                                                                                     #
+!###################################################################################################
+
                  amat_44 =  v * w * BigR * xjac                                * tstep
                  amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
 
-!---------------------------------------------------------------- equation 5
+!###################################################################################################
+!#  equation 5    continuity equation (density)                                                    #
+!###################################################################################################
+
                  Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
                  Bgrad_rho_psi      = ( r0_x * psi_y - r0_y * psi_x ) / BigR
-                 Bgrad_rho_rho      = ( F0 / BigR * rho_p +  rho_x * ps0_y - rho_y * ps0_x ) / BigR   ! F0 due to absence of normalisation
+                 Bgrad_rho_rho      = ( F0 / BigR * rho_p +  rho_x * ps0_y - rho_y * ps0_x ) / BigR
                  BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
                  amat_51 = - (D_par-D_prof) * BigR * BB2_psi / BB2**2 * Bgrad_rho_star     * Bgrad_rho     * xjac * theta * tstep &
@@ -521,7 +572,10 @@ do ms=1, n_gauss
                            + v * r0 * (vpar_s * ps0_t - vpar_t * ps0_s)                                     * theta * tstep &
                            + v * r0 * F0 / BigR * vpar_p                                             * xjac * theta * tstep
 
-!---------------------------------------------------------------- equation 6
+!###################################################################################################
+!#  equation 6   energy equation                                                                   #
+!###################################################################################################
+
                  Bgrad_T_star_psi = ( v_x  * psi_y - v_y  * psi_x  ) / BigR
                  Bgrad_T_psi      = ( T0_x * psi_y - T0_y * psi_x )  / BigR
                  Bgrad_T_T        = ( F0 / BigR * T_p +  T_x * ps0_y - T_y * ps0_x ) / BigR          ! F0 due to absence of normalisation
@@ -548,7 +602,7 @@ do ms=1, n_gauss
                            + v * T0  * F0 / BigR * Vpar0 * rho_p                                * xjac * theta * tstep &
 
                            + v * rho * Vpar0 * (T0_s  * ps0_t - T0_t  * ps0_s)                         * theta * tstep &
-                           + v * T0  * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s)                         * theta * tstep &  !!!!!!!!!!!!!!!!!!!! check!!!!!!!!!!!!!!!!!!!!!!1
+                           + v * T0  * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s)                         * theta * tstep &
 
                            + v * rho * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                * theta * tstep &
                            + v * rho * GAMMA * T0 * F0 / BigR * vpar0_p                         * xjac * theta * tstep
@@ -564,7 +618,7 @@ do ms=1, n_gauss
                            + v * T * F0  / BigR * Vpar0 * r0_p                              * xjac * theta * tstep &
 
                            + v * r0 * Vpar0 * (T_s  * ps0_t - T_t  * ps0_s)                        * theta * tstep &
-                           + v * T  * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                        * theta * tstep &  !!!!!!!!!!!!!!!!!!!! check!!!!!!!!!!!!!!!!!!!!!!1
+                           + v * T  * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                        * theta * tstep &
 
 
                            + v * r0 * GAMMA * T * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * theta * tstep &
@@ -577,13 +631,14 @@ do ms=1, n_gauss
 		           + v * T0 * F0 / BigR * Vpar * r0_p                               * xjac * theta * tstep &
 
                            + v * r0 * Vpar * (T0_s * ps0_t - T0_t * ps0_s)                         * theta * tstep &
-                           + v * T0 * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                         * theta * tstep &  !!!!!!!!!!!!!!!!!!!! check!!!!!!!!!!!!!!!!!!!!!!1
+                           + v * T0 * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                         * theta * tstep &
 
                            + v * r0 * GAMMA * T0 * (vpar_s * ps0_t - vpar_t * ps0_s)               * theta * tstep &
                            + v * r0 * GAMMA * T0 * F0 / BigR * vpar_p                       * xjac * theta * tstep
 
-!---------------------------------------------------------------- equation 7
-
+!###################################################################################################
+!#  equation 7   parallel velocity equation                                                        #
+!###################################################################################################
 
                  amat_71 = + v * (P0_s * psi_t - P0_t * psi_s)                             * theta * tstep ! &
 !                           + vpar0 * (F0/BigR)**2 * (vpar0_s * ps_t - vpar0_t * ps_s)      * theta * tstep

@@ -486,7 +486,7 @@ do ms=1, n_gauss
 !#  equation 2   (perpendicular momentum equation)                                                 #
 !###################################################################################################
 
-                 amat_21 = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep  &
+                 amat_21 = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep
 
                  amat_22 = - BigR * r0_hat * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                                 &
                            + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                              * theta * tstep &

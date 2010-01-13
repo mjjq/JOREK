@@ -12,6 +12,7 @@ all: modules \
      temperature.o \
      temperature_i.o \
      temperature_e.o \
+     pellet_source.o \
      add_pellet.o
 
 modules : mod_parameters.o mod_phys_module.o mod_nodes_elements.o

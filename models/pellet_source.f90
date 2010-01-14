@@ -1,8 +1,6 @@
 subroutine pellet_source(pellet_amplitude,pellet_R,pellet_Z,pellet_phi,pellet_radius, &
                          pellet_sig,pellet_length,R,Z,phi,particle_source)
 
-use data_structure
-use phys_module
 implicit none
 
 real*8 :: R, Z, phi, particle_source

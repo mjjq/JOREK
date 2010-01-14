@@ -246,7 +246,8 @@ do ms=1, n_gauss
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 
      source_pellet = 0.d0
-!     call pellet_source(10.,3.8,0.,0.,0.1,0.02,10.,x_g(ms,mt),y_g(ms,mt),phi,source_pellet)
+     call pellet_source(pellet_amplitude,pellet_R,pellet_Z,pellet_phi,pellet_radius,pellet_sig,pellet_length, &
+                        x_g(ms,mt),y_g(ms,mt),phi,source_pellet)
 
      do i=1,n_vertex_max
 

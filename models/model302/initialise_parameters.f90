@@ -24,6 +24,8 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
                 particlesource, heatsource,                         &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
+		pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
+		pellet_radius, pellet_sig, pellet_length,           &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
 		freeboundary
@@ -115,6 +117,14 @@ if (my_id .eq. 0) then
   T_coef      = 0.d0;  T_coef(1)   = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
+
+  pellet_amplitude = 0.d0
+  pellet_R      = 3.8d0
+  pellet_Z      = 0.0d0
+  pellet_phi    = 1.57d0
+  pellet_radius = 0.08d0
+  pellet_sig    = 0.02
+  pellet_length = 0.785
 
   t_now       = 0.d0
   t_start     = 0.d0

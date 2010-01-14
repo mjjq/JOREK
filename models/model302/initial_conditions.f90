@@ -23,7 +23,7 @@ logical    :: xpoint2
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
-  write(*,*) '*      initial conditions  (300)      *'
+  write(*,*) '*      initial conditions  (302)      *'
   write(*,*) '***************************************'
 endif
 

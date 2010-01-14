@@ -3,7 +3,7 @@
 !*            do not forget to modify boundary_conditions_murge.f90.
 !*
 subroutine boundary_conditions(my_id,node_list,element_list,local_elms,n_local_elms,index_min,index_max, &
-                               xpoint2,psi_axis,psi_bnd,Z_xpoint)			    
+                               xpoint2,psi_axis,psi_bnd,Z_xpoint)
 !---------------------------------------------------------------
 ! add the boundary condition to the global matrix
 !---------------------------------------------------------------
@@ -50,8 +50,15 @@ do i=1, n_local_elms
 !------------------------------------ the open field lines (in case of x-point grid)
           if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3)) then
 
-            if ((k .eq.   1) .or. (k .eq. 2) .or. (k .eq. 3)  .or. &
-                (k .eq.  4)  .or. (k .eq. 95)  .or. (k .eq. 96) .or. (k .eq.97) ) then
+            if (               &
+                   (k .eq. 1)  &
+              .or. (k .eq. 2)  &
+              .or. (k .eq. 3)  &
+              .or. (k .eq. 4)  &
+!              .or. (k .eq. 5) &
+!              .or. (k .eq. 6) &
+!              .or. (k .eq. 7) &
+               ) then
 
 
               index_node = node_list%node(inode)%index(1)
@@ -187,7 +194,7 @@ do i=1, n_local_elms
                 irn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
                 jcn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kT-1)*n_tor + in
                 A_glob(ilarge_vsTs)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
- 
+
                 irn_glob(ilarge_vsT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
                 jcn_glob(ilarge_vsT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
                 A_glob(ilarge_vsT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction
@@ -202,21 +209,24 @@ do i=1, n_local_elms
           endif
 
 !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
+
           if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
 
-!            if ((k .eq. 1) .or. (k .eq. 2) .or. (k .eq. 3) .or. &
-!                (k .eq. 4) .or. (k .eq. 95) .or. (k .eq. 96) .or. (k .eq. 7) ) then
-!            if ((k .eq. 1) .or. (k .eq. 2) .or. (k .eq. 3) .or. &
-!                (k .eq. 4) .or. (k .eq. 5) .or. (k .eq. 6) .or. (k .eq. 7) ) then
+            if (                                                         &
+                    ((freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &               ! exclude condition on psi (freeboundary) except n=0
 
-            if ( (k .eq. 1) .or. (k .eq. 2)  .or. (k .eq. 3) .or. (k .eq. 4) .or. &
-                 ( (k .eq. 5) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) ) .or. &  ! private region only
+               .or. (( .not. freeboundary) .and. (k .eq. 1))             &
 
-!                 ( (k .eq. 6) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) ) .or. &  ! private region only
+               .or. (k .eq. 2)    &
+               .or. (k .eq. 3)    &
+               .or. (k .eq. 4)    &
+!               .or. (k .eq. 5)   &
+               .or.((k .eq. 5) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &
+               .or. (k .eq. 6)    &
+!              .or.((k .eq. 6) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &  ! private region only
+               .or. (k .eq. 7)    &
+               ) then
 
-                 (k .eq. 6)  .or. &
-                 (k .eq. 7) ) then
-                               
               index_node = node_list%node(inode)%index(1)
 
               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then

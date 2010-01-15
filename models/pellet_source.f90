@@ -15,7 +15,7 @@ radius = sqrt((R-pellet_R)**2 + (Z-pellet_Z)**2)
 
 atn     = (0.5d0 - 0.5d0*tanh((radius - pellet_radius)/pellet_sig))
 
-atn_phi = (0.5d0 - 0.5d0*tanh(abs((phi- pellet_phi))/pellet_length))
+atn_phi = (0.5d0 - 0.5d0*tanh((phi- pellet_phi)/pellet_length))
 
 particle_source = pellet_amplitude * atn * atn_phi
 

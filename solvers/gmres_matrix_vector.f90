@@ -12,13 +12,19 @@ include 'mpif.h'
 
 real*8              :: x(*), y(*), t1, t2, t3, t4, t5
 real*8, allocatable :: y_tmp(:)
-integer             :: n, i, ir, jc, ierr, my_id, my_id_n
-integer             :: n_blocksize, n_blocks, iA_start, ix_start, iy_start
+real*8              :: y_tmp_block(n_tor*n_var)
+integer,allocatable :: recv_counts(:), recv_disp(:)
+integer             :: n, i, ir, jc, ierr, my_id, my_id_n, n_cpu, index_offset
+integer             :: n_blocksize, n_blocks, iA_start, ix_start, iy_start, ndof_local
+
+integer index_ytmp_min,index_ytmp_max
+logical found_value
 
 !write(*,*) my_id,my_id_n,' GMRES matrix_vector ',ndof_glob
 call cpu_time(t1)
 
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
+call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)     ! the number of cpus
 
 call cpu_time(t2)
 
@@ -26,25 +32,31 @@ call MPI_BCAST(x,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 
 call cpu_time(t3)
 
-allocate(y_tmp(ndof_glob))
-
-y_tmp(1:ndof_glob) = 0.d0
-
 n_blocksize = n_tor * n_var
 n_blocks    = nz_glob/n_blocksize**2
 
-!$omp parallel default(none)                                                       &
-!$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize)          &
-!$omp   private(i,iA_start,ix_start, iy_start)
+ndof_local   = (local_index_end(my_id+1) - local_index_start(my_id+1) + 1) * n_blocksize
+index_offset = (local_index_start(my_id+1)-1) * n_blocksize 
+
+allocate(y_tmp(ndof_local))
+y_tmp(1:ndof_local) = 0.d0
+
+!$omp parallel default(none)                                                                                         &
+!$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize, nz_glob, local_index_start, index_offset)  &
+!$omp   private(i,iA_start,ix_start, iy_start, ir, jc, y_tmp_block)
 
 !$omp do
 do i=1, n_blocks
 
   iA_start = (i-1) * n_blocksize**2
   ix_start = jcn_glob(iA_start+1)
-  iy_start = irn_glob(iA_start+1)
+  iy_start = irn_glob(iA_start+1) - index_offset
 
-  call dgemv('T',n_blocksize,n_blocksize,1.d0,A_glob(iA_start+1),n_blocksize,x(ix_start),1,1.d0,y_tmp(iy_start),1)
+  call dgemv('T',n_blocksize,n_blocksize,1.d0,A_glob(iA_start+1),n_blocksize,x(ix_start),1,0.d0,y_tmp_block,1)
+
+!$omp critical
+  y_tmp(iy_start:iy_start+n_blocksize-1) = y_tmp(iy_start:iy_start+n_blocksize-1) + y_tmp_block(1:n_blocksize)
+!$omp end critical
 
 enddo
 !$omp end do
@@ -60,11 +72,22 @@ call cpu_time(t4)
 
 y(1:ndof_glob) = 0.d0
 
-call MPI_Reduce(y_tmp,y,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+allocate(recv_counts(n_cpu),recv_disp(n_cpu))
+
+do i=1,n_cpu
+  recv_counts(i) = (local_index_end(i) - local_index_start(i) + 1) * n_blocksize
+enddo
+
+recv_disp(1) = 0
+do i=2,n_cpu
+  recv_disp(i) = recv_disp(i-1) + recv_counts(i-1)
+enddo
+
+call mpi_gatherv(y_tmp,ndof_local,MPI_DOUBLE_PRECISION,y,recv_counts,recv_disp,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 
 call cpu_time(t5)
 
-deallocate(y_tmp)
+deallocate(y_tmp,recv_counts,recv_disp)
 
 !write(*,'(A,i3,3f14.6)') ' M-V timing  barrier: ',my_id,t2-t1
 !write(*,'(A,i3,3f14.6)') ' M-V timing  bcast  : ',my_id,t3-t2

@@ -26,7 +26,7 @@ real*8  :: zbig, psi_axis, psi_bnd, Z_xpoint
 integer :: i_bnd, i, in, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
 integer :: index_i, index_node, index_node1, index_node2, i_order, k_order, ic, ielm, ierr
 integer :: ijA_position, ijA_position2, nz_AA2, n_AA2, kv, kT, ku
-integer :: index_large_i, index_large_k, ilarge2, vertex(2)
+integer :: index_large_i, index_large_k, ilarge2, vertex(2), direction(2)
 integer :: omp_nthreads, omp_tid
 logical :: xpoint2
 
@@ -82,7 +82,7 @@ RHS_loc  = 0.d0
 !$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id)              &
 !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,            &
 !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position, &
-!$omp           l,index_kl,ilarge2,iv2,vertex,inode2,omp_nthreads,omp_tid)
+!$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid)
 
 !omp_nthreads = omp_get_num_threads()
 !omp_tid      = omp_get_thread_num()
@@ -112,40 +112,42 @@ do ife =1, n_local_elms
 
     call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)          ! use direct integration
 
-!    do iv = 1, n_vertex_max                                                                     ! boundary integrals
-!
-!      iv2  = mod(iv, n_vertex_max) + 1
-!
-!      inode1 = element%vertex(iv)
-!      inode2 = element%vertex(iv2)
-!
+    do iv = 1, n_vertex_max                                                                     ! boundary integrals
+
+      iv2  = mod(iv, n_vertex_max) + 1
+
+      inode1 = element%vertex(iv)
+      inode2 = element%vertex(iv2)
+
 !      if (     ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
 !         .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-!	nodes(1) = node_list%node(inode1)
-!	nodes(2) = node_list%node(inode2)
-!	vertex   = (/ iv, iv2 /)
+!	nodes(1)  = node_list%node(inode1)
+!	nodes(2)  = node_list%node(inode2)
+!	vertex    = (/ iv, iv2 /)
+!        direction = (/  1, 2   /)
 
 !	write(*,*) iv,iv2,'boundary_matrix_open : ',inode1,inode2
 
-!        call boundary_matrix_open(vertex, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! only for open field lines for now
+!        call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
 
 !      endif
 
-!      if (     ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-!         .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+      if (     ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+         .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-!	nodes(1) = node_list%node(inode1)
-!	nodes(2) = node_list%node(inode2)
-!	vertex   = (/ iv, iv2 /)
+	nodes(1)  = node_list%node(inode1)
+	nodes(2)  = node_list%node(inode2)
+	vertex    = (/ iv, iv2 /)
+        direction = (/ 1, 3    /)
 
 !	write(*,*) iv,iv2,'boundary_matrix : ',inode1,inode2
 
-!        call boundary_matrix(vertex, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! only for open field lines for now
+!        call boundary_matrix(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for closed field lines
 
-!      endif
+      endif
 
-!    enddo
+    enddo
 
   endif
 
@@ -167,17 +169,7 @@ do ife =1, n_local_elms
 !    enddo
 !  endif
 
-!    if (ife .eq. n_local_elms/2) then
-!    do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
-!      write(*,'(i3,A,i6,4e16.8)') my_id,' RHS : ',i,RHS(i)
-!    enddo
-!    do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
-!      do j=1,n_tor*n_vertex_max*(n_order+1)*n_var
-!        write(*,'(i3,A,2i6,8e16.8)') my_id,' ELM : ',i,j,ELM(i,j)
-!      enddo
-!    enddo
-!    endif
-
+!$omp critical
   do i=1,n_vertex_max
 
     inode1         = element%vertex(i)
@@ -229,6 +221,7 @@ do ife =1, n_local_elms
 
     enddo
   enddo
+!$omp end critical
 
 enddo
 !$omp end do
@@ -238,7 +231,11 @@ call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_CO
 
 deallocate(RHS_loc)
 
-!call vacuum(my_id,node_list,element_list,boundary_list,index_min,index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint)
+!------------------vacuum cannot be called on an element by element basis. The vacuum couples all boundary points!
+
+if (freeboundary) then
+  call vacuum(my_id,node_list,element_list,boundary_list,index_min,index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint)
+endif
 
 call boundary_conditions(my_id,node_list,element_list,local_elms,n_local_elms,index_min,index_max, &
                          xpoint2,psi_axis,psi_bnd,Z_xpoint)

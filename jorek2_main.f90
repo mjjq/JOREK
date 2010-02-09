@@ -82,18 +82,17 @@ program JOREK2
   !*                  intialisation                                      *
   !***********************************************************************
 
-  !call MPI_INIT(IERR)                                ! initialise MPI
+  !call MPI_INIT(IERR)                                     ! initialise MPI
 
   required=MPI_THREAD_MULTIPLE
-  call MPI_Init_thread(required,provided,StatInfo)    ! initialise threaded MPI (openMPI)
+  call MPI_Init_thread(required,provided,StatInfo)         ! initialise threaded MPI (openMPI)
 
-
-
-  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)      ! the id of each cpu
-  my_id = rank
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)           ! the id of each cpu
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
+  my_id = rank
   n_cpu = comm_size
-  method = 'gmres'             ! options 'direct' or 'gmres'
+
+  method = 'gmres'                                         ! options 'direct' or 'gmres'
   gmres  = .true.
   if (trim(method) .ne. 'direct') then
      method = 'gmres'
@@ -112,7 +111,7 @@ program JOREK2
   pastix_analysed    = .false.
   murge_initialised  = .false.
   pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!
-  ! requires no_mpi for Pastix library
+                                       ! requires no_mpi for Pastix library
   adaptive_time = .false.
 
   if (n_tor .eq. 1) then
@@ -145,6 +144,7 @@ program JOREK2
         !    stop
      endif
   endif
+
 
   if (my_id .eq. 0) write(*,*) '****************************************'
   if (my_id .eq. 0) write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
@@ -212,7 +212,7 @@ program JOREK2
         endif
 
         call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
-        !    call print_grid(node_list,element_list,boundary_list)                   ! print the grid
+!        call print_grid(node_list,element_list,boundary_list)                  ! print the grid
 
      endif
 
@@ -264,8 +264,6 @@ program JOREK2
   call broadcast_nodes(my_id,node_list)                   ! sending all nodes
   call broadcast_phys(my_id)                              ! sending the physics parameters
 
-  !write(*,*) ' n_elements : ',my_id,element_list%n_elements
-  !write(*,*) ' n_nodes    : ',my_id,node_list%n_nodes
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -292,9 +290,11 @@ program JOREK2
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   endif
+
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *
   !***********************************************************************
+
   t_now         = t_start
   index_now     = index_start
 
@@ -321,7 +321,6 @@ program JOREK2
 
      if (trim(method) .ne. 'direct') then
 
-
         M_cpu = n_cpu / ((n_tor+1)/2)
 
         N_masters = (n_tor+1)/2
@@ -332,7 +331,7 @@ program JOREK2
            i_tor(i) = (i-1) / M_cpu  + 1
            write (*,*) "i_tor(i)", i_tor(i)
         enddo
-!        stop
+
         call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),i_tor(my_id+1),MPI_COMM_N,ierr)
 
         i_rank(1) = 0
@@ -365,11 +364,14 @@ program JOREK2
           .and. trim(method) .ne. 'direct') THEN
         allocate(local_elms(element_list%n_elements))
         allocate(index_min(n_cpu_n),index_max(n_cpu_n))
+        allocate(local_index_start(n_cpu),local_index_end(n_cpu))
         
         call distribute_nodes_elements(my_id_n,n_cpu_n,node_list,element_list,local_elms,n_local_elms, &
              ndof_glob,index_min,index_max)
      
         node_list%n_dof = ndof_glob
+	local_index_start = index_min
+	local_index_end   = index_max	
         
         call global_matrix_structure(my_id_n,node_List,element_list,boundary_list, freeboundary,&
              local_elms,n_local_elms,index_min(my_id_n+1),index_max(my_id_n+1))
@@ -377,11 +379,14 @@ program JOREK2
      ELSE
         allocate(local_elms(element_list%n_elements))
         allocate(index_min(n_cpu),index_max(n_cpu))
+        allocate(local_index_start(n_cpu),local_index_end(n_cpu))
         
         call distribute_nodes_elements(my_id,n_cpu,node_list,element_list,local_elms,n_local_elms, &
              ndof_glob,index_min,index_max)
      
-        node_list%n_dof = ndof_glob
+        node_list%n_dof   = ndof_glob
+	local_index_start = index_min
+	local_index_end   = index_max	
         
         call global_matrix_structure(my_id,node_List,element_list,boundary_list, freeboundary,&
              local_elms,n_local_elms,index_min(my_id+1),index_max(my_id+1))

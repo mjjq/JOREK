@@ -51,6 +51,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   CHARACTER*8                    :: method
   INTEGER                        :: i_tor(n_cpu)
   INTEGER                        :: n_cpu
+  INTEGER                        :: column_number
   INTEGER                        :: mpi_comm_n
 
   ! local variables
@@ -74,49 +75,48 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   WRITE(*,*) '****************************************'
   WRITE(*,*) ' n_elements (local)       : ',my_id,n_local_elms
 
-
   IF (ALLOCATED(rhs_glob))        DEALLOCATE(rhs_glob)
   IF (method .EQ. "direct") THEN
-     ALLOCATE(rhs_glob(ndof_glob))
-     IF (.NOT. ALLOCATED(rhs_loc))   ALLOCATE(rhs_loc(ndof_glob))
+     column_number = ndof_glob
   ELSE
      IF (i_tor(my_id+1) == 1) THEN
-        ALLOCATE(rhs_glob(ndof_glob/n_tor))
-        IF (.NOT. ALLOCATED(rhs_loc))   ALLOCATE(rhs_loc(ndof_glob/n_tor))
+        column_number = ndof_glob/n_tor
      ELSE
-        ALLOCATE(rhs_glob(ndof_glob*2/n_tor))
-        IF (.NOT. ALLOCATED(rhs_loc))   ALLOCATE(rhs_loc(ndof_glob*2/n_tor))
+        column_number = ndof_glob*2/n_tor
      END IF    
   END IF
+
+  ALLOCATE(rhs_glob(column_number))
+  IF (.NOT. ALLOCATED(rhs_loc))   ALLOCATE(rhs_loc(column_number))
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
 
   !
-  ! Count coefnbr
+  ! Count coefnbr 
   !
   coefnbr = 0
   DO ife =1, n_local_elms
-
+     
      ielm = local_elms(ife)
-
+     
      element = element_list%element(ielm)
-
+     
      DO i=1,n_vertex_max
-
+        
         inode1         = element%vertex(i)
-
+        
         DO i_order = 1, n_order+1
-
+           
            index_node1 = node_list%node(inode1)%index(i_order)
-
+   
            CALL vertex_is_local(index_node1, is_local)
            IF (is_local) THEN 
               coefnbr = coefnbr + 1
            ENDIF
-
+   
         ENDDO
      ENDDO
-
+     
   ENDDO
   IF (method .EQ. "direct") THEN
      coefnbr = coefnbr * (n_vertex_max)*(n_order+1)* (n_var * n_tor)* (n_var * n_tor)
@@ -173,9 +173,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                     
                     index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
                     index_rhs = index_large_i+j
-                    if (index_rhs > ndof_glob .or. index_rhs < 1) then
+                    if (index_rhs > column_number .or. index_rhs < 1) then
                        write (*,*) "index_rhs", index_rhs
-                       write (*,*) "ndof_glob", ndof_glob*2/n_tor
+                       write (*,*) "column_number", column_number
                        write (*,*) "index_large_i", index_large_i
                        write (*,*) "j", j
                              stop
@@ -190,9 +190,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                           ! index in the RHS
                           index_ij  = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j 
                           index_rhs = index_large_i/n_tor+INT((j-1)/n_tor)+1
-                          if (index_rhs > ndof_glob/n_tor .or. index_rhs < 1) then
+                          if (index_rhs > column_number .or. index_rhs < 1) then
                              write (*,*) "index_rhs", index_rhs
-                             write (*,*) "ndof_glob/n_tor", ndof_glob/n_tor
+                             write (*,*) "column_number", column_number
                              write (*,*) "index_large_i", index_large_i
                              write (*,*) "j", j
                              stop
@@ -208,9 +208,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                           ! index in the RHS
                           index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j 
                           index_rhs = index_large_i*2/n_tor+INT((j-1)/n_tor)*2+MOD(MOD(j-1, n_tor)+1,2)+1 
-                          if (index_rhs > ndof_glob*2/n_tor .or. index_rhs < 1) then
+                          if (index_rhs > column_number .or. index_rhs < 1) then
                              write (*,*) "index_rhs", index_rhs
-                             write (*,*) "ndof_glob*2/n_tor", ndof_glob*2/n_tor
+                             write (*,*) "column_number", column_number
                              write (*,*) "index_large_i", index_large_i
                              write (*,*) "j", j, INT((j-1)/n_tor), MOD(MOD(j-1, n_tor)+1,2)+1 
                              stop
@@ -248,7 +248,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                           
                        ENDDO
                        cnt = cnt + n_var*n_var * n_tor * n_tor
-                       CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node2, index_node1, &
+                       CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node1, index_node2, &
                             coefmtx, ierr)
                        IF (ierr /= MURGE_SUCCESS) THEN
                           WRITE (*,*) my_id, ":::", &
@@ -277,7 +277,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                              ENDDO
                              
                           ENDDO
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node2, index_node1, &
+                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node1, index_node2, &
                                coefmtx, ierr)
                           cnt = cnt + n_var*n_var
                           IF (ierr /= MURGE_SUCCESS) THEN
@@ -305,7 +305,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                              ENDDO
                              
                           ENDDO
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node2, index_node1, &
+                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node1, index_node2, &
                                coefmtx, ierr)
                           cnt = cnt + n_var*n_var * 4
                           IF (ierr /= MURGE_SUCCESS) THEN
@@ -335,23 +335,26 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      CALL boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
           psi_bnd)
   END IF
-  
+
   IF (method .EQ. "direct") THEN
      write (*,*) MY_ID, " : Reduce..."
-     CALL MPI_Allreduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
+     CALL MPI_Allreduce(RHS_loc,RHS_glob,column_number,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
   ELSE
      IF (i_tor(my_id+1) == 1) THEN
         write (*,*) my_id, " : Reduce...."
-        CALL MPI_Allreduce(RHS_loc,RHS_glob,ndof_glob/n_tor,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N, ierr)
+        CALL MPI_Allreduce(RHS_loc,RHS_glob,column_number,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N, ierr)
      ELSE
         write (*,*) my_id, " : Reduce.."
-        CALL MPI_AllReduce(RHS_loc,RHS_glob,ndof_glob*2/n_tor,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
+        CALL MPI_AllReduce(RHS_loc,RHS_glob,column_number,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
      END IF    
   END IF
-
-
-   write(*,*) '******** end construct matrix **********'
-
+  
+  IF(ALLOCATED(column_scaling))   DEALLOCATE(column_scaling)
+  ALLOCATE(column_scaling(column_number))
+  CALL MURGE_GetGlobalNorm(id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
+  CALL MURGE_ApplyGlobalScaling(id, column_scaling, -1, ierr)
+  write(*,*) '******** end construct matrix **********'
+  
   DEALLOCATE(RHS_loc)
 
   RETURN

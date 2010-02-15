@@ -66,24 +66,24 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, &
   !------------------------------------------------------- colunm scaling of global distributed matrix
   CALL CPU_TIME(t_scale_0)
 
-  IF (ALLOCATED(column_scaling))  DEALLOCATE(column_scaling)
-  IF (ALLOCATED(column_local))    DEALLOCATE(column_local)
-  ALLOCATE(column_scaling(mumps_par%N),column_local(mumps_par%N))
 
   if (.not. use_murge_element) then
+     IF (ALLOCATED(column_scaling))  DEALLOCATE(column_scaling)
+     IF (ALLOCATED(column_local))    DEALLOCATE(column_local)
+     ALLOCATE(column_scaling(mumps_par%N),column_local(mumps_par%N))
+
      column_local = 1.d-20;   column_scaling = 1.d-20
      DO k=1,nz_glob
         j = jcn_glob(k)
         column_local(j) = MAX(column_local(j),ABS(A_glob(k)))
      ENDDO
-     
+
      CALL MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
      DO k=1,nz_glob
         j = jcn_glob(k)
         A_glob(k) = A_glob(k) / column_scaling(j)
      ENDDO
-  else
-     column_local = 1.d0;     column_scaling = 1.d0
+
   end if
 
   CALL CPU_TIME(t_scale_1)
@@ -232,6 +232,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, &
   ALLOCATE(mumps_par%rhs(mumps_par%n))
 
   CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
+  
   CALL CPU_TIME(t_fact_1)
 
   IF (my_id .EQ. 0) WRITE(*,'(A,f8.3)')  ' PASTIX, fact/solv : ',t_fact_1-t_fact_0

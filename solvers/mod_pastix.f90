@@ -12,11 +12,11 @@ module pastix_module             ! PastiX specific variables
   integer, parameter    :: pastix_rhs      = 0
   integer, parameter    :: pastix_sym      = 1
   integer               :: pastix_nthrd    = 1
-  integer, parameter    :: pastix_iter     = 2
+  integer, parameter    :: pastix_iter     = 255
   integer, parameter    :: pastix_ricar    = 0
   integer, parameter    :: pastix_iluk     = 3
   integer, parameter    :: pastix_amalg    = 5
   integer, parameter    :: pastix_endsolve = 6
-  real*8,  parameter    :: pastix_epsilon  = 1.d-16
+  real*8,  parameter    :: pastix_epsilon  = 1.d-15
   real*8,  parameter    :: pastix_pivot    = 1.d-64
 endmodule pastix_module

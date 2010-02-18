@@ -352,7 +352,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   IF(ALLOCATED(column_scaling))   DEALLOCATE(column_scaling)
   ALLOCATE(column_scaling(column_number))
   CALL MURGE_GetGlobalNorm(id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
-  CALL MURGE_ApplyGlobalScaling(id, column_scaling, -1, ierr)
+  CALL MURGE_ApplyGlobalScaling(id, column_scaling, -1, MURGE_SCAL_COL, ierr)
   write(*,*) '******** end construct matrix **********'
   
   DEALLOCATE(RHS_loc)

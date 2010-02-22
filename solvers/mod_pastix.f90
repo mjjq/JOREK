@@ -13,6 +13,7 @@ module pastix_module             ! PastiX specific variables
   integer, parameter    :: pastix_sym      = 1
   integer               :: pastix_nthrd    = 1
   integer, parameter    :: pastix_iter     = 255
+  integer, parameter    :: pastix_verb     = 2
   integer, parameter    :: pastix_ricar    = 0
   integer, parameter    :: pastix_iluk     = 3
   integer, parameter    :: pastix_amalg    = 5

@@ -112,15 +112,6 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  pastix_iparm(2)     = 0                                     ! initializse
                  pastix_iparm(3)     = 0
 
-                 pastix_iparm(31) = pastix_facto
-                 pastix_iparm(35) = pastix_nthrd                             ! thread/mpi
-                 pastix_iparm(39) = pastix_rhs
-                 pastix_iparm(41) = pastix_sym
-
-                 pastix_iparm(42) = pastix_ricar
-                 pastix_iparm(37) = pastix_iluk
-                 pastix_iparm(14) = pastix_amalg
-
                  if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 
                  allocate(pastix_perm_vars(mumps_par%n),pastix_iperm_vars(mumps_par%n))
@@ -128,6 +119,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
+                 pastix_iparm(4) = pastix_verb
                  pastix_initialised = .true.
 
               endif
@@ -148,7 +140,6 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               pastix_iparm(31) = pastix_facto
               pastix_iparm(35) = pastix_nthrd               !   numthreads   ! number of threads
               pastix_iparm(39) = pastix_rhs                 ! right hand side (0 : use RHS)
-              pastix_iparm(37) = pastix_iluk
               pastix_iparm(41) = pastix_sym
 
               pastix_iparm(42) = pastix_ricar
@@ -199,7 +190,6 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
         pastix_iparm(31) = pastix_facto
         pastix_iparm(35) = pastix_nthrd         ! numthreads   ! number of threads
-        pastix_iparm(37) = pastix_iluk 
         pastix_iparm(39) = pastix_rhs         ! right hand side (0 : use RHS)
         pastix_iparm(41) = pastix_sym
 
@@ -243,7 +233,6 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
      pastix_iparm(31) = pastix_facto
      pastix_iparm(35) = pastix_nthrd ! numthreads   ! number of threads
-     pastix_iparm(37) = pastix_iluk
      pastix_iparm(39) = pastix_rhs            ! right hand side (0 : use RHS)
      pastix_iparm(41) = pastix_sym
 

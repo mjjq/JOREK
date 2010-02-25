@@ -14,7 +14,7 @@
 !*   psi_axis     - ???                                                        *
 !*   psi_bnd      - ???                                                        *
 !*   Z_xpoint     - ???                                                        *
-!*   method       - Solve method ('gmres' or 'direct')                         *
+!*   gmres        - Solve method (.true. for gmres, .false for 'direct')       *
 !*   i_tor        - Tor number                                                 *
 !*   n_cpu        - Number of cpus                                             *
 !*   mpi_comm_n   - Solver MPI communicator                                    *
@@ -24,7 +24,7 @@
 !*                                                                             *
 !*******************************************************************************
 SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
-     n_local_elms, xpoint2,psi_axis,psi_bnd,Z_xpoint, method, i_tor, n_cpu, &
+     n_local_elms, xpoint2,psi_axis,psi_bnd,Z_xpoint, gmres, i_tor, n_cpu, &
      mpi_comm_n)
   !---------------------------------------------------------------
   ! collect the element matrices into one large sparse matrix
@@ -48,7 +48,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   REAL*8                         :: psi_axis
   REAL*8                         :: psi_bnd
   REAL*8                         :: Z_xpoint
-  CHARACTER*8                    :: method
+  LOGICAL                        :: gmres
   INTEGER                        :: i_tor(n_cpu)
   INTEGER                        :: n_cpu
   INTEGER                        :: column_number
@@ -76,7 +76,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   WRITE(*,*) ' n_elements (local)       : ',my_id,n_local_elms
 
   IF (ALLOCATED(rhs_glob))        DEALLOCATE(rhs_glob)
-  IF (method .EQ. "direct") THEN
+  IF (.not. gmres) THEN
      column_number = ndof_glob
   ELSE
      IF (i_tor(my_id+1) == 1) THEN
@@ -118,7 +118,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      ENDDO
      
   ENDDO
-  IF (method .EQ. "direct") THEN
+  IF (.not. gmres) THEN
      coefnbr = coefnbr * (n_vertex_max)*(n_order+1)* (n_var * n_tor)* (n_var * n_tor)
   ELSE
      IF (i_tor(my_id+1) == 1) THEN 
@@ -168,7 +168,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
            IF (is_local) THEN
               
               ! Set RHS member
-              IF (method == "direct") THEN
+              IF (.not. gmres) THEN
                  DO j = 1, n_var * n_tor
                     
                     index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
@@ -234,7 +234,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
                     coefmtx = 0
                     ! BUILD node Matrix
-                    IF (method == "direct") THEN
+                    IF (.not. gmres) THEN
                        DO j = 1, n_var * n_tor
                           ! Row index in the ELM matrix
                           index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
@@ -331,12 +331,12 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   !----------------------- boundary conditions
   
-  IF (method == "direct") THEN
+  IF (.not. gmres) THEN
      CALL boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
           psi_bnd)
   END IF
 
-  IF (method .EQ. "direct") THEN
+  IF (.not. gmres) THEN
      write (*,*) MY_ID, " : Reduce..."
      CALL MPI_Allreduce(RHS_loc,RHS_glob,column_number,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
   ELSE
@@ -353,7 +353,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   ALLOCATE(column_scaling(column_number))
   CALL MURGE_GetGlobalNorm(id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
   CALL MURGE_ApplyGlobalScaling(id, column_scaling, -1, MURGE_SCAL_COL, ierr)
-  write(*,*) '******** end construct matrix **********'
+  write(*,*) '******** end construct matrix murge **********'
   
   DEALLOCATE(RHS_loc)
 

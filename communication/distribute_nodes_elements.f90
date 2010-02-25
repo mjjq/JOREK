@@ -2,6 +2,8 @@ subroutine distribute_nodes_elements(my_id,n_cpu,node_list,element_list, &
                                     local_elms, n_local_elms, n_dof, index_min, index_max)
 !---------------------------------------------------------------------------------------------
 ! subroutine divides the nodes (not their individual dof) over n_cpu equal parts
+!            builds local_elms, contain all elements with at least one node with 
+!            one index between index_min and index_max
 !---------------------------------------------------------------------------------------------
 use data_structure
 

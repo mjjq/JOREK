@@ -48,35 +48,36 @@ program JOREK2
   include 'mpif.h'
 
   type (type_surface_list) :: surface_list
-  logical                  :: grid_changed, ELM_is_local
+  logical                  :: grid_changed
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
-  real*8                   :: t_matrix_0, t_matrix_1, t_fact_0, t_fact_1, t_analysis_0, t_analysis_1, t_reduce_0, t_reduce_1, PI
+  real*8                   :: t_matrix_0, t_matrix_1, PI
   real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
-  integer                  :: istep,ierr,i,j,k,in,iv, inode, index, index_node, i_elm_axis, i_elm_xpoint
-  integer                  :: nznew, first_row, last_row, isize, n_local_ELMs, inext, index_part, index_total
-  integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, i_dof, j_dof
-  integer                  :: iter_gmres, n_bnd
+  integer                  :: istep,ierr,i,k,inode, i_elm_axis, i_elm_xpoint
+  integer                  :: n_local_ELMs, index_total
+  integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters
+  integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER
-  character*8              :: method, label
+  character*8              :: label
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
-  real*8                   :: zjz,dj_dpsi,dj_dz, E_min, E_max
+  real*8                   :: zjz, E_min, E_max
   logical                  :: gmres, solve_only, adaptive_time
   integer*4                :: rank, comm_size 
   real*8 :: zn, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz
   real*8 :: zT, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz
   real*8 :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
-  real*8 :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, R, psi
-  real*8 :: Rp_start, Rp_end, Zp_start, Zp_end
-  real*8,allocatable :: xp(:), yp1(:), yp2(:), yp3(:)
-  integer            :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon
-  logical            :: is_local
-  integer            :: i_elem, inode1, inode2, i_order, k_order, index_node1, index_node2, knode
+  real*8 :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, psi
+  real*8 :: Rp_start, Rp_end
+  real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon
+  logical                  :: is_local
+  integer                  :: i_elem, inode1, i_order, k_order, index_node1, index_node2, knode
   TYPE (type_element)      :: element
+  integer                  :: index_size, id_elements
 
   !***********************************************************************
   !*                  intialisation                                      *
@@ -92,21 +93,12 @@ program JOREK2
   my_id = rank
   n_cpu = comm_size
 
-  method = 'gmres'                                         ! options 'direct' or 'gmres'
-  gmres  = .true.
-  if (trim(method) .ne. 'direct') then
-     method = 'gmres'
-     gmres  = .true.
-  endif
+  gmres  = .true.                                          ! .true. for gmres, .false. for direct
 
   use_mumps  = .false.
   use_pastix = (.not. use_mumps)
-  use_murge  = .true.
-  use_murge_element = .true.
-  if (method == "gmres") then
-     use_murge  = .false.
-     use_murge_element = .false.
-  end if
+  use_murge  = .false.
+  use_murge_element  = .false. 
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.
@@ -115,10 +107,9 @@ program JOREK2
   adaptive_time = .false.
 
   if (n_tor .eq. 1) then
-     method = 'direct'
      gmres  = .false.
   endif
-
+  if (gmres) use_murge_element = .false.
   !---------------------------------------------------------- some checks not to waste any cpu time
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
      write(*,*) ' FATAL : specify a valid solver'
@@ -132,11 +123,11 @@ program JOREK2
      stop
   endif
 
-  if (trim(method) .ne. 'direct') then
+  if (gmres) then
      if (n_cpu .lt. (n_tor-1)/2+1) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-        !    call MPI_FINALIZE(IERR)                                ! clean up MPI
-        !    stop
+        call MPI_FINALIZE(IERR)                                ! clean up MPI
+        stop
      endif
      if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
@@ -319,20 +310,27 @@ program JOREK2
      !*                   (i.e id=0 from each MPI_COMM_N)   *
      !*******************************************************
 
-     if (trim(method) .ne. 'direct') then
-
-        M_cpu = n_cpu / ((n_tor+1)/2)
+     if (gmres) then
 
         N_masters = (n_tor+1)/2
+        if (MOD(n_cpu, N_masters) == 0) then
+           M_cpu = n_cpu / (N_masters)
+        else
+           M_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
+        end if
 
         allocate(i_tor(n_cpu))
 
         do i=1,n_cpu
-           i_tor(i) = (i-1) / M_cpu  + 1
-           write (*,*) "i_tor(i)", i_tor(i)
+           if (MOD(i-1, M_cpu)==0) then
+              i_tor(i) = (i-1) / M_cpu  + 1
+           else
+              i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
+           end if
+           write (*,*) "i_tor(i)", i_tor(i), M_cpu
         enddo
 
-        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),i_tor(my_id+1),MPI_COMM_N,ierr)
+        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
 
         i_rank(1) = 0
         do i=2,N_masters
@@ -341,11 +339,11 @@ program JOREK2
 
         call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
         call MPI_GROUP_INCL(MPI_GROUP_WORLD,N_masters,i_rank,MPI_GROUP_MASTER,ierr)
+
         call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MASTER,MPI_COMM_MASTER,ierr)
 
         call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)                 ! the id of each cpu
         call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr)                 ! the number of cpus
-
         if (my_id_n .eq. 0) then
            call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
            call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
@@ -361,36 +359,34 @@ program JOREK2
      IF (use_pastix == .true. &
           .and. use_murge == .true. &
           .and. use_murge_element == .true.&
-          .and. trim(method) .ne. 'direct') THEN
-        allocate(local_elms(element_list%n_elements))
-        allocate(index_min(n_cpu_n),index_max(n_cpu_n))
-        allocate(local_index_start(n_cpu),local_index_end(n_cpu))
-        
-        call distribute_nodes_elements(my_id_n,n_cpu_n,node_list,element_list,local_elms,n_local_elms, &
-             ndof_glob,index_min,index_max)
-     
-        node_list%n_dof = ndof_glob
-	local_index_start = index_min
-	local_index_end   = index_max	
-        
-        call global_matrix_structure(my_id_n,node_List,element_list,boundary_list, freeboundary,&
-             local_elms,n_local_elms,index_min(my_id_n+1),index_max(my_id_n+1))
+          .and. gmres) THEN
+        index_size  = n_cpu_n
+        id_elements = my_id_n
 
      ELSE
-        allocate(local_elms(element_list%n_elements))
-        allocate(index_min(n_cpu),index_max(n_cpu))
-        allocate(local_index_start(n_cpu),local_index_end(n_cpu))
-        
-        call distribute_nodes_elements(my_id,n_cpu,node_list,element_list,local_elms,n_local_elms, &
-             ndof_glob,index_min,index_max)
-     
-        node_list%n_dof   = ndof_glob
-	local_index_start = index_min
-	local_index_end   = index_max	
-        
-        call global_matrix_structure(my_id,node_List,element_list,boundary_list, freeboundary,&
-             local_elms,n_local_elms,index_min(my_id+1),index_max(my_id+1))
+        index_size  = n_cpu
+        id_elements = my_id
      END IF
+
+
+     allocate(local_elms(element_list%n_elements))
+     allocate(index_min(index_size),index_max(index_size))
+     allocate(local_index_start(n_cpu),local_index_end(n_cpu))
+     
+     !
+     ! Construct index_min, index_max and local_elems
+     !
+     call distribute_nodes_elements(id_elements,index_size,node_list,element_list,local_elms,n_local_elms, &
+          ndof_glob,index_min,index_max)
+     
+     node_list%n_dof = ndof_glob
+     local_index_start = index_min
+     local_index_end   = index_max
+     !
+     ! Build ijA_index, ijA_size and irn_jcn
+     !
+     call global_matrix_structure(my_id_n,node_List,element_list,boundary_list, freeboundary,&
+          local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
 
      IF (use_pastix == .true. &
           .and. use_murge == .true. &
@@ -402,11 +398,11 @@ program JOREK2
         ! Murge initialisation and 
         ! graph definition edge by edge
         !
-        IF (.NOT. murge_initialised) THEN
+        IF (use_murge_element .and. .NOT. murge_initialised) THEN
            !
            ! Init murge
            !
-           if (trim(method) .ne. 'direct') then
+           if (gmres) then
               CALL MURGE_Initialize(N_masters, ierr)
               id = i_rank(i_tor(my_id+1))/M_cpu;
               CALL MURGE_SetCommunicator(id, MPI_COMM_N, ierr)
@@ -415,14 +411,16 @@ program JOREK2
               id = 0;
            end if
 
+           CALL MURGE_GetSolver(solver, ierr)
            IF (solver == MURGE_SOLVER_PASTIX) THEN
               CALL MURGE_SetDefaultOptions(id, 0, ierr)
+              write (*,*) "--- Murge_setdefaultoptions ---"
               CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES, ierr)
               CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
               ! refinement : max number of iterations
               CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,      ierr) 
               ! degrees of freedom per node (not correct)
-              if (trim(method) .eq. 'gmres') then
+              if (gmres) then
                  if ( i_tor(my_id+1) == 1 ) then
                     CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,    n_var,           ierr) 
                  else
@@ -451,6 +449,7 @@ program JOREK2
            murge_initialised = .TRUE.
 
         ENDIF
+
         !
         ! Build the graph
         !
@@ -487,9 +486,9 @@ program JOREK2
                        index_node2 = node_list%node(knode)%index(k_order)
                        
                        
-                       CALL MURGE_GRAPHEDGE(id,                                 &
-                            index_node1,                                        &
-                            index_node2,                                        &
+                       CALL MURGE_GRAPHEDGE(id,  &
+                            index_node1,         &
+                            index_node2,         &
                             ierr)
                        IF (ierr /= MURGE_SUCCESS) THEN
                           write (*,*) "N", mumps_par%n, &
@@ -505,7 +504,6 @@ program JOREK2
            END DO
         END DO
         CALL MURGE_GRAPHEND(id, ierr)
-        
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GRAPHEND"
            STOP
@@ -586,7 +584,7 @@ program JOREK2
         node_list%n_dof = ndof_glob
      END IF
      if (use_mumps) then
-        if (trim(method) .eq. 'direct') then
+        if (.not. gmres) then
            call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
         else
            call initialise_mumps(MPI_COMM_N)        ! start MUMPS sparse matrix solver on local groups
@@ -602,7 +600,7 @@ program JOREK2
   !***********************************************************************
   !***********************************************************************
 
-
+ 
   if (nstep .gt. 0) call update_deltas(my_id,node_list)        ! create list of delta values in local_matrix module
 
   iter_gmres  = 999
@@ -636,8 +634,8 @@ program JOREK2
           .and. use_murge_element == .true.) THEN
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint, &
-             psi_axis, psi_bnd, Z_xpoint, method, i_tor, n_cpu, mpi_comm_n)        ! construct the matrix from elemental matrices
-
+             psi_axis, psi_bnd, Z_xpoint, gmres, i_tor, n_cpu, mpi_comm_n)        ! construct the matrix from elemental matrices
+        
      ELSE
         call construct_matrix(my_id, local_elms, &
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
@@ -652,7 +650,7 @@ program JOREK2
 
      call cpu_time(t_solve_0)
 
-     if (trim(method) .eq. 'direct') then
+     if (.not. gmres) then
 
         if (use_mumps) then
 
@@ -662,7 +660,7 @@ program JOREK2
 
            ! Recuperer la solution
            if (use_murge) then
-              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, method, my_id_n, mpi_comm_n, mpi_comm_master)
+              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
            else
               call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
            endif
@@ -697,8 +695,8 @@ program JOREK2
      
         if (.not. gmres) call update_rhs_n(my_id,my_id_n)      ! correct the RHS with the previous solution (deltas)
 
-        if (use_murge) then
-           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, method, my_id_n, mpi_comm_n, mpi_comm_master)
+        if (use_murge .and. use_murge_element) then
+           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
         else
            call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
         end if
@@ -708,12 +706,12 @@ program JOREK2
 
      call cpu_time(t_solve_1)
 
-     if ((trim(method) .ne. 'direct') .and. (gmres) .and. .not. use_murge .and. .not. use_murge_element) then
+     if (gmres) then
 
         call gmres_driver(my_id,my_id_n,i_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)     ! gmres solution
 
      endif
-
+     
      call cpu_time(t_solve_2)
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -721,7 +719,7 @@ program JOREK2
      if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' solve : ',t_solve_1-t_solve_0
      if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' gmres : ',t_solve_2-t_solve_1
 
-     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (trim(method) .eq. 'direct') ) then
+     if ( (gmres .and. (iter_gmres .lt. iter_big))) then
 
         call update_values(my_id,node_list,deltas)         ! add solution to node values
 
@@ -739,7 +737,7 @@ program JOREK2
      mindelta = minval(deltas); maxdelta = maxval(deltas);
      if (my_id .eq. 0) write(*,'(A,2e16.8,2i12)') ' min/max deltas : ',mindelta,maxdelta,minloc(deltas),maxloc(deltas)
 
-     if ((trim(method) .ne. 'direct') .and. (gmres) .and. (adaptive_time) ) then        ! experimental
+     if (gmres .and. adaptive_time) then        ! experimental
         if (iter_gmres .ge. iter_big) then
            tstep = tstep /2.d0
            write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
@@ -804,7 +802,7 @@ program JOREK2
            pastix_iparm(2)     = 7                       ! Clean-up
            pastix_iparm(3)     = 7
 
-           if (trim(method) .eq. 'direct') then
+           if (.not. gmres) then
 
               call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)

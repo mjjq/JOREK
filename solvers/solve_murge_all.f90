@@ -10,7 +10,7 @@
 !*   index_min       - Minimal index of local nodes                            *
 !*   index_max       - Maximal index of local nodes                            *
 !*   i_tor           - Tor number                                              *
-!*   method          - Solve method ('gmres' or 'direct')                      *
+!*   gmres           - Solve method (.true. for gmres, .false for 'direct')    *
 !*   my_id_n         - Identifier of the node in solver communicator.          *
 !*   mpi_comm_master - masters MPI communicator.                               *
 !*                                                                             *
@@ -18,7 +18,7 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
-SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, & 
+SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, & 
      my_id_n, mpi_comm_master)
   !---------------------------------------------------------------------
   ! subroutine solves the complete system of equation using pastix with
@@ -37,7 +37,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, &
   INTEGER                  :: my_id
   INTEGER                  :: index_min, index_max       ! global index_min, index_max for this cpu
   INTEGER                  :: i_tor(n_cpu)
-  CHARACTER*8              :: method
+  LOGICAL                  :: gmres
   INTEGER                  :: my_id_n
   INTEGER                  :: mpi_comm_master
 
@@ -142,6 +142,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, &
 
      CALL MURGE_Initialize(1, ierr)
      id = 0;
+     CALL MURGE_GetSolver(solver, ierr)
      IF (solver == MURGE_SOLVER_PASTIX) THEN
         CALL MURGE_SetDefaultOptions(id, 0, ierr)
         CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES,  ierr)
@@ -200,7 +201,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, &
   WRITE(*,*) '***********************************'
 
   CALL MURGE_SetGlobalRhs(id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
-  if (method .ne. "direct") then
+  if (gmres) then
      if (my_id_n .eq. 0) then
         
         if (allocated(deltas)) deallocate(deltas)
@@ -238,7 +239,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  method, &
   IF (my_id .EQ. 0) WRITE(*,'(A,f8.3)')  ' PASTIX, fact/solv : ',t_fact_1-t_fact_0
   write (*,*) "mumps_par%n", mumps_par%n, ndof_glob
   write (*,*) "size(deltas)", size(deltas)
-  if (method == "direct") then
+  if (.not. gmres) then
      DO k=1,mumps_par%n
         deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
         !  write(*,*) k,deltas(k)

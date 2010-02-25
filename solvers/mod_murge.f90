@@ -3,7 +3,6 @@ module murge_module             ! Murge specific variables
   include "murge.inc"
   ! Indicate which solver is used
   INTEGER(KIND=MURGE_INTS_KIND)               :: solver  
-  parameter( solver = MURGE_SOLVER_PASTIX ) 
 
   ! Solver identification number
   INTEGER(KIND=MURGE_INTS_KIND)               :: id      
@@ -41,7 +40,7 @@ module murge_module             ! Murge specific variables
 
   ! Number of iteration in refinement
   integer(KIND=MURGE_INTS_KIND)               :: murge_iter
-  parameter (murge_iter=2)
+  parameter (murge_iter=255)
 
   integer(KIND=MURGE_INTS_KIND)               :: murge_ricar
   parameter (murge_ricar=0)

@@ -53,10 +53,13 @@ do i=1, n_local_elms
     if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
     if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
     if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
-
-    index_min_loc = min(index_min_loc, minval(node_list%node(iv)%index))
-    index_max_loc = max(index_max_loc, maxval(node_list%node(iv)%index))
-
+    if (i == 1 .and. iv == 1) then
+       index_min_loc = minval(node_list%node(iv)%index)
+       index_max_loc = maxval(node_list%node(iv)%index)
+    else
+       index_min_loc = min(index_min_loc, minval(node_list%node(iv)%index))
+       index_max_loc = max(index_max_loc, maxval(node_list%node(iv)%index))
+    end if
   enddo
 
 enddo

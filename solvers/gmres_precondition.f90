@@ -6,6 +6,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 use parameters
 use mumps_module
 use pastix_module
+use murge_module
 use global_distributed_matrix
 implicit none
 include 'mpif.h'
@@ -104,37 +105,50 @@ if (use_mumps) then
 
 elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
-  pastix_iparm(2) = 5
-  pastix_iparm(3) = pastix_endsolve
-  pastix_iparm(6) = pastix_iter          ! refinement : max number of iterations
+   if (.not. associated(mumps_par%rhs)) then
+      !    write(*,*) ' gmres: RHS not allocated!',my_id, my_id_n
+      allocate(mumps_par%rhs(mumps_par%n))
+   endif
+   
+   if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
-  pastix_iparm(31) = pastix_facto
-  pastix_iparm(35) = pastix_nthrd         ! numthreads   ! number of threads
-  pastix_iparm(37) = pastix_iluk
-  pastix_iparm(39) = pastix_rhs         ! right hand side (0 : use RHS)
-  pastix_iparm(41) = pastix_sym
+   if (use_murge) then
+      CALL MURGE_SetGlobalRhs(id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
+      if (ierr /= MURGE_SUCCESS) then 
+         write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
+         STOP
+      end if
+      CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
+      if (ierr /= MURGE_SUCCESS) then 
+         write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
+         STOP
+      end if
+   else
+      pastix_iparm(2) = 5
+      pastix_iparm(3) = pastix_endsolve
+      pastix_iparm(6) = pastix_iter          ! refinement : max number of iterations
+      
+      pastix_iparm(31) = pastix_facto
+      pastix_iparm(35) = pastix_nthrd         ! numthreads   ! number of threads
+      pastix_iparm(37) = pastix_iluk
+      pastix_iparm(39) = pastix_rhs         ! right hand side (0 : use RHS)
+      pastix_iparm(41) = pastix_sym
+      
+      pastix_iparm(42) = pastix_ricar
+      pastix_iparm(37) = pastix_iluk
+      pastix_iparm(14) = pastix_amalg
+      
+      pastix_dparm(6)  = pastix_epsilon    ! error level refinement
+      pastix_dparm(11) = pastix_pivot    ! pivot threshold?
 
-  pastix_iparm(42) = pastix_ricar
-  pastix_iparm(37) = pastix_iluk
-  pastix_iparm(14) = pastix_amalg
+      !  write(*,*) my_id, my_id_n,' PRECONDITIONING using PASTIX '
+      
 
-  pastix_dparm(6)  = pastix_epsilon    ! error level refinement
-  pastix_dparm(11) = pastix_pivot    ! pivot threshold?
-
-!  write(*,*) my_id, my_id_n,' PRECONDITIONING using PASTIX '
-
-  if (.not. associated(mumps_par%rhs)) then
-!    write(*,*) ' gmres: RHS not allocated!',my_id, my_id_n
-    allocate(mumps_par%rhs(mumps_par%n))
-  endif
-
-  if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
-
-!  write(*,'(2i3,A,2e16.8)') my_id,my_id_n,' precond : rhs before : ',maxval(mumps_par%rhs),minval(mumps_par%rhs)
-
-  call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
+      !  write(*,'(2i3,A,2e16.8)') my_id,my_id_n,' precond : rhs before : ',maxval(mumps_par%rhs),minval(mumps_par%rhs)
+      
+      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+   end if
 
 endif
 

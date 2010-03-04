@@ -1,7 +1,6 @@
 subroutine add_pellet(node_list,element_list,pellet_density,pellet_size,sig_pellet,pellet_R,pellet_Z)
 
 use data_structure
-use phys_module
 implicit none
 
 type (type_node_list)    :: node_list

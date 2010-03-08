@@ -15,8 +15,9 @@ use parameters
   real*8  :: FF_0,  FF_1,   FF_coef(10)
   real*8  :: particlesource, heatsource,heatsource_i, heatsource_e
   real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par, D_perp(10), D_par
-  real*8  :: D_neutral
+  real*8  :: D_neutral, tauIC
   real*8  :: pellet_amplitude, pellet_R, pellet_Z, pellet_phi, pellet_radius, pellet_sig, pellet_length
+  real*8  :: pellet_psi, pellet_delta_psi
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num
   real*8  :: t_start, t_now
   integer :: nstep, n_R, n_Z, n_radial, n_pol, n_tht, n_flux, n_boundary

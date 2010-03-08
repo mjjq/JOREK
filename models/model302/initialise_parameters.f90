@@ -22,10 +22,11 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
-                particlesource, heatsource,                         &
+                particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
 		pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
 		pellet_radius, pellet_sig, pellet_length,           &
+		pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
 		freeboundary
@@ -109,6 +110,8 @@ if (my_id .eq. 0) then
 
   heatsource     = 1.e-7
   particlesource = 1.e-5
+  
+  tauIC = 0.d0
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
@@ -125,6 +128,8 @@ if (my_id .eq. 0) then
   pellet_radius = 0.08d0
   pellet_sig    = 0.02
   pellet_length = 0.785
+  pellet_psi    = 1.0d0
+  pellet_delta_psi = 999.d0
 
   t_now       = 0.d0
   t_start     = 0.d0

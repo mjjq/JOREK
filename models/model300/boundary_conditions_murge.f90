@@ -153,7 +153,7 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
 
   write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", coefnbr, " entries"
 
-  CALL MURGE_ASSEMBLYBEGIN(id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
+  CALL MURGE_ASSEMBLYBEGIN(id, coefnbr, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
        MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
 
   DO i=1, n_local_elms

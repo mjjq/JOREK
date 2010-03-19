@@ -93,12 +93,12 @@ program JOREK2
   my_id = rank
   n_cpu = comm_size
 
-  gmres  = .false.                                          ! .true. for gmres, .false. for direct
+  gmres  = .true.                                          ! .true. for gmres, .false. for direct
 
   use_mumps  = .false.
   use_pastix = (.not. use_mumps)
-  use_murge  = .true.
-  use_murge_element  = .true.
+  use_murge  = .false.
+  use_murge_element  = .false.
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.

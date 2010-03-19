@@ -168,59 +168,28 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
            IF (is_local) THEN
               
               ! Set RHS member
-              IF (.not. gmres) THEN
-                 DO j = 1, n_var * n_tor
+              DO j = 1, n_var * n_tor
                     
-                    index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
+                 index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
+                 IF (.not. gmres) THEN
                     index_rhs = index_large_i+j
-                    if (index_rhs > column_number .or. index_rhs < 1) then
-                       write (*,*) "index_rhs", index_rhs
-                       write (*,*) "column_number", column_number
-                       write (*,*) "index_large_i", index_large_i
-                       write (*,*) "j", j
-                             stop
-                          end if
-                    rhs_loc(index_rhs) = rhs_loc(index_rhs) + RHS(index_ij)
-                 END DO
-              ELSE
-                 IF (i_tor(my_id+1) == 1) THEN
-                    DO j = 1, n_var * n_tor
-                    
-                       IF (INT((MOD(j-1, n_tor)+1)/2)+1 == i_tor(my_id+1)) THEN
-                          ! index in the RHS
-                          index_ij  = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j 
-                          index_rhs = index_large_i/n_tor+INT((j-1)/n_tor)+1
-                          if (index_rhs > column_number .or. index_rhs < 1) then
-                             write (*,*) "index_rhs", index_rhs
-                             write (*,*) "column_number", column_number
-                             write (*,*) "index_large_i", index_large_i
-                             write (*,*) "j", j
-                             stop
-                          end if
-                          rhs_loc(index_rhs) = rhs_loc(index_rhs) + RHS(index_ij)
-                       END IF
-                       
-                    END DO
                  ELSE
-                    DO j = 1, n_var * n_tor
-                    
-                       IF (INT((MOD(j-1, n_tor)+1)/2)+1 == i_tor(my_id+1)) THEN
-                          ! index in the RHS
-                          index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j 
-                          index_rhs = index_large_i*2/n_tor+INT((j-1)/n_tor)*2+MOD(MOD(j-1, n_tor)+1,2)+1 
-                          if (index_rhs > column_number .or. index_rhs < 1) then
-                             write (*,*) "index_rhs", index_rhs
-                             write (*,*) "column_number", column_number
-                             write (*,*) "index_large_i", index_large_i
-                             write (*,*) "j", j, INT((j-1)/n_tor), MOD(MOD(j-1, n_tor)+1,2)+1 
-                             stop
-                          end if
-                          rhs_loc(index_rhs) = rhs_loc(index_rhs) + RHS(index_ij)
-                       END IF
-                       
-                    END DO
+                    IF (i_tor(my_id+1) == 1) THEN
+                       index_rhs = index_large_i/n_tor+INT((j-1)/n_tor)+1
+                    ELSE
+                       index_rhs = index_large_i*2/n_tor+INT((j-1)/n_tor)*2+MOD(MOD(j-1, n_tor)+1,2)+1 
+                    ENDIF
                  END IF
-              END IF
+
+                 if (index_rhs > column_number .or. index_rhs < 1) then
+                    write (*,*) "index_rhs", index_rhs
+                    write (*,*) "column_number", column_number
+                    write (*,*) "index_large_i", index_large_i
+                    write (*,*) "j", j
+                    stop
+                 end if
+                 rhs_loc(index_rhs) = rhs_loc(index_rhs) + RHS(index_ij)
+              END DO
               ! Build nodes Matrices
               DO k=1,n_vertex_max
                  
@@ -233,88 +202,50 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                     index_large_k = n_tor * n_var * (index_node2 - 1)
 
                     coefmtx = 0
-                    ! BUILD node Matrix
-                    IF (.not. gmres) THEN
-                       DO j = 1, n_var * n_tor
-                          ! Row index in the ELM matrix
-                          index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
-                          
-                          DO l = 1, n_var * n_tor
+                    DO j = 1, n_var * n_tor
+                       ! Row index in the ELM matrix
+                       index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
+                       
+                       DO l = 1, n_var * n_tor
+                          ! BUILD node Matrix
+                          index_kl  = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   
+                          IF (.not. gmres) THEN
                              ! Column index in the ELM matrix
-                             index_kl  = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   
-                             index_mtx = j+(l-1)*(n_var * n_tor)
-                             coefmtx(index_mtx) = ELM(index_ij,index_kl)
-                          ENDDO
-                          
+                             index_mtx = l+(j-1)*(n_var * n_tor)
+                             coefmtx(index_mtx) = ELM(index_kl,index_ij)
+                          ELSE
+                             IF (INT((MOD(j-1, n_tor)+1)/2)+1 == i_tor(my_id+1) .and. &
+                                  INT((MOD(l-1, n_tor)+1)/2)+1 == i_tor(my_id+1)) THEN
+                                IF (i_tor(my_id+1) == 1) THEN
+                                   index_mtx = INT((l-1)/n_tor)+1+(INT((j-1)/n_tor))*(n_var) 
+                                ELSE
+                                   index_mtx = INT((l-1)/n_tor)+MOD(MOD(l-1,n_tor),2)+1+ &
+                                        (INT((j-1)/n_tor)*2+ MOD(MOD(j-1,n_tor),2))*(n_var*2)
+                                END IF
+                                coefmtx(index_mtx) = ELM(index_ij,index_kl)
+                             END IF
+                          END IF
                        ENDDO
+                          
+                    ENDDO
+
+                    IF (.not. gmres) THEN
                        cnt = cnt + n_var*n_var * n_tor * n_tor
-                       CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node1, index_node2, &
-                            coefmtx, ierr)
-                       IF (ierr /= MURGE_SUCCESS) THEN
-                          WRITE (*,*) my_id, ":::", &
-                               "I", index_node1, &
-                               "J", index_node2, cnt
-                          STOP
-                       END IF
                     ELSE
                        IF (i_tor(my_id+1) == 1) THEN
-                          
-                          DO j = 1, n_var * n_tor
-                             ! Row index in the ELM matrix
-                             index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
-                          
-                             DO l = 1, n_var * n_tor
-                                ! Column index in the ELM matrix
-                                
-                                IF (INT((MOD(j-1, n_tor)+1)/2)+1 == i_tor(my_id+1) .and. &
-                                     INT((MOD(l-1, n_tor)+1)/2)+1 == i_tor(my_id+1)) THEN
-                                   
-                                   index_kl  = n_tor * n_var * (n_order+1) * (k-1) + &
-                                        n_tor * n_var * (k_order-1) + l     
-                                   index_mtx = INT((j-1)/n_tor)+1+(INT((l-1)/n_tor))*(n_var) 
-                                   coefmtx(index_mtx) = ELM(index_ij,index_kl)
-                                END IF
-                             ENDDO
-                             
-                          ENDDO
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node1, index_node2, &
-                               coefmtx, ierr)
                           cnt = cnt + n_var*n_var
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*) my_id, "::", &
-                                  "I", index_node1, &
-                                  "J", index_node2, cnt
-                             STOP
-                          END IF
                        ELSE
-                          DO j = 1, n_var * n_tor
-                             ! Row index in the ELM matrix
-                             index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
-                          
-                             DO l = 1, n_var * n_tor
-                                ! Column index in the ELM matrix
-                                
-                                IF (INT((MOD(j-1, n_tor)+1)/2)+1 == i_tor(my_id+1) .and. &
-                                     INT((MOD(l-1, n_tor)+1)/2)+1 == i_tor(my_id+1)) THEN
-                                   
-                                   index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l
-                                   index_mtx = INT((j-1)/n_tor)+MOD(MOD(j-1,n_tor),2)+1+ &
-                                        (INT((l-1)/n_tor)*2+ MOD(MOD(l-1,n_tor),2))*(n_var*2)
-                                   coefmtx(index_mtx) = ELM(index_ij,index_kl)
-                                END IF
-                             ENDDO
-                             
-                          ENDDO
-                          CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node1, index_node2, &
-                               coefmtx, ierr)
                           cnt = cnt + n_var*n_var * 4
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*) my_id, ":", &
-                                  "I", index_node1, &
-                                  "J", index_node2, cnt
-                             STOP
-                          END IF
                        END IF
+                    END IF
+
+                    CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node2, index_node1, &
+                         coefmtx, ierr)
+                    IF (ierr /= MURGE_SUCCESS) THEN
+                       WRITE (*,*) my_id, ":::", &
+                            "I", index_node2, &
+                            "J", index_node1, cnt
+                       STOP
                     END IF
 
                  ENDDO

@@ -428,7 +428,7 @@ do ms=1, n_gauss
 		      - tauIC * BigR**3 * p0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
 		      - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
 
-		      + BigR * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
+		      + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
 
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
 
@@ -632,7 +632,7 @@ do ms=1, n_gauss
 		       + tauIC * BigR**3 * p0_y * (v_x* u_x + v_y * u_y)                         * xjac * theta * tstep &
                        + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
 		       
-		       - BigR * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  
+		       - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  
 
             
              amat_21 = - v * (psi_s * zj0_t - psi_t * zj0_s )              * theta * tstep

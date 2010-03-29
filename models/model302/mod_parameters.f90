@@ -8,9 +8,9 @@ module parameters
   parameter (n_var          = 7)                       ! the number of variables
   parameter (n_dim          = 2)                       ! the number of dimensions
   parameter (n_order        = 3)                       ! order of the polynomial basis
-  parameter (n_tor          = 1)                       ! the number of toroidal harmonics
+  parameter (n_tor          = 21)                       ! the number of toroidal harmonics
   parameter (n_period       = 1)                       ! periodicity in toroidal direction
-  parameter (n_plane        = 1)                       ! the number of toroidal angles
+  parameter (n_plane        = 32)                       ! the number of toroidal angles
   parameter (n_vertex_max   = 4)                       ! the maximum number of corners of an element
   parameter (n_nodes_max    = 20001)                   ! the maximum number of nodes
   parameter (n_elements_max = 20001)                   ! the maximum number of elements

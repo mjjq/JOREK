@@ -17,6 +17,7 @@ real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dps
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
+real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2
 real*8     :: psi_n, psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t,R_s, R_t, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 logical    :: xpoint2
@@ -51,6 +52,12 @@ if (my_id .eq. 0) then
 
     call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+							       
+    zp       = zn * zT
+    dp_dpsi  = zn * dT_dpsi + dn_dpsi * zT
+    dp_dpsi2 = zn * dT_dpsi2 + 2.d0 * dn_dpsi * dT_dpsi + dn_dpsi2 * zT
+    dp_dz    = zn * dT_dz + dn_dz * zT
+    dp_dz2   = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 							       
 
     node_list%node(i)%values(1,1,5) = zn
     node_list%node(i)%values(1,2,5) = dn_dpsi  * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)
@@ -66,6 +73,13 @@ if (my_id .eq. 0) then
                                     + dT_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
                                     + dT_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
 
+    node_list%node(i)%values(1,1,2) = - tauIC * zp 
+    node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))
+    node_list%node(i)%values(1,3,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,3,1) + dp_dz * node_list%node(i)%x(3,2))
+    node_list%node(i)%values(1,4,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,4,1) + dp_dz * node_list%node(i)%x(4,2) &
+                                    + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
+
     node_list%node(i)%values(1,1,7) = 0.d0        ! parallel velocity
     node_list%node(i)%values(1,2,7) = 0.d0
     node_list%node(i)%values(1,3,7) = 0.d0
@@ -76,6 +90,8 @@ if (my_id .eq. 0) then
   enddo
 
 endif
+
+call poisson(my_id,+2,node_list,element_list,2,4,1,xpoint2)              ! calculate w from u  (inverse Poisson)
 
 !----------------------------------------- flux boundary perturbation (to be completed, see Marina)
 !if (my_id .eq. 0) then
@@ -131,8 +147,6 @@ do in=2,n_tor
   endif
 
   call poisson(my_id,1,node_list,element_list,4,2,in,xpoint2)   !----------- for Poisson (toroidal) use 1
-
-! call poisson(my_id,2,node_list,element_list,4,2,in,xpoint2) !----------- for cylinder use 2
 
 enddo
 

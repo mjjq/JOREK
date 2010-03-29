@@ -413,7 +413,7 @@ do ms=1, n_gauss
 		      		      
 		      - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
 		      
-		      + BigR * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
+		      + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
 
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
 
@@ -493,9 +493,9 @@ do ms=1, n_gauss
 		      
                       + zeta * v * delta_g(mp,7,ms,mt) * R0 * F0**2 / BigR        * xjac         &
 		      
-!                      - F0 * (u0_s * vpar0_t - u0_t * vpar0_s)                           * tstep &
-!                      - vpar0 * (F0/BigR)**2 * (vpar0_s * ps0_t - vpar0_t * ps0_s)       * tstep &
-!                      - (F0/BigR)**3 * vpar0 * vpar0_p                            * xjac * tstep
+!                      - v * F0 * (u0_s * vpar0_t - u0_t * vpar0_s)                      * tstep &
+!                      - v * vpar0 * (F0/BigR)**2 * (vpar0_s * ps0_t - vpar0_t * ps0_s)  * tstep &
+!                      - v * (F0/BigR)**3 * vpar0 * vpar0_p                       * xjac * tstep
 
                     - visco_par_num  *                                                                &
                            ( (v_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                  &
@@ -644,7 +644,7 @@ do ms=1, n_gauss
 
 		           + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
 
-                           - BigR * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  
+                           - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  
 
                  amat_23 = - v * (ps0_s * zj_t  - ps0_t * zj_s)                           * theta * tstep  &
                            + eps_cyl * F0 / BigR * v * zj_p  * xjac                       * theta * tstep

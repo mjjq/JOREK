@@ -64,6 +64,10 @@ subroutine solve_murge_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,      ierr) ! refinement : max number of iterations
               !    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF     , n_tor * n_var,  ierr)   
               ! degrees of freedom per node (not correct)
+!$omp parallel default(none) shared(pastix_nthrd)    
+              murge_nthrd = omp_get_num_threads()
+!$omp end parallel
+
               CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
               CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
               CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,     ierr)

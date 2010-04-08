@@ -48,6 +48,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   INTEGER                  :: i, k, j, ierr, m_loc
   INTEGER,ALLOCATABLE      :: counts(:), displacements(:)
   REAL*8, ALLOCATABLE      :: rhs_tmp(:)
+  integer, external :: omp_get_num_threads, omp_get_thread_num
 
   WRITE(*,*) my_id,'*********************************'
   WRITE(*,*) my_id,'*  solve global matrix (PastiX) *'
@@ -153,6 +154,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
 !$omp parallel default(none) shared(pastix_nthrd)    
         murge_nthrd = omp_get_num_threads()
 !$omp end parallel
+        murge_nthrd = 8
         CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
         CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
         CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,     ierr)

@@ -1,6 +1,7 @@
 module murge_module             ! Murge specific variables
   
   include "murge.inc"
+  include "hips.inc"
   ! Indicate which solver is used
   INTEGER(KIND=MURGE_INTS_KIND)               :: solver  
 
@@ -22,7 +23,7 @@ module murge_module             ! Murge specific variables
 
   ! Indicate if we want to use murge element building
   logical                                     :: use_murge_element
-
+  logical                                     :: use_hips
   ! Indicate if murge has been initialized
   logical                                     :: murge_initialised
 
@@ -35,8 +36,7 @@ module murge_module             ! Murge specific variables
   parameter (murge_sym=MURGE_BOOLEAN_FALSE)
 
   ! Number of threads
-  integer(KIND=MURGE_INTS_KIND)               :: murge_nthrd
-  parameter (murge_nthrd=1)
+  integer(KIND=MURGE_INTS_KIND)               :: murge_nthrd =1
 
   ! Number of iteration in refinement
   integer(KIND=MURGE_INTS_KIND)               :: murge_iter

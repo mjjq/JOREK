@@ -1,7 +1,7 @@
 module murge_module             ! Murge specific variables
   
   include "murge.inc"
-  include "hips.inc"
+  !include "hips.inc"
   ! Indicate which solver is used
   INTEGER(KIND=MURGE_INTS_KIND)               :: solver  
 

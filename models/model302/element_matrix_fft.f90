@@ -50,9 +50,9 @@ real*8     :: psi_axis, psi_bnd, Z_xpoint, dj_dpsi, dj_dz, source_pellet
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: Bgrad_rho_rho_n, Bgrad_T_T_n, Bgrad_rho_k_star, Bgrad_T_k_star
-real*8     :: D_prof, ZK_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y
+real*8     :: D_prof, ZK_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7
-real*8     :: rhs_ij_5_k, rhs_ij_6_k
+real*8     :: rhs_ij_5_k, rhs_ij_6_k, rhs_ij_7_k
 real*8     :: rhs_stab_1, rhs_stab_2, rhs_stab_3, rhs_stab_4, rhs_stab_5, rhs_stab_6
 
 real*8     :: v, v_x, v_y, v_s, v_t, v_p, v_ss, v_st, v_tt, v_xx, v_xy, v_yy
@@ -73,8 +73,8 @@ real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_52, amat_55, amat_56, amat_57, amat_61, amat_62, amat_65, amat_66, amat_67, amat_16, amat_13
-real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
-real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n
+real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_77_n, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
+real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n, amat_75_k, amat_77_k
 real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n
 real*8     :: amat_stab_11, amat_stab_12, amat_stab_13, amat_stab_14 ,amat_stab_21,amat_stab_22, amat_stab_23, amat_stab_24
 real*8     :: amat_stab_31, amat_stab_32, amat_stab_33, amat_stab_34 ,amat_stab_41,amat_stab_42, amat_stab_43, amat_stab_44
@@ -321,6 +321,9 @@ do ms=1, n_gauss
      delta_u_x = (   y_t(ms,mt) * delta_s(mp,2,ms,mt) - y_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
      delta_u_y = ( - x_t(ms,mt) * delta_s(mp,2,ms,mt) + x_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
 
+     delta_ps_x = (   y_t(ms,mt) * delta_s(mp,1,ms,mt) - y_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
+     delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
+
      eta_T   = eta   * (abs(T0)/T_0)**(-1.5d0)                   ! temperature dependent resistivity
      visco_T = visco * (abs(T0)/T_0)**(-1.5d0)                   ! temperature dependent viscosity
 
@@ -495,6 +498,14 @@ do ms=1, n_gauss
                     - (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T      * xjac * tstep &
                     - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y                     ) * xjac * tstep &
 
+                    - ZK_perp_num  *                                                                  &
+                           ( (v_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                  &
+                            + v_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                                  &
+                     -2.d0 *  v_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) )                &
+                           * (T0_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                 &
+                            + T0_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                                 &
+                     -2.d0 *  T0_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3   * tstep &
+
                     + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
                     + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac
 
@@ -505,13 +516,17 @@ do ms=1, n_gauss
 !#  equation 7   (parallel velocity equation)                                                      #
 !###################################################################################################
 
-         rhs_ij_7 = - v * F0 / BigR * P0_p                                      * xjac * tstep &
-                    - v * (P0_s * ps0_t - P0_t * ps0_s)                                * tstep &
-                    - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR        * xjac * tstep &
+         rhs_ij_7 = - v * F0 / BigR * P0_p                                              * xjac * tstep &
+                    - v * (P0_s * ps0_t - P0_t * ps0_s)                                        * tstep &
+                    - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR                * xjac * tstep &
+
+                    - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                * tstep &
+                    + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep &
 		    
-		    - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2    * BigR * xjac * tstep &
+		    - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR * xjac * tstep &
 		    
-                    + zeta * v * delta_g(mp,7,ms,mt) * R0 * F0**2 / BigR        * xjac &
+                    + zeta * v * delta_g(mp,7,ms,mt) * R0 * F0**2 / BigR                        * xjac &
+		    + zeta * v * r0 * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR  * xjac &
 
                     - visco_par_num  *                                                                &
                            ( (v_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                  &
@@ -520,7 +535,12 @@ do ms=1, n_gauss
                            * (Vpar0_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                              &
                             + Vpar0_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                              &
                      -2.d0 *  Vpar0_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  *tstep
-
+		     
+	 rhs_ij_7_k = + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep 
+	     
+!###################################################################################################
+!#  equations end                                                                                  #
+!###################################################################################################
 
          ij1 = index_ij
          ij2 = index_ij + 1
@@ -540,6 +560,7 @@ do ms=1, n_gauss
 
          RHS_k(mp,ij5) = RHS_k(mp,ij5) + rhs_ij_5_k * wst
          RHS_k(mp,ij6) = RHS_k(mp,ij6) + rhs_ij_6_k * wst
+         RHS_k(mp,ij7) = RHS_k(mp,ij7) + rhs_ij_7_k * wst
 
          do k=1,n_vertex_max
 
@@ -796,7 +817,15 @@ do ms=1, n_gauss
                        + v * T * F0 / BigR * Vpar0 * r0_p                              * xjac * theta * tstep &
 
                        + (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T_T * xjac * theta * tstep &
-                       + ZK_prof * BigR * ( v_x*T_x + v_y*T_y )                   * xjac * theta * tstep
+                       + ZK_prof * BigR * ( v_x*T_x + v_y*T_y )                   * xjac * theta * tstep &
+
+                     + ZK_perp_num  *                                                                &
+                           ( (v_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                 &
+                            + v_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                                 &
+                     -2.d0 *  v_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) )               &
+                           * (T_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                 &
+                            + T_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                                 &
+                     -2.d0 *  T_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * theta*tstep
 
              amat_66_k = + (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T    * xjac * theta * tstep
 
@@ -818,18 +847,28 @@ do ms=1, n_gauss
 
 
 !###################################################################################################
-!#  equation 6   (parallel velocity equation)                                                      #
+!#  equation 7   (parallel velocity equation)                                                      #
 !###################################################################################################
 
-             amat_71 = + v * (P0_s * psi_t - P0_t * psi_s)                            * theta * tstep &
+             amat_71 =   v * r0 * vpar0 / BigR * (ps0_x * psi_x + ps0_y * psi_y) * xjac * (1.d0 + zeta) &
+	     
+	               + v * (P0_s * psi_t - P0_t * psi_s)                                       * theta * tstep &
+	     		       
+                       + 0.5d0 * r0 * vpar0**2 * BB2 * (psi_s * v_t - psi_t * v_s)               * theta * tstep &
+		       
                        + v*(particle_source(ms,mt) + source_pellet)*vpar0* BB2_psi * BigR * xjac * theta * tstep 
+		       
 
-             amat_72 = 0.d0
+             amat_72 = 0.d0 
 
              amat_75 = + v * (rho_s * T0 * ps0_t - rho_t * T0 * ps0_s)                 * theta * tstep &
                        + v * (rho * T0_s * ps0_t - rho * T0_t * ps0_s)                 * theta * tstep &
-		       + v * F0 / BigR * rho * T0_p                             * xjac * theta * tstep
+		       + v * F0 / BigR * rho * T0_p                             * xjac * theta * tstep &
 
+		       + 0.5d0 * rho * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)    * theta * tstep 
+		          
+             amat_75_k = - 0.5d0 * rho * vpar0**2 * BB2 * F0 / BigR * v_p       * xjac * theta * tstep
+	     
              amat_75_n = + v * F0 / BigR * rho_p * T0                           * xjac * theta * tstep
 
              amat_76 = + v * (T_s * R0 * ps0_t - T_t * R0 * ps0_s)                     * theta * tstep &
@@ -839,8 +878,11 @@ do ms=1, n_gauss
              amat_76_n= + v * F0 / BigR * T_p * R0                              * xjac * theta * tstep
 
              amat_77 = v * Vpar * R0 * F0**2 / BigR * xjac * (1.d0 + zeta) &
-                     + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR         * xjac * theta * tstep &
+                     + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR           * xjac * theta * tstep &
+		     
                      + v*(particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR * xjac * theta * tstep &
+		     
+                     + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)             * theta * tstep &
 
                      + visco_par_num  *                                                                &
                            ( (v_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                   &
@@ -849,9 +891,12 @@ do ms=1, n_gauss
                            * (Vpar_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                &
                             + Vpar_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                                &
                      -2.d0 *  Vpar_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * theta*tstep
+		     
+	     amat_77_k = - r0 * vpar0 * vpar * BB2 * F0 / BigR * v_p                 * xjac * theta * tstep 
+		     		     
 
 !###################################################################################################
-!# end equation 6                                                                                  #
+!# end equation 7                                                                                  #
 !###################################################################################################
 
              kl1 = index_kl
@@ -925,11 +970,13 @@ do ms=1, n_gauss
 
              ELM_p(mp,ij7,kl5)  =  ELM_p(mp,ij7,kl5)  + wst * amat_75
              ELM_n(mp,ij7,kl5)  =  ELM_n(mp,ij7,kl5)  + wst * amat_75_n
+             ELM_k(mp,ij7,kl5)  =  ELM_k(mp,ij7,kl5)  + wst * amat_75_k
 
              ELM_p(mp,ij7,kl6)  =  ELM_p(mp,ij7,kl6)  + wst * amat_76
              ELM_n(mp,ij7,kl6)  =  ELM_n(mp,ij7,kl6)  + wst * amat_76_n
 
              ELM_p(mp,ij7,kl7)  =  ELM_p(mp,ij7,kl7)  + wst * amat_77
+             ELM_k(mp,ij7,kl7)  =  ELM_k(mp,ij7,kl7)  + wst * amat_77_k
 
            enddo
 

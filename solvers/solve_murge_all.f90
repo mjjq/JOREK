@@ -151,7 +151,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
         CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,      ierr) ! refinement : max number of iterations
         !    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF     , n_tor * n_var,  ierr)   ! degrees of freedom per node (not correct)
 
-!$omp parallel default(none) shared(pastix_nthrd)    
+!$omp parallel default(none) shared(pastix_nthrd, murge_nthrd)    
         murge_nthrd = omp_get_num_threads()
 !$omp end parallel
 

@@ -40,7 +40,7 @@ module murge_module             ! Murge specific variables
 
   ! Number of iteration in refinement
   integer(KIND=MURGE_INTS_KIND)               :: murge_iter
-  parameter (murge_iter=255)
+  parameter (murge_iter=250)
 
   integer(KIND=MURGE_INTS_KIND)               :: murge_ricar
   parameter (murge_ricar=0)
@@ -55,7 +55,7 @@ module murge_module             ! Murge specific variables
   parameter (murge_epsilon=1.d-12)
 
   real*8                                      :: murge_pivot
-  parameter (murge_pivot=1.d-32)
+  parameter (murge_pivot=1.d-64)
   integer                                     :: murge_comm
 
 endmodule murge_module

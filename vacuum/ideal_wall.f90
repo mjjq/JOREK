@@ -1,6 +1,6 @@
 subroutine ideal_wall(my_id,node_list,boundary_list)
 !-------------------------------------------------------------------
-! routine calculates the vacuum reponse matrix of a vacuum region 
+! routine calculates the vacuum reponse matrix of a vacuum region
 ! up to an ideally conducting wall
 !-------------------------------------------------------------------
 use data_structure
@@ -26,12 +26,12 @@ if (my_id .eq. 0) then
 
   call vacuum_grid(node_list,boundary_list,r_wall,vacuum_node_list,vacuum_element_list)
 
-  call plot_grid(vacuum_node_list,vacuum_element_list,boundary_list,.true.,.false.)    ! plot the grid
+  call plot_grid(vacuum_node_list,vacuum_element_list,boundary_list,.true.,.true.)    ! plot the grid
 
 endif
 
 
-imode = 1
+imode = 2
 xpoint = .false.
 
 call vacuum_Poisson(my_id,vacuum_node_list,vacuum_element_list,boundary_list,imode)
@@ -50,7 +50,7 @@ use basis_at_gaussian
 use gauss
 use phys_module
 use vacuum_response_module
- 
+
 implicit none
 
 type (type_node_list)    :: node_list
@@ -98,9 +98,9 @@ if (my_id .eq. 0) then
   enddo
 
   write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
-  
+
   write(*,*) ' RHS  : ',n_AA*n_dof_bnd
-  
+
   if (.not. associated(mumps_par%A))     allocate(mumps_par%A(nz_AA))
   if (.not. associated(mumps_par%rhs))   allocate(mumps_par%rhs(n_AA*n_dof_bnd))
   if (.not. associated(mumps_par%irn))   allocate(mumps_par%irn(nz_AA))
@@ -130,7 +130,7 @@ if (my_id .eq. 0) then
     enddo
 
     itor = mode(imode)
-    
+
     call element_matrix_vacuum(element,nodes,itor,ELM)
 
     do i=1,n_vertex_max
@@ -172,56 +172,56 @@ if (my_id .eq. 0) then
   zbig = 1.d10
 
   mumps_par%nrhs = n_dof_bnd
-  
+
   do ibnd = 1, boundary_list%n_boundary
   do jbnd = 1, 2
 
     index_basis = (ibnd-1) * 2 + jbnd - 1
-  
+
     inode  = ibnd
     ibasis = 1 + 2*(jbnd-1)      ! only ibasis = 1 or 3 for now
-    
+
     do i=1, node_list%n_nodes
       node_list%node(i)%values = 0.d0
     enddo
-    
-    node_list%node(inode)%values(1,ibasis,1) = 1
-!----------------------------------------------------- test unit perturbation Fourier harmonic    
+
+    node_list%node(inode)%values(1,ibasis,1) = 1.d0
+!----------------------------------------------------- test unit perturbation Fourier harmonic
 !    sms= 3.d0
 !    do inode=1, boundary_list%n_boundary
-!      tht = atan2( node_list%node(inode)%x(1,2), node_list%node(inode)%x(1,1)-10.d0)      
+!      tht = atan2( node_list%node(inode)%x(1,2), node_list%node(inode)%x(1,1)-10.d0)
 !      node_list%node(inode)%values(1,1,1) = cos(sms*tht)
 !      node_list%node(inode)%values(1,3,1) = -1.d0 / 3.d0 * sms*sin(sms*tht) * 6.283185307 / float( boundary_list%n_boundary)
 !    enddo
 
 
-!integrate over the boundary elements 
+!integrate over the boundary elements
 
-     
+
     do ife = 1, element_list%n_elements                                                                   ! boundary integrals
 
       do iv = 1, n_vertex_max                                                                     ! boundary integrals
-    
+
         iv2  = mod(iv, n_vertex_max) + 1
-      
+
         inode1 = element_list%element(ife)%vertex(iv)
         inode2 = element_list%element(ife)%vertex(iv2)
-      
+
         if (     ((node_list%node(inode1)%boundary .eq. 4) .or.(node_list%node(inode1)%boundary .eq. 3)) &
            .and. ((node_list%node(inode2)%boundary .eq. 4) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
-	 
+
           nodes(1) = node_list%node(inode1)
 	  nodes(2) = node_list%node(inode2)
 	  vertex   = (/ iv, iv2 /)
 
-          dir      = (/ 1, 3 /) ! not correct, depends on node not on element side	 	  
-                  
+          dir      = (/ 1, 3 /) ! not correct, depends on node not on element side  -->  take it from boundary_list
+
           x_g = 0.d0; x_s = 0.d0; y_g = 0.d0; y_s = 0.d0; eq_g = 0.d0; eq_s = 0.d0
-      
+
           do i=1,2
-  
+
             do j=1,2
-	   
+
               do ms=1, n_gauss
 
                 x_g(ms)  = x_g(ms)  + nodes(i)%x(dir(j),1) * element_list%element(ife)%size(vertex(i),dir(j)) * H1(i,j,ms)
@@ -229,44 +229,43 @@ if (my_id .eq. 0) then
 
                 y_g(ms)  = y_g(ms)  + nodes(i)%x(dir(j),2) * element_list%element(ife)%size(vertex(i),dir(j)) * H1(i,j,ms)
                 y_s(ms)  = y_s(ms)  + nodes(i)%x(dir(j),2) * element_list%element(ife)%size(vertex(i),dir(j)) * H1_s(i,j,ms)
-	    
+
                 eq_g(ms)  = eq_g(ms) + nodes(i)%values(1,dir(j),1) * element_list%element(ife)%size(vertex(i),dir(j)) * H1(i,j,ms)
                 eq_s(ms)  = eq_s(ms) + nodes(i)%values(1,dir(j),1) * element_list%element(ife)%size(vertex(i),dir(j)) * H1_s(i,j,ms)
-			    	    
+
               enddo
             enddo
           enddo
-      
+
           do ms=1, n_gauss
 
             ws = wgauss(ms)
-     
+
             psi   = eq_g(ms)
             psi_s = eq_s(ms)
-	
+
 	    dl = sqrt(x_s(ms)**2 + y_s(ms)**2)
 
             do i=1,2                                                                       ! loop over nodes
-     
+
               do j=1,2                                                                     ! loop over basis functions
-	  
+
                 index_ij = nodes(i)%index(dir(j))                                          ! index in the ELM matrix
 
                 v   =  H1(i,j,ms) * element_list%element(ife)%size(vertex(i),dir(j))       ! test function
-	    
-                mumps_par%RHS(index_ij+n_AA*index_basis) = mumps_par%RHS(index_ij+n_AA*index_basis) + v * psi * dl * x_g(ms) * ws              ! add to element RHS
-                		
-!                mumps_par%RHS(index_ij+n_AA*index_basis) = mumps_par%RHS(index_ij+n_AA*index_basis) + v * psi * dl * ws              ! add to element RHS
-		
+
+                mumps_par%RHS(index_ij+n_AA*index_basis) = mumps_par%RHS(index_ij+n_AA*index_basis) + v * psi_s * ws              ! add to element RHS
+
               enddo
             enddo
+
           enddo
-	
-        endif  
-      
+
+        endif
+
       enddo
     enddo
-  
+
   enddo
   enddo
 
@@ -275,7 +274,7 @@ if (my_id .eq. 0) then
   do i=1,node_list%n_nodes
 
     if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
-        
+
       index_i = node_list%node(i)%index(1)  ! base index in the main matrix
 
       mumps_par%irn(ilarge+1) = index_i
@@ -324,46 +323,48 @@ mumps_par%icntl(7) = 4
 
 call DMUMPS(mumps_par)
 
+vacuum_response = 0.d0
+
 if (my_id .eq. 0) then
 
   do ibnd = 1, boundary_list%n_boundary
-  
+
     do jbnd = 1, 2
 
-      index_basis     = (n_order+1)*(ibnd-1) + 2*(jbnd-1) + 1          ! select index 1 and 3 from the 4 dof at each node 
+      index_basis     = (n_order+1)*(ibnd-1) + 2*(jbnd-1) + 1          ! select index 1 and 3 from the 4 dof at each node
       index_basis_bnd = 2*(ibnd-1) +   (jbnd-1) + 1                    ! the index in the vacuum_response matrix
-        
+
       do kbnd=1,boundary_list%n_boundary
 
         do lbnd = 1, 2
 
-          index_basis2     = (n_order+1)*(kbnd-1) + 2*(lbnd-1) + 1 
+          index_basis2     = (n_order+1)*(kbnd-1) + 2*(lbnd-1) + 1
           index_basis2_bnd = 2*(kbnd-1) +   (lbnd-1) + 1               ! the index in the vacuum_response matrix
-    			       
-          vacuum_response(index_basis_bnd,index_basis2_bnd,imode) = mumps_par%rhs(index_basis2 + n_AA * (index_basis_bnd-1))
-	
-        enddo			       
-    
+
+          vacuum_response(index_basis_bnd,index_basis2_bnd,2:n_tor) = mumps_par%rhs(index_basis2 + n_AA * (index_basis_bnd-1))
+
+        enddo
+
       enddo
-    
-      write(*,'(16e11.3)') vacuum_response(index_basis_bnd,:,imode)
-    
+
+      write(*,'(16e11.3)') vacuum_response(index_basis_bnd,:,2)
+
     enddo
   enddo
-  
+
   do i=1,node_list%n_nodes
 
     inode  = i
-    
+
     do j=1, n_order+1
-    
+
       index  = node_list%node(inode)%index(j)
 
       node_list%node(inode)%values(1,j,1) = mumps_par%RHS(index+2*n_AA)
-    
+
     enddo
   enddo
-  
+
   deallocate(mumps_par%irn,mumps_par%jcn,mumps_par%A,mumps_par%rhs)
 
 endif
@@ -426,7 +427,7 @@ do ms=1, n_gauss
 
    wst = wgauss(ms)*wgauss(mt)
 
-   xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)   
+   xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
 
    do i=1,n_vertex_max
 
@@ -434,7 +435,7 @@ do ms=1, n_gauss
 
        index_ij = (i-1)*(n_order+1) + j
 
-       v   =  H(i,j,ms,mt) * element%size(i,j) 
+       v   =  H(i,j,ms,mt) * element%size(i,j)
        v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
        v_y = (- x_t(ms,mt) * h_s(i,j,ms,mt) + x_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
 
@@ -442,16 +443,15 @@ do ms=1, n_gauss
 
          do l=1,n_order+1
 
-           psi   = H(k,l,ms,mt) * element%size(k,l) 
+           psi   = H(k,l,ms,mt) * element%size(k,l)
            psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
            psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
 
            index_kl = (k-1)*(n_order+1) + l
 
            ELM(index_ij,index_kl) =  ELM(index_ij,index_kl) &
-	                          + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt) * xjac * wst
-!	                          + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * xjac * wst
-				  
+	                          + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt)*xjac*wst	                          + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * xjac * wst
+
          enddo
        enddo
 
@@ -466,7 +466,7 @@ end
 
 subroutine vacuum_grid(node_list,boundary_list,r_wall,vacuum_node_list,vacuum_element_list)
 !-------------------------------------------------------------------
-! routine calculates the vacuum reponse matrix of a vacuum region 
+! routine calculates the vacuum reponse matrix of a vacuum region
 ! up to an ideally conducting wall
 !-------------------------------------------------------------------
 use data_structure
@@ -485,7 +485,7 @@ write(*,*) '* vacuum grid                *'
 write(*,*) '******************************'
 
 np = boundary_list%n_boundary
-nr = 101
+nr = 21
 
 write(*,*) ' nr, np : ',nr,np
 
@@ -500,19 +500,20 @@ do i=1,nr
   radius = 1.d0 + (r_wall - 1.d0) * float(i-1)/float(nr-1)
 
   do j=1,np
-  
+
     index = (i-1)*np + j
-  
+
     jv = boundary_list%boundary(j)%vertex(1)
-    
+
     vacuum_node_list%node(index)%x(1,:) = radius * (node_list%node(jv)%x(1,:) - RZcentre) + RZcentre
     vacuum_node_list%node(index)%x(3,:) = radius *  node_list%node(jv)%x(3,:)
-    
+
     xlength = sqrt((node_list%node(jv)%x(1,1) - RZcentre(1))**2 + ((node_list%node(jv)%x(1,2) - RZcentre(2))**2))
-    
-    vacuum_node_list%node(index)%x(2,:) = 1.d0/3.d0 * (r_wall -1.d0) / float(nr-1) * (node_list%node(jv)%x(1,:) - RZcentre) / xlength 
-    vacuum_node_list%node(index)%x(4,:) = 0.d0
-    
+
+    vacuum_node_list%node(index)%x(2,:) = 1.d0/3.d0 * (r_wall - 1.d0) / float(nr-1) * (node_list%node(jv)%x(1,:) - RZcentre) / xlength
+
+    vacuum_node_list%node(index)%x(4,:) = 1.d0/3.d0 * (r_wall - 1.d0) / float(nr-1) * node_list%node(jv)%x(3,:) / xlength
+
     vacuum_node_list%node(index)%boundary = 0
 
     if (i .eq. nr) vacuum_node_list%node(index)%boundary = 2
@@ -521,9 +522,9 @@ do i=1,nr
     do k=1,n_order+1
       vacuum_node_list%node(index)%index(k) =  (n_order+1)*(index-1)+k
     enddo
-    
+
   enddo
-  
+
 enddo
 
 vacuum_node_list%n_nodes        = nr * np
@@ -531,23 +532,23 @@ vacuum_element_list%n_elements  = (nr-1)*np
 
 do i=1,nr-1
 
- do j=1,np-1
+  do j=1,np-1
 
-   index = np*(i-1) + j
+    index = np*(i-1) + j
 
-   vacuum_element_list%element(index)%vertex(1) = (i-1)*np + j
-   vacuum_element_list%element(index)%vertex(4) = (i-1)*np + j + 1
-   vacuum_element_list%element(index)%vertex(3) = (i  )*np + j + 1
-   vacuum_element_list%element(index)%vertex(2) = (i  )*np + j
+    vacuum_element_list%element(index)%vertex(1) = (i-1)*np + j
+    vacuum_element_list%element(index)%vertex(4) = (i-1)*np + j + 1
+    vacuum_element_list%element(index)%vertex(3) = (i  )*np + j + 1
+    vacuum_element_list%element(index)%vertex(2) = (i  )*np + j
 
- enddo
+  enddo
 
- index =  np*(i-1) + np
+  index =  np*(i-1) + np
 
- vacuum_element_list%element(index)%vertex(1)  = (i  )*np
- vacuum_element_list%element(index)%vertex(4)  = (i  )*np - np + 1
- vacuum_element_list%element(index)%vertex(3)  = (i  )*np + 1
- vacuum_element_list%element(index)%vertex(2)  = (i  )*np + np
+  vacuum_element_list%element(index)%vertex(1)  = (i  )*np
+  vacuum_element_list%element(index)%vertex(4)  = (i  )*np - np + 1
+  vacuum_element_list%element(index)%vertex(3)  = (i  )*np + 1
+  vacuum_element_list%element(index)%vertex(2)  = (i  )*np + np
 
 enddo
 

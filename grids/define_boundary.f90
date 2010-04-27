@@ -60,8 +60,13 @@ if (mf .le. 0) then
       if (theta      .lt. 0.5d0*pi)   tht_i = tht_i + 2.d0*pi
 
       r_tmp(i)   = sqrt(rp**2+zp**2)
-      psi_tmp(i) =  - xshift * sin(tht_i) + xleft * cos(tht_i) &
+
+      if (xpoint) then      
+        psi_tmp(i) =  - xshift * sin(tht_i) + xleft * cos(tht_i) &
                  + xampl*(-1.d0 + (xwidth*(tht_i-xtheta)/xsig)**2)* exp( - ((tht_i-xtheta)/xsig)**2)
+      else
+        psi_tmp(i) = 0.d0
+      endif	
 
     enddo
 
@@ -72,6 +77,7 @@ if (mf .le. 0) then
 
     write(*,'(A)')     ' boundary information from R_bnd, Z_bnd, psi_bnd '
     write(*,'(A,i6)')  ' n_bnd : ',n_boundary
+    write(*,'(A,2f8.4)')  ' R_geo, Z_geo : ',R_geo, Z_geo
 
     n_bnd = n_boundary
 
@@ -90,9 +96,14 @@ if (mf .le. 0) then
 !      if (theta      .lt. 0.5d0*pi)   tht_i = tht_i + 2.d0*pi
 
       r_tmp(i)   = sqrt(rp**2+zp**2)
-      psi_tmp(i) = psi_boundary(i) - xshift * sin(tht_i) + xleft * cos(tht_i) &
-                 + xampl*(-1.d0 + (xwidth*(tht_i-xtheta)/xsig)**2)* exp( - ((tht_i-xtheta)/xsig)**2)
-		 
+      
+      if (xpoint) then      
+        psi_tmp(i) = psi_boundary(i) - xshift * sin(tht_i) + xleft * cos(tht_i) &
+                   + xampl*(-1.d0 + (xwidth*(tht_i-xtheta)/xsig)**2)* exp( - ((tht_i-xtheta)/xsig)**2)
+      else
+        psi_tmp(i) = psi_boundary(i)
+      endif	
+      	 
     enddo
 
     r_tmp(n_bnd)   = r_tmp(1)
@@ -126,7 +137,7 @@ if (mf .le. 0) then
     call  TG02A(-1,n_bnd,tht_tmp,psi_tmp,dpsi_tmp,theta,Vpsi)
 
     fbnd(j) = Vr(1)
-    fpsi(j) = - Vpsi(1)
+    fpsi(j) = Vpsi(1)
 
   enddo
 

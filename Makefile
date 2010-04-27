@@ -10,12 +10,12 @@ all :   modules sources $(MAIN)
 
 modules :
 	for dir in $(DIRS); do     \
-          ($(MAKE) -C $$dir modules) \
+          ($(MAKE) -C $$dir modules) || exit 1; \
         done
 
 sources :	
 	for dir in $(DIRS); do \
-          ($(MAKE) -C $$dir all) \
+          ($(MAKE) -C $$dir all) || exit 1; \
         done
 	
 clean :	
@@ -26,7 +26,7 @@ clean :
 	
 	
 $(MAIN) : jorek2_main.f90
-	$(FC) $(FFLAGS_NO_OMP)      \
+	$(FC) $(FFLAGS)      \
 	jorek2_main.f90      \
 	datatypes/*.o        \
 	models/$(MODEL)/*.o  \

@@ -59,6 +59,8 @@ type (type_boundary_list):: boundary_list
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
+real*8   :: angle, pi, xx, xxs, yy, yys, pp, ps, ss, HH(2,2), HH_s(2,2), HH_ss(2,2)
+
 real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1))
 real*8   :: zbig, dl, ws, psi, psi_s, v, tht, xs, ys
 real*8   :: x_g(n_gauss), x_s(n_gauss), y_g(n_gauss), y_s(n_gauss), eq_g(n_gauss), eq_s(n_gauss)
@@ -68,6 +70,7 @@ integer  :: n_border, ilarge, n_AA, nz_AA, nz_AA_old, i,j, k,l, ibnd, jbnd, inod
 integer  :: n_elements, index_large_i, inode, knode, index_large_k, index_ij, index_kl, index, index_i
 integer  :: vertex(2), dir(2), iv2, sms, index_basis, index_basis2, index_basis_bnd, index_basis2_bnd, kbnd, lbnd
 
+pi = 2.*asin(1.d0)
 
 if (my_id .eq. 0) then
 
@@ -268,7 +271,7 @@ if (my_id .eq. 0) then
 
   enddo
   enddo
-
+  
 !----------------------- boundary conditions
 
   do i=1,node_list%n_nodes
@@ -360,12 +363,76 @@ if (my_id .eq. 0) then
 
       index  = node_list%node(inode)%index(j)
 
-      node_list%node(inode)%values(1,j,1) = mumps_par%RHS(index+2*n_AA)
+      node_list%node(inode)%values(1,j,1) = mumps_par%RHS(index+(boundary_list%n_boundary+0)*n_AA)
 
     enddo
   enddo
 
   deallocate(mumps_par%irn,mumps_par%jcn,mumps_par%A,mumps_par%rhs)
+
+!### BEGIN DEBUNG OUTPUT ###
+
+    do ife = 1, element_list%n_elements                                                                   ! boundary integrals
+
+      do iv = 1, n_vertex_max                                                                     ! boundary integrals
+
+        iv2  = mod(iv, n_vertex_max) + 1
+
+        inode1 = element_list%element(ife)%vertex(iv)
+        inode2 = element_list%element(ife)%vertex(iv2)
+
+        if (     ((node_list%node(inode1)%boundary .eq. 4) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+           .and. ((node_list%node(inode2)%boundary .eq. 4) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+
+          nodes(1) = node_list%node(inode1)
+    nodes(2) = node_list%node(inode2)
+    vertex   = (/ iv, iv2 /)
+
+          dir      = (/ 1, 3 /) ! not correct, depends on node not on element side  -->  take it from boundary_list
+
+          do ms=1, 10
+          
+            xx=0.; xxs=0.; yy=0.; yys=0.; pp=0.; ps=0.
+
+            ss = (ms-1.)/9.
+            
+            call basisfunctions1(ss,HH,HH_s,HH_ss)
+
+            do i=1,2 ! vertex number
+
+              do j=1,2 ! basis function
+
+                xx = xx + nodes(i)%x(dir(j),1) * element_list%element(ife)%size(vertex(i),dir(j)) * HH(i,j)
+                xxs = xxs + nodes(i)%x(dir(j),1) * element_list%element(ife)%size(vertex(i),dir(j)) * HH_s(i,j)
+
+                yy = yy + nodes(i)%x(dir(j),2) * element_list%element(ife)%size(vertex(i),dir(j)) * HH(i,j)
+                yys = yys + nodes(i)%x(dir(j),2) * element_list%element(ife)%size(vertex(i),dir(j)) * HH_s(i,j)
+
+                pp = pp + nodes(i)%values(1,dir(j),1) * element_list%element(ife)%size(vertex(i),dir(j)) * HH(i,j)
+                ps = ps + nodes(i)%values(1,dir(j),1) * element_list%element(ife)%size(vertex(i),dir(j)) * HH_s(i,j)
+                
+              enddo
+            enddo
+            
+            888 format(ES12.5,1x,ES12.5)
+            angle = MOD( atan2(yy, xx-R_geo) + 2*PI, 2*PI )
+            write(67, 888) angle, pp
+            write(68, 888) angle, ps
+            write(69, 888) angle, ps / SQRT(xxs**2 + yys**2)
+            write(70, 888) angle, SQRT(xxs**2 + yys**2)
+            write(71, 888) SQRT(xxs**2 + yys**2)
+
+          enddo
+          
+        endif
+
+      enddo
+    enddo
+    
+
+!### END DEBUG OUTPUT ###
+
+
 
 endif
 
@@ -450,7 +517,8 @@ do ms=1, n_gauss
            index_kl = (k-1)*(n_order+1) + l
 
            ELM(index_ij,index_kl) =  ELM(index_ij,index_kl) &
-	                          + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt)*xjac*wst	                          + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * xjac * wst
+                            + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt)*xjac*wst
+                           !+ (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * xjac * wst
 
          enddo
        enddo
@@ -608,3 +676,71 @@ enddo
 
 return
 end
+
+
+
+
+
+subroutine ideal_wall_starwall(my_id,node_list,boundary_list)
+
+  use data_structure
+  use vacuum_response_module
+  use phys_module
+  implicit none
+
+  integer,                  intent(in) :: my_id            ! MPI thread number of current thread
+  type(type_node_list),     intent(in) :: node_list        ! List of boundary nodes
+  type(type_boundary_list), intent(in) :: boundary_list    ! List of boundary elements
+
+  
+  character(len=128) :: file_response_starwall = 'vacuum_response_with_wall_R10_a1.0_w2a_npol16.starwall'
+  
+  integer :: dim
+  integer :: i_n, j_n
+  integer :: itor, jtor
+  integer :: inode, jnode
+  integer :: ibas, jbas
+  integer :: icossin, jcossin ! 0: cos, 1: sin
+  integer :: iindex, jindex
+  integer :: rn_response, cn_response
+  integer :: iindex2, jindex2 !###
+  real*8  :: response
+  
+  OPEN(42, FILE=file_response_starwall)
+  
+  READ(42,*) dim
+  WRITE(*,*) 'dim=',dim
+  
+  vacuum_response = 0.
+  
+  ! Outer loops (response index)
+  do inode = 1, boundary_list%n_boundary ! loop over nodes
+    do itor = 2,3 !###                     ! loop over toroidal modes
+      do ibas = 1, 2                         ! loop over basis functions
+        
+        iindex = 2*(inode-1) +   (ibas-1) + 1  ! first index in response matrix
+        
+        jindex = 0
+        
+        ! Inner loops (perturbation index)
+        do jnode = 1, boundary_list%n_boundary ! loop over nodes
+          do jtor = 2, 3 !###                    ! loop over toroidal harmonics
+            do jbas = 1, 2                         ! loop over basis functions
+              
+              jindex = 2*(jnode-1) +   (jbas-1) + 1  ! second index in response matrix
+                
+              READ(42,*) iindex2, jindex2, response
+              
+              if ( itor == jtor ) vacuum_response(iindex,jindex,itor) = response
+                  
+            end do
+          end do
+        end do
+ 
+      end do
+    end do
+  end do
+
+  CLOSE(42)
+
+end subroutine ideal_wall_starwall

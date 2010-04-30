@@ -23,6 +23,6 @@ use parameters
   integer :: nstep, n_R, n_Z, n_radial, n_pol, n_tht, n_flux, n_boundary
   integer :: n_open, n_private, n_leg
   integer :: mf, index_start, index_now, mode(n_tor), nout
-  logical :: restart, regrid, import_equil, xpoint, freeboundary
+  logical :: restart, regrid, import_equil, xpoint, freeboundary, use_starwall
   real*8, allocatable   :: xtime(:), energies(:,:,:)
 end module

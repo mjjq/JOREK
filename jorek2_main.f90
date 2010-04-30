@@ -92,6 +92,8 @@ program JOREK2
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
   my_id = rank
   n_cpu = comm_size
+  
+  use_starwall = .true. !### make this a namelist input parameter later
 
   gmres  = .true.                                          ! .true. for gmres, .false. for direct
 
@@ -126,8 +128,8 @@ program JOREK2
   if (gmres) then
      if (n_cpu .lt. (n_tor-1)/2+1) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-        call MPI_FINALIZE(IERR)                                ! clean up MPI
-        stop
+!        call MPI_FINALIZE(IERR)                                ! clean up MPI
+!        stop
      endif
      if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
@@ -273,7 +275,12 @@ program JOREK2
 
      allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
 
-     call ideal_wall(my_id,node_list,boundary_list,n_dof_bnd,vacuum_response)   ! fill the vacuum response matrix
+     ! fill the vacuum response matrix
+     if ( use_starwall ) then
+       call ideal_wall_starwall(my_id,node_list,boundary_list)
+     else
+       call ideal_wall(my_id,node_list,boundary_list)
+     end if
 
      mumps_par%JOB = -2                                     ! clean up this instance of mumps
      call DMUMPS(mumps_par)
@@ -356,13 +363,9 @@ program JOREK2
      !***********************************************************************
      !*            distribute nodes and elements over cpu's                 *
      !***********************************************************************
-     IF (use_pastix == .true. &
-          .and. use_murge == .true. &
-          .and. use_murge_element == .true.&
-          .and. gmres) THEN
+     IF ( use_pastix .and. use_murge  .and. use_murge_element .and. gmres ) THEN
         index_size  = n_cpu_n
         id_elements = my_id_n
-
      ELSE
         index_size  = n_cpu
         id_elements = my_id
@@ -388,9 +391,7 @@ program JOREK2
      call global_matrix_structure(my_id_n,node_List,element_list,boundary_list, freeboundary,&
           local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
 
-     IF (use_pastix == .true. &
-          .and. use_murge == .true. &
-          .and. use_murge_element == .true.) THEN
+     IF ( use_pastix .and. use_murge .and. use_murge_element ) THEN
 
         write (*,*) "--- Murge initilisation ---"
 
@@ -630,12 +631,10 @@ program JOREK2
      call cpu_time(t_matrix_0)
 
      ! Build the matrix 
-     IF (use_pastix == .true. .and. use_murge == .true. &
-          .and. use_murge_element == .true.) THEN
+     IF ( use_pastix .and. use_murge .and. use_murge_element ) THEN
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint, &
              psi_axis, psi_bnd, Z_xpoint, gmres, i_tor, n_cpu, mpi_comm_n)        ! construct the matrix from elemental matrices
-        
      ELSE
         call construct_matrix(my_id, local_elms, &
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
@@ -680,9 +679,7 @@ program JOREK2
         if (.not. solve_only) then
 
            call cpu_time(t_send_0)
-           IF (.not.( use_pastix == .true. &
-                .and. use_murge  == .true. &
-                .and. use_murge_element == .true.)) THEN
+           IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
               call distribute_harmonics(my_id,my_id_n,n_cpu)
            END IF
            call cpu_time(t_send_1)
@@ -719,7 +716,7 @@ program JOREK2
      if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' solve : ',t_solve_1-t_solve_0
      if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' gmres : ',t_solve_2-t_solve_1
 
-     if ( (gmres .and. (iter_gmres .lt. iter_big))) then
+     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
         call update_values(my_id,node_list,deltas)         ! add solution to node values
 
@@ -731,7 +728,7 @@ program JOREK2
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
      endif
 
-     !  call boundary_check(node_list,deltas)
+     if ( freeboundary ) call boundary_check(node_list,deltas)
 
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);
@@ -790,10 +787,10 @@ program JOREK2
         mumps_par%JOB = -2                            ! clean up this instance of mumps
         call DMUMPS(mumps_par)
      elseif (use_pastix) then
-        if ( use_murge == .true.) then 
+        if ( use_murge ) then 
 
 
-           IF (use_murge_element == .true.) THEN
+           IF ( use_murge_element ) THEN
               IF (ALLOCATED(glob2loc)) DEALLOCATE(glob2loc)
               IF (ALLOCATED(loc2glob)) DEALLOCATE(loc2glob)
            END IF

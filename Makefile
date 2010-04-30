@@ -141,8 +141,9 @@ jorek2vtk_3d : modules sources
 	communication/import_restart.o    \
 	elements/initialise_basis.o       \
 	elements/basis_functions.o        \
+	elements/basis_functions1.o       \
 	elements/basis_functions2.o       \
-        elements/interp.o                 \
+	elements/interp.o                 \
 	elements/interp_RZ.o              \
 	 -o $(JOREK_DIR)/jorek2vtk_3d $(INCLUDES) $(LIBS)
 

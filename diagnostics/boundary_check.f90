@@ -107,7 +107,8 @@ if (freeboundary) then
 
 !              B_tan_v = B_tan_v + vacuum_response(index_basis_bnd,index_basis2_bnd,i_harm) * P_t * boundary_list%boundary(ibnd)%size(i,j) * H1_s(i,j)
 
-              B_tan_v = B_tan_v + vacuum_response(index_basis2_bnd,index_basis_bnd,i_harm) * P_t * boundary_list%boundary(ibnd)%size(i,j) * H1_s(i,j)
+              B_tan_v = B_tan_v - vacuum_response(index_basis2_bnd,index_basis_bnd,i_harm) &
+	                        * P_t * boundary_list%boundary(ibnd)%size(i,j) * H1_s(i,j) / (R * sqrt(R_t**2 + Z_t**2))
 
             enddo
           enddo

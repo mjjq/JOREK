@@ -385,17 +385,17 @@ if (my_id .eq. 0) then
            .and. ((node_list%node(inode2)%boundary .eq. 4) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
           nodes(1) = node_list%node(inode1)
-    nodes(2) = node_list%node(inode2)
-    vertex   = (/ iv, iv2 /)
+          nodes(2) = node_list%node(inode2)
+          vertex   = (/ iv, iv2 /)
 
           dir      = (/ 1, 3 /) ! not correct, depends on node not on element side  -->  take it from boundary_list
 
-          do ms=1, 10
+          do ms=1, 11
           
             xx=0.; xxs=0.; yy=0.; yys=0.; pp=0.; ps=0.
 
-            ss = (ms-1.)/9.
-            
+            ss = 1.d0 - (float(ms)-1.d0)/10.d0
+	                
             call basisfunctions1(ss,HH,HH_s,HH_ss)
 
             do i=1,2 ! vertex number
@@ -576,11 +576,9 @@ do i=1,nr
     vacuum_node_list%node(index)%x(1,:) = radius * (node_list%node(jv)%x(1,:) - RZcentre) + RZcentre
     vacuum_node_list%node(index)%x(3,:) = radius *  node_list%node(jv)%x(3,:)
 
-    xlength = sqrt((node_list%node(jv)%x(1,1) - RZcentre(1))**2 + ((node_list%node(jv)%x(1,2) - RZcentre(2))**2))
+    vacuum_node_list%node(index)%x(2,:) = 1.d0/3.d0 * (r_wall - 1.d0) / float(nr-1) * (node_list%node(jv)%x(1,:) - RZcentre)
 
-    vacuum_node_list%node(index)%x(2,:) = 1.d0/3.d0 * (r_wall - 1.d0) / float(nr-1) * (node_list%node(jv)%x(1,:) - RZcentre) / xlength
-
-    vacuum_node_list%node(index)%x(4,:) = 1.d0/3.d0 * (r_wall - 1.d0) / float(nr-1) * node_list%node(jv)%x(3,:) / xlength
+    vacuum_node_list%node(index)%x(4,:) = 1.d0/3.d0 * (r_wall - 1.d0) / float(nr-1) * node_list%node(jv)%x(3,:) 
 
     vacuum_node_list%node(index)%boundary = 0
 

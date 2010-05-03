@@ -193,7 +193,7 @@ do ibnd = 1, boundary_list%n_boundary                     ! loop over all bounda
                         if ( use_starwall ) then
                           A_glob_11 = v * eta_T * psi * theta * tstep
                         else
-                          A_glob_11 = v * eta_T * psi_s * theta * tstep
+                         A_glob_11 = v * eta_T * psi_s * theta * tstep
                         end if
 
                         A_glob_11 = A_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,im)

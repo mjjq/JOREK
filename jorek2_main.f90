@@ -93,7 +93,7 @@ program JOREK2
   my_id = rank
   n_cpu = comm_size
   
-  use_starwall = .true. !### make this a namelist input parameter later
+  use_starwall = .false. !### make this a namelist input parameter later
 
   gmres  = .true.                                          ! .true. for gmres, .false. for direct
 
@@ -125,7 +125,7 @@ program JOREK2
      stop
   endif
 
-  if (gmres) then
+  if ((gmres) .and. (nstep .gt. 0)) then
      if (n_cpu .lt. (n_tor-1)/2+1) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
 !        call MPI_FINALIZE(IERR)                                ! clean up MPI

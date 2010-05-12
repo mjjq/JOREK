@@ -1,6 +1,6 @@
 include config.in
 
-DIRS = datatypes models/$(MODEL) models communication elements grids matrix solvers plots diagnostics vacuum refinement
+DIRS = datatypes models/$(MODEL) models communication elements grids matrix solvers timing plots diagnostics vacuum refinement
 
 MAIN = jorek_$(MODEL)
 
@@ -36,6 +36,7 @@ $(MAIN) : jorek2_main.f90
 	grids/*.o            \
 	matrix/*.o           \
 	solvers/*.o          \
+        timing/*.o           \
 	refinement/*.o       \
 	plots/*.o            \
         vacuum/*.o           \

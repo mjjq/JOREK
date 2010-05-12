@@ -6,6 +6,7 @@ use mumps_module
 use global_distributed_matrix
 implicit none
 include 'mpif.h'
+#include "r3_info.h"
 
 integer :: i_tor(*), i, j, m, my_id, my_id_n, my_id_master, MPI_COMM_N, MPI_COMM_MASTER
 integer :: revcom, colx, coly, colz, nbscal, lwork, iter_gmres
@@ -19,6 +20,7 @@ parameter (ZERO = 0.0d0, ONE = 1.0d0)
 parameter (matvec=1, precondLeft=2, precondRight=3, dotProd=4)
 
 !write(*,*) ' GMRES DRIVER : ',my_id,my_id_n
+call r3_info_begin (r3_info_index_0, 'gmres_driver')  ! timing
 call cpu_time(t1)
 call init_dgmres(icntl,cntl)
 
@@ -135,6 +137,6 @@ deallocate(work)
 call cpu_time(t2)
 !write(*,'(i3,A,f14.6)') my_id,' gmres TOTAL : ',t2-t1
 
-
+call r3_info_end (r3_info_index_0)  ! timing
 return
 end

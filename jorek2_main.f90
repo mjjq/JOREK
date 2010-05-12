@@ -46,6 +46,7 @@ program JOREK2
   implicit none
 
   include 'mpif.h'
+#include "r3_info.h"
 
   type (type_surface_list) :: surface_list
   logical                  :: grid_changed
@@ -78,6 +79,7 @@ program JOREK2
   integer                  :: i_elem, inode1, i_order, k_order, index_node1, index_node2, knode
   TYPE (type_element)      :: element
   integer                  :: index_size, id_elements
+  logical                  :: bench_without_plot
 
   !***********************************************************************
   !*                  intialisation                                      *
@@ -88,11 +90,13 @@ program JOREK2
   required=MPI_THREAD_MULTIPLE
   call MPI_Init_thread(required,provided,StatInfo)         ! initialise threaded MPI (openMPI)
 
+  call r3_info_init ()                                     ! timing
+
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)           ! the id of each cpu
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
   my_id = rank
   n_cpu = comm_size
-  
+
   use_starwall = .false. !### make this a namelist input parameter later
 
   gmres  = .true.                                          ! .true. for gmres, .false. for direct
@@ -105,14 +109,25 @@ program JOREK2
   pastix_analysed    = .false.
   murge_initialised  = .false.
   pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!
-                                       ! requires no_mpi for Pastix library
+  ! requires no_mpi for Pastix library
   adaptive_time = .false.
 
   if (n_tor .eq. 1) then
      gmres  = .false.
   endif
   if (gmres) use_murge_element = .false.
+
+  ! Flag from HSLT
+  bench_without_plot              = .false.    ! .true. for benchmark (mesuring elapsed time without plot phases) 
+  use_matrix_whitout_zeros_pastix = .false.    ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
+  use_matrix_whitout_zeros_mumps  = .false.    ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
+
   !---------------------------------------------------------- some checks not to waste any cpu time
+  if(required.ne.provided)then
+     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
+     call MPI_FINALIZE(IERR)
+  endif
+
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
      write(*,*) ' FATAL : specify a valid solver'
      call MPI_FINALIZE(IERR)                                ! clean up MPI
@@ -128,8 +143,8 @@ program JOREK2
   if ((gmres) .and. (nstep .gt. 0)) then
      if (n_cpu .lt. (n_tor-1)/2+1) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-!        call MPI_FINALIZE(IERR)                                ! clean up MPI
-!        stop
+        !        call MPI_FINALIZE(IERR)                                ! clean up MPI
+        !        stop
      endif
      if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
@@ -204,8 +219,8 @@ program JOREK2
 
         endif
 
-        call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
-!        call print_grid(node_list,element_list,boundary_list)                  ! print the grid
+        if(.not. bench_without_plot) call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
+        !        call print_grid(node_list,element_list,boundary_list)                  ! print the grid
 
      endif
 
@@ -277,9 +292,9 @@ program JOREK2
 
      ! fill the vacuum response matrix
      if ( use_starwall ) then
-       call ideal_wall_starwall(my_id,node_list,boundary_list)
+        call ideal_wall_starwall(my_id,node_list,boundary_list)
      else
-       call ideal_wall(my_id,node_list,boundary_list)
+        call ideal_wall(my_id,node_list,boundary_list)
      end if
 
      mumps_par%JOB = -2                                     ! clean up this instance of mumps
@@ -375,13 +390,13 @@ program JOREK2
      allocate(local_elms(element_list%n_elements))
      allocate(index_min(index_size),index_max(index_size))
      allocate(local_index_start(n_cpu),local_index_end(n_cpu))
-     
+
      !
      ! Construct index_min, index_max and local_elems
      !
      call distribute_nodes_elements(id_elements,index_size,node_list,element_list,local_elms,n_local_elms, &
           ndof_glob,index_min,index_max)
-     
+
      node_list%n_dof = ndof_glob
      local_index_start = index_min
      local_index_end   = index_max
@@ -430,7 +445,7 @@ program JOREK2
               else
                  CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,       n_tor * n_var,   ierr) 
               end if
-              
+
               CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
               CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
               CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
@@ -446,7 +461,7 @@ program JOREK2
            CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     1,   ierr)
 
            CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
-           
+
            murge_initialised = .TRUE.
 
         ENDIF
@@ -463,30 +478,30 @@ program JOREK2
            write (*,*) "ERROR in MURGE_GRAPHBEGIN"
            STOP
         END IF
-        
+
         DO i_elem = 1, n_local_elms
-           
+
            element = element_list%element(local_elms(i_elem))
            DO i=1,n_vertex_max
-              
+
               inode1         = element%vertex(i)
-              
+
               DO i_order = 1, n_order+1
-                 
+
                  index_node1 = node_list%node(inode1)%index(i_order)
-                 
-                 
-                 
+
+
+
                  ! Build nodes Matrices
                  DO k=1,n_vertex_max
-                    
+
                     knode         = element%vertex(k)
-                    
+
                     DO k_order = 1, n_order+1
-                       
+
                        index_node2 = node_list%node(knode)%index(k_order)
-                       
-                       
+
+
                        CALL MURGE_GRAPHEDGE(id,  &
                             index_node1,         &
                             index_node2,         &
@@ -497,8 +512,8 @@ program JOREK2
                                "J", index_node2
                           STOP
                        END IF
-                       
-                       
+
+
                     END DO
                  END DO
               END DO
@@ -601,13 +616,14 @@ program JOREK2
   !***********************************************************************
   !***********************************************************************
 
- 
+
   if (nstep .gt. 0) call update_deltas(my_id,node_list)        ! create list of delta values in local_matrix module
 
   iter_gmres  = 999
   iter_big    = 200
   iter_precon = 22
 
+  call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
 
   do istep = 1, nstep
 
@@ -689,7 +705,7 @@ program JOREK2
            call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
         endif
-     
+
         if (.not. gmres) call update_rhs_n(my_id,my_id_n)      ! correct the RHS with the previous solution (deltas)
 
         if (use_murge .and. use_murge_element) then
@@ -708,7 +724,7 @@ program JOREK2
         call gmres_driver(my_id,my_id_n,i_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)     ! gmres solution
 
      endif
-     
+
      call cpu_time(t_solve_2)
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -750,7 +766,7 @@ program JOREK2
      endif
 
      !--------------------------------------------------------- energies
-     if (my_id .eq. 0)  then
+     if (my_id .eq. 0 .and. .not. bench_without_plot)  then
         call energy(node_list,element_list,W_mag,W_kin)
 
         xtime(index_start+istep) = t_now
@@ -767,6 +783,13 @@ program JOREK2
         endif
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
+     endif
+
+     !---------------------------------------------------------timing
+     if (istep.eq.1) then
+        call r3_info_print (-3, -2, 'ITERATION    1')
+     else
+        call r3_info_print (istep, -2, 'ITERATION')
      endif
 
      if (my_id .eq. 0) then
@@ -823,23 +846,25 @@ program JOREK2
 
      call export_restart(node_list,element_list,'jorek_restart.rst')
 
-     PI = 2.d0*asin(1.d0)
-
-     do ivar=1,n_var
-        call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
-     enddo
-
-     do i=1,n_tor,2
-
-        write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
+     if (.not. bench_without_plot) then
+        PI = 2.d0*asin(1.d0)
 
         do ivar=1,n_var
-           if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
-              call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
-           endif
+           call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
         enddo
 
-     enddo
+        do i=1,n_tor,2
+
+           write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
+
+           do ivar=1,n_var
+              if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
+                 call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+              endif
+           enddo
+
+        enddo
+     endif
 
      if (index_now .gt. 1) then
 
@@ -933,6 +958,7 @@ program JOREK2
      if (allocated(xtime))     deallocate(xtime)
 
   endif
+  call r3_info_summary ()                                ! timing
   call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 end program JOREK2

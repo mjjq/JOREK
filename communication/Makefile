@@ -18,7 +18,8 @@ all: mod_phys_module.o \
      update_values.o \
      export_boundary.o \
      vertex_is_local.o \
-     export_helena.o
+     export_helena.o  \
+     split_broadcast.o
 
 modules :     
 

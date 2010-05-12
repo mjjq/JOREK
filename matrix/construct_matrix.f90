@@ -12,6 +12,7 @@ use nodes_elements
 
 implicit none
 include 'mpif.h'
+#include "r3_info.h"
 
 type (type_element)       :: element
 type (type_node)          :: nodes(n_vertex_max)
@@ -32,6 +33,7 @@ logical :: xpoint2
 
 integer, external :: omp_get_num_threads, omp_get_thread_num
 
+call r3_info_begin (r3_info_index_0, 'construct_matrix')   ! timing
 if (my_id .eq. 0) then
   write(*,*) '****************************************'
   write(*,*) '*  construct matrix                    *'
@@ -243,6 +245,6 @@ endif
 call boundary_conditions(my_id,node_list,element_list,local_elms,n_local_elms,index_min,index_max, &
                          xpoint2,psi_axis,psi_bnd,Z_xpoint)
 
-
+call r3_info_end (r3_info_index_0)    ! timing
 return
 end

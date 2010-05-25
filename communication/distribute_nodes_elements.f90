@@ -15,21 +15,33 @@ type (type_surface_list) :: flux_list
 
 integer :: local_elms(*)
 integer :: my_id, n_cpu, n_dof, n_local_elms, index_total, inode
-integer :: index_min(*), index_max(*), index_part, inext, i, k, iv
+integer :: index_min(*), index_max(*), index_part, inext, i,j, k, iv,index1
 
 logical :: elm_is_local
-
+!integer, dimension(node_list%n_nodes) :: active_node
+!integer                               :: n_active_nodes
 if (my_id .eq.0) then
   write(*,*) '************************************'
   write(*,*) '*     distributing nodes           *'
   write(*,*) '************************************'
 endif
 
-index_total = -1
+
+ 
+
+  
+ !call  Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)
+ !index_total = -1
+ !do i=1,n_active_nodes
+  !inode=active_node(i)
+  !index_total = max(index_total,maxval(node_list%node(inode)%index))
+! enddo
+
+ index_total = -1
 do inode=1,node_list%n_nodes
   index_total = max(index_total,maxval(node_list%node(inode)%index))
 enddo
-
+!stop
 !write(*,*) ' n_elements  : ',my_id,element_list%n_elements
 !write(*,*) ' n_nodes     : ',my_id,node_list%n_nodes
 !write(*,*) ' index_total : ',my_id,index_total
@@ -70,6 +82,20 @@ do i = 1, element_list%n_elements
         ELM_is_local = .true.
       endif
     enddo
+
+   if(node_list%node(inode)%constrained==.true.) then
+	     do j = 1, 2
+		 index1 = node_list%node(inode)%parents(j)
+		  do k=1, n_order+1
+
+                       if ( (node_list%node(index1)%index(k) .ge. index_min(my_id+1)) .and. &
+                        (node_list%node(index1)%index(k) .le. index_max(my_id+1)) ) then
+                        ELM_is_local = .true.
+                      endif
+                  enddo
+	    end do     
+	    	    
+   end if
 
   enddo
 

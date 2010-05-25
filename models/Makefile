@@ -9,6 +9,7 @@ all: modules \
      equilibrium.o \
      ffprime.o \
      poisson.o \
+     chgmt_node.o \
      temperature.o \
      temperature_i.o \
      temperature_e.o \

@@ -33,7 +33,7 @@ call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
 
 call MPI_BCAST(element_list%n_elements,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
-bufsize = element_list%n_elements * (2*n_vertex_max*INT_EXT + n_vertex_max*(n_order+1)*IDBL_EXT)
+bufsize = element_list%n_elements * ((2*n_vertex_max+8+5)*INT_EXT + n_vertex_max*(n_order+1)*IDBL_EXT)
 
 if (allocated(buffer)) deallocate(buffer)
 allocate(buffer(bufsize/ INT_EXT))
@@ -48,6 +48,13 @@ if (my_id .eq. 0) then
     call MPI_PACK(anelement%vertex,n_vertex_max,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anelement%neighbours,n_vertex_max,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anelement%size,n_vertex_max*(n_order+1),MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%father,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%n_sons,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%n_gen ,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%sons(1:4)  ,4,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%nref  ,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%contain_node(1:5)  ,5,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  
   enddo
 
 endif
@@ -62,7 +69,12 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,anelement%vertex,n_vertex_max,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%neighbours,n_vertex_max,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%size,n_vertex_max*(n_order+1),MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-
+    call MPI_UNPACK(buffer,bufsize,position,anelement%father,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anelement%n_sons,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anelement%n_gen ,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anelement%sons(1:4)  ,4,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anelement%nref  ,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anelement%contain_node(1:5)  ,5,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     element_list%element(ife) = anelement
 
   enddo

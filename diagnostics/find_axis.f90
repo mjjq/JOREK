@@ -57,7 +57,7 @@ do i=1,element_list%n_elements
     i_elm_axis  = i
     ij_axis     = minloc(PS)
   endif
-
+!write(*,'(A,4f14.8)') ' magnetic axisdd : ',R_axis,Z_axis,psi_axis
 enddo
 
 s=Xgauss(ij_axis(1)) ; t=Xgauss(ij_axis(2))

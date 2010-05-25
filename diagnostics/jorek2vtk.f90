@@ -52,27 +52,30 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 freeboundary
 
-
+write(*,*) "jorek2vtk"
 read(5,in1)               ! read the namelist input file
 
 ivtk = 22                 ! an arbitrary unit number for the VTK output file
 
-nsub  = 5                 ! the number of subdivisions of the cubic finite elements into linear pieces
+nsub  = 5             ! the number of subdivisions of the cubic finite elements into linear pieces
 i_tor = -1
 
-n_scalars = n_var + 8     ! number of scalars to write to the VTK output file
+n_scalars = n_var    ! number of scalars to write to the VTK output file
 n_vectors = 0             ! number of vectors to write to the VTK output file
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
 
-scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar         ', &
-                  'pressure    ',                                                  &
-                  'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp',     &
-		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
+scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar         '/)
+                
+
+!scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar         ', &
+!                  'pressure    ',                                                  &
+!!                  'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp',     &
+!		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
-call import_restart(node_list,element_list)
+ call import_restart(node_list,element_list)
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -104,7 +107,7 @@ else
 endif
 
 do i=1,element_list%n_elements
-
+ if(element_list%element(i)%n_sons.eq.0) then
   do j=1,nsub
     s = float(j-1)/float(nsub-1)
     do k=1,nsub
@@ -213,32 +216,32 @@ do i=1,element_list%n_elements
 
         Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR
 
-        ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
-        D_prof  = D_perp(1)  * ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4))))
+        ZK_prof = ZK_perp(1) !* ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
+        D_prof  = D_perp(1)  !* ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4))))
 
         grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
 !   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp','D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
 
-        scalars(inode,n_var+1)   = scalars(inode,5) * scalars(inode,6)
+       ! scalars(inode,n_var+1)   = scalars(inode,5) * scalars(inode,6)
 
-        if (grad_psi .ne. 0.d0) then
+        !if (grad_psi .ne. 0.d0) then
 
-          scalars(inode,n_var+2) = ZK_par * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
+        !  scalars(inode,n_var+2) = ZK_par * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
 
-          scalars(inode,n_var+3) = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
+        !  scalars(inode,n_var+3) = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
 
-          scalars(inode,n_var+4) = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
+        !  scalars(inode,n_var+4) = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
 
-          scalars(inode,n_var+5) = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
+        !  scalars(inode,n_var+5) = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
 
-          scalars(inode,n_var+6) = D_prof * (RHO_x * ps_x + RHO_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
+        !  scalars(inode,n_var+6) = D_prof * (RHO_x * ps_x + RHO_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
 
-          scalars(inode,n_var+7) = scalars(inode,5) * scalars(inode,7) * Btot
+        !  scalars(inode,n_var+7) = scalars(inode,5) * scalars(inode,7) * Btot
 
-          scalars(inode,n_var+8) = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
+         ! scalars(inode,n_var+8) = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
 
-        endif
+       ! endif
 
 !        vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
 !        vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
@@ -258,7 +261,7 @@ do i=1,element_list%n_elements
       ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
     enddo
   enddo
-
+ endif
 enddo
 
 

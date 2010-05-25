@@ -37,11 +37,11 @@ real*8, external   :: spwert
 integer            :: ifail, inode, node, index, index0, n_node_start, n_element_start, iv, ivp, ivm
 integer            :: n_index_start, node_iv, node_ivp, node_ivm, i_elm_xpoint
 logical            :: xpoint
-
+integer            :: i_sons
 PI = 2.d0*asin(1.d0)
-
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
-
+ 
+ call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+ 
 if (xpoint) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
 
 surface_list%n_psi = n_flux - 1
@@ -410,24 +410,66 @@ do i=1,nrnew
 
    if (i .eq. nrnew) node_list%node(index)%boundary = 2
 
-   if (i.eq.1) then
+   !if (i.eq.1) then
 
-     node_list%node(index)%index(1) = 1
+     !node_list%node(index)%index(1) = 1
 
-     if (j.eq.1) n_index_start = n_index_start + 1
+    ! if (j.eq.1) n_index_start = n_index_start + 1
 
-     node_list%node(index)%index(2) = n_index_start + 1
-     node_list%node(index)%index(3) = n_index_start + 2
-     node_list%node(index)%index(4) = n_index_start + 3
-     n_index_start = n_index_start + n_order
+    ! node_list%node(index)%index(2) = n_index_start + 1
+    ! node_list%node(index)%index(3) = n_index_start + 2
+    ! node_list%node(index)%index(4) = n_index_start + 3
+    ! n_index_start = n_index_start + n_order
 
-   else
+   !else
+     !do k=1,n_order+1
+       !node_list%node(index)%index(k) = n_index_start + k
+    ! enddo
+     !n_index_start = n_index_start + n_order+1
+   !endif
+     
+  
      do k=1,n_order+1
-       node_list%node(index)%index(k) = n_index_start + k
+      node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
      enddo
-     n_index_start = n_index_start + n_order+1
-   endif
+  
 
+          !Neighbours of the element (for refinement procedure)
+
+	    if(i==1) then	        
+	         element_list%element(Index)%neighbours(4) = 0    
+              else		 
+                 element_list%element(Index)%neighbours(4) = Index - npnew 
+	    end if 	 
+	    
+	    if(j==npnew) then
+	    	 element_list%element(Index)%neighbours(3) = Index - npnew + 1  
+	      else
+	    	 element_list%element(Index)%neighbours(3) = Index + 1       
+	    end if	  	    
+	    
+	    if(i==nrnew-1) then
+	    	 element_list%element(Index)%neighbours(2) = 0   
+	      else   
+	    	 element_list%element(Index)%neighbours(2) = Index + npnew 
+	    end if 
+	        
+	    if(j==1) then
+	    	 element_list%element(Index)%neighbours(1) = Index + npnew -1  
+	      else   
+	    	 element_list%element(Index)%neighbours(1) = Index -1      
+	    end if         
+	  
+            ! Initialization of the genealogy  (for refinement procedure)
+
+            element_list%element(Index)%father = 0
+	    element_list%element(Index)%n_sons = 0
+
+	    do i_sons = 1, 4
+
+	         element_list%element(Index)%sons(i_sons) = 0
+
+	    end do 
  enddo
 
 enddo

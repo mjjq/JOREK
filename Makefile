@@ -65,6 +65,15 @@ jorek2_poincare : modules sources
 	solvers/root.o                    \
 	solvers/mnewtax.o                 \
         refinement/neighbours.o           \
+        refinement/Ref_Add_Elements.o\
+        refinement/Ref_Add_Node.o\
+        refinement/Ref_boundary_node.o\
+        refinement/Ref_Check_Neighb_Stat.o\
+        refinement/Ref_Find_Constrained_Node.o\
+        refinement/Refine_Element.o\
+        refinement/Refine_Elem_List.o\
+        refinement/Ref_Update_Index.o\
+        refinement/Ref_Active_Node.o
 	 -o $(JOREK_DIR)/jorek2_poincare $(INCLUDES) $(LIBS)
 
 jorek2_connection2 : modules sources

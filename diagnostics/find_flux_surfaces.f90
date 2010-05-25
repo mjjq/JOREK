@@ -33,20 +33,23 @@ PI = 2.d0* asin(1.d0)
 if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)
 
 allocate(surface_list%flux_surfaces(surface_list%n_psi))
-
+!print*,"findflux deb"
 do j=1, surface_list%n_psi
   surface_list%flux_surfaces(j)%n_pieces = 0
   surface_list%flux_surfaces(j)%elm      = 0
   surface_list%flux_surfaces(j)%s        = 0
   surface_list%flux_surfaces(j)%t        = 0
+!print*,"findflux fin",j,surface_list%n_psi
 enddo
 
 if (xpoint) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
 
+
+
 do i=1, element_list%n_elements
-
+       
   call psi_minmax(node_list,element_list,i,psimin,psimax)
-
+ 
   do j=1, surface_list%n_psi
 
     ifound = 0
@@ -75,7 +78,7 @@ do i=1, element_list%n_elements
         a0 =          p1                                       - surface_list%psi_values(j)
 
         call SOLVP3(a0,a1,a2,a3,s,s2,s3,ifail)
-
+          
         if ((s .ge. 0.d0) .and. (s .le. 1.d0)) then
 
           ifound = ifound + 1
@@ -99,13 +102,13 @@ do i=1, element_list%n_elements
         endif
 
       enddo ! end of 4 edges
-
+  
       if (ifound .eq. 2) then
 
         call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(1:2),s_psi(1:2),dpsi_dr(1:2),dpsi_ds(1:2))
-
+     
       elseif (ifound .eq. 4) then
-
+      
 ! complicated : 2 line pieces but which point belongs to which line piece?
 
 !        write(*,*) ' found 4 points '
@@ -183,7 +186,7 @@ do i=1, element_list%n_elements
         endif
 
       endif
-
+     
 !    endif
 
   enddo

@@ -3,10 +3,10 @@
 
  restart = .f.
  regrid  = .f.
- tstep   = 1000.
- nstep   = 1
+ tstep   = 10000.
+ nstep   = 0
 
- nout = 5
+ nout = 1
 
  fbnd(1)   = 2.
  fbnd(2:4) = 0.
@@ -40,7 +40,7 @@
 
  n_R      = 0
  n_Z      = 0
- n_radial = 41
+ n_radial = 51
  n_pol    = 16
 
  n_flux   = 41

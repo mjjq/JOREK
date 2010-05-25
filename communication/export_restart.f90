@@ -23,6 +23,11 @@ do i=1,node_list%n_nodes
   write(21) node_list%node(i)%deltas
   write(21) node_list%node(i)%index
   write(21) node_list%node(i)%boundary
+  write(21) node_list%node(i)%parents		     
+  write(21) node_list%node(i)%parent_elem			      
+  write(21) node_list%node(i)%ref_lambda
+  write(21) node_list%node(i)%ref_mu		     
+  write(21) node_list%node(i)%constrained
 enddo
 
 write(21) element_list%element(1:element_list%n_elements)

@@ -27,7 +27,7 @@ real*8              :: Rgeo, Zgeo,amin,acentre,fbnd(*),fpsi(*),angle_start
 real*8, allocatable :: RR(:,:),ZZ(:,:),PSI(:,:)
 real*8              :: r_small, pi, dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
 real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3
-integer             :: mf, nr, np, i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm
+integer             :: mf, nr, np, i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm,i_sons
 integer             :: n_element_start, n_node_start, n_boundary_start, n_index_start, ielm, iside,iv1, iv2, idir1, idir2
 real*8              :: XR_r_0,XR_r_1, SIG_r_0, SIG_r_1, XR_tht_0, XR_tht_1, SIG_tht_0, SIG_tht_1, abltg(3), s_tmp, dr_ds, dtht_dt
 real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
@@ -182,22 +182,57 @@ node_list%n_nodes        = n_node_start     + nr*np
 
 do i=1,nr-1
 
- do j=1,np-1
+ do j=1,np
    node  = np*(i-1) + j
    index = n_element_start + node
    element_list%element(index)%vertex(1) = n_node_start + (i-1)*np + j
    element_list%element(index)%vertex(4) = n_node_start + (i-1)*np + j + 1
    element_list%element(index)%vertex(3) = n_node_start + (i  )*np + j + 1
    element_list%element(index)%vertex(2) = n_node_start + (i  )*np + j
- enddo
 
- index = n_element_start + np*(i-1) + np
+   if (j .eq. np) then          
+                 element_list%element(Index)%vertex(4) = (i-1)*np + 1
+                 element_list%element(Index)%vertex(3) =  i*np    + 1
+   endif    
 
- element_list%element(index)%vertex(1)  = n_node_start + (i  )*np
- element_list%element(index)%vertex(4)  = n_node_start + (i  )*np - np + 1
- element_list%element(index)%vertex(3)  = n_node_start + (i  )*np + 1
- element_list%element(index)%vertex(2)  = n_node_start + (i  )*np + np
 
+
+
+
+           !Neighbours of the element (refinement procedure)
+
+	    if(i==1) then	        
+	         element_list%element(Index)%neighbours(4) = 0    
+              else		 
+                 element_list%element(Index)%neighbours(4) = Index - np 
+	    end if 	 
+	    
+	    if(j==np) then
+	    	 element_list%element(Index)%neighbours(3) = Index - np + 1  
+	      else
+	    	 element_list%element(Index)%neighbours(3) = Index + 1       
+	    end if	  	    
+	    
+	    if(i==nr-1) then
+	    	 element_list%element(Index)%neighbours(2) = 0   
+	      else   
+	    	 element_list%element(Index)%neighbours(2) = Index + np 
+	    end if 
+	        
+	    if(j==1) then
+	    	 element_list%element(Index)%neighbours(1) = Index + np -1 
+	      else   
+	    	 element_list%element(Index)%neighbours(1) = Index -1       
+	    end if     
+	  
+            ! Initialization of the genealogy  (refinement procedure)
+
+            element_list%element(Index)%father = 0
+	    element_list%element(Index)%n_sons = 0
+	    do i_sons = 1, 4
+	         element_list%element(Index)%sons(i_sons) = 0
+	    end do 
+  enddo
 enddo
 
 do j=1,np
@@ -259,7 +294,8 @@ do i=1,nr
    do k=1,n_order+1
      node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
    enddo
-
+  
+   node_list%node(index)%constrained=.false.
  enddo
 
 enddo

@@ -14,9 +14,11 @@ implicit none
 include 'mpif.h'
 #include "r3_info.h"
 
+
 type (type_element)       :: element
 type (type_node)          :: nodes(n_vertex_max)
-
+type (type_element)       :: element_father
+type (type_node)          :: nodes_father(n_vertex_max)
 real*8, allocatable :: rhs_loc(:)
 integer :: my_id, local_elms(*), n_local_elms, index_min, index_max,index_min_loc, index_max_loc
 real*8  :: ELM(n_tor*n_vertex_max*(n_order+1)*n_var,n_tor*n_vertex_max*(n_order+1)*n_var)
@@ -30,7 +32,9 @@ integer :: ijA_position, ijA_position2, nz_AA2, n_AA2, kv, kT, ku
 integer :: index_large_i, index_large_k, ilarge2, vertex(2), direction(2)
 integer :: omp_nthreads, omp_tid
 logical :: xpoint2
-
+integer, dimension(n_vertex_max) ::  node_out
+integer, dimension(node_list%n_nodes) :: active_node
+integer :: i_father,INODE_FATHER
 integer, external :: omp_get_num_threads, omp_get_thread_num
 
 call r3_info_begin (r3_info_index_0, 'construct_matrix')   ! timing
@@ -82,12 +86,16 @@ A_glob   = 0.d0
 RHS_glob = 0.d0
 RHS_loc  = 0.d0
 
+
+
+
 !$omp parallel default(none) &
 !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,  &
-!$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id)              &
+!$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id, nodes_father)              &
 !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,            &
 !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position, &
-!$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid)
+!$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,&
+!$omp           i_father,element_father,inode_father,node_out)
 
 !omp_nthreads = omp_get_num_threads()
 !omp_tid      = omp_get_thread_num()
@@ -99,9 +107,23 @@ do ife =1, n_local_elms
 
   ielm = local_elms(ife)
 
+
+  
   element = element_list%element(ielm)
 
+  i_father= element_list%element(ielm)%father
+ 
+
+   if( i_father.ne.0) then
+    element_father = element_list%element(i_father)
+   endif
+
   do iv = 1, n_vertex_max
+
+    if( i_father.ne.0) then
+      inode_father=element_father%vertex(iv)
+      nodes_father(iv) = node_list%node(inode_father)
+    endif
 
     inode     = element%vertex(iv)
 
@@ -174,10 +196,17 @@ do ife =1, n_local_elms
 !    enddo
 !  endif
 
-!$omp critical
+  
+!$omp single
+   
+   call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
+!$omp end single
+!$omp critical  
+
+if (element%n_sons .eq. 0) then
   do i=1,n_vertex_max
 
-    inode1         = element%vertex(i)
+    inode1         =node_out(i)! element%vertex(i)
 
     do i_order = 1, n_order+1
 
@@ -190,12 +219,15 @@ do ife =1, n_local_elms
         do j = 1, n_var * n_tor
 
           index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
-
+       
+          !if (index_large_i + j .eq. 2) then
+	  	!write(*,*)  "RHS(2) = ",ife,inode1,j,index_ij, rhs_loc(index_large_i+j), "=>", rhs_loc(index_large_i+j) + RHS(index_ij)
+         !endif
           rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + RHS(index_ij)
 
           do k=1,n_vertex_max
 
-            knode         = element%vertex(k)
+            knode         =node_out(k)! element%vertex(k)
 
             do k_order = 1, n_order+1
 
@@ -208,7 +240,7 @@ do ife =1, n_local_elms
               do l = 1, n_var * n_tor
 
                 index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   ! index in the ELM matrix
-
+               
                 ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor + l
 
                 irn_glob(ilarge2) = index_large_i   + j
@@ -225,9 +257,10 @@ do ife =1, n_local_elms
       endif
 
     enddo
+   
   enddo
 !$omp end critical
-
+endif
 enddo
 !$omp end do
 !$omp end parallel

@@ -31,6 +31,11 @@ do i=1,node_list%n_nodes
   read(21) node_list%node(i)%deltas(1:n_tor_tmp,:,:)
   read(21) node_list%node(i)%index
   read(21) node_list%node(i)%boundary
+  read(21) node_list%node(i)%parents			     
+  read(21) node_list%node(i)%parent_elem			      
+  read(21) node_list%node(i)%ref_lambda
+  read(21) node_list%node(i)%ref_mu		     
+  read(21) node_list%node(i)%constrained
 enddo
 
 read(21) element_list%element(1:element_list%n_elements)

@@ -35,7 +35,7 @@ if (.not.found_index) then
   do i=1,ijA_size(index1_local)           ! replace by binary search?
 
     write(*,*) i,irn_jcn(index1_local,i)
-
+ stop
   enddo
 
 endif

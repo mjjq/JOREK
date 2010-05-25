@@ -32,7 +32,7 @@ call MPI_TYPE_EXTENT(MPI_LOGICAL,ILOG_EXT,ierr)
 call MPI_BCAST(node_list%n_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(node_list%n_dof,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var)*IDBL_EXT + (n_order+1 + 1)*INT_EXT )
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3 )*INT_EXT + (1)*ILOG_EXT)
 
 allocate(buffer(bufsize/ INT_EXT))
 
@@ -43,12 +43,18 @@ if (my_id .eq. 0) then
 
     anode = node_list%node(i)
 
-    call MPI_PACK(anode%x,(n_order+1)*n_dim,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(anode%values,n_tor*(n_order+1)*n_var,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(anode%deltas,n_tor*(n_order+1)*n_var,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(anode%index,n_order+1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(anode%boundary,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-
+    call MPI_PACK(anode%x,         (n_order+1)*n_dim,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%values,     n_tor*(n_order+1)*n_var,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%deltas,     n_tor*(n_order+1)*n_var,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%index,      n_order+1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%boundary,   1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%constrained    ,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%parents(1:2)   ,2,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%parent_elem    ,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%ref_lambda     ,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anode%ref_mu         ,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  
+   
   enddo
 
 endif
@@ -65,7 +71,11 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,anode%deltas,n_tor*(n_order+1)*n_var,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%index,n_order+1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%boundary,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-
+    call MPI_UNPACK(buffer,bufsize,position,anode%constrained,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anode%parents(1:2)   ,2,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anode%parent_elem    ,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anode%ref_lambda     ,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anode%ref_mu         ,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
     node_list%node(i) = anode
 
   enddo

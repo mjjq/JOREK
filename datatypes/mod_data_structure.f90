@@ -8,6 +8,10 @@ module data_structure                                 ! contains definition of t
     real*8     :: deltas(n_tor,n_order+1,n_var)
     integer    :: index(n_order+1)                    ! the index in the main matrix
     integer    :: boundary                            ! = 1, 2 or 3 for boundary nodes
+    integer    :: parents(2)			      ! Parent nodes (used if node is constrained)"refinement"
+    integer    :: parent_elem			      ! which element do parent nodes belong to ? "refinement"
+    real*8     :: ref_lambda, ref_mu		      ! Local coordinates of node inside the parent element. "refinement"
+    logical    :: constrained			      ! Constrained node or not..."refinement"
   endtype type_node                                   ! x(:,1) : position, x(:,2) : vector u, x(:,3) : vector v, x(4) : vector w
 
   type type_node_list                                 ! type definition of a list of nodes
@@ -20,6 +24,12 @@ module data_structure                                 ! contains definition of t
     integer :: vertex(n_vertex_max)                   ! the nodes of the corners
     integer :: neighbours(n_vertex_max)               ! the neighbouring elements
     real*8  :: size(n_vertex_max,n_order+1)           ! the size of the vectors at each vertex of the element
+    integer :: father				      ! index of father element (0 if no father)"refinement"
+    integer :: n_sons				      ! Number of sons elements"refinement"
+    integer :: n_gen				      ! Generation rank of the element"refinement"
+    integer :: sons(4)				      ! Sons of the element (=0 if no son)"refinement"
+    integer :: contain_node(5)                        ! nodes belonging to the element"refinement"
+    integer :: nref				      ! How the element has been refined (if so)"refinement"
   endtype type_element
 
   type type_element_list                              ! type definition for a list of elements

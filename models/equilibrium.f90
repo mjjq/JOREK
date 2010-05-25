@@ -170,7 +170,7 @@ if (my_id .eq. 0) then
     surface_list%psi_values(i) =  (1. - 0.99999999 * (float(i)/float(surface_list%n_psi))**2 ) * psi_axis
   enddo
 
-  call find_flux_surfaces(xpoint2,node_list,element_list,surface_list)
+  call find_flux_surfaces(xpoint2,node_list,element_list,surface_list)! pb //
   call plot_flux_surfaces(node_list,element_list,surface_list,.true.)
 
   call q_profile(node_list,element_list,surface_list)

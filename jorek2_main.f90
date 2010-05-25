@@ -79,7 +79,12 @@ program JOREK2
   integer                  :: i_elem, inode1, i_order, k_order, index_node1, index_node2, knode
   TYPE (type_element)      :: element
   integer                  :: index_size, id_elements
+
+  integer     	           ::  list_to_be_refined(n_ref_list), n_to_be_refined    
+  
+
   logical                  :: bench_without_plot
+
 
   !***********************************************************************
   !*                  intialisation                                      *
@@ -143,8 +148,13 @@ program JOREK2
   if ((gmres) .and. (nstep .gt. 0)) then
      if (n_cpu .lt. (n_tor-1)/2+1) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
+
+  !      call MPI_FINALIZE(IERR)                                ! clean up MPI
+  !      stop
+
         !        call MPI_FINALIZE(IERR)                                ! clean up MPI
         !        stop
+
      endif
      if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
@@ -217,16 +227,24 @@ program JOREK2
            call MPI_FINALIZE(IERR)                                ! clean up MPI
            stop
 
-        endif
+        endif	
+
+
+        call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
+         !call print_grid(node_list,element_list,boundary_list)                  ! print the grid
+         !call export_restart(node_list,element_list,'jorek_restart.rst')
 
         if(.not. bench_without_plot) call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
         !        call print_grid(node_list,element_list,boundary_list)                  ! print the grid
 
-     endif
 
+     endif
+      
+  
      call equilibrium(my_id,node_list,element_list,xpoint)                        ! equilibrium run on all cpus
      call initial_conditions(my_id,node_list,element_list,xpoint)                 ! initial conditions
-
+   !call finplt
+   !stop
      if (n_flux .gt. 1) then                                                      ! flux surface grid
 
         if (xpoint)  then
@@ -242,10 +260,59 @@ program JOREK2
 
         else
 
-           if (my_id .eq. 0) call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+         if (my_id .eq. 0) then
+
+          call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+              
+          refinement=.true.
+
+
+               !****************************************************************************
+               !                        Refining elements (equilibrum)                     *
+               !****************************************************************************
+
+            if(refinement==.true.) then
+  
+             n_to_be_refined=0
+
+              do i=16*16+1,25*16
+
+               list_to_be_refined(i-16*16) =i
+               n_to_be_refined =  n_to_be_refined +1
+
+              enddo
+
+              do i=32*16+1,element_list%n_elements-16*2
+
+               list_to_be_refined(i-32*16+144) =i !   144=(25-16)*16
+               n_to_be_refined =  n_to_be_refined +1
+      
+              enddo 
+          
+          
+          
+             call Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_refined)
+
+             do i=640+1,1024
+
+               list_to_be_refined(i-640) =i
+               n_to_be_refined =  n_to_be_refined +1
+
+              enddo
+ 
+           ! call Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_refined)
+  
+           
+             call Ref_Update_Index( element_list,node_list)
+          
+            endif
+
+         endif
+        
+      
 
         endif
-
+         
         call equilibrium(my_id,node_list,element_list,xpoint)                         ! equilibrium run on all cpus
         call initial_conditions(my_id,node_list,element_list,xpoint)                  ! initial conditions
 
@@ -402,7 +469,7 @@ program JOREK2
      local_index_end   = index_max
      !
      ! Build ijA_index, ijA_size and irn_jcn
-     !
+     
      call global_matrix_structure(my_id_n,node_List,element_list,boundary_list, freeboundary,&
           local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
 
@@ -734,7 +801,7 @@ program JOREK2
 
      if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
-        call update_values(my_id,node_list,deltas)         ! add solution to node values
+        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
 
         call update_deltas(my_id,node_list)
 
@@ -783,6 +850,7 @@ program JOREK2
         endif
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
+      !  print*,"enrj",abs(energies(1,2,index_start+istep-1))
      endif
 
      !---------------------------------------------------------timing

@@ -1,228 +1,254 @@
 subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max)
-!***********************************************************************
-!* subroutine determines the position of the indices in the global     *
-!* matrix                                                              *
-!***********************************************************************
+  !***********************************************************************
+  !* subroutine determines the position of the indices in the global     *
+  !* matrix                                                              *
+  !***********************************************************************
 
-use data_structure
-use global_distributed_matrix
+  use data_structure
+  use global_distributed_matrix
 
-implicit none
+  implicit none
 
-type (type_node_list)     :: node_list
-type (type_element_list)  :: element_list
-type (type_boundary_list) :: boundary_list
-type (type_surface_list)  :: flux_list
+  type (type_node_list)     :: node_list
+  type (type_element_list)  :: element_list
+  type (type_boundary_list) :: boundary_list
+  type (type_surface_list)  :: flux_list
+  type (type_element)       :: element
+  type (type_node)          :: nodes(n_vertex_max)
 
-integer :: local_elms(*), index_min, index_max, my_id, n_local_elms
-integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
-integer :: j_larger, j, ibase, n_max
+  integer :: local_elms(*), index_min, index_max, my_id, n_local_elms
+  integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
+  integer :: j_larger, j, ibase, n_max
+  integer :: inode,i_father
+  integer, dimension(n_vertex_max) ::  node_out
+  logical :: freeboundary
 
-logical :: freeboundary
+  write(*,*) '**********************************'
+  write(*,*) '* global_matrix_structure        *'
+  write(*,*) '**********************************'
+  write(*,*) '**********************************'
+  if (freeboundary) write(*,*) ' FREEBOUNDARY is ON'
 
-write(*,*) '**********************************'
-write(*,*) '* global_matrix_structure        *'
-write(*,*) '**********************************'
-write(*,*) '**********************************'
-if (freeboundary) write(*,*) ' FREEBOUNDARY is ON'
+  ndof_glob = -1
+  do inode1=1,node_list%n_nodes
+     ndof_glob = max(ndof_glob,maxval(node_list%node(inode1)%index))
+  enddo
+  ndof_glob = ndof_glob * n_tor*n_var
 
-ndof_glob = -1
-do inode1=1,node_list%n_nodes
-  ndof_glob = max(ndof_glob,maxval(node_list%node(inode1)%index))
-enddo
-ndof_glob = ndof_glob * n_tor*n_var
+  n_max = 1024
 
-n_max = 1024
+  allocate(ijA_size(index_max-index_min+1))
+  allocate(irn_jcn(index_max-index_min+1,n_max))
 
-allocate(ijA_size(index_max-index_min+1))
-allocate(irn_jcn(index_max-index_min+1,n_max))
+  ijA_size    = 0
+  irn_jcn = 0
 
-ijA_size    = 0
-irn_jcn = 0
+  do i=1,n_local_elms                 ! loop over the local elements
 
-do i=1,n_local_elms                                                 ! loop over the local elements
+     ielm = local_elms(i)
+     element = element_list%element(ielm)
+     i_father= element_list%element(ielm)%father
+     do iv = 1, n_vertex_max
 
-  ielm = local_elms(i)
+        inode     = element%vertex(iv)
 
-  do iv = 1, n_vertex_max                                           ! loop over the vertices
+        nodes(iv) = node_list%node(inode)
 
-    inode1 = element_list%element(ielm)%vertex(iv)
+     enddo
 
-    do ik = 1, n_degrees                                            ! loop over degrees of freedom
 
-      index1       = node_list%node(inode1)%index(ik)
-      index1_local = index1 - index_min + 1
+     !if( i_father.ne.0) then
+     call Ch_node_struct(ielm, element,nodes,node_out) !  Processing  "constrained nodes"
+     !else
+     !  do j=1,4
+     !  node_out(j)=element%vertex(j)
+     ! enddo
+     !endif
 
-      if ((index1 .ge. index_min) .and. (index1 .le. index_max)) then     ! keep contribution only if index belongs to local range of indices
-                                                                          ! distribution is by nodes (not by element)
-        do jv = 1,n_vertex_max
+     if (element%n_sons .eq. 0) then
 
-          inode2 = element_list%element(ielm)%vertex(jv)
+        do iv = 1, n_vertex_max                                           ! loop over the vertices
 
-          do jk = 1, n_degrees
+           inode1 =node_out(iv)! element_list%element(ielm)%vertex(iv)
 
-            index2       = node_list%node(inode2)%index(jk)
-            index2_local = index2 - index_min + 1
+           do ik = 1, n_degrees                                            ! loop over degrees of freedom
 
-            if (ijA_size(index1_local) .eq. 0) then                      ! if row index1_local still empty, fill with first value (index2)
+              index1       = node_list%node(inode1)%index(ik)
+              index1_local = index1 - index_min + 1
 
-              ijA_size(index1_local) = 1
-              irn_jcn(index1_local,1) = index2
+              if ((index1 .ge. index_min) .and. (index1 .le. index_max)) then     ! keep contribution only if index belongs to local range of indices
+                 ! distribution is by nodes (not by element)
+                 do jv = 1,n_vertex_max
 
-            elseif (index2 .gt. irn_jcn(index1_local,ijA_size(index1_local))) then   ! if index2 larger than all previous indices, add at end of list
+                    inode2 =node_out(jv)! element_list%element(ielm)%vertex(jv)
 
-              irn_jcn(index1_local,ijA_size(index1_local)+1) = index2
-              ijA_size(index1_local) = ijA_size(index1_local) + 1
+                    do jk = 1, n_degrees
 
-            else                                                         ! index2 falls somewhere in (between) existing values
+                       index2       = node_list%node(inode2)%index(jk)
+                       index2_local = index2 - index_min + 1
 
-              do j = 1, ijA_size(index1_local)                           ! find the first index larger than index2
+                       if (ijA_size(index1_local) .eq. 0) then                      ! if row index1_local still empty, fill with first value (index2)
 
-                if (index2 .le. irn_jcn(index1_local,j) ) then
+                          ijA_size(index1_local) = 1
+                          irn_jcn(index1_local,1) = index2
 
-                  j_larger = j                                           ! j_larger is the position of the index larger than (or equal to)  index2
-                  exit
+                       elseif (index2 .gt. irn_jcn(index1_local,ijA_size(index1_local))) then   ! if index2 larger than all previous indices, add at end of list
 
-                endif
+                          irn_jcn(index1_local,ijA_size(index1_local)+1) = index2
+                          ijA_size(index1_local) = ijA_size(index1_local) + 1
 
-              enddo
+                       else                                                         ! index2 falls somewhere in (between) existing values
 
-              if (index2 .ne. irn_jcn(index1_local,j_larger) ) then      ! if index2 <> index(j_larger) add index2 and shift the following values
+                          do j = 1, ijA_size(index1_local)                           ! find the first index larger than index2
 
-                do j=ijA_size(index1_local), j_larger, -1                ! shift the higher indeices
+                             if (index2 .le. irn_jcn(index1_local,j) ) then
 
-                  irn_jcn(index1_local,j+1) = irn_jcn(index1_local,j)
+                                j_larger = j                                           ! j_larger is the position of the index larger than (or equal to)  index2
+                                exit
 
-                enddo
+                             endif
 
-                irn_jcn(index1_local,j_larger) = index2                  ! fill the freed position with index2
-                ijA_size(index1_local) = ijA_size(index1_local) + 1      ! add one to the total number of contributions of this row (index1_local)
+                          enddo
 
-                if (ijA_size(index1_local) .gt. n_max) then
-                  write(*,*) ' FATAL error : irn_jcn too small ',ijA_size(index1_local)
-                endif
+                          if (index2 .ne. irn_jcn(index1_local,j_larger) ) then      ! if index2 <> index(j_larger) add index2 and shift the following values
 
-              endif
+                             do j=ijA_size(index1_local), j_larger, -1                ! shift the higher indeices
 
-            endif
+                                irn_jcn(index1_local,j+1) = irn_jcn(index1_local,j)
 
-          enddo
-        enddo
+                             enddo
 
+                             irn_jcn(index1_local,j_larger) = index2                  ! fill the freed position with index2
+                             ijA_size(index1_local) = ijA_size(index1_local) + 1      ! add one to the total number of contributions of this row (index1_local)
 
+                             if (ijA_size(index1_local) .gt. n_max) then
+                                write(*,*) ' FATAL error : irn_jcn too small ',ijA_size(index1_local)
+                             endif
 
-      endif           ! check if node is local
+                          endif ! (index2 .ne. irn_jcn(index1_local,j_larger) )
 
-    enddo             ! loop over degrees of freedom
-  enddo               ! loop over vertices
+                       endif !(ijA_size(index1_local) .eq. 0)
 
-enddo                 ! loop over local elements
+                    enddo !jk = 1, n_degrees
+                 enddo !jv = 1,n_vertex_max
+                 !endif	
+                 !if (freeboundary .and. (node_list%node(inode1)%boundary .ne. 0)) then (Pourquoi ce if ici ????
+                 ! add contributions from all boundary nodes
 
 
-if (freeboundary) then      ! add contributions from all boundary nodes
 
-  do ibnd = 1,boundary_list%n_boundary                                     ! loop over the boundary elements
+              endif           ! check if node is local
 
-    do iv = 1, 2                                                           ! loop over the vertices
+           enddo             ! loop over degrees of freedom
+        enddo               ! loop over vertices
+     endif ! nsons eq 0
+  enddo                 ! loop over local elements
 
-      inode1 = boundary_list%boundary(ibnd)%vertex(iv)
 
-      do ik = 1, 2                                                         ! loop over degrees of freedom
+  if (freeboundary) then      ! add contributions from all boundary nodes
 
-        idir = boundary_list%boundary(ibnd)%direction(iv,ik)
+     do ibnd = 1,boundary_list%n_boundary                                     ! loop over the boundary elements
 
-        index1       = node_list%node(inode1)%index(idir)
-        index1_local = index1 - index_min + 1
+        do iv = 1, 2                                                           ! loop over the vertices
 
+           inode1 = boundary_list%boundary(ibnd)%vertex(iv)
 
-        if ((index1 .ge. index_min) .and. (index1 .le. index_max)) then     ! keep contribution only if index belongs to local range of indices
+           do ik = 1, 2                                                         ! loop over degrees of freedom
 
-          do jbnd = 1,boundary_list%n_boundary                              ! loop over all boundary elements
+              idir = boundary_list%boundary(ibnd)%direction(iv,ik)
 
-            do jv = 1, 2                                                    ! loop over the nodes of the bounsdary element
+              index1       = node_list%node(inode1)%index(idir)
+              index1_local = index1 - index_min + 1
 
-              inode2 = boundary_list%boundary(jbnd)%vertex(jv)
 
-              do jk = 1, 2
+              if ((index1 .ge. index_min) .and. (index1 .le. index_max)) then     ! keep contribution only if index belongs to local range of indices
 
-                jdir = boundary_list%boundary(jbnd)%direction(jv,jk)
+                 do jbnd = 1,boundary_list%n_boundary                              ! loop over all boundary elements
 
-                index2       = node_list%node(inode2)%index(jdir)
-                index2_local = index2 - index_min + 1
+                    do jv = 1, 2                                                    ! loop over the nodes of the bounsdary element
 
-                if (ijA_size(index1_local) .eq. 0) then
+                       inode2 = boundary_list%boundary(jbnd)%vertex(jv)
 
-                  ijA_size(index1_local) = 1
-                  irn_jcn(index1_local,1) = index2
+                       do jk = 1, 2
 
-                elseif (index2 .gt. irn_jcn(index1_local,ijA_size(index1_local))) then
+                          jdir = boundary_list%boundary(jbnd)%direction(jv,jk)
 
-                  irn_jcn(index1_local,ijA_size(index1_local)+1) = index2
-                  ijA_size(index1_local) = ijA_size(index1_local) + 1
+                          index2       = node_list%node(inode2)%index(jdir)
+                          index2_local = index2 - index_min + 1
 
-                else
+                          if (ijA_size(index1_local) .eq. 0) then
 
-                  do j = 1, ijA_size(index1_local)
+                             ijA_size(index1_local) = 1
+                             irn_jcn(index1_local,1) = index2
 
-                    if (index2 .le. irn_jcn(index1_local,j) ) then
+                          elseif (index2 .gt. irn_jcn(index1_local,ijA_size(index1_local))) then
 
-                      j_larger = j
-                      exit
+                             irn_jcn(index1_local,ijA_size(index1_local)+1) = index2
+                             ijA_size(index1_local) = ijA_size(index1_local) + 1
 
-                    endif
+                          else
 
-                  enddo
+                             do j = 1, ijA_size(index1_local)
 
-                  if (index2 .ne. irn_jcn(index1_local,j_larger) ) then
+                                if (index2 .le. irn_jcn(index1_local,j) ) then
 
-                    do j=ijA_size(index1_local), j_larger, -1
+                                   j_larger = j
+                                   exit
 
-                      irn_jcn(index1_local,j+1) = irn_jcn(index1_local,j)
+                                endif
 
-                    enddo
+                             enddo
 
-                    irn_jcn(index1_local,j_larger) = index2
-                    ijA_size(index1_local) = ijA_size(index1_local) + 1
+                             if (index2 .ne. irn_jcn(index1_local,j_larger) ) then
 
-                    if (ijA_size(index1_local) .gt. n_max) then
-                      write(*,*) ' FATAL error : irn_jcn too small ',ijA_size(index1_local)
-                    endif
+                                do j=ijA_size(index1_local), j_larger, -1
 
-                  endif
+                                   irn_jcn(index1_local,j+1) = irn_jcn(index1_local,j)
 
-                endif
+                                enddo
 
-              enddo  ! end loop over degrees of freedom (jk)
-            enddo    ! end loop over vertices (jv)
-          enddo      ! end loop over boundary elements (jbnd)
+                                irn_jcn(index1_local,j_larger) = index2
+                                ijA_size(index1_local) = ijA_size(index1_local) + 1
 
-        endif        ! endif check if local index
+                                if (ijA_size(index1_local) .gt. n_max) then
+                                   write(*,*) ' FATAL error : irn_jcn too small ',ijA_size(index1_local)
+                                endif
 
-      enddo          ! end loop over degrees of freedom (ik)
-    enddo            ! end loop over vertices (iv)
-  enddo              ! end loop over boundary elements (ibnd)
-endif                ! check if free boundary on
+                             endif
 
-allocate(ijA_index(index_max-index_min+1,n_max))
+                          endif
 
-ibase = 0
-do i=1,index_max-index_min+1
+                       enddo  ! end loop over degrees of freedom (jk)
+                    enddo    ! end loop over vertices (jv)
+                 enddo      ! end loop over boundary elements (jbnd)
 
-  do j=1,ijA_size(i)
+              endif        ! endif check if local index
+              !endif Ce endif est en plus, pourquoi ?
+           enddo          ! end loop over degrees of freedom (ik)
+        enddo            ! end loop over vertices (iv)
+     enddo              ! end loop over boundary elements (ibnd)
+  endif                ! check if free boundary on
 
-    ijA_index(i,j) = ibase + 1
+  allocate(ijA_index(index_max-index_min+1,n_max))
 
-    ibase = ibase + (n_tor*n_var)**2
+  ibase = 0
+  do i=1,index_max-index_min+1
+
+     do j=1,ijA_size(i)
+
+        ijA_index(i,j) = ibase + 1
+
+        ibase = ibase + (n_tor*n_var)**2
+
+     enddo
 
   enddo
 
-enddo
+  n_glob  = (index_max-index_min+1) * n_tor * n_var
 
-n_glob  = (index_max-index_min+1) * n_tor * n_var
+  nz_glob = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + (n_tor*n_var)**2 - 1
 
-nz_glob = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + (n_tor*n_var)**2 - 1
+  write(*,*) my_id,' size matrices : n, nz = ',n_glob, nz_glob
 
-write(*,*) my_id,' size matrices : n, nz = ',n_glob, nz_glob
-
-return
-end
+  return
+end subroutine global_matrix_structure

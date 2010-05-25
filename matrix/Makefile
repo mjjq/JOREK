@@ -8,7 +8,9 @@ all:  modules 			\
       reduce.o 			\
       scale_global_matrix.o 	\
       sort_I_mrgrnk.o 		\
-      global_matrix_structure.o
+      global_matrix_structure.o \
+      ch_node_struct.o \
+      ch_nod_rhs_elm.o
 
 modules : mod_global_distributed_matrix.o
 

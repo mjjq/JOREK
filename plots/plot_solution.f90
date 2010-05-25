@@ -36,7 +36,7 @@ psi_max = -1.e20
 psi_min = +1.e20
 
 do i=1,element_list%n_elements
-
+ if(element_list%element(i)%sons(1).eq.0) then
  x_g = 0. ; x_s = 0.; x_t = 0.
  y_g = 0. ; y_s = 0.; y_t = 0.
  PS = 0.  ; PSX = 0.; PSY = 0.
@@ -98,7 +98,7 @@ do i=1,element_list%n_elements
 
  psi_max = max(psi_max,maxval(PS))
  psi_min = min(psi_min,minval(PS))
-
+endif
 enddo
 
 if ((abs(psi_max) .lt. 1.e-30) .and. (abs(psi_min) .lt. 1.e-30)) then
@@ -135,7 +135,7 @@ pi = 2.*asin(1.)
 error = 0.
 
 do i=1,element_list%n_elements
-
+ if(element_list%element(i)%sons(1).eq.0) then
  x_g = 0. ; x_s = 0.; x_t = 0.
  y_g = 0. ; y_s = 0.; y_t = 0.
  PS = 0.  ; PSX = 0.; PSY = 0.
@@ -196,7 +196,7 @@ do i=1,element_list%n_elements
  enddo
 
  call cplotm(1,1,-2,x_g,y_g,4,-4,1,1,PS,4,zc,nc,'Solution',8,'R [m]',5,'Z [m]',5)
-
+ endif
 enddo
 
 call cplotm(1,1,-1,x_g,y_g,4,-4,1,1,PS,4,zc,nc,'Solution',8,'R [m]',5,'Z [m]',5)

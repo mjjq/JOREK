@@ -24,5 +24,6 @@ use parameters
   integer :: n_open, n_private, n_leg
   integer :: mf, index_start, index_now, mode(n_tor), nout
   logical :: restart, regrid, import_equil, xpoint, freeboundary, use_starwall
+  logical :: refinement
   real*8, allocatable   :: xtime(:), energies(:,:,:)
 end module

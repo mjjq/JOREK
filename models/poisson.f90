@@ -291,7 +291,7 @@ if (my_id .eq. 0) then
   !*************************************************************************
   ! Solutions at constrained nodes                                         *
   !*************************************************************************    
- if(refinement==.true.) then  
+! if(refinement==.true.) then  
  		    
   do i = 1, node_list%n_nodes
       
@@ -382,7 +382,7 @@ if (my_id .eq. 0) then
            
   end do
 
- endif  
+! endif  
   deallocate(mumps_par%irn,mumps_par%jcn,mumps_par%A,mumps_par%rhs)
   !deallocate(pastix_perm_vars,pastix_iperm_vars)
 endif

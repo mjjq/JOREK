@@ -264,7 +264,7 @@ program JOREK2
 
           call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
               
-          refinement=.true.
+         ! refinement=.true.
 
 
                !****************************************************************************
@@ -298,16 +298,23 @@ program JOREK2
                list_to_be_refined(i-640) =i
                n_to_be_refined =  n_to_be_refined +1
 
-              enddo
+             enddo
+
+            do i=1025,1600
+               list_to_be_refined(i-1024) =i
+               n_to_be_refined =  n_to_be_refined +1
+               
+            enddo
  
-           ! call Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_refined)
+            call Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_refined)
   
            
              call Ref_Update_Index( element_list,node_list)
           
             endif
-
-         endif
+           
+         
+           endif
         
       
 

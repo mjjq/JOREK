@@ -24,7 +24,7 @@ namelist /in1/  tstep, nstep, eta, visco, restart,  regrid,         &
                 eta_num, visco_num,                                 &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-		freeboundary
+		freeboundary,refinement
 
 if (my_id .eq. 0) then
 

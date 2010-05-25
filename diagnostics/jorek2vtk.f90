@@ -50,7 +50,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                freeboundary
+                freeboundary,refinement
 
 write(*,*) "jorek2vtk"
 read(5,in1)               ! read the namelist input file

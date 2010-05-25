@@ -3,7 +3,8 @@
 
  restart = .f.
  regrid  = .f.
- tstep   = 10000.
+ refinement=.true.
+ tstep   = 1000.
  nstep   = 0
 
  nout = 1

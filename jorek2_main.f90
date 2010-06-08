@@ -184,7 +184,7 @@ program JOREK2
         if (regrid) then                               ! optional redo fluxsurface grid
 
            if (xpoint)  then
-              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
+              call grid_xpoint(node_list,element_list,boundary_list,n_flux,n_open,n_private,n_leg,n_tht)
            else
               call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
            endif

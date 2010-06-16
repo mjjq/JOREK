@@ -211,7 +211,7 @@ program JOREK2
 
         if ((n_R .gt. 0) .and. (n_Z .gt. 0) .and. (n_radial .gt.0)) then
 
-           call grid_bezier_square_polar(n_R,n_Z,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf,.true.,node_list,element_list)
+           call grid_bezier_square_polar(n_R,n_Z,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf,.true.,node_list,element_list,boundary_list)
 
         elseif ((n_R .gt. 0) .and. (n_Z .gt. 0) ) then
 
@@ -249,7 +249,7 @@ program JOREK2
 
         if (xpoint)  then
 
-           if (my_id .eq. 0) call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
+           if (my_id .eq. 0) call grid_xpoint(node_list,element_list,boundary_list,n_flux,n_open,n_private,n_leg,n_tht)
 
            call broadcast_nodes(my_id,node_list)
            call broadcast_elements(my_id,element_list)
@@ -749,7 +749,7 @@ program JOREK2
 
            ! Recuperer la solution
            if (use_murge) then
-              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
+              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_master)
            else
               call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
            endif
@@ -783,7 +783,7 @@ program JOREK2
         if (.not. gmres) call update_rhs_n(my_id,my_id_n)      ! correct the RHS with the previous solution (deltas)
 
         if (use_murge .and. use_murge_element) then
-           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
+           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_master)
         else
            call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
         end if

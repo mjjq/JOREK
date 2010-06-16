@@ -859,8 +859,11 @@ end
 
 subroutine my_fft(in_fft,out_fft,n)
       
+implicit none
+      
 real*8     :: in_fft(*)
 complex*16 :: out_fft(*)
+integer    :: n
       
 real*8     :: tmp_fft(2*n+2)
 integer    :: i

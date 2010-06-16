@@ -23,9 +23,9 @@ M_cpu    = n_cpu / ((n_tor+1)/2)
 allocate(send_counts(n_cpu),send_disp(n_cpu))
 allocate(recv_counts(n_cpu),recv_disp(n_cpu))
 
-if (my_id .eq. 0) then
+allocate(Rsnd_buffer(ndof_glob))
 
-  allocate(Rsnd_buffer(ndof_glob))
+if (my_id .eq. 0) then
 
   Rsnd_buffer(1:n_loc_n) = rhs(1:ndof_glob:n_tor)
 
@@ -66,7 +66,7 @@ n_send =  ifactor*n_loc_n
 call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
                   rhs_dis,n_send,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 
-if (my_id .eq. 0) deallocate(Rsnd_buffer)
+deallocate(Rsnd_buffer)
 deallocate(send_counts, send_disp, recv_counts, recv_disp)
 return
 end

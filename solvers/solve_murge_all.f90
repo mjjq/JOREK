@@ -45,6 +45,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   REAL*8,ALLOCATABLE       :: column_local(:)
   REAL*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_comm_0, t_comm_1
   REAL*8                   :: t_scale_0, t_scale_1
+  REAL*8                   :: t0,t1
   INTEGER                  :: i, k, j, ierr, m_loc
   INTEGER,ALLOCATABLE      :: counts(:), displacements(:)
   REAL*8, ALLOCATABLE      :: rhs_tmp(:)
@@ -188,10 +189,18 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      !CALL MURGE_MatrixGlobalIJV(id, n_glob, nz_glob, IRN_glob, JCN_glob, A_glob, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr);
 
      write (*,*) 'colptr[n]-1 ', mumps_par%jcn(mumps_par%n+1)-1
+     call cpu_time(t0)
      CALL MURGE_GraphGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
+     call cpu_time(t1)
+     IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GraphGlobalCSC ', t1-t0
+     IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
+
      write (*,*) "ierr", ierr
+     call cpu_time(t0)
      CALL MURGE_MatrixGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
-     CALL CPU_TIME(t_analysis_1)
+     call cpu_time(t1)
+     IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GraphGlobalCSC ', t1-t0
+     IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
 
      pastix_analysed = .TRUE.
 
@@ -206,7 +215,11 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   WRITE(*,*) '* call MURGE_SetGlobalRhs         *'
   WRITE(*,*) '***********************************'
 
+  call cpu_time(t0)
   CALL MURGE_SetGlobalRhs(id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
+  call cpu_time(t1)
+  IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_SetGlobalRhs ', t1-t0
+  IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
   if (gmres) then
      if (my_id_n .eq. 0) then
         
@@ -238,11 +251,12 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
   ALLOCATE(mumps_par%rhs(mumps_par%n))
 
+  call cpu_time(t0)
   CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
+  call cpu_time(t1)
+  IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GetGlobalSolution ', t1-t0
+  IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
   
-  CALL CPU_TIME(t_fact_1)
-
-  IF (my_id .EQ. 0) WRITE(*,'(A,f8.3)')  ' PASTIX, fact/solv : ',t_fact_1-t_fact_0
   write (*,*) "mumps_par%n", mumps_par%n, ndof_glob
   write (*,*) "size(deltas)", size(deltas)
   if (.not. gmres) then

@@ -319,7 +319,6 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
               if (use_murge) then
-                 CALL CPU_TIME(t_analysis_0)
 
                  WRITE(*,*) '***********************************'
                  WRITE(*,*) '* analyse Murge                   *'
@@ -329,9 +328,6 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                     write (*,*) "ERROR in MURGE_GraphGlobalCSC"; 
                     STOP
                  end if
-                 CALL CPU_TIME(t_analysis_1)
-
-                 IF (my_id .EQ. 0)  WRITE(*,'(A,f8.3)') ' PASTIX, analysis  : ',t_analysis_1-t_analysis_0
 
               else
                  if (my_id_n .eq. 0) then                     ! elapsed time analysis start
@@ -401,6 +397,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
      elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
+        CALL CPU_TIME(t_analysis_0)
         if (use_murge) then
            WRITE(*,*) '***********************************'
            WRITE(*,*) '* Matrix Murge                    *'
@@ -411,6 +408,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               write (*,*) "ERROR in MURGE_MatrixGlobalCSC"; 
               STOP
            end if
+
+           CALL CPU_TIME(t_analysis_1)
+                 
+           IF (my_id_n .EQ. 0)  WRITE(*,'(i3,A,f8.3)') my_id, ' PASTIX, analysis  : ',t_analysis_1-t_analysis_0
         else
            call cpu_time(t_fact_0)
 
@@ -473,11 +474,14 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
            STOP
         end if
+        call cpu_time(t_fact_0)
         CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
+        call cpu_time(t_fact_1)
         if (ierr /= MURGE_SUCCESS) then 
            write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
            STOP
         end if
+        if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' PastiX, fact/solv     : ',t_fact_1-t_fact_0
 
      else
         call cpu_time(t_solv_0)

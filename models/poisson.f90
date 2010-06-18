@@ -7,6 +7,20 @@ use data_structure
 use mumps_module
 implicit none
 
+interface
+   subroutine find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+     !-----------------------------------------------------------------------
+     !-----------------------------------------------------------------------
+     use data_structure
+
+     type (type_node_list)    :: node_list
+     type (type_element_list) :: element_list
+
+     real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
+     integer :: i_elm_axis
+   end subroutine find_axis
+end interface
+
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_element)      :: element
@@ -96,7 +110,8 @@ if (my_id .eq. 0) then
   ilarge=0
 
   if (itype .lt. 0) then
-    call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+     i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
+     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
 
     psi_bnd = 0.d0
     if (xpoint) then

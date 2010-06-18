@@ -1,20 +1,29 @@
-subroutine gmres_driver(my_id,my_id_n,i_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
 !------------------------------------------------------------------------------
 ! driver for the reverse communication GMRES routine from dPackgmres (CERFACS)
 !------------------------------------------------------------------------------
 use mumps_module
+use murge_module
 use global_distributed_matrix
 implicit none
 include 'mpif.h'
 #include "r3_info.h"
 
-integer :: i_tor(*), i, j, m, my_id, my_id_n, my_id_master, MPI_COMM_N, MPI_COMM_MASTER
-integer :: revcom, colx, coly, colz, nbscal, lwork, iter_gmres
+interface 
+   subroutine gmres_matrix_vector(x,y,my_id,my_id_n, i_tor, MPI_COMM_MASTER)      
+     integer             :: i_tor(:), MPI_COMM_MASTER
+     real*8              :: x(:), y(:)
+     integer             :: my_id, my_id_n
+   end subroutine gmres_matrix_vector
+end interface
+integer :: i_tor(:), i, j, m, my_id, my_id_n, my_id_master, MPI_COMM_N, MPI_COMM_MASTER
+integer :: revcom, colx, coly, colz, nbscal, lwork, iter_gmres, n_tor
 integer :: irc(5), icntl(8), info(3)
 
 integer :: matvec, precondLeft, precondRight, dotProd, ierr, n_dof
 real*8  :: cntl(5), rinfo(2), sum, err, Bnorm, Xnorm, t1, t2, t3, t4, t5, t6, t7, t8,t9, t10, t11
 real*8, allocatable :: work(:)
+REAL*8, ALLOCATABLE      :: rhs_tmp(:)
 real*8 ::ZERO, ONE
 parameter (ZERO = 0.0d0, ONE = 1.0d0)
 parameter (matvec=1, precondLeft=2, precondRight=3, dotProd=4)
@@ -46,10 +55,28 @@ lwork = m*m + m*(n_dof+5) + 6*n_dof + m + 1
 allocate(work(lwork))
 
 work(1:n_dof)         = deltas(1:n_dof)                     ! the initial guess
-work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
-
-call gmres_matrix_vector(work(1),work(2*n_dof+1:3*n_dof),my_id,my_id_n)
-
+if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
+   work(n_dof+1:2*n_dof)  = 0.d0
+        
+   allocate(rhs_tmp(ndof_glob))
+   work(n_dof+1:2*n_dof)  = 0.d0
+   rhs_tmp = 0.d0
+   if (my_id .eq. 0 ) then
+           
+      rhs_tmp(1:n_dof:n_tor) = RHS_GLOB(1:mumps_par%n)
+           
+   else
+      rhs_tmp(2*i_tor(my_id+1)-2:n_dof:n_tor) = RHS_GLOB(1:mumps_par%n:2)
+      rhs_tmp(2*i_tor(my_id+1)-1:n_dof:n_tor) = RHS_GLOB(2:mumps_par%n:2)
+           
+   endif
+   call MPI_AllReduce(RHS_tmp,work(n_dof+1), n_dof ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
+   rhs_tmp = work(n_dof+1:2*n_dof)
+else
+   work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
+end if
+call gmres_matrix_vector(work(1:2*n_dof),work(2*n_dof+1:3*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
+stop
 if (my_id .eq. 0) then
   sum = 0.d0
   err = -1.d20
@@ -58,7 +85,11 @@ if (my_id .eq. 0) then
   do i=1,n_dof
     sum = sum + (work(2*n_dof+i)-work(n_dof+i))**2
     err = max(err,abs(work(2*n_dof+i)-work(n_dof+i)))
-    Bnorm = Bnorm + RHS_glob(i)**2
+    if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
+       Bnorm = Bnorm + RHS_tmp(i)**2
+    else
+       Bnorm = Bnorm + RHS_glob(i)**2
+    end if
     Xnorm = Xnorm + deltas(i)**2
   enddo
 
@@ -85,7 +116,7 @@ endif
 
        if (revcom.eq.matvec) then                  ! perform the matrix vector product
                                                    ! work(colz) <-- A * work(colx)
-         call gmres_matrix_vector(work(colx),work(colz),my_id,my_id_n)
+         call gmres_matrix_vector(work(colx:colz+n_dof),work(colz:colz+n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
          goto 10
 
        else if (revcom.eq.precondLeft) then        ! perform the left preconditioning
@@ -112,7 +143,7 @@ endif
 
 if (my_id .eq. 0) deltas = work
 
-call gmres_matrix_vector(deltas,work(n_dof+1:2*n_dof),my_id,my_id_n)
+call gmres_matrix_vector(deltas,work(n_dof+1:2*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 
 if (my_id .eq. 0) then
   sum = 0.d0
@@ -120,15 +151,24 @@ if (my_id .eq. 0) then
   Bnorm = 0.d0
   Xnorm = 0.d0
   do i=1,n_dof
-    sum = sum      + (work(n_dof+i)-RHS_glob(i))**2
-    err = max(err,abs(work(n_dof+i)-RHS_glob(i)))
-    Bnorm = Bnorm + RHS_glob(i)**2
+    if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
+       sum = sum      + (work(n_dof+i)-RHS_tmp(i))**2
+       err = max(err,abs(work(n_dof+i)-RHS_tmp(i)))
+       Bnorm = Bnorm + RHS_tmp(i)**2
+    else
+       sum = sum      + (work(n_dof+i)-RHS_glob(i))**2
+       err = max(err,abs(work(n_dof+i)-RHS_glob(i)))
+       Bnorm = Bnorm + RHS_glob(i)**2
+    end if
     Xnorm = Xnorm + deltas(i)**2
   enddo
   write(*,'(A,4e16.8)') ' residu test after : ',sqrt(sum),err,sqrt(Bnorm),sqrt(Xnorm)
 
 endif
 
+if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
+   deallocate(RHS_tmp)
+end if
 iter_gmres = info(2)
 call MPI_BCAST(iter_gmres,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 

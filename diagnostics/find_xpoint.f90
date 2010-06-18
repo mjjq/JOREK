@@ -26,7 +26,9 @@ write(*,*) '*********************************'
 
 
 dpsi_xpoint = 1.d20
-
+                                                                                                    
+ij_xpoint = 1 ! XL: In some cases it is not initialised... 
+i_elm_xpoint = 1 ! XL : In some cases it is not initialised... 
 do i=1,element_list%n_elements
 
   Z = 0.d0
@@ -70,7 +72,6 @@ enddo
 !write(*,*) ' estimate : ',Z_xpoint
 
 s=Xgauss(ij_xpoint(1)) ; t=Xgauss(ij_xpoint(2))
-
 call mnewtax(node_list,element_list,i_elm_xpoint,s,t,xerr,ferr,ifail)
 
 if (ifail .ne. 0 ) write(*,*) ' MNEWTAX : ifail = ',ifail

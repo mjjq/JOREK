@@ -7,6 +7,23 @@ use basis_at_gaussian
 
 implicit none
 
+interface
+   subroutine mnewtax(node_list,element_list,i_elm, r, s, errx, errf, ifail)
+     !-------------------------------------------------------------------------
+     ! solves two non-linear equations using Newtons method (from numerical recipes)
+     ! LU decomposition replaced by explicit solution of 2x2 matrix.
+     !-------------------------------------------------------------------------
+     use data_structure
+     
+     type (type_node_list)    :: node_list
+     type (type_element_list) :: element_list
+
+     real*8    :: r, s
+     real*8    :: errf, errx
+     integer   :: ifail, i_elm
+   end subroutine mnewtax
+end interface
+
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
@@ -24,7 +41,7 @@ write(*,*) '*********************************'
 write(*,*) '*     find_axis                 *'
 write(*,*) '*********************************'
 
-
+ij_axis = 1 ! XL: In some cases it is not initialised...
 psi_axis = 1.d20
 
 do i=1,element_list%n_elements

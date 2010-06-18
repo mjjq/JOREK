@@ -48,6 +48,20 @@ program JOREK2
   include 'mpif.h'
 #include "r3_info.h"
 
+  interface
+     subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+       integer :: i_tor(:), my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
+       integer :: iter_gmres, n_tor
+     end subroutine gmres_driver
+    
+     subroutine equilibrium(my_id,node_list,element_list,xpoint2)
+       use data_structure
+       integer                  :: my_id
+       type (type_node_list)    :: node_list
+       type (type_element_list) :: element_list
+       logical                  :: xpoint2
+     end subroutine equilibrium
+  end interface
   type (type_surface_list) :: surface_list
   logical                  :: grid_changed
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
@@ -128,6 +142,8 @@ program JOREK2
   use_matrix_whitout_zeros_mumps  = .false.    ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
   !---------------------------------------------------------- some checks not to waste any cpu time
+  call initialise_parameters(my_id)                  ! default values and namelist input
+
   if(required.ne.provided)then
      write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
      call MPI_FINALIZE(IERR)
@@ -158,8 +174,8 @@ program JOREK2
      endif
      if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
         write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-        !    call MPI_FINALIZE(IERR)                                ! clean up MPI
-        !    stop
+        call MPI_FINALIZE(IERR)                                ! clean up MPI
+        stop
      endif
   endif
 
@@ -171,7 +187,6 @@ program JOREK2
 
   if (my_id .eq. 0)  call begplt('jorek2.ps')        ! initialise ppplib plotting library
 
-  call initialise_parameters(my_id)                  ! default values and namelist input
   call initialise_basis                              ! define the basis functions at the Gaussian points
 
   if (my_id .eq. 0) then
@@ -264,8 +279,6 @@ program JOREK2
 
           call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
               
-         ! refinement=.true.
-
 
                !****************************************************************************
                !                        Refining elements (equilibrum)                     *
@@ -388,7 +401,7 @@ program JOREK2
   if (nstep .gt. 0) then
 
      grid_changed  = .true.
-
+     i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
      call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
 
      if (xpoint) then
@@ -463,8 +476,10 @@ program JOREK2
 
      allocate(local_elms(element_list%n_elements))
      allocate(index_min(index_size),index_max(index_size))
-     allocate(local_index_start(n_cpu),local_index_end(n_cpu))
-
+     IF ( use_pastix .and. use_murge  .and. use_murge_element .and. gmres ) THEN
+     else
+        allocate(local_index_start(n_cpu),local_index_end(n_cpu))
+     end IF
      !
      ! Construct index_min, index_max and local_elems
      !
@@ -472,9 +487,11 @@ program JOREK2
           ndof_glob,index_min,index_max)
 
      node_list%n_dof = ndof_glob
-     local_index_start = index_min
-     local_index_end   = index_max
-     !
+     IF ( use_pastix .and. use_murge  .and. use_murge_element .and. gmres ) THEN
+     else
+        local_index_start = index_min
+        local_index_end   = index_max
+     end IF
      ! Build ijA_index, ijA_size and irn_jcn
      
      call global_matrix_structure(my_id_n,node_List,element_list,boundary_list, freeboundary,&
@@ -795,7 +812,7 @@ program JOREK2
 
      if (gmres) then
 
-        call gmres_driver(my_id,my_id_n,i_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)     ! gmres solution
+        call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)     ! gmres solution
 
      endif
 

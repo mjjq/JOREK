@@ -6,6 +6,29 @@ subroutine mnewtax(node_list,element_list,i_elm, r, s, errx, errf, ifail)
 use data_structure
 implicit none
 
+interface
+   subroutine interp(node_list,element_list,i_elm,i_var,i_harm,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+     !-----------------------------------------------------------------------------------------
+     ! subroutine calculates the interpolation within one element (i_elm) for a given position
+     ! (s,t) in the local coordinates
+     !-----------------------------------------------------------------------------------------
+     use data_structure
+
+     type (type_node_list)    :: node_list
+     type (type_element_list) :: element_list
+     integer                  :: i_elm
+     integer                  :: i_var
+     integer                  :: i_harms
+     real*8                   :: s
+     real*8                   :: t
+     real*8                   :: P
+     real*8                   :: P_s
+     real*8                   :: P_t
+     real*8                   :: P_st
+     real*8                   :: P_ss
+     real*8                   :: P_tt
+   end subroutine interp
+end interface
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 

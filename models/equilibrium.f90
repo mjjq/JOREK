@@ -6,6 +6,16 @@ use data_structure
 use phys_module
 implicit none
 
+interface
+   subroutine Poisson(my_id,itype,node_list,element_list,ivar_in,ivar_out,i_harm,xpoint)
+     use data_structure
+
+     type (type_node_list)    :: node_list
+     type (type_element_list) :: element_list
+     integer  :: my_id, itype, ivar_in, ivar_out, i_harm
+     logical  :: xpoint
+   end subroutine Poisson
+end interface
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_surface_list) :: surface_list
@@ -33,6 +43,7 @@ if (my_id .eq. 0) then
 endif
 
 n_iter = 51
+i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
 
 do iter=1,n_iter
 

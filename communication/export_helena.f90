@@ -9,6 +9,21 @@ use phys_module
 
 implicit none
 
+interface
+   subroutine find_flux_surfaces(xpoint,node_list,element_list,surface_list)
+     !-----------------------------------------------------------------------
+     ! finds fluxsurfaces by finding crossings at the edge of an element
+     !-----------------------------------------------------------------------
+     use data_structure
+     
+     implicit none
+     logical                  :: xpoint
+     type (type_node_list)    :: node_list
+     type (type_element_list) :: element_list
+     type (type_surface_list) :: surface_list
+   end subroutine find_flux_surfaces
+end interface
+
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_surface_list) :: surface_list
@@ -38,12 +53,12 @@ data wgs / 0.347854845137454,  0.652145154862546, 0.652145154862546,  0.34785484
 write(*,*) '***************************************'
 write(*,*) '* export_helena                       *'
 write(*,*) '***************************************'
-
+i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
 call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
 
 if (allocated(surface_list%psi_values)) deallocate(surface_list%psi_values)
 allocate(surface_list%psi_values(3))
-
+xpoint = .true. ! XL : uninitilised value... 
 if (xpoint) then
   write(*,*) ' x-point plasma'
   call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)

@@ -8,9 +8,12 @@ subroutine reduce(my_id,A,IRN,JCN,NZ,N,IHWB,NZNEW,first_row,last_row)
 !--------------------------------------------------------------------------
 real*8    :: A(*)
 integer :: IRN(*),JCN(*),IHWB(*),N,NZ
+integer :: my_id
 integer, allocatable :: ITOT(:),ISTART(:),IPOS(:),JCOL(:),IRNK(:)
 integer, allocatable :: INEW(:),JNEW(:),  IJold(:)
-integer :: irn_min, irn_max, first_row , last_row, file_id
+integer :: irn_min, irn_max, first_row , last_row, nrows
+integer :: i, irow, index, n_IRNK, index_new, nj, index_old, k, nznew
+
 real*8,allocatable     :: Anew(:)
 
 write(*,*) '***************************************'

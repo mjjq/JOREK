@@ -2,7 +2,7 @@
 ! routine from SPARSKIT2
 !------------------------------------------------------------------------
       subroutine coicsr (n,nnz,job,a,ja,ia,iwk)
-      integer :: ia(nnz),ja(nnz),iwk(n+1)
+      integer :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1)
       real*8  :: a(*)
 !------------------------------------------------------------------------
 ! IN-PLACE coo-csr conversion routine.
@@ -41,6 +41,7 @@
 !----------------------------------------------------------------------c
       real*8  ::   t,tnext
       logical ::   values
+      integer ::   i,j,k, init, ipos, inext, jnext
 !-----------------------------------------------------------------------
       values = (job .eq. 1)
 ! find pointer array for resulting matrix.

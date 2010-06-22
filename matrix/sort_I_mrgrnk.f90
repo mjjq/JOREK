@@ -6,13 +6,13 @@ Subroutine I_mrgrnk (XDONT, IRNGT, NVAL)
 ! __________________________________________________________
 !   subroutine from Orderpack2.0 (slightly adjusted)
 ! __________________________________________________________
-      Integer :: XDONT(NVAL),IRNGT(NVAL)
+      Integer :: NVAL, XDONT(NVAL),IRNGT(NVAL)
 ! __________________________________________________________
       Integer :: XVALA, XVALB
 !
       Integer :: JWRKT(NVAL)
       Integer :: LMTNA, LMTNC, IRNG1, IRNG2
-      Integer :: NVAL, IIND, IWRKD, IWRK, IWRKF, JINDA, IINDA, IINDB
+      Integer :: IIND, IWRKD, IWRK, IWRKF, JINDA, IINDA, IINDB
 !
       Select Case (NVAL)
       Case (:0)

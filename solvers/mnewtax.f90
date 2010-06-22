@@ -18,7 +18,7 @@ interface
      type (type_element_list) :: element_list
      integer                  :: i_elm
      integer                  :: i_var
-     integer                  :: i_harms
+     integer                  :: i_harm
      real*8                   :: s
      real*8                   :: t
      real*8                   :: P

@@ -5,7 +5,6 @@ all: modules \
      basis_functions1.o \
      basis_functions.o \
      bezier_1d.o \
-     bezier_2d.o \
      hermite_1d.o \
      hermite_elements.o \
      initialise_basis.o \

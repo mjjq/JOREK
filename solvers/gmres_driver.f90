@@ -116,7 +116,7 @@ endif
 
        if (revcom.eq.matvec) then                  ! perform the matrix vector product
                                                    ! work(colz) <-- A * work(colx)
-         call gmres_matrix_vector(work(colx:colz+n_dof),work(colz:colz+n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
+         call gmres_matrix_vector(work(colx:colx+n_dof),work(colz:colz+n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
          goto 10
 
        else if (revcom.eq.precondLeft) then        ! perform the left preconditioning

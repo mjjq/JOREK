@@ -797,7 +797,7 @@ program JOREK2
 
         endif
 
-        if (.not. gmres) call update_rhs_n(my_id,my_id_n)      ! correct the RHS with the previous solution (deltas)
+        if (.not. gmres) call update_rhs_n(my_id,my_id_n, i_tor, MPI_COMM_MASTER)      ! correct the RHS with the previous solution (deltas)
 
         if (use_murge .and. use_murge_element) then
            call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_master)

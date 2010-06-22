@@ -1,4 +1,4 @@
-subroutine update_rhs_n(my_id,my_id_n)
+subroutine update_rhs_n(my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 !***********************************************************************
 !* subroutine updates the RHS with the explicit part of the matrix     *
 !* multiplied with the previous solution (deltas)                      *
@@ -9,8 +9,18 @@ use global_distributed_matrix
 implicit none
 include 'mpif.h'
 
+integer             :: i_tor(:)
+integer             :: MPI_COMM_MASTER
 integer             :: my_id, my_id_n, i, ir, jc
 real*8,allocatable  :: rhs_delta(:), rhs_delta_n(:), deltas_n(:)
+
+interface 
+   subroutine gmres_matrix_vector(x,y,my_id,my_id_n, i_tor, MPI_COMM_MASTER)      
+     integer             :: i_tor(:), MPI_COMM_MASTER
+     real*8              :: x(:), y(:)
+     integer             :: my_id, my_id_n
+   end subroutine gmres_matrix_vector
+end interface
 
 !write(*,*) my_id,my_id_n,' starting update_rhs'
 
@@ -24,7 +34,7 @@ if (my_id_n .eq.0) then
   deltas_n(1:mumps_par%n)    = 0.d0
 endif
 
-call gmres_matrix_vector(deltas,rhs_delta,my_id,my_id_n)
+call gmres_matrix_vector(deltas,rhs_delta,my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 
 call distribute_vector(my_id,rhs_delta,rhs_delta_n)
 call distribute_vector(my_id,deltas,deltas_n)

@@ -16,10 +16,14 @@
 !*   local_elms   - List of local elements                                     *
 !*   n_local_elms - Number of local elements                                   *
 !*   psi_bnd      -                                                            *
+!*   gmres        - boolean indicating if we are using GMRES method            *
+!*                                                                             *
+!* Authors:                                                                    *
+!*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
 SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
-     n_local_elms, psi_bnd)			    
+     n_local_elms, psi_bnd, gmres)			    
   !---------------------------------------------------------------
   ! add the boundary condition to the global matrix
   !---------------------------------------------------------------
@@ -38,6 +42,7 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
   TYPE (type_node_list)    :: node_list
   TYPE (type_element_list) :: element_list
   REAL*8                   :: psi_bnd
+  logical                  :: gmres
 
   ! Internal parameters
   REAL*8  :: zbig, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds
@@ -49,6 +54,25 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
   INTEGER :: kv, kT, ku
   INTEGER :: coefnbr
   LOGICAL :: is_local
+  integer :: first_tor
+  integer :: last_tor
+  integer :: murge_ntor
+
+  if (gmres) then 
+     if (murge_id == 0) then
+        first_tor = 1
+        last_tor = 1
+        murge_ntor = 1
+     else
+        first_tor = 2*murge_id-1
+        last_tor = 2*murge_id+1
+        murge_ntor = 2
+     end if
+  else
+     first_tor = 1
+     last_tor = n_tor
+     murge_ntor = n_tor
+  end if
 
   coefnbr = 0
 
@@ -64,7 +88,7 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
 
         IF (node_list%node(inode)%boundary .NE. 0) THEN
 
-           DO in=1, n_tor
+           DO in=first_tor, last_tor
 
               DO k=1, n_var
 
@@ -180,17 +204,17 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
                  !------------------------------------ the open field lines (in case of x-point grid)
                  IF ((node_list%node(inode)%boundary .EQ. 1) .OR. (node_list%node(inode)%boundary .EQ. 3)) THEN
 
-                    IF ((k .EQ.   1) .OR. (k .EQ. 2) .OR. (k .EQ. 3)  .OR. &
-                         (k .EQ.  4)  .OR. (k .EQ. 95)  .OR. (k .EQ. 96) .OR. (k .EQ.97) ) THEN
-
-
+                     
+                    IF ((in < last_tor.AND. in + 1> first_tor) .AND. &
+                         ((k .EQ.   1) .OR. (k .EQ. 2) .OR. (k .EQ. 3)  .OR. &
+                         (k .EQ.  4)  .OR. (k .EQ. 95)  .OR. (k .EQ. 96) .OR. (k .EQ.97)) ) THEN
                        index_node = node_list%node(inode)%index(1)
 
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
@@ -205,8 +229,8 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
@@ -268,42 +292,42 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
                           ku = 2
                           kv = 7
                           kT = 6
-
-                         CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (kv-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (kv-1)*n_tor + in, &
-                               zbig, ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF 
+                          IF (in < last_tor.AND. in + 1> first_tor) THEN
+                             CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
+                                  murge_ndof * (index_node - 1) + (kv-1)*murge_ntor + in, &
+                                  murge_ndof * (index_node - 1) + (kv-1)*murge_ntor + in, &
+                                  zbig, ierr)
+                             IF (ierr /= MURGE_SUCCESS) THEN
+                                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
+                                     "I", index_node, &
+                                     "J", index_node
+                                STOP
+                             END IF
                           
-                          CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (kv-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (kT-1)*n_tor + in, &
-                               - zbig / Btot * 0.5d0 * GAMMA / SQRT(GAMMA*T0) * direction, &
-                               ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
+                             CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
+                                  murge_ndof * (index_node - 1) + (kv-1)*murge_ntor + in, &
+                                  murge_ndof * (index_node - 1) + (kT-1)*murge_ntor + in, &
+                                  - zbig / Btot * 0.5d0 * GAMMA / SQRT(GAMMA*T0) * direction, &
+                                  ierr)
+                             IF (ierr /= MURGE_SUCCESS) THEN
+                                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
+                                     "I", index_node, &
+                                     "J", index_node
+                                STOP
+                             END IF
+                             
+                             CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
+                                  murge_ndof * (index_node  - 1) + (kv-1)*murge_ntor + in, &
+                                  murge_ndof * (index_node2 - 1) + (ku-1)*murge_ntor + in, &
+                                  - zbig * BigR**2 / ps0_s,                             &
+                                  ierr)
+                             IF (ierr /= MURGE_SUCCESS) THEN
+                                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
+                                     "I", index_node, &
+                                     "J", index_node
+                                STOP
+                             END IF
                           END IF
-
-                          CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node  - 1) + (kv-1)*n_tor + in, &
-                               n_tor * n_var * (index_node2 - 1) + (ku-1)*n_tor + in, &
-                               - zbig * BigR**2 / ps0_s,                             &
-                               ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-
                           RHS_glob(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
                                Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*SQRT(GAMMA*T0) / Btot)
                           
@@ -314,43 +338,45 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
                        
                           kv = 7
                           kT = 6
-
-                          CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node2 - 1) + (kv-1)*n_tor + in, &
-                               n_tor * n_var * (index_node2 - 1) + (kv-1)*n_tor + in, &
-                               zbig,                                                 &
-                               ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
+                          IF (in < last_tor.AND. in + 1> first_tor) THEN
+     
+                             CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
+                                  murge_ndof * (index_node2 - 1) + (kv-1)*murge_ntor + in, &
+                                  murge_ndof * (index_node2 - 1) + (kv-1)*murge_ntor + in, &
+                                  zbig,                                                 &
+                                  ierr)
+                             IF (ierr /= MURGE_SUCCESS) THEN
+                                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
+                                     "I", index_node, &
+                                     "J", index_node
+                                STOP
+                             END IF
+                             
+                             CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
+                                  murge_ndof * (index_node2 - 1) + (kv-1)*murge_ntor + in, &
+                                  murge_ndof * (index_node2 - 1) + (kT-1)*murge_ntor + in, &
+                                  - zbig / Btot * 0.5d0 * GAMMA / SQRT(GAMMA*T0) * direction, &
+                                  ierr)
+                             IF (ierr /= MURGE_SUCCESS) THEN
+                                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
+                                     "I", index_node, &
+                                     "J", index_node
+                                STOP
+                             END IF
+                             
+                             CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
+                                  murge_ndof * (index_node2 - 1) + (kv-1)*murge_ntor + in, &
+                                  murge_ndof * (index_node - 1) + (kT-1)*murge_ntor + in, &
+                                  + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction, &
+                                  ierr)
+                             IF (ierr /= MURGE_SUCCESS) THEN
+                                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
+                                     "I", index_node, &
+                                     "J", index_node
+                                STOP
+                             END IF
                           END IF
                           
-                          CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node2 - 1) + (kv-1)*n_tor + in, &
-                               n_tor * n_var * (index_node2 - 1) + (kT-1)*n_tor + in, &
-                               - zbig / Btot * 0.5d0 * GAMMA / SQRT(GAMMA*T0) * direction, &
-                               ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-
-                          CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node2 - 1) + (kv-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (kT-1)*n_tor + in, &
-                               + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction, &
-                               ierr)
-                          IF (ierr /= MURGE_SUCCESS) THEN
-                             WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
-                                  "I", index_node, &
-                                  "J", index_node
-                             STOP
-                          END IF
-
                           RHS_glob(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
                                Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / SQRT(GAMMA*T0) * dT0_ds * direction)
 
@@ -368,21 +394,22 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
                     !            if ((k .eq. 1) .or. (k .eq. 2) .or. (k .eq. 3) .or. &
                     !                (k .eq. 4) .or. (k .eq. 5) .or. (k .eq. 6) .or. (k .eq. 7) ) then
 
-                    IF ( (k .EQ. 1) .OR. (k .EQ. 2)  .OR. (k .EQ. 3) .OR. (k .EQ. 4) .OR. &
-                         ( (k .EQ. 5) .AND. (node_list%node(inode)%values(1,1,1) .LT. psi_bnd) ) .OR. &  ! private region only
+                    IF ( (in < last_tor.AND. in + 1> first_tor) .AND. &
+                         ((k .EQ. 1) .OR. (k .EQ. 2)  .OR. (k .EQ. 3) .OR. (k .EQ. 4) .OR. &
+                         ((k .EQ. 5) .AND. (node_list%node(inode)%values(1,1,1) .LT. psi_bnd) ) .OR. &  ! private region only
                          
                          !                 ( (k .eq. 6) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) ) .or. &  ! private region only
                          
                          (k .EQ. 6)  .OR. &
-                         (k .EQ. 7) ) THEN
+                         (k .EQ. 7) )) THEN
 
                        index_node = node_list%node(inode)%index(1)
 
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
@@ -396,8 +423,8 @@ SUBROUTINE boundary_conditions_murge(my_id,node_list,element_list,local_elms, &
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &

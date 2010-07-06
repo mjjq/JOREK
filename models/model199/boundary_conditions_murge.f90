@@ -16,6 +16,7 @@
 !*   local_elms   - List of local elements                                     *
 !*   n_local_elms - Number of local elements                                   *
 !*   psi_bnd      - UNUSED                                                     *
+!*   gmres        - boolean indicating if we are using GMRES method            *
 !*                                                                             *
 !* Authors:                                                                    *
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *

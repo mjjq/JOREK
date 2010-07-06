@@ -76,7 +76,7 @@ else
    work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
 end if
 call gmres_matrix_vector(work(1:2*n_dof),work(2*n_dof+1:3*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
-stop
+
 if (my_id .eq. 0) then
   sum = 0.d0
   err = -1.d20
@@ -116,7 +116,7 @@ endif
 
        if (revcom.eq.matvec) then                  ! perform the matrix vector product
                                                    ! work(colz) <-- A * work(colx)
-         call gmres_matrix_vector(work(colx:colx+n_dof),work(colz:colz+n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
+         call gmres_matrix_vector(work(colx:colx+2*n_dof-1),work(colz:colz+n_dof-1),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
          goto 10
 
        else if (revcom.eq.precondLeft) then        ! perform the left preconditioning

@@ -34,6 +34,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   USE global_distributed_matrix
   USE phys_module
   USE murge_module
+  USE mumps_module
 
   IMPLICIT NONE
   INCLUDE 'mpif.h'
@@ -53,6 +54,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   INTEGER                        :: n_cpu
   INTEGER                        :: column_number
   INTEGER                        :: mpi_comm_n
+  INTEGER                        :: new_col_mat_elem, new_row_mat_elem
 
   ! local variables
   TYPE (type_element)      :: element
@@ -76,18 +78,18 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   WRITE(*,*) ' n_elements (local)       : ',my_id,n_local_elms
 
   IF (ALLOCATED(rhs_glob))        DEALLOCATE(rhs_glob)
-  IF (.not. gmres) THEN
+  IF (.NOT. gmres) THEN
      column_number = ndof_glob
   ELSE
-     IF (i_tor(my_id+1) == 1) THEN
+     IF (murge_id == 0) THEN
         column_number = ndof_glob/n_tor
      ELSE
         column_number = ndof_glob*2/n_tor
      END IF    
   END IF
 
-  ALLOCATE(rhs_glob(column_number))
-  IF (.NOT. ALLOCATED(rhs_loc))   ALLOCATE(rhs_loc(column_number))
+  ALLOCATE(rhs_glob(ndof_glob))
+  IF (.NOT. ALLOCATED(rhs_loc))   ALLOCATE(rhs_loc(ndof_glob))
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
 
@@ -118,10 +120,10 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      ENDDO
      
   ENDDO
-  IF (.not. gmres) THEN
+  IF (.NOT. gmres) THEN
      coefnbr = coefnbr * (n_vertex_max)*(n_order+1)* (n_var * n_tor)* (n_var * n_tor)
   ELSE
-     IF (i_tor(my_id+1) == 1) THEN 
+     IF (murge_id == 0) THEN 
         coefnbr = coefnbr * (n_vertex_max)*(n_order+1)* (n_var )* (n_var )
      ELSE
         coefnbr = coefnbr * (n_vertex_max)*(n_order+1)* (n_var )* (n_var ) * 4
@@ -171,23 +173,15 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
               DO j = 1, n_var * n_tor
                     
                  index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
-                 IF (.not. gmres) THEN
                     index_rhs = index_large_i+j
-                 ELSE
-                    IF (i_tor(my_id+1) == 1) THEN
-                       index_rhs = index_large_i/n_tor+INT((j-1)/n_tor)+1
-                    ELSE
-                       index_rhs = index_large_i*2/n_tor+INT((j-1)/n_tor)*2+MOD(MOD(j-1, n_tor)+1,2)+1 
-                    ENDIF
-                 END IF
 
-                 if (index_rhs > column_number .or. index_rhs < 1) then
-                    write (*,*) "index_rhs", index_rhs
-                    write (*,*) "column_number", column_number
-                    write (*,*) "index_large_i", index_large_i
-                    write (*,*) "j", j
-                    stop
-                 end if
+                 IF (index_rhs > ndof_glob .OR. index_rhs < 1) THEN
+                    WRITE (*,*) "index_rhs", index_rhs
+                    WRITE (*,*) "column_number", column_number
+                    WRITE (*,*) "index_large_i", index_large_i
+                    WRITE (*,*) "j", j
+                    STOP
+                 END IF
                  rhs_loc(index_rhs) = rhs_loc(index_rhs) + RHS(index_ij)
               END DO
               ! Build nodes Matrices
@@ -209,30 +203,33 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                        DO l = 1, n_var * n_tor
                           ! BUILD node Matrix
                           index_kl  = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   
-                          IF (.not. gmres) THEN
+                          IF (.NOT. gmres) THEN
                              ! Column index in the ELM matrix
                              index_mtx = l+(j-1)*(n_var * n_tor)
                              coefmtx(index_mtx) = ELM(index_kl,index_ij)
                           ELSE
-                             IF (INT((MOD(j-1, n_tor)+1)/2)+1 == i_tor(my_id+1) .and. &
-                                  INT((MOD(l-1, n_tor)+1)/2)+1 == i_tor(my_id+1)) THEN
-                                IF (i_tor(my_id+1) == 1) THEN
-                                   index_mtx = INT((l-1)/n_tor)+1+(INT((j-1)/n_tor))*(n_var) 
+                             IF (INT((MOD(j-1, n_tor)+1)/2) == murge_id .AND. &
+                                  INT((MOD(l-1, n_tor)+1)/2) == murge_id) THEN
+                                IF (murge_id == 0) THEN
+                                   new_col_mat_elem = INT((j-1)/n_tor)
+                                   new_row_mat_elem = INT((l-1)/n_tor)
+                                   index_mtx = new_row_mat_elem+1+new_col_mat_elem*(n_var) 
                                 ELSE
-                                   index_mtx = INT((l-1)/n_tor)+MOD(MOD(l-1,n_tor),2)+1+ &
-                                        (INT((j-1)/n_tor)*2+ MOD(MOD(j-1,n_tor),2))*(n_var*2)
+                                   new_col_mat_elem = INT((j-1)/n_tor)*2 + MOD(MOD(j-1, n_tor)+1,2)
+                                   new_row_mat_elem = INT((l-1)/n_tor)*2 + MOD(MOD(l-1, n_tor)+1,2)
+                                   index_mtx = new_row_mat_elem+1+new_col_mat_elem*(n_var*2) 
                                 END IF
-                                coefmtx(index_mtx) = ELM(index_ij,index_kl)
+                                coefmtx(index_mtx) = ELM(index_kl,index_ij)
                              END IF
                           END IF
                        ENDDO
                           
                     ENDDO
 
-                    IF (.not. gmres) THEN
+                    IF (.NOT. gmres) THEN
                        cnt = cnt + n_var*n_var * n_tor * n_tor
                     ELSE
-                       IF (i_tor(my_id+1) == 1) THEN
+                       IF (murge_id == 0) THEN
                           cnt = cnt + n_var*n_var
                        ELSE
                           cnt = cnt + n_var*n_var * 4
@@ -256,36 +253,54 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      ENDDO
 
   ENDDO
-  write (*,*) my_id, " : MURGE_ASSEMBLYEND in"
+  WRITE (*,*) my_id, " : MURGE_ASSEMBLYEND in"
   CALL MURGE_ASSEMBLYEND(murge_id, ierr)
-  write (*,*) my_id, " : MURGE_ASSEMBLYEND out"
+  WRITE (*,*) my_id, " : MURGE_ASSEMBLYEND out"
 
   !----------------------- boundary conditions
   
-  IF (.not. gmres) THEN
-     CALL boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
-          psi_bnd)
-  END IF
+  CALL boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
+       psi_bnd)
+  
+  IF (.NOT. gmres) THEN
+     WRITE (*,*) MY_ID, " : Reduce..."
+     CALL MPI_Allreduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
 
-  IF (.not. gmres) THEN
-     write (*,*) MY_ID, " : Reduce..."
-     CALL MPI_Allreduce(RHS_loc,RHS_glob,column_number,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
   ELSE
-     IF (i_tor(my_id+1) == 1) THEN
-        write (*,*) my_id, " : Reduce...."
-        CALL MPI_Allreduce(RHS_loc,RHS_glob,column_number,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N, ierr)
+     IF (murge_id == 0) THEN
+        WRITE (*,*) my_id, " : Reduce...."
+        CALL MPI_Allreduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N, ierr)
      ELSE
-        write (*,*) my_id, " : Reduce.."
-        CALL MPI_AllReduce(RHS_loc,RHS_glob,column_number,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
-     END IF    
+        WRITE (*,*) my_id, " : Reduce.."
+        CALL MPI_AllReduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
+     END IF
+
+     if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
+     allocate(mumps_par%rhs(column_number))
+     mumps_par%n = column_number
+     mumps_par%rhs = 0.d0
+
+     if (murge_id .eq. 0 ) then
+        
+        mumps_par%rhs(1:column_number) = rhs_glob(1:ndof_glob:n_tor)
+        
+     else
+           
+        mumps_par%rhs(1:column_number:2) = rhs_glob(2*murge_id:ndof_glob:n_tor)
+        mumps_par%rhs(2:column_number:2) = rhs_glob(2*murge_id+1:ndof_glob:n_tor)
+        
+     endif
+        
+     
   END IF
   
-  IF(ALLOCATED(column_scaling))   DEALLOCATE(column_scaling)
-  ALLOCATE(column_scaling(column_number))
-
-  CALL MURGE_GetGlobalNorm(murge_id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
-  CALL MURGE_ApplyGlobalScaling(murge_id, column_scaling, -1, MURGE_SCAL_COL, ierr)
-  write(*,*) '******** end construct matrix murge **********'
+  IF (.NOT. gmres) THEN
+     IF(ALLOCATED(column_scaling))   DEALLOCATE(column_scaling)
+     ALLOCATE(column_scaling(column_number))
+     CALL MURGE_GetGlobalNorm(murge_id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
+     CALL MURGE_ApplyGlobalScaling(murge_id, column_scaling, -1, MURGE_SCAL_COL, ierr)
+  END IF
+  WRITE(*,*) '******** end construct matrix murge **********'
   
   DEALLOCATE(RHS_loc)
 

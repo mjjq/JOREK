@@ -22,7 +22,7 @@
 !*                                                                             *
 !*******************************************************************************
 SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, & 
-     local_elms, n_local_elms, psi_bnd)			    
+     local_elms, n_local_elms, psi_bnd, gmres)			    
   !---------------------------------------------------------------
   ! add the boundary condition to the global matrix
   !---------------------------------------------------------------
@@ -41,6 +41,7 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
   TYPE (type_node_list)    :: node_list
   TYPE (type_element_list) :: element_list
   REAL*8                   :: psi_bnd
+  logical                  :: gmres
 
   ! Internal parameters
   REAL*8  :: zbig
@@ -48,7 +49,26 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
   INTEGER :: index_node, ielm, ierr
   INTEGER :: coefnbr
   LOGICAL :: is_local
+  integer :: first_tor
+  integer :: last_tor
+  integer :: murge_ntor
   zbig = 1.d12
+
+  if (gmres) then 
+     if (murge_id == 0) then
+        first_tor = 1
+        last_tor = 1
+        murge_ntor = 1
+     else
+        first_tor = 2*murge_id-1
+        last_tor = 2*murge_id+1
+        murge_ntor = 2
+     end if
+  else
+     first_tor = 1
+     last_tor = n_tor
+     murge_ntor = n_tor
+  end if
 
   ! Count the number of values that will be entered
   coefnbr = 0
@@ -62,7 +82,7 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
 
         IF (node_list%node(inode)%boundary .NE. 0) THEN
 
-           DO in=1, n_tor
+           DO in=first_tor, last_tor
 
               DO k=1, n_var
 
@@ -137,7 +157,7 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
 
         IF (node_list%node(inode)%boundary .NE. 0) THEN
 
-           DO in=1, n_tor
+           DO in=first_tor, last_tor
 
               DO k=1, n_var
 
@@ -151,9 +171,10 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
 
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
+                          
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
@@ -168,8 +189,8 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
@@ -193,8 +214,8 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
@@ -208,8 +229,8 @@ SUBROUTINE boundary_conditions_murge(my_id, node_list, element_list, &
                        CALL vertex_is_local(index_node, is_local)
                        IF (is_local) THEN
                           CALL MURGE_ASSEMBLYSETVALUE(murge_id, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
-                               n_tor * n_var * (index_node - 1) + (k-1)*n_tor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
+                               murge_ndof * (index_node - 1) + (k-1)*murge_ntor + in, &
                                zbig, ierr)
                           IF (ierr /= MURGE_SUCCESS) THEN
                              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &

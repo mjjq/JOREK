@@ -55,28 +55,8 @@ lwork = m*m + m*(n_dof+5) + 6*n_dof + m + 1
 allocate(work(lwork))
 
 work(1:n_dof)         = deltas(1:n_dof)                     ! the initial guess
-if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
-   work(n_dof+1:2*n_dof)  = 0.d0
-        
-   allocate(rhs_tmp(ndof_glob))
-   work(n_dof+1:2*n_dof)  = 0.d0
-   rhs_tmp = 0.d0
-   if (my_id .eq. 0 ) then
-           
-      rhs_tmp(1:n_dof:n_tor) = RHS_GLOB(1:mumps_par%n)
-           
-   else
-      rhs_tmp(2*i_tor(my_id+1)-2:n_dof:n_tor) = RHS_GLOB(1:mumps_par%n:2)
-      rhs_tmp(2*i_tor(my_id+1)-1:n_dof:n_tor) = RHS_GLOB(2:mumps_par%n:2)
-           
-   endif
-   call MPI_AllReduce(RHS_tmp,work(n_dof+1), n_dof ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
-   rhs_tmp = work(n_dof+1:2*n_dof)
-else
    work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
-end if
-call gmres_matrix_vector(work(1:2*n_dof),work(2*n_dof+1:3*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
-
+call gmres_matrix_vector(work(1:n_dof),work(2*n_dof+1:3*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 if (my_id .eq. 0) then
   sum = 0.d0
   err = -1.d20
@@ -85,11 +65,7 @@ if (my_id .eq. 0) then
   do i=1,n_dof
     sum = sum + (work(2*n_dof+i)-work(n_dof+i))**2
     err = max(err,abs(work(2*n_dof+i)-work(n_dof+i)))
-    if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
-       Bnorm = Bnorm + RHS_tmp(i)**2
-    else
        Bnorm = Bnorm + RHS_glob(i)**2
-    end if
     Xnorm = Xnorm + deltas(i)**2
   enddo
 
@@ -116,7 +92,8 @@ endif
 
        if (revcom.eq.matvec) then                  ! perform the matrix vector product
                                                    ! work(colz) <-- A * work(colx)
-         call gmres_matrix_vector(work(colx:colx+2*n_dof-1),work(colz:colz+n_dof-1),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
+        
+         call gmres_matrix_vector(work(colx:colx+n_dof-1),work(colz:colz+n_dof-1),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
          goto 10
 
        else if (revcom.eq.precondLeft) then        ! perform the left preconditioning
@@ -151,24 +128,15 @@ if (my_id .eq. 0) then
   Bnorm = 0.d0
   Xnorm = 0.d0
   do i=1,n_dof
-    if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
-       sum = sum      + (work(n_dof+i)-RHS_tmp(i))**2
-       err = max(err,abs(work(n_dof+i)-RHS_tmp(i)))
-       Bnorm = Bnorm + RHS_tmp(i)**2
-    else
        sum = sum      + (work(n_dof+i)-RHS_glob(i))**2
        err = max(err,abs(work(n_dof+i)-RHS_glob(i)))
        Bnorm = Bnorm + RHS_glob(i)**2
-    end if
     Xnorm = Xnorm + deltas(i)**2
   enddo
   write(*,'(A,4e16.8)') ' residu test after : ',sqrt(sum),err,sqrt(Bnorm),sqrt(Xnorm)
 
 endif
 
-if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
-   deallocate(RHS_tmp)
-end if
 iter_gmres = info(2)
 call MPI_BCAST(iter_gmres,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 

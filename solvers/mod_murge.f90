@@ -42,7 +42,7 @@ module murge_module             ! Murge specific variables
 
   ! Number of iteration in refinement
   integer(KIND=MURGE_INTS_KIND)               :: murge_iter
-  parameter (murge_iter=250)
+  parameter (murge_iter=10)
 
   integer(KIND=MURGE_INTS_KIND)               :: murge_ricar
   parameter (murge_ricar=0)

@@ -61,10 +61,13 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      m_loc = (index_max - index_min + 1) * n_tor * n_var
   end if
   mumps_par%nz_loc = nz_glob
-
-  CALL MPI_Allreduce(m_loc,mumps_par%N,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  CALL MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-
+  if (gmres) then
+     CALL MPI_Allreduce(m_loc,mumps_par%N,1,MPI_INTEGER,MPI_SUM,MPI_COMM_N,ierr)
+     CALL MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER,MPI_SUM,MPI_COMM_N,ierr)
+  else
+     CALL MPI_Allreduce(m_loc,mumps_par%N,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
+     CALL MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
+  end if
   !------------------------------------------------------- colunm scaling of global distributed matrix
   CALL CPU_TIME(t_scale_0)
 
@@ -215,41 +218,46 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   WRITE(*,*) '* call MURGE_SetGlobalRhs         *'
   WRITE(*,*) '***********************************'
 
-  call cpu_time(t0)
-  CALL MURGE_SetGlobalRhs(murge_id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
+  if (gmres) then
+     !if (my_id_n .eq. 0) then
+        
+     if (allocated(deltas)) deallocate(deltas)
+     allocate(deltas(ndof_glob))
+     deltas = 0.d0
+     
+     !allocate(rhs_tmp(murge_global_n*murge_ndof))
+     
+     !rhs_tmp = 0.d0
+     !   
+     !   if (murge_id .eq. 0 ) then
+     !      
+     !      rhs_tmp(1:murge_global_n*murge_ndof) = rhs_glob(1:ndof_glob:n_tor)
+     !      
+     !   else
+     !      
+     !      rhs_tmp(1:murge_global_n*murge_ndof:2) = rhs_glob(2*murge_id:ndof_glob:n_tor)
+     !      rhs_tmp(2:murge_global_n*murge_ndof:2) = rhs_glob(2*murge_id+:ndof_glob:n_tor)
+     !      
+     !   endif
+     !   
+     !endif
+
+  end if
+ call cpu_time(t0)
+  if (gmres) then
+     CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
+     !deallocate(rhs_tmp)
+  else
+     CALL MURGE_SetGlobalRhs(murge_id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
+  end if
   call cpu_time(t1)
   IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_SetGlobalRhs ', t1-t0
   IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
-  if (gmres) then
-     if (my_id_n .eq. 0) then
-        
-        if (allocated(deltas)) deallocate(deltas)
-        allocate(deltas(ndof_glob))
-        deltas = 0.d0
-        
-        allocate(rhs_tmp(ndof_glob))
-        
-        rhs_tmp = 0.d0
-        
-        if (my_id .eq. 0 ) then
-           
-           rhs_tmp(1:ndof_glob:n_tor) = rhs_glob(1:mumps_par%n)
-           
-        else
-           
-           rhs_tmp(2*i_tor(my_id+1)-2:ndof_glob:n_tor) = rhs_glob(1:mumps_par%n:2)
-           rhs_tmp(2*i_tor(my_id+1)-1:ndof_glob:n_tor) = rhs_glob(2:mumps_par%n:2)
-           
-        endif
-        
-        deallocate(rhs_tmp)
-     endif
-  end if
   WRITE(*,*) '***********************************'
   WRITE(*,*) '* call MURGE_GetGlobalSolution    *'
   WRITE(*,*) '***********************************'
   IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
-  ALLOCATE(mumps_par%rhs(mumps_par%n))
+  ALLOCATE(mumps_par%rhs(murge_global_n*murge_ndof))
 
   call cpu_time(t0)
   CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
@@ -272,24 +280,24 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
         deltas = 0.d0
         
         allocate(rhs_tmp(ndof_glob))
-        
+
         rhs_tmp = 0.d0
         
         if (my_id .eq. 0 ) then
-           
-           rhs_tmp(1:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n)
+        
+           rhs_tmp(1:ndof_glob:n_tor) = mumps_par%rhs(1:murge_global_n*murge_ndof)
            
         else
-           
-           rhs_tmp(2*i_tor(my_id+1)-2:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n:2)
-           rhs_tmp(2*i_tor(my_id+1)-1:ndof_glob:n_tor) = mumps_par%rhs(2:mumps_par%n:2)
+        
+           rhs_tmp(2*murge_id:ndof_glob:n_tor)   = mumps_par%rhs(1:murge_global_n*murge_ndof:2)
+           rhs_tmp(2*murge_id+1:ndof_glob:n_tor) = mumps_par%rhs(2:murge_global_n*murge_ndof:2)
            
         endif
         
         call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
-        
+
         deallocate(rhs_tmp)
-        
+
      endif
   end if
   deallocate(mumps_par%rhs)

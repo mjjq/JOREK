@@ -39,22 +39,29 @@ n_blocks    = nz_glob/n_blocksize**2
 
 if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
 
-   CALL MURGE_SetGlobalRHS(murge_id, x, -1, MURGE_ASSEMBLY_OVW , ierr)
-   allocate(y_tmp(ndof_glob))
+   if (my_id .eq. 0 ) then
+      allocate(x_tmp(murge_global_n*murge_ndof))
+      x_tmp = x(1:ndof_glob:n_tor)
+   else
+      allocate(x_tmp(murge_global_n*murge_ndof))
+      x_tmp(1:murge_global_n*murge_ndof:2) = x(2*murge_id:ndof_glob:n_tor)
+      x_tmp(2:murge_global_n*murge_ndof:2) = x(2*murge_id+1:ndof_glob:n_tor)
+   end if
+
+   CALL MURGE_SetGlobalRHS(murge_id, x_tmp, -1, MURGE_ASSEMBLY_OVW , ierr)
+   deallocate(x_tmp)       
+   allocate(y_tmp(murge_global_n*murge_ndof))
    CALL MURGE_GetGlobalProduct(murge_id, y_tmp, -1, ierr)
    allocate(y_tmp2(ndof_glob))
    y(1:ndof_glob) = 0.d0
    y_tmp2 = 0.0
-   if (my_id .eq. 0 ) then
+   if (murge_id .eq. 0 ) then
 
-      print *, ndof_glob
-      y_tmp2(1:ndof_glob:n_tor) = y_tmp(1:ndof_glob)
+      y_tmp2(1:ndof_glob:n_tor) = y_tmp(1:murge_global_n*murge_ndof)
 
    else
-      print*, 2*i_tor(my_id+1)-2, ndof_glob
-      y_tmp2(2*i_tor(my_id+1)-2:ndof_glob:n_tor) = y_tmp(1:ndof_glob:2)
-      print*, 2*i_tor(my_id+1)-3, ndof_glob
-      y_tmp2(2*i_tor(my_id+1)-1:ndof_glob:n_tor) = y_tmp(2:ndof_glob:2)
+      y_tmp2(2*murge_id:ndof_glob:n_tor) = y_tmp(1:murge_global_n*murge_ndof:2)
+      y_tmp2(2*murge_id+1:ndof_glob:n_tor) = y_tmp(2:murge_global_n*murge_ndof:2)
       
    endif
    deallocate(y_tmp)

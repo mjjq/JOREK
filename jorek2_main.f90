@@ -96,7 +96,6 @@ program JOREK2
 
   integer     	           ::  list_to_be_refined(n_ref_list), n_to_be_refined    
   
-
   logical                  :: bench_without_plot
 
 
@@ -127,14 +126,16 @@ program JOREK2
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.
-  pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!
+  pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!    
+  refinement=.false.
+
+
   ! requires no_mpi for Pastix library
   adaptive_time = .false.
 
   if (n_tor .eq. 1) then
      gmres  = .false.
   endif
-  if (gmres) use_murge_element = .false.
 
   ! Flag from HSLT
   bench_without_plot              = .false.    ! .true. for benchmark (mesuring elapsed time without plot phases) 
@@ -431,19 +432,13 @@ program JOREK2
         allocate(i_tor(n_cpu))
 
         do i=1,n_cpu
-           if (MOD(i-1, M_cpu)==0) then
-              i_tor(i) = (i-1) / M_cpu  + 1
-           else
-              i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
-           end if
-           write (*,*) "i_tor(i)", i_tor(i), M_cpu
+           i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
         enddo
 
         call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
 
-        i_rank(1) = 0
-        do i=2,N_masters
-           i_rank(i) = i_rank(i-1) + M_cpu
+        do i=1,N_masters
+           i_rank(i) = (i-1) * M_cpu
         enddo
 
         call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -511,7 +506,7 @@ program JOREK2
            !
            if (gmres) then
               CALL MURGE_Initialize(N_masters, ierr)
-              murge_id = i_rank(i_tor(my_id+1))/M_cpu;
+              murge_id = i_tor(my_id+1)-1
               CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
            else
               CALL MURGE_Initialize(1, ierr)
@@ -800,7 +795,7 @@ program JOREK2
         if (.not. gmres) call update_rhs_n(my_id,my_id_n, i_tor, MPI_COMM_MASTER)      ! correct the RHS with the previous solution (deltas)
 
         if (use_murge .and. use_murge_element) then
-           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
+           call solve_murge_all(n_cpu,my_id,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
         else
            call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
         end if

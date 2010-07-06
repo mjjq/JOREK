@@ -19,26 +19,26 @@ SUBROUTINE vertex_is_local(vertex, islocal)
   INTEGER              :: imid
 
   imin = 1
-  imax = local_n
+  imax = murge_local_n
 
-  IF (ALLOCATED(glob2loc)) THEN
-     IF (vertex > global_n) THEN
+  IF (ALLOCATED(murge_glob2loc)) THEN
+     IF (vertex > murge_global_n) THEN
         write (*,*) "vertex_is_local: Vertex out of range"
         STOP
      END IF
         
-     IF (glob2loc(vertex) > 0) THEN 
+     IF (murge_glob2loc(vertex) > 0) THEN 
         islocal = .true.
      ELSE
         islocal = .false.
      END IF
   ELSE
-     ALLOCATE(glob2loc(global_n))
-     glob2loc = -1
-     DO iter = 1, local_n
-        glob2loc(loc2glob(iter)) = iter
+     ALLOCATE(murge_glob2loc(murge_global_n))
+     murge_glob2loc = -1
+     DO iter = 1, murge_local_n
+        murge_glob2loc(murge_loc2glob(iter)) = iter
      END DO
-     IF (glob2loc(vertex) > 0) THEN 
+     IF (murge_glob2loc(vertex) > 0) THEN 
         islocal = .true.
      ELSE
         islocal = .false.

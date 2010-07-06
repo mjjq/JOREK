@@ -113,12 +113,12 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
    if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
    if (use_murge) then
-      CALL MURGE_SetGlobalRhs(id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
+      CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
       if (ierr /= MURGE_SUCCESS) then 
          write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
          STOP
       end if
-      CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
+      CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
       if (ierr /= MURGE_SUCCESS) then 
          write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
          STOP

@@ -39,9 +39,9 @@ n_blocks    = nz_glob/n_blocksize**2
 
 if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
 
-   CALL MURGE_SetGlobalRHS(id, x, -1, MURGE_ASSEMBLY_OVW , ierr)
+   CALL MURGE_SetGlobalRHS(murge_id, x, -1, MURGE_ASSEMBLY_OVW , ierr)
    allocate(y_tmp(ndof_glob))
-   CALL MURGE_GetGlobalProduct(id, y_tmp, -1, ierr)
+   CALL MURGE_GetGlobalProduct(murge_id, y_tmp, -1, ierr)
    allocate(y_tmp2(ndof_glob))
    y(1:ndof_glob) = 0.d0
    y_tmp2 = 0.0

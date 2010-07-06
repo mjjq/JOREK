@@ -19,7 +19,7 @@
 !*                                                                             *
 !*******************************************************************************
 SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, & 
-     my_id_n, mpi_comm_master)
+     my_id_n, mpi_comm_n, mpi_comm_master)
   !---------------------------------------------------------------------
   ! subroutine solves the complete system of equation using pastix with
   ! distributed matrix on the main group mpi_comm_world
@@ -39,7 +39,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   INTEGER                  :: i_tor(n_cpu)
   LOGICAL                  :: gmres
   INTEGER                  :: my_id_n
-  INTEGER                  :: mpi_comm_master
+  INTEGER                  :: mpi_comm_master, MPI_COMM_N
 
   ! local variables:
   REAL*8,ALLOCATABLE       :: column_local(:)
@@ -56,7 +56,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   WRITE(*,*) my_id,'*********************************'
 
   if (use_murge_element) then
-     m_loc = local_n * n_tor * n_var
+     m_loc = murge_local_n * n_tor * n_var
   else
      m_loc = (index_max - index_min + 1) * n_tor * n_var
   end if
@@ -143,34 +143,34 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
 
 
      CALL MURGE_Initialize(1, ierr)
-     id = 0;
-     CALL MURGE_GetSolver(solver, ierr)
-     IF (solver == MURGE_SOLVER_PASTIX) THEN
-        CALL MURGE_SetDefaultOptions(id, 0, ierr)
-        CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES,  ierr)
-        CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
-        CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,      ierr) ! refinement : max number of iterations
-        !    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF     , n_tor * n_var,  ierr)   ! degrees of freedom per node (not correct)
+     murge_id = 0;
+     CALL MURGE_GetSolver(murge_solver, ierr)
+     IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
+        CALL MURGE_SetDefaultOptions(murge_id, 0, ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,             API_VERBOSE_YES,  ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,             murge_iter,      ierr) ! refinement : max number of iterations
+        !    CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF     , n_tor * n_var,  ierr)   ! degrees of freedom per node (not correct)
 
 !$omp parallel default(none) shared(pastix_nthrd, murge_nthrd)    
         murge_nthrd = omp_get_num_threads()
 !$omp end parallel
 
-        CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
-        CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
-        CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
-        CALL MURGE_SetOptionINT(id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
-        CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES, ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
+        CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES, ierr)
 
-        CALL MURGE_SetOptionREAL(id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,   ierr)
+        CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,   ierr)
 
      ENDIF
 
 
-     CALL MURGE_SetOptionINT(id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
-     CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     1,   ierr)
+     CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
+     CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_BASEVAL,     1,   ierr)
 
-     CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
+     CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
 
      pastix_initialised = .TRUE.
 
@@ -185,19 +185,19 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      WRITE(*,*) '***********************************'
      ! this processor enters the A(myfirstrow:mylastrow, *) 
      ! part of the matrix non-zero pattern
-     !CALL MURGE_GraphGlobalIJV(id, n_glob, nz_glob, IRN_glob, JCN_glob, -1, ierr);
-     !CALL MURGE_MatrixGlobalIJV(id, n_glob, nz_glob, IRN_glob, JCN_glob, A_glob, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr);
+     !CALL MURGE_GraphGlobalIJV(murge_id, n_glob, nz_glob, IRN_glob, JCN_glob, -1, ierr);
+     !CALL MURGE_MatrixGlobalIJV(murge_id, n_glob, nz_glob, IRN_glob, JCN_glob, A_glob, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr);
 
      write (*,*) 'colptr[n]-1 ', mumps_par%jcn(mumps_par%n+1)-1
      call cpu_time(t0)
-     CALL MURGE_GraphGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
+     CALL MURGE_GraphGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
      call cpu_time(t1)
      IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GraphGlobalCSC ', t1-t0
      IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
 
      write (*,*) "ierr", ierr
      call cpu_time(t0)
-     CALL MURGE_MatrixGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
+     CALL MURGE_MatrixGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
      call cpu_time(t1)
      IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GraphGlobalCSC ', t1-t0
      IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
@@ -216,7 +216,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   WRITE(*,*) '***********************************'
 
   call cpu_time(t0)
-  CALL MURGE_SetGlobalRhs(id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
+  CALL MURGE_SetGlobalRhs(murge_id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
   call cpu_time(t1)
   IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_SetGlobalRhs ', t1-t0
   IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
@@ -252,7 +252,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   ALLOCATE(mumps_par%rhs(mumps_par%n))
 
   call cpu_time(t0)
-  CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
+  CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
   call cpu_time(t1)
   IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GetGlobalSolution ', t1-t0
   IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'

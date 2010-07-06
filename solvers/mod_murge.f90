@@ -3,20 +3,22 @@ module murge_module             ! Murge specific variables
   include "murge.inc"
   !include "hips.inc"
   ! Indicate which solver is used
-  INTEGER(KIND=MURGE_INTS_KIND)               :: solver  
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_solver  
 
   ! Solver identification number
-  INTEGER(KIND=MURGE_INTS_KIND)               :: id      
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_id      
 
   ! Local number of element
-  INTEGER(KIND=MURGE_INTS_KIND)               :: local_n 
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_local_n 
   ! Global number of element
-  INTEGER(KIND=MURGE_INTS_KIND)               :: global_n 
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_global_n 
+  ! Number of dof by node
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_ndof
 
   ! Local element list
-  INTEGER(KIND=MURGE_INTS_KIND), allocatable  :: loc2glob(:)
+  INTEGER(KIND=MURGE_INTS_KIND), allocatable  :: murge_loc2glob(:)
   ! Global element list
-  INTEGER(KIND=MURGE_INTS_KIND), allocatable  :: glob2loc(:)
+  INTEGER(KIND=MURGE_INTS_KIND), allocatable  :: murge_glob2loc(:)
 
   ! Indicate if we want to use murge or classical interface
   logical                                     :: use_murge

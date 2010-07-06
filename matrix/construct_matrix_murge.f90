@@ -131,7 +131,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   WRITE (*,*) ":: Murge Assembly phase :: ", coefnbr, " entries on processor ", my_id 
   cnt = 0
-  CALL MURGE_ASSEMBLYBEGIN(id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
+  CALL MURGE_ASSEMBLYBEGIN(murge_id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
        MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
 
   DO ife =1, n_local_elms
@@ -239,7 +239,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
                        END IF
                     END IF
 
-                    CALL MURGE_ASSEMBLYSETNODEVALUES(id, index_node2, index_node1, &
+                    CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id, index_node2, index_node1, &
                          coefmtx, ierr)
                     IF (ierr /= MURGE_SUCCESS) THEN
                        WRITE (*,*) my_id, ":::", &
@@ -257,7 +257,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   ENDDO
   write (*,*) my_id, " : MURGE_ASSEMBLYEND in"
-  CALL MURGE_ASSEMBLYEND(id, ierr)
+  CALL MURGE_ASSEMBLYEND(murge_id, ierr)
   write (*,*) my_id, " : MURGE_ASSEMBLYEND out"
 
   !----------------------- boundary conditions
@@ -283,8 +283,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   IF(ALLOCATED(column_scaling))   DEALLOCATE(column_scaling)
   ALLOCATE(column_scaling(column_number))
 
-  CALL MURGE_GetGlobalNorm(id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
-  CALL MURGE_ApplyGlobalScaling(id, column_scaling, -1, MURGE_SCAL_COL, ierr)
+  CALL MURGE_GetGlobalNorm(murge_id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
+  CALL MURGE_ApplyGlobalScaling(murge_id, column_scaling, -1, MURGE_SCAL_COL, ierr)
   write(*,*) '******** end construct matrix murge **********'
   
   DEALLOCATE(RHS_loc)

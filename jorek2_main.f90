@@ -511,47 +511,47 @@ program JOREK2
            !
            if (gmres) then
               CALL MURGE_Initialize(N_masters, ierr)
-              id = i_rank(i_tor(my_id+1))/M_cpu;
-              CALL MURGE_SetCommunicator(id, MPI_COMM_N, ierr)
+              murge_id = i_rank(i_tor(my_id+1))/M_cpu;
+              CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
            else
               CALL MURGE_Initialize(1, ierr)
-              id = 0;
+              murge_id = 0;
            end if
 
-           CALL MURGE_GetSolver(solver, ierr)
-           IF (solver == MURGE_SOLVER_PASTIX) THEN
-              CALL MURGE_SetDefaultOptions(id, 0, ierr)
+           CALL MURGE_GetSolver(murge_solver, ierr)
+           IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
+              CALL MURGE_SetDefaultOptions(murge_id, 0, ierr)
               write (*,*) "--- Murge_setdefaultoptions ---"
-              CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_YES, ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
+              CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,             API_VERBOSE_YES, ierr)
+              CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
               ! refinement : max number of iterations
-              CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,      ierr) 
+              CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,             murge_iter,      ierr) 
               ! degrees of freedom per node (not correct)
               if (gmres) then
                  if ( i_tor(my_id+1) == 1 ) then
-                    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,    n_var,           ierr) 
+                    murge_ndof = n_var
                  else
-                    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,    2 * n_var,       ierr) 
+                    murge_ndof = 2*n_var
                  end if
               else
-                 CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF,       n_tor * n_var,   ierr) 
+                 murge_ndof = n_tor*n_var
               end if
+              CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF,          murge_ndof,   ierr) 
+              CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
+              CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
+              CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
+              CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
+              CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
 
-              CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
-              CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
-
-              CALL MURGE_SetOptionREAL(id, DPARM_EPSILON_MAGN_CTRL,  murge_pivot,     ierr)
+              CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,  murge_pivot,     ierr)
 
            ENDIF
 
 
-           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
-           CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     1,   ierr)
+           CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
+           CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_BASEVAL,     1,   ierr)
 
-           CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
+           CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
 
            murge_initialised = .TRUE.
 
@@ -563,7 +563,7 @@ program JOREK2
         ! TODO: Avoid doubles
         !
         !if (my_id == 0) then
-        CALL MURGE_GRAPHBEGIN(id, mumps_par%n, &
+        CALL MURGE_GRAPHBEGIN(murge_id, mumps_par%n, &
              n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GRAPHBEGIN"
@@ -593,7 +593,7 @@ program JOREK2
                        index_node2 = node_list%node(knode)%index(k_order)
 
 
-                       CALL MURGE_GRAPHEDGE(id,  &
+                       CALL MURGE_GRAPHEDGE(murge_id,  &
                             index_node1,         &
                             index_node2,         &
                             ierr)
@@ -610,21 +610,21 @@ program JOREK2
               END DO
            END DO
         END DO
-        CALL MURGE_GRAPHEND(id, ierr)
+        CALL MURGE_GRAPHEND(murge_id, ierr)
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GRAPHEND"
            STOP
         END IF
 
-        CALL MURGE_GETLOCALNODENBR(id, local_n, ierr)
+        CALL MURGE_GETLOCALNODENBR(murge_id, murge_local_n, ierr)
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
            STOP
         END IF
-        ALLOCATE(loc2glob(local_n))
-        global_n = mumps_par%n
-        write (*,*) "Local number of nodes", local_n, "global",  mumps_par%n
-        CALL MURGE_GETLOCALNODELIST(id, loc2glob, ierr)
+        ALLOCATE(murge_loc2glob(murge_local_n))
+        murge_global_n = mumps_par%n
+        write (*,*) "Local number of nodes", murge_local_n, "global",  mumps_par%n
+        CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
            STOP
@@ -766,7 +766,7 @@ program JOREK2
 
            ! Recuperer la solution
            if (use_murge) then
-              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_master)
+              call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
            else
               call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
            endif
@@ -800,7 +800,7 @@ program JOREK2
         if (.not. gmres) call update_rhs_n(my_id,my_id_n, i_tor, MPI_COMM_MASTER)      ! correct the RHS with the previous solution (deltas)
 
         if (use_murge .and. use_murge_element) then
-           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_master)
+           call solve_murge_all(n_cpu_n,my_id_n,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
         else
            call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
         end if
@@ -906,10 +906,10 @@ program JOREK2
 
 
            IF ( use_murge_element ) THEN
-              IF (ALLOCATED(glob2loc)) DEALLOCATE(glob2loc)
-              IF (ALLOCATED(loc2glob)) DEALLOCATE(loc2glob)
+              IF (ALLOCATED(murge_glob2loc)) DEALLOCATE(murge_glob2loc)
+              IF (ALLOCATED(murge_loc2glob)) DEALLOCATE(murge_loc2glob)
            END IF
-           CALL MURGE_Clean(id, ierr)
+           CALL MURGE_Clean(murge_id, ierr)
         else
            pastix_iparm(2)     = 7                       ! Clean-up
            pastix_iparm(3)     = 7

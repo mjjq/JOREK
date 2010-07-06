@@ -258,33 +258,33 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                     write (*,*) "ERROR in MURGE_Initialize"; 
                     STOP
                  end if
-                 id = i_tor(my_id+1) -1
-                 write (*,*) "id : ", id
-                 CALL MURGE_GetSolver(solver, ierr)
-                 IF (solver == MURGE_SOLVER_PASTIX) THEN
-                    CALL MURGE_SetDefaultOptions(id, 0, ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_VERBOSE,             API_VERBOSE_NO,  ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_ITERMAX,             murge_iter,      ierr) ! refinement : max number of iterations
-                    !    CALL MURGE_SetOptionINT(id, MURGE_IPARAM_DOF     , n_tor * n_var,  ierr)   ! degrees of freedom per node (not correct)
-                    CALL MURGE_SetOptionINT(id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_MATRIX_VERIFICATION, API_YES, ierr)
-                    CALL MURGE_SetOptionINT(id, IPARM_PID,                 id, ierr);
+                 murge_id = i_tor(my_id+1) -1
+                 write (*,*) "murge_id : ", murge_id
+                 CALL MURGE_GetSolver(murge_solver, ierr)
+                 IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
+                    CALL MURGE_SetDefaultOptions(murge_id, 0, ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,             API_VERBOSE_NO,  ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,             murge_iter,      ierr) ! refinement : max number of iterations
+                    !    CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF     , n_tor * n_var,  ierr)   ! degrees of freedom per node (not correct)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES, ierr)
+                    CALL MURGE_SetOptionINT(murge_id, IPARM_PID,                 murge_id, ierr);
 
-                    CALL MURGE_SetOptionREAL(id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,   ierr)
+                    CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,   ierr)
 
                  ENDIF
 
 
-                 CALL MURGE_SetOptionINT(id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
-                 CALL MURGE_SetOptionINT(id, MURGE_IPARAM_BASEVAL,     mumps_par%jcn(1),   ierr)
+                 CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
+                 CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_BASEVAL,     mumps_par%jcn(1),   ierr)
 
-                 CALL MURGE_SetOptionREAL(id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
-                 CALL MURGE_SetCommunicator(id, MPI_COMM_N, ierr)
-                 write (*,*) id, "MPI_COMM_N", MPI_COMM_N
+                 CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
+                 CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
+                 write (*,*) murge_id, "MPI_COMM_N", MPI_COMM_N
               else
 
                  !          if (pastix_smp_only) pastix_nthrd = n_cpu_n                ! use the size of the MPIgroup for the number of threads
@@ -323,7 +323,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  WRITE(*,*) '***********************************'
                  WRITE(*,*) '* analyse Murge                   *'
                  WRITE(*,*) '***********************************'
-                 CALL MURGE_GraphGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
+                 CALL MURGE_GraphGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
                  if (ierr /= MURGE_SUCCESS) then 
                     write (*,*) "ERROR in MURGE_GraphGlobalCSC"; 
                     STOP
@@ -402,7 +402,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            WRITE(*,*) '***********************************'
            WRITE(*,*) '* Matrix Murge                    *'
            WRITE(*,*) '***********************************'
-           CALL MURGE_MatrixGlobalCSC(id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+           CALL MURGE_MatrixGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
                 -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
            if (ierr /= MURGE_SUCCESS) then 
               write (*,*) "ERROR in MURGE_MatrixGlobalCSC"; 
@@ -469,13 +469,13 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      if (use_murge) then
         if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
-        CALL MURGE_SetGlobalRhs(id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
+        CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
         if (ierr /= MURGE_SUCCESS) then 
            write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
            STOP
         end if
         call cpu_time(t_fact_0)
-        CALL MURGE_GetGlobalSolution(id, mumps_par%rhs, -1, ierr)
+        CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
         call cpu_time(t_fact_1)
         if (ierr /= MURGE_SUCCESS) then 
            write (*,*) "ERROR in MURGE_GetGlobalSolution"; 

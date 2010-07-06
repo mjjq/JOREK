@@ -13,7 +13,6 @@ all: 	modules 		\
 	solve_matrix_n.o 	\
 	solve_mumps_all.o 	\
 	solve_pastix_all.o 	\
-	solve_pastix_all_dist.o \
 	solvP3.o 		\
 	update_rhs_n.o 		\
 	solve_murge_all.o

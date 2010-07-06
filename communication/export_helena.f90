@@ -76,6 +76,7 @@ endif
 surface_list%n_psi =3
 if (allocated(surface_list%psi_values)) deallocate(surface_list%psi_values)
 allocate(surface_list%psi_values(surface_list%n_psi))
+surface_list%psi_values = 0 ! XL : uninitialised value.
 
 call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
 

@@ -23,7 +23,8 @@ integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: current, beta_p, beta_n, beta_t, MU_zero, aminor
 real*8     :: xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area, PI, Bgeo, psi_limit
 real*8     :: density, density_in, density_out,  pressure, pressure_in, pressure_out
-real*8     :: current_in, current_out, C_hel, P_hel, D_int, D_ext, P_ext, C_ext
+!real*8     :: current_in, current_out ! XL : uninitialised
+real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
 write(*,*) '***************************************'
@@ -160,7 +161,7 @@ write(*,'(A,f8.5)') ' Volume   : ',volume,' m^3'
 
 write(*,'(A,5f8.5)') 'density  (total/in/out) : ',density,  density_in,  density_out 
 write(*,'(A,5f8.5)') 'pressure (total/in/out) : ',pressure, pressure_in, pressure_out 
-write(*,'(A,5f8.5)') 'current  (in/out)       : ',current_in, current_out 
+!write(*,'(A,5f8.5)') 'current  (in/out)       : ',current_in, current_out XL : uninitialised
 
 return
 end

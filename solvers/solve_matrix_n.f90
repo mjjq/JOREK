@@ -19,7 +19,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   real*8  :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_solv_0, t_solv_1
   real*8, allocatable :: RHS_tmp(:)
   logical :: solve_only
-  integer::time_ini_1,time_ini_0,time_facto_1,time_facto_0,nb_periods,nb_periodes_max,nb_periodes_sec
+  integer::time_ini_1,time_ini_0,time_facto_1,time_facto_0, time_solve_0, time_solve_1,nb_periods,nb_periodes_max,nb_periodes_sec
   integer, external :: omp_get_num_threads, omp_get_thread_num
   !Split broadcast
   character*8 :: type
@@ -451,6 +451,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      write(*,*) 'system_clock elapsed time factorization',REAL(nb_periods)/nb_periodes_sec
   endif
 
+  if (my_id_n .eq. 0) then                              ! elapsed time solve start
+     call MPI_Barrier(MPI_COMM_MASTER,ierr)
+     call system_clock(count=time_solve_0)
+  endif
 
   if (use_mumps) then
 
@@ -514,6 +518,14 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      CALL MPI_Barrier(MPI_COMM_WORLD, ierr)
   endif
 
+
+  if (my_id_n .eq. 0) then                          ! elapsed time factorisation end
+     call MPI_Barrier(MPI_COMM_MASTER,ierr)
+     call system_clock(count=time_solve_1)
+     nb_periods = time_solve_1-time_solve_0
+     if (time_solve_1<time_solve_0) nb_periods = nb_periods + nb_periodes_max
+     write(*,*) 'system_clock elapsed time resolution',REAL(nb_periods)/nb_periodes_sec
+  endif
 
   if (my_id_n .eq. 0) then
 

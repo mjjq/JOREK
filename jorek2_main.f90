@@ -126,8 +126,8 @@ program JOREK2
 
   use_mumps  = .false.
   use_pastix = (.not. use_mumps)
-  use_murge  = .true.
-  use_murge_element  = .true.
+  use_murge  = .false.
+  use_murge_element  = .false.
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.

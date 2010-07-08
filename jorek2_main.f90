@@ -770,6 +770,8 @@ program JOREK2
      call cpu_time(t_matrix_0)
 
      ! Build the matrix 
+     
+     call system_clock(count=t0)
      IF ( use_pastix .and. use_murge .and. use_murge_element ) THEN
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint, &
@@ -780,6 +782,10 @@ program JOREK2
              xpoint,psi_axis,psi_bnd,Z_xpoint)        ! construct the matrix from elemental matrices
      END IF
 
+     call system_clock(count=t1)   
+     nb_periods = t1-t0
+     if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+     write(*,FMT_TIMING) my_id, ' system_clock elapsed time in construct_matrix ',REAL(nb_periods)/nb_periodes_sec
      call cpu_time(t_matrix_1)
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)

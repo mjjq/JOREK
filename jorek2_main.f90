@@ -97,11 +97,16 @@ program JOREK2
   integer     	           ::  list_to_be_refined(n_ref_list), n_to_be_refined    
   
   logical                  :: bench_without_plot
+  integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
+  CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(I2,A70,F7.2)"
 
 
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
+
+  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
+  call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
 
   !call MPI_INIT(IERR)                                     ! initialise MPI
 
@@ -121,8 +126,8 @@ program JOREK2
 
   use_mumps  = .false.
   use_pastix = (.not. use_mumps)
-  use_murge  = .false.
-  use_murge_element  = .false.
+  use_murge  = .true.
+  use_murge_element  = .true.
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.
@@ -565,6 +570,8 @@ program JOREK2
            STOP
         END IF
 
+        call system_clock(count=t0)
+
         DO i_elem = 1, n_local_elms
 
            element = element_list%element(local_elms(i_elem))
@@ -605,25 +612,51 @@ program JOREK2
               END DO
            END DO
         END DO
+
+        call system_clock(count=t1)
+        nb_periods = t1-t0
+        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+        write(*,FMT_TIMING) my_id, ' system_clock elapsed time entering graph ',REAL(nb_periods)/nb_periodes_sec
+
+        call system_clock(count=t0)
         CALL MURGE_GRAPHEND(murge_id, ierr)
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GRAPHEND"
            STOP
         END IF
+        call system_clock(count=t1)
+        nb_periods = t1-t0
+        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+        write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GRAPHEND ',REAL(nb_periods)/nb_periodes_sec
 
+
+        call system_clock(count=t0)
         CALL MURGE_GETLOCALNODENBR(murge_id, murge_local_n, ierr)
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
            STOP
         END IF
+        call system_clock(count=t1)
+        nb_periods = t1-t0
+        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+        write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GETLOCALNODENBR ',REAL(nb_periods)/nb_periodes_sec
+
+        
         ALLOCATE(murge_loc2glob(murge_local_n))
         murge_global_n = mumps_par%n
         write (*,*) "Local number of nodes", murge_local_n, "global",  mumps_par%n
+        call system_clock(count=t0)
         CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
+        call system_clock(count=t1)
+        nb_periods = t1-t0
+        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+        write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GETLOCALNODELIST ',REAL(nb_periods)/nb_periodes_sec
         IF (ierr /= MURGE_SUCCESS) THEN
            write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
            STOP
         END IF
+
+        call system_clock(count=t0)
         ! Build local_elms from loc2glob
         n_local_elms = 0
 
@@ -645,7 +678,7 @@ program JOREK2
                  END IF
               END DO
            END DO
-10      END DO
+10      END DO 
         IF (ALLOCATED(local_elms)) DEALLOCATE(local_elms)
         ! Build local_elms from loc2glob
         ALLOCATE(local_elms(n_local_elms))
@@ -674,6 +707,10 @@ program JOREK2
               END DO
            END DO
 20      END DO
+        call system_clock(count=t1)   
+        nb_periods = t1-t0
+        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+        write(*,FMT_TIMING) my_id, ' system_clock elapsed time computing new local element list ',REAL(nb_periods)/nb_periodes_sec
 
 
         index_total = -1

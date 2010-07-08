@@ -38,6 +38,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   IMPLICIT NONE
   INCLUDE 'mpif.h'
+#include "r3_info.h"
   
   ! Subroutine parameters:
   INTEGER                        :: my_id
@@ -72,6 +73,12 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   INTEGER :: index_rhs
   INTEGER :: index_mtx
   INTEGER :: cnt
+  integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
+  CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(I2,A70,F7.2)"
+
+  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
+  call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
+
   WRITE(*,*) '****************************************'
   WRITE(*,*) '*  construct matrix MURGE              *'
   WRITE(*,*) '****************************************'
@@ -133,6 +140,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   WRITE (*,*) ":: Murge Assembly phase :: ", coefnbr, " entries on processor ", my_id 
   cnt = 0
+  call system_clock(count=t0)
+
   CALL MURGE_ASSEMBLYBEGIN(murge_id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
        MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
 
@@ -253,15 +262,25 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      ENDDO
 
   ENDDO
-  WRITE (*,*) my_id, " : MURGE_ASSEMBLYEND in"
+  call system_clock(count=t1)
+  nb_periods = t1-t0
+  if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
+  write(*,FMT_TIMING) my_id, ' system_clock elapsed time in assembly loop ',REAL(nb_periods)/nb_periodes_sec
+
+  call system_clock(count=t0)
   CALL MURGE_ASSEMBLYEND(murge_id, ierr)
-  WRITE (*,*) my_id, " : MURGE_ASSEMBLYEND out"
+  call system_clock(count=t1)
+  nb_periods = t1-t0
+  if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
+  write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_ASSEMBLYEND ',REAL(nb_periods)/nb_periodes_sec
 
   !----------------------- boundary conditions
   
+  call system_clock(count=t0)
   CALL boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
        psi_bnd, gmres)
-  
+    write(*,FMT_TIMING) my_id, ' system_clock elapsed time in boundary_conditions ',REAL(nb_periods)/nb_periodes_sec
+
   IF (.NOT. gmres) THEN
      WRITE (*,*) MY_ID, " : Reduce..."
      CALL MPI_Allreduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)

@@ -31,7 +31,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   USE global_distributed_matrix
   IMPLICIT NONE
   INCLUDE 'mpif.h'
-  
+#include "r3_info.h"
   ! Subroutine parameters:
   INTEGER                  :: n_cpu
   INTEGER                  :: my_id
@@ -45,16 +45,19 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   REAL*8,ALLOCATABLE       :: column_local(:)
   REAL*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_comm_0, t_comm_1
   REAL*8                   :: t_scale_0, t_scale_1
-  REAL*8                   :: t0,t1
   INTEGER                  :: i, k, j, ierr, m_loc
   INTEGER,ALLOCATABLE      :: counts(:), displacements(:)
   REAL*8, ALLOCATABLE      :: rhs_tmp(:)
   integer, external :: omp_get_num_threads, omp_get_thread_num
+  integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
+  CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(I2,A70,F7.2)"
 
   WRITE(*,*) my_id,'*********************************'
   WRITE(*,*) my_id,'*  solve global matrix (PastiX) *'
   WRITE(*,*) my_id,'*********************************'
 
+  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
+  call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
   if (use_murge_element) then
      m_loc = murge_local_n * n_tor * n_var
   else
@@ -191,19 +194,19 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      !CALL MURGE_GraphGlobalIJV(murge_id, n_glob, nz_glob, IRN_glob, JCN_glob, -1, ierr);
      !CALL MURGE_MatrixGlobalIJV(murge_id, n_glob, nz_glob, IRN_glob, JCN_glob, A_glob, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr);
 
-     write (*,*) 'colptr[n]-1 ', mumps_par%jcn(mumps_par%n+1)-1
-     call cpu_time(t0)
+     call system_clock(count=t0)
      CALL MURGE_GraphGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
-     call cpu_time(t1)
-     IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GraphGlobalCSC ', t1-t0
-     IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
+     call system_clock(count=t1)
+     nb_periods = t1-t0
+     if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
+     write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GraphGlobalCSC ',REAL(nb_periods)/nb_periodes_sec
 
-     write (*,*) "ierr", ierr
-     call cpu_time(t0)
+     call system_clock(count=t0)
      CALL MURGE_MatrixGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
-     call cpu_time(t1)
-     IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GraphGlobalCSC ', t1-t0
-     IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
+     call system_clock(count=t1)
+     nb_periods = t1-t0
+     if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
+     write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_MatrixGlobalCSC ',REAL(nb_periods)/nb_periodes_sec
 
      pastix_analysed = .TRUE.
 
@@ -243,28 +246,28 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      !endif
 
   end if
- call cpu_time(t0)
+  call system_clock(count=t0)
   if (gmres) then
      CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
      !deallocate(rhs_tmp)
   else
      CALL MURGE_SetGlobalRhs(murge_id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
   end if
-  call cpu_time(t1)
-  IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_SetGlobalRhs ', t1-t0
-  IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
-  WRITE(*,*) '***********************************'
-  WRITE(*,*) '* call MURGE_GetGlobalSolution    *'
-  WRITE(*,*) '***********************************'
+  call system_clock(count=t1)
+  nb_periods = t1-t0
+  if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
+  write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_SetGlobalRhs ',REAL(nb_periods)/nb_periodes_sec
+  
   IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
   ALLOCATE(mumps_par%rhs(murge_global_n*murge_ndof))
 
-  call cpu_time(t0)
-  CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
-  call cpu_time(t1)
-  IF (my_id .EQ. 0)  WRITE(*,*) '* MURGE_GetGlobalSolution ', t1-t0
-  IF (my_id .EQ. 0)  WRITE(*,*) '***********************************'
-  
+  call system_clock(count=t0)
+  CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)  
+  call system_clock(count=t1)
+  nb_periods = t1-t0
+  if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
+  write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GetGlobalSolution ',REAL(nb_periods)/nb_periodes_sec
+
   write (*,*) "mumps_par%n", mumps_par%n, ndof_glob
   write (*,*) "size(deltas)", size(deltas)
   if (.not. gmres) then

@@ -260,7 +260,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   !----------------------- boundary conditions
   
   CALL boundary_conditions_murge(my_id,node_list,element_list,local_elms,n_local_elms, &
-       psi_bnd)
+       psi_bnd, gmres)
   
   IF (.NOT. gmres) THEN
      WRITE (*,*) MY_ID, " : Reduce..."

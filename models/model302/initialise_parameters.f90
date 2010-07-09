@@ -29,7 +29,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
 		pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-		freeboundary
+		freeboundary,refinement
 
 if (my_id .eq. 0) then
 

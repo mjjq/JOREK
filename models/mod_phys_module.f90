@@ -18,7 +18,7 @@ use parameters
   real*8  :: D_neutral, tauIC
   real*8  :: pellet_amplitude, pellet_R, pellet_Z, pellet_phi, pellet_radius, pellet_sig, pellet_length
   real*8  :: pellet_psi, pellet_delta_psi
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num,Zk_perp_num
   real*8  :: t_start, t_now
   integer :: nstep, n_R, n_Z, n_radial, n_pol, n_tht, n_flux, n_boundary
   integer :: n_open, n_private, n_leg

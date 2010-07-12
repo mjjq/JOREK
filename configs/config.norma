@@ -1,15 +1,23 @@
 
-MODEL = model300
+MODEL = model302
 
-FC     = mpif90
+FC     = mpif90 -f90=ifort
 
-FFLAGS = -r8 -i4 -O2 -xT -align
+FFLAGS = -r8 -i4 -O2 -xT -align -mcmodel=medium -openmp -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO
+#FFLAGS_NO_OMP = -r8 -i4 -O2 -xT -align -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO
+FFLAGS = -r8 -i4 -O0 -check bounds -traceback -align -openmp -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO
+#FFLAGS_NO_OMP = -r8 -i4 -O0 -check bounds -traceback -align -openmp -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO
 
-#FFLAGS = -r8 -i4 -O0 -check bounds -traceback -align -fpe0 -fp-model strict
+CC     = mpicc 
+CFLAGS = -DUSE_R3_INFO_MPI -DUSE_R3_INFO
+
+# -i4 for openmpi
+
+FFLAGS_NO_OMP = $(FFLAGS)
 
 MYHOME= /home/sccp/gttm/huysmans/norma
 
-JOREK_DIR = $(MYHOME)/jorek2_svn/trunk
+JOREK_DIR = $(MYHOME)/jorek2_test/trunk
 
 MAIN_MODEL_DIR = $(JOREK_DIR)/models
 MODEL_DIR      = $(MAIN_MODEL_DIR)/$(MODEL)
@@ -18,32 +26,45 @@ MATRIX_DIR     = $(JOREK_DIR)/matrix
 ELEMENTS_DIR   = $(JOREK_DIR)/elements
 SOLVERS_DIR    = $(JOREK_DIR)/solvers
 VACUUM_DIR     = $(JOREK_DIR)/vacuum
+REFINE_DIR     = $(JOREK_DIR)/refinement
+TIMING_DIR     = $(JOREK_DIR)/timing
 
-LIBSCOTCH   = -L$(MYHOME)/scotch_5.0/bin -lscotch -lscotcherr
+LIBSCOTCH   = -L$(MYHOME)/scotch_5.1/lib -lptscotch -lptscotcherr
 
-LIBMUMPS  = $(MYHOME)/MUMPS_4.7.3/lib/libdmumps.a
-LIBZMUMPS = $(MYHOME)/MUMPS_4.7.3/lib/libzmumps.a
-INCMUMPS  = $(MYHOME)/MUMPS_4.7.3/include/
-ORDLIB    = $(MYHOME)/MUMPS_4.7.3/lib/libpord.a $(MYHOME)/metis-4.0/libmetis.a $(LSCOTCH)
+LIBMUMPS  = -L$(MYHOME)/MUMPS_4.8.3/lib/ -ldmumps -lmumps_common
+LIBZMUMPS = $(MYHOME)/MUMPS_4.8.3/lib/libzmumps.a
+INCMUMPS  = $(MYHOME)/MUMPS_4.8.3/include/
+ORDLIB    = $(MYHOME)/MUMPS_4.8.3/lib/libpord.a $(MYHOME)/metis-4.0/libmetis.a $(LSCOTCH)
 
 PPPLIB    = $(MYHOME)/lib/ppplib.a
 
-LIBPASTIX = -L$(MYHOME)/PastiX/install/  -lpastix
+METIS     = $(MYHOME)/metis-4.0/libmetis.a
+
+LIBPASTIX = -L$(MYHOME)/PastiX/install/  -lpastix -lpastix_murge 
+INCPASTIX = $(MYHOME)/PastiX/install/
+
 LIBFFTW   = $(MYHOME)/fftw/lib/libfftw3.a
 LIBLAPACK =  -L/opt/intel/mkl/10.0.011//lib/em64t /opt/intel/mkl/10.0.011//lib/em64t/libmkl_lapack.a  /opt/intel/mkl/10.0.011/lib/em64t/libmkl_sequential.a /opt/intel/mkl/10.0.011/lib/em64t/libmkl_core.a /opt/intel/mkl/10.0.011/lib/em64t/libguide.a
-SCALAP    = -L$(MYHOME)/scalapack-1.8.0 -lscalapack
-BLACS     = $(MYHOME)/BLACS/LIB/blacs_MPI-LINUX-0.a $(MYHOME)/BLACS/LIB/blacsF77init_MPI-LINUX-0.a $(MYHOME)/BLACS/LIB/blacsCinit_MPI-LINUX-0.a
 
-LIBS = $(LIBFFTW) $(LIBPASTIX) $(LIBSCOTCH)  $(LIBMUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB)
+SCALAP    = -L$(MYHOME)/scalapack-1.8.0 -lscalapack_mpich2
+BLACS     = $(MYHOME)/BLACS/LIB/blacs_mpich2.a $(MYHOME)/BLACS/LIB/blacsF77init_mpich2.a $(MYHOME)/BLACS/LIB/blacsCinit_mpich2.a
 
-INCLUDES  = -I$(DATATYPES_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(ELEMENTS_DIR) -I$(VACUUM_DIR) -I$(SOLVERS_DIR) -I$(INCMUMPS) -I.
+#LIBWSMP = -L$(MYHOME)/wsmp/wsmp/wsmp-Linux64/lib/Intel -lpwsmp64-juropa #-ltcmalloc_minimal -lstacktrace -lunwind -L$(MYHOME)/wsmp/tcmalloc
+#LIBWSMP = -L$(MYHOME)/wsmp/wsmp/wsmp-Linux64/lib/Intel/mpich2 -lpwsmp64 #-ltcmalloc_minimal -lstacktrace -lunwind -L$(MYHOME)/wsmp/tcmalloc
+
+LIBS = $(LIBFFTW) $(METIS) $(LIBPASTIX) $(LIBSCOTCH) $(LIBWSMP) $(LIBMUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB)
+
+INCLUDES  = -I$(DATATYPES_DIR) -I$(MAIN_MODEL_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(ELEMENTS_DIR) -I$(VACUUM_DIR)  -I$(SOLVERS_DIR)  -I$(TIMING_DIR) -I$(REFINE_DIR) -I$(INCMUMPS) -I$(INCPASTIX) -I.
 
 VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 
-.SUFFIXES: .o .f90 .f 
+.SUFFIXES: .o .f90 .f
 
 %.o: %.f90
 	$(FC) -c $^ -o $@ $(FFLAGS) $(INCLUDES)
 
 %.o: %.f
 	$(FC) -c $^ -o $@ $(FFLAGS) $(INCLUDES)
+
+%.o: %.c
+	$(CC) -c $^ -o $@ $(CFLAGS) $(INCLUDES)

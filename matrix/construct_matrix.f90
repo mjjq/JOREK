@@ -90,12 +90,12 @@ RHS_loc  = 0.d0
 
 
 !$omp parallel default(none) &
-!$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,  &
-!$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id, nodes_father)              &
-!$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,            &
-!$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position, &
-!$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,&
-!$omp           i_father,element_father,inode_father,node_out)
+!$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
+!$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id)                     &
+!$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,   &
+!$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
+!$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
+!$omp           i_father,element_father, nodes_father, inode_father,node_out)
 
 !omp_nthreads = omp_get_num_threads()
 !omp_tid      = omp_get_thread_num()
@@ -196,11 +196,9 @@ do ife =1, n_local_elms
 !    enddo
 !  endif
 
-  
-!$omp single
-   
+     
    call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
-!$omp end single
+
 !$omp critical  
 
 if (element%n_sons .eq. 0) then
@@ -259,9 +257,13 @@ if (element%n_sons .eq. 0) then
     enddo
    
   enddo
-!$omp end critical
+
 endif
+
+!$omp end critical
+
 enddo
+
 !$omp end do
 !$omp end parallel
 

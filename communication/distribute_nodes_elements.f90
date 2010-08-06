@@ -80,6 +80,7 @@ do i = 1, element_list%n_elements
       if ( (node_list%node(inode)%index(k) .ge. index_min(my_id+1)) .and. &
            (node_list%node(inode)%index(k) .le. index_max(my_id+1)) ) then
         ELM_is_local = .true.
+        goto 10
       endif
     enddo
 
@@ -91,6 +92,7 @@ do i = 1, element_list%n_elements
                        if ( (node_list%node(index1)%index(k) .ge. index_min(my_id+1)) .and. &
                         (node_list%node(index1)%index(k) .le. index_max(my_id+1)) ) then
                         ELM_is_local = .true.
+                        goto 10
                       endif
                   enddo
 	    end do     
@@ -98,10 +100,9 @@ do i = 1, element_list%n_elements
    end if
 
   enddo
-
   if (ELM_is_local) then
-    inext = inext + 1
-    local_elms(inext) = i
+10   inext = inext + 1
+     local_elms(inext) = i
   endif
 
 enddo

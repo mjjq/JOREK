@@ -22,27 +22,22 @@ SUBROUTINE vertex_is_local(vertex, islocal)
   imax = murge_local_n
 
   IF (ALLOCATED(murge_glob2loc)) THEN
-     IF (vertex > murge_global_n) THEN
-        write (*,*) "vertex_is_local: Vertex out of range"
-        STOP
-     END IF
-        
-     IF (murge_glob2loc(vertex) > 0) THEN 
-        islocal = .true.
-     ELSE
-        islocal = .false.
-     END IF
+
   ELSE
      ALLOCATE(murge_glob2loc(murge_global_n))
      murge_glob2loc = -1
      DO iter = 1, murge_local_n
         murge_glob2loc(murge_loc2glob(iter)) = iter
      END DO
-     IF (murge_glob2loc(vertex) > 0) THEN 
-        islocal = .true.
-     ELSE
-        islocal = .false.
-     END IF
   END IF
-
+  IF (vertex > murge_global_n) THEN
+     write (*,*) "vertex_is_local: Vertex out of range"
+     STOP
+  END IF
+  
+  IF (murge_glob2loc(vertex) > 0) THEN 
+     islocal = .true.
+  ELSE
+     islocal = .false.
+  END IF
 END SUBROUTINE vertex_is_local

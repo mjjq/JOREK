@@ -72,9 +72,9 @@ program JOREK2
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,ierr,i,k,inode, i_elm_axis, i_elm_xpoint
   integer                  :: n_local_ELMs, index_total
-  integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters
+  integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
-  integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER
+  integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
   character*8              :: label
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
@@ -421,6 +421,9 @@ program JOREK2
      !*******************************************************
      !*      create groups /communicators                   *
      !* MPI_COMM_N      : group for each harmonic           *
+     !* MPI_COMM_TRANS  : Transversal communicator          *
+     !*   (ie : all first proc of MPI_COMM_N, all second,   *
+     !*         all third...)                               *
      !* MPI_COMM_MASTER : group of masters of each harmonic *
      !*                   (i.e id=0 from each MPI_COMM_N)   *
      !*******************************************************
@@ -436,15 +439,21 @@ program JOREK2
 
         allocate(i_tor(n_cpu))
 
+        do i = 1, n_cpu 
+           i_tor(i) =  MOD(i-1, M_cpu)+1
+        end do
+        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_TRANS,ierr)
+
         do i=1,n_cpu
            i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
         enddo
 
         call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
-
+        
         do i=1,N_masters
            i_rank(i) = (i-1) * M_cpu
         enddo
+ 
 
         call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
         call MPI_GROUP_INCL(MPI_GROUP_WORLD,N_masters,i_rank,MPI_GROUP_MASTER,ierr)
@@ -453,6 +462,8 @@ program JOREK2
 
         call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)                 ! the id of each cpu
         call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr)                 ! the number of cpus
+        call MPI_COMM_RANK(MPI_COMM_TRANS, my_id_trans, ierr)         ! the id of each cpu
+        call MPI_COMM_SIZE(MPI_COMM_TRANS, n_cpu_trans, ierr)         ! the number of cpus
         if (my_id_n .eq. 0) then
            call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
            call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
@@ -647,6 +658,8 @@ program JOREK2
         write (*,*) "Local number of nodes", murge_local_n, "global",  mumps_par%n
         call system_clock(count=t0)
         CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
+        if (allocated(murge_glob2loc)) deallocate(murge_glob2loc)
+
         call system_clock(count=t1)
         nb_periods = t1-t0
         if (t1<t0) nb_periods = nb_periods + nb_periodes_max
@@ -775,7 +788,8 @@ program JOREK2
      IF ( use_pastix .and. use_murge .and. use_murge_element ) THEN
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint, &
-             psi_axis, psi_bnd, Z_xpoint, gmres, i_tor, n_cpu, mpi_comm_n)        ! construct the matrix from elemental matrices
+             psi_axis, psi_bnd, Z_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, &
+             mpi_comm_trans, my_id_trans, n_cpu_trans)        ! construct the matrix from elemental matrices
      ELSE
         call construct_matrix(my_id, local_elms, &
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &

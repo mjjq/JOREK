@@ -46,12 +46,14 @@ subroutine vacuum_poisson(my_id,node_list,element_list,boundary_list,imode)
 !---------------------------------------------------------------
 use data_structure
 use mumps_module
+use pastix_module
 use basis_at_gaussian
 use gauss
 use phys_module
 use vacuum_response_module
 
 implicit none
+include 'mpif.h'
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
@@ -65,7 +67,7 @@ real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1))
 real*8   :: zbig, dl, ws, psi, psi_s, v, tht, xs, ys
 real*8   :: x_g(n_gauss), x_s(n_gauss), y_g(n_gauss), y_s(n_gauss), eq_g(n_gauss), eq_s(n_gauss)
 real*8   :: am0, am1, am2, am3, am4, adrive
-integer  :: ierr, my_id, ife, iv, imode, itor, ibasis, ms
+integer  :: ierr, my_id, ife, iv, imode, itor, ibasis, ms, check_data, nnz
 integer  :: n_border, ilarge, n_AA, nz_AA, nz_AA_old, i,j, k,l, ibnd, jbnd, inode1, inode2, jdir
 integer  :: n_elements, index_large_i, inode, knode, index_large_k, index_ij, index_kl, index, index_i
 integer  :: vertex(2), dir(2), iv2, sms, index_basis, index_basis2, index_basis_bnd, index_basis2_bnd, kbnd, lbnd
@@ -319,12 +321,102 @@ if (my_id .eq. 0) then
   mumps_par%nz = nz_AA
 
 endif
-
+#ifdef USE_MUMPS
 mumps_par%JOB = 6
 mumps_par%SYM = 0
 mumps_par%icntl(7) = 4
 
 call DMUMPS(mumps_par)
+#else
+
+if (my_id == 0) then
+   if (allocated(sparskit_work)) deallocate(sparskit_work)
+   allocate(sparskit_work(mumps_par%N + 1))
+   print*, "taille du systeme,non zero", n_AA,nz_AA, mumps_par%NZ
+   call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+
+   nnz = mumps_par%JCN(mumps_par%N+1) - 1
+   call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
+        1, 0, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
+   write (*,*) "nnz", nnz
+   mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
+   if (mumps_par%NZ /= nnz ) then
+      write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
+      if (associated (mumps_par%IRN)) deallocate(mumps_par%IRN)
+      if (associated (mumps_par%A)  ) deallocate(mumps_par%A)
+      allocate(mumps_par%IRN(mumps_par%NZ))
+      allocate(mumps_par%A(mumps_par%NZ))
+      call pastix_fortran_checkmatrix_end(check_data, &
+           1, mumps_par%IRN,mumps_par%A, 1)
+   endif
+
+end if
+
+CALL MPI_BCAST(mumps_par%N, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%NZ, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+write (*,*) "mumps_par%NZ", mumps_par%NZ
+if (my_id /= 0) then
+   if (associated(mumps_par%JCN)) deallocate(mumps_par%JCN)
+   if (associated(mumps_par%IRN)) deallocate(mumps_par%IRN)
+   if (associated(mumps_par%A))   deallocate(mumps_par%A)
+   if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
+
+   allocate(mumps_par%JCN(mumps_par%N+1))
+   allocate(mumps_par%IRN(mumps_par%NZ))
+   allocate(mumps_par%A(mumps_par%NZ))
+   allocate(mumps_par%RHS(mumps_par%N))
+end if
+
+CALL MPI_BCAST(mumps_par%JCN(1), mumps_par%N+1,  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%IRN(1), mumps_par%NZ,   MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
+
+
+if (.not. allocated(pastix_perm_vars))  allocate(pastix_perm_vars(mumps_par%n))
+if (.not. allocated(pastix_iperm_vars)) allocate(pastix_iperm_vars(mumps_par%n))
+
+
+pastix_iparm(1)  = 0          ! insert default values
+pastix_iparm(2)  = 0          ! initializse
+pastix_iparm(3)  = 0
+
+write(*,*) '***********************************'
+write(*,*) '* initialise PastiX               *'
+write(*,*) '***********************************'
+ 
+pastix_data = 0
+ call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+pastix_iparm(2) = 1
+pastix_iparm(3) = 7
+pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
+
+pastix_iparm(7)  = 1                    ! force check
+
+pastix_dparm(6)  = pastix_epsilon    ! error level refinement
+pastix_dparm(11) = pastix_pivot      ! pivot threshold?
+
+pastix_iparm(31) = pastix_facto
+pastix_iparm(35) = pastix_nthrd          ! thread/mpi
+pastix_iparm(39) = pastix_rhs
+pastix_iparm(41) = pastix_sym
+
+pastix_iparm(42) = pastix_ricar
+pastix_iparm(37) = pastix_iluk
+pastix_iparm(14) = pastix_amalg
+
+write(*,*) '***********************************'
+write(*,*) '* call PastiX                     *'
+write(*,*) '***********************************'
+
+	write (*,*) "pastix_data", pastix_data, "mumps_par%n", mumps_par%n, "mumps_par%jcn()", mumps_par%jcn(mumps_par%n+1),"mumps_par%irn",mumps_par%irn(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%A",mumps_par%A(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%rhs",mumps_par%rhs(mumps_par%n), "pastix_iparm(15)", pastix_iparm(15)
+	
+ call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+#endif
 
 vacuum_response = 0.d0
 

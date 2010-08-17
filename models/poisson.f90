@@ -5,7 +5,9 @@ subroutine Poisson(my_id,itype,node_list,element_list,ivar_in,ivar_out,i_harm,xp
 !---------------------------------------------------------------
 use data_structure
 use mumps_module
+use pastix_module
 implicit none
+include 'mpif.h'
 
 interface
    subroutine find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
@@ -32,7 +34,7 @@ real*8   :: zbig, Z_xpoint, psi_axis, psi_bnd, psi_xpoint, R_xpoint, s_xpoint, t
 real*8   :: R_axis, Z_axis, s_axis, t_axis, amix
 integer  :: ierr, my_id, itype, ivar_in, ivar_out, i_harm, i_elm_axis, i_elm_xpoint
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
-integer  :: n_elements, inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
+integer  :: n_elements, inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i, check_data, nnz
 logical  :: xpoint
 real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
 real*8, dimension(2,4) 	 :: c, dc_ds, dc_dt, d2c_dsdt					   
@@ -225,7 +227,7 @@ if (my_id .eq. 0) then
         enddo
       enddo
     enddo
-   endif
+ endif
   enddo
 
   nz_AA_old = nz_AA
@@ -277,6 +279,7 @@ if (my_id .eq. 0) then
 
 endif
 
+#ifdef USE_MUMPS
 mumps_par%JOB = 6
 mumps_par%SYM = 0
 mumps_par%icntl(7) = 4
@@ -284,7 +287,96 @@ mumps_par%icntl(7) = 4
 write(*,*) ' mumps : ',mumps_par%n, mumps_par%nz
 
 call DMUMPS(mumps_par)
+#else
 
+if (my_id == 0) then
+   if (allocated(sparskit_work)) deallocate(sparskit_work)
+   allocate(sparskit_work(mumps_par%N + 1))
+   print*, "taille du systeme,non zero", n_AA,nz_AA, mumps_par%NZ
+   call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+
+   nnz = mumps_par%JCN(mumps_par%N+1) - 1
+   call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
+        1, 0, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
+   write (*,*) "nnz", nnz
+   mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
+   if (mumps_par%NZ /= nnz ) then
+      write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
+      if (associated (mumps_par%IRN)) deallocate(mumps_par%IRN)
+      if (associated (mumps_par%A)  ) deallocate(mumps_par%A)
+      allocate(mumps_par%IRN(mumps_par%NZ))
+      allocate(mumps_par%A(mumps_par%NZ))
+      call pastix_fortran_checkmatrix_end(check_data, &
+           1, mumps_par%IRN,mumps_par%A, 1)
+   endif
+
+end if
+
+CALL MPI_BCAST(mumps_par%N, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%NZ, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+write (*,*) "mumps_par%NZ", mumps_par%NZ
+if (my_id /= 0) then
+   if (associated(mumps_par%JCN)) deallocate(mumps_par%JCN)
+   if (associated(mumps_par%IRN)) deallocate(mumps_par%IRN)
+   if (associated(mumps_par%A))   deallocate(mumps_par%A)
+   if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
+
+   allocate(mumps_par%JCN(mumps_par%N+1))
+   allocate(mumps_par%IRN(mumps_par%NZ))
+   allocate(mumps_par%A(mumps_par%NZ))
+   allocate(mumps_par%RHS(mumps_par%N))
+end if
+
+CALL MPI_BCAST(mumps_par%JCN(1), mumps_par%N+1,  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%IRN(1), mumps_par%NZ,   MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
+
+
+if (.not. allocated(pastix_perm_vars))  allocate(pastix_perm_vars(mumps_par%n))
+if (.not. allocated(pastix_iperm_vars)) allocate(pastix_iperm_vars(mumps_par%n))
+
+pastix_iparm(1)  = 0          ! insert default values
+pastix_iparm(2)  = 0          ! initializse
+pastix_iparm(3)  = 0
+
+write(*,*) '***********************************'
+write(*,*) '* initialise PastiX                *'
+write(*,*) '***********************************'
+ 
+pastix_data = 0
+ call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+pastix_iparm(2) = 1
+pastix_iparm(3) = 7
+pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
+
+pastix_iparm(7)  = 1                    ! force check
+
+pastix_iparm(31) = pastix_facto
+pastix_iparm(35) = pastix_nthrd         ! numthreads : number of threads
+pastix_iparm(39) = pastix_rhs           ! right hand side (0 : use RHS)
+pastix_iparm(37) = pastix_iluk 
+pastix_iparm(41) = pastix_sym
+
+pastix_iparm(42) = pastix_ricar
+pastix_iparm(37) = pastix_iluk
+pastix_iparm(14) = pastix_amalg
+
+pastix_dparm(6)  = pastix_epsilon    ! error level refinement
+pastix_dparm(11) = pastix_pivot      ! pivot threshold?
+
+write(*,*) '***********************************'
+write(*,*) '* call PastiX                     *'
+write(*,*) '***********************************'
+
+	write (*,*) "pastix_data", pastix_data, "mumps_par%n", mumps_par%n, "mumps_par%jcn()", mumps_par%jcn(mumps_par%n+1),"mumps_par%irn",mumps_par%irn(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%A",mumps_par%A(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%rhs",mumps_par%rhs(mumps_par%n), "pastix_iparm(15)", pastix_iparm(16)
+	
+ call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+#endif
 if (my_id .eq. 0) then
 
   do i=1,node_list%n_nodes

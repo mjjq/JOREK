@@ -54,7 +54,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   if (.not. solve_only) then
 
      if (use_mumps) then
-
+#ifdef USE_MUMPS
         !----------------Pre-processing to remove nonzeros in A (MUMPS)
         if (use_matrix_whitout_zeros_mumps) then
            ALLOCATE(tmp(mumps_par%NZ))
@@ -130,7 +130,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            if (time_ini_1<time_ini_0) nb_periods = nb_periods + nb_periodes_max
            write(*,*) 'system_clock elapsed time analysis',REAL(nb_periods)/nb_periodes_sec
         endif
-
+#endif
      else ! .not. use_mumps --> use_pastix or use_murge
 
         if (my_id_n .eq. 0) then
@@ -383,7 +383,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      endif
 
      if (use_mumps) then
-
+#ifdef USE_MUMPS
         call cpu_time(t_fact_0)
 
         mumps_par%JOB = 2                                   ! factorisation
@@ -394,7 +394,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
         if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' MUMPS, fact      : ',t_fact_1-t_fact_0
         if (my_id_n .eq.0)   write(*,'(i3,A,i8)')    my_id,' MUMPS, mem       : ',mumps_par%info(16)
-
+#endif
      elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
         CALL CPU_TIME(t_analysis_0)
@@ -457,7 +457,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   endif
 
   if (use_mumps) then
-
+#ifdef USE_MUMPS
      mumps_par%JOB = 3                                   ! Solve
 
      call cpu_time(t_solv_0)
@@ -467,7 +467,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      call cpu_time(t_solv_1)
 
      if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' MUMPS, solv      : ',t_solv_1-t_solv_0
-
+#endif
   elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
      if (use_murge) then

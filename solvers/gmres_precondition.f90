@@ -98,11 +98,11 @@ if (my_id .eq. 0) deallocate(Rsnd_buffer,send_counts,send_disp)
 
 
 if (use_mumps) then
-
+#ifdef USE_MUMPS
   mumps_par%JOB = 3                                   ! Solve
 
   call DMUMPS(mumps_par)
-
+#endif
 elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
    if (.not. associated(mumps_par%rhs)) then

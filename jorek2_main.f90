@@ -351,9 +351,10 @@ program JOREK2
      if (my_id .eq. 0) call energy(node_list,element_list,W_mag,W_kin)
      if (my_id .eq. 0) write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
 
+#ifdef USE_MUMPS
      mumps_par%JOB = -2                                    ! clean up this instance of mumps
      call DMUMPS(mumps_par)
-
+#endif
      if (allocated(pastix_perm_vars))  deallocate(pastix_perm_vars)
      if (allocated(pastix_iperm_vars)) deallocate(pastix_iperm_vars)
 
@@ -389,10 +390,10 @@ program JOREK2
      else
         call ideal_wall(my_id,node_list,boundary_list)
      end if
-
+#ifdef USE_MUMPS
      mumps_par%JOB = -2                                     ! clean up this instance of mumps
      call DMUMPS(mumps_par)
-
+#endif
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   endif
@@ -951,8 +952,10 @@ program JOREK2
 
   if (nstep .gt.0) then
      if (use_mumps) then
+#ifdef USE_MUMPS
         mumps_par%JOB = -2                            ! clean up this instance of mumps
         call DMUMPS(mumps_par)
+#endif
      elseif (use_pastix) then
         if ( use_murge ) then 
 

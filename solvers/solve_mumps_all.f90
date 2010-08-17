@@ -11,7 +11,7 @@ include 'mpif.h'
 real*8,allocatable       :: column_local(:)
 real*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1
 integer                  :: k, j, ierr, my_id
-
+#ifdef USE_MUMPS
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*      solve global matrix      *'
 !write(*,*) my_id,'*********************************'
@@ -67,6 +67,6 @@ do k=1,mumps_par%n
   deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
 !  write(*,*) k,deltas(k)
 enddo
-
+#endif
 return
 end

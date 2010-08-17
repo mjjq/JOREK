@@ -8,7 +8,7 @@ implicit none
 
 include 'mpif.h'
 integer :: MPI_COMM
-
+#ifdef USE_MUMPS
 mumps_par%COMM = MPI_COMM                      ! Define a communicator for mumps
 
 mumps_par%JOB = -1
@@ -24,6 +24,6 @@ mumps_par%ICNTL(4)  = 6
 
 mumps_par%ICNTL(14) = 20                           ! memory working space increase
 !mumps_par%ICNTL(15) = 0                            ! memory balance only, 1: flops
-
+#endif
 return
 end

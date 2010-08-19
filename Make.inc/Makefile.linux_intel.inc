@@ -5,7 +5,7 @@ MODEL = model199
 # Fortran compiler 
 FC     = mpif90 -f90=ifort
 FFLAGS_OMP       = -openmp 
-FFLAGS           = -g -00 
+FFLAGS           = -g -O0 
 FFLAGS          := $(FFLAGS) -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp
 FFLAGS          := $(FFLAGS) -traceback -xT -align

@@ -38,7 +38,7 @@ ymin = minval(xp(:,2))
 xmin  = 1.1 * xmin - 0.1 * xmax
 ymin  = 1.1 * ymin - 0.1 * ymax
 
-if (frame) call nframe(21,11,1,xmin,xmax,ymin,ymax,'Bezier grid',17,'X',1,'Y',1)
+if (frame) call nframe(21,11,1,xmin,xmax,ymin,ymax,'Bezier grid',11,'X',1,'Y',1)
 call lplot(21,11,461,xp(:,1),xp(:,2),-node_list%n_nodes,1,'Nodes',5,'X',1,'Y',1)
 
 !---------------------------------------------- plot unit vectors

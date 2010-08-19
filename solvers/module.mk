@@ -3,7 +3,7 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	\
 	$(DIR)/gmres_driver.f90		\
 	$(DIR)/gmres_matrix_vector.f90 	\
 	$(DIR)/gmres_precondition.f90 	\
-	$(DIR)/dPackgmres.f90  		\
+	$(DIR)/dPackgmres.f  		\
 	$(DIR)/initialise_mumps.f90 	\
 	$(DIR)/initialise_pastix.f90 	\
 	$(DIR)/mnewtax.f90 		\

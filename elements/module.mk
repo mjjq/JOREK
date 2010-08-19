@@ -20,7 +20,7 @@ JOREK2_POINCARE_SRC := (JOREK2_POINCARE_SRC)	\
 	$(DIR)/basis_functions2.f90		\
 	$(DIR)/hermite_1d.f90			\
 	$(DIR)/interp.f90			\
-	$(dir)/interp_RZ.f90
+	$(DIR)/interp_RZ.f90
 
 
 JOREK2_CONNECTION2_SRC := (JOREK2_CONNECTION2_SRC)	\
@@ -31,7 +31,7 @@ JOREK2_CONNECTION2_SRC := (JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/basis_functions2.f90			\
 	$(DIR)/hermite_1d.f90				\
 	$(DIR)/interp.f90				\
-	$(dir)/interp_RZ.f90
+	$(DIR)/interp_RZ.f90
 
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\

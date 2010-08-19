@@ -15,6 +15,7 @@ DIRS =  datatypes models/$(MODEL) 	\
 
 LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 
+NODEPS = clean cleanall cleandep
 # If we have neither HIPS or PASTIX_MURGE we need to
 # Use fake murge.
 
@@ -44,7 +45,6 @@ LIBS := $(LIBS) $(LIBHIPS)
 INCLUDES := $(INCLUDES) $(INCHIPS)
 DEFINES  := $(DEFINES) -DUSE_HIPS
 endif
-
 ifeq (1, $(USE_MUMPS))
 LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB)
 INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
@@ -64,7 +64,8 @@ include $(patsubst %,%/module.mk,$(DIRS))
 
 SRC_DEP = $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) $(JOREK2VTK3D_SRC)
 SRC_DEP := $(shell echo "$(SRC_DEP)" | sed -e 's@ @\n@g' | sort -u)
-SRC_DEP := $(filter %.f90, $(SRC_DEP))
+SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP))
+
 
 JOREK2_MAIN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) \
 	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))
@@ -107,7 +108,7 @@ cleandep:
 	echo ">> suppression des dependances pour jorek2_main <<"
 	-@rm $(JOREK2_MAIN_DEP);
 
-depends:
+dependencies.mk: $(SRC_DEP)
 	for file in $(SRC_DEP); do 				\
 		file_o=`echo $$file|sed -e "s@\.f90@\.o@" |sed -e "s@\.f@\.o@" `; 	\
 		echo $$file_o;							\
@@ -118,7 +119,6 @@ depends:
 		sed -n "s@[ ]+include[ ]+'\([^']*\)*.*@"$$file_o" : \1@pi" >> dependencies.tmp; \
 		cpp $(INCLUDES) < $$file | 						\
 		sed -n 's@[ ]+include[ ]+"\([^"]*\)*.*@'$$file_o' : \1@pi' >> dependencies.tmp; \
-		cpp $(INCLUDES) < $$file |						\
 		cpp $(INCLUDES) < $$file |						\
 		 sed -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@'$$file_o': \1@p' | \
 		sort | uniq | grep -v ": /" | grep -v ": <">> dependencies.tmp; \
@@ -132,8 +132,8 @@ depends:
 	sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < dependencies.tmp > dependencies.mk
 	rm dependencies.tmp
 
-$(MAIN) : $(JOREK2_MAIN_OBJ)
-	$(FC) $(FFLAGS_NO_OMP)	\
+$(MAIN) : $(JOREK2_MAIN_OBJ) dependencies.mk
+	$(FC) $(FFLAGS_OMP)	\
 	$(JOREK2_MAIN_OBJ)	\
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
 
@@ -144,7 +144,7 @@ jorek2_poincare : diagnostics/jorek2_poincare.f90 $(JOREK2_POINCARE_OBJ)
 	 -o $(JOREK_DIR)/jorek2_poincare $(INCLUDES) $(LIBS)
 
 jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
-	$(FC) $(FFLAGS_NO_OMP)                  \
+	$(FC) $(FFLAGS_OMP)                  \
 	diagnostics/jorek2_connection2.f90   	\
 	$(JOREK2_CONNECTION2_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_connection $(INCLUDES) $(LIBS)
@@ -180,5 +180,6 @@ import_eqdsk : util/import_eqdsk.f90
 	$(FC) util/import_eqdsk.f90 -o import_eqdsk $(LIBS)
 
 include all_rules.mk
--include dependencies.mk
-
+ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
+include dependencies.mk	
+endif

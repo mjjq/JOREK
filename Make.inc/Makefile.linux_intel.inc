@@ -4,11 +4,18 @@ MODEL = model199
 
 # Fortran compiler 
 FC     = mpif90 -f90=ifort
-FFLAGS = -g -fpp -r8 -i4 -O0 -check bounds -traceback -align -openmp
-FFLAGS_FIXEDFORM = -g -fpp -r8 -i4 -O0 -check bounds -traceback -align -openmp
-FFLAGS_NOBOUNDS = -g -fpp -r8 -i4 -O0 -traceback -align -openmp
-#FFLAGS_NO_OMP = -fpp -r8 -i4 -O2 -xT -align
-FFLAGS_NO_OMP = $(FFLAGS)
+FFLAGS_OMP       = -openmp 
+FFLAGS           = -g -00 
+FFLAGS          := $(FFLAGS) -r8 -i4
+FFLAGS          := $(FFLAGS) -fpp
+FFLAGS          := $(FFLAGS) -traceback -xT -align
+
+FFLAGS_FIXEDFORM = $(FFLAGS) -check bounds $(FFLAGS_OMP)
+FFLAGS_NOBOUNDS  = $(FFLAGS)               $(FFLAGS_OMP)
+FFLAGS           = $(FFLAGS) -check bounds $(FFLAGS_OMP)
+
+#FFLAGS_NO_OMP    = -fpp -r8 -i4 -O2 -xT -align
+
 # Solvers dependencies
 USE_HIPS   = 0
 USE_PASTIX = 1
@@ -37,12 +44,6 @@ INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
 INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
-
-#OPENMP
-OPENMP_LIB =  -liomp5
-
-# PPPLIB
-PPPSRC    = $(HOME)/src/ppplib.f
 
 # LIBFFTW
 #LIBFFTW   = $(HOME)/intel/fftw/install/lib/libfftw3.a

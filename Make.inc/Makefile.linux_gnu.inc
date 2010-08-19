@@ -4,11 +4,21 @@ MODEL = model199
 
 # Fortran compiler 
 FC     = mpif90 -f90=gfortran
-FFLAGS = -g -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -O0 -fbounds-check -fopenmp # -traceback -xT -align -openmp
-FFLAGS_FIXEDFORM = -g -ffixed-form -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -O0 -fbounds-check -fopenmp # -traceback -xT -align -openmp
-FFLAGS_NOBOUNDS = -g -ffixed-form -fdefault-real-8 -ffree-line-length-none -x f95-cpp-input -O0  -fopenmp # -traceback -xT -align -openmp
-#FFLAGS_NO_OMP = -fpp -r8 -i4 -O2 -xT -align
-FFLAGS_NO_OMP = -fopenmp # -traceback -xT -align -openmp
+
+FFLAGS_OMP       = -fopenmp 
+FFLAGS           = -g -00 
+FFLAGS          := $(FFLAGS) -fdefault-real-8
+FFLAGS          := $(FFLAGS) -ffree-line-length-none
+FFLAGS          := $(FFLAGS) -x f95-cpp-input
+## TODO find equivalents of this ifort options
+#FFLAGS          := $(FFLAGS) -traceback -xT -align 
+
+FFLAGS_FIXEDFORM = $(FFLAGS) -ffixed-form  -fbounds-check $(FFLAGS_OMP) 
+FFLAGS_NOBOUNDS  = $(FFLAGS) -ffixed-form                 $(FFLAGS_OMP) 
+FFLAGS          := $(FFLAGS)               -fbounds-check $(FFLAGS_OMP) 
+
+#FFLAGS_NO_OMP   = -fpp -r8 -i4 -O2 -xT -align
+
 # Solvers dependencies
 USE_HIPS   = 0
 USE_PASTIX = 1
@@ -37,13 +47,6 @@ INC_PASTIX       = `pastix-conf --incs`
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
 INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
-
-#OPENMP
-OPENMP_LIB =  -liomp5
-
-# PPPLIB
-PPPSRC    = $(HOME)/src/ppplib.f
-#intel/jorek/ppplib.a
 
 # LIBFFTW
 LIBFFTW   = -L/opt/cluster/fftw/3.2.2/intel-11.1-069/intel-4.0.0.025 -lfftw3

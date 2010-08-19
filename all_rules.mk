@@ -1,6 +1,6 @@
 
 
-$(patsubst %.f,%.o,$(PPPSRC)): $(PPPSRC)
+plots/ppplib.o: plots/ppplib.f
 	$(FC) $(FFLAGS_NOBOUNDS)  -c $< -o $@  $(INCLUDES)
 
 solvers/dPackgmres.o: solvers/dPackgmres.f

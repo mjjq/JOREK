@@ -13,7 +13,7 @@ DIRS =  datatypes models/$(MODEL) 	\
 	refinement			\
 	timing
 
-LIBS = $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMPLIB)
+LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 
 # If we have neither HIPS or PASTIX_MURGE we need to
 # Use fake murge.
@@ -51,16 +51,17 @@ INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
 DEFINES := $(DEFINES) -DUSE_MUMPS
 endif
 
-JOREK2_MAIN_SRC        =
-JOREK2_POINCARE_SRC    =
-JOREK2_CONNECTION2_SRC =
-JOREK2VTK_SRC          =
-JOREK2FLVTK_SRC	       =
-JOREK2VTK3D_SRC        =
+JOREK2_MAIN_SRC        = jorek2_main.f90 $(PPPSRC)
+JOREK2_POINCARE_SRC    = $(PPPSRC)
+JOREK2_CONNECTION2_SRC = $(PPPSRC)
+JOREK2VTK_SRC          = $(PPPSRC)
+JOREK2FLVTK_SRC	       = $(PPPSRC)
+JOREK2VTK3D_SRC        = $(PPPSRC)
 
 # include the description for
 #   each module
 include $(patsubst %,%/module.mk,$(DIRS))
+
 SRC_DEP = $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) $(JOREK2VTK3D_SRC)
 SRC_DEP := $(shell echo "$(SRC_DEP)" | sed -e 's@ @\n@g' | sort -u)
 SRC_DEP := $(filter %.f90, $(SRC_DEP))
@@ -131,9 +132,8 @@ depends:
 	sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < dependencies.tmp > dependencies.mk
 	rm dependencies.tmp
 
-$(MAIN) : jorek2_main.f90 $(JOREK2_MAIN_OBJ)
+$(MAIN) : $(JOREK2_MAIN_OBJ)
 	$(FC) $(FFLAGS_NO_OMP)	\
-	jorek2_main.f90      	\
 	$(JOREK2_MAIN_OBJ)	\
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
 

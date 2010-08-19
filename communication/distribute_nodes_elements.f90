@@ -84,7 +84,7 @@ do i = 1, element_list%n_elements
       endif
     enddo
 
-   if(node_list%node(inode)%constrained==.true.) then
+   if(node_list%node(inode)%constrained) then
 	     do j = 1, 2
 		 index1 = node_list%node(inode)%parents(j)
 		  do k=1, n_order+1

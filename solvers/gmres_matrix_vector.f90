@@ -37,7 +37,7 @@ call cpu_time(t3)
 n_blocksize = n_tor * n_var
 n_blocks    = nz_glob/n_blocksize**2
 
-if ((use_murge .eq. .true.) .and. (use_murge_element .eq. .true.)) then
+if ((use_murge) .and. (use_murge_element)) then
 
    if (murge_id .eq. 0 ) then
       allocate(x_tmp(murge_global_n*murge_ndof))

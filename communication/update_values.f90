@@ -23,7 +23,7 @@ integer :: my_id, i, j, k, in, index_node, index
 if (my_id .eq. 0) then
 
   do i = 1, node_list%n_nodes
-   if((node_list%node(i)%constrained==.false.) ) then 
+   if((.not. node_list%node(i)%constrained) ) then 
     do j=1,n_order+1
 
       index_node = node_list%node(i)%index(j)
@@ -54,7 +54,7 @@ if (my_id .eq. 0) then
   !stop
   do i = 1, node_list%n_nodes
    
-  if((node_list%node(i)%constrained==.true.) ) then   
+  if((node_list%node(i)%constrained) ) then   
 
             lambda = node_list%node(i)%ref_lambda
 	    mu     = node_list%node(i)%ref_mu

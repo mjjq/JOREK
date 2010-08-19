@@ -290,7 +290,7 @@ program JOREK2
                !                        Refining elements (equilibrum)                     *
                !****************************************************************************
 
-            if(refinement==.true.) then
+            if(refinement) then
   
              n_to_be_refined=0
 
@@ -692,7 +692,8 @@ program JOREK2
                  END IF
               END DO
            END DO
-10      END DO 
+10         continue
+      END DO 
         IF (ALLOCATED(local_elms)) DEALLOCATE(local_elms)
         ! Build local_elms from loc2glob
         ALLOCATE(local_elms(n_local_elms))
@@ -720,7 +721,8 @@ program JOREK2
                  END IF
               END DO
            END DO
-20      END DO
+20         continue
+        END DO
         call system_clock(count=t1)   
         nb_periods = t1-t0
         if (t1<t0) nb_periods = nb_periods + nb_periodes_max

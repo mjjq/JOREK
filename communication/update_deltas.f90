@@ -15,7 +15,7 @@ if (.not. allocated(deltas)) then
 endif
 
 do i = 1, node_list%n_nodes
- if ((node_list%node(i)%constrained==.false.)) then
+ if ((.not. node_list%node(i)%constrained)) then
   do j=1,n_order+1
 
     index_node = node_list%node(i)%index(j)

@@ -48,7 +48,7 @@ implicit none
 
   do j = 1, n_vertex_max
        
-        if (nodes(j)%constrained==.false.) then
+        if (.not. nodes(j)%constrained) then
         
           node_out(j)=element%vertex(j)    
         

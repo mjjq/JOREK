@@ -41,7 +41,7 @@ real*8, dimension(2,4) 	 :: c, dc_ds, dc_dt, d2c_dsdt
 real*8			 :: lambda, mu	
 real*8			 :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
 real*8			 :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w 
-real*8			 :: i_father, inode_father,Index_elm    
+integer			 :: i_father, inode_father,Index_elm    
 integer, dimension(n_vertex_max)  :: pr
 integer, dimension(2)		  :: parent
 integer, dimension(n_vertex_max) ::  node_out
@@ -380,7 +380,7 @@ write(*,*) '***********************************'
 if (my_id .eq. 0) then
 
   do i=1,node_list%n_nodes
-   if(node_list%node(i)%constrained==.false.) then 
+   if(.not. node_list%node(i)%constrained) then 
     index = node_list%node(i)%index(1)
    
 !    write(*,'(A,2i5,8e16.8)') 'poisson : ',i,index,mumps_par%RHS(index),mumps_par%RHS(index+1),mumps_par%RHS(index+2),mumps_par%RHS(index+3)
@@ -403,7 +403,7 @@ if (my_id .eq. 0) then
   do i = 1, node_list%n_nodes
       
    
-       if(node_list%node(i)%constrained==.true.) then
+       if(node_list%node(i)%constrained) then
 	    !write(*,*) ' '
 	    !write(*,*) 'Constrained node(poisson)', i
 	    !write(*,*)' '

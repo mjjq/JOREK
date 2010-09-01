@@ -61,6 +61,14 @@ program JOREK2
        type (type_element_list) :: element_list
        logical                  :: xpoint2
      end subroutine equilibrium
+     
+     SUBROUTINE UPDATE_RHS_N(MY_ID,MY_ID_N,I_TOR,MPI_COMM_MASTER)
+       INTEGER(KIND=4) :: MY_ID
+       INTEGER(KIND=4) :: MY_ID_N
+       INTEGER(KIND=4) :: I_TOR(:)
+       INTEGER(KIND=4) :: MPI_COMM_MASTER
+     END SUBROUTINE UPDATE_RHS_N
+
   end interface
   type (type_surface_list) :: surface_list
   logical                  :: grid_changed

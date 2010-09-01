@@ -43,6 +43,24 @@ $(MAIN) : jorek2_main.f90
 	diagnostics/*.o      \
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
 	 
+jorek2_four : modules sources
+	$(FC) $(FFLAGS)                   \
+	diagnostics/jorek2_four.f90   \
+	datatypes/*.o        \
+	models/$(MODEL)/*.o  \
+	models/*.o           \
+	communication/*.o    \
+	elements/*.o         \
+	grids/*.o            \
+	matrix/*.o           \
+	solvers/*.o          \
+        timing/*.o           \
+	refinement/*.o       \
+	plots/*.o            \
+        vacuum/*.o           \
+	diagnostics/*.o      \
+	 -o $(JOREK_DIR)/jorek2_four $(INCLUDES) $(LIBS)
+
 jorek2_poincare : modules sources
 	$(FC) $(FFLAGS)                   \
 	diagnostics/jorek2_poincare.f90   \

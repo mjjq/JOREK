@@ -15,7 +15,7 @@ all : boundary_check.o         \
       integrals.o              \
       integrals_3D.o          
       
-modules :       
+modules : mod_fourier.o
 
 clean :
-	rm *.o
+	rm -f *.o

@@ -71,7 +71,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   INTEGER                        :: ELM_INDEX, node
   REAL*8,  ALLOCATABLE           :: rhs_loc(:)
   REAL*8,  ALLOCATABLE           :: ELM(:,:,:,:)
+  REAL*8,  ALLOCATABLE           :: SEND_ELM(:,:,:)
   REAL*8,  ALLOCATABLE           :: RHS(:,:,:)
+  REAL*8,  ALLOCATABLE           :: SEND_RHS(:,:)
   INTEGER, ALLOCATABLE           :: SEND_REQUEST(:)
   INTEGER, ALLOCATABLE           :: RECV_REQUEST(:)
   INTEGER, ALLOCATABLE           :: STATUS(:)
@@ -95,9 +97,10 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
   IF (gmres) THEN
      ALLOCATE(ELM(elem_size, elem_size, elem_block_size, (n_tor+1)/2), RHS(elem_size, elem_block_size, (n_tor+1)/2))
-     ALLOCATE(SEND_REQUEST(n_cpu_trans), RECV_REQUEST(n_cpu_trans))
-     ALLOCATE(SEND_REQUEST2(n_cpu_trans), RECV_REQUEST2(n_cpu_trans))
-     ALLOCATE(STATUS(n_cpu_trans))
+     ALLOCATE(SEND_ELM(elem_size, elem_size, elem_block_size), SEND_RHS(elem_size, elem_block_size))
+     !ALLOCATE(SEND_REQUEST(n_cpu_trans), RECV_REQUEST(n_cpu_trans))
+     !ALLOCATE(SEND_REQUEST2(n_cpu_trans), RECV_REQUEST2(n_cpu_trans))
+     !ALLOCATE(STATUS(n_cpu_trans))
   ELSE
      ALLOCATE(ELM(elem_size, elem_size, 1, 1), RHS(elem_size, 1, 1))
   END IF
@@ -192,41 +195,50 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
            ENDDO
            
            IF (n_tor .GT. 3) THEN
-              CALL element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM(:,:, ELM_INDEX, my_id_trans+1), RHS(:, ELM_INDEX, my_id_trans+1))      ! use fft for toroidal integration
+              CALL element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, SEND_ELM(:,:, ELM_INDEX),SEND_RHS(:, ELM_INDEX))      ! use fft for toroidal integration
            ELSE
-              CALL element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM(:,:, ELM_INDEX, my_id_trans+1), RHS(:, ELM_INDEX, my_id_trans+1))           ! use direct integration
+              CALL element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, SEND_ELM(:,:, ELM_INDEX), SEND_RHS(:, ELM_INDEX))           ! use direct integration
            ENDIF
         END DO
         
-        DO node = 1, n_cpu_trans
-           IF (node /= my_id_trans+1) THEN
-              CALL MPI_ISEND(ELM(1,1,1,my_id_trans+1),   &
-                   elem_block_size*elem_size*elem_size, MPI_REAL,         &
-                   node-1, 1, MPI_COMM_TRANS, SEND_REQUEST(node), ierr) 
-              CALL MPI_IRECV(ELM(1,1,1, node),         &
-                   elem_block_size*elem_size*elem_size, MPI_REAL,         &
-                   node-1, 1, MPI_COMM_TRANS, RECV_REQUEST(node), ierr) 
-              
-              CALL MPI_ISEND(RHS(1,1,my_id_trans+1),     &
-                   elem_block_size*elem_size, MPI_REAL,                   &
-                   node-1, 2, MPI_COMM_TRANS, SEND_REQUEST2(node), ierr) 
-              CALL MPI_IRECV(RHS(1,1, node),           &
-                   elem_block_size*elem_size, MPI_REAL,                   &
-                   node-1, 2, MPI_COMM_TRANS, RECV_REQUEST2(node), ierr) 
-           ELSE
-              RECV_REQUEST(node) = MPI_REQUEST_NULL
-              RECV_REQUEST2(node) = MPI_REQUEST_NULL
-              SEND_REQUEST(node) = MPI_REQUEST_NULL
-              SEND_REQUEST2(node) = MPI_REQUEST_NULL
-           END IF
-        END DO
 
-        DO node = 1, n_cpu_trans
-           IF (node /= my_id_trans+1) THEN
-              CALL MPI_WAIT(RECV_REQUEST(node),  STATUS(node), ierr)
-              CALL MPI_WAIT(RECV_REQUEST2(node), STATUS(node), ierr)
-           END IF
-        END DO
+        CALL MPI_Allgather(SEND_ELM, elem_block_size*elem_size*elem_size,             MPI_REAL, &
+             &             ELM,      n_cpu_trans*elem_block_size*elem_size*elem_size, MPI_REAL, &
+             &             MPI_COMM_TRANS, ierr)
+
+        CALL MPI_Allgather(SEND_RHS, elem_block_size*elem_size,             MPI_REAL, &
+             &             RHS,      n_cpu_trans*elem_block_size*elem_size, MPI_REAL, &
+             &             MPI_COMM_TRANS, ierr)
+
+        !DO node = 1, n_cpu_trans
+        !   IF (node /= my_id_trans+1) THEN
+        !      CALL MPI_ISEND(ELM(1,1,1,my_id_trans+1),   &
+        !           elem_block_size*elem_size*elem_size, MPI_REAL,         &
+        !           node-1, 1, MPI_COMM_TRANS, SEND_REQUEST(node), ierr) 
+        !      CALL MPI_IRECV(ELM(1,1,1, node),         &
+        !           elem_block_size*elem_size*elem_size, MPI_REAL,         &
+        !           node-1, 1, MPI_COMM_TRANS, RECV_REQUEST(node), ierr) 
+        !      
+        !      CALL MPI_ISEND(RHS(1,1,my_id_trans+1),     &
+        !           elem_block_size*elem_size, MPI_REAL,                   &
+        !           node-1, 2, MPI_COMM_TRANS, SEND_REQUEST2(node), ierr) 
+        !      CALL MPI_IRECV(RHS(1,1, node),           &
+        !           elem_block_size*elem_size, MPI_REAL,                   &
+        !           node-1, 2, MPI_COMM_TRANS, RECV_REQUEST2(node), ierr) 
+        !   ELSE
+        !      RECV_REQUEST(node) = MPI_REQUEST_NULL
+        !      RECV_REQUEST2(node) = MPI_REQUEST_NULL
+        !      SEND_REQUEST(node) = MPI_REQUEST_NULL
+        !      SEND_REQUEST2(node) = MPI_REQUEST_NULL
+        !   END IF
+        !END DO
+
+        !DO node = 1, n_cpu_trans
+        !   IF (node /= my_id_trans+1) THEN
+        !      CALL MPI_WAIT(RECV_REQUEST(node),  STATUS(node), ierr)
+        !      CALL MPI_WAIT(RECV_REQUEST2(node), STATUS(node), ierr)
+        !   END IF
+        !END DO
      
         !MPI_WAITANY(n_cpu_trans, MPI_RECV_REQUEST, INTEGER ARRAY_OF_REQUESTS(*),INTEGER INDEX,
         !INTEGER STATUS(MPI_STATUS_SIZE),INTEGER IERROR)
@@ -335,16 +347,17 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
               END DO
            END DO
         END DO
-        DO node = 1, n_cpu_trans
-           IF (node /= my_id_trans+1) THEN
-              CALL MPI_WAIT(SEND_REQUEST(node),  STATUS(node), ierr)
-              CALL MPI_WAIT(SEND_REQUEST2(node), STATUS(node), ierr)
-           END IF
-        END DO
+
+        !DO node = 1, n_cpu_trans
+        !   IF (node /= my_id_trans+1) THEN
+        !      CALL MPI_WAIT(SEND_REQUEST(node),  STATUS(node), ierr)
+        !      CALL MPI_WAIT(SEND_REQUEST2(node), STATUS(node), ierr)
+        !   END IF
+        !END DO
      END DO
-     DEALLOCATE(SEND_REQUEST, RECV_REQUEST)
-     DEALLOCATE(SEND_REQUEST2, RECV_REQUEST2)
-     DEALLOCATE(STATUS)
+     !DEALLOCATE(SEND_REQUEST, RECV_REQUEST)
+     !DEALLOCATE(SEND_REQUEST2, RECV_REQUEST2)
+     !DEALLOCATE(STATUS)
   ELSE
      DO ife =1, n_local_elms
 
@@ -438,7 +451,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
         END DO
      END DO
   END IF
-  DEALLOCATE(RHS, ELM)
+  DEALLOCATE(RHS, ELM, SEND_RHS, SEND_ELM)
 
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0

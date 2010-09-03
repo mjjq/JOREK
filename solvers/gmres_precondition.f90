@@ -34,8 +34,7 @@ n_loc_n  = n_dof / n_tor
 M_cpu    = n_cpu / ((n_tor+1)/2)
 
 ifactor = 2
-if (my_id   .eq. 0) ifactor = 1
-if (my_id_n .ne. 0) ifactor = 0
+if (my_id < M_cpu) ifactor = 1
 
 if (my_id .eq. 0) then
 
@@ -107,10 +106,10 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 
    if (.not. associated(mumps_par%rhs)) then
       !    write(*,*) ' gmres: RHS not allocated!',my_id, my_id_n
-      allocate(mumps_par%rhs(mumps_par%n))
+      allocate(mumps_par%rhs(ifactor*n_loc_n))
    endif
    
-   if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+   if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
    if (use_murge) then
       CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)

@@ -553,10 +553,12 @@ program JOREK2
                  else
                     murge_ndof = 2*n_var
                  end if
+              CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,     2*n_var,      ierr) 
               else
                  murge_ndof = n_tor*n_var
               end if
-              CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF,          murge_ndof,   ierr) 
+              CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF,          murge_ndof,      ierr) 
+
               CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
               CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
               CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,          murge_ricar,     ierr)

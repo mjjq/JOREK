@@ -51,6 +51,8 @@ INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
 DEFINES := $(DEFINES) -DUSE_MUMPS
 endif
 
+INCLUDES := $(INCLUDES) $(DEFINES)
+
 JOREK2_MAIN_SRC        = jorek2_main.f90 $(PPPSRC)
 JOREK2_POINCARE_SRC    = $(PPPSRC)
 JOREK2_CONNECTION2_SRC = $(PPPSRC)
@@ -105,34 +107,48 @@ clean :
 	-@rm $(MOD_FILES);
 
 cleandep:
-	echo ">> suppression des dependances pour jorek2_main <<"
-	-@rm $(JOREK2_MAIN_DEP);
+	@echo ">> suppression des dependances pour jorek2_main <<"
+	-@rm */*.dep */*/*.dep;
 
-dependencies.mk: $(SRC_DEP)
-	for file in $(SRC_DEP); do 				\
-		file_o=`echo $$file|sed -e "s@\.f90@\.o@" |sed -e "s@\.f@\.o@" `; 	\
-		echo $$file_o;							\
-		cpp $(INCLUDES) < $$file | 						\
-		grep -i "^[[:space:]]*use " | 						\
-		awk -v file_o=$$file_o '{print file_o" : "tolower($$2)".mod"}' >> dependencies.tmp;	\
-		cpp $(INCLUDES) < $$file | 						\
-		sed -n "s@[ ]+include[ ]+'\([^']*\)*.*@"$$file_o" : \1@pi" >> dependencies.tmp; \
-		cpp $(INCLUDES) < $$file | 						\
-		sed -n 's@[ ]+include[ ]+"\([^"]*\)*.*@'$$file_o' : \1@pi' >> dependencies.tmp; \
-		cpp $(INCLUDES) < $$file |						\
-		 sed -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@'$$file_o': \1@p' | \
-		sort | uniq | grep -v ": /" | grep -v ": <">> dependencies.tmp; \
-		file_o=`echo $$file | sed -e 's@f90@o@g'`;	\
-		grep -q -i "^[[:space:]]*module" $$file ; 	\
-		if [ $$? -eq 0 ]; then 				\
-			grep -i "^[[:space:]]*module" $$file	\
-			| awk -v file=$$file_o '{print tolower($$2)".mod : "file}' >> dependencies.tmp; \
-		fi;						\
-	done
-	sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < dependencies.tmp > dependencies.mk
-	rm dependencies.tmp
+%.dep:%.f90
+	@echo "generation de dependances pour $(patsubst %.f90, %.o, $<)"
+	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | 							\
+		awk -v file_o=" $(patsubst %.f90, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
+	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
+		sed -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;
+	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
+		sed -n 's@[ ]+include[ ]+"\([^"]*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi' >> $@.tmp || touch $@.tmp;
+	@cpp $(INCLUDES) < $< 2>/dev/null|											\
+		sed -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f90, %.o, $<): \1@p' | 					\
+		sort | uniq | grep -v ": /" | grep -v ": <">> $@.tmp || touch $@.tmp;
+	@grep -q -i "^[[:space:]]*module" $< ; 											\
+	if [ $$? -eq 0 ]; then 													\
+		grep -i "^[[:space:]]*module" $<										\
+		| awk -v file="$(patsubst %.f90, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
+	fi;
+	-@sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
+	-@rm $@.tmp
 
-$(MAIN) : $(JOREK2_MAIN_OBJ) dependencies.mk
+%.dep: %.f
+	@echo "generation de dependances pour $(patsubst %.f, %.o, $<)"
+	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | 							\
+		awk -v file_o="$(patsubst %.f, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
+	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
+		sed -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;
+	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
+		sed -n 's@[ ]+include[ ]+"\([^"]*\)*.*@$(patsubst %.f, %.o, $<) : \1@pi' >> $@.tmp || touch $@.tmp;
+	@cpp $(INCLUDES) < $< 2>/dev/null|											\
+		sed -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f, %.o, $<): \1@p' | 					\
+		sort | uniq | grep -v ": /" | grep -v ": <">> $@.tmp || touch $@.tmp;
+	@grep -q -i "^[[:space:]]*module" $< ; 											\
+	if [ $$? -eq 0 ]; then 													\
+		grep -i "^[[:space:]]*module" $<										\
+		| awk -v file="$(patsubst %.f, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;		\
+	fi;
+	-@sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
+	-@rm $@.tmp
+
+$(MAIN) : $(JOREK2_MAIN_OBJ) # dependencies.mk
 	$(FC) $(FFLAGS_OMP)	\
 	$(JOREK2_MAIN_OBJ)	\
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
@@ -181,5 +197,5 @@ import_eqdsk : util/import_eqdsk.f90
 
 include all_rules.mk
 ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
-include dependencies.mk	
+include $(patsubst %.f, %.dep, $(patsubst %.f90, %.dep, $(SRC_DEP)))
 endif

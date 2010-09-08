@@ -19,6 +19,7 @@ PROGRAM JOREK2_FOUR
   real,    allocatable     :: vve(:,:,:)    ! Variable values at positions of mapping.rre and .zze
   complex, allocatable     :: vfour(:,:,:)  ! Fourier transformed quantity.
   integer                  :: localvars(2), err, vars_per_cpu
+  character(len=6)         :: s
   ! Field line tracing parameters
   integer                  :: nstpts, nmaxsteps, nsmallsteps
   real                     :: deltaphi
@@ -76,24 +77,20 @@ PROGRAM JOREK2_FOUR
   ! --- Output Fourier modes of the physical quantities.
   do ivar = localvars(1), localvars(2)
     OPEN(42, FILE=TRIM(variable_names(ivar))//'_modes', STATUS='REPLACE', ACTION='WRITE')
+    OPEN(43, FILE='mode_numbers', STATUS='REPLACE', ACTION='WRITE')
+    write(42,'("# psi_normalized    ABS(",A," modes)")') TRIM(variable_names(ivar))
+    write(42,'("#")')
     CALL transform_qtty(mapping, ivar, vve, vfour)
     
     l = 0
     do i = 1, 7 ! pol
       do j = 1, (n_tor+1)/2 ! tor
         
-        write(42,'("# ",I3,":   m=",I3,", n=",I3," REAL")') l, i-1, j-1
+        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i-1, j-1
+        write(43,*) TRIM(int2str(i-1))//'/'//TRIM(int2str(j-1))
         l = l + 1
         do k = 1, mapping.nstpts
-          write(42,*) mapping.psin(k), REAL(vfour(i,j,k))
-        end do
-        write(42,*)
-        write(42,*)
-        
-        write(42,'("# ",I3,":   m=",I3,", n=",I3," IMAG")') l, i-1, j-1
-        l = l + 1
-        do k = 1, mapping.nstpts
-          write(42,*) mapping.psin(k), AIMAG(vfour(i,j,k))
+          write(42,*) mapping.psin(k), ABS(vfour(i,j,k))
         end do
         write(42,*)
         write(42,*)
@@ -102,10 +99,38 @@ PROGRAM JOREK2_FOUR
     end do
     
     CLOSE(42)
+    CLOSE(43)
   end do
 
   !WRITE(*,*) '@@< JOREK2_FOUR'
   !call system('date "+ %F %T.%N"')
 
   call MPI_FINALIZE(IERR)                                ! clean up MPI
+  
+  
+  
+  
+  
+  
+  CONTAINS
+  
+  
+  
+  
+  
+  
+  CHARACTER(LEN=20) FUNCTION int2str(i)
+    INTEGER, INTENT(IN) :: i
+    
+    write(int2str,*) i
+    
+    int2str = TRIM(ADJUSTL(int2str))
+    
+  END FUNCTION int2str
+  
+  
+  
+  
+  
+  
 END PROGRAM JOREK2_FOUR

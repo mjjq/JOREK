@@ -5,11 +5,11 @@ subroutine Broadcast_boundary(my_id,boundary_list)
 use data_structure
 implicit none
 
-type (type_boundary_list) :: boundary_list
+type (type_bnd_element_list) :: boundary_list
 include 'mpif.h'                                       ! MPI fortran include file
-type (type_boundary)      :: aboundary
-integer                   :: my_id, ife, ierr, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT
-integer, allocatable      :: buffer(:)
+type (type_bnd_element)      :: aboundary
+integer                      :: my_id, ife, ierr, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT
+integer, allocatable         :: buffer(:)
 
 !  type type_boundary                                  ! type definition for one boundary element (1D element)
 !    integer :: vertex(2)                              ! the nodes of the corners
@@ -28,9 +28,9 @@ integer, allocatable      :: buffer(:)
 call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
 call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
 
-call MPI_BCAST(boundary_list%n_boundary,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+call MPI_BCAST(boundary_list%n_bnd_elements,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
-bufsize = boundary_list%n_boundary * (8*INT_EXT + 4*IDBL_EXT)
+bufsize = boundary_list%n_bnd_elements * (8*INT_EXT + 4*IDBL_EXT)
 
 if (allocated(buffer)) deallocate(buffer)
 allocate(buffer(bufsize/ INT_EXT))
@@ -38,9 +38,9 @@ allocate(buffer(bufsize/ INT_EXT))
 if (my_id .eq. 0) then
   position = 0
 
-  do ife=1,boundary_list%n_boundary
+  do ife=1,boundary_list%n_bnd_elements
 
-    aboundary = boundary_list%boundary(ife)
+    aboundary = boundary_list%bnd_element(ife)
 
     call MPI_PACK(aboundary%vertex,2,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(aboundary%direction,4,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -56,7 +56,7 @@ call MPI_BCAST(buffer,bufsize,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
 if (my_id .ne. 0) then
 
   position = 0
-  do ife=1,boundary_list%n_boundary
+  do ife=1,boundary_list%n_bnd_elements
 
     call MPI_UNPACK(buffer,bufsize,position,aboundary%vertex,2,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,aboundary%direction,4,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -64,7 +64,7 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,aboundary%side,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,aboundary%size,4,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
-    boundary_list%boundary(ife) = aboundary
+    boundary_list%bnd_element(ife) = aboundary
 
   enddo
 

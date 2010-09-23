@@ -6,9 +6,9 @@ use data_structure
 
 implicit none
 
-type (type_node_list)     :: node_list
-type (type_element_list)  :: element_list
-type (type_boundary_list) :: boundary_list
+type (type_node_list)        :: node_list
+type (type_element_list)     :: element_list
+type (type_bnd_element_list) :: boundary_list
 integer :: i
 
 write(*,*) '**************************************************'
@@ -33,15 +33,15 @@ do i=1,element_list%n_elements
 enddo
 
 write(*,*)
-write(*,*) ' boundary_list : n_boundary=',boundary_list%n_boundary
+write(*,*) ' boundary_list : n_boundary=',boundary_list%n_bnd_elements
 write(*,'(A88)') '    i,  iv1, iv2, idir1, idir1, idir2, idir2, elm, side, h1,  hv1,  h2,  hv2'
-do i=1,boundary_list%n_boundary
-  write(*,'(9i5,4f12.5)') i,boundary_list%boundary(i)%vertex(1:2)   , &
-                          boundary_list%boundary(i)%direction(1,1:2), &
-                          boundary_list%boundary(i)%direction(2,1:2), &
-                          boundary_list%boundary(i)%element, &
-                          boundary_list%boundary(i)%side, &
-                          boundary_list%boundary(i)%size(1,1:2), boundary_list%boundary(i)%size(2,1:2) 
+do i=1,boundary_list%n_bnd_elements
+  write(*,'(9i5,4f12.5)') i,boundary_list%bnd_element(i)%vertex(1:2)   , &
+                          boundary_list%bnd_element(i)%direction(1,1:2), &
+                          boundary_list%bnd_element(i)%direction(2,1:2), &
+                          boundary_list%bnd_element(i)%element, &
+                          boundary_list%bnd_element(i)%side, &
+                          boundary_list%bnd_element(i)%size(1,1:2), boundary_list%bnd_element(i)%size(2,1:2) 
 enddo
 
 write(*,*)

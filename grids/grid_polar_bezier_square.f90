@@ -17,7 +17,7 @@ implicit none
 
 type(type_node_list)    :: node_list
 type(type_element_list) :: element_list
-type(type_boundary_list) :: boundary_list
+type(type_bnd_element_list) :: boundary_list
 
 real*8  :: R_begin, R_end, Z_begin, Z_end, radius,x_tmp(n_order+1,n_dim),index_tmp(n_order+1)
 real*8  :: fbnd(*), fpsi(*), amin, Rgeo, Zgeo, u_length

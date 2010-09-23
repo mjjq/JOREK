@@ -9,12 +9,12 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   implicit none
 
-  type (type_node_list)     :: node_list
-  type (type_element_list)  :: element_list
-  type (type_boundary_list) :: boundary_list
-  type (type_surface_list)  :: flux_list
-  type (type_element)       :: element
-  type (type_node)          :: nodes(n_vertex_max)
+  type (type_node_list)        :: node_list
+  type (type_element_list)     :: element_list
+  type (type_bnd_element_list) :: boundary_list
+  type (type_surface_list)     :: flux_list
+  type (type_element)          :: element
+  type (type_node)             :: nodes(n_vertex_max)
 
   integer :: local_elms(*), index_min, index_max, my_id, n_local_elms
   integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
@@ -147,15 +147,15 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   if (freeboundary) then      ! add contributions from all boundary nodes
 
-     do ibnd = 1,boundary_list%n_boundary                                     ! loop over the boundary elements
+  do ibnd = 1,boundary_list%n_bnd_elements                                 ! loop over the boundary elements
 
         do iv = 1, 2                                                           ! loop over the vertices
 
-           inode1 = boundary_list%boundary(ibnd)%vertex(iv)
+          inode1 = boundary_list%bnd_element(ibnd)%vertex(iv)
 
            do ik = 1, 2                                                         ! loop over degrees of freedom
 
-              idir = boundary_list%boundary(ibnd)%direction(iv,ik)
+              idir = boundary_list%bnd_element(ibnd)%direction(iv,ik)
 
               index1       = node_list%node(inode1)%index(idir)
               index1_local = index1 - index_min + 1
@@ -163,15 +163,15 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
               if ((index1 .ge. index_min) .and. (index1 .le. index_max)) then     ! keep contribution only if index belongs to local range of indices
 
-                 do jbnd = 1,boundary_list%n_boundary                              ! loop over all boundary elements
+              do jbnd = 1,boundary_list%n_bnd_elements                          ! loop over all boundary elements
 
                     do jv = 1, 2                                                    ! loop over the nodes of the bounsdary element
 
-                       inode2 = boundary_list%boundary(jbnd)%vertex(jv)
+                       inode2 = boundary_list%bnd_element(jbnd)%vertex(jv)
 
                        do jk = 1, 2
 
-                          jdir = boundary_list%boundary(jbnd)%direction(jv,jk)
+                          jdir = boundary_list%bnd_element(jbnd)%direction(jv,jk)
 
                           index2       = node_list%node(inode2)%index(jdir)
                           index2_local = index2 - index_min + 1

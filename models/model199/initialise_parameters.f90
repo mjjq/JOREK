@@ -24,7 +24,7 @@ namelist /in1/  tstep, nstep, eta, visco, restart,  regrid,         &
                 eta_num, visco_num,                                 &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-		freeboundary,refinement
+		        freeboundary,refinement
 
 if (my_id .eq. 0) then
 
@@ -40,6 +40,7 @@ if (my_id .eq. 0) then
   regrid       = .false.
   
   freeboundary = .false.
+  wall_type    = 'ideal'
 
   n_R       = 3
   n_Z       = 3
@@ -137,6 +138,7 @@ call broadcast_phys(my_id)         ! distribute some values
   write(*,'(A,12e12.4)') ' Kappa        : ',ZK_par,ZK_perp(1:5)
   write(*,'(A,12e12.4)') ' Diffusion    : ',D_par,D_perp(1:5)
 !endif
+
 
 return
 end

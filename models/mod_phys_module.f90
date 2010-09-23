@@ -25,5 +25,6 @@ use parameters
   integer :: mf, index_start, index_now, mode(n_tor), nout
   logical :: restart, regrid, import_equil, xpoint, freeboundary, use_starwall
   logical :: refinement
+  character(len=9)      :: wall_type     ! 'ideal' or 'resistive'
   real*8, allocatable   :: xtime(:), energies(:,:,:)
 end module

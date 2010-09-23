@@ -128,9 +128,10 @@ program JOREK2
   my_id = rank
   n_cpu = comm_size
 
-  use_starwall = .false. !### make this a namelist input parameter later
+  use_starwall = .false.                                    ! make this a namelist input parameter later
+  wall_type    = 'ideal'                                    ! make this a namelist input parameter later
 
-  gmres  = .true.                                          ! .true. for gmres, .false. for direct
+  gmres  = .true.                                           ! .true. for gmres, .false. for direct
 
   use_mumps  = .false.
   use_pastix = (.not. use_mumps)
@@ -161,6 +162,7 @@ program JOREK2
   if(required.ne.provided)then
      write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
      call MPI_FINALIZE(IERR)
+     stop
   endif
 
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
@@ -228,9 +230,9 @@ program JOREK2
 
   if (.not. restart) then
 
-     element_list%n_elements  = 0
-     boundary_list%n_boundary = 0
-     node_list%n_nodes        = 0
+     element_list%n_elements      = 0
+     boundary_list%n_bnd_elements = 0
+     node_list%n_nodes            = 0
 
      call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver
 
@@ -268,7 +270,9 @@ program JOREK2
 
 
      endif
-      
+    
+     ! Determine boundary information from the grid.
+     if ( freeboundary ) call boundary_from_grid()
   
      call equilibrium(my_id,node_list,element_list,xpoint)                        ! equilibrium run on all cpus
      call initial_conditions(my_id,node_list,element_list,xpoint)                 ! initial conditions
@@ -356,6 +360,9 @@ program JOREK2
 
      endif
 
+     ! Determine boundary information from the grid.
+     if ( freeboundary ) call boundary_from_grid()
+  
      if (my_id .eq. 0) call energy(node_list,element_list,W_mag,W_kin)
      if (my_id .eq. 0) write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
 
@@ -384,24 +391,28 @@ program JOREK2
 
      if (my_id .eq. 0) call export_boundary(node_list,boundary_list)
 
-     write(*,*) ' n_boundary : ',boundary_list%n_boundary
+     write(*,*) ' n_bnd_elements : ',boundary_list%n_bnd_elements
 
      call initialise_mumps(MPI_COMM_WORLD)                  ! start MUMPS sparse matrix solver
 
-     n_dof_bnd = 2*boundary_list%n_boundary                 ! the number of degress of freedomon the boundary not correct for grid-xpoint
+     n_dof_bnd = 2*boundary_list%n_bnd_elements             ! the number of degress of freedomon the boundary not correct for grid-xpoint
 
      allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
 
      ! fill the vacuum response matrix
-     if ( use_starwall ) then
-        call ideal_wall_starwall(my_id,node_list,boundary_list)
+     if ( wall_type == 'ideal' ) then
+       if ( use_starwall ) then
+         call ideal_wall_starwall(my_id,node_list,boundary_list)
+       else
+         call ideal_wall(my_id,node_list,boundary_list)
+       end if
      else
-        call ideal_wall(my_id,node_list,boundary_list)
+       call resistive_wall_starwall(my_id,node_list,boundary_list)
      end if
-#ifdef USE_MUMPS
+
      mumps_par%JOB = -2                                     ! clean up this instance of mumps
      call DMUMPS(mumps_par)
-#endif
+     call MPI_bcast(vacuum_response,n_dof_bnd*n_dof_bnd*n_tor,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   endif
@@ -900,7 +911,7 @@ program JOREK2
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
      endif
 
-     if ( freeboundary ) call boundary_check(node_list,deltas)
+     if ( freeboundary ) call boundary_check()
 
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);
@@ -939,6 +950,7 @@ program JOREK2
         endif
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
+
       !  print*,"enrj",abs(energies(1,2,index_start+istep-1))
      endif
 

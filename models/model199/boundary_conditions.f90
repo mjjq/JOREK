@@ -97,9 +97,14 @@ do i=1, n_local_elms
 !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
           if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
 
-            if ( (k .eq. 2) .or. (k .eq. 3) .or.(k .eq. 4) .or. (k .eq. 5) .or. (k .eq. 6) &
-	        .or. ((k .eq. 1).and.( .not. freeboundary ) )                              &    
-		.or. ((k .eq. 1).and.(freeboundary) .and. (in .eq. 1)) ) then
+            if ( ( k .eq. 2 )                                          .or. &
+                 ( k .eq. 4 )                                          .or. &
+                 ( k .eq. 5 )                                          .or. &
+                 ( k .eq. 6 )                                          .or. &
+                 ( (freeboundary) .and. (k .eq. 1) .and. (in .eq. 1) ) .or. &
+                 ( (.not. freeboundary) .and. (k .eq. 1) )             .or. &
+                 ( (freeboundary) .and. (k .eq. 3) .and. (in .eq. 1) ) .or. &
+                 ( ( .not. freeboundary) .and. (k .eq. 3 )) ) then
 
               index_node = node_list%node(inode)%index(1)
 

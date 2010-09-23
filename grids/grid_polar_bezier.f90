@@ -36,7 +36,7 @@ real*8, external    :: spwert
 
 type(type_node_list)     :: node_list
 type(type_element_list)  :: element_list
-type(type_boundary_list) :: boundary_list
+type(type_bnd_element_list) :: boundary_list
 
 allocate(RR(4,nr*np),ZZ(4,nr*np),PSI(4,nr*np))
 
@@ -48,7 +48,7 @@ ds = 1.d0/real(nr-1)
 angle_start = - 3.d0 * PI /4.d0
 
 n_element_start  = element_list%n_elements
-n_boundary_start = boundary_list%n_boundary
+n_boundary_start = boundary_list%n_bnd_elements
 n_node_start     = node_list%n_nodes
 
 n_index_start = 0
@@ -177,7 +177,7 @@ do i=1,nr
 enddo
 
 element_list%n_elements  = n_element_start  + (nr-1)*np
-boundary_list%n_boundary = n_boundary_start + np
+boundary_list%n_bnd_elements = n_boundary_start + np
 node_list%n_nodes        = n_node_start     + nr*np
 
 do i=1,nr-1
@@ -237,14 +237,14 @@ enddo
 
 do j=1,np
 
-  boundary_list%boundary(j)%vertex(1) = n_node_start + (nr-1)*np + j
-  boundary_list%boundary(j)%vertex(2) = n_node_start + (nr-1)*np + j + 1
-  if (j.eq. np) boundary_list%boundary(j)%vertex(2) = n_node_start + (nr-1)*np + 1
+  boundary_list%bnd_element(j)%vertex(1) = n_node_start + (nr-1)*np + j
+  boundary_list%bnd_element(j)%vertex(2) = n_node_start + (nr-1)*np + j + 1
+  if (j.eq. np) boundary_list%bnd_element(j)%vertex(2) = n_node_start + (nr-1)*np + 1
   
-  boundary_list%boundary(j)%element      = n_element_start + (nr-2) * np + j
-  boundary_list%boundary(j)%direction(:,1) = 1                                 ! (vertex,order)
-  boundary_list%boundary(j)%direction(:,2) = 3
-  boundary_list%boundary(j)%side           = 2
+  boundary_list%bnd_element(j)%element      = n_element_start + (nr-2) * np + j
+  boundary_list%bnd_element(j)%direction(:,1) = 1                                 ! (vertex,order)
+  boundary_list%bnd_element(j)%direction(:,2) = 3
+  boundary_list%bnd_element(j)%side           = 2
 
 enddo
   
@@ -361,26 +361,26 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 
 enddo
 
-do j=1, boundary_list%n_boundary
+do j=1, boundary_list%n_bnd_elements
 
-  ielm  = boundary_list%boundary(j)%element
-  iside = boundary_list%boundary(j)%side
+  ielm  = boundary_list%bnd_element(j)%element
+  iside = boundary_list%bnd_element(j)%side
   
   iv1 = iside
   iv2 = mod(iside,4) + 1
 
-  idir1 = boundary_list%boundary(j)%direction(1,2)
-  idir2 = boundary_list%boundary(j)%direction(2,2)
+  idir1 = boundary_list%bnd_element(j)%direction(1,2)
+  idir2 = boundary_list%bnd_element(j)%direction(2,2)
 
-  boundary_list%boundary(j)%size(1,1) = element_list%element(ielm)%size(iv1,1)
-  boundary_list%boundary(j)%size(2,1) = element_list%element(ielm)%size(iv2,1)
+  boundary_list%bnd_element(j)%size(1,1) = element_list%element(ielm)%size(iv1,1)
+  boundary_list%bnd_element(j)%size(2,1) = element_list%element(ielm)%size(iv2,1)
   
-  boundary_list%boundary(j)%size(1,2) = element_list%element(ielm)%size(iv1,idir1) 
-  boundary_list%boundary(j)%size(2,2) = element_list%element(ielm)%size(iv2,idir2) 
+  boundary_list%bnd_element(j)%size(1,2) = element_list%element(ielm)%size(iv1,idir1) 
+  boundary_list%bnd_element(j)%size(2,2) = element_list%element(ielm)%size(iv2,idir2) 
   
 enddo
 
-write(*,*) ' n_boundary : ',boundary_list%n_boundary
+write(*,*) ' n_boundary : ',boundary_list%n_bnd_elements
 
 return
 end

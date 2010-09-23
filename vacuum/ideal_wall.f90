@@ -7,14 +7,18 @@ use data_structure
 use vacuum_response_module
 implicit none
 
-type(type_node_list)     :: node_list
-type(type_boundary_list) :: boundary_list
-type(type_node_list)     :: vacuum_node_list
-type(type_element_list)  :: vacuum_element_list
+type(type_node_list)        :: node_list
+type(type_bnd_element_list) :: boundary_list
+type(type_node_list)        :: vacuum_node_list
+type(type_element_list)     :: vacuum_element_list
 
 real*8  :: r_wall
 integer :: my_id, imode, i
 logical :: xpoint
+
+n_dof_bnd = 2*boundary_list%n_bnd_elements                 ! the number of degress of freedomon the boundary not correct for grid-xpoint
+
+vacuum_response  = 0.d0
 
 if (my_id .eq. 0) then
 
@@ -31,48 +35,65 @@ if (my_id .eq. 0) then
 endif
 
 
-imode = 2
 xpoint = .false.
 
-call vacuum_Poisson(my_id,vacuum_node_list,vacuum_element_list,boundary_list,imode)
+do i=1,(n_tor+1)/2
+
+  if (i .eq. 1) then
+    imode = 1
+  else
+    imode = 2*(i-1)
+  endif
+
+  write(*,*) ' JOREK Vacuum : ',i,imode
+
+  call vacuum_Poisson(my_id,vacuum_node_list,vacuum_element_list,boundary_list,node_list,imode)
+
+  if (imode .gt. 1) vacuum_response(:,:,imode+1) = vacuum_response(:,:,imode)
+
+enddo
 
 call plot_solution(vacuum_node_list,vacuum_element_list,1,-1,1,'vacuum')
 
 return
-end
+end subroutine ideal_wall
 
-subroutine vacuum_poisson(my_id,node_list,element_list,boundary_list,imode)
+
+
+subroutine vacuum_poisson(my_id,node_list,element_list,boundary_list,temp_node_list,imode)
 !---------------------------------------------------------------
 !---------------------------------------------------------------
 use data_structure
 use mumps_module
-use pastix_module
 use basis_at_gaussian
 use gauss
 use phys_module
 use vacuum_response_module
 
 implicit none
-include 'mpif.h'
-
-type (type_node_list)    :: node_list
+type (type_node_list)       :: node_list, temp_node_list
 type (type_element_list) :: element_list
-type (type_boundary_list):: boundary_list
+type (type_bnd_element_list):: boundary_list
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
-real*8   :: angle, pi, xx, xxs, yy, yys, pp, ps, ss, HH(2,2), HH_s(2,2), HH_ss(2,2)
+real*8, allocatable :: xplot(:), yplot(:), yplot2(:), yplot3(:)
 
 real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1))
 real*8   :: zbig, dl, ws, psi, psi_s, v, tht, xs, ys
 real*8   :: x_g(n_gauss), x_s(n_gauss), y_g(n_gauss), y_s(n_gauss), eq_g(n_gauss), eq_s(n_gauss)
 real*8   :: am0, am1, am2, am3, am4, adrive
-integer  :: ierr, my_id, ife, iv, imode, itor, ibasis, ms, check_data, nnz
+real*8   :: angle, angle2, pi, xx, xxs, yy, yys, pp, ps, ps2, ps3, ss, HH(2,2), HH_s(2,2), HH_ss(2,2)
+integer  :: iplot, inode_p, inode_m, inode_p2, inode_m2, inode_p3, inode_m3, inode_p4, inode_m4
+integer  :: inode_p5, inode_m5, inode_p6, inode_m6, inode_p7, inode_m7
+integer  :: ierr, my_id, ife, iv, imode, itor, ibasis, ms
 integer  :: n_border, ilarge, n_AA, nz_AA, nz_AA_old, i,j, k,l, ibnd, jbnd, inode1, inode2, jdir
 integer  :: n_elements, index_large_i, inode, knode, index_large_k, index_ij, index_kl, index, index_i
 integer  :: vertex(2), dir(2), iv2, sms, index_basis, index_basis2, index_basis_bnd, index_basis2_bnd, kbnd, lbnd
 
-pi = 2.*asin(1.d0)
+integer :: index_pert, index_resp, index_resp2, index_pert2, ibnd2, ipert, jpert
+
+PI = 2.D0 * asin(1.D0)
 
 if (my_id .eq. 0) then
 
@@ -81,7 +102,7 @@ if (my_id .eq. 0) then
   write(*,*) '**************************************'
   write(*,*) ' n_elements : ',element_list%n_elements
   write(*,*) ' n_nodes    : ',node_list%n_nodes
-  write(*,*) ' n_bnd      : ',boundary_list%n_boundary
+  write(*,*) ' n_bnd      : ',boundary_list%n_bnd_elements
 
   nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
 
@@ -178,7 +199,7 @@ if (my_id .eq. 0) then
 
   mumps_par%nrhs = n_dof_bnd
 
-  do ibnd = 1, boundary_list%n_boundary
+  do ibnd = 1, boundary_list%n_bnd_elements
   do jbnd = 1, 2
 
     index_basis = (ibnd-1) * 2 + jbnd - 1
@@ -186,17 +207,151 @@ if (my_id .eq. 0) then
     inode  = ibnd
     ibasis = 1 + 2*(jbnd-1)      ! only ibasis = 1 or 3 for now
 
+    inode_m  = mod(ibnd + boundary_list%n_bnd_elements - 2,boundary_list%n_bnd_elements) + 1
+    inode_m2 = mod(ibnd + boundary_list%n_bnd_elements - 3,boundary_list%n_bnd_elements) + 1
+    inode_m3 = mod(ibnd + boundary_list%n_bnd_elements - 4,boundary_list%n_bnd_elements) + 1
+    inode_m4 = mod(ibnd + boundary_list%n_bnd_elements - 5,boundary_list%n_bnd_elements) + 1
+    inode_m5 = mod(ibnd + boundary_list%n_bnd_elements - 6,boundary_list%n_bnd_elements) + 1
+    inode_m6 = mod(ibnd + boundary_list%n_bnd_elements - 7,boundary_list%n_bnd_elements) + 1
+    inode_m7 = mod(ibnd + boundary_list%n_bnd_elements - 8,boundary_list%n_bnd_elements) + 1
+    inode_p  = mod(ibnd,  boundary_list%n_bnd_elements) + 1
+    inode_p2 = mod(ibnd+1,boundary_list%n_bnd_elements) + 1
+    inode_p3 = mod(ibnd+2,boundary_list%n_bnd_elements) + 1
+    inode_p4 = mod(ibnd+3,boundary_list%n_bnd_elements) + 1
+    inode_p5 = mod(ibnd+4,boundary_list%n_bnd_elements) + 1
+    inode_p6 = mod(ibnd+5,boundary_list%n_bnd_elements) + 1
+    inode_p7 = mod(ibnd+6,boundary_list%n_bnd_elements) + 1
     do i=1, node_list%n_nodes
       node_list%node(i)%values = 0.d0
     enddo
 
     node_list%node(inode)%values(1,ibasis,1) = 1.d0
+!    if (jbnd .eq. 1) then
+!      node_list%node(inode)%values(1,ibasis,1)      =  1.d0
+!      node_list%node(inode_m)%values(1,ibasis,1)    =  0.84375d0
+!      node_list%node(inode_m)%values(1,ibasis+2,1)  =  0.1875d0 /2.d0
+!      node_list%node(inode_m2)%values(1,ibasis,1)   =  0.5d0
+!      node_list%node(inode_m2)%values(1,ibasis+2,1) =  0.25d0/2.d0
+!      node_list%node(inode_m3)%values(1,ibasis,1)   =  0.15625d0
+!      node_list%node(inode_m3)%values(1,ibasis+2,1) =  0.1875d0/2.d0
+
+!      node_list%node(inode_p)%values(1,ibasis,1)    =  0.84375d0
+!      node_list%node(inode_p)%values(1,ibasis+2,1)  = -0.1875d0/2.d0
+!      node_list%node(inode_p2)%values(1,ibasis,1)   =  0.5d0
+!      node_list%node(inode_p2)%values(1,ibasis+2,1) = -0.25d0/2.d0
+!      node_list%node(inode_p3)%values(1,ibasis,1)   =  0.15625d0
+!      node_list%node(inode_p3)%values(1,ibasis+2,1) = -0.1875d0/2.d0
+!    endif
+
+!    if (jbnd .eq. 1) then
+!      node_list%node(inode)%values(1,ibasis,1)      =  1.d0
+!      node_list%node(inode_m)%values(1,ibasis,1)    =  0.5d0
+!      node_list%node(inode_m)%values(1,ibasis+2,1)  =  0.25d0
+!      node_list%node(inode_p)%values(1,ibasis,1)    =  0.5d0
+!      node_list%node(inode_p)%values(1,ibasis+2,1)  = -0.25d0
+!    endif
+
+!    if (jbnd .eq. 2) then
+!      node_list%node(inode)%values(1,ibasis-2,1)    =  0.d0
+!      node_list%node(inode)%values(1,ibasis,1)      =  0.333333d0
+!      node_list%node(inode_m)%values(1,ibasis-2,1)  = -0.25d0
+!      node_list%node(inode_m)%values(1,ibasis,1)    = -0.083333d0
+!      node_list%node(inode_p)%values(1,ibasis-2,1)  =  0.25d0
+!      node_list%node(inode_p)%values(1,ibasis,1)    = -0.083333d0
+!    endif
+
+!    if (jbnd .eq. 2) then
+!      node_list%node(inode)%values(1,ibasis-2,1)     =  0.d0
+!      node_list%node(inode)%values(1,ibasis,1)       =  0.333333d0 /2.d0
+
+!      node_list%node(inode_m)%values(1,ibasis-2,1)   = -0.28125d0
+!      node_list%node(inode_m)%values(1,ibasis,1)     =  0.0625d0   /2.d0
+!      node_list%node(inode_m2)%values(1,ibasis-2,1)  = -0.25d0
+!      node_list%node(inode_m2)%values(1,ibasis,1)    = -0.083333d0 /2.d0
+!      node_list%node(inode_m3)%values(1,ibasis-2,1)  = -0.09375d0
+!      node_list%node(inode_m3)%values(1,ibasis,1)    = -0.1041666d0 /2.d0
+
+!      node_list%node(inode_p)%values(1,ibasis-2,1)   =  0.28125d0
+!      node_list%node(inode_p)%values(1,ibasis,1)     =  0.0625d0 /2.d0
+!      node_list%node(inode_p2)%values(1,ibasis-2,1)  =  0.25d0
+!      node_list%node(inode_p2)%values(1,ibasis,1)    = -0.083333d0 /2.d0
+!      node_list%node(inode_p3)%values(1,ibasis-2,1)  =  0.09375d0
+!      node_list%node(inode_p3)%values(1,ibasis,1)    = -0.1041666d0 /2.d0
+!    endif
+
+!    if (jbnd .eq. 1) then
+!      node_list%node(inode)%values(1,ibasis,1)      =  1.d0
+!      node_list%node(inode_m)%values(1,ibasis,1)    =  0.95703125d0
+!      node_list%node(inode_m)%values(1,ibasis+2,1)  =  0.109375d0 /4.d0
+!      node_list%node(inode_m2)%values(1,ibasis,1)   =  0.84375d0
+!      node_list%node(inode_m2)%values(1,ibasis+2,1) =  0.1875d0   /4.d0
+!      node_list%node(inode_m3)%values(1,ibasis,1)   =  0.68359375d0
+!      node_list%node(inode_m3)%values(1,ibasis+2,1) =  0.234375d0 /4.d0
+!      node_list%node(inode_m4)%values(1,ibasis,1)   =  0.5d0
+!      node_list%node(inode_m4)%values(1,ibasis+2,1) =  0.25d0     /4.d0
+!      node_list%node(inode_m5)%values(1,ibasis,1)   =  0.31640625d0
+!      node_list%node(inode_m5)%values(1,ibasis+2,1) =  0.234375d0 /4.d0
+!      node_list%node(inode_m6)%values(1,ibasis,1)   =  0.15625d0
+!      node_list%node(inode_m6)%values(1,ibasis+2,1) =  0.1875d0   /4.d0
+!      node_list%node(inode_m7)%values(1,ibasis,1)   =  0.04296875d0
+!      node_list%node(inode_m7)%values(1,ibasis+2,1) =  0.109375d0 /4.d0
+
+!      node_list%node(inode_p)%values(1,ibasis,1)    =  0.95703125d0
+!      node_list%node(inode_p)%values(1,ibasis+2,1)  =  -0.109375d0 /4.d0
+!      node_list%node(inode_p2)%values(1,ibasis,1)   =  0.84375d0
+!      node_list%node(inode_p2)%values(1,ibasis+2,1) =  -0.1875d0   /4.d0
+!      node_list%node(inode_p3)%values(1,ibasis,1)   =  0.68359375d0
+!      node_list%node(inode_p3)%values(1,ibasis+2,1) =  -0.234375d0 /4.d0
+!      node_list%node(inode_p4)%values(1,ibasis,1)   =  0.5d0
+!      node_list%node(inode_p4)%values(1,ibasis+2,1) =  -0.25d0     /4.d0
+!      node_list%node(inode_p5)%values(1,ibasis,1)   =  0.31640625d0
+!      node_list%node(inode_p5)%values(1,ibasis+2,1) =  -0.234375d0 /4.d0
+!      node_list%node(inode_p6)%values(1,ibasis,1)   =  0.15625d0
+!      node_list%node(inode_p6)%values(1,ibasis+2,1) =  -0.1875d0   /4.d0
+!      node_list%node(inode_p7)%values(1,ibasis,1)   =  0.04296875d0
+!      node_list%node(inode_p7)%values(1,ibasis+2,1) =  -0.109375d0 /4.d0
+!    endif
+
+!    if (jbnd .eq. 2) then
+!      node_list%node(inode)%values(1,ibasis-2,1)     =  0.d0
+!      node_list%node(inode)%values(1,ibasis,1)       =  0.33333333d0  /4.d0
+
+!      node_list%node(inode_m)%values(1,ibasis-2,1)   = -0.19140625d0
+!      node_list%node(inode_m)%values(1,ibasis,1)     =  0.18229166d0  /4.d0
+!      node_list%node(inode_m2)%values(1,ibasis-2,1)  = -0.28125d0
+!      node_list%node(inode_m2)%values(1,ibasis,1)    =  0.0625d0      /4.d0
+!      node_list%node(inode_m3)%values(1,ibasis-2,1)  = -0.29296875d0
+!      node_list%node(inode_m3)%values(1,ibasis,1)    = -0.02604166d0 /4.d0
+!      node_list%node(inode_m4)%values(1,ibasis-2,1)  = -0.25d0
+!      node_list%node(inode_m4)%values(1,ibasis,1)    = -0.083333d0    /4.d0
+!      node_list%node(inode_m5)%values(1,ibasis-2,1)  = -0.17578124d0
+!      node_list%node(inode_m5)%values(1,ibasis,1)    = -0.109375d0    /4.d0
+!      node_list%node(inode_m6)%values(1,ibasis-2,1)  = -0.09375d0
+!      node_list%node(inode_m6)%values(1,ibasis,1)    = -0.1041666d0   /4.d0
+!      node_list%node(inode_m7)%values(1,ibasis-2,1)  = -0.02734375d0
+!      node_list%node(inode_m7)%values(1,ibasis,1)    = -0.067708335d0 /4.d0
+
+!      node_list%node(inode_p)%values(1,ibasis-2,1)   =  0.19140625d0
+!      node_list%node(inode_p)%values(1,ibasis,1)     =  0.18229166d0  /4.d0
+!      node_list%node(inode_p2)%values(1,ibasis-2,1)  =  0.28125d0
+!      node_list%node(inode_p2)%values(1,ibasis,1)    =  0.0625d0      /4.d0
+!      node_list%node(inode_p3)%values(1,ibasis-2,1)  =  0.29296875d0
+!      node_list%node(inode_p3)%values(1,ibasis,1)    = -0.02604166d0 /4.d0
+!      node_list%node(inode_p4)%values(1,ibasis-2,1)  =  0.25d0
+!      node_list%node(inode_p4)%values(1,ibasis,1)    = -0.083333d0    /4.d0
+!      node_list%node(inode_p5)%values(1,ibasis-2,1)  =  0.17578124d0
+!      node_list%node(inode_p5)%values(1,ibasis,1)    = -0.109375d0    /4.d0
+!      node_list%node(inode_p6)%values(1,ibasis-2,1)  =  0.09375d0
+!      node_list%node(inode_p6)%values(1,ibasis,1)    = -0.1041666d0   /4.d0
+!      node_list%node(inode_p7)%values(1,ibasis-2,1)  =  0.02734375d0
+!      node_list%node(inode_p7)%values(1,ibasis,1)    = -0.067708335d0    /4.d0
+!    endif
 !----------------------------------------------------- test unit perturbation Fourier harmonic
-!    sms= 3.d0
-!    do inode=1, boundary_list%n_boundary
+!    sms= 2.d0
+!    do inode=1, boundary_list%n_bnd_elements
 !      tht = atan2( node_list%node(inode)%x(1,2), node_list%node(inode)%x(1,1)-10.d0)
 !      node_list%node(inode)%values(1,1,1) = cos(sms*tht)
-!      node_list%node(inode)%values(1,3,1) = -1.d0 / 3.d0 * sms*sin(sms*tht) * 6.283185307 / float( boundary_list%n_boundary)
+!      node_list%node(inode)%values(1,3,1) = -1.d0 / 3.d0 * sms*sin(sms*tht) * 6.283185307 / float( boundary_list%n_bnd_elements)
 !    enddo
 
 
@@ -251,6 +406,8 @@ if (my_id .eq. 0) then
 
 	    dl = sqrt(x_s(ms)**2 + y_s(ms)**2)
 
+            angle  = atan2(y_g(ms), x_g(ms)-R_geo)
+            angle2 = MOD( angle + 2*PI, 2*PI )
             do i=1,2                                                                       ! loop over nodes
 
               do j=1,2                                                                     ! loop over basis functions
@@ -261,6 +418,7 @@ if (my_id .eq. 0) then
 
                 mumps_par%RHS(index_ij+n_AA*index_basis) = mumps_par%RHS(index_ij+n_AA*index_basis) + v * psi_s * ws              ! add to element RHS
 
+!testing_only                mumps_par%RHS(index_ij+n_AA*index_basis) = mumps_par%RHS(index_ij+n_AA*index_basis) + v * psi * ws * dl             ! add to element RHS
               enddo
             enddo
 
@@ -274,45 +432,6 @@ if (my_id .eq. 0) then
   enddo
   enddo
   
-!----------------------- boundary conditions
-
-  do i=1,node_list%n_nodes
-
-    if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
-
-      index_i = node_list%node(i)%index(1)  ! base index in the main matrix
-
-      mumps_par%irn(ilarge+1) = index_i
-      mumps_par%jcn(ilarge+1) = index_i
-      mumps_par%A(ilarge+1)   = zbig
-      ilarge = ilarge + 1
-
-      index_i = node_list%node(i)%index(2)  ! base index in the main matrix
-
-      mumps_par%irn(ilarge+1) = index_i
-      mumps_par%jcn(ilarge+1) = index_i
-      mumps_par%A(ilarge+1)   = zbig
-      ilarge = ilarge + 1
-    endif
-
-    if ((node_list%node(i)%boundary .eq. 2) .or. (node_list%node(i)%boundary .eq. 3)) then
-
-      index_i = node_list%node(i)%index(1)  ! base index in the main matrix
-
-      mumps_par%irn(ilarge+1) = index_i
-      mumps_par%jcn(ilarge+1) = index_i
-      mumps_par%A(ilarge+1)   = zbig
-      ilarge = ilarge + 1
-
-      index_i = node_list%node(i)%index(3)  ! base index in the main matrix
-
-      mumps_par%irn(ilarge+1) = index_i
-      mumps_par%jcn(ilarge+1) = index_i
-      mumps_par%A(ilarge+1)   = zbig
-      ilarge = ilarge + 1
-    endif
-
-  enddo
 
   nz_AA_old = nz_AA
   nz_AA     = ilarge
@@ -321,132 +440,43 @@ if (my_id .eq. 0) then
   mumps_par%nz = nz_AA
 
 endif
-#ifdef USE_MUMPS
 mumps_par%JOB = 6
 mumps_par%SYM = 0
 mumps_par%icntl(7) = 4
 
 call DMUMPS(mumps_par)
-#else
-
-if (my_id == 0) then
-   if (allocated(sparskit_work)) deallocate(sparskit_work)
-   allocate(sparskit_work(mumps_par%N + 1))
-   print*, "taille du systeme,non zero", n_AA,nz_AA, mumps_par%NZ
-   call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
-
-   nnz = mumps_par%JCN(mumps_par%N+1) - 1
-   call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
-        1, 0, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
-   write (*,*) "nnz", nnz
-   mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
-   if (mumps_par%NZ /= nnz ) then
-      write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
-      if (associated (mumps_par%IRN)) deallocate(mumps_par%IRN)
-      if (associated (mumps_par%A)  ) deallocate(mumps_par%A)
-      allocate(mumps_par%IRN(mumps_par%NZ))
-      allocate(mumps_par%A(mumps_par%NZ))
-      call pastix_fortran_checkmatrix_end(check_data, &
-           1, mumps_par%IRN,mumps_par%A, 1)
-   endif
-
-end if
-
-CALL MPI_BCAST(mumps_par%N, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%NZ, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-write (*,*) "mumps_par%NZ", mumps_par%NZ
-if (my_id /= 0) then
-   if (associated(mumps_par%JCN)) deallocate(mumps_par%JCN)
-   if (associated(mumps_par%IRN)) deallocate(mumps_par%IRN)
-   if (associated(mumps_par%A))   deallocate(mumps_par%A)
-   if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
-
-   allocate(mumps_par%JCN(mumps_par%N+1))
-   allocate(mumps_par%IRN(mumps_par%NZ))
-   allocate(mumps_par%A(mumps_par%NZ))
-   allocate(mumps_par%RHS(mumps_par%N))
-end if
-
-CALL MPI_BCAST(mumps_par%JCN(1), mumps_par%N+1,  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%IRN(1), mumps_par%NZ,   MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
-
-
-if (.not. allocated(pastix_perm_vars))  allocate(pastix_perm_vars(mumps_par%n))
-if (.not. allocated(pastix_iperm_vars)) allocate(pastix_iperm_vars(mumps_par%n))
-
-
-pastix_iparm(1)  = 0          ! insert default values
-pastix_iparm(2)  = 0          ! initializse
-pastix_iparm(3)  = 0
-
-write(*,*) '***********************************'
-write(*,*) '* initialise PastiX               *'
-write(*,*) '***********************************'
- 
-pastix_data = 0
- call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
-pastix_iparm(2) = 1
-pastix_iparm(3) = 7
-pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
-
-pastix_iparm(7)  = 1                    ! force check
-
-pastix_dparm(6)  = pastix_epsilon    ! error level refinement
-pastix_dparm(11) = pastix_pivot      ! pivot threshold?
-
-pastix_iparm(31) = pastix_facto
-pastix_iparm(35) = pastix_nthrd          ! thread/mpi
-pastix_iparm(39) = pastix_rhs
-pastix_iparm(41) = pastix_sym
-
-pastix_iparm(42) = pastix_ricar
-pastix_iparm(37) = pastix_iluk
-pastix_iparm(14) = pastix_amalg
-
-write(*,*) '***********************************'
-write(*,*) '* call PastiX                     *'
-write(*,*) '***********************************'
-
-	write (*,*) "pastix_data", pastix_data, "mumps_par%n", mumps_par%n, "mumps_par%jcn()", mumps_par%jcn(mumps_par%n+1),"mumps_par%irn",mumps_par%irn(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%A",mumps_par%A(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%rhs",mumps_par%rhs(mumps_par%n), "pastix_iparm(15)", pastix_iparm(15)
-	
- call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
-     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
-#endif
 
 vacuum_response = 0.d0
 
 if (my_id .eq. 0) then
 
-  do ibnd = 1, boundary_list%n_boundary
+  do ibnd = 1, boundary_list%n_bnd_elements
 
     do jbnd = 1, 2
 
       index_basis     = (n_order+1)*(ibnd-1) + 2*(jbnd-1) + 1          ! select index 1 and 3 from the 4 dof at each node
       index_basis_bnd = 2*(ibnd-1) +   (jbnd-1) + 1                    ! the index in the vacuum_response matrix
 
-      do kbnd=1,boundary_list%n_boundary
+      do kbnd=1,boundary_list%n_bnd_elements
 
         do lbnd = 1, 2
 
           index_basis2     = (n_order+1)*(kbnd-1) + 2*(lbnd-1) + 1
           index_basis2_bnd = 2*(kbnd-1) +   (lbnd-1) + 1               ! the index in the vacuum_response matrix
 
-          vacuum_response(index_basis_bnd,index_basis2_bnd,2:n_tor) = mumps_par%rhs(index_basis2 + n_AA * (index_basis_bnd-1))
+          vacuum_response(index_basis_bnd,index_basis2_bnd,imode) = mumps_par%rhs(index_basis2 + n_AA * (index_basis_bnd-1))
+
+          write(24,'(2i5,e16.8)') index_basis_bnd, index_basis2_bnd,vacuum_response(index_basis_bnd,index_basis2_bnd,2)
 
         enddo
 
       enddo
 
-      write(*,'(16e11.3)') vacuum_response(index_basis_bnd,:,2)
 
     enddo
   enddo
 
+  write(*,'(A,e14.6)') ' maxval response : ',maxval(abs(vacuum_response))
   do i=1,node_list%n_nodes
 
     inode  = i
@@ -455,14 +485,117 @@ if (my_id .eq. 0) then
 
       index  = node_list%node(inode)%index(j)
 
-      node_list%node(inode)%values(1,j,1) = mumps_par%RHS(index+(boundary_list%n_boundary+0)*n_AA)
+      node_list%node(inode)%values(1,j,1) = mumps_par%RHS(index+(boundary_list%n_bnd_elements+5)*n_AA)
 
     enddo
   enddo
 
   deallocate(mumps_par%irn,mumps_par%jcn,mumps_par%A,mumps_par%rhs)
 
-!### BEGIN DEBUNG OUTPUT ###
+  allocate(xplot(11* boundary_list%n_bnd_elements),yplot(11* boundary_list%n_bnd_elements))
+  allocate(yplot2(11* boundary_list%n_bnd_elements),yplot3(11* boundary_list%n_bnd_elements))
+
+!### BEGIN DEBUG OUTPUT ###
+
+
+
+  itor = 1
+
+  do ipert = 1,boundary_list%n_bnd_elements
+  do jpert = 1,2
+
+  write(*,*) ' PERT : ',ipert,jpert
+  write(22,*) ' PERT : ',ipert,jpert
+
+  xplot  = 0.d0
+  yplot  = 0.d0
+  yplot2 = 0.d0
+  yplot3 = 0.d0
+  iplot  = 0
+
+  index_pert = 2*(ipert-1) + jpert
+
+  do ibnd = 1, boundary_list%n_bnd_elements
+
+    inode1 = boundary_list%bnd_element(ibnd)%vertex(1)
+    inode2 = boundary_list%bnd_element(ibnd)%vertex(2)
+
+    index_resp  = 2*(ibnd-1) + 1
+    ibnd2       = mod(ibnd,boundary_list%n_bnd_elements) + 1
+    index_resp2 = 2*(ibnd2-1) + 1
+
+!    write(*,'(5i5,3e12.4)') inode1,inode2,index_pert,index_resp,index_resp2,vacuum_response(index_pert,index_resp,itor), &
+!                            vacuum_response2(index_pert,index_resp,itor), vacuum_response3(index_pert,index_resp,itor)
+
+    do ms=1, 11
+
+      xx=0.d0; xxs=0.d0; yy=0.d0; yys=0.d0; pp=0.d0; ps=0.d0; ps2 = 0.d0; ps3=0.d0
+
+      ss = float(ms-1)/10.d0
+
+      call basisfunctions1(ss,HH,HH_s,HH_ss)
+
+      xx  = xx  + temp_node_list%node(inode1)%x(1,1) * boundary_list%bnd_element(ibnd)%size(1,1) * HH(1,1)    &
+                + temp_node_list%node(inode1)%x(3,1) * boundary_list%bnd_element(ibnd)%size(1,2) * HH(1,2)    &
+                + temp_node_list%node(inode2)%x(1,1) * boundary_list%bnd_element(ibnd)%size(2,1) * HH(2,1)    &
+                + temp_node_list%node(inode2)%x(3,1) * boundary_list%bnd_element(ibnd)%size(2,2) * HH(2,2)
+      xxs = xxs + temp_node_list%node(inode1)%x(1,1) * boundary_list%bnd_element(ibnd)%size(1,1) * HH_s(1,1)  &
+                + temp_node_list%node(inode1)%x(3,1) * boundary_list%bnd_element(ibnd)%size(1,2) * HH_s(1,2)  &
+                + temp_node_list%node(inode2)%x(1,1) * boundary_list%bnd_element(ibnd)%size(2,1) * HH_s(2,1)  &
+                + temp_node_list%node(inode2)%x(3,1) * boundary_list%bnd_element(ibnd)%size(2,2) * HH_s(2,2)
+      yy  = yy  + temp_node_list%node(inode1)%x(1,2) * boundary_list%bnd_element(ibnd)%size(1,1) * HH(1,1)    &
+                + temp_node_list%node(inode1)%x(3,2) * boundary_list%bnd_element(ibnd)%size(1,2) * HH(1,2)    &
+                + temp_node_list%node(inode2)%x(1,2) * boundary_list%bnd_element(ibnd)%size(2,1) * HH(2,1)    &
+                + temp_node_list%node(inode2)%x(3,2) * boundary_list%bnd_element(ibnd)%size(2,2) * HH(2,2)
+      yys = yys + temp_node_list%node(inode1)%x(1,2) * boundary_list%bnd_element(ibnd)%size(1,1) * HH_s(1,1)  &
+                + temp_node_list%node(inode1)%x(3,2) * boundary_list%bnd_element(ibnd)%size(1,2) * HH_s(1,2)  &
+                + temp_node_list%node(inode2)%x(1,2) * boundary_list%bnd_element(ibnd)%size(2,1) * HH_s(2,1)  &
+                + temp_node_list%node(inode2)%x(3,2) * boundary_list%bnd_element(ibnd)%size(2,2) * HH_s(2,2)
+
+      pp  = pp  + vacuum_response(index_pert,index_resp,itor)    * boundary_list%bnd_element(ibnd)%size(1,1) * HH(1,1)  &
+                + vacuum_response(index_pert,index_resp+1,itor)  * boundary_list%bnd_element(ibnd)%size(1,2) * HH(1,2)  &
+                + vacuum_response(index_pert,index_resp2,itor)   * boundary_list%bnd_element(ibnd)%size(2,1) * HH(2,1)  &
+                + vacuum_response(index_pert,index_resp2+1,itor) * boundary_list%bnd_element(ibnd)%size(2,2) * HH(2,2)
+
+      ps = ps   + vacuum_response(index_pert,index_resp,itor)    * boundary_list%bnd_element(ibnd)%size(1,1) * HH_s(1,1)  &
+                + vacuum_response(index_pert,index_resp+1,itor)  * boundary_list%bnd_element(ibnd)%size(1,2) * HH_s(1,2)  &
+                + vacuum_response(index_pert,index_resp2,itor)   * boundary_list%bnd_element(ibnd)%size(2,1) * HH_s(2,1)  &
+                + vacuum_response(index_pert,index_resp2+1,itor) * boundary_list%bnd_element(ibnd)%size(2,2) * HH_s(2,2)
+
+!      ps2 = ps2 + vacuum_response2(index_pert,index_resp,itor)    * boundary_list%bnd_element(ibnd)%size(1,1) * HH(1,1)  &
+!                + vacuum_response2(index_pert,index_resp+1,itor)  * boundary_list%bnd_element(ibnd)%size(1,2) * HH(1,2)  &
+!                + vacuum_response2(index_pert,index_resp2,itor)   * boundary_list%bnd_element(ibnd)%size(2,1) * HH(2,1)  &
+!                + vacuum_response2(index_pert,index_resp2+1,itor) * boundary_list%bnd_element(ibnd)%size(2,2) * HH(2,2)
+!
+!      ps3 = ps3 + vacuum_response3(index_pert,index_resp,itor)    * boundary_list%bnd_element(ibnd)%size(1,1) * HH_s(1,1)  &
+!                + vacuum_response3(index_pert,index_resp+1,itor)  * boundary_list%bnd_element(ibnd)%size(1,2) * HH_s(1,2)  &
+!                + vacuum_response3(index_pert,index_resp2,itor)   * boundary_list%bnd_element(ibnd)%size(2,1) * HH_s(2,1)  &
+!                + vacuum_response3(index_pert,index_resp2+1,itor) * boundary_list%bnd_element(ibnd)%size(2,2) * HH_s(2,2)
+
+      angle  = atan2(yy, xx-R_geo)
+      angle2 = MOD( angle + 2*PI, 2*PI )
+      write(22, '(9ES14.6)') ss,angle2, xx, yy, pp, ps, ps / SQRT(xxs**2 + yys**2), ps2, ps3
+
+      xplot(iplot+1) = angle2
+      yplot(iplot+1) = pp !/ SQRT(xxs**2 + yys**2) !ps / SQRT(xxs**2 + yys**2)
+      yplot2(iplot+1) = ps2
+      yplot3(iplot+1) = ps3
+      iplot = iplot + 1
+    enddo
+  enddo
+
+!  call lincol(0)
+!  call lplot6(1,1,xplot,yplot2,iplot,'response')
+!  call lincol(3)
+!  call lplot6(1,1,xplot,yplot,-iplot,'response')
+!  call lincol(2)
+!  call lplot6(1,1,xplot,yplot3,-iplot,'response')
+  enddo
+  enddo
+
+    xplot = 0.d0
+    yplot = 0.d0
+    iplot = 0
 
     do ife = 1, element_list%n_elements                                                                   ! boundary integrals
 
@@ -486,7 +619,7 @@ if (my_id .eq. 0) then
           
             xx=0.; xxs=0.; yy=0.; yys=0.; pp=0.; ps=0.
 
-            ss = 1.d0 - (float(ms)-1.d0)/10.d0
+            ss = 1.d0 - float(ms-1)/10.d0
 	                
             call basisfunctions1(ss,HH,HH_s,HH_ss)
 
@@ -506,13 +639,13 @@ if (my_id .eq. 0) then
               enddo
             enddo
             
-            888 format(ES12.5,1x,ES12.5)
-            angle = MOD( atan2(yy, xx-R_geo) + 2*PI, 2*PI )
-            write(67, 888) angle, pp
-            write(68, 888) angle, ps
-            write(69, 888) angle, ps / SQRT(xxs**2 + yys**2)
-            write(70, 888) angle, SQRT(xxs**2 + yys**2)
-            write(71, 888) SQRT(xxs**2 + yys**2)
+            angle  = atan2(yy, xx-R_geo)
+            angle2 = MOD( angle + 2*PI, 2*PI )
+            write(22, '(8ES14.6)') ss,angle2, xx, yy, pp, ps, ps / SQRT(xxs**2 + yys**2)
+
+            xplot(iplot+1) = angle2
+            yplot(iplot+1) = - ps / SQRT(xxs**2 + yys**2)
+            iplot = iplot + 1
 
           enddo
           
@@ -522,15 +655,17 @@ if (my_id .eq. 0) then
     enddo
     
 
+call lincol(1)
+!call lplot6(1,1,xplot,yplot,-iplot,'response')
+!call lincol(0)
 !### END DEBUG OUTPUT ###
-
-
 
 endif
 
-
 return
-end
+end subroutine vacuum_poisson
+
+
 
 subroutine element_matrix_vacuum(element,nodes,itor,ELM)
 !---------------------------------------------------------------
@@ -609,8 +744,7 @@ do ms=1, n_gauss
            index_kl = (k-1)*(n_order+1) + l
 
            ELM(index_ij,index_kl) =  ELM(index_ij,index_kl) &
-                            + (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt)*xjac*wst
-                           !+ (psi_x * v_x + psi_y * v_y + 0.5d0*(float(itor)/x_g(ms,mt))**2 * v * psi) * xjac * wst
+	                          + (psi_x * v_x + psi_y * v_y + (float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt)*xjac*wst
 
          enddo
        enddo
@@ -622,7 +756,9 @@ do ms=1, n_gauss
 enddo
 
 return
-end
+end subroutine element_matrix_vacuum
+
+
 
 subroutine vacuum_grid(node_list,boundary_list,r_wall,vacuum_node_list,vacuum_element_list)
 !-------------------------------------------------------------------
@@ -633,7 +769,7 @@ use data_structure
 
 implicit none
 
-type(type_boundary_list) :: boundary_list
+type(type_bnd_element_list) :: boundary_list
 type(type_node_list)     :: node_list, vacuum_node_list
 type(type_element_list)  :: vacuum_element_list
 
@@ -644,13 +780,13 @@ write(*,*) '******************************'
 write(*,*) '* vacuum grid                *'
 write(*,*) '******************************'
 
-np = boundary_list%n_boundary
+np = boundary_list%n_bnd_elements
 nr = 21
 
 write(*,*) ' nr, np : ',nr,np
 
 do j=1,np
-  jv = boundary_list%boundary(j)%vertex(1)
+  jv = boundary_list%bnd_element(j)%vertex(1)
   RZcentre = RZcentre + node_list%node(jv)%x(1,:)
 enddo
 RZcentre = RZcentre / float(np)
@@ -663,7 +799,7 @@ do i=1,nr
 
     index = (i-1)*np + j
 
-    jv = boundary_list%boundary(j)%vertex(1)
+    jv = boundary_list%bnd_element(j)%vertex(1)
 
     vacuum_node_list%node(index)%x(1,:) = radius * (node_list%node(jv)%x(1,:) - RZcentre) + RZcentre
     vacuum_node_list%node(index)%x(3,:) = radius *  node_list%node(jv)%x(3,:)
@@ -765,9 +901,7 @@ do k=1 , vacuum_element_list%n_elements   ! fill in the size of the elements
 enddo
 
 return
-end
-
-
+end subroutine vacuum_grid
 
 
 
@@ -780,10 +914,10 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list)
 
   integer,                  intent(in) :: my_id            ! MPI thread number of current thread
   type(type_node_list),     intent(in) :: node_list        ! List of boundary nodes
-  type(type_boundary_list), intent(in) :: boundary_list    ! List of boundary elements
+  type(type_bnd_element_list), intent(in) :: boundary_list    ! List of boundary elements
 
-  
-  character(len=128) :: file_response_starwall = 'vacuum_response_with_wall_R10_a1.0_w2a_npol16.starwall'
+
+  character(len=128) :: file_response_starwall = 'vacuum_response_starwall'
   
   integer :: dim
   integer :: i_n, j_n
@@ -793,19 +927,19 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list)
   integer :: icossin, jcossin ! 0: cos, 1: sin
   integer :: iindex, jindex
   integer :: rn_response, cn_response
-  integer :: iindex2, jindex2 !###
+  integer :: iindex2, jindex2
   real*8  :: response
   
-  OPEN(42, FILE=file_response_starwall)
-  
-  READ(42,*) dim
-  WRITE(*,*) 'dim=',dim
+  open(42, FILE=file_response_starwall)
+
+  read(42,*) dim
+  write(*,*) 'dim=',dim
   
   vacuum_response = 0.
   
   ! Outer loops (response index)
-  do inode = 1, boundary_list%n_boundary ! loop over nodes
-    do itor = 2,3 !###                     ! loop over toroidal modes
+  do inode = 1, boundary_list%n_bnd_elements              ! loop over nodes
+    do itor = 2,3                                     ! loop over toroidal modes
       do ibas = 1, 2                         ! loop over basis functions
         
         iindex = 2*(inode-1) +   (ibas-1) + 1  ! first index in response matrix
@@ -813,15 +947,17 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list)
         jindex = 0
         
         ! Inner loops (perturbation index)
-        do jnode = 1, boundary_list%n_boundary ! loop over nodes
-          do jtor = 2, 3 !###                    ! loop over toroidal harmonics
+        do jnode = 1, boundary_list%n_bnd_elements        ! loop over nodes
+          do jtor = 2, 3                              ! loop over toroidal harmonics
             do jbas = 1, 2                         ! loop over basis functions
               
               jindex = 2*(jnode-1) +   (jbas-1) + 1  ! second index in response matrix
                 
-              READ(42,*) iindex2, jindex2, response
-              
-              if ( itor == jtor ) vacuum_response(iindex,jindex,itor) = response
+              read(42,*) iindex2, jindex2, response
+
+              if ( itor == jtor ) then
+                vacuum_response(iindex,jindex,itor) = - 6.283185307 * response
+              endif
                   
             end do
           end do
@@ -831,6 +967,8 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list)
     end do
   end do
 
-  CLOSE(42)
+  vacuum_response(:,:,3) = vacuum_response(:,:,2)
+
+  close(42)
 
 end subroutine ideal_wall_starwall

@@ -9,7 +9,7 @@ implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
-type (type_boundary_list):: boundary_list
+type (type_bnd_element_list):: boundary_list
 type (type_surface_list) :: flux_list
 
 type (type_node_list)    :: newnode_list

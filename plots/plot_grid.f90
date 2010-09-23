@@ -7,9 +7,9 @@ use data_structure
 
 implicit none
 
-type (type_node_list)     :: node_list
-type (type_element_list)  :: element_list
-type (type_boundary_list) :: boundary_list
+type (type_node_list)        :: node_list
+type (type_element_list)     :: element_list
+type (type_bnd_element_list) :: boundary_list
 real*8,allocatable :: xp(:,:)
 real*8             :: xs(2,n_dim), xx_0(n_dim), uu_0(n_dim), vv_0(n_dim), ww_0(n_dim)
 real*8             :: uv_0(n_dim), uv_p(n_dim), xx_p(n_dim) ,xb(4,n_dim)
@@ -22,8 +22,9 @@ write(*,*) '************************************'
 write(*,*) '*           plot_grid              *'
 write(*,*) '************************************'
 write(*,*) ' number of elements          : ',element_list%n_elements
-write(*,*) ' number of boundary elements : ',boundary_list%n_boundary
+write(*,*) ' number of boundary elements : ',boundary_list%n_bnd_elements
 write(*,*) ' number of nodes             : ',node_list%n_nodes
+write(*,*) ' bezier                      : ',bezier
 
 allocate(xp(node_list%n_nodes,n_dim))
 
@@ -137,21 +138,21 @@ call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
 
 call lincol(4)
 
-do k=1, boundary_list%n_boundary
+do k=1, boundary_list%n_bnd_elements
 
-   idir_0 = boundary_list%boundary(k)%direction(1,2)
+   idir_0 = boundary_list%bnd_element(k)%direction(1,2)
 
-   inode_0 = boundary_list%boundary(k)%vertex(1)
+   inode_0 = boundary_list%bnd_element(k)%vertex(1)
    xx_0    = node_list%node(inode_0)%x(1,:)
    uv_0    = node_list%node(inode_0)%x(idir_0,:)
-   huv_0   = boundary_list%boundary(k)%size(1,2)
+   huv_0   = boundary_list%bnd_element(k)%size(1,2)
 
-   idir_p = boundary_list%boundary(k)%direction(2,2)
+   idir_p = boundary_list%bnd_element(k)%direction(2,2)
 
-   inode_p = boundary_list%boundary(k)%vertex(2)
+   inode_p = boundary_list%bnd_element(k)%vertex(2)
    xx_p    = node_list%node(inode_p)%x(1,:)
    uv_p    = node_list%node(inode_p)%x(idir_p,:)
-   huv_p   = boundary_list%boundary(k)%size(2,2)
+   huv_p   = boundary_list%bnd_element(k)%size(2,2)
 
 !    write(*,*) xx_0
 !    write(*,*) xx_0 + uv_0*huv_0

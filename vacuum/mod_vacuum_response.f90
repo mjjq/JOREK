@@ -6,4 +6,11 @@ module vacuum_response_module
 integer             :: n_dof_bnd                  ! degrees of freedom on the boundary
 real*8, allocatable :: vacuum_response(:,:,:)     ! the vacuum response matrix (idrive,ireponse,itor)
 
-end module
+real*8, allocatable :: vacuum_response2(:,:,:) !for testing only
+real*8, allocatable :: vacuum_response3(:,:,:) !for testing only
+
+! --- Resistive wall only.
+integer             :: n_wall_curr                ! Number of wall current potentials.
+real*8, allocatable :: wall_curr(:)               ! Wall current potentials.
+
+end module vacuum_response_module

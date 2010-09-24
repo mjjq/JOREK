@@ -29,7 +29,8 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
 		pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-		freeboundary,refinement
+		        freeboundary, use_starwall, resistive_wall,         &
+                refinement
 
 if (my_id .eq. 0) then
 
@@ -45,7 +46,9 @@ if (my_id .eq. 0) then
   import_equil = .false.
   regrid       = .false.
 
-  freeboundary = .false.
+  freeboundary   = .false. ! use free or fixed boundary?
+  use_starwall   = .false. ! use the STARWALL vacuum solution? (freeboundary only)
+  resistive_wall = .false. ! use a resistive or ideal wall?    (freeboundary only)
 
   n_R       = 3
   n_Z       = 3
@@ -150,18 +153,11 @@ if (my_id .eq. 0) then
   if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))
   if (nstep .gt. 0) allocate(xtime(nstep))
 
+  write(*,*) 'USING MODEL 302'
+
 endif
 
 call broadcast_phys(my_id)         ! distribute some values
-
-if (my_id .eq. 1) then
-  write(*,'(A,12e12.4)') ' heatsource   : ',heatsource
-  write(*,'(A,12e12.4)') ' partsource   : ',particlesource
-  write(*,'(A,12e12.4)') ' T(profile)   : ',T_0,T_1,T_coef
-  write(*,'(A,12e12.4)') ' rho(profile) : ',rho_0,rho_1,rho_coef
-  write(*,'(A,12e12.4)') ' Kappa        : ',ZK_par,ZK_perp(1:5)
-  write(*,'(A,12e12.4)') ' Diffusion    : ',D_par,D_perp(1:5)
-endif
 
 return
 end

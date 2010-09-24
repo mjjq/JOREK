@@ -19,6 +19,9 @@
  quad_u = -0.
  quad_l = -0.
 
+ freeboundary = .f.
+ use_starwall = .f.
+ resistive_wall = .f.
 
  xampl  = +0.
  xsig   = 0.6

@@ -18,7 +18,7 @@ call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
 call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
 call MPI_TYPE_EXTENT(MPI_LOGICAL,ILOG_EXT,ierr)
 
-bufsize = ( 144 * IDBL_EXT + (4+n_tor) * INT_EXT + 5 * ILOG_EXT )
+bufsize = ( 144 * IDBL_EXT + (4+n_tor) * INT_EXT + 7 * ILOG_EXT )
 
 if (allocated(buffer)) deallocate(buffer)
 allocate(buffer(bufsize/ INT_EXT))
@@ -105,6 +105,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(import_equil,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(xpoint,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(freeboundary,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(use_starwall,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(resistive_wall,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 endif
 
@@ -193,6 +195,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,import_equil,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,xpoint,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,freeboundary,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,use_starwall,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,resistive_wall,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
 endif
 

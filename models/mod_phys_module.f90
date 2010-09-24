@@ -23,8 +23,10 @@ use parameters
   integer :: nstep, n_R, n_Z, n_radial, n_pol, n_tht, n_flux, n_boundary
   integer :: n_open, n_private, n_leg
   integer :: mf, index_start, index_now, mode(n_tor), nout
-  logical :: restart, regrid, import_equil, xpoint, freeboundary, use_starwall
+  logical :: restart, regrid, import_equil, xpoint
   logical :: refinement
-  character(len=9)      :: wall_type     ! 'ideal' or 'resistive'
+  logical :: freeboundary   ! use free or fixed boundary?
+  logical :: use_starwall   ! use the STARWALL vacuum solution? (free boundary only)
+  logical :: resistive_wall ! use a resistive or ideal wall?    (free boundary only)
   real*8, allocatable   :: xtime(:), energies(:,:,:)
 end module

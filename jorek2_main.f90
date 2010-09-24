@@ -128,9 +128,6 @@ program JOREK2
   my_id = rank
   n_cpu = comm_size
 
-  use_starwall = .false.                                    ! make this a namelist input parameter later
-  wall_type    = 'ideal'                                    ! make this a namelist input parameter later
-
   gmres  = .true.                                           ! .true. for gmres, .false. for direct
 
   use_mumps  = .false.
@@ -158,6 +155,7 @@ program JOREK2
 
   !---------------------------------------------------------- some checks not to waste any cpu time
   call initialise_parameters(my_id)                  ! default values and namelist input
+  call log_parameters(my_id)
 
   if(required.ne.provided)then
      write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
@@ -400,7 +398,7 @@ program JOREK2
      allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
 
      ! fill the vacuum response matrix
-     if ( wall_type == 'ideal' ) then
+     if ( .NOT. resistive_wall ) then
        if ( use_starwall ) then
          call ideal_wall_starwall(my_id,node_list,boundary_list)
        else

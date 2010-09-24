@@ -12,5 +12,9 @@ real*8, allocatable :: vacuum_response3(:,:,:) !for testing only
 ! --- Resistive wall only.
 integer             :: n_wall_curr                ! Number of wall current potentials.
 real*8, allocatable :: wall_curr(:)               ! Wall current potentials.
+real*8, allocatable :: diagonal_yy(:)
+real*8, allocatable :: matrix_ye(:,:,:)
+real*8, allocatable :: matrix_ey(:,:,:)
+real*8, allocatable :: matrix_ee(:,:,:)
 
 end module vacuum_response_module

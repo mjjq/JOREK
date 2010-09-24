@@ -163,39 +163,36 @@ program JOREK2
   call log_parameters(my_id)
 
   if(required.ne.provided)then
-     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
-     call MPI_FINALIZE(IERR)
-     stop
+    write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
+    call MPI_FINALIZE(IERR)
+    stop
   endif
 
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
-     write(*,*) ' FATAL : specify a valid solver'
-     call MPI_FINALIZE(IERR)                                ! clean up MPI
-     stop
+    write(*,*) ' FATAL : specify a valid solver'
+    call MPI_FINALIZE(IERR)                                ! clean up MPI
+    stop
   endif
 
   if ((n_plane .lt. n_tor + 1) .and. (n_tor .gt. 1)) then
-     write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
-     call MPI_FINALIZE(IERR)                                ! clean up MPI
-     stop
+    write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
+    call MPI_FINALIZE(IERR)                                ! clean up MPI
+    stop
   endif
 
   if ((gmres) .and. (nstep .gt. 0)) then
-     if (n_cpu .lt. (n_tor-1)/2+1) then
-        write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-
-  !      call MPI_FINALIZE(IERR)                                ! clean up MPI
-  !      stop
-
-        !        call MPI_FINALIZE(IERR)                                ! clean up MPI
-        !        stop
-
-     endif
-     if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
-        write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-        call MPI_FINALIZE(IERR)                                ! clean up MPI
-        stop
-     endif
+    if (n_cpu .lt. (n_tor-1)/2+1) then
+      write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
+      
+  !    call MPI_FINALIZE(IERR)                             ! clean up MPI
+  !    stop
+      
+    endif
+    if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
+      write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
+      call MPI_FINALIZE(IERR)                              ! clean up MPI
+      stop
+    endif
   endif
 
 
@@ -345,32 +342,28 @@ program JOREK2
   !*                        vacuum initialisation                         *
   !************************************************************************
   if (freeboundary) then
+    
+    if (my_id .eq. 0) call export_boundary(node_list,boundary_list)
+    
+    write(*,*) ' n_bnd_elements : ',boundary_list%n_bnd_elements
+    
+    call initialise_mumps(MPI_COMM_WORLD)                  ! start MUMPS sparse matrix solver
+    
+    ! --- Fill the vacuum response matrix/matrices
+    if ( .NOT. resistive_wall ) then
+      if ( use_starwall ) then
+        call ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
+      else
+        call ideal_wall(my_id,node_list,boundary_list,bnd_node_list)
+      end if
+    else
+      call resistive_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
+    end if
 
-     if (my_id .eq. 0) call export_boundary(node_list,boundary_list)
-
-     write(*,*) ' n_bnd_elements : ',boundary_list%n_bnd_elements
-
-     call initialise_mumps(MPI_COMM_WORLD)                  ! start MUMPS sparse matrix solver
-
-     n_dof_bnd = 2*boundary_list%n_bnd_elements             ! the number of degress of freedomon the boundary not correct for grid-xpoint
-
-     allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
-
-     ! fill the vacuum response matrix
-     if ( .NOT. resistive_wall ) then
-       if ( use_starwall ) then
-         call ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
-       else
-         call ideal_wall(my_id,node_list,boundary_list,bnd_node_list)
-       end if
-     else
-       call resistive_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
-     end if
-
-     mumps_par%JOB = -2                                     ! clean up this instance of mumps
-     call DMUMPS(mumps_par)
-     call MPI_bcast(vacuum_response,n_dof_bnd*n_dof_bnd*n_tor,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    mumps_par%JOB = -2                                     ! clean up this instance of mumps
+    call DMUMPS(mumps_par)
+    call MPI_bcast(vacuum_response,n_dof_bnd*n_dof_bnd*n_tor,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   endif
 
@@ -908,7 +901,7 @@ program JOREK2
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
 
-        !###  FOR TESTING: OUTPUT SOME ADDITIONAL INFORMATION
+        !### FOR TESTING: OUTPUT SOME ADDITIONAL INFORMATION
         !open(42, file='times_and_steps.dat', status='REPLACE',action='WRITE')
         !do j = 1, index_now
         !  write(42,*) j, xtime(j)

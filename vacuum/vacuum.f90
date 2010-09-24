@@ -25,15 +25,15 @@ real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_p
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
 integer    :: index_min, index_max
-integer    :: my_id, ibnd,i, j, ms, mp, kp, kj, kbnd, k, l, jdir, kdir, ldir, imode, korder, kv, lv,  ilarge_vv, inode
+integer    :: my_id, ibnd,i, j, ms, mp, kp, kj, kbnd, k, l, jdir, kdir, ldir, korder, kv, lv,  ilarge_vv, inode
 integer    :: index_node, index_node2, index_node3, index_node_bnd, index_node2_bnd, index_node3_bnd, ilarge_pp, ilarge_jp, ijA_position
-integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-real*8     :: ws, xjac,  BigR, PI, phi, eps_cyl
+integer    :: in, im
+real*8     :: ws, BigR, PI
 real*8     :: psi_axis, psi_bnd, Z_xpoint
-real*8     :: rhs_glob_1, A_glob_11, A_glob_11_star, A_glob_31
-real*8     :: psi_norm, theta, zeta, gamma_sheeth
+real*8     :: A_glob_11, A_glob_31
+real*8     :: theta, zeta
 
-real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
+real*8     :: v
 real*8     :: ps0, ps0_s, r0, T0
 real*8     :: psi, psi_s, rho,  T, eta_T
 integer    :: itmp1, itmp2

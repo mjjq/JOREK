@@ -17,7 +17,11 @@ real*8  :: r_wall
 integer :: my_id, imode, i
 logical :: xpoint
 
-n_dof_bnd = 2*boundary_list%n_bnd_elements                 ! the number of degress of freedomon the boundary not correct for grid-xpoint
+n_dof_bnd = 2*boundary_list%n_bnd_elements             ! the number of degress of freedomon the boundary not correct for grid-xpoint
+
+if ( allocated(vacuum_response) ) deallocate(vacuum_response)
+allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
+
 
 vacuum_response  = 0.d0
 
@@ -913,26 +917,37 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
   use phys_module
   implicit none
 
+
   integer,                     intent(in) :: my_id            ! MPI thread number of current thread
   type(type_node_list),        intent(in) :: node_list        ! List of boundary nodes
   type(type_bnd_element_list), intent(in) :: boundary_list    ! List of boundary elements
   type(type_bnd_node_list),    intent(in) :: bnd_node_list    ! List of boundary nodes
 
 
-  character(len=128) :: file_response_starwall = 'vacuum_response_starwall'
-  
   integer :: dim
-  integer :: i_n, j_n
   integer :: itor, jtor
   integer :: inode, jnode
   integer :: ibas, jbas
-  integer :: icossin, jcossin ! 0: cos, 1: sin
   integer :: iindex, jindex
-  integer :: rn_response, cn_response
   integer :: iindex2, jindex2
   real*8  :: response
+  real*8  :: TWOPI
+  integer :: ierr
   
-  open(42, FILE=file_response_starwall)
+
+  TWOPI=8.*atan(1.)
+  
+  write(*,*) 'BEGIN ideal_wall_starwall: Reading STARWALL response matrix.'
+  
+  
+  
+  ! --- Read response matrix.
+  write(*,*) 'Reading response matrix from file "vacuum_response_starwall".'
+  open(42, FILE='vacuum_response_starwall', status='old', action='read', iostat=ierr)
+  if ( ierr /= 0 ) then
+    write(*,*) 'FATAL ERROR: Could not open file.'
+    stop
+  end if
 
   read(42,*) dim
   write(*,*) 'dim=',dim
@@ -941,24 +956,22 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
   
   ! Outer loops (response index)
   do inode = 1, boundary_list%n_bnd_elements              ! loop over nodes
-    do itor = 2,3                                     ! loop over toroidal modes
-      do ibas = 1, 2                         ! loop over basis functions
+    do itor = 2,3                                         ! loop over toroidal modes
+      do ibas = 1, 2                                      ! loop over basis functions
         
-        iindex = 2*(inode-1) +   (ibas-1) + 1  ! first index in response matrix
-        
-        jindex = 0
+        iindex = 2*(inode-1) +   (ibas-1) + 1             ! first index in response matrix
         
         ! Inner loops (perturbation index)
         do jnode = 1, boundary_list%n_bnd_elements        ! loop over nodes
-          do jtor = 2, 3                              ! loop over toroidal harmonics
-            do jbas = 1, 2                         ! loop over basis functions
+          do jtor = 2, 3                                  ! loop over toroidal harmonics
+            do jbas = 1, 2                                ! loop over basis functions
               
-              jindex = 2*(jnode-1) +   (jbas-1) + 1  ! second index in response matrix
+              jindex = 2*(jnode-1) +   (jbas-1) + 1       ! second index in response matrix
                 
               read(42,*) iindex2, jindex2, response
-
+              
               if ( itor == jtor ) then
-                vacuum_response(iindex,jindex,itor) = - 6.283185307 * response
+                vacuum_response(iindex,jindex,itor) = - TWOPI * response
               endif
                   
             end do
@@ -972,5 +985,11 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
   vacuum_response(:,:,3) = vacuum_response(:,:,2)
 
   close(42)
+  
+  
+
+  write(*,*) 'END ideal_wall_starwall'
+  
+  
 
 end subroutine ideal_wall_starwall

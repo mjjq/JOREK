@@ -1,4 +1,4 @@
-subroutine resistive_wall_starwall(my_id, node_list, boundary_list)
+subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list)
 
   use data_structure
   use vacuum_response_module
@@ -11,6 +11,7 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list)
   integer,                     intent(in) :: my_id            ! MPI thread number of current thread
   type(type_node_list),        intent(in) :: node_list        ! List of boundary nodes
   type(type_bnd_element_list), intent(in) :: boundary_list    ! List of boundary elements
+  type(type_bnd_node_list),    intent(in) :: bnd_node_list    ! List of boundary nodes
 
 
   character(len=128) :: file_response_starwall = 'vacuum_response_starwall'

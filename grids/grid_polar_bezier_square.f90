@@ -1,5 +1,5 @@
 subroutine grid_bezier_square_polar(nR,nZ,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf, &
-                                    boundary,node_list,element_list,boundary_list)
+                                    boundary,node_list,element_list)
 !***********************************************************************
 ! delivers a square grid surrounded by a one transition ring to a polar
 ! grid
@@ -17,7 +17,6 @@ implicit none
 
 type(type_node_list)    :: node_list
 type(type_element_list) :: element_list
-type(type_bnd_element_list) :: boundary_list
 
 real*8  :: R_begin, R_end, Z_begin, Z_end, radius,x_tmp(n_order+1,n_dim),index_tmp(n_order+1)
 real*8  :: fbnd(*), fpsi(*), amin, Rgeo, Zgeo, u_length
@@ -142,7 +141,7 @@ radius = (1.+ 2./(float(n_radial-1))) *sqrt((R_end-R_begin)**2 + (Z_end - Z_begi
 write(*,'(A,i6)') ' number of nodes    : ',node_list%n_nodes
 write(*,'(A,i6)') ' number of elements : ',element_list%n_elements
 
-call grid_polar_bezier(Rgeo,Zgeo,amin,radius,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list,boundary_list)
+call grid_polar_bezier(Rgeo,Zgeo,amin,radius,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list)
 
 !-------------- adapt the corner nodes
 !node_list%node(nR*nZ+1)%x(1,2)  = 1.1*node_list%node(nR*nZ+1)%x(1,2)

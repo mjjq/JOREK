@@ -78,7 +78,7 @@ program JOREK2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
-  integer                  :: istep,ierr,i,k,inode, i_elm_axis, i_elm_xpoint
+  integer                  :: istep,ierr,i,j,k,inode, i_elm_axis, i_elm_xpoint
   integer                  :: n_local_ELMs, index_total
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
@@ -127,6 +127,11 @@ program JOREK2
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
   my_id = rank
   n_cpu = comm_size
+
+  if (my_id .eq. 0) write(*,*) '****************************************'
+  if (my_id .eq. 0) write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
+  if (my_id .eq. 0) write(*,*) '****************************************'
+  if (my_id .eq. 0) write(*,*) ' n_cpu : ',n_cpu
 
   gmres  = .true.                                           ! .true. for gmres, .false. for direct
 
@@ -194,11 +199,6 @@ program JOREK2
   endif
 
 
-  if (my_id .eq. 0) write(*,*) '****************************************'
-  if (my_id .eq. 0) write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
-  if (my_id .eq. 0) write(*,*) '****************************************'
-  if (my_id .eq. 0) write(*,*) ' n_cpu : ',n_cpu
-
   if (my_id .eq. 0)  call begplt('jorek2.ps')        ! initialise ppplib plotting library
 
   call initialise_basis                              ! define the basis functions at the Gaussian points
@@ -213,7 +213,7 @@ program JOREK2
         if (regrid) then                               ! optional redo fluxsurface grid
 
            if (xpoint)  then
-              call grid_xpoint(node_list,element_list,boundary_list,n_flux,n_open,n_private,n_leg,n_tht)
+              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
            else
               call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
            endif
@@ -240,7 +240,7 @@ program JOREK2
 
         if ((n_R .gt. 0) .and. (n_Z .gt. 0) .and. (n_radial .gt.0)) then
 
-           call grid_bezier_square_polar(n_R,n_Z,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf,.true.,node_list,element_list,boundary_list)
+           call grid_bezier_square_polar(n_R,n_Z,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf,.true.,node_list,element_list)
 
         elseif ((n_R .gt. 0) .and. (n_Z .gt. 0) ) then
 
@@ -248,7 +248,7 @@ program JOREK2
 
         elseif ((n_radial .gt. 0) .and. (n_pol .gt. 0) ) then
 
-           call grid_polar_bezier(R_geo,Z_geo,amin,0.d0,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list,boundary_list)
+           call grid_polar_bezier(R_geo,Z_geo,amin,0.d0,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list)
 
         else
 
@@ -258,109 +258,68 @@ program JOREK2
 
         endif	
 
-
-        call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
-         !call print_grid(node_list,element_list,boundary_list)                  ! print the grid
-         !call export_restart(node_list,element_list,'jorek_restart.rst')
-
-        if(.not. bench_without_plot) call plot_grid(node_list,element_list,boundary_list,.true.,.false.)    ! plot the grid
-        !        call print_grid(node_list,element_list,boundary_list)                  ! print the grid
-
+        if ( freeboundary ) call boundary_from_grid()                             ! Determine boundary information from the grid
+        
+        if(.not. bench_without_plot) call plot_grid(node_list,element_list,boundary_list,bnd_node_list,.true.,.false.)    ! plot the grid
+        !call print_grid(node_list,element_list,boundary_list)                  ! print the grid
+        !call export_restart(node_list,element_list,'jorek_restart.rst')
 
      endif
     
-     ! Determine boundary information from the grid.
-     if ( freeboundary ) call boundary_from_grid()
-  
      call equilibrium(my_id,node_list,element_list,xpoint)                        ! equilibrium run on all cpus
      call initial_conditions(my_id,node_list,element_list,xpoint)                 ! initial conditions
-   !call finplt
-   !stop
+
      if (n_flux .gt. 1) then                                                      ! flux surface grid
 
-        if (xpoint)  then
+       if (xpoint)  then
 
-           if (my_id .eq. 0) call grid_xpoint(node_list,element_list,boundary_list,n_flux,n_open,n_private,n_leg,n_tht)
+         if (my_id .eq. 0) call grid_xpoint(node_list,element_list,boundary_list,n_flux,n_open,n_private,n_leg,n_tht)
 
-           call broadcast_nodes(my_id,node_list)
-           call broadcast_elements(my_id,element_list)
-           call broadcast_boundary(my_id,boundary_list)
+         call broadcast_nodes(my_id,node_list)
+         call broadcast_elements(my_id,element_list)
+         call broadcast_boundary(my_id,boundary_list,bnd_node_list)
 
-           call poisson(my_id,0,node_list,element_list,3,1,1,xpoint)
-           call poisson(my_id,1,node_list,element_list,4,2,1,xpoint)
+         call poisson(my_id,0,node_list,element_list,3,1,1,xpoint)
+         call poisson(my_id,1,node_list,element_list,4,2,1,xpoint)
 
-        else
+       else
 
          if (my_id .eq. 0) then
 
-          call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+           call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
               
 
-               !****************************************************************************
-               !                        Refining elements (equilibrum)                     *
-               !****************************************************************************
+           !****************************************************************************
+           !                        Refining elements (equilibrum)                     *
+           !****************************************************************************
 
-            if(refinement) then
+           if (refinement) then
   
              n_to_be_refined=0
 
-              do i=16*16+1,25*16
-
-               list_to_be_refined(i-16*16) =i
-               n_to_be_refined =  n_to_be_refined +1
-
-              enddo
-
-              do i=32*16+1,element_list%n_elements-16*2
-
-               list_to_be_refined(i-32*16+144) =i !   144=(25-16)*16
-               n_to_be_refined =  n_to_be_refined +1
-      
-              enddo 
-          
-          
-          
              call Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_refined)
-
-             do i=640+1,1024
-
-               list_to_be_refined(i-640) =i
-               n_to_be_refined =  n_to_be_refined +1
-
-             enddo
-
-            do i=1025,1600
-               list_to_be_refined(i-1024) =i
-               n_to_be_refined =  n_to_be_refined +1
-               
-            enddo
  
-            call Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_refined)
-  
-           
              call Ref_Update_Index( element_list,node_list)
           
-            endif
-           
-         
            endif
-        
-      
+             
+         endif
 
-        endif
+       endif
          
-        call equilibrium(my_id,node_list,element_list,xpoint)                         ! equilibrium run on all cpus
-        call initial_conditions(my_id,node_list,element_list,xpoint)                  ! initial conditions
+       if ( (freeboundary) .and. (my_id==0) ) call boundary_from_grid() ! Determine boundary information from the grid.
 
-        !    if (my_id .eq. 0) call print_grid(node_list,element_list)                    ! print nodes and elements
-        !    if (my_id .eq. 0) call plot_grid(node_list,element_list,.true.,.false.)      ! plot the grid
-        !    if (my_id .eq. 0) call plot_grid(node_list,element_list,.true.,.true.)       ! plot the grid
+       if ( my_id == 0 ) call plot_grid(node_list,element_list,boundary_list,bnd_node_list,.false.,.false.)
+  
+       call equilibrium(my_id,node_list,element_list,xpoint)                         ! equilibrium run on all cpus
+       call initial_conditions(my_id,node_list,element_list,xpoint)                  ! initial conditions
+
+       !    if (my_id .eq. 0) call print_grid(node_list,element_list)                    ! print nodes and elements
+       !    if (my_id .eq. 0) call plot_grid(node_list,element_list,boundary_list,bnd_node_list,.true.,.false.)      ! plot the grid
+       !    if (my_id .eq. 0) call plot_grid(node_list,element_list,boundary_list,bnd_node_list,.true.,.true.)       ! plot the grid
 
      endif
 
-     ! Determine boundary information from the grid.
-     if ( freeboundary ) call boundary_from_grid()
-  
      if (my_id .eq. 0) call energy(node_list,element_list,W_mag,W_kin)
      if (my_id .eq. 0) write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
 
@@ -375,7 +334,7 @@ program JOREK2
 
 
   call broadcast_elements(my_id,element_list)             ! sending all elements
-  call broadcast_boundary(my_id,boundary_list)            ! sending boundary elements
+  call broadcast_boundary(my_id,boundary_list,bnd_node_list) ! sending boundary elements
   call broadcast_nodes(my_id,node_list)                   ! sending all nodes
   call broadcast_phys(my_id)                              ! sending the physics parameters
 
@@ -400,12 +359,12 @@ program JOREK2
      ! fill the vacuum response matrix
      if ( .NOT. resistive_wall ) then
        if ( use_starwall ) then
-         call ideal_wall_starwall(my_id,node_list,boundary_list)
+         call ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
        else
-         call ideal_wall(my_id,node_list,boundary_list)
+         call ideal_wall(my_id,node_list,boundary_list,bnd_node_list)
        end if
      else
-       call resistive_wall_starwall(my_id,node_list,boundary_list)
+       call resistive_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
      end if
 
      mumps_par%JOB = -2                                     ! clean up this instance of mumps
@@ -949,7 +908,35 @@ program JOREK2
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
 
-      !  print*,"enrj",abs(energies(1,2,index_start+istep-1))
+        !###  FOR TESTING: OUTPUT SOME ADDITIONAL INFORMATION
+        !open(42, file='times_and_steps.dat', status='REPLACE',action='WRITE')
+        !do j = 1, index_now
+        !  write(42,*) j, xtime(j)
+        !end do
+        !close(42)
+        !
+        !open(42, file='energies.dat', status='REPLACE',action='WRITE')
+        !do i = 1, n_tor
+        !  do j = 1, index_now
+        !    write(42,*) xtime(j), energies(i,1:2,j)
+        !  end do
+        !  write(42,*)
+        !  write(42,*)
+        !end do
+        !close(42)
+        !
+        !open(42, file='growth_rates.dat', status='REPLACE',action='WRITE')
+        !do i = 1, n_tor
+        !  do j = 2, index_now
+        !   write(42,*) ( xtime(j) + xtime(j-1) ) / 2., 0.5 * ( LOG(energies(i,1:2,j)) - LOG(energies(i,1:2,j-1)) ) / ( xtime(j) - xtime(j-1) )
+        !  end do
+        !  write(42,*)
+        !  write(42,*)
+        !end do
+        !close(42)
+        !### END FOR TESTING
+
+        !  print*,"enrj",abs(energies(1,2,index_start+istep-1))
      endif
 
      !---------------------------------------------------------timing

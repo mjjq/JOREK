@@ -1,4 +1,4 @@
-subroutine grid_xpoint(node_list,element_list,boundary_list,n_flux,n_open,n_private,n_leg,n_tht)
+subroutine grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
@@ -9,7 +9,6 @@ implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
-type (type_bnd_element_list):: boundary_list
 type (type_surface_list) :: flux_list
 
 type (type_node_list)    :: newnode_list
@@ -110,7 +109,6 @@ enddo
 call find_flux_surfaces(xpoint,node_list,element_list,flux_list)
 !call q_profile(node_list,element_list,flux_list)
 
-call plot_grid(node_list,element_list,boundary_list,.true.,.false.)
 call plot_flux_surfaces(node_list,element_list,flux_list,.false.)
 
 
@@ -1386,8 +1384,6 @@ node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
-
-call plot_grid(node_list,element_list,boundary_list,.false.,.false.)
 
 call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
 

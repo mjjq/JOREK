@@ -1,4 +1,4 @@
-subroutine plot_grid(node_list,element_list,boundary_list,frame,bezier)
+subroutine plot_grid(node_list,element_list,boundary_list,bnd_node_list,frame,bezier)
 !----------------------------------------------------------------
 ! plot the grid of finite elements with the correct curved edges
 !----------------------------------------------------------------
@@ -10,6 +10,7 @@ implicit none
 type (type_node_list)        :: node_list
 type (type_element_list)     :: element_list
 type (type_bnd_element_list) :: boundary_list
+type (type_bnd_node_list)    :: bnd_node_list
 real*8,allocatable :: xp(:,:)
 real*8             :: xs(2,n_dim), xx_0(n_dim), uu_0(n_dim), vv_0(n_dim), ww_0(n_dim)
 real*8             :: uv_0(n_dim), uv_p(n_dim), xx_p(n_dim) ,xb(4,n_dim)

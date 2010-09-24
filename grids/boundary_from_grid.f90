@@ -26,8 +26,6 @@ subroutine boundary_from_grid()
   bnd_node_list%n_bnd_nodes    = 0
   boundary_list%n_bnd_elements = 0
   
-!write(*,*) '######a'
-  
   
   ! --- Go through all elements of the grid and find out which are located
   !     at the boundary. Build up the lists of boundary nodes and elements.
@@ -43,7 +41,6 @@ subroutine boundary_from_grid()
       ! --- Indices of the nodes in the node_list.
       inode1 = element_list%element(i_elem)%vertex(iv1)
       inode2 = element_list%element(i_elem)%vertex(iv2)
-!write(*,*) '######b', i_elem, iside, iv1, iv2, inode1, inode2
       
       ! --- Boundary information of the two nodes.
       b1 = node_list%node(inode1)%boundary
@@ -64,6 +61,10 @@ subroutine boundary_from_grid()
     end do
     
   end do
+  
+  write(*,*) 'bnd_node_list%n_bnd_nodes    =', bnd_node_list%n_bnd_nodes
+  write(*,*) 'boundary_list%n_bnd_elements =', boundary_list%n_bnd_elements
+
   
   
   

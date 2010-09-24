@@ -1,4 +1,4 @@
-subroutine ideal_wall(my_id,node_list,boundary_list)
+subroutine ideal_wall(my_id,node_list,boundary_list,bnd_node_list)
 !-------------------------------------------------------------------
 ! routine calculates the vacuum reponse matrix of a vacuum region
 ! up to an ideally conducting wall
@@ -9,6 +9,7 @@ implicit none
 
 type(type_node_list)        :: node_list
 type(type_bnd_element_list) :: boundary_list
+type(type_bnd_node_list)    :: bnd_node_list
 type(type_node_list)        :: vacuum_node_list
 type(type_element_list)     :: vacuum_element_list
 
@@ -30,7 +31,7 @@ if (my_id .eq. 0) then
 
   call vacuum_grid(node_list,boundary_list,r_wall,vacuum_node_list,vacuum_element_list)
 
-  call plot_grid(vacuum_node_list,vacuum_element_list,boundary_list,.true.,.true.)    ! plot the grid
+  call plot_grid(vacuum_node_list,vacuum_element_list,boundary_list,bnd_node_list,.true.,.true.)    ! plot the grid
 
 endif
 
@@ -905,16 +906,17 @@ end subroutine vacuum_grid
 
 
 
-subroutine ideal_wall_starwall(my_id,node_list,boundary_list)
+subroutine ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
 
   use data_structure
   use vacuum_response_module
   use phys_module
   implicit none
 
-  integer,                  intent(in) :: my_id            ! MPI thread number of current thread
-  type(type_node_list),     intent(in) :: node_list        ! List of boundary nodes
+  integer,                     intent(in) :: my_id            ! MPI thread number of current thread
+  type(type_node_list),        intent(in) :: node_list        ! List of boundary nodes
   type(type_bnd_element_list), intent(in) :: boundary_list    ! List of boundary elements
+  type(type_bnd_node_list),    intent(in) :: bnd_node_list    ! List of boundary nodes
 
 
   character(len=128) :: file_response_starwall = 'vacuum_response_starwall'

@@ -102,7 +102,7 @@ program JOREK2
   TYPE (type_element)      :: element
   integer                  :: index_size, id_elements
 
-  integer     	           ::  list_to_be_refined(n_ref_list), n_to_be_refined    
+  integer                  ::  list_to_be_refined(n_ref_list), n_to_be_refined    
   
   logical                  :: bench_without_plot
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
@@ -253,7 +253,7 @@ program JOREK2
            call MPI_FINALIZE(IERR)                                ! clean up MPI
            stop
 
-        endif	
+        endif 
 
         if ( freeboundary ) call boundary_from_grid()                             ! Determine boundary information from the grid
         
@@ -350,7 +350,11 @@ program JOREK2
     call initialise_mumps(MPI_COMM_WORLD)                  ! start MUMPS sparse matrix solver
     
     ! --- Fill the vacuum response matrix/matrices
+    n_dof_bnd = 2*bnd_node_list%n_bnd_nodes                ! degrees of freedom on the boundary
     if ( .NOT. resistive_wall ) then
+      if ( allocated(vacuum_response) ) deallocate(vacuum_response)
+      allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
+      vacuum_response = 0.
       if ( use_starwall ) then
         call ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
       else

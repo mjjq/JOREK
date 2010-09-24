@@ -1,14 +1,5 @@
 subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list)
 ! Reads the resistive wall vacuum response matrices written out by STARWALL.
-!
-!   Y: wall currents
-!   P: poloidal flux
-!
-!   dY/dt = - 1/(sigma * d) * [YY] * Y - [YE] * dP/dt
-!
-!   B_par = [EY] * Y + [EE] * P
-!
-! -> Thus, matrix [EE] has the same structure as the ideal response matrix.
 
   use data_structure
   use vacuum_response_module
@@ -35,12 +26,11 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
   real*8  :: TWOPI
   integer :: ierr
   
-  n_dof_bnd = 2*boundary_list%n_bnd_elements       ! the number of degress of freedom on the boundary ###not correct for grid-xpoint
+  TWOPI=8.d0*atan(1.d0)
   
-  
-  TWOPI=8.*atan(1.)
-  
-  write(*,*) 'BEGIN resistive_wall_starwall: Reading STARWALL response matrices.'
+  write(*,*) '************************************'
+  write(*,*) '*     resistive_wall_starwall      *'
+  write(*,*) '************************************'
   
   
   
@@ -58,7 +48,7 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
   if ( allocated(matrix_ee) ) deallocate(matrix_ee)
   allocate( matrix_ee(n_dof_bnd,n_dof_bnd,n_tor) )
   
-  matrix_ee = 0.
+  matrix_ee = 0.d0
   
   ! Outer loops (response index)
   do inode = 1, boundary_list%n_bnd_elements          ! loop over nodes
@@ -110,7 +100,7 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
   if ( allocated(matrix_ey) ) deallocate(matrix_ey)
   allocate( matrix_ey(n_dof_bnd,n_wall_curr,n_tor) )
   
-  matrix_ey = 0.
+  matrix_ey = 0.d0
   
   ! Outer loops (response index)
   do inode = 1, boundary_list%n_bnd_elements          ! loop over nodes
@@ -152,7 +142,7 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
   if ( allocated(matrix_ye) ) deallocate(matrix_ye)
   allocate( matrix_ye(n_wall_curr,n_dof_bnd,n_tor) )
   
-  matrix_ye = 0.
+  matrix_ye = 0.d0
   
   ! Outer loop (wall current index)
   do iwall = 1, n_wall_curr - 1 ! (no response for last wall current potential)
@@ -194,7 +184,7 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
   if ( allocated(diagonal_yy) ) deallocate(diagonal_yy)
   allocate( diagonal_yy(n_wall_curr) )
   
-  diagonal_yy = 0.
+  diagonal_yy = 0.d0
   
   ! (wall current index)
   do iwall = 1, n_wall_curr - 1 ! (no response for last wall current potential)
@@ -206,6 +196,14 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
   end do
   
   close(42)
+  
+  
+  
+  ! --- Prepare the wall current array.
+  if ( allocated(wall_curr) ) deallocate(wall_curr)
+  allocate( wall_curr(n_wall_curr) )
+  wall_curr = 0.d0
+  
   
   
   

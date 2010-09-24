@@ -17,14 +17,6 @@ real*8  :: r_wall
 integer :: my_id, imode, i
 logical :: xpoint
 
-n_dof_bnd = 2*boundary_list%n_bnd_elements             ! the number of degress of freedomon the boundary not correct for grid-xpoint
-
-if ( allocated(vacuum_response) ) deallocate(vacuum_response)
-allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
-
-
-vacuum_response  = 0.d0
-
 if (my_id .eq. 0) then
 
   write(*,*) '******************************'
@@ -376,8 +368,8 @@ if (my_id .eq. 0) then
            .and. ((node_list%node(inode2)%boundary .eq. 4) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
           nodes(1) = node_list%node(inode1)
-	  nodes(2) = node_list%node(inode2)
-	  vertex   = (/ iv, iv2 /)
+    nodes(2) = node_list%node(inode2)
+    vertex   = (/ iv, iv2 /)
 
           dir      = (/ 1, 3 /) ! not correct, depends on node not on element side  -->  take it from boundary_list
 
@@ -409,7 +401,7 @@ if (my_id .eq. 0) then
             psi   = eq_g(ms)
             psi_s = eq_s(ms)
 
-	    dl = sqrt(x_s(ms)**2 + y_s(ms)**2)
+      dl = sqrt(x_s(ms)**2 + y_s(ms)**2)
 
             angle  = atan2(y_g(ms), x_g(ms)-R_geo)
             angle2 = MOD( angle + 2*PI, 2*PI )
@@ -625,7 +617,7 @@ if (my_id .eq. 0) then
             xx=0.; xxs=0.; yy=0.; yys=0.; pp=0.; ps=0.
 
             ss = 1.d0 - float(ms-1)/10.d0
-	                
+                  
             call basisfunctions1(ss,HH,HH_s,HH_ss)
 
             do i=1,2 ! vertex number
@@ -749,7 +741,7 @@ do ms=1, n_gauss
            index_kl = (k-1)*(n_order+1) + l
 
            ELM(index_ij,index_kl) =  ELM(index_ij,index_kl) &
-	                          + (psi_x * v_x + psi_y * v_y + (float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt)*xjac*wst
+                            + (psi_x * v_x + psi_y * v_y + (float(itor)/x_g(ms,mt))**2 * v * psi) * x_g(ms,mt)*xjac*wst
 
          enddo
        enddo
@@ -937,8 +929,9 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
 
   TWOPI=8.*atan(1.)
   
-  write(*,*) 'BEGIN ideal_wall_starwall: Reading STARWALL response matrix.'
-  
+  write(*,*) '************************************'
+  write(*,*) '*        ideal_wall_starwall       *'
+  write(*,*) '************************************'
   
   
   ! --- Read response matrix.
@@ -952,8 +945,7 @@ subroutine ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
   read(42,*) dim
   write(*,*) 'dim=',dim
   
-  vacuum_response = 0.
-  
+
   ! Outer loops (response index)
   do inode = 1, boundary_list%n_bnd_elements              ! loop over nodes
     do itor = 2,3                                         ! loop over toroidal modes

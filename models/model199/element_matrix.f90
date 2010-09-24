@@ -251,7 +251,7 @@ do ms=1, n_gauss
                       + BigR**2 * (v_s * p0_t - v_t * p0_s)                      * tstep &
                       + visco_num * (v_s * w0_s + v_t * w0_t)                    * tstep &
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac  
-		       
+           
            rhs_ij_3 = 0.d0 !- ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * tstep
            rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
 

@@ -1,5 +1,5 @@
-subroutine vacuum(my_id,node_list,element_list,boundary_list,index_min,index_max, &
-                  xpoint2,psi_axis,psi_bnd,Z_xpoint)
+subroutine vacuum(my_id,node_list,element_list,boundary_list,bnd_node_list, &
+                  index_min,index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundary integral of the
 ! induction equation using the vacuum response from STARWALL
@@ -12,11 +12,21 @@ use phys_module
 use global_distributed_matrix
 use vacuum_response_module
 
+
 implicit none
 
-type (type_node_list)        :: node_list
-type (type_element_list)     :: element_list
-type (type_bnd_element_list) :: boundary_list
+integer,                      intent(in)    :: my_id          ! Number of current MPI thread.
+type (type_node_list),        intent(in)    :: node_list      ! Node list of current grid.
+type (type_element_list),     intent(in)    :: element_list   ! Element list of current grid.
+type (type_bnd_element_list), intent(in)    :: boundary_list  ! List of 1D boundary elements.
+type (type_bnd_node_list),    intent(in)    :: bnd_node_list  ! List of boundary nodes.
+integer,                      intent(in)    :: index_min      !
+integer,                      intent(in)    :: index_max      !
+logical,                      intent(in)    :: xpoint2        ! X-point equilibrium?
+real*8,                       intent(in)    :: psi_axis       ! Psi value at magnetic axis.
+real*8,                       intent(in)    :: psi_bnd        ! Psi value at plasma boundary.
+real*8,                       intent(in)    :: Z_xpoint       ! Z-position of X-point.
+
 
 real*8     :: x_g(n_gauss), x_s(n_gauss), x_ss(n_gauss)
 real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)
@@ -24,12 +34,12 @@ real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)
 real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_plane,n_var,n_gauss), eq_ss(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
-integer    :: index_min, index_max
-integer    :: my_id, ibnd,i, j, ms, mp, kp, kj, kbnd, k, l, jdir, kdir, ldir, korder, kv, lv,  ilarge_vv, inode
+integer    :: ibnd,i, j, ms, mp, kp, kj, kbnd, k, l, jdir, kdir, ldir, korder, kv, lv,  ilarge_vv, inode
 integer    :: index_node, index_node2, index_node3, index_node_bnd, index_node2_bnd, index_node3_bnd, ilarge_pp, ilarge_jp, ijA_position
 integer    :: in, im
+integer    :: jpsi, iwall, jnode, jtor, jbas, jindex, jnode_glob, jnode2, jelem
+real*8     :: dPdt, YE_dPdt
 real*8     :: ws, BigR, PI
-real*8     :: psi_axis, psi_bnd, Z_xpoint
 real*8     :: A_glob_11, A_glob_31
 real*8     :: theta, zeta
 
@@ -37,7 +47,6 @@ real*8     :: v
 real*8     :: ps0, ps0_s, r0, T0
 real*8     :: psi, psi_s, rho,  T, eta_T
 integer    :: itmp1, itmp2
-logical    :: xpoint2
 
 write(*,*) '************************************'
 write(*,*) '*     VACUUM boundary integral     *'
@@ -48,6 +57,61 @@ PI    = 2.d0*asin(1.d0)
 theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme
 !theta = 1.5d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
+
+
+
+! --- Time-integrate currents in the resistive wall first.
+!
+!   dY/dt = - 1/(sigma * d) * [YY] * Y - [YE] * dP/dt
+!     Y: wall currents
+!     P: poloidal flux
+!
+if ( resistive_wall ) then
+
+  ! --- First part (- 1/(sigma * d) * [YY] * Y):
+  wall_curr = wall_curr - tstep * ( diagonal_yy(:) * wall_curr(:) ) * wall_resistivity / wall_thickness
+  
+  write(*,*) '###a'
+  
+  ! --- Second part (- [YE] * dP/dt):
+  jpsi=1 ! select poloidal flux variable
+  do iwall = 1, n_wall_curr                       ! loop over wall current potentials
+    write(*,*) '###b', iwall
+    do jnode = 1, bnd_node_list%n_bnd_nodes       ! loop over nodes
+      do jtor = 2, 3                              ! loop over toroidal harmonics
+        do jbas = 1, 2                            ! loop over basis functions
+          jindex = 2*(jnode-1) +   (jbas-1) + 1   ! second index in response matrix
+          write(*,*) '###c', iwall, jindex
+          
+          jnode_glob = bnd_node_list%bnd_node(jnode)%index_jorek
+          
+          ! Determine jdir of current node (essentially which coordinate direction is along the boundary).
+          !######################################################################################################
+          !### maybe this should be replaced later by a backreference of the boundary nodes to their elements ###
+          !######################################################################################################
+          JEL_LOOP: do jelem = 1, boundary_list%n_bnd_elements  ! loop over boundary elements
+            do jnode2 = 1, 2                                    ! loop over the two nodes of the element
+              if ( boundary_list%bnd_element(jelem)%bnd_vertex(jnode2) == jnode ) then
+                jdir = boundary_list%bnd_element(jelem)%direction(jnode2,jbas)
+                exit JEL_LOOP
+              end if
+            end do
+          end do JEL_LOOP
+          
+          ! dPsi/dt at the current node.
+          dPdt = node_list%node(jnode_glob)%deltas(jtor, jdir, jpsi)
+          
+          ! Sum over all nodes of [YE] * dP/dt
+          YE_dPdt = YE_dPdt + matrix_ye(iwall, jindex, jtor) * dPdt
+          
+        end do
+      end do
+    end do
+    wall_curr(iwall) = wall_curr(iwall) - tstep * YE_dPdt
+  end do
+  
+end if
+
 
 
 do ibnd = 1, boundary_list%n_bnd_elements                     ! loop over all boundary elements
@@ -94,7 +158,7 @@ do ibnd = 1, boundary_list%n_bnd_elements                     ! loop over all bo
               delta_g(mp,k,ms) = delta_g(mp,k,ms)  + node_list%node(inode)%deltas(in,jdir,k) &
                                              * boundary_list%bnd_element(ibnd)%size(i,j)       * H1(i,j,ms)   * HZ(in,mp)
 
-	      delta_s(mp,k,ms) = delta_s(mp,k,ms)  + node_list%node(inode)%deltas(in,jdir,k) &
+        delta_s(mp,k,ms) = delta_s(mp,k,ms)  + node_list%node(inode)%deltas(in,jdir,k) &
                                              * boundary_list%bnd_element(ibnd)%size(i,j)       * H1_s(i,j,ms)   * HZ(in,mp)
 
             enddo                                         ! end loop over toroidal harmonics
@@ -172,7 +236,7 @@ do ibnd = 1, boundary_list%n_bnd_elements                     ! loop over all bo
                         psi_s =  H1_s(k,l,ms) * boundary_list%bnd_element(ibnd)%size(k,l) * HZ(in,mp)         ! test function derivative (along boundary, i.e. t)
 
                         rho = psi
-		        T   = psi
+            T   = psi
 
                         do kv=1,n_var
                           do lv=1,n_var
@@ -201,13 +265,17 @@ do ibnd = 1, boundary_list%n_bnd_elements                     ! loop over all bo
                         jcn_glob(ilarge_jp) =  n_tor * n_var * (index_node3-1) + (kp-1)*n_tor + in
 
                         if  (im .eq. in) then
-
-                          A_glob(ilarge_pp)   =  A_glob(ilarge_pp) + ws * A_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,im)
-                          A_glob(ilarge_jp)   =  A_glob(ilarge_jp) + ws * A_glob_31 * vacuum_response(index_node3_bnd,index_node2_bnd,im)
+                          
+                          if ( .not. resistive_wall ) then
+                            A_glob(ilarge_pp)   =  A_glob(ilarge_pp) + ws * A_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,im)
+                            A_glob(ilarge_jp)   =  A_glob(ilarge_jp) + ws * A_glob_31 * vacuum_response(index_node3_bnd,index_node2_bnd,im)
+                          else
+                            !###
+                          end if
                           
 !                          write(*,'(7i5,7e14.6)') ibnd, mp, ms, im, in, index_node2_bnd, index_node3_bnd, A_glob_11, A_glob_11_star, &
 !                                                  vacuum_response(index_node3_bnd,index_node2_bnd,im), vacuum_response2(index_node3_bnd,index_node2_bnd,im), v, psi, psi_s
-!                        write(*,'(A,6i8,e14.6)') 'indices : ',index_node,index_node2,index_node3,ilarge_pp,irn_glob(ilarge_pp),jcn_glob(ilarge_pp),A_glob(ilarge_pp)
+!                          write(*,'(A,6i8,e14.6)') 'indices : ',index_node,index_node2,index_node3,ilarge_pp,irn_glob(ilarge_pp),jcn_glob(ilarge_pp),A_glob(ilarge_pp)
 
                         endif
                       enddo   ! end loop over toroidal harmonics
@@ -219,7 +287,7 @@ do ibnd = 1, boundary_list%n_bnd_elements                     ! loop over all bo
               enddo         ! end of loop over all boundary elements
             enddo           ! end loop over toroidal harmonics
 
-	  endif           ! endif selection of local indices
+    endif           ! endif selection of local indices
 
         enddo             ! end of loop over basis functions
       enddo               ! end of loop over nodes

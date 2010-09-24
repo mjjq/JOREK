@@ -149,12 +149,12 @@ do ife =1, n_local_elms
 !      if (     ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
 !         .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-!	nodes(1)  = node_list%node(inode1)
-!	nodes(2)  = node_list%node(inode2)
-!	vertex    = (/ iv, iv2 /)
+! nodes(1)  = node_list%node(inode1)
+! nodes(2)  = node_list%node(inode2)
+! vertex    = (/ iv, iv2 /)
 !        direction = (/  1, 2   /)
 
-!	write(*,*) iv,iv2,'boundary_matrix_open : ',inode1,inode2
+! write(*,*) iv,iv2,'boundary_matrix_open : ',inode1,inode2
 
 !        call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
 
@@ -163,12 +163,12 @@ do ife =1, n_local_elms
       if (     ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
          .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-	nodes(1)  = node_list%node(inode1)
-	nodes(2)  = node_list%node(inode2)
-	vertex    = (/ iv, iv2 /)
+  nodes(1)  = node_list%node(inode1)
+  nodes(2)  = node_list%node(inode2)
+  vertex    = (/ iv, iv2 /)
         direction = (/ 1, 3    /)
 
-!	write(*,*) iv,iv2,'boundary_matrix : ',inode1,inode2
+! write(*,*) iv,iv2,'boundary_matrix : ',inode1,inode2
 
 !        call boundary_matrix(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for closed field lines
 
@@ -219,7 +219,7 @@ if (element%n_sons .eq. 0) then
           index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
        
           !if (index_large_i + j .eq. 2) then
-	  	!write(*,*)  "RHS(2) = ",ife,inode1,j,index_ij, rhs_loc(index_large_i+j), "=>", rhs_loc(index_large_i+j) + RHS(index_ij)
+      !write(*,*)  "RHS(2) = ",ife,inode1,j,index_ij, rhs_loc(index_large_i+j), "=>", rhs_loc(index_large_i+j) + RHS(index_ij)
          !endif
           rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + RHS(index_ij)
 
@@ -274,8 +274,8 @@ deallocate(RHS_loc)
 !------------------vacuum cannot be called on an element by element basis. The vacuum couples all boundary points!
 
 if (freeboundary) then
-  call vacuum(my_id, node_list, element_list, boundary_list, index_min, index_max, xpoint2,        &
-              psi_axis, psi_bnd, Z_xpoint)
+  call vacuum(my_id, node_list, element_list, boundary_list, bnd_node_list, &
+              index_min, index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint)
 endif
 
 call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &

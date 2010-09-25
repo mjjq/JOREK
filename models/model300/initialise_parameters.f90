@@ -120,12 +120,6 @@ if (my_id .eq. 0) then
 
   if (my_id .eq. 0) read(5,in1)
 
-  do in=1, n_tor
-    mode(in) = + int(in / 2) * n_period
-    write(*,*) ' toroidal mode numbers : ',in,mode(in)
-  enddo
-
-
   tstep_in = tstep
 
   if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))

@@ -29,4 +29,5 @@ use parameters
   logical :: use_starwall   ! use the STARWALL vacuum solution? (free boundary only)
   logical :: resistive_wall ! use a resistive or ideal wall?    (free boundary only)
   real*8, allocatable   :: xtime(:), energies(:,:,:)
+  character(len=3) :: mode_type(n_tor)  ! 'cos' or 'sin'
 end module

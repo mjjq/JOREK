@@ -48,11 +48,6 @@ if (abs(maxval(H_st-G_st)) .gt. 1d-14) write(*,*) ' error in Basisfunctions H_st
 
 PI = 2.d0* asin(1.d0)
 
-do i_tor=1, n_tor
-  mode(i_tor) = + int(i_tor / 2) * n_period
-  write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
-enddo
-
 do k=1,n_plane
 
   phi = 2.d0*PI*float(k-1)/float(n_plane) / float(n_period)

@@ -78,7 +78,7 @@ program JOREK2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
-  integer                  :: istep,ierr,i,j,k,inode, i_elm_axis, i_elm_xpoint
+  integer                  :: istep,ierr,i,j,k,itor,inode, i_elm_axis, i_elm_xpoint
   integer                  :: n_local_ELMs, index_total
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
@@ -131,7 +131,7 @@ program JOREK2
   if (my_id .eq. 0) write(*,*) '****************************************'
   if (my_id .eq. 0) write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
   if (my_id .eq. 0) write(*,*) '****************************************'
-  if (my_id .eq. 0) write(*,*) ' n_cpu : ',n_cpu
+  if (my_id .eq. 0) write(*,'(1X,A,I8)') 'n_cpu          = ',n_cpu
 
   gmres  = .true.                                           ! .true. for gmres, .false. for direct
 
@@ -158,10 +158,25 @@ program JOREK2
   use_matrix_whitout_zeros_pastix = .false.    ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   use_matrix_whitout_zeros_mumps  = .false.    ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
-  !---------------------------------------------------------- some checks not to waste any cpu time
-  call initialise_parameters(my_id)                  ! default values and namelist input
-  call log_parameters(my_id)
+  ! --- Preset input parameters to reasonable defaults; then read the input file.
+  call initialise_parameters(my_id)
 
+  ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).
+  do itor=1, n_tor
+    mode(itor)      = + int(itor / 2) * n_period
+    if ( (itor==1) .or. (mod(itor,2)==0) ) then
+      mode_type(itor) = 'cos'
+    else
+      mode_type(itor) = 'sin'
+    end if
+    !write(*,*) ' toroidal mode numbers : ',itor,mode(itor)
+  enddo
+  
+  ! --- Write out all parameters defined in mod_parameters and by the input file.
+  call log_parameters(my_id)
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+  !---------------------------------------------------------- some checks not to waste any cpu time
   if(required.ne.provided)then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
     call MPI_FINALIZE(IERR)

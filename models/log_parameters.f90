@@ -5,23 +5,39 @@ use phys_module
 
 implicit none
 
-integer, INTENT(IN) :: my_id
+integer, intent(IN) :: my_id
+
+integer           :: ivar, itor
+character(len=10) :: mode_num
 
 
 
 if (my_id .eq. 0) then
-  230 FORMAT(A, ' = ' 10ES12.4)
-  231 FORMAT(A, ' = ' 10I)
-  232 FORMAT(A, ' = ' 10L)
-  233 FORMAT(A, ' = ' 4ES12.4, '     ...    ', 4ES12.4)
-  234 FORMAT(A, ' = ' 9ES12.4, '     ...')
+  230 format(1X,A, ' = ' 10ES12.4)
+  231 format(1X,A, ' = ' 10I8)
+  232 format(1X,A, ' = ' 10L8)
+  233 format(1X,A, ' = ' 4ES12.4, '     ...    ', 4ES12.4)
+  234 format(1X,A, ' = ' 9ES12.4, '     ...')
+  235 format(3x,I3,': ',A)
+  236 format(3x,I3,': ',A,'(',A,'*phi)')
   write(*,*)
-  write(*,*) 'PARAMETERS OF THE JOREK RUN:'
-  write(*,*) '----------------------------'
+  write(*,*) '*************************************************'
+  write(*,*) '*          PARAMETERS OF THE JOREK RUN          *'
+  write(*,*) '*************************************************'
   write(*,231) 'n_var         ', n_var
+  do ivar = 1, n_var
+    write(*,235) ivar, trim(variable_names(ivar))
+  end do
+  write(*,*)
   write(*,231) 'n_dim         ', n_dim
   write(*,231) 'n_order       ', n_order
   write(*,231) 'n_tor         ', n_tor
+  write(*,236) 1, 'cos', '0'
+  do itor = 2, n_tor
+    write(mode_num,'(I4)') mode(itor)
+    write(*,236) itor, mode_type(itor), trim(adjustl(mode_num))
+  end do
+  write(*,*)
   write(*,231) 'n_period      ', n_period
   write(*,231) 'n_plane       ', n_plane
   write(*,231) 'n_vertex_max  ', n_vertex_max

@@ -11,5 +11,5 @@ all :   modules                   \
 modules : mod_vacuum_response.o     
     
 clean :
-	rm -f  *.o
+	rm -f *.o *.mod
     

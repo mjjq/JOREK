@@ -22,5 +22,5 @@ all : define_boundary.o \
 modules :       
     
 clean :
-	rm -f  *.o
+	rm -f *.o
     

@@ -20,4 +20,4 @@ all: modules \
 modules : mod_parameters.o mod_phys_module.o mod_nodes_elements.o
 
 clean :
-	rm *.mod *.o
+	rm -f *.mod *.o

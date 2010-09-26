@@ -15,4 +15,4 @@ all:  modules 			\
 modules : mod_global_distributed_matrix.o
 
 clean :
-	rm *.o *.mod
+	rm -f *.o *.mod

@@ -24,4 +24,4 @@ all: mod_phys_module.o \
 modules :     
 
 clean :
-	rm *.o *.mod
+	rm -f *.o *.mod

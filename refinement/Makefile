@@ -18,4 +18,4 @@ all:  modules \
 modules : mod_data_structure.o
  
 clean :
-	rm *.o *.mod
+	rm -f *.o *.mod

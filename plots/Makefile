@@ -9,4 +9,4 @@ all : plot_flux_surfaces.o   \
 modules :      
 
 clean :
-	rm *.o
+	rm -f *.o

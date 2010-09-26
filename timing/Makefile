@@ -6,4 +6,4 @@ all: r3_info.o \
 modules :
 
 clean :
-	rm  *.o
+	rm  -f *.o

@@ -16,4 +16,4 @@ modules : mod_gauss.o \
           mod_basis_at_gaussian.o 
 
 clean :
-	rm *.mod *.o
+	rm -f *.mod *.o

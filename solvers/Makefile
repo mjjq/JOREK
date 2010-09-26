@@ -21,4 +21,4 @@ modules : 	mod_mumps.o 	\
 		mod_pastix.o	\
 		mod_murge.o
 clean :
-	rm *.mod *.o	  
+	rm -f *.mod *.o	  

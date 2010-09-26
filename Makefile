@@ -9,18 +9,18 @@ MAIN = jorek_$(MODEL)
 all :   modules sources $(MAIN)
 
 modules :
-	for dir in $(DIRS); do     \
+	@for dir in $(DIRS); do     \
           ($(MAKE) -C $$dir modules) || exit 1; \
         done
 
 sources :	
-	for dir in $(DIRS); do \
+	@for dir in $(DIRS); do \
           ($(MAKE) -C $$dir all) || exit 1; \
         done
 	
 clean :	
-	rm $(MAIN) ; \
-	for dir in $(DIRS); do   \
+	@rm -f $(MAIN)
+	@for dir in $(DIRS); do   \
           ($(MAKE) -C $$dir clean) \
         done
 	

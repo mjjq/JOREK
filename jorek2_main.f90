@@ -174,6 +174,7 @@ program JOREK2
   
   ! --- Write out all parameters defined in mod_parameters and by the input file.
   call log_parameters(my_id)
+
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   !---------------------------------------------------------- some checks not to waste any cpu time
@@ -345,10 +346,10 @@ program JOREK2
   endif
 
 
-  call broadcast_elements(my_id,element_list)             ! sending all elements
+  call broadcast_elements(my_id,element_list)                ! sending all elements
   call broadcast_boundary(my_id,boundary_list,bnd_node_list) ! sending boundary elements
-  call broadcast_nodes(my_id,node_list)                   ! sending all nodes
-  call broadcast_phys(my_id)                              ! sending the physics parameters
+  call broadcast_nodes(my_id,node_list)                      ! sending all nodes
+  call broadcast_phys(my_id)                                 ! sending the physics parameters
 
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -356,35 +357,9 @@ program JOREK2
   !************************************************************************
   !*                        vacuum initialisation                         *
   !************************************************************************
-  if (freeboundary) then
     
-    if (my_id .eq. 0) call export_boundary(node_list,boundary_list)
-    
-    write(*,*) ' n_bnd_elements : ',boundary_list%n_bnd_elements
-    
-    call initialise_mumps(MPI_COMM_WORLD)                  ! start MUMPS sparse matrix solver
-    
-    ! --- Fill the vacuum response matrix/matrices
-    n_dof_bnd = 2*bnd_node_list%n_bnd_nodes                ! degrees of freedom on the boundary
-    if ( .NOT. resistive_wall ) then
-      if ( allocated(vacuum_response) ) deallocate(vacuum_response)
-      allocate(vacuum_response(n_dof_bnd,n_dof_bnd,n_tor))   ! allocate the vacuum response matrix
-      vacuum_response = 0.
-      if ( use_starwall ) then
-        call ideal_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
-      else
-        call ideal_wall(my_id,node_list,boundary_list,bnd_node_list)
-      end if
-    else
-      call resistive_wall_starwall(my_id,node_list,boundary_list,bnd_node_list)
-    end if
-
-    mumps_par%JOB = -2                                     ! clean up this instance of mumps
-    call DMUMPS(mumps_par)
-    call MPI_bcast(vacuum_response,n_dof_bnd*n_dof_bnd*n_tor,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-  endif
+  ! --- Fill the vacuum response matrix/matrices
+  if ( freeboundary ) call get_vacuum_response(my_id, node_list, boundary_list, bnd_node_list)
 
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *

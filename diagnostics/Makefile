@@ -18,4 +18,4 @@ all : boundary_check.o         \
 modules : mod_fourier.o
 
 clean :
-	rm -f *.o
+	rm -f *.o *.mod

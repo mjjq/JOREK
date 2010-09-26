@@ -79,7 +79,6 @@ if (my_id .eq. 0) then
     write(*,234) 'fbnd          ', fbnd(1:MIN(9,mf))
     write(*,234) 'fpsi          ', fpsi(1:MIN(9,mf))
   end if
-  write(*,231) 'mode          ', mode
   write(*,230) 'F0            ', F0
   write(*,230) 'zjz_0         ', zjz_0
   write(*,230) 'zjz_1         ', zjz_1

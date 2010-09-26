@@ -1,5 +1,7 @@
 subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list)
-! Reads the resistive wall vacuum response matrices written out by STARWALL.
+!-------------------------------------------------------------------
+! Reads the resistive wall vacuum response matrices written out by STARWALL
+!-------------------------------------------------------------------
 
   use data_structure
   use vacuum_response_module
@@ -47,7 +49,6 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
   
   if ( allocated(matrix_ee) ) deallocate(matrix_ee)
   allocate( matrix_ee(n_dof_bnd,n_dof_bnd,n_tor) )
-  
   matrix_ee = 0.d0
   
   ! Outer loops (response index)

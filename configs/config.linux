@@ -66,3 +66,6 @@ VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 
 %.o: %.f
 	$(FC) -c $^ -o $@ $(FFLAGS) $(INCLUDES)
+
+CFLAGS := $(CFLAGS) -DUSE_MUMPS
+

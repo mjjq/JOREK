@@ -13,7 +13,8 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/temperature_e.f90 		\
 	$(DIR)/mod_phys_module.f90 		\
 	$(DIR)/mod_nodes_elements.f90		\
-	$(DIR)/chgmt_node.f90
+	$(DIR)/chgmt_node.f90			\
+	$(DIR)/log_parameters.f90
 
 JOREK2_POINCARE_SRC := JOREK2_POINCARE_SRC	\
 	$(DIR)/mod_phys_module.f90

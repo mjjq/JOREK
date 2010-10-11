@@ -16,7 +16,8 @@ JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	\
 	$(DIR)/meshac.f90 		\
 	$(DIR)/spline_spwert.f90	\
 	$(DIR)/spline_tb15a.f90 	\
-	$(DIR)/spline_tg02a.f90
+	$(DIR)/spline_tg02a.f90		\
+	$(DIR)/boundary_from_grid.f90
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/find_RZ.f90

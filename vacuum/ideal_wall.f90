@@ -61,10 +61,10 @@ subroutine ideal_wall(my_id, node_list, boundary_list, bnd_node_list)
   enddo
   
   call plot_solution(vacuum_node_list,vacuum_element_list,1,-1,1,'vacuum')
-  
+#ifdef USE_MUMPS
   mumps_par%JOB = -2                                     ! clean up this instance of mumps
   call DMUMPS(mumps_par)
-  
+#endif
   return
 end subroutine ideal_wall
 
@@ -450,12 +450,14 @@ subroutine vacuum_poisson(my_id,node_list,element_list,boundary_list,temp_node_l
     mumps_par%nz = nz_AA
   
   endif
+
+#ifdef USE_MUMPS
   mumps_par%JOB = 6
   mumps_par%SYM = 0
   mumps_par%icntl(7) = 4
   
   call DMUMPS(mumps_par)
-  
+#endif
   vacuum_response = 0.d0
   
   if (my_id .eq. 0) then

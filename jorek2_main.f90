@@ -113,13 +113,14 @@ program JOREK2
   !*                  intialisation                                      *
   !***********************************************************************
 
-  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
-  call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
 
   !call MPI_INIT(IERR)                                     ! initialise MPI
 
   required=MPI_THREAD_MULTIPLE
   call MPI_Init_thread(required,provided,StatInfo)         ! initialise threaded MPI (openMPI)
+
+  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
+  call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
 
   call r3_info_init ()                                     ! timing
 
@@ -137,8 +138,8 @@ program JOREK2
 
   use_mumps  = .false.
   use_pastix = (.not. use_mumps)
-  use_murge  = .false.
-  use_murge_element  = .false.
+  use_murge  = .true.
+  use_murge_element  = .true.
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.

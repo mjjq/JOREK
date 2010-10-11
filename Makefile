@@ -1,5 +1,6 @@
 include config.in
 
+
 DIRS = datatypes models/$(MODEL) models communication elements grids matrix solvers timing plots diagnostics vacuum refinement
 
 MAIN = jorek_$(MODEL)
@@ -17,14 +18,14 @@ sources :
 	@for dir in $(DIRS); do \
           ($(MAKE) -C $$dir all) || exit 1; \
         done
-	
+
 clean :	
 	@rm -f $(MAIN)
 	@for dir in $(DIRS); do   \
           ($(MAKE) -C $$dir clean) \
         done
-	
-	
+
+
 $(MAIN) : jorek2_main.f90
 	$(FC) $(FFLAGS)      \
 	jorek2_main.f90      \
@@ -42,7 +43,7 @@ $(MAIN) : jorek2_main.f90
         vacuum/*.o           \
 	diagnostics/*.o      \
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
-	 
+
 jorek2_four : modules sources
 	$(FC) $(FFLAGS)                   \
 	diagnostics/jorek2_four.f90   \
@@ -157,7 +158,7 @@ jorek2_fieldlines_vtk : modules sources
 	solvers/mnewtax.o                 \
         refinement/neighbours.o           \
 	 -o $(JOREK_DIR)/jorek2_fieldlines_vtk $(INCLUDES) $(LIBS)
-	 
+
 jorek2vtk_3d : modules sources
 	$(FC) $(FFLAGS)                   \
 	diagnostics/jorek2vtk_3d.f90      \
@@ -203,9 +204,9 @@ jorek2_diagno : modules sources
 	grids/meshac.o                    \
 	grids/fgauss.o                    \
 	 -o $(JOREK_DIR)/jorek2_diagno $(INCLUDES) $(LIBS)
-	 
+
 jorek_to_helena :
 	$(FC) diagnostics/jorek_to_helena.f90 -o jorek_to_helena 
-	
+
 import_eqdsk :
 	$(FC) util/import_eqdsk.f90 -o import_eqdsk $(LIBS)

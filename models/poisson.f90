@@ -371,8 +371,6 @@ write(*,*) '***********************************'
 write(*,*) '* call PastiX                     *'
 write(*,*) '***********************************'
 
-	write (*,*) "pastix_data", pastix_data, "mumps_par%n", mumps_par%n, "mumps_par%jcn()", mumps_par%jcn(mumps_par%n+1),"mumps_par%irn",mumps_par%irn(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%A",mumps_par%A(mumps_par%jcn(mumps_par%n+1)-1),"mumps_par%rhs",mumps_par%rhs(mumps_par%n), "pastix_iparm(15)", pastix_iparm(16)
-	
  call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 

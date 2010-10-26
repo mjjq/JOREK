@@ -281,5 +281,7 @@ endif
 call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &
                          index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint)
 
+call r3_info_end (r3_info_index_0)    ! timing
+
 return
 end

@@ -329,8 +329,8 @@ end if
 
 CALL MPI_BCAST(mumps_par%JCN(1), mumps_par%N+1,  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 CALL MPI_BCAST(mumps_par%IRN(1), mumps_par%NZ,   MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE,  0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
+CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
 
 
 if (.not. allocated(pastix_perm_vars))  allocate(pastix_perm_vars(mumps_par%n))

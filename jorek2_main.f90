@@ -855,7 +855,7 @@ program JOREK2
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
      endif
 
-     if ( freeboundary ) call boundary_check()
+     if ( freeboundary .and. (.not. resistive_wall) ) call boundary_check()
 
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);

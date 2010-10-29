@@ -130,6 +130,7 @@ FBD: if (freeboundary) then
       end do ILOOP
 
       write(*,'(i5,8e14.6)') n_points*(ibnd-1)+ip,B_n,B_tan,B_tan_v
+      write(98,*) n_points*(ibnd-1)+ip,B_tan,B_tan_v
       
       integrated_signal = integrated_signal + ABS( B_tan_v ) / ( boundary_list%n_bnd_elements * n_points )
       integrated_error  = integrated_error  + ABS( (B_tan - B_tan_v) ) / ( boundary_list%n_bnd_elements * n_points )
@@ -141,6 +142,7 @@ FBD: if (freeboundary) then
   write(99,*) LOG10 ( integrated_error / integrated_signal )
 
 end if FBD
+write(98,*)
 
 
 write(*,*) '@@< BOUNDARY_CHECK'

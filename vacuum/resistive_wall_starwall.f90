@@ -3,6 +3,8 @@ subroutine resistive_wall_starwall(my_id, node_list, boundary_list,bnd_node_list
 ! Reads the resistive wall vacuum response matrices written out by STARWALL
 !-------------------------------------------------------------------
 
+!### TODO: Let only one MPI thread read the files and broadcast them to the others.
+
   use data_structure
   use vacuum_response_module
   use phys_module

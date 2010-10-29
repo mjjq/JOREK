@@ -23,7 +23,8 @@ call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
 call MPI_BCAST(boundary_list%n_bnd_elements,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(bnd_node_list%n_bnd_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
-bufsize = boundary_list%n_bnd_elements * (10*INT_EXT + 4*IDBL_EXT)
+bufsize = boundary_list%n_bnd_elements * (10*INT_EXT + 4*IDBL_EXT) + &
+          bnd_node_list%n_bnd_nodes    * (4*INT_EXT)
 
 if (allocated(buffer)) deallocate(buffer)
 allocate(buffer(bufsize/ INT_EXT))
@@ -36,6 +37,7 @@ if (my_id .eq. 0) then
     aboundary = boundary_list%bnd_element(ife)
 
     call MPI_PACK(aboundary%vertex,2,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(aboundary%bnd_vertex,2,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(aboundary%direction,4,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(aboundary%element,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(aboundary%side,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -48,6 +50,7 @@ if (my_id .eq. 0) then
 
     call MPI_PACK(abnd_node%index_jorek,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(abnd_node%index_starwall,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(abnd_node%direction,2,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   enddo
   
 endif
@@ -60,6 +63,7 @@ if (my_id .ne. 0) then
   do ife=1,boundary_list%n_bnd_elements
 
     call MPI_UNPACK(buffer,bufsize,position,aboundary%vertex,2,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,aboundary%bnd_vertex,2,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,aboundary%direction,4,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,aboundary%element,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,aboundary%side,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -73,6 +77,7 @@ if (my_id .ne. 0) then
 
     call MPI_UNPACK(buffer,bufsize,position,abnd_node%index_jorek,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,abnd_node%index_starwall,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,abnd_node%direction,2,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     
     bnd_node_list%bnd_node(ind) = abnd_node
   enddo

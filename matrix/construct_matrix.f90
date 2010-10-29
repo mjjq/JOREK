@@ -267,16 +267,16 @@ enddo
 !$omp end do
 !$omp end parallel
 
-call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-
-deallocate(RHS_loc)
-
 !------------------vacuum cannot be called on an element by element basis. The vacuum couples all boundary points!
 
-if (freeboundary) then
-  call vacuum(my_id, node_list, element_list, boundary_list, bnd_node_list, &
-              index_min, index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint)
-endif
+if (freeboundary) call vacuum(my_id, node_list, element_list, boundary_list,             &
+  bnd_node_list, index_min, index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint, rhs_loc)
+
+
+! --- Form a global rhs from the rhss of the individual mpi threads.
+call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+deallocate(RHS_loc)
+
 
 call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &
                          index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint)

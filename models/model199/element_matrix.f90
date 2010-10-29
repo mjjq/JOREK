@@ -316,32 +316,16 @@ do ms=1, n_gauss
                  index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
 
 !---------------------------------------------------------------- equation 1
-!                 amat_11 = v * psi / BigR * xjac * (1.d0+zeta)                                       &
-!                         - v * (psi_s * u0_t - psi_t * u0_s)                        * theta * tstep
+                 amat_11 = v * psi / BigR * xjac * (1.d0+zeta)                                       &
+                         - v * (psi_s * u0_t - psi_t * u0_s)                        * theta * tstep
 
-!                 amat_12 = - v * (ps0_s * u_t - ps0_t * u_s)                        * theta * tstep  &
-!                           + eps_cyl * F0 / BigR * v * u_p * xjac                   * theta * tstep
+                 amat_12 = - v * (ps0_s * u_t - ps0_t * u_s)                        * theta * tstep  &
+                           + eps_cyl * F0 / BigR * v * u_p * xjac                   * theta * tstep
 
-!                 amat_13 = - eta_num * (v_x * zj_x + v_y * zj_y)             * xjac * theta * tstep  &
-!                           - eta_T * v * zj / BigR                           * xjac * theta * tstep
+                 amat_13 = - eta_num * (v_x * zj_x + v_y * zj_y)             * xjac * theta * tstep  &
+                           - eta_T * v * zj / BigR                           * xjac * theta * tstep
 
-!                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep
-
-!---------------------------------------------------------------- equation 1
-                 amat_11 = v * psi / BigR * xjac                                                 &
-                         + eta_T * (psi_x * v_x + psi_y * v_y) / BigR * xjac           * theta * tstep  &
-                         - v * (psi_s * u0_t - psi_t * u0_s)                           * theta * tstep  &
-                         + v * deta_dT * (T0_x * psi_x  + T0_y * psi_y ) / BigR * xjac * theta * tstep
-
-                 amat_12 = -  v * (ps0_s * u_t - ps0_t * u_s)                 * theta * tstep  &
-                           +  eps_cyl * F0 / BigR * v * u_p * xjac            * theta * tstep
-
-                 amat_13 = - eta_num * (v_s * zj_t + v_t * zj_s)              * theta * tstep
-
-                 amat_16 = + deta_dT * T * ( v_x * ps0_x + v_y * ps0_y ) / BigR         * xjac * theta * tstep &
-                           + v * deta_dT * ( T_x * ps0_x + T_y * ps0_y ) / BigR         * xjac * theta * tstep &
-                           + v * d2eta_d2T * T * ( T0_x * ps0_x + T0_y * ps0_y ) / BigR * xjac * theta * tstep &
-                           + v * deta_dT   * T * current_source(ms,mt)   / BigR         * xjac * theta * tstep
+                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep
 
 !---------------------------------------------------------------- equation 2
                  amat_22 = - BigR * r0_hat * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                 &

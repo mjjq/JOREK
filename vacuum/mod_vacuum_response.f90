@@ -32,7 +32,7 @@ end module vacuum_response_module
 !   IDEAL WALL
 !   ----------
 !
-!     B_par = [VR] * P
+!     B_par = [VR] * Psi
 !
 !
 !   RESISTIVE WALL

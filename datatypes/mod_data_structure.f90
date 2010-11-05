@@ -56,6 +56,7 @@ module data_structure                                 ! contains definition of t
   type type_bnd_node                                  ! type definition for one boundary node
     integer :: index_jorek                            ! index of the node in the node_list
     integer :: index_starwall                         ! index of the node in STARWALL numbering
+    integer :: direction(2)                           ! which direction is along the boundary?
   end type type_bnd_node
   
   type type_bnd_node_list                             ! type definition for a list of boundary nodes

@@ -286,7 +286,7 @@ program JOREK2
 
        if (xpoint)  then
 
-         if (my_id .eq. 0) call grid_xpoint(node_list,element_list,boundary_list,n_flux,n_open,n_private,n_leg,n_tht)
+         if (my_id .eq. 0) call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
 
          call broadcast_nodes(my_id,node_list)
          call broadcast_elements(my_id,element_list)

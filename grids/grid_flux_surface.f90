@@ -77,7 +77,7 @@ PSInew(1:4,1:nrnew*npnew) = 0.d0
 call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
 call plot_flux_surfaces(node_list,element_list,surface_list,.true.)
 
-call q_profile(node_list,element_list,surface_list)
+call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 
 allocate(sp1(surface_list%n_psi+1),sp2(surface_list%n_psi+1),sp3(surface_list%n_psi+1),sp4(surface_list%n_psi+1))
 

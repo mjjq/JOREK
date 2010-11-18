@@ -1,4 +1,4 @@
-subroutine q_profile(node_list,element_list,surface_list)
+subroutine q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 !----------------------------------------------------------------------
 ! subroutine calculats the q-profile from the flux surface representation
 ! (adapted from helena20)
@@ -8,15 +8,19 @@ use phys_module
 
 implicit none
 
-!--------------------------------------- gaussian points between (-1.,1.)
-real*8 :: xgs(4), wgs(4)
-data xgs /-0.861136311594053, -0.339981043584856, 0.339981043584856,  0.861136311594053 /
-data wgs / 0.347854845137454,  0.652145154862546, 0.652145154862546,  0.347854845137454 /
+! --- Gaussian points between (-1.,1.) for Gauss-integration
+real*8, parameter :: xgs(4) = (/-0.861136311594053, -0.339981043584856, 0.339981043584856,  0.861136311594053 /)
+real*8, parameter :: wgs(4) = (/ 0.347854845137454,  0.652145154862546, 0.652145154862546,  0.347854845137454 /)
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-type (type_surface_list) :: surface_list
+! --- Input parameters.
+type (type_node_list),    intent(in)    :: node_list
+type (type_element_list), intent(in)    :: element_list
+type (type_surface_list), intent(in)    :: surface_list
+real*8,                   intent(in)    :: psi_axis
+real*8,                   intent(in)    :: psi_xpoint
+real*8,                   intent(in)    :: Z_xpoint
 
+! --- Internal variables
 integer :: n_int
 integer :: i_elm, j, k, n1, n2, n3
 real*8  :: t,rr1, rr2, drr1, drr2, ss1, ss2, dss1, dss2, ri, si, dri, dsi, dl
@@ -65,6 +69,11 @@ do i=2, surface_list%n_psi
 
       call interp_RZ(node_list,element_list,i_elm,ri,si,RRgi,dRRgi_dr,dRRgi_ds,dRRgi_drs,dRRgi_drr,dRRgi_dss, &
                                                         ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss)
+                                                        
+      ! --- Make sure that for flux surfaces at Psi_N < 1, the surface integral is carried out only
+      !     over the flux surface segments of the plasma region.
+      !     I.e., ignore flux surface segments in the private flux region below the x-point.
+      if ( (.not. xpoint) .or. ((PSgi < psi_xpoint) .and. (ZZgi < z_xpoint)) ) cycle
 
       dRRgi_dt = dRRgi_dr * dri + dRRgi_ds * dsi
       dZZgi_dt = dZZgi_dr * dri + dZZgi_ds * dsi
@@ -94,6 +103,13 @@ do i=2, surface_list%n_psi
 
 enddo
 
+! --- Write out the q-profile to "qprofile.dat".
+open(42, file='qprofile.dat', action='write', status='replace')
+do i=2, surface_list%n_psi
+  write(42,'(2ES13.5)') (surface_list%psi_values(i)-psi_axis)/(psi_xpoint-psi_axis), q(i)
+end do
+close(42)
+
 
 !----------------------------------- values on axis
 !q(1) =  PI / sqrt(CRR_axis*CZZ_Axis)
@@ -103,4 +119,4 @@ call lplot(2,1,1,surface_list%psi_values(2),q(2),surface_list%n_psi-1,1,'q-profi
 deallocate(q)
 
 return
-end
+end subroutine q_profile

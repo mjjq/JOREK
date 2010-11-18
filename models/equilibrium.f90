@@ -184,7 +184,7 @@ if (my_id .eq. 0) then
   call find_flux_surfaces(xpoint2,node_list,element_list,surface_list)! pb //
   call plot_flux_surfaces(node_list,element_list,surface_list,.true.)
 
-  call q_profile(node_list,element_list,surface_list)
+  call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 
 endif
 

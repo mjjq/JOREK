@@ -41,12 +41,16 @@ dprof0_dpsi  = dprof0_dpsi  + d2_pert
 dprof0_dpsi2 = dprof0_dpsi2 + d3_pert
 
 atn   = (0.5d0 - 0.5d0*tanh((psi_n - psi_barrier)/sig_F))
+
 datn  = - 1.d0/cosh((psi_n - psi_barrier)/sig_F)**2 / (2.d0 * sig_F) / (psi_bnd - psi_axis)
+
 d2atn =   1.d0/cosh((psi_n - psi_barrier)/sig_F)**2 / (sig_F**2)  &
       * tanh((psi_n - psi_barrier)/sig_F) / (psi_bnd - psi_axis)**2
-d3atn = - 1.d0/cosh((psi_n - psi_barrier)/sig_F)**4 / (sig_F**3)  &
-      * (-2.d0 + cosh(2.d0*(psi_n-psi_barrier)/sig_F) ) / (psi_bnd - psi_axis)**3
 
+!d3atn = - 1.d0/cosh((psi_n - psi_barrier)/sig_F)**4 / (sig_F**3)  &
+!      * (-2.d0 + cosh(2.d0*(psi_n-psi_barrier)/sig_F) ) / (psi_bnd - psi_axis)**3
+d3atn = - 1.d0 / sig_F**3 / (psi_bnd - psi_axis)**3 &
+      * ( -2.d0/cosh((psi_n-psi_barrier)/sig_F)**4 + 1.d0/cosh(2.d0*(psi_n-psi_barrier)/sig_F)**3 ) 
 
 prof1        = prof0        * atn
 dprof1_dpsi  = dprof0_dpsi  * atn +         prof0       * datn

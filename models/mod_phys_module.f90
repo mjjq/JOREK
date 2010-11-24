@@ -1,5 +1,9 @@
 module phys_module
-use parameters
+
+  use parameters
+  
+  implicit none
+
   real*8  :: tstep, tstep_in, eta, visco, visco_par
   real*8  :: R_begin, R_end, Z_begin, Z_end, R_geo, Z_geo, amin, fbnd(1026), fpsi(1026)
   real*8  :: R_boundary(1026), Z_boundary(1026), psi_boundary(1026)
@@ -29,5 +33,13 @@ use parameters
   logical :: use_starwall   ! use the STARWALL vacuum solution? (free boundary only)
   logical :: resistive_wall ! use a resistive or ideal wall?    (free boundary only)
   real*8, allocatable   :: xtime(:), energies(:,:,:)
-  character(len=3) :: mode_type(n_tor)  ! 'cos' or 'sin'
-end module
+  character(len=3)      :: mode_type(n_tor)  ! 'cos' or 'sin'
+  ! --- Numerical input profiles
+  character(len=512)  :: rho_file, T_file, ffprime_file ! Files, the profiles are read from.
+  logical             :: num_rho, num_T, num_ffprime    ! Numerical representation? (e.g., num_rho is set .true., if rho_file /= 'none')
+  integer             :: num_rho_len, num_T_len, num_ffprime_len
+  real*8, allocatable :: num_rho_x(:), num_rho_y0(:), num_rho_y1(:), num_rho_y2(:), num_rho_y3(:)
+  real*8, allocatable :: num_T_x(:), num_T_y0(:), num_T_y1(:), num_T_y2(:), num_T_y3(:)
+  real*8, allocatable :: num_ffprime_x(:), num_ffprime_y0(:), num_ffprime_y1(:), num_ffprime_y2(:)
+  
+end module phys_module

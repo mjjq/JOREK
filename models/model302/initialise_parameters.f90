@@ -1,13 +1,19 @@
 subroutine initialise_parameters(my_id)
 !-----------------------------------------------------------------------
-!
+! Initialise input parameters and read the input namelist
 !-----------------------------------------------------------------------
 use phys_module
 
 implicit none
-integer :: in, my_id, i
+
+! --- Input variables.
+integer, intent(in) :: my_id
+
+! --- Internal variables.
+integer :: in, i
 real*8  :: psi_plot(1001),zj_plot(1001),dj_plot(1001),dz_plot(1001), z_plot(1001), z, zjz, dj_dpsi, dj_dz, psi_n
 
+! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 restart,  regrid,                                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
@@ -24,16 +30,18 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
                 particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-		pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
-		pellet_radius, pellet_sig, pellet_length,           &
-		pellet_psi, pellet_delta_psi,                       &
+                pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
+                pellet_radius, pellet_sig, pellet_length,           &
+                pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-		        freeboundary, use_starwall, resistive_wall,         &
+                rho_file, T_file, ffprime_file,                     &
+                freeboundary, use_starwall, resistive_wall,         &
                 refinement
 
 if (my_id .eq. 0) then
 
+  ! --- Preset input parameters to reasonable default values.
   tstep    = 1.d0
   tstep_in = 1.d0
   nstep    = 0
@@ -45,7 +53,7 @@ if (my_id .eq. 0) then
   restart      = .false.
   import_equil = .false.
   regrid       = .false.
-
+  
   freeboundary   = .false. ! use free or fixed boundary?
   use_starwall   = .false. ! use the STARWALL vacuum solution? (freeboundary only)
   resistive_wall = .false. ! use a resistive or ideal wall?    (freeboundary only)
@@ -140,18 +148,33 @@ if (my_id .eq. 0) then
 
   nout = 9999999
 
-  if (my_id .eq. 0) read(5,in1)
+  rho_file      = 'none'
+  T_file        = 'none'
+  ffprime_file  = 'none'
 
+  ! --- Read input parameters from namelist.
+  if (my_id .eq. 0) read(5,in1)
+  
   tstep_in = tstep
 
   if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))
   if (nstep .gt. 0) allocate(xtime(nstep))
 
   write(*,*) 'USING MODEL 302'
-
+  
+  ! --- Read numerical profiles for rho, T, and ff'.
+  call read_num_profiles()
+  
 endif
 
-call broadcast_phys(my_id)         ! distribute some values
+! --- Broadcast input parameters from MPI thread 0 to the others.
+call broadcast_phys(my_id)
+
+! --- Broadcast numerical input profiles from MPI thread 0 to the others.
+call broadcast_num_profiles(my_id)
+
+! --- Determine the derivatives of the numerical input profiles.
+call derive_num_profiles()
 
 return
-end
+end subroutine initialise_parameters

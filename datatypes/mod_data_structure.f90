@@ -14,7 +14,7 @@ module data_structure                                 ! contains definition of t
     integer    :: parent_elem                         ! which element do parent nodes belong to ? "refinement"
     real*8     :: ref_lambda, ref_mu                  ! Local coordinates of node inside the parent element. "refinement"
     logical    :: constrained                         ! Constrained node or not..."refinement"
-  end type type_node                                  ! x(:,1) : position, x(:,2) : vector u, x(:,3) : vector v, x(4) : vector w
+  end type type_node                                  ! x(:,1) : position, x(:,2) : vector u, x(:,3) : vector v, x(:,4) : vector w
 
   type type_node_list                                 ! type definition of a list of nodes
     integer            :: n_nodes                     ! the number of nodes in the list

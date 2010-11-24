@@ -15,7 +15,9 @@ all: modules \
      temperature_e.o \
      pellet_source.o \
      add_pellet.o    \
-     log_parameters.o
+     log_parameters.o \
+     read_num_profiles.o \
+     derive_num_profiles.o
 
 modules : mod_parameters.o mod_phys_module.o mod_nodes_elements.o
 

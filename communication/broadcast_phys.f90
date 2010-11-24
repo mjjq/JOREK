@@ -1,24 +1,28 @@
 subroutine Broadcast_phys(my_id)
 !----------------------------------------------------------
-! subroutine to broadcast all the nodes in the point_list
+! Broadcast all input parameters from MPI thread 0 to the others
 !----------------------------------------------------------
 use phys_module
 
 implicit none
 
+! --- input variables
+integer, intent(in) :: my_id
+
+! --- internal variables
 include 'mpif.h'               ! MPI fortran include file
-integer              :: my_id, ierr, INT_EXT, IDBL_EXT, ILOG_EXT,position, bufsize
+integer              :: ierr, INT_EXT, IDBL_EXT, ILOG_EXT, CHAR_EXT, position, bufsize
 integer, allocatable :: buffer(:)
 
 !----------------------------------- one line would be enough if only MPI_TYPE_STRUCT would work on IXIA
 !call MPI_BCAST(phys_list,1,MPI_phys,0,MPI_COMM_WORLD,ierr)
 
-
 call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
 call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
 call MPI_TYPE_EXTENT(MPI_LOGICAL,ILOG_EXT,ierr)
+call MPI_TYPE_EXTENT(MPI_CHARACTER,CHAR_EXT,ierr)
 
-bufsize = ( 144 * IDBL_EXT + (4+n_tor) * INT_EXT + 7 * ILOG_EXT )
+bufsize = ( 144 * IDBL_EXT + (4+n_tor) * INT_EXT + 10 * ILOG_EXT + 3*512 * CHAR_EXT )
 
 if (allocated(buffer)) deallocate(buffer)
 allocate(buffer(bufsize/ INT_EXT))
@@ -107,6 +111,13 @@ if (my_id .eq. 0) then
   call MPI_PACK(freeboundary,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(use_starwall,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(resistive_wall,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
+  call MPI_PACK(rho_file,512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(T_file,512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ffprime_file,512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(num_rho,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(num_T,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(num_ffprime,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 endif
 
@@ -197,6 +208,13 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,freeboundary,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,use_starwall,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,resistive_wall,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+
+  call MPI_UNPACK(buffer,bufsize,position,rho_file,512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,T_file,512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ffprime_file,512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,num_rho,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,num_T,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,num_ffprime,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
 endif
 

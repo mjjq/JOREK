@@ -1,18 +1,21 @@
-subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame)
+subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nth)
 use data_structure
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-type (type_surface_list) :: surface_list
+! --- input variables
+type (type_node_list),    intent(in) :: node_list
+type (type_element_list), intent(in) :: element_list
+type (type_surface_list), intent(in) :: surface_list
+logical,                  intent(in) :: frame
+integer,                  intent(in) :: every_nth     ! Plot only every_nth flux surface
 
+! --- internal variables
 integer            :: i, j, k,ip, nplot, node1, node2, node3, node4, i_elm
 real*8             :: t, rr1, rr2, drr1, drr2, ss1, ss2, dss1, dss2, ri, si, dri, dsi
 real*8             :: R_min, R_max, Z_min, Z_max
 real*8             :: dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, dummy7, dummy8, dummy9, dummy10
 real*8,allocatable :: rplot(:), zplot(:)
 character*13       :: LABEL
-logical            :: frame
 
 nplot=11
 allocate(rplot(nplot),zplot(nplot))
@@ -31,7 +34,7 @@ if (frame) CALL NFRAME(21,11,1,R_min,R_max,Z_min,Z_max,LABEL,13,'R [m]',5,'Z [m]
 
 !call plot_grid(node_list,element_list,.true.,.false.)                               ! plot the grid
 
-do j=1,surface_list%n_psi
+do j = 1, surface_list%n_psi, every_nth
 
 !  write(*,*) ' plot : ',j,surface_list%flux_surfaces(j)%n_pieces
 
@@ -98,4 +101,4 @@ enddo
 deallocate(rplot,zplot)
 
 return
-end
+end subroutine plot_flux_surfaces

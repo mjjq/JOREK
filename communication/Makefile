@@ -7,6 +7,7 @@ all: mod_phys_module.o \
      broadcast_boundary.o \
      broadcast_nodes.o \
      broadcast_phys.o \
+     broadcast_num_profiles.o \
      distribute_harmonics.o \
      distribute_nodes_elements.o \
      distribute_vector.o  \

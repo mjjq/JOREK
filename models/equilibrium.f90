@@ -1,9 +1,11 @@
 subroutine equilibrium(my_id,node_list,element_list,xpoint2)
 !-----------------------------------------------------------------------
-!
+! Solve the Grad-Shafranov equation to determine the plasma equilibrium
 !-----------------------------------------------------------------------
+
 use data_structure
 use phys_module
+
 implicit none
 
 interface
@@ -16,11 +18,16 @@ interface
      logical  :: xpoint
    end subroutine Poisson
 end interface
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-type (type_surface_list) :: surface_list
 
-integer    :: ierr, my_id, n_iter, iter, i, in, mm, i_elm_axis, i_elm_xpoint
+! --- Input variables.
+integer,                  intent(in)    :: my_id
+type (type_node_list),    intent(inout) :: node_list
+type (type_element_list), intent(inout) :: element_list
+logical,                  intent(in)    :: xpoint2
+
+! --- Local variables.
+type (type_surface_list) :: surface_list
+integer    :: ierr, n_iter, iter, i, in, mm, i_elm_axis, i_elm_xpoint
 real*8     :: amplitude, psi, psi_axis
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
@@ -34,7 +41,6 @@ real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
 real*8     :: psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
-logical    :: xpoint2
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -46,7 +52,7 @@ n_iter = 51
 i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
 
 do iter=1,n_iter
-
+  
   if (my_id .eq. 0) then
 
     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
@@ -59,6 +65,7 @@ do iter=1,n_iter
 !  call poisson(my_id,2,node_list,element_list,3,1,1,xpoint2)   !----------- for cylinder use 2
 
 enddo
+
 
 if (my_id .eq. 0) then
 
@@ -172,21 +179,28 @@ if (my_id .eq. 0) then
 endif
 
 
+! --- Find flux surfaces and plot them; determine the q-profile.
 if (my_id .eq. 0) then
 
-  surface_list%n_psi =51
+  surface_list%n_psi = 200
+  
   if (allocated(surface_list%psi_values)) deallocate(surface_list%psi_values)
   allocate(surface_list%psi_values(surface_list%n_psi))
-  do i=1,surface_list%n_psi
+  
+  do i = 1, surface_list%n_psi
+
     surface_list%psi_values(i) =  (1. - 0.99999999 * (float(i)/float(surface_list%n_psi))**2 ) * psi_axis
   enddo
 
-  call find_flux_surfaces(xpoint2,node_list,element_list,surface_list)! pb //
-  call plot_flux_surfaces(node_list,element_list,surface_list,.true.)
+  call find_flux_surfaces(xpoint2,node_list,element_list,surface_list)
+  call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4) ! plot every 4th flux surface
 
   call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 
+  if (allocated(surface_list%psi_values))    deallocate(surface_list%psi_values)
+  if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)
+  
 endif
 
 return
-end
+end subroutine equilibrium

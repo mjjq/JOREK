@@ -75,7 +75,7 @@ ZZnew(1:4,1:nrnew*npnew)  = 0.d0
 PSInew(1:4,1:nrnew*npnew) = 0.d0
 
 call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
-call plot_flux_surfaces(node_list,element_list,surface_list,.true.)
+call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1)
 
 call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 

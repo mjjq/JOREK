@@ -178,11 +178,11 @@ program JOREK2
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   !---------------------------------------------------------- some checks not to waste any cpu time
-!  if(required.ne.provided)then
-!    write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
-!    call MPI_FINALIZE(IERR)
-!    stop
-!  endif
+  if(required.ne.provided)then
+    write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
+    call MPI_FINALIZE(IERR)
+    stop
+  endif
 
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
     write(*,*) ' FATAL : specify a valid solver'
@@ -344,31 +344,6 @@ program JOREK2
      if (allocated(pastix_iperm_vars)) deallocate(pastix_iperm_vars)
 
   endif
-
-
-  !###
-  if ( my_id == 0 ) then
-    call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
-    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
-    psi_bnd = psi_xpoint
-    write(111,*) '# density profile'
-    write(112,*) '# temperature profile'
-    write(113,*) '# ffprime profile'
-    
-    do i = 0, 130
-      psi = psi_axis + (psi_bnd-psi_axis) * REAL(i)/100.
-      call density(    xpoint, 0., -1., psi,psi_axis,psi_bnd,           &
-           zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-      call temperature(    xpoint, 0., -1., psi,psi_axis,psi_bnd,           &
-           zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
-      call FFprime(    xpoint, 0., -1., psi,psi_axis,psi_bnd,           &
-           zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-      write(111,'(5ES23.15)') (psi-psi_axis)/(psi_bnd-psi_axis), zn, dn_dpsi, dn_dpsi2, dn_dpsi3
-      write(112,'(5ES23.15)') (psi-psi_axis)/(psi_bnd-psi_axis), zT, dT_dpsi, dT_dpsi2, dT_dpsi3
-      write(113,'(5ES23.15)') (psi-psi_axis)/(psi_bnd-psi_axis), zFFprime, dFFprime_dpsi, dFFprime_dpsi2
-    end do
-  end if
-  !###
 
 
   call broadcast_elements(my_id,element_list)                ! sending all elements
@@ -533,7 +508,7 @@ program JOREK2
                  else
                     murge_ndof = 2*n_var
                  end if
-!              CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,     2*n_var,      ierr) 
+              CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,     2*n_var,      ierr) 
               else
                  murge_ndof = n_tor*n_var
               end if

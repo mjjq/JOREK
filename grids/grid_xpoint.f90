@@ -982,7 +982,7 @@ newnode_list%n_nodes = index
 write(*,*) ' definition of nodes completed ',newnode_list%n_nodes
 
 call nframe(11,11,1,2.5,3.5,-2.0,-1.0,' ',1,'R',1,'Z',1)
-call plot_flux_surfaces(node_list,element_list,flux_list,.false.)
+call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1)
 
 
 allocate(xp(index),yp(index))
@@ -1280,7 +1280,7 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
 
 enddo
 
-!call plot_flux_surfaces(node_list,element_list,flux_list,.true.)
+!call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 
 !***********************************************************************
 !*             fill in the values into the new grid                    *

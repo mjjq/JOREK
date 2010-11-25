@@ -20,6 +20,7 @@ namelist /in1/  tstep, nstep, eta, visco, restart,  regrid,         &
                 xr1, sig1, xr2, sig2,                               &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
+                R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 F0,                                                 &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &

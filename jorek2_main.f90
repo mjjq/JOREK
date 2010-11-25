@@ -178,11 +178,11 @@ program JOREK2
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   !---------------------------------------------------------- some checks not to waste any cpu time
-  if(required.ne.provided)then
-    write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
-    call MPI_FINALIZE(IERR)
-    stop
-  endif
+!  if(required.ne.provided)then
+!    write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
+!    call MPI_FINALIZE(IERR)
+!    stop
+!  endif
 
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
     write(*,*) ' FATAL : specify a valid solver'
@@ -508,7 +508,7 @@ program JOREK2
                  else
                     murge_ndof = 2*n_var
                  end if
-              CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,     2*n_var,      ierr) 
+!              CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,     2*n_var,      ierr) 
               else
                  murge_ndof = n_tor*n_var
               end if

@@ -4,6 +4,7 @@ subroutine derive_num_profiles()
 !-----------------------------------------------------------------------
   
   use phys_module
+  use profiles
   
   implicit none
   

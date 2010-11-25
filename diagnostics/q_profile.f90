@@ -73,7 +73,7 @@ do i=2, surface_list%n_psi
       ! --- Make sure that for flux surfaces at Psi_N < 1, the surface integral is carried out only
       !     over the flux surface segments of the plasma region.
       !     I.e., ignore flux surface segments in the private flux region below the x-point.
-      if ( (.not. xpoint) .or. ((PSgi < psi_xpoint) .and. (ZZgi < z_xpoint)) ) cycle
+      if ( xpoint .and. ((PSgi < psi_xpoint) .and. (ZZgi < z_xpoint)) ) cycle
 
       dRRgi_dt = dRRgi_dr * dri + dRRgi_ds * dsi
       dZZgi_dt = dZZgi_dr * dri + dZZgi_ds * dsi

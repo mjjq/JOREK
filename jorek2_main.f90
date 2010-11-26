@@ -226,7 +226,8 @@ program JOREK2
         if (regrid) then                               ! optional redo fluxsurface grid
 
            if (xpoint)  then
-              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
+              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,            &
+                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
            else
               call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
            endif
@@ -286,7 +287,8 @@ program JOREK2
 
        if (xpoint)  then
 
-         if (my_id .eq. 0) call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht)
+         if (my_id .eq. 0) call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+           SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
 
          call broadcast_nodes(my_id,node_list)
          call broadcast_elements(my_id,element_list)

@@ -1,12 +1,16 @@
 subroutine log_parameters(my_id)
+!-----------------------------------------------------------------------
 ! Write out all relevant parameters from mod_parameters and the input file.
+!-----------------------------------------------------------------------
 
 use phys_module
 
 implicit none
 
-integer, intent(IN) :: my_id
+! --- input variables
+integer, intent(in) :: my_id
 
+! --- local variables
 integer           :: ivar, itor
 character(len=10) :: mode_num
 
@@ -62,9 +66,22 @@ if (my_id .eq. 0) then
   write(*,231) 'n_pol           ', n_pol
   write(*,231) 'n_tht           ', n_tht
   write(*,231) 'n_flux          ', n_flux
-  write(*,231) 'n_open          ', n_open
-  write(*,231) 'n_private       ', n_private
-  write(*,231) 'n_leg           ', n_leg
+  write(*,232) 'xpoint          ', xpoint
+  
+  if ( xpoint ) then
+    write(*,231) 'n_open          ', n_open
+    write(*,231) 'n_private       ', n_private
+    write(*,231) 'n_leg           ', n_leg
+    write(*,230) 'SIG_closed      ', SIG_closed
+    write(*,230) 'SIG_open        ', SIG_open
+    write(*,230) 'SIG_private     ', SIG_private
+    write(*,230) 'SIG_theta       ', SIG_theta
+    write(*,230) 'SIG_leg_0       ', SIG_leg_0
+    write(*,230) 'SIG_leg_1       ', SIG_leg_1
+    write(*,230) 'dPSI_open       ', dPSI_open
+    write(*,230) 'dPSI_private    ', dPSI_private
+  end if
+  
   write(*,231) 'nout            ', nout
   write(*,230) 'xr1             ', xr1
   write(*,230) 'sig1            ', sig1
@@ -132,7 +149,6 @@ if (my_id .eq. 0) then
   write(*,230) 'xtheta          ', xtheta
   write(*,230) 'xshift          ', xshift
   write(*,230) 'xleft           ', xleft
-  write(*,232) 'xpoint          ', xpoint
   write(*,231) 'n_boundary      ', n_boundary
   
   if ( n_boundary > 0 ) then

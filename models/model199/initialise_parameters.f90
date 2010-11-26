@@ -2,6 +2,7 @@ subroutine initialise_parameters(my_id)
 !-----------------------------------------------------------------------
 ! Initialise input parameters and read the input namelist
 !-----------------------------------------------------------------------
+
 use phys_module
 
 implicit none
@@ -10,14 +11,16 @@ implicit none
 integer, intent(in) :: my_id
 
 ! --- Internal variables.
-integer :: in, i
-real*8  :: psi_plot(1001),zj_plot(1001),dj_plot(1001),dz_plot(1001), z_plot(1001), z, zjz, dj_dpsi, dj_dz, psi_n
+!integer :: in, i
+!real*8  :: psi_plot(1001),zj_plot(1001),dj_plot(1001),dz_plot(1001), z_plot(1001), z, zjz, dj_dpsi, dj_dz, psi_n
 
 ! --- Namelist with input parameters.
-namelist /in1/  tstep, nstep, eta, visco, restart,  regrid,         &
+namelist /in1/  tstep, nstep, eta, visco, restart, regrid,          &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open,n_private,n_leg,  nout,                      &
-                xr1, sig1, xr2, sig2,                               &
+                n_open, n_private, n_leg,                           &
+                SIG_closed, SIG_open, SIG_private, SIG_theta,       &
+                SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
+                nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
@@ -29,8 +32,8 @@ namelist /in1/  tstep, nstep, eta, visco, restart,  regrid,         &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
                 particlesource, heatsource,                         &
                 eta_num, visco_num,                                 &
-                ellip,tria_u,tria_l,quad_u,quad_l,                  &
-                xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
+                ellip, tria_u, tria_l, quad_u, quad_l,              &
+                xampl, xwidth, xsig, xtheta, xshift, xleft, xpoint, &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary, use_starwall, resistive_wall,         &
                 refinement
@@ -64,7 +67,17 @@ if (my_id .eq. 0) then
   n_open    = 5
   n_leg     = 5
   n_private = 5
-
+  
+  SIG_closed  = 0.1d0
+  SIG_open    = 0.1d0
+  SIG_private = 0.1d0
+  SIG_theta   = 0.03d0
+  SIG_leg_0   = 0.05d0
+  SIG_leg_1   = 0.2d0
+  
+  dPSI_open    = 0.11
+  dPSI_private = 0.03
+  
   R_geo     = 10.d0
   Z_geo     = 0.d0
   amin      = 1.d0
@@ -73,6 +86,11 @@ if (my_id .eq. 0) then
 
   mf        = 8
   fbnd      = 0.d0; fbnd(1) =2.d0
+
+  R_boundary   = 0.d0
+  Z_boundary   = 0.d0
+  psi_boundary = 0.d0
+  n_boundary   = 0
 
   ellip  = 1.d0
   tria_u = 0.d0

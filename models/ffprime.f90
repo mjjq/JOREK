@@ -80,7 +80,7 @@ else ! use numerical representation.
       left = mid
     end if
   end do
-  aux1 = (psi_n - num_T_x(left)) / (num_T_x(right) - num_T_x(left))
+  aux1 = (psi_n - num_ffprime_x(left)) / (num_ffprime_x(right) - num_ffprime_x(left))
   aux2 = (1. - aux1)
   prof1        = num_ffprime_y0(left)   * aux2 + num_ffprime_y0(right) * aux1
   dprof1_dpsi  = ( num_ffprime_y1(left) * aux2 + num_ffprime_y1(right) * aux1 ) / delta_psi

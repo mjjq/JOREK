@@ -2,40 +2,38 @@ subroutine grid_polar_bezier(Rgeo,Zgeo,amin,acentre,fbnd,fpsi,mf,nr,np,node_list
 !***********************************************************************
 ! defines a polar grid using Bezier finite elements (using the HELENA
 ! cubic Hermite elements formulation)
-!
-! input :
-!          Rgeo,Zgeo : the position of the geometric center
-!          amin      : the minor radius
-!          acentre   : smallest radius
-!          fbnd(1:mf): Fourier series describing the radius as function
-!                      of the poloidal angle
-!          fpsi(1:mf): Fourier series of flux at the boundary
-!          nr        : number of radial points, (nr-1) elements
-!          np        : number of poloidal points, np elements
-!
-! output :
-!
-!          node_list    : list of nodes with grid information
-!          element_list : list of elements with element information
 !***********************************************************************
+
 use parameters
 use data_structure
 
 implicit none
 
-real*8              :: Rgeo, Zgeo,amin,acentre,fbnd(*),fpsi(*),angle_start
+! --- input variables
+real*8,                  intent(in)    :: Rgeo, Zgeo     ! position of the geometric center
+real*8,                  intent(in)    :: amin           ! minor radius
+real*8,                  intent(in)    :: acentre        ! smallest radius
+real*8,                  intent(in)    :: fbnd(*)        ! Fourier series describing the radius as function
+                                                         !   of the poloidal angle
+real*8,                  intent(in)    :: fpsi(*)        ! Fourier series of flux at the boundary
+integer,                 intent(in)    :: mf             ! Number of Fourier modes in fbnd and fpsi
+integer,                 intent(in)    :: nr             ! number of radial points, (nr-1) elements
+integer,                 intent(in)    :: np             ! number of poloidal points, np elements
+type(type_node_list),    intent(inout) :: node_list      ! list of nodes with grid information
+type(type_element_list), intent(inout) :: element_list   ! list of elements with element information
+
+! --- local variables
+real*8              :: angle_start
 real*8, allocatable :: RR(:,:),ZZ(:,:),PSI(:,:)
-real*8              :: r_small, pi, dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
+real*8              :: pi, dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
 real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3
-integer             :: mf, nr, np, i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm,i_sons
-integer             :: n_element_start, n_node_start, n_boundary_start, n_index_start, ielm, iside,iv1, iv2, idir1, idir2
-real*8              :: XR_r_0,XR_r_1, SIG_r_0, SIG_r_1, XR_tht_0, XR_tht_1, SIG_tht_0, SIG_tht_1, abltg(3), s_tmp, dr_ds, dtht_dt
+integer             :: i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm,i_sons
+integer             :: n_element_start, n_node_start, n_index_start
+real*8              :: XR_r_0,XR_r_1, SIG_r_0, SIG_r_1, XR_tht_0, XR_tht_1, SIG_tht_0, SIG_tht_1, abltg(3), dr_ds, dtht_dt
 real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
 
-type(type_node_list)     :: node_list
-type(type_element_list)  :: element_list
 
 allocate(RR(4,nr*np),ZZ(4,nr*np),PSI(4,nr*np))
 
@@ -346,5 +344,4 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 enddo
 
 return
-end
-
+end subroutine grid_polar_bezier

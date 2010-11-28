@@ -1,18 +1,27 @@
 subroutine current(xpoint2,R,Z,Z_xpoint,psi,psi_axis,psi_bnd,zjz)
 !-----------------------------------------------------------------------
-!
+! Determine the current at a given position from the density,
+! temperature, and FF' input profiles
 !-----------------------------------------------------------------------
+
 use phys_module
 
 implicit none
 
-logical :: xpoint2
-real*8  :: R, Z, Z_xpoint, psi, psi_axis, psi_bnd, zj0, zjz, dj_dpsi, psi_n, sigz
-real*8  :: zjz_p, zjz_q, dj_dz, ss, dj_ds
+! --- input variables
+logical, intent(in)    :: xpoint2
+real*8,  intent(in)    :: R, Z
+real*8,  intent(in)    :: Z_xpoint
+real*8,  intent(in)    :: psi
+real*8,  intent(in)    :: psi_axis
+real*8,  intent(in)    :: psi_bnd
+real*8,  intent(out)   :: zjz        ! Current at the given position.
+
+! --- local variables
+real*8  :: psi_n
 real*8  :: zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8  :: zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
 real*8  :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
-real*8  :: dc(4), ddc(4), bar_start, bar_mid, bar_end
 
 psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
 
@@ -28,4 +37,4 @@ call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
 zjz   = zFFprime - R*R * (zn * dT_dpsi + dn_dpsi * zT)
 
 return
-end
+end subroutine current

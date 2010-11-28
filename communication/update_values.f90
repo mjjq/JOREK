@@ -2,23 +2,27 @@ subroutine update_values(my_id,element_list,node_list,RHS)
 !-----------------------------------------------------------------------
 ! subroutine adds the delta_values in RHS to the values in the node_list
 !-----------------------------------------------------------------------
+
 use data_structure
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-real*8  :: RHS(*)
+! --- input variables
+integer,                  intent(in)    :: my_id
+type (type_element_list), intent(inout) :: element_list
+type (type_node_list),    intent(inout) :: node_list
+real*8,                   intent(in)    :: RHS(*)
+
+! --- local variables
 real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
-real*8, dimension(2,4) 	 :: c, dc_ds, dc_dt, d2c_dsdt					   
-real*8			 :: lambda, mu,dif	
+real*8	:: lambda, mu
 real*8, dimension(n_tor) :: Psi, dPsi_ds,dPsi_dt, d2Psi_dsdt
 real*8, dimension(n_tor) :: Delt,Delt_ds,Delt_dt,Delt_dsdt
-real*8			 :: h_u, h_v, h_w   
+real*8	:: h_u, h_v, h_w   
 integer, dimension(n_vertex_max)  :: Pr
-integer, dimension(2)		  :: parent
-integer                           :: index_elm,iv,l,i_tor,ivar
-integer :: my_id, i, j, k, in, index_node, index
+integer, dimension(2)    :: parent
+integer :: index_elm,l,i_tor,ivar
+integer :: i, j, k, in, index_node, index
 
 if (my_id .eq. 0) then
 
@@ -170,4 +174,4 @@ endif
 call broadcast_nodes(my_id,node_list)
 
 return
-end
+end subroutine update_values

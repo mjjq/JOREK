@@ -4,6 +4,7 @@ subroutine grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
 !-----------------------------------------------------------------------
+
 use data_structure
 
 implicit none
@@ -15,7 +16,7 @@ integer,                  intent(in)    :: n_flux, n_open, n_private, n_leg, n_t
 real*8,                   intent(in)    :: SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1
 real*8,                   intent(in)    :: dPSI_open, dPSI_private
 
-! --- internal variables
+! --- local variables
 type (type_surface_list) :: flux_list
 
 type (type_node_list)    :: newnode_list
@@ -23,13 +24,10 @@ type (type_element_list) :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_xpoint
-real*8              :: psi_max, s_max, PI, s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2
+real*8              :: PI, s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
-real*8              :: PSg2,dPSg2_dr,dPSg2_ds,dPSg2_drs,dPSg2_drr,dPSg2_dss
-real*8              :: PSg3,dPSg3_dr,dPSg3_ds,dPSg3_drs,dPSg3_drr,dPSg3_dss
-real*8              :: PSg0,dPSg0_dr,dPSg0_ds,dPSg0_drs,dPSg0_drr,dPSg0_dss
 real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:)
 real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
 real*8, allocatable :: RR_new(:,:),ZZ_new(:,:),s_flux(:,:),t_flux(:,:),t_tht(:,:)
@@ -38,11 +36,10 @@ integer             :: i, j, k, l, m, n_psi, n_flux_2, n_open_2, n_tht_2, n_psi_
 integer             :: n_private_2, i_surf, n_pieces
 integer             :: i_elm_axis, i_elm_xpoint, i_elm_find(8), i_sep, i_max, i_find, npl, ifail
 integer             :: node, index, node_start, index_xpoint, n_xpoint, j_start, j_end
-integer             :: iv, ivp, ivm, node_iv, node_ivp, node_ivm, i_elm, n_leg_2, n_tht_3
-integer             :: inode, ielm_out
-real*8              :: delta_rp, delta_zp, delta_rm, delta_zm, dir_2, dir_3, size_2, size_3
+integer             :: iv, ivp, node_iv, node_ivp, i_elm, n_leg_2, n_tht_3
+integer             :: ielm_out
 real*8              :: Rmid, Zmid, R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
-real*8              :: R1, Z1, R2, Z2, R3, Z3, s_out, t_out, R_out, Z_out, s_in, t_in
+real*8              :: R1, Z1, s_out, t_out, R_out, Z_out
 real*8              :: EJAC, RX, RY, SX, SY, CRR, CZZ, CRZ, alpha1, alpha2, alpha_max, alpha_min
 real*8              :: RL1, RL2, RL3, RL4, RL5, RL6, RL7, ZL1, ZL2, ZL3, ZL4, ZL5, ZL6, ZL7, rr1, ss1
 logical             :: xpoint
@@ -1391,4 +1388,4 @@ deallocate(RR_new,ZZ_new,s_flux,t_flux,t_tht)
 deallocate(ielm_flux,keep,k_cross)
 
 return
-end
+end subroutine grid_xpoint

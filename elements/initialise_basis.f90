@@ -1,21 +1,21 @@
-subroutine initialise_basis
+subroutine initialise_basis()
 !---------------------------------------------------------------
 ! calculates the basis functions at the Gaussian points
 !---------------------------------------------------------------
+
 use gauss
 use basis_at_gaussian
 use phys_module
 
 implicit none
-integer :: i,k,l, i_tor
-real*8  :: s,t,phi,PI
 
+! --- local variables
+integer :: i,k,l
+real*8  :: s,t,phi,PI
 real*8 :: G(n_vertex_max,n_order+1,n_gauss,n_gauss)
 real*8 :: G_s(n_vertex_max,n_order+1,n_gauss,n_gauss)
 real*8 :: G_t(n_vertex_max,n_order+1,n_gauss,n_gauss)
 real*8 :: G_st(n_vertex_max,n_order+1,n_gauss,n_gauss)
-real*8 :: G_ss(n_vertex_max,n_order+1,n_gauss,n_gauss)
-real*8 :: G_tt(n_vertex_max,n_order+1,n_gauss,n_gauss)
 
 do k=1,n_gauss
 
@@ -69,4 +69,4 @@ do k=1,n_plane
 enddo
 
 return
-end
+end subroutine initialise_basis

@@ -68,8 +68,8 @@ program JOREK2
        INTEGER(KIND=4) :: I_TOR(:)
        INTEGER(KIND=4) :: MPI_COMM_MASTER
      END SUBROUTINE UPDATE_RHS_N
-
   end interface
+  
   type (type_surface_list) :: surface_list
   logical                  :: grid_changed
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0

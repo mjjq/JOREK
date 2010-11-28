@@ -10,10 +10,6 @@ implicit none
 ! --- Input variables.
 integer, intent(in) :: my_id
 
-! --- Internal variables.
-!integer :: in, i
-!real*8  :: psi_plot(1001),zj_plot(1001),dj_plot(1001),dz_plot(1001), z_plot(1001), z, zjz, dj_dpsi, dj_dz, psi_n
-
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 restart, regrid,                                    &

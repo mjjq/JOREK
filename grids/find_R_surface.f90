@@ -2,22 +2,30 @@ subroutine find_R_surface(node_list,element_list,surface_list,j_surf,R_find,i_el
 !---------------------------------------------------------------------------
 ! subroutine finds a R value on a specific surface
 !---------------------------------------------------------------------------
+
 use data_structure
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-type (type_surface_list) :: surface_list
+! --- input variables
+type (type_node_list),    intent(in)    :: node_list
+type (type_element_list), intent(in)    :: element_list
+type (type_surface_list), intent(in)    :: surface_list
+integer,                  intent(in)    :: j_surf
+real*8,                   intent(in)    :: R_find
+integer,                  intent(out)   :: i_elm_find(*)
+real*8,                   intent(out)   :: s_find(*)
+real*8,                   intent(out)   :: t_find(*)
+integer,                  intent(out)   :: i_find
 
-integer :: k, j_surf, i_elm_find(*), i_elm, ifail, i_find
-real*8  :: R_find, s_find(*), t_find(*), ri, dri, si ,dsi
+! --- local variables
+integer :: k, i_elm, ifail
+real*8  :: ri, dri, si ,dsi
 real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, t2, t3, delta_t
 real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8  :: RRg2,dRRg2_dr,dRRg2_ds,dRRg2_drs,dRRg2_drr,dRRg2_dss
 real*8  :: ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss
-real*8  :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8  :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt, RZ1, RZ2, dRZ1, dRZ2, RZ0, A0, A1, A2, A3
 
 !write(*,*) ' finding R on surface : ',surface_list%psi_values(j_surf),R_find
@@ -99,4 +107,4 @@ enddo
 if (i_find .eq. 0) write(*,*) ' WARNING : no R surface found'
 
 return
-end
+end subroutine find_R_surface

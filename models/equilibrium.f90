@@ -27,20 +27,16 @@ logical,                  intent(in)    :: xpoint2
 
 ! --- Local variables.
 type (type_surface_list) :: surface_list
-integer    :: ierr, n_iter, iter, i, in, mm, i_elm_axis, i_elm_xpoint
-real*8     :: amplitude, psi, psi_axis
+integer    :: n_iter, iter, i, i_elm_axis, i_elm_xpoint
+real*8     :: psi, psi_axis
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
-real*8     :: w, w_s, w_t, w_st, w_r, w_tht, w_r_tht, w_rr, w_tht_tht
-real*8     :: xx, x_s, x_t, x_st, x_ss, x_tt, yy, y_s, y_t, y_st, y_ss, y_tt
-real*8     :: rr, r2, r_s, r_t, r_st, tht, tht_s, tht_t, tht_st
-real*8     :: r_x, r_y, r_xy, r_xx, r_yy, tht_x, tht_y, tht_xy, tht_xx, tht_yy
-real*8     :: x_min, x_max, y_min, y_max,x ,y
-real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s
-real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
+real*8     :: x_s, x_t
+real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z
+real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
 real*8     :: psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
-real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
+real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t, equil_error, equil_value
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'

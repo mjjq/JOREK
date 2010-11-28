@@ -3,10 +3,13 @@ subroutine Poisson(my_id,itype,node_list,element_list,ivar_in,ivar_out,i_harm,xp
 ! collect the element matrices into one large sparse matrix
 ! in coordinate format
 !---------------------------------------------------------------
+
 use data_structure
 use mumps_module
 use pastix_module
+
 implicit none
+
 include 'mpif.h'
 
 interface
@@ -23,8 +26,17 @@ interface
    end subroutine find_axis
 end interface
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+! --- input variables
+integer,                  intent(in)    :: my_id
+integer,                  intent(in)    :: itype
+type (type_node_list),    intent(inout) :: node_list
+type (type_element_list), intent(inout) :: element_list
+integer,                  intent(in)    :: ivar_in
+integer,                  intent(in)    :: ivar_out
+integer,                  intent(in)    :: i_harm
+logical,                  intent(in)    :: xpoint
+
+! --- local variables
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 type (type_element)      :: element_father
@@ -32,12 +44,10 @@ type (type_node)         :: nodes_father(n_vertex_max)
 real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1))
 real*8   :: zbig, Z_xpoint, psi_axis, psi_bnd, psi_xpoint, R_xpoint, s_xpoint, t_xpoint
 real*8   :: R_axis, Z_axis, s_axis, t_axis, amix
-integer  :: ierr, my_id, itype, ivar_in, ivar_out, i_harm, i_elm_axis, i_elm_xpoint
+integer  :: i_elm_axis, i_elm_xpoint
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
-integer  :: n_elements, inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i, check_data, nnz
-logical  :: xpoint
+integer  :: n_elements, inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
 real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
-real*8, dimension(2,4) 	 :: c, dc_ds, dc_dt, d2c_dsdt					   
 real*8			 :: lambda, mu	
 real*8			 :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
 real*8			 :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w 
@@ -45,8 +55,6 @@ integer			 :: i_father, inode_father,Index_elm
 integer, dimension(n_vertex_max)  :: pr
 integer, dimension(2)		  :: parent
 integer, dimension(n_vertex_max) ::  node_out
-!integer, dimension(node_list%n_nodes) :: active_node
-integer  ::n_active_nodes
 if (my_id .eq. 0) then
 
   write(*,*) '**************************************'
@@ -494,4 +502,4 @@ endif
 
 
 return
-end
+end subroutine poisson

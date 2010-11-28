@@ -2,21 +2,28 @@ subroutine grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n
 !------------------------------------------------------------------------
 ! subroutine calculates a new flux surface grid (adapted from HELENA20)
 !------------------------------------------------------------------------
+
 use data_structure
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-type (type_surface_list) :: surface_list
+! --- input variables
+logical,                  intent(in)    :: xpoint
+type (type_node_list),    intent(inout) :: node_list
+type (type_element_list), intent(inout) :: element_list
+type (type_surface_list), intent(inout) :: surface_list
+integer,                  intent(in)    :: n_flux
+integer,                  intent(in)    :: n_tht
+real*8,                   intent(in)    :: xr1, xr2
+real*8,                   intent(in)    :: sig1, sig2
 
-integer            :: n_flux, n_tht, nrnew, npnew, i, j, k, i_elm, i_elm_axis
+! --- local variables
+integer            :: nrnew, npnew, i, j, k, i_elm, i_elm_axis
 real*8,allocatable :: RRnew(:,:),ZZnew(:,:),PSInew(:,:)
 real*8             :: PI, abltg(3), xtmp
 real*8,allocatable :: s_values(:),radius(:),psi_values(:),tht_start(:),tht_end(:)
 real*8,allocatable :: sp1(:),sp2(:),sp3(:),sp4(:)
 real*8             :: R_axis, Z_axis, psi_axis, s_axis, t_axis
-real*8             :: xr1, sig1, xr2, sig2
 real*8             :: dpsi_ds, tht_min, tht_max, rr1, rr2, ss1, ss2
 real*8             :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8             :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
@@ -27,16 +34,15 @@ real*8             :: tht1, tht2, tht_tmp
 real*8             :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt, rz0, rz1, rz2, drz1, drz2
 real*8             :: a0, a1, a2, a3
 real*8             :: theta, drr1, dss1, drr2, dss2, t, t2, t3, ri, si, dri, dsi, check
-real*8             :: rad, rad2, th_z, th_r, th_rr, th_zz, th_rz, dth_ds, dth_dr, dth_drs, dth_drr, dth_dss
-real*8             :: rzjac, ps_z, ps_r, ps_s, ejac, ptjac, rt, st, dptjac_dr, dptjac_ds, rpt, spt
+real*8             :: rad2, th_z, th_r, th_rr, th_zz, th_rz, dth_ds, dth_dr, dth_drs, dth_drr, dth_dss
+real*8             :: rzjac, ps_z, ps_r, ejac, ptjac, rt, st, dptjac_dr, dptjac_ds, rpt, spt
 real*8             :: dr_dr, dr_dz, ds_dr, ds_dz, dps_drr, dps_dzz, crr_axis, czz_axis, cx, cy
 real*8             :: dr_dpt, dz_dpt, r_ax, s_ax, tn, tn2, cn
 real*8             :: delta_rp, delta_zp, delta_rm, delta_zm, dir_2, dir_3, B_axis, q_axis
-real*8             :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_bnd, delta, dpsi_ds2,dpsi_ds0
+real*8             :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_bnd
 real*8, external   :: spwert
 integer            :: ifail, inode, node, index, index0, n_node_start, n_element_start, iv, ivp, ivm
 integer            :: n_index_start, node_iv, node_ivp, node_ivm, i_elm_xpoint
-logical            :: xpoint
 integer            :: i_sons
 PI = 2.d0*asin(1.d0)
  
@@ -536,4 +542,4 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 
 enddo
 return
-end
+end subroutine grid_flux_surface

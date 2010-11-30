@@ -7,7 +7,7 @@ use data_structure
 
 implicit none
 
-! --- input variables
+! --- Routine parameters
 logical,                  intent(in)    :: xpoint
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list

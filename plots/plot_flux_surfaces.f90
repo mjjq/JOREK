@@ -2,7 +2,7 @@ subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nt
 use data_structure
 implicit none
 
-! --- input variables
+! --- Routine parameters
 type (type_node_list),    intent(in) :: node_list
 type (type_element_list), intent(in) :: element_list
 type (type_surface_list), intent(in) :: surface_list

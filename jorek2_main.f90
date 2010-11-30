@@ -3,10 +3,6 @@
 !***************************************************************************************************
 !*   program solves the (reduced) MHD equations in 3D toroidal geometry                            *
 !*                                                                                                 *
-!*   present status :                                                                              *
-!*     - first version in subversion                                                               *
-!*     - choice of physics model                                                                   *
-!*                                                                                                 *
 !*   solvers implemented:                                                                          *
 !*     - MUMPS                                                                                     *
 !*     - PastiX                                                                                    *
@@ -21,13 +17,6 @@
 !*     - SCALAPACK (BLACS)                                                                         *
 !*     - LAPACK, BLAS                                                                              *
 !*     - PPPLIB                                                                                    *
-!*                                                                                                 *
-!*   to be done:                                                                                   *
-!*     - a lot                                                                                     *
-!*     - boundary integrals                                                                        *
-!*     - sheath transmission factors                                                               *
-!*     - vacuum response (outside grid, external coils)                                            *
-!*     - ...                                                                                       *
 !*                                                                                                 *
 !*  Author : Guido Huysmans (Euratom / CEA Association)                                            *
 !*  Date   : 18-7-2008                                                                             *
@@ -49,25 +38,25 @@ program JOREK2
 #include "r3_info.h"
 
   interface
-     subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
-       integer :: i_tor(:), my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
-       integer :: iter_gmres, n_tor
-     end subroutine gmres_driver
+    subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+      integer :: i_tor(:), my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
+      integer :: iter_gmres, n_tor
+    end subroutine gmres_driver
     
-     subroutine equilibrium(my_id,node_list,element_list,xpoint2)
-       use data_structure
-       integer(kind=4),          intent(in)    :: my_id
-       type (type_node_list),    intent(inout) :: node_list
-       type (type_element_list), intent(inout) :: element_list
-       logical(kind=4),          intent(in)    :: xpoint2
-     end subroutine equilibrium
+    subroutine equilibrium(my_id,node_list,element_list,xpoint2)
+      use data_structure
+      integer(kind=4),          intent(in)    :: my_id
+      type (type_node_list),    intent(inout) :: node_list
+      type (type_element_list), intent(inout) :: element_list
+      logical(kind=4),          intent(in)    :: xpoint2
+    end subroutine equilibrium
      
-     SUBROUTINE UPDATE_RHS_N(MY_ID,MY_ID_N,I_TOR,MPI_COMM_MASTER)
-       INTEGER(KIND=4) :: MY_ID
-       INTEGER(KIND=4) :: MY_ID_N
-       INTEGER(KIND=4) :: I_TOR(:)
-       INTEGER(KIND=4) :: MPI_COMM_MASTER
-     END SUBROUTINE UPDATE_RHS_N
+    SUBROUTINE UPDATE_RHS_N(MY_ID,MY_ID_N,I_TOR,MPI_COMM_MASTER)
+      INTEGER(KIND=4) :: MY_ID
+      INTEGER(KIND=4) :: MY_ID_N
+      INTEGER(KIND=4) :: I_TOR(:)
+      INTEGER(KIND=4) :: MPI_COMM_MASTER
+    END SUBROUTINE UPDATE_RHS_N
   end interface
   
   type (type_surface_list) :: surface_list
@@ -99,42 +88,41 @@ program JOREK2
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon
   logical                  :: is_local
   integer                  :: i_elem, inode1, i_order, k_order, index_node1, index_node2, knode
-  TYPE (type_element)      :: element
+  type (type_element)      :: element
   integer                  :: index_size, id_elements
 
   integer                  ::  list_to_be_refined(n_ref_list), n_to_be_refined    
   
   logical                  :: bench_without_plot
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
-  CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(I2,A70,F7.2)"
+  character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
 
+
+  if (my_id .eq. 0) then
+    write(*,*) '****************************************'
+    write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
+    write(*,*) '****************************************'
+  end if
 
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
 
-
+  ! --- Initialise MPI
   !call MPI_INIT(IERR)                                     ! initialise MPI
-
   required=MPI_THREAD_MULTIPLE
   call MPI_Init_thread(required,provided,StatInfo)         ! initialise threaded MPI (openMPI)
-
-  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
-
-  call r3_info_init ()                                     ! timing
-
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)           ! the id of each cpu
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
   my_id = rank
   n_cpu = comm_size
+  
+  ! --- Initialise timing
+  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
+  call r3_info_init ()                                     ! timing
 
-  if (my_id .eq. 0) write(*,*) '****************************************'
-  if (my_id .eq. 0) write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
-  if (my_id .eq. 0) write(*,*) '****************************************'
-  if (my_id .eq. 0) write(*,'(1X,A,I8)') 'n_cpu          = ',n_cpu
-
+  ! --- Select solver
   gmres  = .true.                                           ! .true. for gmres, .false. for direct
-
   use_mumps  = .false.
   use_pastix = (.not. use_mumps)
   use_murge  = .false.
@@ -145,15 +133,11 @@ program JOREK2
   pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!    
   refinement=.false.
 
+  adaptive_time = .false.  ! requires no_mpi for Pastix library
 
-  ! requires no_mpi for Pastix library
-  adaptive_time = .false.
+  if (n_tor .eq. 1) gmres  = .false.
 
-  if (n_tor .eq. 1) then
-     gmres  = .false.
-  endif
-
-  ! Flag from HSLT
+  ! --- Flag from HSLT
   bench_without_plot              = .false.    ! .true. for benchmark (mesuring elapsed time without plot phases) 
   use_matrix_whitout_zeros_pastix = .false.    ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   use_matrix_whitout_zeros_mumps  = .false.    ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
@@ -177,7 +161,7 @@ program JOREK2
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-  !---------------------------------------------------------- some checks not to waste any cpu time
+  ! --- Some checks not to waste any cpu time
   if(required.ne.provided)then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
     call MPI_FINALIZE(IERR)
@@ -188,53 +172,50 @@ program JOREK2
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_FINALIZE(IERR)                                ! clean up MPI
     stop
-  endif
+  end if
 
   if ((n_plane .lt. n_tor + 1) .and. (n_tor .gt. 1)) then
     write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
     call MPI_FINALIZE(IERR)                                ! clean up MPI
     stop
-  endif
+  end if
 
   if ((gmres) .and. (nstep .gt. 0)) then
     if (n_cpu .lt. (n_tor-1)/2+1) then
       write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-      
   !    call MPI_FINALIZE(IERR)                             ! clean up MPI
   !    stop
-      
-    endif
+    end if
     if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
       write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
       call MPI_FINALIZE(IERR)                              ! clean up MPI
       stop
-    endif
-  endif
+    end if
+  end if
+  
+  ! --- Initialise ppplib plotting library
+  if (my_id .eq. 0)  call begplt('jorek2.ps')
 
+  ! --- Define the basis functions at the Gaussian points
+  call initialise_basis()
 
-  if (my_id .eq. 0)  call begplt('jorek2.ps')        ! initialise ppplib plotting library
+  ! --- Read the restart file to continue a previous JOREK run (if restart is .true.)
+  if ( restart .and. (my_id .eq. 0) ) then
 
-  call initialise_basis                              ! define the basis functions at the Gaussian points
+    call import_restart(node_list,element_list)    ! read restart file
+    tstep = tstep_in
 
-  if (my_id .eq. 0) then
-
-     if (restart) then
-
-        call import_restart(node_list,element_list)    ! read restart file
-        tstep = tstep_in
-
-        if (regrid) then                               ! optional redo fluxsurface grid
-
-           if (xpoint)  then
-              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,            &
-                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-           else
-              call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
-           endif
-
-        endif
-     endif
-  endif
+    ! --- Optional: redo fluxsurface grid (DOES NOT WORK CURRENTLY)
+    if (regrid) then
+      if (xpoint)  then
+        call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,            &
+          SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
+      else
+        call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+      end if
+    end if
+    
+  end if
 
   !***********************************************************************
   !*                  define grid / equilibrium                          *

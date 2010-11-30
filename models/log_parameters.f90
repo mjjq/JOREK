@@ -7,7 +7,7 @@ use phys_module
 
 implicit none
 
-! --- input variables
+! --- Routine parameters
 integer, intent(in) :: my_id
 
 ! --- local variables

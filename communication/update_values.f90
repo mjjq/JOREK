@@ -7,7 +7,7 @@ use data_structure
 
 implicit none
 
-! --- input variables
+! --- Routine parameters
 integer,                  intent(in)    :: my_id
 type (type_element_list), intent(inout) :: element_list
 type (type_node_list),    intent(inout) :: node_list

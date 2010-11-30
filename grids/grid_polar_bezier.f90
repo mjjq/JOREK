@@ -9,7 +9,7 @@ use data_structure
 
 implicit none
 
-! --- input variables
+! --- Routine parameters
 real*8,                  intent(in)    :: Rgeo, Zgeo     ! position of the geometric center
 real*8,                  intent(in)    :: amin           ! minor radius
 real*8,                  intent(in)    :: acentre        ! smallest radius

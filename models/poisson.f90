@@ -26,7 +26,7 @@ interface
    end subroutine find_axis
 end interface
 
-! --- input variables
+! --- Routine parameters
 integer,                  intent(in)    :: my_id
 integer,                  intent(in)    :: itype
 type (type_node_list),    intent(inout) :: node_list

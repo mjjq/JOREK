@@ -7,7 +7,7 @@ use phys_module
 
 implicit none
 
-! --- Input variables.
+! --- Routine parameters
 integer, intent(in) :: my_id
 
 ! --- Namelist with input parameters.

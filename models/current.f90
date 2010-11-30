@@ -8,7 +8,7 @@ use phys_module
 
 implicit none
 
-! --- input variables
+! --- Routine parameters
 logical, intent(in)    :: xpoint2
 real*8,  intent(in)    :: R, Z
 real*8,  intent(in)    :: Z_xpoint

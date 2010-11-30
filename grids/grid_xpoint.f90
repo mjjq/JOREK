@@ -9,7 +9,7 @@ use data_structure
 
 implicit none
 
-! --- input variables
+! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
 integer,                  intent(in)    :: n_flux, n_open, n_private, n_leg, n_tht

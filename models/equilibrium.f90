@@ -19,7 +19,7 @@ interface
    end subroutine Poisson
 end interface
 
-! --- Input variables.
+! --- Routine parameters
 integer,                  intent(in)    :: my_id
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list

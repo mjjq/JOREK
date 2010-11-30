@@ -8,7 +8,7 @@ use phys_module
 
 implicit none
 
-! --- Input variables.
+! --- Routine parameters
 logical, intent(in)  :: xpoint2
 real*8,  intent(in)  :: Z, Z_xpoint, psi, psi_axis, psi_bnd
 real*8,  intent(out) :: temperature_profile, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, &
@@ -120,8 +120,6 @@ else
 end if
 
 temperature_profile = temperature_profile + T_1
-
-write(342,*) psi_n, temperature_profile
 
 return
 end subroutine temperature

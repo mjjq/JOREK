@@ -8,7 +8,7 @@ use phys_module
 
 implicit none
 
-! --- Input variables.
+! --- Routine parameters
 logical, intent(in)  :: xpoint2
 real*8,  intent(in)  :: Z, Z_xpoint, psi, psi_axis, psi_bnd
 real*8,  intent(out) :: density_profile, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, &
@@ -120,8 +120,6 @@ else
 end if
 
 density_profile = density_profile + rho_1
-
-write(341,*) psi_n, density_profile
 
 return
 end subroutine density

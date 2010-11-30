@@ -1,4 +1,4 @@
-subroutine FFprime(xpoint2,Z,Z_xpoint,psi,psi_axis,psi_bnd,FFprime_profile,dFF_dpsi,dFF_dz, &
+recursive subroutine FFprime(xpoint2,Z,Z_xpoint,psi,psi_axis,psi_bnd,FFprime_profile,dFF_dpsi,dFF_dz, &
                        dFF_dpsi2,dFF_dz2,dFF_dpsi_dz)
 !-----------------------------------------------------------------------
 ! Determines the F*F' value and its derivatives at the given
@@ -8,7 +8,7 @@ use phys_module
 
 implicit none
 
-! --- Input variables.
+! --- Routine parameters
 logical, intent(in)  :: xpoint2
 real*8,  intent(in)  :: Z, Z_xpoint, psi, psi_axis, psi_bnd
 real*8,  intent(out) :: FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
@@ -120,8 +120,6 @@ else
 end if
 
 FFprime_profile = FFprime_profile + FF_1
-
-write(343,*) psi_n, ffprime_profile
 
 return
 end subroutine FFprime

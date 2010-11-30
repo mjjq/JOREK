@@ -35,8 +35,10 @@ integer               :: i_elm_axis, i_elm_xpoint
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 restart,  regrid,                                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open,n_private,n_leg,  nout,                      &
-                xr1, sig1, xr2, sig2,                               &
+                n_open, n_private, n_leg,                           &
+                SIG_closed, SIG_open, SIG_private, SIG_theta,       &
+                SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
+                nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
@@ -50,7 +52,9 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                freeboundary,use_starwall,resistive_wall,refinement
+                rho_file, T_file, ffprime_file,                     &
+                freeboundary, use_starwall, resistive_wall,         &
+                refinement
 
 write(*,*) "jorek2vtk"
 read(5,in1)               ! read the namelist input file

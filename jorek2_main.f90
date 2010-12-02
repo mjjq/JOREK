@@ -98,12 +98,6 @@ program JOREK2
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
 
 
-  if (my_id .eq. 0) then
-    write(*,*) '****************************************'
-    write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
-    write(*,*) '****************************************'
-  end if
-
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
@@ -117,6 +111,12 @@ program JOREK2
   my_id = rank
   n_cpu = comm_size
   
+  if (my_id .eq. 0) then
+    write(*,*) '****************************************'
+    write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
+    write(*,*) '****************************************'
+  end if
+
   ! --- Initialise timing
   call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
   call r3_info_init ()                                     ! timing
@@ -274,9 +274,11 @@ program JOREK2
          call broadcast_nodes(my_id,node_list)
          call broadcast_elements(my_id,element_list)
          call broadcast_boundary(my_id,boundary_list,bnd_node_list)
-
-         call poisson(my_id,0,node_list,element_list,3,1,1,xpoint)
-         call poisson(my_id,1,node_list,element_list,4,2,1,xpoint)
+        
+         ! ### REMOVED BY MHOELZL 2010/12/02; TO BE CHECKED AGAIN
+         !call poisson(my_id,0,node_list,element_list,3,1,1,xpoint)
+         !call poisson(my_id,1,node_list,element_list,4,2,1,xpoint)
+         ! ### END REMOVED
 
        else
 

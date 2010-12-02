@@ -26,6 +26,8 @@ real*8  :: aux1, aux2
 delta_psi = psi_bnd - psi_axis
 psi_n     = (psi - psi_axis) / delta_psi
 
+psi_n = max( min(psi_n, 2.), 0. )
+
 !factor = 1.d0
 !if (xpoint2) then
 !  if ((Z .lt. Z_xpoint) .and. (psi_n .lt. 1.d0) ) then

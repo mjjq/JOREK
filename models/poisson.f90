@@ -55,6 +55,8 @@ integer			 :: i_father, inode_father,Index_elm
 integer, dimension(n_vertex_max)  :: pr
 integer, dimension(2)		  :: parent
 integer, dimension(n_vertex_max) ::  node_out
+integer:: nnz, check_data, ierr
+
 if (my_id .eq. 0) then
 
   write(*,*) '**************************************'

@@ -5,6 +5,7 @@ all :   modules                   \
 	ideal_wall.o              \
 	ideal_wall_starwall.o     \
 	resistive_wall_starwall.o \
+        import_external_fields.o   \
 	vacuum.o                  \
 	vacuum_equil.o
       

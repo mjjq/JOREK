@@ -74,22 +74,8 @@ do j = 1, surface_list%n_psi, every_nth
 
     enddo
 
-!    write(*,'(4f10.4)') rplot(1),zplot(1),rplot(nplot),zplot(nplot)
-
-
     call lincol(1)
-!    if (k .gt. 1) then
-!      if (i_elm .eq. surface_list%flux_surfaces(j)%elm(k-1)) then
-!        call lincol(2)
-!       write(51,*) ' 1 setlinewidth '
-!      elseif (i_elm .eq. surface_list%flux_surfaces(j)%elm(k+1)) then
-!        call lincol(3)
-!       write(51,*) ' 2 setlinewidth '
-!      else
-!        call lincol(1)
-!       write(51,*) ' .5 setlinewidth '
-!      endif
-!    endif
+    if (surface_list%n_psi .eq. 1) call lincol(3)
 
     write(51,*) ' .5 setlinewidth '
     call lplot6(21,11,rplot,zplot,-nplot,' ')
@@ -97,6 +83,8 @@ do j = 1, surface_list%n_psi, every_nth
   enddo
 
 enddo
+
+call lincol(0)
 
 deallocate(rplot,zplot)
 

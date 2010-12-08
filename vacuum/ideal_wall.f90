@@ -61,10 +61,12 @@ subroutine ideal_wall(my_id, node_list, boundary_list, bnd_node_list)
   enddo
   
   call plot_solution(vacuum_node_list,vacuum_element_list,1,-1,1,'vacuum')
+
 #ifdef USE_MUMPS
   mumps_par%JOB = -2                                     ! clean up this instance of mumps
   call DMUMPS(mumps_par)
 #endif
+
   return
 end subroutine ideal_wall
 

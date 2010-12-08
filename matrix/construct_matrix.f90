@@ -87,8 +87,6 @@ RHS_glob = 0.d0
 RHS_loc  = 0.d0
 
 
-
-
 !$omp parallel default(none) &
 !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
 !$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id)                     &
@@ -97,23 +95,18 @@ RHS_loc  = 0.d0
 !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
 !$omp           i_father,element_father, nodes_father, inode_father,node_out)
 
-!omp_nthreads = omp_get_num_threads()
-!omp_tid      = omp_get_thread_num()
-!write(*,*) my_id,' number of threads, my_tid : ',omp_nthreads,omp_tid
-
+omp_nthreads = omp_get_num_threads()
+omp_tid      = omp_get_thread_num()
 
 !$omp do
 do ife =1, n_local_elms
 
   ielm = local_elms(ife)
-
-
-  
+ 
   element = element_list%element(ielm)
 
   i_father= element_list%element(ielm)%father
  
-
    if( i_father.ne.0) then
     element_father = element_list%element(i_father)
    endif
@@ -139,7 +132,7 @@ do ife =1, n_local_elms
 
     call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)          ! use direct integration
 
-    do iv = 1, n_vertex_max                                                                     ! boundary integrals
+do iv = 1, n_vertex_max                                                                     ! boundary integrals
 
       iv2  = mod(iv, n_vertex_max) + 1
 
@@ -160,19 +153,19 @@ do ife =1, n_local_elms
 
 !      endif
 
-      if (     ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-         .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+!      if (     ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+!         .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-  nodes(1)  = node_list%node(inode1)
-  nodes(2)  = node_list%node(inode2)
-  vertex    = (/ iv, iv2 /)
-        direction = (/ 1, 3    /)
+!  nodes(1)  = node_list%node(inode1)
+!  nodes(2)  = node_list%node(inode2)
+!  vertex    = (/ iv, iv2 /)
+!        direction = (/ 1, 3    /)
 
 ! write(*,*) iv,iv2,'boundary_matrix : ',inode1,inode2
 
 !        call boundary_matrix(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for closed field lines
 
-      endif
+!      endif
 
     enddo
 
@@ -197,14 +190,15 @@ do ife =1, n_local_elms
 !  endif
 
      
-   call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
+!   call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
 
 !$omp critical  
 
 if (element%n_sons .eq. 0) then
   do i=1,n_vertex_max
 
-    inode1         =node_out(i)! element%vertex(i)
+!    inode1         =node_out(i)! element%vertex(i)
+    inode1         = element%vertex(i)
 
     do i_order = 1, n_order+1
 
@@ -218,14 +212,12 @@ if (element%n_sons .eq. 0) then
 
           index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
        
-          !if (index_large_i + j .eq. 2) then
-      !write(*,*)  "RHS(2) = ",ife,inode1,j,index_ij, rhs_loc(index_large_i+j), "=>", rhs_loc(index_large_i+j) + RHS(index_ij)
-         !endif
           rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + RHS(index_ij)
 
           do k=1,n_vertex_max
 
-            knode         =node_out(k)! element%vertex(k)
+!            knode         =node_out(k)! element%vertex(k)
+            knode         = element%vertex(k)
 
             do k_order = 1, n_order+1
 
@@ -267,9 +259,11 @@ enddo
 !$omp end do
 !$omp end parallel
 
+write(*,*) ' end construct'
+
 !------------------vacuum cannot be called on an element by element basis. The vacuum couples all boundary points!
 
-if (freeboundary) call vacuum(my_id, node_list, element_list, boundary_list,             &
+if (freeboundary) call vacuum(my_id, node_list, element_list, bnd_elm_list,             &
   bnd_node_list, index_min, index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint, rhs_loc)
 
 

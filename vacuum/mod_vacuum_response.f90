@@ -20,6 +20,13 @@ module vacuum_response_module
   real*8, allocatable :: matrix_ye(:,:,:)           ! YE-matrix, see explanation below
   real*8, allocatable :: matrix_ey(:,:,:)           ! EY-matrix, see explanation below
   real*8, allocatable :: matrix_ee(:,:,:)           ! EE-matrix, see explanation below
+
+ ! --- Coil contributions
+  integer             :: n_coils                    ! the number of poloidal field coils
+  real*8, allocatable :: R_coils(:), Z_coils(:)     ! positions of the poloidal field coils
+  real*8, allocatable :: dR_coils(:), dZ_coils(:)   ! widths/heights of the poloidal field coils
+  real*8, allocatable :: I_coils(:)                 ! the coil currents 
+  real*8, allocatable :: external_field(:,:)        ! the external poloidal field  (n_dof_bnd,n_coils)
   
 end module vacuum_response_module
 

@@ -13,7 +13,7 @@ implicit none
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_element)      :: element
-type (type_node_list)    :: nodes
+type (type_node)         :: nodes(n_vertex_max)
 
 real*8     :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
@@ -23,8 +23,9 @@ integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: current, beta_p, beta_n, beta_t, MU_zero, aminor
 real*8     :: xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area, PI, Bgeo, psi_limit
 real*8     :: density, density_in, density_out,  pressure, pressure_in, pressure_out
-!real*8     :: current_in, current_out ! XL : uninitialised
+real*8     :: current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
+
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
 write(*,*) '***************************************'
@@ -51,8 +52,8 @@ do ife =1,  element_list%n_elements
   element = element_list%element(ife)
 
   do iv = 1, n_vertex_max
-    inode          = element%vertex(iv)
-    nodes%node(iv) = node_list%node(inode)
+    inode     = element%vertex(iv)
+    nodes(iv) = node_list%node(inode)
   enddo
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;
@@ -64,19 +65,18 @@ do ife =1,  element_list%n_elements
       do ms=1, n_gauss
         do mt=1, n_gauss
 
-          x_g(ms,mt) = x_g(ms,mt) + nodes%node(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
-          y_g(ms,mt) = y_g(ms,mt) + nodes%node(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
+          x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
+          y_g(ms,mt) = y_g(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
 
-          x_s(ms,mt) = x_s(ms,mt) + nodes%node(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-          x_t(ms,mt) = x_t(ms,mt) + nodes%node(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
-          y_s(ms,mt) = y_s(ms,mt) + nodes%node(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-          y_t(ms,mt) = y_t(ms,mt) + nodes%node(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
         enddo
       enddo
     enddo
   enddo
-
 
   eq_g(:,:,:) = 0.d0; eq_s(:,:,:) = 0.d0; eq_t(:,:,:) = 0.d0;
 
@@ -86,9 +86,9 @@ do ife =1,  element_list%n_elements
         do mt=1, n_gauss
 
           do k=1,n_var
-            eq_g(k,ms,mt)  = eq_g(k,ms,mt)  + nodes%node(i)%values(1,j,k) * element%size(i,j) * H(i,j,ms,mt)
-            eq_s(k,ms,mt)  = eq_s(k,ms,mt)  + nodes%node(i)%values(1,j,k) * element%size(i,j) * H_s(i,j,ms,mt)
-            eq_t(k,ms,mt)  = eq_t(k,ms,mt)  + nodes%node(i)%values(1,j,k) * element%size(i,j) * H_t(i,j,ms,mt)
+            eq_g(k,ms,mt)  = eq_g(k,ms,mt)  + nodes(i)%values(1,j,k) * element%size(i,j) * H(i,j,ms,mt)
+            eq_s(k,ms,mt)  = eq_s(k,ms,mt)  + nodes(i)%values(1,j,k) * element%size(i,j) * H_s(i,j,ms,mt)
+            eq_t(k,ms,mt)  = eq_t(k,ms,mt)  + nodes(i)%values(1,j,k) * element%size(i,j) * H_t(i,j,ms,mt)
           enddo
 
         enddo
@@ -138,10 +138,14 @@ do ife =1,  element_list%n_elements
   enddo
 enddo
 
-density_in   = D_int
-density_out  = D_ext
-pressure_in  = P_int
-pressure_out = P_ext
+density      = density  * 2.d0 * PI
+density_in   = D_int    * 2.d0 * PI
+density_out  = D_ext    * 2.d0 * PI
+pressure     = pressure * 2.d0 * PI
+pressure_in  = P_int    * 2.d0 * PI
+pressure_out = P_ext    * 2.d0 * PI
+current_in   = C_int    * 2.d0 * PI
+current_out  = C_ext    * 2.d0 * PI
 
 MU_zero = 4.d0*PI * 1.d-7
 
@@ -150,18 +154,17 @@ beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
 beta_n  = 100.d0 * (4.*PI/10.) * beta_t / (MU_zero * abs(current) /  (aminor * Bgeo))
 
-
 write(*,*) ' psi_limit : ',psi_limit
-write(*,'(A,f8.5,A)') ' current : ',current/1.e6,' MA'
-write(*,'(A,f8.5)') ' beta_p   : ',beta_p
-write(*,'(A,f8.5)') ' beta_t   : ',beta_t
-write(*,'(A,f8.5)') ' beta_n   : ',beta_n
-write(*,'(A,f8.5)') ' Area     : ',area,' m^2'
-write(*,'(A,f8.5)') ' Volume   : ',volume,' m^3'
+write(*,'(A,f10.5,A)') ' current : ',current/1.e6,' MA'
+write(*,'(A,f10.5)') ' beta_p   : ',beta_p
+write(*,'(A,f10.5)') ' beta_t   : ',beta_t
+write(*,'(A,f10.5)') ' beta_n   : ',beta_n
+write(*,'(A,f10.5,A)') ' Area     : ',area,' m^2'
+write(*,'(A,f10.5,A)') ' Volume   : ',volume,' m^3'
 
-write(*,'(A,5f8.5)') 'density  (total/in/out) : ',density,  density_in,  density_out 
-write(*,'(A,5f8.5)') 'pressure (total/in/out) : ',pressure, pressure_in, pressure_out 
-!write(*,'(A,5f8.5)') 'current  (in/out)       : ',current_in, current_out XL : uninitialised
+write(*,'(A,5f10.5)') 'density  (total/in/out) : ',density,  density_in,  density_out 
+write(*,'(A,5f10.5)') 'pressure (total/in/out) : ',pressure, pressure_in, pressure_out 
+write(*,'(A,5f10.5)') 'current  (in/out)       : ',current_in, current_out 
 
 return
 end

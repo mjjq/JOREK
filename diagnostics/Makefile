@@ -6,6 +6,7 @@ all : boundary_check.o         \
       find_axis.o              \
       find_flux_surfaces.o     \
       find_xpoint.o            \
+      find_limiter.o           \
       flux_surface_add_line.o  \
       flux_surface_add_point.o \
       print_grid.o             \
@@ -13,6 +14,7 @@ all : boundary_check.o         \
       q_profile.o              \
       RZ_minmax.o              \
       integrals.o              \
+      integral_current.o       \
       integrals_3D.o          
       
 modules : mod_fourier.o

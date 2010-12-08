@@ -5,7 +5,7 @@ module nodes_elements
   
   type (type_node_list)        :: node_list
   type (type_element_list)     :: element_list
-  type (type_bnd_element_list) :: boundary_list
+  type (type_bnd_element_list) :: bnd_elm_list
   type (type_bnd_node_list)    :: bnd_node_list
   
 end module nodes_elements

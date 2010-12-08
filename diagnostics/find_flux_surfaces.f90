@@ -27,22 +27,22 @@ write(*,*) '***********************************'
 write(*,*) '*   find_flux_surfaces            *'
 write(*,*) '***********************************'
 write(*,*) ' n_psi : ',surface_list%n_psi
+write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
 
 PI = 2.d0* asin(1.d0)
 
 if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)
 
 allocate(surface_list%flux_surfaces(surface_list%n_psi))
-!print*,"findflux deb"
+
 do j=1, surface_list%n_psi
   surface_list%flux_surfaces(j)%n_pieces = 0
   surface_list%flux_surfaces(j)%elm      = 0
   surface_list%flux_surfaces(j)%s        = 0
   surface_list%flux_surfaces(j)%t        = 0
-!print*,"findflux fin",j,surface_list%n_psi
 enddo
 
-if (xpoint) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+if (xpoint) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 
 
 
@@ -111,8 +111,6 @@ do i=1, element_list%n_elements
       
 ! complicated : 2 line pieces but which point belongs to which line piece?
 
-!        write(*,*) ' found 4 points '
-
         r_av = (r_psi(1)+r_psi(2)+r_psi(3)+r_psi(4))/4.d0
         s_av = (s_psi(1)+s_psi(2)+s_psi(3)+s_psi(4))/4.d0
 
@@ -141,17 +139,7 @@ do i=1, element_list%n_elements
           itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
         endif
 
- !       write(*,*) i,j
- !       write(*,'(4f12.8)') tht
- !       write(*,'(4i5)') itht
- !       write(*,'(4f12.8)') tht(itht)
- !       write(*,'(4f12.8)') r_psi
- !       write(*,'(4f12.8)') s_psi
- !       write(*,'(4f12.8)') dpsi_dr
- !       write(*,'(4f12.8)') dpsi_ds
-
         if ((xpoint) .and. (i .eq. i_elm_xpoint)) then
-          write(*,*) ' adding x-point'
 
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:3:2)), &
                                 s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
@@ -171,10 +159,7 @@ do i=1, element_list%n_elements
             PSI_R = (   dPSg1_dr * dZZg1_ds - dPSg1_ds * dZZg1_dr ) / RZ_jac
             PSI_Z = ( - dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr ) / RZ_jac
 
-            write(*,*) 'x-point : ',r_psi(k),s_psi(k),PSI_R,PSI_Z
-
           enddo
-
 
         else
 

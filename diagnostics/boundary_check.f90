@@ -7,9 +7,9 @@ use nodes_elements
 
 implicit none
 
-integer :: i_harm, ibnd, i_elm, iv1, iv2, inode1, inode2, inode1a, inode2a, kbnd, lbnd
+integer :: i_harm, ibnd, i_elm, iv1, iv2, inode1, inode2, inode1a, inode2a, kbnd, lbnd, k
 integer :: index_basis_bnd, index_basis2_bnd, n_points, i, j, ij_node1, ij_node2, ij_node, kl_node, ip
-real*8  :: s_out, t_out, B_n, B_tan, B_tan2, B_tan_v, xjac, grad_ss, grad_st, B_n_check
+real*8  :: s_out, t_out, B_n, B_tan, B_tan2, B_tan_v, B_tan_vac, xjac, grad_ss, grad_st, B_n_check
 real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: integrated_signal, integrated_error
@@ -18,36 +18,28 @@ write(*,*) '************************************'
 write(*,*) '*    check boundary conditions     *'
 write(*,*) '************************************'
 
-i_harm = 2
+i_harm = n_tor
 
-!  type type_boundary                                  ! type definition for one boundary element (1D element)
-!    integer :: vertex(2)                              ! the nodes of the corners
-!    integer :: direction(2,2)                         ! indicates which direction of the nodes is along the boundary (2 or 3)
-!    integer :: element                                ! boundary element is part of this element
-!    integer :: side                                   ! boundary element corresponds to this side of the originating element
-!    real*8  :: size(2,2)                              ! the size of the vectors at each vertex of the element : size(vertex,order)
-!  endtype type_boundary
-
-n_points = 11
+n_points = 5
 
 FBD: if (freeboundary) then
 
   integrated_signal = 0.
   integrated_error  = 0.
 
-  IBNDLOOP: do ibnd = 1, boundary_list%n_bnd_elements
+  IBNDLOOP: do ibnd = 1, bnd_elm_list%n_bnd_elements
 
     IPLOOP: do ip = 1, n_points
 
-      i_elm = boundary_list%bnd_element(ibnd)%element
-      iv1   = boundary_list%bnd_element(ibnd)%side
+      i_elm = bnd_elm_list%bnd_element(ibnd)%element
+      iv1   = bnd_elm_list%bnd_element(ibnd)%side
       iv2   = mod(iv1,4)+1
 
       inode1 = element_list%element(i_elm)%vertex(iv1)
       inode2 = element_list%element(i_elm)%vertex(iv2)
 
-      inode1a = boundary_list%bnd_element(ibnd)%vertex(1)
-      inode2a = boundary_list%bnd_element(ibnd)%vertex(2)
+      inode1a = bnd_elm_list%bnd_element(ibnd)%vertex(1)
+      inode2a = bnd_elm_list%bnd_element(ibnd)%vertex(2)
 
       if ((iv1 .eq. 1) .and. (iv2 .eq. 2)) then
         t_out = 0.d0
@@ -76,33 +68,51 @@ FBD: if (freeboundary) then
       grad_ss =   (R_t**2 + Z_t**2)       / xjac**2
       grad_st = - (R_s * R_t + Z_s * Z_t) / xjac**2
 
-      B_tan = (P_s * grad_ss + P_t * grad_st) / (R**2 * sqrt(grad_ss))
+      B_tan = (P_s * grad_ss + P_t * grad_st) / (R * sqrt(grad_ss))
       B_n   = P_t / (R * xjac * sqrt(grad_ss))
 
 !--------------------------------------------------------------check whether information from boundary gives same result as element-wise
-      ij_node1   = boundary_list%bnd_element(ibnd)%vertex(1)
-      ij_node2   = boundary_list%bnd_element(ibnd)%vertex(2)
+      ij_node1   = bnd_elm_list%bnd_element(ibnd)%vertex(1)
+      ij_node2   = bnd_elm_list%bnd_element(ibnd)%vertex(2)
 
-      B_n_check =             node_list%node(ij_node1)%values(i_harm,1,1) * boundary_list%bnd_element(ibnd)%size(1,1) * H1_s(1,1)
-      B_n_check = B_n_check + node_list%node(ij_node1)%values(i_harm,3,1) * boundary_list%bnd_element(ibnd)%size(1,2) * H1_s(1,2)
-      B_n_check = B_n_check + node_list%node(ij_node2)%values(i_harm,1,1) * boundary_list%bnd_element(ibnd)%size(2,1) * H1_s(2,1)
-      B_n_check = B_n_check + node_list%node(ij_node2)%values(i_harm,3,1) * boundary_list%bnd_element(ibnd)%size(2,2) * H1_s(2,2)
+      B_n_check =             node_list%node(ij_node1)%values(i_harm,1,1) * bnd_elm_list%bnd_element(ibnd)%size(1,1) * H1_s(1,1)
+      B_n_check = B_n_check + node_list%node(ij_node1)%values(i_harm,3,1) * bnd_elm_list%bnd_element(ibnd)%size(1,2) * H1_s(1,2)
+      B_n_check = B_n_check + node_list%node(ij_node2)%values(i_harm,1,1) * bnd_elm_list%bnd_element(ibnd)%size(2,1) * H1_s(2,1)
+      B_n_check = B_n_check + node_list%node(ij_node2)%values(i_harm,3,1) * bnd_elm_list%bnd_element(ibnd)%size(2,2) * H1_s(2,2)
 
       B_n_check = B_n_check / (R * xjac * sqrt(grad_ss))
 
-      B_tan_v = 0.d0
+      B_tan_v   = 0.d0
+      B_tan_vac = 0.d0
+
+      do i = 1, 2                                                                  ! two vertices of a boundary element
+
+        ij_node = bnd_elm_list%bnd_element(ibnd)%vertex(i)
+
+        do j = 1, 2                                                                ! two basisfunctions at each vertex
+
+          index_basis_bnd = 2*mod(ibnd+i-2,bnd_elm_list%n_bnd_elements) + (j-1) + 1   ! the index in the vacuum_response matrix (DANGEROUS ASSUMPTION!)
+
+          if (i_harm .eq. 1) then                                                   ! poloidal field coil contributions     
+	    do k=1,n_coils                    
+              B_tan_vac = B_tan_vac + external_field(index_basis_bnd,k) * I_coils(k) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j) 
+	    enddo
+	  endif
+	  
+        enddo
+      enddo
 
       ILOOP: do i = 1, 2                                                                  ! two vertices of a boundary element
 
-        ij_node = boundary_list%bnd_element(ibnd)%vertex(i)
+        ij_node = bnd_elm_list%bnd_element(ibnd)%vertex(i)
 
         JLOOP: do j = 1, 2                                                                ! two basisfunctions at each vertex
 
-          index_basis_bnd = 2*mod(ibnd+i-2,boundary_list%n_bnd_elements) + (j-1) + 1   ! the index in the vacuum_response matrix (DANGEROUS ASSUMPTION!)
+          index_basis_bnd = 2*mod(ibnd+i-2,bnd_elm_list%n_bnd_elements) + (j-1) + 1   ! the index in the vacuum_response matrix (DANGEROUS ASSUMPTION!)
 
-          KBNDLOOP: do kbnd=1,boundary_list%n_bnd_elements                                       ! sum over all boudary nodes
+          KBNDLOOP: do kbnd=1,bnd_elm_list%n_bnd_elements                                       ! sum over all boudary nodes
 
-            kl_node = boundary_list%bnd_element(kbnd)%vertex(1)                       ! dangerous : can give same node twice if orientation changes
+            kl_node = bnd_elm_list%bnd_element(kbnd)%vertex(1)                       ! dangerous : can give same node twice if orientation changes
 
             LBNDLOOP: do lbnd = 1, 2
 
@@ -110,17 +120,15 @@ FBD: if (freeboundary) then
 
               P_t = node_list%node(kl_node)%values(i_harm,2*lbnd-1,1)              ! to be changed now only using index 1 and 3
 
-!              B_tan_v = B_tan_v + vacuum_response(index_basis_bnd,index_basis2_bnd,i_harm) * P_t * boundary_list%bnd_element(ibnd)%size(i,j) * H1_s(i,j)
-
               if ( use_starwall ) then
 
-                B_tan_v = B_tan_v - vacuum_response(index_basis2_bnd,index_basis_bnd,i_harm) &
-                                * P_t * boundary_list%bnd_element(ibnd)%size(i,j) * H1(i,j) / R         !(R * sqrt(R_t**2 + Z_t**2))
+               B_tan_v = B_tan_v + vacuum_response(index_basis2_bnd,index_basis_bnd,i_harm) &
+                                * P_t * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j)         !(R * sqrt(R_t**2 + Z_t**2))
 
               else
 
-                B_tan_v = B_tan_v - vacuum_response(index_basis2_bnd,index_basis_bnd,i_harm) &
-	                        * P_t * boundary_list%bnd_element(ibnd)%size(i,j) * H1_s(i,j) / (R * sqrt(R_t**2 + Z_t**2))
+                B_tan_v = B_tan_v + vacuum_response(index_basis2_bnd,index_basis_bnd,i_harm) &
+	                        * P_t * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1_s(i,j) / (sqrt(R_t**2 + Z_t**2))
               end if
 
             end do LBNDLOOP
@@ -129,11 +137,13 @@ FBD: if (freeboundary) then
         end do JLOOP
       end do ILOOP
 
-      write(*,'(i5,8e14.6)') n_points*(ibnd-1)+ip,B_n,B_tan,B_tan_v
-      write(98,*) n_points*(ibnd-1)+ip,B_tan,B_tan_v
+      write(*,'(i5,8e14.6)') n_points*(ibnd-1)+ip,B_n,B_tan,B_tan_v,B_tan_vac,B_tan+B_tan_v+B_tan_vac
+
+!      write(*,'(i5,8e14.6)') n_points*(ibnd-1)+ip,B_n,B_tan,B_tan_v
+!      write(98,*) n_points*(ibnd-1)+ip,B_tan,B_tan_v
       
-      integrated_signal = integrated_signal + ABS( B_tan_v ) / ( boundary_list%n_bnd_elements * n_points )
-      integrated_error  = integrated_error  + ABS( (B_tan - B_tan_v) ) / ( boundary_list%n_bnd_elements * n_points )
+      integrated_signal = integrated_signal + ABS( B_tan_v ) / ( bnd_elm_list%n_bnd_elements * n_points )
+      integrated_error  = integrated_error  + ABS( (B_tan - B_tan_v) ) / ( bnd_elm_list%n_bnd_elements * n_points )
 
     end do IPLOOP
 

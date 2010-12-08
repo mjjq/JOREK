@@ -55,9 +55,9 @@ write(*,*) '*          X-point grid             *'
 write(*,*) '*************************************'
 
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 
 !-------------------------------- double values to find the mid_points
 n_flux_2    = 2 * (n_flux - 1)
@@ -102,7 +102,7 @@ enddo
 call find_flux_surfaces(xpoint,node_list,element_list,flux_list)
 !call q_profile(node_list,element_list,flux_list,psi_axis,psi_xpoint,Z_xpoint)
 
-call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1)
+call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 
 
 !-------------------------------------- store some data for the new grid
@@ -1378,9 +1378,9 @@ node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 
 deallocate(s_values,theta_sep,R_sep,Z_sep,R_max,Z_max,R_min,Z_min,s_tmp)
 deallocate(R_polar,Z_polar,xout)

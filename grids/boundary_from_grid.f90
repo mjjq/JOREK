@@ -1,4 +1,4 @@
-subroutine boundary_from_grid()
+subroutine boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list)
 ! Routine extracts the boundary information (boundary element and node lists)
 ! from the information stored in the grid (element and node lists).
 ! 
@@ -6,19 +6,27 @@ subroutine boundary_from_grid()
 !       the divertor region) are added twice to the bnd_node_list.
   
   use data_structure
-  use nodes_elements
-  
+
   implicit none
-  
+
+  type (type_node_list)        :: node_list
+  type (type_element_list)     :: element_list
+  type (type_bnd_node_list)    :: bnd_node_list
+  type (type_bnd_element_list) :: bnd_elm_list
+    
   integer :: i_elem         ! Element index in element_list.
   integer :: iside          ! Side of the element (1...4).
   integer :: iv1, iv2       ! Numbers of the two nodes on the element side (1...4).
   integer :: inode1, inode2 ! Indices of the nodes in the node_list.
   integer :: b1, b2         ! Boundary properties of the two nodes.
   
+  write(*,*) '*********************************'
+  write(*,*) '*   initialise boundary         *'
+  write(*,*) '*********************************'
+
   ! --- Empty the boundary node and element lists.
-  bnd_node_list%n_bnd_nodes    = 0
-  boundary_list%n_bnd_elements = 0
+  bnd_node_list%n_bnd_nodes   = 0
+  bnd_elm_list%n_bnd_elements = 0
   
   
   ! --- Go through all elements of the grid and find out which are located
@@ -52,7 +60,7 @@ subroutine boundary_from_grid()
   
   call log_bnd_info(.false.)
   !call log_bnd_info(.true.)  ! Output verbose boundary information
-  
+    
 end subroutine boundary_from_grid
 
 
@@ -82,36 +90,36 @@ subroutine add_bnd_elem( i_elem, iv1, iv2, inode1, inode2, iside, b1, b2 )
   call add_bnd_node( i_elem, iv1, inode1, iside, b1, ib1 )
   call add_bnd_node( i_elem, iv2, inode2, iside, b2, ib2 )
   
-  boundary_list%n_bnd_elements = boundary_list%n_bnd_elements + 1
+  bnd_elm_list%n_bnd_elements = bnd_elm_list%n_bnd_elements + 1
   
   ! --- Store vertex indices belonging to the boundary element.
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%vertex = (/ inode1, inode2 /)
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%vertex = (/ inode1, inode2 /)
   
   ! --- Store side of the element that is at the boundary.
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%side   = iside
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%side   = iside
   
   ! --- Store, which element the boundary element belongs to.
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%element = i_elem
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%element = i_elem
   
   ! --- Store direction (directly connected to %side) ############ REMOVE? #############
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%direction(:,1) = 1
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%direction(:,1) = 1
   if ( mod(iside,2) == 1 ) then
     idir = 2
   else
     idir = 3
   end if
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%direction(:,2) = idir
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%direction(:,2) = idir
   
   ! --- Store element size.
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%size(1,1) = element_list%element(i_elem)%size(iv1,1)
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%size(2,1) = element_list%element(i_elem)%size(iv2,1)
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%size(1,1) = element_list%element(i_elem)%size(iv1,1)
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%size(2,1) = element_list%element(i_elem)%size(iv2,1)
   
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%size(1,2) = element_list%element(i_elem)%size(iv1,idir)
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%size(2,2) = element_list%element(i_elem)%size(iv2,idir)
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%size(1,2) = element_list%element(i_elem)%size(iv1,idir)
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%size(2,2) = element_list%element(i_elem)%size(iv2,idir)
   
   ! --- Store boundary node indices.
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%bnd_vertex(1) = ib1
-  boundary_list%bnd_element(boundary_list%n_bnd_elements)%bnd_vertex(2) = ib2
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%bnd_vertex(1) = ib1
+  bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%bnd_vertex(2) = ib2
   
 end subroutine add_bnd_elem
 
@@ -193,22 +201,22 @@ subroutine log_bnd_info(verbose)
   
   write(*,121) 'BOUNDARY INFORMATION:'
   
-  write(*,141) 'n_bnd_elements=', boundary_list%n_bnd_elements
+  write(*,141) 'n_bnd_elements=', bnd_elm_list%n_bnd_elements
   write(*,141) 'n_bnd_nodes   =', bnd_node_list%n_bnd_nodes
   
   if ( verbose ) then
   
     write(*,*)
     write(*,141) 'BOUNDARY ELEMENTS:'
-    do i = 1, boundary_list%n_bnd_elements
+    do i = 1, bnd_elm_list%n_bnd_elements
       write(s,*) i
       write(*,161) '#'//trim(adjustl(s))//':'
-      write(*,182) 'vertex        =', boundary_list%bnd_element(i)%vertex
-      write(*,182) 'bnd_vertex    =', boundary_list%bnd_element(i)%bnd_vertex
-      write(*,182) 'direction     =', boundary_list%bnd_element(i)%direction
-      write(*,182) 'element       =', boundary_list%bnd_element(i)%element
-      write(*,182) 'side          =', boundary_list%bnd_element(i)%side
-      write(*,183) 'size          =', boundary_list%bnd_element(i)%size
+      write(*,182) 'vertex        =', bnd_elm_list%bnd_element(i)%vertex
+      write(*,182) 'bnd_vertex    =', bnd_elm_list%bnd_element(i)%bnd_vertex
+      write(*,182) 'direction     =', bnd_elm_list%bnd_element(i)%direction
+      write(*,182) 'element       =', bnd_elm_list%bnd_element(i)%element
+      write(*,182) 'side          =', bnd_elm_list%bnd_element(i)%side
+      write(*,183) 'size          =', bnd_elm_list%bnd_element(i)%size
     end do
   
     write(*,*)

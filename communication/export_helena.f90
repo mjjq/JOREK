@@ -1,8 +1,6 @@
-subroutine export_helena(node_list,element_list)
+subroutine export_helena(node_list,element_list,bnd_elm_list)
 !****************************************************************************
 !* export plasma boundary and profiles for later use in HELENA              *
-!*
-!* to be completed
 !****************************************************************************
 use data_structure
 use phys_module
@@ -24,12 +22,14 @@ interface
    end subroutine find_flux_surfaces
 end interface
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-type (type_surface_list) :: surface_list
+type (type_node_list)        :: node_list
+type (type_element_list)     :: element_list
+type (type_bnd_element_list) :: bnd_elm_list
+type (type_surface_list)     :: surface_list
 real*8, allocatable      :: rplot(:), zplot(:)
 
 real*8 :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
+real*8 :: psi_lim,R_lim,Z_lim
 real*8 :: psi_bnd, Rmin, Rmax, rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2 
 real*8 :: t, ri, dri, si, dsi, rplot_tmp, zplot_tmp, s_value
 real*8 :: aminor, Rgeo, Bgeo, current,beta_p,beta_t,beta_n, dp_int, zjz_int, sum_dl, q, dl, dp_dpsi
@@ -43,7 +43,7 @@ real*8 :: ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss
 real*8 :: dRRgi_dt, dZZgi_dt, RZjac, PI, PSI_R, PSI_Z, grad_psi, B_tot2, P0gi, dP0gi_dr,dP0gi_ds, P0_R, P0_Z 
 real*8 :: density, density_in, density_out, pressure, pressure_in, pressure_out
 integer :: i_elm_axis, i_elm_xpoint, nplot, i, j, n_bnd, i_elm, k, ip, ig
-integer :: node1, node2, node3, node4
+integer :: node1, node2, node3, node4, ifail
 
 !--------------------------------------- gaussian points between (-1.,1.)
 real*8 :: xgs(4), wgs(4)
@@ -53,24 +53,41 @@ data wgs / 0.347854845137454,  0.652145154862546, 0.652145154862546,  0.34785484
 write(*,*) '***************************************'
 write(*,*) '* export_helena                       *'
 write(*,*) '***************************************'
-i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
 
+call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
+psi_bnd = 0.d0
+Z_xpoint = -99.d0
+	 
+if (xpoint) then
+  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+  if (ifail .ne. 1) then      
+    psi_bnd = psi_xpoint
+  else
+    Z_xpoint = -99.d0
+  endif
+endif
+
+call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+if (Z_lim .gt. Z_xpoint) then
+  psi_bnd = min(psi_lim,psi_bnd)
+  write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
+endif
+    
 if (allocated(surface_list%psi_values)) deallocate(surface_list%psi_values)
 allocate(surface_list%psi_values(3))
-xpoint = .true. ! XL : uninitilised value... 
+
 if (xpoint) then
   write(*,*) ' x-point plasma'
-  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
   surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_xpoint - psi_axis)
   surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_xpoint - psi_axis)
   surface_list%psi_values(3) =  psi_axis + 0.995 * (psi_xpoint - psi_axis)
 else
   write(*,*) ' NOT an x-point plasma'
-  psi_xpoint = 0.d0
-  surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_xpoint - psi_axis)
-  surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_xpoint - psi_axis)
-  surface_list%psi_values(3) =  1.d-3
+  surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_bnd - psi_axis)
+  surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_bnd - psi_axis)
+  surface_list%psi_values(3) =  psi_axis + 0.999 * (psi_bnd - psi_axis)
 endif
 
 surface_list%n_psi =3
@@ -84,7 +101,7 @@ nplot = 3
 
 open(11,file='equilibrium.txt')
 
-j=2
+j=3
 
 psi_bnd = surface_list%psi_values(j)
 
@@ -122,10 +139,7 @@ do k=1,surface_list%flux_surfaces(j)%n_pieces
     call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
     call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
-!      call INTERP2(RR(:,node1),RR(:,node2),RR(:,node3),RR(:,node4),ri,si,rplot(ip),dummy1,dummy2)
-!      call INTERP2(ZZ(:,node1),ZZ(:,node2),ZZ(:,node3),ZZ(:,node4),ri,si,zplot(ip),dummy1,dummy2)
-
-      call interp_RZ(node_list,element_list,i_elm,ri,si,rplot_tmp,dummy1,dummy2,dummy3,dummy4,dummy5, &
+    call interp_RZ(node_list,element_list,i_elm,ri,si,rplot_tmp,dummy1,dummy2,dummy3,dummy4,dummy5, &
                                                         zplot_tmp,dummy6,dummy7,dummy8,dummy9,dummy10)
 
     if (zplot_tmp .ge. Z_xpoint) then
@@ -146,10 +160,6 @@ write(11,'(8e16.8)') R_axis,Z_axis,F0
 write(11,'(8e16.8)') surface_list%psi_values(j),psi_axis,psi_xpoint
 write(11,*)          n_bnd
 
-write(*,'(8e16.8)') R_axis,Z_axis,F0
-write(*,'(8e16.8)') surface_list%psi_values(j),psi_axis,psi_xpoint
-write(*,*)          n_bnd
-
 do i=1,n_bnd
   write(11,*) rplot(i),zplot(i)
 enddo
@@ -163,7 +173,7 @@ write(*,'(A,f8.5,A)') ' amin : ',aminor,' m'
 write(*,'(A,f8.5,A)') ' Rgeo : ',Rgeo,' m'
 write(*,'(A,f8.5,A)') ' Bgeo : ',Bgeo,' T'
 
-call Integrals(node_list,element_list,Bgeo,aminor,surface_list%psi_values(j),current,beta_p,beta_t,beta_n, &
+call Integrals(node_list,element_list,Bgeo,aminor,psi_bnd,current,beta_p,beta_t,beta_n, &
                density,density_in,density_out,pressure,pressure_in,pressure_out)
 
 write(11,*) aminor, Rgeo, Bgeo
@@ -259,6 +269,8 @@ do i=2, surface_list%n_psi
 enddo
 
 close(11)
+
+write(*,*) ' end export_helena'
 
 return
 end

@@ -72,9 +72,9 @@ XR_tht_1  = 999.d0 ! 1.d0 !1.d0
 SIG_tht_1 = 999.d0 ! 0.03d0
 
 allocate(S1(nr),S2(nr),SP1(nr),SP2(nr),SP3(nr),SP4(nr))
-S2 = 0
+S2 = 0.d0
 allocate(T1(np+1),T2(np+1),TP1(np+1),TP2(np+1),TP3(np+1),TP4(np+1))
-T2 = 0
+T2 = 0.d0
 do i=1,nr
   S1(i) = real(i-1)/real(nr-1)
 enddo
@@ -88,87 +88,78 @@ call spline(nr,S1,S2,0.d0,0.d0,2,SP1,SP2,SP3,SP4)
 call meshac2(np+1,T2,XR_tht_0,XR_tht_1,SIG_tht_0,SIG_tht_1,0.6d0,1.0d0)
 call spline(np+1,T1,T2,0.d0,0.d0,2,TP1,TP2,TP3,TP4)
 
-
 do i=1,nr
 
- radius = spwert(nr,S1(i),SP1,SP2,SP3,SP4,S1,ABLTG)
- dr_ds  = abltg(1)
- 
-! write(*,'(4e12.4)') S1(i),S2(i),radius,dr_ds
- 
- do  j=1,np
+  radius = spwert(nr,S1(i),SP1,SP2,SP3,SP4,S1,ABLTG)
+  dr_ds  = abltg(1)
   
-   node   = np*(i-1) + j
+  do  j=1,np
+  
+    node   = np*(i-1) + j
 
-   thtj     = spwert(np+1,T1(j),TP1,TP2,TP3,TP4,T1,ABLTG) * 2.d0 * PI
-   dtht_dt  = abltg(1)
+    thtj     = spwert(np+1,T1(j),TP1,TP2,TP3,TP4,T1,ABLTG) * 2.d0 * PI
+    dtht_dt  = abltg(1)
 
-   if (i.eq.nr) write(*,'(4e12.4)') T1(j),T2(j),thtj,dtht_dt
+    RR(1,node) = Rgeo + amin * radius * fbnd(1) * cos(thtj) / 2.d0
+    RR(2,node) =        amin *          fbnd(1) * cos(thtj) / 2.d0
+    RR(3,node) =      - amin * radius * fbnd(1) * sin(thtj) / 2.d0
+    RR(4,node) =      - amin          * fbnd(1) * sin(thtj) / 2.d0
+    ZZ(1,node) = Zgeo + amin * radius * fbnd(1) * sin(thtj) / 2.d0
+    ZZ(2,node) =        amin *          fbnd(1) * sin(thtj) / 2.d0
+    ZZ(3,node) =        amin * radius * fbnd(1) * cos(thtj) / 2.d0
+    ZZ(4,node) =        amin *          fbnd(1) * cos(thtj) / 2.d0
 
-   RR(1,node) = Rgeo + amin * radius * fbnd(1) * cos(thtj) / 2.d0
-   RR(2,node) =        amin *          fbnd(1) * cos(thtj) / 2.d0
-   RR(3,node) =      - amin * radius * fbnd(1) * sin(thtj) / 2.d0
-   RR(4,node) =      - amin          * fbnd(1) * sin(thtj) / 2.d0
-   ZZ(1,node) = Zgeo + amin * radius * fbnd(1) * sin(thtj) / 2.d0
-   ZZ(2,node) =        amin *          fbnd(1) * sin(thtj) / 2.d0
-   ZZ(3,node) =        amin * radius * fbnd(1) * cos(thtj) / 2.d0
-   ZZ(4,node) =        amin *          fbnd(1) * cos(thtj) / 2.d0
-
-   PSI(1,node) =        radius**8 * fpsi(1) / 2.d0 + psi_axis*(1.d0 - radius**2)
-   PSI(2,node) =  8.d0* radius**7 * fpsi(1) / 2.d0 - psi_axis*2.d0* radius
-   PSI(3,node) =  0.d0
-   PSI(4,node) =  0.d0
+    PSI(1,node) =        radius**8 * fpsi(1) / 2.d0 + psi_axis*(1.d0 - radius**2)
+    PSI(2,node) =  8.d0* radius**7 * fpsi(1) / 2.d0 - psi_axis*2.d0* radius
+    PSI(3,node) =  0.d0
+    PSI(4,node) =  0.d0
 
 !   write(*,'(A,2i6,12e16.8)') ' PSI(1,node) : ', node,1,PSI(1,node),radius,thtj,fpsi(1),fpsi(2)
 
-   do m = 2, mf/2
+    do m = 2, mf/2
 
-     if (m .eq. 2) then
-       rm   = radius * ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ) )
-       drm  =          ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ))
-       drmt = radius * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
-       drmtr=          (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
-     else
-       rm   =      radius**(M-1) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ) )
-       drm  =(M-1)*radius**(M-2) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ))
-       drmt =      radius**(M-1) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
-       drmtr=(M-1)*radius**(M-2) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
-     endif
-     RR(1,node) = RR(1,node) + amin * rm  * cos(thtj)
-     ZZ(1,node) = ZZ(1,node) + amin * rm  * sin(thtj)
-     RR(2,node) = RR(2,node) + amin * drm * cos(thtj)
-     ZZ(2,node) = ZZ(2,node) + amin * drm * sin(thtj)
-     RR(3,node) = RR(3,node) - amin * rm  * sin(thtj) + amin * drmt  * cos(thtj)
-     ZZ(3,node) = ZZ(3,node) + amin * rm  * cos(thtj) + amin * drmt  * sin(thtj)
-     RR(4,node) = RR(4,node) - amin * drm * sin(thtj) + amin * drmtr * cos(thtj)
-     ZZ(4,node) = ZZ(4,node) + amin * drm * cos(thtj) + amin * drmtr * sin(thtj)
+      if (m .eq. 2) then
+        rm   = radius * ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ) )
+        drm  =          ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ))
+        drmt = radius * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
+        drmtr=          (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
+      else
+        rm   =      radius**(M-1) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ) )
+        drm  =(M-1)*radius**(M-2) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ))
+        drmt =      radius**(M-1) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
+        drmtr=(M-1)*radius**(M-2) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
+      endif
+      RR(1,node) = RR(1,node) + amin * rm  * cos(thtj)
+      ZZ(1,node) = ZZ(1,node) + amin * rm  * sin(thtj)
+      RR(2,node) = RR(2,node) + amin * drm * cos(thtj)
+      ZZ(2,node) = ZZ(2,node) + amin * drm * sin(thtj)
+      RR(3,node) = RR(3,node) - amin * rm  * sin(thtj) + amin * drmt  * cos(thtj)
+      ZZ(3,node) = ZZ(3,node) + amin * rm  * cos(thtj) + amin * drmt  * sin(thtj)
+      RR(4,node) = RR(4,node) - amin * drm * sin(thtj) + amin * drmtr * cos(thtj)
+      ZZ(4,node) = ZZ(4,node) + amin * drm * cos(thtj) + amin * drmtr * sin(thtj) 
 
-     PSI(1,node) = PSI(1,node) + radius**8              * (   fpsi(2*m-1) *            cos((m-1)*thtj)       &
-                                                            + fpsi(2*m)   *            sin((m-1)*thtj) )
-     PSI(2,node) = PSI(2,node) + 8.d0 * radius**7 * drm * (   fpsi(2*m-1) *            cos((m-1)*thtj)       &
-                                                            + fpsi(2*m)   *            sin((m-1)*thtj) )
-     PSI(3,node) = PSI(3,node) + radius**8              * ( - fpsi(2*m-1) * float(m-1)*sin((m-1)*thtj)       &
-                                                            + fpsi(2*m)   * float(m-1)*cos((m-1)*thtj) )
-     PSI(4,node) = PSI(4,node) + 8.d0 * radius**7 * drm * ( - fpsi(2*m-1) * float(m-1)*sin((m-1)*thtj)       &
-                                                            + fpsi(2*m)   * float(m-1)*cos((m-1)*thtj) )
+      PSI(1,node) = PSI(1,node) + radius**8              * (   fpsi(2*m-1) *            cos((m-1)*thtj)       &
+                                                             + fpsi(2*m)   *            sin((m-1)*thtj) )
+      PSI(2,node) = PSI(2,node) + 8.d0 * radius**7 * drm * (   fpsi(2*m-1) *            cos((m-1)*thtj)       &
+                                                             + fpsi(2*m)   *            sin((m-1)*thtj) )
+      PSI(3,node) = PSI(3,node) + radius**8              * ( - fpsi(2*m-1) * float(m-1)*sin((m-1)*thtj)       &
+                                                             + fpsi(2*m)   * float(m-1)*cos((m-1)*thtj) )
+      PSI(4,node) = PSI(4,node) + 8.d0 * radius**7 * drm * ( - fpsi(2*m-1) * float(m-1)*sin((m-1)*thtj)       &
+                                                             + fpsi(2*m)   * float(m-1)*cos((m-1)*thtj) )
 
-!     write(*,'(A,2i6,12e16.8)') ' PSI(1,node) : ', node,m,PSI(1,node),radius,thtj,fpsi(2*m-1),fpsi(2*m)
+    enddo
 
-   enddo
+    RR(2,node)  = RR(2,node)  * ds/2.d0 * dr_ds
+    RR(3,node)  = RR(3,node)  * dt/2.d0 * dtht_dt
+    RR(4,node)  = RR(4,node)  * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
+    ZZ(2,node)  = ZZ(2,node)  * ds/2.d0 * dr_ds
+    ZZ(3,node)  = ZZ(3,node)  * dt/2.d0 * dtht_dt
+    ZZ(4,node)  = ZZ(4,node)  * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
+    PSI(2,node) = PSI(2,node) * ds/2.d0 * dr_ds
+    PSI(3,node) = PSI(3,node) * dt/2.d0 * dtht_dt
+    PSI(4,node) = PSI(4,node) * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
 
-   RR(2,node)  = RR(2,node)  * ds/2.d0 * dr_ds
-   RR(3,node)  = RR(3,node)  * dt/2.d0 * dtht_dt
-   RR(4,node)  = RR(4,node)  * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
-   ZZ(2,node)  = ZZ(2,node)  * ds/2.d0 * dr_ds
-   ZZ(3,node)  = ZZ(3,node)  * dt/2.d0 * dtht_dt
-   ZZ(4,node)  = ZZ(4,node)  * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
-   PSI(2,node) = PSI(2,node) * ds/2.d0 * dr_ds
-   PSI(3,node) = PSI(3,node) * dt/2.d0 * dtht_dt
-   PSI(4,node) = PSI(4,node) * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
-
-!   write(*,*) node, PSI(1,node)
-
- enddo
+  enddo
 enddo
 
 element_list%n_elements  = n_element_start  + (nr-1)*np
@@ -188,10 +179,6 @@ do i=1,nr-1
                  element_list%element(Index)%vertex(4) = (i-1)*np + 1
                  element_list%element(Index)%vertex(3) =  i*np    + 1
    endif    
-
-
-
-
 
            !Neighbours of the element (refinement procedure)
 
@@ -226,6 +213,7 @@ do i=1,nr-1
 	    do i_sons = 1, 4
 	         element_list%element(Index)%sons(i_sons) = 0
 	    end do 
+            
   enddo
 enddo
 

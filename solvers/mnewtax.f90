@@ -50,7 +50,7 @@ do k=1,ntrial
 
   call interp(node_list,element_list,i_elm,1,1,x(1),x(2),ZPSI,ZPSIR,ZPSIS,ZPSIRS,ZPSIRR,ZPSISS)
 
-!  write(*,'(A,8e12.4)') ' mnewt : ',x,ZPSI,ZPSIR,ZPSIS,ZPSIRS,ZPSIRR,ZPSISS
+  write(*,'(A,8e12.4)') ' mnewt : ',x,ZPSI,ZPSIR,ZPSIS,ZPSIRS,ZPSIRR,ZPSISS
 
   FVEC(1)   = ZPSIR
   FVEC(2)   = ZPSIS
@@ -64,7 +64,6 @@ do k=1,ntrial
   if (errf .le. tolf) then
     r = x(1)
     s = x(2)
-!    write(*,*) ' newton (1) : ',errf,errx,k
     ifail = 0
     return
   endif
@@ -91,7 +90,6 @@ do k=1,ntrial
   if (errx .le. tolx) then
     r = x(1)
     s = x(2)
-!    write(*,*) ' newton (2) : ',errf,errx,k
     ifail = 0
     return
   endif

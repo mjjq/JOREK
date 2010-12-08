@@ -4,11 +4,13 @@ all: modules \
      current.o \
      density.o \
      element_matrix_GS.o \
+     element_matrix_GS_perturbation.o \
      element_matrix_GS_inverse.o \
      element_matrix_poisson.o \
+     element_matrix_poisson_inverse.o \
+     poisson.o \
      equilibrium.o \
      ffprime.o \
-     poisson.o \
      chgmt_node.o \
      temperature.o \
      temperature_i.o \

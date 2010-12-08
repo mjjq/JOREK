@@ -1,25 +1,19 @@
 
 MODEL = model199
 
-FC     = mpiifort
+FC     = mpif90
 
 FFLAGS = -r8 -i4 -O2 -xT -align -mcmodel=medium -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO -openmp
-#FFLAGS = -r8 -i4 -O2 -xT -align -mcmodel=large -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO -openmp
-#FFLAGS = -r8 -i4 -O0 -g -check bounds -traceback -xT -align -mcmodel=medium -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO -openmp 
-#FFLAGS = -r8 -i8 -O2 -xT -align -mcmodel=medium -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO -openmp
 
 CC = mpicc 
 CFLAGS = -DUSE_R3_INFO_MPI -DUSE_R3_INFO
 
-#FFLAGS = -r8 -i4 -O0 -check bounds -traceback -align -openmp
-# -i4 for openmpi
-#FFLAGS_NO_OMP = -r8 -i4 -O2 -xT -align
 
 FFLAGS_NO_OMP = $(FFLAGS)
 
 MYHOME = $(HOME)
 
-JOREK_DIR = $(MYHOME)/JOREK/Jorek_rev***/trunk
+JOREK_DIR = $(MYHOME)/****/trunk
 
 MAIN_MODEL_DIR = $(JOREK_DIR)/models
 MODEL_DIR      = $(MAIN_MODEL_DIR)/$(MODEL)
@@ -30,40 +24,32 @@ SOLVERS_DIR    = $(JOREK_DIR)/solvers
 TIMING_DIR     = $(JOREK_DIR)/timing
 VACUUM_DIR     = $(JOREK_DIR)/vacuum
 
-LIBSCOTCH   = -L$(MYHOME)/Soft/SCOTCH/lib -lptscotch -lptscotcherr
-#LIBSCOTCH   = -L$(MYHOME)/Soft/scotch_5.1.7_NOSMP/lib -lscotch -lscotcherr
-#LIBSCOTCH   = -L$(MYHOME)/Soft/scotch_5.1.7_NOSMP/lib -lptscotch -lptscotcherr
-#LIBSCOTCH   = -L/lustre/jhome6/fsnelmd/fselmd00/scotch_5.1/lib -lptscotch -lptscotcherrexit
+LIBSCOTCH   = -L$(MYHOME)/****/SCOTCH/lib -lptscotch -lptscotcherr
 
-LIBMUMPS  = -L$(MYHOME)/Soft/MUMPS/lib/ -ldmumps -lmumps_common
-INCMUMPS  = $(MYHOME)/Soft/MUMPS/include/
-ORDLIB    = $(MYHOME)/Soft/MUMPS/lib/libpord.a $(MYHOME)/Soft/METIS/libmetis.a
-                                                                                                                              
-PPPLIB    = $(MYHOME)/Soft/ppplib/ppplib.a
+LIBMUMPS  = -L$(MYHOME)/****/MUMPS/lib/ -ldmumps -lmumps_common
+INCMUMPS  = $(MYHOME)/****/MUMPS/include/
+ORDLIB    = $(MYHOME)/****/MUMPS/lib/libpord.a $(MYHOME)/Soft/METIS/libmetis.a
+                                                                                                   
+PPPLIB    = $(MYHOME)/****/ppplib/ppplib.a
 
-METIS     = $(MYHOME)/Soft/METIS/libmetis.a
+METIS     = $(MYHOME)/****/METIS/libmetis.a
 
-LIBPASTIX = -L$(MYHOME)/Soft/pastix_guido/install -lpastix_murge -lpastix
-INCPASTIX = $(MYHOME)/Soft/pastix_guido/install
+DIRPASTIX = $(MYHOME)/****/install
+LIBPASTIX = -L$(DIRPASTIX) -lpastix_murge -lpastix
+INCPASTIX = $(DIRPASTIX)
 
-MKL_ROOT = /usr/local/intel/mkl/10.2.2.025/lib/em64t
 
-LIBFFTW   = -L$(MKL_ROOT) -lfftw3xf_intel 
+#LIBFFTW   = -L$(MKLROOT) -lfftw3xf_intel 
+LIBFFTW   = -L$(MKLROOT)
 
-LIBLAPACK = -L$(MKL_ROOT) -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lguide
-SCALAP    = -L$(MKL_ROOT) -lmkl_scalapack_lp64 -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lguide
-BLACS     = -L$(MKL_ROOT) -lmkl_blacs_intelmpi_lp64
-
-#THREAD BLAS
-#LIBLAPACK = -L$(MKL_ROOT) -lmkl_lapack -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5
-#SCALAP    = -L$(MKL_ROOT) -lmkl_scalapack_lp64 -lmkl_lapack -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5
-#BLACS     = -L$(MKL_ROOT) -lmkl_blacs_intelmpi_lp64
+LIBLAPACK = -L$(MKLROOT) -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lguide
+SCALAP    = -L$(MKLROOT) -lmkl_scalapack_lp64 -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lguide
+BLACS     = -L$(MKLROOT) -lmkl_blacs_intelmpi_lp64
 
 
 LIBS = $(LIBFFTW) $(METIS) $(LIBPASTIX) $(LIBSCOTCH)  $(LIBMUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB)
 
 INCLUDES  = -I$(DATATYPES_DIR) -I$(MAIN_MODEL_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(ELEMENTS_DIR) -I$(VACUUM_DIR) -I$(SOLVERS_DIR) -I$(TIMING_DIR) -I$(INCMUMPS) -I$(INCPASTIX) -I. 
-
 
 VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 

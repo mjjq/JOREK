@@ -120,7 +120,7 @@ jorek2_connection2 : modules sources
 	 -o $(JOREK_DIR)/jorek2_connection $(INCLUDES) $(LIBS)
 
 jorek2vtk : modules sources
-	$(FC) $(FFLAGS)                   \
+	$(FC) $(FFLAGS_NOOMP)             \
 	diagnostics/jorek2vtk.f90         \
 	datatypes/mod_parameters.o        \
 	datatypes/mod_data_structure.o    \
@@ -140,7 +140,7 @@ jorek2vtk : modules sources
 	 -o $(JOREK_DIR)/jorek2vtk $(INCLUDES) $(LIBS)
 
 jorek2_fieldlines_vtk : modules sources
-	$(FC) $(FFLAGS)                   \
+	$(FC) $(FFLAGS_NOOMP)             \
 	diagnostics/jorek2_fieldlines_vtk.f90         \
 	datatypes/mod_parameters.o        \
 	datatypes/mod_data_structure.o    \

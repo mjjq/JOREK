@@ -188,36 +188,6 @@ endif
 
 !------------------------------- end of equilibrium, start filling data
 
-write(*,*) ' end equilibrium'
-
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-if (ifail .ne. 0) then
-  call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
-  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
-  write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
-endif
-
-psi_bnd = 0.d0
-
-if (xpoint2) then
-  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-  if (ifail .ne. 1) then      
-    psi_bnd = psi_xpoint
-  else
-    Z_xpoint = -99.d0
-  endif
-endif
-
-if (freeboundary) then
-  call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-  if (Z_lim .gt. Z_xpoint) then
-    psi_bnd = min(psi_lim,psi_bnd)
-  endif
-endif
-
-write(*,*) ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
-
 do i=1,node_list%n_nodes
 
   psi = node_list%node(i)%values(1,1,1)

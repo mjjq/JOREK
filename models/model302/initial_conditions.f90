@@ -1,4 +1,4 @@
-subroutine initial_conditions(my_id,node_list,element_list,xpoint2)
+subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2)
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -9,16 +9,18 @@ implicit none
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_surface_list) :: surface_list
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
 
-integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint
+integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint, i_elm, ifail
 real*8     :: amplitude, psi, psi_axis, theta, PI
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
-real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2
-real*8     :: psi_n, psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
+real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
+real*8     :: psi_n, psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint,psi_lim,R_lim,Z_lim
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t,R_s, R_t, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 logical    :: xpoint2
 
@@ -32,11 +34,29 @@ PI = 2.d0 *asin(1.d0)
 
 if (my_id .eq. 0) then
 
-  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
-  if (xpoint2) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
+  if (ifail .ne. 0) then
+    call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
+    call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
+    write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
+  endif
 
   psi_bnd = 0.d0
-  if (xpoint2) psi_bnd = psi_xpoint
+    
+  if (xpoint2) then
+    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+    psi_bnd = psi_xpoint
+  endif
+
+  if (freeboundary) then
+    call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+    if (Z_lim .gt. Z_xpoint) then
+      psi_bnd = min(psi_lim,psi_bnd)
+    endif
+  endif
+
+  write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
 
   do i=1,node_list%n_nodes
 
@@ -91,7 +111,6 @@ if (my_id .eq. 0) then
 
 endif
 
-call poisson(my_id,+2,node_list,element_list,2,4,1,xpoint2)              ! calculate w from u  (inverse Poisson)
 
 !----------------------------------------- flux boundary perturbation (to be completed, see Marina)
 !if (my_id .eq. 0) then
@@ -124,11 +143,10 @@ do in=2,n_tor
 
     do i=1,node_list%n_nodes
 
+      node_list%node(i)%values(in,:,:) = 0.d0
+
       psi = node_list%node(i)%values(1,1,1)
       Z   = node_list%node(i)%x(1,2)
-
-      psi_bnd = 0.d0
-      if (xpoint2) psi_bnd = psi_xpoint
       psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)
 
       node_list%node(i)%values(in,1,4) = amplitude * psi_n * (1.d0 -psi_n)
@@ -146,8 +164,8 @@ do in=2,n_tor
 
   endif
 
-  call poisson(my_id,1,node_list,element_list,4,2,in,xpoint2)   !----------- for Poisson (toroidal) use 1
-
+  call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               4,2,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,1)
 enddo
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)

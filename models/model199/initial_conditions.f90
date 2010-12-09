@@ -43,11 +43,7 @@ if (my_id .eq. 0) then
     
   if (xpoint2) then
     call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-    if (ifail .ne. 1) then      
-      psi_bnd = psi_xpoint
-    else
-      Z_xpoint = -99.d0
-    endif
+    psi_bnd = psi_xpoint
   endif
 
   if (freeboundary) then
@@ -57,7 +53,7 @@ if (my_id .eq. 0) then
     endif
   endif
 
-  write(*,*) ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
+  write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
 
   do i=1,node_list%n_nodes
 
@@ -103,6 +99,8 @@ do in=2,n_tor
 
     do i=1,node_list%n_nodes
 
+      node_list%node(i)%values(in,:,:) = 0.d0
+
       psi = node_list%node(i)%values(1,1,1)
       Z   = node_list%node(i)%x(1,2)
 
@@ -114,7 +112,6 @@ do in=2,n_tor
       node_list%node(i)%values(in,2,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,2,1)
       node_list%node(i)%values(in,3,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,3,1)
       node_list%node(i)%values(in,4,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,4,1)
-
 
       if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. (Z .lt. Z_xpoint))) then
         node_list%node(i)%values(in,1:4,4) = 0.d0

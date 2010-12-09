@@ -50,7 +50,7 @@ do k=1,ntrial
 
   call interp(node_list,element_list,i_elm,1,1,x(1),x(2),ZPSI,ZPSIR,ZPSIS,ZPSIRS,ZPSIRR,ZPSISS)
 
-  write(*,'(A,8e12.4)') ' mnewt : ',x,ZPSI,ZPSIR,ZPSIS,ZPSIRS,ZPSIRR,ZPSISS
+!  write(*,'(A,8e12.4)') ' mnewt : ',x,ZPSI,ZPSIR,ZPSIS,ZPSIRS,ZPSIRR,ZPSISS
 
   FVEC(1)   = ZPSIR
   FVEC(2)   = ZPSIS

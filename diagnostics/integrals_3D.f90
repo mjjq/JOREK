@@ -20,7 +20,7 @@ real*8     :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_ga
 real*8     :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
 real*8     :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
 
-integer    :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_xpoint
+integer    :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_xpoint, ifail
 real*8     :: current, beta_p, beta_n, beta_t, MU_zero, aminor
 real*8     :: xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area, PI, Bgeo, psi_limit
 real*8     :: density, density_in, density_out,  pressure, pressure_in, pressure_out
@@ -56,7 +56,7 @@ gradP_max = 0.d0
 gradP_psi_max = 0.d0
 
 if (xpoint) then
-  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
   psi_limit = psi_xpoint
 else
   psi_limit = 0.d0

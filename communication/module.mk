@@ -4,6 +4,7 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/broadcast_boundary.f90 		\
 	$(DIR)/broadcast_nodes.f90 		\
 	$(DIR)/broadcast_phys.f90 		\
+	$(DIR)/broadcast_num_profiles.f90	\
 	$(DIR)/distribute_harmonics.f90 	\
 	$(DIR)/distribute_nodes_elements.f90 	\
 	$(DIR)/distribute_vector.f90  		\

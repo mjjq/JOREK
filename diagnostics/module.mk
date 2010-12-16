@@ -6,9 +6,11 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/find_axis.f90              \
 	$(DIR)/find_flux_surfaces.f90     \
 	$(DIR)/find_xpoint.f90            \
+	$(DIR)/find_limiter.f90		  \
 	$(DIR)/flux_surface_add_line.f90  \
 	$(DIR)/flux_surface_add_point.f90 \
 	$(DIR)/print_grid.f90             \
+	$(DIR)/integral_current.f90       \
 	$(DIR)/psi_minmax.f90             \
 	$(DIR)/q_profile.f90              \
 	$(DIR)/RZ_minmax.f90              \

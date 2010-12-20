@@ -19,7 +19,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   real*8  :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_solv_0, t_solv_1
   real*8, allocatable :: RHS_tmp(:)
   logical :: solve_only
-  integer::time_ini_1,time_ini_0,time_facto_1,time_facto_0, time_solve_0, time_solve_1,nb_periods,nb_periodes_max,nb_periodes_sec
+  integer::t1, t0, time_ini_1,time_ini_0,time_facto_1,time_facto_0, time_solve_0, time_solve_1,nb_periods,nb_periodes_max,nb_periodes_sec
   integer, external :: omp_get_num_threads, omp_get_thread_num
   !Split broadcast
   character*8 :: type
@@ -189,9 +189,20 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
            if (allocated(sparskit_work)) deallocate(sparskit_work)
            allocate(sparskit_work(mumps_par%N + 1))
-
+           
+           
+           if (my_id_n .eq. 0) then                     ! elapsed time analysis start
+              call MPI_Barrier(MPI_COMM_MASTER,ierr)
+              call system_clock(count=t0)
+           endif
            call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
-
+           if (my_id_n .eq. 0) then
+              call MPI_Barrier(MPI_COMM_MASTER,ierr)     ! elapsed time analysis end
+              call system_clock(count=t1)
+              nb_periods = t1-t0
+              if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+              write(*,*) 'system_clock elapsed time coicsr',REAL(nb_periods)/nb_periodes_sec
+           endif
            deallocate(sparskit_work)
 
         endif
@@ -377,10 +388,6 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      endif   ! (else, use_mumps)
 
 
-     if (my_id_n .eq. 0) then                              ! elapsed time factorisation start
-        call MPI_Barrier(MPI_COMM_MASTER,ierr)
-        call system_clock(count=time_facto_0)
-     endif
 
      if (use_mumps) then
 #ifdef USE_MUMPS
@@ -411,7 +418,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
            CALL CPU_TIME(t_analysis_1)
                  
-           IF (my_id_n .EQ. 0)  WRITE(*,'(i3,A,f8.3)') my_id, ' PASTIX, analysis  : ',t_analysis_1-t_analysis_0
+           IF (my_id_n .EQ. 0)  WRITE(*,'(i3,A,f8.3)') my_id, ' MURGE_MatrixGlobalCSC  : ',t_analysis_1-t_analysis_0
         else
            call cpu_time(t_fact_0)
 
@@ -430,26 +437,31 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
            pastix_dparm(6)  = pastix_epsilon    ! error level refinement
            pastix_dparm(11) = pastix_pivot    ! pivot threshold?
-           pastix_iparm(63) =    i_tor(my_id+1) -1                          
+           pastix_iparm(63) =    i_tor(my_id+1) -1    
+           if (my_id_n .eq. 0) then                              ! elapsed time factorisation start
+              call MPI_Barrier(MPI_COMM_MASTER,ierr)
+              call system_clock(count=time_facto_0)
+           endif
            call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
            call cpu_time(t_fact_1)
 
            if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' PastiX, fact      : ',t_fact_1-t_fact_0
+           
+           if (my_id_n .eq. 0) then                          ! elapsed time factorisation end
+              call MPI_Barrier(MPI_COMM_MASTER,ierr)
+              call system_clock(count=time_facto_1)
+              nb_periods = time_facto_1-time_facto_0
+              if (time_facto_1<time_facto_0) nb_periods = nb_periods + nb_periodes_max
+              write(*,*) 'system_clock elapsed time factorization',REAL(nb_periods)/nb_periodes_sec
+           endif
         end if
 
      endif
 
   endif
 
-  if (my_id_n .eq. 0) then                          ! elapsed time factorisation end
-     call MPI_Barrier(MPI_COMM_MASTER,ierr)
-     call system_clock(count=time_facto_1)
-     nb_periods = time_facto_1-time_facto_0
-     if (time_facto_1<time_facto_0) nb_periods = nb_periods + nb_periodes_max
-     write(*,*) 'system_clock elapsed time factorization',REAL(nb_periods)/nb_periodes_sec
-  endif
 
   if (my_id_n .eq. 0) then                              ! elapsed time solve start
      call MPI_Barrier(MPI_COMM_MASTER,ierr)
@@ -485,7 +497,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
            STOP
         end if
-        if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' PastiX, fact/solv     : ',t_fact_1-t_fact_0
+        if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' MURGE_GetGlobalSolution    : ',t_fact_1-t_fact_0
 
      else
         call cpu_time(t_solv_0)

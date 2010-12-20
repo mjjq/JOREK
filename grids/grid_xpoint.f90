@@ -75,6 +75,7 @@ allocate(flux_list%psi_values(flux_list%n_psi))
 allocate(s_values(n_flux_2+n_open_2+n_private_2))
 
 allocate(s_tmp(n_flux_2+1))
+s_tmp = 0
 call meshac2(n_flux_2+1,s_tmp,1.d0,9999.d0,SIG_closed,9999.d0,0.2d0,1.0d0)
 
 do i=1,n_flux_2
@@ -83,6 +84,7 @@ do i=1,n_flux_2
 enddo
 
 deallocate(s_tmp); allocate(s_tmp(n_open_2+1))
+s_tmp = 0
 call meshac2(n_open_2+1,s_tmp,0.d0,9999.d0,SIG_open,9999.d0,0.6d0,1.0d0)
 
 do i=1,n_open_2
@@ -91,6 +93,7 @@ do i=1,n_open_2
 enddo
 
 deallocate(s_tmp); allocate(s_tmp(n_private_2+1))
+s_tmp = 0
 call meshac2(n_private_2+1,s_tmp,0.d0,9999.d0,SIG_private,9999.d0,0.6d0,1.0d0)
 
 do i=1,n_private_2
@@ -268,7 +271,7 @@ tht_x = atan2(Z_xpoint-Z_axis,R_xpoint-R_axis)
 allocate(theta_sep(n_tht_3),R_sep(n_tht_3),Z_sep(n_tht_3))
 
 deallocate(s_tmp); allocate(s_tmp(n_tht_2))
-
+s_tmp = 0
 call meshac2(n_tht_2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
 !call meshac3(n_tht_2,s_tmp,0.d0,-tht_x/(2.d0*PI),1.d0,SIG_theta,0.05d0,SIG_theta,0.8d0,1.0d0)
@@ -371,7 +374,7 @@ enddo
 
 !------------------------------ second part of the grid below the x-point
 deallocate(s_tmp); allocate(s_tmp(n_leg_2))
-
+s_tmp = 0
 call meshac2(n_leg_2,s_tmp,0.d0,1.d0,SIG_leg_0,SIG_leg_1,0.6d0,1.0d0)
 
 do j=1,n_leg_2

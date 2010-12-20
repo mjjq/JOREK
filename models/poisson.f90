@@ -262,11 +262,9 @@ call DMUMPS(mumps_par)
 if (my_id == 0) then
    if (allocated(sparskit_work)) deallocate(sparskit_work)
    allocate(sparskit_work(mumps_par%N + 1))
-   !print*, "taille du systeme,non zero", n_AA,nz_AA, mumps_par%NZ
    call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
-   
+
    nnz = mumps_par%JCN(mumps_par%N+1) - 1
-   print *, "Avant", MPI_COMM_SELF
    call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
         1, 0, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
    write (*,*) "nnz", nnz
@@ -286,6 +284,7 @@ end if
 CALL MPI_BCAST(mumps_par%N, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 CALL MPI_BCAST(mumps_par%NZ, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 write (*,*) my_id, "mumps_par%NZ", mumps_par%NZ, mumps_par%N
+
 if (my_id /= 0) then
    if (associated(mumps_par%JCN)) deallocate(mumps_par%JCN)
    if (associated(mumps_par%IRN)) deallocate(mumps_par%IRN)

@@ -109,9 +109,9 @@ write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
 
 if (.not. pastix_initialised) then
 
-  pastix_iparm(1)  = 0          ! insert default values
-  pastix_iparm(2)  = 0          ! initializse
-  pastix_iparm(3)  = 0
+  pastix_iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
+  pastix_iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
+  pastix_iparm(IPARM_END_TASK)          = API_TASK_INIT
 
 write(*,*) '***********************************'
 write(*,*) '* initialise PastiX               *'
@@ -120,32 +120,29 @@ write(*,*) '***********************************'
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-  pastix_iparm(4) = pastix_verb
+  pastix_iparm(IPARM_VERBOSE)            = pastix_verb
+  pastix_iparm(IPARM_ITERMAX)            = pastix_iter                 ! refinement : max number of iterations
+
+  pastix_iparm(IPARM_FACTORIZATION)      = pastix_facto
+  pastix_iparm(IPARM_THREAD_NBR)         = pastix_nthrd  !   numthreads   ! number of threads
+  pastix_iparm(IPARM_RHS_MAKING)         = pastix_rhs                 ! right hand side (0 : use RHS)
+  
+  pastix_iparm(IPARM_SYM)                = pastix_sym
+  
+  pastix_iparm(IPARM_INCOMPLETE)         = pastix_ricar
+  pastix_iparm(IPARM_LEVEL_OF_FILL)      = pastix_iluk
+  pastix_iparm(IPARM_AMALGAMATION_LEVEL) = pastix_amalg
+  
+  pastix_dparm(DPARM_EPSILON_REFINEMENT) = pastix_epsilon             ! error level refinement
+  pastix_dparm(DPARM_EPSILON_MAGN_CTRL)  = pastix_pivot               ! pivot threshold?
   pastix_initialised = .true.
 
 endif
 
 if (.not. pastix_analysed) then
 
-  pastix_iparm(2) = 1
-  pastix_iparm(3) = 3
-  pastix_iparm(6) = pastix_iter          ! refinement : max number of iterations
-
- ! pastix_iparm(5) = n_tor * n_var   ! degrees of freedom per node (not correct)
-
-  pastix_iparm(31) = pastix_facto
-  pastix_iparm(35) = pastix_nthrd         ! numthreads : number of threads
-  pastix_iparm(39) = pastix_rhs         ! right hand side (0 : use RHS)
-  pastix_iparm(37) = pastix_iluk 
-  pastix_iparm(41) = pastix_sym
-
-  pastix_iparm(42) = pastix_ricar
-  pastix_iparm(37) = pastix_iluk
-  pastix_iparm(14) = pastix_amalg
-
-  pastix_dparm(6)  = pastix_epsilon    ! error level refinement
-  pastix_dparm(11) = pastix_pivot    ! pivot threshold?
-
+   pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
+   pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
   call cpu_time(t_analysis_0)
 
 write(*,*) '***********************************'
@@ -166,23 +163,8 @@ endif
 
 call cpu_time(t_fact_0)
 
-pastix_iparm(2) = 4
-pastix_iparm(3) = pastix_endsolve
-pastix_iparm(6) = pastix_iter          ! refinement : max number of iterations
-
-pastix_iparm(31) = pastix_facto
-pastix_iparm(35) = pastix_nthrd         !   numthreads : number of threads
-pastix_iparm(39) = pastix_rhs        ! right hand side (0 : use RHS)
-pastix_iparm(37) = pastix_iluk
-pastix_iparm(41) = pastix_sym
-
-pastix_iparm(42) = pastix_ricar
-pastix_iparm(37) = pastix_iluk
-pastix_iparm(14) = pastix_amalg
-
-pastix_dparm(6)  = pastix_epsilon    ! error level refinement
-pastix_dparm(11) = pastix_pivot    ! pivot threshold?
-
+pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
+pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
 write(*,*) '***********************************'
 write(*,*) '* call PastiX                     *'
 write(*,*) '***********************************'

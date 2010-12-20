@@ -96,13 +96,30 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   elem_block_size = 2
   elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
   IF (gmres) THEN
-     ALLOCATE(ELM(elem_size, elem_size, elem_block_size, (n_tor+1)/2), RHS(elem_size, elem_block_size, (n_tor+1)/2))
-     ALLOCATE(SEND_ELM(elem_size, elem_size, elem_block_size), SEND_RHS(elem_size, elem_block_size))
+     !****************************************************************
+     !
+     ! In GMRES mode, each processor will compute an elementar matrix
+     !  and then all computed matrices will be exchanged through an
+     !   MPI_allgather().
+     !
+     ! The same process is performed for right-hand-side member.
+     !****************************************************************
+     ALLOCATE(ELM(elem_size, elem_size, elem_block_size, (n_tor+1)/2))
+     ALLOCATE(RHS(elem_size, elem_block_size, (n_tor+1)/2))
+     ALLOCATE(SEND_ELM(elem_size, elem_size, elem_block_size))
+     ALLOCATE(SEND_RHS(elem_size, elem_block_size))
      !ALLOCATE(SEND_REQUEST(n_cpu_trans), RECV_REQUEST(n_cpu_trans))
      !ALLOCATE(SEND_REQUEST2(n_cpu_trans), RECV_REQUEST2(n_cpu_trans))
      !ALLOCATE(STATUS(n_cpu_trans))
   ELSE
-     ALLOCATE(ELM(elem_size, elem_size, 1, 1), RHS(elem_size, 1, 1))
+     !****************************************************************
+     !
+     ! in Direct factorisation, all the matrix is built. There is no
+     !  need to communicate until each processor has built its part of
+     !   the matrix.
+     !****************************************************************
+     ALLOCATE(ELM(elem_size, elem_size, 1, 1))
+     ALLOCATE(RHS(elem_size, 1, 1))
   END IF
 
   WRITE(*,*) '****************************************'
@@ -154,6 +171,14 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      ENDDO
      
   ENDDO
+
+  !*******************************************************************
+  ! In gmres mode, each sub-communicator works on two tors, except the
+  !  firs one which works on the first tor.
+  !
+  ! In direct mode, there is only one communicator, all the processors
+  !  share the whole matrix.
+  !*******************************************************************
   IF (.NOT. gmres) THEN
      coefnbr = coefnbr * (n_vertex_max)*(n_order+1)* (n_var * n_tor)* (n_var * n_tor)
   ELSE

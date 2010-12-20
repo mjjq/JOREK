@@ -2,7 +2,7 @@
 ! Routine: vertex_is_local
 !
 ! check if vertex is in the SORTED in ascendent order list 
-! loc2glob of size n and return it in islocal.
+! loc2glob of size n and return .true. or .false. in islocal.
 !
 SUBROUTINE vertex_is_local(vertex, islocal)
 

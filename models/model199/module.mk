@@ -6,7 +6,6 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/element_matrix_fft.f90 		\
 	$(DIR)/boundary_matrix_open.f90  	\
 	$(DIR)/boundary_conditions.f90 		\
-	$(DIR)/boundary_conditions_murge.f90 	\
 	$(DIR)/initial_conditions.f90		\
 	$(DIR)/mod_parameters.f90
 

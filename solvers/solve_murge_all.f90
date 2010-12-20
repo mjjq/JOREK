@@ -227,31 +227,14 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      if (allocated(deltas)) deallocate(deltas)
      allocate(deltas(ndof_glob))
      deltas = 0.d0
-     
-     !allocate(rhs_tmp(murge_global_n*murge_ndof))
-     
-     !rhs_tmp = 0.d0
-     !   
-     !   if (murge_id .eq. 0 ) then
-     !      
-     !      rhs_tmp(1:murge_global_n*murge_ndof) = rhs_glob(1:ndof_glob:n_tor)
-     !      
-     !   else
-     !      
-     !      rhs_tmp(1:murge_global_n*murge_ndof:2) = rhs_glob(2*murge_id:ndof_glob:n_tor)
-     !      rhs_tmp(2:murge_global_n*murge_ndof:2) = rhs_glob(2*murge_id+:ndof_glob:n_tor)
-     !      
-     !   endif
-     !   
-     !endif
 
   end if
   call system_clock(count=t0)
   if (gmres) then
-     CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
+     CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, 0, MURGE_ASSEMBLY_OVW , ierr)
      !deallocate(rhs_tmp)
   else
-     CALL MURGE_SetGlobalRhs(murge_id, rhs_glob, -1,MURGE_ASSEMBLY_OVW , ierr)
+     CALL MURGE_SetGlobalRhs(murge_id, rhs_glob, 0, MURGE_ASSEMBLY_OVW , ierr)
   end if
   call system_clock(count=t1)
   nb_periods = t1-t0
@@ -261,8 +244,9 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
   ALLOCATE(mumps_par%rhs(murge_global_n*murge_ndof))
 
-  call system_clock(count=t0)
-  CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)  
+  call system_clock(count=t0) 
+  mumps_par%rhs = 0.0
+  CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, 0, ierr)  
   call system_clock(count=t1)
   nb_periods = t1-t0
   if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
@@ -292,8 +276,8 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
            
         else
         
-           rhs_tmp(2*murge_id:ndof_glob:n_tor)   = mumps_par%rhs(1:murge_global_n*murge_ndof:2)
-           rhs_tmp(2*murge_id+1:ndof_glob:n_tor) = mumps_par%rhs(2:murge_global_n*murge_ndof:2)
+           rhs_tmp(2*murge_harmonic-2:ndof_glob:n_tor) = mumps_par%rhs(1:murge_global_n*murge_ndof:2)
+           rhs_tmp(2*murge_harmonic-1:ndof_glob:n_tor) = mumps_par%rhs(2:murge_global_n*murge_ndof:2)
            
         endif
         

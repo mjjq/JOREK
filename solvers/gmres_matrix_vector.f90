@@ -34,43 +34,13 @@ call MPI_BCAST(x,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 
 call cpu_time(t3)
 
-n_blocksize = n_tor * n_var
-n_blocks    = nz_glob/n_blocksize**2
-
+y = 0
 if ((use_murge) .and. (use_murge_element)) then
-
-   if (murge_id .eq. 0 ) then
-      allocate(x_tmp(murge_global_n*murge_ndof))
-      x_tmp = x(1:ndof_glob:n_tor)
-   else
-      allocate(x_tmp(murge_global_n*murge_ndof))
-      x_tmp(1:murge_global_n*murge_ndof:2) = x(2*murge_id:ndof_glob:n_tor)
-      x_tmp(2:murge_global_n*murge_ndof:2) = x(2*murge_id+1:ndof_glob:n_tor)
-   end if
-
-   CALL MURGE_SetGlobalRHS(murge_id, x_tmp, -1, MURGE_ASSEMBLY_OVW , ierr)
-   deallocate(x_tmp)       
-   allocate(y_tmp(murge_global_n*murge_ndof))
-   CALL MURGE_GetGlobalProduct(murge_id, y_tmp, -1, ierr)
-
-   if (my_id_n .eq. 0 ) then
-      allocate(y_tmp2(ndof_glob))
-      y(1:ndof_glob) = 0.d0
-      y_tmp2 = 0.0
-      if (murge_id .eq. 0 ) then
-         
-         y_tmp2(1:ndof_glob:n_tor) = y_tmp(1:murge_global_n*murge_ndof)
-         
-      else
-         y_tmp2(2*murge_id:ndof_glob:n_tor) = y_tmp(1:murge_global_n*murge_ndof:2)
-         y_tmp2(2*murge_id+1:ndof_glob:n_tor) = y_tmp(2:murge_global_n*murge_ndof:2)
-         
-      endif
-      deallocate(y_tmp)
-      call MPI_AllReduce(y_tmp2,y,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
-      deallocate(y_tmp2)
-   end if
+   CALL MURGE_SetGlobalRHS(murge_id_prod, x, 0, MURGE_ASSEMBLY_OVW , ierr)
+   CALL MURGE_GetGlobalProduct(murge_id_prod, y, 0, ierr)
 else
+   n_blocksize = n_tor * n_var
+   n_blocks    = nz_glob/n_blocksize**2
    ndof_local   = (local_index_end(my_id+1) - local_index_start(my_id+1) + 1) * n_blocksize
    index_offset = (local_index_start(my_id+1)-1) * n_blocksize 
    allocate(y_tmp(ndof_local))

@@ -64,8 +64,7 @@ JOREK2VTK3D_SRC        = $(PPPSRC)
 #   each module
 include $(patsubst %,%/module.mk,$(DIRS))
 
-SRC_DEP = $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) $(JOREK2VTK3D_SRC)
-SRC_DEP := $(shell echo "$(SRC_DEP)" | sed -e 's@ @\n@g' | sort -u)
+SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) $(JOREK2VTK3D_SRC))
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP))
 
 
@@ -110,9 +109,10 @@ cleandep:
 	@echo ">> suppression des dependances pour jorek2_main <<"
 	-@rm */*.dep */*/*.dep;
 
+
 %.dep:%.f90
 	@echo "generation de dependances pour $(patsubst %.f90, %.o, $<)"
-	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | 							\
+	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | sed 's/\,.*//' | 					\
 		awk -v file_o=" $(patsubst %.f90, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
 		sed -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;

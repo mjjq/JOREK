@@ -65,7 +65,7 @@ if (my_id .eq. 0) then
   do i=1,n_dof
     sum = sum + (work(2*n_dof+i)-work(n_dof+i))**2
     err = max(err,abs(work(2*n_dof+i)-work(n_dof+i)))
-       Bnorm = Bnorm + RHS_glob(i)**2
+    Bnorm = Bnorm + RHS_glob(i)**2
     Xnorm = Xnorm + deltas(i)**2
   enddo
 
@@ -110,8 +110,8 @@ endif
        else if (revcom.eq.dotProd) then            ! perform the scalar product
                                                    ! work(colz) <-- work(colx) work(coly)
 
-         if (my_id .eq. 0) call dgemv('C',n_dof,nbscal,ONE,work(colx),n_dof,work(coly),1,ZERO,work(colz),1)
-
+         if (my_id .eq. 0) call dgemv('C',n_dof,nbscal,ONE, work(colx),n_dof,work(coly),1,ZERO,work(colz),1)
+ 
          goto 10
 
        endif

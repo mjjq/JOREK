@@ -269,7 +269,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                     write (*,*) "ERROR in MURGE_Initialize"; 
                     STOP
                  end if
-                 murge_id = i_tor(my_id+1) -1
+                 murge_id = 0
                  write (*,*) "murge_id : ", murge_id
                  CALL MURGE_GetSolver(murge_solver, ierr)
                  IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
@@ -483,15 +483,13 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
      if (use_murge) then
-        if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
-
-        CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
+        CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, 0,MURGE_ASSEMBLY_OVW , ierr)
         if (ierr /= MURGE_SUCCESS) then 
            write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
            STOP
         end if
         call cpu_time(t_fact_0)
-        CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
+        CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, 0, ierr)
         call cpu_time(t_fact_1)
         if (ierr /= MURGE_SUCCESS) then 
            write (*,*) "ERROR in MURGE_GetGlobalSolution"; 

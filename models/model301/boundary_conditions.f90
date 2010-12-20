@@ -123,7 +123,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
 
            if (node_list%node(inode)%boundary .ne. 0) then
 
-              do in=1, n_tor
+              do in=first_tor, last_tor
 
                  do k=1, n_var
 

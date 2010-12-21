@@ -303,10 +303,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  !$omp parallel default(none) shared(pastix_nthrd)    
                  pastix_nthrd = omp_get_num_threads()
                  !$omp end parallel
-
-                 pastix_iparm(IPARM_MODIFY_PARAMETER) = API_NO         ! insert default values
-                 pastix_iparm(IPARM_START_TASK)       = API_TASK_INIT  ! initializse
-                 pastix_iparm(IPARM_END_TASK)         = API_TASK_INIT
+                 !+1 because there is a difference between murge.inc (0 based) and pastix_fortran.h (1 based) 
+                 pastix_iparm(IPARM_MODIFY_PARAMETER+1) = API_NO         ! insert default values
+                 pastix_iparm(IPARM_START_TASK+1)       = API_TASK_INIT  ! initializse
+                 pastix_iparm(IPARM_END_TASK+1)         = API_TASK_INIT
 
                  if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 
@@ -315,21 +315,21 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
                  !pastix_iparm(IPARM_PID)     =    i_tor(my_id+1) -1 
-		 pastix_iparm(IPARM_VERBOSE)            = pastix_verb              
-                 pastix_iparm(IPARM_ITERMAX)            = pastix_iter                 ! refinement : max number of iterations
+		 pastix_iparm(IPARM_VERBOSE+1)            = pastix_verb              
+                 pastix_iparm(IPARM_ITERMAX+1)            = pastix_iter                 ! refinement : max number of iterations
 
-                 pastix_iparm(IPARM_FACTORIZATION)      = pastix_facto
-                 pastix_iparm(IPARM_THREAD_NBR)         = pastix_nthrd  !   numthreads   ! number of threads
-                 pastix_iparm(IPARM_RHS_MAKING)         = pastix_rhs                 ! right hand side (0 : use RHS)
+                 pastix_iparm(IPARM_FACTORIZATION+1)      = pastix_facto
+                 pastix_iparm(IPARM_THREAD_NBR+1)         = pastix_nthrd  !   numthreads   ! number of threads
+                 pastix_iparm(IPARM_RHS_MAKING+1)         = pastix_rhs                 ! right hand side (0 : use RHS)
 
-                 pastix_iparm(IPARM_SYM)                = pastix_sym
+                 pastix_iparm(IPARM_SYM+1)                = pastix_sym
 
-                 pastix_iparm(IPARM_INCOMPLETE)         = pastix_ricar
-                 pastix_iparm(IPARM_LEVEL_OF_FILL)      = pastix_iluk
-                 pastix_iparm(IPARM_AMALGAMATION_LEVEL) = pastix_amalg
+                 pastix_iparm(IPARM_INCOMPLETE+1)         = pastix_ricar
+                 pastix_iparm(IPARM_LEVEL_OF_FILL+1)      = pastix_iluk
+                 pastix_iparm(IPARM_AMALGAMATION_LEVEL+1) = pastix_amalg
 
-                 pastix_dparm(DPARM_EPSILON_REFINEMENT) = pastix_epsilon             ! error level refinement
-                 pastix_dparm(DPARM_EPSILON_MAGN_CTRL)  = pastix_pivot               ! pivot threshold?
+                 pastix_dparm(DPARM_EPSILON_REFINEMENT+1) = pastix_epsilon             ! error level refinement
+                 pastix_dparm(DPARM_EPSILON_MAGN_CTRL+1)  = pastix_pivot               ! pivot threshold?
               end if
               pastix_initialised = .true.
 
@@ -359,8 +359,8 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                     call MPI_Barrier(MPI_COMM_MASTER,ierr)
                     call system_clock(count=time_ini_0)
                  endif
-                 pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
-                 pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
+                 pastix_iparm(IPARM_START_TASK+1) = API_TASK_ORDERING
+                 pastix_iparm(IPARM_END_TASK+1)   = API_TASK_ANALYSE
                  call cpu_time(t_analysis_0)
 
                  call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
@@ -421,8 +421,8 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         else
            call cpu_time(t_fact_0)
 
-           pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
-           pastix_iparm(IPARM_END_TASK)   = API_TASK_NUMFACT
+           pastix_iparm(IPARM_START_TASK+1) = API_TASK_NUMFACT
+           pastix_iparm(IPARM_END_TASK+1)   = API_TASK_NUMFACT
            if (my_id_n .eq. 0) then                              ! elapsed time factorisation start
               call MPI_Barrier(MPI_COMM_MASTER,ierr)
               call system_clock(count=time_facto_0)
@@ -485,8 +485,8 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      else
         call cpu_time(t_solv_0)
 
-        pastix_iparm(IPARM_START_TASK) = API_TASK_SOLVE
-        pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
+        pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
+        pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
         if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &

@@ -9,6 +9,7 @@ use pastix_module
 use global_distributed_matrix
 implicit none
 include 'mpif.h'
+#include "pastix_fortran.h"
 
 integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
 real*8,allocatable       :: column_local(:)

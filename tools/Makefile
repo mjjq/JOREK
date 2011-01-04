@@ -1,0 +1,9 @@
+include ../config.in
+
+.SUFFIXES: .c
+%.o:%.c
+	$(CC) $(CFLAGS) -g           -c $< -o $@  $(INCLUDES)
+
+all : fortran_pthread.o
+
+fortran_pthread.c

@@ -25,7 +25,12 @@ program JOREK2
 
   use mumps_module
   use pastix_module
-  use murge_module
+  use murge_module, only : murge_initialization, murge_setGraph, MURGE_Clean
+  use murge_module, only : use_murge, use_murge_element
+  use murge_module, only : murge_initialised, murge_harmonic
+  use murge_module, only : murge_glob2loc, murge_loc2glob
+  use murge_module, only : murge_id
+
   use data_structure
   use phys_module
   use global_distributed_matrix
@@ -461,7 +466,7 @@ program JOREK2
           local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
 
      if ( use_pastix .and. use_murge .and. use_murge_element ) then
-
+        
         write (*,*) "--- Murge initilisation ---"
 
         ! TODO : deplacer dans un subroutine, dans mod_murge.f90
@@ -470,66 +475,8 @@ program JOREK2
         ! Murge initialisation and 
         ! graph definition edge by edge
         !
-        IF (use_murge_element .and. .NOT. murge_initialised) THEN
-           !
-           ! Init murge
-           !
-           murge_id = 0
-           if (gmres) then
-              murge_id_prod = 1
-              CALL MURGE_Initialize(2, ierr)
-              CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
-              CALL MURGE_SetCommunicator(murge_id_prod, MPI_COMM_WORLD, ierr)
-              CALL MURGE_SetDefaultOptions(murge_id_prod, 0, ierr)
-              CALL MURGE_SetOptionINT(murge_id_prod, IPARM_VERBOSE,             API_VERBOSE_YES, ierr)
-              CALL MURGE_SetOptionINT(murge_id_prod, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
-              CALL MURGE_SetOptionINT(murge_id_prod, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
-              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_SYM,          murge_sym,       ierr)
-              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_BASEVAL,      1,               ierr)
-              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_DOF,          n_tor*n_var,     ierr) 
-           else
-              CALL MURGE_Initialize(1, ierr)
-           end if
-
-           CALL MURGE_GetSolver(murge_solver, ierr)
-           IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
-              CALL MURGE_SetDefaultOptions(murge_id,      0, ierr)
-              write (*,*) "--- Murge_setdefaultoptions ---"
-              CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,             API_VERBOSE_YES, ierr)
-              CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
-              ! refinement : max number of iterations
-              CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX, murge_iter,      ierr) 
-              ! degrees of freedom per node (not correct)
-              if (gmres) then
-                 if ( i_tor(my_id+1) == 1 ) then
-                    murge_ndof = n_var
-                 else
-                    murge_ndof = 2*n_var
-                 end if
-              CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,     2*n_var,      ierr) 
-              else
-                 murge_ndof = n_tor*n_var
-              end if
-              CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF,          murge_ndof,      ierr) 
-              ! TODO : omp_num_thread
-              CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
-              CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
-              CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
-              CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
-              CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
-
-              CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,  murge_pivot,     ierr)
-
-           ENDIF
-
-
-           CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
-           CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_BASEVAL,     1,   ierr)
-
-           CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
-
-           murge_initialised = .TRUE.
-
+        IF (use_murge_element) THEN
+           call murge_initialization(gmres,my_id,  MPI_COMM_N, i_tor)
         ENDIF
 
         !
@@ -539,155 +486,8 @@ program JOREK2
         ! TODO : subroutine dans le module murge
         !
         !if (my_id == 0) then
-        CALL MURGE_GRAPHBEGIN(murge_id, mumps_par%n, &
-             n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GRAPHBEGIN"
-           STOP
-        END IF
-        CALL MURGE_GRAPHBEGIN(murge_id_prod, mumps_par%n, &
-             n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GRAPHBEGIN"
-           STOP
-        END IF
-
-        call system_clock(count=t0)
-
-        DO i_elem = 1, n_local_elms
-
-           element = element_list%element(local_elms(i_elem))
-           DO i=1,n_vertex_max
-
-              inode1         = element%vertex(i)
-
-              DO i_order = 1, n_order+1
-
-                 index_node1 = node_list%node(inode1)%index(i_order)
-
-
-
-                 ! Build nodes Matrices
-                 DO k=1,n_vertex_max
-
-                    knode         = element%vertex(k)
-
-                    DO k_order = 1, n_order+1
-
-                       index_node2 = node_list%node(knode)%index(k_order)
-
-
-                       CALL MURGE_GRAPHEDGE(murge_id,  &
-                            index_node1,         &
-                            index_node2,         &
-                            ierr)
-                       IF (ierr /= MURGE_SUCCESS) THEN
-                          write (*,*) "N", mumps_par%n, n_AA,&
-                               "I", index_node1, &
-                               "J", index_node2
-                          STOP
-                       END IF
-
-                       CALL MURGE_GRAPHEDGE(murge_id_prod,  &
-                            index_node1,         &
-                            index_node2,         &
-                            ierr)
-                       IF (ierr /= MURGE_SUCCESS) THEN
-                          write (*,*) "N", mumps_par%n, n_AA,&
-                               "I", index_node1, &
-                               "J", index_node2
-                          STOP
-                       END IF
-
-
-                    END DO
-                 END DO
-              END DO
-           END DO
-        END DO
-
-        call system_clock(count=t1)
-        nb_periods = t1-t0
-        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-        write(*,FMT_TIMING) my_id, ' system_clock elapsed time entering graph ',REAL(nb_periods)/nb_periodes_sec
-
-        call system_clock(count=t0)
-        CALL MURGE_GRAPHEND(murge_id, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GRAPHEND"
-           STOP
-        END IF
-        call system_clock(count=t1)
-        nb_periods = t1-t0
-        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-        write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GRAPHEND ',REAL(nb_periods)/nb_periodes_sec
-
-
-        CALL MURGE_GRAPHEND(murge_id_prod, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GRAPHEND"
-           STOP
-        END IF
-
-        call system_clock(count=t0)
-        CALL MURGE_GETLOCALNODENBR(murge_id, murge_local_n, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
-           STOP
-        END IF
-        CALL MURGE_GETLOCALNODENBR(murge_id_prod, murge_local_n_prod, ierr)
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
-           STOP
-        END IF
-        call system_clock(count=t1)
-        nb_periods = t1-t0
-        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-        write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GETLOCALNODENBR ',REAL(nb_periods)/nb_periodes_sec
-
-        
-        ALLOCATE(murge_loc2glob(murge_local_n))
-        ALLOCATE(murge_loc2glob_prod(murge_local_n_prod))
-        murge_global_n      = mumps_par%n
-        murge_global_n_prod = mumps_par%n
-        write (*,*) "Local number of nodes", murge_local_n, "global",  mumps_par%n
-        call system_clock(count=t0)
-        CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
-        if (allocated(murge_glob2loc)) deallocate(murge_glob2loc)
-
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
-           STOP
-        END IF
-
-        CALL MURGE_GETLOCALNODELIST(murge_id_prod, murge_loc2glob_prod, ierr)
-        if (allocated(murge_glob2loc)) deallocate(murge_glob2loc)
-
-        IF (ierr /= MURGE_SUCCESS) THEN
-           write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
-           STOP
-        END IF
-        call system_clock(count=t1)
-        nb_periods = t1-t0
-        if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-        write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GETLOCALNODELIST ',REAL(nb_periods)/nb_periodes_sec
-
-        !!murge_local_n_prod = murge_local_n/((n_tor+1)/2)
-        !!if (my_id == 0) then
-        !!   murge_local_n_prod = murge_local_n_prod + MOD(murge_local_n, (n_tor+1)/2)
-        !!end if
-        !!allocate (murge_loc2glob_prod(murge_local_n_prod))
-        !!iter2=1
-        !!do iter = my_id_trans+1, murge_local_n, (n_tor+1)/2
-        !!   murge_loc2glob_prod(iter2) = murge_loc2glob(iter)
-        !!   iter2 = iter2 + 1
-        !!end do
-        !!call MURGE_SETLOCALNODELIST(murge_id_prod, murge_local_n_prod, murge_loc2glob_prod, ierr)
-        !!IF (ierr /= MURGE_SUCCESS) THEN
-        !!   write (*,*) "ERROR in MURGE_SETLOCALNODELIST"
-        !!   STOP
-        !!END IF
-        
+        call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms, &
+             &              element_list, node_list, n_aa, my_id)
         call system_clock(count=t0)
         ! Build local_elms from loc2glob
         n_local_elms = 0

@@ -280,27 +280,27 @@ if (my_id == 0) then
    endif
 
 end if
-
-CALL MPI_BCAST(mumps_par%N, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%NZ, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-write (*,*) my_id, "mumps_par%NZ", mumps_par%NZ, mumps_par%N
-
-if (my_id /= 0) then
-   if (associated(mumps_par%JCN)) deallocate(mumps_par%JCN)
-   if (associated(mumps_par%IRN)) deallocate(mumps_par%IRN)
-   if (associated(mumps_par%A))   deallocate(mumps_par%A)
-   if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
-
-   allocate(mumps_par%JCN(mumps_par%N+1))
-   allocate(mumps_par%IRN(mumps_par%NZ))
-   allocate(mumps_par%A(mumps_par%NZ))
-   allocate(mumps_par%RHS(mumps_par%N))
-end if
-
-CALL MPI_BCAST(mumps_par%JCN(1), mumps_par%N+1,  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%IRN(1), mumps_par%NZ,   MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
-CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
+!! Equilibrium on one processus no need toi BCast
+!!CALL MPI_BCAST(mumps_par%N, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!!CALL MPI_BCAST(mumps_par%NZ, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!!write (*,*) my_id, "mumps_par%NZ", mumps_par%NZ, mumps_par%N
+!!
+!!if (my_id /= 0) then
+!!   if (associated(mumps_par%JCN)) deallocate(mumps_par%JCN)
+!!   if (associated(mumps_par%IRN)) deallocate(mumps_par%IRN)
+!!   if (associated(mumps_par%A))   deallocate(mumps_par%A)
+!!   if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
+!!
+!!   allocate(mumps_par%JCN(mumps_par%N+1))
+!!   allocate(mumps_par%IRN(mumps_par%NZ))
+!!   allocate(mumps_par%A(mumps_par%NZ))
+!!   allocate(mumps_par%RHS(mumps_par%N))
+!!end if
+!!
+!!CALL MPI_BCAST(mumps_par%JCN(1), mumps_par%N+1,  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!!CALL MPI_BCAST(mumps_par%IRN(1), mumps_par%NZ,   MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!!CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
+!!CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
 
 if (   allocated(pastix_perm_vars) .and.     &
      & size(pastix_perm_vars) /= mumps_par%N) then 
@@ -323,7 +323,7 @@ write(*,*) '* initialise PastiX                *'
 write(*,*) '***********************************'
  
 pastix_data = 0
- call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+ call pastix_fortran(pastix_data,MPI_COMM_SELF,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 pastix_iparm(2) = 1
@@ -349,7 +349,7 @@ write(*,*) '***********************************'
 write(*,*) '* call PastiX                     *'
 write(*,*) '***********************************'
 
- call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+ call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #endif

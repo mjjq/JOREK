@@ -1,7 +1,7 @@
 include config.in
 
 
-DIRS = datatypes models/$(MODEL) models communication elements grids matrix solvers timing plots diagnostics vacuum refinement
+DIRS = datatypes models/$(MODEL) models communication elements grids matrix solvers timing plots diagnostics vacuum refinement tools
 
 MAIN = jorek_$(MODEL)
 

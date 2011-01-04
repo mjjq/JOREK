@@ -11,7 +11,8 @@ DIRS =  datatypes models/$(MODEL) 	\
 	diagnostics 			\
 	vacuum 				\
 	refinement			\
-	timing
+	timing				\
+	tools
 
 LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 
@@ -23,7 +24,7 @@ INCLUDES  =  $(patsubst %,-I%/,$(DIRS)) -I. $(INCMURGE)
 
 VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 
-.SUFFIXES: .o .f90 .f 
+.SUFFIXES: .o .f90 .f .c
 
 
 ifeq (1, $(USE_PASTIX_MURGE))
@@ -68,8 +69,9 @@ SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP))
 
 
-JOREK2_MAIN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))
+JOREK2_MAIN_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))		\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_MAIN_SRC)))
 JOREK2_POINCARE_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SRC))) \
 	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POINCARE_SRC)))
 JOREK2_CONNECTION2_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) \

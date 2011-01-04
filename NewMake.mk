@@ -201,3 +201,17 @@ include all_rules.mk
 ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
 include $(patsubst %.f, %.dep, $(patsubst %.f90, %.dep, $(SRC_DEP)))
 endif
+
+allmodels:
+	make -f NewMake MODEL=model199 $(filter-out allmodels, ${MAKECMDGOALS})
+	make -f NewMake clean
+	make -f NewMake MODEL=model300 $(filter-out allmodels, ${MAKECMDGOALS})
+	make -f NewMake clean
+	make -f NewMake MODEL=model301 $(filter-out allmodels, ${MAKECMDGOALS})
+	make -f NewMake clean
+	make -f NewMake MODEL=model302 $(filter-out allmodels, ${MAKECMDGOALS})
+	make -f NewMake clean
+	make -f NewMake MODEL=model400 $(filter-out allmodels, ${MAKECMDGOALS})
+	make -f NewMake clean
+	make -f NewMake MODEL=model701 $(filter-out allmodels, ${MAKECMDGOALS})
+	make -f NewMake clean

@@ -19,8 +19,8 @@ real*8,                   intent(in)    :: dPSI_open, dPSI_private
 ! --- local variables
 type (type_surface_list) :: flux_list
 
-type (type_node_list)    :: newnode_list
-type (type_element_list) :: newelement_list
+type (type_node_list), allocatable    :: newnode_list
+type (type_element_list), allocatable :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_xpoint
@@ -701,6 +701,8 @@ do i=n_flux_2,n_flux_2+n_open_2+n_private_2
 
 enddo
 
+ALLOCATE(newnode_list, newelement_list)
+
 
 !***********************************************************************
 !*     define the new nodes and finite elements    (nodes first)       *
@@ -1380,6 +1382,8 @@ node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+
+DEALLOCATE(newnode_list, newelement_list)
 
 call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 

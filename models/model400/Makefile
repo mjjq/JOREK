@@ -6,7 +6,6 @@ all: modules 				\
      element_matrix.o 			\
      element_matrix_fft.o 		\
      boundary_conditions.o 		\
-     boundary_conditions_murge.o 	\
      initial_conditions.o
 #     boundary_matrix.o   		\
 #     boundary_matrix_open.o   		\

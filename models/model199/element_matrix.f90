@@ -197,12 +197,12 @@ do ms=1, n_gauss
      delta_u_x = (   y_t(ms,mt) * delta_s(mp,2,ms,mt) - y_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
      delta_u_y = ( - x_t(ms,mt) * delta_s(mp,2,ms,mt) + x_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
 
-     eta_T   = eta   !* (T0/T_0)**(-1.5d0)                   ! temperature dependent resistivity
-     visco_T = visco !* (T0/T_0)**(-1.5d0)                   ! temperature dependent viscosity
+     eta_T   = eta   * (T0/T_0)**(-1.5d0)                   ! temperature dependent resistivity
+     visco_T = visco * (T0/T_0)**(-1.5d0)                   ! temperature dependent viscosity
 
-     deta_dT   = 0.!- eta   * (1.5d0)  * T0**(-2.5d0) * T_0**(1.5d0)
-     d2eta_d2T = 0.!  eta   * (3.75d0) * T0**(-3.5d0) * T_0**(1.5d0)
-     dvisco_dT = 0.!- visco * (1.5d0)  * T0**(-2.5d0) * T_0**(1.5d0)
+     deta_dT   = - eta   * (1.5d0)  * T0**(-2.5d0) * T_0**(1.5d0)
+     d2eta_d2T =   eta   * (3.75d0) * T0**(-3.5d0) * T_0**(1.5d0)
+     dvisco_dT = - visco * (1.5d0)  * T0**(-2.5d0) * T_0**(1.5d0)
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then

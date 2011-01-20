@@ -1278,6 +1278,7 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
 
   newelement_list%element(k)%father     = 0
   newelement_list%element(k)%n_sons     = 0
+  element_list%element(Index)%sons(:)   = 0
 enddo
 
 !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
@@ -1326,6 +1327,8 @@ do i=1,newnode_list%n_nodes
       index = index - 1
     endif
   enddo
+  
+  newnode_list%node(i)%constrained = .false.
 enddo
 
 do i=1,newnode_list%n_nodes

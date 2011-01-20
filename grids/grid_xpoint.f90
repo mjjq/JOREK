@@ -1276,6 +1276,8 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     newelement_list%element(k)%size(iv,4) = newelement_list%element(k)%size(iv,2) * newelement_list%element(k)%size(iv,3)
   enddo
 
+  newelement_list%element(k)%father     = 0
+  newelement_list%element(k)%n_sons     = 0
 enddo
 
 !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)

@@ -42,7 +42,8 @@ real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
 real*8			 :: lambda, mu	
 real*8			 :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
 real*8			 :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w
-real*8			 :: i_father, inode_father,Index_elm
+real*8			 :: inode_father,Index_elm
+integer                          :: i_father
 integer, dimension(n_vertex_max) :: pr
 integer, dimension(2)		 :: parent
 integer, dimension(n_vertex_max) :: node_out

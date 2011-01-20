@@ -127,14 +127,15 @@ contains
     elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
     cnt = 0
     cnt2 = 0
+    !TODO: anticiper l'allocation ou l'allouer une fois pour toute
     ALLOCATE(ELM(elem_size, elem_size))
     ALLOCATE(RHS(elem_size))
     DO ife =1, data%n_local_elms, data%step 
 
-       call synchro_x_threads(data%thread_nbr, data%barrier)
-       call fortran_pthread_mutex_lock(data%mutex, ret)
+!$OMP barrier       
+!$OMP critical(matrix_nbr)       
        data%matrix_nbr = 0
-       call fortran_pthread_mutex_unlock(data%mutex, ret)
+!$OMP end critical(matrix_nbr)       
        !! do 
        DO ELM_INDEX = data%thread_num, data%elem_block_size, data%thread_nbr
           !print * , "ELM_INDEX", ELM_INDEX
@@ -232,9 +233,9 @@ contains
                                  & n_tor * n_var * (i_order-1) + j   
                             ! index in global matrix
                             index_rhs = index_large_i+j
-                            call fortran_pthread_mutex_lock(data%mutex, ret)
+!$OMP critical(rhs_member)                            
                             data%rhs_loc(index_rhs) = data%rhs_loc(index_rhs) + RHS(index_ij)
-                            call fortran_pthread_mutex_unlock(data%mutex, ret)
+!$OMP end critical (rhs_member)                           
                          END DO
                          ! Build nodes Matrices
                          DO k=1,n_vertex_max
@@ -248,10 +249,10 @@ contains
                                index_large_k = n_tor * n_var * (index_node2 - 1)
 
                                !coefmtx = 0
-                               call fortran_pthread_mutex_lock(data%mutex, ret)
+!$OMP critical(matrix_nbr)                            
                                data%matrix_nbr = data%matrix_nbr+1
                                next_matrix = data%matrix_nbr
-                               call fortran_pthread_mutex_unlock(data%mutex, ret)
+!$OMP end critical (matrix_nbr)       
                                DO j = 1, n_var * n_tor
                                   ! Row index in the ELM matrix
                                   index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
@@ -336,13 +337,12 @@ contains
              !print *, data%my_id, ife, "next_matrix", next_matrix
           END IF
        END DO
-       call synchro_x_threads(data%thread_nbr, data%barrier)
-       IF (data%thread_nbr == 1 .or. data%thread_num == 2) THEN
-          IF (data%gmres) THEN
-             my_murde_id = murge_id_prod
-          ELSE
-             my_murde_id = murge_id
-          END IF
+!$OMP barrier       
+
+       IF (.not. data%gmres) THEN
+          ! We work on the full problem with direct method
+          my_murde_id = murge_id
+          
           DO j = 1, data%matrix_nbr 
              index_node1 = data%PROD_COLROW(1, j) 
              index_node2 = data%PROD_COLROW(2, j) 
@@ -358,50 +358,74 @@ contains
                 STOP
              END IF
           END DO
-       END IF
-       IF (data%thread_num == 1 .and. DATA%gmres .AND. .NOT. DATA%solve_only) THEN
-          data%matrix_nbr_rcv = 0
-          CALL MPI_Allgather(data%matrix_nbr, 1, MPI_INTEGER, &
-               &            data%matrix_nbr_rcv, 1,   MPI_INTEGER, &
-               &            data%MPI_COMM_TRANS, ierr)
-          total = total + sum(data%matrix_nbr_rcv)
-          !print *, data%my_id, data%thread_num, "data%matrix_nbr", data%matrix_nbr, data%matrix_nbr_rcv, total, cnt
-          CALL MPI_Alltoall(data%SEND_MATRICES, data%elem_block_size*(n_vertex_max&
-               &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
-               &            data%RECV_MATRICES, data%elem_block_size*(n_vertex_max&
-               &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
-               &            data%MPI_COMM_TRANS, ierr)
-          
-          CALL MPI_Allgather(data%PROD_COLROW, data%elem_block_size*2*(n_vertex_max&
-               &            *(n_order+1))**2, MPI_INTEGER, &
-               &            data%RECV_COLROW, data%elem_block_size*2*(n_vertex_max&
-               &            *(n_order+1))**2, MPI_INTEGER, &
-               &            data%MPI_COMM_TRANS, ierr)
-          
-          DO node = 1, (n_tor+1)/2
-             DO i = 1, data%matrix_nbr_rcv(node)
-                index_node1 = data%RECV_COLROW(1, i, node)
-                index_node2 = data%RECV_COLROW(2, i, node)
-                DO iter = 1, data%my_harm_size**2
-                   coefmtx(iter) = data%RECV_MATRICES(iter, i, node)
+
+       ELSE
+          ! We have to construct a problem for the product
+          my_murde_id = murge_id_prod
+
+          IF (data%thread_num == 1) THEN
+             DO j = 1, data%matrix_nbr 
+                index_node1 = data%PROD_COLROW(1, j) 
+                index_node2 = data%PROD_COLROW(2, j) 
+                DO iter = 1, (n_tor*n_var)**2
+                   coefmtx(iter)= data%PROD_MATRICES(iter,j)
                 END DO
-                
-                CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id,         &
-                     & index_node2,       &
-                     & index_node1,     &
-                     & coefmtx, ierr)
+                CALL MURGE_ASSEMBLYSETNODEVALUES(my_murde_id, index_node2, index_node1, &
+                     coefmtx, ierr)  
                 IF (ierr /= MURGE_SUCCESS) THEN
-                   WRITE (*,*) data%my_id, "::::", &
+                   WRITE (*,*) data%my_id, ":::", &
                         "I", index_node2, &
-                        "J", index_node1,&
-                        & cnt2, cnt, ife, i, node, data%matrix_nbr_rcv(node),&
-                        & data%n_local_elms,data%element_list%n_elements
+                        "J", index_node1, cnt
                    STOP
                 END IF
-                cnt2 = cnt2 + 1
-                
              END DO
-          END DO
+          END IF
+          ! Just so that the first thread doesn't do all the job.
+          IF ((data%thread_nbr == 1 .or. data%thread_num == 2 ) .and. & 
+               & .NOT. DATA%solve_only) THEN
+             data%matrix_nbr_rcv = 0
+             CALL MPI_Allgather(data%matrix_nbr, 1, MPI_INTEGER, &
+                  &            data%matrix_nbr_rcv, 1,   MPI_INTEGER, &
+                  &            data%MPI_COMM_TRANS, ierr)
+             total = total + sum(data%matrix_nbr_rcv)
+             !print *, data%my_id, data%thread_num, "data%matrix_nbr", data%matrix_nbr, data%matrix_nbr_rcv, total, cnt
+             CALL MPI_Alltoall(data%SEND_MATRICES, data%elem_block_size*(n_vertex_max&
+                  &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
+                  &            data%RECV_MATRICES, data%elem_block_size*(n_vertex_max&
+                  &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
+                  &            data%MPI_COMM_TRANS, ierr)
+             
+             CALL MPI_Allgather(data%PROD_COLROW, data%elem_block_size*2*(n_vertex_max&
+                  &            *(n_order+1))**2, MPI_INTEGER, &
+                  &            data%RECV_COLROW, data%elem_block_size*2*(n_vertex_max&
+                  &            *(n_order+1))**2, MPI_INTEGER, &
+                  &            data%MPI_COMM_TRANS, ierr)
+          
+             DO node = 1, (n_tor+1)/2
+                DO i = 1, data%matrix_nbr_rcv(node)
+                   index_node1 = data%RECV_COLROW(1, i, node)
+                   index_node2 = data%RECV_COLROW(2, i, node)
+                   DO iter = 1, data%my_harm_size**2
+                      coefmtx(iter) = data%RECV_MATRICES(iter, i, node)
+                   END DO
+                   
+                   CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id,         &
+                        & index_node2,       &
+                        & index_node1,     &
+                        & coefmtx, ierr)
+                   IF (ierr /= MURGE_SUCCESS) THEN
+                      WRITE (*,*) data%my_id, "::::", &
+                           "I", index_node2, &
+                           "J", index_node1,&
+                           & cnt2, cnt, ife, i, node, data%matrix_nbr_rcv(node),&
+                           & data%n_local_elms,data%element_list%n_elements
+                      STOP
+                   END IF
+                   cnt2 = cnt2 + 1
+                   
+                END DO
+             END DO
+          END IF
        END IF
     END DO
     DEALLOCATE(RHS,ELM)
@@ -502,13 +526,16 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   INTEGER*8,              ALLOCATABLE :: threads(:)
   INTEGER :: ret, retval
   INTEGER *8, target :: mutex
-  INTEGER, external :: omp_get_num_threads
+  INTEGER, external :: omp_get_num_threads, omp_get_thread_num
 
   CALL SYSTEM_CLOCK(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
   CALL r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
-  !$omp PARALLEL shared(thread_nbr)
+!$omp PARALLEL shared(thread_nbr)
+!$OMP master
   thread_nbr = omp_get_num_threads()
-  !$omp end PARALLEL
+  print *, "THREAD_NBR", thread_nbr
+!$omp end master
+!$omp end PARALLEL
   elem_block_size = thread_nbr
   elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
   ! We allocate too much for harm_0
@@ -690,8 +717,6 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   !    constructed like the product matrix. No communication has to be
   !     performed.
 
-  call init_barrier(barrier)
-  call fortran_pthread_mutex_init(mutex, ret)
   Allocate(datas(thread_nbr))
   Allocate(threads(thread_nbr))
   Do iter = 1, thread_nbr
@@ -727,18 +752,19 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      datas(iter)%matrix_nbr_rcv    => matrix_nbr_rcv
      datas(iter)%harm_size         => harm_size        
      datas(iter)%my_harm_size      => my_harm_size
-     call fortran_pthread_create(thrEads(iter), LOOP, datas(iter), ret)
   end Do
+!$OMP parallel private(iter,ret) default(shared)
+  iter = 1+omp_get_thread_num()
+  ret = LOOP(datas(iter))
+!$OMP barrier
+!$OMP end parallel
 
   Do iter = 1, thread_nbr
-     call fortran_pthread_join(threads(iter), retval, ret)
      DEALLOCATE(datas(iter)%RHS)
      DEALLOCATE(datas(iter)%ELM)
      NULLIFY(datas(iter)%RHS)
      NULLIFY(datas(iter)%ELM)
-
   end Do
-  call destroy_barrier(barrier)
   deallocate(datas)
   deallocate(threads)
 

@@ -6,4 +6,7 @@ include ../config.in
 
 all : fortran_pthread.o
 
-fortran_pthread.c
+modules :
+
+clean :
+	rm -f *.mod *.o

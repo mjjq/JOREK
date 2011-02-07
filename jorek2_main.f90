@@ -75,7 +75,7 @@ program JOREK2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master, my_id_eq, n_cpu_eq
-  integer                  :: istep,ierr,i,j,k,itor,inode, i_elm_axis, i_elm_xpoint
+  integer                  :: istep,jstep,ierr,i,j,k,itor,inode, i_elm_axis, i_elm_xpoint
   integer                  :: n_local_ELMs, index_total
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
@@ -357,7 +357,7 @@ program JOREK2
 
   t_now         = t_start
   index_now     = index_start
-
+  
   if (nstep .gt. 0) then
 
      grid_changed  = .true.
@@ -589,24 +589,29 @@ program JOREK2
 
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
 
-  do istep = 1, nstep
+  index_now = index_start
+
+  do jstep = 1, 10  
+  do istep = 1, nstep_n(jstep)
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-     index_now = index_start + istep
+     index_now = index_now + 1
+     
+     tstep = tstep_n(jstep)
 
      if (my_id .eq. 0)  write(*,*) '********************************************'
-     if (my_id .eq. 0)  write(*,'(A17,2i7,f8.2,A)') ' *   time step : ',istep,index_now,tstep,'     *'
+     if (my_id .eq. 0)  write(*,'(A17,3i7,f8.4,A)') ' *   time step : ',jstep,istep,index_now,tstep,'     *'
      if (my_id .eq. 0)  write(*,*) '********************************************'
 
-     !  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-     !  if (xpoint) then
-     !    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-     !    psi_bnd = psi_xpoint
-     !  else
-     !    psi_bnd = 0.d0
-     !  endif
+     if (xpoint) then
+       call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+       psi_bnd = psi_xpoint
+     else
+       psi_bnd = 0.d0
+     endif
 
      call cpu_time(t_matrix_0)
 
@@ -715,6 +720,7 @@ program JOREK2
 
      else
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
+	exit
      endif
 
      if ( freeboundary .and. (.not. resistive_wall) ) call boundary_check()
@@ -803,7 +809,8 @@ program JOREK2
      endif
 
   enddo                                              ! end of time stepping
-
+  enddo
+  
   !***********************************************************************
   !*                         cleanup  (solvers)                          *
   !***********************************************************************

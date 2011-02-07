@@ -11,7 +11,8 @@ implicit none
 integer, intent(in) :: my_id
 
 ! --- Namelist with input parameters.
-namelist /in1/  tstep, nstep, eta, visco, restart, regrid,          &
+namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
+                eta, visco, restart, regrid,                        &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
@@ -38,8 +39,9 @@ if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   tstep    = 1.d0
-  tstep_in = 1.d0
+  tstep_n  = 1.d0
   nstep    = 0
+  nstep_n  = 0
 
   eta   = 1.d-5
   visco = 1.d-5
@@ -96,7 +98,7 @@ if (my_id .eq. 0) then
 
   xampl  = 0.d0
   xwidth = 0.d0
-  xsig   = 0.d0
+  xsig   = 1.d0
   xtheta = 0.d0
   xshift = 0.d0
   xleft  = 0.d0
@@ -145,7 +147,16 @@ if (my_id .eq. 0) then
   if (my_id .eq. 0) read(5,in1)
   
   tstep_in = tstep
-
+  
+  if (sum(nstep_n) .gt. 0) then
+    nstep = sum(nstep_n)
+  else
+    tstep_n    = 0.d0
+    tstep_n(1) = tstep
+    nstep_n    = 0
+    nstep_n(1) = nstep
+  endif
+  
   if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))
   if (nstep .gt. 0) allocate(xtime(nstep))
 

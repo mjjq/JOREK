@@ -7,7 +7,7 @@ module phys_module
   
   implicit none
 
-  real*8  :: tstep, tstep_in, eta, visco, visco_par
+  real*8  :: tstep, tstep_in,  tstep_n(10), eta, visco, visco_par
   real*8  :: amin, fbnd(1026), fpsi(1026)
   real*8  :: R_boundary(1026), Z_boundary(1026), psi_boundary(1026)
   real*8  :: ellip, tria_u, tria_l, quad_u, quad_l
@@ -27,10 +27,10 @@ module phys_module
   real*8  :: pellet_psi, pellet_delta_psi
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num,Zk_perp_num
   real*8  :: t_start, t_now
-  integer :: nstep, n_boundary
+  integer :: nstep, nstep_n(10), n_boundary
   integer :: mf, index_start, index_now, mode(n_tor), nout
   logical :: restart, regrid, import_equil, xpoint
-  logical :: refinement
+  logical :: refinement     ! allow mesh refinement
   logical :: freeboundary   ! use free or fixed boundary?
   logical :: use_starwall   ! use the STARWALL vacuum solution? (free boundary only)
   logical :: resistive_wall ! use a resistive or ideal wall?    (free boundary only)

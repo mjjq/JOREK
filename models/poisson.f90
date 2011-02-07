@@ -1,10 +1,9 @@
 subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list, &
-                   ivar_in,ivar_out,i_harm, psi_axis,psi_bnd,xpoint,Z_xpoint,freeboundary,iter)
-!---------------------------------------------------------------
-! collect the element matrices into one large sparse matrix
-! in coordinate format
-!---------------------------------------------------------------
-
+                   ivar_in,ivar_out,i_harm, psi_axis,psi_bnd,xpoint,Z_xpoint, &
+                   freeboundary,refinement,iter)
+!-------------------------------------------------------------------------------
+! collect the element matrices into one large sparse matrix in coordinate format
+!-------------------------------------------------------------------------------
 use data_structure
 use mumps_module
 use pastix_module
@@ -12,16 +11,17 @@ implicit none
 include 'mpif.h'
 
 ! --- Routine parameters
-integer,                  intent(in)    :: my_id
-integer,                  intent(in)    :: itype
+integer,                  intent(in)    :: my_id             ! MPI id
+integer,                  intent(in)    :: itype             ! selects the physics model (GS, Laplace)
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
-integer,                  intent(in)    :: ivar_in
-integer,                  intent(in)    :: ivar_out
-integer,                  intent(in)    :: i_harm
-integer,                  intent(in)    :: iter
-logical,                  intent(in)    :: xpoint
+integer,                  intent(in)    :: ivar_in           ! index of the input variable
+integer,                  intent(in)    :: ivar_out          ! index of the output variable
+integer,                  intent(in)    :: i_harm            ! index of toroidal harmonic
+integer,                  intent(in)    :: iter              ! the iteration number
+logical,                  intent(in)    :: xpoint            
 logical,                  intent(in)    :: freeboundary
+logical,                  intent(in)    :: refinement       
 
 ! --- local variables
 type (type_element)      :: element
@@ -84,6 +84,7 @@ enddo
 if (iter .le. 1) then
   write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
   write(*,*) ' number of boundary nodes: ',n_border
+  write(*,*) ' nz_AA                   : ',nz_AA
 endif
   
 if (.not. associated(mumps_par%A))     allocate(mumps_par%A(nz_AA))
@@ -112,22 +113,29 @@ endif
 do ife =1, n_elements
 
   element = element_list%element(ife)
-  i_father= element_list%element(ife)%father
-
-  if (i_father.ne. 0) then
-    element_father = element_list%element(i_father)
+  
+  if (refinement) then                  ! no contribution from elements which have children
+    if (element%n_sons .ne. 0) cycle
   endif
-
-  do iv = 1, n_vertex_max
-
-    if (i_father.ne.0) then
-      inode_father=element_father%vertex(iv)
-      nodes_father(iv) = node_list%node(inode_father)
+  
+  if (refinement) then
+    i_father= element_list%element(ife)%father
+    if (i_father.ne. 0) then
+      element_father = element_list%element(i_father)
     endif
 
+    do iv = 1, n_vertex_max
+
+      if (i_father.ne.0) then
+        inode_father=element_father%vertex(iv)
+        nodes_father(iv) = node_list%node(inode_father)
+      endif
+    enddo
+  endif ! refinement
+  
+  do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-
   enddo
 
   if (itype .eq. -1) then
@@ -152,44 +160,44 @@ do ife =1, n_elements
 
   endif
 
-  call Chgmt_node(ife,element,nodes,element_father,nodes_father,ELM,RHS,node_out) ! Processing  "constrained nodes"
+  if (refinement) then ! Processing  "constrained nodes"
+    call Chgmt_node(ife,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
+  else
+    node_out = element%vertex
+  endif
+  
+  do i=1,n_vertex_max
 
-  if (element%n_sons .eq. 0) then
+    inode = node_out(i)
 
-    do i=1,n_vertex_max
+    do j=1,n_order+1
 
-      inode = node_out(i)! element%vertex(i)
+      index_ij = (i-1)*(n_order+1) + j     ! index in the ELM matrix
 
-      do j=1,n_order+1
+      index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
 
-        index_ij = (i-1)*(n_order+1) + j     ! index in the ELM matrix
+      mumps_par%rhs(index_large_i) = mumps_par%rhs(index_large_i) + RHS(index_ij)
 
-        index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
+      do k=1,n_vertex_max
 
-        mumps_par%rhs(index_large_i) = mumps_par%rhs(index_large_i) + RHS(index_ij)
+        knode         =node_out(k)! element%vertex(k)
 
-        do k=1,n_vertex_max
+        do l=1,n_order+1
 
-          knode         =node_out(k)! element%vertex(k)
+          index_kl = (k-1)*(n_order+1) + l
 
-          do l=1,n_order+1
+          index_large_k = node_list%node(knode)%index(l)  ! base index in the main matrix
 
-            index_kl = (k-1)*(n_order+1) + l
+          ilarge = ilarge +1
 
-            index_large_k = node_list%node(knode)%index(l)  ! base index in the main matrix
+          mumps_par%irn(ilarge) = index_large_i
+          mumps_par%jcn(ilarge) = index_large_k
+          mumps_par%A(ilarge)   = ELM(index_ij,index_kl)
 
-            ilarge = ilarge +1
-
-            mumps_par%irn(ilarge) = index_large_i
-            mumps_par%jcn(ilarge) = index_large_k
-            mumps_par%A(ilarge)   = ELM(index_ij,index_kl)
-
-          enddo
         enddo
       enddo
     enddo
-
-  endif      ! element%n_sons
+  enddo
 
 enddo
 
@@ -217,7 +225,7 @@ else        ! apply fixed boundary conditions
       mumps_par%jcn(ilarge+1) = index_i
       mumps_par%A(ilarge+1)   = zbig
       ilarge = ilarge + 1
-
+         
       if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
 
         index_i = node_list%node(i)%index(2)  ! base index in the main matrix
@@ -248,7 +256,9 @@ else        ! apply fixed boundary conditions
   mumps_par%nz = nz_AA
 
 endif
+
 #ifdef USE_MUMPS
+
 mumps_par%n  = n_AA
 
 mumps_par%JOB = 6
@@ -258,6 +268,7 @@ mumps_par%icntl(7) = 4
 if (iter .le. 1) write(*,*) ' mumps : ',mumps_par%n, mumps_par%nz
 
 call DMUMPS(mumps_par)
+
 #else
 
 if (my_id == 0) then
@@ -281,27 +292,6 @@ if (my_id == 0) then
    endif
 
 end if
-!! Equilibrium on one processus no need toi BCast
-!!CALL MPI_BCAST(mumps_par%N, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!!CALL MPI_BCAST(mumps_par%NZ, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!!write (*,*) my_id, "mumps_par%NZ", mumps_par%NZ, mumps_par%N
-!!
-!!if (my_id /= 0) then
-!!   if (associated(mumps_par%JCN)) deallocate(mumps_par%JCN)
-!!   if (associated(mumps_par%IRN)) deallocate(mumps_par%IRN)
-!!   if (associated(mumps_par%A))   deallocate(mumps_par%A)
-!!   if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
-!!
-!!   allocate(mumps_par%JCN(mumps_par%N+1))
-!!   allocate(mumps_par%IRN(mumps_par%NZ))
-!!   allocate(mumps_par%A(mumps_par%NZ))
-!!   allocate(mumps_par%RHS(mumps_par%N))
-!!end if
-!!
-!!CALL MPI_BCAST(mumps_par%JCN(1), mumps_par%N+1,  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!!CALL MPI_BCAST(mumps_par%IRN(1), mumps_par%NZ,   MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!!CALL MPI_BCAST(mumps_par%A(1),   mumps_par%NZ,   MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
-!!CALL MPI_BCAST(mumps_par%RHS(1), mumps_par%N,    MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
 
 if (   allocated(pastix_perm_vars) .and.     &
      & size(pastix_perm_vars) /= mumps_par%N) then 
@@ -357,9 +347,7 @@ write(*,*) '***********************************'
 
 do i=1,node_list%n_nodes
 
-  if(node_list%node(i)%constrained==.false.) then
-
-    index = node_list%node(i)%index(1)
+  if ((.not. refinement) .or. (refinement .and. (.not. node_list%node(i)%constrained)) ) then
 
     do k=1,n_order+1
 
@@ -376,98 +364,96 @@ do i=1,node_list%n_nodes
         node_list%node(i)%values(i_harm,k,ivar_out) = amix * node_list%node(i)%values(i_harm,k,ivar_out) &
                                                     + (1.d0 - amix) * mumps_par%RHS(index)
       endif
-    enddo
-  endif
-enddo
+      
+    enddo    ! order
+  endif      ! refinement, constrained
+enddo        ! nodes
 
 !*************************************************************************
 ! Solutions at constrained nodes                                         *
 !*************************************************************************
-! if(refinement==.true.) then
+if (refinement) then
 
-do i = 1, node_list%n_nodes
+  do i = 1, node_list%n_nodes
 
-  if(node_list%node(i)%constrained==.true.) then
-!write(*,*) ' '
-!write(*,*) 'Constrained node(poisson)', i
-!write(*,*)' '
+    if (node_list%node(i)%constrained) then
 
-    lambda = node_list%node(i)%ref_lambda
-    mu     = node_list%node(i)%ref_mu
-    index_elm = node_list%node(i)%parent_elem
-    parent(1) = node_list%node(i)%parents(1)
-    parent(2) = node_list%node(i)%parents(2)
+      lambda = node_list%node(i)%ref_lambda
+      mu     = node_list%node(i)%ref_mu
+      index_elm = node_list%node(i)%parent_elem
+      parent(1) = node_list%node(i)%parents(1)
+      parent(2) = node_list%node(i)%parents(2)
 
-    call basisfunctions(lambda, mu, H, H_s, H_t, H_st)
+      call basisfunctions(lambda, mu, H, H_s, H_t, H_st)
 
-    do j = 1, n_vertex_max
-      pr(j) = element_list%element(index_elm)%vertex(j)
-    end do
+      do j = 1, n_vertex_max
+        pr(j) = element_list%element(index_elm)%vertex(j)
+      end do
 
-    dx_ds = 0.
-    dx_dt = 0.
-    dy_ds = 0.
-    dy_dt = 0.
-    d2x_dsdt = 0.
-    d2y_dsdt = 0.
+      dx_ds = 0.
+      dx_dt = 0.
+      dy_ds = 0.
+      dy_dt = 0.
+      d2x_dsdt = 0.
+      d2y_dsdt = 0.
 
-    Psi = 0.
-    dPsi_ds = 0.
-    dPsi_dt = 0.
-    d2Psi_dsdt = 0.
+      Psi = 0.
+      dPsi_ds = 0.
+      dPsi_dt = 0.
+      d2Psi_dsdt = 0.
 
-    do k = 1, n_vertex_max
+      do k = 1, n_vertex_max
 
-      if ((pr(k)==parent(1)).or.(pr(k)==parent(2))) then
+        if ((pr(k)==parent(1)).or.(pr(k)==parent(2))) then
 
-        do l = 1, n_order+1
-
-	  dx_ds = dx_ds + node_list%node(pr(k))%x(l,1) * H_s(k,l) 	&
-	        * element_list%element(index_elm)%size(k,l)
-	  dx_dt = dx_dt + node_list%node(pr(k))%x(l,1) * H_t(k,l) 	&
-	        * element_list%element(index_elm)%size(k,l)
-
-	  dy_ds = dy_ds + node_list%node(pr(k))%x(l,2) * H_s(k,l) 	&
-	        * element_list%element(index_elm)%size(k,l)
-	  dy_dt = dy_dt + node_list%node(pr(k))%x(l,2) * H_t(k,l) 	&
-	        * element_list%element(index_elm)%size(k,l)
-
-	  d2x_dsdt = d2x_dsdt + node_list%node(pr(k))%x(l,1) * H_st(k,l) 	&
-	           * element_list%element(index_elm)%size(k,l)
-	  d2y_dsdt = d2y_dsdt + node_list%node(pr(k))%x(l,2) * H_st(k,l) 	&
-	           * element_list%element(index_elm)%size(k,l)
-
-	  Psi = Psi  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H(k,l)	   &
-	           * element_list%element(index_elm)%size(k,l)
-
-	  dPsi_ds = dPsi_ds  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H_s(k,l)	   &
+          do l = 1, n_order+1
+  
+            dx_ds = dx_ds + node_list%node(pr(k))%x(l,1) * H_s(k,l) 	&
 	          * element_list%element(index_elm)%size(k,l)
-
-          dPsi_dt = dPsi_dt  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H_t(k,l)	   &
+	    dx_dt = dx_dt + node_list%node(pr(k))%x(l,1) * H_t(k,l) 	&
                   * element_list%element(index_elm)%size(k,l)
 
-          d2Psi_dsdt = d2Psi_dsdt  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H_st(k,l)	   &
+            dy_ds = dy_ds + node_list%node(pr(k))%x(l,2) * H_s(k,l) 	&
+                  * element_list%element(index_elm)%size(k,l)
+	    dy_dt = dy_dt + node_list%node(pr(k))%x(l,2) * H_t(k,l) 	&
 	          * element_list%element(index_elm)%size(k,l)
-        end do
-      end if
-    end do
 
-    h_u = 1
-    h_v = 1
-    h_w = h_u*h_v
+            d2x_dsdt = d2x_dsdt + node_list%node(pr(k))%x(l,1) * H_st(k,l) 	&
+                     * element_list%element(index_elm)%size(k,l)
+            d2y_dsdt = d2y_dsdt + node_list%node(pr(k))%x(l,2) * H_st(k,l) 	&
+                     * element_list%element(index_elm)%size(k,l)
 
-    node_list%node(i)%values(i_harm,1,ivar_out) = Psi
-    node_list%node(i)%values(i_harm,2,ivar_out)	= (dPsi_ds) /(3.*h_u)
-    node_list%node(i)%values(i_harm,3,ivar_out)	= (dPsi_dt) /(3.*h_v)
-    node_list%node(i)%values(i_harm,4,ivar_out)	= (d2Psi_dsdt) /(9.*h_w)
+            Psi = Psi  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H(k,l)	   &
+                * element_list%element(index_elm)%size(k,l)
 
-  end if
+            dPsi_ds = dPsi_ds  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H_s(k,l)	   &
+                    * element_list%element(index_elm)%size(k,l)
 
-end do
+            dPsi_dt = dPsi_dt  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H_t(k,l)	   &
+                    * element_list%element(index_elm)%size(k,l)
 
-! endif
+            d2Psi_dsdt = d2Psi_dsdt  + node_list%node(pr(k))%values(i_harm,l,ivar_out)*H_st(k,l)	   &
+	            * element_list%element(index_elm)%size(k,l)
+          enddo
+        endif
+      enddo
+
+      h_u = 1
+      h_v = 1
+      h_w = h_u*h_v
+
+      node_list%node(i)%values(i_harm,1,ivar_out) = Psi
+      node_list%node(i)%values(i_harm,2,ivar_out) = (dPsi_ds) /(3.*h_u)
+      node_list%node(i)%values(i_harm,3,ivar_out) = (dPsi_dt) /(3.*h_v)
+      node_list%node(i)%values(i_harm,4,ivar_out) = (d2Psi_dsdt) /(9.*h_w)
+
+    endif   ! constrained
+  enddo     ! nodes
+endif       ! refinement
+
 deallocate(mumps_par%irn,mumps_par%jcn,mumps_par%A,mumps_par%rhs)
-  !deallocate(pastix_perm_vars,pastix_iperm_vars)
+
+!deallocate(pastix_perm_vars,pastix_iperm_vars)
   
 return
 end subroutine poisson

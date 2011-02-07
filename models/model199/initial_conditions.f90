@@ -104,10 +104,6 @@ do in=2,n_tor
       psi = node_list%node(i)%values(1,1,1)
       Z   = node_list%node(i)%x(1,2)
 
-      psi_bnd = 0.d0
-      if (xpoint2) psi_bnd = psi_xpoint
-      psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)
-
       node_list%node(i)%values(in,1,4) = amplitude * psi_n * (1.d0 -psi_n)
       node_list%node(i)%values(in,2,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,2,1)
       node_list%node(i)%values(in,3,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,3,1)
@@ -124,7 +120,7 @@ do in=2,n_tor
   endif
 
   call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,1)
+               4,2,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)
 
 enddo
 

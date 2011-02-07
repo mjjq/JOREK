@@ -10,7 +10,7 @@ implicit none
 
 interface
    subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list, &
-                      ivar_in,ivar_out,i_harm,psi_axis,psi_bnd,xpoint,Z_xpoint,freeboundary,iter)
+                      ivar_in,ivar_out,i_harm,psi_axis,psi_bnd,xpoint,Z_xpoint,freeboundary,refinement,iter)
      use data_structure
 
      type (type_node_list)        :: node_list
@@ -19,7 +19,7 @@ interface
      type (type_bnd_element_list) :: bnd_elm_list
      integer  :: my_id, itype, ivar_in, ivar_out, i_harm, iter
      real*8   :: psi_bnd, psi_axis, Z_xpoint
-     logical  :: xpoint, freeboundary
+     logical  :: xpoint, freeboundary, refinement
    end subroutine Poisson
 end interface
 
@@ -60,7 +60,7 @@ freeboundary2 = freeboundary
 freeboundary  = .false.
 
 !------------------------------------ fixed boundary equilibrium
-n_iter = 100
+n_iter = 200
 
 do iter=1,n_iter
 
@@ -98,7 +98,8 @@ do iter=1,n_iter
     
   write(*,'(A,3e14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
   
-  call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1,psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,iter)   !----------- for GS use -1
+  call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
+               psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,iter)   !----------- for GS use -1
 
   diff = 0.d0
   do i=1, node_list%n_nodes
@@ -123,7 +124,7 @@ ZKI         = 0.01
 
 if (freeboundary) then
 
-  n_iter =100
+  n_iter =200
   
   call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, Z_xpoint, current_ref)
   
@@ -166,9 +167,10 @@ if (freeboundary) then
        
     write(*,'(A,3e14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
 
-    call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1,psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,iter)   !----------- for GS use -1
+    call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
+                 psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,iter)   !----------- for GS use -1
 
-    call boundary_check
+!    call boundary_check
  
     diff = 0.d0
     do i=1, node_list%n_nodes
@@ -176,7 +178,7 @@ if (freeboundary) then
     enddo  
     diff = diff / float(node_list%n_nodes)
   
-    write(*,'(A,e14.6)') ' iteration, diff : ',iter,diff
+    write(*,'(A,i5,e14.6)') ' iteration, diff : ',iter,diff
   
     if ((iter .gt. 1) .and. (diff .lt. 1.d-6)) exit
 

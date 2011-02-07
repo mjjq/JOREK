@@ -798,19 +798,19 @@ newnode_list%node(index_xpoint+1)%x(1,:) = (/ R_xpoint, Z_xpoint /)
 newnode_list%node(index_xpoint+1)%x(2,:) = (/ R_xpoint-R_axis,Z_xpoint-Z_axis/)/sqrt((R_xpoint-R_axis)**2+(Z_xpoint-Z_axis)**2)
 newnode_list%node(index_xpoint+1)%x(3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint+1)%x(4,:) = 0.d0
-newnode_list%node(index_xpoint)%boundary = 0
+newnode_list%node(index_xpoint+1)%boundary = 0
 
 newnode_list%node(index_xpoint+2)%x(1,:) = (/ R_xpoint, Z_xpoint /)
 newnode_list%node(index_xpoint+2)%x(2,:) = (/ R_xpoint-R_axis,Z_xpoint-Z_axis/)/sqrt((R_xpoint-R_axis)**2+(Z_xpoint-Z_axis)**2)
 newnode_list%node(index_xpoint+2)%x(3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+2)%x(4,:) = 0.d0
-newnode_list%node(index_xpoint)%boundary = 0
+newnode_list%node(index_xpoint+2)%boundary = 0
 
 newnode_list%node(index_xpoint+3)%x(1,:) = (/ R_xpoint, Z_xpoint /)
 newnode_list%node(index_xpoint+3)%x(2,:) = (/ 1.d0,0.d0 /)
 newnode_list%node(index_xpoint+3)%x(3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+3)%x(4,:) = 0.d0
-newnode_list%node(index_xpoint)%boundary = 0
+newnode_list%node(index_xpoint+3)%boundary = 0
 
 newnode_list%n_nodes = newnode_list%n_nodes + n_xpoint
 
@@ -1224,7 +1224,7 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     j2 = keep(k,iv,2)
 
     node_iv  = newelement_list%element(k)%vertex(iv)
-    node_ivp = newelement_list%element(k)%vertex(ivp)
+    node_ivp = newelement_list%element(k)%vertex(ivp) 
 
 !    write(*,'(A,8i5)') ' midpoint node : ',k,iv,i2,j2
 

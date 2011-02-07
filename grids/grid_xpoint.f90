@@ -792,21 +792,25 @@ newnode_list%node(index_xpoint)%x(1,:) = (/ R_xpoint, Z_xpoint /)
 newnode_list%node(index_xpoint)%x(2,:) = (/ 1.d0,0.d0 /)
 newnode_list%node(index_xpoint)%x(3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint)%x(4,:) = 0.d0
+newnode_list%node(index_xpoint)%boundary = 0
 
 newnode_list%node(index_xpoint+1)%x(1,:) = (/ R_xpoint, Z_xpoint /)
 newnode_list%node(index_xpoint+1)%x(2,:) = (/ R_xpoint-R_axis,Z_xpoint-Z_axis/)/sqrt((R_xpoint-R_axis)**2+(Z_xpoint-Z_axis)**2)
 newnode_list%node(index_xpoint+1)%x(3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint+1)%x(4,:) = 0.d0
+newnode_list%node(index_xpoint)%boundary = 0
 
 newnode_list%node(index_xpoint+2)%x(1,:) = (/ R_xpoint, Z_xpoint /)
 newnode_list%node(index_xpoint+2)%x(2,:) = (/ R_xpoint-R_axis,Z_xpoint-Z_axis/)/sqrt((R_xpoint-R_axis)**2+(Z_xpoint-Z_axis)**2)
 newnode_list%node(index_xpoint+2)%x(3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+2)%x(4,:) = 0.d0
+newnode_list%node(index_xpoint)%boundary = 0
 
 newnode_list%node(index_xpoint+3)%x(1,:) = (/ R_xpoint, Z_xpoint /)
 newnode_list%node(index_xpoint+3)%x(2,:) = (/ 1.d0,0.d0 /)
 newnode_list%node(index_xpoint+3)%x(3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+3)%x(4,:) = 0.d0
+newnode_list%node(index_xpoint)%boundary = 0
 
 newnode_list%n_nodes = newnode_list%n_nodes + n_xpoint
 
@@ -1387,6 +1391,14 @@ node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+
+
+!----temporary, needs to be completed, neighbour information
+do i=1, element_list%n_elements
+  element_list%element(i)%father = 0
+  element_list%element(i)%n_sons = 0
+  element_list%element(i)%sons(:) = 0
+enddo
 
 DEALLOCATE(newnode_list, newelement_list)
 

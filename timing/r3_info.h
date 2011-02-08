@@ -12,7 +12,7 @@
 
       INTEGER (4), PARAMETER :: r3_info_mx = 256
       INTEGER (4), PARAMETER :: r3_part_mx = 10
-      INTEGER (4), PARAMETER :: r3_stak_mx = 64
+      INTEGER (4), PARAMETER :: r3_stak_mx = 10000 
 
 ! ...
 

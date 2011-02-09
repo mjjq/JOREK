@@ -19,8 +19,8 @@ real*8,                   intent(in)    :: dPSI_open, dPSI_private
 ! --- local variables
 type (type_surface_list) :: flux_list
 
-type (type_node_list), allocatable    :: newnode_list
-type (type_element_list), allocatable :: newelement_list
+type (type_node_list), pointer    :: newnode_list
+type (type_element_list), pointer :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_xpoint

@@ -81,10 +81,8 @@ do iter=1,n_iter
     write(*,'(A,3f10.5)')  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
   endif
     
-  if (freeboundary) then
-    psi_bnd = 0.d0
-    Z_xpoint = -99.d0
-  endif
+  psi_bnd = 0.d0
+  Z_xpoint = -99.d0
   
   if (xpoint2) then
     call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)

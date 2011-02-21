@@ -257,13 +257,15 @@ program JOREK2
       endif 
 
       call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list)                                                ! Determine boundary information from the grid
+    
+    end if
         
-      if ( freeboundary ) then         
+    if ( freeboundary ) then         
         call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,.true.)  ! Fill the vacuum response matrix/matrices
-      endif
+    endif
         
+    if (my_id .eq. 0) then
       if (.not. bench_without_plot) call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.)    ! plot the grid
-            
     endif
     
 #ifdef USE_MUMPS
@@ -914,7 +916,7 @@ program JOREK2
      if (xpoint) then
         call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
      else
-        psi_xpoint = psi_bnd
+        psi_xpoint = 0.d0 ! ### needs to be checked
      endif
 
      Rp_start = R_axis - amin*2.d0

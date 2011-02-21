@@ -157,7 +157,7 @@ do k=1,surface_list%flux_surfaces(j)%n_pieces
 enddo
 
 write(11,'(8e16.8)') R_axis,Z_axis,F0
-write(11,'(8e16.8)') surface_list%psi_values(j),psi_axis,psi_xpoint
+write(11,'(8e16.8)') surface_list%psi_values(j),psi_axis!,psi_xpoint
 write(11,*)          n_bnd
 
 do i=1,n_bnd

@@ -39,7 +39,8 @@ if (my_id .eq. 0) then
     write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
   endif
 
-  psi_bnd = 0.d0
+  psi_bnd  =   0.d0
+  Z_xpoint = -99.d0
     
   if (xpoint2) then
     call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
@@ -103,6 +104,8 @@ do in=2,n_tor
 
       psi = node_list%node(i)%values(1,1,1)
       Z   = node_list%node(i)%x(1,2)
+
+      psi_n = (psi - psi_axis)/(psi_bnd - psi_axis) ! ### needs to be checked
 
       node_list%node(i)%values(in,1,4) = amplitude * psi_n * (1.d0 -psi_n)
       node_list%node(i)%values(in,2,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,2,1)

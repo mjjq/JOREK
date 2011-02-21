@@ -8,21 +8,30 @@ use phys_module
 
 implicit none
 
-interface
-   subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list, &
-                      ivar_in,ivar_out,i_harm,psi_axis,psi_bnd,xpoint,Z_xpoint,freeboundary,refinement,iter)
-     use data_structure
-
-     type (type_node_list)        :: node_list
-     type (type_element_list)     :: element_list
-     type (type_bnd_node_list)    :: bnd_node_list
-     type (type_bnd_element_list) :: bnd_elm_list
-     integer  :: my_id, itype, ivar_in, ivar_out, i_harm, iter
-     real*8   :: psi_bnd, psi_axis, Z_xpoint
-     logical  :: xpoint, freeboundary, refinement
-   end subroutine Poisson
-end interface
-
+INTERFACE 
+  SUBROUTINE POISSON(MY_ID,ITYPE,NODE_LIST,ELEMENT_LIST,           &
+     &BND_NODE_LIST,BND_ELM_LIST,IVAR_IN,IVAR_OUT,I_HARM,PSI_AXIS, &
+     &PSI_BND,XPOINT,Z_XPOINT,FREEBOUNDARY,REFINEMENT,ITER)
+    USE DATA_STRUCTURE
+    INTEGER(KIND=4), INTENT(IN) :: MY_ID
+    INTEGER(KIND=4), INTENT(IN) :: ITYPE
+    TYPE (TYPE_NODE_LIST), INTENT(INOUT) :: NODE_LIST
+    TYPE (TYPE_ELEMENT_LIST), INTENT(INOUT) :: ELEMENT_LIST
+    TYPE (TYPE_BND_NODE_LIST) :: BND_NODE_LIST
+    TYPE (TYPE_BND_ELEMENT_LIST) :: BND_ELM_LIST
+    INTEGER(KIND=4), INTENT(IN) :: IVAR_IN
+    INTEGER(KIND=4), INTENT(IN) :: IVAR_OUT
+    INTEGER(KIND=4), INTENT(IN) :: I_HARM
+    REAL(KIND=8) :: PSI_AXIS
+    REAL(KIND=8) :: PSI_BND
+    LOGICAL(KIND=4), INTENT(IN) :: XPOINT
+    REAL(KIND=8) :: Z_XPOINT
+    LOGICAL(KIND=4), INTENT(IN) :: FREEBOUNDARY
+    LOGICAL(KIND=4), INTENT(IN) :: REFINEMENT
+    INTEGER(KIND=4), INTENT(IN) :: ITER
+  END SUBROUTINE POISSON
+END INTERFACE 
+          
 ! --- Routine parameters
 integer,                      intent(in)    :: my_id
 type (type_node_list),        intent(inout) :: node_list
@@ -96,7 +105,7 @@ do iter=1,n_iter
     endif
   endif
     
-  write(*,'(A,3e14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
+  write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
   
   call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,iter)   !----------- for GS use -1
@@ -107,7 +116,7 @@ do iter=1,n_iter
   enddo  
   diff = diff / float(node_list%n_nodes)
   
-  write(*,'(A,i5,e14.6)') ' diff : ',iter,diff
+  write(*,'(A,i5,es14.6)') ' diff : ',iter,diff
   
   if ((iter .gt. 1) .and. (diff .lt. 1.d-6)) exit
 
@@ -184,7 +193,7 @@ if (freeboundary) then
 
   enddo
 
-  if ((freeboundary) .and. (my_id .eq.0)) call boundary_check
+  if ((freeboundary) .and. (my_id .eq.0)) call boundary_check()
 
 endif
 

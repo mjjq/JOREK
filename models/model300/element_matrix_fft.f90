@@ -1019,23 +1019,28 @@ do j=1, n_vertex_max*n_var*(n_order+1)
 enddo
 
 return
-end
+end subroutine element_matrix_fft
+
+
 
 subroutine my_fft(in_fft,out_fft,n)
 
+implicit none
+
 real*8     :: in_fft(*)
 complex*16 :: out_fft(*)
+integer    :: n
 
 real*8     :: tmp_fft(2*n+2)
 integer    :: i
-
+      
 tmp_fft(1:n) = in_fft(1:n)
-
+      
 call RFT2(tmp_fft,n,1)
-
+      
 do i=1,n
   out_fft(i) = cmplx(tmp_fft(2*i-1),tmp_fft(2*i))
 enddo
-
+      
 return
-end
+end subroutine my_fft

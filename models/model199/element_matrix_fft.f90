@@ -855,7 +855,9 @@ do j=1, n_vertex_max*n_var*(n_order+1)
 enddo
 
 return
-end
+end subroutine element_matrix_fft
+
+
 
 subroutine my_fft(in_fft,out_fft,n)
       
@@ -877,5 +879,4 @@ do i=1,n
 enddo
       
 return
-end
-      
+end subroutine my_fft

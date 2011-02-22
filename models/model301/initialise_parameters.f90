@@ -31,7 +31,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                rho_file, T_file, ffprime_file,                     &
+                rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall
 
 if (my_id .eq. 0) then
@@ -49,7 +49,8 @@ if (my_id .eq. 0) then
   import_equil = .false.
   regrid       = .false.
   
-  freeboundary   = .false. ! use free or fixed boundary?
+  freeboundary_equil = .false. ! use free or fixed boundary equilibrium?
+  freeboundary   = .false. ! use free or fixed boundary conditions in time-evolution?
   use_starwall   = .false. ! use the STARWALL vacuum solution? (freeboundary only)
   resistive_wall = .false. ! use a resistive or ideal wall?    (freeboundary only)
 

@@ -66,6 +66,6 @@ subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, co
     
   end if
   
-  if (coils) call import_external_fields
+  if (coils) call import_external_fields()
     
 end subroutine get_vacuum_response

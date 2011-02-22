@@ -260,6 +260,8 @@ program JOREK2
     
     end if
         
+    call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)  ! sending boundary elements
+  
     if ( freeboundary ) then         
         call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,.false.)  ! Fill the vacuum response matrix/matrices
     endif

@@ -31,7 +31,8 @@ module phys_module
   integer :: mf, index_start, index_now, mode(n_tor), nout
   logical :: restart, regrid, import_equil, xpoint
   logical :: refinement     ! allow mesh refinement
-  logical :: freeboundary   ! use free or fixed boundary?
+  logical :: freeboundary_equil ! use a free or fixed boundary equilibrium?
+  logical :: freeboundary   ! use free or fixed boundary conditions in time-evolution?
   logical :: use_starwall   ! use the STARWALL vacuum solution? (free boundary only)
   logical :: resistive_wall ! use a resistive or ideal wall?    (free boundary only)
   real*8, allocatable   :: xtime(:), energies(:,:,:)

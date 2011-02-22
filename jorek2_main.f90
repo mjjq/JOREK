@@ -360,6 +360,8 @@ program JOREK2
   t_now         = t_start
   index_now     = index_start
   
+  psi_bnd = 0.d0
+  
   if (nstep .gt. 0) then
 
      grid_changed  = .true.
@@ -916,7 +918,7 @@ program JOREK2
      if (xpoint) then
         call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
      else
-        psi_xpoint = 0.d0 ! ### needs to be checked
+        psi_xpoint = psi_bnd
      endif
 
      Rp_start = R_axis - amin*2.d0

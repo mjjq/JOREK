@@ -157,6 +157,7 @@ if (my_id .eq. 0) then
     write(*,233) 'psi_boundary    ', psi_boundary(1:4), psi_boundary(n_boundary-3:n_boundary)
   end if
   
+  write(*,232) 'freeboundary_equil', freeboundary_equil
   write(*,232) 'freeboundary    ', freeboundary
   if ( freeboundary ) then
     write(*,232) 'use_starwall    ', use_starwall

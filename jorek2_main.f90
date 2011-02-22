@@ -261,7 +261,7 @@ program JOREK2
     end if
         
     if ( freeboundary ) then         
-        call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,.true.)  ! Fill the vacuum response matrix/matrices
+        call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,.false.)  ! Fill the vacuum response matrix/matrices
     endif
         
     if (my_id .eq. 0) then

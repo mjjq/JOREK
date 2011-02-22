@@ -1,6 +1,6 @@
 subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list, &
                    ivar_in,ivar_out,i_harm, psi_axis,psi_bnd,xpoint,Z_xpoint, &
-                   freeboundary,refinement,iter)
+                   freeboundary_equil,refinement,iter)
 !-------------------------------------------------------------------------------
 ! collect the element matrices into one large sparse matrix in coordinate format
 !-------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ integer,                  intent(in)    :: ivar_out          ! index of the outp
 integer,                  intent(in)    :: i_harm            ! index of toroidal harmonic
 integer,                  intent(in)    :: iter              ! the iteration number
 logical,                  intent(in)    :: xpoint            
-logical,                  intent(in)    :: freeboundary
+logical,                  intent(in)    :: freeboundary_equil
 logical,                  intent(in)    :: refinement       
 
 ! --- local variables
@@ -56,7 +56,7 @@ if (iter .le. 1) then
   write(*,*) ' i_type       : ',itype
   write(*,*) ' n_elements   : ',element_list%n_elements
   write(*,*) ' n_nodes      : ',node_list%n_nodes
-  write(*,*) ' freeboundary : ',freeboundary
+  write(*,*) ' freeboundary_equil : ',freeboundary_equil
 endif
   
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2 
@@ -68,9 +68,9 @@ do i=1,node_list%n_nodes
   if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
 enddo
 
-if ((.not. freeboundary) .or. (itype .ne. -1)) then
+if ((.not. freeboundary_equil) .or. (itype .ne. -1)) then
   nz_AA = nz_AA + n_border
-elseif  (freeboundary .and. (itype .eq. -1)) then
+elseif  (freeboundary_equil .and. (itype .eq. -1)) then
   nz_AA = nz_AA + 128 * bnd_node_list%n_bnd_nodes**2
 endif
   
@@ -103,7 +103,7 @@ ilarge=0
 
 amix = 0.d0
 if (itype .eq. -1) then
-  if (freeboundary) then
+  if (freeboundary_equil) then
     amix= 0.95
   else
     amix = 0.5
@@ -140,7 +140,7 @@ do ife =1, n_elements
 
   if (itype .eq. -1) then
     
-    if (freeboundary) then
+    if (freeboundary_equil) then
       call element_matrix_GS(xpoint,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
     else
       call element_matrix_GS_perturbation(xpoint,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
@@ -209,7 +209,7 @@ zbig = 1.d10
 
 !----------------------- boundary conditions
 
-if (freeboundary .and. (itype .eq. -1)) then
+if (freeboundary_equil .and. (itype .eq. -1)) then
 
   call vacuum_equil(node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd)
             
@@ -354,7 +354,7 @@ do i=1,node_list%n_nodes
       index = node_list%node(i)%index(k)
 
 !--------------- for equation in perturbation form
-      if ((.not. freeboundary) .and. (itype .eq. -1)) then
+      if ((.not. freeboundary_equil) .and. (itype .eq. -1)) then
         node_list%node(i)%deltas(i_harm,k,ivar_out) = mumps_par%RHS(index)
         node_list%node(i)%values(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) &
                                                     + (1.d0 - amix) * mumps_par%RHS(index)

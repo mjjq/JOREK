@@ -11,7 +11,7 @@ implicit none
 INTERFACE 
   SUBROUTINE POISSON(MY_ID,ITYPE,NODE_LIST,ELEMENT_LIST,           &
      &BND_NODE_LIST,BND_ELM_LIST,IVAR_IN,IVAR_OUT,I_HARM,PSI_AXIS, &
-     &PSI_BND,XPOINT,Z_XPOINT,FREEBOUNDARY,REFINEMENT,ITER)
+     &PSI_BND,XPOINT,Z_XPOINT,FREEBOUNDARY_EQUIL,REFINEMENT,ITER)
     USE DATA_STRUCTURE
     INTEGER(KIND=4), INTENT(IN) :: MY_ID
     INTEGER(KIND=4), INTENT(IN) :: ITYPE
@@ -26,7 +26,7 @@ INTERFACE
     REAL(KIND=8) :: PSI_BND
     LOGICAL(KIND=4), INTENT(IN) :: XPOINT
     REAL(KIND=8) :: Z_XPOINT
-    LOGICAL(KIND=4), INTENT(IN) :: FREEBOUNDARY
+    LOGICAL(KIND=4), INTENT(IN) :: FREEBOUNDARY_EQUIL
     LOGICAL(KIND=4), INTENT(IN) :: REFINEMENT
     INTEGER(KIND=4), INTENT(IN) :: ITER
   END SUBROUTINE POISSON
@@ -55,18 +55,18 @@ real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 real*8     :: current_tot, current_ref, current_int, amix, ZKP, ZKI, ZKD, diff
-logical    :: freeboundary2
+logical    :: freeboundary_equil2
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '*           equilibrium               *'
   write(*,*) '***************************************'
-  write(*,*) '   freeboundary : ',freeboundary
+  write(*,*) '   freeboundary_equil : ',freeboundary_equil
   write(*,*) '   X-point      : ',xpoint2
 endif
 
-freeboundary2 = freeboundary
-freeboundary  = .false.
+freeboundary_equil2 = freeboundary_equil
+freeboundary_equil  = .false.
 
 !------------------------------------ fixed boundary equilibrium
 n_iter = 200
@@ -89,7 +89,7 @@ do iter=1,n_iter
     if (ifail .ne. 1) then      
       psi_bnd = psi_xpoint
     else
-      if (freeboundary) then
+      if (freeboundary_equil) then
         Z_xpoint = -99.d0
       endif
     endif
@@ -106,7 +106,7 @@ do iter=1,n_iter
   write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
   
   call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
-               psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,iter)   !----------- for GS use -1
+               psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
 
   diff = 0.d0
   do i=1, node_list%n_nodes
@@ -122,14 +122,14 @@ enddo
 
 
 !--------------------------------------- freeboundary equilibrium
-freeboundary = freeboundary2
+freeboundary_equil = freeboundary_equil2
 
 current_int = 0.d0
 amix        = 0.96
 ZKP         = 1.0                ! PI feedback on the total current
 ZKI         = 0.01 
 
-if (freeboundary) then
+if (freeboundary_equil) then
 
   n_iter =200
   
@@ -175,7 +175,7 @@ if (freeboundary) then
     write(*,'(A,3e14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
-                 psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,iter)   !----------- for GS use -1
+                 psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
 
 !    call boundary_check
  
@@ -191,7 +191,7 @@ if (freeboundary) then
 
   enddo
 
-  if ((freeboundary) .and. (my_id .eq.0)) call boundary_check()
+  if ((freeboundary_equil) .and. (my_id .eq.0)) call boundary_check()
 
 endif
 
@@ -285,7 +285,7 @@ sep_list%psi_values(1) = psi_bnd
 
 call find_flux_surfaces(xpoint2,node_list,element_list,sep_list)  
 
-if (freeboundary) then
+if (freeboundary_equil) then
   call plot_coils(.true.)
   call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4)
   call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1)

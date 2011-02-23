@@ -28,6 +28,8 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   write(*,*) '**********************************'
   write(*,*) '**********************************'
   if (freeboundary) write(*,*) ' FREEBOUNDARY is ON'
+  
+  n_matrix_block_size = n_tor * n_var
 
   ndof_glob = -1
   do inode1=1,node_list%n_nodes

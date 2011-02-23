@@ -35,6 +35,7 @@ program JOREK2
   use phys_module
   use global_distributed_matrix
   use nodes_elements
+  use boundary, only: boundary_from_grid
   use vacuum_response_module
 
   implicit none

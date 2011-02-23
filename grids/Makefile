@@ -1,7 +1,6 @@
 include ../config.in	
 
 all : define_boundary.o \
-      boundary_from_grid.o \
       fft.o \
       fgauss.o \
       find_crossing.o \
@@ -19,7 +18,7 @@ all : define_boundary.o \
       spline_tb15a.o \
       spline_tg02a.o
       
-modules :       
+modules :  mod_boundary.o     
     
 clean :
 	rm -f *.o

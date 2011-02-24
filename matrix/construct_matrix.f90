@@ -9,6 +9,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   use global_distributed_matrix
   use phys_module
   use nodes_elements
+  use vacuum_response, only: vacuum_boundary_integral, NEW_VACUUM
 
   implicit none
   include 'mpif.h'
@@ -260,17 +261,24 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   write(*,*) ' end construct'
 
-  !------------------vacuum cannot be called on an element by element basis. The vacuum couples all boundary points!
-
-  if (freeboundary) call vacuum(my_id, node_list, element_list, bnd_elm_list,             &
-       bnd_node_list, index_min, index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint, rhs_loc)
+  ! --- Add vacuum response (boundary integrals) for free boundary computations
+  if (freeboundary) then
+    if ( NEW_VACUUM ) then
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max) !###TODO### move somewhere else
+      call vacuum_boundary_integral(bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, &
+        resistive_wall, index_min, index_max, rhs_loc, tstep)
+    else
+      call vacuum_old(my_id, node_list, element_list, bnd_elm_list, bnd_node_list, index_min, index_max,  &
+        xpoint2, psi_axis, psi_bnd, Z_xpoint, rhs_loc)
+    end if
+  end if
 
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   deallocate(RHS_loc)
 
-
+  ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &
        index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint, .false., .false.)
 

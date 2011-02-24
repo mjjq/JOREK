@@ -55,11 +55,6 @@ if (my_id .eq. 0) then
   import_equil = .false.
   regrid       = .false.
   
-  freeboundary_equil = .false. ! use free or fixed boundary equilibrium?
-  freeboundary   = .false. ! use free or fixed boundary conditions in time-evolution?
-  use_starwall   = .false. ! use the STARWALL vacuum solution? (freeboundary only)
-  resistive_wall = .false. ! use a resistive or ideal wall?    (freeboundary only)
-
   n_R       = 3
   n_Z       = 3
   n_radial  = 11

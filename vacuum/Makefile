@@ -1,16 +1,14 @@
 include ../config.in	
 
-all :   modules                   \
-	get_vacuum_response.o     \
-	ideal_wall.o              \
-	ideal_wall_starwall.o     \
-	resistive_wall_starwall.o \
-        import_external_fields.o   \
-	vacuum.o                  \
-	vacuum_equil.o
+all : modules                    \
+	ideal_wall.o                 \
+	ideal_wall_starwall.o        \
+	resistive_wall_starwall.o    \
+	vacuum_old.o
       
-modules : mod_vacuum_response.o     
+modules : mod_vacuum.o           \
+	mod_vacuum_response.o        \
+	mod_vacuum_equilibrium.o
     
 clean :
 	rm -f *.o *.mod
-    

@@ -86,4 +86,69 @@ module global_distributed_matrix
   
   
   
+  !> Initialize the (freeboundary related) row and column numbers in the sparse matrix structure.
+  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max)
+    
+    use parameters, only: n_tor, n_var
+    use data_structure, only: type_node_list, type_bnd_node_list
+    
+    implicit none
+    
+    ! --- Routine parameters
+    type(type_node_list),        intent(in)    :: node_list            !< List of grid nodes
+    type(type_bnd_node_list),    intent(in)    :: bnd_node_list        !< List of boundary grid nodes
+    integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
+    
+    ! --- Local variables
+    integer :: l_node_bnd, l_dof, l_node, l_dir, l_index, l_tor, l_var, l_row
+    integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_tor, j_var, j_col
+    integer :: sparsepos
+    
+    !write(*,*) LOG_BEGIN_MARKER//' global_matrix_structure_vacuum'
+    
+    ! --- Select a matrix row
+    do l_node_bnd = 1, bnd_node_list%n_bnd_nodes
+      do l_dof = 1, 2
+        l_node      = bnd_node_list%bnd_node(l_node_bnd)%index_jorek
+        l_dir       = bnd_node_list%bnd_node(l_node_bnd)%direction(l_dof)
+        l_index     = node_list%node(l_node)%index(l_dir)
+        if ( (l_index < index_min) .or. (l_index > index_max) ) cycle ! Is the current MPI thread in charge?
+        do l_tor = 1, n_tor
+          do l_var = 1, n_var
+            l_row = det_row_col(l_index, l_var, l_tor)
+            
+            ! --- Select a matrix column
+            do j_node_bnd = 1, bnd_node_list%n_bnd_nodes
+              do j_dof = 1, 2
+                j_node      = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
+                j_dir       = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
+                j_index     = node_list%node(j_node)%index(j_dir)
+                do j_tor = 1, n_tor
+                  do j_var = 1, n_var
+                    j_col = det_row_col(j_index, j_var, j_tor)
+                    
+                    ! --- Determine which position in the sparse matrix data structure corresponds
+                    !     to the matrix entry at l_row, j_col.
+                    sparsepos = det_sparse_pos(l_row, j_col, index_min)
+                    
+                    ! --- Set row and column numbers in the sparse matrix data structure
+                    irn_glob(sparsepos) = l_row
+                    jcn_glob(sparsepos) = j_col
+                    
+                  end do
+                end do
+              end do
+            end do
+            
+          end do
+        end do
+      end do
+    end do
+    
+    !write(*,*) LOG_END_MARKER//' global_matrix_structure_vacuum'
+    
+  end subroutine global_matrix_structure_vacuum
+  
+  
+  
 end module global_distributed_matrix

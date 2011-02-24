@@ -7,6 +7,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
 use data_structure
 use mumps_module
 use pastix_module
+use vacuum_equilibrium, only: vacuum_equil
 implicit none
 include 'mpif.h'
 

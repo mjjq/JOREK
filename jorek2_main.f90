@@ -36,7 +36,8 @@ program JOREK2
   use global_distributed_matrix
   use nodes_elements
   use boundary, only: boundary_from_grid
-  use vacuum_response_module
+  use vacuum_response
+  use vacuum_equilibrium
 
   implicit none
 
@@ -152,8 +153,10 @@ program JOREK2
   use_matrix_whitout_zeros_pastix = .false.    ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   use_matrix_whitout_zeros_mumps  = .false.    ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
-  ! --- Preset input parameters to reasonable defaults; then read the input file.
+  ! --- Preset input parameters to reasonable defaults, then read the input file.
+  call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
   call initialise_parameters(my_id)
+  call vacuum_init(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
 
   ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).
   do itor=1, n_tor
@@ -180,25 +183,25 @@ program JOREK2
 
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
     write(*,*) ' FATAL : specify a valid solver'
-    call MPI_FINALIZE(IERR)                                ! clean up MPI
+    call MPI_FINALIZE(IERR)
     stop
   end if
 
   if ((n_plane .lt. n_tor + 1) .and. (n_tor .gt. 1)) then
     write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
-    call MPI_FINALIZE(IERR)                                ! clean up MPI
+    call MPI_FINALIZE(IERR)
     stop
   end if
 
   if ((gmres) .and. (nstep .gt. 0)) then
     if (n_cpu .lt. (n_tor-1)/2+1) then
       write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-  !    call MPI_FINALIZE(IERR)                             ! clean up MPI
+  !    call MPI_FINALIZE(IERR)
   !    stop
     end if
     if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
       write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-      call MPI_FINALIZE(IERR)                              ! clean up MPI
+      call MPI_FINALIZE(IERR)
       stop
     end if
   end if
@@ -215,7 +218,7 @@ program JOREK2
     call import_restart(node_list,element_list)    ! read restart file
     tstep = tstep_in
 
-    ! --- Optional: redo fluxsurface grid (DOES NOT WORK CURRENTLY)
+    ! --- Optional: redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
         call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,            &
@@ -263,9 +266,10 @@ program JOREK2
         
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)  ! sending boundary elements
   
-    if ( freeboundary ) then         
-        call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,.false.)  ! Fill the vacuum response matrix/matrices
-    endif
+    ! --- Fill the vacuum response matrices for freeboundary computations
+    if (freeboundary_equil) call import_external_fields()
+    if ( freeboundary ) call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
+      freeboundary_equil, use_starwall, resistive_wall)
         
     if (my_id .eq. 0) then
       if (.not. bench_without_plot) call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.)    ! plot the grid
@@ -730,7 +734,7 @@ program JOREK2
 	exit
      endif
 
-     if ( freeboundary .and. (.not. resistive_wall) ) call boundary_check()
+     if ( freeboundary ) call boundary_check()
 
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);

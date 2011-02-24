@@ -1,6 +1,6 @@
 subroutine plot_coils(frame)
 
-use vacuum_response_module
+use vacuum_response
 
 real*8  :: rp(5),zp(5), rmin,rmax, zmin, zmax
 logical :: frame

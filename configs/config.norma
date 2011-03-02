@@ -1,5 +1,5 @@
 
-MODEL = model302
+MODEL = model199
 
 FC     = mpif90 -f90=ifort
 
@@ -15,9 +15,9 @@ CFLAGS = -DUSE_R3_INFO_MPI -DUSE_R3_INFO
 
 FFLAGS_NO_OMP = $(FFLAGS)
 
-MYHOME= /home/sccp/gttm/huysmans/norma
+MYHOME=/data/JOREK
 
-JOREK_DIR = $(MYHOME)/jorek2_test/trunk
+JOREK_DIR = /home/sipp/gipp/GL310811/jorek2/trunk
 
 MAIN_MODEL_DIR = $(JOREK_DIR)/models
 MODEL_DIR      = $(MAIN_MODEL_DIR)/$(MODEL)
@@ -31,17 +31,17 @@ TIMING_DIR     = $(JOREK_DIR)/timing
 
 LIBSCOTCH   = -L$(MYHOME)/scotch_5.1/lib -lptscotch -lptscotcherr
 
-LIBMUMPS  = -L$(MYHOME)/MUMPS_4.8.3/lib/ -ldmumps -lmumps_common
-LIBZMUMPS = $(MYHOME)/MUMPS_4.8.3/lib/libzmumps.a
-INCMUMPS  = $(MYHOME)/MUMPS_4.8.3/include/
-ORDLIB    = $(MYHOME)/MUMPS_4.8.3/lib/libpord.a $(MYHOME)/metis-4.0/libmetis.a $(LSCOTCH)
+LIBMUMPS  = -L$(MYHOME)/MUMPS_4.7.3/lib/ -ldmumps 
+LIBZMUMPS = $(MYHOME)/MUMPS_4.7.3/lib/libzmumps.a
+INCMUMPS  = $(MYHOME)/MUMPS_4.7.3/include/
+ORDLIB    = $(MYHOME)/MUMPS_4.7.3/lib/libpord.a $(MYHOME)/metis-4.0/libmetis.a $(LSCOTCH)
 
 PPPLIB    = $(MYHOME)/lib/ppplib.a
 
 METIS     = $(MYHOME)/metis-4.0/libmetis.a
 
-LIBPASTIX = -L$(MYHOME)/PastiX/install/  -lpastix -lpastix_murge 
-INCPASTIX = $(MYHOME)/PastiX/install/
+LIBPASTIX = -L$(MYHOME)/pastix/install/  -lpastix -lpastix_murge 
+INCPASTIX = $(MYHOME)/pastix/install/
 
 LIBFFTW   = $(MYHOME)/fftw/lib/libfftw3.a
 LIBLAPACK =  -L/opt/intel/mkl/10.0.011//lib/em64t /opt/intel/mkl/10.0.011//lib/em64t/libmkl_lapack.a  /opt/intel/mkl/10.0.011/lib/em64t/libmkl_sequential.a /opt/intel/mkl/10.0.011/lib/em64t/libmkl_core.a /opt/intel/mkl/10.0.011/lib/em64t/libguide.a

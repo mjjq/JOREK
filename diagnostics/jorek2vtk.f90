@@ -18,7 +18,7 @@ type (type_element_list) :: element_list
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 integer,allocatable   :: ien (:,:)
-integer               :: i, j, k, m, etype, ivtk, irst, int, i_var, i_tor, index, index_node
+integer               :: i, j, k, m, etype, ivtk, irst, int, i_var, i_tor, index, index_node, ifail
 character             :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:), vector_names(:)
 !real*4                :: float
@@ -102,7 +102,7 @@ vectors = 0.d0
 xyz     = 0
 ien     = 0
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 if (xpoint) then
   call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
   psi_bnd = psi_xpoint
@@ -116,7 +116,6 @@ do i=1,element_list%n_elements
     s = float(j-1)/float(nsub-1)
     do k=1,nsub
       t = float(k-1)/float(nsub-1)
-
       call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 
       xjac  = R_s * Z_t - R_t * Z_s

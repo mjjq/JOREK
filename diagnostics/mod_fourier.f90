@@ -258,10 +258,10 @@ MODULE FOURIER
     
     ! --- Determine position of axis and xpoint/boundary point; start points will be started between both positions.
     call find_axis(node_list,element_list,mapping.psi_axis,mapping.R_axis,mapping.Z_axis,mapping.i_elm_axis, &
-      mapping.s_axis,mapping.t_axis)
+      mapping.s_axis,mapping.t_axis,ifail)
     if (xpoint) then
       call find_xpoint(node_list,element_list,mapping.psi_xpoint,mapping.R_xpoint,mapping.Z_xpoint, &
-        mapping.i_elm_xpoint,mapping.s_xpoint,mapping.t_xpoint)
+        mapping.i_elm_xpoint,mapping.s_xpoint,mapping.t_xpoint,ifail)
     else
       ! determine the position of one boundary node as a replacement in a case without an xpoint.
       do i = 1, node_list%n_nodes

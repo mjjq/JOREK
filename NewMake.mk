@@ -102,18 +102,18 @@ sources :
 cleanall : clean cleandep
 
 clean :	
-	@echo ">> suppression des objets pour jorek2_main <<"
-	-@rm $(JOREK2_MAIN_OBJ);
-	@echo ">> suppression des modules pour jorek2_main <<"
-	-@rm $(MOD_FILES);
+	@echo ">> Deleting Object Files <<"
+	-@rm -f $(JOREK2_MAIN_OBJ);
+	@echo ">> Deleting Module Files <<"
+	-@rm -f $(MOD_FILES);
 
 cleandep:
-	@echo ">> suppression des dependances pour jorek2_main <<"
-	-@rm */*.dep */*/*.dep;
+	@echo ">> Deleting Dependency Files <<"
+	-@rm -f */*.dep */*/*.dep;
 
 
 %.dep:%.f90
-	@echo "generation de dependances pour $(patsubst %.f90, %.o, $<)"
+	@echo "Generating Dependencies for $(patsubst %.f90, %.o, $<)"
 	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | sed 's/\,.*//' | 					\
 		awk -v file_o=" $(patsubst %.f90, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
@@ -129,10 +129,10 @@ cleandep:
 		| awk -v file="$(patsubst %.f90, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
 	fi;
 	-@sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
-	-@rm $@.tmp
+	-@rm -f $@.tmp
 
 %.dep: %.f
-	@echo "generation de dependances pour $(patsubst %.f, %.o, $<)"
+	@echo "Generating Dependencies for $(patsubst %.f, %.o, $<)"
 	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | 							\
 		awk -v file_o="$(patsubst %.f, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
@@ -148,7 +148,7 @@ cleandep:
 		| awk -v file="$(patsubst %.f, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;		\
 	fi;
 	-@sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
-	-@rm $@.tmp
+	-@rm -f $@.tmp
 
 $(MAIN) : $(JOREK2_MAIN_OBJ) # dependencies.mk
 	$(FC) $(FFLAGS_OMP)	\

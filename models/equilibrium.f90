@@ -191,7 +191,7 @@ if (freeboundary_equil) then
 
   enddo
 
-  if ((freeboundary_equil) .and. (my_id .eq.0)) call boundary_check()
+  if (my_id == 0) call boundary_check()
 
 endif
 

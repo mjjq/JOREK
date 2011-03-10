@@ -12,5 +12,5 @@ solvers/dPackgmres.o: solvers/dPackgmres.f
 %.o: %.f
 	$(FC) $(FFLAGS)           -c $< -o $@  $(INCLUDES)
 
-%.o:%.c
+%.o: %.c
 	$(CC) $(CFLAGS)           -c $< -o $@  $(INCLUDES)

@@ -22,28 +22,24 @@
 !*  Date   : 18-7-2008                                                                             *
 !***************************************************************************************************
 program JOREK2
-
+  
   use mumps_module
   use pastix_module
-  use murge_module, only : murge_initialization, murge_setGraph, MURGE_Clean
-  use murge_module, only : use_murge, use_murge_element
-  use murge_module, only : murge_initialised, murge_harmonic
-  use murge_module, only : murge_glob2loc, murge_loc2glob
-  use murge_module, only : murge_id
-
+  use murge_module,        only: murge_initialization, murge_setGraph, MURGE_Clean, use_murge,     &
+    use_murge_element, murge_initialised, murge_harmonic, murge_glob2loc, murge_loc2glob, murge_id
   use data_structure
   use phys_module
   use global_distributed_matrix
   use nodes_elements
-  use boundary, only: boundary_from_grid
-  use vacuum_response
-  use vacuum_equilibrium
-
+  use boundary,            only: boundary_from_grid
+  use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response
+  use vacuum_equilibrium,  only: import_external_fields
+  
   implicit none
-
+  
   include 'mpif.h'
 #include "r3_info.h"
-
+  
   interface
     subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
       integer :: i_tor(:), my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
@@ -65,10 +61,35 @@ program JOREK2
       integer(kind=4) :: my_id_n
       integer(kind=4) :: i_tor(:)
       integer(kind=4) :: mpi_comm_master
-     end subroutine update_rhs_n
-
+    end subroutine update_rhs_n
+    
+    subroutine construct_matrix_murge(my_id,node_list,                  &
+      element_list,local_elms,n_local_elms,xpoint2,psi_axis,psi_bnd,    &
+      z_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans, &
+      n_cpu_trans,solve_only)
+      use data_structure, only : type_node, type_element,               &
+        type_element_list, type_node_list
+      integer(kind=4) :: n_cpu
+      integer(kind=4), target :: n_local_elms
+      integer(kind=4), target :: my_id
+      type (type_node_list), target :: node_list
+      type (type_element_list), target :: element_list
+      integer(kind=4), target :: local_elms(n_local_elms)
+      logical(kind=4), target :: xpoint2
+      real(kind=8), target :: psi_axis
+      real(kind=8), target :: psi_bnd
+      real(kind=8), target :: z_xpoint
+      logical(kind=4), target :: gmres
+      integer(kind=4) :: i_tor(n_cpu)
+      integer(kind=4) :: mpi_comm_n
+      integer(kind=4), target :: mpi_comm_trans
+      integer(kind=4), target :: my_id_trans
+      integer(kind=4), target :: n_cpu_trans
+      logical(kind=4), target :: solve_only
+    end subroutine construct_matrix_murge
   end interface
   
+  integer, parameter       :: TIMES_FILE = 43, ENERGIES_FILE = 44, GROWTH_FILE = 45 ! File handlers
   type (type_surface_list) :: surface_list
   logical                  :: grid_changed
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
@@ -76,8 +97,8 @@ program JOREK2
   real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
-  integer                  :: my_id, my_id_n, my_id_master, my_id_eq, n_cpu_eq
-  integer                  :: istep,jstep,ierr,i,j,k,itor,inode, i_elm_axis, i_elm_xpoint
+  integer                  :: my_id, my_id_n, my_id_master
+  integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint
   integer                  :: n_local_ELMs, index_total
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
@@ -97,42 +118,40 @@ program JOREK2
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon, n_aa
   logical                  :: is_local
-  integer                  :: i_elem, inode1, i_order, k_order, index_node1, index_node2, knode
+  integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
   integer                  :: index_size, id_elements
-
-  integer                  ::  list_to_be_refined(n_ref_list), n_to_be_refined    
-  
+  integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   logical                  :: bench_without_plot
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
-
+  
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
-
-  ! --- Initialise MPI
-  !call MPI_INIT(IERR)                                     ! initialise MPI
+  
+  ! --- Initialise MPI / threaded MPI
+  !call MPI_INIT(IERR)
   required=MPI_THREAD_MULTIPLE
-  call MPI_Init_thread(required,provided,StatInfo)         ! initialise threaded MPI (openMPI)
-  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)           ! the id of each cpu
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)      ! the number of cpus
+  call MPI_Init_thread(required,provided,StatInfo)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)      ! id of each MPI proc
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr) ! number of MPI procs
   my_id = rank
   n_cpu = comm_size
- 
-  if (my_id .eq. 0) then
+  
+  if (my_id == 0) then
     write(*,*) '****************************************'
     write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
     write(*,*) '****************************************'
     write(*,*) ' number of cpus : ',n_cpu
-  endif
-
+  end if
+  
   ! --- Initialise timing
-  call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
+  call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max) ! elapsed time
   call r3_info_init ()                                     ! timing
-
+  
   ! --- Select solver
-  gmres              = .true.                              ! .true. for gmres, .false. for direct
+  gmres              = .true.          ! .true. for gmres, .false. for direct solver
   use_mumps          = .false.
   use_pastix         = (.not. use_mumps)
   use_murge          = .false.
@@ -141,245 +160,252 @@ program JOREK2
   pastix_analysed    = .false.
   murge_initialised  = .false.
   pastix_smp_only    = .false.         ! implies that each MPI group resides within one node!    
+  if (n_tor == 1) gmres = .false.
   
-  refinement    = .false.              ! enable mesh refinement
-
+  refinement    = .false.              ! enable mesh refinement?
+  
   adaptive_time = .false.              ! requires no_mpi for Pastix library
-
-  if (n_tor .eq. 1) gmres  = .false.
-
+  
   ! --- Flag from HSLT
   bench_without_plot              = .false.    ! .true. for benchmark (mesuring elapsed time without plot phases) 
   use_matrix_whitout_zeros_pastix = .false.    ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   use_matrix_whitout_zeros_mumps  = .false.    ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
-
+  
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
   call initialise_parameters(my_id)
   call vacuum_init(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
-
+  
   ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).
   do itor=1, n_tor
-    mode(itor)      = + int(itor / 2) * n_period
+    mode(itor)        = int(itor / 2) * n_period
     if ( (itor==1) .or. (mod(itor,2)==0) ) then
       mode_type(itor) = 'cos'
     else
       mode_type(itor) = 'sin'
     end if
-    !write(*,*) ' toroidal mode numbers : ',itor,mode(itor)
-  enddo
+  end do
   
   ! --- Write out all parameters defined in mod_parameters and by the input file.
   call log_parameters(my_id)
-
+  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
+  
   ! --- Some checks not to waste any cpu time
   if (required.ne.provided) then
-    write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided is smaller than required)',my_id,required,provided
+    write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_FINALIZE(IERR)
     stop
-  endif
-
+  end if
+  
   if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_FINALIZE(IERR)
     stop
   end if
-
-  if ((n_plane .lt. n_tor + 1) .and. (n_tor .gt. 1)) then
+  
+  if ((n_plane < n_tor + 1) .and. (n_tor > 1)) then
     write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
     call MPI_FINALIZE(IERR)
     stop
   end if
-
-  if ((gmres) .and. (nstep .gt. 0)) then
-    if (n_cpu .lt. (n_tor-1)/2+1) then
-      write(*,'(A,i4,A,i4,A)') ' FATAL : need at least',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-  !    call MPI_FINALIZE(IERR)
-  !    stop
-    end if
-    if (mod(n_cpu,(n_tor-1)/2+1) .ne. 0) then
-      write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',(n_tor-1)/2+1,' harmonics'
-      call MPI_FINALIZE(IERR)
-      stop
-    end if
+  
+  if ( gmres .and. (nstep > 0) .and. (mod(n_cpu,(n_tor-1)/2+1) /= 0) ) then
+    write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',            &
+      (n_tor-1)/2+1,' harmonics'
+    call MPI_FINALIZE(IERR)
+    stop
   end if
   
+  ! --- Open files which will be filled during the code run
+  open(TIMES_FILE,    file='times.dat',        status='REPLACE', action='WRITE')
+  open(ENERGIES_FILE, file='energies.dat',     status='REPLACE', action='WRITE')
+  open(GROWTH_FILE,   file='growth_rates.dat', status='REPLACE', action='WRITE')
+  
   ! --- Initialise ppplib plotting library
-  if (my_id .eq. 0)  call begplt('jorek2.ps')
-
+  if (my_id == 0)  call begplt('jorek2.ps')
+  
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
-
+  
   ! --- Read the restart file to continue a previous JOREK run (if restart is .true.)
-  if ( restart .and. (my_id .eq. 0) ) then
-
-    call import_restart(node_list,element_list)    ! read restart file
+  if ( restart .and. (my_id == 0) ) then
+    
+    ! --- Read the restart file (jorek_restart.rst)
+    call import_restart(node_list, element_list)
     tstep = tstep_in
-
+    
     ! --- Optional: redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
-        call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,            &
-          SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
+        call grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg, n_tht,         &
+          SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open,           &
+          dPSI_private)
       else
-        call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+        call grid_flux_surface(xpoint, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
+          sig1, xr2, sig2)
       end if
     end if
     
   end if
-
+  
   !***********************************************************************
   !*                  define grid / equilibrium                          *
   !***********************************************************************
-
-  if (.not. restart) then
-
+  
+  if_not_restart: if (.not. restart) then
+    
     element_list%n_elements      = 0
     bnd_elm_list%n_bnd_elements  = 0
     node_list%n_nodes            = 0
-
+    
     if (my_id .eq. 0) then
-
-      call define_boundary
-
-      if ((n_R .gt. 0) .and. (n_Z .gt. 0) .and. (n_radial .gt.0)) then
-
-        call grid_bezier_square_polar(n_R,n_Z,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf,.true.,node_list,element_list)
-
-      elseif ((n_R .gt. 0) .and. (n_Z .gt. 0) ) then
-
-        call grid_bezier_square(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,.true.,node_list,element_list)
-
-      elseif ((n_radial .gt. 0) .and. (n_pol .gt. 0) ) then
-
-        call grid_polar_bezier(R_geo,Z_geo,amin,0.d0,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list)
-
+      
+      call define_boundary()
+      
+      if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+        
+        call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, amin,    &
+          fbnd, fpsi, mf, .true., node_list, element_list)
+        
+      else if ((n_R > 0) .and. (n_Z > 0) ) then
+        
+        call grid_bezier_square(n_R, n_Z, R_begin, R_end, Z_begin, Z_end, .true., node_list,       &
+          element_list)
+        
+      else if ((n_radial > 0) .and. (n_pol > 0) ) then
+        
+        call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,          &
+          node_list, element_list)
+        
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'
-      endif 
-
-      call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list)                                                ! Determine boundary information from the grid
-    
+        call MPI_FINALIZE(IERR)
+        stop
+      end if 
+      
+      ! --- Determine boundary information from the grid
+      call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
+      
     end if
-        
-    call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)  ! sending boundary elements
-  
+    
+    ! --- Send boundary elements to different MPI threads
+    call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+    
     ! --- Fill the vacuum response matrices for freeboundary computations
-    if (freeboundary_equil) call import_external_fields()
-    if ( freeboundary ) call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
+    if ( freeboundary_equil ) call import_external_fields()
+    if ( freeboundary ) call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,    &
       freeboundary_equil, use_starwall, resistive_wall)
-        
-    if (my_id .eq. 0) then
-      if (.not. bench_without_plot) call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.)    ! plot the grid
-    endif
+    
+    ! --- Plot the grid  
+    if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
+      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.)
+    end if
     
 #ifdef USE_MUMPS
+    ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
     call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,0,MPI_GROUP_MUMPS_EQUIL,ierr)
     call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
-
-    if (my_id .eq. 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)                   ! start MUMPS sparse matrix solver
+    if (my_id .eq. 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
 #endif
-
+    
     if (my_id .eq. 0) then
-
+      
+      ! --- Compute the plasma equilibrium
       call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
-
-      if (n_flux .gt. 1) then                                                          ! flux surface grid
+      
+      ! --- Determine a flux surface aligned grid
+      if (n_flux .gt. 1) then
         
         if (xpoint)  then
-
-          call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-                           SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-
+          
+          call grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg, n_tht,       &
+            SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open,         &
+            dPSI_private)
+          
           call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.)
           
         else
-
-          call grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
           
-          call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.)  
+          call grid_flux_surface(xpoint, node_list, element_list, surface_list, n_flux, n_tht,     &
+            xr1, sig1, xr2, sig2)
           
-          !****************************************************************************
-          !                        Refining elements (equilibrum)                     *
-          !****************************************************************************
-
+          call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.)  
+          
+          ! --- Refine elements (equilibrum)
           if (refinement) then
-  
             n_to_be_refined=0
-            call Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_refined)
-            call Ref_Update_Index( element_list,node_list)
-          
-          endif
+            call Refine_Elem_List(node_list, element_list, list_to_be_refined, n_to_be_refined)
+            call Ref_Update_Index(element_list, node_list)
+          end if
              
-        endif
-                                               ! Determine boundary information from the grid         
-        call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list) 
-
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint)
-
-      endif
-  
-      call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint) ! initial conditions
- 
+        end if
+        
+        ! --- Determine boundary information from the grid         
+        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list) 
+        
+        ! --- Compute the plasma equilibrium
+        call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint)
+        
+      end if
+      
+      ! --- Set initial conditions for time-evolution
+      call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint)
+      
+      ! --- Determine initial energies
       call energy(node_list,element_list,W_mag,W_kin)
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
-  
-    endif
-
+      
+    end if
+    
 #ifdef USE_MUMPS
-    mumps_par%JOB = -2                                       ! clean up this instance of mumps
-    if (my_id .eq. 0) call DMUMPS(mumps_par)
+    ! --- Clean up this instance of mumps (used for equilibrium)
+    mumps_par%JOB = -2
+    if (my_id == 0) call DMUMPS(mumps_par)
 #endif
     if (allocated(pastix_perm_vars))  deallocate(pastix_perm_vars)
     if (allocated(pastix_iperm_vars)) deallocate(pastix_iperm_vars)
-
-  endif
-
-  call broadcast_elements(my_id,element_list)                ! sending all elements
-  call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)  ! sending boundary elements
-  call broadcast_nodes(my_id,node_list)                      ! sending all nodes
-  call broadcast_phys(my_id)                                 ! sending the physics parameters
-
-  n_AA  = node_list%n_nodes * (n_order+1)
+    
+  end if if_not_restart
   
+  ! --- Broadcast grid information and input parameters to other MPI procs
+  call broadcast_elements(my_id, element_list)                ! elements
+  call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) ! boundary elements
+  call broadcast_nodes(my_id, node_list)                      ! nodes
+  call broadcast_phys(my_id)                                  ! physics parameters
+  
+  ! ###QUESTION### WHAT IS THIS FOR?
+  n_AA  = node_list%n_nodes * (n_order+1)
   n_AA = 0
   do inode = 1, node_list%n_nodes
-     n_AA = max(n_AA,node_list%node(inode)%index(4))
-  enddo
+    n_AA = max(n_AA,node_list%node(inode)%index(4))
+  end do
   mumps_par%n = n_AA
-
+  ! ########
+  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-  !************************************************************************
-  !*                        vacuum initialisation                         *
-  !************************************************************************
-    
-  ! --- Fill the vacuum response matrix/matrices
-!  if ( freeboundary ) call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list)
-
+  
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *
   !***********************************************************************
-
-  t_now         = t_start
-  index_now     = index_start
   
-  psi_bnd = 0.d0
+  t_now     = t_start
+  index_now = index_start
+  psi_bnd   = 0.d0
   
-  if (nstep .gt. 0) then
+  if (nstep > 0) then
 
      grid_changed  = .true.
      call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
      if (xpoint) then
-        call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+        call find_xpoint(node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,    &
+          s_xpoint, t_xpoint, ifail)
         psi_bnd = psi_xpoint
      else
-        psi_bnd = 0.d0
-     endif
+        psi_bnd = 0.d0 ! ###QUESTION### DOES THIS MAKE SENSE WITH A FREE BOUNDARY EQUILIBRIUM?
+     end if
 
 
      !*******************************************************
@@ -734,8 +760,6 @@ program JOREK2
 	exit
      endif
 
-     if ( freeboundary ) call boundary_check()
-
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);
      if (my_id .eq. 0) write(*,'(A,2e16.8,2i12)') ' min/max deltas : ',mindelta,maxdelta,minloc(deltas),maxloc(deltas)
@@ -774,35 +798,15 @@ program JOREK2
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
 
-        !### FOR TESTING: OUTPUT SOME ADDITIONAL INFORMATION
-        !open(42, file='times_and_steps.dat', status='REPLACE',action='WRITE')
-        !do j = 1, index_now
-        !  write(42,*) j, xtime(j)
-        !end do
-        !close(42)
-        !
-        !open(42, file='energies.dat', status='REPLACE',action='WRITE')
-        !do i = 1, n_tor
-        !  do j = 1, index_now
-        !    write(42,*) xtime(j), energies(i,1:2,j)
-        !  end do
-        !  write(42,*)
-        !  write(42,*)
-        !end do
-        !close(42)
-        !
-        !open(42, file='growth_rates.dat', status='REPLACE',action='WRITE')
-        !do i = 1, n_tor
-        !  do j = 2, index_now
-        !   write(42,*) ( xtime(j) + xtime(j-1) ) / 2., 0.5 * ( LOG(energies(i,1:2,j)) - LOG(energies(i,1:2,j-1)) ) / ( xtime(j) - xtime(j-1) )
-        !  end do
-        !  write(42,*)
-        !  write(42,*)
-        !end do
-        !close(42)
-        !### END FOR TESTING
-
-        !  print*,"enrj",abs(energies(1,2,index_start+istep-1))
+        ! --- Output some information to text files during the code run
+        write(TIMES_FILE,'(I6,1X,ES15.5)') index_now, xtime(index_now)
+        write(ENERGIES_FILE,'(999ES15.5)') xtime(index_now), energies(:,1:2,index_now)
+        if ( index_now > 1 ) then 
+          write(GROWTH_FILE,  '(999ES15.5)') (xtime(index_now)+xtime(index_now-1))/2.d0,             &
+            0.5d0 * ( LOG(energies(:,1:2,index_now)) - LOG(energies(:,1:2,index_now-1)) )            &
+            / (xtime(index_now)-xtime(index_now-1))
+        end if
+          
      endif
 
      !---------------------------------------------------------timing
@@ -860,6 +864,11 @@ program JOREK2
         end if
      endif
   endif
+  
+  ! --- Close open files
+  close(TIMES_FILE)
+  close(ENERGIES_FILE)
+  close(GROWTH_FILE)
 
   !***********************************************************************
   !*                          plots etc.                                 *

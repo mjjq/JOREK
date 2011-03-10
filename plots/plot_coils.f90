@@ -2,8 +2,14 @@ subroutine plot_coils(frame)
 
 use vacuum_response
 
-real*8  :: rp(5),zp(5), rmin,rmax, zmin, zmax
-logical :: frame
+implicit none
+
+! --- Routine parameters
+logical, intent(in) :: frame
+
+! --- Local variables
+real*8  :: rp(5),zp(5), r_min, r_max, z_min, z_max
+integer :: i
 
 write(*,*) '*************************************'
 write(*,*) '*         plot coils                *'

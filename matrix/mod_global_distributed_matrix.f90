@@ -1,6 +1,8 @@
 module global_distributed_matrix
-
+  
   implicit none
+  
+  public
   
   real*8,  allocatable, target  :: A_glob(:),   rhs_glob(:)            ! the distributed global matrix and rhs
   integer, allocatable, target  :: irn_glob(:), jcn_glob(:)            ! the row and column indices for coordinate format sparse matrix/ (or CSR)

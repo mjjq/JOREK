@@ -377,13 +377,15 @@ module vacuum_response
     end if
     
     ! --- Determine vectors of the psi and deltapsi boundary values.
-    call det_psibnd_vec(psibnd_vec, dpsibnd_vec, bnd_node_list, node_list)
+    call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
     
     ! --- Update the derived response matrices
     call update_response(tstep, freeboundary_equil, resistive_wall)
     
     ! --- Perform the time-stepping for the wall currents.
     if ( resistive_wall ) call evolve_wall_currents(psibnd_vec, dpsibnd_vec)
+    
+    call boundary_check()
     
     !write(35+my_id,'(4ES20.12)') sum(abs(rhs_loc)), sum(abs(A_glob))
     
@@ -593,17 +595,17 @@ module vacuum_response
   
   
   !> Determine vectors of the psi and deltapsi values at the boundary.
-  subroutine det_psibnd_vec(psibnd_vec, dpsibnd_vec, bnd_node_list, node_list)
+  subroutine det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
     
     use data_structure, only: type_node_list, type_bnd_node_list
     
     implicit none
     
     ! --- Routine parameters
-    real*8, allocatable,      intent(out) :: psibnd_vec(:)  !< Vector of psi boundary values
-    real*8, allocatable,      intent(out) :: dpsibnd_vec(:) !< Vector of deltapsi boundary values
     type(type_node_list),     intent(in)  :: node_list      !< List of grid nodes
     type(type_bnd_node_list), intent(in)  :: bnd_node_list  !< List of boundary grid nodes
+    real*8, allocatable,      intent(out) :: psibnd_vec(:)  !< Vector of psi boundary values
+    real*8, allocatable,      intent(out) :: dpsibnd_vec(:) !< Vector of deltapsi boundary values
     
     ! --- Local variables
     integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp
@@ -708,7 +710,7 @@ module vacuum_response
     update_required = ( old_thick   /= wall_thickness      ) &
                  .or. ( old_res     /= wall_resistivity    ) &
                  .or. ( old_tstep   /= tstep               ) &
-                 .or. ( old_reswall /= resistive_wall      ) &
+                 .or. ( old_reswall .neqv. resistive_wall  ) &
                  .or. (                       .not. allocated(response_m_pp_rhs)  ) &
                  .or. (                       .not. allocated(response_m_pp_lhs)  ) &
                  .or. ( resistive_wall .and. (.not. allocated(response_d_ww))     ) &

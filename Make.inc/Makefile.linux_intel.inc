@@ -1,18 +1,31 @@
-# Confiduration file for jorek
+# Configuration file for jorek
+
 # model directory
 MODEL = model199
 
 # Fortran compiler 
 FC     = mpif90 -f90=ifort
 FFLAGS_OMP       = -openmp 
-FFLAGS           = -g -O0 
-FFLAGS          := $(FFLAGS) -r8 -i4
+FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp
 FFLAGS          := $(FFLAGS) -traceback -xT -align
+FFLAGS          := $(FFLAGS) -O0     # Optimization level
 
-FFLAGS_FIXEDFORM = $(FFLAGS) -check bounds $(FFLAGS_OMP)
-FFLAGS_NOBOUNDS  = $(FFLAGS)               $(FFLAGS_OMP)
-FFLAGS           = $(FFLAGS) -check bounds $(FFLAGS_OMP)
+# --- DEBUGGING
+#   --- Debug symbols for debuggers
+DEBUGFLAGS  = -g
+#   --- Check array boundaries
+DEBUGFLAGS += -check bounds
+#   --- Generate and check interfaces (__genmod files)
+#DEBUGFLAGS += -gen-interfaces -warn interfaces
+#   --- Check many other things
+#DEBUGFLAGS += -warn all,nounused -check all,noarg_temp_created -debug all -debug-parameters -fstack-security-check -ftrapuv
+#   --- Even more checks and warnings
+#DEBUGFLAGS += -warn all -check all
+
+FFLAGS_FIXEDFORM := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
+FFLAGS_NOBOUNDS  := $(FFLAGS)               $(FFLAGS_OMP)
+FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 
 #FFLAGS_NO_OMP    = -fpp -r8 -i4 -O2 -xT -align
 

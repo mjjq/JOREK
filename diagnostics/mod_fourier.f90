@@ -49,7 +49,7 @@ MODULE FOURIER
     
 !    write(*,*) '@@> LOG_MAPPING'
     
-    write(*,'(A,I,A)')        'nstpts     =', mapping.nstpts, ' (number of radial positions)'
+    write(*,'(A,I12,A)')      'nstpts     =', mapping.nstpts, ' (number of radial positions)'
     write(*,'(A,ES12.4,A)')   'R_axis     =', mapping.R_axis, ' (R position of magnetic axis)'
     write(*,'(A,ES12.4,A)')   'Z_axis     =', mapping.Z_axis, ' (Z position of magnetic axis)'
     write(*,'(A,ES12.4,A)')   'psi_axis   =', mapping.psi_axis, ' (poloidal flux at magnetic axis)'

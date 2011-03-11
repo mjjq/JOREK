@@ -1,0 +1,3 @@
+#!/bin/bash
+
+svn -R propset svn:ignore -F .svnignore .

@@ -19,6 +19,9 @@ module vacuum_response
   character(len=7), parameter :: LOG_BEGIN_MARKER = 'BEGIN: '
   character(len=5), parameter :: LOG_END_MARKER   = 'END: '
   
+  LOGICAL, PARAMETER :: VACUUM_PSI_EQ = .TRUE. !###
+  LOGICAL, PARAMETER :: VACUUM_J_EQ   = .TRUE. !###
+  
   
   
   
@@ -474,37 +477,42 @@ module vacuum_response
                             sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min)
               
                             ! --- Vacuum response contribution to the lhs of the current equation
-                            amat_contrib = testfunc_l * ws  &
-                              * basfunc_i * sqrt_xs2_ys2 * response_m_pp_lhs(i_resp, j_resp)
-                            !$omp atomic
-                            A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
+                            if ( VACUUM_J_EQ ) then
+                              amat_contrib = testfunc_l * ws  &
+                                * basfunc_i * sqrt_xs2_ys2 * response_m_pp_lhs(i_resp, j_resp)
+                              !$omp atomic
+                              A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
+                            end if
 
                             ! --- Vacuum response contribution to the lhs of the pol. flux equation
-                            !### TODO: implement contribution to psi equation ###
-                            !amat_contrib = 0.d0
-                            !!$omp atomic
-                            !A_glob(sparsepos_pp) = A_glob(sparsepos_pp) + amat_contrib
-                            !###
+                            if ( VACUUM_PSI_EQ ) then
+                              amat_contrib = testfunc_l * ws * tstep &
+                                * basfunc_i * sqrt_xs2_ys2 * response_m_pp_lhs(i_resp, j_resp)
+                              !$omp atomic
+                              A_glob(sparsepos_pp) = A_glob(sparsepos_pp) + amat_contrib
+                            end if
 
                           end do L_JS
                         end do L_JD
                       end do L_JB
                       
                       ! --- Contribution of vacuum response to the rhs of the current equation
-                      rhs_contrib = sum( response_m_pp_rhs(i_resp, :) * psibnd_vec(:) )
-                      if ( resistive_wall ) rhs_contrib = rhs_contrib                              &
-                        + sum( response_m_pw_rhs(i_resp, :) * wall_curr(:) )
-                      rhs_contrib = rhs_contrib * testfunc_l * ws * basfunc_i * sqrt_xs2_ys2
-                      !$omp atomic
-                      rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
+                      if ( VACUUM_J_EQ ) then
+                        rhs_contrib = sum( response_m_pp_rhs(i_resp, :) * psibnd_vec(:) )
+                        if ( resistive_wall ) rhs_contrib = rhs_contrib                            &
+                          + sum( response_m_pw_rhs(i_resp, :) * wall_curr(:) )
+                        rhs_contrib = rhs_contrib * testfunc_l * ws * basfunc_i * sqrt_xs2_ys2
+                        !$omp atomic
+                        rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
+                      end if
                       
                       ! --- Contribution of vacuum response to the rhs of the poloidal flux equation
-                      !### TODO: implement contribution to psi equation ###
-                      !rhs_contrib = 0.d0
-                      !!$omp atomic
-                      !rhs_loc(l_row_psi) = rhs_loc(l_row_psi) + rhs_contrib
-                      !###
-                        
+                      if ( VACUUM_PSI_EQ ) then
+                        rhs_contrib = 0.d0
+                        !$omp atomic
+                        rhs_loc(l_row_psi) = rhs_loc(l_row_psi) + rhs_contrib
+                      end if
+                       
                     end do L_IS
                   end do L_ID
                 end do L_IV

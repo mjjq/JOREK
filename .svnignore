@@ -1,0 +1,6 @@
+*.dep
+*.mod
+*__genmod.*
+config.in
+Makefile.inc
+jorek_model???

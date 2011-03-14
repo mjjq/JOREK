@@ -533,7 +533,7 @@ module vacuum_response
   
   
   
-  ! --- Determine coordinate values on Gaussian points in a given boundary element.
+  !> Determine coordinate values on Gaussian points in a given boundary element.
   subroutine det_coord_bnd(bndelem, node_list, R, Z, R_s, Z_s)
     
     use gauss,             only: n_gauss, xgauss, wgauss

@@ -375,15 +375,6 @@ program JOREK2
   call broadcast_nodes(my_id, node_list)                      ! nodes
   call broadcast_phys(my_id)                                  ! physics parameters
   
-  ! ###QUESTION### WHAT IS THIS FOR?
-  n_AA  = node_list%n_nodes * (n_order+1)
-  n_AA = 0
-  do inode = 1, node_list%n_nodes
-    n_AA = max(n_AA,node_list%node(inode)%index(4))
-  end do
-  mumps_par%n = n_AA
-  ! ########
-  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   !***********************************************************************
@@ -404,7 +395,7 @@ program JOREK2
           s_xpoint, t_xpoint, ifail)
         psi_bnd = psi_xpoint
      else
-        psi_bnd = 0.d0 ! ###QUESTION### DOES THIS MAKE SENSE WITH A FREE BOUNDARY EQUILIBRIUM?
+        psi_bnd = 0.d0 ! ### NEEDS TO BE MODIFIED FOR FREE BOUNDARY EQUILIBRIUM
      end if
 
 

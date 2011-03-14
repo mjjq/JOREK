@@ -1,9 +1,14 @@
+!> Compares \f$B_{tan}\f$ and \f$B_{tan,vacuum}\f$ at the interface.
+!!
+!! The relative difference is calculated according to:
+!! \f$\frac{\int dA |B_{tan,plasma}-B_{tan,vacuum}|}{\int dA |B_{tan,vacuum}|}\f$.
 subroutine boundary_check()
-!< Compares B_{||} and B_{||,vacuum} at the interface
   
-  use phys_module
-  use vacuum_response
-  use nodes_elements
+  use data_structure,  only: type_bnd_element 
+  use phys_module,     only: resistive_wall
+  use nodes_elements,  only: node_list, bnd_node_list, element_list, bnd_elm_list
+  use vacuum_response, only: NEW_VACUUM, n_dof_starwall, n_starwall_harmonics, starwall_harmonics, &
+    response_index, starwall_m_ee, starwall_m_ey, starwall_m_id, wall_curr, det_psibnd_vec
   
   implicit none
   
@@ -21,13 +26,13 @@ subroutine boundary_check()
   real*8   :: P, P_s, P_t, P_st, P_ss, P_tt
   real*8   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
   real*8   :: s_pt, t_pt, s_or_t ! s and t values at current point
-  real*8   :: xjac     ! 2D Jacobian
-  real*8   :: B_pol(2) ! Poloidal magnetic field
-  real*8   :: e_par(2) ! Vector tangential to interface
-  real*8   :: P_R, P_Z ! dPsi/dR, dPsi/dZ
-  logical  :: s_const  ! Is the bound. elem. an s=const side of the 2D element?
+  real*8   :: xjac               ! 2D Jacobian
+  real*8   :: B_pol(2)           ! Poloidal magnetic field
+  real*8   :: e_par(2)           ! Vector tangential to interface
+  real*8   :: P_R, P_Z           ! dPsi/dR, dPsi/dZ
+  logical  :: s_const            ! Is the bound. elem. an s=const side of the 2D element?
   
-  if ( .not. NEW_VACUUM ) return ! ### Old vacuum is not implemented anymore ###
+  if ( .not. NEW_VACUUM ) return ! (old vacuum is not implemented anymore)
   
   write(*,*) '@@> boundary_check'
   
@@ -35,9 +40,9 @@ subroutine boundary_check()
   write(*,*) '*    check boundary conditions     *'
   write(*,*) '************************************'
   
-  allocate( psibnd_vec(n_dof_starwall), dpsibnd_vec(n_dof_starwall),         &
-    B_par(n_starwall_harmonics), B_par_v(n_starwall_harmonics),              &
-    val_integral(n_starwall_harmonics), err_integral(n_starwall_harmonics) )
+  allocate( psibnd_vec(n_dof_starwall), dpsibnd_vec(n_dof_starwall), B_par(n_starwall_harmonics),  &
+    B_par_v(n_starwall_harmonics), val_integral(n_starwall_harmonics),                             &
+    err_integral(n_starwall_harmonics) )
   
   ! --- Determine vectors with the Psi and deltaPsi values at the boundary.
   call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
@@ -74,8 +79,8 @@ subroutine boundary_check()
       end select
       
       ! --- Determine coordinate values (plus derivatives)
-      call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt,  &
-        R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+      call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, R_st, R_ss, R_tt, Z, &
+        Z_s, Z_t, Z_st, Z_ss, Z_tt)
       
       ! --- 2D Jacobian
       xjac = R_s * Z_t - R_t * Z_s
@@ -92,8 +97,8 @@ subroutine boundary_check()
         l_tor = starwall_harmonics(l_starwall)
         
         ! --- Psi value (plus derivatives) at current point (l_tor mode)
-        call interp(node_list, element_list, m_elm, 1, l_tor, s_pt, t_pt,  &
-          P, P_s, P_t, P_st, P_ss, P_tt)
+        call interp(node_list, element_list, m_elm, 1, l_tor, s_pt, t_pt, P, P_s, P_t, P_st, P_ss, &
+          P_tt)
         
         ! --- Poloidal magnetic field at current point
         P_R   = (   P_s * Z_t - P_t * Z_s ) / xjac ! dPsi/dR

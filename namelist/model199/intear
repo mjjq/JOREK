@@ -1,5 +1,4 @@
-
- &in1
+&in1
 
  restart = .f.
  regrid  = .f.
@@ -95,4 +94,4 @@
  rho_coef(4)  =  1.d0
  rho_coef(5)  =  5.d0
 
- &end
+/

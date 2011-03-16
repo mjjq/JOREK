@@ -75,8 +75,8 @@ if (mf .le. 0) then
 
   else
 
-    write(*,'(A)')     ' boundary information from R_bnd, Z_bnd, psi_bnd '
-    write(*,'(A,i6)')  ' n_bnd : ',n_boundary
+    write(*,'(A)')     ' boundary information from R_boundary, Z_boundary, psi_boundary '
+    write(*,'(A,i6)')  ' n_boundary : ',n_boundary
     write(*,'(A,2f8.4)')  ' R_geo, Z_geo : ',R_geo, Z_geo
 
     n_bnd = n_boundary

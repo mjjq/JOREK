@@ -1,11 +1,11 @@
 
 MODEL = model302
 
-FC     = mpif90 -f90=ifort
+FC     = mpif90 -f90=ifort -mt_mpi
 
-#FFLAGS = -r8 -i4 -O2 -xT -align -openmp -openmp-lib compat
+#FFLAGS = -r8 -i4 -O2 -xSSSE3 -align -openmp -openmp-lib compat
 FFLAGS = -r8 -i4 -O0 -check bounds -traceback -align -openmp
-FFLAGS_NO_OMP = -r8 -i4 -O2 -xT -align
+FFLAGS_NO_OMP = -r8 -i4 -O2 -xSSSE3 -align
 
 # -i4 for openmpi
 

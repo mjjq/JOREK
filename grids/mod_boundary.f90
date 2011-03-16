@@ -77,7 +77,7 @@ module boundary
     call sort_bnd_elements( bnd_elm_list )
     
     ! --- Output short (.false.) or verbose (.true.) boundary information.
-    call log_bnd_info(.true., node_list, bnd_node_list, bnd_elm_list)
+    call log_bnd_info(.false., node_list, bnd_node_list, bnd_elm_list)
     
   end subroutine boundary_from_grid
   

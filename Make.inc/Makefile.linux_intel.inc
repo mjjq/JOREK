@@ -4,11 +4,11 @@
 MODEL = model199
 
 # Fortran compiler 
-FC     = mpif90 -f90=ifort
+FC     = mpif90 -f90=ifort -mt_mpi
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp
-FFLAGS          := $(FFLAGS) -traceback -xT -align
+FFLAGS          := $(FFLAGS) -traceback -xSSSE3 -align
 FFLAGS          := $(FFLAGS) -O0     # Optimization level
 
 # --- DEBUGGING
@@ -27,7 +27,7 @@ FFLAGS_FIXEDFORM := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 FFLAGS_NOBOUNDS  := $(FFLAGS)               $(FFLAGS_OMP)
 FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 
-#FFLAGS_NO_OMP    = -fpp -r8 -i4 -O2 -xT -align
+#FFLAGS_NO_OMP    = -fpp -r8 -i4 -O2 -xSSSE3 -align
 
 # Solvers dependencies
 USE_HIPS   = 0

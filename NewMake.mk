@@ -199,7 +199,7 @@ import_eqdsk : util/import_eqdsk.f90
 
 include all_rules.mk
 ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
-include $(patsubst %.f, %.dep, $(patsubst %.f90, %.dep, $(SRC_DEP)))
+-include $(patsubst %.f, %.dep, $(patsubst %.f90, %.dep, $(SRC_DEP)))
 endif
 
 allmodels:

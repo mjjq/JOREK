@@ -2,6 +2,8 @@ module parameters
 
   implicit none
 
+  integer, parameter :: jorek_model = 301
+
   integer      :: n_var, n_dim, n_order, n_tor, n_period, n_plane, n_vertex_max
   integer      :: n_nodes_max ,n_elements_max, n_boundary_max, n_pieces_max,n_degrees
   

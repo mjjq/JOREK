@@ -71,7 +71,7 @@ do i = 1, element_list%n_elements
 
   ELM_is_local = .false.
 
-  do iv=1,n_vertex_max
+  L_IV: do iv=1,n_vertex_max
 
     inode = element_list%element(i)%vertex(iv)
 
@@ -80,11 +80,11 @@ do i = 1, element_list%n_elements
       if ( (node_list%node(inode)%index(k) .ge. index_min(my_id+1)) .and. &
            (node_list%node(inode)%index(k) .le. index_max(my_id+1)) ) then
         ELM_is_local = .true.
-        goto 10
+        exit L_IV
       endif
     enddo
 
-   if(node_list%node(inode)%constrained) then
+    if(node_list%node(inode)%constrained) then
 	     do j = 1, 2
 		 index1 = node_list%node(inode)%parents(j)
 		  do k=1, n_order+1
@@ -92,16 +92,16 @@ do i = 1, element_list%n_elements
                        if ( (node_list%node(index1)%index(k) .ge. index_min(my_id+1)) .and. &
                         (node_list%node(index1)%index(k) .le. index_max(my_id+1)) ) then
                         ELM_is_local = .true.
-                        goto 10
+                        exit L_IV
                       endif
                   enddo
 	    end do     
 	    	    
-   end if
+    end if
 
-  enddo
+  end do L_IV
   if (ELM_is_local) then
-10   inext = inext + 1
+     inext = inext + 1
      local_elms(inext) = i
   endif
 

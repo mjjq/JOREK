@@ -39,6 +39,8 @@ allocate(q(surface_list%n_psi))
 
 PI = 2.d0 *asin(1.d0)
 
+write(*,*) '   i     psi           q          sum_dl'
+
 do i=2, surface_list%n_psi
 
   q(i)   = 0.d0
@@ -99,7 +101,7 @@ do i=2, surface_list%n_psi
 
   q(i) = F0 * q(i) / (2.d0 * PI)
 
-  write(*,'(A,i5,3e16.8)') ' psi, q : ',i,surface_list%psi_values(i),q(i),sum_dl
+  write(*,'(i5,3es13.5)') i, surface_list%psi_values(i), q(i), sum_dl
 
 enddo
 

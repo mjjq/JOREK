@@ -24,7 +24,7 @@ logical,                  intent(in)    :: xpoint
 logical,                  intent(in)    :: freeboundary_equil
 logical,                  intent(in)    :: refinement       
 
-! --- local variables
+! --- Local variables
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 type (type_element)      :: element_father

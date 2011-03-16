@@ -217,9 +217,11 @@ program JOREK2
   end if
   
   ! --- Open files which will be filled during the code run
-  open(TIMES_FILE,    file='times.dat',        status='REPLACE', action='WRITE')
-  open(ENERGIES_FILE, file='energies.dat',     status='REPLACE', action='WRITE')
-  open(GROWTH_FILE,   file='growth_rates.dat', status='REPLACE', action='WRITE')
+  if ( my_id == 0 ) then
+    open(TIMES_FILE,    file='times.dat',        status='REPLACE', action='WRITE')
+    open(ENERGIES_FILE, file='energies.dat',     status='REPLACE', action='WRITE')
+    open(GROWTH_FILE,   file='growth_rates.dat', status='REPLACE', action='WRITE')
+  end if
   
   ! --- Initialise ppplib plotting library
   if (my_id == 0)  call begplt('jorek2.ps')
@@ -748,7 +750,7 @@ program JOREK2
      endif
 
      !--------------------------------------------------------- energies
-     if (my_id .eq. 0 .and. .not. bench_without_plot)  then
+     if ( (my_id == 0) .and. .not. bench_without_plot)  then
         call energy(node_list,element_list,W_mag,W_kin)
 
         xtime(index_start+istep) = t_now
@@ -833,9 +835,11 @@ program JOREK2
   endif
   
   ! --- Close open files
-  close(TIMES_FILE)
-  close(ENERGIES_FILE)
-  close(GROWTH_FILE)
+  if ( my_id == 0 ) then
+    close(TIMES_FILE)
+    close(ENERGIES_FILE)
+    close(GROWTH_FILE)
+  end if
 
   !***********************************************************************
   !*                          plots etc.                                 *

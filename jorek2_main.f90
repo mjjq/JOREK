@@ -153,7 +153,7 @@ program JOREK2
   gmres              = .true.             ! .true. for gmres, .false. for direct solver
   use_mumps          = .false.            ! Use MUMPS solver
   use_pastix         = (.not. use_mumps)  ! Use PASTIX solver
-  use_murge          = .true.             ! Use MURGE interface to PASTIX solver
+  use_murge          = .false.            ! Use MURGE interface to PASTIX solver
   use_murge_element  = .false.
   pastix_initialised = .false.
   pastix_analysed    = .false.

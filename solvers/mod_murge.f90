@@ -251,8 +251,9 @@ CONTAINS
     type (type_element)      :: element
     integer :: nb_periods, nb_periodes_max, nb_periodes_sec
     character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
-
-
+    
+    call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
+    
     Call MURGE_GRAPHBEGIN(murge_id, n, &
          n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
     IF (ierr /= MURGE_SUCCESS) THEN

@@ -754,17 +754,17 @@ program JOREK2
      if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
         call energy(node_list,element_list,W_mag,W_kin)
 
-        xtime(index_start+istep) = t_now
-        energies(1:n_tor,1,index_start+istep) = W_mag(1:n_tor)
-        energies(1:n_tor,2,index_start+istep) = W_kin(1:n_tor)
+        xtime(index_now) = t_now
+        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
+        energies(1:n_tor,2,index_now) = W_kin(1:n_tor)
 
         Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
 
         if (index_start+istep .gt. 1) then
-           Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_start+istep)/energies(n_tor,1,index_start+istep-1)))/ tstep
-           Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_start+istep)/energies(n_tor,2,index_start+istep-1)))/ tstep
-           Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_start+istep)/energies(1,1,index_start+istep-1)))/ tstep
-           Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_start+istep)/energies(1,2,index_start+istep-1)))/ tstep
+           Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
+           Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+           Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
+           Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
         endif
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin

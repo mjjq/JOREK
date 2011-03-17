@@ -34,6 +34,7 @@ program JOREK2
   use boundary,            only: boundary_from_grid
   use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response
   use vacuum_equilibrium,  only: import_external_fields
+  use live_data,           only: init_live_data, write_live_data, finalize_live_data
   
   implicit none
   
@@ -89,7 +90,6 @@ program JOREK2
     end subroutine construct_matrix_murge
   end interface
   
-  integer, parameter       :: TIMES_FILE = 43, ENERGIES_FILE = 44, GROWTH_FILE = 45 ! File handlers
   type (type_surface_list) :: surface_list
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
   real*8                   :: t_matrix_0, t_matrix_1, PI
@@ -146,8 +146,8 @@ program JOREK2
   end if
   
   ! --- Initialise timing
-  call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max) ! elapsed time
-  call r3_info_init ()                                     ! timing
+  call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
+  call r3_info_init ()
   
   ! --- Select solver
   gmres              = .true.             ! .true. for gmres, .false. for direct solver
@@ -217,11 +217,7 @@ program JOREK2
   end if
   
   ! --- Open files which will be filled during the code run
-  if ( my_id == 0 ) then
-    open(TIMES_FILE,    file='times.dat',        status='REPLACE', action='WRITE')
-    open(ENERGIES_FILE, file='energies.dat',     status='REPLACE', action='WRITE')
-    open(GROWTH_FILE,   file='growth_rates.dat', status='REPLACE', action='WRITE')
-  end if
+  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data()
   
   ! --- Initialise ppplib plotting library
   if (my_id == 0)  call begplt('jorek2.ps')
@@ -235,6 +231,11 @@ program JOREK2
     ! --- Read the restart file (jorek_restart.rst)
     call import_restart(node_list, element_list)
     tstep = tstep_in
+    
+    ! --- Output energies and growth_rates to text files (values from restart file)
+    do index_now = 1, index_start
+      call write_live_data(index_now)
+    end do
     
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
@@ -598,8 +599,8 @@ program JOREK2
   iter_precon = 22
 
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
-
-  index_now = index_start
+  
+  index_now = index_start  ! index_now: Index of current timestep
 
   do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   do istep = 1, nstep_n(jstep)
@@ -750,7 +751,7 @@ program JOREK2
      endif
 
      !--------------------------------------------------------- energies
-     if ( (my_id == 0) .and. .not. bench_without_plot)  then
+     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
         call energy(node_list,element_list,W_mag,W_kin)
 
         xtime(index_start+istep) = t_now
@@ -768,19 +769,13 @@ program JOREK2
 
         write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
 
-        ! --- Output some information to text files during the code run
-        write(TIMES_FILE,'(I6,1X,ES15.5)') index_now, xtime(index_now)
-        write(ENERGIES_FILE,'(999ES15.5)') xtime(index_now), energies(:,1:2,index_now)
-        if ( index_now > 1 ) then 
-          write(GROWTH_FILE,  '(999ES15.5)') (xtime(index_now)+xtime(index_now-1))/2.d0,             &
-            0.5d0 * ( LOG(energies(:,1:2,index_now)) - LOG(energies(:,1:2,index_now-1)) )            &
-            / (xtime(index_now)-xtime(index_now-1))
-        end if
+        ! --- Output energies and growth_rates to text files during the code run
+        call write_live_data(index_now)
         
      endif
 
      !---------------------------------------------------------timing
-     if (istep.eq.1) then
+     if ( istep == 1 ) then
         call r3_info_print (-3, -2, 'ITERATION    1')
      else
         call r3_info_print (istep, -2, 'ITERATION')
@@ -835,11 +830,7 @@ program JOREK2
   endif
   
   ! --- Close open files
-  if ( my_id == 0 ) then
-    close(TIMES_FILE)
-    close(ENERGIES_FILE)
-    close(GROWTH_FILE)
-  end if
+  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data()
 
   !***********************************************************************
   !*                          plots etc.                                 *

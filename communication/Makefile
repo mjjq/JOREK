@@ -22,7 +22,7 @@ all: mod_phys_module.o \
      export_helena.o  \
      split_broadcast.o
 
-modules :     
+modules : mod_live_data.o
 
 clean :
 	rm -f *.o *.mod

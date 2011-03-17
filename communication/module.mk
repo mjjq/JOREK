@@ -17,7 +17,8 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/export_boundary.f90 		\
 	$(DIR)/vertex_is_local.f90	 	\
 	$(DIR)/export_helena.f90		\
-	$(DIR)/split_broadcast.f90
+	$(DIR)/split_broadcast.f90		\
+        $(DIR)/mod_live_data.f90
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/import_restart.f90

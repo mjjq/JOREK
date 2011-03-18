@@ -1,17 +1,23 @@
+!> Contains data structures and some routines related to the global matrix and right hand sides.
+!!
+!! The sparse matrix and the corresponding right hand side represent the system of equations
+!! given to the solver for calculating the time evolution of the physical quantities.
 module global_distributed_matrix
   
   implicit none
   
   public
   
-  real*8,  allocatable, target  :: A_glob(:),   rhs_glob(:)            ! the distributed global matrix and rhs
-  integer, allocatable, target  :: irn_glob(:), jcn_glob(:)            ! the row and column indices for coordinate format sparse matrix/ (or CSR)
-  integer, allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)    ! contains the structure of the sparse matrix (to fill in CSR format)
-  real*8,  allocatable :: deltas(:)                                    ! solution from previous step
-  real*8,  allocatable :: column_scaling(:)                            ! column scaling of the global matrix
-  integer, allocatable :: local_index_start(:), local_index_end(:)     ! range of indices local to one MPI process 
+  real*8,  allocatable, target  :: A_glob(:)    !< Distributed global matrix
+  real*8,  allocatable, target  :: rhs_glob(:)  !< Distributed global right hand side
+  integer, allocatable, target  :: irn_glob(:)  !< Row indices for coordinate format sparse matrix (or CSR)
+  integer, allocatable, target  :: jcn_glob(:)  !< Column indices for coordinate format sparse matrix (or CSR)
+  integer, allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
+  real*8,  allocatable :: deltas(:)                                 !< solution from previous step
+  real*8,  allocatable :: column_scaling(:)                         !< column scaling of the global matrix
+  integer, allocatable :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
   integer              :: ndof_glob, n_glob, nz_glob
-  integer              :: n_matrix_block_size                          ! Size of a matrix block (n_var x n_tor)
+  integer              :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
   
   
   
@@ -19,7 +25,7 @@ module global_distributed_matrix
   
   
   
-    !> Determine the matrix row or column for given values of ::i_index, ::i_var, and ::i_tor.
+  !> Determine the matrix row or column for given values of ::i_index, ::i_var, and ::i_tor.
   integer recursive function det_row_col(i_index, i_var, i_tor)
     
     use parameters, only: n_tor, n_var

@@ -1,26 +1,22 @@
-!***************************************************************************************************
-!*                                         JOREK 2.0                                               *
-!***************************************************************************************************
-!*   program solves the (reduced) MHD equations in 3D toroidal geometry                            *
-!*                                                                                                 *
-!*   solvers implemented:                                                                          *
-!*     - MUMPS                                                                                     *
-!*     - PastiX                                                                                    *
-!*     - GMRES (+MUMPS or PastiX preconditioner)                                                   *
-!*                                                                                                 *
-!*   required libraries :                                                                          *
-!*     - MPI                                                                                       *
-!*     - MUMPS                                                                                     *
-!*     - PastiX                                                                                    *
-!*     - SCOTCH (metis)                                                                            *
-!*     - FFTW                                                                                      *
-!*     - SCALAPACK (BLACS)                                                                         *
-!*     - LAPACK, BLAS                                                                              *
-!*     - PPPLIB                                                                                    *
-!*                                                                                                 *
-!*  Author : Guido Huysmans (Euratom / CEA Association)                                            *
-!*  Date   : 18-7-2008                                                                             *
-!***************************************************************************************************
+!> JOREK 2.0 -- Solves the (reduced) MHD equations in 3D toroidal geometry.
+!!
+!! - solvers implemented:
+!!   - MUMPS
+!!   - PastiX
+!!   - GMRES (+MUMPS or PastiX preconditioner)
+!!
+!! - required libraries :
+!!   - MPI
+!!   - MUMPS
+!!   - PastiX
+!!   - SCOTCH (metis)
+!!   - FFTW
+!!   - SCALAPACK (BLACS)
+!!   - LAPACK, BLAS
+!!   - PPPLIB
+!!
+!! @author Guido Huysmans (Euratom / CEA Association)
+!! @date 18-7-2008
 program JOREK2
   
   use mumps_module
@@ -584,7 +580,11 @@ program JOREK2
      endif
 
   endif
-
+  
+  ! --- Export a restart file before the first timestep
+  if ( (my_id == 0) .and. (nstep > 0) .and. (.not. restart) ) then
+    call export_restart(node_list,element_list,'jorek00000.rst')
+  end if
 
   !***********************************************************************
   !***********************************************************************
@@ -956,3 +956,71 @@ program JOREK2
   call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 end program JOREK2
+
+
+! --- The following comment block defines the start page of the Doxygen code documentation ---
+!
+!> \mainpage
+!!
+!! JOREK solves the (reduced) MHD equations in 3D toroidal geometry using a discretization with
+!! Bezier finite elements in the poloidal plane and a Fourier expansion in toroidal direction.
+!! 
+!! \section Doxygen
+!! This documentation is generated directly from the source code using Doxygen
+!! (http://www.doxygen.org). For this to work properly, you should follow some
+!! simple rules when writing comments in the code.
+!!
+!! - An example for the proper documentation of a subroutine:                               \n
+!!                                                                                          \n
+!! <tt>
+!! !\> Brief documentation for the test routine                                             \n
+!! !!                                                                                       \n
+!! !! More details on the functionality of the                                              \n
+!! !! test routines can be added like this.                                                 \n
+!! !!                                                                                       \n
+!! subroutine test(i,r)                                                                     \n
+!!                                                                                          \n
+!!   ! --- Routine parameters                                                               \n
+!!   integer, intent(in)  :: i !< Information on parameter i                                \n
+!!   real*8,  intent(out) :: r !< Information regarding parameter r                         \n
+!!                                                                                          \n
+!!   ! --- Local variables                                                                  \n
+!!   integer :: k   ! Information on k (Local variables are not documented by Doxygen)      \n
+!!                                                                                          \n
+!!   ...                                                                                    \n
+!!                                                                                          \n
+!! end subroutine test                                                                      \n
+!! </tt>
+!!
+!! - The documentation of a module works in the same way:                                   \n
+!!                                                                                          \n
+!! <tt>
+!! !\> Brief documentation for the test module                                              \n
+!! !!                                                                                       \n
+!! !! More details on the functionality of the                                              \n
+!! !! test module can be added like this.                                                   \n
+!! !!                                                                                       \n
+!! module some_test_module                                                                  \n
+!!                                                                                          \n
+!!  implicit none                                                                           \n
+!!                                                                                          \n
+!!  !\> \@name Rectangular Grid                                                             \n
+!!  integer :: n_R               !< Number of grid points in R-direction                    \n
+!!  integer :: n_Z               !< Number of grid points in Z-direction                    \n
+!!                                                                                          \n
+!!  !\> \@name Polar Grid                                                                   \n
+!!  !! Parameters defining a non flux-aligned polar grid in the poloidal plane.             \n
+!!  integer :: n_radial          !< Number of radial grid points                            \n
+!!  integer :: n_pol             !< Number of poloidal grid points                          \n
+!!                                                                                          \n
+!!  contains                                                                                \n
+!!                                                                                          \n
+!!  !\> Description for routine                                                             \n
+!!  subroutine test()                                                                       \n
+!!  ...                                                                                     \n
+!! </tt>
+!! Note, that the \@name command allows to create groups of variables.
+!!
+!! - For further information, refer to the Doxygen manual found at
+!!   http://www.stack.nl/~dimitri/doxygen/manual.html
+!!

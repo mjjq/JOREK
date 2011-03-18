@@ -1,3 +1,4 @@
+!> Implements the free boundary equilibrium.
 module vacuum_equilibrium
   
   use vacuum

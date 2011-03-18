@@ -1,7 +1,5 @@
+!> Read numerical input profiles
 subroutine read_num_profiles()
-!-----------------------------------------------------------------------
-! Read the numerical input profiles
-!-----------------------------------------------------------------------
   
   use phys_module
   use profiles

@@ -1,5 +1,4 @@
-module vacuum_response
-!< Implements the interplay of the plasma with a conducting wall.
+!> Implements the interplay of the plasma with a conducting wall.
 !!
 !! The plasma-wall interaction is characterized by vacuum response matrices which are calculated by
 !! the STARWALL code and imported into JOREK by the routine read_starwall_response(). The vacuum
@@ -8,6 +7,7 @@ module vacuum_response
 !!
 !! IMPORTANT: The variable s in a boundary element does not necessarily correspond to s in the
 !! 2D elements depending on element orientation. 
+module vacuum_response
   
   use vacuum
   

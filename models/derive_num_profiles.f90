@@ -1,7 +1,5 @@
+!> Determine the derivatives of the numerical input profiles
 subroutine derive_num_profiles()
-!-----------------------------------------------------------------------
-! Determine the derivatives of the numerical input profiles
-!-----------------------------------------------------------------------
   
   use phys_module
   use profiles

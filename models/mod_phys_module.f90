@@ -1,91 +1,188 @@
+!> Input parameters and physical variables.
 module phys_module
-!-----------------------------------------------------------------------
-! 
-!-----------------------------------------------------------------------
 
   use parameters
   
   implicit none
-
-  real*8  :: tstep, tstep_in,  tstep_n(10), eta, visco, visco_par
-  real*8  :: amin, fbnd(1026), fpsi(1026)
-  real*8  :: R_boundary(1026), Z_boundary(1026), psi_boundary(1026)
-  real*8  :: ellip, tria_u, tria_l, quad_u, quad_l
+  
+  !> @name Various parameters
+  real*8  :: eta               !< Resistivity
+  real*8  :: visco             !< Viscosity
+  real*8  :: visco_par         !< Parallel viscosity
+  real*8  :: F0                !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
+  real*8  :: GAMMA
+  real*8  :: Q_bar             !< (model400)
+  real*8  :: sigma             !< (model400)
+  real*8  :: tauIC             !< (model302 and 701)
+  integer :: mode(n_tor)       !< Toroidal mode number corresponding to the JOREK modes
+  integer :: nout              !< Output a restart file every nout timesteps.
+  logical :: restart           !< Restart a code run from the restart file jorek_restart.rst?
+  logical :: regrid            !< Re-generate the flux-aligned grid (does not work currently)?
+  logical :: import_equil
+  logical :: xpoint            !< X-point geometry?
+  logical :: refinement        !< Use mesh refinement?
+  real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+  character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
+  
+  !> @name Define X-point geometry by geometrical properties
+  !!
+  !! \f[
+  !! \Psi(\theta) =
+  !!        -x_{shift}\sin(\theta)
+  !!        +x_{left}\cos(\theta)
+  !!        +x_{ampl}\left[
+  !!            \left(\frac{x_{width}\cdot(\theta-x_{theta})}{x_{sig}}\right)^2-1
+  !!          \right]exp\left[-\left(\frac{\theta-x_{theta}}{x_{sig}}\right)^2\right]
+  !! \f]
   real*8  :: xampl, xwidth, xsig, xtheta, xshift, xleft
-  real*8  :: xr1, sig1, xr2, sig2
-  real*8  :: F0, GAMMA, Q_bar, sigma
-  real*8  :: zjz_0, zjz_1,  zj_coef(10)
+  
+  !> @name Heat and particle sources
+  real*8  :: particlesource, heatsource,heatsource_i, heatsource_e
+  
+  !> @name Heat and particle diffusivity parameters
+  real*8  :: D_perp(10), D_par
+  real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
+  
+  !> @name Numerical resistivity, viscosity and diffusivities
+  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num,Zk_perp_num
+  
+  !> @name Timestepping parameters
+  real*8  :: tstep             !< Size of the timesteps (\f$ \Delta t \f$)
+  real*8  :: tstep_in
+  real*8  :: tstep_n(10)       !< Alternative to tstep: Up to ten values may be given
+  integer :: nstep             !< Number of timesteps to perform
+  integer :: nstep_n(10)       !< Alternative to nstep: Up to ten values may be given
+  real*8  :: t_start           !< Time value at the start of the code run (zero or from restart file)
+  real*8  :: t_now             !< Current time value in the simulation
+  integer :: index_start       !< Time step index at the beginning of the code run (zero or from restart file)
+  integer :: index_now         !< Current time step index
+  real*8, allocatable :: xtime(:) !< Time values corresponding to the timesteps.
+  
+  !> @name Analytical boundary of initial grid
+  !!
+  !! Analytical definition of the boundary of the non flux-aligned initial polar grid.
+  !!
+  !! - \f$ Z=Z_{geo} + a_{min} \epsilon \sin(\theta) \f$
+  !!
+  !! - for \f$ \theta < \pi \f$:
+  !!   \f$ R=R_{geo} + a_{min} \cos\left[\theta+T_u\sin(\theta)+Q_u\sin(2\theta)\right] \f$
+  !!
+  !! - for \f$ \theta \ge \pi \f$:
+  !!   \f$ R=R_{geo} + a_{min} \cos\left[\theta+T_l\sin(\theta)+Q_l\sin(2\theta)\right] \f$
+  !!
+  real*8  :: amin              !< Minor radius
+  real*8  :: ellip             !< Ellipticity
+  real*8  :: tria_u            !< Upper triangularity
+  real*8  :: tria_l            !< Lower triangularity
+  real*8  :: quad_u            !< Upper quadrangularity
+  real*8  :: quad_l            !< Lower quadrangularity
+  
+  !> @name Fourier expanded boundary of initial grid
+  !! Boundary of the non flux-aligned initial polar grid given as Fourier series
+  integer :: mf                !< Number of entries in fbnd and fpsi
+  real*8  :: fbnd(1026)        !< Fourier expansion of boundary
+  real*8  :: fpsi(1026)        !< Fourier expansion of the poloidal flux at the boundary
+  
+  !> @name Numerical boundary of initial grid
+  !! Numerical definition of the boundary of the non flux-aligned initial polar grid.
+  integer :: n_boundary        !< Number of points in R_boundary, Z_boundary, psi_boundary.
+  real*8  :: R_boundary(1026)  !< Numerical R values defining the boundary
+  real*8  :: Z_boundary(1026)  !< Numerical Z values defining the boundary
+  real*8  :: psi_boundary(1026)!< Numerical values giving the poloidal flux at the boundary
+  
+  !> @name Pellet-related input parameters
+  real*8  :: pellet_amplitude, pellet_R, pellet_Z, pellet_phi
+  real*8  :: pellet_radius, pellet_sig, pellet_length
+  real*8  :: pellet_psi, pellet_delta_psi
+  
+  !> @name Free boundary extension
+  !! Input parameters related to the free boundary extension (folder vacuum/).
+  logical :: freeboundary_equil!< use a free or fixed boundary equilibrium?
+  logical :: freeboundary      !< use free or fixed boundary conditions in time-evolution?
+  logical :: use_starwall      !< use the STARWALL vacuum solution? (free boundary only)
+  logical :: resistive_wall    !< use a resistive or ideal wall?    (free boundary only)
+  
+  !> @name Rectangular Grid
+  !! Parameters defining a rectangular grid in R- and Z-directions in the poloidal plane.
+  integer :: n_R               !< Number of grid points in R-direction
+  integer :: n_Z               !< Number of grid points in Z-direction
+  real*8  :: R_begin           !< Left boundary of grid in R-direction
+  real*8  :: R_end             !< Right boundary of grid in R-direction
+  real*8  :: Z_begin           !< Lower boundary of grid in Z-direction
+  real*8  :: Z_end             !< Upper boundary of grid in Z-direction
+  
+  !> @name Polar Grid
+  !! Parameters defining a non flux-aligned polar grid in the poloidal plane.
+  integer :: n_radial          !< Number of radial grid points
+  integer :: n_pol             !< Number of poloidal grid points
+  real*8  :: R_geo             !< Center of the grid
+  real*8  :: Z_geo             !< Center of the grid
+  
+  !> @name Flux surface grid
+  !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.
+  integer :: n_flux            !< Number of radial grid points
+  integer :: n_tht             !< Number of poloidal grid points
+  real*8  :: xr1               !< Grid accumulation parameter
+  real*8  :: xr2               !< Grid accumulation parameter
+  real*8  :: sig1              !< Grid accumulation parameter
+  real*8  :: sig2              !< Grid accumulation parameter
+  
+  !> @name Flux surface grid with X-point
+  !! Parameters defining a flux-aligned grid with X-point in the poloidal plane.
+  integer :: n_open            !< Number of 'radial' grid points in the open flux region
+  integer :: n_private         !< Number of 'radial' grid points in the private flux region
+  integer :: n_leg             !< Number of 'poloidal' grid points along the divertor legs
+  real*8  :: SIG_closed        !< Width with grid accumulation
+  real*8  :: SIG_open          !< Width with grid accumulation
+  real*8  :: SIG_private       !< Width with grid accumulation
+  real*8  :: SIG_theta         !< Width with grid accumulation
+  real*8  :: SIG_leg_0         !< Width with grid accumulation
+  real*8  :: SIG_leg_1         !< Width with grid accumulation
+  real*8  :: dPSI_open         !< Delta Psi grid extends into the open flux region
+  real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region
+  
+  !> @name Analytical input profile for the density
+  real*8  :: rho_0, rho_1,  rho_coef(10)
+  
+  !> @name Numerical input profile for the density
+  character(len=512)  :: rho_file        !< ASCII file the profile is read from.
+  logical             :: num_rho         !< is set true if rho_file /= 'none'
+  integer             :: num_rho_len     !< Number of points in profile
+  real*8, allocatable :: num_rho_x(:)    !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_rho_y0(:)   !< Values of density profile
+  real*8, allocatable :: num_rho_y1(:)   !< First derivatives of density profile (\f$ d\rho/d\Psi_N \f$)
+  real*8, allocatable :: num_rho_y2(:)   !< Second derivatives of density profile (\f$ d^2\rho/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_rho_y3(:)   !< Third derivatives of density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
+  
+  !> @name Analytical input profile for the temperature
   real*8  :: T_0,   T_1,    T_coef(10)
   real*8  :: Ti_0,  Ti_1,   Ti_coef(10)
   real*8  :: Te_0,  Te_1,   Te_coef(10)
-  real*8  :: rho_0, rho_1,  rho_coef(10)
+  
+  !> @name Numerical input profile for the temperature
+  character(len=512)  :: T_file          !< ASCII file the profile is read from.
+  logical             :: num_T           !< is set true if T_file /= 'none'
+  integer             :: num_T_len       !< Number of points in profile
+  real*8, allocatable :: num_T_x(:)      !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_T_y0(:)     !< Values of temperature profile
+  real*8, allocatable :: num_T_y1(:)     !< First derivatives of temperature profile (\f$ dT/d\Psi_N \f$)
+  real*8, allocatable :: num_T_y2(:)     !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_T_y3(:)     !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
+  
+  !> @name Analytical input profile for FFprime
   real*8  :: FF_0,  FF_1,   FF_coef(10)
-  real*8  :: particlesource, heatsource,heatsource_i, heatsource_e
-  real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par, D_perp(10), D_par
-  real*8  :: D_neutral, tauIC
-  real*8  :: pellet_amplitude, pellet_R, pellet_Z, pellet_phi, pellet_radius, pellet_sig, pellet_length
-  real*8  :: pellet_psi, pellet_delta_psi
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num,Zk_perp_num
-  real*8  :: t_start, t_now
-  integer :: nstep, nstep_n(10), n_boundary
-  integer :: mf, index_start, index_now, mode(n_tor), nout
-  logical :: restart, regrid, import_equil, xpoint
-  logical :: refinement     ! allow mesh refinement
-  logical :: freeboundary_equil ! use a free or fixed boundary equilibrium?
-  logical :: freeboundary   ! use free or fixed boundary conditions in time-evolution?
-  logical :: use_starwall   ! use the STARWALL vacuum solution? (free boundary only)
-  logical :: resistive_wall ! use a resistive or ideal wall?    (free boundary only)
-  real*8, allocatable   :: xtime(:), energies(:,:,:)
-  character(len=3)      :: mode_type(n_tor)  ! 'cos' or 'sin'
   
+  !> @name Numerical input profile for FFprime
+  character(len=512)  :: ffprime_file    !< ASCII file the profile is read from.
+  logical             :: num_ffprime     !< is set true if ffprime_file /= 'none'
+  integer             :: num_ffprime_len !< Number of points in profile
+  real*8, allocatable :: num_ffprime_x(:)!< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_ffprime_y0(:) !< Values of FFprime profile
+  real*8, allocatable :: num_ffprime_y1(:) !< First derivatives of FFprime profile (\f$ dFF'/d\Psi_N \f$)
+  real*8, allocatable :: num_ffprime_y2(:) !< Second derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
   
-  
-  ! --- Grid parameters
-  !   --- Rectangular grid
-  integer :: n_R               ! Number of grid points in R-direction
-  integer :: n_Z               ! Number of grid points in Z-direction
-  real*8  :: R_begin, R_end    ! Extent of grid in R-direction
-  real*8  :: Z_begin, Z_end    ! Extent of grid in Z-direction
-  !   --- Polar grid
-  integer :: n_radial          ! Number of radial grid points
-  integer :: n_pol             ! Number of poloidal grid points
-  real*8  :: R_geo, Z_geo      ! Center of the grid
-  !   --- Flux surface grid (no X-point)
-  integer :: n_flux            ! Number of radial grid points
-  integer :: n_tht             ! Number of poloidal grid points
-  !   --- X-point grid (uses also parameters from flux surface grid)
-  integer :: n_open            ! Number of 'radial' grid points in the open flux region
-  integer :: n_private         ! Number of 'radial' grid points in the private flux region
-  integer :: n_leg             ! Number of 'poloidal' grid points along the divertor legs
-  real*8  :: SIG_closed        ! Width with grid accumulation
-  real*8  :: SIG_open          ! -"-
-  real*8  :: SIG_private       ! -"-
-  real*8  :: SIG_theta         ! -"-
-  real*8  :: SIG_leg_0         ! -"-
-  real*8  :: SIG_leg_1         ! -"-
-  real*8  :: dPSI_open         ! Delta Psi grid extends into the open flux region
-  real*8  :: dPSI_private      ! Delta Psi grid extends into the private flux region
-  
-  
-  
-  ! --- Numerical input profiles
-  !   --- Density
-  character(len=512)  :: rho_file        ! ASCII file the profile is read from.
-  logical             :: num_rho         ! is set true if rho_file /= 'none'
-  integer             :: num_rho_len     ! Number of points in profile
-  real*8, allocatable :: num_rho_x(:)    ! Radial positions of profile points (PsiN values)
-  real*8, allocatable :: num_rho_y0(:), num_rho_y1(:), num_rho_y2(:), num_rho_y3(:) ! values and derivatives
-  !   --- Temperature
-  character(len=512)  :: T_file          ! ASCII file the profile is read from.
-  logical             :: num_T           ! is set true if T_file /= 'none'
-  integer             :: num_T_len       ! Number of points in profile
-  real*8, allocatable :: num_T_x(:)      ! Radial positions of profile points (PsiN values)
-  real*8, allocatable :: num_T_y0(:), num_T_y1(:), num_T_y2(:), num_T_y3(:) ! values and derivatives
-  !   --- FFprime
-  character(len=512)  :: ffprime_file    ! ASCII file the profile is read from.
-  logical             :: num_ffprime     ! is set true if ffprime_file /= 'none'
-  integer             :: num_ffprime_len ! Number of points in profile
-  real*8, allocatable :: num_ffprime_x(:)! Radial positions of profile points (PsiN values)
-  real*8, allocatable :: num_ffprime_y0(:), num_ffprime_y1(:), num_ffprime_y2(:) ! values and derivatives
+  !> @name (Currently unused)
+  real*8  :: zjz_0, zjz_1,  zj_coef(10)
+  real*8  :: D_neutral
   
 end module phys_module

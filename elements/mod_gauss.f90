@@ -1,12 +1,17 @@
+!> Contains positions (xgauss) and weights (wgauss) of
+!! Gaussian points for Gaussian integration.
+!!
+!! The values are valid for normalised coordinates in the range
+!! \f$0 \le S \le 1\f$.
 module Gauss
-!-----------------------------------------------------------
-! module contains the Gaussian points (Xgauss) and weights
-! (Wgauss) in the normalised coordinates ( 0. <= S <= 1.)
-!-----------------------------------------------------------
- integer, parameter :: n_gauss = 4, n_gauss_2 = n_gauss * n_gauss
- real*8 :: Xgauss(n_gauss), Wgauss(n_gauss)
+  
+ integer, parameter :: n_gauss   = 4                  !< Number of Gaussian points
+ integer, parameter :: n_gauss_2 = n_gauss * n_gauss  !< Square of n_gauss
+ 
+ real*8,  parameter :: Xgauss(n_gauss) = (/ 0.0694318442029735d0, 0.3300094782075720d0,            &
+   0.6699905217924280d0, 0.9305681557970265d0 /)      !< Positions of Gaussian points
 
- data XGauss /0.0694318442029735,0.3300094782075720,0.6699905217924280,0.9305681557970265 /
- data WGauss /0.173927422568727, 0.326072577431273, 0.326072577431273 ,0.173927422568727/
+ real*8,  parameter :: Wgauss(n_gauss) = (/ 0.173927422568727d0,  0.326072577431273d0,             &
+   0.326072577431273d0,  0.173927422568727d0  /)      !< Weights of Gaussian points
 
-endmodule
+end module Gauss

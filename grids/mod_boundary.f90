@@ -1,5 +1,5 @@
+!> Allows to generate the boundary-element and boundary-node data structures for a given grid.
 module boundary
-!< Allows to generate the boundary element and boundary node data structures for a given grid.
   
   
   

@@ -1,28 +1,28 @@
+!> Basic model-dependend hard-coded run parameters.
 module parameters
 
   implicit none
   
-  integer, parameter :: jorek_model = 300
+  integer, parameter :: jorek_model    = 300       !< JOREK physics model
 
-  integer      :: n_var, n_dim, n_order, n_tor, n_period, n_plane, n_vertex_max
-  integer      :: n_nodes_max ,n_elements_max, n_boundary_max, n_pieces_max,n_degrees
+  integer, parameter :: n_var          = 7         !< number of variables
+  integer, parameter :: n_dim          = 2         !< number of dimensions
+  integer, parameter :: n_order        = 3         !< order of the polynomial basis
+  integer, parameter :: n_tor          = 3         !< number of toroidal harmonics
+  integer, parameter :: n_period       = 1         !< periodicity in toroidal direction
+  integer, parameter :: n_plane        = 4         !< number of toroidal angles
+  integer, parameter :: n_vertex_max   = 4         !< maximum number of corners of an element
+  integer, parameter :: n_nodes_max    = 15001     !< maximum number of nodes
+  integer, parameter :: n_elements_max = 15001     !< maximum number of elements
+  integer, parameter :: n_boundary_max = 1001      !< maximum number of boundary elements
+  integer, parameter :: n_pieces_max   = 10001     !< maximum number of line pieces describing a flux surface
+  integer, parameter :: n_degrees      = n_order+1 !< degrees of freedom per variable per node
+  integer, parameter :: nref_max       = 10000     !< (refinement)
+  integer, parameter :: n_ref_list     = 10000     !< (refinement)
   
-  parameter (n_var          = 7)                       ! the number of variables
-  parameter (n_dim          = 2)                       ! the number of dimensions
-  parameter (n_order        = 3)                       ! order of the polynomial basis
-  parameter (n_tor          = 3)                       ! the number of toroidal harmonics
-  parameter (n_period       = 1)                       ! periodicity in toroidal direction
-  parameter (n_plane        = 4)                       ! the number of toroidal angles
-  parameter (n_vertex_max   = 4)                       ! the maximum number of corners of an element
-  parameter (n_nodes_max    = 15001)                   ! the maximum number of nodes
-  parameter (n_elements_max = 15001)                   ! the maximum number of elements
-  parameter (n_boundary_max = 1001)                    ! the maximum number of boundary elements
-  parameter (n_pieces_max   = 10001)                   ! the maximum number of line pieces describing a flux surface
-  parameter (n_degrees      = n_order+1)               ! degrees of freedom per variable per node
+  !> Names of the physical variables
+  character(len=11) :: variable_names(n_var) =                       &
+    (/ 'Flux       ','Potential  ','Current    ','Vorticity  ',      &
+       'Density    ','Temperature','V_parallel ' /)
 
-  character*11 :: variable_names(n_var)
- 
-  parameter (variable_names = (/ 'Flux       ','Potential  ','Current    ','Vorticity  ', &
-                                 'Density    ','Temperature','V_parallel ' /))
-
-endmodule
+end module parameters

@@ -1,5 +1,13 @@
-!> The module contains routines to write certain data to text files during the code run
-!! (e.g., energies and growth rates).
+!> The module contains routines to write certain data to text files during the code run.
+!!
+!! - energies.dat: Magnetic and kinetic energies versus time
+!! - growth_rates.dat: Growth rates versus time
+!! - times.dat: JOREK time versus time step index
+!!
+!! The data can be plotted while or after JOREK is running to watch a simulation.
+!! - E.g., start gnuplot and type:\n
+!!     <tt> set log y; plot 'energies.dat' using 1:3 with linespoints </tt>
+!!
 module live_data
   
   implicit none

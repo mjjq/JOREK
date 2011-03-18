@@ -1,7 +1,8 @@
+!> Routines for reading/writing/manipulating 1D data profiles.
+!!
+!! The module is used to handle numerical input profiles for temperature,
+!! density and FFprime.
 module profiles
-!-----------------------------------------------------------------------
-! Routines for reading/writing/manipulating 1D data profiles
-!-----------------------------------------------------------------------
   
   
   

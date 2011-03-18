@@ -1,5 +1,5 @@
-
-MODULE murge_module             ! Murge specific variables
+!> Variables and and routines related to the MURGE solver interface.
+MODULE murge_module
   IMPLICIT NONE
 
   INCLUDE "murge.inc"
@@ -69,22 +69,21 @@ MODULE murge_module             ! Murge specific variables
 
 
 CONTAINS
-  !
-  ! Subroutine: murge_add_one_entry
-  ! 
-  ! Add one entry to the product and/or harminic matrix.
-  ! 
-  ! Parameters :
-  !   index_node  - row node index
-  !   k           - row var index
-  !   in          - row tor index
-  !   index_node2 - col node index
-  !   k2          - col var index
-  !   in2         - col tor index
-  !   zbig        - value
-  !   solve_only  - Do not add to harmonic matrix if .true.
-  !   gmres       - Do not add to product matrix if .false.
-  !
+  !>
+  !! Subroutine: murge_add_one_entry
+  !! 
+  !! Add one entry to the product and/or harminic matrix.
+  !! 
+  !! @param index_node  row node index
+  !! @param k           row var index
+  !! @param in          row tor index
+  !! @param index_node2 col node index
+  !! @param k2          col var index
+  !! @param in2         col tor index
+  !! @param zbig        value
+  !! @param solve_only  Do not add to harmonic matrix if .true.
+  !! @param gmres       Do not add to product matrix if .false.
+  !!
   SUBROUTINE murge_add_one_entry( index_node, k, in, index_node2, k2,&
        &                          in2, zbig, murge_ntor, solve_only, gmres )
     USE parameters 

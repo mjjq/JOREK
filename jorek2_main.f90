@@ -962,17 +962,43 @@ end program JOREK2
 !
 !> \mainpage
 !!
+!! \section JOREK About JOREK
+!!
 !! JOREK solves the (reduced) MHD equations in 3D toroidal geometry using a discretization with
 !! Bezier finite elements in the poloidal plane and a Fourier expansion in toroidal direction.
+!!
+!! \section DOCU About this documentation
+!!
+!! This documentation covers the code structure, i.e.,
+!! <ul>
+!! <li>
+!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/dirs.html">directories</a>,
+!! </li><li>
+!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/files.html">source files</a>,
+!! </li><li>
+!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/namespaces.html">Fortran modules</a>,
+!! </li><li>
+!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/globals_func.html">subroutines and functions</a>, and
+!! </li><li>
+!!   routine parameters.
+!! </li>
+!! </ul>
+!!
+!! Background information on the implemented equations,
+!! the numerical methods, compiling and running the code, ..., is covered in a LaTeX
+!! documentation that is available in the docu/ folder of the JOREK repository as LaTeX
+!! source and PDF.
 !! 
-!! \section Doxygen
-!! This documentation is generated directly from the source code using Doxygen
-!! (http://www.doxygen.org). For this to work properly, you should follow some
+!! \section Doxygen Code documentation with Doxygen
+!!
+!! This documentation is generated directly from the source code using
+!! <a href="http://www.doxygen.org">Doxygen</a>.
+!! For this to work properly, you should follow some
 !! simple rules when writing comments in the code.
 !!
 !! - An example for the proper documentation of a subroutine:                               \n
 !!                                                                                          \n
-!! <tt>
+!! <code>
 !! !\> Brief documentation for the test routine                                             \n
 !! !!                                                                                       \n
 !! !! More details on the functionality of the                                              \n
@@ -990,11 +1016,11 @@ end program JOREK2
 !!   ...                                                                                    \n
 !!                                                                                          \n
 !! end subroutine test                                                                      \n
-!! </tt>
+!! </code>
 !!
 !! - The documentation of a module works in the same way:                                   \n
 !!                                                                                          \n
-!! <tt>
+!! <code>
 !! !\> Brief documentation for the test module                                              \n
 !! !!                                                                                       \n
 !! !! More details on the functionality of the                                              \n
@@ -1018,9 +1044,13 @@ end program JOREK2
 !!  !\> Description for routine                                                             \n
 !!  subroutine test()                                                                       \n
 !!  ...                                                                                     \n
-!! </tt>
-!! Note, that the \@name command allows to create groups of variables.
+!! </code>
+!! Note, that the \@name command allows to create groups of variables. An example for this
+!! is the module ::phys_module.
 !!
-!! - For further information, refer to the Doxygen manual found at
-!!   http://www.stack.nl/~dimitri/doxygen/manual.html
+!! - HTML markup is possible, e.g., \<b\>some text\</b\> will display in bold face:
+!!   <b>some text</b>
+!!
+!! - For further information, refer to the
+!!   <a href="http://www.stack.nl/~dimitri/doxygen/manual.html">Doxygen manual</a>.
 !!

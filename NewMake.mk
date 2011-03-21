@@ -84,7 +84,7 @@ JOREK2VTK3D_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) \
 	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK3D_SRC)))
 
 
-MOD_FILES=$(shell grep -i "^[[:space:]]*module" $(JOREK2_MAIN_SRC) | awk '{print tolower($$2)".mod"}' | xargs echo)
+MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
 
 all: $(MAIN)
@@ -150,7 +150,7 @@ cleandep:
 	-@sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
 	-@rm -f $@.tmp
 
-$(MAIN) : $(JOREK2_MAIN_OBJ) # dependencies.mk
+$(MAIN) : $(JOREK2_MAIN_OBJ)
 	$(FC) $(FFLAGS_OMP)	\
 	$(JOREK2_MAIN_OBJ)	\
 	 -o $(MAIN) $(INCLUDES) $(LIBS)

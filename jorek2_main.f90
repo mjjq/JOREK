@@ -606,6 +606,7 @@ program JOREK2
   do istep = 1, nstep_n(jstep)
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
+     call flushc !flush the output stream
 
      index_now = index_now + 1
      

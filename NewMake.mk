@@ -202,16 +202,22 @@ ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
 -include $(patsubst %.f, %.dep, $(patsubst %.f90, %.dep, $(SRC_DEP)))
 endif
 
+# Build binaries for all physics models
 allmodels:
-	make -f NewMake MODEL=model199 $(filter-out allmodels, ${MAKECMDGOALS})
-	make -f NewMake clean
-	make -f NewMake MODEL=model300 $(filter-out allmodels, ${MAKECMDGOALS})
-	make -f NewMake clean
-	make -f NewMake MODEL=model301 $(filter-out allmodels, ${MAKECMDGOALS})
-	make -f NewMake clean
-	make -f NewMake MODEL=model302 $(filter-out allmodels, ${MAKECMDGOALS})
-	make -f NewMake clean
-	make -f NewMake MODEL=model400 $(filter-out allmodels, ${MAKECMDGOALS})
-	make -f NewMake clean
-	make -f NewMake MODEL=model701 $(filter-out allmodels, ${MAKECMDGOALS})
-	make -f NewMake clean
+	$(MAKE) -f NewMake.mk MODEL=model199 clean
+	$(MAKE) -f NewMake.mk MODEL=model199 $(filter-out allmodels, ${MAKECMDGOALS})
+	
+#	$(MAKE) -f NewMake.mk MODEL=model300 clean
+#	$(MAKE) -f NewMake.mk MODEL=model300 $(filter-out allmodels, ${MAKECMDGOALS})
+	
+#	$(MAKE) -f NewMake.mk MODEL=model301 clean
+#	$(MAKE) -f NewMake.mk MODEL=model301 $(filter-out allmodels, ${MAKECMDGOALS})
+	
+	$(MAKE) -f NewMake.mk MODEL=model302 clean
+	$(MAKE) -f NewMake.mk MODEL=model302 $(filter-out allmodels, ${MAKECMDGOALS})
+	
+#	$(MAKE) -f NewMake.mk MODEL=model400 clean
+#	$(MAKE) -f NewMake.mk MODEL=model400 $(filter-out allmodels, ${MAKECMDGOALS})
+	
+#	$(MAKE) -f NewMake.mk MODEL=model701 clean
+#	$(MAKE) -f NewMake.mk MODEL=model701 $(filter-out allmodels, ${MAKECMDGOALS})

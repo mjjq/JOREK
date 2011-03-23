@@ -19,7 +19,7 @@ real*8,                   intent(in)    :: dPSI_open, dPSI_private
 ! --- local variables
 type (type_surface_list) :: flux_list
 
-type (type_node_list), pointer    :: newnode_list
+type (type_node_list),    pointer :: newnode_list
 type (type_element_list), pointer :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
@@ -701,12 +701,38 @@ do i=n_flux_2,n_flux_2+n_open_2+n_private_2
 
 enddo
 
-ALLOCATE(newnode_list, newelement_list)
-
-
 !***********************************************************************
 !*     define the new nodes and finite elements    (nodes first)       *
 !***********************************************************************
+
+! --- Allocate data structures for new nodes and elements and initialize them.
+allocate(newnode_list, newelement_list)
+newnode_list%n_nodes = 0
+newnode_list%n_dof   = 0
+do i = 1, n_nodes_max
+  newnode_list%node(i)%x           = 0.d0
+  newnode_list%node(i)%values      = 0.d0
+  newnode_list%node(i)%deltas      = 0.d0
+  newnode_list%node(i)%index       = 0
+  newnode_list%node(i)%boundary    = 0
+  newnode_list%node(i)%parents     = 0
+  newnode_list%node(i)%parent_elem = 0
+  newnode_list%node(i)%ref_lambda  = 0.d0
+  newnode_list%node(i)%ref_mu      = 0.d0
+  newnode_list%node(i)%constrained = .false.
+end do
+newelement_list%n_elements = 0
+do i = 1, n_elements_max
+  newelement_list%element(i)%vertex       = 0
+  newelement_list%element(i)%neighbours   = 0
+  newelement_list%element(i)%size         = 0.d0
+  newelement_list%element(i)%father       = 0
+  newelement_list%element(i)%n_sons       = 0
+  newelement_list%element(i)%n_gen        = 0
+  newelement_list%element(i)%sons         = 0
+  newelement_list%element(i)%contain_node = 0
+  newelement_list%element(i)%nref         = 0
+end do
 
 do i=1,n_flux-1                 !------------------------ the closed field lines
   do j=1, n_tht-1
@@ -1400,7 +1426,7 @@ do i=1, element_list%n_elements
   element_list%element(i)%sons(:) = 0
 enddo
 
-DEALLOCATE(newnode_list, newelement_list)
+deallocate(newnode_list, newelement_list)
 
 call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 

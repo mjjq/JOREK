@@ -11,7 +11,7 @@ type (type_element_list) :: element_list
 integer :: i, j, n_tor_tmp
 real*8  :: growth_mag, growth_kin, eta_tmp, visco_tmp, visco_par_tmp, amplitude
 
-open(21,file='jorek_restart.rst',form='unformatted')
+open(21,file='jorek_restart.rst', form='unformatted', status='old', action='read')
 
 read(21) n_tor_tmp
 

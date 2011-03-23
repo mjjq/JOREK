@@ -23,6 +23,7 @@ module phys_module
   logical :: refinement        !< Use mesh refinement?
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
+  logical :: produce_live_data !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
   
   !> @name Define X-point geometry by geometrical properties
   !!

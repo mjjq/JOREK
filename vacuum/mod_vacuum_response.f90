@@ -1,12 +1,15 @@
 !> Implements the interplay of the plasma with a conducting wall.
 !!
 !! The plasma-wall interaction is characterized by vacuum response matrices which are calculated by
-!! the STARWALL code and imported into JOREK by the routine read_starwall_response(). The vacuum
-!! response enters into the boundary integral of the current equation which is implemented in the
-!! routine vacuum_boundary_integral().
+!! the STARWALL code and imported into JOREK by the routine read_starwall_response(). The matrices
+!! allow to express the magnetic field parallel to the interface (boundary of the JOREK domain) in
+!! terms of the poloidal flux at the interface and the wall currents. The vacuum
+!! response enters into the boundary integral of the current equation which vanishes for fixed
+!! boundary conditions. The boundary integral is implemented in the routine
+!! vacuum_boundary_integral().
 !!
-!! IMPORTANT: The variable s in a boundary element does not necessarily correspond to s in the
-!! 2D elements depending on element orientation. 
+!! @note The variable s in a boundary element may correspond to s or t of the respective
+!! 2D element depending on element orientation.
 module vacuum_response
   
   use vacuum
@@ -31,7 +34,7 @@ module vacuum_response
   
   
   
-  !> Determines the vacuum response for an ideal or resistive wall
+  !> Get the vacuum response for an ideal or resistive wall.
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
     freeboundary_equil, use_starwall, resistive_wall)
   
@@ -250,7 +253,7 @@ module vacuum_response
   
   
   
-  !> Broadcast the STARWALL response matrices
+  !> Broadcast the STARWALL response matrices to the other MPI procs.
   subroutine broadcast_starwall_response(my_id, resistive_wall)
     
     implicit none
@@ -318,7 +321,12 @@ module vacuum_response
   
   
   
-  !> Implement the vacuum boundary integral in the current equation (ideal or resistive wall).
+  !> Implements the boundary integral in the current equation which vanishes for fixed boundary
+  !! conditions.
+  !!
+  !! The magnetic field parallel to the interface (boundary of JOREK computational domain) is
+  !! expressed by the STARWALL vacuum response in terms of the poloidal magnetic field at the
+  !! interface (ideal and resistive wall) and the wall currents (resistive wall).
   subroutine vacuum_boundary_integral(bnd_node_list, node_list, bnd_elm_list,              &
     freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep)
       
@@ -533,7 +541,8 @@ module vacuum_response
   
   
   
-  !> Determine coordinate values on Gaussian points in a given boundary element.
+  !> Determine the values of \f$R\f$, \f$Z\f$, \f$\partial R/\partial s\f$, and
+  !! \f$ \partial Z/\partial s \f$ on the Gaussian points of a given boundary element.
   subroutine det_coord_bnd(bndelem, node_list, R, Z, R_s, Z_s)
     
     use gauss,             only: n_gauss, xgauss, wgauss
@@ -545,10 +554,10 @@ module vacuum_response
     ! --- Routine parameters
     type(type_bnd_element), intent(in)  :: bndelem       !< Boundary element to be considered.
     type(type_node_list),   intent(in)  :: node_list     !< List of grid nodes
-    real*8, optional,       intent(out) :: R(n_gauss)    !< Values of R
-    real*8, optional,       intent(out) :: Z(n_gauss)    !< Values of Z
-    real*8, optional,       intent(out) :: R_s(n_gauss)  !< Values of R,s
-    real*8, optional,       intent(out) :: Z_s(n_gauss)  !< Values of Z,s
+    real*8, optional,       intent(out) :: R(n_gauss)    !< Values of R on Gaussian points
+    real*8, optional,       intent(out) :: Z(n_gauss)    !< Values of Z on Gaussian points
+    real*8, optional,       intent(out) :: R_s(n_gauss)  !< Values of R,s on Gaussian points
+    real*8, optional,       intent(out) :: Z_s(n_gauss)  !< Values of Z,s on Gaussian points
     
     ! --- Local variables
     integer         :: k_vertex, k_dof, k_node, k_dir
@@ -590,8 +599,8 @@ module vacuum_response
     ! --- Routine parameters
     type(type_node_list),     intent(in)  :: node_list      !< List of grid nodes
     type(type_bnd_node_list), intent(in)  :: bnd_node_list  !< List of boundary grid nodes
-    real*8, allocatable,      intent(out) :: psibnd_vec(:)  !< Vector of psi boundary values
-    real*8, allocatable,      intent(out) :: dpsibnd_vec(:) !< Vector of deltapsi boundary values
+    real*8, allocatable,      intent(out) :: psibnd_vec(:)  !< Vector of Psi boundary values
+    real*8, allocatable,      intent(out) :: dpsibnd_vec(:) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
     integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp
@@ -628,14 +637,14 @@ module vacuum_response
   
   
   
-  !> Implement the wall current time evolution.
+  !> Perform the time-evolution of the wall currents (resistive wall).
   subroutine evolve_wall_currents(psibnd_vec, dpsibnd_vec)
     
     implicit none
     
     ! --- Routine parameters
-    real*8,  intent(in) :: psibnd_vec (n_dof_starwall) !< Vector of psi boundary values
-    real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltapsi boundary values
+    real*8,  intent(in) :: psibnd_vec (n_dof_starwall) !< Vector of Psi boundary values
+    real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
     integer :: i
@@ -670,6 +679,10 @@ module vacuum_response
   
   
   !> Update the derived response matrices.
+  !!
+  !! This is necessary
+  !! - right after the start or restart of the code
+  !! - when wall resistivity, tstep, or some other parameters have changed.
   subroutine update_response(tstep, freeboundary_equil, resistive_wall)
     
     implicit none
@@ -820,7 +833,7 @@ module vacuum_response
   
   
   
-  !> Read a response matrix from a file.
+  !> Read a STARWALL response matrix from a file.
   subroutine read_response_matrix( matrix, dim_expected, filename )
     
     ! --- Routine parameters
@@ -871,7 +884,7 @@ module vacuum_response
   
   
   
-  !> Read a diagonal response matrix from a file.
+  !> Read a diagonal STARWALL response matrix from a file.
   subroutine read_response_diagonal( diagonal, dim_expected, filename )
     
     ! --- Routine parameters
@@ -920,7 +933,7 @@ module vacuum_response
   
   
   
-  !> Determine the response index for a certain boundary degree of freedom.
+  !> Determine the index in the response matrix for a certain boundary degree of freedom.
   integer recursive function response_index(inode, i_starwall, ibas)
     
     ! --- Routine parameters
@@ -950,7 +963,7 @@ module vacuum_response
   
   
   
-  !> Character string description of a given toroidal mode. @todo put somewhere else
+  !> Return a description of a given toroidal mode. @todo put somewhere else
   character(len=12) function mode_to_str(i_tor, n_period)
   
     implicit none
@@ -986,7 +999,7 @@ module vacuum_response
   
   
   
-  !> Character string description of several toroidal modes. @todo put somewhere else
+  !> Return a description of several toroidal modes. @todo put somewhere else
   character(len=1400) function modes_to_str(i_tors, n_tor, n_period)
   
     implicit none

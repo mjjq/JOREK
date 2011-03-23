@@ -32,7 +32,8 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, use_starwall, resistive_wall
+                freeboundary, use_starwall, resistive_wall,         &
+                produce_live_data
 
 if (my_id .eq. 0) then
 
@@ -141,6 +142,8 @@ if (my_id .eq. 0) then
   T_file        = 'none'
   ffprime_file  = 'none'
 
+  produce_live_data = .true.
+  
   ! --- Read input parameters from namelist.
   if (my_id .eq. 0) read(5,in1)
   

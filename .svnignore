@@ -4,3 +4,6 @@
 config.in
 Makefile.inc
 jorek_model???
+*.lst
+F*.f
+*.optdbg

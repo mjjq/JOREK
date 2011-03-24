@@ -15,14 +15,14 @@ character(len=10) :: mode_num
 
 if (my_id == 0) then
   
-  230 format(1X,A, ' = ' 10ES12.4)
-  231 format(1X,A, ' = ' 10I12)
-  232 format(1X,A, ' = ' 10L12)
-  233 format(1X,A, ' = ' 4ES12.4, '     ...    ', 4ES12.4)
-  234 format(1X,A, ' = ' 9ES12.4, '     ...')
+  230 format(1X,A, ' = ', 10ES12.4)
+  231 format(1X,A, ' = ', 10I12)
+  232 format(1X,A, ' = ', 10L12)
+  233 format(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)
+  234 format(1X,A, ' = ', 9ES12.4, '     ...')
   235 format(3x,I3,': ',A)
   236 format(3x,I3,': ',A,'(',A,'*phi)')
-  237 format(1X,A, ' = "' A, '"')
+  237 format(1X,A, ' = "', A, '"')
   
   write(*,*)
   write(*,*) '*************************************************'

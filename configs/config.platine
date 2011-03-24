@@ -11,14 +11,20 @@ MYHOME = $(HOME)
 
 JOREK_DIR = $(MYHOME)/jorek2_svn/trunk
 
-MAIN_MODEL_DIR = $(JOREK_DIR)/models
-MODEL_DIR      = $(MAIN_MODEL_DIR)/$(MODEL)
-DATATYPES_DIR  = $(JOREK_DIR)/datatypes
-MATRIX_DIR     = $(JOREK_DIR)/matrix
-ELEMENTS_DIR   = $(JOREK_DIR)/elements
-SOLVERS_DIR    = $(JOREK_DIR)/solvers
-VACUUM_DIR     = $(JOREK_DIR)/vacuum
-GRID_DIR       = $(JOREK_DIR)/grids
+COMMUNICATION_DIR = $(JOREK_DIR)/communcation
+DATATYPES_DIR     = $(JOREK_DIR)/datatypes
+DIAGNOSTICS_DIR   = $(JOREK_DIR)/diagnostics
+ELEMENTS_DIR      = $(JOREK_DIR)/elements
+GRIDS_DIR         = $(JOREK_DIR)/grids
+MAIN_MODEL_DIR    = $(JOREK_DIR)/models
+MODEL_DIR         = $(MAIN_MODEL_DIR)/$(MODEL)
+MATRIX_DIR        = $(JOREK_DIR)/matrix
+PLOTS_DIR         = $(JOREK_DIR)/plots
+REFINEMENT_DIR    = $(JOREK_DIR)/refinement
+SOLVERS_DIR       = $(JOREK_DIR)/solvers
+TIMING_DIR        = $(JOREK_DIR)/timing
+TOOLS_DIR         = $(JOREK_DIR)/tools
+VACUUM_DIR        = $(JOREK_DIR)/vacuum
 
 LIBSCOTCH   = -L$(MYHOME)/scotch_5.0/bin -lscotch -lscotcherr
 
@@ -37,7 +43,10 @@ BLACS     =
 
 LIBS = $(LIBFFTW) $(LIBPASTIX) $(LIBSCOTCH)  $(LIBMUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB)
 
-INCLUDES  = -I$(DATATYPES_DIR) -I$(GRID_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(ELEMENTS_DIR) -I$(VACUUM_DIR) -I$(SOLVERS_DIR) -I$(INCMUMPS) -I.
+INCLUDES  = -I . -I$(COMMUNICATION_DIR) -I$(DATATYPES_DIR) -I$(DIAGNOSTICS_DIR) -I$(ELEMENTS_DIR)  \
+  -I$(GRIDS_DIR) -I$(MAIN_MODEL_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(PLOTS_DIR)                 \
+  -I$(REFINEMENT_DIR) -I$(SOLVERS_DIR) -I$(TIMING_DIR) -I$(TOOLS_DIR) -I$(VACUUM_DIR)              \
+  -I$(INC_MUMPS) -I$(INC_PASTIX)
 
 VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 

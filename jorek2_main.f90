@@ -994,6 +994,13 @@ end program JOREK2
 !! is covered in a seperate documentation available in the docu/ folder of the JOREK
 !! repository as LaTeX source or <a href="JOREK_DOC.pdf">online as PDF</a>.
 !! 
+!! \section Repository Browse Subversion Repository online
+!! 
+!! The <a href="http://subversion.apache.org/">Subversion</a> repository of JOREK can
+!! be <a href="https://gforge.inria.fr/scm/viewvc.php?view=rev&root=aster">browsed online</a>
+!! after logging in if you already have an account for it. On the Server,
+!! <a href="http://www.viewvc.org/">ViewVC</a> is installed for this purpose.
+!!
 !! \section Doxygen Code documentation with Doxygen
 !!
 !! This documentation is generated directly from the source code using

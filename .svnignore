@@ -4,6 +4,9 @@
 config.in
 Makefile.inc
 jorek_model???
+jorek2vtk
+jorek2vtk_3d
+jorek2_poincare
 *.lst
 F*.f
 *.optdbg

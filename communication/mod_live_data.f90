@@ -6,9 +6,8 @@
 !! - growth_rates.dat: Growth rates versus time
 !! - times.dat: JOREK time versus time step index
 !!
-!! The data can be plotted while or after JOREK is running to monitor a simulation.
-!! E.g., start gnuplot and type: \n
-!!     <tt> set log y; set nokey; plot for [i=2:7] 'energies.dat' using 1:i with linespoints </tt>
+!! The data can be plotted very easily while or after JOREK is running to monitor a simulation:
+!! <tt> gnuplot plot_live_data </tt>
 !!
 module live_data
   
@@ -17,6 +16,7 @@ module live_data
   private
   public init_live_data, write_live_data, finalize_live_data
   
+  integer, parameter :: TEMPORARY_FILE= 43 !< File handle for temporary file
   integer, parameter :: TIMES_FILE    = 43 !< File handle for 'times.dat'
   integer, parameter :: ENERGIES_FILE = 44 !< File handle for 'energies.dat'
   integer, parameter :: GROWTH_FILE   = 45 !< File handle for 'growth_rates.dat'
@@ -51,29 +51,45 @@ module live_data
       return
     end if
     
+    ! --- Create plotting script for Gnuplot.
+    open(TEMPORARY_FILE, file='plot_live_data',  status='REPLACE', action='WRITE')
+    write(TEMPORARY_FILE,*) "ncols=`head -n 1 energies.dat | wc | sed -e 's/  */ /g' | cut -d' ' -f 3`"
+    write(TEMPORARY_FILE,*) "set key outside"
+    write(TEMPORARY_FILE,*) ""
+    write(TEMPORARY_FILE,*) "set log y"
+    write(TEMPORARY_FILE,*) "set title 'Energies'"
+    write(TEMPORARY_FILE,*) "plot for [i=2:ncols] 'energies.dat' u 1:i w lp t columnhead(i)"
+    write(TEMPORARY_FILE,*) "pause -1 'Hit Enter to continue...'"
+    write(TEMPORARY_FILE,*) ""
+    write(TEMPORARY_FILE,*) "set log y"
+    write(TEMPORARY_FILE,*) "set title 'Growth rates'"
+    write(TEMPORARY_FILE,*) "plot for [i=2:ncols] 'growth_rates.dat' u 1:i w lp t columnhead(i)"
+    write(TEMPORARY_FILE,*) "pause -1 'Hit Enter to continue...'"
+    close(TEMPORARY_FILE)
+    
     ! --- Open the data files.
     open(TIMES_FILE,    file='times.dat',        status='REPLACE', action='WRITE')
     open(ENERGIES_FILE, file='energies.dat',     status='REPLACE', action='WRITE')
     open(GROWTH_FILE,   file='growth_rates.dat', status='REPLACE', action='WRITE')
     
     ! --- Write file headers indicating what data is in the files.
-    write(TIMES_FILE,'(A)') '# step       time'
+    write(TIMES_FILE,'(A)') ' "step"     "time"'
 
-    write(ENERGIES_FILE,'(A)',advance='no') '#      time      '
+    write(ENERGIES_FILE,'(A)',advance='no') '      "time"    '
     do n = 1, n_tor
-      write(ENERGIES_FILE,'(A5,",",I2,",",A3,3x)',advance='no') 'E_mag', mode(n), mode_type(n)
+      write(ENERGIES_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"E_mag', mode(n), mode_type(n), '"'
     end do
     do n = 1, n_tor
-      write(ENERGIES_FILE,'(A5,",",I2,",",A3,3x)',advance='no') 'E_kin', mode(n), mode_type(n)
+      write(ENERGIES_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"E_kin', mode(n), mode_type(n), '"'
     end do
     write(ENERGIES_FILE,*)
 
-    write(GROWTH_FILE,'(A)',advance='no') '#      time      '
+    write(GROWTH_FILE,'(A)',advance='no') '      "time"    '
     do n = 1, n_tor
-      write(GROWTH_FILE,'(A5,",",I2,",",A3,3x)',advance='no') 'G_mag', mode(n), mode_type(n)
+      write(GROWTH_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"G_mag', mode(n), mode_type(n), '"'
     end do
     do n = 1, n_tor
-      write(GROWTH_FILE,'(A5,",",I2,",",A3,3x)',advance='no') 'G_kin', mode(n), mode_type(n)
+      write(GROWTH_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"G_kin', mode(n), mode_type(n), '"'
     end do
     write(GROWTH_FILE,*)
     

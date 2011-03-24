@@ -1,5 +1,7 @@
 include Makefile.inc
 
+JOREK_DIR = `pwd`
+
 DIRS =  datatypes models/$(MODEL) 	\
 	models 				\
 	communication 			\

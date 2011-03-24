@@ -112,13 +112,13 @@ enddo
 write(*,*) ' modes   : ',mode
 write(*,*) ' nperiod : ',n_period
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
-if (xpoint) then
-  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
-  psi_bnd = psi_xpoint
-else
-  psi_bnd = 0.d0
-endif
+call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
+psi_bnd = 0.d0
+if ( xpoint ) then
+  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+  if ( ifail == 0 ) psi_bnd = psi_xpoint
+end if
   
 call begplt('poincare.ps')
 

@@ -12,3 +12,6 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/plot_velocity_profile.f90	\
 	$(DIR)/plot_profiles.f90		\
 	$(DIR)/ppplib.f	
+
+JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
+	$(DIR)/ppplib.f				\

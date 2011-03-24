@@ -985,10 +985,14 @@ end program JOREK2
 !! </li>
 !! </ul>
 !!
-!! Background information on the implemented equations,
-!! the numerical methods, compiling and running the code, ..., is covered in a LaTeX
-!! documentation that is available in the docu/ folder of the JOREK repository as LaTeX
-!! source and PDF.
+!! Background information on
+!! - the implemented equations
+!! - the numerical methods
+!! - compiling and running the code
+!! - ...
+!!
+!! is covered in a seperate documentation available in the docu/ folder of the JOREK
+!! repository as LaTeX source or <a href="JOREK_DOC.pdf">online as PDF</a>.
 !! 
 !! \section Doxygen Code documentation with Doxygen
 !!

@@ -188,11 +188,10 @@ do i=1,node_list%n_nodes
 
     direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
 
-    Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
-
     do in=1,n_tor
 
       BigR = node_list%node(i)%x(1,1)
+      Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
       T0   = node_list%node(i)%values(in,1,6)
       node_list%node(i)%values(in,1,n_var) = direction / Btot * sqrt(GAMMA * T0)
 

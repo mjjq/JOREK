@@ -32,8 +32,9 @@ real*8                :: psi_bnd,psi_axis,R_axis,Z_axis,s_axis,t_axis,psi_xpoint
 real*8                :: ps0, psi_norm, particle_source, D_prof, ZK_prof, grad_psi
 integer               :: i_elm_axis, i_elm_xpoint
 
-namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
-                restart,  regrid,                                   &
+namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
+                eta, visco, visco_par,                              &
+                restart, regrid,                                    &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
@@ -48,13 +49,17 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
-                particlesource, heatsource,                         &
+                particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
+                pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
+                pellet_radius, pellet_sig, pellet_length,           &
+                pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                rho_file, T_file, ffprime_file,                     &
+                rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
-                refinement
+                refinement,                                         &
+                produce_live_data
 
 write(*,*) "jorek2vtk"
 read(5,in1)               ! read the namelist input file

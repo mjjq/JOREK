@@ -73,6 +73,7 @@ jorek2_poincare : modules sources
 	communication/import_restart.o    \
 	elements/initialise_basis.o       \
 	elements/basis_functions.o        \
+	elements/basis_functions1.o       \
 	elements/basis_functions2.o       \
         elements/hermite_1d.o             \
         elements/interp.o                 \
@@ -83,21 +84,12 @@ jorek2_poincare : modules sources
 	grids/find_RZ.o                   \
 	solvers/root.o                    \
 	solvers/mnewtax.o                 \
-        refinement/neighbours.o           \
-        refinement/Ref_Add_Elements.o\
-        refinement/Ref_Add_Node.o\
-        refinement/Ref_boundary_node.o\
-        refinement/Ref_Check_Neighb_Stat.o\
-        refinement/Ref_Find_Constrained_Node.o\
-        refinement/Refine_Element.o\
-        refinement/Refine_Elem_List.o\
-        refinement/Ref_Update_Index.o\
-        refinement/Ref_Active_Node.o\
+        refinement/*.o                    \
 	 -o $(JOREK_DIR)/jorek2_poincare $(INCLUDES) $(LIBS)
 
 jorek2_connection2 : modules sources
-	$(FC) $(FFLAGS_NO_OMP)                   \
-	diagnostics/jorek2_connection2.f90   \
+	$(FC) $(FFLAGS_NO_OMP)            \
+	diagnostics/jorek2_connection2.f90\
 	datatypes/mod_parameters.o        \
 	datatypes/mod_data_structure.o    \
 	elements/mod_gauss.o              \

@@ -92,7 +92,7 @@ jorek2_poincare : modules sources
         refinement/Refine_Element.o\
         refinement/Refine_Elem_List.o\
         refinement/Ref_Update_Index.o\
-        refinement/Ref_Active_Node.o
+        refinement/Ref_Active_Node.o\
 	 -o $(JOREK_DIR)/jorek2_poincare $(INCLUDES) $(LIBS)
 
 jorek2_connection2 : modules sources

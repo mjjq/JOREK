@@ -47,6 +47,8 @@ if (my_id .eq. 0) then
   if (xpoint2) then
     call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
     psi_bnd = psi_xpoint
+  else
+    Z_xpoint = -999.d0
   endif
 
   if (freeboundary) then

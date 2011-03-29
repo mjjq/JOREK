@@ -971,28 +971,22 @@ end program JOREK2
 !! \section DOCU About this documentation
 !!
 !! This documentation covers the code structure, i.e.,
-!! <ul>
-!! <li>
-!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/dirs.html">directories</a>,
-!! </li><li>
-!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/files.html">source files</a>,
-!! </li><li>
-!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/namespaces.html">Fortran modules</a>,
-!! </li><li>
-!!   <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/globals_func.html">subroutines and functions</a>, and
-!! </li><li>
-!!   routine parameters.
-!! </li>
-!! </ul>
+!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/dirs.html">directories</a>,
+!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/files.html">source files</a>,
+!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/namespaces.html">Fortran modules</a>,
+!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/globals_func.html">subroutines and functions</a>, and
+!! - routine parameters.
 !!
-!! Background information on
-!! - the implemented equations
-!! - the numerical methods
-!! - compiling and running the code
+!! Background information on the following topics is covered in a seperate documentation
+!! available in the docu/ folder of the JOREK repository as LaTeX source or
+!! <a href="JOREK_DOC.pdf">online as PDF</a>:
+!! - Implemented equations
+!! - Numerical methods
+!! - Using the version control system Subversion
+!! - Compiling and running the code
+!! - Bezier elements
+!! - Free boundary extension
 !! - ...
-!!
-!! is covered in a seperate documentation available in the docu/ folder of the JOREK
-!! repository as LaTeX source or <a href="JOREK_DOC.pdf">online as PDF</a>.
 !! 
 !! \section Repository Browse Subversion Repository online
 !! 

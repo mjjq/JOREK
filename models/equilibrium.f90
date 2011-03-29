@@ -69,9 +69,11 @@ freeboundary_equil2 = freeboundary_equil
 freeboundary_equil  = .false.
 
 !------------------------------------ fixed boundary equilibrium
-n_iter = 200
+n_iter   = 200
+psi_bnd  = 0.d0
+Z_xpoint = -99.d0
 
-do iter=1,n_iter
+do iter = 1, n_iter
 
   call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
@@ -80,13 +82,10 @@ do iter=1,n_iter
     call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
     write(*,'(A,3f10.5)')  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
   endif
-    
-  psi_bnd = 0.d0
-  Z_xpoint = -99.d0
   
   if (xpoint2) then
     call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-    if (ifail .ne. 1) then      
+    if (ifail == 0) then ! (otherwise, keep the values of the previous iteration as a reasonable guess)
       psi_bnd = psi_xpoint
     else
       if (freeboundary_equil) then
@@ -114,9 +113,15 @@ do iter=1,n_iter
   enddo  
   diff = diff / float(node_list%n_nodes)
   
-  write(*,'(A,i5,es14.6)') ' diff : ',iter,diff
+  write(*,'(A,I4,A,ES10.3)') ' Iteration ', iter, ': diff=', diff
   
-  if ((iter .gt. 1) .and. (diff .lt. 1.d-6)) exit
+  if ( (iter > 1) .and. (diff < 1.d-6) ) then
+    write(*,'(A,I4,A)') ' Equilibrium converged: after', iter, ' iterations'
+    exit
+  else if ( iter == n_iter) then
+    write(*,'(A,ES10.3)') ' Equilibrium not fully converged: diff=', diff
+    exit
+  end if
 
 enddo
 

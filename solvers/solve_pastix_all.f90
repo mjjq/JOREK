@@ -13,14 +13,13 @@ include 'mpif.h'
 
 integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
 real*8,allocatable       :: column_local(:)
-integer, allocatable     :: pastix_loc2glb(:)
 real*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_comm_0, t_comm_1
 real*8                   :: t_scale_0, t_scale_1
 integer                  :: i, k, j, ierr, my_id, m_loc
 integer,allocatable      :: counts(:), displacements(:)
 
 integer, external :: omp_get_num_threads, omp_get_thread_num
-
+  
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix (PastiX) *'
 !write(*,*) my_id,'*********************************'
@@ -181,6 +180,10 @@ do k=1,mumps_par%n
   deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
 !  write(*,*) k,deltas(k)
 enddo
+
+if (allocated(column_local))  deallocate(column_local)
+if (allocated(counts))        deallocate(counts)
+if (allocated(displacements)) deallocate(displacements)
 
 return
 end

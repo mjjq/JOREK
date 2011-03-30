@@ -11,15 +11,15 @@ function usage() {
   echo ""
   echo "Usage: `basename $0` <PREFIX> [<target_file>] [options]"
   echo ""
-  echo "    -l          List all prefixes"
+  echo "    -l          List all available prefixes"
   echo "    -f <file>   Use <file> instead of ./macroscopic_vars.dat"
   echo ""
-  echo "Remarks"
-  echo "  - If <target_file> is omitted, the output goes to STDOUT"
+  echo "Remark:"
+  echo "  If <target_file> is omitted, the output goes to STDOUT"
   echo ""
   echo "Examples:"
-  echo "  extract_live_data ENERGIES energies.dat"
-  echo "  extract_live_data N_TOR"
+  echo "  extract_live_data energies energies.dat"
+  echo "  extract_live_data n_tor"
   echo ""
 }
 
@@ -64,14 +64,27 @@ done
 # --- List all available prefixes if -l option is specified
 if [ $list -eq 1 ]; then
   echo ""
-  echo -n "Available prefixes: "
-  cat $file | sed -e "s/^@\([^ ]*\):.*/\1/" | sort | uniq | tr '\n' ' '
+  tmp="/tmp/tmp_eld_$$"
+  cat $file | sed -e "s/^@\([^ ]*\):.*/\1/" > $tmp
+  unique_list=`cat $tmp | sort | uniq`
+  for prefix in $unique_list; do
+    entries=`cat $tmp | grep $prefix | wc | sed -e 's/^ *\([0-9]*\).*/\1/'`
+    echo "$prefix: $entries entries"
+  done
+  rm $tmp
   echo ""
   echo ""
   exit
 fi
 
 # --- Extract all data for the specified prefix
+if [ "$PREFIX" == "" ]; then
+  echo ""
+  echo "ERROR: No prefix specified."
+  usage
+  exit 1
+fi
+
 function extract() { grep "@${PREFIX}:" $file | sed -e "s/^@${PREFIX}://" -e "s/^ *//"; }
 
 if [ "$TARGET" == "-" ] || [ "$TARGET" == "" ]; then

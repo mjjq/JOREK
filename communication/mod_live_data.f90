@@ -61,7 +61,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*n_tor
-    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies:      "time"      '
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: "time"           '
     do n = 1, n_tor
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"E_{mag', mode(n), &
         mode_type(n), '}"'
@@ -73,7 +73,7 @@ module live_data
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*n_tor
-    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates:      "time"      '
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: "time"           '
     do n = 1, n_tor
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{mag', mode(n), &
         mode_type(n), '}"'

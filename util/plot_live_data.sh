@@ -9,7 +9,7 @@
 
 function usage() {
   echo ""
-  echo "Usage: $0 [-h -q <qtty> -ps -(no)log]"
+  echo "Usage: `basename $0` [-h -q <qtty> -ps -(no)log]"
   echo ""
   echo "  -h         Print this usage information"
   echo "  -q <qtty>  Plot the given quantity (default: 'energies')"
@@ -62,8 +62,8 @@ fi
 
 # --- Extract necessary data from macroscopic_vars.dat first
 extract_live_data="$SCRIPTDIR/extract_live_data.sh"
-n_tor=`$extract_live_data n_tor -`
-ncols=`$extract_live_data n_${qtty} -`
+n_tor=`$extract_live_data n_tor`
+ncols=`$extract_live_data n_${qtty}`
 $extract_live_data ${qtty} ${qtty}.dat
 
 # --- Plot energies and growth rates

@@ -65,15 +65,8 @@ done
 if [ $list -eq 1 ]; then
   echo ""
   tmp="/tmp/tmp_eld_$$"
-  cat $file | sed -e "s/^@\([^ ]*\):.*/\1/" > $tmp
-  unique_list=`cat $tmp | sort | uniq`
-  for prefix in $unique_list; do
-    entries=`cat $tmp | grep $prefix | wc | sed -e 's/^ *\([0-9]*\).*/\1/'`
-    echo "$prefix: $entries entries"
-  done
-  rm $tmp
-  echo ""
-  echo ""
+  cat $file | sed -e "s/^@\([^ ]*\):.*/\1/" | sort | uniq -c | sed -e 's/^ *\([0-9]*\) *\([^ ]*\)/\2: \1 entries/'
+  echo
   exit
 fi
 
@@ -85,7 +78,7 @@ if [ "$PREFIX" == "" ]; then
   exit 1
 fi
 
-function extract() { grep "@${PREFIX}:" $file | sed -e "s/^@${PREFIX}://" -e "s/^ *//"; }
+function extract() { grep "@${PREFIX}:" $file | sed -e "s/^@${PREFIX}://" -e "s/^ *//" -e "s/ *$//"; }
 
 if [ "$TARGET" == "-" ] || [ "$TARGET" == "" ]; then
   extract

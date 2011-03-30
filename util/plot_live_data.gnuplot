@@ -18,4 +18,4 @@ if ( logy==1 ) set log y
 set key outside
 set title qtty
 plot for [i=2:ncols+1] qtty.'.dat' u 1:i w lp t columnhead(i)
-pause mouse key
+if ( ps==0 ) pause mouse key

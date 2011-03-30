@@ -1,13 +1,13 @@
-!> The module contains routines to write certain data to text files while the code is running.
+!> The module contains routines which write certain data toa text file while the code is running.
 !!
-!! The input parameter phys_module::produce_live_data allows to switch the functionality of
-!! this module on or off. If the parameter is true, the following files are created:
-!! - energies.dat: Magnetic and kinetic energies versus time
-!! - growth_rates.dat: Growth rates versus time
-!! - times.dat: JOREK time versus time step index
-!!
-!! The data can be plotted very easily while or after JOREK is running to monitor a simulation:
-!! <tt> gnuplot plot_live_data </tt>
+!! - The file <b>macroscopic_vars.dat</b> is created during the code run and filled with
+!!   information about certain run parameters, energy timetraces, growth rates, etc.
+!! - The input parameter phys_module::produce_live_data allows to switch the functionality of
+!!   this module on (default) or off.
+!! - The script extract_live_data.sh in the util/ folder allows to extract certain live data from
+!!   the output file. Run it with option -h for usage information.
+!! - The script plot_live_data.sh allows to plot live data, e.g., the energy
+!!   time traces. Run it with option -h for usage information.
 !!
 module live_data
   
@@ -16,10 +16,8 @@ module live_data
   private
   public init_live_data, write_live_data, finalize_live_data
   
-  integer, parameter :: TEMPORARY_FILE= 43 !< File handle for temporary file
-  integer, parameter :: TIMES_FILE    = 43 !< File handle for 'times.dat'
-  integer, parameter :: ENERGIES_FILE = 44 !< File handle for 'energies.dat'
-  integer, parameter :: GROWTH_FILE   = 45 !< File handle for 'growth_rates.dat'
+  integer,           parameter :: LIVE_DATA_HANDLE = 43 !< File handle for live data file
+  character(len=20), parameter :: LIVE_DATA_FILE   = 'macroscopic_vars.dat' !< Live data file
   
   
   
@@ -27,71 +25,63 @@ module live_data
   
   
   
-  !> Open files, the data is written to.
+  !> Open file, write out headers and some parameters.
   subroutine init_live_data()
     
-    use parameters,  only: n_tor
+    use parameters,  only: n_tor, n_plane, n_period, jorek_model
     use phys_module, only: produce_live_data, mode, mode_type
     
     implicit none
     
-    logical :: opened1, opened2, opened3
+    logical :: opened
     integer :: n
     
     if ( .not. produce_live_data ) return
     
-    ! --- Check, that file handles are not already in use.
-    inquire(unit=TIMES_FILE, opened=opened1)
-    inquire(unit=ENERGIES_FILE, opened=opened2)
-    inquire(unit=GROWTH_FILE, opened=opened3)
-    if ( opened1 .or. opened2 .or. opened3 ) then
-      write(*,*) 'WARNING: LIVE DATA CANNOT BE PRODUCED AS A FILE HANDLE IS ALREADY IN USE!'
-      write(*,*) opened1, opened2, opened3
+    ! --- Check, that the file handle is not already in use.
+    inquire(unit=LIVE_DATA_HANDLE, opened=opened)
+    if ( opened ) then
+      write(*,*) 'WARNING: LIVE DATA CANNOT BE PRODUCED AS FILE HANDLE IS ALREADY IN USE!'
       produce_live_data = .false.
       return
     end if
     
-    ! --- Create plotting script for Gnuplot.
-    open(TEMPORARY_FILE, file='plot_live_data',  status='REPLACE', action='WRITE')
-    write(TEMPORARY_FILE,*) "ncols=`head -n 1 energies.dat | wc | sed -e 's/  */ /g' | cut -d' ' -f 3`"
-    write(TEMPORARY_FILE,*) "set key outside"
-    write(TEMPORARY_FILE,*) ""
-    write(TEMPORARY_FILE,*) "set log y"
-    write(TEMPORARY_FILE,*) "set title 'Energies'"
-    write(TEMPORARY_FILE,*) "plot for [i=2:ncols] 'energies.dat' u 1:i w lp t columnhead(i)"
-    write(TEMPORARY_FILE,*) "pause -1 'Hit Enter to continue...'"
-    write(TEMPORARY_FILE,*) ""
-    write(TEMPORARY_FILE,*) "set log y"
-    write(TEMPORARY_FILE,*) "set title 'Growth rates'"
-    write(TEMPORARY_FILE,*) "plot for [i=2:ncols] 'growth_rates.dat' u 1:i w lp t columnhead(i)"
-    write(TEMPORARY_FILE,*) "pause -1 'Hit Enter to continue...'"
-    close(TEMPORARY_FILE)
-    
     ! --- Open the data files.
-    open(TIMES_FILE,    file='times.dat',        status='REPLACE', action='WRITE')
-    open(ENERGIES_FILE, file='energies.dat',     status='REPLACE', action='WRITE')
-    open(GROWTH_FILE,   file='growth_rates.dat', status='REPLACE', action='WRITE')
+    open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='REPLACE', action='WRITE')
+    
+    ! --- Write some general information
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@jorek_model: ', jorek_model
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_period: ', n_period
     
     ! --- Write file headers indicating what data is in the files.
-    write(TIMES_FILE,'(A)') ' "step"     "time"'
-
-    write(ENERGIES_FILE,'(A)',advance='no') '      "time"    '
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_times: ', 1
+    write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*n_tor
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies:      "time"      '
     do n = 1, n_tor
-      write(ENERGIES_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"E_mag', mode(n), mode_type(n), '"'
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"E_{mag', mode(n), &
+        mode_type(n), '}"'
     end do
     do n = 1, n_tor
-      write(ENERGIES_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"E_kin', mode(n), mode_type(n), '"'
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"E_{kin', mode(n), &
+        mode_type(n), '}"'
     end do
-    write(ENERGIES_FILE,*)
-
-    write(GROWTH_FILE,'(A)',advance='no') '      "time"    '
+    write(LIVE_DATA_HANDLE,*)
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*n_tor
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates:      "time"      '
     do n = 1, n_tor
-      write(GROWTH_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"G_mag', mode(n), mode_type(n), '"'
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{mag', mode(n), &
+        mode_type(n), '}"'
     end do
     do n = 1, n_tor
-      write(GROWTH_FILE,'(A6,",",I2.2,",",A3,A1,1x)',advance='no') '"G_kin', mode(n), mode_type(n), '"'
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{kin', mode(n), &
+        mode_type(n), '}"'
     end do
-    write(GROWTH_FILE,*)
+    write(LIVE_DATA_HANDLE,*)
     
   end subroutine init_live_data
   
@@ -112,8 +102,8 @@ module live_data
     if ( .not. produce_live_data ) return
     
     ! --- Write data to the files.
-    write(TIMES_FILE,'(I6,1X,ES15.7)') index, xtime(index)
-    write(ENERGIES_FILE,'(999ES15.7)') xtime(index), energies(1:n_tor,1:2,index)
+    write(LIVE_DATA_HANDLE,'(A,I6,1X,ES17.9)') '@times:', index, xtime(index)
+    write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@energies:', xtime(index), energies(1:n_tor,1:2,index)
     if ( index > 1 ) then
       where ( (energies(:,:,index)>0.d0) .and. (energies(:,:,index-1)>0.d0) )
         growth_rates =                                                                         &
@@ -122,14 +112,15 @@ module live_data
       elsewhere
         growth_rates = 0.d0
       end where
-      write(GROWTH_FILE,  '(999ES15.7)') (xtime(index)+xtime(index-1))/2.d0, growth_rates
+      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@growth_rates:', &
+        (xtime(index)+xtime(index-1))/2.d0, growth_rates
     end if
     
   end subroutine write_live_data
   
   
   
-  !> Close files, the data is written to.
+  !> Close file.
   subroutine finalize_live_data()
     
     use phys_module, only: produce_live_data
@@ -138,10 +129,7 @@ module live_data
     
     if ( .not. produce_live_data ) return
     
-    ! --- Close the data files.
-    close(TIMES_FILE)
-    close(ENERGIES_FILE)
-    close(GROWTH_FILE)
+    close(LIVE_DATA_HANDLE)
     
   end subroutine finalize_live_data
 

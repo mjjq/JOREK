@@ -28,7 +28,7 @@ module live_data
   !> Open file, write out headers and some parameters.
   subroutine init_live_data()
     
-    use parameters,  only: n_tor, n_plane, n_period, jorek_model
+    use parameters,  only: n_tor, n_plane, n_period, jorek_model, variable_names
     use phys_module, only: produce_live_data, mode, mode_type
     
     implicit none
@@ -54,6 +54,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_period: ', n_period
+    write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_times: ', 1

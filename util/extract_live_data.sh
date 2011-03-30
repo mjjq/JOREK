@@ -27,7 +27,7 @@ fi
 PREFIX=$1
 TARGET=$2
 
-function extract() { grep "@${PREFIX}:" macroscopic_vars.dat | sed -e "s/^@${PREFIX}://"; }
+function extract() { grep "@${PREFIX}:" macroscopic_vars.dat | sed -e "s/^@${PREFIX}://" -e "s/^ *//"; }
 
 if [ "$TARGET" == "-" ] || [ "$TARGET" == "" ]; then
   extract

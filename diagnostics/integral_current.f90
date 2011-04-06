@@ -2,6 +2,7 @@ subroutine integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, z
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
+use parameters
 use data_structure
 use Gauss
 use basis_at_gaussian
@@ -21,6 +22,8 @@ real*8     :: ps_g(n_gauss,n_gauss)
 integer    :: i, j, ms, mt, iv, inode, ife, n_elements
 real*8     :: zn,dn_dpsi,dn_dz,ddn_dpsi,ddn_dz,ddn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: zT,dT_dpsi,dT_dz,ddT_dpsi,ddT_dz,ddT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
+real*8     :: zTi,zTe,dTi_dpsi,dTe_dpsi,dTi_dz,dTe_dz,ddTi_dpsi,ddTe_dpsi,ddTi_dz,ddTe_dz
+real*8     :: ddTi_dpsi_dz,ddTe_dpsi_dz,dTi_dpsi3,dTe_dpsi3,dTi_dpsi_dz2,dTe_dpsi_dz2,dTi_dpsi2_dz,dTe_dpsi2_dz
 real*8     :: zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz
 real*8     :: current, xjac, BigR, PI, Z_xpoint, psi_axis, psi_bnd, wst
 logical    :: xpoint2
@@ -71,8 +74,23 @@ do ife =1,  element_list%n_elements
       call density(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
                    zn,dn_dpsi,dn_dz,ddn_dpsi,ddn_dz,ddn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
 
-      call temperature(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
-                       zT,dT_dpsi,dT_dz,ddT_dpsi,ddT_dz,ddT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      if (jorek_model .eq. 400) then
+        
+        call temperature_i(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+                   zTi,dTi_dpsi,dTi_dz,ddTi_dpsi,ddTi_dz,ddTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+        	       
+        call temperature_e(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+                   zTe,dTe_dpsi,dTe_dz,ddTe_dpsi,ddTe_dz,ddTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
+
+        zT = zTi + zTe
+        dT_dpsi = dTi_dpsi + dTe_dpsi
+      
+      else
+        
+        call temperature(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+                   zT,dT_dpsi,dT_dz,ddT_dpsi,ddT_dz,ddT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+
+      endif
 
       call FFprime(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
                    zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz)

@@ -1,4 +1,4 @@
-subroutine initial_conditions(my_id,node_list,element_list,xpoint2)
+subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2)
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -9,16 +9,19 @@ implicit none
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_surface_list) :: surface_list
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
 
-integer    :: my_id, i, in, mm, i_elm_axis
-real*8     :: amplitude, psi, psi_axis
+integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint, i_elm, ifail
+real*8     :: amplitude, psi, psi_axis, theta, PI
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zTi, dTi_dpsi, dTi_dpsi2, dTi_dz, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi2_dz, dTi_dpsi_dz2
 real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi2_dz, dTe_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, Ti0, Ti0_s, Te0, Te0_s, BigR_s
-real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
-real*8     :: psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint
+real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
+real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
+real*8     :: psi_n, psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint,psi_lim,R_lim,Z_lim
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t, ps0_x, ps0_y, R_s, R_t, Z_s, Z_t, xjac, direction, Btot
 logical    :: xpoint2
 
@@ -28,16 +31,35 @@ if (my_id .eq. 0) then
   write(*,*) '***************************************'
 endif
 
-amplitude = 1.d-10
-mm = 2
+PI = 2.d0 *asin(1.d0)
 
 if (my_id .eq. 0) then
 
-  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
-  if (xpoint2) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
+  if (ifail .ne. 0) then
+    call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
+    call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
+    write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
+  endif
 
   psi_bnd = 0.d0
-  if (xpoint2) psi_bnd = psi_xpoint
+    
+  if (xpoint2) then
+    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+    psi_bnd = psi_xpoint
+  else
+    Z_xpoint = -999.d0
+  endif
+
+  if (freeboundary) then
+    call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+    if (Z_lim .gt. Z_xpoint) then
+      psi_bnd = min(psi_lim,psi_bnd)
+    endif
+  endif
+
+  write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
 
   do i=1,node_list%n_nodes
 
@@ -45,17 +67,22 @@ if (my_id .eq. 0) then
     R   = node_list%node(i)%x(1,1)
     Z   = node_list%node(i)%x(1,2)
 
-    call density(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+    call density(      xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature_i(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,             &
-                                                               dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
+    call temperature_i(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+    		       zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+    call temperature_e(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+    		       zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
 
-    call temperature_e(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,             &
-                                                               dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
-
-    call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
+    call FFprime(      xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+
+    zp       = zn * (zTi + zTe)
+    dp_dpsi  = zn * (dTi_dpsi + dTe_dpsi) + dn_dpsi * (zTi + zTe)
+    dp_dpsi2 = zn * (dTi_dpsi2 + dTe_dpsi2) + 2.d0 * dn_dpsi * (dTi_dpsi + dTe_dpsi) + dn_dpsi2 * (zTi + zTe)
+    dp_dz    = zn * (dTi_dz + dTe_dz) + dn_dz * (zTi + zTe)
+    dp_dz2   = zn * (dTi_dz2 + dTe_dz2) + 2.d0 * dn_dz * (dTi_dz + dTe_dz) + dn_dz2 * (zTi + zTe)				       
 
     node_list%node(i)%values(1,1,5) = zn
     node_list%node(i)%values(1,2,5) = dn_dpsi  * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)
@@ -78,17 +105,49 @@ if (my_id .eq. 0) then
                                     + dTe_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
                                     + dTe_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
 
+    node_list%node(i)%values(1,1,2) = - tauIC * zp 
+    node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))
+    node_list%node(i)%values(1,3,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,3,1) + dp_dz * node_list%node(i)%x(3,2))
+    node_list%node(i)%values(1,4,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,4,1) + dp_dz * node_list%node(i)%x(4,2) &
+                                    + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
+
     node_list%node(i)%values(1,1,7) = 0.d0        ! parallel velocity
     node_list%node(i)%values(1,2,7) = 0.d0
     node_list%node(i)%values(1,3,7) = 0.d0
     node_list%node(i)%values(1,4,7) = 0.d0
     
+    node_list%node(i)%deltas = 0.d0
+    
   enddo
 
 endif
 
-call poisson(my_id,-2,node_list,element_list,1,3,1,xpoint2)   !----------- solve for current profile (GS_inverse)
-!call poisson(my_id,0,node_list,element_list,3,1,1,xpoint2)    !----------- solve for GS (from current profile)
+
+!----------------------------------------- flux boundary perturbation (to be completed, see Marina)
+!if (my_id .eq. 0) then
+!  do i=1,node_list%n_nodes
+!    psi = node_list%node(i)%values(1,1,1)
+!    R   = node_list%node(i)%x(1,1)
+!    Z   = node_list%node(i)%x(1,2)
+!    theta = atan2(Z-Z_axis, R-R_axis)
+!    psi_bnd = 0.d0
+!    if (xpoint2) psi_bnd = psi_xpoint
+!    psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)     
+!    if (node_list%node(i)%boundary .ne. 0) then
+!      node_list%node(i)%values(2,1,1) =  0.01 * sin(2.d0*theta)
+!      node_list%node(i)%values(3,1,1) = -0.01 * cos(2.d0*theta) 
+!      node_list%node(i)%values(2,3,1) =  0.01 * cos(2.d0*theta) * 2.d0*PI/float(n_tht)
+!      node_list%node(i)%values(3,3,1) = +0.01 * sin(2.d0*theta) * 2.d0*PI/float(n_tht)
+!    endif
+!  enddo
+!call poisson(my_id,-2,node_list,element_list,1,3,2,xpoint2) 
+!call poisson(my_id,-2,node_list,element_list,1,3,3,xpoint2) 
+!endif    
+
+!---------------------------- initialise perturbations
+amplitude = 1.d-12
+mm = 2
 
 do in=2,n_tor
 
@@ -96,18 +155,16 @@ do in=2,n_tor
 
     do i=1,node_list%n_nodes
 
+      node_list%node(i)%values(in,:,:) = 0.d0
+
       psi = node_list%node(i)%values(1,1,1)
       Z   = node_list%node(i)%x(1,2)
-
-      psi_bnd = 0.d0
-      if (xpoint2) psi_bnd = psi_xpoint
       psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)
 
       node_list%node(i)%values(in,1,4) = amplitude * psi_n * (1.d0 -psi_n)
       node_list%node(i)%values(in,2,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,2,1)
       node_list%node(i)%values(in,3,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,3,1)
       node_list%node(i)%values(in,4,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,4,1)
-
 
       if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. (Z .lt. Z_xpoint))) then
         node_list%node(i)%values(in,1:4,4) = 0.d0
@@ -119,14 +176,13 @@ do in=2,n_tor
 
   endif
 
-  call poisson(my_id,1,node_list,element_list,4,2,in,xpoint2)   !----------- for Poisson (toroidal) use 1
-
-! call poisson(my_id,2,node_list,element_list,4,2,in,xpoint2) !----------- for cylinder use 2
-
+  call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               4,2,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)
 enddo
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
 do i=1,node_list%n_nodes
+
   if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
 
     ps0_s     = node_list%node(i)%values(1,2,1)
@@ -142,11 +198,10 @@ do i=1,node_list%n_nodes
 
     direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
 
-    Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
-
     do in=1,n_tor
 
       BigR = node_list%node(i)%x(1,1)
+      Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
       Ti0   = node_list%node(i)%values(in,1,6)
       Te0   = node_list%node(i)%values(in,1,8)
       node_list%node(i)%values(in,1,7) = direction / Btot * sqrt(GAMMA * (Ti0 + Te0))
@@ -163,6 +218,9 @@ do i=1,node_list%n_nodes
     enddo
   endif
 enddo
+
+!call add_pellet(node_list,element_list,5.,0.08,0.03,R_geo-0.78,Z_geo)
+!call add_pellet(node_list,element_list,25.,0.08,0.03,R_geo+0.85,Z_geo)
 
 return
 end

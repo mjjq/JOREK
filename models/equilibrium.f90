@@ -3,6 +3,7 @@ subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,x
 ! Solve the Grad-Shafranov equation to determine the plasma equilibrium
 !   both freeboundary and fixed boundary solutions
 !-----------------------------------------------------------------------
+use parameters
 use data_structure
 use phys_module
 
@@ -44,8 +45,10 @@ logical,                      intent(in)    :: xpoint2
 type (type_surface_list) :: surface_list, sep_list
 integer    :: ierr, n_iter, iter, i, in, mm, i_elm_axis, i_elm_xpoint, i_elm_lim, ifail, i_elm
 real*8     :: amplitude, psi, psi_bnd
-real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
-real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
+real*8     :: zn,  dn_dpsi,  dn_dpsi2,  dn_dz,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi2_dz,  dn_dpsi_dz2
+real*8     :: zT,  dT_dpsi,  dT_dpsi2,  dT_dz,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi2_dz,  dT_dpsi_dz2
+real*8     :: zTi, dTi_dpsi, dTi_dpsi2, dTi_dz, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi2_dz, dTi_dpsi_dz2
+real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi2_dz, dTe_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: xx, x_s, x_t, x_st, x_ss, x_tt, yy, y_s, y_t, y_st, y_ss, y_tt
 real*8     :: R_axis, Z_axis, s_axis, t_axis, psi_axis,R, Z, BigR, T0, BigR_s, T0_s
@@ -211,8 +214,25 @@ do i=1,node_list%n_nodes
   call density(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                              dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-  call temperature(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
-                                                             dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+  if (jorek_model .eq. 400) then
+    call temperature_i(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+  		     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
+
+    call temperature_e(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+  		     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+    zT  	= zTi	       + zTe
+    dT_dpsi	= dTi_dpsi     + dTe_dpsi
+    dT_dpsi2	= dTi_dpsi2    + dTe_dpsi2
+    dT_dpsi3	= dTi_dpsi3    + dTe_dpsi3
+    dT_dz	= dTi_dz       + dTe_dz
+    dT_dz2	= dTi_dz2      + dTe_dz2
+    dT_dpsi_dz  = dTi_dpsi_dz  + dTe_dpsi_dz
+    dT_dpsi2_dz = dTi_dpsi2_dz + dTe_dpsi2_dz
+    dT_dpsi_dz2 = dTi_dpsi_dz2 + dTe_dpsi_dz2 
+  else
+    call temperature(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+  		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+  endif
 
   call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                              dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)

@@ -3,6 +3,7 @@ subroutine Integrals(node_list,element_list,Bgeo,aminor,psi_limit,current,beta_p
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
+use parameters
 use data_structure
 use Gauss
 use basis_at_gaussian
@@ -22,6 +23,7 @@ real*8     :: eq_g(n_var,n_gauss,n_gauss), eq_s(n_var,n_gauss,n_gauss), eq_t(n_v
 integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: current, beta_p, beta_n, beta_t, MU_zero, aminor
 real*8     :: xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area, PI, Bgeo, psi_limit
+real*8     :: rho_00, T_00, Ti_00, Te_00
 real*8     :: density, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8     :: current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
@@ -106,21 +108,27 @@ do ife =1,  element_list%n_elements
       xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
       BigR = x_g(ms,mt)
 
-      rho_0 = eq_g(5,ms,mt)
-      T_0   = eq_g(6,ms,mt)
+      rho_00 = eq_g(5,ms,mt)
+      if (jorek_model .eq. 400) then
+        Ti_00 = eq_g(6,ms,mt)
+        Te_00 = eq_g(8,ms,mt)
+        T_00  = Ti_00 + Te_00
+      else
+        T_00  = eq_g(6,ms,mt)
+      endif
       ZJ_0  = eq_g(3,ms,mt)
       PS_0  = eq_g(1,ms,mt)
 
-      pressure = pressure + rho_0 * T_0 * xjac * BigR * wst
-      density  = density  + rho_0       * xjac * BigR * wst
+      pressure = pressure + rho_00 * T_00 * xjac * BigR * wst
+      density  = density  + rho_00       * xjac * BigR * wst
 
       if (PS_0 .lt. psi_limit) then
 
-        D_int = D_int + rho_0       * xjac * BigR * wst
-        P_int = P_int + rho_0 * T_0 * xjac * BigR * wst
+        D_int = D_int + rho_00       * xjac * BigR * wst
+        P_int = P_int + rho_00 * T_00 * xjac * BigR * wst
         C_int = C_int + ZJ_0 /BigR  * xjac * BigR * wst
         
-        P_hel = P_hel + rho_0 * T_0 * xjac * wst         ! 2D integrals
+        P_hel = P_hel + rho_00 * T_00 * xjac * wst         ! 2D integrals
         C_hel = C_hel + ZJ_0 /BigR  * xjac * wst
         
         Volume = Volume + 2.d0 * PI * BigR * xjac * wst
@@ -128,8 +136,8 @@ do ife =1,  element_list%n_elements
         
       else
 
-        D_ext = D_ext + rho_0       * xjac * BigR * wst      
-        P_ext = P_ext + rho_0 * T_0 * xjac * BigR * wst
+        D_ext = D_ext + rho_00       * xjac * BigR * wst      
+        P_ext = P_ext + rho_00 * T_00 * xjac * BigR * wst
         C_ext = C_ext + ZJ_0 /BigR  * xjac * BigR * wst
         
       endif

@@ -7,11 +7,12 @@ use phys_module
 
 implicit none
 
-! --- Input variables.
+! --- Routine parameters
 integer, intent(in) :: my_id
 
 ! --- Namelist with input parameters.
-namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
+namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
+                eta, visco, visco_par,                              &
                 restart, regrid,                                    &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
@@ -25,27 +26,33 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
-                Ti_0,   Ti_1,   Ti_coef,                            &
-                Te_0,   Te_1,   Te_coef,                            &
+                Ti_0,  Ti_1,  Ti_coef,  			    &
+                Te_0,  Te_1,  Te_coef,  			    &
                 FF_0,  FF_1,  FF_coef,                              &
                 K_i_par, ZK_i_perp, K_e_par, ZK_e_perp,             &
                 Zk_par, ZK_perp, D_par, D_perp,                     &
                 Q_bar, sigma,                                       &
                 particlesource, heatsource,                         &
-                heatsource_i, heatsource_e,                         &
-                eta_num, visco_num,                                 &
+                heatsource_i, heatsource_e, tauIC,                  &
+                eta_num, visco_num, visco_par_num,                  &
+	        D_perp_num, ZK_perp_num,                            &
+                pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
+                pellet_radius, pellet_sig, pellet_length,           &
+                pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
+                refinement,                                         &
                 produce_live_data
 
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   tstep    = 1.d0
-  tstep_in = 1.d0
+  tstep_n  = 1.d0
   nstep    = 0
+  nstep_n  = 0
 
   eta   = 1.d-5
   visco = 1.d-5
@@ -55,6 +62,10 @@ if (my_id .eq. 0) then
   import_equil = .false.
   regrid       = .false.
   
+  freeboundary   = .false. ! use free or fixed boundary?
+  use_starwall   = .false. ! use the STARWALL vacuum solution? (freeboundary only)
+  resistive_wall = .false. ! use a resistive or ideal wall?    (freeboundary only)
+
   n_R       = 3
   n_Z       = 3
   n_radial  = 11
@@ -126,14 +137,19 @@ if (my_id .eq. 0) then
   
   D_perp(1)    = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par        = 0.d0
-
-  eta_num   = 0.d0
-  visco_num = 0.d0
+  
+  eta_num       = 0.d0
+  visco_num     = 0.d0
+  visco_par_num = 0.d0
+  D_perp_num    = 0.d0
+  ZK_perp_num   = 0.d0
 
   heatsource_i   = 1.e-7
   heatsource_e   = 1.e-7
   heatsource     = 1.e-7
   particlesource = 1.e-5
+
+  tauIC = 0.d0
 
   zjz_0 =  0.1173d0;  T_0   =  1.d-6  ; Ti_0   =  1.d-6  ;   Te_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;  T_1   =  1.d-8  ; Ti_1   =  1.d-8  ;   Te_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
@@ -144,6 +160,16 @@ if (my_id .eq. 0) then
   Te_coef     = 0.d0;  Te_coef(1)  = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
+
+  pellet_amplitude = 0.d0
+  pellet_R      = 3.8d0
+  pellet_Z      = 0.0d0
+  pellet_phi    = 1.57d0
+  pellet_radius = 0.08d0
+  pellet_sig    = 0.02
+  pellet_length = 0.785
+  pellet_psi    = 1.0d0
+  pellet_delta_psi = 999.d0
 
   t_now       = 0.d0
   t_start     = 0.d0
@@ -162,9 +188,20 @@ if (my_id .eq. 0) then
   
   tstep_in = tstep
 
+  if (sum(nstep_n) .gt. 0) then
+    nstep = sum(nstep_n)
+  else
+    tstep_n    = 0.d0
+    tstep_n(1) = tstep
+    nstep_n    = 0
+    nstep_n(1) = nstep
+  endif
+  
   if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))
   if (nstep .gt. 0) allocate(xtime(nstep))
 
+  write(*,*) 'USING MODEL 400'
+  
   ! --- Read numerical profiles for rho, T, and ff'.
   call read_num_profiles()
   

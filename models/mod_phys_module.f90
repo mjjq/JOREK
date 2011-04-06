@@ -170,6 +170,26 @@ module phys_module
   real*8, allocatable :: num_T_y2(:)     !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_T_y3(:)     !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   
+  !> @name Numerical input profile for the ion temperature
+  character(len=512)  :: Ti_file         !< ASCII file the profile is read from.
+  logical             :: num_Ti          !< is set true if T_file /= 'none'
+  integer             :: num_Ti_len      !< Number of points in profile
+  real*8, allocatable :: num_Ti_x(:)     !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_Ti_y0(:)    !< Values of temperature profile
+  real*8, allocatable :: num_Ti_y1(:)    !< First derivatives of temperature profile (\f$ dT/d\Psi_N \f$)
+  real*8, allocatable :: num_Ti_y2(:)    !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_Ti_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
+  
+  !> @name Numerical input profile for the electron temperature
+  character(len=512)  :: Te_file         !< ASCII file the profile is read from.
+  logical             :: num_Te          !< is set true if T_file /= 'none'
+  integer             :: num_Te_len      !< Number of points in profile
+  real*8, allocatable :: num_Te_x(:)     !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_Te_y0(:)    !< Values of temperature profile
+  real*8, allocatable :: num_Te_y1(:)    !< First derivatives of temperature profile (\f$ dT/d\Psi_N \f$)
+  real*8, allocatable :: num_Te_y2(:)    !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_Te_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
+  
   !> @name Analytical input profile for FFprime
   real*8  :: FF_0,  FF_1,   FF_coef(10)
   

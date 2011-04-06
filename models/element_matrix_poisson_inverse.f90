@@ -24,7 +24,6 @@ real*8     :: ps0_x, ps0_y, v, v_x, v_y, psi, psi_x, psi_y, rhs_ij
 integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm
 logical    :: xpoint
 real*8     :: Z_xpoint,psi_axis,psi_bnd,dj_dpsi,dj_dz
-real*8     :: zn,dn_dpsi,dn_dz, zT,dT_dpsi,dT_dz, zFFprime,dFFprime_dpsi,dFFprime_dz
 
 ELM=0.d0
 RHS=0.d0

@@ -51,24 +51,18 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   logical                  :: solve_only
 
   ! Internal parameters
-  real*8  :: zbig
+  real*8  :: zbig, Ti0, Te0, Vpar0, bigR, dTi0_ds, dTe0_ds, dVpar0_ds, dBigR_ds
+  real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
+  real*8  :: Btot
+  real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
   integer :: i, in, iv, inode, k
-  integer :: index_large_i, index_node, ielm
-  integer :: ijA_position, ilarge2
-
+  integer :: index_large_i, index_node, index_node2, ielm
+  integer :: ijA_position,ijA_position2, ilarge2, kv, kTi, kTe, ku, ilarge_vv, ilarge_vTi, ilarge_vTe, ilarge_vus
+  integer :: ilarge_vsvs, ilarge_vsTi, ilarge_vsTe, ilarge_vsTis, ilarge_vsTes
   integer :: loop_nbr, loop, cnt
   integer :: first_tor, last_tor, murge_ntor, ierr
   logical :: is_local
-
-  real*8  :: Ti0, Te0, Vpar0, bigR, dTi0_ds, dTe0_ds, dVpar0_ds, dBigR_ds
-  real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
-  real*8  :: Vpar0_pol_R, Vpar0_pol_Z, Vpol_R, Vpol_Z, znormal_R, znormal_Z
-  real*8  :: Btot, ratio
-  real*8  :: grad_s, grad_psi, u0_s, u0_t, u0_x, u0_y
-  integer :: i_bnd, ife, inode1, inode2, knode, j, l
-  integer :: index_i, index_node2, ic
-  integer :: ijA_position2, nz_AA2, n_AA2, kv, kTi, kTe, ku, ilarge_vv, ilarge_vTi, ilarge_vTe, ilarge_vsvs, ilarge_vsTi, ilarge_vsTe, ilarge_vsTis, ilarge_vsTes, ilarge_vus
-
+  
   zbig = 1.d10
   if (use_murge .and. use_murge_element) then
      ! when we use murge assembly we first count entries then we had them.
@@ -108,27 +102,35 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
         end if
      end if
 
-
      do i=1, n_local_elms
 
         ielm = local_elms(i)
-        
+
         do iv=1, n_vertex_max
 
            inode = element_list%element(ielm)%vertex(iv)
-           
+
            if (node_list%node(inode)%boundary .ne. 0) then
 
               do in=first_tor, last_tor
 
                  do k=1, n_var
-                    
+
                     !------------------------------------ the open field lines (in case of x-point grid)
-                    if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3)) then
-                       
-                       if ((k .eq.   1) .or. (k .eq. 2) .or. (k .eq. 3)  .or. &
-                            (k .eq.  4)  .or. (k .eq. 95)  .or. (k .eq. 96) .or. (k .eq.97) .or. (k .eq.98) ) then
-                          
+                    if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3) .or. (node_list%node(inode)%boundary .eq. 5)) then
+
+                       if (                  &
+                            (k .eq. 1)       &
+                            .or. (k .eq. 2)  &
+                            .or. (k .eq. 3)  &
+                            .or. (k .eq. 4)  &
+                                !.or. (k .eq. 5) &
+                                !.or. (k .eq. 6) &
+                                !.or. (k .eq. 7) &
+                                !.or. (k .eq. 8) &
+                            ) then
+
+
                           index_node = node_list%node(inode)%index(1)
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
@@ -140,7 +142,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                         & index_node, k, in, &
                                         & index_node, k, in, &
                                         & zbig, murge_ntor, solve_only, gmres)
-                                   
+
                                 end if
                              end if
                           else
@@ -149,9 +151,9 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                 call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
 
                                 index_large_i = n_tor * n_var * (index_node - 1)
-                                
+
                                 ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                                
+
                                 irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                                 jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                                 A_glob(ilarge2)   = zbig
@@ -170,38 +172,37 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                         & index_node, k, in, &
                                         & index_node, k, in, &
                                         & zbig, murge_ntor, solve_only, gmres)
-                                   
+
                                 end if
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                                 call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                                
+
                                 index_large_i = n_tor * n_var * (index_node - 1)
-                                
+
                                 ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                                
+
                                 irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                                 jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                                 A_glob(ilarge2)    = zbig
 
                              endif
                           end if
-
                        endif
-                       
+
                        if (k .eq. 7) then
 
                           index_node  = node_list%node(inode)%index(1)             ! position of value
                           index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
-                          
+
                           Ti0       = node_list%node(inode)%values(1,1,6)
                           Te0       = node_list%node(inode)%values(1,1,8)
                           Vpar0     = node_list%node(inode)%values(1,1,k)
                           BigR      = node_list%node(inode)%x(1,1)
-                          dTi0_ds    = node_list%node(inode)%values(1,2,6)
-                          dTe0_ds    = node_list%node(inode)%values(1,2,8)
+                          dTi0_ds   = node_list%node(inode)%values(1,2,6)
+                          dTe0_ds   = node_list%node(inode)%values(1,2,8)
                           dVpar0_ds = node_list%node(inode)%values(1,2,k)
                           dBigR_ds  = node_list%node(inode)%x(2,1)
 
@@ -219,10 +220,10 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                           xjac  =  R_s*Z_t - R_t*Z_s
                           ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
                           ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
-                          
+
                           u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
                           u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
-                          
+
                           direction = + ps0_x / abs(ps0_x)             ! temporary solution for lower x-point only
 
                           grad_psi = sqrt(ps0_x**2 + ps0_y**2)
@@ -231,40 +232,40 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
 
                           if (in .eq. 1) then
 
-                             !                write(*,'(A,3e14.6,A,e14.6)') ' Boundary : ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*(Ti0 + Te0))/Btot,&
-                             !                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*(Ti0 + Te0))/Btot
+                             !                write(*,'(A,3e14.6,A,e14.6)') ' Boundary : ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot,&
+                             !                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
 
                           endif
-                          ku  = 2
-                          kv  = 7
+
+                          ku = 2
+                          kv = 7
                           kTi = 6
-                          kTe = 8
+		          kTe = 8
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
                                 if (loop /= loop_nbr) then
-                                   cnt = cnt + 4
+                                   cnt = cnt + 3
                                 else
                                    call murge_add_one_entry( & 
-                                        & index_node, kv, in, &
-                                        & index_node, kv, in, &
+                                        & index_node, kv,  in, &
+                                        & index_node, kv,  in, &
                                         & zbig, murge_ntor, solve_only, gmres)
                                    call murge_add_one_entry( & 
-                                        & index_node, kv, in, &
+                                        & index_node, kv,  in, &
                                         & index_node, kTi, in, &
                                         & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
                                    call murge_add_one_entry( & 
-                                        & index_node, kv, in, &
+                                        & index_node, kv,  in, &
                                         & index_node, kTe, in, &
                                         & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
                                    call murge_add_one_entry( & 
                                         & index_node,  kv, in, &
                                         & index_node2, ku, in, &
                                         & - zbig * BigR**2 / ps0_s, murge_ntor, solve_only, gmres)
-                                   
+
                                    RHS_glob(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                        Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*(Ti0 + Te0))/ Btot)
-                                   
+                                        Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*(Ti0 + Te0)) / Btot)
                                 end if
                              end if
                           else
@@ -274,73 +275,66 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                 call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
 
                                 index_large_i = n_tor * n_var * (index_node - 1)
-                         
 
-                                ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
+
+                                ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv -1)*n_tor + in
                                 ilarge_vTi = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTi-1)*n_tor + in
                                 ilarge_vTe = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTe-1)*n_tor + in
-                                ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
-                                
+                                ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku -1)*n_tor + in
+
                                 irn_glob(ilarge_vv)  =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
                                 jcn_glob(ilarge_vv)  =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
                                 A_glob(ilarge_vv)    =  zbig
-                                
-                                irn_glob(ilarge_vTi) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                irn_glob(ilarge_vTe) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+
+                                irn_glob(ilarge_vTi) =  n_tor * n_var * (index_node-1) + (kv -1)*n_tor + in
                                 jcn_glob(ilarge_vTi) =  n_tor * n_var * (index_node-1) + (kTi-1)*n_tor + in
-                                jcn_glob(ilarge_vTe) =  n_tor * n_var * (index_node-1) + (kTe-1)*n_tor + in
                                 A_glob(ilarge_vTi)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction
+
+                                irn_glob(ilarge_vTe) =  n_tor * n_var * (index_node-1) + (kv -1)*n_tor + in
+                                jcn_glob(ilarge_vTe) =  n_tor * n_var * (index_node-1) + (kTe-1)*n_tor + in
                                 A_glob(ilarge_vTe)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction
 
                                 irn_glob(ilarge_vus) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
                                 jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
                                 A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
-                                
+
                                 RHS_glob(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                     Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*(Ti0 + Te0))/ Btot)
-                                
+                                     Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*(Ti0 + Te0)) / Btot)
+
                              endif
                           end if
 
-                          index_node = node_list%node(inode)%index(1)
+                          index_node  = node_list%node(inode)%index(1)
                           index_node2 = node_list%node(inode)%index(2)
-
-                          kv  = 7
-                          kTi = 6
-                          kTe = 8
-
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node2, is_local)
                              if (is_local) then
                                 if (loop /= loop_nbr) then
-                                   cnt = cnt + 5
+                                   cnt = cnt + 1
                                 else
                                    call murge_add_one_entry( & 
-                                        & index_node2, kv, in, &
-                                        & index_node2, kv, in, &
+                                        & index_node2, kv,  in, &
+                                        & index_node2, kv,  in, &
                                         & zbig, murge_ntor, solve_only, gmres)
-
                                    call murge_add_one_entry( & 
-                                        & index_node2, kv, in, &
+                                        & index_node2, kv,  in, &
                                         & index_node2, kTi, in, &
                                         & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
                                    call murge_add_one_entry( & 
-                                        & index_node2, kv, in, &
+                                        & index_node2, kv,  in, &
                                         & index_node2, kTe, in, &
                                         & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
-
                                    call murge_add_one_entry( & 
-                                        & index_node2, kv, in, &
+                                        & index_node2, kv,  in, &
                                         & index_node,  kTi, in, &
-                                        & + zbig / Btot * 0.25d0 * GAMMA**(2.d0) / ((GAMMA*(Ti0 + Te0))**1.5d0) * dTi0_ds * direction, murge_ntor, solve_only, gmres)
+                                        & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTi0_ds * direction, murge_ntor, solve_only, gmres)
                                    call murge_add_one_entry( & 
-                                        & index_node2, kv, in, &
+                                        & index_node2, kv,  in, &
                                         & index_node,  kTe, in, &
-                                        & + zbig / Btot * 0.25d0 * GAMMA**(2.d0) / ((GAMMA*(Ti0 + Te0))**1.5d0) * dTi0_ds * direction, murge_ntor, solve_only, gmres)
+                                        & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTe0_ds * direction, murge_ntor, solve_only, gmres)
 
-                                   RHS_glob(n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                   RHS_glob(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
                                         Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * (dTi0_ds + dTe0_ds) * direction)
-                                   
                                 end if
                              end if
                           else
@@ -350,49 +344,62 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                 call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
 
                                 index_large_i = n_tor * n_var * (index_node2 - 1)
-                                
-                                ilarge_vsvs  = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
+
+
+                                ilarge_vsvs  = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv -1)*n_tor + in
                                 ilarge_vsTis = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTi-1)*n_tor + in
                                 ilarge_vsTes = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTe-1)*n_tor + in
-                                ilarge_vsTi = ijA_position - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTi-1)*n_tor + in
-                                ilarge_vsTe = ijA_position - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTe-1)*n_tor + in
+                                ilarge_vsTi  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTi-1)*n_tor + in
+                                ilarge_vsTe  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kTe-1)*n_tor + in
 
-                                irn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                A_glob(ilarge_vsvs)   = zbig
+                                irn_glob(ilarge_vsvs)  =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                jcn_glob(ilarge_vsvs)  =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                A_glob(ilarge_vsvs)    = zbig
 
-                                irn_glob(ilarge_vsTis) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                irn_glob(ilarge_vsTes) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                irn_glob(ilarge_vsTis) =  n_tor * n_var * (index_node2-1) + (kv -1)*n_tor + in
                                 jcn_glob(ilarge_vsTis) =  n_tor * n_var * (index_node2-1) + (kTi-1)*n_tor + in
+                                A_glob(ilarge_vsTis)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction
+
+                                irn_glob(ilarge_vsTes) =  n_tor * n_var * (index_node2-1) + (kv -1)*n_tor + in
                                 jcn_glob(ilarge_vsTes) =  n_tor * n_var * (index_node2-1) + (kTe-1)*n_tor + in
-                                A_glob(ilarge_vsTis)  = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction
-                                A_glob(ilarge_vsTes)  = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction
+                                A_glob(ilarge_vsTes)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction
 
-                                irn_glob(ilarge_vsTi) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                irn_glob(ilarge_vsTe) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vsTi) =  n_tor * n_var * (index_node-1) + (kTi-1)*n_tor + in
-                                jcn_glob(ilarge_vsTe) =  n_tor * n_var * (index_node-1) + (kTe-1)*n_tor + in
-                                A_glob(ilarge_vsTi)  = + zbig / Btot * 0.25d0 * GAMMA**(2.d0) / ((GAMMA*(Ti0 + Te0))**1.5d0) * dTi0_ds * direction
-                                A_glob(ilarge_vsTe)  = + zbig / Btot * 0.25d0 * GAMMA**(2.d0) / ((GAMMA*(Ti0 + Te0))**1.5d0) * dTe0_ds * direction
+                                irn_glob(ilarge_vsTi)  =  n_tor * n_var * (index_node2-1) + (kv -1)*n_tor + in
+                                jcn_glob(ilarge_vsTi)  =  n_tor * n_var * (index_node -1) + (kTi-1)*n_tor + in
+                                A_glob(ilarge_vsTi)    = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTi0_ds * direction
 
-                                RHS_glob(n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                irn_glob(ilarge_vsTe)  =  n_tor * n_var * (index_node2-1) + (kv -1)*n_tor + in
+                                jcn_glob(ilarge_vsTe)  =  n_tor * n_var * (index_node -1) + (kTe-1)*n_tor + in
+                                A_glob(ilarge_vsTe)    = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTe0_ds * direction
+
+                                RHS_glob(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
                                      Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * (dTi0_ds + dTe0_ds) * direction)
 
                              endif
+                          end if
+                       end if
 
-                          endif
-                          
-                       endif
                     end if
 
-                    !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
-                    if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
-                       
-                       if ((k .eq. 1) .or. (k .eq. 2) .or. (k .eq. 3) .or. &
-                            (k .eq. 4) .or. (k .eq. 95) .or. (k .eq. 96) .or. (k .eq. 7) .or. (k .eq. 98) ) then
-                          
+                    !------------------------------------ wall aligned with fluxsurface : wall (in case of x-point grid)
+                    if (   (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3) ) then
+
+                       if (                                                      &
+                            ((freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &               ! exclude condition on psi (freeboundary) except n=0
+                            .or. (( .not. freeboundary) .and. (k .eq. 1))        &
+                            .or. (k .eq. 2)    &
+                            .or. (k .eq. 3)    &
+                            .or. (k .eq. 4)    &
+                                !.or. (k .eq. 5)    &
+                                !.or.((k .eq. 5) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &  ! private region only
+                                !.or. (k .eq. 6)    &
+                            .or.((k .eq. 6) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &  ! private region only
+                            .or. (k .eq. 7)    &
+                                !.or. (k .eq. 8)    &
+                            .or.((k .eq. 8) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &  ! private region only
+                            ) then
+
                           index_node = node_list%node(inode)%index(1)
-                          
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
@@ -403,12 +410,12 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                         & index_node, k, in, &
                                         & index_node, k, in, &
                                         & zbig, murge_ntor, solve_only, gmres)
-                                   
+
                                 end if
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                                
+
                                 call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
 
                                 index_large_i = n_tor * n_var * (index_node - 1)
@@ -417,11 +424,10 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
 
                                 irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                                 jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                A_glob(ilarge2)   = zbig
-                                
+                                A_glob(ilarge2)   =  zbig
+
                              endif
                           end if
-                          
                           index_node = node_list%node(inode)%index(3)
 
                           if (use_murge .and. use_murge_element) then
@@ -434,28 +440,28 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                         & index_node, k, in, &
                                         & index_node, k, in, &
                                         & zbig, murge_ntor, solve_only, gmres)
-                                   
+
                                 end if
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                                
+
                                 call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                                
+
                                 index_large_i = n_tor * n_var * (index_node - 1)
-                                
+
                                 ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                                
+
                                 irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                                 jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                                 A_glob(ilarge2)    = zbig
-                                
+
                              endif
                           end if
                        endif
-                       
+
                     endif
-                    
+
                  enddo
 
               enddo
@@ -471,6 +477,5 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
         end if
      end if
   end do
-
   return
 end subroutine boundary_conditions

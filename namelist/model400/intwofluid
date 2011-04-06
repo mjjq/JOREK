@@ -1,0 +1,122 @@
+
+ &in1
+
+ restart = .t.
+ regrid  = .f.
+ tstep   = 1
+ nstep   = 10
+
+ nout = 1
+
+ fbnd(1)   = 2.
+ fbnd(2:4) = 0.
+ mf        = 0
+
+ ellip  = 1.7  
+ tria_u = 0.
+ tria_l = 0.
+ quad_u = -0.
+ quad_l = -0.4   
+
+
+ xampl  = 0.68
+ xsig   = 0.6
+ xwidth = 1.48
+ xtheta = 4.73
+ xleft  = -0.01
+ xshift = 0.055
+ xpoint = .t.
+
+ R_begin = 2.9
+ R_end   = 3.1
+ Z_begin = -0.1
+ Z_end   = 0.1
+
+ R_geo = 3.0
+ Z_geo = 0.
+
+ F0    = 7.8
+
+ amin     = 1.2 
+
+ n_R      = 0
+ n_Z      = 0
+ n_radial = 81
+ n_pol    = 141
+
+ n_flux    = 41
+ n_tht     = 96
+ n_open    = 21
+ n_leg     = 11
+ n_private = 9
+
+ eta   = 1.d-6
+ visco = 1.d-6
+ visco_par = 1.d-4
+
+ eta_num = 1.d-9
+
+ D_par     = 0.d0
+ D_perp(1) = 1.d-6
+ D_perp(2) = 0.9d0
+ D_perp(3) = 0.09d0
+ D_perp(4) = 0.01d0
+ D_perp(5) = 0.92d0
+ D_perp(6) = 1.d-6
+
+ K_i_par      = 1.d4
+ ZK_i_perp(1) = 1.d-6
+ ZK_i_perp(2) = 0.9d0
+ ZK_i_perp(3) = 0.09d0
+ ZK_i_perp(4) = 0.01d0
+ ZK_i_perp(5) = 0.92d0
+ ZK_i_perp(6) = 0.d-7
+
+ K_e_par      = 4.d5
+ ZK_e_perp(1) = 1.d-6
+ ZK_e_perp(2) = 0.9d0
+ ZK_e_perp(3) = 0.09d0
+ ZK_e_perp(4) = 0.01d0
+ ZK_e_perp(5) = 0.92d0
+ ZK_e_perp(6) = 0.d-7
+
+ FF_0 = 4.8d0
+ FF_1 = 0.d0
+ FF_coef(1)  = -1.d0
+ FF_coef(2)  = 0.d0
+ FF_coef(3)  = 0.d0
+ FF_coef(4)  = 0.03d0
+ FF_coef(5)  = 1.0d0
+ FF_coef(6)  = -0.05d0
+ FF_coef(7)  = 0.94d0
+ FF_coef(8)  = 0.07d0
+
+ heatsource_i   = 0.d-7
+ heatsource_e   = 0.d-7
+ particlesource = 0.d-5
+
+ Ti_0 = 0.3d-1
+ Ti_1 = 0.6d-3
+ Ti_coef(1) = -0.5d0
+ Ti_coef(2) = +0.0d0
+ Ti_coef(3) = 0.d0
+ Ti_coef(4) = 0.06d0
+ Ti_coef(5) = 0.96d0
+
+ Te_0 = 0.3d-1
+ Te_1 = 0.6d-3
+ Te_coef(1) = -0.5d0
+ Te_coef(2) = +0.0d0
+ Te_coef(3) = 0.d0
+ Te_coef(4) = 0.06d0
+ Te_coef(5) = 0.96d0
+
+ rho_0 = 1.
+ rho_1 = 0.01
+ rho_coef(1)  =  0.0
+ rho_coef(2)  =  0.0
+ rho_coef(3)  =  0.0
+ rho_coef(4)  =  0.06
+ rho_coef(5)  =  0.96d0
+
+ / 

@@ -28,6 +28,7 @@ program JOREK2
   use global_distributed_matrix
   use nodes_elements
   use boundary,            only: boundary_from_grid
+  use vacuum,              only: NEW_VACUUM
   use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response, update_response
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
@@ -294,7 +295,7 @@ program JOREK2
     if ( freeboundary_equil ) call import_external_fields()
     if ( freeboundary ) call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,    &
       freeboundary_equil, use_starwall, resistive_wall)
-    if ( freeboundary .or. freeboundary_equil ) call update_response(tstep, freeboundary_equil, resistive_wall)
+    if ( freeboundary .or. freeboundary_equil .and. NEW_VACUUM ) call update_response(tstep, freeboundary_equil, resistive_wall)
     
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then

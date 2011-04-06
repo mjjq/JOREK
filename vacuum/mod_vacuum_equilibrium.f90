@@ -238,8 +238,13 @@ module vacuum_equilibrium
   		
                   mumps_par%irn(ilarge) = index_node
                   mumps_par%jcn(ilarge) = index_node3
-                  mumps_par%A(ilarge)   = - ws * A_glob_11 * &
-                  vac_response(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder))
+                  if ( NEW_VACUUM ) then
+                    mumps_par%A(ilarge)   = - ws * A_glob_11 * &
+                    response_m_eq(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder))
+                  else
+                    mumps_par%A(ilarge)   = - ws * A_glob_11 * &
+                    vac_response(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder))
+                  end if
                   !###OLD### mumps_par%A(ilarge)   = - ws * A_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,1)
   		
   ! 		  mumps_par%RHS(index_node) = mumps_par%RHS(index_node) - ws * v * RHS_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,1) 

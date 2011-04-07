@@ -14,26 +14,42 @@ function usage() {
   echo "  -h         Print this usage information"
   echo "  -f <file>  Take data from <file> instead of 'macroscopic_vars.dat'"
   echo "  -l         List plottable quantities"
-  echo "  -q <qtty>  Plot the given quantity (default: 'energies')"
-  echo "               Currently possible: energies growth_rates"
+  echo "  -q <qtty>  Plot the given quantity (default: '-q energies')"
   echo "  -ps        Plot to .ps files (default: plot to screen)"
-  echo "  -(no)log   (Non-)Logarithmic y-axis (default: logarithmic)"
+  echo "  -(no)log   (Non-)Logarithmic y-axis (default: '-log')"
+  echo ""
+  echo "Remarks:"
+  echo "  * The beginning of a quantity name is sufficient, e.g., the command"
+  echo "    '`basename $0` -q gr' will plot growth_rates."
   echo ""
 }
 
 SCRIPTDIR=`dirname $0`
 
-# --- Check that required scripts are available
+# --- Some sanity checks
+#   --- Required scripts available?
 extract_live_data="$SCRIPTDIR/extract_live_data.sh"
 if [ ! -f "$extract_live_data" ]; then
-  echo "ERROR: The script extract_live_data.sh must be available at the same position"
+  echo "ERROR: The script extract_live_data.sh must be available in the same folder"
   echo "as the plot_live_data.sh script."
   exit 1
 elif [ ! -f "$SCRIPTDIR/plot_live_data.gnuplot" ]; then
-  echo "ERROR: The file plot_live_data.gnuplot must be available at the same position"
+  echo "ERROR: The file plot_live_data.gnuplot must be available in the same folder"
   echo "as the plot_live_data.sh script."
   exit 1
 fi
+#   --- Gnuplot available?
+tmp="/tmp/tmp_pld_$$"
+gnuplot --version > $tmp
+if [ $? -ne 0 ]; then
+  echo "ERROR: You need to have gnuplot to use this script. If you have it installed,"
+  echo "you may need to add the installation folder to your PATH environment variable."
+  exit 1
+fi
+echo ""
+echo "Gnuplot found: `cat $tmp`"
+echo "(`which gnuplot`)"
+rm $tmp
 
 # --- Evaluate command line parameters
 ps=0
@@ -77,15 +93,16 @@ done
 plottable=`$extract_live_data plottable -f $file`
 is_plottable=0
 for s in $plottable; do
-  if [ "$s" == "$qtty" ]; then
+  if [[ $s =~ ^${qtty} ]]; then
     is_plottable=1
+    qtty=$s
   fi
 done
 if [ $is_plottable -eq 0 ]; then
   echo ""
   echo "ERROR: Quantity '$qtty' is not plottable."
   echo "Plottable quantities are: $plottable"
-  echo ""
+  usage
   exit 1
 fi
 

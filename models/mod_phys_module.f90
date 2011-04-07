@@ -14,7 +14,7 @@ module phys_module
   real*8  :: Q_bar             !< (model400)
   real*8  :: sigma             !< (model400)
   real*8  :: tauIC             !< (model302 and 701)
-  integer :: mode(n_tor)       !< Toroidal mode number corresponding to the JOREK modes
+  integer :: mode(n_tor)       !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout              !< Output a restart file every nout timesteps.
   logical :: restart           !< Restart a code run from the restart file jorek_restart.rst?
   logical :: regrid            !< Re-generate the flux-aligned grid (does not work currently)?

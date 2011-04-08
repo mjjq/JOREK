@@ -522,7 +522,9 @@ delta_s =   psi_t * R / (Zjac * F0) * delta_p
 delta_t = - psi_s * R / (Zjac * F0) * delta_p
 
 return
-end
+end subroutine step
+
+
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
 use parameters
@@ -561,4 +563,4 @@ do i_tor = 1, (n_tor-1)/2
 enddo
 
 return
-end subroutine step
+end subroutine var_value

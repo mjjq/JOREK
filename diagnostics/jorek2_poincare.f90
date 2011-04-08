@@ -6,7 +6,7 @@ module elements_nodes_neighbours
   type (type_element_list) :: element_list
   integer,allocatable      :: element_neighbours(:,:)
   
-end module
+end module elements_nodes_neighbours
 
 program jorek2_poincare
 !-----------------------------------------------------------------------
@@ -19,15 +19,20 @@ use elements_nodes_neighbours
 
 implicit none
 
+character(len=512) :: s
 real*8,allocatable  :: rp(:), zp(:), tp(:), pp(:)
+integer, allocatable :: n_turn(:)
+integer :: nr, ntour, curr
+real*8  :: rr, zz, psi
 integer :: i, j, iside_i, iside_j, ip, i_lines, n_lines, i_tor, i_harm, i_var_psi, iplot_type
-integer :: i_elm, ifail, i_phi, n_phi, i_turn, n_turn, i_elm_out, i_elm_prev, i_elm_tmp,i_steps
-real*8  :: R_start, Z_start, P_start, R_line, Z_line, s_line, t_line, p_line, R_mid, Z_mid, s_mid, t_mid, p_mid, s_out, t_out
+integer :: i_elm, ifail, i_phi, n_phi, i_turn, i_elm_out, i_elm_prev, i_elm_tmp,i_steps
+real*8  :: R_line, Z_line, s_line, t_line, p_line, R_mid, Z_mid, s_mid, t_mid, p_mid, s_out, t_out
+real*8, allocatable :: R_start(:), Z_start(:), P_start(:)
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, PI, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step
 real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, atmp, cur_pert, psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint, psi_bnd, psi_out
-integer :: i_elm_axis, i_elm_xpoint
+integer :: i_elm_axis, i_elm_xpoint, ierr
 
 logical, external :: neighbours
 
@@ -70,6 +75,8 @@ read(5,in1)
 
 call import_restart(node_list,element_list)
 
+call initialise_basis
+
 allocate(element_neighbours(4,element_list%n_elements))
 
 element_neighbours = 0
@@ -96,16 +103,96 @@ enddo
 
 PI = 2.d0 *asin(1.d0)
 
-n_lines = 50
-n_turn  = 500
-n_phi   = 500
+
+
+! --- Read start points from file 'stpts'.
+!
+! Example for a stpts file:
+!   Eleven field lines will be started, the first ten between (1.7,0.0) and (1.8,0.0), the eleventh at (1.85,0.2)
+! 
+!   +-------------------------------------------------------
+!   |# n_lines
+!   |  11
+!   |# nr   R_start   Z_start    psi_start   n_turns
+!   |   1    1.700      0.000     0.000      100
+!   |  10    1.800      0.000     0.000      200
+!   |  11    1.850      0.200     0.000      800
+!   +-------------------------------------------------------
+!
+open(21, file='stpts', status='old', action='read', iostat=ierr)
+
+if ( ierr == 0 ) then ! stpts file exists, use it.
+
+  read(21, '(a)') s ! read comment line (ignored)
+  read(21,*) n_lines
+  if ( n_lines < 1 ) then
+    write(*,*) 'ERROR in stpts file: n_lines must be >= 1.'
+    stop
+  end if
+  read(21, '(A)') s ! read comment line (ignored)
+  
+  allocate( R_start(n_lines), Z_start(n_lines), P_start(n_lines), n_turn(n_lines) )
+  
+  curr = 0
+  do
+    if ( curr >= n_lines ) exit
+    
+    read(21, *) nr, rr, zz, psi, ntour
+    
+    if ( ( nr == 1 ) .and. ( curr == 0 ) ) then
+      R_start(1) = rr
+      Z_start(1) = zz
+      P_start(1) = psi
+      n_turn(1)  = ntour
+    else if ( curr == 0 ) then
+      write(*,*) 'ERROR in stpts file: first start point must be nr=1.'
+      stop
+    else if ( ( nr < 1 ) .or. ( nr > n_lines ) ) then
+      write(*,*) 'ERROR in stpts file: nr must be > 0 and < n_lines.'
+      stop
+    else if ( nr <= curr ) then
+      write(*,*) 'ERROR in stpts file: start points must be sorted in ascending nr-order.'
+      stop
+    else
+      
+      do i_lines = curr + 1, nr
+        R_start(i_lines) = R_start(curr) + ( rr - R_start(curr) ) * ( real(i_lines-curr) / real(nr-curr) )
+        Z_start(i_lines) = Z_start(curr) + ( zz - Z_start(curr) ) * ( real(i_lines-curr) / real(nr-curr) )
+        P_start(i_lines) = P_start(curr) + ( psi- P_start(curr) ) * ( real(i_lines-curr) / real(nr-curr) )
+        n_turn(i_lines)  = nint( n_turn(curr) + real( ntour - n_turn(curr) ) * ( real(i_lines-curr) / real(nr-curr) ) )
+      end do
+      
+    end if
+    
+    curr = nr
+    
+  end do
+  
+  close(21)
+
+else ! if no stpts file exists, use the following hard-coded default startpoints
+
+  n_lines = 50
+
+  allocate( R_start(n_lines), Z_start(n_lines), P_start(n_lines), n_turn(n_lines) )
+
+  do i_lines = 1, n_lines
+    R_start(i_lines) = 1.7156 + (2.18-1.7156) * float(i_lines-1)/float(n_lines-1)
+    Z_start(i_lines) = 0.12237
+    P_start(i_lines) = 0.d0
+  end do
+
+  n_turn  = 500
  
+end if
+
+n_phi   = 500
 delta_phi = 2.d0 * PI / float(n_period*n_phi)
 tol       = 1.d-6
 
 i_var_psi = 1
 
-allocate(Rp(n_turn),Zp(n_turn), Tp(n_turn),Pp(n_turn))
+allocate(Rp(maxval(n_turn)),Zp(maxval(n_turn)), Tp(maxval(n_turn)),Pp(maxval(n_turn)))
 
 Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
 do i=1,node_list%n_nodes
@@ -133,7 +220,14 @@ end if
   
 call begplt('poincare.ps')
 
-open(21,file='poincare.txt')
+! --- Open the output files to which the Poincare data will be written in ascii format
+open(21,file='poinc_R-Z.dat')
+write(21,*) '#  R                 Z'
+open(22,file='poinc_rho-theta.dat')
+write(22,*) '# rho=sqrt(psi_n)'
+write(22,*) '# psi_n=(psi - psi_axis)/(psi_bnd - psi_axis)'
+write(22,*) '#'
+write(22,*) '#  rho               theta'
 
 if (iplot_type .eq. 1) then
   call nframe(21,11,1,Rmin,Rmax,Zmin,Zmax,'Poincare',8,'R [m]',4,'Z [m]',4)
@@ -141,28 +235,23 @@ else
   call nframe(1,11,1,0.d0,1.2d0,-PI,PI,'Poincare',8,'r [m]',4,'theta',5)
 endif
 
-do i_lines=1,n_lines
-
+! --- Trace the fieldlines
+L_IL: do i_lines=1,n_lines
   ip = 0
 
-  R_start = R_geo + 0.6 + 0.4*amin*float(i_lines-1)/float(n_lines-1)
-!  R_start = R_geo + 0.18 + 0.8*amin*float(i_lines-1)/float(n_lines-1)
-  Z_start = Z_geo
-  P_start = 0.d0 !PI/2.d0
+  write(*,'(2i6,2f8.3)') i_lines,n_lines,R_start(i_lines),Z_start(i_lines)
 
-  write(*,'(2i6,2f8.3)') i_lines,n_lines,R_start,Z_start
-
-  call find_RZ(node_list,element_list,R_start,Z_start,R_out,Z_out,i_elm,s_out,t_out,ifail)
+  call find_RZ(node_list,element_list,R_start(i_lines),Z_start(i_lines),R_out,Z_out,i_elm,s_out,t_out,ifail)
   
   if (ifail .ne. 0) exit
 
-  R_line = R_start
-  Z_line = Z_start
-  p_line = P_start
+  R_line = R_start(i_lines)
+  Z_line = Z_start(i_lines)
+  p_line = P_start(i_lines)
   s_line = s_out
   t_line = t_out
   
-  do i_turn = 1, n_turn
+  do i_turn = 1, n_turn(i_lines)
 
     do i_phi=1,n_phi
     
@@ -361,8 +450,14 @@ do i_lines=1,n_lines
   write(*,*) ' points : ',ip
 
   do i=1,ip
-    write(21,'(4e18.8)') Rp(i),Zp(i),Pp(i),Tp(i)
+    write(21,'(4e18.8)') Rp(i),Zp(i)
+    write(22,'(4e18.8)') SQRT( MAX(Pp(i), 0.) ),Tp(i)
   enddo
+
+  write(21,*)
+  write(21,*)
+  write(22,*)
+  write(22,*)
   
   call lincol(mod(i_lines,8))
    
@@ -372,12 +467,15 @@ do i_lines=1,n_lines
     call pplot(1,1,Pp,Tp,ip,1)
   endif
   
-enddo
+end do L_IL
 
 close(21)
+close(22)
 call finplt
 
-end
+end program jorek2_poincare
+
+
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t)
 use parameters
@@ -463,4 +561,4 @@ do i_tor = 1, (n_tor-1)/2
 enddo
 
 return
-end
+end subroutine step

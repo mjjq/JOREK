@@ -53,7 +53,7 @@ allkeys=""
 while [ $# -gt 0 ]; do
   thekey="${1%%=*}"
   theval="${1#*=}"
-  if [ "$thekey" == "$1" ] || [ -z $theval ]; then
+  if [ "$thekey" == "$1" ] || [ -z "$theval" ]; then
     echo ""
     echo "ERROR: Parameter '$1' is not in the form <value>=<key>."
     usage

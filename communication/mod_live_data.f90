@@ -59,9 +59,13 @@ module live_data
     
     ! --- Write file headers indicating what data is in the files.
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_times: ', 1
+    write(LIVE_DATA_HANDLE,'(A)') '@times_xlabel: time step'
+    write(LIVE_DATA_HANDLE,'(A)') '@times_ylabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*n_tor
+    write(LIVE_DATA_HANDLE,'(A)') '@energies_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel: normalized energy'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: "time"           '
     do n = 1, n_tor
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"E_{mag', mode(n), &
@@ -74,6 +78,8 @@ module live_data
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*n_tor
+    write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel: normalized growth rate'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: "time"           '
     do n = 1, n_tor
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{mag', mode(n), &

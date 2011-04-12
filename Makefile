@@ -36,8 +36,7 @@ $(MAIN) : jorek2_main.f90
 	grids/*.o            \
 	matrix/*.o           \
 	solvers/*.o          \
-        timing/r3_info.o     \
-        timing/flushc.o      \
+        timing/*.o      \
 	refinement/*.o       \
 	plots/*.o            \
         vacuum/*.o           \

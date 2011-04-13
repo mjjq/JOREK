@@ -302,7 +302,7 @@ program JOREK2
     
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
-      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.)
+      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
     end if
     
 #ifdef USE_MUMPS
@@ -327,14 +327,14 @@ program JOREK2
             SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open,         &
             dPSI_private)
           
-          call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.)
+          call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
           
         else
           
           call grid_flux_surface(xpoint, node_list, element_list, surface_list, n_flux, n_tht,     &
             xr1, sig1, xr2, sig2)
           
-          call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.)  
+          call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
           
           ! --- Refine elements (equilibrum)
           if (refinement) then

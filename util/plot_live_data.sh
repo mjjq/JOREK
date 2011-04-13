@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Purpose: Plot energies and growth rates during or after a JOREK code run
+# Purpose: Plot energies and growth rates during or after a JOREK code run using GNUPLOT
 #
 # Data: 2011-03-30
 # Author: Matthias Hoelzl, IPP Garching
@@ -39,24 +39,8 @@ elif [ ! -f "$SCRIPTDIR/plot_live_data.gnuplot" ]; then
   exit 1
 fi
 #   --- Gnuplot available?
-which_gnuplot=`which gnuplot`
-if [ ! `which gnuplot` ]; then
-  echo ""
-  echo "ERROR: You need to have gnuplot to use this script. If you have it installed,"
-  echo "you may need to add the installation folder to your PATH environment variable."
-  echo ""
-  echo "NOTE: If you have xmgrace installed, you may use the script"
-  echo "plot_live_data_grace.sh instead."
-  echo ""
-  exit 1
-fi
-gnuplot_version_string=`gnuplot --version`
-gnuplot_version=`echo $gnuplot_version_string | cut -d' ' -f 2`
-gnuplot_version2=`echo $gnuplot_version | sed -e 's/\.//'`
-if [ $gnuplot_version2 -lt 44 ]; then
-  echo ""
-  echo "ERROR: Gnuplot 4.4 or newer is required."
-  echo "Found $gnuplot_version_string"
+$SCRIPTDIR/check_gnuplot.sh 4.4
+if [ $? -ne 0 ]; then
   echo ""
   echo "NOTE: If you have xmgrace installed, you may use the script"
   echo "plot_live_data_grace.sh instead."

@@ -1,4 +1,4 @@
-subroutine plot_grid(node_list,element_list,boundary_list,bnd_node_list,frame,bezier)
+subroutine plot_grid(node_list, element_list, boundary_list, bnd_node_list, frame, bezier, gridname)
 !----------------------------------------------------------------
 ! plot the grid of finite elements with the correct curved edges
 !----------------------------------------------------------------
@@ -7,16 +7,21 @@ use data_structure
 
 implicit none
 
-type (type_node_list)        :: node_list
-type (type_element_list)     :: element_list
-type (type_bnd_element_list) :: boundary_list
-type (type_bnd_node_list)    :: bnd_node_list
+! --- Routine parameters
+type (type_node_list),        intent(in)   :: node_list       !< List of grid nodes
+type (type_element_list),     intent(in)   :: element_list    !< List of grid elements
+type (type_bnd_element_list), intent(in)   :: boundary_list   !< List of boundary elements
+type (type_bnd_node_list),    intent(in)   :: bnd_node_list   !< List of boundary nodes
+logical,                      intent(in)   :: frame
+logical,                      intent(in)   :: bezier
+character(len=*),             intent(in)   :: gridname        !< Used for the name of the ascii output file
+
+! --- Local variables
 real*8,allocatable :: xp(:,:)
 real*8             :: xs(2,n_dim), xx_0(n_dim), uu_0(n_dim), vv_0(n_dim), ww_0(n_dim)
 real*8             :: uv_0(n_dim), uv_p(n_dim), xx_p(n_dim) ,xb(4,n_dim)
 real*8             :: xmax, xmin, ymax, ymin, s, huv_0, huv_p, x_length
 integer            :: i, j, inode_0, inode_p, iplot, k, ip, np, iuv, idir_0, idir_p
-logical            :: frame, bezier
 character*3        :: label
 
 write(*,*) '************************************'
@@ -98,6 +103,8 @@ allocate(xp(np,n_dim))
 
 iplot = 0
 
+open(21, file='grid_'//trim(adjustl(gridname))//'.dat') ! Open the ascii file
+
 do k=1, element_list%n_elements
 
  do i=1,4                         ! over the 4 edges
@@ -128,11 +135,16 @@ do k=1, element_list%n_elements
      xb(4,:) = xx_p
 
      call bezier_1d(n_dim, s, xb, xp(j,:))
+     write(21,'(2ES16.8)') xp(j,:) ! Output the grid information to the ascii file
    enddo
+   write(21,*)
+   write(21,*)
    
    call lplot6(1,1,xp(1:np,1),xp(1:np,2),-np,' ')
  enddo
 enddo
+
+close(21) ! Close the ascii file
 
 call lincol(1)
 call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
@@ -171,7 +183,7 @@ do k=1, boundary_list%n_bnd_elements
    enddo
 
    call lplot6(1,1,xp(1:np,1),xp(1:np,2),-np,' ')
-
+   
 enddo
 
 call lincol(0)

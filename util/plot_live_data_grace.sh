@@ -33,7 +33,7 @@ if [ ! -f "$extract_live_data" ]; then
   echo "as the plot_live_data.sh script."
   exit 1
 fi
-#   --- Gnuplot available?
+#   --- Grace available?
 if [ ! `which xmgrace` ]; then
   echo ""
   echo "ERROR: You need to have xmgrace to use this script. If you have it installed,"

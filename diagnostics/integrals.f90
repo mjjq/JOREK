@@ -111,7 +111,7 @@ do ife =1,  element_list%n_elements
       rho_00 = eq_g(5,ms,mt)
       if (jorek_model .eq. 400) then
         Ti_00 = eq_g(6,ms,mt)
-        Te_00 = eq_g(8,ms,mt)
+        Te_00 = eq_g(n_var,ms,mt)
         T_00  = Ti_00 + Te_00
       else
         T_00  = eq_g(6,ms,mt)

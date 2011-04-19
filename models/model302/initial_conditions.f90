@@ -102,10 +102,8 @@ if (my_id .eq. 0) then
                                     + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
                                     + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
 
-    node_list%node(i)%values(1,1,7) = 0.d0        ! parallel velocity
-    node_list%node(i)%values(1,2,7) = 0.d0
-    node_list%node(i)%values(1,3,7) = 0.d0
-    node_list%node(i)%values(1,4,7) = 0.d0
+    node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (filled-in just below with inverse Poisson)
+    node_list%node(i)%values(1,:,7) = 0.d0        ! parallel velocity
     
     node_list%node(i)%deltas = 0.d0
 
@@ -113,6 +111,10 @@ if (my_id .eq. 0) then
 
 endif
 
+if (tauIC .ne. 0.d0) then
+  call Poisson(my_id,2,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               2,4,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)      ! inverse Poisson
+endif
 
 !----------------------------------------- flux boundary perturbation (to be completed, see Marina)
 !if (my_id .eq. 0) then

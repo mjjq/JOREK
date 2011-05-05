@@ -1,0 +1,31 @@
+
+ &in1
+
+ restart = .f.
+ regrid  = .f.
+ !refinement=.f.
+ tstep   = 0.25 
+ nstep = 400
+
+ nout = 1
+
+ R_begin = -5. 
+ R_end   =  5. 
+ Z_begin = -5. 
+ Z_end   =  5. 
+
+ n_R      = 101 
+ n_Z      = 101 
+ n_radial = 0
+ n_pol    = 0 
+
+ n_flux   = 0 
+ n_tht    = 0 
+ n_open   = 0
+ n_leg    = 0
+ n_private = 0
+
+ visco = 1.d-4
+ visco_num = 1.d-6
+
+ &end

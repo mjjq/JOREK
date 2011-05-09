@@ -1,4 +1,4 @@
-subroutine grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2)
+subroutine grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2,refinement)
 !------------------------------------------------------------------------
 ! subroutine calculates a new flux surface grid (adapted from HELENA20)
 !------------------------------------------------------------------------
@@ -8,7 +8,7 @@ use data_structure
 implicit none
 
 ! --- Routine parameters
-logical,                  intent(in)    :: xpoint
+logical,                  intent(in)    :: xpoint, refinement
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
 type (type_surface_list), intent(inout) :: surface_list
@@ -398,92 +398,91 @@ enddo
 
 do i=1,nrnew
 
- do j=1,npnew
+  do j=1,npnew
 
-   index0 =                npnew*(i-1) + j
-   index  = n_node_start + npnew*(i-1) + j
+    index0 =                npnew*(i-1) + j
+    index  = n_node_start + npnew*(i-1) + j
 
-   node_list%node(index)%X(1,1) = RRnew(1,index0)
-   node_list%node(index)%X(1,2) = ZZnew(1,index0)
+    node_list%node(index)%X(1,1) = RRnew(1,index0)
+    node_list%node(index)%X(1,2) = ZZnew(1,index0)
 
-   node_list%node(index)%values(1,1,1) = PSInew(1,index0)
+    node_list%node(index)%values(1,1,1) = PSInew(1,index0)
 
-   node_list%node(index)%X(2,1) = RRnew(2,index0)         * 2.d0/3.d0
-   node_list%node(index)%X(2,2) = ZZnew(2,index0)         * 2.d0/3.d0
-   node_list%node(index)%values(1,2,1) = PSInew(2,index0) * 2.d0/3.d0
+    node_list%node(index)%X(2,1) = RRnew(2,index0)         * 2.d0/3.d0
+    node_list%node(index)%X(2,2) = ZZnew(2,index0)         * 2.d0/3.d0
+    node_list%node(index)%values(1,2,1) = PSInew(2,index0) * 2.d0/3.d0
 
-   node_list%node(index)%X(3,1) = RRnew(3,index0)         * 2.d0/3.d0
-   node_list%node(index)%X(3,2) = ZZnew(3,index0)         * 2.d0/3.d0
-   node_list%node(index)%values(1,3,1) = PSInew(3,index0) * 2.d0/3.d0
+    node_list%node(index)%X(3,1) = RRnew(3,index0)         * 2.d0/3.d0
+    node_list%node(index)%X(3,2) = ZZnew(3,index0)         * 2.d0/3.d0
+    node_list%node(index)%values(1,3,1) = PSInew(3,index0) * 2.d0/3.d0
 
-   node_list%node(index)%X(4,1) = RRnew(4,index0)         * 4.d0/9.d0
-   node_list%node(index)%X(4,2) = ZZnew(4,index0)         * 4.d0/9.d0
-   node_list%node(index)%values(1,4,1) = PSInew(4,index0) * 4.d0/9.d0
+    node_list%node(index)%X(4,1) = RRnew(4,index0)         * 4.d0/9.d0
+    node_list%node(index)%X(4,2) = ZZnew(4,index0)         * 4.d0/9.d0
+    node_list%node(index)%values(1,4,1) = PSInew(4,index0) * 4.d0/9.d0
 
-   if (i .eq. nrnew) node_list%node(index)%boundary = 2
+    if (i .eq. nrnew) node_list%node(index)%boundary = 2
 
-   !if (i.eq.1) then
+    if (.not. refinement) then       ! keep original formulation if not using refinement
+   
+      if (i.eq.1) then
 
-     !node_list%node(index)%index(1) = 1
+        node_list%node(index)%index(1) = 1
 
-    ! if (j.eq.1) n_index_start = n_index_start + 1
+        if (j.eq.1) n_index_start = n_index_start + 1
 
-    ! node_list%node(index)%index(2) = n_index_start + 1
-    ! node_list%node(index)%index(3) = n_index_start + 2
-    ! node_list%node(index)%index(4) = n_index_start + 3
-    ! n_index_start = n_index_start + n_order
+        node_list%node(index)%index(2) = n_index_start + 1
+        node_list%node(index)%index(3) = n_index_start + 2
+        node_list%node(index)%index(4) = n_index_start + 3
+        n_index_start = n_index_start + n_order
 
-   !else
-     !do k=1,n_order+1
-       !node_list%node(index)%index(k) = n_index_start + k
-    ! enddo
-     !n_index_start = n_index_start + n_order+1
-   !endif
-     
+      else
+        do k=1,n_order+1
+          node_list%node(index)%index(k) = n_index_start + k
+        enddo
+        n_index_start = n_index_start + n_order+1
+      endif
+   
+    else      ! in case of refinement
   
-     do k=1,n_order+1
-      node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
-     enddo
+      do k=1,n_order+1
+        node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
+      enddo
   
-
           !Neighbours of the element (for refinement procedure)
 
-	    if(i==1) then	        
-	         element_list%element(Index)%neighbours(4) = 0    
-              else		 
-                 element_list%element(Index)%neighbours(4) = Index - npnew 
-	    end if 	 
-	    
-	    if(j==npnew) then
-	    	 element_list%element(Index)%neighbours(3) = Index - npnew + 1  
-	      else
-	    	 element_list%element(Index)%neighbours(3) = Index + 1       
-	    end if	  	    
-	    
-	    if(i==nrnew-1) then
-	    	 element_list%element(Index)%neighbours(2) = 0   
-	      else   
-	    	 element_list%element(Index)%neighbours(2) = Index + npnew 
-	    end if 
-	        
-	    if(j==1) then
-	    	 element_list%element(Index)%neighbours(1) = Index + npnew -1  
-	      else   
-	    	 element_list%element(Index)%neighbours(1) = Index -1      
-	    end if         
-	  
-            ! Initialization of the genealogy  (for refinement procedure)
+      if(i==1) then	        
+        element_list%element(Index)%neighbours(4) = 0    
+      else		 
+        element_list%element(Index)%neighbours(4) = Index - npnew 
+      end if 
+    
+      if(j==npnew) then
+        element_list%element(Index)%neighbours(3) = Index - npnew + 1  
+      else
+        element_list%element(Index)%neighbours(3) = Index + 1       
+      end if	  	    
+    
+      if(i==nrnew-1) then
+        element_list%element(Index)%neighbours(2) = 0   
+      else   
+        element_list%element(Index)%neighbours(2) = Index + npnew 
+      end if 
+        
+      if(j==1) then
+        element_list%element(Index)%neighbours(1) = Index + npnew -1  
+      else   
+        element_list%element(Index)%neighbours(1) = Index -1      
+      end if  
+      
+    endif
+  
+! Initialization of the genealogy  (for refinement procedure)
+  
+    element_list%element(Index)%father = 0
+    element_list%element(Index)%n_sons = 0
+    element_list%element(Index)%sons(:) = 0
 
-            element_list%element(Index)%father = 0
-	    element_list%element(Index)%n_sons = 0
-
-	    do i_sons = 1, 4
-
-	         element_list%element(Index)%sons(i_sons) = 0
-
-	    end do 
- enddo
-
+  enddo
 enddo
 
 

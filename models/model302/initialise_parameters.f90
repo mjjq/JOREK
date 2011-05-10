@@ -22,7 +22,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                F0, gamma_sheath, density_reflection,               &
+                F0,                                                 &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
@@ -30,17 +30,15 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
                 particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num,                                        &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
-                pellet_psi, pellet_delta_psi, pellet_density,       &
-		pellet_velocity_R, pellet_velocity_Z,               &
-		central_density, pellet_particles, use_pellet,      &
+                pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                rho_file, T_file, ffprime_file,                     &
+                rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
-                refinement, bc_natural_open
+                refinement,                                         &
+                produce_live_data
 
 if (my_id .eq. 0) then
 
@@ -58,14 +56,6 @@ if (my_id .eq. 0) then
   import_equil = .false.
   regrid       = .false.
   
-  freeboundary   = .false. ! use free or fixed boundary?
-  use_starwall   = .false. ! use the STARWALL vacuum solution? (freeboundary only)
-  resistive_wall = .false. ! use a resistive or ideal wall?    (freeboundary only)
-
-  bc_natural_open = .false.
-  gamma_sheath = 4.5d0       ! sheath transmission factor (single fluid)
-  density_reflection = 0.d0  ! reflection coefficient for outgoing density
-    
   n_R       = 3
   n_Z       = 3
   n_radial  = 11
@@ -136,7 +126,6 @@ if (my_id .eq. 0) then
   visco_num     = 0.d0
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
-  ZK_perp_num   = 0.d0
 
   heatsource     = 1.e-7
   particlesource = 1.e-5
@@ -151,22 +140,16 @@ if (my_id .eq. 0) then
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
-  pellet_amplitude  = 0.d0
-  pellet_R          = 3.8d0
-  pellet_Z          = 0.0d0
-  pellet_phi        = 1.57d0
-  pellet_radius     = 0.08d0
-  pellet_sig        = 0.02
-  pellet_length     = 0.785
-  pellet_psi        = 1.0d0
-  pellet_delta_psi  = 999.d0
-  pellet_velocity_R = 0.d0
-  pellet_velocity_Z = 0.d0
-  pellet_particles  = 0.d0
-  pellet_density    = 3.d8 
-  
-  central_density = 1.d0
-  
+  pellet_amplitude = 0.d0
+  pellet_R      = 3.8d0
+  pellet_Z      = 0.0d0
+  pellet_phi    = 1.57d0
+  pellet_radius = 0.08d0
+  pellet_sig    = 0.02
+  pellet_length = 0.785
+  pellet_psi    = 1.0d0
+  pellet_delta_psi = 999.d0
+
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0
@@ -177,6 +160,8 @@ if (my_id .eq. 0) then
   T_file        = 'none'
   ffprime_file  = 'none'
 
+  produce_live_data = .true.
+  
   ! --- Read input parameters from namelist.
   if (my_id .eq. 0) read(5,in1)
   
@@ -190,12 +175,10 @@ if (my_id .eq. 0) then
     nstep_n    = 0
     nstep_n(1) = nstep
   endif
-
+  
   if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))
   if (nstep .gt. 0) allocate(xtime(nstep))
 
-  write(*,*) 'USING MODEL 303'
-  
   ! --- Read numerical profiles for rho, T, and ff'.
   call read_num_profiles()
   

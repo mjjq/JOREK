@@ -362,8 +362,8 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                             .or. (k .eq. 2)    &
                             .or. (k .eq. 3)    &
                             .or. (k .eq. 4)    &
-                                !.or. (k .eq. 5)   &
-                            .or.((k .eq. 5) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &
+                            .or. (k .eq. 5)    &
+                            !.or.((k .eq. 5) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &
                             .or. (k .eq. 6)    &
                                 !.or.((k .eq. 6) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &  ! private region only
                             .or. (k .eq. 7)    &

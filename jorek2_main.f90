@@ -28,6 +28,7 @@ program JOREK2
   use parameters
   use global_distributed_matrix
   use nodes_elements
+  use pellet_module
   use boundary,            only: boundary_from_grid
   use vacuum,              only: NEW_VACUUM
   use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response, update_response
@@ -646,6 +647,13 @@ program JOREK2
            endif
         endif
      endif
+     
+     if (use_pellet) then
+       local_pellet_particles = 0.d0
+       local_plasma_particles = 0.d0
+       local_pellet_volume    = 0.d0 
+     endif
+
      IF ( use_pastix .and. use_murge .and. use_murge_element ) THEN
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint, &
@@ -731,7 +739,9 @@ program JOREK2
         call update_deltas(my_id,node_list)
 
         t_now = t_now + tstep
-
+        
+        if (use_pellet) call update_pellet(my_id)
+        
      else
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
 	exit

@@ -21,7 +21,7 @@ all: modules \
      read_num_profiles.o \
      derive_num_profiles.o
 
-modules : mod_parameters.o mod_phys_module.o mod_nodes_elements.o
+modules : mod_parameters.o mod_phys_module.o mod_pellet.o mod_nodes_elements.o
 
 clean :
 	rm -f *.mod *.o

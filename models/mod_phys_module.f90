@@ -10,10 +10,13 @@ module phys_module
   real*8  :: visco             !< Viscosity
   real*8  :: visco_par         !< Parallel viscosity
   real*8  :: F0                !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
-  real*8  :: GAMMA
+  real*8  :: central_density   !< physical (non-normalised) density at the magnetic axis (in units of 10^20 m^-3)
+  real*8  :: gamma             !< ratio of specific heat (=5/3)
   real*8  :: Q_bar             !< (model400)
   real*8  :: sigma             !< (model400)
   real*8  :: tauIC             !< (model302 and 701)
+  real*8  :: gamma_sheath      !< sheath boundary condition open fieldlines (model303)
+  real*8  :: density_reflection !< density reflection coeeficient open fieldlines (model303)
   integer :: mode(n_tor)       !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout              !< Output a restart file every nout timesteps.
   logical :: restart           !< Restart a code run from the restart file jorek_restart.rst?
@@ -21,9 +24,11 @@ module phys_module
   logical :: import_equil
   logical :: xpoint            !< X-point geometry?
   logical :: refinement        !< Use mesh refinement?
+  logical :: bc_natural_open   !< use natural boundary conditions on the open fieldlines
+  logical :: produce_live_data !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
+  
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
-  logical :: produce_live_data !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
   
   !> @name Define X-point geometry by geometrical properties
   !!
@@ -45,7 +50,7 @@ module phys_module
   real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
   
   !> @name Numerical resistivity, viscosity and diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num,Zk_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num
   
   !> @name Timestepping parameters
   real*8  :: tstep             !< Size of the timesteps (\f$ \Delta t \f$)
@@ -92,9 +97,20 @@ module phys_module
   real*8  :: psi_boundary(1026)!< Numerical values giving the poloidal flux at the boundary
   
   !> @name Pellet-related input parameters
-  real*8  :: pellet_amplitude, pellet_R, pellet_Z, pellet_phi
-  real*8  :: pellet_radius, pellet_sig, pellet_length
-  real*8  :: pellet_psi, pellet_delta_psi
+  real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
+  real*8  :: pellet_R          !< major radius position pellet
+  real*8  :: pellet_Z          !< Z position pellet
+  real*8  :: pellet_phi        !< width of the pellet cloud (densioty source) in toroidal 
+  real*8  :: pellet_radius     !< radius of the simulation pellet
+  real*8  :: pellet_sig        !< width of smoothing of density source (arctan((r-pellet_radius)/pellet_sig))
+  real*8  :: pellet_length     !< width of smoothing of density source in toroidal angle
+  real*8  :: pellet_psi        !< pellet_width in poloidal flux
+  real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
+  real*8  :: pellet_velocity_R !< pellet velocity component radial direction
+  real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
+  real*8  :: pellet_density    !< pellet density (in units 10^20 m^-3)
+  real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
+  logical :: use_pellet
   
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).

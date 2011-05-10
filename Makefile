@@ -28,7 +28,7 @@ clean :
 $(MAIN) : jorek2_main.f90
 	$(FC) $(FFLAGS)      \
 	jorek2_main.f90      \
-	datatypes/*.o        \
+        datatypes/*.o        \
 	models/$(MODEL)/*.o  \
 	models/*.o           \
 	communication/*.o    \

@@ -22,7 +22,7 @@ call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
 call MPI_TYPE_EXTENT(MPI_LOGICAL,ILOG_EXT,ierr)
 call MPI_TYPE_EXTENT(MPI_CHARACTER,CHAR_EXT,ierr)
 
-bufsize = ( 153 * IDBL_EXT + (14+n_tor) * INT_EXT + 10 * ILOG_EXT + 3*512 * CHAR_EXT )
+bufsize = ( 160 * IDBL_EXT + (14+n_tor) * INT_EXT + 12 * ILOG_EXT + 3*512 * CHAR_EXT )
 
 if (allocated(buffer)) deallocate(buffer)
 allocate(buffer(bufsize/ INT_EXT))
@@ -30,72 +30,79 @@ allocate(buffer(bufsize/ INT_EXT))
 if (my_id .eq. 0) then
   position = 0
 
-  call MPI_PACK(eta,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(visco,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(visco_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(eta,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)        ! 1
+  call MPI_PACK(visco,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 2
+  call MPI_PACK(visco_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 3
 
-  call MPI_PACK(tstep,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(tstep_n,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(F0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(GAMMA,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Q_bar,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(sigma,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(tstep,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 4
+  call MPI_PACK(tstep_n,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 14
+  call MPI_PACK(F0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)         ! 15
+  call MPI_PACK(GAMMA,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 16
+  call MPI_PACK(Q_bar,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 17
+  call MPI_PACK(sigma,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 18
    
-  call MPI_PACK(zjz_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(zjz_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(zj_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(zjz_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 19
+  call MPI_PACK(zjz_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 20
+  call MPI_PACK(zj_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 30
 
-  call MPI_PACK(T_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(T_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(T_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(T_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)        ! 31
+  call MPI_PACK(T_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)        ! 32
+  call MPI_PACK(T_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! 42
 
-  call MPI_PACK(Ti_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Ti_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Ti_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Ti_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 43
+  call MPI_PACK(Ti_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 44
+  call MPI_PACK(Ti_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 54
 
-  call MPI_PACK(Te_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Te_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Te_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Te_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 55
+  call MPI_PACK(Te_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 56
+  call MPI_PACK(Te_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 66
 
-  call MPI_PACK(rho_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(rho_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(rho_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(rho_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 67
+  call MPI_PACK(rho_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 68
+  call MPI_PACK(rho_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 78
 
-  call MPI_PACK(FF_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(FF_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(FF_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(FF_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 79
+  call MPI_PACK(FF_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 80
+  call MPI_PACK(FF_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 90
 
-  call MPI_PACK(heatsource,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(heatsource_i,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(heatsource_e,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(particlesource,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(heatsource,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 91
+  call MPI_PACK(heatsource_i,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 92
+  call MPI_PACK(heatsource_e,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 93
+  call MPI_PACK(particlesource,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 94
   
-  call MPI_PACK(ZK_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(ZK_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(ZK_i_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(K_i_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(ZK_e_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(K_e_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(D_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(D_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(D_neutral,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ZK_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! 104
+  call MPI_PACK(ZK_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 105
+  call MPI_PACK(ZK_i_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 115
+  call MPI_PACK(K_i_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 116
+  call MPI_PACK(ZK_e_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 126
+  call MPI_PACK(K_e_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 127
+  call MPI_PACK(D_perp,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 137
+  call MPI_PACK(D_par,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 138
+  call MPI_PACK(D_neutral,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 139
   
-  call MPI_PACK(tauIC,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(tauIC,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)              ! 140
+  call MPI_PACK(gamma_sheath,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 141
+  call MPI_PACK(density_reflection,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 142
+  call MPI_PACK(central_density,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! 143
 
-  call MPI_PACK(eta_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(visco_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(visco_par_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(D_perp_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(eta_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)         ! 144
+  call MPI_PACK(visco_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 145
+  call MPI_PACK(visco_par_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 146
+  call MPI_PACK(D_perp_num,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 147
 
-  call MPI_PACK(pellet_amplitude,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_R,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_Z,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_phi,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_radius,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_sig,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_length,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_psi,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pellet_delta_psi,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(pellet_amplitude,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 148
+  call MPI_PACK(pellet_R,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)           ! 149
+  call MPI_PACK(pellet_Z,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)           ! 150
+  call MPI_PACK(pellet_phi,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)         ! 151
+  call MPI_PACK(pellet_radius,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 152
+  call MPI_PACK(pellet_sig,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)         ! 153
+  call MPI_PACK(pellet_length,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 154
+  call MPI_PACK(pellet_psi,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)         ! 155
+  call MPI_PACK(pellet_delta_psi,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 156
+  call MPI_PACK(pellet_velocity_R,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 157
+  call MPI_PACK(pellet_velocity_Z,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 158
+  call MPI_PACK(pellet_density,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 159
+  call MPI_PACK(pellet_particles,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 160_R
 
   call MPI_PACK(nstep,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(nstep_n,10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -111,6 +118,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(freeboundary,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(use_starwall,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(resistive_wall,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(bc_natural_open,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(use_pellet,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(rho_file,512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(T_file,512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -178,6 +187,9 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,D_neutral,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,tauIC,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,gamma_sheath,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,density_reflection,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,central_density,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,eta_num,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,visco_num,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
@@ -193,6 +205,10 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,pellet_length,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,pellet_psi,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,pellet_delta_psi,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,pellet_velocity_R,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,pellet_velocity_Z,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,pellet_density,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,nstep,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,10,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -208,6 +224,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,freeboundary,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,use_starwall,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,resistive_wall,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,bc_natural_open,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,use_pellet,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,rho_file,512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,T_file,512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)

@@ -648,12 +648,6 @@ program JOREK2
         endif
      endif
      
-     if (use_pellet) then
-       local_pellet_particles = 0.d0
-       local_plasma_particles = 0.d0
-       local_pellet_volume    = 0.d0 
-     endif
-
      IF ( use_pastix .and. use_murge .and. use_murge_element ) THEN
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint, &
@@ -735,13 +729,13 @@ program JOREK2
 
      if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
+        if (use_pellet) call update_pellet(my_id,node_list,element_list)
+
         call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
         call update_deltas(my_id,node_list)
 
         t_now = t_now + tstep
-        
-        if (use_pellet) call update_pellet(my_id)
-        
+                
      else
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
 	exit

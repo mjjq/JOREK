@@ -378,6 +378,8 @@ do ms=1, n_gauss
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
 
      source_pellet = 0.d0
+     source_volume = 0.d0
+     
 !     call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
 !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
 !                        x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
@@ -386,11 +388,7 @@ do ms=1, n_gauss
                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
                          x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, central_density, pellet_particles, pellet_density, &
                          source_pellet, source_volume)			
-
-     local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
-     local_plasma_particles = local_plasma_particles + r0            * bigR * xjac * wst * delta_phi
-     local_pellet_volume    = local_pellet_volume    + source_volume * bigR * xjac * wst * delta_phi 
-
+    
      do i=1,n_vertex_max
 
        do j=1,n_order+1

@@ -1,8 +1,5 @@
 module pellet_module
 
-real*8 :: local_pellet_particles   !< the (local) pellet particles added in this timestep
-real*8 :: local_plasma_particles   !< the plasma density (before this timestep)
-real*8 :: local_pellet_volume      !< the volume of the simulated pellet in this timestep
 
 real*8 :: total_pellet_particles   !< the (total) pellet particles added in this timestep
 real*8 :: total_plasma_particles   !< the total plasma density (before this timestep)
@@ -83,13 +80,13 @@ else if (pellet_particles .gt. 0.) then
   particle_source = ablation_rate / central_density  * atn * atn_phi / pellet_volume
   
   volume_source   = atn * atn_phi
- 
+
 end if
 
 return
 end subroutine pellet_source2
 
-subroutine update_pellet(my_id)
+subroutine update_pellet(my_id,node_List,element_list)
 !******************************************************************************
 ! routine updates the pellet position and the size of the simulated           *
 ! and physical pellet sizes (from the integral of the pellet particle source) *
@@ -101,8 +98,11 @@ implicit none
 
 include 'mpif.h'
 
+type (type_node_list)    :: node_list
+type (type_element_list) :: element_list
+
 integer :: my_id, ierr
-real*8  :: PI, zmu0, V_normalisation
+real*8  :: PI, zmu0, V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
 PI   = 2.d0  * asin(1.d0)
 zmu0 = 4.d-7 * PI
@@ -111,21 +111,15 @@ if (pellet_amplitude .gt. 0) return
 
 ! S.F. introduced pellet velocity here. 14/02/2011.
 
+call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+
 V_normalisation = 1.d0 / sqrt(central_density * 1.66d-7 * 2.d0 * zmu0) ! assumes Deuterium!
 
 pellet_R = pellet_R + pellet_velocity_R * tstep / V_normalisation
 pellet_Z = pellet_Z + pellet_velocity_Z * tstep / V_normalisation
 
 PI = 2.d0*asin(1.d0)
-
-total_pellet_particles = 0.d0
-total_plasma_particles = 0.d0
-total_pellet_volume    = 0.d0
-
-call MPI_Reduce(local_pellet_particles,total_pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-call MPI_Reduce(local_plasma_particles,total_plasma_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-call MPI_Reduce(local_pellet_volume,total_pellet_volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-
+ 
 total_pellet_particles = total_pellet_particles * central_density * tstep  ! check tstep
 
 if (my_id .eq. 0) then
@@ -134,10 +128,10 @@ if (my_id .eq. 0) then
 
     pellet_particles = max(pellet_particles - total_pellet_particles, 0.d0)
     
-    write(*,'(A,4e14.6)') ' pellet (R,Z) =', pellet_R, pellet_Z,pellet_velocity_R/V_normalisation,pellet_velocity_Z/V_normalisation
-    write(*,'(A,4e14.6)') ' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles
-    write(*,'(A,4e14.6)') ' remaining particles in pellet      : ', pellet_particles
-    write(*,'(A,4e14.6)') ' pellet_volume (sim,phys)           : ', total_pellet_volume,pellet_particles/pellet_density
+    write(*,'(i3,A,4e14.6)') my_id,' pellet (R,Z) =', pellet_R, pellet_Z,pellet_velocity_R/V_normalisation,pellet_velocity_Z/V_normalisation
+    write(*,'(i3,A,4e14.6)') my_id,' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles
+    write(*,'(i3,A,4e14.6)') my_id,' remaining particles in pellet      : ', pellet_particles
+    write(*,'(i3,A,4e14.6)') my_id,' pellet volume (sim,phys)           : ', total_pellet_volume,pellet_particles/pellet_density
    
 !  end if
 

@@ -1,5 +1,5 @@
 subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
-     xpoint2,psi_axis,psi_bnd,Z_xpoint)
+                            xpoint2,psi_axis,psi_bnd,Z_xpoint)
   !---------------------------------------------------------------
   ! collect the element matrices into one large sparse matrix
   ! in coordinate format
@@ -95,7 +95,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
   !$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id, bc_natural_open,    &
-  !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume, refinement)    &
+  !$omp          refinement)    &
   !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
@@ -104,7 +104,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   omp_nthreads = omp_get_num_threads()
   omp_tid      = omp_get_thread_num()
 
-  !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume)
+  !$omp do 
   do ife =1, n_local_elms
 
      ielm = local_elms(ife)

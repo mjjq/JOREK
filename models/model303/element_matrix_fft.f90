@@ -20,6 +20,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use pellet_module
 
 use elm_fft
 
@@ -46,7 +47,7 @@ integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, PI, phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
-real*8     :: psi_axis, psi_bnd, Z_xpoint, dj_dpsi, dj_dz, source_pellet
+real*8     :: psi_axis, psi_bnd, Z_xpoint, dj_dpsi, dj_dz, source_pellet, source_volume
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: Bgrad_rho_rho_n, Bgrad_T_T_n, Bgrad_rho_k_star, Bgrad_T_k_star, ZKpar_T, dZKpar_dT
@@ -354,9 +355,16 @@ do ms=1, n_gauss
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 
      source_pellet = 0.d0
-     call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
-                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
-                        x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
+     source_volume = 0.d0
+!     call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
+!                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
+!                        x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
+
+     call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+                         pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
+                         x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, central_density, pellet_particles, pellet_density, &
+                         source_pellet, source_volume)			
+   
 
      do i=1,n_vertex_max
 

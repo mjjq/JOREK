@@ -39,8 +39,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 rho_file, T_file, ffprime_file,                     &
-                freeboundary, use_starwall, resistive_wall,         &
-                refinement, bc_natural_open
+                freeboundary_equil, freeboundary,                   &
+                use_starwall, resistive_wall,                       &
+                refinement, bc_natural_open,                        &
+                produce_live_data
 
 if (my_id .eq. 0) then
 
@@ -58,21 +60,22 @@ if (my_id .eq. 0) then
   import_equil = .false.
   regrid       = .false.
   
-  freeboundary   = .false. ! use free or fixed boundary?
-  use_starwall   = .false. ! use the STARWALL vacuum solution? (freeboundary only)
-  resistive_wall = .false. ! use a resistive or ideal wall?    (freeboundary only)
+  freeboundary_equil = .false. ! use free or fixed boundary equilibrium
+  freeboundary       = .false. ! use free or fixed boundary?
+  use_starwall       = .false. ! use the STARWALL vacuum solution? (freeboundary only)
+  resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
 
-  bc_natural_open = .false.
-  gamma_sheath = 4.5d0       ! sheath transmission factor (single fluid)
-  density_reflection = 0.d0  ! reflection coefficient for outgoing density
+  bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
+  gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
+  density_reflection = 0.d0   ! reflection coefficient for outgoing density
     
-  n_R       = 3
-  n_Z       = 3
+  n_R       = 0
+  n_Z       = 0
   n_radial  = 11
-  n_pol     = 6
+  n_pol     = 16
 
   n_flux    = 11
-  n_tht     = 17
+  n_tht     = 16
 
   n_open    = 5
   n_leg     = 5
@@ -164,6 +167,7 @@ if (my_id .eq. 0) then
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
   pellet_density    = 3.d8 
+  use_pellet        = .false.
   
   central_density = 1.d0
   
@@ -176,6 +180,8 @@ if (my_id .eq. 0) then
   rho_file      = 'none'
   T_file        = 'none'
   ffprime_file  = 'none'
+
+  produce_live_data = .true.
 
   ! --- Read input parameters from namelist.
   if (my_id .eq. 0) read(5,in1)
@@ -193,8 +199,6 @@ if (my_id .eq. 0) then
 
   if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))
   if (nstep .gt. 0) allocate(xtime(nstep))
-
-  write(*,*) 'USING MODEL 303'
   
   ! --- Read numerical profiles for rho, T, and ff'.
   call read_num_profiles()

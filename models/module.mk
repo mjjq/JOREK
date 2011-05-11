@@ -19,7 +19,8 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/log_parameters.f90			\
 	$(DIR)/read_num_profiles.f90 			\
 	$(DIR)/pellet_source.f90			\
-	$(DIR)/derive_num_profiles.f90
+	$(DIR)/derive_num_profiles.f90                  \
+        $(DIR)/mod_pellet.f90
 
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\

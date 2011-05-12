@@ -26,7 +26,7 @@ logical    :: xpoint2
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
-  write(*,*) '*      initial conditions  (302)      *'
+  write(*,*) '*      initial conditions  (701)      *'
   write(*,*) '***************************************'
 endif
 
@@ -79,31 +79,20 @@ if (my_id .eq. 0) then
     dp_dz    = zn * dT_dz + dn_dz * zT
     dp_dz2   = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 							       
 
-    node_list%node(i)%values(1,1,5) = zn
-    node_list%node(i)%values(1,2,5) = dn_dpsi  * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,5) = dn_dpsi  * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,5) = dn_dpsi  * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(4,2) &
-                                    + dn_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dn_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
-
-    node_list%node(i)%values(1,1,6) = zT
-    node_list%node(i)%values(1,2,6) = dT_dpsi  * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,6) = dT_dpsi  * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,6) = dT_dpsi  * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(4,2) &
+    node_list%node(i)%values(1,1,var_T) = zT
+    node_list%node(i)%values(1,2,var_T) = dT_dpsi  * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,var_T) = dT_dpsi  * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,var_T) = dT_dpsi  * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(4,2) &
                                     + dT_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
                                     + dT_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
-
-    node_list%node(i)%values(1,1,2) = - tauIC * zp 
-    node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))
-    node_list%node(i)%values(1,3,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,3,1) + dp_dz * node_list%node(i)%x(3,2))
-    node_list%node(i)%values(1,4,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,4,1) + dp_dz * node_list%node(i)%x(4,2) &
-                                    + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
-
-    node_list%node(i)%values(1,1,7) = 0.d0        ! parallel velocity
-    node_list%node(i)%values(1,2,7) = 0.d0
-    node_list%node(i)%values(1,3,7) = 0.d0
-    node_list%node(i)%values(1,4,7) = 0.d0
+    
+    node_list%node(i)%values(:,:,var_u1) = 0.d0    
+    node_list%node(i)%values(:,:,var_u2) = 0.d0    
+    node_list%node(i)%values(:,:,var_u3) = 0.d0    
+    
+    node_list%node(i)%values(:,:,var_A1) = 0.d0    
+    node_list%node(i)%values(:,:,var_A2) = 0.d0      
+    node_list%node(i)%values(:,:,var_A3) = node_list%node(i)%psi_eq(:,:) 
     
     node_list%node(i)%deltas = 0.d0
 

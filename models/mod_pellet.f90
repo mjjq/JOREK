@@ -130,10 +130,10 @@ if (my_id .eq. 0) then
 
     pellet_particles = max(pellet_particles - total_pellet_particles, 0.d0)
     
-    write(*,'(i3,A,4e14.6)') my_id,' pellet (R,Z) =', pellet_R, pellet_Z,pellet_velocity_R/V_normalisation,pellet_velocity_Z/V_normalisation
-    write(*,'(i3,A,4e14.6,A)') my_id,' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles,' [10^20]'
-    write(*,'(i3,A,4e14.6)') my_id,' remaining particles in pellet      : ', pellet_particles
-    write(*,'(i3,A,4e14.6)') my_id,' pellet volume (sim,phys)           : ', total_pellet_volume,pellet_particles/pellet_density
+    write(*,'(A,4e14.6)') ' pellet (R,Z) =', pellet_R, pellet_Z,pellet_velocity_R/V_normalisation,pellet_velocity_Z/V_normalisation
+    write(*,'(A,3e14.6,A)') ' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles,' [10^20]'
+    write(*,'(A,4e14.6)') ' remaining particles in pellet      : ', pellet_particles
+    write(*,'(A,4e14.6)') ' pellet volume (sim,phys)           : ', total_pellet_volume,pellet_particles/pellet_density
    
 !  end if
 

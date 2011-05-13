@@ -13,7 +13,7 @@ contains
 
 subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                           pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                          R,Z,psi,phi, r0, T0, central_density, pellet_particles, pellet_density, &
+                          R,Z,psi,phi, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume,&
                           particle_source, volume_source)
 
 implicit none
@@ -30,6 +30,7 @@ real*8 :: pellet_phi                !< length of pellet in toroidal direction
 real*8 :: pellet_radius             !< pellet size (radius) in poloidal plane
 real*8 :: pellet_sig, pellet_length !< sigmas of pellet source in poloidal and toroidal direction
 real*8 :: pellet_psi, pellet_delta_psi
+real*8 :: pellet_volume
 
 !output variables
 real*8 :: particle_source           !< particle source (JOREK normalised units)
@@ -65,7 +66,7 @@ else if (pellet_particles .gt. 0.) then
   atn_phi = (0.5d0 - 0.5d0*tanh((phi- pellet_phi)/pellet_length))
   atn_psi = (0.5d0 - 0.5d0*tanh(abs(psi- pellet_psi)/pellet_delta_psi))
   
-  pellet_volume = PI * pellet_radius**2 * pellet_R * pellet_phi ! simulated pellet volume
+!  pellet_volume = PI * pellet_radius**2 * pellet_R * pellet_phi ! simulated pellet volume
     
   phys_pellet_volume = pellet_particles /pellet_density         ! physical pellet volume 
 
@@ -80,7 +81,7 @@ else if (pellet_particles .gt. 0.) then
   particle_source = ablation_rate / central_density  * atn * atn_phi / pellet_volume
   
   volume_source   = atn * atn_phi
-
+  
 end if
 
 return
@@ -120,7 +121,8 @@ pellet_Z = pellet_Z + pellet_velocity_Z * tstep / V_normalisation
 
 PI = 2.d0*asin(1.d0)
  
-total_pellet_particles = total_pellet_particles * central_density * tstep  ! check tstep
+total_pellet_particles = total_pellet_particles * central_density * tstep 
+total_plasma_particles = total_plasma_particles * central_density          ! undo normalisation
 
 if (my_id .eq. 0) then
 
@@ -129,7 +131,7 @@ if (my_id .eq. 0) then
     pellet_particles = max(pellet_particles - total_pellet_particles, 0.d0)
     
     write(*,'(i3,A,4e14.6)') my_id,' pellet (R,Z) =', pellet_R, pellet_Z,pellet_velocity_R/V_normalisation,pellet_velocity_Z/V_normalisation
-    write(*,'(i3,A,4e14.6)') my_id,' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles
+    write(*,'(i3,A,4e14.6,A)') my_id,' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles,' [10^20]'
     write(*,'(i3,A,4e14.6)') my_id,' remaining particles in pellet      : ', pellet_particles
     write(*,'(i3,A,4e14.6)') my_id,' pellet volume (sim,phys)           : ', total_pellet_volume,pellet_particles/pellet_density
    

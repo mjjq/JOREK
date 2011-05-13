@@ -92,7 +92,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_int, C_ext,             &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,              &
-!$omp          central_density, pellet_particles,pellet_density,                        &
+!$omp          central_density, pellet_particles,pellet_density, pellet_volume,         &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume)     &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                       &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,             &
@@ -210,12 +210,12 @@ do ife = ife_min, ife_max
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
                               x_g(ms,mt),y_g(ms,mt), ps0, phi, r0, T0, central_density, &
-                              pellet_particles, pellet_density, source_pellet, source_volume)                  
+                              pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)                  
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
           local_plasma_particles = local_plasma_particles + r0            * bigR * xjac * wst * delta_phi
           local_pellet_volume    = local_pellet_volume    + source_volume * bigR * xjac * wst * delta_phi 
-        
+
         endif
 
         if (ps0 .lt. psi_limit) then
@@ -262,6 +262,7 @@ MU_zero = 4.d0*PI * 1.d-7
 current = C_int / MU_zero
 
 if (my_id .eq. 0) then
+  write(*,'(A,2e14.6)') ' Integrals_3D, PELLET : ',pellet_volume, total_pellet_volume
   if (index_start .gt.0) then
     write(*,'(A,8e14.6)') ' Volume   : ',xtime(index_start),volume
     write(*,'(A,8e14.6)') ' density  (total/in/out) : ',xtime(index_start),density,  density_in,  density_out 

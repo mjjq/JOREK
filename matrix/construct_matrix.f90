@@ -150,22 +150,22 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
        inode1 = element%vertex(iv)
        inode2 = element%vertex(iv2)
 
-!	if (bc_natural_open) then
-!
-!	  if   (  ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-!	    .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
-!
-!	    nodes(1)  = node_list%node(inode1)
-!	    nodes(2)  = node_list%node(inode2)
-!	    
-!	    vertex    = (/ iv, iv2 /)
-!	    direction = (/  1, 2   /)
-!
-!	    call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
-!
-!	  endif
-!	 
-!	endif
+       if (bc_natural_open) then
+
+	 if   (  ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+	   .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+
+	   nodes(1)  = node_list%node(inode1)
+	   nodes(2)  = node_list%node(inode2)
+	   
+	   vertex    = (/ iv, iv2 /)
+	   direction = (/  1, 2   /)
+
+	   call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
+
+	 endif
+	
+       endif
 	   
      enddo
 

@@ -117,7 +117,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                  do k=1, n_var
 
                     !------------------------------------ the open field lines (in case of x-point grid)
-                    if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3) .or. (node_list%node(inode)%boundary .eq. 5)) then
+                    if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3)) then
 
                        if (                  &
                             (k .eq. 1)       &

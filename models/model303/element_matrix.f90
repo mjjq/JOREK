@@ -32,7 +32,7 @@ integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, PI, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
-real*8     :: source_volume, source_pellet
+real*8     :: source_volume, source_pellet, source_pellet2
 real*8     :: psi_axis, psi_bnd, Z_xpoint, dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
@@ -65,6 +65,10 @@ real*8     :: amat_stab_31, amat_stab_32, amat_stab_33, amat_stab_34 ,amat_stab_
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 logical    :: xpoint2
 
+real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
+real*8     :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
+real*8     :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
+
 ELM = 0.d0
 RHS = 0.d0
 
@@ -86,6 +90,8 @@ delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 current_source  = 0.d0
 particle_source = 0.d0
 heat_source     = 0.d0
+eq_zne          = 0.d0
+eq_zTe          = 0.d0         
 
 do i=1,n_vertex_max
  do j=1,n_order+1
@@ -126,13 +132,28 @@ do i=1,n_vertex_max
 
        enddo
 
-       call current(xpoint2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
-       call sources(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
-
+     
      enddo
    enddo
  enddo
 enddo
+
+do ms=1, n_gauss
+  do mt=1, n_gauss
+ 
+    call current(xpoint2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call sources(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+
+    call density(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+                 dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+
+    call temperature(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+                     dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+  
+  enddo
+enddo
+
+eq_zTe = eq_zTe / 2.d0	! electron temperature	
 
 
 !--------------------------------------------------- sum over the Gaussian integration points
@@ -384,12 +405,22 @@ do ms=1, n_gauss
 !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
 !                        x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
 
+!     call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+!                         pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
+!                         x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, central_density, pellet_particles,&
+!			 pellet_density, total_pellet_volume, &
+!                         source_pellet2, source_volume)			
+
      call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                         x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, central_density, pellet_particles,&
-			 pellet_density, total_pellet_volume, &
-                         source_pellet, source_volume)			
-
+                         x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
+			 central_density, pellet_particles, pellet_density, total_pellet_volume, &
+                         source_pellet, source_volume)	
+      
+!     if ((mp*ms*mt .eq.1) .and. ((source_pellet .gt. 1e-4) .or. (source_pellet2 .gt. 1e-4)))  then			 
+!       write(*,'(A,8e14.6)') 'CHECK:',x_g(ms,mt),y_g(ms,mt), r0,eq_zne(ms,mt),T0,eq_zTe(ms,mt), source_pellet2,source_pellet			 		
+!     endif
+     
      do i=1,n_vertex_max
 
        do j=1,n_order+1
@@ -471,10 +502,7 @@ do ms=1, n_gauss
                       - v * eps_cyl * F0 / BigR * zj0_p                   * xjac * tstep &
                       + BigR**2 * (v_s * p0_t - v_t * p0_s)                      * tstep &
 
-                      - visco_num_T  * ( (v_ss * (x_t(ms,mt)**2+y_t(ms,mt)**2) + v_tt*(x_s(ms,mt)**2+y_s(ms,mt)**2)   &
-                               -2.d0*  v_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) )                       &
-                                    * (w0_ss * (x_t(ms,mt)**2+y_t(ms,mt)**2) + w0_tt*(x_s(ms,mt)**2+y_s(ms,mt)**2)    &
-                               -2.d0*  w0_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * tstep &
+                      - visco_num_T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy) * BigR * xjac * tstep &                                                                &
 			       
 !****                      +  tauIC * BigR**4 * w0 * (p0_s * v_t - p0_t * v_s)        * tstep &
 !****                      -  4.d0 * tauIC * BigR**3 * v * w0 * p0_y           * xjac * tstep &

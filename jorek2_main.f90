@@ -649,7 +649,7 @@ program JOREK2
      endif
 
      if (use_pellet) then            ! calculating the pellet_volume (total_pellet_volume)
-       pellet_volume = 3.1415926535 * pellet_radius**2 * 2.d0 * 3.1415926535 * pellet_R
+       pellet_volume = 3.1415926 * pellet_radius**2 * 2.d0 * 3.1415926535 * pellet_R
        call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
      endif
      
@@ -734,7 +734,10 @@ program JOREK2
 
      if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
-        if (use_pellet) call update_pellet(my_id,node_list,element_list)
+        if (use_pellet) then
+	  pellet_volume = total_pellet_volume
+	  call update_pellet(my_id,node_list,element_list)
+        endif
 
         call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
         call update_deltas(my_id,node_list)

@@ -74,7 +74,10 @@ else if (pellet_particles .gt. 0.) then
 
   pellet_atomic = 2.d0
 
-  ablation_rate = 1.62d5 * central_density**(-0.77) * T0**(1.72) * r0**(0.45) * phys_pellet_volume**(0.48) * pellet_atomic**0.217
+!----------------- model from Kuteev (see Polevoi, PPCF2008)
+ ! ablation_rate = 1.62d5 * central_density**(-0.77) * T0**(1.72) * r0**(0.45) * phys_pellet_volume**(0.48) * pellet_atomic**0.217
+!----------------- NGS model Parks (see Gal NF2008)
+  ablation_rate = 2.01d4 * central_density**(-0.81) * T0**(1.64) * r0**(0.33) * phys_pellet_volume**(0.44) * pellet_atomic**0.5
   
 ! particle source in JOREK normalisation
 
@@ -102,6 +105,7 @@ include 'mpif.h'
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
+real*8  :: psi_axis, psi_bnd
 integer :: my_id, ierr
 real*8  :: PI, zmu0, V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
@@ -109,8 +113,6 @@ PI   = 2.d0  * asin(1.d0)
 zmu0 = 4.d-7 * PI
 
 if (pellet_amplitude .gt. 0) return
-
-! S.F. introduced pellet velocity here. 14/02/2011.
 
 call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 

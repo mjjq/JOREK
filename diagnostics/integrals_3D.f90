@@ -1,5 +1,4 @@
-subroutine Integrals_3D(my_id, node_list,element_list,&
-                        density,density_in,density_out,pressure,pressure_in,pressure_out)
+subroutine Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
@@ -18,16 +17,23 @@ type (type_element_list) :: element_list
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
+real*8  :: psi_axis, psi_bnd
 real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
 real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
 real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
 real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
 
-integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_xpoint, ifail
+real*8  :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
+real*8  :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
+real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
+real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
+
+integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint, ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
+real*8  ::  R_axis,Z_axis,s_axis,t_axis 
 real*8  :: current, beta_p, beta_n, beta_t, MU_zero, aminor
-real*8  :: xjac, BigR, wst, P_int, C_int, zj0, ps0, r0, T0, Vol, Volume, Area, PI, Bgeo, psi_limit
-real*8  :: density, density_in, density_out,  pressure, pressure_in, pressure_out
+real*8  :: xjac, BigR, wst, P_int, C_int, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, PI, Bgeo, psi_limit
+real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, P_max, delta_phi, phi, P_tot, D_tot
 real*8  :: psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy
@@ -47,7 +53,7 @@ if (my_id .eq. 0) then
   write(*,*) ' n_cpu   : ',n_cpu
 endif
 
-density  = 0.d0
+density_tot  = 0.d0
 pressure = 0.d0
 D_int    = 0.d0
 P_int    = 0.d0
@@ -75,30 +81,35 @@ P_max         = 0.d0
 gradP_max     = 0.d0
 gradP_psi_max = 0.d0
 
+call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
 if (xpoint) then
   call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-  psi_limit = psi_xpoint
+  psi_bnd= psi_xpoint
 else
-  psi_limit = 0.d0
+  psi_bnd = 0.d0
 endif
+psi_limit = psi_bnd
 
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
-!$omp parallel default(none)                                                            &
-!$omp   shared(element_list,node_list, H, H_s, H_t, HZ, ife_min, ife_max,               &
-!$omp          Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, PI,                   &
-!$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_int, C_ext,             &
-!$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                &
-!$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,              &
-!$omp          central_density, pellet_particles,pellet_density, pellet_volume,         &
-!$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume)     &
-!$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                       &
-!$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,             &
-!$omp           wst, BigR, r0, T0, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy,  &
-!$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi, &
-!$omp           P_max, source_pellet, source_volume,                                    &
+!$omp parallel default(none)                                                                   &
+!$omp   shared(element_list,node_list, H, H_s, H_t, HZ, ife_min, ife_max, xpoint,              &
+!$omp          Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, PI, psi_axis, psi_bnd,       &
+!$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_int, C_ext,                    &
+!$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
+!$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,                     &
+!$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
+!$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume)            &
+!$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
+!$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
+!$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy,  &
+!$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
+!$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe,                           &
+!$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
+!$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           omp_nthreads,omp_tid)
 
 omp_nthreads = omp_get_num_threads()
@@ -159,8 +170,24 @@ do ife = ife_min, ife_max
 	  enddo
         enddo
       enddo
+      
     enddo
   enddo
+  
+  do ms=1, n_gauss
+    do mt=1, n_gauss
+ 
+      call density(xpoint, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+                   dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+
+      call temperature(xpoint, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+                       dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+  
+    enddo
+  enddo
+
+  eq_zTe = eq_zTe / 2.d0	! electron temperature	
+
 !--------------------------------------------------- sum over the Gaussian integration points
   
   do mp=1,n_plane
@@ -177,7 +204,8 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
-        T0     = eq_g(mp,6,ms,mt)
+        T0     = eq_g(mp,6,ms,mt) 
+        T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
 	
@@ -207,9 +235,14 @@ do ife = ife_min, ife_max
         
         if (use_pellet) then
         
+!          call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+!                              pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
+!                              x_g(ms,mt),y_g(ms,mt), ps0, phi, r0, T0e, central_density, &
+!                              pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)                  
+
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                              x_g(ms,mt),y_g(ms,mt), ps0, phi, r0, T0, central_density, &
+                              x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt), eq_zTe(ms,mt), central_density, &
                               pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)                  
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
@@ -248,7 +281,7 @@ call MPI_AllReduce(P_ext,pressure_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WO
 call MPI_AllReduce(C_int,current_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(C_ext,current_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(Vol,Volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(D_tot,density,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(D_tot,density_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(P_tot,pressure,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 if (use_pellet) then
@@ -265,12 +298,12 @@ if (my_id .eq. 0) then
   write(*,'(A,2e14.6)') ' Integrals_3D, PELLET : ',pellet_volume, total_pellet_volume
   if (index_start .gt.0) then
     write(*,'(A,8e14.6)') ' Volume   : ',xtime(index_start),volume
-    write(*,'(A,8e14.6)') ' density  (total/in/out) : ',xtime(index_start),density,  density_in,  density_out 
+    write(*,'(A,8e14.6)') ' density  (total/in/out) : ',xtime(index_start),density_tot,  density_in,  density_out 
     write(*,'(A,8e14.6)') ' pressure (total/in/out) : ',xtime(index_start),pressure, pressure_in, pressure_out, P_max, gradP_max, gradP_psi_max
     write(*,'(A,8e14.6)') ' current  (in/out)       : ',xtime(index_start),current_in, current_out 
  else 
     write(*,'(A,8e14.6)') ' Volume   : ',0.d0,volume
-    write(*,'(A,8e14.6)') ' density  (total/in/out) : ',0.d0,density,  density_in,  density_out 
+    write(*,'(A,8e14.6)') ' density  (total/in/out) : ',0.d0,density_tot,  density_in,  density_out 
     write(*,'(A,8e14.6)') ' pressure (total/in/out) : ',0.d0,pressure, pressure_in, pressure_out, P_max, gradP_max, gradP_psi_max
     write(*,'(A,8e14.6)') ' current  (in/out)       : ',0.d0,current_in, current_out 
   endif

@@ -521,7 +521,6 @@ do ms=1, n_gauss
                     - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR                * xjac * tstep &
 
                     - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                * tstep &
-                    + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep &
 		    
 		    - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR * xjac * tstep &
 		    

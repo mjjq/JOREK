@@ -228,9 +228,9 @@ do ms=1, n_gauss
      r0_p  = eq_p(mp,5,ms,mt)
      r0_s  = eq_s(mp,5,ms,mt)
      r0_t  = eq_t(mp,5,ms,mt)
-     r0_ss = eq_s(mp,5,ms,mt)
-     r0_st = eq_t(mp,5,ms,mt)
-     r0_tt = eq_t(mp,5,ms,mt)
+     r0_ss = eq_ss(mp,5,ms,mt)
+     r0_st = eq_st(mp,5,ms,mt)
+     r0_tt = eq_tt(mp,5,ms,mt)
 
      r0_hat   = BigR**2 * abs(r0)
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x

@@ -18,4 +18,4 @@ solvers/dPackgmres.o: solvers/dPackgmres.f
 
 %.o: %.c
 	@echo "*** $< ***"
-	$(CC) $(CFLAGS) -c $< -o $@  $(INCLUDES)
+	$(CC) $(CFLAGS) -c $< -o $@  $(CINCLUDES)

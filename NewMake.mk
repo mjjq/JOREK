@@ -1,5 +1,10 @@
 include Makefile.inc
 
+SED      ?=sed# gnu-sed command
+AWK			 ?=awk# gnu-awk command
+IBMFC    ?=#    IBM compiler flag (for FORTRAN symbol defs)
+
+
 JOREK_DIR = `pwd`
 
 DIRS =  datatypes models/$(MODEL) 	\
@@ -31,12 +36,20 @@ VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 
 ifeq (1, $(USE_PASTIX_MURGE))
 LIBS     := $(LIBS) $(LIB_PASTIX_MURGE) $(LIB_PASTIX_BLAS)
+ifdef IBMFC 
+	FDEFINES := $(DEFINES) -WF,-DUSE_MURGE
+endif
 DEFINES  := $(DEFINES) -DUSE_MURGE
 INCLUDES := $(INCLUDES) $(INC_PASTIX)
 endif
 
 ifeq (1, $(USE_PASTIX))
 DEFINES  := $(DEFINES) -DUSE_PASTIX
+ifdef FDEFINES
+	FDEFINES := $(FDEFINES),-DUSE_PASTIX
+else 
+	FDEFINES := -WF,-DUSE_PASTIX
+endif
 ifeq (0, $(USE_PASTIX_MURGE))
 LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
 INCLUDES := $(INCLUDES) $(INC_PASTIX)
@@ -47,14 +60,29 @@ ifeq (1, $(USE_HIPS))
 LIBS := $(LIBS) $(LIBHIPS)
 INCLUDES := $(INCLUDES) $(INCHIPS)
 DEFINES  := $(DEFINES) -DUSE_HIPS
+ifdef FDEFINES
+	FDEFINES := $(FDEFINES),-DUSE_HIPS
+else 
+	FDEFINES := -WF,-DUSE_HIPS
+endif
 endif
 ifeq (1, $(USE_MUMPS))
 LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB)
 INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
 DEFINES := $(DEFINES) -DUSE_MUMPS
+ifdef FDEFINES
+	FDEFINES := $(FDEFINES),-DUSE_MUMPS
+else 
+	FDEFINES := -WF,-DUSE_MUMPS
+endif
 endif
 
-INCLUDES := $(INCLUDES) $(DEFINES)
+CINCLUDES := $(INCLUDES) $(DEFINES)
+ifdef IBMFC
+	INCLUDES  := $(INCLUDES) $(FDEFINES)
+else
+	INCLUDES  := $(CINCLUDES)
+endif
 
 JOREK2_MAIN_SRC        = jorek2_main.f90 $(PPPSRC)
 JOREK2_POINCARE_SRC    = $(PPPSRC)
@@ -116,40 +144,40 @@ cleandep:
 
 %.dep:%.f90
 	@echo "Generating Dependencies for $(patsubst %.f90, %.o, $<)"
-	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | sed 's/\,.*//' | 					\
-		awk -v file_o=" $(patsubst %.f90, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
+	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | $(SED) 's/\,.*//' | 					\
+		$(AWK) -v file_o=" $(patsubst %.f90, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
-		sed -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;
+		$(SED) -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
-		sed -n 's@[ ]+include[ ]+"\([^"]*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi' >> $@.tmp || touch $@.tmp;
+		$(SED) -n 's@[ ]+include[ ]+"\([^"]*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null|											\
-		sed -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f90, %.o, $<): \1@p' | 					\
+		$(SED) -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f90, %.o, $<): \1@p' | 					\
 		sort | uniq | grep -v ": /" | grep -v ": <">> $@.tmp || touch $@.tmp;
 	@grep -q -i "^[[:space:]]*module" $< ; 											\
 	if [ $$? -eq 0 ]; then 													\
 		grep -i "^[[:space:]]*module" $<										\
-		| awk -v file="$(patsubst %.f90, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
+		| $(AWK) -v file="$(patsubst %.f90, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
 	fi;
-	-@sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
+	-@$(SED) -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
 	-@rm -f $@.tmp
 
 %.dep: %.f
 	@echo "Generating Dependencies for $(patsubst %.f, %.o, $<)"
 	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | 							\
-		awk -v file_o="$(patsubst %.f, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
+		$(AWK) -v file_o="$(patsubst %.f, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
-		sed -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;
+		$(SED) -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
-		sed -n 's@[ ]+include[ ]+"\([^"]*\)*.*@$(patsubst %.f, %.o, $<) : \1@pi' >> $@.tmp || touch $@.tmp;
+		$(SED) -n 's@[ ]+include[ ]+"\([^"]*\)*.*@$(patsubst %.f, %.o, $<) : \1@pi' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null|											\
-		sed -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f, %.o, $<): \1@p' | 					\
+		$(SED) -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f, %.o, $<): \1@p' | 					\
 		sort | uniq | grep -v ": /" | grep -v ": <">> $@.tmp || touch $@.tmp;
 	@grep -q -i "^[[:space:]]*module" $< ; 											\
 	if [ $$? -eq 0 ]; then 													\
 		grep -i "^[[:space:]]*module" $<										\
-		| awk -v file="$(patsubst %.f, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;		\
+		| $(AWK) -v file="$(patsubst %.f, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;		\
 	fi;
-	-@sed -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
+	-@$(SED) -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
 	-@rm -f $@.tmp
 
 $(MAIN) : $(JOREK2_MAIN_OBJ)

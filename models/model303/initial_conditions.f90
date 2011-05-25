@@ -174,7 +174,7 @@ do in=2,n_tor
   endif
 
   call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)
+               4,2,1, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)
 enddo
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)

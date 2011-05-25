@@ -113,7 +113,7 @@ endif
 
 if (tauIC .ne. 0.d0) then
   call Poisson(my_id,2,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               2,4,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)      ! inverse Poisson
+               2,4,1, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)      ! inverse Poisson
 endif
 
 !----------------------------------------- flux boundary perturbation (to be completed, see Marina)

@@ -19,7 +19,8 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   real*8  :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_solv_0, t_solv_1
   real*8, allocatable :: RHS_tmp(:)
   logical :: solve_only
-  integer::t1, t0, time_ini_1,time_ini_0,time_facto_1,time_facto_0, time_solve_0, time_solve_1,nb_periods,nb_periodes_max,nb_periodes_sec
+  integer :: t1, t0, time_ini_1,time_ini_0,time_facto_1,time_facto_0, time_solve_0
+  integer :: time_solve_1,nb_periods,nb_periodes_max,nb_periodes_sec
   integer, external :: omp_get_num_threads, omp_get_thread_num
   !Split broadcast
   character*8 :: type
@@ -187,15 +188,43 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            endif
            !----------------End pre-processing (PASTIX)
 
-           if (allocated(sparskit_work)) deallocate(sparskit_work)
-           allocate(sparskit_work(mumps_par%N + 1))
            
            
            if (my_id_n .eq. 0) then                     ! elapsed time analysis start
               call MPI_Barrier(MPI_COMM_MASTER,ierr)
               call system_clock(count=t0)
            endif
+
+#IFDEF USE_BLOCK
+           !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
+           !                             temporary solution before using blocks everywhere
+
+           block_size  = n_var
+	   if (my_id .ne. 0) block_size = 2*n_var
+	   
+           block_size2 = block_size**2
+           !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
+           n_block   = mumps_par%n  / block_size
+           nnz_block = mumps_par%nz / block_size2
+	   
+           do i=1,nnz_block  
+             mumps_par%irn(i) = (mumps_par%irn((i-1)*block_size2+1) - 1) / block_size + 1 
+             mumps_par%jcn(i) = (mumps_par%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
+           enddo
+
+           if (allocated(sparskit_work)) deallocate(sparskit_work)
+           allocate(sparskit_work(n_block+1))
+
+           call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
+
+#ELSE
+           if (allocated(sparskit_work)) deallocate(sparskit_work)
+           allocate(sparskit_work(mumps_par%N + 1))
+
            call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+
+#ENDIF
+
            if (my_id_n .eq. 0) then
               call MPI_Barrier(MPI_COMM_MASTER,ierr)     ! elapsed time analysis end
               call system_clock(count=t1)
@@ -218,7 +247,11 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
            call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
            call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
-
+#IFDEF USE_BLOCK
+           call MPI_BCAST(block_size,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+           call MPI_BCAST(n_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+           call MPI_BCAST(nnz_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+#ENDIF
            if (my_id_n .gt. 0) then
               if (associated(mumps_par%irn)) deallocate(mumps_par%irn)
               if (associated(mumps_par%jcn)) deallocate(mumps_par%jcn)
@@ -310,16 +343,23 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
                  if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 
+#IFDEF USE_BLOCK
+                 allocate(pastix_perm_vars(n_block),pastix_iperm_vars(n_block))
+
+                 call pastix_fortran(pastix_data,MPI_COMM_N,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#ELSE
                  allocate(pastix_perm_vars(mumps_par%n),pastix_iperm_vars(mumps_par%n))
 
                  call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-                 !pastix_iparm(IPARM_PID)     =    i_tor(my_id+1) -1 
+#ENDIF
+
 		 pastix_iparm(IPARM_VERBOSE+1)            = pastix_verb              
-                 pastix_iparm(IPARM_ITERMAX+1)            = pastix_iter                 ! refinement : max number of iterations
+                 pastix_iparm(IPARM_ITERMAX+1)            = pastix_iter                ! refinement : max number of iterations
 
                  pastix_iparm(IPARM_FACTORIZATION+1)      = pastix_facto
-                 pastix_iparm(IPARM_THREAD_NBR+1)         = pastix_nthrd  !   numthreads   ! number of threads
+                 pastix_iparm(IPARM_THREAD_NBR+1)         = pastix_nthrd               ! number of threads
                  pastix_iparm(IPARM_RHS_MAKING+1)         = pastix_rhs                 ! right hand side (0 : use RHS)
 
                  pastix_iparm(IPARM_SYM+1)                = pastix_sym
@@ -329,7 +369,12 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  pastix_iparm(IPARM_AMALGAMATION_LEVEL+1) = pastix_amalg
 
                  pastix_dparm(DPARM_EPSILON_REFINEMENT+1) = pastix_epsilon             ! error level refinement
-                 pastix_dparm(DPARM_EPSILON_MAGN_CTRL+1)  = pastix_pivot               ! pivot threshold?
+                 pastix_dparm(DPARM_EPSILON_MAGN_CTRL+1)  = pastix_pivot               ! pivot threshold
+#IFDEF USE_BLOCK
+                 pastix_iparm(IPARM_DOF_NBR+1)            = block_size                 ! block size
+#ELSE
+                 pastix_iparm(IPARM_DOF_NBR+1)            = 1
+#ENDIF
               end if
               pastix_initialised = .true.
 
@@ -363,9 +408,17 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  pastix_iparm(IPARM_END_TASK+1)   = API_TASK_ANALYSE
                  call cpu_time(t_analysis_0)
 
-                 call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+#IFDEF USE_BLOCK
+  
+                 call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
+                      mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
+#ELSE
+
+                 call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#ENDIF
                  call cpu_time(t_analysis_1)
 
                  if (my_id_n .eq.0) write(*, '(i3,A,f8.3)') my_id,' PASTIX, analysis  : ',t_analysis_1-t_analysis_0
@@ -427,9 +480,16 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               call MPI_Barrier(MPI_COMM_MASTER,ierr)
               call system_clock(count=time_facto_0)
            endif
+	   
+#IFDEF USE_BLOCK
+           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
+                      mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+#ELSE	   
            call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
+#ENDIF
            call cpu_time(t_fact_1)
 
            if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' PastiX, fact      : ',t_fact_1-t_fact_0
@@ -489,12 +549,17 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
         if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
+#IFDEF USE_BLOCK
+        call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
+                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#ELSE
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
+#ENDIF
         call cpu_time(t_solv_1)
 
-        if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' PastiX, solv      : ',t_solv_1-t_solv_0
+        if (my_id_n .eq.0)  write(*,'(i3,A,f8.3)')  my_id,' PastiX, solv      : ',t_solv_1-t_solv_0
      end if
      CALL MPI_Barrier(MPI_COMM_WORLD, ierr)
   endif

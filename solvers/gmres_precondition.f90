@@ -70,24 +70,24 @@ if (my_id_n .eq. 0) then
 
   allocate(mumps_par%rhs(ifactor*n_loc_n))
 
-!  call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
-!                    mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
+  call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
+                    mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
 
 !------------- mpi_scatterv alternative
-  ibuf_size = 8*n_dof  
-  allocate(buffer(ibuf_size))
-  call mpi_buffer_attach(buffer,ibuf_size,ierr)
-  if (my_id_master .eq. 0) mumps_par%rhs(1:n_loc_n) = Rsnd_buffer(1:n_loc_n)
-  do i=2,(n_tor+1)/2 
-    if (my_id_master .eq. 0) then    
-      idisp = n_loc_n + 1  + (i-2)*2*n_loc_n 
-      call mpi_bsend(Rsnd_buffer(idisp),2*n_loc_n,MPI_DOUBLE_PRECISION,i-1,i-1,MPI_COMM_MASTER,ierr)    
-    endif      
-    if (my_id_master .eq. i-1) then
-      call mpi_recv(mumps_par%rhs,2*n_loc_n,MPI_DOUBLE_PRECISION,0,i-1,MPI_COMM_MASTER,status,ierr)      
-    endif    
-  enddo
-  call mpi_buffer_detach(buffer,ibuf_size,ierr)
+!  ibuf_size = 8*n_dof  
+!  allocate(buffer(ibuf_size))
+!  call mpi_buffer_attach(buffer,ibuf_size,ierr)
+!  if (my_id_master .eq. 0) mumps_par%rhs(1:n_loc_n) = Rsnd_buffer(1:n_loc_n)
+!  do i=2,(n_tor+1)/2 
+!    if (my_id_master .eq. 0) then    
+!      idisp = n_loc_n + 1  + (i-2)*2*n_loc_n 
+!      call mpi_bsend(Rsnd_buffer(idisp),2*n_loc_n,MPI_DOUBLE_PRECISION,i-1,i-1,MPI_COMM_MASTER,ierr)    
+!    endif      
+!    if (my_id_master .eq. i-1) then
+!      call mpi_recv(mumps_par%rhs,2*n_loc_n,MPI_DOUBLE_PRECISION,0,i-1,MPI_COMM_MASTER,status,ierr)      
+!    endif    
+!  enddo
+!  call mpi_buffer_detach(buffer,ibuf_size,ierr)
 !------------------- end alternative
 
 endif
@@ -125,12 +125,12 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
    else
       pastix_iparm(2) = 5
       pastix_iparm(3) = pastix_endsolve
-      pastix_iparm(6) = pastix_iter          ! refinement : max number of iterations
+      pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
       
       pastix_iparm(31) = pastix_facto
-      pastix_iparm(35) = pastix_nthrd         ! numthreads   ! number of threads
+      pastix_iparm(35) = pastix_nthrd         ! number of threads
       pastix_iparm(37) = pastix_iluk
-      pastix_iparm(39) = pastix_rhs         ! right hand side (0 : use RHS)
+      pastix_iparm(39) = pastix_rhs           ! right hand side (0 : use RHS)
       pastix_iparm(41) = pastix_sym
       
       pastix_iparm(42) = pastix_ricar
@@ -138,15 +138,22 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       pastix_iparm(14) = pastix_amalg
       
       pastix_dparm(6)  = pastix_epsilon    ! error level refinement
-      pastix_dparm(11) = pastix_pivot    ! pivot threshold?
+      pastix_dparm(11) = pastix_pivot      ! pivot threshold?
 
-      !  write(*,*) my_id, my_id_n,' PRECONDITIONING using PASTIX '
+#IFDEF USE_BLOCK
+      pastix_iparm(5) = block_size      ! block size
       
+      write(*,*) 'GMRES_PRECONDITION : ',block_size,n_block,nnz_block
 
-      !  write(*,'(2i3,A,2e16.8)') my_id,my_id_n,' precond : rhs before : ',maxval(mumps_par%rhs),minval(mumps_par%rhs)
+      call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
+                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#ELSE      
+      pastix_iparm(5) = 1      ! block size
       
       call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#ENDIF
    end if
 
 endif
@@ -171,24 +178,24 @@ if (my_id_n .eq. 0) then
     recv_disp(i) = recv_disp(i-1) + recv_counts(i-1)
   enddo
 
-!  call mpi_gatherv(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION, &
-!                   y_tmp,recv_counts,recv_disp,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
+  call mpi_gatherv(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION, &
+                   y_tmp,recv_counts,recv_disp,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
 
 !----------------------------- mpi_gatherv alternative
-  if (my_id_master .eq. 0)  y_tmp(1:n_loc_n) = mumps_par%rhs(1:n_loc_n) 
-  call mpi_buffer_attach(buffer,ibuf_size,ierr)
-  do i=2,(n_tor+1)/2 
-    if (my_id_master .eq. i-1) then
-      call mpi_bsend(mumps_par%rhs,2*n_loc_n,MPI_DOUBLE_PRECISION,0,i-1,MPI_COMM_MASTER,ierr)
-    endif  
-    if (my_id_master .eq. 0) then    
-      idisp = n_loc_n + 1  + (i-2)*2*n_loc_n 
-      write(*,*) idisp
-      call mpi_recv(y_tmp(idisp),2*n_loc_n,MPI_DOUBLE_PRECISION,i-1,i-1,MPI_COMM_MASTER,status,ierr)
-    endif    
-  enddo
-  call mpi_buffer_detach(buffer,ibuf_size,ierr)
-  deallocate(buffer)
+!  if (my_id_master .eq. 0)  y_tmp(1:n_loc_n) = mumps_par%rhs(1:n_loc_n) 
+!  call mpi_buffer_attach(buffer,ibuf_size,ierr)
+!  do i=2,(n_tor+1)/2 
+!    if (my_id_master .eq. i-1) then
+!      call mpi_bsend(mumps_par%rhs,2*n_loc_n,MPI_DOUBLE_PRECISION,0,i-1,MPI_COMM_MASTER,ierr)
+!    endif  
+!    if (my_id_master .eq. 0) then    
+!      idisp = n_loc_n + 1  + (i-2)*2*n_loc_n 
+!      write(*,*) idisp
+!      call mpi_recv(y_tmp(idisp),2*n_loc_n,MPI_DOUBLE_PRECISION,i-1,i-1,MPI_COMM_MASTER,status,ierr)
+!    endif    
+!  enddo
+!  call mpi_buffer_detach(buffer,ibuf_size,ierr)
+!  deallocate(buffer)
 !--------------------------- end alternative
 
   if (my_id .eq. 0) then

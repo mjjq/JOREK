@@ -5,6 +5,7 @@ module pastix_module             ! PastiX specific variables
   integer,allocatable   :: pastix_perm_vars(:), pastix_iperm_vars(:)
   integer,allocatable   :: sparskit_work(:)
   integer,allocatable   :: ihwb(:),iwk(:)
+  integer               :: n_block, nnz_block, block_size, block_size2
 
   logical               :: use_pastix, pastix_initialised, pastix_analysed, pastix_smp_only, use_matrix_whitout_zeros_pastix
 

@@ -88,24 +88,52 @@ call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
 
 call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
+
+#IFDEF USE_BLOCK
+!---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
+!                             temporary solution before using blocks everywhere
+
+block_size  = n_tor * n_var
+block_size2 = block_size**2
+!---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
+n_block   = mumps_par%n  / block_size
+nnz_block = mumps_par%nz / block_size2
+
+do i=1,nnz_block  
+  mumps_par%irn(i) = (mumps_par%irn((i-1)*block_size2+1) - 1) / block_size + 1 
+  mumps_par%jcn(i) = (mumps_par%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
+enddo
+
+if (allocated(sparskit_work)) deallocate(sparskit_work)
+allocate(sparskit_work(n_block+1))
+
+call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
+
+if (.not. allocated(pastix_perm_vars))  allocate(pastix_perm_vars(n_block))
+if (.not. allocated(pastix_iperm_vars)) allocate(pastix_iperm_vars(n_block))
+
+#ELSE
+
 if (allocated(sparskit_work)) deallocate(sparskit_work)
 allocate(sparskit_work(mumps_par%N + 1))
 
 call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+
+if (.not. allocated(pastix_perm_vars))  allocate(pastix_perm_vars(mumps_par%n))
+if (.not. allocated(pastix_iperm_vars)) allocate(pastix_iperm_vars(mumps_par%n))
+
+#ENDIF
 
 call cpu_time(t_comm_1)
 
 if (my_id .eq. 0)  write(*,'(A,f8.3)') ' PASTIX, comm      : ',t_comm_1-t_comm_0
 
 
-if (.not. allocated(pastix_perm_vars))  allocate(pastix_perm_vars(mumps_par%n))
-if (.not. allocated(pastix_iperm_vars)) allocate(pastix_iperm_vars(mumps_par%n))
-
 !$omp parallel default(none) shared(pastix_nthrd)    
-        pastix_nthrd = omp_get_num_threads()
+pastix_nthrd = omp_get_num_threads()
 !$omp end parallel
 
-write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
+if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
 
 if (.not. pastix_initialised) then
 
@@ -113,18 +141,25 @@ if (.not. pastix_initialised) then
   pastix_iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
   pastix_iparm(IPARM_END_TASK)          = API_TASK_INIT
 
-write(*,*) '***********************************'
-write(*,*) '* initialise PastiX               *'
-write(*,*) '***********************************'
-
+  if (my_id .eq. 0) then
+    write(*,*) '***********************************'
+    write(*,*) '* initialise PastiX               *'
+    write(*,*) '***********************************'
+  endif
+  
+#IFDEF USE_BLOCK
+  call pastix_fortran(pastix_data,MPI_COMM_WORLD,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#ELSE
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#ENDIF
 
   pastix_iparm(IPARM_VERBOSE)            = pastix_verb
   pastix_iparm(IPARM_ITERMAX)            = pastix_iter                 ! refinement : max number of iterations
 
   pastix_iparm(IPARM_FACTORIZATION)      = pastix_facto
-  pastix_iparm(IPARM_THREAD_NBR)         = pastix_nthrd  !   numthreads   ! number of threads
+  pastix_iparm(IPARM_THREAD_NBR)         = pastix_nthrd               ! number of threads
   pastix_iparm(IPARM_RHS_MAKING)         = pastix_rhs                 ! right hand side (0 : use RHS)
   
   pastix_iparm(IPARM_SYM)                = pastix_sym
@@ -137,21 +172,40 @@ write(*,*) '***********************************'
   pastix_dparm(DPARM_EPSILON_MAGN_CTRL)  = pastix_pivot               ! pivot threshold?
   pastix_initialised = .true.
 
+#IFDEF USE_BLOCK
+  pastix_iparm(IPARM_DOF_NBR)            = block_size
+#ELSE
+  pastix_iparm(IPARM_DOF_NBR)            = 1
+#ENDIF
+
 endif
 
 if (.not. pastix_analysed) then
 
-   pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
-   pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
+  pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
+  pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
+ 
   call cpu_time(t_analysis_0)
+  
+  if (my_id .eq. 0) then
+    write(*,*) '***********************************'
+    write(*,*) '* analyse PastiX                  *'
+    write(*,*) '***********************************'
+  endif
 
-write(*,*) '***********************************'
-write(*,*) '* analyse PastiX                  *'
-write(*,*) '***********************************'
+#IFDEF USE_BLOCK
+  
+  call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, &
+                      mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+#ELSE
 
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, &
                       mumps_par%jcn(1:mumps_par%n+1), mumps_par%irn(1:mumps_par%nz), mumps_par%A(1:mumps_par%nz), &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+#ENDIF
 
   call cpu_time(t_analysis_1)
 
@@ -165,12 +219,27 @@ call cpu_time(t_fact_0)
 
 pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
 pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
-write(*,*) '***********************************'
-write(*,*) '* call PastiX                     *'
-write(*,*) '***********************************'
+
+if (my_id .eq. 0) then
+  write(*,*) '***********************************'
+  write(*,*) '* call PastiX                     *'
+  write(*,*) '***********************************'
+endif
+
+#IFDEF USE_BLOCK
+
+pastix_iparm(IPARM_DOF_NBR)            = block_size
+
+call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block,                                                 &
+                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+#ELSE
 
 call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+#ENDIF
 
 call cpu_time(t_fact_1)
 
@@ -178,7 +247,6 @@ if (my_id .eq. 0) write(*,'(A,f8.3)')  ' PASTIX, fact/solv : ',t_fact_1-t_fact_0
 
 do k=1,mumps_par%n
   deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
-!  write(*,*) k,deltas(k)
 enddo
 
 if (allocated(column_local))  deallocate(column_local)

@@ -26,6 +26,8 @@ clean :
 
 
 $(MAIN) : jorek2_main.f90
+	@echo -n "#define SVN_VERSION" > version.h
+	@svn info | grep 'Revision:' | cut -c10-13 >> version.h
 	$(FC) $(FFLAGS)      \
 	jorek2_main.f90      \
         datatypes/*.o        \

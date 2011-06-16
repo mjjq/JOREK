@@ -39,6 +39,7 @@ program JOREK2
   
   include 'mpif.h'
 #include "r3_info.h"
+#include "version.h"
   
   interface
     subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
@@ -144,6 +145,7 @@ program JOREK2
     write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
     write(*,*) '****************************************'
     write(*,*) ' number of cpus : ',n_cpu
+    write(*,*) ' SVN_VERSION : ', SVN_VERSION
   end if
   
   ! --- Initialise timing

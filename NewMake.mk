@@ -118,6 +118,8 @@ MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
 
 all: $(MAIN)
+	@echo -n "#define SVN_VERSION" > version.h
+	@svn info | grep 'Revision:' | cut -c10-13 >> version.h
 
 modules :
 	for dir in $(DIRS); do     \

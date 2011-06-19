@@ -34,7 +34,7 @@ program JOREK2
   use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response, update_response
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
-  
+  use tr_module 
   implicit none
   
   include 'mpif.h'
@@ -102,7 +102,7 @@ program JOREK2
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
-  character*8              :: label
+  character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
@@ -139,7 +139,9 @@ program JOREK2
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr) ! number of MPI procs
   my_id = rank
   n_cpu = comm_size
-  
+  call tr_meminit(my_id,n_cpu)
+  call tr_print_memsize("Begin")
+
   if (my_id == 0) then
     write(*,*) '****************************************'
     write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
@@ -227,7 +229,8 @@ program JOREK2
   
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
-  
+  call tr_print_memsize("InitStep")
+
   ! --- Read the restart file to continue a previous JOREK run (if restart is .true.)
   if ( restart .and. (my_id == 0) ) then
     
@@ -370,10 +373,11 @@ program JOREK2
     mumps_par%JOB = -2
     if (my_id == 0) call DMUMPS(mumps_par)
 #endif
-    if (allocated(pastix_perm_vars))  deallocate(pastix_perm_vars)
-    if (allocated(pastix_iperm_vars)) deallocate(pastix_iperm_vars)
+    if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars")
+    if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars")
     
   end if if_not_restart
+  call tr_print_memsize("AfterEquilibrium")
   
   ! --- Broadcast grid information and input parameters to other MPI procs
   call broadcast_elements(my_id, element_list)                ! elements
@@ -422,7 +426,7 @@ program JOREK2
            M_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
         end if
 
-        allocate(i_tor(n_cpu))
+        call tr_allocate(i_tor,1,n_cpu,"i_tor")
         
         do i = 1, n_cpu 
            i_tor(i) =  MOD(i-1, M_cpu)+1
@@ -471,10 +475,12 @@ program JOREK2
         id_elements = my_id
      endif
 
-     allocate(local_elms(element_list%n_elements))
-     allocate(index_min(index_size),index_max(index_size))
+     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms")
+     call tr_allocate(index_min,1,index_size,"index_min")
+     call tr_allocate(index_max,1,index_size,"index_max")
      if ( .not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres) ) then
-        allocate(local_index_start(n_cpu),local_index_end(n_cpu))
+        call tr_allocate(local_index_start,1,n_cpu,"local_index_start")
+        call tr_allocate(local_index_end,1,n_cpu,"local_index_end")
      end if
      !
      ! Construct index_min, index_max and local_elems
@@ -537,9 +543,9 @@ program JOREK2
            END IF
         END DO
 
-        IF (ALLOCATED(local_elms)) DEALLOCATE(local_elms)
+        IF (ALLOCATED(local_elms)) call tr_deallocate(local_elms,"local_elms")
         ! Build local_elms from loc2glob
-        ALLOCATE(local_elms(n_local_elms))
+        call tr_allocate(local_elms,1,n_local_elms,"local_elms")
 
         n_local_elms = 0
         DO i_elem = 1, element_list%n_elements
@@ -606,6 +612,7 @@ program JOREK2
   iter_big    = 200
   iter_precon = 22
 
+  call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
   
   index_now = index_start  ! index_now: Index of current timestep
@@ -800,6 +807,8 @@ program JOREK2
      else
         call r3_info_print (istep, -2, 'ITERATION')
      endif
+     write(itlabel,'(I8)'),istep
+     call tr_print_memsize("AfterIter"//itlabel)
      
      ! --- Write a restart file every nout timesteps
      if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
@@ -825,8 +834,8 @@ program JOREK2
 
 
            IF ( use_murge_element ) THEN
-              IF (ALLOCATED(murge_glob2loc)) DEALLOCATE(murge_glob2loc)
-              IF (ALLOCATED(murge_loc2glob)) DEALLOCATE(murge_loc2glob)
+              IF (ALLOCATED(murge_glob2loc)) call tr_deallocate(murge_glob2loc,"murge_glob2loc")
+              IF (ALLOCATED(murge_loc2glob)) call tr_deallocate(murge_loc2glob,"murge_loc2glob")
            END IF
            CALL MURGE_Clean(murge_id, ierr)
         else
@@ -910,7 +919,10 @@ program JOREK2
      call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
 
      nplot = 501
-     allocate(xp(nplot),yp1(nplot),yp2(nplot),yp3(nplot))
+     call tr_allocate(xp,1,nplot,"xp")
+     call tr_allocate(yp1,1,nplot,"yp1")
+     call tr_allocate(yp2,1,nplot,"yp2")
+     call tr_allocate(yp3,1,nplot,"yp3")
      iplot = 0
 
      if (xpoint) then
@@ -977,12 +989,13 @@ program JOREK2
 
      call export_helena(node_list,element_list,bnd_elm_list)
 
-     if (allocated(energies))  deallocate(energies)
-     if (allocated(xtime))     deallocate(xtime)
+     if (allocated(energies))  call tr_deallocate(energies,"energies")
+     if (allocated(xtime))     call tr_deallocate(xtime,"xtime")
   endif
-  
+
   call r3_info_summary ()                                ! timing
   call MPI_FINALIZE(IERR)                                ! clean up MPI
+
 
 end program JOREK2
 

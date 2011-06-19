@@ -2,15 +2,17 @@ subroutine scale_global_matrix
 !***********************************************************************
 !* column scaling of the global matrix                                 *
 !***********************************************************************
+use tr_module 
 use global_distributed_matrix
 implicit none
 include 'mpif.h'
 real*8, allocatable :: column_local(:)
 integer :: k,j,ierr
 
-if (allocated(column_scaling))  deallocate(column_scaling)
-if (allocated(column_local))    deallocate(column_local)
-allocate(column_scaling(ndof_glob),column_local(ndof_glob))
+if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling")
+if (allocated(column_local))    call tr_deallocate(column_local,"column_local")
+call tr_allocate(column_scaling,1,ndof_glob,"column_scaling")
+call tr_allocate(column_local,1,ndof_glob,"column_local")
 
 column_local = 1.d-20;   column_scaling = 1.d-20
 
@@ -26,7 +28,7 @@ do k=1,nz_glob
   A_glob(k) = A_glob(k) / column_scaling(j)
 enddo
 
-deallocate(column_local)
+call tr_deallocate(column_local,"column_local")
 
 return
 end

@@ -1,5 +1,5 @@
 subroutine add_pellet(node_list,element_list,pellet_density,pellet_size,sig_pellet,pellet_R,pellet_Z)
-
+use tr_module
 use data_structure
 implicit none
 
@@ -22,7 +22,11 @@ write(*,*) '* adding (non-axisymmetric) pellet density  *'
 write(*,*) '*********************************************'
 
 nfft=1024
-allocate(delta_n_phi(nfft+2),T_phi(nfft+2),T_phi_s(nfft+2),T_phi_t(nfft+2),T_phi_st(nfft+2))
+call tr_allocate(delta_n_phi,1,nfft+2,"delta_n_phi")
+call tr_allocate(T_phi,1,nfft+2,"T_phi")
+call tr_allocate(T_phi_s,1,nfft+2,"T_phi_s")
+call tr_allocate(T_phi_t,1,nfft+2,"T_phi_t")
+call tr_allocate(T_phi_st,1,nfft+2,"T_phi_st")
 
 PI = 2.d0 * asin(1.d0)
 

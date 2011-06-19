@@ -475,7 +475,7 @@ close(20)
 
 !--------------------------------------------------- write the binary VTK file
 n_scalars=1
-allocate(scalar_names(n_scalars))
+call tr_allocate(scalar_names,1,n_scalars,"scalar_names")
 scalar_names = (/ 'T           '/)
 
 

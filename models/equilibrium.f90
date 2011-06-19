@@ -3,6 +3,7 @@ subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,x
 ! Solve the Grad-Shafranov equation to determine the plasma equilibrium
 !   both freeboundary and fixed boundary solutions
 !-----------------------------------------------------------------------
+use tr_module 
 use parameters
 use data_structure
 use phys_module
@@ -288,8 +289,8 @@ enddo
 
 surface_list%n_psi = 200
   
-if (allocated(surface_list%psi_values)) deallocate(surface_list%psi_values)
-allocate(surface_list%psi_values(surface_list%n_psi))
+if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
+call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
   
 if (xpoint2) then
   do i = 1, surface_list%n_psi
@@ -304,8 +305,8 @@ endif
 call find_flux_surfaces(xpoint2,node_list,element_list,surface_list)
 
 sep_list%n_psi =1
-if (allocated(sep_list%psi_values)) deallocate(sep_list%psi_values)
-allocate(sep_list%psi_values(sep_list%n_psi))
+if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values")
+call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values")
 sep_list%psi_values(1) = psi_bnd
 
 call find_flux_surfaces(xpoint2,node_list,element_list,sep_list)  
@@ -325,9 +326,9 @@ endif
   
 call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,Z_xpoint)
 
-if (allocated(surface_list%psi_values))    deallocate(surface_list%psi_values)
+if (allocated(surface_list%psi_values))    call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
 if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)
-if (allocated(sep_list%psi_values))        deallocate(sep_list%psi_values)
+if (allocated(sep_list%psi_values))        call tr_deallocate(sep_list%psi_values,"sep_list%psi_values")
 if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
  
 return

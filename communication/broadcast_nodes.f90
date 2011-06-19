@@ -2,6 +2,7 @@ subroutine Broadcast_nodes(my_id,node_list)
 !----------------------------------------------------------
 ! subroutine to broadcast all the nodes in the node_list
 !----------------------------------------------------------
+use tr_module 
 use data_structure
 implicit none
 
@@ -34,7 +35,7 @@ call MPI_BCAST(node_list%n_dof,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3 )*INT_EXT + (1)*ILOG_EXT)
 
-allocate(buffer(bufsize/ INT_EXT))
+call tr_allocate(buffer,1,bufsize/ INT_EXT,"bcastn_buffer")
 
 if (my_id .eq. 0) then
 
@@ -82,7 +83,7 @@ if (my_id .ne. 0) then
 
 endif
 
-deallocate(buffer)
+call tr_deallocate(buffer,"bcastn_buffer")
 
 return
 end

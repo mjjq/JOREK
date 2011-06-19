@@ -2,6 +2,7 @@ subroutine Broadcast_elements(my_id,element_list)
 !----------------------------------------------------------
 ! subroutine to broadcast all the nodes in the point_list
 !----------------------------------------------------------
+use tr_module
 use data_structure
 implicit none
 
@@ -35,8 +36,7 @@ call MPI_BCAST(element_list%n_elements,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 bufsize = element_list%n_elements * ((2*n_vertex_max+8+5)*INT_EXT + n_vertex_max*(n_order+1)*IDBL_EXT)
 
-if (allocated(buffer)) deallocate(buffer)
-allocate(buffer(bufsize/ INT_EXT))
+call tr_allocate(buffer,1,bufsize/ INT_EXT,"bcaste_buffer")
 
 if (my_id .eq. 0) then
   position = 0
@@ -81,7 +81,7 @@ if (my_id .ne. 0) then
 
 endif
 
-deallocate(buffer)
+call tr_deallocate(buffer,"bcaste_buffer")
 
 return
 end

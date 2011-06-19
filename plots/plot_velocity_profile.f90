@@ -2,6 +2,7 @@ subroutine plot_velocity_profile(node_list,element_list,Rp_start,Zp_start,Rp_end
 !****************************************************************************
 !* plots 1D profile of the n=0 equilibrium flow                             *
 !****************************************************************************
+use tr_module 
 use data_structure
 use phys_module
 
@@ -37,7 +38,9 @@ nplot  = 1001
 i_var  = 2
 i_harm = 1
 
-allocate(xp(nplot),yp(nplot),stmp(nplot))
+call tr_allocate(xp,1,nplot,"xp")
+call tr_allocate(yp,1,nplot,"yp")
+call tr_allocate(stmp,1,nplot,"stmp")
 
 xr1  = 9999.
 sig1 = 9999.
@@ -94,7 +97,9 @@ enddo
 
 call lplot(1,1,1,xp,yp,iplot,1,'perp. flow',10,'distance',8,'flow',4)
 
-deallocate(xp,yp)
+call tr_deallocate(xp,"xp")
+call tr_deallocate(yp,"yp")
+call tr_deallocate(xp,"stmp")
 
 return
 end

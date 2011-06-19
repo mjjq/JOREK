@@ -3,6 +3,7 @@ subroutine update_rhs_n(my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 !* subroutine updates the RHS with the explicit part of the matrix     *
 !* multiplied with the previous solution (deltas)                      *
 !***********************************************************************
+use tr_module 
 use parameters
 use mumps_module
 use global_distributed_matrix
@@ -24,12 +25,13 @@ end interface
 
 !write(*,*) my_id,my_id_n,' starting update_rhs'
 
-allocate(rhs_delta(ndof_glob))             ! size could be zero when my_id .gt.0 but needs to be allocated
+call tr_allocate(rhs_delta,1,ndof_glob,"rhs_delta")             ! size could be zero when my_id .gt.0 but needs to be allocated
 
 rhs_delta(1:ndof_glob) = 0.d0
 
 if (my_id_n .eq.0) then
-  allocate(rhs_delta_n(mumps_par%n),deltas_n(mumps_par%n))
+  call tr_allocate(rhs_delta_n,1,mumps_par%n,"rhs_delta_n")
+  call tr_allocate(deltas_n,1,mumps_par%n,"deltas_n")
   rhs_delta_n(1:mumps_par%n) = 0.d0
   deltas_n(1:mumps_par%n)    = 0.d0
 endif
@@ -53,8 +55,11 @@ if (my_id_n .eq. 0) then              ! rhs lives only on masters
 
 endif
 
-deallocate(rhs_delta)
-if (my_id_n .eq.0) deallocate(rhs_delta_n,deltas_n)
+call tr_deallocate(rhs_delta,"rhs_delta")
+if (my_id_n .eq.0) then
+   call tr_deallocate(rhs_delta_n,"rhs_delta_n")
+   call tr_deallocate(deltas_n,"deltas_n")
+end if
 
 return
 end

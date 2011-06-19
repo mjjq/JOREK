@@ -3,6 +3,7 @@ subroutine solve_mumps_all(my_id)
 ! subroutine solves the complete system of equation using mumps with
 ! distributed matrix on the main group mpi_comm_world
 !---------------------------------------------------------------------
+use tr_module 
 use mumps_module
 use global_distributed_matrix
 implicit none
@@ -24,9 +25,10 @@ mumps_par%rhs     => rhs_glob(1:nz_glob)
 mumps_par%n      = ndof_glob
 mumps_par%nz_loc = nz_glob
 
-if (allocated(column_scaling))  deallocate(column_scaling)
-if (allocated(column_local))    deallocate(column_local)
-allocate(column_scaling(mumps_par%N),column_local(mumps_par%N))
+if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling")
+if (allocated(column_local))    call tr_deallocate(column_local,"column_local")
+call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling")
+call tr_allocate(column_local,1,mumps_par%N,"column_local")
 
 column_local = 1.d-20;   column_scaling = 1.d-20
 do k=1,mumps_par%nz_loc

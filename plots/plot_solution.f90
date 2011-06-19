@@ -2,6 +2,7 @@ subroutine plot_solution(node_list,element_list,ivar,iharm,iangle,label)
 !-----------------------------------------------------------------------
 ! plots the 2D solution
 !-----------------------------------------------------------------------
+use tr_module 
 use parameters
 use data_structure
 use basis_at_gaussian
@@ -108,7 +109,7 @@ endif
 
 write(*,*) ' min/max : ',psi_min,psi_max
 
-allocate(xp(node_list%n_nodes,n_dim))
+call tr_allocate(xp,1,node_list%n_nodes,1,n_dim,"xp")
 
 do i=1,node_list%n_nodes
  xp(i,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
@@ -202,7 +203,7 @@ enddo
 call cplotm(1,1,-1,x_g,y_g,4,-4,1,1,PS,4,zc,nc,'Solution',8,'R [m]',5,'Z [m]',5)
 call lincol(0)
 
-if (allocated(xp)) deallocate(xp)
+if (allocated(xp)) call tr_deallocate(xp,"xp")
 
 return
 end

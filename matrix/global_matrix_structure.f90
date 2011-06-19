@@ -3,7 +3,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
   !***********************************************************************
-
+  use tr_module
   use data_structure
   use global_distributed_matrix
 
@@ -39,8 +39,8 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   n_max = 1024
 
-  allocate(ijA_size(index_max-index_min+1))
-  allocate(irn_jcn(index_max-index_min+1,n_max))
+  call tr_allocate(ijA_size,1,index_max-index_min+1,"ijA_size")
+  call tr_allocate(irn_jcn,1,index_max-index_min+1,1,n_max,"irn_jcn")
 
   ijA_size    = 0
   irn_jcn = 0
@@ -231,7 +231,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
      enddo              ! end loop over boundary elements (ibnd)
   endif                ! check if free boundary on
 
-  allocate(ijA_index(index_max-index_min+1,n_max))
+  call tr_allocate(ijA_index,1,index_max-index_min+1,1,n_max,"ijA_index")
 
   ibase = 0
   do i=1,index_max-index_min+1

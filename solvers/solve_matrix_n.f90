@@ -3,6 +3,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   ! subroutine solves the system of equation for each harmonic
   ! using mumps with centralised matrix on the group mpi_group_n (mpi_comm_n)
   !---------------------------------------------------------------------
+  use tr_module 
   use parameters
 
   use mumps_module
@@ -31,7 +32,8 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
   call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
   call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
-
+  call tr_print_memsize("BeforeSolveN")
+     
   if (my_id .eq. 0) then
      write(*,*) my_id,'*********************************'
      write(*,*) my_id,'*      solve local matrix  (n)  *'
@@ -58,7 +60,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #ifdef USE_MUMPS
         !----------------Pre-processing to remove nonzeros in A (MUMPS)
         if (use_matrix_whitout_zeros_mumps) then
-           ALLOCATE(tmp(mumps_par%NZ))
+           call tr_allocate(tmp,1,mumps_par%NZ,"tmp")
            tmp(:)=0
            !
            nz2=0
@@ -70,9 +72,9 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            ENDDO
            WRITE(*,*) '% zeros',my_id,mumps_par%NZ,nz2,REAL(nz2)/REAL(mumps_par%NZ)*100
            !
-           ALLOCATE(A2(nz2))
-           ALLOCATE(irn2(nz2))
-           ALLOCATE(jcn2(nz2))
+           call tr_allocate(A2,1,nz2,"A2")
+           call tr_allocate(irn2,1,nz2,"irn2")
+           call tr_allocate(jcn2,1,nz2,"jcn2")
            !
            A2(:) = 0.d0
            irn2(:) = 0
@@ -84,25 +86,25 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               jcn2(i) = mumps_par%jcn(tmp(i))        
            ENDDO
            !
-           DEALLOCATE(tmp)  
+           call tr_deallocate(tmp,"tmp")  
            !
-           IF (ASSOCIATED(mumps_par%A))   DEALLOCATE(mumps_par%A)
-           IF (ASSOCIATED(mumps_par%irn)) DEALLOCATE(mumps_par%irn)
-           IF (ASSOCIATED(mumps_par%jcn)) DEALLOCATE(mumps_par%jcn)
+           IF (ASSOCIATED(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
+           IF (ASSOCIATED(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
+           IF (ASSOCIATED(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
            !
            mumps_par%NZ = nz2
            !
-           ALLOCATE(mumps_par%A(mumps_par%NZ))
-           ALLOCATE(mumps_par%irn(mumps_par%NZ))
-           ALLOCATE(mumps_par%jcn(mumps_par%NZ))
+           call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A")
+           call tr_allocatep(mumps_par%irn,1,mumps_par%NZ,"mumps_par%irn")
+           call tr_allocatep(mumps_par%jcn,1,mumps_par%NZ,"mumps_par%jcn")
            !
            mumps_par%A(:)   = A2(:)
            mumps_par%irn(:) = irn2(:)
            mumps_par%jcn(:) = jcn2(:)
            !
-           DEALLOCATE(A2)
-           DEALLOCATE(irn2)
-           DEALLOCATE(jcn2)
+           call tr_deallocate(a2,"a2")
+           call tr_deallocate(irn2,"irn2")
+           call tr_deallocate(jcn2,"jcn2")
            !
         endif
         !----------------End pre-processing (MUMPS)
@@ -138,7 +140,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
            !----------------Pre-processing to remove nonzeros in A (PASTIX)
            if (use_matrix_whitout_zeros_pastix) then
-              ALLOCATE(tmp(mumps_par%NZ))
+              call tr_allocate(tmp,1,mumps_par%NZ,"tmp")
               tmp(:)=0
               !
               nz2=0
@@ -150,9 +152,9 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               ENDDO
               WRITE(*,*) '% zeros',my_id,mumps_par%NZ,nz2,REAL(nz2)/REAL(mumps_par%NZ)*100
               !
-              ALLOCATE(A2(nz2))
-              ALLOCATE(irn2(nz2))
-              ALLOCATE(jcn2(nz2))
+              call tr_allocate(A2,1,nz2,"A2")
+              call tr_allocate(irn2,1,nz2,"irn2")
+              call tr_allocate(jcn2,1,nz2,"jcn2")
               !
               A2(:) = 0.d0
               irn2(:) = 0
@@ -164,26 +166,26 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  jcn2(i) = mumps_par%jcn(tmp(i))        
               ENDDO
               !
-              DEALLOCATE(tmp)  
+              call tr_deallocate(tmp,"tmp")  
               !
-              IF (ASSOCIATED(mumps_par%A))   DEALLOCATE(mumps_par%A)
-              IF (ASSOCIATED(mumps_par%irn)) DEALLOCATE(mumps_par%irn)
-              IF (ASSOCIATED(mumps_par%jcn)) DEALLOCATE(mumps_par%jcn)
+              IF (ASSOCIATED(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
+              IF (ASSOCIATED(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
+              IF (ASSOCIATED(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
               !
               kk = mumps_par%NZ  !tmp, just for write(*,*) below
               mumps_par%NZ = nz2
               !
-              ALLOCATE(mumps_par%A(mumps_par%NZ))
-              ALLOCATE(mumps_par%irn(mumps_par%NZ))
-              ALLOCATE(mumps_par%jcn(mumps_par%NZ))
+              call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A")
+              call tr_allocatep(mumps_par%irn,1,mumps_par%NZ,"mumps_par%irn")
+              call tr_allocatep(mumps_par%jcn,1,mumps_par%NZ,"mumps_par%jcn")
               !
               mumps_par%A(:)   = A2(:)
               mumps_par%irn(:) = irn2(:)
               mumps_par%jcn(:) = jcn2(:)
               !
-              DEALLOCATE(A2)
-              DEALLOCATE(irn2)
-              DEALLOCATE(jcn2)
+              call tr_deallocate(a2,"a2")
+              call tr_deallocate(irn2,"irn2")
+              call tr_deallocate(jcn2,"jcn2")
               !
            endif
            !----------------End pre-processing (PASTIX)
@@ -253,11 +255,14 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            call MPI_BCAST(nnz_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 #ENDIF
            if (my_id_n .gt. 0) then
-              if (associated(mumps_par%irn)) deallocate(mumps_par%irn)
-              if (associated(mumps_par%jcn)) deallocate(mumps_par%jcn)
-              if (associated(mumps_par%A))   deallocate(mumps_par%A)
-              if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
-              allocate(mumps_par%irn(mumps_par%nz),mumps_par%jcn(mumps_par%nz),mumps_par%a(mumps_par%nz),mumps_par%rhs(mumps_par%n))
+              if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
+              if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
+              if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
+              if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
+              call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"mumps_par%irn")
+              call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"mumps_par%jcn")
+              call tr_allocatep(mumps_par%a,1,mumps_par%nz,"mumps_par%a")
+              call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs")
            endif
 
 !!$           call MPI_BCAST(mumps_par%IRN,mumps_par%nz,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -280,10 +285,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               k = mumps_par%JCN(mumps_par%N+1)-1
               IF(k/=nz2)THEN
                  WRITE(*,*) 'New nnz to symmetrize',my_id,k,REAL(k)/REAL(kk)*100
-                 DEALLOCATE(mumps_par%IRN)
-                 DEALLOCATE(mumps_par%A)
-                 ALLOCATE(mumps_par%A(k))
-                 ALLOCATE(mumps_par%IRN(k))
+                 call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN")
+                 call tr_deallocatep(mumps_par%A,"mumps_par%A")
+                 call tr_allocatep(mumps_par%A,1,k,"mumps_par%A")
+                 call tr_allocatep(mumps_par%IRN,1,k,"mumps_par%IRN")
                  CALL pastix_fortran_checkmatrix_end(pastix_data,pastix_verb,mumps_par%IRN,mumps_par%A,1)
               ENDIF
            ENDIF
@@ -575,11 +580,11 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
   if (my_id_n .eq. 0) then
 
-     if (allocated(deltas)) deallocate(deltas)
-     allocate(deltas(ndof_glob))
+     if (allocated(deltas)) call tr_deallocate(deltas,"deltas")
+     call tr_allocate(deltas,1,ndof_glob,"deltas")
      deltas = 0.d0
 
-     allocate(rhs_tmp(ndof_glob))
+     call tr_allocate(rhs_tmp,1,ndof_glob,"rhs_tmp")
 
      rhs_tmp = 0.d0
 
@@ -596,9 +601,13 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
      call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
 
-     deallocate(rhs_tmp)
+     call tr_deallocate(rhs_tmp,"rhs_tmp")
 
   endif
+  call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+1)) 
+
+
+  call tr_print_memsize("AfterSolveN")
   call r3_info_end (r3_info_index_0)         ! timing
   return
 end subroutine solve_matrix_n

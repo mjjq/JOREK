@@ -3,6 +3,7 @@ subroutine q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_x
 ! subroutine calculats the q-profile from the flux surface representation
 ! (adapted from helena20)
 !---------------------------------------------------------------------
+use tr_module 
 use data_structure
 use phys_module
 
@@ -35,7 +36,7 @@ write(*,*) '**********************************'
 write(*,*) '*        q-profile               *'
 write(*,*) '**********************************'
 
-allocate(q(surface_list%n_psi))
+call tr_allocate(q,1,surface_list%n_psi,"q")
 
 PI = 2.d0 *asin(1.d0)
 
@@ -118,7 +119,7 @@ close(42)
 
 call lplot(2,1,1,surface_list%psi_values(2),q(2),surface_list%n_psi-1,1,'q-profile',9,'flux',4,'q',1)
 
-deallocate(q)
+call tr_deallocate(q,"q")
 
 return
 end subroutine q_profile

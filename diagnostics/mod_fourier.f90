@@ -3,6 +3,7 @@ MODULE FOURIER
 ! magnetic field and to perform a Fourier transformation of physical quantities in (theta_mag, phi).
 ! For details see ../README.jorek2_four
   
+  USE tr_module 
   USE parameters,      ONLY: n_vertex_max, n_order, n_plane, n_tor, variable_names
   USE nodes_elements,  ONLY: node_list, element_list
   USE phys_module,     ONLY: F0, xpoint
@@ -34,8 +35,7 @@ MODULE FOURIER
   
   integer, parameter   :: NEQUIDIST_PTS = 32  ! Number of equidistant points for theta_mag(theta_geo) Fourier trafo
   integer, parameter   :: FFTW_ESTIMATE = 64  ! constant of the FFTW library
-  real*8,  parameter   :: PI = 4.*ATAN(1.)
-  
+  real*8,  parameter   :: PI =  3.141592653589793_8
   
   
   CONTAINS
@@ -100,9 +100,10 @@ MODULE FOURIER
     
     nequidist_tor = n_plane-1
     
-    if ( ALLOCATED(vve)   ) DEALLOCATE(vve)
-    if ( ALLOCATED(vfour) ) DEALLOCATE(vfour)
-    ALLOCATE( vve(NEQUIDIST_PTS,nequidist_tor,mapping.nstpts), vfour(NEQUIDIST_PTS/2+1,nequidist_tor,mapping.nstpts) )
+    if ( ALLOCATED(vve)   ) call tr_deallocate(vve,"vve")
+    if ( ALLOCATED(vfour) ) call tr_deallocate(vfour,"vfour")
+    call tr_ALLOCATE(vve,1,NEQUIDIST_PTS,1,nequidist_tor,1,mapping.nstpts,"vve")
+    call tr_allocate(vfour,1,NEQUIDIST_PTS/2+1,1,nequidist_tor,1,mapping.nstpts,"vfour")
     vve   = 0.
     vfour = 0.
     

@@ -15,7 +15,7 @@ subroutine distribute_harmonics(my_id,my_id_n,n_cpu)
 !    mumps_par%jcn(1:mumps_par%nz)
 !
 !---------------------------------------------------------------------
-
+use tr_module
 use parameters
 use global_distributed_matrix
 use mumps_module
@@ -45,9 +45,13 @@ do i=1,nz_glob                                    ! determine buffersize
 enddo
 write(*,*) my_id,' ibufsize : ',ibufsize,nz_glob
 
-allocate(Asnd_buffer(ibufsize),isnd_buffer(ibufsize),jsnd_buffer(ibufsize))
-allocate(send_counts(n_cpu),send_disp(n_cpu))
-allocate(recv_counts(n_cpu),recv_disp(n_cpu))
+call tr_allocate(Asnd_buffer,1,ibufsize,"dh_Asnd_buffer")
+call tr_allocate(isnd_buffer,1,ibufsize,"dh_isnd_buffer")
+call tr_allocate(jsnd_buffer,1,ibufsize,"dh_jsnd_buffer")
+call tr_allocate(send_counts,1,n_cpu,"dh_send_counts")
+call tr_allocate(send_disp,1,n_cpu,"dh_send_disp")
+call tr_allocate(recv_counts,1,n_cpu,"dh_recv_counts")
+call tr_allocate(recv_disp,1,n_cpu,"dh_recv_disp")
 
 nz_loc_n = nz_glob    / n_tor**2
 n_loc_n  = ndof_glob  / n_tor
@@ -107,7 +111,7 @@ enddo
 !write(*,'(i3,A,12i8)') my_id,' send_counts : ',send_counts
 !write(*,'(i3,A,12i8)') my_id,' send_disp   : ',send_disp
 
-allocate(sizes(n_cpu))
+call tr_allocate(sizes,1,n_cpu,"dh_sizes")
 
 call mpi_allgather(nz_loc_n,1,MPI_INTEGER,sizes,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
@@ -138,11 +142,13 @@ mumps_par%nz = N_recv
 !write(*,'(i3,A,12i8)') my_id,' recv_disp   : ',recv_disp
 !write(*,'(i3,A,12i8)') my_id,' sizes       : ',sizes
 
-if (associated(mumps_par%A))   deallocate(mumps_par%A)
-if (associated(mumps_par%irn)) deallocate(mumps_par%irn)
-if (associated(mumps_par%jcn)) deallocate(mumps_par%jcn)
+if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A")
+if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn")
+if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn")
 
-allocate(mumps_par%A(N_recv),mumps_par%irn(N_recv),mumps_par%jcn(N_recv))
+call tr_allocatep(mumps_par%A,1,N_recv,"dh_mumps_par%A")
+call tr_allocatep(mumps_par%irn,1,N_recv,"dh_mumps_par%irn")
+call tr_allocatep(mumps_par%jcn,1,N_recv,"dh_mumps_par%jcn")
 
 mumps_par%A = 0.d0
 mumps_par%irn = 0
@@ -189,16 +195,22 @@ if (my_id_n .eq. 0) then
 endif
 
 
-deallocate(Asnd_buffer, isnd_buffer, jsnd_buffer)
-deallocate(send_counts,send_disp,recv_counts,recv_disp, sizes)
+call tr_deallocate(Asnd_buffer,"dh_Asnd_buffer")
+call tr_deallocate(isnd_buffer,"dh_isnd_buffer")
+call tr_deallocate(jsnd_buffer,"dh_jsnd_buffer")
+call tr_deallocate(send_counts,"dh_send_counts")
+call tr_deallocate(send_disp  ,"dh_send_disp  ")
+call tr_deallocate(recv_counts,"dh_recv_counts")
+call tr_deallocate(recv_disp  ,"dh_recv_disp  ")
+call tr_deallocate(sizes      ,"dh_sizes      ")
 
 ifactor = 2
 if (my_id .eq. 0)            ifactor = 1
 if (mod(my_id,M_cpu) .ne. 0) ifactor = 0
 
 mumps_par%n =  ifactor*n_loc_n
-if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
-allocate(mumps_par%rhs(mumps_par%n))
+if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs")
+call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs")
 
 call distribute_vector(my_id,rhs_glob,mumps_par%rhs)
 

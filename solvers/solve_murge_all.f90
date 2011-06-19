@@ -24,6 +24,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   ! subroutine solves the complete system of equation using pastix with
   ! distributed matrix on the main group mpi_comm_world
   !---------------------------------------------------------------------
+  USE tr_module 
   USE parameters
   USE mumps_module
   USE pastix_module
@@ -76,9 +77,10 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
 
 
   if (.not. use_murge_element) then
-     IF (ALLOCATED(column_scaling))  DEALLOCATE(column_scaling)
-     IF (ALLOCATED(column_local))    DEALLOCATE(column_local)
-     ALLOCATE(column_scaling(mumps_par%N),column_local(mumps_par%N))
+     IF (ALLOCATED(column_scaling))  call tr_deallocate(column_scaling,"column_scaling")
+     IF (ALLOCATED(column_local))    call tr_deallocate(column_local,"column_local")
+     call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling")
+     call tr_allocate(column_local,1,mumps_par%N,"column_local")
 
      column_local = 1.d-20;   column_scaling = 1.d-20
      DO k=1,nz_glob
@@ -102,10 +104,11 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   CALL CPU_TIME(t_comm_0)
   IF (.NOT. use_murge_element) THEN
      !------------------------------------------------------ collect the distributed matrix onto all procs
-     IF (ALLOCATED(counts))        DEALLOCATE(counts)
-     IF (ALLOCATED(displacements)) DEALLOCATE(displacements)
+     IF (ALLOCATED(counts))        call tr_deallocate(counts,"counts")
+     IF (ALLOCATED(displacements)) call tr_deallocate(displacements,"displacements")
      
-     ALLOCATE(counts(n_cpu),displacements(n_cpu))
+     call tr_allocate(counts,1,n_cpu,"counts")
+     call tr_allocate(displacements,1,n_cpu,"displacements")
      
      CALL MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER,counts,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
      
@@ -114,12 +117,14 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
         displacements(i) = displacements(i-1) + counts(i-1)
      ENDDO
      
-     IF (ASSOCIATED(mumps_par%IRN)) DEALLOCATE(mumps_par%IRN)
-     IF (ASSOCIATED(mumps_par%JCN)) DEALLOCATE(mumps_par%JCN)
-     IF (ASSOCIATED(mumps_par%A) )  DEALLOCATE(mumps_par%A)
+     IF (ASSOCIATED(mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN")
+     IF (ASSOCIATED(mumps_par%JCN)) call tr_deallocatep(mumps_par%JCN,"mumps_par%JCN")
+     IF (ASSOCIATED(mumps_par%A) )  call tr_deallocatep(mumps_par%A,"mumps_par%A")
 
      
-     ALLOCATE(mumps_par%IRN(mumps_par%nz),mumps_par%JCN(mumps_par%nz),mumps_par%A(mumps_par%nz))
+     call tr_allocatep(mumps_par%IRN,1,mumps_par%nz,"mumps_par%IRN")
+     call tr_allocatep(mumps_par%JCN,1,mumps_par%nz,"mumps_par%JCN")
+     call tr_allocatep(mumps_par%A,1,mumps_par%nz,"mumps_par%A")
 
 
      CALL MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%IRN, &
@@ -224,15 +229,15 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   if (gmres) then
      !if (my_id_n .eq. 0) then
         
-     if (allocated(deltas)) deallocate(deltas)
-     allocate(deltas(ndof_glob))
+     if (allocated(deltas)) call tr_deallocate(deltas,"deltas")
+     call tr_allocate(deltas,1,ndof_glob,"deltas")
      deltas = 0.d0
 
   end if
   call system_clock(count=t0)
   if (gmres) then
      CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, 0, MURGE_ASSEMBLY_OVW , ierr)
-     !deallocate(rhs_tmp)
+!      call tr_deallocate(rhs_tmp,"rhs_tmp")
   else
      CALL MURGE_SetGlobalRhs(murge_id, rhs_glob, 0, MURGE_ASSEMBLY_OVW , ierr)
   end if
@@ -241,8 +246,8 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   if (t1<t0) nb_periods = nb_periods + nb_periodes_max   
   write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_SetGlobalRhs ',REAL(nb_periods)/nb_periodes_sec
   
-  IF (ASSOCIATED(mumps_par%rhs)) DEALLOCATE(mumps_par%rhs)     
-  ALLOCATE(mumps_par%rhs(murge_global_n*murge_ndof))
+  IF (ASSOCIATED(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")     
+  call tr_allocatep(mumps_par%rhs,1,murge_global_n*murge_ndof,"mumps_par%rhs")
 
   call system_clock(count=t0) 
   mumps_par%rhs = 0.0
@@ -262,11 +267,11 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   else
      if (my_id_n .eq. 0) then
         
-        if (allocated(deltas)) deallocate(deltas)
-        allocate(deltas(ndof_glob))
+        if (allocated(deltas)) call tr_deallocate(deltas,"deltas")
+        call tr_allocate(deltas,1,ndof_glob,"deltas")
         deltas = 0.d0
         
-        allocate(rhs_tmp(ndof_glob))
+        call tr_allocate(rhs_tmp,1,ndof_glob,"rhs_tmp")
 
         rhs_tmp = 0.d0
         
@@ -283,10 +288,10 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
         
         call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
 
-        deallocate(rhs_tmp)
+        call tr_deallocate(rhs_tmp,"rhs_tmp")
 
      endif
   end if
-  deallocate(mumps_par%rhs)
+  call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
   RETURN
 END SUBROUTINE solve_murge_all

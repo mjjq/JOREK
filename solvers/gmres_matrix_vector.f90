@@ -5,6 +5,7 @@ subroutine gmres_matrix_vector(x,y,my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 !
 ! result (y) is only known on id=0
 !-----------------------------------------------------------------------
+use tr_module 
 use parameters
 use global_distributed_matrix
 use murge_module
@@ -43,7 +44,7 @@ else
    n_blocks    = nz_glob/n_blocksize**2
    ndof_local   = (local_index_end(my_id+1) - local_index_start(my_id+1) + 1) * n_blocksize
    index_offset = (local_index_start(my_id+1)-1) * n_blocksize 
-   allocate(y_tmp(ndof_local))
+   call tr_allocate(y_tmp,1,ndof_local,"y_tmp")
    y_tmp(1:ndof_local) = 0.d0
 !$omp parallel default(none)                                                                                         &
 !$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize, nz_glob, local_index_start, index_offset)  &
@@ -77,7 +78,8 @@ else
    
    y(1:ndof_glob) = 0.d0
    
-   allocate(recv_counts(n_cpu),recv_disp(n_cpu))
+   call tr_allocate(recv_counts,1,n_cpu,"recv_counts")
+   call tr_allocate(recv_disp,1,n_cpu,"recv_disp")
 
    do i=1,n_cpu
       recv_counts(i) = (local_index_end(i) - local_index_start(i) + 1) * n_blocksize
@@ -89,7 +91,9 @@ else
    enddo
 
    call mpi_gatherv(y_tmp,ndof_local,MPI_DOUBLE_PRECISION,y,recv_counts,recv_disp,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-   deallocate(y_tmp,recv_counts,recv_disp)
+   call tr_deallocate(y_tmp,"y_tmp")
+   call tr_deallocate(recv_counts,"recv_counts")
+   call tr_deallocate(recv_disp,"recv_disp")
 end if
 
 call cpu_time(t5)

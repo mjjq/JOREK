@@ -4,9 +4,9 @@ include ../config.in
 %.o:%.c
 	$(CC) $(CFLAGS)           -c $< -o $@  $(INCLUDES)
 
-all : fortran_pthread.o
+all : fortran_pthread.o 
 
-modules :
+modules : 
 
 clean :
 	rm -f *.mod *.o

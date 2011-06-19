@@ -1,4 +1,5 @@
 subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nth)
+use tr_module 
 use data_structure
 implicit none
 
@@ -18,7 +19,8 @@ real*8,allocatable :: rplot(:), zplot(:)
 character*13       :: LABEL
 
 nplot=11
-allocate(rplot(nplot),zplot(nplot))
+call tr_allocate(rplot,1,nplot,"rplot")
+call tr_allocate(zplot,1,nplot,"zplot")
 
 LABEL= 'Flux surfaces'
 
@@ -86,7 +88,8 @@ enddo
 
 call lincol(0)
 
-deallocate(rplot,zplot)
+call tr_deallocate(rplot,"rplot")
+call tr_deallocate(zplot,"zplot")
 
 return
 end subroutine plot_flux_surfaces

@@ -1,10 +1,11 @@
 include ../config.in
 
-all: r3_info.o \
+all:    r3_info.o \
 	flushc.o \
-	r3_ctlk.o
+	r3_ctlk.o \
+	trace.o
 
-modules :
+modules : trace.o
 
 clean :
-	rm  -f *.o
+	rm  -f *.o *.mod

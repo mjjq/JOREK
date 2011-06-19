@@ -4,6 +4,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   ! collect the element matrices into one large sparse matrix
   ! in coordinate format
   !---------------------------------------------------------------
+  use tr_module 
   use parameters
   use data_structure
   use global_distributed_matrix
@@ -27,7 +28,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   logical :: xpoint2
 
 !--- internal variables
-  real*8, allocatable :: rhs_loc(:)
+  real*8, pointer :: rhs_loc(:)
   real*8  :: ELM(n_tor*n_vertex_max*(n_order+1)*n_var,n_tor*n_vertex_max*(n_order+1)*n_var)
   real*8  :: RHS(n_tor*n_vertex_max*(n_order+1)*n_var)
   real*8  :: ELM2(n_tor*n_vertex_max*(n_order+1)*n_var,n_tor*n_vertex_max*(n_order+1)*n_var)
@@ -50,7 +51,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
      ! write(*,*) ' n_elements (local)       : ',my_id,n_local_elms
      ! write(*,*) ' index_min,index_max      : ',my_id,index_min,index_max
   endif
-
+  call tr_print_memsize("DebConstM")
   i_bnd = 0
 
   do i=1, n_local_elms
@@ -75,15 +76,15 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   enddo
 
-  if (.not. allocated(A_glob))    allocate(A_glob(nz_glob))
-  if (.not. allocated(irn_glob))  allocate(irn_glob(nz_glob))
-  if (.not. allocated(jcn_glob))  allocate(jcn_glob(nz_glob))
+  if (.not. allocated(A_glob))    call tr_allocate(A_glob,1,nz_glob,"A_glob")
+  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob")
+  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob")
 
-  if (allocated(rhs_glob))        deallocate(rhs_glob)
+  if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob")
 
-  allocate(rhs_glob(ndof_glob))
+  call tr_allocate(rhs_glob,1,ndof_glob,"rhs_glob")
 
-  if (.not. allocated(rhs_loc))   allocate(rhs_loc(ndof_glob))
+  call tr_allocatep(rhs_loc,1,ndof_glob,"rhs_loc")
 
   irn_glob = 0
   jcn_glob = 0
@@ -277,13 +278,13 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-  deallocate(RHS_loc)
+  call tr_deallocatep(RHS_loc,"RHS_loc")
 
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &
        index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint, .false., .false.)
 
   call r3_info_end(r3_info_index_0) !timing
-
+  call tr_print_memsize("EndConstM")
   return
 end subroutine construct_matrix

@@ -2,6 +2,7 @@ subroutine distribute_vector(my_id,rhs,rhs_dis)
 !-----------------------------------------------------------------------
 ! distribute vector rhs to the MASTERS of each toroidal harmonic
 !-----------------------------------------------------------------------
+use tr_module 
 use parameters
 use global_distributed_matrix
 use mumps_module
@@ -20,10 +21,11 @@ call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 n_loc_n  = ndof_glob  / n_tor
 M_cpu    = n_cpu / ((n_tor+1)/2)
 
-allocate(send_counts(n_cpu),send_disp(n_cpu))
-allocate(recv_counts(n_cpu),recv_disp(n_cpu))
-
-allocate(Rsnd_buffer(ndof_glob))
+call tr_allocate(send_counts,1,n_cpu,"dv_send_counts")
+call tr_allocate(send_disp,1,n_cpu,"dv_send_disp")
+call tr_allocate(recv_counts,1,n_cpu,"dv_recv_counts")
+call tr_allocate(recv_disp,1,n_cpu,"dv_recv_disp")
+call tr_allocate(Rsnd_buffer,1,ndof_glob,"dv_Rsnd_buffer")
 
 if (my_id .eq. 0) then
 
@@ -66,7 +68,10 @@ n_send =  ifactor*n_loc_n
 call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
                   rhs_dis,n_send,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 
-deallocate(Rsnd_buffer)
-deallocate(send_counts, send_disp, recv_counts, recv_disp)
+call tr_deallocate(Rsnd_buffer,"dv_Rsnd_buffer")
+call tr_deallocate(send_counts,"dv_send_counts")
+call tr_deallocate(send_disp,"dv_send_disp")
+call tr_deallocate(recv_counts,"dv_recv_counts")
+call tr_deallocate(recv_disp,"dv_recv_disp")
 return
 end

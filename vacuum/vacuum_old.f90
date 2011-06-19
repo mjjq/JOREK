@@ -363,7 +363,8 @@ subroutine vacuum_old(my_id,node_list,element_list,bnd_elm_list,bnd_node_list, &
   write(95,*)
   write(45,*)
   
-  deallocate( psi_bnd_vec, dpsi_bnd_vec )
+  deallocate( psi_bnd_vec)
+  deallocate( dpsi_bnd_vec )
   
   return
 end subroutine vacuum_old

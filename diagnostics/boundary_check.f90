@@ -4,6 +4,7 @@
 !! \f$\frac{\int dA |B_{tan,plasma}-B_{tan,vacuum}|}{\int dA |B_{tan,vacuum}|}\f$.
 subroutine boundary_check()
   
+  use tr_module
   use data_structure,  only: type_bnd_element 
   use phys_module,     only: resistive_wall
   use nodes_elements,  only: node_list, bnd_node_list, element_list, bnd_elm_list
@@ -40,9 +41,12 @@ subroutine boundary_check()
   write(*,*) '*    check boundary conditions     *'
   write(*,*) '************************************'
   
-  allocate( psibnd_vec(n_dof_starwall), dpsibnd_vec(n_dof_starwall), B_par(n_starwall_harmonics),  &
-    B_par_v(n_starwall_harmonics), val_integral(n_starwall_harmonics),                             &
-    err_integral(n_starwall_harmonics) )
+  call tr_allocate(psibnd_vec,1,n_dof_starwall,"psibnd_vec")
+  call tr_allocate(dpsibnd_vec,1,n_dof_starwall,"dpsibnd_vec")
+  call tr_allocate(B_par,1,n_starwall_harmonics,"B_par")
+  call tr_allocate(B_par_v,1,n_starwall_harmonics,"B_par_v")
+  call tr_allocate(val_integral,1,n_starwall_harmonics,"val_integral")
+  call tr_allocate(err_integral,1,n_starwall_harmonics,"err_integral")
   
   ! --- Determine vectors with the Psi and deltaPsi values at the boundary.
   call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
@@ -157,7 +161,12 @@ subroutine boundary_check()
   !write(87,'(I6,1x,20ES15.5)') err_integral(:) / val_integral(:)
   !###
   
-  deallocate( psibnd_vec, dpsibnd_vec, B_par, B_par_v, val_integral, err_integral )
+  call tr_deallocate(psibnd_vec,"psibnd_vec")
+  call tr_deallocate(dpsibnd_vec,"dpsibnd_vec")
+  call tr_deallocate(B_par,"B_par")
+  call tr_deallocate(B_par_v,"B_par_v")
+  call tr_deallocate(val_integral,"val_integral")
+  call tr_deallocate(err_integral,"err_integral")
   
   write(*,*) '@@< boundary_check'
   

@@ -26,10 +26,7 @@ if (my_id .eq.0) then
   write(*,*) '************************************'
 endif
 
-
  
-
-  
  !call  Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)
  !index_total = -1
  !do i=1,n_active_nodes
@@ -110,6 +107,7 @@ enddo
 n_local_ELMs = inext
 
 !write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
+
 
 return
 end

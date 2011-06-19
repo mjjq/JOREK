@@ -2,6 +2,7 @@ subroutine import_restart(node_list,element_list)
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
+use tr_module 
 use data_structure
 use phys_module
 implicit none
@@ -45,11 +46,11 @@ read(21) t_start
 
 if (index_start .ge. 1) then
 
-  if (allocated(xtime)) deallocate(xtime)
-  allocate(xtime(1:index_start+nstep))
+  if (allocated(xtime)) call tr_deallocate(xtime,"xtime")
+  call tr_allocate(xtime,1,index_start+nstep,"xtime")
 
-  if (allocated(energies)) deallocate(energies)
-  allocate(energies(n_tor,2,1:index_start+nstep))
+  if (allocated(energies)) call tr_deallocate(energies,"energies")
+  call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies")
 
   energies = 0.d0
 

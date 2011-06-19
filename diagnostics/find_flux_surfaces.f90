@@ -2,6 +2,7 @@ subroutine find_flux_surfaces(xpoint,node_list,element_list,surface_list)
 !-----------------------------------------------------------------------
 ! finds fluxsurfaces by finding crossings at the edge of an element
 !-----------------------------------------------------------------------
+use tr_module 
 use data_structure
 
 implicit none
@@ -31,9 +32,13 @@ write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surfa
 
 PI = 2.d0* asin(1.d0)
 
-if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)
+if (allocated(surface_list%flux_surfaces)) then
+   call tr_unregister_mem(sizeof(surface_list%flux_surfaces),"surface_list%flux_surfaces")
+   deallocate(surface_list%flux_surfaces)
+end if
 
-allocate(surface_list%flux_surfaces(surface_list%n_psi))
+allocate(surface_list%flux_surfaces(1:surface_list%n_psi))
+call tr_register_mem(sizeof(surface_list%flux_surfaces),"surface_list%flux_surfaces")
 
 do j=1, surface_list%n_psi
   surface_list%flux_surfaces(j)%n_pieces = 0

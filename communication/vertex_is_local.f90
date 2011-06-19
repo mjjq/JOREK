@@ -5,7 +5,7 @@
 ! loc2glob of size n and return .true. or .false. in islocal.
 !
 SUBROUTINE vertex_is_local(vertex, islocal)
-
+  USE tr_module
   USE murge_module
 
   IMPLICIT NONE
@@ -24,7 +24,7 @@ SUBROUTINE vertex_is_local(vertex, islocal)
   IF (ALLOCATED(murge_glob2loc)) THEN
 
   ELSE
-     ALLOCATE(murge_glob2loc(murge_global_n))
+     call tr_allocate(murge_glob2loc,1,murge_global_n,"murge_glob2loc")
      murge_glob2loc = -1
      DO iter = 1, murge_local_n
         murge_glob2loc(murge_loc2glob(iter)) = iter

@@ -2,7 +2,7 @@ subroutine grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n
 !------------------------------------------------------------------------
 ! subroutine calculates a new flux surface grid (adapted from HELENA20)
 !------------------------------------------------------------------------
-
+use tr_module
 use data_structure
 
 implicit none
@@ -60,9 +60,15 @@ surface_list%n_psi = n_flux - 1
 nrnew              = n_flux
 npnew              = n_tht
 
-allocate(surface_list%psi_values(surface_list%n_psi),psi_values(surface_list%n_psi+1))
-allocate(s_values(nrnew),radius(nrnew),tht_start(n_pieces_max),tht_end(n_pieces_max))
-allocate(RRnew(4,nrnew*npnew),ZZnew(4,nrnew*npnew),PSInew(4,nrnew*npnew))
+call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
+call tr_allocate(psi_values,1,surface_list%n_psi+1,"psi_values")
+call tr_allocate(s_values,1,nrnew,"s_values")
+call tr_allocate(radius,1,nrnew,"radius")
+call tr_allocate(tht_start,1,n_pieces_max,"tht_start")
+call tr_allocate(tht_end,1,n_pieces_max,"tht_end")
+call tr_allocate(RRnew,1,4,1,nrnew*npnew,"RRnew")
+call tr_allocate(ZZnew,1,4,1,nrnew*npnew,"ZZnew")
+call tr_allocate(PSInew,1,4,1,nrnew*npnew,"PSInew")
 
 s_values = 0.d0
 call meshac2(surface_list%n_psi+1,s_values,xr1,xr2,sig1,sig2,0.6d0,1.0d0)
@@ -90,7 +96,10 @@ call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1)
 
 !call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 
-allocate(sp1(surface_list%n_psi+1),sp2(surface_list%n_psi+1),sp3(surface_list%n_psi+1),sp4(surface_list%n_psi+1))
+call tr_allocate(sp1,1,surface_list%n_psi+1,"sp1")
+call tr_allocate(sp2,1,surface_list%n_psi+1,"sp2")
+call tr_allocate(sp3,1,surface_list%n_psi+1,"sp3")
+call tr_allocate(sp4,1,surface_list%n_psi+1,"sp4")
 
 call spline(surface_list%n_psi+1,radius,s_values,0.d0,0.d0,0,sp1,sp2,sp3,sp4)
 

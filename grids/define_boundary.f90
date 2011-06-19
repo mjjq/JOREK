@@ -6,6 +6,7 @@ subroutine Define_Boundary
 !   TRIA  : triangularity
 ! output is contained in the module boundary
 !---------------------------------------------------------------------
+use tr_module 
 use phys_module
 
 implicit none
@@ -35,7 +36,11 @@ if (mf .le. 0) then
     write(*,'(A18,f8.4)')  '  Xpoint(angle)   : ',xtheta
 
     n_bnd = 256
-    allocate(tht_tmp(n_bnd),r_tmp(n_bnd),dr_tmp(n_bnd),psi_tmp(n_bnd),dpsi_tmp(n_bnd))
+    call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp")
+    call tr_allocate(r_tmp,1,n_bnd,"r_tmp")
+    call tr_allocate(dr_tmp,1,n_bnd,"dr_tmp")
+    call tr_allocate(psi_tmp,1,n_bnd,"psi_tmp")
+    call tr_allocate(dpsi_tmp,1,n_bnd,"dpsi_tmp")
 
     do i=1,n_bnd
 
@@ -81,7 +86,11 @@ if (mf .le. 0) then
 
     n_bnd = n_boundary
 
-    allocate(tht_tmp(n_bnd),r_tmp(n_bnd),dr_tmp(n_bnd),psi_tmp(n_bnd),dpsi_tmp(n_bnd))
+    call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp")
+    call tr_allocate(r_tmp,1,n_bnd,"r_tmp")
+    call tr_allocate(dr_tmp,1,n_bnd,"dr_tmp")
+    call tr_allocate(psi_tmp,1,n_bnd,"psi_tmp")
+    call tr_allocate(dpsi_tmp,1,n_bnd,"dpsi_tmp")
 
     do i=1,n_bnd
 
@@ -112,7 +121,7 @@ if (mf .le. 0) then
 
   endif
 
-  allocate(work(3*n_bnd))
+  call tr_allocate(work,1,3*n_bnd,"work")
 
   call TB15A(n_bnd,tht_tmp,r_tmp,dr_tmp,work,6)           ! periodic spline of the radius
   call TB15A(n_bnd,tht_tmp,psi_tmp,dpsi_tmp,work,6)       ! periodic spline of flux
@@ -122,7 +131,7 @@ if (mf .le. 0) then
   call lplot6(1,1,tht_tmp,psi_boundary,-n_bnd,'psi at boundary')
   call lincol(0)
   
-  deallocate(work)
+  call tr_deallocate(work,"work")
 
   mf = 256
 
@@ -155,7 +164,11 @@ if (mf .le. 0) then
 
   fpsi(1) = 0.d0
 
-  deallocate(tht_tmp,r_tmp,dr_tmp,psi_tmp,dpsi_tmp)
+  call tr_deallocate(tht_tmp,"tht_tmp")
+  call tr_deallocate(r_tmp,"r_tmp")
+  call tr_deallocate(dr_tmp,"dr_tmp")
+  call tr_deallocate(psi_tmp,"psi_tmp")
+  call tr_deallocate(dpsi_tmp,"dpsi_tmp")
 
 else
   write(*,*) ' boundary defined by Fourier series : ',mf

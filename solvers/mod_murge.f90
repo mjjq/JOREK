@@ -1,5 +1,6 @@
 !> Variables and and routines related to the MURGE solver interface.
 MODULE murge_module
+  use tr_module 
   IMPLICIT NONE
 
   INCLUDE "murge.inc"
@@ -361,14 +362,14 @@ CONTAINS
     write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GETLOCALNODENBR ',REAL(nb_periods)/nb_periodes_sec
 
 
-    ALLOCATE(murge_loc2glob(murge_local_n))
-    ALLOCATE(murge_loc2glob_prod(murge_local_n_prod))
+    call tr_allocate(murge_loc2glob,1,murge_local_n,"murge_loc2glob")
+    call tr_allocate(murge_loc2glob_prod,1,murge_local_n_prod,"murge_loc2glob_prod")
     murge_global_n      = n
     murge_global_n_prod = n
     write (*,*) "Local number of nodes", murge_local_n, "global",  n
     call system_clock(count=t0)
     CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
-    if (allocated(murge_glob2loc)) deallocate(murge_glob2loc)
+    if (allocated(murge_glob2loc)) call tr_deallocate(murge_glob2loc,"murge_glob2loc")
 
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
@@ -376,7 +377,7 @@ CONTAINS
     END IF
 
     CALL MURGE_GETLOCALNODELIST(murge_id_prod, murge_loc2glob_prod, ierr)
-    if (allocated(murge_glob2loc)) deallocate(murge_glob2loc)
+    if (allocated(murge_glob2loc)) call tr_deallocate(murge_glob2loc,"murge_glob2loc")
 
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_GETLOCALNODELIST"

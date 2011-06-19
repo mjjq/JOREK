@@ -2,7 +2,7 @@ subroutine Broadcast_boundary(my_id,boundary_list,bnd_node_list)
 !----------------------------------------------------------
 ! subroutine to broadcast all the nodes and elements of the boundary
 !----------------------------------------------------------
-
+use tr_module
 use data_structure
 
 implicit none
@@ -26,8 +26,7 @@ call MPI_BCAST(bnd_node_list%n_bnd_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 bufsize = boundary_list%n_bnd_elements * (10*INT_EXT + 4*IDBL_EXT) + &
           bnd_node_list%n_bnd_nodes    * (4*INT_EXT)
 
-if (allocated(buffer)) deallocate(buffer)
-allocate(buffer(bufsize/ INT_EXT))
+call tr_allocate(buffer,1,int(bufsize/INT_EXT),"bcastb_buffer")
 
 if (my_id .eq. 0) then
   position = 0
@@ -84,7 +83,7 @@ if (my_id .ne. 0) then
   
 endif
 
-deallocate(buffer)
+call tr_deallocate(buffer,"bcastb_buffer")
 
 return
 end

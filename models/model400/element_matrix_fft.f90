@@ -24,6 +24,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use elm_fft
+use tr_module 
 
 implicit none
 
@@ -313,7 +314,8 @@ do ms=1, n_gauss
  	endif
       endif
 
-      allocate(prof(3),Diff(3,10))
+      call tr_allocate(prof,1,3,"prof")
+      call tr_allocate(Diff,1,3,1,10,"Diff")
       
       !----------- Allocate the values directly from the pressure profile (rho_coef, T_coef...) 
       do id = 1,10
@@ -360,7 +362,8 @@ do ms=1, n_gauss
       D_prof    = prof(1) !* (2.d0*D_perp(6) + D_perp(6) * tanh((psi_norm-1.04d0)/0.02d0))
       ZK_i_prof = prof(2) 
       ZK_e_prof = prof(3) 
-      deallocate(prof,Diff)
+      call tr_deallocate(prof,"prof")
+      call tr_deallocate(Diff,"Diff")
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! Build up the D_perp and K_perp profiles !!!!!!!!!!!! END

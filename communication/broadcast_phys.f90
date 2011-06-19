@@ -2,6 +2,7 @@ subroutine Broadcast_phys(my_id)
 !----------------------------------------------------------
 ! Broadcast all input parameters from MPI thread 0 to the others
 !----------------------------------------------------------
+use tr_module
 use phys_module
 
 implicit none
@@ -24,8 +25,7 @@ call MPI_TYPE_EXTENT(MPI_CHARACTER,CHAR_EXT,ierr)
 
 bufsize = ( 160 * IDBL_EXT + (14+n_tor) * INT_EXT + 12 * ILOG_EXT + 3*512 * CHAR_EXT )
 
-if (allocated(buffer)) deallocate(buffer)
-allocate(buffer(bufsize/ INT_EXT))
+call tr_allocate(buffer,1,bufsize/ INT_EXT,"bcastp_buffer")
 
 if (my_id .eq. 0) then
   position = 0
@@ -236,7 +236,7 @@ if (my_id .ne. 0) then
 
 endif
 
-if (allocated(buffer)) deallocate(buffer)
+call tr_deallocate(buffer,"bcastp_buffer")
 
 return
 end

@@ -2,6 +2,7 @@ subroutine plot_grid(node_list, element_list, boundary_list, bnd_node_list, fram
 !----------------------------------------------------------------
 ! plot the grid of finite elements with the correct curved edges
 !----------------------------------------------------------------
+use tr_module 
 use parameters
 use data_structure
 
@@ -32,7 +33,7 @@ write(*,*) ' number of boundary elements : ',boundary_list%n_bnd_elements
 write(*,*) ' number of nodes             : ',node_list%n_nodes
 write(*,*) ' bezier                      : ',bezier
 
-allocate(xp(node_list%n_nodes,n_dim))
+call tr_allocate(xp,1,node_list%n_nodes,1,n_dim,"xp")
 
 do i=1,node_list%n_nodes
  xp(i,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
@@ -94,12 +95,12 @@ call lincol(0)
 !return
 
 !------------------------------ plot the curved boundaries
-deallocate(xp)
+call tr_deallocate(xp,"xp")
 
 
 np = 11
 
-allocate(xp(np,n_dim))
+call tr_allocate(xp,1,np,1,n_dim,"xp")
 
 iplot = 0
 
@@ -188,12 +189,12 @@ enddo
 
 call lincol(0)
 
-deallocate(xp)
+call tr_deallocate(xp,"xp")
 
 if (.not. bezier) return
 
 !------------------------------ plot the Bezier points
-allocate(xp(12*element_list%n_elements,n_dim))
+call tr_allocate(xp,1,12*element_list%n_elements,1,n_dim,"xp")
 
 iplot = 0
 
@@ -222,7 +223,7 @@ call lincol(1)
 !call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
 call pplot(11,11,xp(:,1),xp(:,2),iplot,1)
 
-deallocate(xp)
+call tr_deallocate(xp,"xp")
 
 
 return

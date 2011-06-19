@@ -3,6 +3,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 ! solve step of the local matrices for each toroidal harmonic
 ! (preconditioner for gmres)
 !-----------------------------------------------------------------------
+use tr_module 
 use parameters
 use mumps_module
 use pastix_module
@@ -38,7 +39,9 @@ if (my_id < M_cpu) ifactor = 1
 
 if (my_id .eq. 0) then
 
-  allocate(Rsnd_buffer(n_dof),send_counts(n_cpu/M_cpu),send_disp(n_cpu/M_cpu))
+  call tr_allocate(Rsnd_buffer,1,n_dof,"Rsnd_buffer")
+  call tr_allocate(send_counts,1,n_cpu/M_cpu,"send_counts")
+  call tr_allocate(send_disp,1,n_cpu/M_cpu,"send_disp")
   Rsnd_buffer(1:n_loc_n) = x(1:n_dof:n_tor)
 
   do in=2, (n_tor+1)/2
@@ -64,11 +67,11 @@ if (my_id .eq. 0) then
 
 endif
 
-if (associated(mumps_par%rhs)) deallocate(mumps_par%rhs)
+if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
 
 if (my_id_n .eq. 0) then
 
-  allocate(mumps_par%rhs(ifactor*n_loc_n))
+  call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs")
 
   call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
                     mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
@@ -93,7 +96,11 @@ if (my_id_n .eq. 0) then
 endif
 
 
-if (my_id .eq. 0) deallocate(Rsnd_buffer,send_counts,send_disp)
+if (my_id .eq. 0) then
+   call tr_deallocate(Rsnd_buffer,"Rsnd_buffer")
+   call tr_deallocate(send_counts,"send_counts")
+   call tr_deallocate(send_disp,"send_disp")
+end if
 
 
 if (use_mumps) then
@@ -106,7 +113,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 
    if (.not. associated(mumps_par%rhs)) then
       !    write(*,*) ' gmres: RHS not allocated!',my_id, my_id_n
-      allocate(mumps_par%rhs(ifactor*n_loc_n))
+      call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs")
    endif
    
    if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
@@ -163,8 +170,9 @@ endif
 
 if (my_id_n .eq. 0) then
 
-  allocate(y_tmp(n_dof))
-  allocate(recv_counts(n_cpu/M_cpu),recv_disp(n_cpu/M_cpu))
+  call tr_allocate(y_tmp,1,n_dof,"y_tmp")
+  call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts")
+  call tr_allocate(recv_disp,1,n_cpu/M_cpu,"recv_disp")
 
   y_tmp(1:n_dof) = 0.d0
 
@@ -213,11 +221,14 @@ if (my_id_n .eq. 0) then
 
   endif
 
-  deallocate(y_tmp, recv_counts, recv_disp)
+  call tr_deallocate(y_tmp,"y_tmp")
+  call tr_deallocate(recv_counts,"recv_counts")
+  call tr_deallocate(recv_disp,"recv_disp")
 endif
 
 call cpu_time(t2)
-if (my_id .eq. 0) write(*,'(i3,A,f14.6)') my_id,' PRECON TOTAL : ',t2-t1
-
+if (my_id .eq. 0) then
+   write(*,'(i3,A,f14.6)') my_id,' PRECON TOTAL : ',t2-t1
+end if
 return
 end

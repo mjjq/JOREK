@@ -2,7 +2,7 @@ subroutine initialise_parameters(my_id)
 !-----------------------------------------------------------------------
 ! Initialise input parameters and read the input namelist
 !-----------------------------------------------------------------------
-
+use tr_module
 use phys_module
 
 implicit none
@@ -157,8 +157,8 @@ if (my_id .eq. 0) then
     nstep_n(1) = nstep
   endif
   
-  if (nstep .gt. 0) allocate(energies(n_tor,2,nstep))
-  if (nstep .gt. 0) allocate(xtime(nstep))
+  if (nstep .gt. 0) call tr_allocate(energies,1,n_tor,1,2,1,nstep,"energies")
+  if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime")
 
   write(*,*) 'USING MODEL 199'
   

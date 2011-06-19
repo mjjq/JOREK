@@ -130,6 +130,7 @@ subroutine fshape
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
+use tr_module
 use helena_boundary
 use helena_constants
 implicit none
@@ -144,7 +145,7 @@ real              :: tht, Rbnd_av, ORbnd_av, values(4)
 integer           :: m, igrinv, i, j, ishape, ieast(1), iwest(1), n_bnd_short
 parameter (error = 1.e-8)
 
-allocate(fr(mf+2))
+call tr_allocate(fr,1,mf+2,"fr")
 allocate(theta(mf),gamma(mf),xv(mf),yv(mf))
 
   write(*,*) ' fshape : (R,Z) set given on ',n_bnd,' points'
@@ -159,9 +160,13 @@ allocate(theta(mf),gamma(mf),xv(mf),yv(mf))
 
   write(*,'(A,3f12.8)') ' Rgeo, Zgeo : ',Rgeo,Zgeo,amin
 
-  allocate(tht_tmp(n_bnd),fr_tmp(n_bnd),work(3*n_bnd+6))
-  allocate(tht_sort(n_bnd+2),fr_sort(n_bnd+2),dfr_sort(n_bnd+2))
-  allocate(index_order(n_bnd+2))
+  call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp")
+  call tr_allocate(fr_tmp,1,n_bnd,"fr_tmp")
+  call tr_allocate(work,1,3*n_bnd+6,"work")
+  call tr_allocate(tht_sort,1,n_bnd+2,"tht_sort")
+  call tr_allocate(fr_sort,1,n_bnd+2,"fr_sort")
+  call tr_allocate(dfr_sort,1,n_bnd+2,"dfr_sort")
+  call tr_allocate(index_order,1,n_bnd+2,"index_order")
 
   do i=1,n_bnd
 

@@ -2,6 +2,7 @@ subroutine update_deltas(my_id,node_list)
 !---------------------------------------------------------------------
 ! subroutine to create a local list of delta values
 !---------------------------------------------------------------------
+use tr_module
 use data_structure
 use global_distributed_matrix
 
@@ -10,7 +11,7 @@ integer               :: my_id, i, j, k, in, index, index_node
 type (type_node_list) :: node_list
 
 if (.not. allocated(deltas)) then
-  allocate(deltas(node_list%n_dof))
+  call tr_allocate(deltas,1,node_list%n_dof,"deltas")
   deltas = 0.d0
 endif
 

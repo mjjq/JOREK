@@ -2,6 +2,7 @@ subroutine plot_profiles(node_list,element_list,Rplot,Zplot)
 !****************************************************************************
 !* plots 1D profile of the n=0 equilibrium flow                             *
 !****************************************************************************
+use tr_module 
 use data_structure
 use phys_module
 use basis_at_gaussian
@@ -30,7 +31,8 @@ enddo
 
 nplot  = 401
 
-allocate(xp(nplot,2),yp(nplot,n_var))
+call tr_allocate(xp,1,nplot,1,2,"xp")
+call tr_allocate(yp,1,nplot,1,n_var,"yp")
 
 !---------------------------------- plot perpendicular equilibrium flow
 
@@ -74,7 +76,8 @@ do i = 1,iplot
 enddo
 
 
-deallocate(xp,yp)
+call tr_deallocate(xp,"xp")
+call tr_deallocate(yp,"yp")
 
 return
 end

@@ -385,6 +385,13 @@ program JOREK2
   call broadcast_nodes(my_id, node_list)                      ! nodes
   call broadcast_phys(my_id)                                  ! physics parameters
   
+  n_AA  = node_list%n_nodes * (n_order+1)  
+  n_AA = 0  
+  do inode = 1, node_list%n_nodes  
+     n_AA = max(n_AA,node_list%node(inode)%index(4))  
+  end do
+  mumps_par%n = n_AA
+
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   !***********************************************************************
@@ -507,7 +514,6 @@ program JOREK2
 
         ! --- Murge initialisation and graph definition edge by edge
         if (use_murge_element) call murge_initialization(gmres, my_id, MPI_COMM_N, i_tor)
-
         ! --- Build the graph
         !   TODO : Avoid doubles
         call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms, &

@@ -117,9 +117,9 @@ JOREK2VTK3D_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) \
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
 
-all: $(MAIN)
-	@echo -n "#define SVN_VERSION" > version.h
-	@svn info | grep 'Revision:' | cut -c10-13 >> version.h
+
+
+all: version $(MAIN)
 
 modules :
 	for dir in $(DIRS); do     \
@@ -143,6 +143,13 @@ cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -f */*.dep */*/*.dep;
 
+version:
+	@echo -n "#define SVN_VERSION " > version.h
+	@svn info | grep 'Revision:' | cut -c10-14 > revision.txt
+	-@test -s revision.txt; \
+           if [ $$? -eq 0 ]; then cat revision.txt >> version.h; \
+	                     else echo "UNKNOWN" >> version.h; fi
+	@rm -f revision.txt
 
 %.dep:%.f90
 	@echo "Generating Dependencies for $(patsubst %.f90, %.o, $<)"
@@ -238,18 +245,13 @@ endif
 allmodels:
 	$(MAKE) -f NewMake.mk MODEL=model199 clean
 	$(MAKE) -f NewMake.mk MODEL=model199 $(filter-out allmodels, ${MAKECMDGOALS})
-	
 #	$(MAKE) -f NewMake.mk MODEL=model300 clean
 #	$(MAKE) -f NewMake.mk MODEL=model300 $(filter-out allmodels, ${MAKECMDGOALS})
-	
 #	$(MAKE) -f NewMake.mk MODEL=model301 clean
 #	$(MAKE) -f NewMake.mk MODEL=model301 $(filter-out allmodels, ${MAKECMDGOALS})
-	
 	$(MAKE) -f NewMake.mk MODEL=model302 clean
 	$(MAKE) -f NewMake.mk MODEL=model302 $(filter-out allmodels, ${MAKECMDGOALS})
-	
 #	$(MAKE) -f NewMake.mk MODEL=model400 clean
 #	$(MAKE) -f NewMake.mk MODEL=model400 $(filter-out allmodels, ${MAKECMDGOALS})
-	
 #	$(MAKE) -f NewMake.mk MODEL=model701 clean
 #	$(MAKE) -f NewMake.mk MODEL=model701 $(filter-out allmodels, ${MAKECMDGOALS})

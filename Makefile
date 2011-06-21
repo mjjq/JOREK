@@ -4,14 +4,22 @@ DIRS = timing datatypes models/$(MODEL) models communication elements grids matr
 
 MAIN = jorek_$(MODEL)
 
-.PHONY : modules sources $(MAIN) jorek2_diagno jorek2vtk jorek2vtk_3d import_eqdsk
+.PHONY : version modules sources $(MAIN) jorek2_diagno jorek2vtk jorek2vtk_3d import_eqdsk
 
-all :   modules sources $(MAIN)
+all :   version modules sources $(MAIN)
 
 modules :
 	@for dir in $(DIRS); do     \
           ($(MAKE) -C $$dir modules) || exit 1; \
         done
+
+version :
+	@echo -n "#define SVN_VERSION " > version.h
+	@svn info | grep 'Revision:' | cut -c10-14 > revision.txt
+	-@test -s revision.txt; \
+           if [ $$? -eq 0 ]; then cat revision.txt >> version.h; \
+	                     else echo "\"UNKNOWN\"" >> version.h; fi
+	@rm -f revision.txt
 
 sources :	
 	@for dir in $(DIRS); do \
@@ -26,8 +34,6 @@ clean :
 
 
 $(MAIN) : jorek2_main.f90
-	@echo -n "#define SVN_VERSION" > version.h
-	@svn info | grep 'Revision:' | cut -c10-13 >> version.h
 	$(FC) $(FFLAGS)      \
 	jorek2_main.f90      \
         datatypes/*.o        \

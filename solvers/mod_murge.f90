@@ -138,6 +138,7 @@ CONTAINS
     INTEGER(KIND=MURGE_INTS_KIND) :: ierr
 
 
+    call tr_debug_write("murge_initialised begin")
     IF (.NOT. murge_initialised) THEN
        murge_id = 0
        !$omp PARALLEL shared(murge_nthrd)
@@ -226,6 +227,7 @@ CONTAINS
 
        murge_initialised = .TRUE.
     END IF
+    call tr_debug_write("murge_initialised end")
   END SUBROUTINE murge_initialization
 
   SUBROUTINE murge_setGraph(gmres, n, local_elms, n_local_elms, element_list, &
@@ -252,6 +254,7 @@ CONTAINS
     integer :: nb_periods, nb_periodes_max, nb_periodes_sec
     character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
     
+    call tr_debug_write("murge_setgraph begin")
     call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
     
     Call MURGE_GRAPHBEGIN(murge_id, n, &
@@ -270,10 +273,11 @@ CONTAINS
     END IF
     call system_clock(count=t0)
 
+    call tr_debug_write("murge_setgraph loop start")
     DO i_elem = 1, n_local_elms
 
        element = element_list%element(local_elms(i_elem))
-       DO i=1,n_vertex_max
+       DO i = 1, n_vertex_max
 
           inode1         = element%vertex(i)
 
@@ -284,7 +288,7 @@ CONTAINS
 
 
              ! Build nodes Matrices
-             DO k=1,n_vertex_max
+             DO k= 1, n_vertex_max
 
                 knode         = element%vertex(k)
 
@@ -322,6 +326,7 @@ CONTAINS
        END DO
     END DO
 
+    call tr_debug_write("murge_setgraph loop end")
     call system_clock(count=t1)
     nb_periods = t1-t0
     if (t1<t0) nb_periods = nb_periods + nb_periodes_max
@@ -403,5 +408,6 @@ CONTAINS
     !!   write (*,*) "ERROR in MURGE_SETLOCALNODELIST"
     !!   STOP
     !!END IF
+    call tr_debug_write("murge_setgraph end")
   END SUBROUTINE murge_setGraph
 end module murge_module

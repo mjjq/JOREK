@@ -124,10 +124,12 @@ contains
     INTEGER                        :: elem_size
     INTEGER                        :: ife
     INTEGER                        :: ELM_INDEX
+    INTEGER, POINTER               :: pt_matrix_nbr
     INTEGER                        :: node, iter, total, my_murde_id
     elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
     cnt = 0
     cnt2 = 0
+    pt_matrix_nbr => data%matrix_nbr
     !TODO: anticiper l'allocation ou l'allouer une fois pour toute
     call tr_allocate(ELM,1,elem_size,1,elem_size,"ELM")
     call tr_allocate(RHS,1,elem_size,"RHS")
@@ -135,8 +137,11 @@ contains
 
 !$OMP barrier       
 !$OMP critical(matrix_nbr)       
-       data%matrix_nbr = 0
+!$OMP flush(pt_matrix_nbr)
+       pt_matrix_nbr = 0
+!$OMP flush(pt_matrix_nbr)
 !$OMP end critical(matrix_nbr)       
+!$OMP barrier       
        !! do 
        DO ELM_INDEX = data%thread_num, data%elem_block_size, data%thread_nbr
           !print * , "ELM_INDEX", ELM_INDEX
@@ -251,8 +256,10 @@ contains
 
                                !coefmtx = 0
 !$OMP critical(matrix_nbr)                            
-                               data%matrix_nbr = data%matrix_nbr+1
-                               next_matrix = data%matrix_nbr
+!$OMP flush(pt_matrix_nbr)
+                               pt_matrix_nbr = pt_matrix_nbr+1
+                               next_matrix = pt_matrix_nbr
+!$OMP flush(pt_matrix_nbr)
 !$OMP end critical (matrix_nbr)       
                                DO j = 1, n_var * n_tor
                                   ! Row index in the ELM matrix
@@ -344,7 +351,7 @@ contains
           ! We work on the full problem with direct method
           my_murde_id = murge_id
           
-          DO j = 1, data%matrix_nbr 
+          DO j = 1, pt_matrix_nbr 
              index_node1 = data%PROD_COLROW(1, j) 
              index_node2 = data%PROD_COLROW(2, j) 
              DO iter = 1, (n_tor*n_var)**2
@@ -365,7 +372,7 @@ contains
           my_murde_id = murge_id_prod
 
           IF (data%thread_num == 1) THEN
-             DO j = 1, data%matrix_nbr 
+             DO j = 1, pt_matrix_nbr 
                 index_node1 = data%PROD_COLROW(1, j) 
                 index_node2 = data%PROD_COLROW(2, j) 
                 DO iter = 1, (n_tor*n_var)**2
@@ -385,11 +392,11 @@ contains
           IF ((data%thread_nbr == 1 .or. data%thread_num == 2 ) .and. & 
                & .NOT. DATA%solve_only) THEN
              data%matrix_nbr_rcv = 0
-             CALL MPI_Allgather(data%matrix_nbr, 1, MPI_INTEGER, &
+             CALL MPI_Allgather(pt_matrix_nbr, 1, MPI_INTEGER, &
                   &            data%matrix_nbr_rcv, 1,   MPI_INTEGER, &
                   &            data%MPI_COMM_TRANS, ierr)
              total = total + sum(data%matrix_nbr_rcv)
-             !print *, data%my_id, data%thread_num, "data%matrix_nbr", data%matrix_nbr, data%matrix_nbr_rcv, total, cnt
+             !print *, data%my_id, data%thread_num, "data%matrix_nbr", pt_matrix_nbr, data%matrix_nbr_rcv, total, cnt
              CALL MPI_Alltoall(data%SEND_MATRICES, data%elem_block_size*(n_vertex_max&
                   &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
                   &            data%RECV_MATRICES, data%elem_block_size*(n_vertex_max&

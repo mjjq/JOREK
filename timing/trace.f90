@@ -54,7 +54,7 @@ module tr_module
   integer*8, private :: max_allocate, nb_allocate
 
   character(LEN=100), parameter, private :: &
-       memory_filename = "trace.out"
+       trace_file = "trace.out"
   integer, private :: uout_mem = 30
 
   !******************************
@@ -69,7 +69,7 @@ contains
     gmy_id = pmy_id
     target_proc = nbprocs-1
     if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = memory_filename, status = 'REPLACE', &
+       open(uout_mem, file = trace_file, status = 'REPLACE', &
             form = 'FORMATTED')
        write(uout_mem,*) ' '
        close(uout_mem)
@@ -77,20 +77,29 @@ contains
   end subroutine tr_meminit
 
   !---------------------------------------- 
-  ! Write special string in file memory_filename
+  ! Write special string in file trace_file
   !----------------------------------------
   subroutine tr_write(string)
     character*(*) string
     if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = memory_filename, status = 'OLD', &
+       open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')
        write(uout_mem,'(A)') string
        close(uout_mem)
     end if
   end subroutine tr_write
 
+  !---------------------------------------- 
+  ! Write debug remark in file trace_file
+  !----------------------------------------
+  subroutine tr_debug_write(string)
+    character*(*) string
+    call tr_write("### "//string//" ###")
+  end subroutine tr_debug_write
+
+
   !-------------------------------------------
-  ! Write memory in the file memory_filename (allocate)
+  ! Write memory in the file trace_file (allocate)
   !-------------------------------------------
   subroutine tr_memwriteadd(size_array,type_name,var_name)
     integer*8    , intent(in)  :: size_array
@@ -99,7 +108,7 @@ contains
 
 #ifdef MEMTRACE
     if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = memory_filename, status = 'OLD', &
+       open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')
        write(uout_mem,'(A10,I15,A10,A15,A20,5X,I20)') &
             'Add', &
@@ -110,14 +119,14 @@ contains
   end subroutine tr_memwriteadd
 
   !-------------------------------------------
-  ! Write memory in the file memory_filename (deallocate)
+  ! Write memory in the file trace_file (deallocate)
   !-------------------------------------------
   subroutine tr_memwritedel(var_name)
     character*(*), intent(in) :: var_name
 
 #ifdef MEMTRACE
     if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = memory_filename, status = 'OLD', &
+       open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')
        write(uout_mem,'(50X,A20,A5,I20)') var_name, ' Supp', nb_allocate
        close(uout_mem)    
@@ -947,7 +956,7 @@ contains
 
     if (gmy_id.eq.target_proc) then
        rcount = KBconst * get_memory_inkb("VmRSS")
-       open(uout_mem, file = memory_filename, status = 'OLD', &
+       open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')
        if (nb_allocate.gt.GBconst) then
           write(uout_mem,'(A20,A50,1f10.3,A)'), label,&

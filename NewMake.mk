@@ -148,7 +148,7 @@ version:
 	@svn info | grep 'Revision:' | cut -c10-14 > revision.txt
 	-@test -s revision.txt; \
            if [ $$? -eq 0 ]; then cat revision.txt >> version.h; \
-	                     else echo "UNKNOWN" >> version.h; fi
+	                     else echo "\"UNKNOWN\"" >> version.h; fi
 	@rm -f revision.txt
 
 %.dep:%.f90

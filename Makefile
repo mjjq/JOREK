@@ -44,7 +44,7 @@ $(MAIN) : jorek2_main.f90
 	grids/*.o            \
 	matrix/*.o           \
 	solvers/*.o          \
-        timing/*.o      \
+	timing/*.o           \
 	refinement/*.o       \
 	plots/*.o            \
         vacuum/*.o           \
@@ -52,7 +52,7 @@ $(MAIN) : jorek2_main.f90
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
 
 jorek2_four : modules sources
-	$(FC) $(FFLAGS)                   \
+	$(FC) $(FFLAGS)               \
 	diagnostics/jorek2_four.f90   \
 	datatypes/*.o        \
 	models/$(MODEL)/*.o  \
@@ -77,6 +77,7 @@ jorek2_poincare : modules sources
 	elements/mod_gauss.o              \
 	elements/mod_basis_at_gaussian.o  \
 	models/$(MODEL)/mod_phys_module.o \
+	timing/trace.o                    \
 	communication/import_restart.o    \
 	elements/initialise_basis.o       \
 	elements/basis_functions.o        \
@@ -102,6 +103,7 @@ jorek2_connection2 : modules sources
 	elements/mod_gauss.o              \
 	elements/mod_basis_at_gaussian.o  \
 	models/$(MODEL)/mod_phys_module.o \
+	timing/trace.o                    \
 	communication/import_restart.o    \
 	elements/initialise_basis.o       \
 	elements/basis_functions.o        \
@@ -126,6 +128,7 @@ jorek2vtk : modules sources
 	elements/mod_gauss.o              \
 	models/$(MODEL)/mod_phys_module.o \
 	elements/mod_basis_at_gaussian.o  \
+	timing/trace.o                    \
 	communication/import_restart.o    \
 	elements/initialise_basis.o       \
 	elements/basis_functions.o        \
@@ -146,6 +149,7 @@ jorek2_fieldlines_vtk : modules sources
 	elements/mod_gauss.o              \
 	models/$(MODEL)/mod_phys_module.o \
 	elements/mod_basis_at_gaussian.o  \
+	timing/trace.o                    \
 	communication/import_restart.o    \
 	elements/initialise_basis.o       \
 	elements/basis_functions.o        \
@@ -166,6 +170,7 @@ jorek2vtk_3d : modules sources
 	elements/mod_gauss.o              \
 	models/$(MODEL)/mod_phys_module.o \
 	elements/mod_basis_at_gaussian.o  \
+	timing/trace.o                    \
 	communication/import_restart.o    \
 	elements/initialise_basis.o       \
 	elements/basis_functions.o        \
@@ -180,6 +185,7 @@ jorek2_diagno : modules sources
 	diagnostics/jorek2_diagno.f90     \
 	datatypes/mod_parameters.o        \
 	datatypes/mod_data_structure.o    \
+	timing/trace.o                    \
 	communication/export_helena.o     \
 	plots/plot_velocity_profile.o     \
 	plots/plot_profiles.o             \

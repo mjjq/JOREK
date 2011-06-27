@@ -145,7 +145,7 @@ cleandep:
 
 version:
 	@echo -n "#define SVN_VERSION " > version.h
-	@svn info | grep 'Revision:' | cut -c10-14 > revision.txt
+	@export LANG=C; svn info | grep 'Revision:' | cut -c10-14 > revision.txt
 	-@test -s revision.txt; \
            if [ $$? -eq 0 ]; then cat revision.txt >> version.h; \
 	                     else echo "\"UNKNOWN\"" >> version.h; fi

@@ -269,7 +269,7 @@ mumps_par%icntl(7) = 4
 if (iter .le. 1) write(*,*) ' mumps : ',mumps_par%n, mumps_par%nz
 
 call DMUMPS(mumps_par)
-
+call tr_print_memsize("MUMPS_For_Poisson")
 #else
 
 if (my_id == 0) then
@@ -344,7 +344,11 @@ write(*,*) '***********************************'
  call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
+call tr_print_memsize("PASTIX_For_Poisson")
 #endif
+
+call tr_debug_write("mumps_par%N",int(mumps_par%N))
+call tr_debug_write("mumps_par%NZ",int(mumps_par%NZ))
 
 do i=1,node_list%n_nodes
 

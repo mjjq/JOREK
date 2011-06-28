@@ -318,6 +318,8 @@ program JOREK2
     call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
     if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
 #endif
+
+    call tr_set_targetproc(0)
     
     if (my_id == 0) then
       
@@ -393,6 +395,7 @@ program JOREK2
   mumps_par%n = n_AA
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  call tr_raz_targetproc
   
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *

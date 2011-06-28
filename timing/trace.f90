@@ -50,6 +50,8 @@ module tr_module
   integer, private, parameter :: RKIND = 8
   ! processor identity
   integer, private :: gmy_id
+  ! nb of processors
+  integer, private :: nbprocs
   ! used for memory size calculation
   integer*8, private :: max_allocate, nb_allocate
 
@@ -64,10 +66,11 @@ contains
   !---------------------------------------- 
   ! constructor
   !----------------------------------------
-  subroutine tr_meminit(pmy_id, nbprocs)
-    integer, intent(in) :: pmy_id, nbprocs
+  subroutine tr_meminit(pmy_id, pnbprocs)
+    integer, intent(in) :: pmy_id, pnbprocs
     gmy_id = pmy_id
-    target_proc = nbprocs-1
+    nbprocs = pnbprocs
+    call tr_raz_targetproc
     if (gmy_id.eq.target_proc) then
        open(uout_mem, file = trace_file, status = 'REPLACE', &
             form = 'FORMATTED')
@@ -75,6 +78,23 @@ contains
        close(uout_mem)
     end if
   end subroutine tr_meminit
+
+  !---------------------------------------- 
+  ! Change the target processor responsible for outputting messages
+  !----------------------------------------
+  subroutine tr_set_targetproc(procid)
+    integer, intent(in) :: procid
+    target_proc = procid
+    call tr_debug_write("New target proc",target_proc)
+  end subroutine tr_set_targetproc
+
+  !---------------------------------------- 
+  ! Set the default target processor responsible for outputting messages
+  !----------------------------------------
+  subroutine tr_raz_targetproc
+    target_proc = nbprocs-1
+    call tr_debug_write("Reset target proc",target_proc)
+  end subroutine tr_raz_targetproc
 
   !---------------------------------------- 
   ! Write special string in file trace_file
@@ -92,9 +112,16 @@ contains
   !---------------------------------------- 
   ! Write debug remark in file trace_file
   !----------------------------------------
-  subroutine tr_debug_write(string)
-    character*(*) string
-    call tr_write("### "//string//" ###")
+  subroutine tr_debug_write(string, int_var)
+    character*(*)           :: string
+    integer      , optional :: int_var
+    character(len=1024)     :: bufstring
+    if (present(int_var)) then
+       write(bufstring,'(A,I20)')string,int_var
+    else
+       write(bufstring,'(A)')string
+    end if
+    call tr_write("### "//trim(adjustl(bufstring))//" ###")
   end subroutine tr_debug_write
 
 
@@ -945,16 +972,18 @@ contains
   !***********************************************
   !  function for program analysis
   !***********************************************
-  subroutine tr_print_memsize(label)
+  subroutine tr_print_memsize(label,procid)
     implicit none
     character(*), intent(in) :: label
+    integer, optional :: procid
     integer*8, parameter :: GBconst = 1024_8*1024_8*1024_8
     integer*8, parameter :: MBconst = 1024_8*1024_8
     integer*8, parameter :: KBconst = 1024_8
     integer :: uout
     integer*8 :: scount, dcount, rcount
 
-    if (gmy_id.eq.target_proc) then
+    if ((present(procid) .and. procid.eq.gmy_id) .or. &
+         (gmy_id.eq.target_proc)) then
        rcount = KBconst * get_memory_inkb("VmRSS")
        open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')

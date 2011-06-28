@@ -972,18 +972,16 @@ contains
   !***********************************************
   !  function for program analysis
   !***********************************************
-  subroutine tr_print_memsize(label,procid)
+  subroutine tr_print_memsize(label)
     implicit none
     character(*), intent(in) :: label
-    integer, optional :: procid
     integer*8, parameter :: GBconst = 1024_8*1024_8*1024_8
     integer*8, parameter :: MBconst = 1024_8*1024_8
     integer*8, parameter :: KBconst = 1024_8
     integer :: uout
     integer*8 :: scount, dcount, rcount
 
-    if ((present(procid) .and. procid.eq.gmy_id) .or. &
-         (gmy_id.eq.target_proc)) then
+    if (gmy_id.eq.target_proc) then
        rcount = KBconst * get_memory_inkb("VmRSS")
        open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')
@@ -996,19 +994,19 @@ contains
                'memsize allocated with tr_module = ', &
                nb_allocate/dfloat(MBconst), ' MBytes'
        end if
-        if (precond_mem.gt.GBconst) then
-           write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-                'memsize MAX pastix   = ', &
-                precond_mem/dfloat(GBconst), ' GBytes'
-        else if (precond_mem.gt.MBconst) then
-           write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-                'memsize MAX pastix   = ', &
-                precond_mem/dfloat(MBconst), ' MBytes'
-        else
-           write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-                'memsize MAX pastix   = ', &
-                precond_mem/dfloat(KBconst), ' KBytes'
-        end if
+       if (precond_mem.gt.GBconst) then
+          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+               'memsize MAX pastix   = ', &
+               precond_mem/dfloat(GBconst), ' GBytes'
+       else if (precond_mem.gt.MBconst) then
+          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+               'memsize MAX pastix   = ', &
+               precond_mem/dfloat(MBconst), ' MBytes'
+       else
+          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+               'memsize MAX pastix   = ', &
+               precond_mem/dfloat(KBconst), ' KBytes'
+       end if
        if (rcount.gt.GBconst) then
           write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
                'memsize   (RSS) = ', &

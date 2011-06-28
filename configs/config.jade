@@ -1,0 +1,71 @@
+MODEL = model199
+
+FC     = ifort
+
+FFLAGS_NO_OMP = -r8 -i4 -O2 -xT -align -mcmodel=large -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO -DUSE_MUMPS -DUSE_MURGE
+FFLAGS        = $(FFLAGS_NO_OMP) -openmp
+#FLAGS_NO_OMP = -DUSE_MUMPS -r8 -i4 -O0 -check bounds -traceback -align -cpp -DUSE_R3_INFO_MPI -DUSE_R3_INFO
+#FFLAGS = $(FFLAGS_NO_OMP) -openmp
+# -i4 for openmpi
+
+CC     = icc
+CFLAGS = -DUSE_R3_INFO_MPI -DUSE_R3_INFO
+
+LIBMPI  = -lmpi_mt
+LIBHOME = /home/jorekcp/jorek_tools
+MKLHOME = /opt/software/SGI/intel/mkl/10.1.1.019/lib/em64t
+
+JOREK_DIR = $(PWD)
+
+MAIN_MODEL_DIR = $(JOREK_DIR)/models
+MODEL_DIR      = $(MAIN_MODEL_DIR)/$(MODEL)
+COM_DIR        = $(JOREK_DIR)/communication
+DATATYPES_DIR  = $(JOREK_DIR)/datatypes
+GRIDS_DIR      = $(JOREK_DIR)/grids
+MATRIX_DIR     = $(JOREK_DIR)/matrix
+ELEMENTS_DIR   = $(JOREK_DIR)/elements
+SOLVERS_DIR    = $(JOREK_DIR)/solvers
+VACUUM_DIR     = $(JOREK_DIR)/vacuum
+REFINE_DIR     = $(JOREK_DIR)/refinement
+TIMING_DIR     = $(JOREK_DIR)/timing
+
+LIBSCOTCH   = -L$(LIBHOME)/scotch/lib -lptscotch -lptscotcherr
+
+LIBMUMPS  = -L$(LIBHOME)/MUMPS_4.9.2/lib/ -ldmumps -lmumps_common
+LIBZMUMPS = $(LIBHOME)/MUMPS_4.9.2/lib/libzmumps.a
+INCMUMPS  = $(LIBHOME)/MUMPS_4.9.2/include/
+ORDLIB    = $(LIBHOME)/MUMPS_4.9.2/lib/libpord.a 
+
+PPPLIB    = $(LIBHOME)/ppplib/ppplib.a
+
+METIS     = $(LIBHOME)/metis-4.0/libmetis.a 
+
+INCPASTIX =  $(LIBHOME)/pastix
+LIBPASTIX =  -L$(INCPASTIX)  -lpastix_murge -lpastix
+
+#LIBWSMP = -L$(MYHOME)/wsmp/wsmp/wsmp-Linux64/lib/Intel -lpwsmp64-juropa #-ltcmalloc_minimal -lstacktrace -lunwind -L$(MYHOME)/wsmp/tcmalloc
+#LIBWSMP = -L$(MYHOME)/wsmp/wsmp/wsmp-Linux64/lib/Intel/mpich2 -lpwsmp64 #-ltcmalloc_minimal -lstacktrace -lunwind -L$(MYHOME)/wsmp/tcmalloc
+
+
+LIBLAPACK = -L$(MKLHOME) -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -liomp5
+SCALAP    = -L$(MKLHOME) -lmkl_scalapack -lmkl_blacs_sgimpt_lp64
+BLACS     = 
+
+LIBFFTW   = /opt/software/SGI/fftw/3.2.2/lib/libfftw3.a  
+
+LIBS = $(LIBMPI) $(LIBFFTW) $(METIS) $(LIBPASTIX) $(LIBSCOTCH)  $(LIBMUMPS) $(METIS) $(ORDLIB) $(SCALAP) $(BLACS) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) 
+
+INCLUDES  = -I$(DATATYPES_DIR) -I$(MAIN_MODEL_DIR) -I$(MODEL_DIR) -I$(MATRIX_DIR) -I$(GRIDS_DIR) -I$(COM_DIR) -I$(ELEMENTS_DIR) -I$(VACUUM_DIR) -I$(SOLVERS_DIR) -I$(REFINE_DIR) -I$(TIMING_DIR) -I$(INCMUMPS) -I$(INCPASTIX) -I.
+
+VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
+
+.SUFFIXES: .o .f90 .f .c
+
+%.o: %.f90
+	$(FC) -c $^ -o $@ $(FFLAGS) $(INCLUDES)
+
+%.o: %.f
+	$(FC) -c $^ -o $@ $(FFLAGS) $(INCLUDES)
+
+%.o: %.c
+	$(CC) -c $^ -o $@ $(CFLAGS) $(INCLUDES)

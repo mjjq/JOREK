@@ -59,6 +59,9 @@ module tr_module
        trace_file = "trace.out"
   integer, private :: uout_mem = 30
 
+  real(RKIND) :: myreal
+  integer     :: myint
+  complex     :: mycomp
   !******************************
 contains
   !******************************
@@ -256,9 +259,9 @@ contains
     integer   :: i1
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * sizeof(array1d(begin_dim1))
-    call tr_memwriteadd(size_array,'integer array1D',var_name)
     allocate(array1d(begin_dim1:end_dim1),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * sizeof(myint)
+    call tr_memwriteadd(size_array,'integer array1D',var_name)
     if (err.eq.0) then
        do i1 = begin_dim1,end_dim1
           array1d(i1) = 0
@@ -284,9 +287,9 @@ contains
     integer   :: i1
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * sizeof(array1d(begin_dim1))
-    call tr_memwriteadd(size_array,'double array1D',var_name)
     allocate(array1d(begin_dim1:end_dim1),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array1D',var_name)
     if (err.eq.0) then
        do i1 = begin_dim1,end_dim1
           array1d(i1) = 0._RKIND
@@ -319,11 +322,11 @@ contains
     integer   :: i1, i2
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1) * sizeof(array2d(begin_dim1,begin_dim2))
-    call tr_memwriteadd(size_array,'integer array2D',var_name)
     allocate(array2d(begin_dim1:end_dim1,begin_dim2:end_dim2), &
          stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1) * sizeof(myint)
+    call tr_memwriteadd(size_array,'integer array2D',var_name)
     if (err.eq.0) then
        do i2 = begin_dim2,end_dim2
           do i1 = begin_dim1,end_dim1
@@ -354,11 +357,11 @@ contains
     integer   :: i1, i2
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1) * sizeof(array2d(begin_dim1,begin_dim2))
-    call tr_memwriteadd(size_array,'double array2D',var_name)
     allocate(array2d(begin_dim1:end_dim1,begin_dim2:end_dim2), &
          stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1) * sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array2D',var_name)
     if (err.eq.0) then
        do i2 = begin_dim2,end_dim2
           do i1 = begin_dim1,end_dim1
@@ -394,12 +397,12 @@ contains
     integer   :: i1, i2, i3
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1)* &
-         (end_dim3-begin_dim3+1)* sizeof(array3d(begin_dim1,begin_dim2,begin_dim3))
-    call tr_memwriteadd(size_array,'double array3D',var_name)
     allocate(array3d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
          begin_dim3:end_dim3),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1)* &
+         (end_dim3-begin_dim3+1)* sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array3D',var_name)
     if (err.eq.0) then
        do i3 = begin_dim3,end_dim3
           do i2 = begin_dim2,end_dim2
@@ -434,12 +437,12 @@ contains
     integer   :: i1, i2, i3
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1)* &
-         (end_dim3-begin_dim3+1)* sizeof(array3d(begin_dim1,begin_dim2,begin_dim3))
-    call tr_memwriteadd(size_array,'double array3D',var_name)
     allocate(array3d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
          begin_dim3:end_dim3),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1)* &
+         (end_dim3-begin_dim3+1)* sizeof(myint)
+    call tr_memwriteadd(size_array,'double array3D',var_name)
     if (err.eq.0) then
        do i3 = begin_dim3,end_dim3
           do i2 = begin_dim2,end_dim2
@@ -471,10 +474,9 @@ contains
     integer   :: err
     integer   :: i1
     integer*8 :: size_array 
-
-    size_array = (end_dim1-begin_dim1+1) * sizeof(array1d(begin_dim1))
-    call tr_memwriteadd(size_array,'integer array1D',var_name)
     allocate(array1d(begin_dim1:end_dim1),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * sizeof(myint)
+    call tr_memwriteadd(size_array,'integer array1D',var_name)
     if (err.eq.0) then
        do i1 = begin_dim1,end_dim1
           array1d(i1) = 0
@@ -500,9 +502,9 @@ contains
     integer   :: i1
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * sizeof(array1d(begin_dim1))
-    call tr_memwriteadd(size_array,'double array1D',var_name)
     allocate(array1d(begin_dim1:end_dim1),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array1D',var_name)
     if (err.eq.0) then
        do i1 = begin_dim1,end_dim1
           array1d(i1) = 0._RKIND
@@ -529,9 +531,9 @@ contains
     integer   :: i1
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * sizeof(array1d(begin_dim1))
-    call tr_memwriteadd(size_array,'complex array1D',var_name)
     allocate(array1d(begin_dim1:end_dim1),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * sizeof(mycomp)
+    call tr_memwriteadd(size_array,'complex array1D',var_name)
     if (err.eq.0) then
        do i1 = begin_dim1,end_dim1
           array1d(i1) = cmplx(0,0)
@@ -564,11 +566,11 @@ contains
     integer   :: i1, i2
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1) * sizeof(array2d(begin_dim1,begin_dim2))
-    call tr_memwriteadd(size_array,'integer array2D',var_name)
     allocate(array2d(begin_dim1:end_dim1,begin_dim2:end_dim2), &
          stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1) * sizeof(myint)
+    call tr_memwriteadd(size_array,'integer array2D',var_name)
     if (err.eq.0) then
        do i2 = begin_dim2,end_dim2
           do i1 = begin_dim1,end_dim1
@@ -599,11 +601,11 @@ contains
     integer   :: i1, i2
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1) * sizeof(array2d(begin_dim1,begin_dim2))
-    call tr_memwriteadd(size_array,'double array2D',var_name)
     allocate(array2d(begin_dim1:end_dim1,begin_dim2:end_dim2), &
          stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1) * sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array2D',var_name)
     if (err.eq.0) then
        do i2 = begin_dim2,end_dim2
           do i1 = begin_dim1,end_dim1
@@ -634,11 +636,11 @@ contains
     integer   :: i1, i2
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1) * sizeof(array2d(begin_dim1,begin_dim2))
-    call tr_memwriteadd(size_array,'complex array2D',var_name)
     allocate(array2d(begin_dim1:end_dim1,begin_dim2:end_dim2), &
          stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1) * sizeof(mycomp)
+    call tr_memwriteadd(size_array,'complex array2D',var_name)
     if (err.eq.0) then
        do i2 = begin_dim2,end_dim2
           do i1 = begin_dim1,end_dim1
@@ -648,7 +650,7 @@ contains
     else
        if (gmy_id.eq.target_proc) then
           print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',sizeof(array2d)
+          print*,'-> required memory (in Bytes) = ',size_array
        end if
        stop
     end if
@@ -675,12 +677,12 @@ contains
     integer   :: i1, i2, i3
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1)* &
-         (end_dim3-begin_dim3+1)* SIZEOF(array3d(begin_dim1,begin_dim2,begin_dim3))
-    call tr_memwriteadd(size_array,'integer array3D',var_name)
     allocate(array3d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
          begin_dim3:end_dim3),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1)* &
+         (end_dim3-begin_dim3+1)* SIZEOF(myint)
+    call tr_memwriteadd(size_array,'integer array3D',var_name)
     if (err.eq.0) then
        do i3 = begin_dim3,end_dim3
           do i2 = begin_dim2,end_dim2
@@ -718,12 +720,12 @@ contains
     integer   :: i1, i2, i3
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1)* &
-         (end_dim3-begin_dim3+1)* SIZEOF(array3d(begin_dim1,begin_dim2,begin_dim3))
-    call tr_memwriteadd(size_array,'integer array3D',var_name)
     allocate(array3d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
          begin_dim3:end_dim3),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1)* &
+         (end_dim3-begin_dim3+1)* SIZEOF(mycomp)
+    call tr_memwriteadd(size_array,'integer array3D',var_name)
     if (err.eq.0) then
        do i3 = begin_dim3,end_dim3
           do i2 = begin_dim2,end_dim2
@@ -761,12 +763,12 @@ contains
     integer   :: i1, i2, i3
     integer*8 :: size_array 
 
-    size_array = (end_dim1-begin_dim1+1) * &
-         (end_dim2-begin_dim2+1)* &
-         (end_dim3-begin_dim3+1)* sizeof(array3d(begin_dim1,begin_dim2,begin_dim3))
-    call tr_memwriteadd(size_array,'double array3D',var_name)
     allocate(array3d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
          begin_dim3:end_dim3),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1)* &
+         (end_dim3-begin_dim3+1)* sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array3D',var_name)
     if (err.eq.0) then
        do i3 = begin_dim3,end_dim3
           do i2 = begin_dim2,end_dim2

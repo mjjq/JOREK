@@ -64,7 +64,10 @@ if (my_id .eq. 0) then
     idisp          = idisp + send_counts(j)
 
   enddo
-
+else
+  call tr_allocate(Rsnd_buffer,1,1,"Rsnd_buffer")
+  call tr_allocate(send_counts,1,1,"send_counts")
+  call tr_allocate(send_disp,1,1,"send_disp")
 endif
 
 if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
@@ -96,11 +99,9 @@ if (my_id_n .eq. 0) then
 endif
 
 
-if (my_id .eq. 0) then
-   call tr_deallocate(Rsnd_buffer,"Rsnd_buffer")
-   call tr_deallocate(send_counts,"send_counts")
-   call tr_deallocate(send_disp,"send_disp")
-end if
+call tr_deallocate(Rsnd_buffer,"Rsnd_buffer")
+call tr_deallocate(send_counts,"send_counts")
+call tr_deallocate(send_disp,"send_disp")
 
 
 if (use_mumps) then

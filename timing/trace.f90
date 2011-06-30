@@ -70,11 +70,12 @@ contains
     integer, intent(in) :: pmy_id, pnbprocs
     gmy_id = pmy_id
     nbprocs = pnbprocs
-    call tr_raz_targetproc
+    target_proc = nbprocs-1
     if (gmy_id.eq.target_proc) then
        open(uout_mem, file = trace_file, status = 'REPLACE', &
             form = 'FORMATTED')
        write(uout_mem,*) ' '
+       call flush(uout_mem)
        close(uout_mem)
     end if
   end subroutine tr_meminit
@@ -105,6 +106,7 @@ contains
        open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')
        write(uout_mem,'(A)') string
+       call flush(uout_mem)
        close(uout_mem)
     end if
   end subroutine tr_write

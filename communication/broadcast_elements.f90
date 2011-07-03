@@ -5,13 +5,13 @@ subroutine Broadcast_elements(my_id,element_list)
 use tr_module
 use data_structure
 implicit none
+include 'mpif.h'               ! MPI fortran include file
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
-include 'mpif.h'               ! MPI fortran include file
 type (type_element)      :: anelement
 integer                  :: my_id, ife, ierr, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT
-integer, allocatable     :: buffer(:)
+character, allocatable   :: buffer(:)
 
 ! type type_element                                    ! type definition for one elements
 !    integer :: vertex(n_vertex_max)                   ! the nodes of the corners
@@ -28,21 +28,19 @@ integer, allocatable     :: buffer(:)
 !call MPI_BCAST(fe_list%fe(1:fe_list%nfe),fe_list%nfe,MPI_element,0,MPI_COMM_WORLD,ierr)
 
 
-
-call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
-call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
-
 call MPI_BCAST(element_list%n_elements,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+
+call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 
 bufsize = element_list%n_elements * ((2*n_vertex_max+8+5)*INT_EXT + n_vertex_max*(n_order+1)*IDBL_EXT)
 
-call tr_allocate(buffer,1,bufsize/ INT_EXT,"bcaste_buffer")
-
+allocate(buffer(bufsize))
+call tr_register_mem(sizeof(buffer),"bcaste_buffer")
 if (my_id .eq. 0) then
   position = 0
 
   do ife=1,element_list%n_elements
-
     anelement = element_list%element(ife)
 
     call MPI_PACK(anelement%vertex,n_vertex_max,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -51,37 +49,37 @@ if (my_id .eq. 0) then
     call MPI_PACK(anelement%father,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anelement%n_sons,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anelement%n_gen ,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(anelement%sons(1:4)  ,4,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%sons(1)  ,4,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anelement%nref  ,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(anelement%contain_node(1:5)  ,5,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(anelement%contain_node(1)  ,5,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   
   enddo
 
 endif
-
 call MPI_BCAST(buffer,bufsize,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
 
 if (my_id .ne. 0) then
 
   position = 0
   do ife=1,element_list%n_elements
-
     call MPI_UNPACK(buffer,bufsize,position,anelement%vertex,n_vertex_max,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%neighbours,n_vertex_max,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%size,n_vertex_max*(n_order+1),MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%father,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%n_sons,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%n_gen ,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    call MPI_UNPACK(buffer,bufsize,position,anelement%sons(1:4)  ,4,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anelement%sons(1)  ,4,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anelement%nref  ,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    call MPI_UNPACK(buffer,bufsize,position,anelement%contain_node(1:5)  ,5,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,anelement%contain_node(1)  ,5,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     element_list%element(ife) = anelement
 
   enddo
 
 endif
 
-call tr_deallocate(buffer,"bcaste_buffer")
+call tr_unregister_mem(sizeof(buffer),"bcaste_buffer")
+deallocate(buffer)
+
 
 return
-end
+end subroutine Broadcast_elements

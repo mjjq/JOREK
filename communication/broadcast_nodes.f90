@@ -11,7 +11,7 @@ type (type_node_list)    :: node_list
 include 'mpif.h'               ! MPI fortran include file
 type (type_node)         :: anode
 integer                  :: i, ierr, my_id, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT
-integer, allocatable     :: buffer(:)
+character, allocatable   :: buffer(:)
 
 !  type type_node                                      ! type definition of a node (i.e. a vertex)
 !    real*8     :: x(n_order+1,n_dim)                  ! x,y,z coordinates of points and additional nodal geometry
@@ -26,16 +26,17 @@ integer, allocatable     :: buffer(:)
 !  endtype type_node_list
 
 
-call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
-call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
-call MPI_TYPE_EXTENT(MPI_LOGICAL,ILOG_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 
 call MPI_BCAST(node_list%n_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(node_list%n_dof,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3 )*INT_EXT + (1)*ILOG_EXT)
 
-call tr_allocate(buffer,1,bufsize/ INT_EXT,"bcastn_buffer")
+allocate(buffer(bufsize))
+call tr_register_mem(bufsize,"bcastn_buffer")
 
 if (my_id .eq. 0) then
 
@@ -83,7 +84,8 @@ if (my_id .ne. 0) then
 
 endif
 
-call tr_deallocate(buffer,"bcastn_buffer")
+call tr_unregister_mem(bufsize,"bcastn_buffer")
+deallocate(buffer)
 
 return
-end
+end subroutine Broadcast_nodes

@@ -12,20 +12,21 @@ integer, intent(in) :: my_id
 
 ! --- internal variables
 include 'mpif.h'               ! MPI fortran include file
-integer              :: ierr, INT_EXT, IDBL_EXT, ILOG_EXT, CHAR_EXT, position, bufsize
-integer, allocatable :: buffer(:)
+integer                :: ierr, INT_EXT, IDBL_EXT, ILOG_EXT, CHAR_EXT, position, bufsize
+character, allocatable :: buffer(:)
 
 !----------------------------------- one line would be enough if only MPI_TYPE_STRUCT would work on IXIA
 !call MPI_BCAST(phys_list,1,MPI_phys,0,MPI_COMM_WORLD,ierr)
 
-call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
-call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
-call MPI_TYPE_EXTENT(MPI_LOGICAL,ILOG_EXT,ierr)
-call MPI_TYPE_EXTENT(MPI_CHARACTER,CHAR_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 bufsize = ( 160 * IDBL_EXT + (14+n_tor) * INT_EXT + 12 * ILOG_EXT + 3*512 * CHAR_EXT )
 
-call tr_allocate(buffer,1,bufsize/ INT_EXT,"bcastp_buffer")
+allocate(buffer(bufsize))
+call tr_register_mem(bufsize,"bcastp_buffer")
 
 if (my_id .eq. 0) then
   position = 0
@@ -236,7 +237,8 @@ if (my_id .ne. 0) then
 
 endif
 
-call tr_deallocate(buffer,"bcastp_buffer")
+call tr_unregister_mem(bufsize,"bcastp_buffer")
+deallocate(buffer)
 
 return
-end
+end subroutine Broadcast_phys

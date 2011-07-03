@@ -14,19 +14,19 @@ type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element)      :: aboundary
 type (type_bnd_node)         :: abnd_node
 integer                      :: my_id, ife, ind, ierr, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT
-integer, allocatable         :: buffer(:)
+character, allocatable       :: buffer(:)
 
 
-call MPI_TYPE_EXTENT(MPI_INTEGER,INT_EXT,ierr)
-call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION,IDBL_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 
 call MPI_BCAST(boundary_list%n_bnd_elements,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(bnd_node_list%n_bnd_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 bufsize = boundary_list%n_bnd_elements * (10*INT_EXT + 4*IDBL_EXT) + &
           bnd_node_list%n_bnd_nodes    * (4*INT_EXT)
-
-call tr_allocate(buffer,1,int(bufsize/INT_EXT),"bcastb_buffer")
+allocate(buffer(bufsize))
+call tr_register_mem(bufsize,"bcastb_buffer")
 
 if (my_id .eq. 0) then
   position = 0
@@ -83,7 +83,8 @@ if (my_id .ne. 0) then
   
 endif
 
-call tr_deallocate(buffer,"bcastb_buffer")
+call tr_unregister_mem(bufsize,"bcastb_buffer")
+deallocate(buffer)
 
 return
-end
+end subroutine Broadcast_boundary

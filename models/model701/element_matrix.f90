@@ -1,4 +1,8 @@
-subroutine element_matrix(element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
+module mod_elt_matrix
+  implicit none
+contains
+
+subroutine element_matrix(element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -24,8 +28,9 @@ real*8     :: eq_ss(n_plane,n_var,n_gauss,n_gauss),eq_st(n_plane,n_var,n_gauss,n
 
 real*8     :: delta_g(n_plane,n_var,n_gauss,n_gauss), delta_s(n_plane,n_var,n_gauss,n_gauss), delta_t(n_plane,n_var,n_gauss,n_gauss)
 
-real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
-real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
+real*8, dimension (:,:), pointer  :: ELM
+real*8, dimension (:)  , pointer  :: RHS
+integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
@@ -60,9 +65,9 @@ real*8     :: BZ0,          BZ0_AR,          BZ0_AZ,          BZ0_AP
 real*8     :: BP0,          BP0_AR,          BP0_AZ,          BP0_AP 
 real*8     :: Bgrad_vstar,  Bgrad_vstar_AR,  Bgrad_vstar_AZ,  Bgrad_vstar_AP
 real*8     :: Ugrad_vstar,  Ugrad_vstar_AR,  Ugrad_vstar_AZ,  Ugrad_vstar_AP
-real*8     :: BR0_A1_star,  BR0_A2_star      BR0_A3_star
-real*8     :: BZ0_A1_star,  BZ0_A2_star      BZ0_A3_star
-real*8     :: BP0_A1_star,  BP0_A2_star      BP0_A3_star
+real*8     :: BR0_A1star,  BR0_A2star  ,    BR0_A3star
+real*8     :: BZ0_A1star,  BZ0_A2star  ,    BZ0_A3star
+real*8     :: BP0_A1star,  BP0_A2star  ,    BP0_A3star
 
 real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y
 
@@ -310,31 +315,31 @@ do ms=1, n_gauss
 !###################################################################################################
 !#  equation 4 (R component induction equation)                                                    #
 !###################################################################################################
-           BR0_A1_star = 0.d0                      ! rot(A_star) component AR
-           BZ0_A1_star = - v_p / BigR
-           BP0_A1_star =   v_y / BigR
+           BR0_A1star = 0.d0                      ! rot(A_star) component AR
+           BZ0_A1star = - v_p / BigR
+           BP0_A1star =   v_y / BigR
 
-           rhs_ij(var_A1) = - eta * (BR0_A1_star * BR0 + BZ0_A1_star * BZ0 + BP0_A1_star * BP0) * xjac3 * tstep &
+           rhs_ij(var_A1) = - eta * (BR0_A1star * BR0 + BZ0_A1star * BZ0 + BP0_A1star * BP0) * xjac3 * tstep &
 	                    + v * ( UZ0 * BP0 - UP0 * BZ0) * xjac3 * tstep
 
 !###################################################################################################
 !#  equation 5 (Z component induction equation)                                                    #
 !###################################################################################################
-           BR0_A2_star =   v_p / BigR
-           BZ0_A2_star = 0.d0
-           BP0_A2_star = - v_x / BigR
+           BR0_A2star =   v_p / BigR
+           BZ0_A2star = 0.d0
+           BP0_A2star = - v_x / BigR
 
-           rhs_ij(var_A2) = - eta * (BR0_A2_star * BR0 + BZ0_A2_star * BZ0 + BP0_A2_star * BP0) * xjac3 * tstep &
+           rhs_ij(var_A2) = - eta * (BR0_A2star * BR0 + BZ0_A2star * BZ0 + BP0_A2star * BP0) * xjac3 * tstep &
 	                    + v * ( UP0 * BR0 - UR0 * BP0) * xjac3 * tstep
          
 !###################################################################################################
 !#  equation 6 (PHI component induction equation)                                                  #
 !###################################################################################################
-           BR0_A3_star  =  - v_y / BigR
-           BZ0_A3_star  =    v_x / BigR
-           BP0_A3_star  = 0.d0
+           BR0_A3star  =  - v_y / BigR
+           BZ0_A3star  =    v_x / BigR
+           BP0_A3star  = 0.d0
 
-           rhs_ij(var_A3) = - eta * (BR0_A3_star * BR0 + BZ0_A3_star * BZ0 + BP0_A3_star * BP0) * xjac3 * tstep &
+           rhs_ij(var_A3) = - eta * (BR0_A3star * BR0 + BZ0_A3star * BZ0 + BP0_A3star * BP0) * xjac3 * tstep &
 	                    + v * ( UR0 * BZ0 - UZ0 * BR0) * xjac3 * tstep
 
 !###################################################################################################
@@ -353,7 +358,7 @@ do ms=1, n_gauss
            do ivar=1,n_var
              ij = index_ij + (ivar-1)*n_tor
              RHS(ij) =  RHS(ij) + wst * rhs_ij(ivar)
-           endo
+           enddo
 
            do k=1,n_vertex_max
 
@@ -635,8 +640,8 @@ do ms=1, n_gauss
 		     kl = index_kl + (kvar-1)*n_tor
 
                      ELM(ij,kl) =  ELM(ij,kl) + wst * amat(ivar,kvar)
-		   endo
-		 endo
+		   enddo
+		 enddo
 
                enddo
              enddo
@@ -651,5 +656,7 @@ do ms=1, n_gauss
  enddo
 enddo
 
+
 return
-end
+end subroutine element_matrix
+end module mod_elt_matrix

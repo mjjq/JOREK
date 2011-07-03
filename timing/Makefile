@@ -1,6 +1,6 @@
 include ../config.in
 
-all:    r3_info.o \
+all:    modules r3_info.o \
 	flushc.o \
 	r3_ctlk.o \
 	trace.o

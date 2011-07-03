@@ -1,3 +1,5 @@
+module mod_poiss
+contains
 subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list, &
                    ivar_in,ivar_out,i_harm, psi_axis,psi_bnd,xpoint,Z_xpoint, &
                    freeboundary_equil,refinement,iter)
@@ -309,7 +311,7 @@ if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mum
 pastix_iparm(1)  = 0          ! insert default values
 pastix_iparm(2)  = 0          ! initializse
 pastix_iparm(3)  = 0
-
+pastix_nthrd     = nbthreads
 write(*,*) '***********************************'
 write(*,*) '* initialise PastiX                *'
 write(*,*) '***********************************'
@@ -465,3 +467,4 @@ call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
   
 return
 end subroutine poisson
+end module mod_poiss

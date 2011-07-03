@@ -1,10 +1,11 @@
 DIR = models/model701
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)		\
-	$(DIR)/mod_parameters.f90		\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/element_matrix.f90 		\
-	$(DIR)/boundary_conditions.f90 		\
-	$(DIR)/initial_conditions.f90
+	$(DIR)/boundary_matrix_open.f90  	\
+	$(DIR)/boundary_conditions.f90  	\
+	$(DIR)/initial_conditions.f90           \
+	$(DIR)/mod_parameters.f90		
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/mod_parameters.f90

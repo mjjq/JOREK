@@ -12,7 +12,10 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   use pellet_module
   use nodes_elements
   use vacuum_response, only: vacuum_boundary_integral, NEW_VACUUM
-
+  use mod_ch_nod_rhs_elm
+  use mod_boundary_matrix_open
+  use mod_elt_matrix
+  use mod_elt_matrix_fft
   implicit none
   include 'mpif.h'
 #include "r3_info.h"
@@ -29,10 +32,10 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
 !--- internal variables
   real*8, pointer :: rhs_loc(:)
-  real*8  :: ELM(n_tor*n_vertex_max*(n_order+1)*n_var,n_tor*n_vertex_max*(n_order+1)*n_var)
-  real*8  :: RHS(n_tor*n_vertex_max*(n_order+1)*n_var)
-  real*8  :: ELM2(n_tor*n_vertex_max*(n_order+1)*n_var,n_tor*n_vertex_max*(n_order+1)*n_var)
-  real*8  :: RHS2(n_tor*n_vertex_max*(n_order+1)*n_var)
+  real*8, dimension (:,:), pointer  :: ELM
+  real*8, dimension (:,:), pointer  :: ELM2
+  real*8, dimension (:)  , pointer  :: RHS
+  real*8, dimension (:)  , pointer  :: RHS2
   integer :: i_bnd, i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
   integer :: index_node1, index_node2, i_order, k_order, ielm, ierr
   integer :: ijA_position
@@ -83,7 +86,6 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob")
 
   call tr_allocate(rhs_glob,1,ndof_glob,"rhs_glob")
-
   call tr_allocatep(rhs_loc,1,ndof_glob,"rhs_loc")
 
   irn_glob = 0
@@ -96,24 +98,30 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
   !$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id, bc_natural_open,    &
-  !$omp          refinement)    &
+  !$omp          refinement,thread_struct)    &
   !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out)
-
+#ifdef _OPENMP
   omp_nthreads = omp_get_num_threads()
-  omp_tid      = omp_get_thread_num()
+  omp_tid      = 1+omp_get_thread_num()
+#else
+  omp_nthreads = 1
+  omp_tid      = 1
+#endif
+  ELM  => thread_struct(omp_tid)%ELM
+  ELM2 => thread_struct(omp_tid)%ELM2
+  RHS  => thread_struct(omp_tid)%RHS
+  RHS2 => thread_struct(omp_tid)%RHS2
 
   !$omp do 
   do ife =1, n_local_elms
-
      ielm = local_elms(ife)
 
      element = element_list%element(ielm)
      
      if (refinement) then
-
        i_father = element_list%element(ielm)%father
 
        if( i_father.ne.0) then
@@ -139,14 +147,15 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
      endif
 
      if (n_tor .gt. 3) then
-       call element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)      ! use fft for toroidal integration
+       call element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)      ! use fft for toroidal integration
      else
-       call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)          ! use direct integration
+       call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)          ! use direct integration
      endif
 
      do iv = 1, n_vertex_max									 ! boundary integrals
 
        iv2  = mod(iv, n_vertex_max) + 1
+
 
        inode1 = element%vertex(iv)
        inode2 = element%vertex(iv2)
@@ -155,7 +164,6 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
 	 if   (  ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
 	   .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
-
 	   nodes(1)  = node_list%node(inode1)
 	   nodes(2)  = node_list%node(inode2)
 	   

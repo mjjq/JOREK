@@ -130,7 +130,9 @@ program JOREK2
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
-  
+
+  ! --- Initialize OpenMP threads before MPI_init
+  call init_threads()
   ! --- Initialise MPI / threaded MPI
   !call MPI_INIT(IERR)
   required=MPI_THREAD_MULTIPLE
@@ -179,7 +181,7 @@ program JOREK2
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
   call initialise_parameters(my_id)
   call vacuum_init(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
-  
+
   ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).
   do itor=1, n_tor
     mode(itor)        = int(itor / 2) * n_period
@@ -229,6 +231,11 @@ program JOREK2
   
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
+  ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
+  ! --- n_plane, n_var have to remain the same until the end of the program.
+  call new_thread_buffers()
+
+
   call tr_print_memsize("InitStep")
 
   ! --- Read the restart file to continue a previous JOREK run (if restart is .true.)
@@ -1004,6 +1011,7 @@ program JOREK2
 
   call r3_info_summary ()                                ! timing
   call MPI_FINALIZE(IERR)                                ! clean up MPI
+  call del_thread_buffers()
 
 
 end program JOREK2

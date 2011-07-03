@@ -7,7 +7,8 @@ IBMFC    ?=#    IBM compiler flag (for FORTRAN symbol defs)
 
 JOREK_DIR = `pwd`
 
-DIRS =  datatypes models/$(MODEL) 	\
+DIRS =  timing \
+        datatypes models/$(MODEL) 	\
 	models 				\
 	communication 			\
 	elements 			\
@@ -18,7 +19,6 @@ DIRS =  datatypes models/$(MODEL) 	\
 	diagnostics 			\
 	vacuum 				\
 	refinement			\
-	timing				\
 	tools
 
 LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
@@ -27,7 +27,7 @@ NODEPS = clean cleanall cleandep
 # If we have neither HIPS or PASTIX_MURGE we need to
 # Use fake murge.
 
-INCLUDES  =  $(patsubst %,-I%/,$(DIRS)) -I. $(INCMURGE)
+INCLUDES  =   -I. $(patsubst %,-I%/,$(DIRS)) $(INCMURGE)
 
 VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 

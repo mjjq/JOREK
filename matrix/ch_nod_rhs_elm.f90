@@ -1,26 +1,25 @@
 !*****************************************************************************
 !        Modifications of the stiffness matrix and RHS                       *
 !*****************************************************************************
-
-
-subroutine Ch_nod_rhs_elm(i_element, element,nodes,element_father,nodes_father,ELM,RHS,node_out)
-
-
-
- use parameters
- use data_structure
-
-implicit none
-
+module mod_ch_nod_rhs_elm
+  implicit none
+contains  
+  subroutine Ch_nod_rhs_elm(i_element, element,nodes,element_father,nodes_father,ELM,RHS,node_out)
+  use parameters
+  use data_structure
+  
+  implicit none
  type (type_element)   :: element
  type (type_element)   :: element_father
  type (type_node)      :: nodes(n_vertex_max)
  type (type_node)      :: nodes_father(n_vertex_max)
 
+real*8, dimension (:,:), pointer  :: ELM
+real*8, dimension (:)  , pointer  :: RHS
  real*8, dimension(n_vertex_max*n_var*(n_order+1)*n_tor,&
-                 n_vertex_max*n_var*(n_order+1)*n_tor)  	:: ELM, ELM_bis, ELM_tr, C_matrix
+                 n_vertex_max*n_var*(n_order+1)*n_tor)  	:: ELM_bis, ELM_tr, C_matrix
 
- real*8, dimension( n_vertex_max*n_var*(n_order+1)*n_tor)	::  RHS, RHS_bis
+ real*8, dimension(n_vertex_max*n_var*(n_order+1)*n_tor)	:: RHS_bis
  real*8, dimension(4,4)			  	:: H, H_s, H_t, H_st
  real*8, dimension(2,4) 			:: c, dc_ds, dc_dt, d2c_dsdt					   
  real*8						:: lambda, mu,h_u,h_v,h_w						   
@@ -281,3 +280,4 @@ implicit none
 
 
 end subroutine Ch_nod_rhs_elm
+end module mod_ch_nod_rhs_elm

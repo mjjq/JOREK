@@ -1,8 +1,8 @@
 !> Definitions of derived data types for grid nodes and elements, boundary nodes and elements,
 !! and flux surface elements
 module data_structure
-
   use parameters
+  use tr_module
 
   implicit none
 
@@ -79,5 +79,78 @@ module data_structure
     type (type_surface),allocatable :: flux_surfaces(:) !< the list of surfaces
   end type type_surface_list
 
+  TYPE type_thread_buffer
+     real*8, dimension (:,:,:), pointer :: ELM_p
+     real*8, dimension (:,:,:), pointer :: ELM_n
+     real*8, dimension (:,:,:), pointer :: ELM_k
+     real*8, dimension (:,:,:), pointer :: ELM_kn
+     real*8, dimension (:,:)  , pointer :: RHS_p
+     real*8, dimension (:,:)  , pointer :: RHS_k
+     real*8, dimension (:,:)  , pointer :: ELM
+     real*8, dimension (:,:)  , pointer :: ELM2
+     real*8, dimension (:)    , pointer :: RHS
+     real*8, dimension (:)    , pointer :: RHS2
+  END TYPE type_thread_buffer
+  
+  integer                                             , public :: nbthreads
+  TYPE(type_thread_buffer), dimension(:), pointer    , public :: thread_struct => NULL()
+  
+contains
+
+  subroutine init_threads()
+#ifdef _OPENMP
+    INTEGER, external :: omp_get_num_threads, omp_get_thread_num, omp_set_dynamic
+    INTEGER ierr
+    !$OMP PARALLEL shared(nbthreads)
+    !$OMP master
+    ierr= omp_set_dynamic(0)
+    nbthreads = omp_get_num_threads()
+    !$OMP end master
+    !$OMP barrier
+    !$OMP end PARALLEL
+#else
+    nbthreads = 1
+#endif
+  end subroutine init_threads
+
+  subroutine new_thread_buffers()
+    integer i
+    if (.not. associated(thread_struct)) then
+       allocate(thread_struct(nbthreads))
+       call tr_register_mem(sizeof(thread_struct),"thread_struct")
+       do i = 1, nbthreads
+          call tr_debug_write("Init thread_struct, thread_id=",i)
+          call tr_allocatep(thread_struct(i)%ELM_p, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1)*n_tor,"ELM_p")
+          call tr_allocatep(thread_struct(i)%ELM_n, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1)*n_tor,"ELM_n")
+          call tr_allocatep(thread_struct(i)%ELM_k, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1)*n_tor,"ELM_k")
+          call tr_allocatep(thread_struct(i)%ELM_kn,1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1)*n_tor,"ELM_kn")
+          call tr_allocatep(thread_struct(i)%RHS_p, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),"RHS_p")                                     
+          call tr_allocatep(thread_struct(i)%RHS_k, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),"RHS_k")                                     
+          call tr_allocatep(thread_struct(i)%ELM,   1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM")       
+          call tr_allocatep(thread_struct(i)%RHS,   1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS")                                     
+          call tr_allocatep(thread_struct(i)%ELM2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM2")      
+          call tr_allocatep(thread_struct(i)%RHS2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS2")                                     
+       end do
+    end if
+  end subroutine new_thread_buffers
+  
+  subroutine del_thread_buffers()
+    integer i
+    do i = 1, nbthreads
+       call tr_deallocatep(thread_struct(i)%ELM_p,"ELM_p")
+       call tr_deallocatep(thread_struct(i)%ELM_n,"ELM_n")
+       call tr_deallocatep(thread_struct(i)%ELM_k,"ELM_k")
+       call tr_deallocatep(thread_struct(i)%ELM_kn,"ELM_kn")
+       call tr_deallocatep(thread_struct(i)%RHS_p,"RHS_p")                                     
+       call tr_deallocatep(thread_struct(i)%RHS_k,"RHS_k")                                     
+       call tr_deallocatep(thread_struct(i)%ELM,"ELM")
+       call tr_deallocatep(thread_struct(i)%RHS,"RHS")
+       call tr_deallocatep(thread_struct(i)%ELM2,"ELM2")
+       call tr_deallocatep(thread_struct(i)%RHS2,"RHS2")
+    end do
+    call tr_unregister_mem(sizeof(thread_struct),"thread_struct")
+    deallocate(thread_struct)
+  end subroutine del_thread_buffers
+  
 end module data_structure
 

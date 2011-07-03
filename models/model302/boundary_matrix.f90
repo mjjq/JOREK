@@ -21,8 +21,8 @@ real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_p
 real*8     :: eq_ss(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
-real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
-real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
+real*8, dimension (:,:), pointer  :: ELM
+real*8, dimension (:)  , pointer  :: RHS
 
 integer    :: vertex(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
@@ -175,4 +175,4 @@ do ms=1, n_gauss
 enddo
 
 return
-end
+end subroutine boundary_matrix

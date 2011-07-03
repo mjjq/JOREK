@@ -49,7 +49,7 @@ module tr_module
   ! size of real numbers used in jorek
   integer, private, parameter :: RKIND = 8
   ! processor identity
-  integer, private :: gmy_id
+  integer, public :: gmy_id
   ! nb of processors
   integer, private :: nbprocs
   ! used for memory size calculation

@@ -2,7 +2,7 @@ subroutine initialise_parameters(my_id)
 !-----------------------------------------------------------------------
 ! Initialise input parameters and read the input namelist
 !-----------------------------------------------------------------------
-use tr_allocate
+use tr_module
 use phys_module
 
 implicit none

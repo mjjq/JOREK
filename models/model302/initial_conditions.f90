@@ -4,6 +4,7 @@ subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_el
 !-----------------------------------------------------------------------
 use data_structure
 use phys_module
+use mod_poiss
 implicit none
 
 type (type_node_list)    :: node_list

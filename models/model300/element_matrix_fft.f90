@@ -11,7 +11,9 @@ use parameters
 !$OMP THREADPRIVATE(ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k)
 end module
 
-subroutine element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM,RHS)
+module mod_elt_matrix_fft
+contains
+subroutine element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !
@@ -31,8 +33,9 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
-real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
+real*8, dimension (:,:), pointer  :: ELM
+real*8, dimension (:)  , pointer  :: RHS
+integer, intent(in) :: tid
 
 real*8     :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
 real*8     :: x_ss(n_gauss,n_gauss),       x_st(n_gauss,n_gauss),       x_tt(n_gauss,n_gauss)
@@ -1044,3 +1047,4 @@ enddo
       
 return
 end subroutine my_fft
+end module mod_elt_matrix_fft

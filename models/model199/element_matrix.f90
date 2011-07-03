@@ -1,17 +1,20 @@
-subroutine element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM,RHS)
-!---------------------------------------------------------------
-! calculates the matrix contribution of one element
-!---------------------------------------------------------------
+module mod_elt_matrix
+  implicit none
+contains
+
+subroutine element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
+  !---------------------------------------------------------------
+  ! calculates the matrix contribution of one element
+  !---------------------------------------------------------------
 use parameters
 use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use tr_module
 
-implicit none
-
-type (type_element)   :: element
-type (type_node)      :: nodes(n_vertex_max)
+type (type_element), intent(in)   :: element
+type (type_node)   , intent(in)   :: nodes(n_vertex_max)
 
 real*8     :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
 real*8     :: x_ss(n_gauss,n_gauss),       x_st(n_gauss,n_gauss),       x_tt(n_gauss,n_gauss)
@@ -24,8 +27,9 @@ real*8     :: eq_ss(n_plane,n_var,n_gauss,n_gauss),eq_st(n_plane,n_var,n_gauss,n
 
 real*8     :: delta_g(n_plane,n_var,n_gauss,n_gauss), delta_s(n_plane,n_var,n_gauss,n_gauss), delta_t(n_plane,n_var,n_gauss,n_gauss)
 
-real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
-real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
+real*8, dimension (:,:), pointer  :: ELM
+real*8, dimension (:)  , pointer  :: RHS
+integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, kl1, kl2, kl3, kl4, kl5, kl6
@@ -442,5 +446,5 @@ do ms=1, n_gauss
 enddo
 
 return
-end
-
+end subroutine element_matrix
+end module mod_elt_matrix

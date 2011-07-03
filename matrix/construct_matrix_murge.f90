@@ -30,7 +30,8 @@ MODULE THREAD_DATA
   use tr_module 
   USE data_structure,  only : type_element_list&
        &, type_node_list
-
+  use mod_elt_matrix_fft
+  use mod_elt_matrix
 
   TYPE THREAD_DATA_TYPE
      ! -- local variables   --
@@ -116,8 +117,8 @@ contains
     TYPE (type_node)               :: nodes(n_vertex_max)
     logical                        :: is_local
     TYPE (type_node)               :: nodes_father(n_vertex_max)
-    REAL*8,  ALLOCATABLE           :: ELM(:,:)
-    REAL*8,  ALLOCATABLE           :: RHS(:)
+    REAL*8,  POINTER               :: ELM(:,:)
+    REAL*8,  POINTER               :: RHS(:)
     INTEGER                        :: next_matrix
     INTEGER                        :: ret
     !INTEGER, external              :: fortran_pthread_mutex_lock, fortran_pthread_mutex_unlock
@@ -131,8 +132,8 @@ contains
     cnt2 = 0
     pt_matrix_nbr => data%matrix_nbr
     !TODO: anticiper l'allocation ou l'allouer une fois pour toute
-    call tr_allocate(ELM,1,elem_size,1,elem_size,"ELM")
-    call tr_allocate(RHS,1,elem_size,"RHS")
+    call tr_allocatep(ELM,1,elem_size,1,elem_size,"ELM")
+    call tr_allocatep(RHS,1,elem_size,"RHS")
     DO ife =1, data%n_local_elms, data%step 
 
 !$OMP barrier       
@@ -173,10 +174,10 @@ contains
 
              IF (n_tor .GT. 3) THEN
                 CALL element_matrix_fft(element,nodes, data%xpoint2, data%psi_axis,  &
-                     &                  data%psi_bnd, Data%z_xpoint, ELM(:,:), RHS(:))      ! use fft for toroidal integration
+                     &                  data%psi_bnd, Data%z_xpoint, ELM, RHS, data%thread_num)      ! use fft for toroidal integration
              ELSE
                 CALL element_matrix(element,nodes, data%xpoint2, data%psi_axis,&
-                     &              data%psi_bnd, Data%z_xpoint, ELM(:,:), RHS(:))      ! use direct integration      
+                     &              data%psi_bnd, Data%z_xpoint, ELM, RHS, data%thread_num)      ! use direct integration      
                 DO iv = 1, n_vertex_max                                                                     ! boundary integrals
 
                    iv2  = MOD(iv, n_vertex_max) + 1
@@ -436,8 +437,8 @@ contains
           END IF
        END IF
     END DO
-    CALL tr_deallocate(RHS,"RHS")
-    call tr_deallocate(ELM,"ELM")
+    CALL tr_deallocatep(RHS,"RHS")
+    call tr_deallocatep(ELM,"ELM")
     LOOP = 0
     !print *, "cnt, cnt2", cnt, cnt2
   END FUNCTION LOOP

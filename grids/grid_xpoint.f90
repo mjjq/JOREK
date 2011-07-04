@@ -38,16 +38,18 @@ integer             :: n_private_2, i_surf, n_pieces
 integer             :: i_elm_axis, i_elm_xpoint, i_elm_find(8), i_sep, i_max, i_find, npl, ifail
 integer             :: node, index, node_start, index_xpoint, n_xpoint, j_start, j_end
 integer             :: iv, ivp, node_iv, node_ivp, i_elm, n_leg_2, n_tht_3
-integer             :: ielm_out
+integer             :: my_id, ielm_out
 real*8              :: Rmid, Zmid, R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out
 real*8              :: EJAC, RX, RY, SX, SY, CRR, CZZ, CRZ, alpha1, alpha2, alpha_max, alpha_min
-real*8              :: RL1, RL2, RL3, RL4, RL5, RL6, RL7, ZL1, ZL2, ZL3, ZL4, ZL5, ZL6, ZL7, rr1, ss1
+real*8              :: RL1, RL2, RL3, RL4, RL5, RL6, RL7, RL8, RL9, ZL1, ZL2, ZL3, ZL4, ZL5, ZL6, ZL7, ZL8, ZL9
+real*8              :: angle_L1, angle_L8, angle_L9, rr1, ss1
 logical             :: xpoint
 real*8,external     :: root
 character*4         :: label
 
 xpoint = .true.
+my_id  = 0
 
 PI = 2.d0 * asin(1.d0)
 
@@ -56,9 +58,9 @@ write(*,*) '*          X-point grid             *'
 write(*,*) '*************************************'
 
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 
 !-------------------------------- double values to find the mid_points
 n_flux_2    = 2 * (n_flux - 1)
@@ -311,18 +313,50 @@ Z_sep(1) = Z_xpoint
 R_sep(n_tht_2) = R_xpoint
 Z_sep(n_tht_2) = Z_xpoint
 
+angle_L1 = atan2(ZL1-Z_xpoint,RL1-R_xpoint)
+if (angle_L1 .lt. 0.d0) angle_L1 = angle_L1 + 2.d0*PI
+
+angle_L8 = tht_x + 1.5d0*PI
+angle_L9 = tht_x + 0.5d0*PI
+
+if (tht_x + 1.5d0*PI .gt. angle_L1) then   ! check if L8 is above L1 : if not adjust angle
+  angle_L8 = angle_L1 - 0.1
+  angle_L9 = angle_L8 - PI
+endif
+
 !------------------------------------ find crossing of last fluxsurface
 call tr_allocate(R_max,1,n_tht_3,"R_max")
 call tr_allocate(Z_max,1,n_tht_3,"Z_max")
 call tr_allocate(R_min,1,n_tht_3,"R_min")
 call tr_allocate(Z_min,1,n_tht_3,"Z_min")
 
+call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L9,R_xpoint,Z_xpoint,i_elm_find,s_find,t_find,i_find)
+call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+               RL9,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+               ZL9,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+write(*,'(A,2e16.8)') ' L9 (outside): ',RL9,ZL9  ! outside wall crossing at x-point level
+
+call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L8,R_xpoint,Z_xpoint,i_elm_find,s_find,t_find,i_find)
+call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+               RL8,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+               ZL8,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+write(*,'(A,2e16.8)') ' L8 (inside): ',RL8,ZL8  ! inside wall crossing at x-point level
+
+
 do j=1,n_tht_2
 
   if (Z_sep(j) .le. Z_axis) then
 
-     Z_max(j) = Z_sep(j)
+!     Z_max(j) = Z_sep(j)
 
+    if (j .gt. n_tht_2/2) then
+      Z_max(j) = Z_sep(j) + (ZL8 - Z_xpoint) * ((Z_sep(j) - Z_axis)/(Z_xpoint - Z_axis))**2
+    else
+      Z_max(j) = Z_sep(j) + (ZL9 - Z_xpoint) * ((Z_sep(j) - Z_axis)/(Z_xpoint - Z_axis))**2
+    endif
+    
     call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(j),i_elm_find,s_find,t_find,i_find)
 
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
@@ -339,7 +373,7 @@ do j=1,n_tht_2
       s_flux(n_psi_2,j)    = s_find(1)
       t_flux(n_psi_2,j)    = t_find(1)
       t_tht(n_psi_2,j)     = 1.d0
-
+      
     else
 
       call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
@@ -426,6 +460,7 @@ do j=1,n_leg_2
 
 enddo
 
+
 do j=1,n_leg_2
 
   Z_max(n_tht_2 + j) = ZL1 + (Z_max(n_tht_2) -ZL1) * s_tmp(j)
@@ -469,7 +504,7 @@ enddo
 R_max(n_tht_2+2*n_leg_2) = R_max(1)   ! this one is known
 
 
-do j=1,n_leg_2
+do j=1,n_leg_2                        ! inside leg
 
   R_sep(n_tht_2 + j) = RL6 + (R_xpoint - RL6) * s_tmp(j)
   call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+j),i_elm_find,s_find,t_find,i_find)
@@ -831,7 +866,7 @@ alpha_min = min(alpha1,alpha2)
 write(*,*) ' ALPHA : ',alpha_max,alpha_min
 
 newnode_list%node(index_xpoint)%x(1,:) = (/ R_xpoint, Z_xpoint /)
-newnode_list%node(index_xpoint)%x(2,:) = (/ 1.d0,0.d0 /)
+newnode_list%node(index_xpoint)%x(2,:) = (/ cos(angle_L9),sin(angle_L9) /)
 newnode_list%node(index_xpoint)%x(3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint)%x(4,:) = 0.d0
 newnode_list%node(index_xpoint)%boundary = 0
@@ -849,7 +884,7 @@ newnode_list%node(index_xpoint+2)%x(4,:) = 0.d0
 newnode_list%node(index_xpoint+2)%boundary = 0
 
 newnode_list%node(index_xpoint+3)%x(1,:) = (/ R_xpoint, Z_xpoint /)
-newnode_list%node(index_xpoint+3)%x(2,:) = (/ 1.d0,0.d0 /)
+newnode_list%node(index_xpoint+3)%x(2,:) = (/ -cos(angle_L8),-sin(angle_L8) /)
 newnode_list%node(index_xpoint+3)%x(3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+3)%x(4,:) = 0.d0
 newnode_list%node(index_xpoint+3)%boundary = 0
@@ -1449,9 +1484,9 @@ deallocate(newnode_list)
 call tr_unregister_mem(sizeof(newelement_list),"newelement_list")
 deallocate(newelement_list)
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 
 call tr_deallocate(s_values,"s_values")
 call tr_deallocate(theta_sep,"theta_sep")

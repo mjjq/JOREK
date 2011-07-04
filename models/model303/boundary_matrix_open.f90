@@ -1,3 +1,7 @@
+module mod_boundary_matrix_open
+  implicit none
+contains
+
 subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
@@ -39,9 +43,9 @@ logical    :: xpoint2
 
 PI    = 2.d0*asin(1.d0)
 
-theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
+!theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
-!theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
+theta = 1.0d0   ; zeta = 0.5d0       ! BDF2 (Gears) scheme
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
@@ -183,4 +187,6 @@ do ms=1, n_gauss
 enddo
 
 return
-end
+end subroutine
+
+end module mod_boundary_matrix_open

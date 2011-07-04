@@ -13,7 +13,6 @@ all : define_boundary.o \
       grid_polar_bezier.o \
       grid_polar_bezier_square.o \
       grid_xpoint.o \
-      grid_xpoint_wall.o \
       meshac.o \
       spline_spwert.o \
       spline_tb15a.o \

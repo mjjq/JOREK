@@ -29,7 +29,7 @@ do i=1,node_list%n_nodes
   Zmax = max(Zmax,node_list%node(i)%x(1,2))
 enddo
 
-nplot  = 401
+nplot  = 1001
 
 call tr_allocate(xp,1,nplot,1,2,"xp")
 call tr_allocate(yp,1,nplot,1,n_var,"yp")

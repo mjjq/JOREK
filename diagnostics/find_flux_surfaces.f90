@@ -20,7 +20,7 @@ real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8  :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss, RZ_jac, PSI_R, pSI_Z
 
-integer :: i, j, k, ifound, iv, im, is, n1, n2, n3
+integer :: my_id, i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint
 logical :: xpoint
 
@@ -31,6 +31,7 @@ write(*,*) ' n_psi : ',surface_list%n_psi
 write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
 
 PI = 2.d0* asin(1.d0)
+my_id = 0
 
 if (allocated(surface_list%flux_surfaces)) then
    call tr_unregister_mem(sizeof(surface_list%flux_surfaces),"surface_list%flux_surfaces")
@@ -47,7 +48,7 @@ do j=1, surface_list%n_psi
   surface_list%flux_surfaces(j)%t        = 0
 enddo
 
-if (xpoint) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 
 
 

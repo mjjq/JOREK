@@ -38,6 +38,9 @@ if (index_now .gt. 0) then
   write(21) xtime(1:index_now)
   write(21) energies(:,:,1:index_now)
 endif
+if (use_pellet) then
+  write(21) pellet_particles, pellet_R, pellet_Z
+endif
 
 close(21)
 

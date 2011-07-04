@@ -31,9 +31,11 @@ real*8,  allocatable :: Asnd_buffer(:), Rsnd_buffer(:)
 integer, allocatable :: isnd_buffer(:), jsnd_buffer(:)
 integer, allocatable :: send_counts(:), send_disp(:), recv_counts(:), recv_disp(:), sizes(:)
 
-write(*,*) my_id,'*********************************'
-write(*,*) my_id,'*      distributing matrix      *'
-write(*,*) my_id,'*********************************'
+if (my_id .eq. 0) then
+  write(*,*) my_id,'*********************************'
+  write(*,*) my_id,'*      distributing matrix      *'
+  write(*,*) my_id,'*********************************'
+endif
 
 ibufsize=0
 do i=1,nz_glob                                    ! determine buffersize
@@ -43,7 +45,6 @@ do i=1,nz_glob                                    ! determine buffersize
     ibufsize = ibufsize + 1
   endif
 enddo
-write(*,*) my_id,' ibufsize : ',ibufsize,nz_glob
 
 call tr_allocate(Asnd_buffer,1,ibufsize,"dh_Asnd_buffer")
 call tr_allocate(isnd_buffer,1,ibufsize,"dh_isnd_buffer")
@@ -57,11 +58,6 @@ nz_loc_n = nz_glob    / n_tor**2
 n_loc_n  = ndof_glob  / n_tor
 
 M_cpu = n_cpu / ((n_tor+1)/2)
-
-write(*,*) my_id,' nz_glob, nz_loc_n : ',nz_glob, nz_loc_n
-write(*,*) my_id,' n, n_loc_n       : ',ndof_glob , n_loc_n
-write(*,*) my_id,' n_cpu, M_cpu     : ',n_cpu, M_cpu
-
 
 index(1) = 0
 if (n_tor .gt. 1) index(2) = nz_loc_n
@@ -95,8 +91,6 @@ do j=2,n_cpu
 
   n_i = (j-1) / M_cpu
 
-!  write(*,*) my_id,' j, n_i, index(ni+1) : ', j, n_i, index(n_i+1)
-
   if (mod(j-1,M_cpu) .eq. 0) then
     send_counts(j) = index(n_i+1) - index(n_i)
     send_disp(j)   = idisp
@@ -107,9 +101,6 @@ do j=2,n_cpu
   endif
 
 enddo
-
-!write(*,'(i3,A,12i8)') my_id,' send_counts : ',send_counts
-!write(*,'(i3,A,12i8)') my_id,' send_disp   : ',send_disp
 
 call tr_allocate(sizes,1,n_cpu,"dh_sizes")
 
@@ -188,9 +179,6 @@ if (my_id_n .eq. 0) then
     mumps_par%jcn(i) = j_reduced
 
   enddo
-
-!  write(*,*) my_id,' distribute_harm check irn : ',minval(mumps_par%irn),maxval(mumps_par%irn)
-!  write(*,*) my_id,' distribute_harm check jcn : ',minval(mumps_par%jcn),maxval(mumps_par%jcn)
 
 endif
 

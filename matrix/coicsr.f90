@@ -143,11 +143,6 @@
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof
       
-      write(*,*) ' COICSR : n    = ',n
-      write(*,*) ' COICSR : nnz  = ',nnz
-      write(*,*) ' COICSR : ndof = ',ndof
-      write(*,*) ' COICSR : ndof*n, ndof*nnz = ',ndof*n, ndof*nnz
-            
 ! find pointer array for resulting matrix.
       do i=1,n+1
          iwk(i) = 0

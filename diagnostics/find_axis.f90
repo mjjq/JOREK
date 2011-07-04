@@ -1,4 +1,4 @@
-subroutine find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+subroutine find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 use data_structure
@@ -30,16 +30,18 @@ type (type_element_list) :: element_list
 real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, grad_psi, ps_x, ps_y, ps_s, ps_t, xjac
 real*8  :: psi_min, psi_max, grad_psi_min
 real*8  :: R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
-integer :: i_elm_axis, ij_axis(2), i, iv, ms, mt, kf, kv, ifail
+integer :: my_id,i_elm_axis, ij_axis(2), i, iv, ms, mt, kf, kv, ifail
 
 real*8  :: x(2), s, t, xerr, ferr, rs_tolerance
 
 logical :: early_exit
 parameter (rs_tolerance = 1.d-8)
 
-write(*,*) '*********************************'
-write(*,*) '*     find_axis                 *'
-write(*,*) '*********************************'
+if (my_id .eq. 0) then
+  write(*,*) '*********************************'
+  write(*,*) '*     find_axis                 *'
+  write(*,*) '*********************************'
+endif
 
 i_elm_axis = 1
 ij_axis    = 1 
@@ -107,7 +109,7 @@ call interp_RZ(node_list,element_list,i_elm_axis,s,t,R_axis,R_s,R_t,R_st,R_ss,R_
 s_axis = s
 t_axis = t
 
-write(*,'(A,4f14.8)') ' magnetic axis : ',R_axis,Z_axis,psi_axis
+if (my_id .eq. 0) write(*,'(A,4f14.8)') ' magnetic axis : ',R_axis,Z_axis,psi_axis
 
 return
 END

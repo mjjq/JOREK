@@ -11,6 +11,9 @@ module data_structure
                                                       !! x(1,:) position, x(2,:) vector u, x(3,:) vector v, x(4,:) vector w
     real*8     :: values(n_tor,n_order+1,n_var)   !< Variable values and derivatives
     real*8     :: deltas(n_tor,n_order+1,n_var)   !< Change of variable values and derivatives in last timestep
+#ifdef fullmhd
+    real*8     :: psi_eq(n_order+1,n_var)         !< equilibrium flux at the nodes
+#endif
     integer    :: index(n_order+1)                !< index in the main matrix
     integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes
     integer    :: parents(2)                      !< Parent nodes (used if node is constrained)"refinement"

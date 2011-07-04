@@ -61,7 +61,7 @@ enddo
 
 factor = 1.d0/ x_g                    ! Grad-Shafranov
 if (itype .eq. 1) factor = x_g        ! Poisson
-if (itype .eq. 2) factor = 1.d0       ! cylinder
+if (itype .eq. 3) factor = 1.d0       ! cylinder
 
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss

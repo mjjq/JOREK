@@ -96,9 +96,17 @@ do i=1,n_vertex_max
        x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
        x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
+       x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+       x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+       x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+
        y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
        y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
        y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+
+       y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+       y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+       y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
        do mp=1,n_plane
 
@@ -107,11 +115,8 @@ do i=1,n_vertex_max
            do in=1,n_tor
 
              eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
-
              eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
-
              eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
-
              eq_p(mp,k,ms,mt) = eq_p(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ_p(in,mp)
 
              eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)* HZ(in,mp)
@@ -325,9 +330,9 @@ do ms=1, n_gauss
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 
      source_pellet = 0.d0
-     call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
-                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
-                        x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
+ !    call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
+ !                       pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
+ !                       x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
 
      do i=1,n_vertex_max
 
@@ -359,7 +364,7 @@ do ms=1, n_gauss
 	        + v_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )     / xjac**2          &		
 		- xjac_y * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) ) / xjac**2
 
-           v_xy = (- v_ss * y_t(ms,mt)*x_t(ms,mt) - v_tt * x_s(ms,mt)*y_s(ms,mt)                    &
+           v_xy = (- v_ss * y_t(ms,mt)*x_t(ms,mt) - v_tt * x_s(ms,mt)*y_s(ms,mt)                   &
      	        + v_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                        &        
                 - v_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                        &	   
 	        - v_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2          &		
@@ -376,22 +381,12 @@ do ms=1, n_gauss
 !#  equation 1   (induction equation)                                                              #
 !###################################################################################################
 
-!           rhs_ij_1 = &
-!                      - v * eta_T  * current_source(ms,mt)/ BigR          * xjac * tstep &
-!                      -     eta_T   * (v_x *  ps0_x  + v_y  * ps0_y)/BigR * xjac * tstep &
-!                      - v * deta_dT * (T0_x * ps0_x  + T0_y * ps0_y)/BigR * xjac * tstep &
-
-!                      + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
-!                      - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
-!                      + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
-!                      + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
-
            rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt))/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
 
-                      - v * tauIC/(r0*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &		      
-                      + v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
+!                      - v * tauIC/(r0*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &      
+!                      + v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
 
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
                       + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
@@ -411,17 +406,18 @@ do ms=1, n_gauss
                                -2.d0*  v_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) )                       &
                                     * (w0_ss * (x_t(ms,mt)**2+y_t(ms,mt)**2) + w0_tt*(x_s(ms,mt)**2+y_s(ms,mt)**2)    &
                                -2.d0*  w0_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * tstep &
-			       
-!****                      +  tauIC * BigR**4 * w0 * (p0_s * v_t - p0_t * v_s)        * tstep &
+       
+                      +  tauIC * BigR**4 * w0 * (p0_s * v_t - p0_t * v_s)        * tstep &
+
 !****                      -  4.d0 * tauIC * BigR**3 * v * w0 * p0_y           * xjac * tstep &
 
-                      - v * tauIC * BigR**4 * (p0_s * w0_t - p0_t * w0_s)        * tstep &
-
-		      - tauIC * BigR**3 * p0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
-		      		      
-		      - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
-		      
-		      + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
+!                      - v * tauIC * BigR**4 * (p0_s * w0_t - p0_t * w0_s)        * tstep &
+!
+!                      - tauIC * BigR**3 * p0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
+!           
+!                      - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
+      
+                      + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
 
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
 
@@ -450,9 +446,9 @@ do ms=1, n_gauss
                     - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
                     - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep &
                     - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                    * tstep &
-		    
-		    + v * 2.d0 * tauIC * p0_y * BigR                                           * xjac * tstep &
-		    
+    
+!                    + v * 2.d0 * tauIC * p0_y * BigR                                           * xjac * tstep &
+    
                     + zeta * v * delta_g(mp,5,ms,mt) * BigR                                    * xjac &
 
                     - D_perp_num  *                                                                   &
@@ -504,14 +500,14 @@ do ms=1, n_gauss
            rhs_ij_7 = - v * F0 / BigR * P0_p                                              * xjac * tstep &
                       - v * (P0_s * ps0_t - P0_t * ps0_s)                                        * tstep &
                       - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR                * xjac * tstep &
-		      		      
-		      - v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2 * BigR * xjac * tstep &
-		      
-		      - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                * tstep &
-		      + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep &
-		      		      
+          
+                      - v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2 * BigR * xjac * tstep &
+      
+                      - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                * tstep &
+                      + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep &
+           
                       + zeta * v * delta_g(mp,7,ms,mt) * R0 * F0**2 / BigR                * xjac         &
-		      + zeta * v * r0 * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR * xjac  &
+                      + zeta * v * r0 * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR * xjac  &
 
                       - visco_par_num  *                                                                 &
                              ( (v_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                   &
@@ -563,15 +559,15 @@ do ms=1, n_gauss
                  psi_st = h_st(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
 
                  psi_xx = (psi_ss * y_t(ms,mt)**2 - 2.d0*psi_st * y_s(ms,mt)*y_t(ms,mt) + psi_tt * y_s(ms,mt)**2  &	        
-		        + psi_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                         &	   
-	                + psi_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2          &		
+		        + psi_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &	   
+	                + psi_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2               &		
 		        - xjac_x * (psi_s * y_t(ms,mt) - psi_t * y_s(ms,mt)) / xjac**2
 
 	         psi_yy = (psi_ss * x_t(ms,mt)**2 - 2.d0*psi_st * x_s(ms,mt)*x_t(ms,mt) + psi_tt * x_s(ms,mt)**2   &	        
-		        + psi_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                          &	   
-	                + psi_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2        &		
+		        + psi_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                               &	   
+	                + psi_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2             &		
 		        - xjac_y * (- psi_s * x_t(ms,mt) + psi_t * x_s(ms,mt) ) / xjac**2
-           
+
 	         psi_xy = (- psi_ss * y_t(ms,mt)*x_t(ms,mt) - psi_tt * x_s(ms,mt)*y_s(ms,mt)                 &
      	                + psi_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                        &        
                         - psi_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                        &	   
@@ -605,36 +601,37 @@ do ms=1, n_gauss
 !###################################################################################################
 
                  amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                     &
-                         - v * (psi_s * u0_t - psi_t * u0_s)                        * theta * tstep  &
+                         - v * (psi_s * u0_t - psi_t * u0_s)                        * theta * tstep  !&
 
-                         + v * tauIC/(r0*BB2) * F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep 
-			 
-			 ! term with BB2 still missing
-		      
+                 !         + v * tauIC/(r0*BB2) * F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep 
+ 
+                 ! term with BB2 still missing
+      
 
                  amat_12 = - v * (ps0_s * u_t - ps0_t * u_s)                        * theta * tstep  &
                            + eps_cyl * F0 / BigR * v * u_p * xjac                   * theta * tstep
 
                  amat_13 = - eta_num_T * (v_x * zj_x + v_y * zj_y)           * xjac * theta * tstep  &
                            - eta_T * v * zj / BigR                           * xjac * theta * tstep
-			   
-	         amat_15 = + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T0  * (ps0_s * rho_t - ps0_t * rho_s) * theta * tstep &
-		           + v * tauIC/(r0*BB2) * F0**2/BigR**2 * rho * (ps0_s * T0_t  - ps0_t * T0_s)  * theta * tstep &
-			   
-                           - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T0  * rho_p * xjac * theta * tstep &
-                           - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * rho * T0_p  * xjac * theta * tstep &
-			   
-                      - v * tauIC * rho /(r0**2 * BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * theta * tstep &		      
-                      + v * tauIC * rho /(r0**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep 
+   
+                 amat_15 =  0.d0 
+                        !   + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T0  * (ps0_s * rho_t - ps0_t * rho_s) * theta * tstep &
+                        !   + v * tauIC/(r0*BB2) * F0**2/BigR**2 * rho * (ps0_s * T0_t  - ps0_t * T0_s)  * theta * tstep &
+   
+                        !   - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T0  * rho_p * xjac * theta * tstep &
+                        !   - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * rho * T0_p  * xjac * theta * tstep &
+   
+                        !   - v * tauIC * rho /(r0**2 * BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * theta * tstep &      
+                        !   + v * tauIC * rho /(r0**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep 
 
 
-                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep &
-		 
-		        + v * tauIC/(r0*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
-		        + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &
-			   
-                        - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep &
-                        - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac * theta * tstep 
+                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep !&
+ 
+                      !  + v * tauIC/(r0*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
+                      !  + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &
+   
+                      !  - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep &
+                      !  - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac * theta * tstep 
 
 
 !---------------------------------------------------------------- equation 1
@@ -660,9 +657,8 @@ do ms=1, n_gauss
                            + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                              * theta * tstep &
                            + BigR**2 * (u_x * u0_x + u_y * u0_y) * (v_x * r0_y_hat - v_y * r0_x_hat) * xjac * theta * tstep &
 			   
-		           + tauIC * BigR**3 * p0_y * (v_x* u_x + v_y * u_y)                         * xjac * theta * tstep &
-
-		           + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
+!		           + tauIC * BigR**3 * p0_y * (v_x* u_x + v_y * u_y)                         * xjac * theta * tstep &
+!		           + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
 
                            - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  
 
@@ -676,37 +672,41 @@ do ms=1, n_gauss
                                     * (w_ss * (x_t(ms,mt)**2+y_t(ms,mt)**2) + w_tt*(x_s(ms,mt)**2+y_s(ms,mt)**2) &
                                -2.d0*  w_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * theta*tstep &
      
-                         + v * tauIC * BigR**4 * (p0_s * w_t - p0_t * w_s)              * theta * tstep 
+!                        + v * tauIC * BigR**4 * (p0_s * w_t - p0_t * w_s)              * theta * tstep 
+                          
+			 -  tauIC * BigR**4 * w * (p0_s * v_t - p0_t * v_s)             * theta * tstep 
 
                  amat_25 = + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)   * xjac * theta * tstep &
                            + rho_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)         * theta * tstep &
                            - BigR**2 * (v_s * rho_t * T0   - v_t * rho_s * T0  )        * theta * tstep &
                            - BigR**2 * (v_s * rho   * T0_t - v_t * rho   * T0_s)        * theta * tstep &
 
-                           + v * tauIC * BigR**4 * T0  * (rho_s * w0_t - rho_t * w0_s)  * theta * tstep &
-                           + v * tauIC * BigR**4 * rho * (T0_s  * w0_t - T0_t  * w0_s)  * theta * tstep &
 
+                           -  tauIC * BigR**4 * w0 * T0 *(rho_s * v_t - rho_t * v_s) * theta * tstep &
+                           -  tauIC * BigR**4 * w0 * rho*(T0_s * v_t  - T0_t  * v_s) * theta * tstep 
 
-		           + tauIC * BigR**3 * (T0_y * rho + T0 * rho_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
-
-		           + v * tauIC * BigR**4 * ( (u0_xy * (rho_xx*T0 + 2.d0*rho_x*T0_x + rho*T0_xx           &
-			                                    -  rho_yy*T0 - 2.d0*rho_y*T0_y - rho*T0_yy))         &			                  
-			                           - (rho_xy * T0 + rho_x*T0_y + rho_y*T0_x + rho*T0_xy) * (u0_xx - u0_yy)  )   &
-						 * xjac * theta * tstep 
+!                           + v * tauIC * BigR**4 * T0  * (rho_s * w0_t - rho_t * w0_s)  * theta * tstep &
+!                           + v * tauIC * BigR**4 * rho * (T0_s  * w0_t - T0_t  * w0_s)  * theta * tstep &
+!                           + tauIC * BigR**3 * (T0_y * rho + T0 * rho_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
+!		            + v * tauIC * BigR**4 * ( (u0_xy * (rho_xx*T0 + 2.d0*rho_x*T0_x + rho*T0_xx           &
+!			                                    -  rho_yy*T0 - 2.d0*rho_y*T0_y - rho*T0_yy))         &			                  
+!			                           - (rho_xy * T0 + rho_x*T0_y + rho_y*T0_x + rho*T0_xy) * (u0_xx - u0_yy)  )   &
+!						 * xjac * theta * tstep 
 
                  amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                            - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
                            + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac  * theta * tstep &
 
-                           + v * tauIC * BigR**4 * r0 * (T_s  * w0_t - T_t  * w0_s)  * theta * tstep &
-                           + v * tauIC * BigR**4 * T  * (r0_s * w0_t - r0_t * w0_s)  * theta * tstep &
+                           -  tauIC * BigR**4 * w0 * r0 *(T_s * v_t  - T_t  * v_s) * theta * tstep &
+                           -  tauIC * BigR**4 * w0 * T  *(r0_s * v_t - r0_t * v_s) * theta * tstep 
 
-		           + tauIC * BigR**3 * (r0_y * T + r0 * T_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
-
-		           + v * tauIC * BigR**4 * ( (u0_xy * (T_xx*r0 + 2.d0*T_x*r0_x + T*r0_xx         &
-			                                     - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))       &			                  
-			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
-						 * xjac * theta * tstep 
+!                           + v * tauIC * BigR**4 * r0 * (T_s  * w0_t - T_t  * w0_s)  * theta * tstep &
+!                           + v * tauIC * BigR**4 * T  * (r0_s * w0_t - r0_t * w0_s)  * theta * tstep &
+!		            + tauIC * BigR**3 * (r0_y * T + r0 * T_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
+!		            + v * tauIC * BigR**4 * ( (u0_xy * (T_xx*r0 + 2.d0*T_x*r0_x + T*r0_xx         &
+!			                                     - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))       &			                  
+!			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
+!						 * xjac * theta * tstep 
 
 !###################################################################################################
 !#  equation 3                                                                                     #
@@ -750,7 +750,7 @@ do ms=1, n_gauss
                          + v * rho * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                      * theta * tstep &
                          + v * rho * F0 / BigR * vpar0_p                                               * xjac * theta * tstep &
 
-                         - v * 2.d0 * tauIC * (rho_y * T0 + rho*T0_y) * BigR                           * xjac * theta * tstep &
+!                         - v * 2.d0 * tauIC * (rho_y * T0 + rho*T0_y) * BigR                           * xjac * theta * tstep &
 		    
                      + D_perp_num  *                                                                   &
                            ( (v_ss * (x_t(ms,mt)**2 + y_t(ms,mt)**2)                                   &
@@ -760,7 +760,7 @@ do ms=1, n_gauss
                             + rho_tt * (x_s(ms,mt)**2 + y_s(ms,mt)**2)                                &
                      -2.d0 *  rho_st * (x_s(ms,mt)*x_t(ms,mt) + y_s(ms,mt)*y_t(ms,mt)) ) ) / xjac**3  * theta*tstep
                  
-		 amat_56 = - v * 2.d0 * tauIC * (T_y * r0 + T*r0_y) * BigR                           * xjac * theta * tstep 
+		 amat_56 = 0.d0 !- v * 2.d0 * tauIC * (T_y * r0 + T*r0_y) * BigR                           * xjac * theta * tstep 
 
                  amat_57 = + v * F0 / BigR * Vpar * r0_p                                             * xjac * theta * tstep &
                            + v * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                                       * theta * tstep &

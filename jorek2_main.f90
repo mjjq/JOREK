@@ -117,13 +117,13 @@ program JOREK2
   real*8                   :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, psi
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
-  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon, n_aa
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon, n_aa, iter_prev
   logical                  :: is_local
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
   integer                  :: index_size, id_elements
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
-  logical                  :: bench_without_plot
+  logical                  :: bench_without_plot, grid_to_wall, equil
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
   
@@ -168,9 +168,12 @@ program JOREK2
   pastix_smp_only    = .false.            ! Implies that each MPI group resides within one node!
   if (n_tor == 1) gmres = .false.
   
-  refinement         = .false.            ! Enable mesh refinement?
-  
-  adaptive_time      = .false.            ! Requires no_mpi for Pastix library
+  refinement    = .false.              ! enable mesh refinement
+  grid_to_wall  = .false.               ! extend the grid to a physical wall
+  adaptive_time = .false.              ! requires no_mpi for Pastix library
+
+  equil = .true.
+  if (jorek_model .eq. 1) equil = .false.
   
   ! --- Flag from HSLT
   bench_without_plot              = .false.    ! .true. for benchmark (mesuring elapsed time without plot phases) 
@@ -331,23 +334,29 @@ program JOREK2
     if (my_id == 0) then
       
       ! --- Compute the plasma equilibrium
-      call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
+      if (equil) then
+        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
+      endif
       
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
         
         if (xpoint)  then
-          
-          call grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg, n_tht,       &
-            SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open,         &
-            dPSI_private)
-          
+
+!          if (.not. grid_to_wall) then
+            call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+                             SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
+!          else
+!            call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+!                                  SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
+!          endif
+                   
           call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
           
         else
           
           call grid_flux_surface(xpoint, node_list, element_list, surface_list, n_flux, n_tht,     &
-            xr1, sig1, xr2, sig2, refinement)
+                                 xr1, sig1, xr2, sig2,refinement)
           
           call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
           
@@ -413,10 +422,10 @@ program JOREK2
   
   if (nstep > 0) then
 
-     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
      if (xpoint) then
-        call find_xpoint(node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,    &
+        call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,    &
           s_xpoint, t_xpoint, ifail)
         psi_bnd = psi_xpoint
      else
@@ -626,7 +635,8 @@ program JOREK2
 
   iter_gmres  = 999
   iter_big    = 200
-  iter_precon = 22
+  iter_precon = 22 
+  iter_prev   = 0
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
@@ -649,10 +659,10 @@ program JOREK2
        write(*,*) '******************************************************'
      end if
 
-     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
      if (xpoint) then
-       call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
        psi_bnd = psi_xpoint
      else
        psi_bnd = 0.d0
@@ -667,32 +677,34 @@ program JOREK2
         solve_only = .false.
         if ((gmres) .and. (istep .gt. 1)) then
            solve_only = .true.
-           if (iter_gmres .gt. iter_precon) then                        ! redo preconditioner
+           if (iter_gmres+iter_prev .gt. 2*iter_precon) then                        ! redo preconditioner
               solve_only = .false.
            endif
         endif
      endif
-
+     
      if (use_pellet) then            ! calculating the pellet_volume (total_pellet_volume)
        pellet_volume = 3.1415926 * pellet_radius**2 * 2.d0 * 3.1415926535 * pellet_R
        call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
      endif
-     
-     IF ( use_pastix .and. use_murge .and. use_murge_element ) THEN
+          
+     if ( use_pastix .and. use_murge .and. use_murge_element ) then
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint, &
              psi_axis, psi_bnd, Z_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, &
              mpi_comm_trans, my_id_trans, n_cpu_trans, solve_only)        ! construct the matrix from elemental matrices
-     ELSE
+     else
         call construct_matrix(my_id, local_elms, &
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
              xpoint,psi_axis,psi_bnd,Z_xpoint)        ! construct the matrix from elemental matrices
-     END IF
-
+     endif
+     
      call system_clock(count=t1)   
      nb_periods = t1-t0
      if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-     write(*,FMT_TIMING) my_id, ' system_clock elapsed time in construct_matrix ',REAL(nb_periods)/nb_periodes_sec
+     if (my_id .eq. 0) then
+       write(*,FMT_TIMING) my_id, ' system_clock elapsed time in construct_matrix ',REAL(nb_periods)/nb_periodes_sec
+     endif     
      call cpu_time(t_matrix_1)
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -748,7 +760,10 @@ program JOREK2
 
      call cpu_time(t_solve_1)
 
-     if (gmres) call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+     if (gmres) then
+       iter_prev = iter_gmres
+       call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+     endif
 
      call cpu_time(t_solve_2)
 
@@ -763,16 +778,19 @@ program JOREK2
 	  pellet_volume = total_pellet_volume
 	  call update_pellet(my_id,node_list,element_list)
         endif
-
+	
         call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
         call update_deltas(my_id,node_list)
 
         t_now = t_now + tstep
-                
+
      else
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
 	exit
      endif
+
+!     if ( freeboundary .and. (.not. resistive_wall) ) call boundary_check()
+!     if (my_id .eq. 0) call boundary_check()
 
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);
@@ -932,7 +950,7 @@ program JOREK2
      endif
 
 !---------------------------------------------- plot equilibrium current profile (to be removed)
-     call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
+     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
 
      nplot = 501
      call tr_allocate(xp,1,nplot,"xp")
@@ -942,7 +960,7 @@ program JOREK2
      iplot = 0
 
      if (xpoint) then
-        call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+        call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
      else
         psi_xpoint = psi_bnd
      endif

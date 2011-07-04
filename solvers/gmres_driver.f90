@@ -41,10 +41,10 @@ icntl(5) = 3            ! orthogonalization scheme
 icntl(6) = 1            ! initial guess  (1) = user supplied guess
 icntl(8) = 1            ! residual calculation strategy at restart
 
-cntl(1) = 1.d-7         ! stopping tolerance
+cntl(1) = 1.d-8         ! stopping tolerance
 cntl(2) = 1.d0
 cntl(3) = 1.d0
-cntl(4) = 1.d3          ! 1.d0
+cntl(4) = 1.d0          ! 1.d0
 cntl(5) = 1.d0
 
 m = 20
@@ -56,7 +56,7 @@ lwork = m*m + m*(n_dof+5) + 6*n_dof + m + 1
 call tr_allocate(work,1,lwork,"work")
 
 work(1:n_dof)         = deltas(1:n_dof)                     ! the initial guess
-   work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
+work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
 call gmres_matrix_vector(work(1:n_dof),work(2*n_dof+1:3*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 if (my_id .eq. 0) then
   sum = 0.d0

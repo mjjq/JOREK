@@ -246,7 +246,7 @@ MODULE FOURIER
     real*8  :: dpsi_dzn, dpsi_drn ! derivatives of psi at previous small step
     real*8  :: dpsi_dzh, dpsi_drh ! derivatives of psi at half small step
     real*8  :: R_out, Z_out, s_out, t_out
-    integer :: i_elm_out, ifail
+    integer :: i_elm_out, ifail,my_id
     real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
     real*8 :: x, x_s, x_t, x_st, x_ss, x_tt, y, y_s, y_t, y_st, y_ss, y_tt
     real*8 :: xjac
@@ -256,12 +256,13 @@ MODULE FOURIER
 !    write(*,*) '@@> TRACE_FIELDLINES'
     
     smalldeltaphi = deltaphi / nsmallsteps
+    my_id = 0
     
     ! --- Determine position of axis and xpoint/boundary point; start points will be started between both positions.
-    call find_axis(node_list,element_list,mapping.psi_axis,mapping.R_axis,mapping.Z_axis,mapping.i_elm_axis, &
+    call find_axis(my_id,node_list,element_list,mapping.psi_axis,mapping.R_axis,mapping.Z_axis,mapping.i_elm_axis, &
       mapping.s_axis,mapping.t_axis,ifail)
     if (xpoint) then
-      call find_xpoint(node_list,element_list,mapping.psi_xpoint,mapping.R_xpoint,mapping.Z_xpoint, &
+      call find_xpoint(my_id,node_list,element_list,mapping.psi_xpoint,mapping.R_xpoint,mapping.Z_xpoint, &
         mapping.i_elm_xpoint,mapping.s_xpoint,mapping.t_xpoint,ifail)
     else
       ! determine the position of one boundary node as a replacement in a case without an xpoint.

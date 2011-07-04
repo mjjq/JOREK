@@ -42,7 +42,7 @@ real*8             :: delta_rp, delta_zp, delta_rm, delta_zm, dir_2, dir_3, B_ax
 real*8             :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_bnd
 real*8, external   :: spwert
 integer            :: ifail, inode, node, index, index0, n_node_start, n_element_start, iv, ivp, ivm
-integer            :: n_index_start, node_iv, node_ivp, node_ivm, i_elm_xpoint
+integer            :: my_id, n_index_start, node_iv, node_ivp, node_ivm, i_elm_xpoint
 integer            :: i_sons
 
 write(*,*) '**************************************'
@@ -50,11 +50,12 @@ write(*,*) '*         flux surface grid          *'
 write(*,*) '**************************************'
 
 PI = 2.d0*asin(1.d0)
+my_id = 0
  
 i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
  
-if (xpoint) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 
 surface_list%n_psi = n_flux - 1
 nrnew              = n_flux

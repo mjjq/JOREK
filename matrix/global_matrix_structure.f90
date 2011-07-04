@@ -37,7 +37,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   enddo
   ndof_glob = ndof_glob * n_tor*n_var
 
-  n_max = 1024
+  n_max = 1536
 
   call tr_allocate(ijA_size,1,index_max-index_min+1,"ijA_size")
   call tr_allocate(irn_jcn,1,index_max-index_min+1,1,n_max,"irn_jcn")
@@ -134,9 +134,6 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
                     enddo !jk = 1, n_degrees
                  enddo !jv = 1,n_vertex_max
                  !endif	
-                 !if (freeboundary .and. (node_list%node(inode1)%boundary .ne. 0)) then (Pourquoi ce if ici ????
-                 ! add contributions from all boundary nodes
-
 
 
               endif           ! check if node is local

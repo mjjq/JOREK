@@ -22,7 +22,7 @@ implicit none
 character(len=512) :: s
 real*8,allocatable  :: rp(:), zp(:), tp(:), pp(:)
 integer, allocatable :: n_turn(:)
-integer :: nr, ntour, curr
+integer :: my_id, nr, ntour, curr
 real*8  :: rr, zz, psi
 integer :: i, j, iside_i, iside_j, ip, i_lines, n_lines, i_tor, i_harm, i_var_psi, iplot_type
 integer :: i_elm, ifail, i_phi, n_phi, i_turn, i_elm_out, i_elm_prev, i_elm_tmp,i_steps
@@ -68,6 +68,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_poincare                     *'
 write(*,*) '***************************************'
+
+my_id = 0
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 
@@ -210,11 +212,11 @@ enddo
 write(*,*) ' modes   : ',mode
 write(*,*) ' nperiod : ',n_period
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 psi_bnd = 0.d0
 if ( xpoint ) then
-  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
   if ( ifail == 0 ) psi_bnd = psi_xpoint
 end if
   

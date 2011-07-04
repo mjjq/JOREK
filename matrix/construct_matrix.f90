@@ -103,6 +103,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out)
+
 #ifdef _OPENMP
   omp_nthreads = omp_get_num_threads()
   omp_tid      = 1+omp_get_thread_num()
@@ -110,6 +111,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   omp_nthreads = 1
   omp_tid      = 1
 #endif
+  
   ELM  => thread_struct(omp_tid)%ELM
   ELM2 => thread_struct(omp_tid)%ELM2
   RHS  => thread_struct(omp_tid)%RHS
@@ -126,7 +128,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
        if( i_father.ne.0) then
   
-          element_father = element_list%element(i_father)
+         element_father = element_list%element(i_father)
 
          do iv = 1, n_vertex_max
            inode_father=element_father%vertex(iv)
@@ -156,46 +158,46 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
        iv2  = mod(iv, n_vertex_max) + 1
 
-
        inode1 = element%vertex(iv)
        inode2 = element%vertex(iv2)
 
        if (bc_natural_open) then
 
-	 if   (  ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-	   .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
-	   nodes(1)  = node_list%node(inode1)
-	   nodes(2)  = node_list%node(inode2)
-	   
-	   vertex    = (/ iv, iv2 /)
-	   direction = (/  1, 2   /)
+         if   (  ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+           .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-	   call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
+           nodes(1)  = node_list%node(inode1)
+           nodes(2)  = node_list%node(inode2)
+           
+           vertex    = (/ iv, iv2 /)
+           direction = (/  1, 2   /)
 
-	 endif
-	
+           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
+
+         endif
+        
        endif
-	   
+           
      enddo
 
 
      !------------------------------------------------------- comparing two versions of element_matrix
-     !  if (ife .eq. n_local_elms/2) then
-     !    call element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM2, RHS2)
-     !    call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
-     !    do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
-     !      if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
-     !        write(*,'(i3,A,i6,3e16.8)') my_id,' RHS : ',i,RHS(i),RHS2(i),RHS(i)-RHS2(i)
-     !      endif
-     !    enddo
-     !    do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
-     !      do j=1,n_tor*n_vertex_max*(n_order+1)*n_var
-     !        if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
-     !          write(*,'(i3,A,2i6,3e16.8)') my_id,' ELM : ',i,j,ELM(i,j),ELM2(i,j),ELM(i,j)-ELM2(i,j)
-     !        endif
-     !     enddo
-     !    enddo
-     !  endif
+      ! if (ife .eq. n_local_elms/2) then
+      !   call element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM2, RHS2)
+      !   call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
+      !   do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
+      !     if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
+      !       write(*,'(i3,A,i6,3e16.8)') my_id,' RHS : ',i,RHS(i),RHS2(i),RHS(i)-RHS2(i)
+      !     endif
+      !   enddo
+      !   do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
+      !     do j=1,n_tor*n_vertex_max*(n_order+1)*n_var
+      !       if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
+      !         write(*,'(i3,A,2i6,3e16.8)') my_id,' ELM : ',i,j,ELM(i,j),ELM2(i,j),ELM(i,j)-ELM2(i,j)
+      !       endif
+      !    enddo
+      !   enddo
+      ! endif
 
      if (refinement) then   
        call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 

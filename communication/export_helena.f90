@@ -47,7 +47,7 @@ real*8 :: ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss
 real*8 :: dRRgi_dt, dZZgi_dt, RZjac, PI, PSI_R, PSI_Z, grad_psi, B_tot2, P0gi, dP0gi_dr,dP0gi_ds, P0_R, P0_Z 
 real*8 :: density, density_in, density_out, pressure, pressure_in, pressure_out
 integer :: i_elm_axis, i_elm_xpoint, nplot, i, j, n_bnd, i_elm, k, ip, ig
-integer :: node1, node2, node3, node4, ifail
+integer :: node1, node2, node3, node4, ifail, my_id
 
 !--------------------------------------- gaussian points between (-1.,1.)
 real*8 :: xgs(4), wgs(4)
@@ -57,14 +57,15 @@ data wgs / 0.347854845137454,  0.652145154862546, 0.652145154862546,  0.34785484
 write(*,*) '***************************************'
 write(*,*) '* export_helena                       *'
 write(*,*) '***************************************'
+my_id = 0
 
-call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 psi_bnd = 0.d0
 Z_xpoint = -99.d0
 	 
 if (xpoint) then
-  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
   if (ifail .ne. 1) then      
     psi_bnd = psi_xpoint
   else
@@ -78,12 +79,14 @@ if (Z_lim .gt. Z_xpoint) then
   write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
 endif
     
+surface_list%n_psi =3
 if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
 call tr_allocate(surface_list%psi_values,1,3,"surface_list%psi_values")
+surface_list%psi_values = 0 ! XL : uninitialised value.
 
 if (xpoint) then
   write(*,*) ' x-point plasma'
-  call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
   surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_xpoint - psi_axis)
   surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_xpoint - psi_axis)
   surface_list%psi_values(3) =  psi_axis + 0.995 * (psi_xpoint - psi_axis)
@@ -93,11 +96,6 @@ else
   surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_bnd - psi_axis)
   surface_list%psi_values(3) =  psi_axis + 0.999 * (psi_bnd - psi_axis)
 endif
-
-surface_list%n_psi =3
-if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
-call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
-surface_list%psi_values = 0 ! XL : uninitialised value.
 
 call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
 

@@ -49,13 +49,7 @@ SUBROUTINE split_brodcast(type,MPI_COMM_N)
      ELSE IF (trim(type).EQ.'double') THEN
         CALL MPI_BCAST(mumps_par%A(is:ie),nz_split_end,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
      ENDIF
-     !
-     WRITE(*,*) 'use split_brodcast: ',crit,buff_max,nz_split_end
-     !
   ELSE
-     !
-     WRITE(*,*) 'split_brodcast not use: ',type,mumps_par%nz
-     !
      IF (trim(type).EQ.'intIRN') THEN
         CALL MPI_BCAST(mumps_par%IRN,mumps_par%nz,MPI_INTEGER,0,MPI_COMM_N,ierr)
      ELSE IF (trim(type).EQ.'intJCN') THEN   

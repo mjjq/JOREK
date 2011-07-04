@@ -1,4 +1,4 @@
-subroutine find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 use data_structure
@@ -14,17 +14,18 @@ real*8  :: psi_xpoint, dpsi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, ps_s
 real*8  :: grad_psi, grad_psi_min
 real*8  :: R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: ps_x, ps_y, xjac
-integer :: i_elm_xpoint, ij_xpoint(2), i, iv, ms, mt, kf, kv, ifail
+integer :: my_id, i_elm_xpoint, ij_xpoint(2), i, iv, ms, mt, kf, kv, ifail
 
 real*8  :: x(2), s, t, xerr, ferr, rs_tolerance
 
 logical :: early_exit
 parameter (rs_tolerance = 1.d-8)
 
-write(*,*) '*********************************'
-write(*,*) '*     find_xpoint               *'
-write(*,*) '*********************************'
-
+if (my_id .eq. 0) then
+  write(*,*) '*********************************'
+  write(*,*) '*     find_xpoint               *'
+  write(*,*) '*********************************'
+endif
 
 dpsi_xpoint  = 1.d20
 grad_psi_min = 1.d20
@@ -83,7 +84,7 @@ s=Xgauss(ij_xpoint(1)) ; t=Xgauss(ij_xpoint(2))
 
 call mnewtax(node_list,element_list,i_elm_xpoint,s,t,xerr,ferr,ifail)
 
-if (ifail .ne. 0 ) write(*,*) ' MNEWTAX : ifail = ',ifail
+if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' MNEWTAX : ifail = ',ifail
 
 call interp(node_list,element_list,i_elm_xpoint,1,1,s,t,psi_xpoint,P_s,P_t,P_st,P_ss,P_tt)
 
@@ -96,11 +97,13 @@ xjac = R_s * Z_t - R_t * Z_s
 ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
 ps_y = (- P_s * R_t + P_t * R_s)/ xjac
 
-write(*,'(A,i6,4f14.8)') ' X-point : ',i_elm_xpoint,R_xpoint,Z_xpoint,psi_xpoint,sqrt(ps_x**2+ps_y**2)
+if (my_id .eq. 0) then
+  write(*,'(A,i6,4f14.8)') ' X-point : ',i_elm_xpoint,R_xpoint,Z_xpoint,psi_xpoint,sqrt(ps_x**2+ps_y**2)
+endif
 
 if (sqrt(ps_x**2+ps_y**2) .gt. 1.d-4) ifail=1
 
-if (ifail .ne. 0 ) write(*,*) ' find_xpoint : ifail = ',ifail
+if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' find_xpoint : ifail = ',ifail
 
 return
 END

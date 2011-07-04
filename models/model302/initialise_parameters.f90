@@ -29,6 +29,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
                 particlesource, heatsource, tauIC,                  &
+                central_density,                                    &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num,                                        &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
@@ -55,6 +56,8 @@ if (my_id .eq. 0) then
   eta   = 1.d-5
   visco = 1.d-5
   visco_par = 1.d-5
+  
+  central_density = 1.d0  ! the central density in units 10^20 m^-3 
 
   restart      = .false.
   import_equil = .false.
@@ -71,6 +74,7 @@ if (my_id .eq. 0) then
   
   n_R       = 0
   n_Z       = 0
+
   n_radial  = 11
   n_pol     = 16
 
@@ -165,11 +169,10 @@ if (my_id .eq. 0) then
   pellet_delta_psi  = 999.d0
   pellet_velocity_R = 0.d0
   pellet_velocity_Z = 0.d0
-  pellet_particles  = 0.d0
-  pellet_density    = 3.d8 
+  pellet_particles  = 0.d0  
+  central_density   = 1.d0
+  pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
-  
-  central_density = 1.d0
 
   t_now       = 0.d0
   t_start     = 0.d0

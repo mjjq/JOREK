@@ -1,6 +1,7 @@
 module mod_boundary_matrix_open
   implicit none
 contains
+
 subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
@@ -72,7 +73,7 @@ do i=1,2
         do k=1,n_var
 
           do in=1,n_tor
-	  	  
+
             eq_g(mp,k,ms)  = eq_g(mp,k,ms)  + nodes(i)%values(in,j,k) * element_size_ij * H1(i,j,ms)   * HZ(in,mp)
 
             eq_s(mp,k,ms)  = eq_s(mp,k,ms)  + nodes(i)%values(in,j,k) * element_size_ij * H1_s(i,j,ms) * HZ(in,mp)

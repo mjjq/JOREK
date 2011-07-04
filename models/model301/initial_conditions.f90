@@ -32,8 +32,8 @@ PI = 2.d0 *asin(1.d0)
 
 if (my_id .eq. 0) then
 
-  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
-  if (xpoint2) call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+  call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis)
+  if (xpoint2) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
 
   psi_bnd = 0.d0
   if (xpoint2) psi_bnd = psi_xpoint

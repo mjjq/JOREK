@@ -1,6 +1,6 @@
 subroutine find_theta_surface(node_list,element_list,surface_list,j_surf,theta,R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
 !---------------------------------------------------------------------------
-! subroutine finds a Z value on a specific surface
+! subroutine finds a theta value on a specific surface
 !---------------------------------------------------------------------------
 
 use data_structure
@@ -22,7 +22,7 @@ integer,                  intent(out)   :: i_find
 
 ! --- local variables
 integer :: k, i_elm, ifail
-real*8  :: ri, dri, si ,dsi
+real*8  :: ri, dri, si ,dsi, tht_in
 real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, t2, t3, tht1, tht2, PI, tht_out
 real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
@@ -34,6 +34,9 @@ real*8  :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt, RZ1, RZ2, dRZ1, dRZ2, RZ0, A0
 !write(*,'(A,2e16.8)') ' R_axis, Z_axis : ',R_axis, Z_axis
 
 PI = 2.d0 * asin(1.d0)
+
+tht_in = theta
+if (tht_in .lt. 0.d0) tht_in = tht_in + 2.d0 * PI
 
 i_find = 0
 
@@ -109,7 +112,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 !      write(*,'(A,3e16.8)') ' find_theta check : ',tht_out,theta,(RRg1-R_axis)*sin(theta)-(ZZg1-Z_axis)*cos(theta)
 
-      if (abs(theta - tht_out) .lt. 1.D-4) then
+      if (abs(tht_in - tht_out) .lt. 1.D-4) then
 
         s_find(i_find+1)     = ri
         t_find(i_find+1)     = si

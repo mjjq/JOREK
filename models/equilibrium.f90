@@ -35,7 +35,7 @@ real*8     :: R_xpoint,Z_xpoint,s_xpoint,t_xpoint, psi_xpoint
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
-real*8     :: current_tot, current_ref, current_int, amix, ZKP, ZKI, ZKD, diff
+real*8     :: current_tot, current_ref, current_int, amix, ZKP, ZKI, ZKD, diff, R_xpoint2, Z_xpoint2
 logical    :: freeboundary_equil2
 
 if (my_id .eq. 0) then
@@ -56,7 +56,7 @@ Z_xpoint = -99.d0
 
 do iter = 1, n_iter
 
-  call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+  call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
   if ((ifail .ne. 0) .and. (iter .le. 5)) then
     call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -65,9 +65,11 @@ do iter = 1, n_iter
   endif
   
   if (xpoint2) then
-    call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
     if (ifail == 0) then ! (otherwise, keep the values of the previous iteration as a reasonable guess)
       psi_bnd = psi_xpoint
+      R_xpoint = R_xpoint2
+      Z_xpoint = Z_xpoint2
     else
       if (freeboundary_equil) then
         Z_xpoint = -99.d0
@@ -132,7 +134,7 @@ if (freeboundary_equil) then
     
     write(*,'(A,8e12.4)') 'FEEDBACK : ',current_ref,current_tot,current_int,T_0, FF_0
                    
-    call find_axis(node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
     if ((ifail .ne. 0) .and. (iter .le. 5)) then
       call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -143,7 +145,7 @@ if (freeboundary_equil) then
     psi_bnd = 0.d0
   
     if (xpoint2) then
-      call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+      call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
       if (ifail .ne. 1) then      
         psi_bnd = psi_xpoint
       else
@@ -167,7 +169,7 @@ if (freeboundary_equil) then
  
     diff = 0.d0
     do i=1, node_list%n_nodes
-      diff = diff + node_list%node(i)%deltas(1,1,1)
+      diff = diff + abs(node_list%node(i)%deltas(1,1,1))
     enddo  
     diff = diff / float(node_list%n_nodes)
   
@@ -212,9 +214,16 @@ do i=1,node_list%n_nodes
   		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
   endif
 
+#ifdef fullmhd
+  call F_profile(xpoint2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
+                 F_prof,dF_dpsi,dF_dz, dF_dpsi2,dF_dz2,dF_dpsi_dz, &
+                 zFFprime,dFFprime_dpsi,ddFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+		 
+#else
   call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                              dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
-							      
+#endif
+
   zjz     = zFFprime      - R*R *      (dn_dpsi    * zT + zn * dT_dpsi)
 
   dj_dpsi = dFFprime_dpsi - R*R *      (dn_dpsi2   * zT + zn * dT_dpsi2  + 2.d0 * dn_dpsi * dT_dpsi)
@@ -259,6 +268,10 @@ do i=1,node_list%n_nodes
                                                + node_list%node(i)%x(3,1) * node_list%node(i)%values(1,2,1) ) &
                                   + dj_dZ_dpsi*( node_list%node(i)%x(2,2) * node_list%node(i)%values(1,3,1)   &
                                                + node_list%node(i)%x(3,2) * node_list%node(i)%values(1,2,1) )
+
+#ifdef fullmhd
+  node_list%node(i)%psi_eq(:,:) = node_list%node(i)%values(1,:,:)
+#endif
 
 enddo
 

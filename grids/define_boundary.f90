@@ -118,7 +118,11 @@ if (mf .le. 0) then
     r_tmp(n_bnd)   = r_tmp(1)
     psi_tmp(n_bnd) = psi_tmp(1)
     tht_tmp(n_bnd) = tht_tmp(1) + 2.d0 * PI
-
+    
+    do i=1,n_bnd
+      write(*,*) tht_tmp(i),r_tmp(i),psi_tmp(i)
+    enddo
+    
   endif
 
   call tr_allocate(work,1,3*n_bnd,"work")

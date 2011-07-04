@@ -1,6 +1,6 @@
 include config.in
 
-DIRS = timing datatypes models/$(MODEL) models communication elements grids matrix solvers plots diagnostics vacuum refinement tools
+DIRS = timing datatypes models models/$(MODEL) communication elements grids matrix solvers plots diagnostics vacuum refinement tools
 
 MAIN = jorek_$(MODEL)
 
@@ -37,8 +37,8 @@ $(MAIN) : jorek2_main.f90
 	$(FC) $(FFLAGS)      \
 	jorek2_main.f90      \
         datatypes/*.o        \
+        models/*.o           \
 	models/$(MODEL)/*.o  \
-	models/*.o           \
 	communication/*.o    \
 	elements/*.o         \
 	grids/*.o            \
@@ -126,7 +126,7 @@ jorek2vtk : modules sources
 	datatypes/mod_parameters.o        \
 	datatypes/mod_data_structure.o    \
 	elements/mod_gauss.o              \
-	models/$(MODEL)/mod_phys_module.o \
+	models/mod_phys_module.o \
 	elements/mod_basis_at_gaussian.o  \
 	timing/trace.o                    \
 	communication/import_restart.o    \
@@ -140,6 +140,26 @@ jorek2vtk : modules sources
 	diagnostics/find_xpoint.o         \
 	solvers/mnewtax.o                 \
 	 -o $(JOREK_DIR)/jorek2vtk $(INCLUDES) $(LIBS)
+
+jorek_target2vtk : modules sources
+	$(FC) $(FFLAGS_NOOMP)             \
+	diagnostics/jorek_target2vtk.f90         \
+	datatypes/mod_parameters.o        \
+	datatypes/mod_data_structure.o    \
+	elements/mod_gauss.o              \
+	models/mod_phys_module.o \
+	elements/mod_basis_at_gaussian.o  \
+	communication/import_restart.o    \
+	elements/initialise_basis.o       \
+	elements/basis_functions.o        \
+        elements/basis_functions1.o       \
+	elements/basis_functions2.o       \
+        elements/interp.o                 \
+	elements/interp_RZ.o              \
+	diagnostics/find_axis.o           \
+	diagnostics/find_xpoint.o         \
+	solvers/mnewtax.o                 \
+	 -o $(JOREK_DIR)/jorek_target2vtk $(INCLUDES) $(LIBS)
 
 jorek2_fieldlines_vtk : modules sources
 	$(FC) $(FFLAGS_NOOMP)             \
@@ -194,6 +214,7 @@ jorek2_diagno : modules sources
 	diagnostics/flux_surface_add_point.o  \
 	diagnostics/find_axis.o           \
 	diagnostics/find_xpoint.o         \
+        diagnostics/find_limiter.o        \
 	diagnostics/RZ_minmax.o           \
 	diagnostics/psi_minmax.o          \
 	diagnostics/integrals.o           \
@@ -203,12 +224,32 @@ jorek2_diagno : modules sources
 	solvers/solve_M2.o                \
 	solvers/root.o                    \
 	elements/*.o                      \
-	models/$(MODEL)/mod_phys_module.o \
+	models/mod_phys_module.o          \
+        models/mod_pellet.o               \
+        models/density.o                  \
+        models/temperature.o              \
 	communication/import_restart.o    \
 	grids/find_RZ.o                   \
 	grids/meshac.o                    \
 	grids/fgauss.o                    \
 	 -o $(JOREK_DIR)/jorek2_diagno $(INCLUDES) $(LIBS)
+
+jorek2vtk_model001 : modules sources
+	$(FC) $(FFLAGS_NOOMP)             \
+	diagnostics/jorek2vtk_model001.f90         \
+	datatypes/mod_parameters.o        \
+	datatypes/mod_data_structure.o    \
+	elements/mod_gauss.o              \
+	models/$(MODEL)/mod_phys_module.o \
+	elements/mod_basis_at_gaussian.o  \
+	communication/import_restart.o    \
+	elements/initialise_basis.o       \
+	elements/basis_functions.o        \
+        elements/basis_functions1.o       \
+	elements/basis_functions2.o       \
+        elements/interp.o                 \
+	elements/interp_RZ.o              \
+	 -o $(JOREK_DIR)/jorek2vtk_model001 $(INCLUDES) $(LIBS)
 
 jorek_to_helena :
 	$(FC) diagnostics/jorek_to_helena.f90 -o jorek_to_helena 

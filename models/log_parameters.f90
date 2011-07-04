@@ -50,6 +50,15 @@ if (my_id == 0) then
   write(*,231) 'n_pieces_max      ', n_pieces_max
   write(*,231) 'n_degrees         ', n_degrees
   write(*,*)
+  write(*,231) 'n_period        ', n_period
+  write(*,231) 'n_plane         ', n_plane
+  write(*,231) 'n_vertex_max    ', n_vertex_max
+  write(*,231) 'n_nodes_max     ', n_nodes_max
+  write(*,231) 'n_elements_max  ', n_elements_max
+  write(*,231) 'n_boundary_max  ', n_boundary_max
+  write(*,231) 'n_pieces_max    ', n_pieces_max
+  write(*,231) 'n_degrees       ', n_degrees
+  write(*,*)
   write(*,230) 'tstep             ', tstep
   write(*,231) 'nstep             ', nstep
   write(*,230) 'tstep_n           ', tstep_n
@@ -140,6 +149,7 @@ if (my_id == 0) then
   write(*,230) 'visco_num         ', visco_num
   write(*,230) 'visco_par_num     ', visco_par_num
   write(*,230) 'D_perp_num        ', D_perp_num
+  write(*,230) 'ZK_perp_num       ', ZK_perp_num
   write(*,230) 'pellet_amplitude  ', pellet_amplitude
   write(*,230) 'pellet_R          ', pellet_R
   write(*,230) 'pellet_Z          ', pellet_Z
@@ -149,6 +159,7 @@ if (my_id == 0) then
   write(*,230) 'pellet_length     ', pellet_length
   write(*,230) 'pellet_psi        ', pellet_psi
   write(*,230) 'pellet_delta_psi  ', pellet_delta_psi
+  write(*,*)
   write(*,230) 'ellip             ', ellip
   write(*,230) 'tria_u            ', tria_u
   write(*,230) 'tria_l            ', tria_l

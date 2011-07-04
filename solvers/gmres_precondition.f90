@@ -151,10 +151,8 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 #IFDEF USE_BLOCK
       pastix_iparm(5) = block_size      ! block size
       
-      write(*,*) 'GMRES_PRECONDITION : ',block_size,n_block,nnz_block
-
       call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #ELSE      
       pastix_iparm(5) = 1      ! block size
@@ -199,7 +197,6 @@ if (my_id_n .eq. 0) then
 !    endif  
 !    if (my_id_master .eq. 0) then    
 !      idisp = n_loc_n + 1  + (i-2)*2*n_loc_n 
-!      write(*,*) idisp
 !      call mpi_recv(y_tmp(idisp),2*n_loc_n,MPI_DOUBLE_PRECISION,i-1,i-1,MPI_COMM_MASTER,status,ierr)
 !    endif    
 !  enddo

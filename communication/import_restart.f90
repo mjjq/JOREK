@@ -44,6 +44,8 @@ read(21) tstep,eta_tmp,visco_tmp,visco_par_tmp
 read(21) index_start
 read(21) t_start
 
+write(*,*) ' IMPORT CHECK nstep = ',nstep
+
 if (index_start .ge. 1) then
 
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime")
@@ -57,6 +59,10 @@ if (index_start .ge. 1) then
   read(21) xtime(1:index_start)
   read(21) energies(1:n_tor_tmp,:,1:index_start)
 
+endif
+
+if (use_pellet) then
+  read(21)  pellet_particles, pellet_R, pellet_Z
 endif
 
 close(21)

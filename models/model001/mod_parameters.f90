@@ -2,7 +2,7 @@ module parameters
 
   implicit none
 
-  integer, parameter :: jorek_model    = 302       !< JOREK physics model
+  integer, parameter :: jorek_model    = 001       !< JOREK physics model
 
   integer, parameter :: n_var          = 2         !< number of variables
   integer, parameter :: n_dim          = 2         !< number of dimensions

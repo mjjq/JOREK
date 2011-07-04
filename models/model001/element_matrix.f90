@@ -189,7 +189,10 @@ do ms=1, n_gauss
 
         rhs_ij_1 = - w0    * (v_s * u0_t - v_t * u0_s)                   * tstep &
                    - visco * (v_x * w0_x + v_y * w0_y)            * xjac * tstep &
-                   - visco_num * (v_xx + v_yy)*(w0_xx + w0_yy)    * xjac * tstep &
+                   - visco_num * (v_xx + v_yy)*(w0_xx + w0_yy)    * xjac * tstep & 
+		   
+		   - 0.25d0 * (w0_x * u0_y - w0_y * u0_x) * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep &
+		   
                    - zeta  * (v_x * delta_u_x + v_y * delta_u_y)  * xjac  
            
         rhs_ij_2 = 0.d0 
@@ -231,11 +234,14 @@ do ms=1, n_gauss
 !---------------------------------------------------------------- equation 1
  		      
             amat_11 = - (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                 &  
-                      + w0 * (v_s * u_t - v_t * u_s)                   * theta * tstep 
+                      + w0 * (v_s * u_t - v_t * u_s)                   * theta * tstep &
+		      + 0.25d0 * (w0_x * u_y - w0_y * u_x)   * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+		      + 0.25d0 * (w0_x * u0_y - w0_y * u0_x) * ( v_x * u_y  - v_y * u_x)  * xjac * theta * tstep * tstep 
      
             amat_12 = + w * (v_s * u0_t - v_t * u0_s)                  * theta * tstep &
                       + visco * (v_x * w_x + v_y * w_y)         * xjac * theta * tstep &	      
-                      + visco_num * (v_xx + v_yy)*(w_xx + w_yy) * xjac * theta * tstep
+                      + visco_num * (v_xx + v_yy)*(w_xx + w_yy) * xjac * theta * tstep &
+		      + 0.25d0 * (w_x * u0_y - w_y * u0_x) * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep 
 		      
 !---------------------------------------------------------------- equation 2
             amat_22 =  v * w * xjac                            

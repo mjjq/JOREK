@@ -1,4 +1,4 @@
-DIR = models/model302
+DIR = models/model303
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/sources.f90 			\

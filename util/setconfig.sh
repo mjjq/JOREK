@@ -8,6 +8,7 @@
 # Author: Matthias Hoelzl, IPP Garching
 #
 
+
 function usage() {
   echo ""
   echo "Usage: `basename $0` <key>=<value> [...]"
@@ -41,7 +42,7 @@ function val() {
 
 function setmodel() {
   model=$1
-  
+
   # --- Basic checks for the specified model
   if [ ${#model} -eq 3 ]; then
     model="model$model"
@@ -49,12 +50,12 @@ function setmodel() {
   if [ ! ${#model} -eq 8 ] || [[ ! ${model:5:3} =~ ^[0-9]+$ ]]; then
     echo "ERROR: Illegal model specified: '$model'."
   fi
-  
+
   # --- Set MODEL = modelXXX in the makefile configuration files
   for file in config.in Makefile.inc; do
     if [ -f $file ]; then
       cp $file $tmp
-      cat $tmp | sed -e "s/\(^ *MODEL *= *\)model[0-9]*\(.*$\)/\1$model\2/" > $file
+      cat $tmp | sed -e "s/\(^ *MODEL *= *\)[^ ]*\(.*$\)/\1$model\2/" > $file
     fi
   done
 }
@@ -90,7 +91,6 @@ function setparam() {
   cat $tmp | sed -e "s/\(^.*:: *$key *= *\)[^! ]*\(.*$\)/\1$val\2/" > $file
 }
 
-
 # --- First set the model (if there is a respective command line argument)
 for arg in $@; do
   if [ `key $arg` == "model" ]; then
@@ -100,6 +100,7 @@ done
 
 # --- Determine the model
 model=`getmodel`
+
 if [ "$model" = "AMBIGUOUS" ]; then
   exit 1
 fi

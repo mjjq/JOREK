@@ -1,3 +1,7 @@
+module mod_boundary_matrix_open
+  implicit none
+contains
+
 subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
@@ -206,4 +210,5 @@ do ms=1, n_gauss
 enddo
 
 return
-end
+end subroutine boundary_matrix_open
+end module mod_boundary_matrix_open

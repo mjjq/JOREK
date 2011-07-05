@@ -34,7 +34,7 @@ module tr_module
   interface tr_allocatep
      module procedure tr_allocatep1d_i, tr_allocatep1d_d, & 
           tr_allocatep2d_d, tr_allocatep2d_i, &
-          tr_allocatep3d_d, tr_allocatep3d_i
+          tr_allocatep3d_d, tr_allocatep3d_i, tr_allocatep4d_d
   end interface
 
   !*** surdefinition for deallocation ***
@@ -42,7 +42,7 @@ module tr_module
      module procedure tr_deallocatep1d_i, &
           tr_deallocatep1d_d, tr_deallocatep2d_i, &
           tr_deallocatep3d_d, tr_deallocatep2d_d, &
-          tr_deallocatep3d_i
+          tr_deallocatep3d_i, tr_deallocatep4d_d
   end interface
   real*8 :: precond_mem = 0
   integer :: target_proc = 0
@@ -421,6 +421,53 @@ contains
     nb_allocate  = nb_allocate + size_array
     max_allocate = max(max_allocate,nb_allocate)
   end subroutine tr_allocatep3d_d
+
+  !---------------------------------------- 
+  ! memory allocation for a 4D array
+  !----------------------------------------
+  subroutine tr_allocatep4d_d(array4d,begin_dim1,end_dim1, &
+       begin_dim2,end_dim2,begin_dim3,end_dim3,begin_dim4,end_dim4,var_name)
+    real(RKIND), dimension(:,:,:,:), pointer    :: array4d
+    integer                        , intent(in) :: begin_dim1
+    integer                        , intent(in) :: end_dim1
+    integer                        , intent(in) :: begin_dim2
+    integer                        , intent(in) :: end_dim2
+    integer                        , intent(in) :: begin_dim3
+    integer                        , intent(in) :: end_dim3
+    integer                        , intent(in) :: begin_dim4
+    integer                        , intent(in) :: end_dim4
+    character*(*)                  , intent(in) :: var_name
+
+    integer   :: err
+    integer   :: i1, i2, i3, i4
+    integer*8 :: size_array 
+
+    allocate(array4d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
+         begin_dim3:end_dim3,begin_dim4:end_dim4),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1)* &
+         (end_dim3-begin_dim3+1)*(end_dim4-begin_dim4+1)* sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array4D',var_name)
+    if (err.eq.0) then
+       do i4 = begin_dim4,end_dim4
+          do i3 = begin_dim3,end_dim3
+             do i2 = begin_dim2,end_dim2
+                do i1 = begin_dim1,end_dim1
+                   array4d(i1,i2,i3,i4) = 0._RKIND
+                end do
+             end do
+          end do
+       end do
+    else
+       if (gmy_id.eq.target_proc) then
+          print *,'problem in allocating ',var_name
+          print *,'-> required memory (in Bytes) = ',size_array
+       end if
+       stop
+    end if
+    nb_allocate  = nb_allocate + size_array
+    max_allocate = max(max_allocate,nb_allocate)
+  end subroutine tr_allocatep4d_d
 
   subroutine tr_allocatep3d_i(array3d,begin_dim1,end_dim1, &
        begin_dim2,end_dim2,begin_dim3,end_dim3,var_name)
@@ -850,6 +897,18 @@ contains
        array3d => null()
     end if
   end subroutine tr_deallocatep3d_d
+
+  subroutine tr_deallocatep4d_d(array4d,var_name)
+    real(RKIND), dimension(:,:,:,:) , pointer :: array4d
+    character*(*)                   , intent(in) :: var_name
+
+    if (associated(array4d)) then
+       nb_allocate = nb_allocate - sizeof(array4d)
+       call tr_memwritedel(var_name)
+       deallocate(array4d)
+       array4d => null()
+    end if
+  end subroutine tr_deallocatep4d_d
 
 
   subroutine tr_deallocatep3d_i(array3d,var_name)

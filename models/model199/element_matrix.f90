@@ -16,17 +16,6 @@ use tr_module
 type (type_element), intent(in)   :: element
 type (type_node)   , intent(in)   :: nodes(n_vertex_max)
 
-real*8     :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
-real*8     :: x_ss(n_gauss,n_gauss),       x_st(n_gauss,n_gauss),       x_tt(n_gauss,n_gauss)
-real*8     :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
-real*8     :: y_ss(n_gauss,n_gauss),       y_st(n_gauss,n_gauss),       y_tt(n_gauss,n_gauss)
-
-real*8     :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss), eq_t(n_plane,n_var,n_gauss,n_gauss)
-real*8     :: eq_p(n_plane,n_var,n_gauss,n_gauss)
-real*8     :: eq_ss(n_plane,n_var,n_gauss,n_gauss),eq_st(n_plane,n_var,n_gauss,n_gauss),eq_tt(n_plane,n_var,n_gauss,n_gauss)
-
-real*8     :: delta_g(n_plane,n_var,n_gauss,n_gauss), delta_s(n_plane,n_var,n_gauss,n_gauss), delta_t(n_plane,n_var,n_gauss,n_gauss)
-
 real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
 integer, intent(in) :: tid
@@ -60,6 +49,28 @@ real*8     :: amat_stab_11, amat_stab_12, amat_stab_13, amat_stab_14 ,amat_stab_
 real*8     :: amat_stab_31, amat_stab_32, amat_stab_33, amat_stab_34 ,amat_stab_41,amat_stab_42, amat_stab_43, amat_stab_44
 logical    :: xpoint2
 
+real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
+real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
+real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t
+real*8, dimension(n_gauss,n_gauss)    :: y_ss, y_st, y_tt
+
+real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
+real*8, dimension(:,:,:,:) , pointer :: eq_st, eq_ss, eq_tt
+real*8, dimension(:,:,:,:) , pointer :: eq_p
+real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
+
+eq_g    => thread_struct(tid)%eq_g   
+eq_s    => thread_struct(tid)%eq_s   
+eq_t    => thread_struct(tid)%eq_t   
+eq_p    => thread_struct(tid)%eq_p   
+eq_ss   => thread_struct(tid)%eq_ss   
+eq_st   => thread_struct(tid)%eq_st   
+eq_tt   => thread_struct(tid)%eq_tt   
+delta_g => thread_struct(tid)%delta_g
+delta_s => thread_struct(tid)%delta_s
+delta_t => thread_struct(tid)%delta_t
+
+
 ELM = 0.d0
 RHS = 0.d0
 
@@ -69,7 +80,6 @@ GAMMA = 5.d0 / 3.d0
 theta = 0.5d0  ; zeta = 0.0d0      ! Crank-Nicholson scheme
 !theta = 1.0d0  ; zeta = 0.0d0      ! Euler scheme 
 !theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
-
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
@@ -446,5 +456,6 @@ do ms=1, n_gauss
 enddo
 
 return
+
 end subroutine element_matrix
 end module mod_elt_matrix

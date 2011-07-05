@@ -1,16 +1,3 @@
-module elm_fft
-use parameters
-
-  real*8 :: ELM_p(n_plane,n_vertex_max*n_var*(n_order+1),n_vertex_max*n_var*(n_order+1)*n_tor)
-  real*8 :: ELM_n(n_plane,n_vertex_max*n_var*(n_order+1),n_vertex_max*n_var*(n_order+1)*n_tor)
-  real*8 :: ELM_k(n_plane,n_vertex_max*n_var*(n_order+1),n_vertex_max*n_var*(n_order+1)*n_tor)
-  real*8 :: ELM_kn(n_plane,n_vertex_max*n_var*(n_order+1),n_vertex_max*n_var*(n_order+1)*n_tor)
-  real*8 :: RHS_p(n_plane,n_vertex_max*n_var*(n_order+1))
-  real*8 :: RHS_k(n_plane,n_vertex_max*n_var*(n_order+1))
-
-!$OMP THREADPRIVATE(ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k)
-end module
-
 module mod_elt_matrix_fft
 contains
 subroutine element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
@@ -25,24 +12,12 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use elm_fft
 use tr_module 
 
 implicit none
 
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
-
-real*8     :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
-real*8     :: x_ss(n_gauss,n_gauss),       x_st(n_gauss,n_gauss),       x_tt(n_gauss,n_gauss)
-real*8     :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
-real*8     :: y_ss(n_gauss,n_gauss),       y_st(n_gauss,n_gauss),       y_tt(n_gauss,n_gauss)
-
-real*8     :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss), eq_t(n_plane,n_var,n_gauss,n_gauss)
-real*8     :: eq_p(n_plane,n_var,n_gauss,n_gauss)
-real*8     :: eq_ss(n_plane,n_var,n_gauss,n_gauss),eq_st(n_plane,n_var,n_gauss,n_gauss),eq_tt(n_plane,n_var,n_gauss,n_gauss)
-
-real*8     :: delta_g(n_plane,n_var,n_gauss,n_gauss), delta_s(n_plane,n_var,n_gauss,n_gauss), delta_t(n_plane,n_var,n_gauss,n_gauss)
 
 real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
@@ -111,6 +86,40 @@ integer*8  :: plan
 
 INTEGER    :: FFTW_FORWARD,  FFTW_BACKWARD, FFTW_ESTIMATE
 PARAMETER (FFTW_FORWARD=-1,FFTW_BACKWARD=+1, FFTW_ESTIMATE=64)
+real*8, dimension(:,:,:) , pointer :: ELM_p
+real*8, dimension(:,:,:) , pointer :: ELM_n
+real*8, dimension(:,:,:) , pointer :: ELM_k
+real*8, dimension(:,:,:) , pointer :: ELM_kn
+real*8, dimension(:,:)   , pointer :: RHS_p
+real*8, dimension(:,:)   , pointer :: RHS_k 
+
+real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
+real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
+real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t
+real*8, dimension(n_gauss,n_gauss)    :: y_ss, y_st, y_tt
+
+real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
+real*8, dimension(:,:,:,:) , pointer :: eq_p
+real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt   
+real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
+
+eq_g    => thread_struct(tid)%eq_g   
+eq_s    => thread_struct(tid)%eq_s   
+eq_t    => thread_struct(tid)%eq_t   
+eq_p    => thread_struct(tid)%eq_p   
+eq_ss   => thread_struct(tid)%eq_ss  
+eq_st   => thread_struct(tid)%eq_st  
+eq_tt   => thread_struct(tid)%eq_tt  
+delta_g => thread_struct(tid)%delta_g
+delta_s => thread_struct(tid)%delta_s
+delta_t => thread_struct(tid)%delta_t
+
+ELM_p  => thread_struct(tid)%ELM_p 
+ELM_n  => thread_struct(tid)%ELM_n 
+ELM_k  => thread_struct(tid)%ELM_k
+ELM_kn => thread_struct(tid)%ELM_kn
+RHS_p  => thread_struct(tid)%RHS_p 
+RHS_k  => thread_struct(tid)%RHS_k 
 
 ELM_p = 0.d0
 ELM_n = 0.d0

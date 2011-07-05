@@ -3,7 +3,7 @@
 module data_structure
   use parameters
   use tr_module
-
+  use gauss
   implicit none
 
   type type_node                                  !< type definition of a node (i.e. a vertex)
@@ -93,10 +93,16 @@ module data_structure
      real*8, dimension (:,:)  , pointer :: ELM2
      real*8, dimension (:)    , pointer :: RHS
      real*8, dimension (:)    , pointer :: RHS2
+
+     real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
+     real*8, dimension(:,:,:,:) , pointer :: eq_p
+     real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt   
+     real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
+
   END TYPE type_thread_buffer
   
-  integer                                             , public :: nbthreads
-  TYPE(type_thread_buffer), dimension(:), pointer    , public :: thread_struct => NULL()
+  integer                                         , public :: nbthreads
+  TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()
   
 contains
 
@@ -133,6 +139,16 @@ contains
           call tr_allocatep(thread_struct(i)%RHS,   1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS")                                     
           call tr_allocatep(thread_struct(i)%ELM2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM2")      
           call tr_allocatep(thread_struct(i)%RHS2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS2")                                     
+          call tr_allocatep(thread_struct(i)%eq_g   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_g")
+          call tr_allocatep(thread_struct(i)%eq_s   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_s")
+          call tr_allocatep(thread_struct(i)%eq_t   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_t")
+          call tr_allocatep(thread_struct(i)%eq_p   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_p")
+          call tr_allocatep(thread_struct(i)%eq_ss  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_ss")
+          call tr_allocatep(thread_struct(i)%eq_st  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_st")
+          call tr_allocatep(thread_struct(i)%eq_tt  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_tt") 
+          call tr_allocatep(thread_struct(i)%delta_g,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_g") 
+          call tr_allocatep(thread_struct(i)%delta_s,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_s")
+          call tr_allocatep(thread_struct(i)%delta_t,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_t")
        end do
     end if
   end subroutine new_thread_buffers
@@ -150,6 +166,16 @@ contains
        call tr_deallocatep(thread_struct(i)%RHS,"RHS")
        call tr_deallocatep(thread_struct(i)%ELM2,"ELM2")
        call tr_deallocatep(thread_struct(i)%RHS2,"RHS2")
+       call tr_deallocatep(thread_struct(i)%eq_g   ,"eq_g")
+       call tr_deallocatep(thread_struct(i)%eq_s   ,"eq_s")
+       call tr_deallocatep(thread_struct(i)%eq_t   ,"eq_t")
+       call tr_deallocatep(thread_struct(i)%eq_p   ,"eq_p")
+       call tr_deallocatep(thread_struct(i)%eq_ss  ,"eq_ss")
+       call tr_deallocatep(thread_struct(i)%eq_st  ,"eq_st")
+       call tr_deallocatep(thread_struct(i)%eq_tt  ,"eq_tt") 
+       call tr_deallocatep(thread_struct(i)%delta_g,"delta_g") 
+       call tr_deallocatep(thread_struct(i)%delta_s,"delta_s")
+       call tr_deallocatep(thread_struct(i)%delta_t,"delta_t")
     end do
     call tr_unregister_mem(sizeof(thread_struct),"thread_struct")
     deallocate(thread_struct)

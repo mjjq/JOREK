@@ -44,6 +44,12 @@ module tr_module
           tr_deallocatep3d_d, tr_deallocatep2d_d, &
           tr_deallocatep3d_i, tr_deallocatep4d_d
   end interface
+
+  !*** surdefinition for deallocation ***
+  interface tr_debug_write
+     module procedure tr_debug_writes, tr_debug_writei, tr_debug_writef
+  end interface
+
   real*8 :: precond_mem = 0
   integer :: target_proc = 0
   ! size of real numbers used in jorek
@@ -117,17 +123,36 @@ contains
   !---------------------------------------- 
   ! Write debug remark in file trace_file
   !----------------------------------------
-  subroutine tr_debug_write(string, int_var)
+  subroutine tr_debug_writes(string)
     character*(*)           :: string
-    integer      , optional :: int_var
     character(len=1024)     :: bufstring
-    if (present(int_var)) then
-       write(bufstring,'(A,I20)')string,int_var
-    else
-       write(bufstring,'(A)')string
-    end if
+    write(bufstring,'(A)')string
     call tr_write("### "//trim(adjustl(bufstring))//" ###")
-  end subroutine tr_debug_write
+  end subroutine tr_debug_writes
+
+
+  !---------------------------------------- 
+  ! Write debug remark in file trace_file
+  !----------------------------------------
+  subroutine tr_debug_writei(string, int_var)
+    character*(*)           :: string
+    integer                 :: int_var
+    character(len=1024)     :: bufstring
+    write(bufstring,'(A,I20)')string,int_var
+    call tr_write("### "//trim(adjustl(bufstring))//" ###")
+  end subroutine tr_debug_writei
+
+
+  !---------------------------------------- 
+  ! Write debug remark in file trace_file
+  !----------------------------------------
+  subroutine tr_debug_writef(string, float_var)
+    character*(*)           :: string
+    real*8                  :: float_var
+    character(len=1024)     :: bufstring
+    write(bufstring,'(A,E20.11)')string,float_var
+    call tr_write("### "//trim(adjustl(bufstring))//" ###")
+  end subroutine tr_debug_writef
 
 
   !-------------------------------------------

@@ -52,6 +52,8 @@ integer, dimension(2)		 :: parent
 integer, dimension(n_vertex_max) :: node_out
 integer:: nnz, check_data, ierr
 
+
+
 write(*,*) '**************************************'
 write(*,*) '*            Poisson                 *'
 write(*,*) '**************************************'
@@ -63,6 +65,7 @@ if (iter .le. 1) then
 endif
   
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2 
+call tr_debug_write("Deb_poisson",nz_AA)
 
 n_border = 0
 do i=1,node_list%n_nodes

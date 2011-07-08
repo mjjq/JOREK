@@ -304,6 +304,10 @@ program JOREK2
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
+
+      call tr_debug_write("JMAIN:Def_grid elt_list",element_list%n_elements)
+      call tr_debug_write("JMAIN:Def_grid node_list",node_list%n_nodes)
+      call tr_debug_write("JMAIN:Def_grid bnd_elt_list",bnd_elm_list%n_bnd_elements)
       
     end if
     
@@ -402,13 +406,17 @@ program JOREK2
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) ! boundary elements
   call broadcast_nodes(my_id, node_list)                      ! nodes
   call broadcast_phys(my_id)                                  ! physics parameters
-  
   n_AA  = node_list%n_nodes * (n_order+1)  
   n_AA = 0  
   do inode = 1, node_list%n_nodes  
      n_AA = max(n_AA,node_list%node(inode)%index(4))  
   end do
   mumps_par%n = n_AA
+
+  call tr_debug_write("JMAIN:End_init elt_list",element_list%n_elements)
+  call tr_debug_write("JMAIN:End_init bnd_elt_list",bnd_elm_list%n_bnd_elements)
+  call tr_debug_write("JMAIN:End_init node_list",node_list%n_nodes)
+  call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   call tr_raz_targetproc
@@ -648,6 +656,7 @@ program JOREK2
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
      call flushc !flush the output stream
+     call tr_debug_write("JMAIN:Index_now",index_now)
 
      index_now = index_now + 1
      
@@ -660,6 +669,10 @@ program JOREK2
      end if
 
      call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
+     call tr_debug_write("JMAIN:Find_axis_R",R_axis)
+     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
+     call tr_debug_write("JMAIN:Find_axis_T",T_axis)
 
      if (xpoint) then
        call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
@@ -687,6 +700,7 @@ program JOREK2
        pellet_volume = 3.1415926 * pellet_radius**2 * 2.d0 * 3.1415926535 * pellet_R
        call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
      endif
+     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
           
      if ( use_pastix .and. use_murge .and. use_murge_element ) then
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &

@@ -51,7 +51,6 @@ module tr_module
   end interface
 
   real*8 :: precond_mem = 0
-  integer :: target_proc = 0
   ! size of real numbers used in jorek
   integer, private, parameter :: RKIND = 8
   ! processor identity
@@ -61,8 +60,8 @@ module tr_module
   ! used for memory size calculation
   integer*8, private :: max_allocate, nb_allocate
 
-  character(LEN=100), parameter, private :: &
-       trace_file = "trace.out"
+  character(LEN=13), private :: &
+       trace_file = "trace    .out"
   integer, private :: uout_mem = 30
 
   real(RKIND) :: myreal
@@ -73,51 +72,49 @@ contains
   !******************************
 
   !---------------------------------------- 
-  ! constructor
+  ! Init target file in each processor
   !----------------------------------------
   subroutine tr_meminit(pmy_id, pnbprocs)
     integer, intent(in) :: pmy_id, pnbprocs
+    logical fexist
     gmy_id = pmy_id
     nbprocs = pnbprocs
-    target_proc = nbprocs-1
-    if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = trace_file, status = 'REPLACE', &
+    write(trace_file(6:9),'(I4.4)') gmy_id
+    inquire(file=trace_file,exist=fexist)
+    if (fexist) then
+       open(uout_mem, file = trace_file, status = 'OLD', position = 'APPEND', &
             form = 'FORMATTED')
-       write(uout_mem,*) ' '
-       call flush(uout_mem)
-       close(uout_mem)
+    else
+       open(uout_mem, file = trace_file, status = 'NEW', &
+            form = 'FORMATTED')
     end if
+    write(uout_mem,*) '### meminit ### '
+    call flush(uout_mem)
+    close(uout_mem)
   end subroutine tr_meminit
 
   !---------------------------------------- 
-  ! Change the target processor responsible for outputting messages
+  ! Reset file
   !----------------------------------------
-  subroutine tr_set_targetproc(procid)
-    integer, intent(in) :: procid
-    target_proc = procid
-    call tr_debug_write("New target proc",target_proc)
-  end subroutine tr_set_targetproc
+  subroutine tr_resetfile()
+    open(uout_mem, file = trace_file, status = 'REPLACE', &
+         form = 'FORMATTED')
+    write(uout_mem,*) '### meminit ### '
+    call flush(uout_mem)
+    close(uout_mem)
+  end subroutine tr_resetfile
 
-  !---------------------------------------- 
-  ! Set the default target processor responsible for outputting messages
-  !----------------------------------------
-  subroutine tr_raz_targetproc
-    target_proc = nbprocs-1
-    call tr_debug_write("Reset target proc",target_proc)
-  end subroutine tr_raz_targetproc
 
   !---------------------------------------- 
   ! Write special string in file trace_file
   !----------------------------------------
   subroutine tr_write(string)
     character*(*) string
-    if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = trace_file, status = 'OLD', &
-            position = 'APPEND', form = 'FORMATTED')
-       write(uout_mem,'(A)') string
-       call flush(uout_mem)
-       close(uout_mem)
-    end if
+    open(uout_mem, file = trace_file, status = 'OLD', &
+         position = 'APPEND', form = 'FORMATTED')
+    write(uout_mem,'(A)') string
+    call flush(uout_mem)
+    close(uout_mem)
   end subroutine tr_write
 
   !---------------------------------------- 
@@ -164,14 +161,12 @@ contains
     character*(*), intent(in)  :: var_name
 
 #ifdef MEMTRACE
-    if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = trace_file, status = 'OLD', &
-            position = 'APPEND', form = 'FORMATTED')
-       write(uout_mem,'(A10,I15,A10,A15,A20,5X,I20)') &
-            'Add', &
-            size_array,' Bytes ',type_name,var_name, nb_allocate
-       close(uout_mem)    
-    end if
+    open(uout_mem, file = trace_file, status = 'OLD', &
+         position = 'APPEND', form = 'FORMATTED')
+    write(uout_mem,'(A10,I15,A10,A15,A20,5X,I20)') &
+         'Add', &
+         size_array,' Bytes ',type_name,var_name, nb_allocate
+    close(uout_mem)    
 #endif
   end subroutine tr_memwriteadd
 
@@ -182,12 +177,10 @@ contains
     character*(*), intent(in) :: var_name
 
 #ifdef MEMTRACE
-    if (gmy_id.eq.target_proc) then
-       open(uout_mem, file = trace_file, status = 'OLD', &
-            position = 'APPEND', form = 'FORMATTED')
-       write(uout_mem,'(50X,A20,A5,I20)') var_name, ' Supp', nb_allocate
-       close(uout_mem)    
-    end if
+    open(uout_mem, file = trace_file, status = 'OLD', &
+         position = 'APPEND', form = 'FORMATTED')
+    write(uout_mem,'(50X,A20,A5,I20)') var_name, ' Supp', nb_allocate
+    close(uout_mem)    
 #endif
   end subroutine tr_memwritedel
 
@@ -292,10 +285,8 @@ contains
           array1d(i1) = 0
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -320,10 +311,8 @@ contains
           array1d(i1) = 0._RKIND
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
 
@@ -359,10 +348,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -394,10 +381,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -437,10 +422,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -484,10 +467,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print *,'problem in allocating ',var_name
-          print *,'-> required memory (in Bytes) = ',size_array
-       end if
+       print *,'problem in allocating ',var_name
+       print *,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -524,10 +505,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -554,10 +533,8 @@ contains
           array1d(i1) = 0
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -582,10 +559,8 @@ contains
           array1d(i1) = 0._RKIND
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
 
@@ -611,10 +586,8 @@ contains
           array1d(i1) = cmplx(0,0)
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -650,10 +623,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -685,10 +656,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -720,10 +689,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -764,10 +731,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -807,10 +772,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -850,10 +813,8 @@ contains
           end do
        end do
     else
-       if (gmy_id.eq.target_proc) then
-          print*,'problem in allocating ',var_name
-          print*,'-> required memory (in Bytes) = ',size_array
-       end if
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
        stop
     end if
     nb_allocate  = nb_allocate + size_array
@@ -1069,7 +1030,6 @@ contains
     integer :: uout
     integer*8 :: scount, dcount, rcount
 
-    if (gmy_id.eq.target_proc) then
        rcount = KBconst * get_memory_inkb("VmRSS")
        open(uout_mem, file = trace_file, status = 'OLD', &
             position = 'APPEND', form = 'FORMATTED')
@@ -1109,6 +1069,5 @@ contains
                rcount/dfloat(KBconst), ' KBytes'
        end if
        close(uout_mem)
-    end if
   end subroutine tr_print_memsize
 end module tr_module

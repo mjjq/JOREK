@@ -1,3 +1,5 @@
+module solve_mat_n
+contains
 subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   !---------------------------------------------------------------------
   ! subroutine solves the system of equation for each harmonic
@@ -15,11 +17,15 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   include 'mpif.h'
 #include "r3_info.h"
 
-  integer :: i, my_id, i_tor(*), i_reduced, j_reduced, n_i, n_j, index, index1, index2
-  integer :: MPI_COMM_N, MPI_COMM_MASTER, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
+  integer, intent(in) :: my_id
+  integer, dimension(:), intent(in) :: i_tor(:)
+  integer, intent(in) :: MPI_COMM_N, MPI_COMM_MASTER
+  logical, intent(in) :: solve_only
+
+  integer :: i, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
+  integer :: i_reduced, j_reduced, n_i, n_j, index, index1, index2
   real*8  :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_solv_0, t_solv_1
   real*8, allocatable :: RHS_tmp(:)
-  logical :: solve_only
   integer :: t1, t0, time_ini_1,time_ini_0,time_facto_1,time_facto_0, time_solve_0
   integer :: time_solve_1,nb_periods,nb_periodes_max,nb_periodes_sec
   integer, external :: omp_get_num_threads, omp_get_thread_num
@@ -473,6 +479,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               STOP
            end if
 
+           call tr_deallocatep(mumps_par%A,"special:mumps_par%A")
+           call tr_deallocatep(mumps_par%irn,"special:mumps_par%irn")
+           call tr_deallocatep(mumps_par%jcn,"special:mumps_par%jcn")
+
            CALL CPU_TIME(t_analysis_1)
                  
            IF (my_id_n .EQ. 0)  WRITE(*,'(i3,A,f8.3)') my_id, ' MURGE_MatrixGlobalCSC  : ',t_analysis_1-t_analysis_0
@@ -566,10 +576,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
         if (my_id_n .eq.0)  write(*,'(i3,A,f8.3)')  my_id,' PastiX, solv      : ',t_solv_1-t_solv_0
      end if
-     CALL MPI_Barrier(MPI_COMM_WORLD, ierr)
   endif
 
 
+  CALL MPI_Barrier(MPI_COMM_WORLD, ierr)
   if (my_id_n .eq. 0) then                          ! elapsed time factorisation end
      call MPI_Barrier(MPI_COMM_MASTER,ierr)
      call system_clock(count=time_solve_1)
@@ -589,25 +599,29 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      rhs_tmp = 0.d0
 
      if (my_id .eq. 0 ) then
-
-        rhs_tmp(1:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n)
-
+!        rhs_tmp(1:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n)
+        do i=0, mumps_par%n-1
+           rhs_tmp(1+i*n_tor)=mumps_par%rhs(1+i)
+        end do
      else
-
-        rhs_tmp(2*i_tor(my_id+1)-2:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n:2)
-        rhs_tmp(2*i_tor(my_id+1)-1:ndof_glob:n_tor) = mumps_par%rhs(2:mumps_par%n:2)
+!        rhs_tmp(2*i_tor(my_id+1)-2:ndof_glob:n_tor) = mumps_par%rhs(1:mumps_par%n:2)
+!        rhs_tmp(2*i_tor(my_id+1)-1:ndof_glob:n_tor) = mumps_par%rhs(2:mumps_par%n:2)
+        do i=0, mumps_par%n/2-1
+           rhs_tmp(2*i_tor(my_id+1)-2+i*n_tor) = mumps_par%rhs(1+i*2)
+           rhs_tmp(2*i_tor(my_id+1)-1+i*n_tor) = mumps_par%rhs(2+i*2)
+        end do
 
      endif
-
+     
      call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
-
      call tr_deallocate(rhs_tmp,"rhs_tmp")
 
   endif
-  call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+1)) 
-
-
+  if (.not. use_murge) then
+     call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+1)) 
+  end if
   call tr_print_memsize("AfterSolveN")
   call r3_info_end (r3_info_index_0)         ! timing
   return
 end subroutine solve_matrix_n
+end module solve_mat_n

@@ -34,7 +34,9 @@ program JOREK2
   use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response, update_response
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
+  use solve_mat_n
   use tr_module 
+  
   implicit none
   
   include 'mpif.h'
@@ -142,7 +144,6 @@ program JOREK2
   my_id = rank
   n_cpu = comm_size
   call tr_meminit(my_id,n_cpu)
-  call tr_print_memsize("Begin")
 
   if (my_id == 0) then
     write(*,*) '****************************************'
@@ -166,7 +167,12 @@ program JOREK2
   pastix_analysed    = .false.
   murge_initialised  = .false.
   pastix_smp_only    = .false.            ! Implies that each MPI group resides within one node!
-  if (n_tor == 1) gmres = .false.
+  if (n_tor == 1) then
+     gmres = .false.
+     use_murge = .false. 
+     ! MURGE with ntor=1 doesn't work up to now
+     ! because i_tor is not allocated correctly
+  end if
   
   refinement    = .false.              ! enable mesh refinement
   grid_to_wall  = .false.               ! extend the grid to a physical wall
@@ -272,7 +278,7 @@ program JOREK2
   !***********************************************************************
   
   if_not_restart: if (.not. restart) then
-    
+    call tr_resetfile()
     element_list%n_elements      = 0
     bnd_elm_list%n_bnd_elements  = 0
     node_list%n_nodes            = 0
@@ -333,8 +339,6 @@ program JOREK2
     if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
 #endif
 
-    call tr_set_targetproc(0)
-    
     if (my_id == 0) then
       
       ! --- Compute the plasma equilibrium
@@ -419,8 +423,7 @@ program JOREK2
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  call tr_raz_targetproc
-  
+
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *
   !***********************************************************************
@@ -728,7 +731,6 @@ program JOREK2
      call cpu_time(t_solve_0)
 
      if (.not. gmres) then
-
         if (use_mumps) then
 
            call solve_mumps_all(my_id)
@@ -745,7 +747,6 @@ program JOREK2
         endif
 
      else
-
         if (.not. solve_only) then
 
            call cpu_time(t_send_0)
@@ -771,7 +772,6 @@ program JOREK2
      endif
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
      call cpu_time(t_solve_1)
 
      if (gmres) then

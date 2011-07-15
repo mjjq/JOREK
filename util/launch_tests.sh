@@ -1,9 +1,14 @@
 #!/bin/bash
+# Usage:                                                      
+#   # Example For model 199
+#    ./launch_test.sh sim199 # Compute the equilibrium
+#    ./launch_test.sh sim199 # Compute the first 50 time steps
+#    ./launch_test.sh sim199 # Compute the time steps 51 to 100
 
 # ---------- Following variables has to be changed by the user ----------
 
 # Trunk of jorek to be used
-TRKDIR=~/trunk2g
+TRKDIR=/scratch/jorekgl/trunk2g
 # Location of 'util' directory that contains 'setinput.sh'
 UTILDIR=${TRKDIR}/util
 # Location of namelist directory that contains input jorek files
@@ -11,9 +16,9 @@ NAMEDIR=${TRKDIR}/namelist
 # Location of directory that contains executables of Jorek
 EXEDIR=${TRKDIR}
 # Location of target directory where simulation directory will be created
-BASEDIR=/data/GL310811/jorek
+BASEDIR=/scratch/jorekgl
 # Mpirun command
-MPIRUN="mpirun  -np 8"
+MPIRUN="mpiexec"
 
 # List of executables used during following simulations
 # The n-th executable has three parameters : 
@@ -96,12 +101,12 @@ if [ "$MODNB" = "199" ]; then
   INFILE=${list_inputs[$j]}
   
   if [ ! -f jorek_equil.rst ]; then
-      ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep=0
+      ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1
       EXE=j${model[$i]}_1
       ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
       cp jorek_restart.rst jorek_equil.rst
   else
-      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep=50 tstep=1000
+      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000
       EXE=j${model[$i]}_3
       ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop
       

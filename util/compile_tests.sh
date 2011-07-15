@@ -1,9 +1,12 @@
 #!/bin/bash
+# Usage:                                                                
+# ./compile_test.sh 199 # compile model 199 with several ntor/nplane settings
+# ./compile_test.sh 302 # compile model 302 with several ntor/nplane settings
 
 # ---------- Following variables has to be changed by the user ----------
 
 # Location of trunk of jorek to compile
-TRKDIR=~/trunk2g
+TRKDIR=/scratch/jorekgl/trunk2g
 # Location of 'util' directory that contains 'setconfig.sh'
 UTILDIR=${TRKDIR}/util
 # Options when launching make
@@ -12,12 +15,6 @@ MAKEOPT="-j 4"
 # List of executable to compile 
 # The n-th executable has three parameters : 
 #      model[n] ntor[n] nplane[n] nperiod[n]
-if [ "$1" = "all" ]; then 
-   declare -a model=(  199 199 199 302 302 )
-   declare -a ntor=(   1   3   7   1   3   )
-   declare -a nplane=( 1   4   8   1   8   )
-   declare -a nperiod=(1   1   1   1   8   )
-fi
 if [ "$1" = "199" ]; then 
    declare -a model=(  199 199 )
    declare -a ntor=(    1   3  )
@@ -29,6 +26,12 @@ if [ "$1" = "302" ]; then
    declare -a ntor=(    3   1  )
    declare -a nplane=(  8   1  )
    declare -a nperiod=( 8   1  )
+fi
+if [ "$1" = "all" ]; then 
+   declare -a model=(  199 199 199 302 302 )
+   declare -a ntor=(   1   3   7   1   3   )
+   declare -a nplane=( 1   4   8   1   8   )
+   declare -a nperiod=(1   1   1   1   8   )
 fi
 
 #-------------------------------------------------------------------------

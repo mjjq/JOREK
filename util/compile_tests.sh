@@ -1,67 +1,79 @@
 #!/bin/bash
-# Location of new version of jorek to compile
-NEWDIR=~/trunk2g
-# Location of reference version of jorek to compile
-REFDIR=~/trunkref
-# Location of 'util' directory that contains 'setconfig.sh'
-UTILDIR=~/util
-# Location of target directory where executables will be copied
-EXEDIR=/scratch/jorekgl
 
-# Cleaning the old executables
-if [ "$1" = "clean" ]; then
-  for DIR in $REFDIR $NEWDIR; do
-     echo "cleaning $DIR of old executables"
-     cd $DIR
-     rm -f j???_? j???_??
-  done
-fi
+# ---------- Following variables has to be changed by the user ----------
+
+# Location of trunk of jorek to compile
+TRKDIR=/home/sipp/gipp/GL310811/trunk2g
+# Location of 'util' directory that contains 'setconfig.sh'
+UTILDIR=${TRKDIR}/util
+# Options when launching make
+MAKEOPT="-j 4"
 
 # List of executable to compile 
 # The n-th executable has three parameters : 
-#      model[n] ntor[n] nplane[n]
-#declare -a model=( 199 199 199 302 302 302)
-#declare -a ntor=(  1   3   7   1   3   7  )
-#declare -a nplane=(1   4   8   1   4   8  )
-declare -a model=( 199 199 199)
-declare -a ntor=(  1   3   7  )
-declare -a nplane=(1   4   8  )
+#      model[n] ntor[n] nplane[n] nperiod[n]
+if [ "$1" = "all" ]; then 
+   declare -a model=(  199 199 199 302 302 )
+   declare -a ntor=(   1   3   7   1   3   )
+   declare -a nplane=( 1   4   8   1   8   )
+   declare -a nperiod=(1   1   1   1   8   )
+fi
+if [ "$1" = "199" ]; then 
+   declare -a model=(  199 199 )
+   declare -a ntor=(    1   3  )
+   declare -a nplane=(  1   4  )
+   declare -a nperiod=( 1   1  ) 
+fi
+if [ "$1" = "302" ]; then 
+   declare -a model=(  302 302 )
+   declare -a ntor=(    3   1  )
+   declare -a nplane=(  8   1  )
+   declare -a nperiod=( 8   1  )
+fi
 
-# Launch compilation and generates all executables
-for DIR in $REFDIR $NEWDIR; do
-  for (( i = 0 ; i < ${#model[@]} ; i++ )); do
+#-------------------------------------------------------------------------
+
+# Cleaning the old executables
+if [ "$1" = "clean" ]; then
+  echo "cleaning $DIR of old executables"
+  cd $TRKDIR
+  rm -f j???_? j???_??
+fi
+
+if [ ${#model[@]} -eq 0 ]; then
+  echo "ERROR: no model number has be given in parameter."
+  echo "Try for example '199' as parameter"
+  exit 0
+fi
+
+if [ -z "$2" ]; then
+    noselect=1
+else
+    noselect=0
+    echo $2
+fi
+
+for (( i = 0 ; i < ${#model[@]} ; i++ )); do
+   # if a second parameter is given  in command line, it specifies
+   # one subset of a model to be compiled.
+  ((selectid=i==$2))
+  if ((noselect || selectid)); then
     cat <<EOF > go.sh
 TG=jorek_model${model[$i]}
 EXE=j${model[$i]}_${ntor[$i]}
-if [ ! -f $DIR\$EXE ]; then
-  echo ============= model=${model[$i]} n_tor=${ntor[$i]} n_period=1 n_plane=${nplane[$i]}
-  cd $DIR
-  $UTILDIR//setconfig.sh  model=${model[$i]} n_tor=${ntor[$i]} n_period=1 n_plane=${nplane[$i]}
+if [ ! -f $TRKDIR\$EXE ]; then
+  echo ============= model=${model[$i]} n_tor=${ntor[$i]} n_period=1 n_plane=${nplane[$i]} n_period=${nperiod[$i]} 
+  cd $TRKDIR
+  $UTILDIR//setconfig.sh  model=${model[$i]} n_tor=${ntor[$i]} n_period=1 n_plane=${nplane[$i]} n_period=${nperiod[$i]}
   if [ -f \$TG ]; then rm -f \$TG; fi
   make -f NewMake.mk cleanall
-  make -f NewMake.mk timing/trace.o
-  make -f NewMake.mk -j 4 | tee log_${model[$i]}_${ntor[$i]}
+  make -f NewMake.mk ${MAKEOPT} timing/trace.o
+  make -f NewMake.mk ${MAKEOPT} | tee log_${model[$i]}_${ntor[$i]}
   if [ -f \$TG ]; then mv \$TG \$EXE; fi
 fi
 EOF
     chmod +x go.sh
     ./go.sh
-  done
+  fi
 done
 
-# Copy the executables to target directory.
-# Reference executables have a _ref suffix,
-# whereas new executables have a _new suffix.
-for (( i = 0 ; i < ${#model[@]} ; i++ )); do
-   EXE=j${model[$i]}_${ntor[$i]}
-   if [ -f $REFDIR/$EXE ]; then
-      cp $REFDIR/$EXE $EXEDIR/${EXE}_ref
-   else
-      echo "ERROR: DO NOT FOUND " $REFDIR/$EXE
-   fi
-   if [ -f $NEWDIR/$EXE ]; then
-      cp $NEWDIR/$EXE $EXEDIR/${EXE}_new
-   else
-      echo "ERROR: DO NOT FOUND " $NEWDIR/$EXE
-   fi
-done

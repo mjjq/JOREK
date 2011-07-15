@@ -1028,46 +1028,47 @@ contains
     integer*8, parameter :: MBconst = 1024_8*1024_8
     integer*8, parameter :: KBconst = 1024_8
     integer :: uout
-    integer*8 :: scount, dcount, rcount
-
-       rcount = KBconst * get_memory_inkb("VmRSS")
-       open(uout_mem, file = trace_file, status = 'OLD', &
-            position = 'APPEND', form = 'FORMATTED')
-       if (nb_allocate.gt.GBconst) then
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label,&
-               'memsize allocated with tr_module = ', &
-               nb_allocate/dfloat(GBconst), ' GBytes'
-       else 
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-               'memsize allocated with tr_module = ', &
-               nb_allocate/dfloat(MBconst), ' MBytes'
-       end if
-       if (precond_mem.gt.GBconst) then
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-               'memsize MAX pastix   = ', &
-               precond_mem/dfloat(GBconst), ' GBytes'
-       else if (precond_mem.gt.MBconst) then
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-               'memsize MAX pastix   = ', &
-               precond_mem/dfloat(MBconst), ' MBytes'
-       else
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-               'memsize MAX pastix   = ', &
-               precond_mem/dfloat(KBconst), ' KBytes'
-       end if
-       if (rcount.gt.GBconst) then
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-               'memsize   (RSS) = ', &
-               rcount/dfloat(GBconst), ' GBytes'
-       else if (rcount.gt.MBconst) then
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-               'memsize   (RSS) = ', &
-               rcount/dfloat(MBconst), ' MBytes'
-       else
-          write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
-               'memsize   (RSS) = ', &
-               rcount/dfloat(KBconst), ' KBytes'
-       end if
-       close(uout_mem)
+    integer*8 :: scount, dcount, rcount, lcount
+    
+    rcount = KBconst * get_memory_inkb("VmRSS")
+    open(uout_mem, file = trace_file, status = 'OLD', &
+         position = 'APPEND', form = 'FORMATTED')
+    if (nb_allocate.gt.GBconst) then
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label,&
+            'memsize allocated within Jorek (tr_module) = ', &
+            nb_allocate/dfloat(GBconst), ' GBytes'
+    else 
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+            'memsize allocated within Jorek (tr_module) = ', &
+            nb_allocate/dfloat(MBconst), ' MBytes'
+    end if
+    lcount = rcount - nb_allocate
+    if (lcount.gt.GBconst) then
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+            'memsize occupied by libraries/others = ', &
+            lcount/dfloat(GBconst), ' GBytes'
+    else if (lcount.gt.MBconst) then
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+            'memsize occupied by libraries/others = ', &
+            lcount/dfloat(MBconst), ' MBytes'
+    else
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+            'memsize occupied by libraries/others = ', &
+            lcount/dfloat(KBconst), ' KBytes'
+    end if
+    if (rcount.gt.GBconst) then
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+            'memsize total   (RSS) = ', &
+            rcount/dfloat(GBconst), ' GBytes'
+    else if (rcount.gt.MBconst) then
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+            'memsize total   (RSS) = ', &
+            rcount/dfloat(MBconst), ' MBytes'
+    else
+       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+            'memsize total   (RSS) = ', &
+            rcount/dfloat(KBconst), ' KBytes'
+    end if
+    close(uout_mem)
   end subroutine tr_print_memsize
 end module tr_module

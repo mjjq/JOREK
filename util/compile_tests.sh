@@ -3,7 +3,7 @@
 # ---------- Following variables has to be changed by the user ----------
 
 # Location of trunk of jorek to compile
-TRKDIR=/home/sipp/gipp/GL310811/trunk2g
+TRKDIR=~/trunk2g
 # Location of 'util' directory that contains 'setconfig.sh'
 UTILDIR=${TRKDIR}/util
 # Options when launching make
@@ -48,15 +48,16 @@ fi
 
 if [ -z "$2" ]; then
     noselect=1
+    targetid=0
 else
     noselect=0
-    echo $2
+    targetid=$2
 fi
 
 for (( i = 0 ; i < ${#model[@]} ; i++ )); do
    # if a second parameter is given  in command line, it specifies
    # one subset of a model to be compiled.
-  ((selectid=i==$2))
+  ((selectid=(i==$targetid)))
   if ((noselect || selectid)); then
     cat <<EOF > go.sh
 TG=jorek_model${model[$i]}

@@ -40,7 +40,7 @@ real*8     :: eta_Te, visco_Te, deta_dTe, d2eta_d2Te, dvisco_dTe
 real*8     :: eta_numm, visco_numm, visco_par_numm, D_perp_numm, K_perp_numm
 real*8     :: atn_D,datn_D,atn_D_n,pol_D,dpol_D,D_min,psi_D
 real*8     :: ZK_i_prof, ZK_e_prof, ZK_i_par, ZK_e_par, dZK_i_par, dZK_e_par, D_prof 
-real*8,allocatable :: prof(:),Diff(:,:)
+real*8     :: prof(1:3),Diff(1:3,1:10)
 
 real*8     :: v, v_x, v_y, v_s, v_t, v_p, v_ss, v_st, v_tt, v_xx, v_yy, v_xs, v_ys, v_xt, v_yt
 real*8     :: ps0, ps0_x, ps0_y, ps0_p,ps0_s,ps0_t
@@ -326,9 +326,6 @@ do ms=1, n_gauss
  	endif
       endif
 
-      call tr_allocate(prof,1,3,"prof")
-      call tr_allocate(Diff,1,3,1,10,"Diff")
-      
       !----------- Allocate the values directly from the pressure profile (rho_coef, T_coef...) 
       do id = 1,10
 	if ((id .eq. 7) .or. (id .eq. 8) .or. (id .eq. 9)) then
@@ -374,8 +371,6 @@ do ms=1, n_gauss
       D_prof    = prof(1) !* (2.d0*D_perp(6) + D_perp(6) * tanh((psi_norm-1.04d0)/0.02d0))
       ZK_i_prof = prof(2) 
       ZK_e_prof = prof(3) 
-      call tr_deallocate(prof,"prof")
-      call tr_deallocate(Diff,"Diff")
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! Build up the D_perp and K_perp profiles !!!!!!!!!!!! END

@@ -119,9 +119,10 @@ if (mf .le. 0) then
     psi_tmp(n_bnd) = psi_tmp(1)
     tht_tmp(n_bnd) = tht_tmp(1) + 2.d0 * PI
     
-    do i=1,n_bnd
-      write(*,*) tht_tmp(i),r_tmp(i),psi_tmp(i)
-    enddo
+    ! --- Debugging output: 
+    !do i=1,n_bnd
+    !  write(*,*) tht_tmp(i),r_tmp(i),psi_tmp(i)
+    !enddo
     
   endif
 

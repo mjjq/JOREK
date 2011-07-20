@@ -43,6 +43,7 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/flux_surface_add_point.f90  	\
 	$(DIR)/find_axis.f90           		\
 	$(DIR)/find_xpoint.f90         		\
+	$(DIR)/find_limiter.f90                 \
 	$(DIR)/RZ_minmax.f90           		\
 	$(DIR)/psi_minmax.f90          		\
 	$(DIR)/integrals.f90           		\

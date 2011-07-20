@@ -1,11 +1,6 @@
-!**********************************************************************
-!* program to convert a JOREK2 restart file into binary VTK format    *
-!**********************************************************************
-
+!> Program to convert a JOREK2 restart file into binary VTK format
 program jorek2vtk
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+
 use data_structure
 use phys_module
 use basis_at_gaussian
@@ -31,36 +26,13 @@ real*8                :: RHO_x, RHO_y, RHO_p, V, V_s, V_t, V_st, V_ss, V_tt, Bto
 real*8                :: psi_bnd,psi_axis,R_axis,Z_axis,s_axis,t_axis,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
 real*8                :: ps0, psi_norm, particle_source, D_prof, ZK_prof, grad_psi, source_pellet, ZKpar_T
 real*8                :: w0_x, w0_y, w0_xx, w0_yy, xjac_x, xjac_y
-integer               :: i_elm_axis, i_elm_xpoint, k_tor, ifail
-
-namelist /in1/  tstep, nstep, nstep_n, tstep_n,                     &
-                eta, visco, visco_par,                              &
-                restart,  regrid,                                   &
-                n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open,n_private,n_leg,  nout,                      &
-                xr1, sig1, xr2, sig2,                               &
-                R_begin, R_end, Z_begin, Z_end,                     &
-                R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
-                R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-		dpsi_open, dpsi_private,                            &
-                F0, gamma_sheath, density_reflection,               &
-                zjz_0, zjz_1, zj_coef,                              &
-                rho_0, rho_1, rho_coef,                             &
-                T_0,   T_1,   T_coef,                               &
-                FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_perp, D_par, D_perp,D_neutral,           &
-                particlesource, heatsource, tauIC,                  &
-                eta_num, visco_num, visco_par_num, D_perp_num, ZK_perp_num,      &
-                ellip,tria_u,tria_l,quad_u,quad_l,                  &
-                xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-		pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
-		pellet_psi, pellet_delta_psi,                       &
-		pellet_radius, pellet_sig, pellet_length,           &
-                freeboundary, bc_natural_open, use_starwall, resistive_wall, &
-		rho_file, T_file, ffprime_file
+integer               :: i_elm_axis, i_elm_xpoint, k_tor, ifail, ierr
 
 write(*,*) "jorek2vtk"
-read(5,in1)               ! read the namelist input file
+
+my_id=0
+
+call initialise_parameters(my_id)
 
 ivtk = 22                 ! an arbitrary unit number for the VTK output file
 
@@ -367,6 +339,5 @@ do i_var =1, n_vectors
 enddo
 
 close(ivtk)
-
-end
-
+ 
+end program jorek2vtk

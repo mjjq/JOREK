@@ -11,6 +11,8 @@
 !!
 module live_data
   
+#include "version.h"
+  
   implicit none
   
   private
@@ -50,6 +52,7 @@ module live_data
     open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='REPLACE', action='WRITE')
     
     ! --- Write some general information
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@svn_version: ', SVN_VERSION
     write(LIVE_DATA_HANDLE,'(A,I5)') '@jorek_model: ', jorek_model
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane

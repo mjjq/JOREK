@@ -1,7 +1,6 @@
+!> Initialise input parameters and read the input namelist
 subroutine initialise_parameters(my_id)
-!-----------------------------------------------------------------------
-! Initialise input parameters and read the input namelist
-!-----------------------------------------------------------------------
+
 use tr_module
 use phys_module
 
@@ -203,16 +202,10 @@ if (my_id .eq. 0) then
   ! --- Read numerical profiles for rho, T, and ff'.
   call read_num_profiles()
   
+  ! --- Determine the derivatives of the numerical input profiles.
+  call derive_num_profiles()
+  
 endif
-
-! --- Broadcast input parameters from MPI thread 0 to the others.
-call broadcast_phys(my_id)
-
-! --- Broadcast numerical input profiles from MPI thread 0 to the others.
-call broadcast_num_profiles(my_id)
-
-! --- Determine the derivatives of the numerical input profiles.
-call derive_num_profiles()
 
 return
 end subroutine initialise_parameters

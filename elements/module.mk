@@ -29,6 +29,7 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/mod_basis_at_gaussian.f90		\
 	$(DIR)/initialise_basis.f90			\
 	$(DIR)/basis_functions.f90			\
+	$(DIR)/basis_functions1.f90 	\
 	$(DIR)/basis_functions2.f90			\
 	$(DIR)/hermite_1d.f90				\
 	$(DIR)/interp.f90				\
@@ -50,6 +51,7 @@ JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 	$(DIR)/mod_basis_at_gaussian.f90	\
 	$(DIR)/initialise_basis.f90		\
 	$(DIR)/basis_functions.f90		\
+	$(DIR)/basis_functions1.f90		\
 	$(DIR)/basis_functions2.f90		\
 	$(DIR)/interp.f90			\
 	$(DIR)/interp_RZ.f90

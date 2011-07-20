@@ -1,7 +1,6 @@
+!> Initialise input parameters and read the input namelist
 subroutine initialise_parameters(my_id)
-!-----------------------------------------------------------------------
-! Initialise input parameters and read the input namelist
-!-----------------------------------------------------------------------
+
 use tr_module
 use phys_module
 
@@ -165,22 +164,25 @@ if (my_id .eq. 0) then
   
   tstep_in = tstep
 
+  if (sum(nstep_n) .gt. 0) then
+    nstep = sum(nstep_n)
+  else
+    tstep_n    = 0.d0
+    tstep_n(1) = tstep
+    nstep_n    = 0
+    nstep_n(1) = nstep
+  endif
+  
   if (nstep .gt. 0) call tr_allocate(energies,1,n_tor,1,2,1,nstep,"energies")
   if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime")
 
   ! --- Read numerical profiles for rho, T, and ff'.
   call read_num_profiles()
   
+  ! --- Determine the derivatives of the numerical input profiles.
+  call derive_num_profiles()
+  
 endif
-
-! --- Broadcast input parameters from MPI thread 0 to the others.
-call broadcast_phys(my_id)
-
-! --- Broadcast numerical input profiles from MPI thread 0 to the others.
-call broadcast_num_profiles(my_id)
-
-! --- Determine the derivatives of the numerical input profiles.
-call derive_num_profiles()
 
 return
 end subroutine initialise_parameters

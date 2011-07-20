@@ -35,7 +35,7 @@ program JOREK2
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
   use solve_mat_n
-  use tr_module 
+  use tr_module
   
   implicit none
   
@@ -149,8 +149,9 @@ program JOREK2
     write(*,*) '****************************************'
     write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
     write(*,*) '****************************************'
-    write(*,*) ' number of cpus : ',n_cpu
-    write(*,*) ' SVN_VERSION : ', SVN_VERSION
+    write(*,*) ' number MPI processes     : ', n_cpu
+    write(*,*) ' number of OpenMP threads : ', nbthreads
+    write(*,*) ' svn version              : ', SVN_VERSION
   end if
   
   ! --- Initialise timing
@@ -188,7 +189,7 @@ program JOREK2
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
-  call initialise_parameters(my_id)
+  call initialise_and_broadcast_parameters(my_id)
   call vacuum_init(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
 
   ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).

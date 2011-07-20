@@ -6,16 +6,17 @@ module elements_nodes_neighbours
   type (type_element_list) :: element_list
   integer,allocatable      :: element_neighbours(:,:)
 
-end module
+end module elements_nodes_neighbours
 
-program jorek2_poincare
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+
+
+program jorek2_fieldlines_vtk
+
 use data_structure
 use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
+use tr_module
 
 implicit none
 
@@ -32,44 +33,18 @@ real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, R
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, value_out
 character :: buffer*80, lf*1, str1*12, str2*12, str3*24
-integer :: ivtk, i_var
+integer :: ivtk, i_var, my_id, ierr
 
 logical, external :: neighbours
-
-namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                eta, visco, visco_par,                              &
-                restart, regrid,                                    &
-                n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg,                           &
-                SIG_closed, SIG_open, SIG_private, SIG_theta,       &
-                SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
-                nout, xr1, sig1, xr2, sig2,                         &
-                R_begin, R_end, Z_begin, Z_end,                     &
-                R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
-                R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                F0,                                                 &
-                zjz_0, zjz_1, zj_coef,                              &
-                rho_0, rho_1, rho_coef,                             &
-                T_0,   T_1,   T_coef,                               &
-                FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
-                particlesource, heatsource, tauIC,                  &
-                eta_num, visco_num, visco_par_num, D_perp_num,      &
-                pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
-                pellet_radius, pellet_sig, pellet_length,           &
-                pellet_psi, pellet_delta_psi,                       &
-                ellip,tria_u,tria_l,quad_u,quad_l,                  &
-                xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, use_starwall, resistive_wall,         &
-                refinement,                                         &
-                produce_live_data
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_poincare                     *'
 write(*,*) '***************************************'
 write(*,*) ' nperiod : ',n_period
-read(5,in1)
+
+my_id=0
+
+call initialise_parameters(my_id)
 
 call import_restart(node_list,element_list)
 
@@ -475,7 +450,8 @@ close(20)
 
 !--------------------------------------------------- write the binary VTK file
 n_scalars=1
-call tr_allocate(scalar_names,1,n_scalars,"scalar_names")
+!### call tr_allocate(scalar_names,1,n_scalars,"scalar_names")
+allocate(scalar_names(1))
 scalar_names = (/ 'T           '/)
 
 
@@ -529,7 +505,9 @@ enddo
 
 close(ivtk)
 
-end
+end program jorek2_fieldlines_vtk
+
+
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
 use parameters
@@ -577,7 +555,9 @@ delta_s =   psi_t * R / (Zjac * F0) * delta_p
 delta_t = - psi_s * R / (Zjac * F0) * delta_p
 
 return
-end
+end subroutine step
+
+
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
 use parameters
@@ -616,4 +596,4 @@ do i_tor = 1, (n_tor-1)/2
 enddo
 
 return
-end
+end subroutine var_value

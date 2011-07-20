@@ -26,6 +26,52 @@ if (my_id == 0) then
   
   write(*,*)
   write(*,*) '*************************************************'
+  write(*,*) '*          PREPROCESSOR OPTIONS                 *'
+  write(*,*) '*************************************************'
+  write(*,'(1x,a)',advance='no') ' USE_MUMPS                : '
+#ifdef USE_MUMPS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+  
+  write(*,'(1x,a)',advance='no') ' USE_PASTIX               : '
+#ifdef USE_PASTIX
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+  
+  write(*,'(1x,a)',advance='no') ' USE_MURGE                : '
+#ifdef USE_MURGE
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+  
+  write(*,'(1x,a)',advance='no') ' USE_HIPS                 : '
+#ifdef USE_HIPS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+  
+  write(*,'(1x,a)',advance='no') ' USE_BLOCK                : '
+#ifdef USE_BLOCK
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+  
+  write(*,'(1x,a)',advance='no') ' MEMTRACE                 : '
+#ifdef MEMTRACE 
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+  write(*,*)
+  write(*,*) '*************************************************'
   write(*,*) '*          PARAMETERS OF THE JOREK RUN          *'
   write(*,*) '*************************************************'
   write(*,231) 'jorek_model       ', jorek_model

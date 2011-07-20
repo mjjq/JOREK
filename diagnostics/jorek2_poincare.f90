@@ -8,10 +8,11 @@ module elements_nodes_neighbours
   
 end module elements_nodes_neighbours
 
+
+
+!> Create a Poincare plot for a JOREK restart file
 program jorek2_poincare
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+
 use data_structure
 use phys_module
 use basis_at_gaussian
@@ -36,44 +37,16 @@ integer :: i_elm_axis, i_elm_xpoint, ierr
 
 logical, external :: neighbours
 
-namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                eta, visco, visco_par,                              &
-                restart, regrid,                                    &
-                n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg,                           &
-                SIG_closed, SIG_open, SIG_private, SIG_theta,       &
-                SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
-                nout, xr1, sig1, xr2, sig2,                         &
-                R_begin, R_end, Z_begin, Z_end,                     &
-                R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
-                R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                F0,                                                 &
-                zjz_0, zjz_1, zj_coef,                              &
-                rho_0, rho_1, rho_coef,                             &
-                T_0,   T_1,   T_coef,                               &
-                FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
-                particlesource, heatsource, tauIC,                  &
-                eta_num, visco_num, visco_par_num, D_perp_num,      &
-                pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
-                pellet_radius, pellet_sig, pellet_length,           &
-                pellet_psi, pellet_delta_psi,                       &
-                ellip,tria_u,tria_l,quad_u,quad_l,                  &
-                xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, use_starwall, resistive_wall,         &
-                refinement,                                         &
-                produce_live_data
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_poincare                     *'
 write(*,*) '***************************************'
 
-my_id = 0
+my_id=0
+
+call initialise_parameters(my_id)
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
-
-read(5,in1)
 
 call import_restart(node_list,element_list)
 

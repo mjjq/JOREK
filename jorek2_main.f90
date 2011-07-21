@@ -176,7 +176,7 @@ program JOREK2
   end if
   
   refinement    = .false.              ! enable mesh refinement
-  grid_to_wall  = .false.               ! extend the grid to a physical wall
+  grid_to_wall  = .false.              ! extend the grid to a physical wall
   adaptive_time = .false.              ! requires no_mpi for Pastix library
 
   equil = .true.
@@ -633,7 +633,7 @@ program JOREK2
   endif
   
   ! --- Export a restart file before the first timestep
-  if ( (my_id == 0) .and. (nstep > 0) .and. (.not. restart) ) then
+  if ( (my_id == 0) .and. (.not. restart) ) then
     call export_restart(node_list,element_list,'jorek00000.rst')
   end if
 

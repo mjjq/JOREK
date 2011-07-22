@@ -56,7 +56,7 @@ module avoid_neg_dens
   
   
   !> Identify all positions with rho < rho_1
-  subroutine identify_dens_problems()
+  subroutine identify_dens_problems(my_id)
     
     use parameters,        only: n_vertex_max, n_order, n_tor
     use data_structure,    only: type_element, type_node
@@ -64,6 +64,9 @@ module avoid_neg_dens
     use gauss,             only: n_gauss
     use basis_at_gaussian, only: H, HZ
     use phys_module,       only: rho_1
+    
+    ! --- Routine parameters.
+    integer, intent(in) :: my_id
     
     type(type_element) :: element
     type(type_node)    :: node
@@ -76,8 +79,8 @@ module avoid_neg_dens
     
     num_problem_pos(:) = 0
     
-    call find_xpoint(0,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-    call find_axis(0,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
     
     do mp = 1, n_plane
       do ielm = 1, element_list%n_elements

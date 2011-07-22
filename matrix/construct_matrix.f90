@@ -105,7 +105,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   RHS_loc  = 0.d0
 
 #ifdef AVOID_NEG_DENS     
-  call identify_dens_problems()
+  call identify_dens_problems(my_id)
   if ( my_id == 0 ) call output_problem_pos()
 #endif
 

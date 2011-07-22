@@ -23,11 +23,12 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   integer, dimension(n_vertex_max) ::  node_out
   logical :: freeboundary
 
-  write(*,*) '**********************************'
-  write(*,*) '* global_matrix_structure        *'
-  write(*,*) '**********************************'
-  write(*,*) '**********************************'
-  if (freeboundary) write(*,*) ' FREEBOUNDARY is ON'
+  if ( my_id == 0 ) then
+    write(*,*) '**********************************'
+    write(*,*) '* global_matrix_structure        *'
+    write(*,*) '**********************************'
+    if (freeboundary) write(*,*) ' FREEBOUNDARY is ON'
+  end if
   
   n_matrix_block_size = n_tor * n_var
 

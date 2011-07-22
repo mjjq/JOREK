@@ -100,7 +100,7 @@ s=Xgauss(ij_axis(1)) ; t=Xgauss(ij_axis(2))
 
 call mnewtax(node_list,element_list,i_elm_axis,s,t,xerr,ferr,ifail)
 
-if (ifail .ne. 0 ) write(*,*) ' MNEWTAX : ifail = ',ifail
+if ((ifail .ne. 0 ).and.(my_id .eq. 0)) write(*,*) ' MNEWTAX : ifail = ',ifail
 
 call interp(node_list,element_list,i_elm_axis,1,1,s,t,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
 

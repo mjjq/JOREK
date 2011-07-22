@@ -1,6 +1,6 @@
 include config.in
 
-DIRS = timing datatypes models models/$(MODEL) communication elements grids matrix solvers plots diagnostics vacuum refinement tools
+DIRS = timing elements models models/$(MODEL) datatypes communication grids matrix solvers plots diagnostics vacuum refinement tools
 
 MAIN = jorek_$(MODEL)
 
@@ -8,12 +8,13 @@ MAIN = jorek_$(MODEL)
 
 all :   version modules sources $(MAIN)
 
-modules :
+modules : version
+	@make elements/mod_gauss.o
 	@for dir in $(DIRS); do     \
           ($(MAKE) -C $$dir modules) || exit 1; \
         done
 
-version :
+version : 
 	@echo -n "#define SVN_VERSION " > version.h
 	@export LANG=C; svn info | grep 'Revision:' | cut -c10-14 > revision.txt
 	-@test -s revision.txt; \
@@ -256,3 +257,4 @@ jorek_to_helena :
 
 import_eqdsk :
 	$(FC) util/import_eqdsk.f90 -o import_eqdsk $(LIBS)
+

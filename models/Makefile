@@ -19,9 +19,11 @@ all: modules \
      add_pellet.o    \
      log_parameters.o \
      read_num_profiles.o \
-     derive_num_profiles.o
+     derive_num_profiles.o \
+     preset_parameters.o \
+     initialise_and_broadcast_parameters.o
 
-modules : mod_parameters.o mod_phys_module.o mod_pellet.o mod_nodes_elements.o
+modules : mod_parameters.o mod_phys_module.o mod_pellet.o mod_nodes_elements.o mod_avoid_neg_dens.o
 
 clean :
 	rm -f *.mod *.o

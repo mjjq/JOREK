@@ -109,7 +109,7 @@ program JOREK2
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
-  logical                  :: gmres, solve_only, adaptive_time
+  logical                  :: solve_only
   integer*4                :: rank, comm_size 
   real*8                   :: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
   real*8                   :: zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
@@ -120,12 +120,11 @@ program JOREK2
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon, n_aa, iter_prev
-  logical                  :: is_local
+  logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
   integer                  :: index_size, id_elements
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
-  logical                  :: bench_without_plot, grid_to_wall, equil
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
   
@@ -135,63 +134,56 @@ program JOREK2
 
   ! --- Initialize OpenMP threads before MPI_init
   call init_threads()
+  
   ! --- Initialise MPI / threaded MPI
-  !call MPI_INIT(IERR)
   required=MPI_THREAD_MULTIPLE
   call MPI_Init_thread(required,provided,StatInfo)
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)      ! id of each MPI proc
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr) ! number of MPI procs
   my_id = rank
   n_cpu = comm_size
-  call tr_meminit(my_id,n_cpu)
-
+  
   if (my_id == 0) then
     write(*,*) '****************************************'
     write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
     write(*,*) '****************************************'
-    write(*,*) ' number MPI processes     : ', n_cpu
+    write(*,*) ' number of MPI processes  : ', n_cpu
     write(*,*) ' number of OpenMP threads : ', nbthreads
     write(*,*) ' svn version              : ', SVN_VERSION
   end if
   
+  ! --- Initialise memory tracing
+  call tr_meminit(my_id, n_cpu)
+
   ! --- Initialise timing
   call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
   call r3_info_init ()
   
-  ! --- Select solver
-  gmres              = .true.             ! .true. for gmres, .false. for direct solver
-  use_mumps          = .false.            ! Use MUMPS solver
-  use_pastix         = (.not. use_mumps)  ! Use PASTIX solver
-  use_murge          = .false.            ! Use MURGE interface to PASTIX solver
-  use_murge_element  = .false.
+  ! --- Remove file STOP_NOW if it exists
+  if ( my_id == 0 ) then
+    open(42, file='STOP_NOW', iostat=ierr)
+    if ( ierr == 0 ) then
+      close(42, status='delete')
+    end if
+  end if
+
+  ! --- Preset some solver variables
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.
-  pastix_smp_only    = .false.            ! Implies that each MPI group resides within one node!
-  if (n_tor == 1) then
-     gmres = .false.
-     use_murge = .false. 
-     ! MURGE with ntor=1 doesn't work up to now
-     ! because i_tor is not allocated correctly
-  end if
-  
-  refinement    = .false.              ! enable mesh refinement
-  grid_to_wall  = .false.              ! extend the grid to a physical wall
-  adaptive_time = .false.              ! requires no_mpi for Pastix library
-
-  equil = .true.
-  if (jorek_model .eq. 1) equil = .false.
-  
-  ! --- Flag from HSLT
-  bench_without_plot              = .false.    ! .true. for benchmark (mesuring elapsed time without plot phases) 
-  use_matrix_whitout_zeros_pastix = .false.    ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
-  use_matrix_whitout_zeros_mumps  = .false.    ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
-  call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
   call initialise_and_broadcast_parameters(my_id)
+  
+  ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
 
+  ! --- MURGE with ntor=1 doesn't work up to now because i_tor is not allocated correctly
+  if (n_tor == 1) then
+    gmres     = .false.
+    use_murge = .false. 
+  end if
+  
   ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).
   do itor=1, n_tor
     mode(itor)        = int(itor / 2) * n_period
@@ -208,32 +200,33 @@ program JOREK2
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Some checks not to waste any cpu time
-  if (required.ne.provided) then
+  if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_FINALIZE(IERR)
     stop
-  end if
-  
-  if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
+  else if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_FINALIZE(IERR)
     stop
-  end if
-  
-  if ((n_plane < n_tor + 1) .and. (n_tor > 1)) then
-    write(*,*) ' FATAL : n_plane too small ',n_plane,n_tor
+  else if ((n_plane < 2*(n_tor - 1)) .or. (n_plane < 1)) then
+    write(*,*) ' FATAL : n_plane too small. Required: n_plane >= 2*(n_tor-1)'
+    write(*,*) '   n_plane=', n_plane, ', n_tor=', n_tor
     call MPI_FINALIZE(IERR)
     stop
-  end if
-  
-  if ( gmres .and. (nstep > 0) .and. (mod(n_cpu,(n_tor-1)/2+1) /= 0) ) then
+  else if ( gmres .and. (nstep > 0) .and. (mod(n_cpu,(n_tor-1)/2+1) /= 0) ) then
     write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',            &
       (n_tor-1)/2+1,' harmonics'
     call MPI_FINALIZE(IERR)
     stop
+  else if ( use_mumps ) then
+#ifndef USE_MUMPS
+    write(*,*) 'FATAL : use_mumps=.true. is possible only with preprocessor option USE_MUMPS'
+    call MPI_FINALIZE(IERR)
+    stop
+#endif
   end if
   
-  ! --- Open files which will be filled during the code run
+  ! --- Open live data file which will be filled during the code run
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data()
   
   ! --- Initialise ppplib plotting library
@@ -241,14 +234,17 @@ program JOREK2
   
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
+  
   ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
   ! --- n_plane, n_var have to remain the same until the end of the program.
   call new_thread_buffers()
 
-
   call tr_print_memsize("InitStep")
 
-  ! --- Read the restart file to continue a previous JOREK run (if restart is .true.)
+  !***********************************************************************
+  !*                  read restart file                                  *
+  !***********************************************************************
+  
   if ( restart .and. (my_id == 0) ) then
     
     ! --- Read the restart file (jorek_restart.rst)
@@ -414,7 +410,7 @@ program JOREK2
   n_AA  = node_list%n_nodes * (n_order+1)  
   n_AA = 0  
   do inode = 1, node_list%n_nodes  
-     n_AA = max(n_AA,node_list%node(inode)%index(4))  
+    n_AA = max(n_AA,node_list%node(inode)%index(4))  
   end do
   mumps_par%n = n_AA
 
@@ -505,7 +501,7 @@ program JOREK2
      !***********************************************************************
      !*            distribute nodes and elements over cpu's                 *
      !***********************************************************************
-     if ( use_pastix .and. use_murge  .and. use_murge_element .and. gmres ) then
+     if ( use_pastix .and. use_murge .and. use_murge_element .and. gmres ) then
         index_size  = n_cpu_n
         id_elements = my_id_n
      else
@@ -642,7 +638,7 @@ program JOREK2
   !*                          time stepping                              *
   !***********************************************************************
   !***********************************************************************
-
+  
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
   iter_gmres  = 999
@@ -655,8 +651,8 @@ program JOREK2
   
   index_now = index_start  ! index_now: Index of current timestep
 
-  do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
-  do istep = 1, nstep_n(jstep)
+  jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
+  istep_loop: do istep = 1, nstep_n(jstep)
 
      call MPI_Barrier(MPI_COMM_WORLD,ierr)
      call flushc !flush the output stream
@@ -864,9 +860,16 @@ program JOREK2
        write(fileout,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
        call export_restart(node_list,element_list,fileout)
      endif
-
-  enddo                                              ! end of time stepping
-  enddo
+     
+     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
+     inquire(file='STOP_NOW', exist=file_exists)
+     if ( file_exists ) then
+       if ( my_id == 0 ) write(*,*) 'Found file STOP_NOW: Exiting the code.'
+       exit jstep_loop
+     end if
+     
+  enddo istep_loop
+  enddo jstep_loop
   
   !***********************************************************************
   !*                         cleanup  (solvers)                          *

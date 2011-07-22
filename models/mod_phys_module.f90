@@ -18,7 +18,7 @@ module phys_module
   real*8  :: gamma_sheath      !< sheath boundary condition open fieldlines (model303)
   real*8  :: gamma_sheath_i    !< sheath boundary condition open fieldlines (model400)
   real*8  :: gamma_sheath_e    !< sheath boundary condition open fieldlines (model400)
-  real*8  :: density_reflection !< density reflection coeeficient open fieldlines (model303)
+  real*8  :: density_reflection!< density reflection coeeficient open fieldlines (model303)
   integer :: mode(n_tor)       !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout              !< Output a restart file every nout timesteps.
   logical :: restart           !< Restart a code run from the restart file jorek_restart.rst?
@@ -28,6 +28,11 @@ module phys_module
   logical :: refinement        !< Use mesh refinement?
   logical :: bc_natural_open   !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
+  logical :: grid_to_wall      !< extend the grid to a physical wall
+  logical :: adaptive_time     !< requires no_mpi for Pastix library
+  logical :: equil             !< compute equilibrium
+  logical :: bench_without_plot!< .true. for benchmark (mesuring elapsed time without plot phases) 
+  logical :: gmres             !< Use iterative GMRES solver
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'

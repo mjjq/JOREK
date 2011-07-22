@@ -11,6 +11,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use avoid_neg_dens, only: diffusivity_factor
 
 implicit none
 
@@ -333,6 +334,10 @@ do ms=1, n_gauss
 
      D_prof  = D_perp(1)  * ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4)))) &
              + D_perp(6) * (D_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+D_perp(5)+D_perp(3)) /D_perp(4))))
+
+#ifdef AVOID_NEG_DENS     
+     D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
+#endif
 
      ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4)))) &
              + ZK_perp(6) * (ZK_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))

@@ -29,7 +29,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
 
   use data_structure
   use global_distributed_matrix
-  use phys_module
+  use phys_module, only: F0, GAMMA, freeboundary
   USE murge_module
 
   implicit none

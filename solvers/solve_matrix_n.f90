@@ -65,7 +65,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      if (use_mumps) then
 #ifdef USE_MUMPS
         !----------------Pre-processing to remove nonzeros in A (MUMPS)
-        if (use_matrix_whitout_zeros_mumps) then
+        if (no_zeros_mumps) then
            call tr_allocate(tmp,1,mumps_par%NZ,"tmp")
            tmp(:)=0
            !
@@ -145,7 +145,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         if (my_id_n .eq. 0) then
 
            !----------------Pre-processing to remove nonzeros in A (PASTIX)
-           if (use_matrix_whitout_zeros_pastix) then
+           if (no_zeros_pastix) then
               call tr_allocate(tmp,1,mumps_par%NZ,"tmp")
               tmp(:)=0
               !
@@ -284,7 +284,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            call split_brodcast(type,MPI_COMM_N)
 
            !----------------PaStiX need an input matrix with symmetric structure   
-           IF (use_matrix_whitout_zeros_pastix) then
+           IF (no_zeros_pastix) then
               CALL pastix_fortran_checkmatrix(pastix_data,MPI_COMM_WORLD,pastix_verb, &
                    pastix_sym,1,mumps_par%N,mumps_par%JCN,mumps_par%IRN,mumps_par%A,-1,1)
 

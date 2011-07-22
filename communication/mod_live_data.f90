@@ -48,11 +48,10 @@ module live_data
       return
     end if
     
-    ! --- Open the data files.
     open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='REPLACE', action='WRITE')
     
     ! --- Write some general information
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@svn_version: ', SVN_VERSION
+    write(LIVE_DATA_HANDLE,*)  '@svn_version: ', SVN_VERSION
     write(LIVE_DATA_HANDLE,'(A,I5)') '@jorek_model: ', jorek_model
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane
@@ -94,6 +93,8 @@ module live_data
     end do
     write(LIVE_DATA_HANDLE,*)
     
+    close(LIVE_DATA_HANDLE)
+    
   end subroutine init_live_data
   
   
@@ -112,6 +113,8 @@ module live_data
     
     if ( .not. produce_live_data ) return
     
+    open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='OLD', access='APPEND', action='WRITE')
+    
     ! --- Write data to the files.
     write(LIVE_DATA_HANDLE,'(A,I6,1X,ES17.9)') '@times:', index, xtime(index)
     write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@energies:', xtime(index), energies(1:n_tor,1:2,index)
@@ -127,6 +130,8 @@ module live_data
         (xtime(index)+xtime(index-1))/2.d0, growth_rates
     end if
     
+    close(LIVE_DATA_HANDLE)
+    
   end subroutine write_live_data
   
   
@@ -140,7 +145,7 @@ module live_data
     
     if ( .not. produce_live_data ) return
     
-    close(LIVE_DATA_HANDLE)
+    ! -nothing to be done currently-
     
   end subroutine finalize_live_data
 

@@ -1,9 +1,11 @@
+!> Construct the main matrix from the contributions of the Bezier elements.
+!!
+!! The element contributions are determined by element_matrix(_fft). Additional
+!! contributions from boundary conditions and the free boundary extension are
+!! added by external routine calls.
 subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
                             xpoint2,psi_axis,psi_bnd,Z_xpoint)
-  !---------------------------------------------------------------
-  ! collect the element matrices into one large sparse matrix
-  ! in coordinate format
-  !---------------------------------------------------------------
+  
   use tr_module 
   use parameters
   use data_structure
@@ -12,33 +14,41 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   use pellet_module
   use nodes_elements
   use vacuum_response, only: vacuum_boundary_integral, NEW_VACUUM
+  use avoid_neg_dens,  only: identify_dens_problems, output_problem_pos, diffusivity_factor
   use mod_ch_nod_rhs_elm
   use mod_boundary_matrix_open
   use mod_elt_matrix
   use mod_elt_matrix_fft
+  
   implicit none
+  
   include 'mpif.h'
 #include "r3_info.h"
 
-  type (type_element)       :: element
-  type (type_node)          :: nodes(n_vertex_max)
-  type (type_element)       :: element_father
-  type (type_node)          :: nodes_father(n_vertex_max)
+  ! --- Routine parameters
+  integer, intent(in) :: my_id
+  integer, intent(in) :: local_elms(*)
+  integer, intent(in) :: n_local_elms
+  integer, intent(in) :: index_min
+  integer, intent(in) :: index_max
+  real*8,  intent(in) :: psi_axis
+  real*8,  intent(in) :: psi_bnd
+  real*8,  intent(in) :: Z_xpoint
+  logical, intent(in) :: xpoint2
 
-! --- input variables
-  integer :: my_id, local_elms(*), n_local_elms, index_min, index_max,index_min_loc, index_max_loc
-  real*8  :: psi_axis, psi_bnd, Z_xpoint
-  logical :: xpoint2
-
-!--- internal variables
-  real*8, pointer :: rhs_loc(:)
+  !--- Internal variables
+  type (type_element) :: element
+  type (type_node)    :: nodes(n_vertex_max)
+  type (type_element) :: element_father
+  type (type_node)    :: nodes_father(n_vertex_max)
+  real*8, pointer     :: rhs_loc(:)
   real*8, dimension (:,:), pointer  :: ELM
   real*8, dimension (:,:), pointer  :: ELM2
   real*8, dimension (:)  , pointer  :: RHS
   real*8, dimension (:)  , pointer  :: RHS2
   integer :: i_bnd, i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
   integer :: index_node1, index_node2, i_order, k_order, ielm, ierr
-  integer :: ijA_position
+  integer :: ijA_position, index_min_loc, index_max_loc
   integer :: index_large_i, index_large_k, ilarge2, vertex(2), direction(2)
   integer :: omp_nthreads, omp_tid
   integer :: node_out(n_vertex_max)
@@ -94,6 +104,10 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
 
+#ifdef AVOID_NEG_DENS     
+  call identify_dens_problems()
+  if ( my_id == 0 ) call output_problem_pos()
+#endif
 
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &

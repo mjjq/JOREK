@@ -3,6 +3,9 @@
 subroutine log_parameters(my_id)
 
 use phys_module
+use mumps_module,  only: use_mumps, no_zeros_mumps
+use murge_module,  only: use_murge, use_murge_element
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
 
 implicit none
 
@@ -26,8 +29,11 @@ if (my_id == 0) then
   
   write(*,*)
   write(*,*) '*************************************************'
-  write(*,*) '*          PREPROCESSOR OPTIONS                 *'
+  write(*,*) '*          PARAMETERS OF THE JOREK RUN          *'
   write(*,*) '*************************************************'
+  write(*,*)
+  write(*,*) 'PREPROCESSOR OPTIONS'
+  write(*,*) '-------------------------------------------------'
   write(*,'(1x,a)',advance='no') ' USE_MUMPS                : '
 #ifdef USE_MUMPS
   write(*,*) 'on'
@@ -70,10 +76,16 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' AVOID_NEG_DENS           : '
+#ifdef AVOID_NEG_DENS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,*)
-  write(*,*) '*************************************************'
-  write(*,*) '*          PARAMETERS OF THE JOREK RUN          *'
-  write(*,*) '*************************************************'
+  write(*,*) 'HARD-CODED PARAMETERS'
+  write(*,*) '-------------------------------------------------'
   write(*,231) 'jorek_model       ', jorek_model
   write(*,231) 'n_var             ', n_var
   do ivar = 1, n_var
@@ -96,6 +108,8 @@ if (my_id == 0) then
   write(*,231) 'n_pieces_max      ', n_pieces_max
   write(*,231) 'n_degrees         ', n_degrees
   write(*,*)
+  write(*,*) 'NAMELIST INPUT PARAMETERS'
+  write(*,*) '-------------------------------------------------'
   write(*,230) 'tstep             ', tstep
   write(*,231) 'nstep             ', nstep
   write(*,230) 'tstep_n           ', tstep_n
@@ -167,6 +181,21 @@ if (my_id == 0) then
     write(*,237) 'T_file            ', trim(T_file)
   end if
   
+  if ( jorek_model == 400 ) then
+    write(*,230) 'Te_0               ', Te_0
+    write(*,230) 'Te_1               ', Te_1
+    write(*,230) 'Te_coef            ', Te_coef(1:5)
+    write(*,230) 'Ti_0               ', Ti_0
+    write(*,230) 'Ti_1               ', Ti_1
+    write(*,230) 'Ti_coef            ', Ti_coef(1:5)
+    write(*,230) 'ZK_e_perp          ', ZK_e_perp(1:5)
+    write(*,230) 'ZK_i_perp          ', ZK_i_perp(1:5)
+    write(*,230) 'heatsource_e       ', heatsource_e
+    write(*,230) 'heatsource_i       ', heatsource_i
+    write(*,230) 'K_e_par            ', K_e_par
+    write(*,230) 'K_i_par            ', K_i_par
+  end if
+  
   if ( .not. num_ffprime ) then
     write(*,230) 'FF_0              ', FF_0
     write(*,230) 'FF_1              ', FF_1
@@ -187,15 +216,24 @@ if (my_id == 0) then
   write(*,230) 'visco_par_num     ', visco_par_num
   write(*,230) 'D_perp_num        ', D_perp_num
   write(*,230) 'ZK_perp_num       ', ZK_perp_num
-  write(*,230) 'pellet_amplitude  ', pellet_amplitude
-  write(*,230) 'pellet_R          ', pellet_R
-  write(*,230) 'pellet_Z          ', pellet_Z
-  write(*,230) 'pellet_phi        ', pellet_phi
-  write(*,230) 'pellet_radius     ', pellet_radius
-  write(*,230) 'pellet_sig        ', pellet_sig
-  write(*,230) 'pellet_length     ', pellet_length
-  write(*,230) 'pellet_psi        ', pellet_psi
-  write(*,230) 'pellet_delta_psi  ', pellet_delta_psi
+  write(*,232) 'use_pellet        ', use_pellet
+  
+  if ( use_pellet ) then
+    write(*,230) 'pellet_amplitude  ', pellet_amplitude
+    write(*,230) 'pellet_R          ', pellet_R
+    write(*,230) 'pellet_Z          ', pellet_Z
+    write(*,230) 'pellet_phi        ', pellet_phi
+    write(*,230) 'pellet_radius     ', pellet_radius
+    write(*,230) 'pellet_sig        ', pellet_sig
+    write(*,230) 'pellet_length     ', pellet_length
+    write(*,230) 'pellet_psi        ', pellet_psi
+    write(*,230) 'pellet_delta_psi  ', pellet_delta_psi
+    write(*,230) 'pellet_density    ', pellet_density
+    write(*,230) 'pellet_particles  ', pellet_particles
+    write(*,230) 'pellet_velocity_R ', pellet_velocity_R
+    write(*,230) 'pellet_velocity_Z ', pellet_velocity_Z
+  end if
+  
   write(*,*)
   write(*,230) 'ellip             ', ellip
   write(*,230) 'tria_u            ', tria_u
@@ -223,7 +261,26 @@ if (my_id == 0) then
     write(*,232) 'resistive_wall    ', resistive_wall
   end if
   
+  write(*,230) 'Q_bar             ', Q_bar
+  write(*,230) 'sigma             ', sigma
+  write(*,230) 'density_reflection', density_reflection
+  write(*,230) 'central_density   ', central_density
+  write(*,230) 'gamma_sheath      ', gamma_sheath
+  write(*,232) 'bc_natural_open   ', bc_natural_open
+  write(*,232) 'produce_live_data ', produce_live_data
+  write(*,232) 'gmres             ', gmres
+  write(*,232) 'use_mumps         ', use_mumps
+  write(*,232) 'use_pastix        ', use_pastix
+  write(*,232) 'use_murge         ', use_murge
+  write(*,232) 'use_murge_element ', use_murge_element
+  write(*,232) 'pastix_smp_only   ', pastix_smp_only
   write(*,232) 'refinement        ', refinement
+  write(*,232) 'grid_to_wall      ', grid_to_wall
+  write(*,232) 'adaptive_time     ', adaptive_time
+  write(*,232) 'equil             ', equil
+  write(*,232) 'bench_without_plot', bench_without_plot
+  write(*,232) 'no_zeros_mumps    ', no_zeros_mumps
+  write(*,232) 'no_zeros_pastix   ', no_zeros_pastix
   write(*,*)
   
 end if

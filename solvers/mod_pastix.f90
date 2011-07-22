@@ -7,7 +7,7 @@ module pastix_module             ! PastiX specific variables
   integer,allocatable   :: ihwb(:),iwk(:)
   integer               :: n_block, nnz_block, block_size, block_size2
 
-  logical               :: use_pastix, pastix_initialised, pastix_analysed, pastix_smp_only, use_matrix_whitout_zeros_pastix
+  logical               :: use_pastix, pastix_initialised, pastix_analysed, pastix_smp_only, no_zeros_pastix
 
   integer, parameter    :: pastix_facto    = 2
   integer, parameter    :: pastix_rhs      = 0

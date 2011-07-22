@@ -9,7 +9,7 @@ module mumps_module
 #endif
   
   type (DMUMPS_STRUC) :: mumps_par
-  logical             :: use_mumps,use_matrix_whitout_zeros_mumps
+  logical             :: use_mumps,no_zeros_mumps
   integer             :: MPI_COMM_MUMPS_EQUIL, MPI_GROUP_MUMPS_EQUIL
   
 end module mumps_module

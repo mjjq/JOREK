@@ -4,6 +4,9 @@ subroutine Broadcast_phys(my_id)
 !----------------------------------------------------------
 use tr_module
 use phys_module
+use mumps_module,  only: use_mumps, no_zeros_mumps
+use murge_module,  only: use_murge, use_murge_element
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
 
 implicit none
 
@@ -23,7 +26,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( 160 * IDBL_EXT + (14+n_tor) * INT_EXT + 12 * ILOG_EXT + 3*512 * CHAR_EXT )
+bufsize = ( 160 * IDBL_EXT + (14+n_tor) * INT_EXT + 25 * ILOG_EXT + 3*512 * CHAR_EXT )
 
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastp_buffer")
@@ -128,6 +131,20 @@ if (my_id .eq. 0) then
   call MPI_PACK(num_rho,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_T,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_ffprime,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
+  call MPI_PACK(gmres,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(use_mumps,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(use_pastix,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(use_murge,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(use_murge_element,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(pastix_smp_only,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(refinement,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(grid_to_wall,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(adaptive_time,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(equil,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(bench_without_plot,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(no_zeros_pastix,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(no_zeros_mumps,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 endif
 
@@ -234,6 +251,20 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,num_rho,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,num_T,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,num_ffprime,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+
+  call MPI_UNPACK(buffer,bufsize,position,gmres,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,use_mumps,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,use_pastix,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,use_murge,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,use_murge_element,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,pastix_smp_only,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,refinement,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,grid_to_wall,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,adaptive_time,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,equil,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,bench_without_plot,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,no_zeros_pastix,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,no_zeros_mumps,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
 endif
 

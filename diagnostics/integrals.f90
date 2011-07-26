@@ -1,8 +1,8 @@
-subroutine Integrals(node_list,element_list,Bgeo,aminor,psi_limit,current,beta_p,beta_t,beta_n,&
-                     density,density_in,density_out,pressure,pressure_in,pressure_out)
-!---------------------------------------------------------------
-!
-!---------------------------------------------------------------
+!> Determines some integrals over the JOREK computational domain to determine the total current etc.
+subroutine Integrals(node_list, element_list, Bgeo, aminor, psi_limit, current,                    &
+                     beta_p, beta_t, beta_n, density, density_in, density_out,                     &
+                     pressure, pressure_in, pressure_out)
+
 use parameters
 use data_structure
 use Gauss
@@ -11,21 +11,32 @@ use phys_module
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+! --- Routine parameters
+type(type_node_list),    intent(in)    :: node_list
+type(type_element_list), intent(in)    :: element_list
+real*8,                  intent(out)   :: Bgeo
+real*8,                  intent(in)    :: aminor
+real*8,                  intent(in)    :: psi_limit
+real*8,                  intent(out)   :: current
+real*8,                  intent(out)   :: beta_p
+real*8,                  intent(out)   :: beta_t
+real*8,                  intent(out)   :: beta_n
+real*8,                  intent(out)   :: density
+real*8,                  intent(out)   :: density_in
+real*8,                  intent(out)   :: density_out
+real*8,                  intent(out)   :: pressure
+real*8,                  intent(out)   :: pressure_in
+real*8,                  intent(out)   :: pressure_out
+
+! --- Local variables
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
-
-real*8     :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
-real*8     :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
+real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
+real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 real*8     :: eq_g(n_var,n_gauss,n_gauss), eq_s(n_var,n_gauss,n_gauss), eq_t(n_var,n_gauss,n_gauss)
-
 integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
-real*8     :: current, beta_p, beta_n, beta_t, MU_zero, aminor
-real*8     :: xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area, PI, Bgeo, psi_limit
-real*8     :: rho_00, T_00, Ti_00, Te_00
-real*8     :: density, density_in, density_out,  pressure, pressure_in, pressure_out
-real*8     :: current_in, current_out 
+real*8     :: MU_zero, xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area, PI
+real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
 
 write(*,*) '***************************************'
@@ -49,7 +60,7 @@ Bgeo = F0 / R_geo
 
 PI = 2.d0*asin(1.d0)
 
-do ife =1,  element_list%n_elements
+do ife =1, element_list%n_elements
 
   element = element_list%element(ife)
 
@@ -175,4 +186,4 @@ write(*,'(A,5f10.5)') 'pressure (total/in/out) : ',pressure, pressure_in, pressu
 write(*,'(A,5f10.5)') 'current  (in/out)       : ',current_in, current_out 
 
 return
-end
+end subroutine integrals

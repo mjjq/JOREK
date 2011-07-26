@@ -419,6 +419,7 @@ program JOREK2
   call tr_debug_write("JMAIN:End_init node_list",node_list%n_nodes)
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
+  !if ( freeboundary .and. (my_id==0) ) call export_boundary(node_list, boundary_list, bnd_node_list)
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   !***********************************************************************
@@ -797,7 +798,7 @@ program JOREK2
 
      else
         write(*,*) ' TIME STEP SKIPPED !', iter_gmres
-	exit
+  exit
      endif
 
 !     if ( freeboundary .and. (.not. resistive_wall) ) call boundary_check()
@@ -901,7 +902,7 @@ program JOREK2
 
            elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
-              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,null(),null(),null(), &
                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
            endif
 
@@ -1004,12 +1005,12 @@ program JOREK2
              call temperature_i(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint, &
            		      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)	   		    
              call temperature_e(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint, &
-	   		      zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)          
-	     zT = zTi + zTe
+              zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)          
+       zT = zTi + zTe
              dT_dpsi = dTi_dpsi + dTe_dpsi           
            else
-	     call temperature(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint, &
-           		      zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+       call temperature(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint, &
+                    zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
            endif
            call FFprime(    xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
                 zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
@@ -1071,6 +1072,7 @@ end program JOREK2
 !! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/globals_func.html">subroutines and functions</a>, and
 !! - routine parameters.
 !!
+!! <img src="JOREK_DOC.jpeg" style="border:1px solid black;float:right"/>
 !! Background information on the following topics is covered in a seperate documentation
 !! available in the docu/ folder of the JOREK repository as LaTeX source or
 !! <a href="JOREK_DOC.pdf">online as PDF</a>:

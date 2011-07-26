@@ -1,7 +1,6 @@
+!> Export plasma boundary and profiles for later use in HELENA
 subroutine export_helena(node_list,element_list,bnd_elm_list)
-!****************************************************************************
-!* export plasma boundary and profiles for later use in HELENA              *
-!****************************************************************************
+
 use tr_module 
 use parameters
 use data_structure
@@ -11,11 +10,7 @@ implicit none
 
 interface
    subroutine find_flux_surfaces(xpoint,node_list,element_list,surface_list)
-     !-----------------------------------------------------------------------
-     ! finds fluxsurfaces by finding crossings at the edge of an element
-     !-----------------------------------------------------------------------
      use data_structure
-     
      implicit none
      logical                  :: xpoint
      type (type_node_list)    :: node_list
@@ -24,12 +19,14 @@ interface
    end subroutine find_flux_surfaces
 end interface
 
-type (type_node_list)        :: node_list
-type (type_element_list)     :: element_list
-type (type_bnd_element_list) :: bnd_elm_list
+! --- Routine parameters
+type (type_node_list),        intent(in)    :: node_list
+type (type_element_list),     intent(in)    :: element_list
+type (type_bnd_element_list), intent(in)    :: bnd_elm_list
+
+! --- Local variables
 type (type_surface_list)     :: surface_list
 real*8, allocatable      :: rplot(:), zplot(:)
-
 real*8 :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
 real*8 :: psi_lim,R_lim,Z_lim
 real*8 :: psi_bnd, Rmin, Rmax, rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2 
@@ -63,7 +60,7 @@ call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_
 
 psi_bnd = 0.d0
 Z_xpoint = -99.d0
-	 
+   
 if (xpoint) then
   call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
   if (ifail .ne. 1) then      
@@ -233,8 +230,8 @@ do i=2, surface_list%n_psi
         call interp(node_list,element_list,i_elm,6,1,ri,si,Ti0gi,dTi0gi_dr,dTi0gi_ds,dTi0gi_drs,dTi0gi_drr,dTi0gi_dss)
         call interp(node_list,element_list,i_elm,8,1,ri,si,Te0gi,dTe0gi_dr,dTe0gi_ds,dTe0gi_drs,dTe0gi_drr,dTe0gi_dss)
         T0gi     = Ti0gi + Te0gi
-	dT0gi_dr = dTi0gi_dr + dTe0gi_dr
-	dT0gi_ds = dTi0gi_ds + dTe0gi_ds
+  dT0gi_dr = dTi0gi_dr + dTe0gi_dr
+  dT0gi_ds = dTi0gi_ds + dTe0gi_ds
       else
         call interp(node_list,element_list,i_elm,6,1,ri,si,T0gi,dT0gi_dr,dT0gi_ds,dT0gi_drs,dT0gi_drr,dT0gi_dss)
       endif      

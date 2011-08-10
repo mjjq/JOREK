@@ -16,7 +16,7 @@ subroutine resistive_wall_starwall(my_id, node_list, bnd_elm_list, bnd_node_list
   type(type_bnd_element_list), intent(in) :: bnd_elm_list    ! List of boundary elements
   type(type_bnd_node_list),    intent(in) :: bnd_node_list    ! List of boundary nodes
 
-  integer :: dim(2)
+  integer :: dim(2), err
   integer :: dim1, i, j, k
   real*8  :: TWOPI, a, b
   
@@ -34,23 +34,23 @@ subroutine resistive_wall_starwall(my_id, node_list, bnd_elm_list, bnd_node_list
   
   ! --- Read 'EE' matrix.
   dim(:) = response_index(bnd_node_list%n_bnd_nodes, n_tor, 2)
-  call read_response_matrix( matrix_ee, dim, 'starwall_m_ee' )
+  call read_response_matrix( matrix_ee, dim, 'starwall_m_ee', err )
   matrix_ee(:,:) = matrix_ee(:,:) * TWOPI
 
 
   ! --- Read 'EY' matrix.
   dim(:) = (/ response_index(bnd_node_list%n_bnd_nodes, n_tor, 2), n_wall_curr /)
-  call read_response_matrix( matrix_ey, dim, 'starwall_m_ey' )
+  call read_response_matrix( matrix_ey, dim, 'starwall_m_ey', err )
   matrix_ey(:,:) = matrix_ey(:,:) * TWOPI
   
   
   ! --- Read 'YE' matrix.
   dim(:) = (/ n_wall_curr, response_index(bnd_node_list%n_bnd_nodes, n_tor, 2) /)
-  call read_response_matrix( matrix_ye, dim, 'starwall_m_ye' )
+  call read_response_matrix( matrix_ye, dim, 'starwall_m_ye', err )
   
   
   ! --- Read 'YY' matrix (diagonal matrix).
-  call read_response_diagonal( diagonal_yy, n_wall_curr, 'starwall_d_yy' )
+  call read_response_diagonal( diagonal_yy, n_wall_curr, 'starwall_d_yy', err )
   
   
   ! --- Prepare the wall current array.

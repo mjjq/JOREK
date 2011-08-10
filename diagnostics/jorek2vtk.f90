@@ -175,7 +175,7 @@ do i=1,element_list%n_elements
 
 	  ps0 = scalars(inode,1)
           psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-          if ((psi_norm .lt. 1.d0) .and. (Z .lt. Z_xpoint)) then
+          if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint)) then
             psi_norm = 2.d0 - psi_norm
           endif
 
@@ -185,7 +185,7 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
           call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-          call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+          if ( jorek_model >= 300 ) call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
 
           if ((xjac .gt. 1.d-6)) then      ! avoid the axis
 

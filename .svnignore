@@ -10,3 +10,4 @@ jorek2_poincare
 *.lst
 F*.f
 *.optdbg
+version.h

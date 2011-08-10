@@ -314,7 +314,7 @@ program JOREK2
       
     end if
     
-    ! --- Send boundary elements to different MPI threads
+    ! --- Send boundary elements to other MPI procs
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
@@ -398,10 +398,22 @@ program JOREK2
 #endif
     if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars")
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars")
+  
+  else if_not_restart
+    
+    ! --- Determine boundary information from the grid
+    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
+    
+    ! --- Fill the vacuum response matrices for freeboundary computations
+    if ( freeboundary_equil ) call import_external_fields()
+    if ( freeboundary .or. freeboundary_equil ) call get_vacuum_response(my_id, node_list,           &
+      bnd_elm_list, bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
+    if ( freeboundary .or. freeboundary_equil .and. NEW_VACUUM ) call update_response(tstep,         &
+      freeboundary_equil, resistive_wall)
     
   end if if_not_restart
   call tr_print_memsize("AfterEquilibrium")
-  
+    
   ! --- Broadcast grid information and input parameters to other MPI procs
   call broadcast_elements(my_id, element_list)                ! elements
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) ! boundary elements
@@ -413,13 +425,12 @@ program JOREK2
     n_AA = max(n_AA,node_list%node(inode)%index(4))  
   end do
   mumps_par%n = n_AA
-
+  
   call tr_debug_write("JMAIN:End_init elt_list",element_list%n_elements)
   call tr_debug_write("JMAIN:End_init bnd_elt_list",bnd_elm_list%n_bnd_elements)
   call tr_debug_write("JMAIN:End_init node_list",node_list%n_nodes)
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
-  !if ( freeboundary .and. (my_id==0) ) call export_boundary(node_list, boundary_list, bnd_node_list)
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   !***********************************************************************

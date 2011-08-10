@@ -16,8 +16,8 @@ module vacuum
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
   
   !> @name Resistive wall only
-  real*8              :: wall_resistivity    = 0.d0      !< Resistivity of the external wall @todo Units etc.???
-  real*8              :: wall_thickness      = 1.d0      !< Thickness of the external wall @todo Units etc.???
+  real*8              :: wall_resistivity    = 0.d0      !< Resistivity of the external wall @todo Units etc.??? @todo Make input parameter
+  real*8              :: wall_thickness      = 1.d0      !< Thickness of the external wall @todo Units etc.??? @todo Make input parameter
   integer             :: n_wall_curr                     !< Number of wall current potentials.
   real*8, allocatable :: wall_curr(:)                    !< Wall current potentials (\f$Y_k\f$ in the documentation).
 

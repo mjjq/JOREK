@@ -9,7 +9,7 @@
 
 function usage() {
   echo ""
-  echo "Usage: `basename $0` [-h -q <qtty> -ps -(no)log]"
+  echo "Usage: `basename $0` [-h -f <file> -l -q <qtty> -(no)log]"
   echo ""
   echo "  -h         Print this usage information"
   echo "  -f <file>  Take data from <file> instead of 'macroscopic_vars.dat'"
@@ -46,7 +46,6 @@ if [ ! `which xmgrace` ]; then
 fi
 
 # --- Evaluate command line parameters
-ps=0
 qtty="energies"
 logy=1
 file="macroscopic_vars.dat"

@@ -142,14 +142,18 @@ module vacuum_response
     ! --- Local variables
     integer           :: dim(2)
     real*8            :: TWOPI
-    integer           :: i, i_starw, n, is_sin
+    integer           :: i, i_starw, n, is_sin, err
     
     write(*,*) LOG_BEGIN_MARKER//' Reading STARWALL response matrices'
     TWOPI = 8.d0 * atan(1.d0)
     
     ! --- Determine STARWALL harmonics
     if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' Determining STARWALL harmonics'
-    open(42, file='starwall_harmonics', status='old', action='read')
+    open(42, file='starwall_harmonics', status='old', action='read', iostat=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR: Could not open file "starwall_harmonics".'
+      stop      
+    end if
     read(42,*) n_starwall_harmonics
     if ( allocated(starwall_harmonics) ) deallocate( starwall_harmonics )
     allocate( starwall_harmonics(n_starwall_harmonics) )
@@ -194,27 +198,55 @@ module vacuum_response
       write(*,*) 'Reading resistive wall matrices.'
       ! (Determine number of wall currents)
       write(*,*) LOG_BEGIN_MARKER//' Determining number of wall currents'
-      open(42, FILE='starwall_d_yy', status='old', action='read')
+      open(42, FILE='starwall_d_yy', status='old', action='read', iostat=err)
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not open file "starwall_d_yy".'
+        stop      
+      end if
       read(42,*) n_wall_curr
       write(*,'(1x,a,i7)') 'n_wall_curr=', n_wall_curr
       close(42)
       write(*,*) LOG_END_MARKER//' Determining number of wall currents'
       ! (EE matrix)
       dim(:) = n_dof_starwall
-      call read_response_matrix( starwall_m_ee, dim, 'starwall_m_ee' )
+      call read_response_matrix( starwall_m_ee, dim, 'starwall_m_ee', err )
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not read starwall_m_ee matrix.'
+        stop      
+      end if
       ! (EY matrix)
       dim(:) = (/ n_dof_starwall, n_wall_curr /)
-      call read_response_matrix( starwall_m_ey, dim, 'starwall_m_ey' )
+      call read_response_matrix( starwall_m_ey, dim, 'starwall_m_ey', err )
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not read starwall_m_ey matrix.'
+        stop      
+      end if
       ! (YE matrix)
       dim(:) = (/ n_wall_curr, n_dof_starwall /)
-      call read_response_matrix( starwall_m_ye, dim, 'starwall_m_ye' )
+      call read_response_matrix( starwall_m_ye, dim, 'starwall_m_ye', err )
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not read starwall_m_ye matrix.'
+        stop      
+      end if
       ! (YY diagonal matrix)
-      call read_response_diagonal( starwall_d_yy, n_wall_curr, 'starwall_d_yy' )
+      call read_response_diagonal( starwall_d_yy, n_wall_curr, 'starwall_d_yy', err )
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not read starwall_d_yy diagonal matrix.'
+        stop      
+      end if
     else
       write(*,*) 'Reading ideal wall matrix.'
       dim(:) = n_dof_starwall
-      call read_response_matrix( starwall_m_id, dim, 'starwall_m_id' )
-      call read_response_matrix( starwall_m_nw, dim, 'starwall_m_nw' )
+      call read_response_matrix( starwall_m_id, dim, 'starwall_m_id', err )
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not read starwall_m_id matrix.'
+        stop      
+      end if
+      call read_response_matrix( starwall_m_nw, dim, 'starwall_m_nw', err )
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not read starwall_m_nw matrix.'
+        stop      
+      end if
     end if
     if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' Reading matrices'
     
@@ -834,25 +866,30 @@ module vacuum_response
   
   
   !> Read a STARWALL response matrix from a file.
-  subroutine read_response_matrix( matrix, dim_expected, filename )
+  subroutine read_response_matrix( matrix, dim_expected, filename, err )
     
     ! --- Routine parameters
     real*8, allocatable, intent(inout) :: matrix(:,:)     !< Matrix to be read
     integer,             intent(in)    :: dim_expected(2) !< Matrix dimension expected
     character(len=*),    intent(in)    :: filename        !< Filename to read from
+    integer,             intent(out)   :: err             !< Error code
     
     ! --- Local variables
     integer :: dim(2), i, j, i2, j2
     
+    err = 0
+    
     if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' read_response_matrix "'//trim(filename)//'"'
     
-    open(42, FILE=trim(filename), status='old', action='read')
+    open(42, FILE=trim(filename), status='old', action='read', iostat=err)
+    if ( err /= 0 ) return
 
     read(42,*) dim
     write(*,'(1x,a,2i7)') 'dim=',dim
 
     if ( (dim(1) /= dim_expected(1)) .or. (dim(2) /= dim_expected(2)) ) then
       write(*,*) 'FATAL ERROR: Matrix dimension not as expected. Different resolutions?'
+      write(*,'(1x,a,2i7)') 'dim_expected=',dim_expected
       stop
     end if
     
@@ -885,19 +922,21 @@ module vacuum_response
   
   
   !> Read a diagonal STARWALL response matrix from a file.
-  subroutine read_response_diagonal( diagonal, dim_expected, filename )
+  subroutine read_response_diagonal( diagonal, dim_expected, filename, err )
     
     ! --- Routine parameters
     real*8, allocatable, intent(inout) :: diagonal(:)     !< Matrix to be read
     integer,             intent(in)    :: dim_expected    !< Matrix dimension expected
     character(len=*),    intent(in)    :: filename        !< Filename to read from
+    integer,             intent(out)   :: err             !< Error code
     
     ! --- Local variables
     integer :: dim, i, i2
     
     if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' read_response_diagonal "'//trim(filename)//'"'
     
-    open(42, FILE=trim(filename), status='old', action='read')
+    open(42, FILE=trim(filename), status='old', action='read', iostat=err)
+    if ( err /= 0 ) return
 
     read(42,*) dim
     write(*,'(1x,a,i7)') 'dim=',dim

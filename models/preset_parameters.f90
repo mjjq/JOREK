@@ -21,7 +21,7 @@ subroutine preset_parameters
   visco = 1.d-5
   visco_par = 1.d-5
   
-  central_density = 1.d0  ! the central density in units 10^20 m^-3
+  central_density = 0.d0  ! the central density in units 10^20 m^-3
 
   restart      = .false.
   import_equil = .false.

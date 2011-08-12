@@ -23,6 +23,11 @@ set xlabel xlabel
 set ylabel ylabel
 plot for [i=2:ncols+1] qtty.'.dat' u 1:i w lp t columnhead(i)
 
-if ( ps==0 ) print 'Right mouse button to zoom; "u" to unzoom again'
-if ( ps==0 ) print 'Click into window with left mouse button to exit'
+if ( ps==0 ) print ''
+if ( ps==0 ) print 'Hints:'
+if ( ps==0 ) print '* Use right mouse button to zoom'
+if ( ps==0 ) print '* Press "U" to unzoom again'
+if ( ps==0 ) print '* Press "E" to update the data'
+if ( ps==0 ) print '* Click with left mouse button to exit'
+if ( ps==0 ) print ''
 if ( ps==0 ) pause mouse button1

@@ -119,11 +119,13 @@ gnuplot local_plot.gnuplot &
 gnuplot_pid=$!
 
 # --- Refresh live data as long as gnuplot is running -- pressing E in gnuplot will update
-while true; do
-  ps | grep -q $gnuplot_pid # See if Gnuplot is still running
-  if [ $? -ne 0 ]; then
-    break # If Gnuplot is not running, exit the loop
-  fi
-  $extract_live_data ${qtty} ${qtty}.dat -f $file # Refresh the data 
-  sleep 10
-done
+if [ $ps -eq 0 ]; then
+  while true; do
+    ps | grep -q $gnuplot_pid # See if Gnuplot is still running
+    if [ $? -ne 0 ]; then
+      break # If Gnuplot is not running, exit the loop
+    fi
+    $extract_live_data ${qtty} ${qtty}.dat -f $file # Refresh the data 
+    sleep 10
+  done &
+fi

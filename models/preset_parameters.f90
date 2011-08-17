@@ -16,6 +16,9 @@ subroutine preset_parameters
   tstep_n  = 1.d0
   nstep    = 0
   nstep_n  = 0
+  
+  eta_T_dependent   = .true.
+  visco_T_dependent = .true.
 
   eta   = 1.d-5
   visco = 1.d-5
@@ -109,8 +112,12 @@ subroutine preset_parameters
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
 
-  heatsource     = 1.e-7
-  particlesource = 1.e-5
+  heatsource          = 1.e-7
+  heatsource_psin     = 1.0d0
+  heatsource_sig      = 0.1d0
+  particlesource      = 1.e-5
+  particlesource_psin = 1.0d0
+  particlesource_sig  = 0.1d0
   
   tauIC = 0.d0
 

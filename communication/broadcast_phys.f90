@@ -26,7 +26,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( 160 * IDBL_EXT + (14+n_tor) * INT_EXT + 25 * ILOG_EXT + 3*512 * CHAR_EXT )
+bufsize = ( 164 * IDBL_EXT + (14+n_tor) * INT_EXT + 27 * ILOG_EXT + 3*512 * CHAR_EXT )
 
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastp_buffer")
@@ -106,7 +106,12 @@ if (my_id .eq. 0) then
   call MPI_PACK(pellet_velocity_R,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 157
   call MPI_PACK(pellet_velocity_Z,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 158
   call MPI_PACK(pellet_density,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 159
-  call MPI_PACK(pellet_particles,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 160_R
+  call MPI_PACK(pellet_particles,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 160
+  
+  call MPI_PACK(particlesource_psin,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)! 161
+  call MPI_PACK(particlesource_sig,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 162
+  call MPI_PACK(heatsource_psin,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! 163
+  call MPI_PACK(heatsource_sig,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 164_R
 
   call MPI_PACK(nstep,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(nstep_n,10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -115,6 +120,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(index_start,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(index_now,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+  call MPI_PACK(eta_T_dependent,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(visco_T_dependent,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(restart,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(regrid,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(import_equil,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -228,6 +235,11 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,pellet_density,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
+  call MPI_UNPACK(buffer,bufsize,position,particlesource_psin,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particlesource_sig,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,heatsource_psin,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,heatsource_sig,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+
   call MPI_UNPACK(buffer,bufsize,position,nstep,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,10,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_flux,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -235,6 +247,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,index_start,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,index_now,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
+  call MPI_UNPACK(buffer,bufsize,position,eta_T_dependent,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,visco_T_dependent,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,restart,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,regrid,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,import_equil,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

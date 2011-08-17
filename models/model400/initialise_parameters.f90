@@ -29,8 +29,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
-                Ti_0,  Ti_1,  Ti_coef,  			    &
-                Te_0,  Te_1,  Te_coef,  			    &
+                Ti_0,  Ti_1,  Ti_coef,                              &
+                Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
                 K_i_par, ZK_i_perp, K_e_par, ZK_e_perp,             &
                 Zk_par, ZK_perp, D_par, D_perp,                     &
@@ -38,7 +38,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource, heatsource,                         &
                 heatsource_i, heatsource_e, tauIC,                  &
                 eta_num, visco_num, visco_par_num,                  &
-	        D_perp_num, ZK_perp_num,                            &
+                D_perp_num, ZK_perp_num,                            &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi,                       &
@@ -47,9 +47,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
-		pastix_smp_only, refinement, grid_to_wall,          &
-		adaptive_time, equil, bench_without_plot,           &
-		no_zeros_pastix, no_zeros_mumps,                    &
+                pastix_smp_only, refinement, grid_to_wall,          &
+                adaptive_time, equil, bench_without_plot,           &
+                no_zeros_pastix, no_zeros_mumps,                    &
+                eta_T_dependent, visco_T_dependent,                 &
+                heatsource_psin, heatsource_sig,                    &
+                particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres
 
 if (my_id .eq. 0) then

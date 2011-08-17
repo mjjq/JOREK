@@ -7,10 +7,12 @@ module phys_module
   
   !> @name Various parameters
   real*8  :: eta               !< Resistivity
+  logical :: eta_T_dependent   !< Resistivity dependent on temperature? Otherwise constant.
   real*8  :: visco             !< Viscosity
+  logical :: visco_T_dependent !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par         !< Parallel viscosity
   real*8  :: F0                !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
-  real*8  :: central_density   !< physical (non-normalised) density at the magnetic axis (in units of 10^20 m^-3)
+  real*8  :: central_density   !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
   real*8  :: gamma             !< ratio of specific heat (=5/3)
   real*8  :: Q_bar             !< (model400)
   real*8  :: sigma             !< (model400)
@@ -50,7 +52,24 @@ module phys_module
   real*8  :: xampl, xwidth, xsig, xtheta, xshift, xleft
   
   !> @name Heat and particle sources
-  real*8  :: particlesource, heatsource,heatsource_i, heatsource_e
+  !!
+  !! \f[
+  !! S(\Psi_N) = S_0 \cdot \left[0.5 - 0.5 \tanh\left(\frac{\Psi_N - \Psi_{N,0}}{\sigma}\right) \right]
+  !! \f]
+  !!
+  !! The following parameters can be set via the namelist input file:
+  !! - \f$ S_0 \f$ denotes the source strenght (e.g., heatsource)
+  !! - \f$ \Psi_{N,0} \f$ denotes the position around which the source is ramped down (e.g., heatsource_psin)
+  !! - \f$ \sigma \f$ denotes the width over which the source is ramped down (e.g., heatsource_sig)
+  !!
+  real*8  :: particlesource      !< Particle source strength
+  real*8  :: particlesource_psin !< Position around which source is ramped down
+  real*8  :: particlesource_sig  !< Width over which source is ramped down
+  real*8  :: heatsource          !< Heat source strength
+  real*8  :: heatsource_psin     !< Position around which source is ramped down
+  real*8  :: heatsource_sig      !< Width over which source is ramped down
+  real*8  :: heatsource_i        !< Heat source strength (ions), model4xx only
+  real*8  :: heatsource_e        !< Heat source strength (electrons), model4xx only
   
   !> @name Heat and particle diffusivity parameters
   real*8  :: D_perp(10), D_par

@@ -301,19 +301,32 @@ do ms=1, n_gauss
 
      delta_u_x = (   y_t(ms,mt) * delta_s(mp,2,ms,mt) - y_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
      delta_u_y = ( - x_t(ms,mt) * delta_s(mp,2,ms,mt) + x_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
-
-     eta_Te   = eta   * (abs(Te0)/Te_0)**(-1.5d0)                   ! temperature dependent resistivity
-     visco_Te = visco * (abs(Te0)/Te_0)**(-1.5d0)                   ! temperature dependent viscosity
-
+     
+     ! --- Temperature dependent resistivity
+     if ( eta_T_dependent ) then
+       eta_Te     = eta   * (abs(Te0)/Te_0)**(-1.5d0)
+       deta_dTe   = - eta   * (1.5d0)  * abs(Te0)**(-2.5d0) * Te_0**(1.5d0)
+       d2eta_d2Te =   eta   * (3.75d0) * abs(Te0)**(-3.5d0) * Te_0**(1.5d0)
+     else
+       eta_Te     = eta
+       deta_dTe   = 0.d0
+       d2eta_d2Te = 0.d0
+     end if
+     
+     ! --- Temperature dependent viscosity
+     if ( visco_T_dependent ) then
+       visco_Te   = visco * (abs(Te0)/Te_0)**(-1.5d0)
+       dvisco_dTe = - visco * (1.5d0)  * abs(Te0)**(-2.5d0) * Te_0**(1.5d0)
+     else
+       visco_Te   = visco
+       dvisco_dTe = 0.d0
+     end if
+     
      eta_numm       = eta_num                        ! hyperresistivity
      visco_numm     = visco_num 		     ! hyperviscosity
      visco_par_numm = visco_par_num		     ! hyperviscosity
      D_perp_numm     = D_perp_num		     ! hyperdiffusivity
      K_perp_numm     = ZK_perp_num		     ! hyperconductivity
-
-     deta_dTe   = - eta   * (1.5d0)  * abs(Te0)**(-2.5d0) * Te_0**(1.5d0)
-     d2eta_d2Te =   eta   * (3.75d0) * abs(Te0)**(-3.5d0) * Te_0**(1.5d0)
-     dvisco_dTe = - visco * (1.5d0)  * abs(Te0)**(-2.5d0) * Te_0**(1.5d0)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! Build up the D_perp and K_perp profiles !!!!!!!!!!!! BEGIN

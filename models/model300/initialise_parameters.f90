@@ -37,9 +37,12 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
-		pastix_smp_only, refinement, grid_to_wall,          &
-		adaptive_time, equil, bench_without_plot,           &
-		no_zeros_pastix, no_zeros_mumps,                    &
+                pastix_smp_only, refinement, grid_to_wall,          &
+                adaptive_time, equil, bench_without_plot,           &
+                no_zeros_pastix, no_zeros_mumps,                    &
+                eta_T_dependent, visco_T_dependent,                 &
+                heatsource_psin, heatsource_sig,                    &
+                particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres
 
 if (my_id .eq. 0) then

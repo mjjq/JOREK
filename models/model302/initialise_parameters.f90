@@ -38,8 +38,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
-		pellet_velocity_R, pellet_velocity_Z,               &
-		central_density, pellet_particles, use_pellet,      &
+                pellet_velocity_R, pellet_velocity_Z,               &
+                central_density, pellet_particles, use_pellet,      &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 rho_file, T_file, ffprime_file,                     &
@@ -47,9 +47,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_starwall, resistive_wall,                       &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
-		pastix_smp_only, refinement, grid_to_wall,          &
-		adaptive_time, equil, bench_without_plot,           &
-		no_zeros_pastix, no_zeros_mumps,                    &
+                pastix_smp_only, refinement, grid_to_wall,          &
+                adaptive_time, equil, bench_without_plot,           &
+                no_zeros_pastix, no_zeros_mumps,                    &
+                eta_T_dependent, visco_T_dependent,                 &
+                heatsource_psin, heatsource_sig,                    &
+                particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres
 
 if (my_id .eq. 0) then
@@ -59,7 +62,7 @@ if (my_id .eq. 0) then
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
   
   ! --- Model-specific presets
-  ! -none-
+  particlesource_psin = 100.d0
   
   ! --- Read input parameters from namelist.
   if (my_id .eq. 0) read(5,in1)

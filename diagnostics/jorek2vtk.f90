@@ -13,10 +13,10 @@ type (type_element_list) :: element_list
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 integer,allocatable   :: ien (:,:)
-integer               :: i, j, k, m, etype, ivtk, irst, int, i_var, i_tor, index, index_node, my_id
+integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
+integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_plane, index, index_node, my_id
 character             :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:), vector_names(:)
-!real*4                :: float
 real*8                :: s, t
 real*8                :: P,P_s,P_t,P_st,P_ss,P_tt,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8                :: Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt, ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt, W,W_s,W_t,W_st,W_ss,W_tt
@@ -30,17 +30,24 @@ integer               :: i_elm_axis, i_elm_xpoint, k_tor, ifail, ierr
 
 write(*,*) "jorek2vtk"
 
-my_id=0
-
+! --- Initialise input parameters and read the input namelist.
+my_id     = 0
 call initialise_parameters(my_id)
 
-ivtk = 22                 ! an arbitrary unit number for the VTK output file
+! --- Number of subdivisions of the cubic finite elements into linear pieces
+nsub      = 5
 
-nsub  = 5                 ! the number of subdivisions of the cubic finite elements into linear pieces
-i_tor = -1 
+! --- Select a single toroidal mode for the vtk file
+!     * If i_tor > 0, only this mode will be included in the vtk file
+!     * Otherwise, all modes will be summed up at the toroidal plane i_plane
+i_tor     = -1
+i_plane   = 1
 
-n_scalars = n_var + 10     ! number of scalars to write to the VTK output file
-n_vectors = 0             ! number of vectors to write to the VTK output file
+! --- Number of scalars to write to the VTK output file
+n_scalars = n_var + 10
+
+! --- Number of vectors to write to the VTK output file
+n_vectors = 0
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
 
@@ -80,7 +87,6 @@ scalars = 0.d0
 vectors = 0.d0
 xyz     = 0
 ien     = 0
-my_id   = 0
 
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
@@ -170,7 +176,7 @@ do i=1,element_list%n_elements
 
           do m=1,n_var
             call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-            scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,1)
+            scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
 
 	  ps0 = scalars(inode,1)
@@ -189,25 +195,25 @@ do i=1,element_list%n_elements
 
           if ((xjac .gt. 1.d-6)) then      ! avoid the axis
 
-	    u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,1)
-            u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,1)
+	    u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
+            u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
-            ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,1)
-            ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,1)
+            ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
+            ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
 
-            zj_x  = zj_x   + (   Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,1)
-            zj_y  = zj_y   + ( - R_t * ZJ_s + R_s * ZJ_t )   / xjac * HZ(i_tor,1)
+            zj_x  = zj_x   + (   Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
+            zj_y  = zj_y   + ( - R_t * ZJ_s + R_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
 
-            TT_x  = TT_x   + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,1)
-            TT_y  = TT_y   + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,1)
+            TT_x  = TT_x   + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
+            TT_y  = TT_y   + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
 	    TT_p  = TT_p   + TT * HZ_p(i_tor,1)
 
-            RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,1)
-            RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,1)
+            RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
+            RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
 	    RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)
   
-	    w0_x  = w0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,1)
-            w0_y  = w0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,1)
+	    w0_x  = w0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
+            w0_y  = w0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 !            w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2 ) / xjac**2                
 !            w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2 ) / xjac**2               
 

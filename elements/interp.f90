@@ -1,17 +1,30 @@
-subroutine interp(node_list,element_list,i_elm,i_var,i_harm,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-!-----------------------------------------------------------------------------------------
-! subroutine calculates the interpolation within one element (i_elm) for a given position
-! (s,t) in the local coordinates
-!-----------------------------------------------------------------------------------------
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!! (s,t) in the local coordinates
+recursive subroutine interp(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st,&
+  P_ss, P_tt)
+
 use data_structure
+
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+! --- Routine parameters
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P
+real*8,                   intent(out) :: P_s
+real*8,                   intent(out) :: P_t
+real*8,                   intent(out) :: P_st
+real*8,                   intent(out) :: P_ss
+real*8,                   intent(out) :: P_tt
 
+! --- Local variables
 real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
-real*8 :: s, t, P, P_s, P_t, P_st, P_ss, P_tt
-integer :: kv, iv, kf, i_harm, i_var, i_elm
+integer :: kv, iv, kf 
 
 call basisfunctions2(s,t,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),G_ss(1:4,1:4),G_tt(1:4,1:4))
 
@@ -30,9 +43,9 @@ do kv = 1,n_vertex_max  ! 4 vertices
     P_ss = P_ss + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
     P_tt = P_tt + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
 
-  enddo
+  end do
 
-enddo
+end do
 
 return
-end
+end subroutine interp

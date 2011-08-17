@@ -173,14 +173,14 @@ do i=1,element_list%n_elements
 	w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
         
         !$omp parallel do                                                                          &
-        !$omp   num_threads( min(i_tor,3) )                                                        &
+        !$omp   num_threads( min(n_tor,3) )                                                        &
         !$omp   default( shared )                                                                  &
-        !$omp   firstprivate( u0_x, u0_y, ps_x, ps_y, zj_x, zj_y, TT_x, TT_y, TT_p, RHO_x, RHO_y,  &
-        !$omp     RHO_p, w0_x, w0_y, w0_xx, w0_yy )                                                &
         !$omp   private( i_tor, m, P, P_s, P_t, P_st, P_ss, P_tt, Psi, Ps_s, Ps_t, Ps_st, Ps_ss,   &
         !$omp     Ps_tt, U, U_s, U_t, U_st, U_ss, U_tt, ZJ, ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt, W,    &
         !$omp     W_s, W_t, W_st, W_ss, W_tt, RHO, RHO_s, RHO_t, RHO_st, RHO_ss, RHO_tt, TT, TT_s, &
-        !$omp     TT_t, TT_st, TT_ss, TT_tt, V, V_s, V_t, V_st, V_ss, V_tt )
+        !$omp     TT_t, TT_st, TT_ss, TT_tt, V, V_s, V_t, V_st, V_ss, V_tt )                       &
+        !$omp   firstprivate( u0_x, u0_y, ps_x, ps_y, zj_x, zj_y, TT_x, TT_y, TT_p, RHO_x, RHO_y,  &
+        !$omp     RHO_p, w0_x, w0_y, w0_xx, w0_yy )
         do i_tor = 1, n_tor
           
           do m=1,n_var

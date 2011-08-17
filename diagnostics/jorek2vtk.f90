@@ -171,20 +171,24 @@ do i=1,element_list%n_elements
 	TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
 	
 	w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
-
+        
+        !$omp parallel do                                                                          &
+        !$omp   num_threads( min(i_tor,3) )                                                        &
+        !$omp   default( shared )                                                                  &
+        !$omp   firstprivate( u0_x, u0_y, ps_x, ps_y, zj_x, zj_y, TT_x, TT_y, TT_p, RHO_x, RHO_y,  &
+        !$omp     RHO_p, w0_x, w0_y, w0_xx, w0_yy )                                                &
+        !$omp   private( i_tor, m, P, P_s, P_t, P_st, P_ss, P_tt, Psi, Ps_s, Ps_t, Ps_st, Ps_ss,   &
+        !$omp     Ps_tt, U, U_s, U_t, U_st, U_ss, U_tt, ZJ, ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt, W,    &
+        !$omp     W_s, W_t, W_st, W_ss, W_tt, RHO, RHO_s, RHO_t, RHO_st, RHO_ss, RHO_tt, TT, TT_s, &
+        !$omp     TT_t, TT_st, TT_ss, TT_tt, V, V_s, V_t, V_st, V_ss, V_tt )
         do i_tor = 1, n_tor
-
+          
           do m=1,n_var
             call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+            !$omp atomic
             scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
-
-	  ps0 = scalars(inode,1)
-          psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-          if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint)) then
-            psi_norm = 2.d0 - psi_norm
-          endif
-
+          
           call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
           call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
           call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
@@ -192,45 +196,52 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
           if ( jorek_model >= 300 ) call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-
+          
           if ((xjac .gt. 1.d-6)) then      ! avoid the axis
-
-	    u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
+            
+            u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
             u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
-
+            
             ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
             ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
-
+            
             zj_x  = zj_x   + (   Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
             zj_y  = zj_y   + ( - R_t * ZJ_s + R_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
-
+            
             TT_x  = TT_x   + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
             TT_y  = TT_y   + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
-	    TT_p  = TT_p   + TT * HZ_p(i_tor,1)
-
+            TT_p  = TT_p   + TT * HZ_p(i_tor,1)
+            
             RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
             RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
-	    RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)
-  
-	    w0_x  = w0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
+            RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)
+            
+            w0_x  = w0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
             w0_y  = w0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 !            w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2 ) / xjac**2                
 !            w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2 ) / xjac**2               
-
+            
             w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2       &             
                   + w_s * (Z_st*Z_t - Z_tt*Z_s )                                &        
                   + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2                &             
                   - xjac_x * (w_s* Z_t - w_t * Z_s)  / xjac**2
-
+            
             w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2       &             
                   + w_s * (R_st*R_t - R_tt*R_s )                                 &        
                   + w_t * (R_st*R_s - R_ss*R_t ) )         / xjac**2             &             
                   - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
-
-	  endif
-
-	enddo  ! end loop toroidal harmonics
-
+            
+          endif
+          
+        enddo  ! end loop toroidal harmonics
+        !$omp end parallel do
+        
+        ps0 = scalars(inode,1)
+        psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
+        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint)) then
+          psi_norm = 2.d0 - psi_norm
+        endif
+        
         v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
 
         Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR  

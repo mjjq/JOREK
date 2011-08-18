@@ -157,6 +157,7 @@ subroutine preset_parameters
   produce_live_data = .true.
   
   gmres              = .true.               ! Use iterative solver
+  gmres_max_iter     = 200                  ! Max number of GMRES iterations
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
   use_murge          = .false.              ! Use MURGE interface to PASTIX solver

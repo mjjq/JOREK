@@ -1,7 +1,6 @@
+!> Driver for the reverse communication GMRES routine from dPackgmres (CERFACS)
 subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
-!------------------------------------------------------------------------------
-! driver for the reverse communication GMRES routine from dPackgmres (CERFACS)
-!------------------------------------------------------------------------------
+
 use tr_module 
 use mumps_module
 use murge_module
@@ -35,7 +34,7 @@ call cpu_time(t1)
 call init_dgmres(icntl,cntl)
 
 icntl(3) = 6            ! output unit
-icntl(7) = 200          ! Maximum number of iterations
+icntl(7) = iter_gmres   ! Maximum number of iterations
 icntl(4) = 1            ! preconditioner (1) = left preconditioner
 icntl(5) = 3            ! orthogonalization scheme
 icntl(6) = 1            ! initial guess  (1) = user supplied guess
@@ -138,7 +137,7 @@ if (my_id .eq. 0) then
 
 endif
 
-iter_gmres = info(2)
+iter_gmres = info(2) ! Actual number of iterations
 call MPI_BCAST(iter_gmres,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 call tr_deallocate(work,"work")

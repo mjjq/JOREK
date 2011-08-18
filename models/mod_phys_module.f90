@@ -35,6 +35,7 @@ module phys_module
   logical :: equil             !< compute equilibrium
   logical :: bench_without_plot!< .true. for benchmark (mesuring elapsed time without plot phases) 
   logical :: gmres             !< Use iterative GMRES solver
+  integer :: gmres_max_iter    !< Maximum number of GMRES iterations
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'

@@ -275,6 +275,7 @@ if (my_id == 0) then
   write(*,232) 'bc_natural_open     ', bc_natural_open
   write(*,232) 'produce_live_data   ', produce_live_data
   write(*,232) 'gmres               ', gmres
+  write(*,231) 'gmres_max_iter      ', gmres_max_iter
   write(*,232) 'use_mumps           ', use_mumps
   write(*,232) 'use_pastix          ', use_pastix
   write(*,232) 'use_murge           ', use_murge

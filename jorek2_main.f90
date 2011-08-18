@@ -776,6 +776,7 @@ program JOREK2
 
      if (gmres) then
        iter_prev = iter_gmres
+       iter_gmres = gmres_max_iter
        call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
      endif
 

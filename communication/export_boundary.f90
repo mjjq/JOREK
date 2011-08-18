@@ -1,5 +1,5 @@
+!> Export boundary information for STARWALL
 subroutine export_boundary(node_list, boundary_list, bnd_node_list)
-!< Export boundary information for STARWALL
   
   use data_structure 
   

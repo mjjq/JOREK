@@ -319,9 +319,10 @@ program JOREK2
     
     ! --- Fill the vacuum response matrices for freeboundary computations
     if ( freeboundary_equil ) call import_external_fields()
-    if ( freeboundary ) call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,    &
-      freeboundary_equil, use_starwall, resistive_wall)
-    if ( freeboundary .or. freeboundary_equil .and. NEW_VACUUM ) call update_response(tstep, freeboundary_equil, resistive_wall)
+    if ( freeboundary_equil ) call get_vacuum_response(my_id, node_list, bnd_elm_list,             &
+      bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
+    if ( freeboundary_equil .and. NEW_VACUUM ) call update_response(tstep, freeboundary_equil,     &
+      resistive_wall)
     
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
@@ -374,7 +375,7 @@ program JOREK2
              
         end if
         
-        ! --- Determine boundary information from the grid         
+        ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list) 
         
         ! --- Compute the plasma equilibrium
@@ -389,7 +390,7 @@ program JOREK2
       call energy(node_list,element_list,W_mag,W_kin)
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
       
-    end if
+    end if ! (my_id == 0)
     
 #ifdef USE_MUMPS
     ! --- Clean up this instance of mumps (used for equilibrium)
@@ -399,19 +400,20 @@ program JOREK2
     if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars")
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars")
   
-  else if_not_restart
-    
-    ! --- Determine boundary information from the grid
-    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
-    
-    ! --- Fill the vacuum response matrices for freeboundary computations
-    if ( freeboundary_equil ) call import_external_fields()
-    if ( freeboundary .or. freeboundary_equil ) call get_vacuum_response(my_id, node_list,           &
-      bnd_elm_list, bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
-    if ( freeboundary .or. freeboundary_equil .and. NEW_VACUUM ) call update_response(tstep,         &
-      freeboundary_equil, resistive_wall)
-    
   end if if_not_restart
+  
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  
+  ! --- Determine boundary information from the grid
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
+  
+  ! --- Fill the vacuum response matrices for freeboundary computations
+  if ( freeboundary_equil ) call import_external_fields()
+  if ( freeboundary .or. freeboundary_equil ) call get_vacuum_response(my_id, node_list,           &
+    bnd_elm_list, bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
+  if ( (freeboundary .or. freeboundary_equil) .and. NEW_VACUUM ) call update_response(tstep,       &
+    freeboundary_equil, resistive_wall)
+  
   call tr_print_memsize("AfterEquilibrium")
     
   ! --- Broadcast grid information and input parameters to other MPI procs

@@ -645,7 +645,7 @@ program JOREK2
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
   iter_gmres  = 999
-  iter_big    = 200
+  iter_big    = gmres_max_iter
   iter_precon = 22 
   iter_prev   = 0
 

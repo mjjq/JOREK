@@ -80,7 +80,6 @@ module phys_module
   
   !> @name Timestepping parameters
   real*8  :: tstep             !< Size of the timesteps (\f$ \Delta t \f$)
-  real*8  :: tstep_in
   real*8  :: tstep_n(10)       !< Alternative to tstep: Up to ten values may be given
   integer :: nstep             !< Number of timesteps to perform
   integer :: nstep_n(10)       !< Alternative to nstep: Up to ten values may be given

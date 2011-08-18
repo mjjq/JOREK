@@ -39,7 +39,6 @@ PROGRAM JOREK2_FOUR
   call initialise_basis                                    ! define the basis functions at the Gaussian points
 
   call import_restart(node_list,element_list)              ! read restart file
-  tstep = tstep_in
 
   call broadcast_elements(my_id,element_list)              ! sending all elements
   call broadcast_boundary(my_id,boundary_list)             ! sending boundary elements

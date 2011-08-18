@@ -137,19 +137,23 @@ program JOREK2
   
   ! --- Initialise MPI / threaded MPI
   required=MPI_THREAD_MULTIPLE
-  call MPI_Init_thread(required,provided,StatInfo)
-  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)      ! id of each MPI proc
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr) ! number of MPI procs
+  call MPI_Init_thread(required, provided, StatInfo)
+  
+  ! --- Determine ID of each MPI proc
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
   my_id = rank
+  
+  ! --- Determine number of MPI procs
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
   n_cpu = comm_size
   
   if (my_id == 0) then
-    write(*,*) '****************************************'
-    write(*,*) '*   3D Reduced MHD : JOREK_2.0         *'
-    write(*,*) '****************************************'
-    write(*,*) ' number of MPI processes  : ', n_cpu
-    write(*,*) ' number of OpenMP threads : ', nbthreads
-    write(*,*) ' svn version              : ', SVN_VERSION
+    write(*,*) '*************************************************'
+    write(*,*) '*   3D Reduced MHD : JOREK_2.0                  *'
+    write(*,*) '*************************************************'
+    write(*,*) ' MPI processes       : ', n_cpu
+    write(*,*) ' OpenMP threads      : ', nbthreads
+    write(*,*) ' SVN revision        : ', SVN_VERSION
   end if
   
   ! --- Initialise memory tracing
@@ -162,9 +166,7 @@ program JOREK2
   ! --- Remove file STOP_NOW if it exists
   if ( my_id == 0 ) then
     open(42, file='STOP_NOW', iostat=ierr)
-    if ( ierr == 0 ) then
-      close(42, status='delete')
-    end if
+    if ( ierr == 0 ) close(42, status='delete')
   end if
 
   ! --- Preset some solver variables
@@ -184,17 +186,7 @@ program JOREK2
     use_murge = .false. 
   end if
   
-  ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).
-  do itor=1, n_tor
-    mode(itor)        = int(itor / 2) * n_period
-    if ( (itor==1) .or. (mod(itor,2)==0) ) then
-      mode_type(itor) = 'cos'
-    else
-      mode_type(itor) = 'sin'
-    end if
-  end do
-  
-  ! --- Write out all parameters defined in mod_parameters and by the input file.
+  ! --- Write out all parameters defined in mod_parameters and the namelist input file.
   call log_parameters(my_id)
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -226,7 +218,7 @@ program JOREK2
 #endif
   end if
   
-  ! --- Open live data file which will be filled during the code run
+  ! --- Initialize live data file which will be filled during the code run
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data()
   
   ! --- Initialise ppplib plotting library
@@ -249,9 +241,8 @@ program JOREK2
     
     ! --- Read the restart file (jorek_restart.rst)
     call import_restart(node_list, element_list)
-    tstep = tstep_in
     
-    ! --- Output energies and growth_rates to text files (values from restart file)
+    ! --- Write live data for previous time-steps
     do index_now = 1, index_start
       call write_live_data(index_now)
     end do
@@ -282,6 +273,7 @@ program JOREK2
     
     if (my_id == 0) then
       
+      ! --- Define the boundary of the initial grid
       call define_boundary()
       
       if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
@@ -314,7 +306,7 @@ program JOREK2
       
     end if
     
-    ! --- Send boundary elements to other MPI procs
+    ! --- Send boundary elements and nodes to other MPI procs
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
@@ -340,9 +332,7 @@ program JOREK2
     if (my_id == 0) then
       
       ! --- Compute the plasma equilibrium
-      if (equil) then
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
-      endif
+      if (equil) call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
       
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
@@ -405,7 +395,7 @@ program JOREK2
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Determine boundary information from the grid
-  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
+  if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary_equil ) call import_external_fields()
@@ -421,7 +411,6 @@ program JOREK2
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) ! boundary elements
   call broadcast_nodes(my_id, node_list)                      ! nodes
   call broadcast_phys(my_id)                                  ! physics parameters
-  n_AA  = node_list%n_nodes * (n_order+1)  
   n_AA = 0  
   do inode = 1, node_list%n_nodes  
     n_AA = max(n_AA,node_list%node(inode)%index(4))  

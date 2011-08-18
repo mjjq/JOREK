@@ -66,8 +66,6 @@ if (my_id .eq. 0) then
   ! --- Read input parameters from namelist.
   if (my_id .eq. 0) read(5,in1)
   
-  tstep_in = tstep
-  
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else

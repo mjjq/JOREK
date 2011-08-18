@@ -800,9 +800,9 @@ program JOREK2
         t_now = t_now + tstep
 
      else
-        write(*,*) ' TIME STEP SKIPPED !', iter_gmres
-  exit
-     endif
+       if ( my_id == 0 ) write(*,*) ' TIME STEP SKIPPED !', iter_gmres
+       exit
+     end if
 
 !     if ( freeboundary .and. (.not. resistive_wall) ) call boundary_check()
 !     if (my_id .eq. 0) call boundary_check()

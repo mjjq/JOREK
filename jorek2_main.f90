@@ -801,6 +801,7 @@ program JOREK2
 
      else
        if ( my_id == 0 ) write(*,*) ' TIME STEP SKIPPED !', iter_gmres
+       index_now = index_now - 1 ! Undo the time step
        exit
      end if
 

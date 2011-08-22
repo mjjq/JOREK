@@ -109,7 +109,7 @@ call interp_RZ(node_list,element_list,i_elm_axis,s,t,R_axis,R_s,R_t,R_st,R_ss,R_
 s_axis = s
 t_axis = t
 
-if (my_id .eq. 0) write(*,'(A,4f14.8)') ' magnetic axis : ',R_axis,Z_axis,psi_axis
+if (my_id .eq. 0) write(*,'(A,i6,4f14.8)') ' magnetic axis : ',i_elm_axis,R_axis,Z_axis,psi_axis
 
 return
 END

@@ -16,12 +16,12 @@ open(21,file='jorek_restart.rst', form='unformatted', status='old', action='read
 
 read(21) n_tor_tmp
 
-if (n_tor_tmp .gt. n_tor) write(*,*) ' IMPORT WARNING : reducing number of harmonics!', n_tor, n_tor_tmp
-if (n_tor_tmp .lt. n_tor) write(*,*) ' IMPORT WARNING : increasing number of harmonics!',n_tor,n_tor_tmp
+if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
 
 n_tor_tmp = min(n_tor,n_tor_tmp)
 
-write(*,'(A,i5,A)') ' importing ',n_tor_tmp,' harmonics'
+write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
 
 read(21) node_list%n_nodes,element_list%n_elements
 read(21) node_list%n_dof
@@ -43,8 +43,6 @@ read(21) element_list%element(1:element_list%n_elements)
 read(21) tstep,eta_tmp,visco_tmp,visco_par_tmp
 read(21) index_start
 read(21) t_start
-
-write(*,*) ' IMPORT CHECK nstep = ',nstep
 
 if (index_start .ge. 1) then
 

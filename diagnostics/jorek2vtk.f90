@@ -112,6 +112,7 @@ do i=1,element_list%n_elements
       call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 
       xjac  = R_s * Z_t - R_t * Z_s
+      if ( xjac == 0.d0 ) xjac = 1.d-8
       BigR  = R
    
       xjac_x  = (R_ss*Z_t**2 - Z_ss*R_t*Z_t - 2.d0*R_st*Z_s*Z_t   &           
@@ -172,20 +173,10 @@ do i=1,element_list%n_elements
 	
 	w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
         
-        !$omp parallel do                                                                          &
-        !$omp   num_threads( min(n_tor,3) )                                                        &
-        !$omp   default( shared )                                                                  &
-        !$omp   private( i_tor, m, P, P_s, P_t, P_st, P_ss, P_tt, Psi, Ps_s, Ps_t, Ps_st, Ps_ss,   &
-        !$omp     Ps_tt, U, U_s, U_t, U_st, U_ss, U_tt, ZJ, ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt, W,    &
-        !$omp     W_s, W_t, W_st, W_ss, W_tt, RHO, RHO_s, RHO_t, RHO_st, RHO_ss, RHO_tt, TT, TT_s, &
-        !$omp     TT_t, TT_st, TT_ss, TT_tt, V, V_s, V_t, V_st, V_ss, V_tt )                       &
-        !$omp   firstprivate( u0_x, u0_y, ps_x, ps_y, zj_x, zj_y, TT_x, TT_y, TT_p, RHO_x, RHO_y,  &
-        !$omp     RHO_p, w0_x, w0_y, w0_xx, w0_yy )
         do i_tor = 1, n_tor
           
           do m=1,n_var
             call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-            !$omp atomic
             scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
           
@@ -234,8 +225,7 @@ do i=1,element_list%n_elements
           endif
           
         enddo  ! end loop toroidal harmonics
-        !$omp end parallel do
-        
+	    
         ps0 = scalars(inode,1)
         psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
         if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint)) then

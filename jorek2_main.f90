@@ -1070,10 +1070,10 @@ end program JOREK2
 !! \section DOCU About this documentation
 !!
 !! This documentation covers the code structure, i.e.,
-!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/dirs.html">directories</a>,
-!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/files.html">source files</a>,
-!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/namespaces.html">Fortran modules</a>,
-!! - <a href="http://www.ipp.mpg.de/~mhoelzl/jorek/globals_func.html">subroutines and functions</a>, and
+!! - <a href="dirs.html">directories</a>,
+!! - <a href="files.html">source files</a>,
+!! - <a href="annotated.html">Fortran modules</a>,
+!! - <a href="globals_func.html">subroutines and functions</a>, and
 !! - routine parameters.
 !!
 !! <img src="JOREK_DOC.jpeg" style="border:1px solid black;float:right"/>

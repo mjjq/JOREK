@@ -12,27 +12,22 @@ trap cleanup 1 2 3 6
 function cleanup () {
   if [ "$1" != "0" ]; then
     echo ""
-    echo "ABORTING. Waiting for unfinished threads..."
+    echo "ABORTING."
     echo ""
   fi
+  echo ""
+  echo "Waiting for threads to finish..."
   wait
-  for i in `seq $nthreads`; do
-    if [ ! -z "${tmpdir[$i]}" ]; then
-      rm -rf ${tmpdir[$i]}
-    fi
-  done
   if [ ! -z "$local_tmp_dir" ]; then
     rm -rf $local_tmp_dir
   fi
-  if [ "$1" == "0" ]; then
-    echo "done."
-  fi
+  echo "...done."
   exit
 }
 
 function usage () {
   echo ""
-  echo "Usage: `basename $0` [options] jorek2vtk infile [extra-files]"
+  echo "Usage: `basename $0` [options] binary infile [extra-files]"
   echo ""
   echo "Converts JOREK restart files into VTK files that can be"
   echo "visualized using, e.g., VISIT or PARAVIEW."
@@ -48,9 +43,9 @@ function usage () {
   echo "  -i_tor <i_tor>  Select a single toroidal mode (-1 means all) [default: -1]."
   echo "  -i_plane <i_plane> Select the toroidal plane [default: 1]."
   echo ""
-  echo "  jorek2vtk       jorek2vtk(3d) executable"
+  echo "  binary          jorek2vtk(3d) executable"
   echo "  infile          Input file of the corresponding JOREK run"
-  echo "  extra-files     Additional files that are required for running jorek2vtk"
+  echo "  extra-files     Additional files that are required for running"
   echo ""
 }
 
@@ -102,14 +97,23 @@ function do_convert () {
     
     echo "CONVERTING '${file##*/}'"
     
-    cp $file jorek_restart.rst
+    rm -f jorek_restart.rst
+    ln -s $file jorek_restart.rst
     for copyfile in $copyfiles; do
       cp $startDir/$copyfile .
     done
-    $jorek2vtk < $infile > ./log
+    $binary < $infile > ./log 2>&1
     if [ $? -ne 0 ]; then
-      echo "AN ERROR OCCURED!"
-      cat ./log
+      if [ ! -f $ERROR_STOP_FILE ]; then
+        touch $ERROR_STOP_FILE
+        cat ./log
+        echo ""
+        echo "ithread = $ithread"
+        echo "file    = `basename $file`"
+        echo ""
+        echo "ERRORS OCCURED EXECUTING THE BINARY. SEE ABOVE."
+      fi
+      unmark_running $ithread
       return 1
     else
       grep -i "warning" ./log
@@ -174,7 +178,7 @@ if [ $# -lt 2 ]; then
   exit 1
 fi
 
-jorek2vtk=`readlink -f $1`
+binary=`readlink -f $1`
 shift
 infile=`readlink -f $1`
 shift
@@ -184,8 +188,8 @@ copyfiles="$@"
 
 
 # --- Some basic checks
-if [ ! -f $jorek2vtk ]; then
-  echo "ERROR: $jorek2vtk does not exist."
+if [ ! -f $binary ]; then
+  echo "ERROR: $binary does not exist."
   usage
   exit 1
 elif [ ! -f $infile ]; then
@@ -212,14 +216,16 @@ targetDir=`readlink -f $dir`
 
 
 # --- Create local temporary directory
-local_tmp_dir="tmp_vtk_$$"
-mkdir -p $local_tmp_dir
+local_tmp_dir0="tmp_vtk_$$"
+mkdir -p $local_tmp_dir0
+local_tmp_dir=`readlink -f $local_tmp_dir0` # absolute path
+ERROR_STOP_FILE="$local_tmp_dir/ERROR_STOP"
 
 
 
 # --- Create the namelist file with jorek2vtk parameters
 if [ "$writenml" == "yes" ]; then
-  vtk_nml="$local_tmp_dir/vtk.nml"
+  vtk_nml="$local_tmp_dir0/vtk.nml"
   echo "&vtk_params"               > $vtk_nml
   if [ ! -z "$nsub" ]; then
     echo "  nsub    = $nsub"      >> $vtk_nml
@@ -242,19 +248,22 @@ fi
 
 # --- Prepare thread temporary folders
 for i in `seq $nthreads`; do
-  tmpdir[$i]="/tmp/tmp_c2v_$$_$i"
-  mkdir ${tmpdir[$i]}
+  tmpdir[$i]="$local_tmp_dir/thread_$i"
+  mkdir -p ${tmpdir[$i]}
 done
 
 
 
-# --- Convert files (in parallel)
+# --- Parallel file conversion
+echo ""
 files=`ls $sourceDir/jorek?????.rst 2> /dev/null`
-
 for file in $files; do
+  if [ -f "$ERROR_STOP_FILE" ]; then cleanup; fi
   ithread=`get_available_thread`
-  mark_running $ithread
-  do_convert $file $ithread &
+  if [ ! -f "$ERROR_STOP_FILE" ]; then
+    mark_running $ithread
+    do_convert $file $ithread &
+  fi
 done
 
 

@@ -28,20 +28,33 @@ real*8                :: ps0, psi_norm, particle_source, D_prof, ZK_prof, grad_p
 real*8                :: w0_x, w0_y, w0_xx, w0_yy, xjac_x, xjac_y
 integer               :: i_elm_axis, i_elm_xpoint, k_tor, ifail, ierr
 
-write(*,*) "jorek2vtk"
+namelist /vtk_params/ nsub, i_tor, i_plane
+
+write(*,*) 'jorek2vtk'
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
 call initialise_parameters(my_id)
 
-! --- Number of subdivisions of the cubic finite elements into linear pieces
-nsub      = 5
+! --- Preset parameters
+nsub      = 5  ! Number of subdivisions of the cubic finite elements into linear pieces
+i_tor     = -1 ! If i_tor > 0, only this mode will be included in the vtk file...
+i_plane   = 1  ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 
-! --- Select a single toroidal mode for the vtk file
-!     * If i_tor > 0, only this mode will be included in the vtk file
-!     * Otherwise, all modes will be summed up at the toroidal plane i_plane
-i_tor     = -1
-i_plane   = 1
+! --- Read parameters from namelist file 'vtk.nml' if it exists
+open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  read(42,vtk_params)
+  close(42)
+end if
+write(*,*)
+write(*,*) 'Parameters:'
+write(*,*) '-----------'
+write(*,*) 'nsub    =', nsub
+write(*,*) 'i_tor   =', i_tor
+write(*,*) 'i_plane =', i_plane
+write(*,*)
 
 ! --- Number of scalars to write to the VTK output file
 n_scalars = n_var + 10

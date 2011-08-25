@@ -21,6 +21,9 @@ function cleanup () {
       rm -rf ${tmpdir[$i]}
     fi
   done
+  if [ ! -z "$local_tmp_dir" ]; then
+    rm -rf $local_tmp_dir
+  fi
   if [ "$1" == "0" ]; then
     echo "done."
   fi
@@ -38,6 +41,12 @@ function usage () {
   echo "  -j <nthreads>   Convert parallel using <nthreads> threads [default: serial]."
   echo "  -min <minstep>  Minimum step number to convert"
   echo "  -max <maxstep>  Maximum step number to convert"
+  echo "  -dir <dir>      Write vtk files to the specified directory [default: ./vtk]."
+  echo ""
+  echo "Options passed to jorek2vtk via namelist input (see code for details):"
+  echo "  -nsub <nsub>    Number of finite element subdivisions [default: 5]."
+  echo "  -i_tor <i_tor>  Select a single toroidal mode (-1 means all) [default: -1]."
+  echo "  -i_plane <i_plane> Select the toroidal plane [default: 1]."
   echo ""
   echo "  jorek2vtk       jorek2vtk(3d) executable"
   echo "  infile          Input file of the corresponding JOREK run"
@@ -95,7 +104,7 @@ function do_convert () {
     
     cp $file jorek_restart.rst
     for copyfile in $copyfiles; do
-      cp $startDir/$copyfiles .
+      cp $startDir/$copyfile .
     done
     $jorek2vtk < $infile > ./log
     if [ $? -ne 0 ]; then
@@ -117,6 +126,11 @@ function do_convert () {
 nthreads="1"
 minstep="0"
 maxstep="99999"
+dir="./vtk"
+nsub=""
+i_tor=""
+i_plane=""
+writenml="no"
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
@@ -127,6 +141,21 @@ while [ $# -gt 1 ]; do
   elif [ "$1" == "-max" ]; then
     maxstep="$2"
     shift 2
+  elif [ "$1" == "-dir" ]; then
+    dir="$2"
+    shift 2
+  elif [ "$1" == "-nsub" ]; then
+    nsub="$2"
+    shift 2
+    writenml="yes"
+  elif [ "$1" == "-i_tor" ]; then
+    i_tor="$2"
+    shift 2
+    writenml="yes"
+  elif [ "$1" == "-i_plane" ]; then
+    i_plane="$2"
+    shift 2
+    writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
     usage
     exit 0
@@ -175,10 +204,39 @@ fi
 
 
 
-# --- Create vtk subfolder
+# --- Create directory for vtk files
 startDir=`pwd`
-mkdir -p ./vtk
-targetDir=`readlink -f ./vtk`
+mkdir -p $dir || exit 1
+targetDir=`readlink -f $dir`
+
+
+
+# --- Create local temporary directory
+local_tmp_dir="tmp_vtk_$$"
+mkdir -p $local_tmp_dir
+
+
+
+# --- Create the namelist file with jorek2vtk parameters
+if [ "$writenml" == "yes" ]; then
+  vtk_nml="$local_tmp_dir/vtk.nml"
+  echo "&vtk_params"               > $vtk_nml
+  if [ ! -z "$nsub" ]; then
+    echo "  nsub    = $nsub"      >> $vtk_nml
+  fi
+  if [ ! -z "$i_tor" ]; then
+    echo "  i_tor   = $i_tor"     >> $vtk_nml
+  fi
+  if [ ! -z "$i_plane" ]; then
+    echo "  i_plane = $i_plane"   >> $vtk_nml
+  fi
+  echo "/"                        >> $vtk_nml
+  copyfiles="$copyfiles $vtk_nml"
+elif [ -f "vtk.nml" ]; then
+  # If parameters -nsub, -i_tor, -i_plane were not provided, but
+  # a vtk.nml file exists, include it automatically
+  copyfiles="$copyfiles vtk.nml"
+fi
 
 
 

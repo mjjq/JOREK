@@ -16,7 +16,6 @@ PROGRAM JOREK2_FOUR
   integer                  :: required, provided, StatInfo
   integer*4                :: rank, comm_size 
   TYPE(t_theta_mapping)    :: mapping       ! mapping between theta_mag and theta_geo
-  real,    allocatable     :: vve(:,:,:,:)  ! Variable values at positions of mapping.rre and .zze
   complex, allocatable     :: vfour(:,:,:,:)! Fourier transformed quantity.
   integer                  :: localvars(2), err, vars_per_cpu
   character(len=6)         :: sn
@@ -78,7 +77,7 @@ PROGRAM JOREK2_FOUR
   CALL determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping, m_pol_range)
   
   ! --- Transform the quantities
-  CALL transform_qttys(mapping, vve, vfour, m_pol_range)
+  CALL transform_qttys(mapping, vfour, m_pol_range)
   
   ! --- Output Fourier modes of the physical quantities.
   do ivar = localvars(1), localvars(2)

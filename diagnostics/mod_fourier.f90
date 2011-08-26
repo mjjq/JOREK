@@ -76,7 +76,7 @@ module fourier
   
   
   !> Fourier-transform the physical variables in the magnetic angle theta_mag.
-  subroutine transform_qttys(mapping, vve, vfour, m_pol_range)
+  subroutine transform_qttys(mapping, vfour, m_pol_range)
     
     type(t_theta_mapping), intent(in)    :: mapping
     real*8, allocatable,   intent(inout) :: vve(:,:,:,:)   !< Variable values (ipol,itor,irad,ivar)
@@ -94,10 +94,9 @@ module fourier
     nequidist_tor = n_plane-1
     nequidist_pts = 2*(maxval(m_pol_range))
     
-    if ( allocated(vve)   ) deallocate(vve)
     if ( allocated(vfour) ) deallocate(vfour)
-    allocate(vve(nequidist_pts,nequidist_tor,mapping.nstpts,n_var))
-    allocate(vfour(nequidist_pts,nequidist_tor,mapping.nstpts,n_var))
+    allocate(vve(nequidist_pts,nequidist_tor))
+    allocate(vfour(nequidist_pts/2+1,nequidist_tor,mapping.nstpts,n_var))
     vve   = 0.d0
     vfour = 0.d0
     
@@ -159,7 +158,7 @@ module fourier
         !$omp end parallel do
         
       end do
-
+      
       do l = 1, n_var
         call dfftw_plan_dft_r2c_2d(fftw_plan, nequidist_pts, nequidist_tor, vve(:,:,k,l),          &
 	  vfour(:,:,k,l), FFTW_ESTIMATE)
@@ -170,6 +169,8 @@ module fourier
     end do
 
     vfour = vfour / REAL( nequidist_pts * nequidist_tor )
+    
+    deallocate( vve )
     
   end subroutine transform_qttys
   

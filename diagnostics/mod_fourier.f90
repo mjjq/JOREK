@@ -79,10 +79,10 @@ module fourier
   subroutine transform_qttys(mapping, vfour, m_pol_range)
     
     type(t_theta_mapping), intent(in)    :: mapping
-    real*8, allocatable,   intent(inout) :: vve(:,:,:,:)   !< Variable values (ipol,itor,irad,ivar)
-    complex, allocatable,  intent(inout) :: vfour(:,:,:,:) !< Transformed quantity (m,n,irad,ivar)
+    complex, allocatable,  intent(inout) :: vfour(:,:,:,:) !< Transformed quantities (m,n,irad,ivar)
     integer,               intent(in)    :: m_pol_range(2) !< Range of poloidal mode numbers
     
+    real*8, allocatable :: vve(:,:,:,:) ! Variable values (ipol,itor,irad,ivar)
     real*8  :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
     integer :: i, j, k, l, iharm, nn, kv, iv, kf
     real*8  :: R_out, Z_out, s_out, t_out
@@ -95,7 +95,7 @@ module fourier
     nequidist_pts = 2*(maxval(m_pol_range))
     
     if ( allocated(vfour) ) deallocate(vfour)
-    allocate(vve(nequidist_pts,nequidist_tor))
+    allocate(vve(nequidist_pts,nequidist_tor,mapping.nstpts,n_var))
     allocate(vfour(nequidist_pts/2+1,nequidist_tor,mapping.nstpts,n_var))
     vve   = 0.d0
     vfour = 0.d0
@@ -103,7 +103,7 @@ module fourier
     
     do k = 1, mapping.nstpts ! radial positions
       
-      write(*,*) 'Transforming variables on surface', k
+      write(*,'(1x,a,i4)') 'Transforming variables on surface', k
       
       do j = 1, nequidist_tor  ! toroidal positions
         
@@ -178,7 +178,8 @@ module fourier
   
   !> Determine the magnetic poloidal angle, theta_mag, by performing field line tracing
   !! in the axisymmetric magnetic field component.
-  subroutine determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping, m_pol_range)
+  subroutine determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping, m_pol_range,   &
+    debug)
   
     integer,               intent(in)    :: nstpts      !< Number of radial positions
     integer,               intent(in)    :: nmaxsteps   !< Maximum number of poloidal steps
@@ -186,6 +187,7 @@ module fourier
     integer,               intent(in)    :: nsmallsteps !< Number of small between two large steps
     type(t_theta_mapping), intent(inout) :: mapping
     integer,               intent(in)    :: m_pol_range(2) !< Range of poloidal mode numbers
+    logical,               intent(in)    :: debug       !< Output debug information?
     
     integer*8            :: fftw_plan
     integer              :: i, j, k
@@ -213,6 +215,12 @@ module fourier
     
     ! --- Interpolate theta_mag to equidistant theta_geo positions.
     do k = 1, mapping.nstpts
+      if ( mapping.npts(k) < nequidist_pts ) then
+        write(*,'(1x,a)')       'WARNING: Low number of points from field line tracing.'
+        write(*,'(3x,a)')       'You may need to decrease deltaphi in "four_params.nml"'
+        write(*,'(3x,a,f5.3)')  'by a factor > ', real(nequidist_pts)/real(mapping.npts(k))
+        write(*,'(3x,a,i3)')    'Field line', k
+      end if
       call interpolEquidist(mapping.t2(k,0:mapping.npts(k)), mapping.rr(k,0:mapping.npts(k)),      &
         mapping.npts(k)+1, mapping.rre(k,0:nequidist_pts-1), mapping.t2(k,0),                      &
         mapping.t2(k,0)+2.*PI*REAL(nequidist_pts-1)/REAL(nequidist_pts), nequidist_pts)
@@ -222,43 +230,45 @@ module fourier
     end do
     
     ! --- Output some information for debugging.
-    open(42, FILE='determine_theta_mag.rr-zz.dat', ACTION='WRITE', STATUS='REPLACE')
-    do k = 1, mapping.nstpts
-      do j = 0, mapping.npts(k)
-        write(42,*) mapping.rr(k,j), mapping.zz(k,j)
-      end do
-      write(42,*)
-    end do
-    close(42)
-    
-    open(42, FILE='determine_theta_mag.tt-t2.dat', ACTION='WRITE', STATUS='REPLACE')
-    do k = 1, mapping.nstpts
-      do j = 0, mapping.npts(k)
-        write(42,*) mapping.tt(k,j), mapping.t2(k,j)
-      end do
-      write(42,*)
-    end do
-    close(42)
-    
-    open(42, FILE='determine_theta_mag.rre-zze.dat', ACTION='WRITE', STATUS='REPLACE')
-    do k = 1, mapping.nstpts
-      do j = 0, nequidist_pts
-        write(42,*) mapping.rre(k,MOD(j,nequidist_pts)), mapping.zze(k,MOD(j,nequidist_pts))
-      end do
-      write(42,*)
-    end do
-    close(42)
-
-    open(42, FILE='determine_theta_mag.rre-zze.2.dat', ACTION='WRITE', STATUS='REPLACE')
-    do j = 0, nequidist_pts-1
+    if ( debug ) then
+      open(42, FILE='determine_theta_mag.rr-zz.dat', ACTION='WRITE', STATUS='REPLACE')
       do k = 1, mapping.nstpts
-        write(42,*) mapping.rre(k,j), mapping.zze(k,j)
+        do j = 0, mapping.npts(k)
+          write(42,*) mapping.rr(k,j), mapping.zz(k,j)
+        end do
+        write(42,*)
       end do
-      write(42,*)
-    end do
-    close(42)
+      close(42)
+      
+      open(42, FILE='determine_theta_mag.tt-t2.dat', ACTION='WRITE', STATUS='REPLACE')
+      do k = 1, mapping.nstpts
+        do j = 0, mapping.npts(k)
+          write(42,*) mapping.tt(k,j), mapping.t2(k,j)
+        end do
+        write(42,*)
+      end do
+      close(42)
+      
+      open(42, FILE='determine_theta_mag.rre-zze.dat', ACTION='WRITE', STATUS='REPLACE')
+      do k = 1, mapping.nstpts
+        do j = 0, nequidist_pts
+          write(42,*) mapping.rre(k,MOD(j,nequidist_pts)), mapping.zze(k,MOD(j,nequidist_pts))
+        end do
+        write(42,*)
+      end do
+      close(42)
+  
+      open(42, FILE='determine_theta_mag.rre-zze.2.dat', ACTION='WRITE', STATUS='REPLACE')
+      do j = 0, nequidist_pts-1
+        do k = 1, mapping.nstpts
+          write(42,*) mapping.rre(k,j), mapping.zze(k,j)
+        end do
+        write(42,*)
+      end do
+      close(42)
 
-    call log_mapping(mapping)
+      call log_mapping(mapping)
+    end if
     
   end subroutine determine_theta_mag
   
@@ -405,7 +415,7 @@ module fourier
               ( ( mapping.tt(k,mapping.npts(k)) - mapping.tt(k,0) - 2.*PI ) / &
               ( mapping.tt(k,mapping.npts(k)) - mapping.tt(k,mapping.npts(k)-1) ) ) ) * 2.*PI
           end do
-          write(*,'("Field line",I4,":    psin=",F7.3,"    npts=",I7)') k, mapping.psin(k),        &
+          write(*,'(" Field line",I4,":    psin=",F7.3,"    npts=",I7)') k, mapping.psin(k),       &
 	    mapping.npts(k)
           exit
         end if

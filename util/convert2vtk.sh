@@ -22,30 +22,35 @@ function cleanup () {
     rm -rf $local_tmp_dir
   fi
   echo "...done."
-  exit
+  exit $1
 }
 
 function usage () {
   echo ""
+  echo "Converts JOREK restart files into VTK files that can be visualized using,"
+  echo "e.g., VISIT or PARAVIEW."
+  echo ""
   echo "Usage: `basename $0` [options] binary infile [extra-files]"
   echo ""
-  echo "Converts JOREK restart files into VTK files that can be"
-  echo "visualized using, e.g., VISIT or PARAVIEW."
-  echo ""
   echo "Options:"
-  echo "  -j <nthreads>   Convert parallel using <nthreads> threads [default: serial]."
-  echo "  -min <minstep>  Minimum step number to convert"
-  echo "  -max <maxstep>  Maximum step number to convert"
-  echo "  -dir <dir>      Write vtk files to the specified directory [default: ./vtk]."
+  echo "  -j <nthreads>       Convert using <nthreads> threads [default: 1]"
+  echo "  -min <minstep>      Minimum time step index to convert"
+  echo "  -max <maxstep>      Maximum time step index to convert"
+  echo "  -dir <dir>          Write vtk files to specified directory [default: vtk]"
   echo ""
   echo "Options passed to jorek2vtk via namelist input (see code for details):"
-  echo "  -nsub <nsub>    Number of finite element subdivisions [default: 5]."
-  echo "  -i_tor <i_tor>  Select a single toroidal mode (-1 means all) [default: -1]."
-  echo "  -i_plane <i_plane> Select the toroidal plane [default: 1]."
+  echo "  -nsub <nsub>        Number of finite element subdivisions [default: 5]"
+  echo "  -i_tor <i_tor>      Select single toroidal mode [default: -1 means all]"
+  echo "  -i_plane <i_plane>  Select the toroidal plane [default: 1]"
   echo ""
-  echo "  binary          jorek2vtk(3d) executable"
-  echo "  infile          Input file of the corresponding JOREK run"
-  echo "  extra-files     Additional files that are required for running"
+  echo "  binary              jorek2vtk(3d) executable"
+  echo "  infile              Input file of the corresponding JOREK run"
+  echo "  extra-files         Additional files that are required for running"
+  echo ""
+  echo "Remarks:"
+  echo "  * <i_tor> and <i_plane> may contain lists or ranges, e.g., -i_tor 3,5-7"
+  echo "  * With option -i_tor 3, '_itor3' is added to the output directory"
+  echo "  * With option -i_plane 5, '_iplane5' is added to the output directory"
   echo ""
 }
 
@@ -95,8 +100,6 @@ function do_convert () {
   if ( [ ! -e $targetFile ] || [ "$file" -nt "$targetFile" ] ) \
     && [ $stepnum -ge $minstep ] && [ $stepnum -le $maxstep ]; then
     
-    echo "CONVERTING '${file##*/}'"
-    
     rm -f jorek_restart.rst
     ln -s $file jorek_restart.rst
     for copyfile in $copyfiles; do
@@ -116,7 +119,7 @@ function do_convert () {
       unmark_running $ithread
       return 1
     else
-      grep -i "warning" ./log
+      egrep -i "warning|restart time" ./log
     fi
     mv jorek_tmp.vtk $targetFile
   fi
@@ -126,11 +129,15 @@ function do_convert () {
 
 
 
+SCRIPTDIR=`dirname $0`
+
+
+
 # --- Process command line parameters
 nthreads="1"
 minstep="0"
 maxstep="99999"
-dir="./vtk"
+customdir=""
 nsub=""
 i_tor=""
 i_plane=""
@@ -146,7 +153,7 @@ while [ $# -gt 1 ]; do
     maxstep="$2"
     shift 2
   elif [ "$1" == "-dir" ]; then
-    dir="$2"
+    customdir="$2"
     shift 2
   elif [ "$1" == "-nsub" ]; then
     nsub="$2"
@@ -184,6 +191,80 @@ infile=`readlink -f $1`
 shift
 sourceDir=`readlink -f .`
 copyfiles="$@"
+for copyfile in $copyfiles; do
+  if [ ! -f "$copyfile" ]; then
+    echo "ERROR: Extra-file '$copyfile' does not exist."
+    usage
+    exit 1
+  fi
+done
+
+
+
+function get_recursive_params () {
+  i_tor_rec=$1
+  i_plane_rec=$2
+  params="-j $nthreads -min $minstep -max $maxstep"
+  if [ ! -z "$nsub"        ]; then params="$params -nsub    $nsub";        fi
+  if [ ! -z "$i_tor_rec"   ]; then params="$params -i_tor   $i_tor_rec";   fi
+  if [ ! -z "$i_plane_rec" ]; then params="$params -i_plane $i_plane_rec"; fi
+  params="$params $binary $infile $copyfiles"
+  echo $params
+}
+
+
+
+# --- Handle range specifications (e.g., 3-7) and list specifications (e.g., 3,5,7)
+#     for i_tor and i_plane via recursive calls
+i_tor_array=( $(echo $i_tor | tr ',' '\n') )
+if [ ${#i_tor_array[@]} -gt 1 ]; then
+  for i in ${i_tor_array[@]}; do
+    $SCRIPTDIR/convert2vtk.sh `get_recursive_params "$i" "$i_plane"` || exit 1
+  done
+  exit
+fi
+i_tor_array=( $(echo $i_tor | tr '-' '\n') )
+if [ ${#i_tor_array[@]} -eq 2 ]; then
+  for i in `seq ${i_tor_array[0]} ${i_tor_array[1]}`; do
+    $SCRIPTDIR/convert2vtk.sh `get_recursive_params "$i" "$i_plane"` || exit 1
+  done
+  exit
+fi
+i_plane_array=( $(echo $i_plane | tr ',' '\n') )
+if [ ${#i_plane_array[@]} -gt 1 ]; then
+  for i in ${i_plane_array[@]}; do
+    $SCRIPTDIR/convert2vtk.sh `get_recursive_params "$i_tor" "$i"` || exit 1
+  done
+  exit
+fi
+i_plane_array=( $(echo $i_plane | tr '-' '\n') )
+if [ ${#i_plane_array[@]} -eq 2 ]; then
+  for i in `seq ${i_plane_array[0]} ${i_plane_array[1]}`; do
+    $SCRIPTDIR/convert2vtk.sh `get_recursive_params "$i_tor" "$i"` || exit 1
+  done
+  exit
+fi
+
+
+
+# --- Determine output directory
+dir="./vtk"
+if [ ! -z "$customdir" ]; then
+  dir="$customdir"
+else
+  if [ ! -z "$i_tor" ]; then
+    dir="${dir}_itor$i_tor"
+    echo ""
+    echo "****** i_tor=$i_tor ******"
+  fi
+  if [ ! -z "$i_plane" ]; then
+    dir="${dir}_iplane$i_plane"
+    echo ""
+    echo "****** i_plane=$i_plane ******"
+  elif [ -z "$i_tor" ]; then
+    dir="${dir}_iplane1"
+  fi
+fi
 
 
 
@@ -267,5 +348,5 @@ for file in $files; do
 done
 
 
-
+sleep 1
 cleanup 0

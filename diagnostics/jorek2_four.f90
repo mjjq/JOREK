@@ -27,7 +27,7 @@ program JOREK2_FOUR
   !   --- Preset field line tracing parameters.
   nstpts      = 30
   nmaxsteps   = 2500
-  deltaphi    = 1.
+  deltaphi    = 0.3
   nsmallsteps = 3
   m_pol_range = (/0, 7/)
   debug       = .false.
@@ -75,10 +75,10 @@ program JOREK2_FOUR
       l = 0
       do i = m_pol_range(1), m_pol_range(2) ! pol
         
-        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i-1, (j-1)*n_period
+        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i, (j-1)*n_period
         l = l + 1
         do k = 1, mapping.nstpts
-          write(42,*) mapping.psin(k), ABS(vfour(i,j,k,ivar))
+          write(42,*) mapping.psin(k), ABS(vfour(i+1,j,k,ivar))
         end do
         write(42,*)
         write(42,*)

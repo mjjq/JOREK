@@ -139,7 +139,7 @@ cleanall : clean cleandep
 
 clean :	
 	@echo ">> Deleting Object Files <<"
-	-@rm -f $(JOREK2_MAIN_OBJ);
+	-@rm -f $(JOREK2_MAIN_OBJ) $(JOREK2_FOUR_OBJ);
 	@echo ">> Deleting Module Files <<"
 	-@rm -f $(MOD_FILES);
 
@@ -208,7 +208,7 @@ jorek2_four : diagnostics/jorek2_four.f90 $(JOREK2_FOUR_OBJ)
 	$(FC) $(FFLAGS)                 \
 	diagnostics/jorek2_four.f90 \
 	$(JOREK2_FOUR_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_four $(INCLUDES) $(LIBS)
+	 -o $(JOREK_DIR)/jorek2_four $(INCLUDES) $(LIBS) $(LIBFFTW)
 
 jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
 	$(FC) $(FFLAGS_OMP)                  \

@@ -1,4 +1,4 @@
-subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+recursive subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 !-------------------------------------------------------------------------
 ! solves two non-linear equations using Newtons method (from numerical recipes)
 ! LU decomposition replaced by explicit solution of 2x2 matrix.

@@ -11,7 +11,7 @@ real*8  :: Rmin, Rmax, Zmin, Zmax, psimin, psimax, psma, psmi, psmima, psim, psi
 real*8  :: aa, bb, cc, det, r, dummy
 real*8,external :: root
 integer :: i_elm, iv, n, im, n1, n2
-real*8  :: s,t,P,P_s,P_t,P_st,P_ss,P_tt
+real*8  :: s,t,P,P_s,P_t,P_st,P_ss,P_tt, ss1, ss2, ss3
 integer :: k
 
 do k=1,2
@@ -24,20 +24,26 @@ do k=1,2
     im = mod(iv,n_vertex_max) + 1
     n1 = element_list%element(i_elm)%vertex(iv)
     n2 = element_list%element(i_elm)%vertex(im)
+    
+    ss1 = element_list%element(i_elm)%size(iv,1)
 
     if ((iv .eq. 1) .or. (iv .eq. 3)) THEN
 
-      PSIM  =  node_list%node(n1)%x(1,k) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n1)
-      PSIMR =  node_list%node(n1)%x(2,k) * element_list%element(i_elm)%size(iv,2) * 3.d0/2.d0 ! PSI(3,n1)
-      PSIP  =  node_list%node(n2)%x(1,k) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n2)
-      PSIPR =  node_list%node(n2)%x(2,k) * element_list%element(i_elm)%size(iv,2) * 3.d0/2.d0 ! PSI(3,n2)
+      ss2 = element_list%element(i_elm)%size(iv,2)
+
+      PSIM  =  node_list%node(n1)%x(1,k) * ss1             ! PSI(1,n1)
+      PSIMR =  node_list%node(n1)%x(2,k) * ss2 * 3.d0/2.d0 ! PSI(3,n1)
+      PSIP  =  node_list%node(n2)%x(1,k) * ss1             ! PSI(1,n2)
+      PSIPR =  node_list%node(n2)%x(2,k) * ss2 * 3.d0/2.d0 ! PSI(3,n2)
 
     elseif ((iv .eq. 2) .or. (iv .eq. 4)) then
 
-      PSIM  =   node_list%node(n1)%x(1,k) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n1)
-      PSIMR =   node_list%node(n1)%x(3,k) * element_list%element(i_elm)%size(iv,3) * 3.d0/2.d0 ! PSI(2,n1)
-      PSIP  =   node_list%node(n2)%x(1,k) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n2)
-      PSIPR =   node_list%node(n2)%x(3,k) * element_list%element(i_elm)%size(iv,3) * 3.d0/2.d0 ! PSI(2,n2)
+      ss3 = element_list%element(i_elm)%size(iv,3)
+      
+      PSIM  =   node_list%node(n1)%x(1,k) * ss1             ! PSI(1,n1)
+      PSIMR =   node_list%node(n1)%x(3,k) * ss3 * 3.d0/2.d0 ! PSI(2,n1)
+      PSIP  =   node_list%node(n2)%x(1,k) * ss1             ! PSI(1,n2)
+      PSIPR =   node_list%node(n2)%x(3,k) * ss3 * 3.d0/2.d0 ! PSI(2,n2)
 
     endif
 

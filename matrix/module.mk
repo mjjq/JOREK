@@ -12,3 +12,6 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC) 			\
 	$(DIR)/mod_global_distributed_matrix.f90	\
 	$(DIR)/ch_nod_rhs_elm.f90			\
 	$(DIR)/ch_node_struct.f90
+	
+JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC) 			\
+	$(DIR)/mod_global_distributed_matrix.f90	\

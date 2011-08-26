@@ -114,6 +114,8 @@ JOREK2VTK3D_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) \
 	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK3D_SRC)))
 JOREK2_DIAGNO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_DIAGNO_SRC))) \
 	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_DIAGNO_SRC)))
+JOREK2_FOUR_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) \
+	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))
 
 
 MOD_FILES=`find . -name "*.mod"`
@@ -201,6 +203,12 @@ jorek2_poincare : diagnostics/jorek2_poincare.f90 $(JOREK2_POINCARE_OBJ)
 	diagnostics/jorek2_poincare.f90 \
 	$(JOREK2_POINCARE_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_poincare $(INCLUDES) $(LIBS)
+
+jorek2_four : diagnostics/jorek2_four.f90 $(JOREK2_FOUR_OBJ)
+	$(FC) $(FFLAGS)                 \
+	diagnostics/jorek2_four.f90 \
+	$(JOREK2_FOUR_OBJ)		\
+	 -o $(JOREK_DIR)/jorek2_four $(INCLUDES) $(LIBS)
 
 jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
 	$(FC) $(FFLAGS_OMP)                  \

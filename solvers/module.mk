@@ -19,6 +19,13 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	\
 	$(DIR)/mod_pastix.f90		\
 	$(DIR)/mod_murge.f90
 
+JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
+	$(DIR)/root.f90				\
+	$(DIR)/mod_mumps.f90 		\
+	$(DIR)/mod_pastix.f90		\
+	$(DIR)/mod_murge.f90 		\
+	$(DIR)/mnewtax.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/root.f90				\
 	$(DIR)/mod_mumps.f90 		\

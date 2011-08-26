@@ -12,18 +12,18 @@ PROGRAM JOREK2_FOUR
   type (type_surface_list) :: surface_list
   integer                  :: my_id
   integer                  :: i, j, k, l, ierr, ivar
-  integer                  :: n_cpu
+  integer                  :: n_cpu, m_pol_range(2)
   integer                  :: required, provided, StatInfo
   integer*4                :: rank, comm_size 
   TYPE(t_theta_mapping)    :: mapping       ! mapping between theta_mag and theta_geo
-  real,    allocatable     :: vve(:,:,:)    ! Variable values at positions of mapping.rre and .zze
-  complex, allocatable     :: vfour(:,:,:)  ! Fourier transformed quantity.
+  real,    allocatable     :: vve(:,:,:,:)  ! Variable values at positions of mapping.rre and .zze
+  complex, allocatable     :: vfour(:,:,:,:)! Fourier transformed quantity.
   integer                  :: localvars(2), err, vars_per_cpu
-  character(len=6)         :: s
+  character(len=6)         :: sn
   ! Field line tracing parameters
   integer                  :: nstpts, nmaxsteps, nsmallsteps
   real                     :: deltaphi
-  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps
+  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps, m_pol_range
 
   required=MPI_THREAD_MULTIPLE
   call MPI_Init_thread(required,provided,StatInfo)         ! initialise threaded MPI (openMPI)
@@ -41,7 +41,7 @@ PROGRAM JOREK2_FOUR
   call import_restart(node_list,element_list)              ! read restart file
 
   call broadcast_elements(my_id,element_list)              ! sending all elements
-  call broadcast_boundary(my_id,boundary_list)             ! sending boundary elements
+  call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)! sending boundary elements
   call broadcast_nodes(my_id,node_list)                    ! sending all nodes
   call broadcast_phys(my_id)                               ! sending the physics parameters
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -55,6 +55,7 @@ PROGRAM JOREK2_FOUR
   nmaxsteps   = 2500
   deltaphi    = 1.
   nsmallsteps = 3
+  m_pol_range = (/1, 7/)
   
   ! --- If four_params.nml file exists, read field line tracing parameters from that file.
   OPEN(42, FILE='./four_params.nml', ACTION='READ', STATUS='OLD', IOSTAT=err)
@@ -65,39 +66,49 @@ PROGRAM JOREK2_FOUR
   END IF
   
   ! --- Log field line tracing parameters.
-  write(*,*) 'nstpts      =', nstpts
-  write(*,*) 'nmaxsteps   =', nmaxsteps
-  write(*,*) 'deltaphi    =', deltaphi
-  write(*,*) 'nsmallsteps =', nsmallsteps
+  111 format(1x,a,2i12)
+  112 format(1x,a,2es12.4)
+  write(*,111) 'nstpts      =', nstpts
+  write(*,111) 'nmaxsteps   =', nmaxsteps
+  write(*,112) 'deltaphi    =', deltaphi
+  write(*,111) 'nsmallsteps =', nsmallsteps
+  write(*,111) 'm_pol_range =', m_pol_range
 
   ! --- Determine magnetic coordinates by field line tracing.
-  CALL determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping)
-
+  CALL determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping, m_pol_range)
+  
+  ! --- Transform the quantities
+  CALL transform_qttys(mapping, vve, vfour, m_pol_range)
+  
   ! --- Output Fourier modes of the physical quantities.
   do ivar = localvars(1), localvars(2)
-    OPEN(42, FILE=TRIM(variable_names(ivar))//'_modes', STATUS='REPLACE', ACTION='WRITE')
     OPEN(43, FILE='mode_numbers', STATUS='REPLACE', ACTION='WRITE')
     write(42,'("# psi_normalized    ABS(",A," modes)")') TRIM(variable_names(ivar))
     write(42,'("#")')
-    CALL transform_qtty(mapping, ivar, vve, vfour)
     
     l = 0
-    do i = 1, 7 ! pol
-      do j = 1, (n_tor+1)/2 ! tor
+    do j = 1, (n_tor+1)/2 ! tor
+    
+      write(sn,'(i3.3)') (j-1)*n_period
+      OPEN(42, FILE=TRIM(variable_names(ivar))//'_modes_n'//trim(sn), STATUS='REPLACE', ACTION='WRITE')
+    
+      do i = m_pol_range(1), m_pol_range(2) ! pol
         
-        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i-1, j-1
-        write(43,*) TRIM(int2str(i-1))//'/'//TRIM(int2str(j-1))
+        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i-1, (j-1)*n_period
+        write(43,*) TRIM(int2str(i-1))//'/'//TRIM(int2str((j-1)*n_period))
         l = l + 1
         do k = 1, mapping.nstpts
-          write(42,*) mapping.psin(k), ABS(vfour(i,j,k))
+          write(42,*) mapping.psin(k), ABS(vfour(i,j,k,ivar))
         end do
         write(42,*)
         write(42,*)
         
       end do
+      
+      CLOSE(42)
+      
     end do
     
-    CLOSE(42)
     CLOSE(43)
   end do
 

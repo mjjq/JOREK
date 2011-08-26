@@ -5,6 +5,9 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	\
 	$(DIR)/r3_ctlk.c                \
 	$(DIR)/trace.f90
 
+JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC) \
+	$(DIR)/trace.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) \
 	$(DIR)/trace.f90
 

@@ -3,6 +3,10 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC) 		\
 	$(DIR)/mod_data_structure.f90		\
 	$(DIR)/mod_profiles.f90
 
+JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC) 	\
+	$(DIR)/mod_data_structure.f90		\
+	$(DIR)/mod_profiles.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 	\
 	$(DIR)/mod_data_structure.f90		\
 	$(DIR)/mod_profiles.f90

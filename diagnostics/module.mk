@@ -15,7 +15,15 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/q_profile.f90              \
 	$(DIR)/RZ_minmax.f90              \
 	$(DIR)/integrals.f90              \
+	$(DIR)/mod_fourier.f90            \
 	$(DIR)/integrals_3D.f90          
+
+JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	  \
+	$(DIR)/boundary_check.f90         \
+	$(DIR)/RZ_minmax.f90              \
+	$(DIR)/find_axis.f90              \
+	$(DIR)/find_xpoint.f90            \
+	$(DIR)/mod_fourier.f90
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 	\
 	$(DIR)/find_axis.f90			\

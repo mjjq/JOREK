@@ -20,6 +20,14 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/split_broadcast.f90		\
         $(DIR)/mod_live_data.f90
 
+JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
+	$(DIR)/broadcast_elements.f90 		\
+	$(DIR)/broadcast_boundary.f90 		\
+	$(DIR)/broadcast_nodes.f90 		\
+	$(DIR)/broadcast_phys.f90 		\
+	$(DIR)/export_boundary.f90 		\
+	$(DIR)/import_restart.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/import_restart.f90
 

@@ -7,6 +7,10 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/initial_conditions.f90           \
 	$(DIR)/mod_parameters.f90		
 
+JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
+	$(DIR)/initialise_parameters.f90 	\
+	$(DIR)/mod_parameters.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/mod_parameters.f90

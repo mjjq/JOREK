@@ -310,11 +310,11 @@ program JOREK2
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
-    if ( freeboundary_equil ) call import_external_fields()
     if ( freeboundary_equil ) call get_vacuum_response(my_id, node_list, bnd_elm_list,             &
       bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
     if ( freeboundary_equil .and. NEW_VACUUM ) call update_response(tstep, freeboundary_equil,     &
       resistive_wall)
+    if ( freeboundary_equil ) call import_external_fields()
     
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then

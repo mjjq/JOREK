@@ -34,7 +34,7 @@ module vacuum_equilibrium
                 
   n_dof_bnd_tmp = 2*n_dof_bnd_tmp
          
-  if (n_dof_bnd .ne. n_dof_bnd_tmp) write(*,'(A,2i4)') ' ERROR : wrong number of boundary points ;',n_dof_bnd,n_dof_bnd_tmp
+  if (n_dof_bnd .ne. n_dof_bnd_tmp) write(*,'(A,2i4)') ' ERROR : wrong number of boundary points :', n_dof_bnd, n_dof_bnd_tmp
          
   allocate(external_field(n_dof_bnd_tmp,n_coils))           ! allocate external_field matrix
   allocate(I_coils(n_coils))                                 ! allocate the coil currents

@@ -4,6 +4,7 @@ subroutine update_values(my_id,element_list,node_list,RHS)
 !-----------------------------------------------------------------------
 
 use data_structure
+use phys_module, only: linear_run
 
 implicit none
 
@@ -22,7 +23,10 @@ real*8	:: h_u, h_v, h_w
 integer, dimension(n_vertex_max)  :: Pr
 integer, dimension(2)    :: parent
 integer :: index_elm,l,i_tor,ivar
-integer :: i, j, k, in, index_node, index
+integer :: i, j, k, in, index_node, index, i_tor_min
+
+i_tor_min = 1
+if ( linear_run ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
 
 if (my_id .eq. 0) then
 
@@ -34,7 +38,7 @@ if (my_id .eq. 0) then
 
       do k=1,n_var
 
-        do in=1,n_tor
+        do in=i_tor_min,n_tor
 
           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
 
@@ -94,7 +98,7 @@ if (my_id .eq. 0) then
             Delt_dt=0.
             Delt_dsdt=0.  
   
-     do i_tor = 1, n_tor     
+     do i_tor = i_tor_min, n_tor     
           do k = 1, n_vertex_max	        
              Pr(k) = element_list%element(index_elm)%vertex(k)    
            if((Pr(k)==parent(1)).or.(Pr(k)==parent(2))) then

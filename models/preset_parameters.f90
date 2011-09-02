@@ -156,6 +156,8 @@ subroutine preset_parameters
 
   produce_live_data = .true.
   
+  linear_run         = .false.
+  
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
   use_mumps          = .false.              ! Use MUMPS solver

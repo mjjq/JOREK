@@ -43,7 +43,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 eta_T_dependent, visco_T_dependent,                 &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
-                produce_live_data, gmres, gmres_max_iter
+                produce_live_data, gmres, gmres_max_iter, linear_run
 
 if (my_id .eq. 0) then
 

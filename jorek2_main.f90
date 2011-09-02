@@ -810,7 +810,6 @@ program JOREK2
 
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);
-     if (my_id .eq. 0) write(*,'(A,2e16.8,2i12)') ' min/max deltas : ',mindelta,maxdelta,minloc(deltas),maxloc(deltas)
 
      if (gmres .and. adaptive_time) then        ! experimental
         if (iter_gmres .ge. iter_big) then
@@ -835,16 +834,28 @@ program JOREK2
         energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
         energies(1:n_tor,2,index_now) = W_kin(1:n_tor)
 
+        
+        ! --- Output some information about the current timestep
+        130 format(1x,a,i5.5,a,es8.2,a)
+        131 format(1x,a,2(2(es10.2,' ...',es10.2,',')))
+        132 format(1x,'-------------------------------------------------------------------')
+        133 format(1x,a,2(es10.2,' at ',i10,','))
+        write(*,*)
+        write(*,132)
+        write(*,130) 'After step ', istep, ' (t_now=', t_now, '):'
+        write(*,132)
+        write(*,133) 'min/max deltas  =', mindelta, minloc(deltas), maxdelta, maxloc(deltas)
+        write(*,131) 'W_mag/_kin      =', W_mag(1), W_mag(n_tor), W_kin(1), W_kin(n_tor)
         Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
-
-        if (index_start+istep .gt. 1) then
-           Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
-           Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
-           Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
-           Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
+        if (index_now > index_start+1) then
+          Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
+          Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+          Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
+          Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
+          write(*,131) 'Growth_mag/_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
         endif
-
-        write(*,'(i5,12e14.6)') istep,t_now,W_mag(1),W_kin(1),W_mag(n_tor),W_kin(n_tor),Growth_kin0,Growth_kin
+        write(*,132)
+        write(*,*)
 
         ! --- Output energies and growth_rates to text files during the code run
         call write_live_data(index_now)
@@ -869,7 +880,11 @@ program JOREK2
      ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
      inquire(file='STOP_NOW', exist=file_exists)
      if ( file_exists ) then
-       if ( my_id == 0 ) write(*,*) 'Found file STOP_NOW: Exiting the code.'
+       if ( my_id == 0 ) then
+         write(*,*)
+         write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
+         write(*,*)
+       end if
        exit jstep_loop
      end if
      

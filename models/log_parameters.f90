@@ -274,6 +274,7 @@ if (my_id == 0) then
   write(*,230) 'gamma_sheath        ', gamma_sheath
   write(*,232) 'bc_natural_open     ', bc_natural_open
   write(*,232) 'produce_live_data   ', produce_live_data
+  write(*,232) 'linear_run          ', linear_run
   write(*,232) 'gmres               ', gmres
   write(*,231) 'gmres_max_iter      ', gmres_max_iter
   write(*,232) 'use_mumps           ', use_mumps

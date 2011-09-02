@@ -415,8 +415,10 @@ module fourier
               ( ( mapping.tt(k,mapping.npts(k)) - mapping.tt(k,0) - 2.*PI ) / &
               ( mapping.tt(k,mapping.npts(k)) - mapping.tt(k,mapping.npts(k)-1) ) ) ) * 2.*PI
           end do
+          !$omp critical
           write(*,'(" Field line",I4,":    psin=",F7.3,"    npts=",I7)') k, mapping.psin(k),       &
 	    mapping.npts(k)
+          !$omp end critical
           exit
         end if
         

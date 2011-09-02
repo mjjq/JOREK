@@ -7,6 +7,12 @@ jorek_model???
 jorek2vtk
 jorek2vtk_3d
 jorek2_poincare
+jorek2_four
+jorek2_connection2
+jorek2_fieldlines_vtk
+jorek2_diagno
+jorek_to_helena
+import_eqdsk
 *.lst
 F*.f
 *.optdbg

@@ -158,6 +158,8 @@ subroutine preset_parameters
   
   linear_run         = .false.
   
+  export_for_nemec   = .false.
+  
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
   use_mumps          = .false.              ! Use MUMPS solver

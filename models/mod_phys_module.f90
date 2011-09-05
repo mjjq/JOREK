@@ -37,6 +37,7 @@ module phys_module
   logical :: gmres             !< Use iterative GMRES solver
   integer :: gmres_max_iter    !< Maximum number of GMRES iterations
   logical :: linear_run        !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
+  logical :: export_for_nemec  !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'

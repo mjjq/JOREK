@@ -8,6 +8,7 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/distribute_harmonics.f90 	\
 	$(DIR)/distribute_nodes_elements.f90 	\
 	$(DIR)/distribute_vector.f90  		\
+	$(DIR)/export_nemec.f90 		\
 	$(DIR)/export_grid.f90 			\
 	$(DIR)/export_pov.f90 			\
 	$(DIR)/export_restart.f90 		\

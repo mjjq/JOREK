@@ -13,6 +13,8 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/integral_current.f90       \
 	$(DIR)/psi_minmax.f90             \
 	$(DIR)/q_profile.f90              \
+	$(DIR)/determine_q_profile.f90    \
+	$(DIR)/determine_PhiN.f90         \
 	$(DIR)/RZ_minmax.f90              \
 	$(DIR)/integrals.f90              \
 	$(DIR)/integrals_3D.f90          

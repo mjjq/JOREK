@@ -332,7 +332,10 @@ program JOREK2
     if (my_id == 0) then
       
       ! --- Compute the plasma equilibrium
-      if (equil) call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
+      if (equil) then
+        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
+        if (export_for_nemec) call export_nemec(node_list, element_list, xpoint)
+      end if
       
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then

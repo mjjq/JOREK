@@ -174,12 +174,12 @@ beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
 beta_n  = 100.d0 * (4.*PI/10.) * beta_t / (MU_zero * abs(current) /  (aminor * Bgeo))
 
 write(*,*) ' psi_limit : ',psi_limit
-write(*,'(A,f10.5,A)') ' current : ',current/1.e6,' MA'
-write(*,'(A,f10.5)') ' beta_p   : ',beta_p
-write(*,'(A,f10.5)') ' beta_t   : ',beta_t
-write(*,'(A,f10.5)') ' beta_n   : ',beta_n
-write(*,'(A,f10.5,A)') ' Area     : ',area,' m^2'
-write(*,'(A,f10.5,A)') ' Volume   : ',volume,' m^3'
+write(*,'(A,f12.7,A)') ' current  : ',current/1.e6,' MA'
+write(*,'(A,f12.7)') ' beta_p   : ',beta_p
+write(*,'(A,f12.7)') ' beta_t   : ',beta_t
+write(*,'(A,f12.7)') ' beta_n   : ',beta_n
+write(*,'(A,f12.7,A)') ' Area     : ',area,' m^2'
+write(*,'(A,f12.7,A)') ' Volume   : ',volume,' m^3'
 
 write(*,'(A,5f10.5)') 'density  (total/in/out) : ',density,  density_in,  density_out 
 write(*,'(A,5f10.5)') 'pressure (total/in/out) : ',pressure, pressure_in, pressure_out 

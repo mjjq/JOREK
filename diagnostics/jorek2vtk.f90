@@ -27,8 +27,9 @@ real*8                :: psi_bnd,psi_axis,R_axis,Z_axis,s_axis,t_axis,psi_xpoint
 real*8                :: ps0, psi_norm, particle_source, D_prof, ZK_prof, grad_psi, source_pellet, ZKpar_T
 real*8                :: w0_x, w0_y, w0_xx, w0_yy, xjac_x, xjac_y
 integer               :: i_elm_axis, i_elm_xpoint, k_tor, ifail, ierr
+logical               :: without_n0_mode
 
-namelist /vtk_params/ nsub, i_tor, i_plane
+namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
 
 write(*,*) 'jorek2vtk'
 
@@ -40,6 +41,7 @@ call initialise_parameters(my_id)
 nsub      = 5  ! Number of subdivisions of the cubic finite elements into linear pieces
 i_tor     = -1 ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane   = 1  ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
+without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -51,9 +53,10 @@ end if
 write(*,*)
 write(*,*) 'Parameters:'
 write(*,*) '-----------'
-write(*,*) 'nsub    =', nsub
-write(*,*) 'i_tor   =', i_tor
-write(*,*) 'i_plane =', i_plane
+write(*,*) 'nsub            =', nsub
+write(*,*) 'i_tor           =', i_tor
+write(*,*) 'i_plane         =', i_plane
+write(*,*) 'without_n0_mode =', without_n0_mode
 write(*,*)
 
 ! --- Number of scalars to write to the VTK output file
@@ -187,6 +190,8 @@ do i=1,element_list%n_elements
 	w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
         
         do i_tor = 1, n_tor
+        
+          if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
           
           do m=1,n_var
             call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)

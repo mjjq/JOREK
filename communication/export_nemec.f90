@@ -1,4 +1,10 @@
 !> Export the equilibrium for the NEMEC code.
+!!
+!! - iota-for-nemec contains the inverse q-profile versus the normalized toroidal flux
+!! - pres-for-nemec contains the pressure profile versus the normalized toroidal flux
+!! - namelist-for-nemec contains some input parameters required for the NEMEC run
+!! - lcms-for-descur contains a representation of the last closed magnetic surface which needs to
+!!   be Fourier-expanded by the DESCUR code for NEMEC
 subroutine export_nemec(node_list, element_list, xpoint)
   
   use data_structure

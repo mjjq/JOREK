@@ -42,6 +42,7 @@ function usage () {
   echo "  -nsub <nsub>        Number of finite element subdivisions [default: 5]"
   echo "  -i_tor <i_tor>      Select single toroidal mode [default: -1 means all]"
   echo "  -i_plane <i_plane>  Select the toroidal plane [default: 1]"
+  echo "  -no0                Don't include the n=0 mode (for i_tor=-1) [default: off]"
   echo ""
   echo "  binary              jorek2vtk(3d) executable"
   echo "  infile              Input file of the corresponding JOREK run"
@@ -141,6 +142,7 @@ customdir=""
 nsub=""
 i_tor=""
 i_plane=""
+no0=""
 writenml="no"
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
@@ -166,6 +168,10 @@ while [ $# -gt 1 ]; do
   elif [ "$1" == "-i_plane" ]; then
     i_plane="$2"
     shift 2
+    writenml="yes"
+  elif [ "$1" == "-no0" ]; then
+    no0="yes"
+    shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
     usage
@@ -206,6 +212,7 @@ function get_recursive_params () {
   i_plane_rec=$2
   params="-j $nthreads -min $minstep -max $maxstep"
   if [ ! -z "$nsub"        ]; then params="$params -nsub    $nsub";        fi
+  if [ ! -z "$no0"         ]; then params="$params -no0";                  fi
   if [ ! -z "$i_tor_rec"   ]; then params="$params -i_tor   $i_tor_rec";   fi
   if [ ! -z "$i_plane_rec" ]; then params="$params -i_plane $i_plane_rec"; fi
   params="$params $binary $infile $copyfiles"
@@ -256,6 +263,8 @@ else
     dir="${dir}_itor$i_tor"
     echo ""
     echo "****** i_tor=$i_tor ******"
+  elif [ ! -z "$no0" ]; then
+    dir="${dir}_no0"
   fi
   if [ ! -z "$i_plane" ]; then
     dir="${dir}_iplane$i_plane"
@@ -316,6 +325,9 @@ if [ "$writenml" == "yes" ]; then
   fi
   if [ ! -z "$i_plane" ]; then
     echo "  i_plane = $i_plane"   >> $vtk_nml
+  fi
+  if [ ! -z "$no0" ]; then
+    echo "  without_n0_mode = .true."   >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"

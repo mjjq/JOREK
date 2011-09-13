@@ -12,7 +12,8 @@ integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vecto
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 real*8,allocatable    :: HZ(:,:)
 integer,allocatable   :: ien (:,:)
-integer               :: i, j, k, m, etype, ivtk, irst, int, i_var, i_tor, index, index_node, n_points
+integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
+integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, index, index_node, n_points
 character             :: buffer*80, lf*1, str1*10, str2*10
 character*8, allocatable :: scalar_names(:), vector_names(:)
 real*4                :: float
@@ -23,17 +24,38 @@ real*8                :: U,U_s,U_t,U_st,U_ss,U_tt, RHO,RH_s,RH_t,RH_st,RH_ss,RH_
 real*8                :: u0_x, u0_y, xjac, v_perp, Psi_J, R_p, error, zj_x, zj_y, ps_x, ps_y
 logical               :: periodic
 integer               :: ierr, my_id
+logical               :: without_n0_mode
 
-periodic = .true.
+namelist /vtk_params/ nsub, without_n0_mode, periodic
 
-my_id=0
+write(*,*) 'jorek2vtk_3d'
 
+! --- Initialise input parameters and read the input namelist.
+my_id     = 0
 call initialise_parameters(my_id)
 
-ivtk = 22                 ! an arbitrary unit number for the VTK output file
-nsub  = 5                 ! the number of subdivisions of the cubic finite elements into linear pieces
+! --- Preset parameters
+nsub      = 5  ! Number of subdivisions of the cubic finite elements into linear pieces
+without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
+periodic  = .true.
 
-n_scalars = 4             ! number of scalars to write to the VTK output file
+! --- Read parameters from namelist file 'vtk.nml' if it exists
+open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  read(42,vtk_params)
+  close(42)
+end if
+write(*,*)
+write(*,*) 'Parameters:'
+write(*,*) '-----------'
+write(*,*) 'nsub            =', nsub
+write(*,*) 'without_n0_mode =', without_n0_mode
+write(*,*) 'periodic        =', periodic
+write(*,*)
+
+! --- Number of scalars and vectors written to the VTK file
+n_scalars = 4
 n_vectors = 1
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
@@ -68,7 +90,6 @@ PI = 2.d0 * asin(1.d0)
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
-  write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
 
 allocate(HZ(n_tor,n_plane))
@@ -87,6 +108,8 @@ do m=1,n_plane
 enddo
 
 do m=1, n_plane
+  ! --- Print progress information as jorek2vtk_3d may run very long...
+  if ( mod(m,n_plane/40+1) == 0 ) write(*,'(" Plane ",i4.4," of ",i4.4)') m, n_plane
 
   if (periodic) then
     angle = 2.d0 * PI * float(m-1)/float(n_plane)
@@ -103,6 +126,7 @@ do m=1, n_plane
 
         call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
         xjac  = R_s * Z_t - R_t * Z_s
+        if ( xjac == 0.d0 ) xjac = 1.d-8 ! (workaround to avoid floating invalid)
 
 
         inode = inode+1
@@ -111,6 +135,8 @@ do m=1, n_plane
 
         do i_tor = 1,n_tor
 
+          if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
+          
           call interp(node_list,element_list,i,1,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,1) = scalars(inode,1) + P * HZ(i_tor,m)
 
@@ -228,5 +254,7 @@ do i_var =1, n_vectors
 enddo
 
 close(ivtk)
+
+write(*,*) 'done.'
 
 end program jorek2vtk_3d

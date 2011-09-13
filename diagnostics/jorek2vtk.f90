@@ -259,6 +259,7 @@ do i=1,element_list%n_elements
         ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4)))) &
                 + ZK_perp(6) * (ZK_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
        
+        scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
         ZKpar_T = ZK_par * ((scalars(inode,6)+T_1)/T_0)**2.5
 	
         grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
@@ -364,5 +365,7 @@ do i_var =1, n_vectors
 enddo
 
 close(ivtk)
+
+write(*,*) 'done.'
  
 end program jorek2vtk

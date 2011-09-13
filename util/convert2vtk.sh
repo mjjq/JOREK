@@ -7,8 +7,8 @@
 # Author: Matthias Hoelzl, IPP Garching
 #
 
+# --- Cleanup things when the user presses Ctrl-C or the script finishes.
 trap cleanup 1 2 3 6
-
 function cleanup () {
   if [ "$1" != "0" ]; then
     echo ""
@@ -27,31 +27,36 @@ function cleanup () {
 
 function usage () {
   echo ""
-  echo "Converts JOREK restart files into VTK files that can be visualized using,"
-  echo "e.g., VISIT or PARAVIEW."
+  echo "Convert JOREK restart files into 2D/3D VTK files for visualization."
   echo ""
   echo "Usage: `basename $0` [options] binary infile [extra-files]"
   echo ""
   echo "Options:"
+  echo "  -dir <dir>          Specify a custom target directory (see remarks below)"
   echo "  -j <nthreads>       Convert using <nthreads> threads [default: 1]"
-  echo "  -min <minstep>      Minimum time step index to convert"
   echo "  -max <maxstep>      Maximum time step index to convert"
-  echo "  -dir <dir>          Write vtk files to specified directory [default: vtk]"
+  echo "  -min <minstep>      Minimum time step index to convert"
+  echo "  -only <step>        Convert only one time step"
+  echo "  -range <minstep> <maxstep>     Convert a range of time steps"
+  echo "  -zip                Compress the .vtk files using gzip"
   echo ""
-  echo "Options passed to jorek2vtk via namelist input (see code for details):"
+  echo "Options passed to jorek2vtk(_3d) via namelist input (see code for details):"
+  echo "  -i_tor <i_tor>      Select one toroidal mode [default: -1] (2D VTK ONLY)"
+  echo "  -i_plane <i_plane>  Select the toroidal plane [default: 1] (2D VTK ONLY)"
+  echo "  -no0                Don't include the n=0 mode for i_tor=-1 [default: off]"
   echo "  -nsub <nsub>        Number of finite element subdivisions [default: 5]"
-  echo "  -i_tor <i_tor>      Select single toroidal mode [default: -1 means all]"
-  echo "  -i_plane <i_plane>  Select the toroidal plane [default: 1]"
-  echo "  -no0                Don't include the n=0 mode (for i_tor=-1) [default: off]"
+  echo "  -[no]periodic       (Un)set periodicity for 3D plot (3D VTK ONLY)"
   echo ""
   echo "  binary              jorek2vtk(3d) executable"
   echo "  infile              Input file of the corresponding JOREK run"
   echo "  extra-files         Additional files that are required for running"
   echo ""
   echo "Remarks:"
-  echo "  * <i_tor> and <i_plane> may contain lists or ranges, e.g., -i_tor 3,5-7"
-  echo "  * With option -i_tor 3, '_itor3' is added to the output directory"
-  echo "  * With option -i_plane 5, '_iplane5' is added to the output directory"
+  echo "  * <i_tor> and <i_plane> may contain lists and/or ranges, e.g., -i_tor 3,5-7"
+  echo "  * The default target directory is ./vtk(3d)"
+  echo "  * With option -i_tor X, '_itorX' is added to the output directory name"
+  echo "  * With option -no0, '_no0' is added to the output directory name"
+  echo "  * With option -i_plane X, '_iplaneX' is added to the output directory name"
   echo ""
 }
 
@@ -123,6 +128,10 @@ function do_convert () {
       egrep -i "warning|restart time" ./log
     fi
     mv jorek_tmp.vtk $targetFile
+    if [ "$zipfiles" == "yes" ]; then
+      rm -f ${targetFile}.gz
+      gzip $targetFile
+    fi
   fi
   
   unmark_running $ithread
@@ -154,9 +163,20 @@ while [ $# -gt 1 ]; do
   elif [ "$1" == "-max" ]; then
     maxstep="$2"
     shift 2
+  elif [ "$1" == "-only" ]; then
+    minstep="$2"
+    maxstep="$2"
+    shift 2
+  elif [ "$1" == "-range" ]; then
+    minstep="$2"
+    maxstep="$3"
+    shift 3
   elif [ "$1" == "-dir" ]; then
     customdir="$2"
     shift 2
+  elif [ "$1" == "-zip" ]; then
+    zipfiles="yes"
+    shift 1
   elif [ "$1" == "-nsub" ]; then
     nsub="$2"
     shift 2
@@ -171,6 +191,14 @@ while [ $# -gt 1 ]; do
     writenml="yes"
   elif [ "$1" == "-no0" ]; then
     no0="yes"
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-noperiodic" ]; then
+    periodic=".false."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-periodic" ]; then
+    periodic=".true."
     shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
@@ -255,10 +283,16 @@ fi
 
 
 # --- Determine output directory
-dir="./vtk"
 if [ ! -z "$customdir" ]; then
   dir="$customdir"
 else
+  if [[ "$binary" == *jorek2vtk_3d* ]]; then
+    dir="./vtk3d"
+    threeD="yes"
+  else
+    dir="./vtk"
+    threeD="no"
+  fi
   if [ ! -z "$i_tor" ]; then
     dir="${dir}_itor$i_tor"
     echo ""
@@ -270,10 +304,11 @@ else
     dir="${dir}_iplane$i_plane"
     echo ""
     echo "****** i_plane=$i_plane ******"
-  elif [ -z "$i_tor" ]; then
+  elif [ -z "$i_tor" ] && [ "$threeD" == "no" ]; then
     dir="${dir}_iplane1"
   fi
 fi
+echo "Writing files to dir='$dir'."
 
 
 
@@ -328,6 +363,9 @@ if [ "$writenml" == "yes" ]; then
   fi
   if [ ! -z "$no0" ]; then
     echo "  without_n0_mode = .true."   >> $vtk_nml
+  fi
+  if [ ! -z "$periodic" ]; then
+    echo "  periodic = $periodic" >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"

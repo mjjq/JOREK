@@ -7,8 +7,8 @@ use basis_at_gaussian
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+type (type_node_list)   , pointer :: node_list
+type (type_element_list), pointer :: element_list
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -32,6 +32,9 @@ logical               :: without_n0_mode
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
 
 write(*,*) 'jorek2vtk'
+call flush(6)
+allocate(node_list)
+allocate(element_list)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
@@ -58,6 +61,7 @@ write(*,*) 'i_tor           =', i_tor
 write(*,*) 'i_plane         =', i_plane
 write(*,*) 'without_n0_mode =', without_n0_mode
 write(*,*)
+call flush(6)
 
 ! --- Number of scalars to write to the VTK output file
 n_scalars = n_var + 10

@@ -112,6 +112,10 @@ if (mf .le. 0) then
       else
         psi_tmp(i) = psi_boundary(i)
       endif	
+
+      if ((i .gt. 1) .and. (tht_tmp(i) .lt. tht_tmp(i-1))) then
+       tht_tmp(i) = tht_tmp(i) + 2.d0*pi
+      endif
       	 
     enddo
 

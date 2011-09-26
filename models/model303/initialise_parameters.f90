@@ -41,6 +41,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 central_density, pellet_particles, use_pellet,      &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
+                xcase,                                              &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary_equil, freeboundary,                   &
                 use_starwall, resistive_wall,                       &
@@ -60,6 +61,9 @@ if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
+  
+  ! --- DoubleNull flag
+  xcase = 1
   
   ! --- Model-specific presets
   particlesource_psin = 100.d0

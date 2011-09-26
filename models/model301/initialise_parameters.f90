@@ -34,6 +34,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
+                xcase,                                              &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
@@ -51,6 +52,9 @@ if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
+  
+  ! --- DoubleNull flag
+  xcase = 1
   
   ! --- Model-specific presets
   particlesource_psin = 100.d0

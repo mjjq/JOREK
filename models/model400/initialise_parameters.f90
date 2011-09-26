@@ -43,7 +43,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
-                xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
+                xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
@@ -61,6 +61,9 @@ if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
+  
+  ! --- DoubleNull flag
+  xcase = 1
   
   ! --- Model-specific presets
   Ti_0   =  1.d-6

@@ -131,12 +131,12 @@ cleandep:
 	-@rm -f *.dep */*.dep */*/*.dep;
 
 version:
-	@echo "#define SVN_VERSION"                                > version.h.tmp
-	@svn info > /dev/null 2>&1;                                                 \
-	if [ $$? -eq 0 ]; then                                                      \
-	  svn info | grep "Revision:" | sed -e 's/^Revision: *//' >> version.h.tmp; \
-	else                                                                        \
-	  echo '"UNKNOWN"' >> version.h.tmp;                                        \
+	@echo "#define SVN_VERSION"                                               > version.h.tmp
+	@svn info > /dev/null 2>&1;                                                                \
+	if [ $$? -eq 0 ]; then                                                                     \
+	  export LANG=C; svn info | grep "Revision:" | sed -e 's/^Revision: *//' >> version.h.tmp; \
+	else                                                                                       \
+	  echo '"UNKNOWN"' >> version.h.tmp;                                                       \
 	fi
 	@cat version.h.tmp | tr '\n' ' ' > version.h; rm version.h.tmp
 

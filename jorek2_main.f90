@@ -871,7 +871,7 @@ program JOREK2
      else
         call r3_info_print (istep, -2, 'ITERATION')
      endif
-     write(itlabel,'(I8)'),istep
+     write(itlabel,'(I8)') istep
      call tr_print_memsize("AfterIter"//itlabel)
      
      ! --- Write a restart file every nout timesteps

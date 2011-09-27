@@ -113,7 +113,7 @@ module live_data
     
     if ( .not. produce_live_data ) return
     
-    open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='OLD', access='APPEND', action='WRITE')
+    open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='OLD', position='APPEND', action='WRITE')
     
     ! --- Write data to the files.
     write(LIVE_DATA_HANDLE,'(A,I6,1X,ES17.9)') '@times:', index, xtime(index)

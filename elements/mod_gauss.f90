@@ -3,7 +3,7 @@
 !!
 !! The values are valid for normalised coordinates in the range
 !! \f$0 \le S \le 1\f$.
-module Gauss
+module gauss
   
  integer, parameter :: n_gauss   = 4                  !< Number of Gaussian points
  integer, parameter :: n_gauss_2 = n_gauss * n_gauss  !< Square of n_gauss
@@ -14,4 +14,4 @@ module Gauss
  real*8,  parameter :: Wgauss(n_gauss) = (/ 0.173927422568727d0,  0.326072577431273d0,             &
    0.326072577431273d0,  0.173927422568727d0  /)      !< Weights of Gaussian points
 
-end module Gauss
+end module gauss

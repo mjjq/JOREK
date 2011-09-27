@@ -236,7 +236,7 @@ contains
     integer*4          , intent(in) :: mem_in_bytes
     character*(*)      , intent(in) :: var_name
 
-    call tr_memwriteadd(int8(mem_in_bytes),'unknown type',var_name)
+    call tr_memwriteadd(int(mem_in_bytes,8),'unknown type',var_name)
     nb_allocate = nb_allocate + mem_in_bytes
   end subroutine tr_register_mem_int4
 
@@ -1034,38 +1034,38 @@ contains
     open(uout_mem, file = trace_file, status = 'OLD', &
          position = 'APPEND', form = 'FORMATTED')
     if (nb_allocate.gt.GBconst) then
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label,&
+       write(uout_mem,'(A20,A50,1f10.3,A)') label,&
             'memsize allocated within Jorek (tr_module) = ', &
             nb_allocate/dfloat(GBconst), ' GBytes'
     else 
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize allocated within Jorek (tr_module) = ', &
             nb_allocate/dfloat(MBconst), ' MBytes'
     end if
     lcount = rcount - nb_allocate
     if (lcount.gt.GBconst) then
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize occupied by libraries/others = ', &
             lcount/dfloat(GBconst), ' GBytes'
     else if (lcount.gt.MBconst) then
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize occupied by libraries/others = ', &
             lcount/dfloat(MBconst), ' MBytes'
     else
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize occupied by libraries/others = ', &
             lcount/dfloat(KBconst), ' KBytes'
     end if
     if (rcount.gt.GBconst) then
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize total   (RSS) = ', &
             rcount/dfloat(GBconst), ' GBytes'
     else if (rcount.gt.MBconst) then
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize total   (RSS) = ', &
             rcount/dfloat(MBconst), ' MBytes'
     else
-       write(uout_mem,'(A20,A50,1f10.3,A)'), label, &
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize total   (RSS) = ', &
             rcount/dfloat(KBconst), ' KBytes'
     end if

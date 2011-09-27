@@ -1,9 +1,8 @@
 include Makefile.inc
 
-SED      ?=sed# gnu-sed command
-AWK			 ?=awk# gnu-awk command
-IBMFC    ?=#    IBM compiler flag (for FORTRAN symbol defs)
-
+SED   ?= sed # gnu-sed command
+AWK   ?= awk # gnu-awk command
+IBMFC ?=     # IBM compiler flag (for FORTRAN symbol defs)
 
 JOREK_DIR = `pwd`
 
@@ -35,53 +34,39 @@ VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 
 
 ifeq (1, $(USE_PASTIX_MURGE))
-LIBS     := $(LIBS) $(LIB_PASTIX_MURGE) $(LIB_PASTIX_BLAS)
-ifdef IBMFC 
-	FDEFINES := $(DEFINES) -WF,-DUSE_MURGE
-endif
-DEFINES  := $(DEFINES) -DUSE_MURGE
-INCLUDES := $(INCLUDES) $(INC_PASTIX)
+  LIBS     := $(LIBS) $(LIB_PASTIX_MURGE) $(LIB_PASTIX_BLAS)
+  DEFINES  := $(DEFINES) -DUSE_MURGE
+  INCLUDES := $(INCLUDES) $(INC_PASTIX)
 endif
 
 ifeq (1, $(USE_PASTIX))
-DEFINES  := $(DEFINES) -DUSE_PASTIX
-ifdef FDEFINES
-	FDEFINES := $(FDEFINES),-DUSE_PASTIX
-else 
-	FDEFINES := -WF,-DUSE_PASTIX
-endif
-ifeq (0, $(USE_PASTIX_MURGE))
-LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
-INCLUDES := $(INCLUDES) $(INC_PASTIX)
-endif
+  DEFINES  := $(DEFINES) -DUSE_PASTIX
+  ifeq (0, $(USE_PASTIX_MURGE))
+    LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
+    INCLUDES := $(INCLUDES) $(INC_PASTIX)
+  endif
 endif
 
 ifeq (1, $(USE_HIPS))
-LIBS := $(LIBS) $(LIBHIPS)
-INCLUDES := $(INCLUDES) $(INCHIPS)
-DEFINES  := $(DEFINES) -DUSE_HIPS
-ifdef FDEFINES
-	FDEFINES := $(FDEFINES),-DUSE_HIPS
-else 
-	FDEFINES := -WF,-DUSE_HIPS
-endif
-endif
-ifeq (1, $(USE_MUMPS))
-LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
-INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
-DEFINES := $(DEFINES) -DUSE_MUMPS
-ifdef FDEFINES
-	FDEFINES := $(FDEFINES),-DUSE_MUMPS
-else 
-	FDEFINES := -WF,-DUSE_MUMPS
-endif
+  LIBS := $(LIBS) $(LIBHIPS)
+  INCLUDES := $(INCLUDES) $(INCHIPS)
+  DEFINES  := $(DEFINES) -DUSE_HIPS
 endif
 
-CINCLUDES := $(INCLUDES) $(DEFINES)
+ifeq (1, $(USE_MUMPS))
+  LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
+  INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
+  DEFINES := $(DEFINES) -DUSE_MUMPS
+endif
+
+# Correct preprocessor-defines for IBM XLF Compiler
+IBM_DEFINES = `echo $(DEFINES) | sed -e 's/^/-WF,/' -e 's/  */,/g'`
+
+INCLUDES2  := $(INCLUDES) $(DEFINES)
 ifdef IBMFC
-	INCLUDES  := $(INCLUDES) $(FDEFINES)
+  INCLUDES := $(INCLUDES) $(IBM_DEFINES)
 else
-	INCLUDES  := $(CINCLUDES)
+  INCLUDES := $(INCLUDES) $(DEFINES)
 endif
 
 JOREK2_MAIN_SRC        = jorek2_main.f90 $(PPPSRC)
@@ -92,8 +77,7 @@ JOREK2FLVTK_SRC	       = $(PPPSRC)
 JOREK2VTK3D_SRC        = $(PPPSRC)
 JOREK2_FOUR_SRC        = $(PPPSRC)
 
-# include the description for
-#   each module
+# include the description for each module
 include $(patsubst %,%/module.mk,$(DIRS))
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC))
@@ -122,8 +106,6 @@ JOREK2_FOUR_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) \
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
 
-
-
 all: version $(MAIN)
 
 modules :
@@ -146,26 +128,28 @@ clean :
 
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
-	-@rm -f */*.dep */*/*.dep;
+	-@rm -f *.dep */*.dep */*/*.dep;
 
 version:
-	@echo -n "#define SVN_VERSION " > version.h
-	@export LANG=C; svn info | grep 'Revision:' | cut -c10-14 > revision.txt
-	-@test -s revision.txt; \
-           if [ $$? -eq 0 ]; then cat revision.txt >> version.h; \
-	                     else echo "\"UNKNOWN\"" >> version.h; fi
-	@rm -f revision.txt
+	@echo "#define SVN_VERSION"                                > version.h.tmp
+	@svn info > /dev/null 2>&1;                                                 \
+	if [ $$? -eq 0 ]; then                                                      \
+	  svn info | grep "Revision:" | sed -e 's/^Revision: *//' >> version.h.tmp; \
+	else                                                                        \
+	  echo '"UNKNOWN"' >> version.h.tmp;                                        \
+	fi
+	@cat version.h.tmp | tr '\n' ' ' > version.h; rm version.h.tmp
 
 %.dep:%.f90
-	@echo "Generating Dependencies for $(patsubst %.f90, %.o, $<)"
-	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | $(SED) 's/\,.*//' | 					\
+	@echo "Generating Dependencies for$(patsubst %.f90, %.o, $<)"
+	@cpp $(INCLUDES2) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | $(SED) 's/\,.*//' | 					\
 		$(AWK) -v file_o=" $(patsubst %.f90, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
-	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
+	@cpp $(INCLUDES2) < $< 2>/dev/null| 											\
 		$(SED) -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;
-	@cpp $(INCLUDES) < $< 2>/dev/null| 											\
+	@cpp $(INCLUDES2) < $< 2>/dev/null| 											\
 		$(SED) -n 's@[ ]+include[ ]+"\([^"]*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi' >> $@.tmp || touch $@.tmp;
-	@cpp $(INCLUDES) < $< 2>/dev/null|											\
-		$(SED) -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f90, %.o, $<): \1@p' | 					\
+	@cpp $(INCLUDES2) < $< 2>/dev/null|											\
+		$(SED) -n 's@^\# *[0-9][0-9]* *"\([^"]*\)".*@$(patsubst %.f90, %.o, $<): \1@p' | 				\
 		sort | uniq | grep -v ": /" | grep -v ": <">> $@.tmp || touch $@.tmp;
 	@grep -q -i "^[[:space:]]*module" $< ; 											\
 	if [ $$? -eq 0 ]; then 													\
@@ -176,7 +160,7 @@ version:
 	-@rm -f $@.tmp
 
 %.dep: %.f
-	@echo "Generating Dependencies for $(patsubst %.f, %.o, $<)"
+	@echo "Generating Dependencies for$(patsubst %.f, %.o, $<)"
 	@cpp $(INCLUDES) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | 							\
 		$(AWK) -v file_o="$(patsubst %.f, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES) < $< 2>/dev/null| 											\

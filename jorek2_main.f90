@@ -128,6 +128,11 @@ program JOREK2
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
   
+  real*8,  pointer :: dummy_real(:)
+  integer, pointer :: dummy_int(:)
+  dummy_real => NULL()
+  dummy_int  => NULL()
+  
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
@@ -924,7 +929,7 @@ program JOREK2
 
            elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
-              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,null(),null(),null(), &
+              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,dummy_int,dummy_int,dummy_real, &
                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
            endif
 

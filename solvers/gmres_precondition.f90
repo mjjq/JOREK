@@ -21,6 +21,11 @@ real*8              :: t1, t2, t3, t4, t5, t6
 real*8, allocatable :: buffer(:)
 integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 
+real*8,  pointer :: dummy_real(:)
+integer, pointer :: dummy_int(:)
+dummy_real => NULL()
+dummy_int  => NULL()
+
 !write(*,*) my_id,my_id_n,' GMRES preconditioning ',MPI_COMM_WORLD
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)     ! the number of cpus
@@ -148,18 +153,18 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       pastix_dparm(6)  = pastix_epsilon    ! error level refinement
       pastix_dparm(11) = pastix_pivot      ! pivot threshold?
 
-#IFDEF USE_BLOCK
+#ifdef USE_BLOCK
       pastix_iparm(5) = block_size      ! block size
       
       call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-                    NULL(), NULL(), NULL(), &
+                    dummy_int, dummy_int, dummy_real, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#ELSE      
+#else      
       pastix_iparm(5) = 1      ! block size
       
-      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,NULL(), NULL(), NULL(), &
+      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, dummy_int, dummy_int, dummy_real, &
            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#ENDIF
+#endif
    end if
 
 endif

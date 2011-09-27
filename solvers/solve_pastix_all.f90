@@ -94,7 +94,7 @@ call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
 call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 
-#IFDEF USE_BLOCK
+#ifdef USE_BLOCK
 !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
 !                             temporary solution before using blocks everywhere
 
@@ -117,7 +117,7 @@ call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%
 if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars")
 if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars")
 
-#ELSE
+#else
 
 if (allocated(sparskit_work)) deallocate(sparskit_work)
 allocate(sparskit_work(mumps_par%N + 1))
@@ -127,7 +127,7 @@ call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,s
 if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars")
 if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars")
 
-#ENDIF
+#endif
 
 call cpu_time(t_comm_1)
 
@@ -152,13 +152,13 @@ if (.not. pastix_initialised) then
     write(*,*) '***********************************'
   endif
   
-#IFDEF USE_BLOCK
+#ifdef USE_BLOCK
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#ELSE
+#else
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#ENDIF
+#endif
 
   pastix_iparm(IPARM_VERBOSE)            = pastix_verb
   pastix_iparm(IPARM_ITERMAX)            = pastix_iter                 ! refinement : max number of iterations
@@ -177,11 +177,11 @@ if (.not. pastix_initialised) then
   pastix_dparm(DPARM_EPSILON_MAGN_CTRL)  = pastix_pivot               ! pivot threshold?
   pastix_initialised = .true.
 
-#IFDEF USE_BLOCK
+#ifdef USE_BLOCK
   pastix_iparm(IPARM_DOF_NBR)            = block_size
-#ELSE
+#else
   pastix_iparm(IPARM_DOF_NBR)            = 1
-#ENDIF
+#endif
 
 endif
 
@@ -198,19 +198,19 @@ if (.not. pastix_analysed) then
     write(*,*) '***********************************'
   endif
 
-#IFDEF USE_BLOCK
+#ifdef USE_BLOCK
   
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, &
                       mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-#ELSE
+#else
 
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, &
                       mumps_par%jcn(1:mumps_par%n+1), mumps_par%irn(1:mumps_par%nz), mumps_par%A(1:mumps_par%nz), &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-#ENDIF
+#endif
 
   call cpu_time(t_analysis_1)
 
@@ -231,7 +231,7 @@ if (my_id .eq. 0) then
   write(*,*) '***********************************'
 endif
 
-#IFDEF USE_BLOCK
+#ifdef USE_BLOCK
 
 pastix_iparm(IPARM_DOF_NBR)            = block_size
 
@@ -239,12 +239,12 @@ call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block,                        
                     mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-#ELSE
+#else
 
 call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-#ENDIF
+#endif
 
 call cpu_time(t_fact_1)
 

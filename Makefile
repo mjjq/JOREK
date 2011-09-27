@@ -64,6 +64,7 @@ IBM_DEFINES = `echo $(DEFINES) | sed -e 's/^/-WF,/' -e 's/  */,/g'`
 
 INCLUDES2  := $(INCLUDES) $(DEFINES)
 ifdef IBMFC
+  DEFINES  := $(DEFINES) -DIBM_MACHINE
   INCLUDES := $(INCLUDES) $(IBM_DEFINES)
 else
   INCLUDES := $(INCLUDES) $(DEFINES)
@@ -108,27 +109,17 @@ MAIN = jorek_$(MODEL)
 
 all: version $(MAIN)
 
-modules :
-	for dir in $(DIRS); do     \
-          ($(MAKE) -C $$dir modules) \
-        done
-
-sources :	
-	for dir in $(DIRS); do \
-          ($(MAKE) -C $$dir all) \
-        done
-
 cleanall : clean cleandep
 
 clean :	
 	@echo ">> Deleting Object Files <<"
-	-@rm -f $(JOREK2_MAIN_OBJ) $(JOREK2_FOUR_OBJ);
+	-@rm -f $(JOREK2_MAIN_OBJ) $(JOREK2_FOUR_OBJ)
 	@echo ">> Deleting Module Files <<"
-	-@rm -f $(MOD_FILES);
+	-@rm -f $(MOD_FILES)
 
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
-	-@rm -f *.dep */*.dep */*/*.dep;
+	-@rm -f *.dep */*.dep */*/*.dep
 
 version:
 	@echo "#define SVN_VERSION"                                               > version.h.tmp

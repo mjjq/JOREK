@@ -89,7 +89,7 @@ contains
             form = 'FORMATTED')
     end if
     write(uout_mem,*) '### meminit ### '
-    call flush(uout_mem)
+    call flush_it(uout_mem)
     close(uout_mem)
   end subroutine tr_meminit
 
@@ -100,7 +100,7 @@ contains
     open(uout_mem, file = trace_file, status = 'REPLACE', &
          form = 'FORMATTED')
     write(uout_mem,*) '### meminit ### '
-    call flush(uout_mem)
+    call flush_it(uout_mem)
     close(uout_mem)
   end subroutine tr_resetfile
 
@@ -113,7 +113,7 @@ contains
     open(uout_mem, file = trace_file, status = 'OLD', &
          position = 'APPEND', form = 'FORMATTED')
     write(uout_mem,'(A)') string
-    call flush(uout_mem)
+    call flush_it(uout_mem)
     close(uout_mem)
   end subroutine tr_write
 

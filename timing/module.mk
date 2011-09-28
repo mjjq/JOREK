@@ -1,6 +1,7 @@
 DIR = timing
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	\
 	$(DIR)/r3_info.f90		\
+	$(DIR)/r3_ctlk.c		\
 	$(DIR)/flushc.c			\
 	$(DIR)/flush_it.f90		\
 	$(DIR)/trace.f90

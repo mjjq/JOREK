@@ -74,10 +74,10 @@ allocate(scalar_names(n_scalars), vector_names(n_vectors))
 !scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar         '/)
                 
 
-scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar         ', &
+scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar        ', &
                   'pressure    ',                                                  &
                   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp',     &
-		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp','D_prof      ','ZK_prof      '/)
+		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp','D_prof      ','ZK_prof     '/)
 
 !scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ', &
 !                  'pressure    ',                                                  &

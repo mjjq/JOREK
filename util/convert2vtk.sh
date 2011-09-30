@@ -34,10 +34,8 @@ function usage () {
   echo "Options:"
   echo "  -dir <dir>          Specify a custom target directory (see remarks below)"
   echo "  -j <nthreads>       Convert using <nthreads> threads [default: 1]"
-  echo "  -max <maxstep>      Maximum time step index to convert"
-  echo "  -min <minstep>      Minimum time step index to convert"
-  echo "  -only <step>        Convert only one time step"
-  echo "  -range <minstep> <maxstep>     Convert a range of time steps"
+  echo "  -only <step>,<step> Convert only listed time steps"
+  echo "  -only <step>-<step> Convert only time steps in the given range"
   echo "  -zip                Compress the .vtk files using gzip"
   echo ""
   echo "Options passed to jorek2vtk(_3d) via namelist input (see code for details):"
@@ -91,6 +89,21 @@ function get_available_thread () {
   done
 }
 
+# Find out if a time step was selected for conversion by the user (-only option)
+function is_selected () {
+  step_number=`echo $1 | sed -e 's/^[0 ]*\(.*.\)$/\1/'` # remove leading zeros
+  step_ranges=`echo $selected_steps | tr ',' ' '` # split selected_steps, e.g., 1-3,5-7 -> 1-3 5-7
+  for step_range in $step_ranges; do
+    step_numbers=(`echo $step_range | tr '-' ' '`) # split step_range, e.g., 1-3 -> 1 3
+    if [[ ${#step_numbers[*]} -eq 1 && ${step_numbers[0]} -eq $step_number ]] || \
+       [[ ${#step_numbers[*]} -eq 2 && ${step_numbers[0]} -le $step_number && ${step_numbers[1]} -ge $step_number ]]; then
+      echo "yes" # the step is contained in selected_steps, so answer 'yes'
+      return
+    fi
+  done
+  echo "no"
+}
+
 function do_convert () {
   file="$1"
   ithread="$2"
@@ -102,9 +115,9 @@ function do_convert () {
   targetFile="jorek.${targetFile:5:5}.vtk" # Target filename with same number as source
   targetFile="$targetDir/$targetFile" # Target filename with full path
   
-  # Convert only new restart files in the range between minstep and maxstep
+  # Convert only new, selected restart files
   if ( [ ! -e $targetFile ] || [ "$file" -nt "$targetFile" ] ) \
-    && [ $stepnum -ge $minstep ] && [ $stepnum -le $maxstep ]; then
+    && [ `is_selected $stepnum` == "yes" ]; then
     
     rm -f jorek_restart.rst
     ln -s $file jorek_restart.rst
@@ -145,8 +158,7 @@ SCRIPTDIR=`dirname $0`
 
 # --- Process command line parameters
 nthreads="1"
-minstep="0"
-maxstep="99999"
+selected_steps="0-99999"
 customdir=""
 nsub=""
 i_tor=""
@@ -157,20 +169,9 @@ while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
     shift 2
-  elif [ "$1" == "-min" ]; then
-    minstep="$2"
-    shift 2
-  elif [ "$1" == "-max" ]; then
-    maxstep="$2"
-    shift 2
   elif [ "$1" == "-only" ]; then
-    minstep="$2"
-    maxstep="$2"
+    selected_steps="$2"
     shift 2
-  elif [ "$1" == "-range" ]; then
-    minstep="$2"
-    maxstep="$3"
-    shift 3
   elif [ "$1" == "-dir" ]; then
     customdir="$2"
     shift 2
@@ -238,7 +239,7 @@ done
 function get_recursive_params () {
   i_tor_rec=$1
   i_plane_rec=$2
-  params="-j $nthreads -min $minstep -max $maxstep"
+  params="-j $nthreads -only $selected_steps"
   if [ ! -z "$nsub"        ]; then params="$params -nsub    $nsub";        fi
   if [ ! -z "$no0"         ]; then params="$params -no0";                  fi
   if [ ! -z "$i_tor_rec"   ]; then params="$params -i_tor   $i_tor_rec";   fi

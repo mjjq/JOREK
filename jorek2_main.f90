@@ -844,7 +844,7 @@ program JOREK2
 
         
         ! --- Output some information about the current timestep
-        130 format(1x,a,i5.5,a,es8.2,a)
+        130 format(1x,a,i5.5,a,es9.3,a)
         131 format(1x,a,2(2(es10.2,' ...',es10.2,',')))
         132 format(1x,'-------------------------------------------------------------------')
         133 format(1x,a,2(es10.2,' at ',i10,','))
@@ -852,15 +852,15 @@ program JOREK2
         write(*,132)
         write(*,130) 'After step ', istep, ' (t_now=', t_now, '):'
         write(*,132)
-        write(*,133) 'min/max deltas  =', mindelta, minloc(deltas), maxdelta, maxloc(deltas)
-        write(*,131) 'W_mag/_kin      =', W_mag(1), W_mag(n_tor), W_kin(1), W_kin(n_tor)
+        write(*,133) 'min,max deltas  =', mindelta, minloc(deltas), maxdelta, maxloc(deltas)
+        write(*,131) 'W_mag,_kin      =', W_mag(1), W_mag(n_tor), W_kin(1), W_kin(n_tor)
         Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
         if (index_now > index_start+1) then
           Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
           Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
           Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
           Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
-          write(*,131) 'Growth_mag/_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
+          write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
         endif
         write(*,132)
         write(*,*)

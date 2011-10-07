@@ -6,7 +6,7 @@ module fourier
   use tr_module 
   use parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
   use nodes_elements,  only: node_list, element_list
-  use phys_module,     only: F0, xpoint
+  use phys_module,     only: F0, xpoint, xcase
   
   implicit none
   
@@ -28,8 +28,8 @@ module fourier
     real*8,  allocatable :: zze(:,:) !< Z coordinates at equidistant theta_mag(!) positions
     real*8               :: psi_axis, R_axis, Z_axis, s_axis, t_axis
     integer              :: i_elm_axis
-    real*8               :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
-    integer              :: i_elm_xpoint
+    real*8               :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
+    integer              :: i_elm_xpoint(2)
   end type t_theta_mapping
   
   integer :: nequidist_pts !< Number of equidistant points for theta_mag(theta_geo) Fourier trafo
@@ -47,13 +47,13 @@ module fourier
     
     type(t_theta_mapping), intent(in) :: mapping
     
-    write(*,'(A,I12,A)')      'nstpts     =', mapping.nstpts, ' (number of radial positions)'
-    write(*,'(A,ES12.4,A)')   'R_axis     =', mapping.R_axis, ' (R position of magnetic axis)'
-    write(*,'(A,ES12.4,A)')   'Z_axis     =', mapping.Z_axis, ' (Z position of magnetic axis)'
-    write(*,'(A,ES12.4,A)')   'psi_axis   =', mapping.psi_axis, ' (poloidal flux at magnetic axis)'
-    write(*,'(A,ES12.4,A)')   'R_xpoint   =', mapping.R_xpoint, ' (R position of x-point)'
-    write(*,'(A,ES12.4,A)')   'Z_xpoint   =', mapping.Z_xpoint, ' (Z position of x-point)'
-    write(*,'(A,ES12.4,A)')   'psi_xpoint =', mapping.psi_xpoint, ' (poloidal flux at x-point)'
+    write(*,'(A,I12,A)')      'nstpts     =', mapping.nstpts,	     ' (number of radial positions)'
+    write(*,'(A,ES12.4,A)')   'R_axis     =', mapping.R_axis,	     ' (R position of magnetic axis)'
+    write(*,'(A,ES12.4,A)')   'Z_axis     =', mapping.Z_axis,	     ' (Z position of magnetic axis)'
+    write(*,'(A,ES12.4,A)')   'psi_axis   =', mapping.psi_axis,      ' (poloidal flux at magnetic axis)'
+    write(*,'(A,ES12.4,A)')   'R_xpoint   =', mapping.R_xpoint(1),   ' (R position of x-point)'
+    write(*,'(A,ES12.4,A)')   'Z_xpoint   =', mapping.Z_xpoint(1),   ' (Z position of x-point)'
+    write(*,'(A,ES12.4,A)')   'psi_xpoint =', mapping.psi_xpoint(1), ' (poloidal flux at x-point)'
     
     write(*,'(A)', ADVANCE='NO') 'psin       ='
     if ( allocated(mapping.psin) ) then
@@ -306,15 +306,15 @@ module fourier
       mapping.i_elm_axis, mapping.s_axis,mapping.t_axis,ifail)
     if (xpoint) then
       call find_xpoint(my_id,node_list,element_list,mapping.psi_xpoint,mapping.R_xpoint,           &
-        mapping.Z_xpoint, mapping.i_elm_xpoint,mapping.s_xpoint,mapping.t_xpoint,ifail)
+        mapping.Z_xpoint, mapping.i_elm_xpoint,mapping.s_xpoint,mapping.t_xpoint,xcase,ifail)
     else
       ! Determine the position of a boundary node for non-xpoint cases.
       do i = 1, node_list%n_nodes
         if ( node_list%node(i)%boundary == 2 ) then
-          mapping.R_xpoint = node_list%node(i)%x(1,1)
-          mapping.Z_xpoint = node_list%node(i)%x(1,2)
-          call find_RZ(node_list,element_list,mapping.R_xpoint,mapping.Z_xpoint,R_out,Z_out,       &
-	    mapping.i_elm_xpoint,mapping.s_xpoint,mapping.t_xpoint,ifail)
+          mapping.R_xpoint(1) = node_list%node(i)%x(1,1)
+          mapping.Z_xpoint(1) = node_list%node(i)%x(1,2)
+          call find_RZ(node_list,element_list,mapping.R_xpoint(1),mapping.Z_xpoint(1),R_out,Z_out,       &
+	    mapping.i_elm_xpoint(1),mapping.s_xpoint(1),mapping.t_xpoint(1),ifail)
           exit
         end if
       end do
@@ -331,10 +331,10 @@ module fourier
       if ( do_not_continue ) cycle
       
       ! --- Initialize field line position.
-      mapping.rr(k,0) = mapping.R_axis + 0.03*( mapping.R_xpoint - mapping.R_axis ) + &
-        0.93*( mapping.R_xpoint - mapping.R_axis ) * ( REAL(k-1) / REAL(mapping.nstpts-1) )
-      mapping.zz(k,0) = mapping.Z_axis + 0.03*( mapping.Z_xpoint - mapping.Z_axis ) + &
-        0.93*( mapping.Z_xpoint - mapping.Z_axis ) * ( REAL(k-1) / REAL(mapping.nstpts-1) )
+      mapping.rr(k,0) = mapping.R_axis + 0.03*( mapping.R_xpoint(1) - mapping.R_axis ) + &
+        0.93*( mapping.R_xpoint(1) - mapping.R_axis ) * ( REAL(k-1) / REAL(mapping.nstpts-1) )
+      mapping.zz(k,0) = mapping.Z_axis + 0.03*( mapping.Z_xpoint(1) - mapping.Z_axis ) + &
+        0.93*( mapping.Z_xpoint(1) - mapping.Z_axis ) * ( REAL(k-1) / REAL(mapping.nstpts-1) )
       mapping.tt(k,0) = atan3( mapping.zz(k,0)-mapping.Z_axis, mapping.rr(k,0)-mapping.R_axis )
       theta_corr = 0.
       
@@ -342,7 +342,7 @@ module fourier
       call find_RZ(node_list,element_list,mapping.rr(k,0),mapping.zz(k,0),R_out,Z_out,i_elm_out,   &
         s_out,t_out,ifail)
       call interp0(i_elm_out,1,1,s_out,t_out,P,P_s,P_t)
-      mapping.psin(k) = (P-mapping.psi_axis)/(mapping.psi_xpoint-mapping.psi_axis)
+      mapping.psin(k) = (P-mapping.psi_axis)/(mapping.psi_xpoint(1)-mapping.psi_axis)
       
       FL_LARGESTEPS: do j = 1, NMAXSTEPS
         if ( do_not_continue ) cycle

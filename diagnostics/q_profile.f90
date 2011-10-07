@@ -16,8 +16,8 @@ type (type_node_list),    intent(in)    :: node_list
 type (type_element_list), intent(in)    :: element_list
 type (type_surface_list), intent(in)    :: surface_list
 real*8,                   intent(in)    :: psi_axis
-real*8,                   intent(in)    :: psi_xpoint
-real*8,                   intent(in)    :: Z_xpoint
+real*8,                   intent(in)    :: psi_xpoint(2)
+real*8,                   intent(in)    :: Z_xpoint(2)
 
 ! --- Local variables
 real*8, allocatable :: q(:)
@@ -36,7 +36,11 @@ call lplot(2,1,1,surface_list%psi_values(2),q(2),surface_list%n_psi-1,1,'q-profi
 ! --- Write out the q-profile versus the poloidal flux to "qprofile.dat".
 open(42, file='qprofile.dat', action='write', status='replace')
 do i=5, surface_list%n_psi-1
-  write(42,'(2ES13.5)') (surface_list%psi_values(i)-psi_axis)/(psi_xpoint-psi_axis), q(i)
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .gt. psi_xpoint(2)) ) ) then
+    write(42,'(2ES13.5)') (surface_list%psi_values(i)-psi_axis)/(psi_xpoint(2)-psi_axis), q(i)
+  else
+    write(42,'(2ES13.5)') (surface_list%psi_values(i)-psi_axis)/(psi_xpoint(1)-psi_axis), q(i)
+  endif
 end do
 close(42)
 

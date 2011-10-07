@@ -63,7 +63,7 @@ module avoid_neg_dens
     use nodes_elements,    only: node_list, element_list
     use gauss,             only: n_gauss
     use basis_at_gaussian, only: H, HZ
-    use phys_module,       only: rho_1
+    use phys_module,       only: rho_1,xcase
     
     ! --- Routine parameters.
     integer, intent(in) :: my_id
@@ -73,13 +73,13 @@ module avoid_neg_dens
     integer :: mp, ielm, ms, mt, i, j, in, iv
     integer, parameter :: k_psi = 1, k_rho = 5
     real*8  :: R, Z, psi, rho, psi_n
-    real*8  :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
+    real*8  :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
     real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
-    integer :: i_elm_xpoint, i_elm_axis, ifail
+    integer :: i_elm_xpoint(2), i_elm_axis, ifail
     
     num_problem_pos(:) = 0
     
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
     
     do mp = 1, n_plane
@@ -110,9 +110,29 @@ module avoid_neg_dens
               end do
             end do
             
-            psi_n = ( psi - psi_axis ) / ( psi_xpoint - psi_axis )
+            if(xcase .ne. 2) then
+	      psi_n = ( psi - psi_axis ) / ( psi_xpoint(1) - psi_axis )
+	    endif
+            if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+	      psi_n = ( psi - psi_axis ) / ( psi_xpoint(2) - psi_axis )
+	    endif
             
-            if ( ( rho < 0.999d0 * rho_1 ) .and. ( Z > Z_xpoint ) .and. ( psi_n < psi_n_limit ) ) then
+            if ( ( rho < 0.999d0 * rho_1 ) .and. ( psi_n < psi_n_limit ) &
+	         .and. ( Z > Z_xpoint(1) ) .and. ( xcase .eq. 1 )         ) then
+              num_problem_pos(mp) = num_problem_pos(mp) + 1
+              problem_pos(mp,num_problem_pos(mp))%R = R
+              problem_pos(mp,num_problem_pos(mp))%Z = Z
+              problem_pos(mp,num_problem_pos(mp))%rho_over_rho1 = rho / rho_1
+            end if
+            if ( ( rho < 0.999d0 * rho_1 ) .and. ( psi_n < psi_n_limit ) &
+	         .and. ( Z < Z_xpoint(2) ) .and. ( xcase .eq. 2 )         ) then
+              num_problem_pos(mp) = num_problem_pos(mp) + 1
+              problem_pos(mp,num_problem_pos(mp))%R = R
+              problem_pos(mp,num_problem_pos(mp))%Z = Z
+              problem_pos(mp,num_problem_pos(mp))%rho_over_rho1 = rho / rho_1
+            end if
+            if ( ( rho < 0.999d0 * rho_1 ) .and. ( psi_n < psi_n_limit )                     &
+	         .and. ( Z > Z_xpoint(1) ) .and. ( Z < Z_xpoint(2) ) .and. ( xcase .eq. 3 )   ) then
               num_problem_pos(mp) = num_problem_pos(mp) + 1
               problem_pos(mp,num_problem_pos(mp))%R = R
               problem_pos(mp,num_problem_pos(mp))%Z = Z

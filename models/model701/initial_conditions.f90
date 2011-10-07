@@ -1,4 +1,4 @@
-subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2)
+subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2, xcase2)
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -13,7 +13,7 @@ type (type_surface_list) :: surface_list
 type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
-integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint, i_elm, ifail
+integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint(2), i_elm, ifail, xcase2
 real*8     :: amplitude, psi, psi_axis, theta, PI
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
@@ -21,7 +21,7 @@ real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2
 real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
 real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
-real*8     :: psi_n, psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint,psi_lim,R_lim,Z_lim
+real*8     :: psi_n, psi_bnd,psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2),psi_lim,R_lim,Z_lim
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t,R_s, R_t, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 logical    :: xpoint2
 
@@ -32,6 +32,8 @@ if (my_id .eq. 0) then
 endif
 
 PI = 2.d0 *asin(1.d0)
+Z_xpoint(1) = -99.d0
+Z_xpoint(2) = +99.d0
 
 if (my_id .eq. 0) then
 
@@ -43,21 +45,26 @@ if (my_id .eq. 0) then
     write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
   endif
 
-  psi_bnd = 0.d0
-    
+  psi_bnd = 0.d0    
   if (xpoint2) then
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-    psi_bnd = psi_xpoint
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    psi_bnd  = psi_xpoint(1)
+    if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+      psi_bnd = psi_xpoint(2)
+    endif
+    if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
+    if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
   endif
 
   if (freeboundary) then
     call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-    if (Z_lim .gt. Z_xpoint) then
+    if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
     endif
   endif
 
-  write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
+  if(xcase2 .eq. 1) write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
+  if(xcase2 .eq. 2) write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
 
   do i=1,node_list%n_nodes
 
@@ -65,13 +72,13 @@ if (my_id .eq. 0) then
     R   = node_list%node(i)%x(1,1)
     Z   = node_list%node(i)%x(1,2)
 
-    call density(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+    call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+    call temperature(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
                                                                dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
-    call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
+    call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 							       
     zp       = zn * zT
@@ -110,7 +117,9 @@ endif
 !    Z   = node_list%node(i)%x(1,2)
 !    theta = atan2(Z-Z_axis, R-R_axis)
 !    psi_bnd = 0.d0
-!    if (xpoint2) psi_bnd = psi_xpoint
+!    if (xpoint2 .and. (xcase2 .ne. 2)) psi_bnd = psi_xpoint(1)
+!    if (xpoint2 .and. (xcase2 .eq. 2)) psi_bnd = psi_xpoint(2)
+!    if (xpoint2 .and. (xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) psi_bnd = psi_xpoint(2)
 !    psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)     
 !    if (node_list%node(i)%boundary .ne. 0) then
 !      node_list%node(i)%values(2,1,1) =  0.01 * sin(2.d0*theta)
@@ -119,8 +128,8 @@ endif
 !      node_list%node(i)%values(3,3,1) = +0.01 * sin(2.d0*theta) * 2.d0*PI/float(n_tht)
 !    endif
 !  enddo
-!call poisson(my_id,-2,node_list,element_list,1,3,2,xpoint2) 
-!call poisson(my_id,-2,node_list,element_list,1,3,3,xpoint2) 
+!call poisson(my_id,-2,node_list,element_list,1,3,2,xpoint2, xcase2) 
+!call poisson(my_id,-2,node_list,element_list,1,3,3,xpoint2, xcase2) 
 !endif    
     
 !---------------------------- initialise perturbations
@@ -144,7 +153,10 @@ do in=2,n_tor
       node_list%node(i)%values(in,3,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,3,1)
       node_list%node(i)%values(in,4,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,4,1)
       
-      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. (Z .lt. Z_xpoint))) then
+      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) ) then
+        node_list%node(i)%values(in,1:4,4) = 0.d0
+      endif
+      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) ) then
         node_list%node(i)%values(in,1:4,4) = 0.d0
       endif
 
@@ -155,7 +167,7 @@ do in=2,n_tor
   endif
 
   call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,1)
+               4,2,in, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,1)
 enddo
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
@@ -189,8 +201,14 @@ do i=1,node_list%n_nodes
       node_list%node(i)%values(in,2,n_var) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
       node_list%node(i)%values(in,2,n_var) = direction *  node_list%node(i)%values(in,2,n_var)
 
-      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint,node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
+      if(xcase2 .eq. 1) then
+        write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(1),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
 			    node_list%node(i)%values(in,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
+      endif
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+        write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(2),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
+			    node_list%node(i)%values(in,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
+      endif
 
     enddo
   endif

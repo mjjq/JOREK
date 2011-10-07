@@ -1,4 +1,4 @@
-subroutine current(xpoint2,R,Z,Z_xpoint,psi,psi_axis,psi_bnd,zjz)
+subroutine current(xpoint2,xcase2,R,Z,Z_xpoint,psi,psi_axis,psi_bnd,zjz)
 !-----------------------------------------------------------------------
 ! Determine the current at a given position from the density,
 ! temperature, and FF' input profiles
@@ -11,8 +11,9 @@ implicit none
 
 ! --- Routine parameters
 logical, intent(in)    :: xpoint2
+integer, intent(in)    :: xcase2
 real*8,  intent(in)    :: R, Z
-real*8,  intent(in)    :: Z_xpoint
+real*8,  intent(in)    :: Z_xpoint(2)
 real*8,  intent(in)    :: psi
 real*8,  intent(in)    :: psi_axis
 real*8,  intent(in)    :: psi_bnd
@@ -28,15 +29,15 @@ real*8  :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2
 
 psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
 
-call density(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,&
+call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,&
              zn,dn_dpsi,dn_dz,dn_dpsi2, dn_dz2, dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
 
 if (jorek_model .eq. 400) then
   
-  call temperature_i(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+  call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
                    zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
 		 
-  call temperature_e(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+  call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
                    zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
 
   zT = zTi + zTe
@@ -44,12 +45,12 @@ if (jorek_model .eq. 400) then
 
 else
   
-  call temperature(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+  call temperature(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
                    zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
 
 endif
 
-call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
              zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 
 zjz   = zFFprime - R*R * (zn * dT_dpsi + dn_dpsi * zT)

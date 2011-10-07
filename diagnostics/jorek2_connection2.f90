@@ -28,8 +28,8 @@ real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s,
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, PI, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, zl1, zl2, partial(2)
-real*8  :: psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint, value_out
-integer :: i_elm_xpoint, my_id, ierr
+real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), value_out
+integer :: i_elm_xpoint(2), my_id, ierr
 
 logical, external :: neighbours
 
@@ -112,9 +112,9 @@ write(*,*) ' nperiod : ',n_period
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
-call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint)
+call find_xpoint(node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase)
 
-write(*,*) ' PSI_XPOINT : ',psi_xpoint,i_elm_xpoint
+write(*,*) ' PSI_XPOINT : ',psi_xpoint(1),i_elm_xpoint(1)
   
 call begplt('connection2e.ps')
 call nframe(21,11,1,Rmin,Rmax,Zmin,Zmax,'Poincare',8,'R [m]',4,'Z [m]',4)
@@ -454,7 +454,7 @@ do i = 6*element_list%n_elements/8, 8*element_list%n_elements/8
           zl1 = C_turn(i_turn,1)
 	  zl2 = C_turn(1,1) - C_turn(i_turn,1) + C_turn(1,2) 
 	  	  
-	  if ((PSI_turn(1,1) .lt. psi_xpoint).and. (Z_turn(1,1) .gt. Z_xpoint)) then
+	  if ((PSI_turn(1,1) .lt. psi_xpoint(1)).and. (Z_turn(1,1) .gt. Z_xpoint(1))) then
 	  	  
             if (n_turn_max(1) .lt. n_turns) then
               write(21,'(12e16.8)') R_turn(i_turn,1),Z_turn(i_turn,1),min(zl1,zl2),T_turn(i_turn,1),PSI_turn(i_turn,1),ZN_turn(i_turn,1)
@@ -480,7 +480,7 @@ do i = 6*element_list%n_elements/8, 8*element_list%n_elements/8
           zl1 = C_turn(i_turn,2)
 	  zl2 = C_turn(1,2) - C_turn(i_turn,2) + C_turn(1,1) 
 
-	  if ((PSI_turn(1,2) .lt. psi_xpoint) .and. (Z_turn(1,2) .gt. Z_xpoint)) then
+	  if ((PSI_turn(1,2) .lt. psi_xpoint(1)) .and. (Z_turn(1,2) .gt. Z_xpoint(1))) then
 	  
 	    if (n_turn_max(2) .lt. n_turns) then
               write(21,'(12e16.8)') R_turn(i_turn,2),Z_turn(i_turn,2),min(zl1,zl2),T_turn(i_turn,2),PSI_turn(i_turn,2),ZN_turn(i_turn,2)

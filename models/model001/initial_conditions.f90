@@ -1,4 +1,4 @@
-subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2)
+subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2, xcase2)
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -13,8 +13,8 @@ type (type_surface_list)     :: surface_list
 type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
-integer    :: my_id, i 
-real*8     :: amplitude1, amplitude2, R, Z, R1, Z1, R2, Z2, radius1, sigma1, radius2, sigma2, psi_bnd, psi_axis, Z_xpoint
+integer    :: my_id, i , xcase2
+real*8     :: amplitude1, amplitude2, R, Z, R1, Z1, R2, Z2, radius1, sigma1, radius2, sigma2, psi_bnd, psi_axis, Z_xpoint(2)
 real*8     :: W, W_R, W_Z, W_RR, W_RZ, W_ZZ, R_s, R_t, R_st, Z_s, Z_t, Z_st
 logical    :: xpoint2
 
@@ -78,7 +78,7 @@ if (my_id .eq. 0) then
   enddo
 
   call Poisson(my_id,3,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               2,1,1, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)
+               2,1,1, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)
 
 endif
 

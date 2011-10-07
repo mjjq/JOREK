@@ -1,4 +1,4 @@
-subroutine grid_flux_surface(xpoint,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2,refinement)
+subroutine grid_flux_surface(xpoint,xcase,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2,refinement)
 !------------------------------------------------------------------------
 ! subroutine calculates a new flux surface grid (adapted from HELENA20)
 !------------------------------------------------------------------------
@@ -12,6 +12,7 @@ logical,                  intent(in)    :: xpoint, refinement
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
 type (type_surface_list), intent(inout) :: surface_list
+integer,                  intent(in)    :: xcase
 integer,                  intent(in)    :: n_flux
 integer,                  intent(in)    :: n_tht
 real*8,                   intent(in)    :: xr1, xr2
@@ -39,10 +40,10 @@ real*8             :: rzjac, ps_z, ps_r, ejac, ptjac, rt, st, dptjac_dr, dptjac_
 real*8             :: dr_dr, dr_dz, ds_dr, ds_dz, dps_drr, dps_dzz, crr_axis, czz_axis, cx, cy
 real*8             :: dr_dpt, dz_dpt, r_ax, s_ax, tn, tn2, cn
 real*8             :: delta_rp, delta_zp, delta_rm, delta_zm, dir_2, dir_3, B_axis, q_axis
-real*8             :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_bnd
+real*8             :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_bnd
 real*8, external   :: spwert
 integer            :: ifail, inode, node, index, index0, n_node_start, n_element_start, iv, ivp, ivm
-integer            :: my_id, n_index_start, node_iv, node_ivp, node_ivm, i_elm_xpoint
+integer            :: my_id, n_index_start, node_iv, node_ivp, node_ivm, i_elm_xpoint(2)
 integer            :: i_sons
 
 write(*,*) '**************************************'
@@ -55,7 +56,7 @@ my_id = 0
 i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
  
-if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
 surface_list%n_psi = n_flux - 1
 nrnew              = n_flux
@@ -77,7 +78,12 @@ call meshac2(surface_list%n_psi+1,s_values,xr1,xr2,sig1,sig2,0.6d0,1.0d0)
 psi_values(1) = psi_axis
 
 psi_bnd = -1.d-12
-if (xpoint) psi_bnd = psi_xpoint
+if (xpoint) then
+  psi_bnd = psi_xpoint(1)
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    psi_bnd = psi_xpoint(2)
+  endif
+endif
 
 do i=1,surface_list%n_psi
   radius(i+1)                = float(i)/float(surface_list%n_psi)
@@ -92,7 +98,7 @@ RRnew(1:4,1:nrnew*npnew)  = 0.d0
 ZZnew(1:4,1:nrnew*npnew)  = 0.d0
 PSInew(1:4,1:nrnew*npnew) = 0.d0
 
-call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
+call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
 call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1)
 
 !call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)

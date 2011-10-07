@@ -49,9 +49,10 @@ program JOREK2
       integer :: iter_gmres, n_tor
     end subroutine gmres_driver
     
-    subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2)
+    subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2)
       use data_structure
       integer(kind=4),             intent(in)    :: my_id
+      integer(kind=4),             intent(in)    :: xcase2
       type (type_node_list),       intent(inout) :: node_list
       type (type_element_list),    intent(inout) :: element_list
       type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list    
@@ -66,22 +67,23 @@ program JOREK2
       integer(kind=4) :: mpi_comm_master
     end subroutine update_rhs_n
     
-    subroutine construct_matrix_murge(my_id,node_list,                  &
-      element_list,local_elms,n_local_elms,xpoint2,psi_axis,psi_bnd,    &
-      z_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans, &
+    subroutine construct_matrix_murge(my_id,node_list,                      &
+      element_list,local_elms,n_local_elms,xpoint2,xcase2,psi_axis,psi_bnd, &
+      z_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans,     &
       n_cpu_trans,solve_only)
-      use data_structure, only : type_node, type_element,               &
+      use data_structure, only : type_node, type_element,                   &
         type_element_list, type_node_list
       integer(kind=4) :: n_cpu
       integer(kind=4), target :: n_local_elms
       integer(kind=4), target :: my_id
+      integer(kind=4), target :: xcase2
       type (type_node_list), target :: node_list
       type (type_element_list), target :: element_list
       integer(kind=4), target :: local_elms(n_local_elms)
       logical(kind=4), target :: xpoint2
       real(kind=8), target :: psi_axis
       real(kind=8), target :: psi_bnd
-      real(kind=8), target :: z_xpoint
+      real(kind=8), target :: z_xpoint(2)
       logical(kind=4), target :: gmres
       integer(kind=4) :: i_tor(n_cpu)
       integer(kind=4) :: mpi_comm_n
@@ -97,9 +99,9 @@ program JOREK2
   real*8                   :: t_matrix_0, t_matrix_1, PI
   real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
-  real*8                   :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, mindelta, maxdelta
+  real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
-  integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint
+  integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
   integer                  :: n_local_ELMs, index_total
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
@@ -259,7 +261,7 @@ program JOREK2
           SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open,           &
           dPSI_private)
       else
-        call grid_flux_surface(xpoint, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
+        call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
           sig1, xr2, sig2, refinement)
       end if
     end if
@@ -338,10 +340,10 @@ program JOREK2
       
       ! --- Compute the plasma equilibrium
       if (equil) then
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint) 
-        if (export_for_nemec) call export_nemec(node_list, element_list, xpoint)
+        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase) 
+        if (export_for_nemec) call export_nemec(node_list, element_list, xpoint, xcase)
       end if
-      
+!stop      
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
         
@@ -349,7 +351,7 @@ program JOREK2
 
 !          if (.not. grid_to_wall) then
             call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-                             SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
+                             SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
 !          else
 !            call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
 !                                  SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
@@ -359,7 +361,7 @@ program JOREK2
           
         else
           
-          call grid_flux_surface(xpoint, node_list, element_list, surface_list, n_flux, n_tht,     &
+          call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
                                  xr1, sig1, xr2, sig2,refinement)
           
           call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
@@ -377,12 +379,12 @@ program JOREK2
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list) 
         
         ! --- Compute the plasma equilibrium
-        call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint)
+        call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase)
         
       end if
       
       ! --- Set initial conditions for time-evolution
-      call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint)
+      call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
       
       ! --- Determine initial energies
       call energy(node_list,element_list,W_mag,W_kin)
@@ -445,8 +447,11 @@ program JOREK2
 
      if (xpoint) then
         call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,    &
-          s_xpoint, t_xpoint, ifail)
-        psi_bnd = psi_xpoint
+          s_xpoint, t_xpoint, xcase, ifail)
+        psi_bnd  = psi_xpoint(1)
+        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+          psi_bnd = psi_xpoint(2)
+        endif
      else
         psi_bnd = 0.d0
      end if
@@ -686,8 +691,11 @@ program JOREK2
      call tr_debug_write("JMAIN:Find_axis_T",T_axis)
 
      if (xpoint) then
-       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-       psi_bnd = psi_xpoint
+       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+       psi_bnd = psi_xpoint(1)
+       if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+         psi_bnd = psi_xpoint(2)
+       endif
      else
        psi_bnd = 0.d0
      endif
@@ -715,13 +723,13 @@ program JOREK2
           
      if ( use_pastix .and. use_murge .and. use_murge_element ) then
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
-             n_local_ELms,  xpoint, &
+             n_local_ELms,  xpoint,xcase, &
              psi_axis, psi_bnd, Z_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, &
              mpi_comm_trans, my_id_trans, n_cpu_trans, solve_only)        ! construct the matrix from elemental matrices
      else
         call construct_matrix(my_id, local_elms, &
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
-             xpoint,psi_axis,psi_bnd,Z_xpoint)        ! construct the matrix from elemental matrices
+             xpoint,xcase,psi_axis,psi_bnd,Z_xpoint)        ! construct the matrix from elemental matrices
      endif
      
      call system_clock(count=t1)   
@@ -1006,9 +1014,12 @@ program JOREK2
      iplot = 0
 
      if (xpoint) then
-        call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+        call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
      else
-        psi_xpoint = psi_bnd
+        psi_bnd = psi_xpoint(1)
+        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+          psi_bnd = psi_xpoint(2)
+        endif
      endif
 
      Rp_start = R_axis - amin*2.d0
@@ -1026,20 +1037,20 @@ program JOREK2
 
            call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
-           call density(    xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
+           call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,           &
                 zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
            if (jorek_model .eq. 400) then             
-             call temperature_i(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint, &
+             call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
            		      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)	   		    
-             call temperature_e(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint, &
+             call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
               zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)          
        zT = zTi + zTe
              dT_dpsi = dTi_dpsi + dTe_dpsi           
            else
-       call temperature(xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint, &
+       call temperature(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
                     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
            endif
-           call FFprime(    xpoint, Zp, Z_xpoint, psi,psi_axis,psi_xpoint,           &
+           call FFprime(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,           &
                 zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
            zjz   = (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
@@ -1051,7 +1062,7 @@ program JOREK2
            yp2(iplot) = zjz
            yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
 
-           !      write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_xpoint,yp2(iplot),yp1(iplot),yp3(iplot)
+           !      write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
 
         endif
 

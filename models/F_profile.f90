@@ -1,4 +1,4 @@
-subroutine F_profile(xpoint2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
+subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
                      F_prof,dF_dpsi,dF_dz, dF_dpsi2,dF_dz2,dF_dpsi_dz, &
                      FFprime_prof,dFF_dpsi,dFF_dz, dFF_dpsi2,dFF_dz2,dFF_dpsi_dz)
 !-----------------------------------------------------------------------
@@ -11,13 +11,18 @@ use phys_module
 implicit none
 
 logical :: xpoint2
+integer :: xcase2
 real*8  :: prof0, dprof0_dpsi, dprof0_dpsi2
 real*8  :: prof1, dprof1_dpsi, dprof1_dpsi2
 real*8  :: prof2, dprof2_dpsi, dprof2_dpsi2
 real*8  :: Fconst, profF, profF1, F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_dpsi_dz
 real*8  :: FFprime_prof, profFF, profFF1, FF_prof, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
-real*8  :: Z, Z_xpoint, psi, psi_axis, psi_bnd,  psi_n, psi_barrier, sig_F, sigz
-real*8  :: atn, datn, d2atn, d3atn, atn_z, datn_z, d2atn_z, factor, d_0, d_pert, d2_pert, d3_pert
+real*8  :: Z, Z_xpoint(2), psi, psi_axis, psi_bnd,  psi_n, psi_barrier, sig_F, sigz
+real*8  :: atn, datn, d2atn, d3atn
+real*8  :: atn_z,   datn_z,   d2atn_z
+real*8  :: atn_z_u, datn_z_u, d2atn_z_u, factor
+real*8  :: d_0, d_pert, d2_pert, d3_pert
+real*8  :: tanh2, cosh3, tanh2_u, cosh3_u
 real*8  :: alfa,profFFp, dprofFFp_dpsi
 
 sig_F       = FF_coef(4)
@@ -93,16 +98,35 @@ dFF_dpsi_dz     = 0.d0
 if (xpoint2) then
   sigz    = 0.1d0
 
-  atn_z           =  (0.5d0 - 0.5d0*tanh((Z_xpoint-Z)/sigz))
-  datn_z          =  0.5d0/cosh((Z_xpoint-Z)/sigz)**2 / sigz
-  d2atn_z         = 1.d0/cosh((Z_xpoint-Z)/sigz)**2 /  sigz**2 * tanh((Z_xpoint-Z)/sigz)
-
-  FFprime_prof  =   prof1        * atn_z
-  dFF_dpsi         =   dprof1_dpsi  * atn_z
-  dFF_dpsi2        =   dprof1_dpsi2 * atn_z
-  dFF_dz           = + prof1        * datn_z
-  dFF_dz2          = + prof1        * d2atn_z
-  dFF_dpsi_dz      =   dprof1_dpsi  * datn_z
+  tanh2   = tanh((Z_xpoint(1)-Z)/sigz)
+  cosh3   = cosh((Z_xpoint(1)-Z)/sigz)
+  tanh2_u = tanh((Z-Z_xpoint(2))/sigz)
+  cosh3_u = cosh((Z-Z_xpoint(2))/sigz)
+    
+  atn_z 	   = (0.5d0 - 0.5d0*tanh2)
+  datn_z	   =  0.5d0/cosh3**2   / sigz
+  d2atn_z	   =  1.0d0/cosh3**2   / sigz**2 * tanh2
+  atn_z_u	   = (0.5d0 - 0.5d0*tanh2_u)
+  datn_z_u	   = -0.5d0/cosh3_u**2 / sigz
+  d2atn_z_u	   =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
+  
+  if(xcase2 .eq. 1) then
+    atn_z_u          = 1.d0
+    datn_z_u         = 0.d0
+    d2atn_z_u        = 0.d0
+  endif
+  if(xcase .eq. 2) then
+    atn_z            = 1.d0
+    datn_z           = 0.d0
+    d2atn_z          = 0.d0
+  endif
+  
+  FFprime_prof  =   prof1           *	 atn_z * atn_z_u
+  dFF_dpsi         =   dprof1_dpsi  *	 atn_z * atn_z_u
+  dFF_dpsi2        =   dprof1_dpsi2 *	 atn_z * atn_z_u  
+  dFF_dz           = + prof1        * ( datn_z * atn_z_u  +	     atn_z * datn_z_u)
+  dFF_dz2          = + prof1        * (d2atn_z * atn_z_u  +  2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u) 
+  dFF_dpsi_dz      =   dprof1_dpsi  * ( datn_z * atn_z_u  +	     atn_z * datn_z_u)
 
 endif
 

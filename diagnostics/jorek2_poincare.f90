@@ -32,8 +32,9 @@ real*8, allocatable :: R_start(:), Z_start(:), P_start(:)
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, PI, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step
-real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, atmp, cur_pert, psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint, psi_bnd, psi_out
-integer :: i_elm_axis, i_elm_xpoint, ierr
+real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, atmp, cur_pert
+real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_out
+integer :: i_elm_axis, i_elm_xpoint(2), ierr
 
 logical, external :: neighbours
 
@@ -189,8 +190,8 @@ call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_
 
 psi_bnd = 0.d0
 if ( xpoint ) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-  if ( ifail == 0 ) psi_bnd = psi_xpoint
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+  if ( ifail == 0 ) psi_bnd = psi_xpoint(1)
 end if
   
 call begplt('poincare.ps')

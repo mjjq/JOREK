@@ -1,5 +1,5 @@
 subroutine vacuum_old(my_id,node_list,element_list,bnd_elm_list,bnd_node_list, &
-                  index_min,index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint,rhs_loc)
+                  index_min,index_max,xpoint2,xcase2,psi_axis,psi_bnd,Z_xpoint,rhs_loc)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundary integral of the
 ! induction and current equations using the STARWALL vacuum response
@@ -24,10 +24,11 @@ subroutine vacuum_old(my_id,node_list,element_list,bnd_elm_list,bnd_node_list, &
   type (type_bnd_node_list),    intent(in)    :: bnd_node_list  ! List of boundary nodes.
   integer,                      intent(in)    :: index_min      ! Minimum index handled by current MPI thread
   integer,                      intent(in)    :: index_max      ! Maximum index handled by current MPI thread
+  integer,                      intent(in)    :: xcase2         ! Xpoint configuration flag
   logical,                      intent(in)    :: xpoint2        ! X-point equilibrium?
   real*8,                       intent(in)    :: psi_axis       ! Psi value at magnetic axis.
   real*8,                       intent(in)    :: psi_bnd        ! Psi value at plasma boundary.
-  real*8,                       intent(in)    :: Z_xpoint       ! Z-position of X-point.
+  real*8,                       intent(in)    :: Z_xpoint(2)       ! Z-position of X-point.
   real*8,                       intent(inout) :: rhs_loc(ndof_glob) ! Part of the RHS handled by current MPI thread
   
   

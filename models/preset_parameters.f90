@@ -90,6 +90,7 @@ subroutine preset_parameters
   xshift = 0.d0
   xleft  = 0.d0
   xpoint = .false.
+  xcase  = 1
 
   xr1  = 9999.d0
   sig1 = 9999.d0

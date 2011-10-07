@@ -28,14 +28,14 @@ real*8  :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
 real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
 
-integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint, ifail
+integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint(2), ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
 real*8  ::  R_axis,Z_axis,s_axis,t_axis 
 real*8  :: current, beta_p, beta_n, beta_t, MU_zero, aminor
 real*8  :: xjac, BigR, wst, P_int, C_int, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, PI, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, P_max, delta_phi, phi, P_tot, D_tot
-real*8  :: psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
+real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet
@@ -84,8 +84,11 @@ gradP_psi_max = 0.d0
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-  psi_bnd= psi_xpoint
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+  psi_bnd  = psi_xpoint(1)
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    psi_bnd = psi_xpoint(2)
+  endif
 else
   psi_bnd = 0.d0
 endif
@@ -96,7 +99,7 @@ ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 !$omp parallel default(none)                                                                   &
-!$omp   shared(element_list,node_list, H, H_s, H_t, HZ, ife_min, ife_max, xpoint,              &
+!$omp   shared(element_list,node_list, H, H_s, H_t, HZ, ife_min, ife_max, xpoint, xcase,       &
 !$omp          Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, PI, psi_axis, psi_bnd,       &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_int, C_ext,                    &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
@@ -177,10 +180,10 @@ do ife = ife_min, ife_max
   do ms=1, n_gauss
     do mt=1, n_gauss
  
-      call density(xpoint, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+      call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-      call temperature(xpoint, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
   
     enddo

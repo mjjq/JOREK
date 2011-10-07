@@ -1,4 +1,4 @@
-subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 use data_structure
@@ -10,11 +10,11 @@ implicit none
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
-real*8  :: psi_xpoint, dpsi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, ps_s, ps_t
-real*8  :: grad_psi, grad_psi_min
+real*8  :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), ps_s, ps_t
+real*8  :: grad_psi, grad_psi_min(2)
 real*8  :: R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: ps_x, ps_y, xjac
-integer :: my_id, i_elm_xpoint, ij_xpoint(2), i, iv, ms, mt, kf, kv, ifail
+integer :: my_id, i_elm_xpoint(2), ij_xpoint(2,2), i, iv, ms, mt, kf, kv, ifail, xcase
 
 real*8  :: x(2), s, t, xerr, ferr, rs_tolerance
 
@@ -27,9 +27,9 @@ if (my_id .eq. 0) then
   write(*,*) '*********************************'
 endif
 
-dpsi_xpoint  = 1.d20
 grad_psi_min = 1.d20
-Z_xpoint     = 0.d0
+Z_xpoint(1)  = 0.d0
+Z_xpoint(2)  = 0.d0
 
 do i=1,element_list%n_elements
 
@@ -68,11 +68,19 @@ do i=1,element_list%n_elements
 
       grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
       
-      if ((grad_psi .lt. grad_psi_min) .and. ((Z) .lt. -0.4d0)) then
-        grad_psi_min = grad_psi
-	Z_xpoint     = Z
-        i_elm_xpoint = i
-        ij_xpoint(1) = ms;         ij_xpoint(2)  = mt
+      ! --- Look for the lower Xpoint
+      if ((grad_psi .lt. grad_psi_min(1)) .and. (Z .lt. -0.4d0) .and. (xcase .ne. 2)) then
+        grad_psi_min(1) = grad_psi
+	Z_xpoint(1)     = Z
+        i_elm_xpoint(1) = i
+        ij_xpoint(1,1) = ms;         ij_xpoint(1,2)  = mt
+      endif
+      ! --- And for the upper Xpoint
+      if ((grad_psi .lt. grad_psi_min(2)) .and. (Z .gt.  0.4d0) .and. (xcase .ne. 1)) then
+        grad_psi_min(2) = grad_psi
+	Z_xpoint(2)     = Z
+        i_elm_xpoint(2) = i
+        ij_xpoint(2,1) = ms;         ij_xpoint(2,2)  = mt
       endif
 
     enddo
@@ -80,30 +88,48 @@ do i=1,element_list%n_elements
   
 enddo
 
-s=Xgauss(ij_xpoint(1)) ; t=Xgauss(ij_xpoint(2))
+if(xcase .ne. 2) then
+  s=Xgauss(ij_xpoint(1,1)) ; t=Xgauss(ij_xpoint(1,2))
+  call mnewtax(node_list,element_list,i_elm_xpoint(1),s,t,xerr,ferr,ifail)
+  if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' MNEWTAX LowerXpoint: ifail = ',ifail
 
-call mnewtax(node_list,element_list,i_elm_xpoint,s,t,xerr,ferr,ifail)
-
-if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' MNEWTAX : ifail = ',ifail
-
-call interp(node_list,element_list,i_elm_xpoint,1,1,s,t,psi_xpoint,P_s,P_t,P_st,P_ss,P_tt)
-
-call interp_RZ(node_list,element_list,i_elm_xpoint,s,t,R_xpoint,R_s,R_t,R_st,R_ss,R_tt,Z_xpoint,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-
-s_xpoint = s
-t_xpoint = t
-
-xjac = R_s * Z_t - R_t * Z_s
-ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
-ps_y = (- P_s * R_t + P_t * R_s)/ xjac
-
-if (my_id .eq. 0) then
-  write(*,'(A,i6,4f14.8)') ' X-point : ',i_elm_xpoint,R_xpoint,Z_xpoint,psi_xpoint,sqrt(ps_x**2+ps_y**2)
+  call interp(node_list,element_list,i_elm_xpoint(1),1,1,s,t,psi_xpoint(1),P_s,P_t,P_st,P_ss,P_tt)
+  call interp_RZ(node_list,element_list,i_elm_xpoint(1),s,t,R_xpoint(1),R_s,R_t,R_st,R_ss,R_tt,Z_xpoint(1),Z_s,Z_t,Z_st,Z_ss,Z_tt)
+  s_xpoint(1) = s
+  t_xpoint(1) = t
+  
+  xjac = R_s * Z_t - R_t * Z_s
+  ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
+  ps_y = (- P_s * R_t + P_t * R_s)/ xjac
+  
+  if (my_id .eq. 0) then
+    write(*,'(A,i6,4f14.8)') ' Lower X-point : ',i_elm_xpoint(1),R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
+  endif
+  if (sqrt(ps_x**2+ps_y**2) .gt. 1.d-4) ifail=1
+  if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' find_xpoint : LowerXpoint ifail = ',ifail
 endif
 
-if (sqrt(ps_x**2+ps_y**2) .gt. 1.d-4) ifail=1
+if(xcase .ne. 1) then
+  s=Xgauss(ij_xpoint(2,1)) ; t=Xgauss(ij_xpoint(2,2))
+  call mnewtax(node_list,element_list,i_elm_xpoint(2),s,t,xerr,ferr,ifail)
+  if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' MNEWTAX UpperXpoint: ifail = ',ifail
 
-if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' find_xpoint : ifail = ',ifail
+  call interp(node_list,element_list,i_elm_xpoint(2),1,1,s,t,psi_xpoint(2),P_s,P_t,P_st,P_ss,P_tt)
+  call interp_RZ(node_list,element_list,i_elm_xpoint(2),s,t,R_xpoint(2),R_s,R_t,R_st,R_ss,R_tt,Z_xpoint(2),Z_s,Z_t,Z_st,Z_ss,Z_tt)
+  s_xpoint(2) = s
+  t_xpoint(2) = t
+  
+  xjac = R_s * Z_t - R_t * Z_s
+  ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
+  ps_y = (- P_s * R_t + P_t * R_s)/ xjac
+  
+  if (my_id .eq. 0) then
+    write(*,'(A,i6,4f14.8)') ' Upper X-point : ',i_elm_xpoint(2),R_xpoint(2),Z_xpoint(2),psi_xpoint(2),sqrt(ps_x**2+ps_y**2)
+  endif
+  if (sqrt(ps_x**2+ps_y**2) .gt. 1.d-4) ifail=1
+  if ((ifail .ne. 0 ).and.(my_id .eq.0)) write(*,*) ' find_xpoint : UpperXpoint ifail = ',ifail
+endif
+
 
 return
 END

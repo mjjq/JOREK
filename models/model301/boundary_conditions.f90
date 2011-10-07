@@ -13,6 +13,7 @@
 !*   index_min    - Minimal index of local elements (not with murge assembly)  *
 !*   index_max    - Maximal index of local elements (not with murge assembly)  *
 !*   xpoint2      -                                                            *
+!*   xcase2       -                                                            *
 !*   psi_axis     -                                                            *
 !*   psi_bnd      -                                                            *
 !*   Z_xpoint     -                                                            *
@@ -25,7 +26,7 @@
 !*******************************************************************************
 subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    & 
      &                          n_local_elms, index_min, index_max, xpoint2,   &
-     &                          psi_axis, psi_bnd, Z_xpoint, gmres, solve_only )
+     &                          xcase2, psi_axis, psi_bnd, Z_xpoint, gmres, solve_only )
 
   use data_structure
   use global_distributed_matrix
@@ -41,12 +42,13 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   INTEGER                  :: n_local_elms
   INTEGER                  :: index_min
   INTEGER                  :: index_max
+  INTEGER                  :: xcase2
   TYPE (type_node_list)    :: node_list
   TYPE (type_element_list) :: element_list
   logical                  :: xpoint2
   REAL*8                   :: psi_axis
   REAL*8                   :: psi_bnd
-  REAL*8                   :: Z_xpoint
+  REAL*8                   :: Z_xpoint(2)
   logical                  :: gmres
   logical                  :: solve_only
 

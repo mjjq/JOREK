@@ -2,7 +2,7 @@ module mod_boundary_matrix_open
   implicit none
 contains
 
-subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
+subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
 ! implements the natural boundary conditions
@@ -27,10 +27,10 @@ real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
-integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index
+integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: ws, xjac,  BigR, PI, phi, eps_cyl
-real*8     :: psi_axis, psi_bnd, Z_xpoint
+real*8     :: psi_axis, psi_bnd, Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6
 real*8     :: psi_norm, theta, zeta
 
@@ -109,7 +109,10 @@ do ms=1, n_gauss
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms) .lt. Z_xpoint)) then
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
+         psi_norm = 2.d0 - psi_norm
+       endif
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
          psi_norm = 2.d0 - psi_norm
        endif
      endif

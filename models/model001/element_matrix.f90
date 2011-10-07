@@ -2,7 +2,7 @@ module mod_elt_matrix
   implicit none
 contains
 
-subroutine element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix(element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -21,10 +21,10 @@ real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
 integer, intent(in) :: tid
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, kl1, kl2
 real*8     :: wst, xjac, xjac_x, xjac_y
-real*8     :: psi_axis, psi_bnd, Z_xpoint, psi_norm
+real*8     :: psi_axis, psi_bnd, Z_xpoint(2), psi_norm
 real*8     :: rhs_ij_1,   rhs_ij_2
 real*8     :: theta, zeta, delta_u_x, delta_u_y
 

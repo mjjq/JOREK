@@ -1,4 +1,4 @@
-subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2)
+subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2, xcase2)
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -13,14 +13,14 @@ type (type_surface_list)     :: surface_list
 type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
-integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint, ifail, i_elm
+integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint(2), ifail, i_elm, xcase2
 real*8     :: amplitude, psi, psi_axis
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR
 real*8     :: R_out, Z_out, s_out, t_out, R_lim, Z_lim, s_lim, t_lim, psi_lim
-real*8     :: psi_n, psi_bnd,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
+real*8     :: psi_n, psi_bnd,psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8     :: p_s, p_t, p_ss, p_st, p_tt
 logical    :: xpoint2
 
@@ -41,21 +41,28 @@ if (my_id .eq. 0) then
   endif
 
   psi_bnd  =   0.d0
-  Z_xpoint = -99.d0
+  Z_xpoint(1) = -99.d0
+  Z_xpoint(2) = +99.d0
     
   if (xpoint2) then
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-    psi_bnd = psi_xpoint
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    psi_bnd  = psi_xpoint(1)
+    if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+      psi_bnd = psi_xpoint(2)
+    endif
+    if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
+    if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
   endif
 
   if (freeboundary) then
     call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-    if (Z_lim .gt. Z_xpoint) then
+    if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
     endif
   endif
 
-  write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint,ifail
+  if(xcase2 .eq. 1) write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
+  if(xcase2 .eq. 2) write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
 
   do i=1,node_list%n_nodes
 
@@ -63,13 +70,13 @@ if (my_id .eq. 0) then
     R   = node_list%node(i)%x(1,1)
     Z   = node_list%node(i)%x(1,2)
 
-    call density(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+    call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+    call temperature(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
                                                                dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
-    call FFprime(    xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
+    call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 
     node_list%node(i)%values(1,1,5) = zn
@@ -113,7 +120,10 @@ do in=2,n_tor
       node_list%node(i)%values(in,3,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,3,1)
       node_list%node(i)%values(in,4,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,4,1)
 
-      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. (Z .lt. Z_xpoint))) then
+      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) ) then
+        node_list%node(i)%values(in,1:4,4) = 0.d0
+      endif
+      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) ) then
         node_list%node(i)%values(in,1:4,4) = 0.d0
       endif
 
@@ -124,7 +134,7 @@ do in=2,n_tor
   endif
 
   call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,in, psi_axis,psi_bnd,xpoint2,Z_xpoint,freeboundary,refinement,1)
+               4,2,in, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)
 
 enddo
 

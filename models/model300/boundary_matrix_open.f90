@@ -1,4 +1,4 @@
-subroutine boundary_matrix_open(vertex, element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
+subroutine boundary_matrix_open(vertex, element, nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
 ! implements the natural boundary conditions
@@ -17,8 +17,8 @@ type (type_node)      :: nodes(2)        ! the two nodes containing the boundary
 real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
-integer    :: vertex(2)
-real*8     :: psi_axis, psi_bnd, Z_xpoint
+integer    :: vertex(2), xcase2
+real*8     :: psi_axis, psi_bnd, Z_xpoint(2)
 logical    :: xpoint2
 
 return

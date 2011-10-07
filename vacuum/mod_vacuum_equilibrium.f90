@@ -101,7 +101,7 @@ module vacuum_equilibrium
   integer    :: index_node2_bnd, index_node3_bnd, ilarge_pp, ijA_position
   integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
   real*8     :: ws, xjac,  BigR, PI, phi, eps_cyl
-  real*8     :: psi_axis, psi_bnd, Z_xpoint
+  real*8     :: psi_axis, psi_bnd, Z_xpoint(2)
   real*8     :: rhs_glob_1, A_glob_11, A_glob_11_star, RHS_glob_11, ps0
   real*8     :: psi_norm, theta, zeta
   

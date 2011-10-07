@@ -5,7 +5,7 @@
 !! - namelist-for-nemec contains some input parameters required for the NEMEC run
 !! - lcms-for-descur contains a representation of the last closed magnetic surface which needs to
 !!   be Fourier-expanded by the DESCUR code for NEMEC
-subroutine export_nemec(node_list, element_list, xpoint)
+subroutine export_nemec(node_list, element_list, xpoint, xcase)
   
   use data_structure
   
@@ -15,6 +15,7 @@ subroutine export_nemec(node_list, element_list, xpoint)
   type (type_node_list),        intent(in) :: node_list
   type (type_element_list),     intent(in) :: element_list
   logical,                      intent(in) :: xpoint
+  integer,                      intent(in) :: xcase
   
   ! --- Local variables
   real*8, parameter :: pi  = 3.14159265358979323d0
@@ -23,8 +24,8 @@ subroutine export_nemec(node_list, element_list, xpoint)
   real*8 :: dens, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz
   real*8 :: temp, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz
   type (type_surface_list) :: surface_list
-  integer :: i, i_elm_xpoint, i_elm_axis, ifail
-  real*8  :: R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_xpoint, psi_bnd
+  integer :: i, i_elm_xpoint(2), i_elm_axis, ifail
+  real*8  :: R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2), psi_bnd
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8, allocatable :: q(:), PhiN(:)
   integer :: nplot, j, k, i_elm, node1, node2, node3, node4, ip
@@ -38,8 +39,13 @@ subroutine export_nemec(node_list, element_list, xpoint)
   psi_bnd = 0.d0
   if (xpoint) then
     call find_xpoint(0,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,  &
-      t_xpoint,ifail)
-    if (ifail .ne. 1) psi_bnd = psi_xpoint
+      t_xpoint,xcase,ifail)
+    if (ifail .ne. 1) then
+      psi_bnd  = psi_xpoint(1)
+      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+        psi_bnd = psi_xpoint(2)
+      endif
+    endif
   endif
   
   ! --- Find flux surfaces
@@ -49,7 +55,7 @@ subroutine export_nemec(node_list, element_list, xpoint)
     surface_list%psi_values(i) = (float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis)    &
       + psi_axis
   enddo
-  call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
+  call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
   
   ! --- Determine the q-profile.
   call tr_allocate(q,1,surface_list%n_psi,"q")
@@ -82,9 +88,9 @@ subroutine export_nemec(node_list, element_list, xpoint)
   write(42,*) surface_list%n_psi
   do i = 1, surface_list%n_psi
     psi_i = surface_list%psi_values(i)
-    call density(xpoint, 0.d0, -10.d0, psi_i, psi_axis, psi_bnd, dens, dn_dpsi, dn_dz, dn_dpsi2,   &
+    call density(xpoint, xcase, 0.d0, -10.d0, psi_i, psi_axis, psi_bnd, dens, dn_dpsi, dn_dz, dn_dpsi2,   &
       dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-    call temperature(xpoint, 0.d0, -10.d0, psi_i, psi_axis, psi_bnd, temp, dT_dpsi, dT_dz,         &
+    call temperature(xpoint, xcase, 0.d0, -10.d0, psi_i, psi_axis, psi_bnd, temp, dT_dpsi, dT_dz,         &
       dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz)
     pressure = dens * temp / mu0
     write(42,*) PhiN(i), pressure

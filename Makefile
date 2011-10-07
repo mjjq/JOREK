@@ -6,17 +6,18 @@ IBMFC ?=     # IBM compiler flag (for FORTRAN symbol defs)
 
 JOREK_DIR = `pwd`
 
-DIRS =  timing \
-        datatypes models/$(MODEL) 	\
-	models 				\
-	communication 			\
-	elements 			\
-	grids 				\
-	matrix 				\
+DIRS =  timing				\
+        models/$(MODEL) 		\
+        datatypes			\
+	models				\
+	communication			\
+	elements			\
+	grids				\
+	matrix				\
 	solvers 			\
-	plots 				\
-	diagnostics 			\
-	vacuum 				\
+	plots				\
+	diagnostics			\
+	vacuum				\
 	refinement			\
 	tools
 
@@ -171,7 +172,7 @@ version:
 
 $(MAIN) : $(JOREK2_MAIN_OBJ)
 	$(FC) $(FFLAGS_OMP)	\
-	$(JOREK2_MAIN_OBJ)	\
+	$(JOREK2_MAIN_OBJ) 	\
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
 
 jorek2_poincare : diagnostics/jorek2_poincare.f90 $(JOREK2_POINCARE_OBJ)

@@ -9,10 +9,11 @@ use phys_module
 implicit none
 
 interface
-   subroutine find_flux_surfaces(xpoint,node_list,element_list,surface_list)
+   subroutine find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
      use data_structure
      implicit none
      logical                  :: xpoint
+     integer                  :: xcase
      type (type_node_list)    :: node_list
      type (type_element_list) :: element_list
      type (type_surface_list) :: surface_list
@@ -27,7 +28,7 @@ type (type_bnd_element_list), intent(in)    :: bnd_elm_list
 ! --- Local variables
 type (type_surface_list)     :: surface_list
 real*8, allocatable      :: rplot(:), zplot(:)
-real*8 :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
+real*8 :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8 :: psi_lim,R_lim,Z_lim
 real*8 :: psi_bnd, Rmin, Rmax, rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2 
 real*8 :: t, ri, dri, si, dsi, rplot_tmp, zplot_tmp, s_value
@@ -43,7 +44,7 @@ real*8 :: RRgi,dRRgi_dr,dRRgi_ds,dRRgi_drs,dRRgi_drr,dRRgi_dss
 real*8 :: ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss
 real*8 :: dRRgi_dt, dZZgi_dt, RZjac, PI, PSI_R, PSI_Z, grad_psi, B_tot2, P0gi, dP0gi_dr,dP0gi_ds, P0_R, P0_Z 
 real*8 :: density, density_in, density_out, pressure, pressure_in, pressure_out
-integer :: i_elm_axis, i_elm_xpoint, nplot, i, j, n_bnd, i_elm, k, ip, ig
+integer :: i_elm_axis, i_elm_xpoint(2), nplot, i, j, n_bnd, i_elm, k, ip, ig
 integer :: node1, node2, node3, node4, ifail, my_id
 
 !--------------------------------------- gaussian points between (-1.,1.)
@@ -59,19 +60,26 @@ my_id = 0
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 psi_bnd = 0.d0
-Z_xpoint = -99.d0
+Z_xpoint(1) = -99.d0
+Z_xpoint(2) = +99.d0
    
 if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
   if (ifail .ne. 1) then      
-    psi_bnd = psi_xpoint
+    psi_bnd  = psi_xpoint(1)
+    if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+      psi_bnd = psi_xpoint(2)
+    endif
+    if(xcase .eq. 1) Z_xpoint(2) = +99.d0
+    if(xcase .eq. 2) Z_xpoint(1) = -99.d0
   else
-    Z_xpoint = -99.d0
+    Z_xpoint(1) = -99.d0
+    Z_xpoint(2) = +99.d0
   endif
 endif
 
 call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-if (Z_lim .gt. Z_xpoint) then
+if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
   psi_bnd = min(psi_lim,psi_bnd)
   write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
 endif
@@ -83,10 +91,18 @@ surface_list%psi_values = 0 ! XL : uninitialised value.
 
 if (xpoint) then
   write(*,*) ' x-point plasma'
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-  surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_xpoint - psi_axis)
-  surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_xpoint - psi_axis)
-  surface_list%psi_values(3) =  psi_axis + 0.995 * (psi_xpoint - psi_axis)
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_xpoint(2) - psi_axis)
+    surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_xpoint(2) - psi_axis)
+    surface_list%psi_values(3) =  psi_axis + 0.995 * (psi_xpoint(2) - psi_axis)
+  else
+    surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_xpoint(1) - psi_axis)
+    surface_list%psi_values(2) =  psi_axis + 0.99  * (psi_xpoint(1) - psi_axis)
+    surface_list%psi_values(3) =  psi_axis + 0.995 * (psi_xpoint(1) - psi_axis)
+  endif
+  if(xcase .eq. 1) Z_xpoint(2) = +99.d0
+  if(xcase .eq. 2) Z_xpoint(1) = -99.d0
 else
   write(*,*) ' NOT an x-point plasma'
   surface_list%psi_values(1) =  psi_axis + 0.95  * (psi_bnd - psi_axis)
@@ -94,7 +110,7 @@ else
   surface_list%psi_values(3) =  psi_axis + 0.999 * (psi_bnd - psi_axis)
 endif
 
-call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
+call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
 
 nplot = 3
 
@@ -141,7 +157,7 @@ do k=1,surface_list%flux_surfaces(j)%n_pieces
     call interp_RZ(node_list,element_list,i_elm,ri,si,rplot_tmp,dummy1,dummy2,dummy3,dummy4,dummy5, &
                                                         zplot_tmp,dummy6,dummy7,dummy8,dummy9,dummy10)
 
-    if (zplot_tmp .ge. Z_xpoint) then
+    if ( (zplot_tmp .ge. Z_xpoint(1)) .and. ((zplot_tmp .le. Z_xpoint(2)) ) ) then
       Rmin = min(rplot_tmp,Rmin)
       Rmax = max(rplot_tmp,Rmax)
 
@@ -156,7 +172,7 @@ do k=1,surface_list%flux_surfaces(j)%n_pieces
 enddo
 
 write(11,'(8e16.8)') R_axis,Z_axis,F0
-write(11,'(8e16.8)') surface_list%psi_values(j),psi_axis!,psi_xpoint
+write(11,'(8e16.8)') surface_list%psi_values(j),psi_axis!,psi_xpoint(1)
 write(11,*)          n_bnd
 
 do i=1,n_bnd
@@ -190,7 +206,7 @@ do i=1,n_flux
   surface_list%psi_values(i) =  psi_axis + s_value**2 * (psi_bnd - psi_axis)
 enddo
 
-call find_flux_surfaces(xpoint,node_list,element_list,surface_list)
+call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
 
 PI = 2.d0 *asin(1.d0)
 
@@ -230,8 +246,8 @@ do i=2, surface_list%n_psi
         call interp(node_list,element_list,i_elm,6,1,ri,si,Ti0gi,dTi0gi_dr,dTi0gi_ds,dTi0gi_drs,dTi0gi_drr,dTi0gi_dss)
         call interp(node_list,element_list,i_elm,8,1,ri,si,Te0gi,dTe0gi_dr,dTe0gi_ds,dTe0gi_drs,dTe0gi_drr,dTe0gi_dss)
         T0gi     = Ti0gi + Te0gi
-  dT0gi_dr = dTi0gi_dr + dTe0gi_dr
-  dT0gi_ds = dTi0gi_ds + dTe0gi_ds
+        dT0gi_dr = dTi0gi_dr + dTe0gi_dr
+        dT0gi_ds = dTi0gi_ds + dTe0gi_ds
       else
         call interp(node_list,element_list,i_elm,6,1,ri,si,T0gi,dT0gi_dr,dT0gi_ds,dT0gi_drs,dT0gi_drr,dT0gi_dss)
       endif      

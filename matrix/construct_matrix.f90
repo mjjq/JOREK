@@ -4,7 +4,7 @@
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
 subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
-                            xpoint2,psi_axis,psi_bnd,Z_xpoint)
+                            xpoint2,xcase2,psi_axis,psi_bnd,Z_xpoint)
   
   use tr_module 
   use parameters
@@ -31,9 +31,10 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   integer, intent(in) :: n_local_elms
   integer, intent(in) :: index_min
   integer, intent(in) :: index_max
+  integer, intent(in) :: xcase2
   real*8,  intent(in) :: psi_axis
   real*8,  intent(in) :: psi_bnd
-  real*8,  intent(in) :: Z_xpoint
+  real*8,  intent(in) :: Z_xpoint(2)
   logical, intent(in) :: xpoint2
 
   !--- Internal variables
@@ -111,8 +112,8 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
-  !$omp          index_min, index_max,xpoint2,psi_axis,psi_bnd,Z_xpoint, my_id, bc_natural_open,    &
-  !$omp          refinement,thread_struct)    &
+  !$omp          index_min, index_max,xpoint2,xcase2,psi_axis,psi_bnd,Z_xpoint, my_id,              &
+  !$omp          bc_natural_open,refinement,thread_struct)    &
   !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
@@ -163,9 +164,9 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
      endif
 
      if (n_tor .gt. 3) then
-       call element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)      ! use fft for toroidal integration
+       call element_matrix_fft(element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)      ! use fft for toroidal integration
      else
-       call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)          ! use direct integration
+       call element_matrix(element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)          ! use direct integration
      endif
 
      do iv = 1, n_vertex_max									 ! boundary integrals
@@ -186,7 +187,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
            vertex    = (/ iv, iv2 /)
            direction = (/  1, 2   /)
 
-           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
+           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
 
          endif
         
@@ -197,8 +198,8 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
      !------------------------------------------------------- comparing two versions of element_matrix
       ! if (ife .eq. n_local_elms/2) then
-      !   call element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM2, RHS2)
-      !   call element_matrix(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
+      !   call element_matrix_fft(element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM2, RHS2)
+      !   call element_matrix(element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
       !   do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
       !     if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
       !       write(*,'(i3,A,i6,3e16.8)') my_id,' RHS : ',i,RHS(i),RHS2(i),RHS(i)-RHS2(i)
@@ -295,7 +296,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
         resistive_wall, index_min, index_max, rhs_loc, tstep)
     else
       call vacuum_old(my_id, node_list, element_list, bnd_elm_list, bnd_node_list, index_min, index_max,  &
-        xpoint2, psi_axis, psi_bnd, Z_xpoint, rhs_loc)
+        xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, rhs_loc)
     end if
   end if
 
@@ -306,7 +307,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &
-       index_max, xpoint2, psi_axis, psi_bnd, Z_xpoint, .false., .false.)
+       index_max, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, .false., .false.)
 
   call r3_info_end(r3_info_index_0) !timing
   call tr_print_memsize("EndConstM")

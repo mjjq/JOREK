@@ -1,6 +1,6 @@
 module mod_elt_matrix_fft
 contains
-subroutine element_matrix_fft(element,nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix_fft(element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !
@@ -23,11 +23,11 @@ real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
 integer, intent(in) :: tid
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, id
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, id, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
 real*8     :: wst, xjac, xjac_s, xjac_t, BigR, r2, PI, phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source_i(n_gauss,n_gauss),heat_source_e(n_gauss,n_gauss)
-real*8     :: psi_axis, psi_bnd, Z_xpoint, dj_dpsi, dj_dz
+real*8     :: psi_axis, psi_bnd, Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho, Bgrad_rho_star, Bgrad_rho_psi, Bgrad_rho_star_psi, Bgrad_rho_rho, Bgrad_rho_rho_n, Bgrad_rho_k_star
 real*8     :: Bgrad_Ti,  Bgrad_Ti_star,  Bgrad_Ti_psi,  Bgrad_Ti_star_psi,  Bgrad_Ti_Ti,   Bgrad_Ti_Ti_n,   Bgrad_Ti_k_star
 real*8     :: Bgrad_Te,  Bgrad_Te_star,  Bgrad_Te_psi,  Bgrad_Te_star_psi,  Bgrad_Te_Te,   Bgrad_Te_Te_n,   Bgrad_Te_k_star
@@ -190,8 +190,8 @@ do i=1,n_vertex_max
 
        enddo
 
-       call current(xpoint2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
-       call sources(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
+       call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+       call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
 
      enddo
    enddo
@@ -334,9 +334,12 @@ do ms=1, n_gauss
 
       psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
       if (xpoint2) then
- 	if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint)) then
- 	  psi_norm = 2.d0 - psi_norm
- 	endif
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
+         psi_norm = 2.d0 - psi_norm
+       endif
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
+         psi_norm = 2.d0 - psi_norm
+       endif
       endif
 
       !----------- Allocate the values directly from the pressure profile (rho_coef, T_coef...) 
@@ -359,7 +362,11 @@ do ms=1, n_gauss
             
       do id = 1,3
   	if (psi_norm .gt. Diff(id,5)) then
-  	  psi_D = 2.d0*Diff(id,5) - psi_norm
+  	  if (id .eq. 1) then
+	    psi_D = 2.d0*Diff(id,5) - psi_norm
+	  else
+	    psi_D = Diff(id,5)
+	  endif
   	else 
   	  psi_D = psi_norm
   	endif
@@ -369,6 +376,8 @@ do ms=1, n_gauss
   	if (Diff(id,7) .ge. 0.d0) then
   	  Diff(id,7) = -0.1d0
   	endif 
+        if (xcase2 .ne. 2) psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-y_g(ms,mt))/0.1d0))
+        if (xcase2 .ne. 1) psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((y_g(ms,mt)-Z_xpoint(2))/0.1d0))
   	atn_D    = 0.5d0 - 0.5d0 * tanh((psi_D-Diff(id,5))/Diff(id,4))
   	datn_D   =       - 0.5d0 / cosh((psi_D-Diff(id,5))/Diff(id,4))**2.d0 /(Diff(id,4)*(psi_bnd - psi_axis))
   	pol_D    = 1 + Diff(id,7)*psi_D	   + Diff(id,8)*psi_D**2.d0	 + Diff(id,9)*psi_D**3.d0
@@ -378,10 +387,11 @@ do ms=1, n_gauss
 
   	prof(id) = (1.d0-Diff(id,10)) * ( Diff(id,1) * (1.d0-Diff(id,2)+Diff(id,2)*(0.5d0 - 0.5d0 * tanh((psi_norm-Diff(id,5))/Diff(id,4)))) &
   		        	        + Diff(id,6) * (0.5d0 - 0.5d0 * tanh((-psi_norm+Diff(id,5)+Diff(id,3))/Diff(id,4)))) &
-  	                +Diff(id,10)  *   Diff(id,1) / (dpol_D*atn_D + pol_D*datn_D) / D_min    
+  	                +Diff(id,10)  * ( Diff(id,1) / (dpol_D*atn_D + pol_D*datn_D) / D_min ) &
+			              * (1 + Diff(id,6) - Diff(id,6) * tanh(-(psi_norm-(1+4*Diff(id,4)))/Diff(id,4)))   !higher Kperp in SOL
       enddo
       
-      D_prof    = prof(1) !* (2.d0*D_perp(6) + D_perp(6) * tanh((psi_norm-1.04d0)/0.02d0))
+      D_prof    = prof(1)
       ZK_i_prof = prof(2) 
       ZK_e_prof = prof(3) 
 

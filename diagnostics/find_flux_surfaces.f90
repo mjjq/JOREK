@@ -1,4 +1,4 @@
-subroutine find_flux_surfaces(xpoint,node_list,element_list,surface_list)
+subroutine find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
 !-----------------------------------------------------------------------
 ! finds fluxsurfaces by finding crossings at the edge of an element
 !-----------------------------------------------------------------------
@@ -12,16 +12,13 @@ type (type_element_list) :: element_list
 type (type_surface_list) :: surface_list
 
 real*8  :: psimin, psimax, a0, a1, a2, a3, PI
-real*8  :: psi_test, dpsi_dr(4),dpsi_ds(4), dRR_dr(4), dRR_ds(4), dZZ_dr(4), dZZ_ds(4)
-real*8  :: p1, dp1, dp4, p4, p2, p3, RR_psi(4), ZZ_psi(4), r_psi(4), s_psi(4), tht(4)
+real*8  :: dpsi_dr(4),dpsi_ds(4)
+real*8  :: p1, dp1, dp4, p4, p2, p3, r_psi(4), s_psi(4), tht(4)
 real*8  :: s, s2, s3, r_tmp, s_tmp, psr_tmp, pss_tmp, ttmp, tt
-real*8  :: psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint, r_av, s_av
-real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
-real*8  :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss, RZ_jac, PSI_R, pSI_Z
+real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), r_av, s_av
 
 integer :: my_id, i, j, k, ifound, iv, im, is, n1, n2, n3
-integer :: ifail, itht(4), itmp,i_elm_xpoint
+integer :: ifail, itht(4), itmp,i_elm_xpoint(2), xcase
 logical :: xpoint
 
 write(*,*) '***********************************'
@@ -48,7 +45,7 @@ do j=1, surface_list%n_psi
   surface_list%flux_surfaces(j)%t        = 0
 enddo
 
-if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
 
 
@@ -112,7 +109,7 @@ do i=1, element_list%n_elements
       if (ifound .eq. 2) then
 
         call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(1:2),s_psi(1:2),dpsi_dr(1:2),dpsi_ds(1:2))
-     
+	
       elseif (ifound .eq. 4) then
       
 ! complicated : 2 line pieces but which point belongs to which line piece?
@@ -145,27 +142,13 @@ do i=1, element_list%n_elements
           itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
         endif
 
-        if ((xpoint) .and. (i .eq. i_elm_xpoint)) then
+        if ((xpoint) .and. (     ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2))  &
+	                    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1))   )  ) then
 
-          call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:3:2)), &
+	  call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:3:2)), &
                                 s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(2:4:2)), &
                                 s_psi(itht(2:4:2)),dpsi_dr(itht(2:4:2)),dpsi_ds(itht(2:4:2)))
-
-          do k=1,4
-            call interp_RZ(node_list,element_list,i_elm_xpoint,r_psi(k),s_psi(k), &
-                           RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                           ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-            call interp(node_list,element_list,i_elm_xpoint,1,1,r_psi(k),s_psi(k),&
-                        PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
-
-            RZ_jac  = DRRg1_dr * dZZg1_ds - dRRg1_ds * dZZg1_dr
-
-            PSI_R = (   dPSg1_dr * dZZg1_ds - dPSg1_ds * dZZg1_dr ) / RZ_jac
-            PSI_Z = ( - dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr ) / RZ_jac
-
-          enddo
 
         else
 

@@ -1,4 +1,4 @@
-recursive subroutine FFprime(xpoint2,Z,Z_xpoint,psi,psi_axis,psi_bnd,FFprime_profile,dFF_dpsi,dFF_dz, &
+recursive subroutine FFprime(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,FFprime_profile,dFF_dpsi,dFF_dz, &
                        dFF_dpsi2,dFF_dz2,dFF_dpsi_dz)
 !-----------------------------------------------------------------------
 ! Determines the F*F' value and its derivatives at the given
@@ -10,14 +10,19 @@ implicit none
 
 ! --- Routine parameters
 logical, intent(in)  :: xpoint2
-real*8,  intent(in)  :: Z, Z_xpoint, psi, psi_axis, psi_bnd
+integer, intent(in)  :: xcase2
+real*8,  intent(in)  :: Z, Z_xpoint(2), psi, psi_axis, psi_bnd
 real*8,  intent(out) :: FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
 
 ! --- Internal variables.
 real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, psi_barrier
 real*8  :: psi_n, delta_psi, sig_F, sigz, dprof1_dpsi, dprof1_dpsi2
-real*8  :: atn, datn, d2atn, d3atn, atn_z, datn_z, d2atn_z, factor, d_pert, d2_pert, d3_pert
-real*8  :: cosh1, cosh2, cosh3, tanh1, tanh2
+real*8  :: atn,     datn,     d2atn, d3atn
+real*8  :: atn_z,   datn_z,   d2atn_z
+real*8  :: atn_z_u, datn_z_u, d2atn_z_u, factor
+real*8  :: d_pert, d2_pert, d3_pert
+real*8  :: cosh1, cosh2, cosh3, cosh3_u
+real*8  :: tanh1, tanh2, tanh2_u
 ! for interpolating numerical profiles
 integer :: left, right, mid
 real*8  :: aux1, aux2
@@ -96,19 +101,35 @@ if ( xpoint2 ) then
   
   sigz             = 0.1d0
   
-  tanh2 = tanh((Z_xpoint-Z)/sigz)
-  cosh3 = cosh((Z_xpoint-Z)/sigz)
+  tanh2   = tanh((Z_xpoint(1)-Z)/sigz)
+  cosh3   = cosh((Z_xpoint(1)-Z)/sigz)
+  tanh2_u = tanh((Z-Z_xpoint(2))/sigz)
+  cosh3_u = cosh((Z-Z_xpoint(2))/sigz)
+    
+  atn_z 	   = (0.5d0 - 0.5d0*tanh2)
+  datn_z	   =  0.5d0/cosh3**2   / sigz
+  d2atn_z	   =  1.0d0/cosh3**2   / sigz**2 * tanh2
+  atn_z_u	   = (0.5d0 - 0.5d0*tanh2_u)
+  datn_z_u	   = -0.5d0/cosh3_u**2 / sigz
+  d2atn_z_u	   =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
   
-  atn_z            = (0.5d0 - 0.5d0*tanh2)
-  datn_z           = 0.5d0/cosh3**2 / sigz
-  d2atn_z          = 1.0d0/cosh3**2 / sigz**2 * tanh2
+  if(xcase2 .eq. 1) then
+    atn_z_u          = 1.d0
+    datn_z_u         = 0.d0
+    d2atn_z_u        = 0.d0
+  endif
+  if(xcase .eq. 2) then
+    atn_z            = 1.d0
+    datn_z           = 0.d0
+    d2atn_z          = 0.d0
+  endif
   
-  FFprime_profile  = prof1        * atn_z
-  dFF_dpsi         = dprof1_dpsi  * atn_z
-  dFF_dpsi2        = dprof1_dpsi2 * atn_z
-  dFF_dz           = prof1        * datn_z
-  dFF_dz2          = prof1        * d2atn_z
-  dFF_dpsi_dz      = dprof1_dpsi  * datn_z
+  FFprime_profile  = prof1        *    atn_z * atn_z_u
+  dFF_dpsi         = dprof1_dpsi  *    atn_z * atn_z_u
+  dFF_dpsi2        = dprof1_dpsi2 *    atn_z * atn_z_u  
+  dFF_dz           = prof1        * ( datn_z * atn_z_u  +	   atn_z * datn_z_u)
+  dFF_dz2          = prof1        * (d2atn_z * atn_z_u  +  2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u) 
+  dFF_dpsi_dz      = dprof1_dpsi  * ( datn_z * atn_z_u  +	   atn_z * datn_z_u)
 
 else
  

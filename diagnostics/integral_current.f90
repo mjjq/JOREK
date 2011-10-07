@@ -1,4 +1,4 @@
-subroutine integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, z_xpoint, current)
+subroutine integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, z_xpoint, current)
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
@@ -19,13 +19,13 @@ real*8     :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_ga
 real*8     :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
 real*8     :: ps_g(n_gauss,n_gauss)
 
-integer    :: i, j, ms, mt, iv, inode, ife, n_elements
+integer    :: i, j, ms, mt, iv, inode, ife, n_elements, xcase2
 real*8     :: zn,dn_dpsi,dn_dz,ddn_dpsi,ddn_dz,ddn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: zT,dT_dpsi,dT_dz,ddT_dpsi,ddT_dz,ddT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
 real*8     :: zTi,zTe,dTi_dpsi,dTe_dpsi,dTi_dz,dTe_dz,ddTi_dpsi,ddTe_dpsi,ddTi_dz,ddTe_dz
 real*8     :: ddTi_dpsi_dz,ddTe_dpsi_dz,dTi_dpsi3,dTe_dpsi3,dTi_dpsi_dz2,dTe_dpsi_dz2,dTi_dpsi2_dz,dTe_dpsi2_dz
 real*8     :: zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz
-real*8     :: current, xjac, BigR, PI, Z_xpoint, psi_axis, psi_bnd, wst
+real*8     :: current, xjac, BigR, PI, Z_xpoint(2), psi_axis, psi_bnd, wst
 logical    :: xpoint2
 
 current = 0.d0
@@ -71,15 +71,15 @@ do ife =1,  element_list%n_elements
 
     do mt=1, n_gauss
 
-      call density(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+      call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
                    zn,dn_dpsi,dn_dz,ddn_dpsi,ddn_dz,ddn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
 
       if (jorek_model .eq. 400) then
         
-        call temperature_i(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+        call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
                    zTi,dTi_dpsi,dTi_dz,ddTi_dpsi,ddTi_dz,ddTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
         	       
-        call temperature_e(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+        call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
                    zTe,dTe_dpsi,dTe_dz,ddTe_dpsi,ddTe_dz,ddTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
 
         zT = zTi + zTe
@@ -87,12 +87,12 @@ do ife =1,  element_list%n_elements
       
       else
         
-        call temperature(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+        call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
                    zT,dT_dpsi,dT_dz,ddT_dpsi,ddT_dz,ddT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
 
       endif
 
-      call FFprime(xpoint2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
+      call FFprime(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
                    zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz)
                    
       wst = wgauss(ms)*wgauss(mt)

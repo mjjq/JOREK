@@ -11,6 +11,7 @@
 !*   local_elms       - List of local elements                                 *
 !*   n_local_elms     - Number of local elements                               *
 !*   xpoint2          - ???                                                    *
+!*   xcase2           - ???                                                    *
 !*   psi_axis         - ???                                                    *
 !*   psi_bnd          - ???                                                    *
 !*   Z_xpoint         - ???                                                    *
@@ -50,7 +51,8 @@ MODULE THREAD_DATA
      LOGICAL,                   POINTER :: xpoint2
      REAL*8,                    POINTER :: psi_axis
      REAL*8,                    POINTER :: psi_bnd
-     REAL*8,                    POINTER :: Z_xpoint
+     REAL*8,                    POINTER :: Z_xpoint(:)
+     INTEGER,                   POINTER :: xcase2
      INTEGER,                   POINTER :: local_elms(:)
      INTEGER,                   POINTER :: n_local_elms
      INTEGER,                   POINTER :: step
@@ -173,10 +175,10 @@ contains
              ENDDO
 
              IF (n_tor .GT. 3) THEN
-                CALL element_matrix_fft(element,nodes, data%xpoint2, data%psi_axis,  &
+                CALL element_matrix_fft(element,nodes, data%xpoint2, data%xcase2, data%psi_axis,  &
                      &                  data%psi_bnd, Data%z_xpoint, ELM, RHS, data%thread_num)      ! use fft for toroidal integration
              ELSE
-                CALL element_matrix(element,nodes, data%xpoint2, data%psi_axis,&
+                CALL element_matrix(element,nodes, data%xpoint2, data%xcase2, data%psi_axis,&
                      &              data%psi_bnd, Data%z_xpoint, ELM, RHS, data%thread_num)      ! use direct integration      
                 DO iv = 1, n_vertex_max                                                                     ! boundary integrals
 
@@ -195,7 +197,7 @@ contains
 
                    ! write(*,*) iv,iv2,'boundary_matrix_open : ',inode1,inode2
 
-                   !        call boundary_matrix_open(vertex, direction, element,nodes, data%xpoint2, data%psi_axis, data%psi_bnd, Data%z_xpoint, ELM, RHS)    ! for open field lines
+                   !        call boundary_matrix_open(vertex, direction, element,nodes, data%xpoint2, data%xcase2, data%psi_axis, data%psi_bnd, Data%z_xpoint, ELM, RHS)    ! for open field lines
 
                    !      endif
 
@@ -209,7 +211,7 @@ contains
 
                    ! write(*,*) iv,iv2,'boundary_matrix : ',inode1,inode2
 
-                   !        call boundary_matrix(vertex, direction, element,nodes, data%xpoint2, data%psi_axis, data%psi_bnd, Data%z_xpoint, ELM, RHS)    ! for closed field lines
+                   !        call boundary_matrix(vertex, direction, element,nodes, data%xpoint2, data%xcase2, data%psi_axis, data%psi_bnd, Data%z_xpoint, ELM, RHS)    ! for closed field lines
 
                    !ENDIF
 
@@ -446,7 +448,7 @@ contains
 END MODULE THREAD_DATA
 
 SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
-     n_local_elms, xpoint2,psi_axis,psi_bnd,Z_xpoint, gmres, i_tor, n_cpu, &
+     n_local_elms, xpoint2, xcase2,psi_axis,psi_bnd,Z_xpoint, gmres, i_tor, n_cpu, &
      mpi_comm_n, MPI_COMM_TRANS, my_id_trans, n_cpu_trans, solve_only)
   !---------------------------------------------------------------
   ! collect the element matrices into one large sparse matrix
@@ -481,8 +483,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   LOGICAL, target                :: xpoint2
   REAL*8, target                 :: psi_axis
   REAL*8, target                 :: psi_bnd
-  REAL*8, target                 :: Z_xpoint
+  REAL*8, target                 :: Z_xpoint(:)
   LOGICAL, target                :: gmres
+  INTEGER, target                :: xcase2
   INTEGER                        :: i_tor(n_cpu)
   INTEGER                        :: n_cpu
   INTEGER                        :: column_number
@@ -757,6 +760,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      datas(iter)%gmres             => gmres            
      datas(iter)%solve_only        => solve_only       
      datas(iter)%xpoint2           => xpoint2            
+     datas(iter)%xcase2            => xcase2            
      datas(iter)%psi_axis          => psi_axis           
      datas(iter)%psi_bnd           => psi_bnd            
      datas(iter)%Z_xpoint          => Z_xpoint           
@@ -835,7 +839,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   WRITE (*,*) MY_ID, " : Reduce..."
   CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   CALL boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, 0, &
-       0,         xpoint2, psi_axis, psi_bnd, Z_xpoint, gmres, solve_only)
+       0,         xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, gmres, solve_only)
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max   

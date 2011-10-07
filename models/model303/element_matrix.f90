@@ -2,7 +2,7 @@ module mod_elt_matrix
   implicit none
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, psi_axis, psi_bnd, Z_xpoint, ELM,RHS, tid)
+subroutine element_matrix(element, nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM,RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -22,12 +22,12 @@ real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
 integer, intent(in) :: tid
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, PI, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
 real*8     :: source_volume, source_pellet, source_pellet2
-real*8     :: psi_axis, psi_bnd, Z_xpoint, dj_dpsi, dj_dz
+real*8     :: psi_axis, psi_bnd, Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7
@@ -164,13 +164,13 @@ enddo
 do ms=1, n_gauss
   do mt=1, n_gauss
  
-    call current(xpoint2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
-    call sources(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 
-    call density(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+    call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                  dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature(xpoint2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+    call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                      dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
   
   enddo
@@ -428,7 +428,10 @@ do ms=1, n_gauss
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint)) then
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
+         psi_norm = 2.d0 - psi_norm
+       endif
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
          psi_norm = 2.d0 - psi_norm
        endif
      endif
@@ -440,19 +443,31 @@ do ms=1, n_gauss
              + ZK_perp(6) * (ZK_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
 	     
 
-     if ((T0 .lt. T_1).and. (y_g(ms,mt) .gt. Z_xpoint))   ZK_prof = 2.d-4
-     if ((r0 .lt. 0.d0) .and. (y_g(ms,mt) .gt. Z_xpoint)) D_prof  = 1.d-4
+     if ((T0 .lt. T_1)  .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ZK_prof = 2.d-4
+     if ((T0 .lt. T_1)  .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ZK_prof = 2.d-4
+     if ((r0 .lt. 0.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) D_prof  = 1.d-4
+     if ((r0 .lt. 0.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) D_prof  = 1.d-4
 
 !     ZK_perp_num   = 0.d0
 !     ZK_perp_num_T = 0.d0
-!     if ((T0 .lt. T_1)   .and. (y_g(ms,mt) .gt. Z_xpoint) .and. (psi_norm .le. 1.0)) then
+!     if ((T0 .lt. T_1)   .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2) .and. (psi_norm .le. 1.0)) then
+!       ZK_prof = 2.d-4
+!       ZK_perp_num   = 1.d-5 ! * (T0/T_1 - 1.d0)**2
+!       ZK_perp_num_T = 0.D0 !2.d-2 * (T0/T_1 - 1.d0) / T_1
+!     endif
+!     if ((T0 .lt. T_1)   .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1) .and. (psi_norm .le. 1.0)) then
 !       ZK_prof = 2.d-4
 !       ZK_perp_num   = 1.d-5 ! * (T0/T_1 - 1.d0)**2
 !       ZK_perp_num_T = 0.D0 !2.d-2 * (T0/T_1 - 1.d0) / T_1
 !     endif
 !     D_perp_num     = 0.d0
 !     D_perp_num_rho = 0.d0
-!     if ((r0 .lt. rho_1) .and. (y_g(ms,mt) .gt. Z_xpoint) .and. (psi_norm .le. 1.0)) then
+!     if ((r0 .lt. rho_1) .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2) .and. (psi_norm .le. 1.0)) then
+!        D_prof = 1.d-4
+!       D_perp_num     = 1.d-5 !* (r0/rho_1 - 1.d0)**2
+!       D_perp_num_rho = 0.d0  !2.d-2 * (r0/rho_1 - 1.d0) / rho_1
+!     endif
+!     if ((r0 .lt. rho_1) .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1) .and. (psi_norm .le. 1.0)) then
 !        D_prof = 1.d-4
 !       D_perp_num     = 1.d-5 !* (r0/rho_1 - 1.d0)**2
 !       D_perp_num_rho = 0.d0  !2.d-2 * (r0/rho_1 - 1.d0) / rho_1

@@ -1,7 +1,7 @@
 module mod_poiss
 contains
-subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list, &
-                   ivar_in,ivar_out,i_harm, psi_axis,psi_bnd,xpoint,Z_xpoint, &
+subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list,   &
+                   ivar_in,ivar_out,i_harm, psi_axis,psi_bnd,xpoint,xcase,Z_xpoint, &
                    freeboundary_equil,refinement,iter)
 !-------------------------------------------------------------------------------
 ! collect the element matrices into one large sparse matrix in coordinate format
@@ -23,6 +23,7 @@ integer,                  intent(in)    :: ivar_in           ! index of the inpu
 integer,                  intent(in)    :: ivar_out          ! index of the output variable
 integer,                  intent(in)    :: i_harm            ! index of toroidal harmonic
 integer,                  intent(in)    :: iter              ! the iteration number
+integer,                  intent(in)    :: xcase              
 logical,                  intent(in)    :: xpoint            
 logical,                  intent(in)    :: freeboundary_equil
 logical,                  intent(in)    :: refinement       
@@ -36,9 +37,9 @@ type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
 real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1))
-real*8   :: zbig, Z_xpoint, psi_axis, psi_bnd, psi_xpoint, R_xpoint, s_xpoint, t_xpoint
+real*8   :: zbig, Z_xpoint(2), psi_axis, psi_bnd, psi_xpoint(2), R_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8   :: R_axis, Z_axis, s_axis, t_axis, amix
-integer  :: i_elm_axis, i_elm_xpoint
+integer  :: i_elm_axis, i_elm_xpoint(2)
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
 integer  :: n_elements, inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
 
@@ -147,14 +148,14 @@ do ife =1, n_elements
   if (itype .eq. -1) then
     
     if (freeboundary_equil) then
-      call element_matrix_GS(xpoint,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
+      call element_matrix_GS(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
     else
-      call element_matrix_GS_perturbation(xpoint,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
+      call element_matrix_GS_perturbation(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
     endif
     
   elseif (itype .eq. -2) then
 
-    call element_matrix_GS_inverse(xpoint,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
+    call element_matrix_GS_inverse(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
 
   elseif (itype .eq. +2) then
 

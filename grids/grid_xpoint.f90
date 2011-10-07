@@ -1,5 +1,5 @@
 subroutine grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg, n_tht, &
-  SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private)
+  SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private, xcase)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
@@ -13,7 +13,7 @@ implicit none
 ! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
-integer,                  intent(in)    :: n_flux, n_open, n_private, n_leg, n_tht
+integer,                  intent(in)    :: n_flux, n_open, n_private, n_leg, n_tht, xcase
 real*8,                   intent(in)    :: SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1
 real*8,                   intent(in)    :: dPSI_open, dPSI_private
 
@@ -24,7 +24,7 @@ type (type_node_list),    pointer :: newnode_list
 type (type_element_list), pointer :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
-real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint, Z_xpoint, s_xpoint, t_xpoint, psi_xpoint
+real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
 real*8              :: PI, s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
@@ -35,7 +35,7 @@ real*8, allocatable :: RR_new(:,:),ZZ_new(:,:),s_flux(:,:),t_flux(:,:),t_tht(:,:
 integer,allocatable :: ielm_flux(:,:), keep(:,:,:), k_cross(:,:)
 integer             :: i, j, k, l, m, n_psi, n_flux_2, n_open_2, n_tht_2, n_psi_2, i2, j2
 integer             :: n_private_2, i_surf, n_pieces
-integer             :: i_elm_axis, i_elm_xpoint, i_elm_find(8), i_sep, i_max, i_find, npl, ifail
+integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), i_sep, i_max, i_find, npl, ifail
 integer             :: node, index, node_start, index_xpoint, n_xpoint, j_start, j_end
 integer             :: iv, ivp, node_iv, node_ivp, i_elm, n_leg_2, n_tht_3
 integer             :: my_id, ielm_out
@@ -60,7 +60,7 @@ write(*,*) '*************************************'
 
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
 !-------------------------------- double values to find the mid_points
 n_flux_2    = 2 * (n_flux - 1)
@@ -83,7 +83,7 @@ call meshac2(n_flux_2+1,s_tmp,1.d0,9999.d0,SIG_closed,9999.d0,0.2d0,1.0d0)
 
 do i=1,n_flux_2
   s_values(i) = s_tmp(i+1)
-  flux_list%psi_values(i) =  psi_axis + s_values(i)**2 * (psi_xpoint - psi_axis)
+  flux_list%psi_values(i) =  psi_axis + s_values(i)**2 * (psi_xpoint(1) - psi_axis)
 enddo
 
 call tr_deallocate(s_tmp,"s_tmp"); call tr_allocate(s_tmp,1,n_open_2+1,"s_tmp")
@@ -92,7 +92,7 @@ call meshac2(n_open_2+1,s_tmp,0.d0,9999.d0,SIG_open,9999.d0,0.6d0,1.0d0)
 
 do i=1,n_open_2
   s_values(i+n_flux_2)             =  1.d0 + dPSI_open*s_tmp(i+1)
-  flux_list%psi_values(i+n_flux_2) =  psi_axis + s_values(i+n_flux_2)**2 * (psi_xpoint - psi_axis)
+  flux_list%psi_values(i+n_flux_2) =  psi_axis + s_values(i+n_flux_2)**2 * (psi_xpoint(1) - psi_axis)
 enddo
 
 call tr_deallocate(s_tmp,"s_tmp"); call tr_allocate(s_tmp,1,n_private_2+1,"s_tmp")
@@ -101,11 +101,11 @@ call meshac2(n_private_2+1,s_tmp,0.d0,9999.d0,SIG_private,9999.d0,0.6d0,1.0d0)
 
 do i=1,n_private_2
   s_values(i+n_flux_2+n_open_2)             =  1.d0 - dPSI_private*s_tmp(i+1)
-  flux_list%psi_values(i+n_flux_2+n_open_2) =  psi_axis + s_values(i+n_flux_2+n_open_2)**2 * (psi_xpoint - psi_axis)
+  flux_list%psi_values(i+n_flux_2+n_open_2) =  psi_axis + s_values(i+n_flux_2+n_open_2)**2 * (psi_xpoint(1) - psi_axis)
 enddo
 
 
-call find_flux_surfaces(xpoint,node_list,element_list,flux_list)
+call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
 !call q_profile(node_list,element_list,flux_list,psi_axis,psi_xpoint,Z_xpoint)
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
@@ -140,11 +140,11 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  if ((ZZg1 .lt. ZL1) .and. (RRg1 .lt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL1) .and. (RRg1 .lt. R_xpoint(1))) then
     RL1 = RRg1
     ZL1 = ZZg1
   endif
-  if ((ZZg1 .lt. ZL4) .and. (RRg1 .gt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL4) .and. (RRg1 .gt. R_xpoint(1))) then
     RL4 = RRg1
     ZL4 = ZZg1
   endif
@@ -156,11 +156,11 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  if ((ZZg1 .lt. ZL1) .and. (RRg1 .lt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL1) .and. (RRg1 .lt. R_xpoint(1))) then
     RL1 = RRg1
     ZL1 = ZZg1
   endif
-  if ((ZZg1 .lt. ZL4) .and. (RRg1 .gt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL4) .and. (RRg1 .gt. R_xpoint(1))) then
     RL4 = RRg1
     ZL4 = ZZg1
   endif
@@ -181,11 +181,11 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  if ((RRg1 .lt. RL2) .and. (ZZg1 .lt. Z_xpoint)) then
+  if ((RRg1 .lt. RL2) .and. (ZZg1 .lt. Z_xpoint(1))) then
     RL2 = RRg1
     ZL2 = ZZg1
   endif
-  if ((RRg1 .gt. RL3)  .and. (ZZg1 .lt. Z_xpoint)) then
+  if ((RRg1 .gt. RL3)  .and. (ZZg1 .lt. Z_xpoint(1))) then
     RL3 = RRg1
     ZL3 = ZZg1
   endif
@@ -197,17 +197,17 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  if ((RRg1 .lt. RL2) .and. (ZZg1 .lt. Z_xpoint)) then
+  if ((RRg1 .lt. RL2) .and. (ZZg1 .lt. Z_xpoint(1))) then
     RL2 = RRg1
     ZL2 = ZZg1
   endif
-  if ((RRg1 .gt. RL3)  .and. (ZZg1 .lt. Z_xpoint)) then
+  if ((RRg1 .gt. RL3)  .and. (ZZg1 .lt. Z_xpoint(1))) then
     RL3 = RRg1
     ZL3 = ZZg1
   endif
 enddo
 
-tht_x = atan2(Z_xpoint-Z_axis,R_xpoint-R_axis)
+tht_x = atan2(Z_xpoint(1)-Z_axis,R_xpoint(1)-R_axis)
 if (tht_x .lt. 0.d0) tht_x = tht_x + 2.d0 * PI
 
 call find_theta_surface(node_list,element_list,flux_list,flux_list%n_psi,tht_x,R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
@@ -216,7 +216,7 @@ do i=1,i_find
    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RL5,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                                            ZL5,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-   if (ZL5 .le. Z_xpoint) exit
+   if (ZL5 .le. Z_xpoint(1)) exit
 enddo
 
 RL6 = 999.; ZL6 = 1.d10  ! left  strike point (i.e. on separatrix)
@@ -233,11 +233,11 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  if ((ZZg1 .lt. ZL6) .and. (RRg1 .lt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL6) .and. (RRg1 .lt. R_xpoint(1))) then
     RL6 = RRg1
     ZL6 = ZZg1
   endif
-  if ((ZZg1 .lt. ZL7)  .and. (RRg1 .gt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL7)  .and. (RRg1 .gt. R_xpoint(1))) then
     RL7 = RRg1
     ZL7 = ZZg1
   endif
@@ -249,11 +249,11 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  if ((ZZg1 .lt. ZL6) .and. (RRg1 .lt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL6) .and. (RRg1 .lt. R_xpoint(1))) then
     RL6 = RRg1
     ZL6 = ZZg1
   endif
-  if ((ZZg1 .lt. ZL7)  .and. (RRg1 .gt. R_xpoint)) then
+  if ((ZZg1 .lt. ZL7)  .and. (RRg1 .gt. R_xpoint(1))) then
     RL7 = RRg1
     ZL7 = ZZg1
   endif
@@ -272,7 +272,7 @@ write(*,*) ' LEG points (7) : ',RL7,ZL7
 i_sep = n_flux_2
 i_max = n_flux_2 + n_open_2
 
-tht_x = atan2(Z_xpoint-Z_axis,R_xpoint-R_axis)
+tht_x = atan2(Z_xpoint(1)-Z_axis,R_xpoint(1)-R_axis)
 
 call tr_allocate(theta_sep,1,n_tht_3,"theta_sep")
 call tr_allocate(R_sep,1,n_tht_3,"R_sep")
@@ -308,12 +308,12 @@ do j=1,n_tht_2
 !  write(*,'(A,i5,2e16.8)') ' R_sep, Z_sep : ',j,R_sep(j),Z_sep(j)
 enddo
 
-R_sep(1) = R_xpoint
-Z_sep(1) = Z_xpoint
-R_sep(n_tht_2) = R_xpoint
-Z_sep(n_tht_2) = Z_xpoint
+R_sep(1) = R_xpoint(1)
+Z_sep(1) = Z_xpoint(1)
+R_sep(n_tht_2) = R_xpoint(1)
+Z_sep(n_tht_2) = Z_xpoint(1)
 
-angle_L1 = atan2(ZL1-Z_xpoint,RL1-R_xpoint)
+angle_L1 = atan2(ZL1-Z_xpoint(1),RL1-R_xpoint(1))
 if (angle_L1 .lt. 0.d0) angle_L1 = angle_L1 + 2.d0*PI
 
 angle_L8 = tht_x + 1.5d0*PI
@@ -330,14 +330,14 @@ call tr_allocate(Z_max,1,n_tht_3,"Z_max")
 call tr_allocate(R_min,1,n_tht_3,"R_min")
 call tr_allocate(Z_min,1,n_tht_3,"Z_min")
 
-call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L9,R_xpoint,Z_xpoint,i_elm_find,s_find,t_find,i_find)
+call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L9,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
 call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
                RL9,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                ZL9,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
 write(*,'(A,2e16.8)') ' L9 (outside): ',RL9,ZL9  ! outside wall crossing at x-point level
 
-call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L8,R_xpoint,Z_xpoint,i_elm_find,s_find,t_find,i_find)
+call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L8,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
 call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
                RL8,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                ZL8,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -352,9 +352,9 @@ do j=1,n_tht_2
 !     Z_max(j) = Z_sep(j)
 
     if (j .gt. n_tht_2/2) then
-      Z_max(j) = Z_sep(j) + (ZL8 - Z_xpoint) * ((Z_sep(j) - Z_axis)/(Z_xpoint - Z_axis))**2
+      Z_max(j) = Z_sep(j) + (ZL8 - Z_xpoint(1)) * ((Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
     else
-      Z_max(j) = Z_sep(j) + (ZL9 - Z_xpoint) * ((Z_sep(j) - Z_axis)/(Z_xpoint - Z_axis))**2
+      Z_max(j) = Z_sep(j) + (ZL9 - Z_xpoint(1)) * ((Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
     endif
     
     call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(j),i_elm_find,s_find,t_find,i_find)
@@ -364,7 +364,7 @@ do j=1,n_tht_2
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
 
-    if ( ((RRg1 .ge. R_xpoint).and.(j .lt. n_tht_2/2)) .or. ((RRg1 .lt. R_xpoint).and.(j .gt. n_tht_2/2)) ) then
+    if ( ((RRg1 .ge. R_xpoint(1)).and.(j .lt. n_tht_2/2)) .or. ((RRg1 .lt. R_xpoint(1)).and.(j .gt. n_tht_2/2)) ) then
 
       R_max(j)             = RRg1
       RR_new(n_psi_2,j)    = RRg1
@@ -432,7 +432,7 @@ do j=1,n_leg_2
                    RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-    if (ZZg1 .le. Z_xpoint) exit
+    if (ZZg1 .le. Z_xpoint(1)) exit
 
   enddo
 
@@ -452,7 +452,7 @@ do j=1,n_leg_2
                    RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,     &
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-    if (ZZg1 .le. Z_xpoint) exit
+    if (ZZg1 .le. Z_xpoint(1)) exit
 
   enddo
 
@@ -473,7 +473,7 @@ do j=1,n_leg_2
                    RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-    if (RRg1 .le. R_xpoint) exit
+    if (RRg1 .le. R_xpoint(1)) exit
 
   enddo
 
@@ -494,7 +494,7 @@ do j=1,n_leg_2
                    RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-    if (RRg1 .ge. R_xpoint) exit
+    if (RRg1 .ge. R_xpoint(1)) exit
 
   enddo
 
@@ -506,7 +506,7 @@ R_max(n_tht_2+2*n_leg_2) = R_max(1)   ! this one is known
 
 do j=1,n_leg_2                        ! inside leg
 
-  R_sep(n_tht_2 + j) = RL6 + (R_xpoint - RL6) * s_tmp(j)
+  R_sep(n_tht_2 + j) = RL6 + (R_xpoint(1) - RL6) * s_tmp(j)
   call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+j),i_elm_find,s_find,t_find,i_find)
 
   do i=1,i_find
@@ -515,18 +515,18 @@ do j=1,n_leg_2                        ! inside leg
                    RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-    if (ZZg1 .le. Z_xpoint) exit
+    if (ZZg1 .le. Z_xpoint(1)) exit
 
   enddo
 
   Z_sep(n_tht_2 + j) = ZZg1
 
 enddo
-Z_sep(n_tht_2+n_leg_2) = Z_xpoint ! this one is known
+Z_sep(n_tht_2+n_leg_2) = Z_xpoint(1) ! this one is known
 
 do j=1,n_leg_2
 
-  R_sep(n_tht_2 + n_leg_2 + j) = RL7 + (R_xpoint - RL7) * s_tmp(j)
+  R_sep(n_tht_2 + n_leg_2 + j) = RL7 + (R_xpoint(1) - RL7) * s_tmp(j)
 
   call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,i_find)
 
@@ -536,14 +536,14 @@ do j=1,n_leg_2
                    RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,     &
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-    if (ZZg1 .le. Z_xpoint) exit
+    if (ZZg1 .le. Z_xpoint(1)) exit
 
   enddo
 
   Z_sep(n_tht_2 + n_leg_2 + j) = ZZg1
 
 enddo
-Z_sep(n_tht_2+2*n_leg_2) = Z_xpoint ! this one is known
+Z_sep(n_tht_2+2*n_leg_2) = Z_xpoint(1) ! this one is known
 
 call lincol(2)
 call lplot6(1,1,R_max,Z_max,-(n_tht_2+2*n_leg_2),' ')
@@ -838,9 +838,9 @@ index_xpoint = newnode_list%n_nodes + 1
 
 n_xpoint=4
 
-call interp(node_list,element_list,i_elm_xpoint,1,1,s_xpoint,t_xpoint,&
+call interp(node_list,element_list,i_elm_xpoint(1),1,1,s_xpoint(1),t_xpoint(1),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
-call interp_RZ(node_list,element_list,i_elm_xpoint,s_xpoint,t_xpoint, &
+call interp_RZ(node_list,element_list,i_elm_xpoint(1),s_xpoint(1),t_xpoint(1), &
                    RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
@@ -865,25 +865,25 @@ alpha_min = min(alpha1,alpha2)
 
 write(*,*) ' ALPHA : ',alpha_max,alpha_min
 
-newnode_list%node(index_xpoint)%x(1,:) = (/ R_xpoint, Z_xpoint /)
+newnode_list%node(index_xpoint)%x(1,:) = (/ R_xpoint(1), Z_xpoint(1) /)
 newnode_list%node(index_xpoint)%x(2,:) = (/ cos(angle_L9),sin(angle_L9) /)
 newnode_list%node(index_xpoint)%x(3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint)%x(4,:) = 0.d0
 newnode_list%node(index_xpoint)%boundary = 0
 
-newnode_list%node(index_xpoint+1)%x(1,:) = (/ R_xpoint, Z_xpoint /)
-newnode_list%node(index_xpoint+1)%x(2,:) = (/ R_xpoint-R_axis,Z_xpoint-Z_axis/)/sqrt((R_xpoint-R_axis)**2+(Z_xpoint-Z_axis)**2)
+newnode_list%node(index_xpoint+1)%x(1,:) = (/ R_xpoint(1), Z_xpoint(1) /)
+newnode_list%node(index_xpoint+1)%x(2,:) = (/ R_xpoint(1)-R_axis,Z_xpoint(1)-Z_axis/)/sqrt((R_xpoint(1)-R_axis)**2+(Z_xpoint(1)-Z_axis)**2)
 newnode_list%node(index_xpoint+1)%x(3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint+1)%x(4,:) = 0.d0
 newnode_list%node(index_xpoint+1)%boundary = 0
 
-newnode_list%node(index_xpoint+2)%x(1,:) = (/ R_xpoint, Z_xpoint /)
-newnode_list%node(index_xpoint+2)%x(2,:) = (/ R_xpoint-R_axis,Z_xpoint-Z_axis/)/sqrt((R_xpoint-R_axis)**2+(Z_xpoint-Z_axis)**2)
+newnode_list%node(index_xpoint+2)%x(1,:) = (/ R_xpoint(1), Z_xpoint(1) /)
+newnode_list%node(index_xpoint+2)%x(2,:) = (/ R_xpoint(1)-R_axis,Z_xpoint(1)-Z_axis/)/sqrt((R_xpoint(1)-R_axis)**2+(Z_xpoint(1)-Z_axis)**2)
 newnode_list%node(index_xpoint+2)%x(3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+2)%x(4,:) = 0.d0
 newnode_list%node(index_xpoint+2)%boundary = 0
 
-newnode_list%node(index_xpoint+3)%x(1,:) = (/ R_xpoint, Z_xpoint /)
+newnode_list%node(index_xpoint+3)%x(1,:) = (/ R_xpoint(1), Z_xpoint(1) /)
 newnode_list%node(index_xpoint+3)%x(2,:) = (/ -cos(angle_L8),-sin(angle_L8) /)
 newnode_list%node(index_xpoint+3)%x(3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+3)%x(4,:) = 0.d0
@@ -914,8 +914,8 @@ do i=n_flux,n_flux+n_open           !--------------------------- nodes on the op
                  Z_polar(k,4,j2), 3.d0/2.d0 *(Z_polar(k,4,j2)-Z_polar(k,3,j2)) /)
 
     if ((j .eq. 1) .or. (j .eq. n_tht)) then
-      R_cub1d = (/ R_xpoint, 0.5d0*(R_max(j2)-R_xpoint), R_max(j2), 0.5d0*(R_max(j2)-R_xpoint)  /)
-      Z_cub1d = (/ Z_xpoint, 0.5d0*(Z_max(j2)-Z_xpoint), Z_max(j2), 0.5d0*(Z_max(j2)-Z_xpoint)  /)
+      R_cub1d = (/ R_xpoint(1), 0.5d0*(R_max(j2)-R_xpoint(1)), R_max(j2), 0.5d0*(R_max(j2)-R_xpoint(1))  /)
+      Z_cub1d = (/ Z_xpoint(1), 0.5d0*(Z_max(j2)-Z_xpoint(1)), Z_max(j2), 0.5d0*(Z_max(j2)-Z_xpoint(1))  /)
     endif
 
     call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),tmp1, dR_dt)
@@ -1486,7 +1486,7 @@ deallocate(newelement_list)
 
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
 call tr_deallocate(s_values,"s_values")
 call tr_deallocate(theta_sep,"theta_sep")

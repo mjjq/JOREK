@@ -1,4 +1,4 @@
-subroutine element_matrix_GS_inverse(xpoint,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
+subroutine element_matrix_GS_inverse(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -21,9 +21,9 @@ real*8     :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vert
 
 real*8     :: xjac, wst
 real*8     :: ps0_x, ps0_y, v, v_x, v_y, psi, psi_x, psi_y, rhs_ij
-integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm
+integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm, xcase
 logical    :: xpoint
-real*8     :: Z_xpoint,psi_axis,psi_bnd,dj_dpsi,dj_dz
+real*8     :: Z_xpoint(2),psi_axis,psi_bnd,dj_dpsi,dj_dz
 real*8     :: zn,dn_dpsi,dn_dz, zT,dT_dpsi,dT_dz, zFFprime,dFFprime_dpsi,dFFprime_dz
 
 ELM=0.d0

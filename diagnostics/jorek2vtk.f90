@@ -23,10 +23,11 @@ real*8                :: Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt, ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_
 real*8                :: U,U_s,U_t,U_st,U_ss,U_tt, RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt, TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
 real*8                :: u0_x, u0_y, xjac, v_perp, Psi_J, R_p, error, zj_x, zj_y, ps_x, ps_y, TT_x, TT_y, TT_p
 real*8                :: RHO_x, RHO_y, RHO_p, V, V_s, V_t, V_st, V_ss, V_tt, Btot, BigR
-real*8                :: psi_bnd,psi_axis,R_axis,Z_axis,s_axis,t_axis,psi_xpoint,R_xpoint,Z_xpoint,s_xpoint,t_xpoint
+real*8                :: psi_bnd,psi_axis,R_axis,Z_axis,s_axis,t_axis
+real*8                :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8                :: ps0, psi_norm, particle_source, D_prof, ZK_prof, grad_psi, source_pellet, ZKpar_T
 real*8                :: w0_x, w0_y, w0_xx, w0_yy, xjac_x, xjac_y
-integer               :: i_elm_axis, i_elm_xpoint, k_tor, ifail, ierr
+integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
@@ -111,8 +112,11 @@ ien     = 0
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,ifail)
-  psi_bnd = psi_xpoint
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+  psi_bnd  = psi_xpoint(1)
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    psi_bnd = psi_xpoint(2)
+  endif
 else
   psi_bnd = 0.d0
 endif
@@ -250,7 +254,10 @@ do i=1,element_list%n_elements
 	    
         ps0 = scalars(inode,1)
         psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint)) then
+        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
+          psi_norm = 2.d0 - psi_norm
+        endif
+        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
           psi_norm = 2.d0 - psi_norm
         endif
         

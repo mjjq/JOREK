@@ -573,10 +573,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
 #ifdef USE_BLOCK
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-                    dummy_int,dummy_int,dummy_real, &
+                    NULL(),NULL(),NULL(), &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
-        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,dummy_int,dummy_int,dummy_real, &
+        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,NULL(),NULL(),NULL(), &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
         call cpu_time(t_solv_1)

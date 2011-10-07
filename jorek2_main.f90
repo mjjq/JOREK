@@ -929,7 +929,7 @@ program JOREK2
 
            elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
-              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,dummy_int,dummy_int,dummy_real, &
+              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,NULL(),NULL(),NULL(), &
                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
            endif
 

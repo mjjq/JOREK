@@ -338,7 +338,7 @@ else
   call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1)
 endif
   
-call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,Z_xpoint)
+call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 
 if (allocated(surface_list%psi_values))    call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
 if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)

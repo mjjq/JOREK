@@ -83,7 +83,7 @@ program JOREK2
       logical(kind=4), target :: xpoint2
       real(kind=8), target :: psi_axis
       real(kind=8), target :: psi_bnd
-      real(kind=8), target :: z_xpoint(2)
+      real(kind=8), target :: z_xpoint(:)
       logical(kind=4), target :: gmres
       integer(kind=4) :: i_tor(n_cpu)
       integer(kind=4) :: mpi_comm_n
@@ -259,7 +259,7 @@ program JOREK2
       if (xpoint)  then
         call grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg, n_tht,         &
           SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open,           &
-          dPSI_private)
+          dPSI_private, xcase)
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
           sig1, xr2, sig2, refinement)

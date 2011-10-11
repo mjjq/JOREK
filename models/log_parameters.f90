@@ -141,7 +141,7 @@ if (my_id == 0) then
     write(*,230) 'SIG_leg_1           ', SIG_leg_1
     write(*,230) 'dPSI_open           ', dPSI_open
     write(*,230) 'dPSI_private        ', dPSI_private
-    write(*,232) 'xcase               ', xcase
+    write(*,231) 'xcase               ', xcase
   end if
   
   write(*,231) 'nout                ', nout

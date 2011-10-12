@@ -29,6 +29,8 @@ real*8                :: ps0, psi_norm, particle_source, D_prof, ZK_prof, grad_p
 real*8                :: w0_x, w0_y, w0_xx, w0_yy, xjac_x, xjac_y
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode
+!===========GDP=========== --- add the diagnostics Er, Vtheta, Vneo
+real*8                :: Er, psi_abs, Vtheta, Vneo, Btheta
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
 
@@ -66,6 +68,8 @@ call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
 n_scalars = n_var + 10
+!===========GDP=========== --- increment n_scalars: add Er, Vtheta and Vneo
+n_scalars = n_var + 13
 
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
@@ -78,7 +82,8 @@ allocate(scalar_names(n_scalars), vector_names(n_vectors))
 scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar        ', &
                   'pressure    ',                                                  &
                   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp',     &
-		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp','D_prof      ','ZK_prof     '/)
+		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp','D_prof      ',     &
+                  'ZK_prof     ','Er          ','Vtheta      ','Vneo        '/)
 
 !scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ', &
 !                  'pressure    ',                                                  &
@@ -179,6 +184,18 @@ do i=1,element_list%n_elements
           zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
 
 	  v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
+!===========GDP=========== --- compute added diagnostics
+          psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
+          Btheta  = (psi_abs/R)          
+          Vtheta  = 0.0
+          Vneo    = 0.0
+          Er      = 0.0
+          if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
+             Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
+                  (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
+             Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
+             Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
+          endif
 
 !	  vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
 !          vectors(inode,:,2) = (/ + ps_y /R * V, - ps_x /R * V, F0/R * V /)
@@ -262,6 +279,18 @@ do i=1,element_list%n_elements
         endif
         
         v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
+!===========GDP=========== --- compute added diagnostics
+        psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
+        Btheta  = (psi_abs/R)          
+        Vtheta  = 0.0
+        Vneo    = 0.0
+        Er      = 0.0
+        if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
+           Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
+                (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
+           Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
+           Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
+        endif
 
         Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR  
         D_prof  = D_perp(1)  * ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4)))) &
@@ -281,22 +310,29 @@ do i=1,element_list%n_elements
 
         if (grad_psi .ne. 0.d0) then
 
-          scalars(inode,n_var+2) = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
-
-          scalars(inode,n_var+3) = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
-
-          scalars(inode,n_var+4) = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
-
-          scalars(inode,n_var+5) = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
-
-          scalars(inode,n_var+6) = D_prof * (RHO_x * ps_x + RHO_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
-
-          scalars(inode,n_var+7) = scalars(inode,5) * scalars(inode,7) * Btot
-
-          scalars(inode,n_var+8) = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
+          scalars(inode,n_var+2)  = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
+                                 
+          scalars(inode,n_var+3)  = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
+                                 
+          scalars(inode,n_var+4)  = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
+                                 
+          scalars(inode,n_var+5)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
+                                 
+          scalars(inode,n_var+6)  = D_prof * (RHO_x * ps_x + RHO_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
+                                 
+          scalars(inode,n_var+7)  = scalars(inode,5) * scalars(inode,7) * Btot
+                                 
+          scalars(inode,n_var+8)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
 
           scalars(inode,n_var+9)  = D_prof
+
           scalars(inode,n_var+10) = ZK_prof
+!===========GDP=========== --- added outputs
+          scalars(inode,n_var+11) = Er
+
+          scalars(inode,n_var+12) = Vtheta
+
+          scalars(inode,n_var+13) = Vneo
 
 !           call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
 !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &

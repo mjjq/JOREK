@@ -49,18 +49,30 @@ subroutine preset_parameters
   n_tht     = 16
 
   n_open    = 5
+  n_outer   = 0
+  n_inner   = 0
   n_leg     = 5
   n_private = 5
+  n_up_leg  = 0
+  n_up_priv = 0
   
   SIG_closed  = 0.1d0
   SIG_open    = 0.1d0
+  SIG_outer   = 0.1d0
+  SIG_inner   = 0.1d0
   SIG_private = 0.1d0
+  SIG_up_priv = 0.1d0
   SIG_theta   = 0.03d0
   SIG_leg_0   = 0.05d0
   SIG_leg_1   = 0.2d0
+  SIG_up_leg_0= 0.05d0
+  SIG_up_leg_1= 0.2d0
   
   dPSI_open    = 0.11
+  dPSI_outer   = 0.11
+  dPSI_inner   = 0.11
   dPSI_private = 0.03
+  dPSI_up_priv = 0.03
   
   R_geo     = 10.d0
   Z_geo     = 0.d0

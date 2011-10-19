@@ -175,17 +175,29 @@ module phys_module
   
   !> @name Flux surface grid with X-point
   !! Parameters defining a flux-aligned grid with X-point in the poloidal plane.
-  integer :: n_open            !< Number of 'radial' grid points in the open flux region
-  integer :: n_private         !< Number of 'radial' grid points in the private flux region
-  integer :: n_leg             !< Number of 'poloidal' grid points along the divertor legs
+  integer :: n_open            !< Number of 'radial' grid points in the open flux region - in between the two separatrices in case of double-null
+  integer :: n_outer           !< Number of 'radial' grid points in the open flux region on the outer side (LFS) in case of double-null
+  integer :: n_inner           !< Number of 'radial' grid points in the open flux region on the inner side (HFS) in case of double-null
+  integer :: n_private         !< Number of 'radial' grid points in the private flux region on the lower side
+  integer :: n_leg             !< Number of 'poloidal' grid points along the divertor legs on the lower side
+  integer :: n_up_priv         !< Number of 'radial' grid points in the private flux region on the upper side (upper Xpoint or double-null)
+  integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs on the upper side (upper Xpoint or double-null)
   real*8  :: SIG_closed        !< Width with grid accumulation
   real*8  :: SIG_open          !< Width with grid accumulation
+  real*8  :: SIG_outer         !< Width with grid accumulation
+  real*8  :: SIG_inner         !< Width with grid accumulation
   real*8  :: SIG_private       !< Width with grid accumulation
+  real*8  :: SIG_up_priv       !< Width with grid accumulation
   real*8  :: SIG_theta         !< Width with grid accumulation
   real*8  :: SIG_leg_0         !< Width with grid accumulation
   real*8  :: SIG_leg_1         !< Width with grid accumulation
+  real*8  :: SIG_up_leg_0      !< Width with grid accumulation
+  real*8  :: SIG_up_leg_1      !< Width with grid accumulation
   real*8  :: dPSI_open         !< Delta Psi grid extends into the open flux region
+  real*8  :: dPSI_outer        !< Delta Psi grid extends into the open flux region
+  real*8  :: dPSI_inner        !< Delta Psi grid extends into the open flux region
   real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region
+  real*8  :: dPSI_up_priv      !< Delta Psi grid extends into the private flux region
   
   !> @name Analytical input profile for the density
   real*8  :: rho_0, rho_1,  rho_coef(10)

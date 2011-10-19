@@ -77,7 +77,7 @@ do j = 1, surface_list%n_psi, every_nth
     enddo
 
     call lincol(1)
-    if (surface_list%n_psi .le. 2) call lincol(3)
+    if (surface_list%n_psi .le. 6) call lincol(3)
 
     write(51,*) ' .5 setlinewidth '
     call lplot6(21,11,rplot,zplot,-nplot,' ')

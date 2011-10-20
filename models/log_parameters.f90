@@ -208,9 +208,9 @@ if (my_id == 0) then
   end if
   
   write(*,230) 'ZK_par              ', ZK_par
-  write(*,230) 'ZK_perp             ', ZK_perp(1:5)
+  write(*,230) 'ZK_perp             ', ZK_perp(1:6)
   write(*,230) 'D_par               ', D_par
-  write(*,230) 'D_perp              ', D_perp(1:5)
+  write(*,230) 'D_perp              ', D_perp(1:6)
   write(*,230) 'particlesource      ', particlesource
   write(*,230) 'particlesource_psin ', particlesource_psin
   write(*,230) 'particlesource_sig  ', particlesource_sig

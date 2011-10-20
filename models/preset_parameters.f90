@@ -113,9 +113,11 @@ subroutine preset_parameters
   R_end   =  0.1d0
   Z_begin = -0.1d0
   Z_end   = 0.1d0
-
+  
+  ZK_perp(:) = 0.d0
   ZK_perp(1) = 1.d-5; ZK_perp(2) = 0.d0; ZK_perp(3)= 0.d0; ZK_perp(4)= 99.d0; ZK_perp(5) = 99.d0
   ZK_par     = 1.d0
+  D_perp(:)  = 0.d0
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
 

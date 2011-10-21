@@ -17,11 +17,9 @@ real*8  :: p1, dp1, dp4, p4, p2, p3, r_psi(4), s_psi(4), tht(4)
 real*8  :: s, s2, s3, r_tmp, s_tmp, psr_tmp, pss_tmp, ttmp, tt
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), r_av, s_av
 
-real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
-real*8  :: RRg(4)
-real*8  :: ZZg(4)
-integer :: l, ifound2, i_neigh, Xneigh, icount, i_elm
+real*8  :: RRg(4),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
+real*8  :: ZZg(4),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+integer :: l, i_neigh, Xneigh, icount
 integer :: my_id, i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2), xcase
 logical :: xpoint
@@ -148,8 +146,8 @@ do i=1, element_list%n_elements
         endif
         
 	
-        if ((xpoint) .and. (     ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2))  &
-	                    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1))   )  ) then
+        if ((xpoint) .and. (     ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2) .and. (surface_list%psi_values(j) .eq. psi_xpoint(1)) )  &
+	                    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1) .and. (surface_list%psi_values(j) .eq. psi_xpoint(2)) )  ) ) then
 
 	  call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:3:2)), &
           	   s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
@@ -171,18 +169,15 @@ do i=1, element_list%n_elements
 	      exit
 	    endif
 	  enddo
-          ! If it is a neighboor, then record all four intersections
-	  if(Xneigh .gt. 0) then
+          ! If it is a neighboor, then record all four intersections (also do that for cases where
+	  ! the element is i_elm_xpoint, but the flux surface is not the LCFS)
+	  if( (Xneigh .gt. 0) &
+	    .or. ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) & 
+	    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1)) ) then
 	    do k=1,4
-              !Send a copy of i, not i itself, otherwise Fortran will make a segmentation fault 
-	      ! (I just love stuff like that! Pointer or not pointer, that is question...)
-	      i_elm = i
-	      call interp_RZ(node_list,element_list,i_elm,r_psi(k),s_psi(k),&
-	     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
-	       		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-              !Here as well... do not send RRg(k) and ZZg(k) directly otherwise Fortran gets crazy...
-	      RRg(k) = RRg1
-	      ZZg(k) = ZZg1
+	      call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),&
+	     		     RRg(k),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	    &
+	       		     ZZg(k),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 	    enddo
 	  endif
           ! Then, look if the element is above/below or right/left of i_elm_xpoint, 
@@ -190,6 +185,45 @@ do i=1, element_list%n_elements
 	  ! and 3,4 are always left/below Xpoint
 	  if(Xneigh .gt. 0) then
 	    if( (maxval(RRg) .gt. R_xpoint(Xneigh)) .and. (minval(RRg) .lt. R_xpoint(Xneigh)) ) then
+	      icount = 0
+	      do k=1,4
+	        if(RRg(k) .gt. R_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	      do k=1,4
+	        if(RRg(k) .lt. R_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	    else
+	      icount = 0
+	      do k=1,4
+	        if(ZZg(k) .gt. Z_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	      do k=1,4
+	        if(ZZg(k) .lt. Z_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	    endif
+	  endif
+          
+	  ! In the case where the element actually is i_elm_xpoint, 
+	  ! but the flux surface is not the LCFS, we need to check if the line is right&left
+	  ! or above&below the Xpoint
+	  if( (Xneigh .eq. 0) &
+	    .and. (    ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) &
+	          .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1)) ) ) then
+	    if(i .eq. i_elm_xpoint(1)) Xneigh = 1
+	    if(i .eq. i_elm_xpoint(2)) Xneigh = 2
+	    if(surface_list%psi_values(j) .gt. psi_xpoint(Xneigh)) then
 	      icount = 0
 	      do k=1,4
 	        if(RRg(k) .gt. R_xpoint(Xneigh)) then

@@ -1,5 +1,5 @@
 !> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-recursive subroutine interp_RZ(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+subroutine interp_RZ(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 
 use data_structure
 implicit none

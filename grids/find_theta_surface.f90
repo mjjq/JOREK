@@ -21,7 +21,7 @@ real*8,                   intent(out)   :: t_find(*)
 integer,                  intent(out)   :: i_find
 
 ! --- local variables
-integer :: k, i_elm, ifail
+integer :: i, k, i_elm, ifail, iterMax
 real*8  :: ri, dri, si ,dsi, tht_in
 real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, t2, t3, tht1, tht2, PI, tht_out
 real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
@@ -36,10 +36,10 @@ real*8  :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt, RZ1, RZ2, dRZ1, dRZ2, RZ0, A0
 PI = 2.d0 * asin(1.d0)
 
 tht_in = theta
-if (tht_in .lt. 0.d0) tht_in = tht_in + 2.d0 * PI
+if (tht_in .lt. 0.d0)    tht_in = tht_in + 2.d0 * PI
+if (tht_in .gt. 2.d0*PI) tht_in = tht_in - 2.d0 * PI
 
 i_find = 0
-
 do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
   rr1  = surface_list%flux_surfaces(j_surf)%s(1,k);   ss1  = surface_list%flux_surfaces(j_surf)%t(1,k)
@@ -85,43 +85,51 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
   call SOLVP3(a0,a1,a2,a3,t,t2,t3,ifail)
 
+!  if(   ( (tht1 .lt. theta) .and. (tht2 .gt. theta) ) &
+!    .or.( (tht1 .gt. theta) .and. (tht2 .lt. theta) ) ) then
   if (abs(t) .lt. 1.01d0) then
-
+    
     call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
     call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
     call interp_RZ(node_list,element_list,i_elm,ri,si,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-!------------------------------------------------------ one step to improve quality of solution
-    dRRg1_dt = dRRg1_dr * dri + dRRg1_ds * dsi
-    dZZg1_dt = dZZg1_dr * dri + dZZg1_ds * dsi
+    tht_out = atan2(ZZg1-Z_axis,RRg1-R_axis)
+    if (tht_out .lt. 0.d0) tht_out = tht_out + 2.d0 * PI
+!------------------------------------------------------ now step to improve quality of solution
+    iterMax =5
+    do i=1,iterMax
+      dRRg1_dt = dRRg1_dr * dri + dRRg1_ds * dsi
+      dZZg1_dt = dZZg1_dr * dri + dZZg1_ds * dsi
 
-    t = t - ((RRg1-R_axis)*sin(theta)-(ZZg1-Z_axis)*cos(theta)) / (dRRg1_dt * sin(theta) - dZZg1_dt * cos(theta))
+      t = t - ((RRg1-R_axis)*sin(theta)-(ZZg1-Z_axis)*cos(theta)) / (dRRg1_dt * sin(theta) - dZZg1_dt * cos(theta))
 
-    if (abs(t) .le. 1.d0) then
+      if (abs(t) .le. 1.d0) then
 
-      call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
-      call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
+        call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
+        call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
-      call interp_RZ(node_list,element_list,i_elm,ri,si,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        call interp_RZ(node_list,element_list,i_elm,ri,si,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+        					      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-      tht_out = atan2(ZZg1-Z_axis,RRg1-R_axis)
-      if (tht_out .lt. 0.d0) tht_out = tht_out + 2.d0 * PI
+        tht_out = atan2(ZZg1-Z_axis,RRg1-R_axis)
+        if (tht_out .lt. 0.d0) tht_out = tht_out + 2.d0 * PI
 
-!      write(*,'(A,3e16.8)') ' find_theta check : ',tht_out,theta,(RRg1-R_axis)*sin(theta)-(ZZg1-Z_axis)*cos(theta)
+!        write(*,'(A,3e16.8)') ' find_theta check : ',tht_out,theta,(RRg1-R_axis)*sin(theta)-(ZZg1-Z_axis)*cos(theta)
 
-      if (abs(tht_in - tht_out) .lt. 1.D-4) then
+	if (abs(tht_in - tht_out) .lt. 1.D-6) then
 
-        s_find(i_find+1)     = ri
-        t_find(i_find+1)     = si
-        i_elm_find(i_find+1) = i_elm
-        i_find               = i_find + 1
+          s_find(i_find+1)     = ri
+          t_find(i_find+1)     = si
+          i_elm_find(i_find+1) = i_elm
+          i_find	       = i_find + 1
+	  exit
+
+        endif
 
       endif
-
-    endif
+    enddo
 
   endif
 

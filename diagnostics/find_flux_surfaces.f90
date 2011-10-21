@@ -7,9 +7,9 @@ use data_structure
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-type (type_surface_list) :: surface_list
+type (type_node_list)   , intent(in)	 :: node_list
+type (type_element_list), intent(in)	 :: element_list
+type (type_surface_list), intent(inout)  :: surface_list
 
 real*8  :: psimin, psimax, a0, a1, a2, a3, PI
 real*8  :: dpsi_dr(4),dpsi_ds(4)
@@ -17,6 +17,11 @@ real*8  :: p1, dp1, dp4, p4, p2, p3, r_psi(4), s_psi(4), tht(4)
 real*8  :: s, s2, s3, r_tmp, s_tmp, psr_tmp, pss_tmp, ttmp, tt
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), r_av, s_av
 
+real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
+real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8  :: RRg(4)
+real*8  :: ZZg(4)
+integer :: l, ifound2, i_neigh, Xneigh, icount, i_elm
 integer :: my_id, i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2), xcase
 logical :: xpoint
@@ -122,36 +127,100 @@ do i=1, element_list%n_elements
         where (tht .lt. 0.d0) tht = tht + 2.d0*PI
 
         itht(1)= 1; itht(2) = 2; itht(3) = 3; itht(4) = 4
-
-        if (tht(2) .lt. tht(1)) then
-          itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
-        endif
-        if (tht(4) .lt. tht(3)) then
-          itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
-        endif
+	
+	if (tht(2) .lt. tht(1)) then
+	  itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
+	endif
+	if (tht(4) .lt. tht(3)) then
+	  itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
+	endif
+	if (tht(itht(3)) .lt. tht(itht(2))) then
+	  itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
+	endif
+	if (tht(itht(2)) .lt. tht(itht(1))) then
+	  itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
+	endif
+	if (tht(itht(4)) .lt. tht(itht(3))) then
+	  itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
+	endif
         if (tht(itht(3)) .lt. tht(itht(2))) then
           itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
         endif
-        if (tht(itht(2)) .lt. tht(itht(1))) then
-          itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
-        endif
-        if (tht(itht(4)) .lt. tht(itht(3))) then
-          itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
-        endif
-        if (tht(itht(3)) .lt. tht(itht(2))) then
-          itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
-        endif
-
+        
+	
         if ((xpoint) .and. (     ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2))  &
 	                    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1))   )  ) then
 
 	  call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:3:2)), &
-                                s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
+          	   s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(2:4:2)), &
                                 s_psi(itht(2:4:2)),dpsi_dr(itht(2:4:2)),dpsi_ds(itht(2:4:2)))
 
         else
 
+          ! This is a little tricky, we look if the element is a neighboor of one of the Xpoints
+	  Xneigh = 0
+	  do k=1,4
+	    i_neigh = element_list%element(i)%neighbours(k)
+	    if( (xcase .ne. 2) .and. (i_neigh .eq. i_elm_xpoint(1)) ) then
+	      Xneigh = 1
+	      exit
+	    endif
+	    if( (xcase .ne. 1) .and. (i_neigh .eq. i_elm_xpoint(2)) ) then
+	      Xneigh = 2
+	      exit
+	    endif
+	  enddo
+          ! If it is a neighboor, then record all four intersections
+	  if(Xneigh .gt. 0) then
+	    do k=1,4
+              !Send a copy of i, not i itself, otherwise Fortran will make a segmentation fault 
+	      ! (I just love stuff like that! Pointer or not pointer, that is question...)
+	      i_elm = i
+	      call interp_RZ(node_list,element_list,i_elm,r_psi(k),s_psi(k),&
+	     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
+	       		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+              !Here as well... do not send RRg(k) and ZZg(k) directly otherwise Fortran gets crazy...
+	      RRg(k) = RRg1
+	      ZZg(k) = ZZg1
+	    enddo
+	  endif
+          ! Then, look if the element is above/below or right/left of i_elm_xpoint, 
+	  ! and then reorder the points 1,2,3,4 so that 1,2 are always right/above Xpoint,
+	  ! and 3,4 are always left/below Xpoint
+	  if(Xneigh .gt. 0) then
+	    if( (maxval(RRg) .gt. R_xpoint(Xneigh)) .and. (minval(RRg) .lt. R_xpoint(Xneigh)) ) then
+	      icount = 0
+	      do k=1,4
+	        if(RRg(k) .gt. R_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	      do k=1,4
+	        if(RRg(k) .lt. R_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	    else
+	      icount = 0
+	      do k=1,4
+	        if(ZZg(k) .gt. Z_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	      do k=1,4
+	        if(ZZg(k) .lt. Z_xpoint(Xneigh)) then
+	          icount = icount + 1
+	          itht(icount) = k
+	        endif
+	      enddo
+	    endif
+	  endif
+
+          ! Then add the lines
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:2)), &
                               s_psi(itht(1:2)),dpsi_dr(itht(1:2)),dpsi_ds(itht(1:2)))
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(3:4)), &

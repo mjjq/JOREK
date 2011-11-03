@@ -1028,7 +1028,7 @@ contains
     integer*8, parameter :: MBconst = 1024_8*1024_8
     integer*8, parameter :: KBconst = 1024_8
     integer :: uout
-    integer*8 :: scount, dcount, rcount, lcount
+    integer*8 :: scount, dcount, rcount, lcount, pcount
     
     rcount = KBconst * get_memory_inkb("VmRSS")
     open(uout_mem, file = trace_file, status = 'OLD', &
@@ -1055,6 +1055,20 @@ contains
        write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize occupied by libraries/others = ', &
             lcount/dfloat(KBconst), ' KBytes'
+    end if
+    call pastix_getmem(pcount)
+    if (pcount .gt. GBconst) then
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
+            'memsize PaStiX  = ', &
+            pcount/dfloat(GBconst), ' GBytes'
+    else if (pcount.gt.MBconst) then
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
+            'memsize PaStiX = ', &
+            pcount/dfloat(MBconst), ' MBytes'
+    else
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
+            'memsize PaStiX = ', &
+            pcount/dfloat(KBconst), ' KBytes'
     end if
     if (rcount.gt.GBconst) then
        write(uout_mem,'(A20,A50,1f10.3,A)') label, &

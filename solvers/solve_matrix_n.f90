@@ -313,6 +313,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
               if (use_murge) then
 
+#ifdef USE_MURGE
                  CALL MURGE_Initialize(n_tor, ierr)
                  if (ierr /= MURGE_SUCCESS) then 
                     write (*,*) "ERROR in MURGE_Initialize"; 
@@ -345,6 +346,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
                  CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
                  write (*,*) murge_id, "MPI_COMM_N", MPI_COMM_N
+#else
+                 print *, "Binary built without murge"
+                 call abort()
+#endif
               else
 
                  !          if (pastix_smp_only) pastix_nthrd = n_cpu_n                ! use the size of the MPIgroup for the number of threads
@@ -409,7 +414,12 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  WRITE(*,*) '***********************************'
                  WRITE(*,*) '* analyse Murge                   *'
                  WRITE(*,*) '***********************************'
+#ifdef USE_MURGE
                  CALL MURGE_GraphGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
+#else
+                 print *, "Binary built without murge"
+                 call abort()
+#endif
                  if (ierr /= MURGE_SUCCESS) then 
                     write (*,*) "ERROR in MURGE_GraphGlobalCSC"; 
                     STOP
@@ -477,8 +487,13 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            WRITE(*,*) '***********************************'
            WRITE(*,*) '* Matrix Murge                    *'
            WRITE(*,*) '***********************************'
+#ifdef USE_MURGE
            CALL MURGE_MatrixGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
                 -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
+#else
+           print *, "Binary built without murge"
+           call abort()
+#endif
            if (ierr /= MURGE_SUCCESS) then 
               write (*,*) "ERROR in MURGE_MatrixGlobalCSC"; 
               STOP
@@ -548,6 +563,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
      if (use_murge) then
+#ifdef USE_MURGE
         CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, 0,MURGE_ASSEMBLY_OVW , ierr)
         if (ierr /= MURGE_SUCCESS) then 
            write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
@@ -562,6 +578,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         end if
         if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' MURGE_GetGlobalSolution    : ',t_fact_1-t_fact_0
 
+#else
+        print *, "Binary built without murge"
+        call abort()
+#endif
      else
         call cpu_time(t_solv_0)
 

@@ -91,6 +91,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   do loop = 1, loop_nbr
      if (loop == 2)  then
         write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
+#ifdef USE_MURGE
         if (.not. solve_only) then
            CALL MURGE_ASSEMBLYBEGIN(murge_id, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
@@ -99,6 +100,10 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
            CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
         end if
+#else
+       print *, "Binary built without murge"
+       call abort()
+#endif
      end if
 
      do i=1, n_local_elms
@@ -271,12 +276,17 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
         enddo
      enddo
      if (loop == 2) then
+#ifdef USE_MURGE
         if (.not. solve_only) then
            CALL MURGE_ASSEMBLYEND(murge_id, ierr)
         end if
         if (gmres) then
            CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
         end if
+#else
+       print *, "Binary built without murge"
+       call abort()
+#endif
      end if
   end do
 

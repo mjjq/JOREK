@@ -93,10 +93,10 @@ CONTAINS
     INTEGER :: index_node2, k2, in2
     REAL*8  :: zbig
     INTEGER :: murge_ntor
-    INTEGER :: ierr
+    INTEGER(kind=MURGE_INTS_KIND) :: ierr
     LOGICAL :: solve_only, gmres
     INTEGER(KIND=MURGE_INTS_KIND) :: row_idx, col_idx  
-
+#ifdef USE_MURGE
     IF (.NOT. solve_only) THEN
        row_idx = murge_ndof * (index_node - 1) + (k -1)*murge_ntor + 1 
        col_idx = murge_ndof * (index_node2- 1) + (k2-1)*murge_ntor + 1
@@ -116,6 +116,7 @@ CONTAINS
        col_idx = n_tor*n_var * (index_node2- 1) + (k2-1)*n_tor + in2 
        CALL MURGE_ASSEMBLYSETVALUE( murge_id_prod, row_idx, col_idx, zbig,&
             &                       ierr )
+
        IF (ierr /= MURGE_SUCCESS) THEN
           WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE(prod) ", &
                "I", index_node, n_tor, n_var, k, in, &
@@ -123,6 +124,10 @@ CONTAINS
           STOP
        END IF
     END IF
+#else
+       print *, "Binary built without murge"
+       call abort()
+#endif
   END SUBROUTINE murge_add_one_entry
 
   SUBROUTINE murge_initialization(gmres, my_id, mpi_comm_n, i_tor)
@@ -136,6 +141,9 @@ CONTAINS
 
     INTEGER, EXTERNAL :: omp_get_num_threads
     INTEGER(KIND=MURGE_INTS_KIND) :: ierr
+    INTEGER(KIND=MURGE_INTS_KIND) :: ndof
+    
+#ifdef USE_MURGE
 
 
     call tr_debug_write("murge_initialised begin")
@@ -162,8 +170,9 @@ CONTAINS
                   &                  murge_sym,       ierr)
              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_BASEVAL, &
                   &                  1,               ierr)
+             ndof = n_tor*n_var
              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_DOF,     &
-                  &                  n_tor*n_var,     ierr)  
+                  &                  ndof,     ierr)  
              CALL MURGE_SetCommunicator(murge_id_prod, MPI_COMM_WORLD, ierr)
 
              CALL MURGE_SetDefaultOptions(murge_id,      0, ierr)
@@ -228,6 +237,10 @@ CONTAINS
        murge_initialised = .TRUE.
     END IF
     call tr_debug_write("murge_initialised end")
+#else
+       print *, "Binary built without murge"
+       call abort()
+#endif
   END SUBROUTINE murge_initialization
 
   SUBROUTINE murge_setGraph(gmres, n, local_elms, n_local_elms, element_list, &
@@ -246,26 +259,30 @@ CONTAINS
     integer :: local_elms(:)
 
     integer(KIND=MURGE_INTS_KIND) :: ierr
+    integer(KIND=MURGE_INTL_KIND) :: nnz
     integer :: t0, t1
     integer :: i_elem
     integer :: i, k, inode1, knode, i_order, k_order
-    integer :: index_node1, index_node2
+    integer(KIND=MURGE_INTS_KIND) :: index_node1, index_node2
     type (type_element)      :: element
     integer :: nb_periods, nb_periodes_max, nb_periodes_sec
     character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
     
+#ifdef USE_MURGE
     call tr_debug_write("murge_setgraph begin")
     call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
     
-    Call MURGE_GRAPHBEGIN(murge_id, n, &
-         n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
+    murge_global_n      = n
+    murge_global_n_prod = n
+    nnz = n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max 
+
+    Call MURGE_GRAPHBEGIN(murge_id, murge_global_n, nnz, ierr)
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_GRAPHBEGIN"
        STOP
     END IF
     IF (gmres) THEN
-       CALL MURGE_GRAPHBEGIN(murge_id_prod, n, &
-            n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max, ierr)
+       CALL MURGE_GRAPHBEGIN(murge_id_prod, murge_global_n_prod, nnz, ierr)
        IF (ierr /= MURGE_SUCCESS) THEN
           write (*,*) "ERROR in MURGE_GRAPHBEGIN"
           STOP
@@ -369,8 +386,6 @@ CONTAINS
 
     call tr_allocate(murge_loc2glob,1,murge_local_n,"murge_loc2glob")
     call tr_allocate(murge_loc2glob_prod,1,murge_local_n_prod,"murge_loc2glob_prod")
-    murge_global_n      = n
-    murge_global_n_prod = n
     write (*,*) "Local number of nodes", murge_local_n, "global",  n
     call system_clock(count=t0)
     CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
@@ -408,6 +423,11 @@ CONTAINS
     !!   write (*,*) "ERROR in MURGE_SETLOCALNODELIST"
     !!   STOP
     !!END IF
+
     call tr_debug_write("murge_setgraph end")
+#else
+       print *, "Binary built without murge"
+       call abort()
+#endif
   END SUBROUTINE murge_setGraph
 end module murge_module

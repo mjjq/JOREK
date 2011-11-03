@@ -360,8 +360,14 @@ contains
              DO iter = 1, (n_tor*n_var)**2
                 coefmtx(iter)= data%PROD_MATRICES(iter,j)
              END DO
+#ifdef USE_MURGE
              CALL MURGE_ASSEMBLYSETNODEVALUES(my_murde_id, index_node2, index_node1, &
                   coefmtx, ierr)  
+#else
+             print *, "Binary built without murge"
+             call abort()
+#endif
+
              IF (ierr /= MURGE_SUCCESS) THEN
                 WRITE (*,*) data%my_id, ":::", &
                      "I", index_node2, &
@@ -381,8 +387,13 @@ contains
                 DO iter = 1, (n_tor*n_var)**2
                    coefmtx(iter)= data%PROD_MATRICES(iter,j)
                 END DO
+#ifdef USE_MURGE
                 CALL MURGE_ASSEMBLYSETNODEVALUES(my_murde_id, index_node2, index_node1, &
                      coefmtx, ierr)  
+#else
+                print *, "Binary built without murge"
+                call abort()
+#endif
                 IF (ierr /= MURGE_SUCCESS) THEN
                    WRITE (*,*) data%my_id, ":::", &
                         "I", index_node2, &
@@ -419,11 +430,15 @@ contains
                    DO iter = 1, data%my_harm_size**2
                       coefmtx(iter) = data%RECV_MATRICES(iter, i, node)
                    END DO
-                   
+#ifdef USE_MURGE
                    CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id,         &
                         & index_node2,       &
                         & index_node1,     &
                         & coefmtx, ierr)
+#else
+                   print *, "Binary built without murge"
+                   call abort()
+#endif
                    IF (ierr /= MURGE_SUCCESS) THEN
                       WRITE (*,*) data%my_id, "::::", &
                            "I", index_node2, &
@@ -704,6 +719,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   cnt = 0
   cnt2  = 0
   CALL SYSTEM_CLOCK(count=t0)
+#ifdef USE_MURGE
   IF (.NOT. solve_only) THEN
      CALL MURGE_MATRIXRESET(murge_id, ierr)
      CALL MURGE_ASSEMBLYBEGIN(murge_id, coefnbr, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
@@ -712,7 +728,10 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   CALL MURGE_MATRIXRESET(murge_id_prod, ierr)
   CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, coefnbr_prod, MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD, &
        MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-
+#else
+  print *, "Binary built without murge"
+  call abort()
+#endif
   !
   ! GMRES :
   !   Each processor Pi of each harmonic communicator will process
@@ -806,7 +825,12 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   CALL SYSTEM_CLOCK(count=t0)
 
   IF (.NOT. gmres .OR. .NOT. solve_only) THEN
+#ifdef USE_MURGE
      CALL MURGE_ASSEMBLYEND(murge_id, ierr)
+#else
+       print *, "Binary built without murge"
+       call abort()
+#endif
      IF (ierr /= MURGE_SUCCESS) THEN
         IF (gmres) THEN
            WRITE (*,*) my_id, "::: error in assemblyend", &
@@ -820,7 +844,12 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   END IF
 
   IF (gmres) THEN
+#ifdef USE_MURGE
      CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
+#else
+       print *, "Binary built without murge"
+       call abort()
+#endif
      IF (ierr /= MURGE_SUCCESS) THEN
         WRITE (*,*) my_id, "::: error in assemblyend..", &
              cnt*(n_tor*n_var)**2, cnt
@@ -866,8 +895,13 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   IF (.NOT. gmres) THEN
      IF(ALLOCATED(column_scaling))   call tr_deallocate(column_scaling,"column_scaling")
      call tr_allocate(column_scaling,1,column_number,"column_scaling")
+#ifdef USE_MURGE
      CALL MURGE_GetGlobalNorm(murge_id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
      CALL MURGE_ApplyGlobalScaling(murge_id, column_scaling, -1, MURGE_SCAL_COL, ierr)
+#else
+     print *, "Binary built without murge"
+     call abort()
+#endif
   END IF
 
   WRITE(*,*) '******** end construct matrix murge **********'

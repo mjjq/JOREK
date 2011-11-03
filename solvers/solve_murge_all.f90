@@ -53,6 +53,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
   CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(I2,A70,F7.2)"
 
+#ifdef USE_MURGE
   WRITE(*,*) my_id,'*********************************'
   WRITE(*,*) my_id,'*  solve global matrix (PastiX) *'
   WRITE(*,*) my_id,'*********************************'
@@ -151,7 +152,6 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      CALL CPU_TIME(t_comm_1)
 
      IF (my_id .EQ. 0)  WRITE(*,'(A,f8.3)') ' PASTIX, comm      : ',t_comm_1-t_comm_0
-
 
      CALL MURGE_Initialize(1, ierr)
      murge_id = 0;
@@ -293,5 +293,9 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      endif
   end if
   call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
+#else
+  print *, "Binary built without murge"
+  call abort()
+#endif
   RETURN
 END SUBROUTINE solve_murge_all

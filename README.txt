@@ -6,7 +6,7 @@
 
 to build jorek2:
 
-- edit the config.in file to match your environment
+- edit the Makefile.inc file to match your environment
   (some examples are available in the directory configs)
   
   choose a model : model199 (reduced MHD, no v_parallel)

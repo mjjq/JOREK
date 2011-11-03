@@ -125,6 +125,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
    if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
    if (use_murge) then
+#ifdef USE_MURGE
       CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
       if (ierr /= MURGE_SUCCESS) then 
          write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
@@ -135,6 +136,10 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
          write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
          STOP
       end if
+#else
+      print *, "Binary built without murge"
+      call abort()
+#endif
    else
       pastix_iparm(2) = 5
       pastix_iparm(3) = pastix_endsolve

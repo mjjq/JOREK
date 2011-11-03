@@ -180,7 +180,7 @@ subroutine preset_parameters
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
   use_murge          = .false.              ! Use MURGE interface to PASTIX solver
-  use_murge_element  = .false.              ! ?
+  use_murge_element  = .false.              ! Build the matrix through murge, not with a CSC.
   
   refinement         = .false.              ! enable mesh refinement
   

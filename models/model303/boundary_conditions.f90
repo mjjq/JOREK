@@ -26,7 +26,7 @@
 !*******************************************************************************
 subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    & 
      &                          n_local_elms, index_min, index_max, xpoint2,   &
-     &                          xcase, psi_axis, psi_bnd, Z_xpoint, gmres, solve_only )
+     &                          xcase2, psi_axis, psi_bnd, Z_xpoint, gmres, solve_only )
 
   use data_structure
   use global_distributed_matrix

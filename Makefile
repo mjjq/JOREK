@@ -83,27 +83,42 @@ JOREK2_FOUR_SRC        = $(PPPSRC)
 include $(patsubst %,%/module.mk,$(DIRS))
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC))
+
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP))
 
 
 JOREK2_MAIN_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) 	\
 			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))		\
 			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_MAIN_SRC)))
-JOREK2_POINCARE_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POINCARE_SRC)))
-JOREK2_CONNECTION2_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_CONNECTION2_SRC)))
-JOREK2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK_SRC)))
-JOREK2FLVTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2FLVTK_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2FLVTK_SRC)))
-JOREK2VTK3D_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK3D_SRC)))
-JOREK2_DIAGNO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_DIAGNO_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_DIAGNO_SRC)))
-JOREK2_FOUR_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) \
-	$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))
 
+
+JOREK2_POINCARE_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POINCARE_SRC)))	\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POINCARE_SRC)))
+
+JOREK2_CONNECTION2_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) 	\
+				$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_CONNECTION2_SRC)))		\
+				$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_CONNECTION2_SRC)))
+
+JOREK2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK_SRC))) \
+		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK_SRC)))	\
+		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2VTK_SRC)))
+
+JOREK2FLVTK_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2FLVTK_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2FLVTK_SRC)))		\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2FLVTK_SRC)))
+
+JOREK2VTK3D_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK3D_SRC)))		\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2VTK3D_SRC)))
+
+JOREK2_DIAGNO_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_DIAGNO_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_DIAGNO_SRC)))		\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_DIAGNO_SRC)))
+
+JOREK2_FOUR_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))		\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_FOUR_SRC)))
 
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
@@ -224,21 +239,21 @@ import_eqdsk : util/import_eqdsk.f90
 	$(FC) util/import_eqdsk.f90 -o import_eqdsk $(LIBS)
 
 include all_rules.mk
-ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
+ifeq (0, $(words $(foreach word, ${NODEPS}, $(findstring ${word}, ${MAKECMDGOALS}))))
 -include $(patsubst %.f, %.dep, $(patsubst %.f90, %.dep, $(SRC_DEP)))
 endif
 
 # Build binaries for all physics models
 allmodels:
-	$(MAKE) -f NewMake.mk MODEL=model199 clean
-	$(MAKE) -f NewMake.mk MODEL=model199 $(filter-out allmodels, ${MAKECMDGOALS})
-#	$(MAKE) -f NewMake.mk MODEL=model300 clean
-#	$(MAKE) -f NewMake.mk MODEL=model300 $(filter-out allmodels, ${MAKECMDGOALS})
-#	$(MAKE) -f NewMake.mk MODEL=model301 clean
-#	$(MAKE) -f NewMake.mk MODEL=model301 $(filter-out allmodels, ${MAKECMDGOALS})
-	$(MAKE) -f NewMake.mk MODEL=model302 clean
-	$(MAKE) -f NewMake.mk MODEL=model302 $(filter-out allmodels, ${MAKECMDGOALS})
-#	$(MAKE) -f NewMake.mk MODEL=model400 clean
-#	$(MAKE) -f NewMake.mk MODEL=model400 $(filter-out allmodels, ${MAKECMDGOALS})
-#	$(MAKE) -f NewMake.mk MODEL=model701 clean
-#	$(MAKE) -f NewMake.mk MODEL=model701 $(filter-out allmodels, ${MAKECMDGOALS})
+	$(MAKE) MODEL=model199 clean
+	$(MAKE) MODEL=model199 $(filter-out allmodels, ${MAKECMDGOALS})
+#	$(MAKE) MODEL=model300 clean
+#	$(MAKE) MODEL=model300 $(filter-out allmodels, ${MAKECMDGOALS})
+#	$(MAKE) MODEL=model301 clean
+#	$(MAKE) MODEL=model301 $(filter-out allmodels, ${MAKECMDGOALS})
+	$(MAKE) MODEL=model302 clean
+	$(MAKE) MODEL=model302 $(filter-out allmodels, ${MAKECMDGOALS})
+#	$(MAKE) MODEL=model400 clean
+#	$(MAKE) MODEL=model400 $(filter-out allmodels, ${MAKECMDGOALS})
+#	$(MAKE) MODEL=model701 clean
+#	$(MAKE) MODEL=model701 $(filter-out allmodels, ${MAKECMDGOALS})

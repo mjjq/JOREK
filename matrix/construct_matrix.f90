@@ -4,7 +4,7 @@
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
 subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
-                            xpoint2,xcase2,psi_axis,psi_bnd,Z_xpoint)
+                            xpoint2,xcase2,psi_axis,psi_bnd,Z_xpoint,psi_xpoint)
   
   use tr_module 
   use parameters
@@ -35,6 +35,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   real*8,  intent(in) :: psi_axis
   real*8,  intent(in) :: psi_bnd
   real*8,  intent(in) :: Z_xpoint(2)
+  real*8,  intent(in) :: psi_xpoint(2)
   logical, intent(in) :: xpoint2
 
   !--- Internal variables
@@ -307,7 +308,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &
-       index_max, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, .false., .false.)
+       index_max, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, .false., .false.)
 
   call r3_info_end(r3_info_index_0) !timing
   call tr_print_memsize("EndConstM")

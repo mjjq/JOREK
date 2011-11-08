@@ -1,4 +1,4 @@
-subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nth)
+subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nth,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 use tr_module 
 use data_structure
 implicit none
@@ -9,14 +9,33 @@ type (type_element_list), intent(in) :: element_list
 type (type_surface_list), intent(in) :: surface_list
 logical,                  intent(in) :: frame
 integer,                  intent(in) :: every_nth     ! Plot only every_nth flux surface
+integer,                  intent(in) :: xcase
+logical,                  intent(in) :: xpoint
+real*8,                   intent(in) :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)    
 
 ! --- internal variables
-integer            :: i, j, k,ip, nplot, node1, node2, node3, node4, i_elm
+integer            :: i, j, k,ip, nplot, node1, node2, node3, node4, i_elm, found
 real*8             :: t, rr1, rr2, drr1, drr2, ss1, ss2, dss1, dss2, ri, si, dri, dsi
 real*8             :: R_min, R_max, Z_min, Z_max
 real*8             :: dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, dummy7, dummy8, dummy9, dummy10
+real*8             :: psi_bnd, psi_bnd2
 real*8,allocatable :: rplot(:), zplot(:)
 character*13       :: LABEL
+
+if(xpoint) then
+  if (xcase .eq. 1) psi_bnd = psi_xpoint(1)
+  if (xcase .eq. 2) psi_bnd = psi_xpoint(2)
+  if (xcase .eq. 3) then
+    if (psi_xpoint(2) .lt. psi_xpoint(1)) then
+      psi_bnd  = psi_xpoint(2)
+      psi_bnd2 = psi_xpoint(1)
+    else
+      psi_bnd  = psi_xpoint(1)
+      psi_bnd2 = psi_xpoint(2)
+    endif
+  endif
+endif
+found = 0
 
 nplot=11
 call tr_allocate(rplot,1,nplot,"rplot")
@@ -39,7 +58,24 @@ if (frame) CALL NFRAME(21,11,1,R_min,R_max,Z_min,Z_max,LABEL,13,'R [m]',5,'Z [m]
 do j = 1, surface_list%n_psi, every_nth
 
 !  write(*,*) ' plot : ',j,surface_list%flux_surfaces(j)%n_pieces
+  
+  
+  ! Make sure that we don't plot private regions twice
+  if(xpoint) then
+    if ((surface_list%n_psi .gt. 10) .and. (j .gt. 2)) then
+      if ((surface_list%psi_values(j) .gt. psi_bnd)  .and. (found .eq. 0)) found = 1
+      if ((surface_list%psi_values(j) .gt. psi_bnd2) .and. (xcase .eq. 3) .and. (found .eq. 1)) found = 2
+      if ((surface_list%psi_values(j) .lt. surface_list%psi_values(j-1))  .and. (found .eq. 3)) found = 4
+      if ((surface_list%psi_values(j) .lt. surface_list%psi_values(j-1))  .and. (found .eq. 2)) found = 3
+      if ((surface_list%psi_values(j) .gt. surface_list%psi_values(j-1))  .and. (found .eq. 4)) found = 5
+      if ((surface_list%psi_values(j) .lt. psi_xpoint(2)) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) &
+          .and. (     abs(surface_list%psi_values(j)  -surface_list%psi_values(j-1)) .gt. &
+	         2.d0*abs(surface_list%psi_values(j-1)-surface_list%psi_values(j-2))       ) &
+          .and. (found .eq. 4) ) found = 5
 
+    endif
+  endif
+  
   do k=1,surface_list%flux_surfaces(j)%n_pieces
 
     i_elm = surface_list%flux_surfaces(j)%elm(k)
@@ -79,8 +115,56 @@ do j = 1, surface_list%n_psi, every_nth
     call lincol(1)
     if (surface_list%n_psi .le. 6) call lincol(3)
 
-    write(51,*) ' .5 setlinewidth '
-    call lplot6(21,11,rplot,zplot,-nplot,' ')
+    write(51,*) ' 1.5 setlinewidth '
+    
+    ! Make sure that we don't plot private regions twice
+    if (found .eq. 0) then 
+      if ((xpoint) .and. (surface_list%n_psi .gt. 6)) then
+        if(     (xcase .eq. 1) &
+          .and. ((surface_list%psi_values(j) .eq. psi_xpoint(1)) &
+          .or.  (minval(zplot) .ge. Z_xpoint(1))) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+        if(     (xcase .eq. 2) &
+          .and. ((surface_list%psi_values(j) .eq. psi_xpoint(2)) &
+          .or.  (maxval(zplot) .le. Z_xpoint(2))) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+        if(     (xcase .eq. 3) &
+          .and. (((surface_list%psi_values(j) .eq. psi_xpoint(1)) .and. (maxval(zplot) .le. Z_xpoint(2))) &
+          .or.   ((surface_list%psi_values(j) .eq. psi_xpoint(2)) .and. (minval(zplot) .ge. Z_xpoint(1))) &
+          .or.   ((minval(zplot) .ge. Z_xpoint(1)) &
+	  .and.   (maxval(zplot) .le. Z_xpoint(2))) ) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+      else
+	call lplot6(21,11,rplot,zplot,-nplot,' ')
+      endif
+    endif
+    if (found .eq. 1) then 
+      if(     (xcase .eq. 1) &
+        .and. ( ((surface_list%psi_values(j) .lt. psi_bnd) .and. (maxval(zplot) .lt. Z_xpoint(1))) &
+	       .or. (surface_list%psi_values(j) .ge. psi_bnd)) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+      if(     (xcase .eq. 2) &
+        .and. ( ((surface_list%psi_values(j) .lt. psi_bnd) .and. (maxval(zplot) .gt. Z_xpoint(2))) &
+	       .or. (surface_list%psi_values(j) .ge. psi_bnd)) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+      if (xcase .eq. 3) then
+        if(     (psi_xpoint(2) .lt. psi_xpoint(1)) &
+          .and. ((surface_list%psi_values(j) .eq. psi_xpoint(1)) &
+	  .or.   (minval(zplot) .ge. Z_xpoint(1)))  ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+        if(     (psi_xpoint(1) .le. psi_xpoint(2)) &
+          .and. ((surface_list%psi_values(j) .eq. psi_xpoint(2)) &
+	  .or.   (maxval(zplot) .le. Z_xpoint(2)))  ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+      endif
+    endif
+    if (found .eq. 2) then 
+      if(     (minval(rplot) .ge. R_xpoint(2)) &
+        .and. (maxval(zplot) .ge. 0.d0) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+      if(     (minval(rplot) .ge. R_xpoint(1)) &
+        .and. (minval(zplot) .le. 0.d0) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+    endif
+    if (found .eq. 3) then 
+      if(     (maxval(rplot) .le. R_xpoint(2)) &
+        .and. (maxval(zplot) .ge. 0.d0) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+      if(     (maxval(rplot) .le. R_xpoint(1)) &
+        .and. (minval(zplot) .le. 0.d0) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+    endif
+    if ( (found .eq. 4) .and. (maxval(zplot) .le. Z_xpoint(1)) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
+    if ( (found .eq. 5) .and. (minval(zplot) .ge. Z_xpoint(2)) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
 
   enddo
 

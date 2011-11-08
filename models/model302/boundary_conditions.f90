@@ -26,7 +26,7 @@
 !*******************************************************************************
 subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    & 
      &                          n_local_elms, index_min, index_max, xpoint2,   &
-     &                          xcase2, psi_axis, psi_bnd, Z_xpoint, gmres, solve_only )
+     &                          xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only )
 
   use data_structure
   use global_distributed_matrix
@@ -49,6 +49,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   REAL*8                   :: psi_axis
   REAL*8                   :: psi_bnd
   REAL*8                   :: Z_xpoint(2)
+  REAL*8                   :: psi_xpoint(2)
   logical                  :: gmres
   logical                  :: solve_only
 
@@ -224,6 +225,8 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                           u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
 
                           direction = + ps0_x / abs(ps0_x)             ! temporary solution for lower x-point only
+			  if (xcase2 .eq. 2) direction = -direction
+			  if ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
 
                           grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
@@ -365,9 +368,19 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                             .or. (k .eq. 3)    &
                             .or. (k .eq. 4)    &
                                 !.or. (k .eq. 5)   &
-                            .or.((k .eq. 5) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &
+                                .or.( (k .eq. 5) .and.   & 
+			          (    ((xcase2 .ne. 3) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd)) &
+			          .or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
+				                        .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(1)) )  &
+			          .or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
+				                        .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(2)) ) ))  &  ! private region only
                             .or. (k .eq. 6)    &
-                                !.or.((k .eq. 6) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd) )  &  ! private region only
+                                !.or.( (k .eq. 6) .and.   & 
+			          !(    ((xcase2 .ne. 3) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd)) &
+			          !.or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
+				  !                      .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(1)) )  &
+			          !.or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
+				  !                      .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(2)) ) ))  &  ! private region only
                             .or. (k .eq. 7)    &
                             ) then
 

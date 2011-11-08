@@ -170,6 +170,8 @@ do i=1,node_list%n_nodes
     ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
 
     direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
+    if (xcase2 .eq. 2) direction = -direction
+    if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
 
     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 

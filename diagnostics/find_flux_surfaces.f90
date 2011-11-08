@@ -27,11 +27,11 @@ logical :: xpoint
 write(*,*) '***********************************'
 write(*,*) '*   find_flux_surfaces            *'
 write(*,*) '***********************************'
-write(*,*) ' n_psi : ',surface_list%n_psi
-write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
+!write(*,*) ' n_psi : ',surface_list%n_psi
+!write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
 
 PI = 2.d0* asin(1.d0)
-my_id = 0
+my_id = 1 ! Just don't want the printout...
 
 if (allocated(surface_list%flux_surfaces)) then
    call tr_unregister_mem(sizeof(surface_list%flux_surfaces),"surface_list%flux_surfaces")

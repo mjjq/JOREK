@@ -69,7 +69,7 @@ program JOREK2
     
     subroutine construct_matrix_murge(my_id,node_list,                      &
       element_list,local_elms,n_local_elms,xpoint2,xcase2,psi_axis,psi_bnd, &
-      z_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans,     &
+      z_xpoint,psi_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans,     &
       n_cpu_trans,solve_only)
       use data_structure, only : type_node, type_element,                   &
         type_element_list, type_node_list
@@ -84,6 +84,7 @@ program JOREK2
       real(kind=8), target :: psi_axis
       real(kind=8), target :: psi_bnd
       real(kind=8), target :: z_xpoint(:)
+      real(kind=8), target :: psi_xpoint(:)
       logical(kind=4), target :: gmres
       integer(kind=4) :: i_tor(n_cpu)
       integer(kind=4) :: mpi_comm_n
@@ -257,9 +258,14 @@ program JOREK2
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
-        call grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg, n_tht,         &
-          SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open,           &
-          dPSI_private, xcase)
+        if (xcase .ne. 1) then
+	  call grid_double_xpoint(node_list, element_list, n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg, &
+        		          SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,			    &
+	        	          SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1, dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv, xcase)
+        else
+	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+        		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+        endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
           sig1, xr2, sig2, refinement)
@@ -343,15 +349,21 @@ program JOREK2
         call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase) 
         if (export_for_nemec) call export_nemec(node_list, element_list, xpoint, xcase)
       end if
-!stop      
+
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
         
         if (xpoint)  then
 
 !          if (.not. grid_to_wall) then
-            call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+          if (xcase .ne. 1) then
+	    call grid_double_xpoint(node_list, element_list, n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg, &
+                                    SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,                         &
+		                    SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1, dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv, xcase)
+          else
+	    call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                              SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+          endif
 !          else
 !            call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
 !                                  SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
@@ -724,12 +736,12 @@ program JOREK2
      if ( use_pastix .and. use_murge .and. use_murge_element ) then
         call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
              n_local_ELms,  xpoint,xcase, &
-             psi_axis, psi_bnd, Z_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, &
+             psi_axis, psi_bnd, Z_xpoint,psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, &
              mpi_comm_trans, my_id_trans, n_cpu_trans, solve_only)        ! construct the matrix from elemental matrices
      else
         call construct_matrix(my_id, local_elms, &
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
-             xpoint,xcase,psi_axis,psi_bnd,Z_xpoint)        ! construct the matrix from elemental matrices
+             xpoint,xcase,psi_axis,psi_bnd,Z_xpoint,psi_xpoint)        ! construct the matrix from elemental matrices
      endif
      
      call system_clock(count=t1)   

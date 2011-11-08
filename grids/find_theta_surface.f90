@@ -118,7 +118,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 !        write(*,'(A,3e16.8)') ' find_theta check : ',tht_out,theta,(RRg1-R_axis)*sin(theta)-(ZZg1-Z_axis)*cos(theta)
 
-	if (abs(tht_in - tht_out) .lt. 1.D-6) then
+	if (abs(tht_in - tht_out) .lt. 1.D-4) then
 
           s_find(i_find+1)     = ri
           t_find(i_find+1)     = si

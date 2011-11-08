@@ -19,7 +19,7 @@ real*8,                   intent(out)   :: t_find(*)
 integer,                  intent(out)   :: i_find
 
 ! --- local variables
-integer :: k, i_elm, ifail
+integer :: i, k, i_elm, ifail, iterMax
 real*8  :: ri, dri, si ,dsi
 real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, t2, t3, delta_t
 real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
@@ -46,6 +46,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
   call interp_RZ(node_list,element_list,i_elm,rr2,ss2,RRg2,dRRg2_dr,dRRg2_ds,dRRg2_drs,dRRg2_drr,dRRg2_dss, &
                                                       ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss)
+!  write(*,'(A,i8,4f)') ' find_R check 0 : ',k,RRg1,ZZg1,RRg2,ZZg2
   dRRg1_dt = dRRg1_dr * drr1 + dRRg1_ds * dss1
   dZZg1_dt = dZZg1_dr * drr1 + dZZg1_ds * dss1
   dRRg2_dt = dRRg2_dr * drr2 + dRRg2_ds * dss2
@@ -77,29 +78,35 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 !    write(*,'(A,2i8,4e16.8)') ' find_R check 1 : ',i_find+1,i_elm,ZZg1,t,RRg1,RRg1 - R_find
 
 !------------------------------------------------------ one step to improve quality of solution
-    dRRg1_dt = dRRg1_dr * dri + dRRg1_ds * dsi
+    iterMax =5
+    do i=1,iterMax
+      dRRg1_dt = dRRg1_dr * dri + dRRg1_ds * dsi
 
-    if (dRRg1_dt .ne. 0)  delta_t = - (RRg1-R_find) / (dRRg1_dt)
+      if (dRRg1_dt .ne. 0)  delta_t = - (RRg1-R_find) / (dRRg1_dt)
 
-    if (abs(delta_t) .le. 0.25) t = t + delta_t
+      if (abs(delta_t) .le. 0.25) t = t + delta_t
 
-    if (abs(t) .le. 1.000001d0) then
+      if (abs(t) .le. 1.000001d0) then
 
-      call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
-      call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
+        call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
+        call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
-      call interp_RZ(node_list,element_list,i_elm,ri,si,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        call interp_RZ(node_list,element_list,i_elm,ri,si,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+        					      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
 
-!      write(*,'(A,2i8,4e16.8)') ' find_R check 2 : ',i_find+1,i_elm,ZZg1,t,RRg1,RRg1 - R_find
+!        write(*,'(A,2i8,4e16.8)') ' find_R check 2 : ',i_find+1,i_elm,ZZg1,t,RRg1,RRg1 - R_find
 
-      s_find(i_find+1) = ri
-      t_find(i_find+1) = si
-      i_elm_find(i_find+1) = i_elm
-      i_find = i_find + 1
+	if (abs(R_find - RRg1) .lt. 1.D-6) then
+          s_find(i_find+1) = ri
+          t_find(i_find+1) = si
+          i_elm_find(i_find+1) = i_elm
+          i_find = i_find + 1
+	  exit
+	endif
 
-    endif
+      endif
+    enddo
   endif
 
 enddo

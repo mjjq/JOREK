@@ -108,7 +108,7 @@ enddo
 call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
 !call q_profile(node_list,element_list,flux_list,psi_axis,psi_xpoint,Z_xpoint)
 
-call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
+call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
 
 
 !-------------------------------------- store some data for the new grid
@@ -1060,8 +1060,8 @@ newnode_list%n_nodes = index
 
 write(*,*) ' definition of nodes completed ',newnode_list%n_nodes
 
-call nframe(11,11,1,2.5,3.5,-2.0,-1.0,' ',1,'R',1,'Z',1)
-call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1)
+call nframe(11,11,1,2.0,3.0,-2.0,-1.0,' ',1,'R',1,'Z',1)
+call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
 
 
 call tr_allocate(xp,1,index,"xp")
@@ -1070,8 +1070,8 @@ call tr_allocate(yp,1,index,"yp")
 do i=1,newnode_list%n_nodes
   xp(i) = newnode_list%node(i)%x(1,1)
   yp(i) = newnode_list%node(i)%x(1,2)
-  write(label,'(i4)') i
-  call dlch(int(90.+900.*(xp(i)-2.5)/1.),int(77.+645.*(yp(i)+1.71)/0.71),label,4,1)
+!  write(label,'(i4)') i
+!  call dlch(int(90.+900.*(xp(i)-2.5)/1.),int(77.+645.*(yp(i)+1.71)/0.71),label,4,1)
 enddo
 
 call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)

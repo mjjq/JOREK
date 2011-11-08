@@ -7,13 +7,14 @@ implicit none
 ! --- Routine parameters
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
 real*8,                   intent(in)  :: s,t
 real*8,                   intent(out) :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
 
 ! --- Local variables
 real*8  :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
 real*8  :: xx1, xx2, ss
-integer :: kv, iv, kf, i_elm
+integer :: kv, iv, kf
 
 call basisfunctions2(s,t,G,G_s,G_t,G_st,G_ss,G_tt)
 

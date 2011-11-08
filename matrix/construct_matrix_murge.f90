@@ -52,6 +52,7 @@ MODULE THREAD_DATA
      REAL*8,                    POINTER :: psi_axis
      REAL*8,                    POINTER :: psi_bnd
      REAL*8,                    POINTER :: Z_xpoint(:)
+     REAL*8,                    POINTER :: psi_xpoint(:)
      INTEGER,                   POINTER :: xcase2
      INTEGER,                   POINTER :: local_elms(:)
      INTEGER,                   POINTER :: n_local_elms
@@ -463,7 +464,7 @@ contains
 END MODULE THREAD_DATA
 
 SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
-     n_local_elms, xpoint2, xcase2,psi_axis,psi_bnd,Z_xpoint, gmres, i_tor, n_cpu, &
+     n_local_elms, xpoint2, xcase2,psi_axis,psi_bnd,Z_xpoint, psi_xpoint, gmres, i_tor, n_cpu, &
      mpi_comm_n, MPI_COMM_TRANS, my_id_trans, n_cpu_trans, solve_only)
   !---------------------------------------------------------------
   ! collect the element matrices into one large sparse matrix
@@ -499,6 +500,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   REAL*8, target                 :: psi_axis
   REAL*8, target                 :: psi_bnd
   REAL*8, target                 :: Z_xpoint(:)
+  REAL*8, target                 :: psi_xpoint(:)
   LOGICAL, target                :: gmres
   INTEGER, target                :: xcase2
   INTEGER                        :: i_tor(n_cpu)
@@ -783,6 +785,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      datas(iter)%psi_axis          => psi_axis           
      datas(iter)%psi_bnd           => psi_bnd            
      datas(iter)%Z_xpoint          => Z_xpoint           
+     datas(iter)%psi_xpoint        => psi_xpoint           
      datas(iter)%local_elms        => local_elms      
      datas(iter)%n_local_elms      => n_local_elms       
      datas(iter)%step              => step               
@@ -868,7 +871,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   WRITE (*,*) MY_ID, " : Reduce..."
   CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   CALL boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, 0, &
-       0,         xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, gmres, solve_only)
+       0,         xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only)
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max   

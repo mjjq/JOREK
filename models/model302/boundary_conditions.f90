@@ -304,7 +304,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                              call vertex_is_local(index_node2, is_local)
                              if (is_local) then
                                 if (loop /= loop_nbr) then
-                                   cnt = cnt + 1
+                                   cnt = cnt + 3
                                 else
                                    call murge_add_one_entry( & 
                                         & index_node2, kv, in, &

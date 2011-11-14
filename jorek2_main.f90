@@ -130,6 +130,8 @@ program JOREK2
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
+  integer, allocatable     :: tab_n_local_elems(:)
+
   
   real*8,  pointer :: dummy_real(:)
   integer, pointer :: dummy_int(:)
@@ -604,6 +606,19 @@ program JOREK2
            END IF
         END DO
 
+        ! Check that the number of local elements is the same on each processor
+        ! of MPI_COMM_TRANS
+        call tr_allocate(tab_n_local_elems, 1, n_cpu_trans, "tab_n_local_elems")
+        CALL MPI_Allgather(n_local_elms,      1, MPI_INTEGER, &
+             &             tab_n_local_elems, 1, MPI_INTEGER, &
+             &             MPI_COMM_TRANS, ierr)
+        do i = 1, n_cpu_trans
+           if (n_local_elms .ne. tab_n_local_elems(i)) then
+              print *, "ERROR: n_local_elms qhould be the same over MPI_COMM_TRANS"
+              call abort()
+           end if
+        end do
+        call tr_deallocate(tab_n_local_elems, "tab_n_local_elems")
         IF (ALLOCATED(local_elms)) call tr_deallocate(local_elms,"local_elms")
         ! Build local_elms from loc2glob
         call tr_allocate(local_elms,1,n_local_elms,"local_elms")

@@ -280,10 +280,18 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
 #ifdef USE_MURGE
         if (.not. solve_only) then
            CALL MURGE_ASSEMBLYEND(murge_id, ierr)
+           IF (ierr /= MURGE_SUCCESS) THEN
+              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYEND "
+              STOP
+           END IF
         end if
         if (gmres) then
            CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
-        end if
+           IF (ierr /= MURGE_SUCCESS) THEN
+              WRITE (*,*)  "ERROR in MURGE_ASSEMBLYEND "
+              STOP
+           END IF
+        end if        
 #else
        print *, "Binary built without murge"
        call abort()

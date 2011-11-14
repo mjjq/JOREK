@@ -202,8 +202,8 @@ CONTAINS
              ELSE
                 murge_ndof = 2*n_var
              END IF
-!tmp             CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,         &
-!tmp                  &                  2*n_var,      ierr) 
+             CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,         &
+                  &                  2*n_var,      ierr) 
           ELSE
              murge_ndof = n_tor*n_var
           END IF

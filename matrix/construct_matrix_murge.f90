@@ -37,6 +37,20 @@ MODULE THREAD_DATA
   TYPE THREAD_DATA_TYPE
      ! -- local variables   --
      INTEGER                            :: thread_num
+     LOGICAL                            :: ok
+!#define PLENTY_TIMERS
+#ifdef PLENTY_TIMERS
+     INTEGER                            :: nb_periods_ass
+     INTEGER                            :: nb_periods_set
+     INTEGER                            :: nb_periods_elem_mat
+     INTEGER                            :: nb_periods_comm
+     INTEGER                            :: nb_periods_max
+#endif
+     INTEGER                            :: ndof_glob
+     ! Different memory area on each thread
+     REAL*8,                    POINTER :: ELM(:,:)
+     REAL*8,                    POINTER :: RHS(:)
+     
      ! --  global variables --
      ! read only, no mutex
      INTEGER,                   POINTER :: thread_nbr
@@ -58,29 +72,20 @@ MODULE THREAD_DATA
      INTEGER,                   POINTER :: elem_block_size
      INTEGER,                   POINTER :: harm_size, my_harm_size
      ! each thread access different part, no mutex
-     REAL*8,                    POINTER :: PROD_MATRICES(:,:)
-     INTEGER,                   POINTER :: PROD_COLROW(:,:)
-     REAL*8,                    POINTER :: SEND_MATRICES(:,:,:)
-     REAL*8,                    POINTER :: RECV_MATRICES(:,:,:)
-     INTEGER,                   POINTER :: RECV_COLROW(:, :, :)
-     ! only used by master, no mutex
-     INTEGER,                   POINTER :: matrix_nbr_rcv(:)
-     ! read/write, mutex protected
+     REAL*8,                    POINTER :: PROD_MATRICES(:,:,:)
+     INTEGER,                   POINTER :: PROD_COLROW(:,:,:)
+     REAL*8,                    POINTER :: SEND_MATRICES(:,:,:,:)
+     REAL*8,                    POINTER :: RECV_MATRICES(:,:,:,:)
+     INTEGER,                   POINTER :: RECV_COLROW(:, :, :,:)
+     INTEGER,                   POINTER :: matrix_nbr(:)
+     INTEGER,                   POINTER :: matrix_nbr_rcv(:,:)
+     REAL*8,                    POINTER :: rhs_loc_thread(:,:)
+     ! accessed on thread 1
      REAL*8,                    POINTER :: rhs_loc(:)
-     INTEGER,                   POINTER :: matrix_nbr
-     ! barrier / mutex
-     INTEGER*8,                 POINTER :: barrier
-     INTEGER*8,                 POINTER :: mutex
-     LOGICAL                            :: ok
-     INTEGER                            :: nb_periods_ass
-     INTEGER                            :: nb_periods_set
-     INTEGER                            :: nb_periods_max
-
   END TYPE THREAD_DATA_TYPE
 contains
 
   INTEGER FUNCTION LOOP(data)
-    !USE thread_data,     only : thread_data_type, synchro_x_threads
     USE data_structure,  only : type_node, type_element
     USE parameters,      only : n_vertex_max , n_var, n_order, n_tor
     USE murge_module,    only : MURGE_SUCCESS, MURGE_ASSEMBLYBEGIN,&
@@ -131,30 +136,26 @@ contains
     INTEGER                        :: elem_size
     INTEGER                        :: ife
     INTEGER                        :: ELM_INDEX
-    INTEGER, POINTER               :: pt_matrix_nbr
-    INTEGER                        :: node, iter, total, t0, t1
-
+    INTEGER                        :: node, iter, total, t0, t1, tt0, tt1, thread
+    INTEGER,               POINTER :: matrix_nbr_rcv(:,:), pt_matrix_nbr
 
     elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
     cnt = 0
     cnt2 = 0
-    pt_matrix_nbr => data%matrix_nbr
+    pt_matrix_nbr => data%matrix_nbr(data%thread_num)
     data%ok = .true.
+    matrix_nbr_rcv => data%matrix_nbr_rcv
+    
+    ELM => data%ELM
+    RHS => data%RHS
     !TODO: anticiper l'allocation ou l'allouer une fois pour toute
-    call tr_allocatep(ELM,1,elem_size,1,elem_size,"ELM")
-    call tr_allocatep(RHS,1,elem_size,"RHS")
     ELEM : DO ife =1, data%n_local_elms, data%step 
-
-!$OMP barrier       
-!$OMP critical(matrix_nbr)       
-!$OMP flush(pt_matrix_nbr)
        pt_matrix_nbr = 0
-!$OMP flush(pt_matrix_nbr)
-!$OMP end critical(matrix_nbr)       
-!$OMP barrier       
        !!  elem_block_size elements are computed each loop iteration, 
        !! each thread is in charge of a part of theses elements 
+#ifdef PLENTY_TIMERS
        CALL SYSTEM_CLOCK(count=t0)
+#endif
        BLOCK_ELEM : DO ELM_INDEX = data%thread_num, data%elem_block_size, data%thread_nbr
           !print * , "ELM_INDEX", ELM_INDEX
           !print *, "ife+ELM_INDEX-1+elm_index*data%my_id_trans", &
@@ -192,6 +193,9 @@ contains
              ENDDO
 
              !! Compute the element matrix
+#ifdef PLENTY_TIMERS
+             CALL SYSTEM_CLOCK(count=tt0)
+#endif
              IF (n_tor .GT. 3) THEN
                 CALL element_matrix_fft(element,nodes, data%xpoint2, data%xcase2, data%psi_axis,  &
                      &                  data%psi_bnd, Data%z_xpoint, ELM, RHS, data%thread_num)      ! use fft for toroidal integration
@@ -235,7 +239,11 @@ contains
 
                 ENDDO
              ENDIF
-
+#ifdef PLENTY_TIMERS
+             CALL SYSTEM_CLOCK(count=tt1)
+             data%nb_periods_elem_mat = data%nb_periods_elem_mat + tt1-tt0
+             IF (tt1<tt0) data%nb_periods_elem_mat = data%nb_periods_elem_mat + data%nb_periods_max
+#endif
              !CALL ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
              IF (element%n_sons .EQ. 0) THEN
                 VERTEX_COL : DO i=1,n_vertex_max
@@ -260,9 +268,7 @@ contains
                                  & n_tor * n_var * (i_order-1) + j   
                             ! index in global matrix
                             index_rhs = index_large_i+j
-!$OMP critical(rhs_member)                            
-                            data%rhs_loc(index_rhs) = data%rhs_loc(index_rhs) + RHS(index_ij)
-!$OMP end critical (rhs_member)                           
+                            data%rhs_loc_thread(index_rhs,data%thread_num) = data%rhs_loc_thread(index_rhs,data%thread_num) + RHS(index_ij)
                          END DO
 
                          ! Build nodes Matrices
@@ -277,12 +283,7 @@ contains
                                index_large_k = n_tor * n_var * (index_node2 - 1)
 
                                !coefmtx = 0
-!$OMP critical(matrix_nbr)                            
-!$OMP flush(pt_matrix_nbr)
-                               pt_matrix_nbr = pt_matrix_nbr+1
-                               next_matrix = pt_matrix_nbr
-!$OMP flush(pt_matrix_nbr)
-!$OMP end critical (matrix_nbr)       
+                               pt_matrix_nbr = pt_matrix_nbr + 1
                                DOF_COL : DO j = 1, n_var * n_tor
                                   ! Row index in the ELM matrix
                                   index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   
@@ -313,10 +314,8 @@ contains
                                                    & new_row_mat_elem+1
 
                                            END IF
-                                           data%SEND_MATRICES(index_send_mtx,&
-                                                &(next_matrix),&
-                                                & col_harm) = ELM(index_kl& 
-                                                &,index_ij)
+                                           data%SEND_MATRICES(index_send_mtx, pt_matrix_nbr, data%thread_num, col_harm) = &
+                                                ELM(index_kl,index_ij)
                                         END IF
                                      END IF
                                      new_col_mat_elem = j-1
@@ -324,7 +323,7 @@ contains
                                      index_mtx = new_row_mat_elem+1&
                                           &+new_col_mat_elem&
                                           &*(n_tor*n_var)
-                                     data%PROD_MATRICES(index_mtx, next_matrix) = &
+                                     data%PROD_MATRICES(index_mtx, pt_matrix_nbr, data%thread_num) = &
                                           & ELM(index_kl&
                                           &,index_ij)
                                      !coefmtx(index_mtx) =&
@@ -333,31 +332,8 @@ contains
                                      
                                   END DO DOF_ROW
                                END DO DOF_COL
-                               data%PROD_COLROW(1, next_matrix) = index_node1
-                               data%PROD_COLROW(2, next_matrix) = index_node2
-
-                               !print *, data%my_id, data%thread_num, "Zone protegee"
-                               !call fortran_pthread_mutex_lock(data%mutex, ret)
-                               !!print *, data%my_id, data%thread_num, "Zone protegee in"
-                               !IF (data%gmres) THEN
-                               !   CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id_prod, index_node2, index_node1, &
-                               !        coefmtx, ierr)
-                               !ELSE
-                               !   CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id, index_node2, index_node1, &
-                               !        coefmtx, ierr)
-                               !END IF
-                               cnt = cnt + 1
-                               !print *, data%my_id, data%thread_num, "Zone protegee out"
-                               !call fortran_pthread_mutex_unlock(data%mutex, ret)
-                               !print *, data%my_id, data%thread_num, "Zone protegee out final"
-                               !IF (ierr /= MURGE_SUCCESS) THEN
-                               !   WRITE (*,*) data%my_id, ":::", &
-                               !        "I", index_node2, &
-                               !        "J", index_node1, cnt
-                               !   STOP
-                               !END IF
-
-
+                               data%PROD_COLROW(1, pt_matrix_nbr, data%thread_num) = index_node1
+                               data%PROD_COLROW(2, pt_matrix_nbr, data%thread_num) = index_node2
                             END DO ORDER_ROW
                          END DO VERTEX_ROW
                       END IF
@@ -367,73 +343,90 @@ contains
              !print *, data%my_id, ife, "next_matrix", next_matrix
           END IF
        END DO BLOCK_ELEM
+#ifdef PLENTY_TIMERS
        CALL SYSTEM_CLOCK(count=t1)
        data%nb_periods_ass = data%nb_periods_ass + t1-t0
        IF (t1<t0) data%nb_periods_ass = data%nb_periods_ass + data%nb_periods_max
-       !$OMP barrier       
+       !$omp critical
+       print *, "TEMPS ASS", data%my_id, data%thread_num, t1-t0
+       !$omp end critical
+#endif
+
+!$OMP barrier 
+#ifdef PLENTY_TIMERS      
        CALL SYSTEM_CLOCK(count=t0)
+#endif
        IF (.not. data%gmres) THEN
           ! We work on the full problem with direct method
           IF (data%thread_num == 1) THEN
-             DO j = 1, pt_matrix_nbr 
-                index_node1 = data%PROD_COLROW(1, j) 
-                index_node2 = data%PROD_COLROW(2, j) 
-                DO iter = 1, (n_tor*n_var)**2
-                   coefmtx(iter)= data%PROD_MATRICES(iter,j)
-                END DO
+             DO thread = 1, data%thread_nbr
+                DO j = 1, data%matrix_nbr(thread) 
+                   
+                   index_node1 = data%PROD_COLROW(1, j, thread) 
+                   index_node2 = data%PROD_COLROW(2, j, thread) 
+                   DO iter = 1, (n_tor*n_var)**2
+                      coefmtx(iter)= data%PROD_MATRICES(iter,j,thread)
+                   END DO
 #ifdef USE_MURGE
-                CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id, index_node2, index_node1, &
-                     coefmtx, ierr)  
+                   CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id, index_node2, index_node1, &
+                        coefmtx, ierr)  
 #else
-                print *, "Binary built without murge"
-                data%ok = .false.
-                return
-#endif
-
-                IF (ierr /= MURGE_SUCCESS) THEN
-                   WRITE (*,*) data%my_id, ":::", &
-                        "I", index_node2, &
-                        "J", index_node1, cnt
+                   print *, "Binary built without murge"
                    data%ok = .false.
                    return
-                END IF
+#endif
+
+                   IF (ierr /= MURGE_SUCCESS) THEN
+                      WRITE (*,*) data%my_id, ":::", &
+                           "I", index_node2, &
+                           "J", index_node1, cnt
+                      data%ok = .false.
+                      return
+                   END IF
+                END DO
              END DO
           END IF
        ELSE
           ! We have to construct a problem for the product
           IF (data%thread_num == 1) THEN
-             DO j = 1, pt_matrix_nbr 
-                index_node1 = data%PROD_COLROW(1, j) 
-                index_node2 = data%PROD_COLROW(2, j) 
-                DO iter = 1, (n_tor*n_var)**2
-                   coefmtx(iter)= data%PROD_MATRICES(iter,j)
-                END DO
+             DO thread = 1, data%thread_nbr
+                DO j = 1, data%matrix_nbr(thread)
+                   index_node1 = data%PROD_COLROW(1, j, thread) 
+                   index_node2 = data%PROD_COLROW(2, j, thread) 
+                   DO iter = 1, (n_tor*n_var)**2
+                      coefmtx(iter)= data%PROD_MATRICES(iter,j, thread)
+                   END DO
 #ifdef USE_MURGE
-                CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id_prod, index_node2, index_node1, &
-                     coefmtx, ierr)  
+                   CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id_prod, index_node2, index_node1, &
+                        coefmtx, ierr)  
 #else
-                print *, "Binary built without murge"
-                data%ok = .false.
-                return
-#endif
-                IF (ierr /= MURGE_SUCCESS) THEN
-                   WRITE (*,*) data%my_id, ":::", &
-                        "I", index_node2, &
-                        "J", index_node1, cnt
+                   print *, "Binary built without murge"
                    data%ok = .false.
                    return
-                END IF
+#endif
+                   IF (ierr /= MURGE_SUCCESS) THEN
+                      WRITE (*,*) data%my_id, ":::", &
+                           "I", index_node2, &
+                           "J", index_node1, cnt
+                      data%ok = .false.
+                      return
+                   END IF
+                END DO
              END DO
           END IF
           ! Just so that the first thread doesn't do all the job.
           IF ((data%thread_nbr == 1 .or. data%thread_num == 2 ) .and. & 
                & .NOT. DATA%solve_only) THEN
-             data%matrix_nbr_rcv = 0
-             CALL MPI_Allgather(pt_matrix_nbr, 1, MPI_INTEGER, &
-                  &            data%matrix_nbr_rcv, 1,   MPI_INTEGER, &
-                  &            data%MPI_COMM_TRANS, ierr)
-             total = total + sum(data%matrix_nbr_rcv)
-             !print *, data%my_id, data%thread_num, "data%matrix_nbr", pt_matrix_nbr, data%matrix_nbr_rcv, total, cnt
+             
+             matrix_nbr_rcv = 0
+#ifdef PLENTY_TIMERS
+             CALL SYSTEM_CLOCK(count=tt0)
+#endif
+             CALL MPI_Allgather(data%matrix_nbr, data%thread_nbr, MPI_INTEGER, &
+                  &             matrix_nbr_rcv,  data%thread_nbr, MPI_INTEGER, &
+                  &             data%MPI_COMM_TRANS, ierr)
+             total = total + sum(matrix_nbr_rcv)
+             !print *, data%my_id, data%thread_num, "data%matrix_nbr", pt_matrix_nbr, matrix_nbr_rcv, total, cnt
              CALL MPI_Alltoall(data%SEND_MATRICES, data%elem_block_size*(n_vertex_max&
                   &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
                   &            data%RECV_MATRICES, data%elem_block_size*(n_vertex_max&
@@ -446,48 +439,60 @@ contains
                   &            *(n_order+1))**2, MPI_INTEGER, &
                   &            data%MPI_COMM_TRANS, ierr)
 
-          
-             DO node = 1, (n_tor+1)/2
-                DO i = 1, data%matrix_nbr_rcv(node)
-                   index_node1 = data%RECV_COLROW(1, i, node)
-                   index_node2 = data%RECV_COLROW(2, i, node)
-                   DO iter = 1, data%my_harm_size**2
-                      coefmtx(iter) = data%RECV_MATRICES(iter, i, node)
-                   END DO
-#ifdef USE_MURGE
-                   CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id,         &
-                        & index_node2,       &
-                        & index_node1,     &
-                        & coefmtx, ierr)
-#else
-                   print *, "Binary built without murge"
-                   data%ok = .false.
-                   return
+#ifdef PLENTY_TIMERS
+             CALL SYSTEM_CLOCK(count=tt1)
+             data%nb_periods_comm = data%nb_periods_comm + tt1-tt0
+             IF (tt1<tt0) data%nb_periods_comm = data%nb_periods_comm + data%nb_periods_max
 #endif
-                   IF (ierr /= MURGE_SUCCESS) THEN
-                      WRITE (*,*) data%my_id, "::::", &
-                           "I", index_node2, &
-                           "J", index_node1, ierr, &
-                           & cnt2, cnt, ife, i, node, data%matrix_nbr_rcv(node),&
-                           & data%n_local_elms,data%element_list%n_elements
-                      call abort()
+             DO node = 1, (n_tor+1)/2
+                DO thread = 1, data%thread_nbr
+                   DO i = 1, matrix_nbr_rcv(thread, node)
+                      index_node1 = data%RECV_COLROW(1, i, thread, node)
+                      index_node2 = data%RECV_COLROW(2, i, thread, node)
+                      DO iter = 1, data%my_harm_size**2
+                         coefmtx(iter) = data%RECV_MATRICES(iter, i, thread, node)
+                      END DO
+#ifdef USE_MURGE
+                      CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id,         &
+                           & index_node2,       &
+                           & index_node1,     &
+                           & coefmtx, ierr)
+#else
+                      print *, "Binary built without murge"
                       data%ok = .false.
                       return
-                   END IF
-                   cnt2 = cnt2 + 1
-                   
+#endif
+                      IF (ierr /= MURGE_SUCCESS) THEN
+                         WRITE (*,*) data%my_id, "::::", &
+                              "I", index_node2, &
+                              "J", index_node1, ierr, &
+                              & cnt2, cnt, ife, i, node, matrix_nbr_rcv(thread, node),&
+                              & data%n_local_elms,data%element_list%n_elements
+                         call abort()
+                         data%ok = .false.
+                         return
+                      END IF
+                      cnt2 = cnt2 + 1
+                   END DO
                 END DO
              END DO
           END IF
        END IF
+#ifdef PLENTY_TIMERS
        CALL SYSTEM_CLOCK(count=t1)
        data%nb_periods_set = data%nb_periods_set + t1-t0
        IF (t1<t0) data%nb_periods_set = data%nb_periods_set + data%nb_periods_max
+#endif
+       !$OMP barrier
     END DO ELEM
-    CALL tr_deallocatep(RHS,"RHS")
-    call tr_deallocatep(ELM,"ELM")
+    IF (data%thread_num .eq. 1) then
+       DO thread = 1, data%thread_nbr
+          DO j = 1, data%ndof_glob
+             data%rhs_loc(j) = data%rhs_loc(j) + data%rhs_loc_thread(j,thread)
+          END DO
+       END DO
+    END IF
     LOOP = 0
-    !print *, "cnt, cnt2", cnt, cnt2
   END FUNCTION LOOP
 
 END MODULE THREAD_DATA
@@ -502,7 +507,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   USE tr_module 
   USE data_structure, only : type_node, type_element, type_element_list&
-       &, type_node_list
+       &, type_node_list, thread_struct
   USE parameters,     only : n_vertex_max , n_var, n_order, n_tor
   USE murge_module,   only : MURGE_SUCCESS, MURGE_ASSEMBLYBEGIN,   &
        & MURGE_ASSEMBLYSETNODEVALUES, MURGE_ASSEMBLYEND, murge_id, &
@@ -540,22 +545,23 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   LOGICAL, target                :: Solve_only
   ! local variables
   TYPE (type_element)            :: element
-  INTEGER                        :: coefnbr, coefnbr_prod
+  INTEGER                        :: coefnbr, coefnbr_max, coefnbr_min
+  INTEGER                        :: coefnbr_prod, coefnbr_prod_max, coefnbr_prod_min
   REAL(KIND=MURGE_COEF_KIND)     :: coefmtx(n_tor*n_var*n_tor*n_var)
   INTEGER, TARGET                :: elem_block_size
   INTEGER, TARGET                :: thread_nbr
   INTEGER                        :: elem_size
   INTEGER                        :: ELM_INDEX
-  REAL*8,  POINTER               :: rhs_loc(:)
-  REAL*8,  POINTER               :: PROD_MATRICES(:,:)
-  REAL*8,  POINTER               :: SEND_MATRICES(:,:,:)
-  REAL*8,  POINTER               :: RECV_MATRICES(:,:,:)
-  INTEGER, POINTER               :: RECV_COLROW(  :,:,:)
-  INTEGER, POINTER               :: PROD_COLROW(  :,:)
+  REAL*8,  POINTER               :: rhs_loc(:), rhs_loc_thread(:,:)
+  REAL*8,  POINTER               :: PROD_MATRICES(:,:,:)
+  REAL*8,  POINTER               :: SEND_MATRICES(:,:,:,:)
+  REAL*8,  POINTER               :: RECV_MATRICES(:,:,:,:)
+  INTEGER, POINTER               :: RECV_COLROW(  :,:,:,:)
+  INTEGER, POINTER               :: PROD_COLROW(  :,:,:)
+  INTEGER, POINTER               :: matrix_nbr(:)
+  INTEGER, POINTER               :: matrix_nbr_rcv(:,:)
   REAL*8,  POINTER               :: ELM(:,:)
   REAL*8,  POINTER               :: RHS(:)
-  INTEGER, TARGET                :: matrix_nbr
-  INTEGER, POINTER               :: matrix_nbr_rcv(:)
   logical                        :: ok, ok_recv
 
   type (type_element)       :: element_father
@@ -576,18 +582,19 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   LOGICAL :: is_local
   INTEGER :: cnt, cnt2
   INTEGER :: t0,t1,nb_periodes_max,nb_periodes_sec
-  INTEGER :: nb_periods
+  INTEGER :: nb_periods, max_periods, min_periods
+  INTEGER :: nb_periods_ass_max, nb_periods_ass_min
+  INTEGER :: nb_periods_set_max, nb_periods_set_min
+  INTEGER :: nb_periods_elem_mat_max, nb_periods_elem_mat_min
+  INTEGER :: nb_periods_comm_max, nb_periods_comm_min
   INTEGER, TARGET :: my_harm_num, my_harm_size, harm_size, node
   INTEGER, target :: step
   INTEGER :: index_send_mtx, index_mtx, new_row_mat_elem, new_col_mat_elem
   INTEGER :: col_harm, row_harm
-  CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(I2,A70,F7.2)"
-  CHARACTER(LEN=20), PARAMETER :: FMT_TIMING_T = "(I2,1x,I2,A70,F7.2)"
-  INTEGER*8, target   :: barrier
+  CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(A70,F7.2)"
   TYPE(THREAD_DATA_TYPE), ALLOCATABLE :: datas(:)
   INTEGER*8,              ALLOCATABLE :: threads(:)
   INTEGER :: ret, retval
-  INTEGER *8, target :: mutex
   INTEGER, external :: omp_get_num_threads, omp_get_thread_num
 
   CALL SYSTEM_CLOCK(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
@@ -595,10 +602,13 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 !$omp PARALLEL shared(thread_nbr)
 !$OMP master
   thread_nbr = omp_get_num_threads()
-  print *, "THREAD_NBR", thread_nbr
 !$omp end master
 !$omp end PARALLEL
-  elem_block_size = thread_nbr
+  if (my_id .eq. 0) print *, "THREAD_NBR", thread_nbr
+
+  elem_block_size = 1*thread_nbr
+  elem_block_size = n_local_elms/((n_tor+1)/2)
+
   elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
   ! We allocate too much for harm_0
   harm_size = 2*n_var
@@ -620,23 +630,33 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      !
      ! The same process is performed for right-hand-side member.
      !****************************************************************
-     call tr_ALLOCATEp(RECV_MATRICES,1,harm_size**2,1,&
-          (n_vertex_max*(n_order+1))**2*elem_block_size,1,(n_tor+1)/2,"RECV_MATRICES")
-     call tr_ALLOCATEp(SEND_MATRICES,1,harm_size**2,1,&
-          (n_vertex_max*(n_order+1))**2*elem_block_size,1,(n_tor+1)/2,"SEND_MATRICES") 
-     call tr_ALLOCATEp(RECV_COLROW,1,2,1,(n_vertex_max*(n_order+1))**2* elem_block_size,&
-          1,(n_tor+1)/2,"RECV_COLROW")
-     call tr_ALLOCATEp(matrix_nbr_rcv,1,(n_tor+1)/2,"matrix_nbr_rcv")
+     call tr_ALLOCATEp(RECV_MATRICES,1,harm_size**2,&
+          1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+          1, thread_nbr, &
+          1, (n_tor+1)/2, "RECV_MATRICES")
+     call tr_ALLOCATEp(SEND_MATRICES, 1, harm_size**2,&
+          1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+          1, thread_nbr, &
+          1, (n_tor+1)/2, "SEND_MATRICES") 
+     call tr_ALLOCATEp(RECV_COLROW, 1, 2, &
+          1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+          1, thread_nbr, &
+          1, (n_tor+1)/2, "RECV_COLROW")
   END IF
-  call tr_ALLOCATEp(PROD_MATRICES,1,(n_tor*n_var)**2,1,&
-       (n_vertex_max*(n_order+1))**2*elem_block_size,"PROD_MATRICES")
-  call tr_ALLOCATEp(PROD_COLROW,1,2,1,(n_vertex_max*(n_order+1))**2*elem_block_size,&
-       "PROD_COLROW")
-
-  WRITE(*,*) '****************************************'
-  WRITE(*,*) '*  construct matrix MURGE              *'
-  WRITE(*,*) '****************************************'
-  WRITE(*,*) ' n_elements (local)       : ',my_id,n_local_elms
+  call tr_ALLOCATEp(PROD_MATRICES,1,(n_tor*n_var)**2, &
+       1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+       1, thread_nbr, "PROD_MATRICES")
+  call tr_ALLOCATEp(PROD_COLROW, 1, 2, &
+       1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+       1, thread_nbr, "PROD_COLROW")
+  call tr_ALLOCATEp(matrix_nbr,1,thread_nbr, "matrix_nbr")
+  call tr_ALLOCATEp(matrix_nbr_rcv,1,thread_nbr,1,(n_tor+1)/2,"matrix_nbr_rcv")
+  
+  if (my_id .eq. 0) then
+     WRITE(*,*) '****************************************'
+     WRITE(*,*) '*  construct matrix MURGE              *'
+     WRITE(*,*) '****************************************'
+  end if
 
   IF (ALLOCATED(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob")
   IF (.NOT. gmres) THEN
@@ -652,9 +672,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   call tr_allocate(rhs_glob,1,ndof_glob,"rhs_glob")
 
   call tr_allocatep(rhs_loc,1,ndof_glob,"rhs_loc")
+  call tr_allocatep(rhs_loc_thread,1,ndof_glob,1,thread_nbr,"rhs_loc_thread")
 
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
+  Rhs_loc_thread = 0.d0
 
   IF (gmres) THEN
      step = elem_block_size*(n_tor+1)/2
@@ -664,7 +686,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   !
   ! Count coefnbr 
   !
+#ifdef PLENTY_TIMERS
   CALL SYSTEM_CLOCK(count=t0)
+#endif
   coefnbr = 0
   DO ife =1, n_local_elms
 
@@ -740,17 +764,36 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      END IF
   END IF
 
+#ifdef PLENTY_TIMERS
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max   
-  WRITE(*,FMT_TIMING) my_id, ' system_clock elapsed time counting assembly entries ',REAL(nb_periods)/nb_periodes_sec
+  CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time counting assembly entries ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time counting assembly entries ',REAL(min_periods)/nb_periodes_sec
+  end if
+#endif
 
+  CALL MPI_Reduce(coefnbr, coefnbr_max, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(coefnbr, coefnbr_min, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
   IF (.NOT. gmres) THEN
-     WRITE (*,*) ":: Murge Assembly phase :: ", coefnbr, " entries on processor ", my_id 
+     IF (my_id .eq. 0) then
+        WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_max, " maximum entries"
+        WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_min, " minimum entries"
+     end IF
   ELSE
-     WRITE (*,*) ":: Murge Assembly phase :: ", coefnbr, "/",&
-          & coefnbr_prod, " entries on processor ", my_id 
+     CALL MPI_Reduce(coefnbr_prod, coefnbr_prod_max, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+     CALL MPI_Reduce(coefnbr_prod, coefnbr_prod_min, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+     IF (my_id .eq. 0) then
+        WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_max, " maximum entries"
+        WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_min, " minimum entries"
+        WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_prod_max, " maximum entries for product"
+        WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_prod_min, " minimum entries for product"
+     end IF
   END IF
+
   cnt = 0
   cnt2  = 0
   CALL SYSTEM_CLOCK(count=t0)
@@ -795,43 +838,48 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   call tr_register_mem(sizeof(threads),"threads")
   Do iter = 1, thread_nbr
      !print *, "iter", iter
-     datas(iter)%thread_num        = iter
-     datas(iter)%thread_nbr        => thread_nbr
-     datas(iter)%my_id             => my_id
-     datas(iter)%my_id_trans       => my_id_trans
-     datas(iter)%MPI_COMM_TRANS    => MPI_COMM_TRANS     
-     datas(iter)%node_list         => node_list          
-     datas(iter)%element_list      => element_list       
+     datas(iter)%thread_num          = iter
+     datas(iter)%thread_nbr          => thread_nbr
+     datas(iter)%my_id               => my_id
+     datas(iter)%my_id_trans         => my_id_trans
+     datas(iter)%MPI_COMM_TRANS      => MPI_COMM_TRANS     
+     datas(iter)%node_list           => node_list          
+     datas(iter)%element_list        => element_list       
+     datas(iter)%ELM                 => thread_struct(iter)%ELM
+     datas(iter)%RHS                 => thread_struct(iter)%RHS
      !call tr_ALLOCATEp(datas(iter)%ELM,1,elem_size,1,elem_size,"datas(iter)%elm")
      !call tr_ALLOCATEp(datas(iter)%RHS,1,elem_size,"datas(iter)%RHS")
-     datas(iter)%rhs_loc           => rhs_loc          
-     datas(iter)%SEND_MATRICES     => SEND_MATRICES    
-     datas(iter)%PROD_MATRICES     => PROD_MATRICES    
-     datas(iter)%RECV_MATRICES     => RECV_MATRICES    
-     datas(iter)%PROD_COLROW       => PROD_COLROW     
-     datas(iter)%RECV_COLROW       => RECV_COLROW      
-     datas(iter)%matrix_nbr        => matrix_nbr         
-     datas(iter)%gmres             => gmres            
-     datas(iter)%solve_only        => solve_only       
-     datas(iter)%xpoint2           => xpoint2            
-     datas(iter)%xcase2            => xcase2            
-     datas(iter)%psi_axis          => psi_axis           
-     datas(iter)%psi_bnd           => psi_bnd            
-     datas(iter)%Z_xpoint          => Z_xpoint           
-     datas(iter)%psi_xpoint        => psi_xpoint           
-     datas(iter)%local_elms        => local_elms      
-     datas(iter)%n_local_elms      => n_local_elms       
-     datas(iter)%step              => step               
-     datas(iter)%elem_block_size   => elem_block_size    
-     datas(iter)%barrier           => barrier            
-     datas(iter)%mutex             => mutex              
-     datas(iter)%matrix_nbr_rcv    => matrix_nbr_rcv
-     datas(iter)%harm_size         => harm_size        
-     datas(iter)%my_harm_size      => my_harm_size
-     datas(iter)%nb_periods_max   = nb_periodes_max
-     datas(iter)%nb_periods_ass   = 0
-     datas(iter)%nb_periods_set   = 0
-     
+     datas(iter)%rhs_loc             => rhs_loc          
+     datas(iter)%rhs_loc_thread      => rhs_loc_thread
+     datas(iter)%SEND_MATRICES       => SEND_MATRICES    
+     datas(iter)%PROD_MATRICES       => PROD_MATRICES    
+     datas(iter)%RECV_MATRICES       => RECV_MATRICES    
+     datas(iter)%PROD_COLROW         => PROD_COLROW     
+     datas(iter)%RECV_COLROW         => RECV_COLROW 
+     datas(iter)%matrix_nbr          => matrix_nbr
+     datas(iter)%matrix_nbr_rcv      => matrix_nbr_rcv
+     datas(iter)%gmres               => gmres            
+     datas(iter)%solve_only          => solve_only       
+     datas(iter)%xpoint2             => xpoint2            
+     datas(iter)%xcase2              => xcase2            
+     datas(iter)%psi_axis            => psi_axis           
+     datas(iter)%psi_bnd             => psi_bnd            
+     datas(iter)%Z_xpoint            => Z_xpoint           
+     datas(iter)%psi_xpoint          => psi_xpoint           
+     datas(iter)%local_elms          => local_elms      
+     datas(iter)%n_local_elms        => n_local_elms       
+     datas(iter)%step                => step               
+     datas(iter)%elem_block_size     => elem_block_size    
+     datas(iter)%harm_size           => harm_size        
+     datas(iter)%my_harm_size        => my_harm_size
+#ifdef PLENTY_TIMERS
+     datas(iter)%nb_periods_max      = nb_periodes_max
+     datas(iter)%nb_periods_ass      = 0
+     datas(iter)%nb_periods_set      = 0
+     datas(iter)%nb_periods_elem_mat = 0
+     datas(iter)%nb_periods_comm     = 0
+#endif
+     datas(iter)%ndof_glob           = ndof_glob
   end Do
 !$OMP parallel private(iter,ret) default(shared)
   iter = 1+omp_get_thread_num()
@@ -839,15 +887,35 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 !$OMP barrier
 !$OMP end parallel
   ok = .true.
+#ifdef PLENTY_TIMERS
+  nb_periods_ass_max = 0
+  nb_periods_ass_min = datas(1)%nb_periods_ass
+  nb_periods_set_max = 0
+  nb_periods_set_min = datas(1)%nb_periods_set
+  nb_periods_elem_mat_max = 0
+  nb_periods_elem_mat_min = datas(1)%nb_periods_elem_mat
+  nb_periods_comm_max = 0
+  nb_periods_comm_min = datas(1)%nb_periods_elem_mat
+#endif
   Do iter = 1, thread_nbr
      !call tr_deallocatep(datas(iter)%RHS,"datas(iter)%RHS")
      !call tr_deallocatep(datas(iter)%ELM,"datas(iter)%ELM")
      !NULLIFY(datas(iter)%RHS)
      !NULLIFY(datas(iter)%ELM)
      ok = datas(iter)%ok .and. ok
-     !WRITE(*,FMT_TIMING_T) my_id, iter, ' elapsed time assemblying matrices ',REAL(datas(iter)%nb_periods_ass)/nb_periodes_sec
-     !WRITE(*,FMT_TIMING_T) my_id, iter, ' elapsed time setting matrices and communicating ',REAL(datas(iter)%nb_periods_set)/nb_periodes_sec
+#ifdef PLENTY_TIMERS
+     nb_periods_ass_max = MAX(nb_periods_ass_max, datas(iter)%nb_periods_ass)
+     nb_periods_ass_min = MIN(nb_periods_ass_min, datas(iter)%nb_periods_ass)
+     nb_periods_set_max = MAX(nb_periods_set_max, datas(iter)%nb_periods_set)
+     nb_periods_set_min = MIN(nb_periods_set_min, datas(iter)%nb_periods_set)
+     nb_periods_elem_mat_max = MAX(nb_periods_elem_mat_max, datas(iter)%nb_periods_elem_mat)
+     nb_periods_elem_mat_min = MIN(nb_periods_elem_mat_min, datas(iter)%nb_periods_elem_mat)
+     nb_periods_comm_max = MAX(nb_periods_comm_max, datas(iter)%nb_periods_comm)
+     nb_periods_comm_min = MIN(nb_periods_comm_min, datas(iter)%nb_periods_comm)
+#endif
   end Do
+
+
   CALL MPI_Allreduce(ok, ok_recv, 1, MPI_LOGICAL, MPI_LAND, MPI_COMM_WORLD, ierr)
   if (.not. ok_recv) then
      print *, "ERROR in MURGE call(s)"
@@ -862,22 +930,59 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      call tr_deallocatep(send_matrices,"send_matrices")
      call tr_deallocatep(recv_matrices,"recv_matrices")
      call tr_deallocatep(recv_colrow,"recv_colrow")
-     call tr_deallocatep(matrix_nbr_rcv,"matrix_nbr_rcv")
   END IF
   call tr_deallocatep(prod_matrices,"prod_matrices")
   call tr_deallocatep(prod_colrow,"prod_colrow")
+  call tr_deallocatep(matrix_nbr, "matrix_nbr")
+  call tr_deallocatep(matrix_nbr_rcv, "matrix_nbr_rcv")
   CALL SYSTEM_CLOCK(count=t1)
+#ifdef PLENTY_TIMERS
+  CALL MPI_Reduce(nb_periods_ass_max, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods_ass_min, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time assemblying matrices ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time assemblying matrices ',REAL(min_periods)/nb_periodes_sec
+  end if
+
+  CALL MPI_Reduce(nb_periods_set_max, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods_set_min, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time setting matrices into murge ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time setting matrices into murge ',REAL(min_periods)/nb_periodes_sec
+  end if
+
+  CALL MPI_Reduce(nb_periods_elem_mat_max, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods_elem_mat_min, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time building element matrices ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time building element matrices ',REAL(min_periods)/nb_periodes_sec
+  end if
+
+  CALL MPI_Reduce(nb_periods_comm_max, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods_comm_min, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time communicating ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time communicating ',REAL(min_periods)/nb_periodes_sec
+  end if
+#endif
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max   
-  WRITE(*,FMT_TIMING) my_id, ' system_clock elapsed time in assembly loop ',REAL(nb_periods)/nb_periodes_sec
+  CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time in assembly loop ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time in assembly loop ',REAL(min_periods)/nb_periodes_sec
+  end if
+
+
   CALL SYSTEM_CLOCK(count=t0)
 
   IF (.NOT. gmres .OR. .NOT. solve_only) THEN
 #ifdef USE_MURGE
      CALL MURGE_ASSEMBLYEND(murge_id, ierr)
 #else
-       print *, "Binary built without murge"
-       call abort()
+     print *, "Binary built without murge"
+     call abort()
 #endif
      IF (ierr /= MURGE_SUCCESS) THEN
         IF (gmres) THEN
@@ -887,7 +992,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
            WRITE (*,*) my_id, "::: error in assemblyend..", &
                 cnt*(n_tor*n_var)**2, cnt
         END IF
-        STOP
+        call abort()
      END IF
   END IF
 
@@ -901,26 +1006,35 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      IF (ierr /= MURGE_SUCCESS) THEN
         WRITE (*,*) my_id, "::: error in assemblyend..", &
              cnt*(n_tor*n_var)**2, cnt
-        STOP
+        call abort()
      END IF
   END IF
 
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max   
-  WRITE(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_ASSEMBLYEND(s)',REAL(nb_periods)/nb_periodes_sec
+  CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time in MURGE_ASSEMBLYEND(s) ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time in MURGE_ASSEMBLYEND(s) ',REAL(min_periods)/nb_periodes_sec
+  end if
 
   !----------------------- boundary conditions
 
   CALL SYSTEM_CLOCK(count=t0)
-  WRITE (*,*) MY_ID, " : Reduce..."
   CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   CALL boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, 0, &
        0,         xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only)
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max   
-  WRITE(*,FMT_TIMING) my_id, ' system_clock elapsed time in boundary_conditions ',REAL(nb_periods)/nb_periodes_sec
+  CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(nb_periods, min_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  if (my_id .eq. 0) then 
+     WRITE(*,FMT_TIMING) ' maximum elapsed time in boundary_conditions ',REAL(max_periods)/nb_periodes_sec
+     WRITE(*,FMT_TIMING) ' minimum elapsed time in boundary_conditions ',REAL(min_periods)/nb_periodes_sec
+  end if
 
   IF (gmres .AND. .NOT. solve_only) THEN
      IF (ASSOCIATED(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
@@ -951,12 +1065,15 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      call abort()
 #endif
   END IF
+  if (my_id .eq. 0) &
+       WRITE(*,*) '******** end construct matrix murge **********'
 
-  WRITE(*,*) '******** end construct matrix murge **********'
-  OPEN(unit=10, file='RHS_glob.txt', iostat=ios)
-  WRITE (10,*) RHS_glob
-  CLOSE(10)
+  !OPEN(unit=10, file='RHS_glob.txt', iostat=ios)
+  !WRITE (10,*) RHS_glob
+  !CLOSE(10)
+
   call tr_deallocatep(RHS_loc,"RHS_loc")
+  call tr_deallocatep(RHS_loc_thread,"RHS_loc_thread")
 
   RETURN
 END SUBROUTINE construct_matrix_murge

@@ -164,6 +164,12 @@ program JOREK2
     write(*,*) ' MPI processes       : ', n_cpu
     write(*,*) ' OpenMP threads      : ', nbthreads
     write(*,*) ' SVN revision        : ', SVN_VERSION
+    111 format(2x,a,': ',a)
+    write(*,111) 'compile_time        ', compile_time
+    write(*,111) 'compile_user        ', compile_user
+    write(*,111) 'compile_machine     ', compile_machine
+    write(*,111) 'compile_command     ', compile_command
+    write(*,111) 'compile_flags       ', compile_flags
   end if
   
   ! --- Initialise memory tracing

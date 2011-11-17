@@ -128,10 +128,10 @@ program JOREK2
   type (type_element)      :: element
   integer                  :: index_size, id_elements
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
-  integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
+  integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods, max_periods, min_periods
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
   integer, allocatable     :: tab_n_local_elems(:)
-
+  integer                  :: sum_n_local_elms, max_n_local_elms, min_n_local_elms
   
   real*8,  pointer :: dummy_real(:)
   integer, pointer :: dummy_int(:)
@@ -601,9 +601,6 @@ program JOREK2
                  EXIT
               END IF
            END DO
-           IF (.not. is_local) then
-              print *, my_id, ":", i_elem
-           END IF
         END DO
 
         ! Check that the number of local elements is the same on each processor
@@ -650,7 +647,24 @@ program JOREK2
         call system_clock(count=t1)   
         nb_periods = t1-t0
         if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-        write(*,FMT_TIMING) my_id, ' system_clock elapsed time computing new local element list ',REAL(nb_periods)/nb_periodes_sec
+        
+        CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+        CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+        if (my_id .eq. 0) then
+           write(*,FMT_TIMING) my_id, ' maximum elapsed time computing new local element list ',REAL(max_periods)/nb_periodes_sec
+           write(*,FMT_TIMING) my_id, ' minimum elapsed time computing new local element list ',REAL(min_periods)/nb_periodes_sec
+        end if
+
+        CALL MPI_Reduce(n_local_elms, sum_n_local_elms, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_N, ierr)
+        CALL MPI_Reduce(n_local_elms, max_n_local_elms, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_N, ierr)
+        CALL MPI_Reduce(n_local_elms, min_n_local_elms, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_N, ierr)
+
+        if (my_id .eq. 0) then
+           write(*,"(A70,I12)") ' maximum number of elements computed on one cpu ', max_n_local_elms
+           write(*,"(A70,I12)") ' minimum number of elements computed on one cpu ', min_n_local_elms
+           write(*,"(A70,I12)") ' number of elements computed over all cpus ', sum_n_local_elms
+           write(*,"(A70,I12)") ' total number of elements ', element_list%n_elements
+        end if
 
         index_total = -1
         do inode=1, node_list%n_nodes

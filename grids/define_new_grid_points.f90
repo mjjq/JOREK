@@ -1,8 +1,6 @@
-subroutine define_new_grid_xpoints(node_list, element_list, flux_list, &
+!> Subroutine defines the new grid_points from crossing of polar and radial coordinate lines
+subroutine define_new_grid_points(node_list, element_list, flux_list, &
                                    xcase, R_xpoint, Z_xpoint, psi_xpoint, n_grids, stpts, sigmas, nwpts)
-!------------------------------------------------------------------------------------------
-! subroutine defines the new grid_points from crossing of polar and radial coordinate lines
-!------------------------------------------------------------------------------------------
 
 
 use tr_module 
@@ -17,7 +15,8 @@ type (type_node_list)       , intent(inout) :: node_list
 type (type_element_list)    , intent(inout) :: element_list
 type (type_strategic_points), intent(inout) :: stpts
 type (type_new_points)      , intent(inout) :: nwpts
-integer,                      intent(inout) :: n_grids(10), xcase
+integer,                      intent(inout) :: n_grids(10)
+integer,                      intent(in)    :: xcase
 real*8,                       intent(in)    :: sigmas(16)
 real*8,                       intent(in)    :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
 
@@ -1260,4 +1259,4 @@ endif
 !close(102)
 
 return
-end subroutine define_new_grid_xpoints
+end subroutine define_new_grid_points

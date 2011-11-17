@@ -191,7 +191,7 @@ call find_strategic_points(node_list, element_list, flux_list, &
 !-------------------------------------------------------------------------------------------!
 
 !-------------------------------- Call the routine
-call define_new_grid_xpoints(node_list, element_list, flux_list, &
+call define_new_grid_points(node_list, element_list, flux_list, &
                              xcase, R_xpoint, Z_xpoint, psi_xpoint, n_grids, stpts, sigmas, nwpts)
 
 

@@ -1,31 +1,43 @@
+!> Routine determines the position(s) of the xpoint(s).
 subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-!-----------------------------------------------------------------------
-!-----------------------------------------------------------------------
+
 use data_structure
 use gauss
 use basis_at_gaussian
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+! --- Routine parameters
+integer,                  intent(in)    :: my_id
+type (type_node_list),    intent(in)    :: node_list
+type (type_element_list), intent(in)    :: element_list
+real*8,                   intent(out)   :: psi_xpoint(2)
+real*8,                   intent(out)   :: R_xpoint(2)
+real*8,                   intent(out)   :: Z_xpoint(2)
+integer,                  intent(out)   :: i_elm_xpoint(2)
+real*8,                   intent(out)   :: s_xpoint(2)
+real*8,                   intent(out)   :: t_xpoint(2)
+integer,                  intent(in)    :: xcase
+integer,                  intent(out)   :: ifail
 
-real*8  :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), ps_s, ps_t
-real*8  :: grad_psi, grad_psi_min(2)
+! --- Local variables
+real*8  :: grad_psi, grad_psi_min(2), ps_s, ps_t
 real*8  :: R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: ps_x, ps_y, xjac
-integer :: my_id, i_elm_xpoint(2), ij_xpoint(2,2), i, iv, ms, mt, kf, kv, ifail, xcase
+integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv
 
-real*8  :: x(2), s, t, xerr, ferr, rs_tolerance
-
+real*8  :: x(2), s, t, xerr, ferr
 logical :: early_exit
-parameter (rs_tolerance = 1.d-8)
+
+real*8, parameter :: rs_tolerance = 1.d-8
 
 if (my_id .eq. 0) then
   write(*,*) '*********************************'
   write(*,*) '*     find_xpoint               *'
   write(*,*) '*********************************'
 endif
+
+ifail = 0
 
 grad_psi_min = 1.d20
 Z_xpoint(1)  = 0.d0
@@ -132,4 +144,4 @@ endif
 
 
 return
-END
+end subroutine find_xpoint

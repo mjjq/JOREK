@@ -38,7 +38,7 @@ call cpu_time(t3)
 y = 0
 if ((use_murge) .and. (use_murge_element)) then
 #ifdef USE_MURGE
-   CALL MURGE_SetGlobalRHS(murge_id_prod, x, 0, MURGE_ASSEMBLY_OVW , ierr)
+   CALL MURGE_SetGlobalRHS(murge_id_prod, x, -1, MURGE_ASSEMBLY_OVW , ierr)
    CALL MURGE_GetGlobalProduct(murge_id_prod, y, 0, ierr)
 #else
    print *, "Binary built without murge"

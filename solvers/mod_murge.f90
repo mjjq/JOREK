@@ -176,6 +176,8 @@ CONTAINS
              CALL MURGE_SetCommunicator(murge_id_prod, MPI_COMM_WORLD, ierr)
 
              CALL MURGE_SetDefaultOptions(murge_id,      0, ierr)
+             CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINMENT,     &
+                  &                  API_NO,     ierr)  
              CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
           END IF
        ELSE
@@ -301,8 +303,6 @@ CONTAINS
           DO i_order = 1, n_order+1
 
              index_node1 = node_list%node(inode1)%index(i_order)
-
-
 
              ! Build nodes Matrices
              DO k= 1, n_vertex_max

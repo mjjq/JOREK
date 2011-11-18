@@ -135,6 +135,7 @@ contains
     !INTEGER, external              :: fortran_pthread_mutex_lock, fortran_pthread_mutex_unlock
     INTEGER                        :: elem_size
     INTEGER                        :: ife
+    INTEGER                        :: prod_size, mat_size
     INTEGER                        :: ELM_INDEX
     INTEGER                        :: node, iter, total, t0, t1, tt0, tt1, thread
     INTEGER,               POINTER :: matrix_nbr_rcv(:,:), pt_matrix_nbr
@@ -148,6 +149,7 @@ contains
     
     ELM => data%ELM
     RHS => data%RHS
+!    print *, "data%n_local_elms", data%n_local_elms, "data%step", data%step
     !TODO: anticiper l'allocation ou l'allouer une fois pour toute
     ELEM : DO ife =1, data%n_local_elms, data%step 
        pt_matrix_nbr = 0
@@ -427,17 +429,20 @@ contains
                   &             data%MPI_COMM_TRANS, ierr)
              total = total + sum(matrix_nbr_rcv)
              !print *, data%my_id, data%thread_num, "data%matrix_nbr", pt_matrix_nbr, matrix_nbr_rcv, total, cnt
-             CALL MPI_Alltoall(data%SEND_MATRICES, data%elem_block_size*(n_vertex_max&
-                  &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
-                  &            data%RECV_MATRICES, data%elem_block_size*(n_vertex_max&
-                  &            *(n_order+1)*data%harm_size)**2, MPI_DOUBLE_PRECISION, &
+
+
+             mat_size = ((data%elem_block_size/data%thread_nbr+1)*data%thread_nbr)*&
+               (n_vertex_max*(n_order+1)*data%harm_size)**2
+             CALL MPI_Alltoall(data%SEND_MATRICES, mat_size, MPI_DOUBLE_PRECISION, &
+                  &            data%RECV_MATRICES, mat_size, MPI_DOUBLE_PRECISION, &
                   &            data%MPI_COMM_TRANS, ierr)
              
-             CALL MPI_Allgather(data%PROD_COLROW, data%elem_block_size*2*(n_vertex_max&
-                  &            *(n_order+1))**2, MPI_INTEGER, &
-                  &            data%RECV_COLROW, data%elem_block_size*2*(n_vertex_max&
-                  &            *(n_order+1))**2, MPI_INTEGER, &
+             prod_size = 2*((data%elem_block_size/data%thread_nbr+1)*data%thread_nbr)*&
+               (n_vertex_max*(n_order+1))**2
+             CALL MPI_Allgather(data%PROD_COLROW, prod_size, MPI_INTEGER, &
+                  &            data%RECV_COLROW, prod_size, MPI_INTEGER, &
                   &            data%MPI_COMM_TRANS, ierr)
+
 
 #ifdef PLENTY_TIMERS
              CALL SYSTEM_CLOCK(count=tt1)
@@ -445,8 +450,8 @@ contains
              IF (tt1<tt0) data%nb_periods_comm = data%nb_periods_comm + data%nb_periods_max
 #endif
              DO node = 1, (n_tor+1)/2
-                DO thread = 1, data%thread_nbr
-                   DO i = 1, matrix_nbr_rcv(thread, node)
+               DO thread = 1, data%thread_nbr
+                 DO i = 1, matrix_nbr_rcv(thread, node)
                       index_node1 = data%RECV_COLROW(1, i, thread, node)
                       index_node2 = data%RECV_COLROW(2, i, thread, node)
                       DO iter = 1, data%my_harm_size**2
@@ -466,7 +471,7 @@ contains
                          WRITE (*,*) data%my_id, "::::", &
                               "I", index_node2, &
                               "J", index_node1, ierr, &
-                              & cnt2, cnt, ife, i, node, matrix_nbr_rcv(thread, node),&
+                              & "cnt2", cnt2, cnt, ife, "i", i, "node", node, "matrix_nbr_rcv", matrix_nbr_rcv(thread, node),&
                               & data%n_local_elms,data%element_list%n_elements
                          call abort()
                          data%ok = .false.
@@ -607,8 +612,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   if (my_id .eq. 0) print *, "THREAD_NBR", thread_nbr
 
   elem_block_size = 1*thread_nbr
-  elem_block_size = n_local_elms/((n_tor+1)/2)
-
+  if (mod(elem_block_size, ((n_tor+1)/2)) .eq. 0) then
+    elem_block_size = n_local_elms/((n_tor+1)/2)
+  else
+    elem_block_size = ((n_local_elms - mod(elem_block_size, ((n_tor+1)/2)))/((n_tor+1)/2))+1
+  end if
   elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
   ! We allocate too much for harm_0
   harm_size = 2*n_var
@@ -631,23 +639,23 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      ! The same process is performed for right-hand-side member.
      !****************************************************************
      call tr_ALLOCATEp(RECV_MATRICES,1,harm_size**2,&
-          1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+          1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
           1, thread_nbr, &
           1, (n_tor+1)/2, "RECV_MATRICES")
      call tr_ALLOCATEp(SEND_MATRICES, 1, harm_size**2,&
-          1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+          1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
           1, thread_nbr, &
           1, (n_tor+1)/2, "SEND_MATRICES") 
      call tr_ALLOCATEp(RECV_COLROW, 1, 2, &
-          1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+          1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
           1, thread_nbr, &
           1, (n_tor+1)/2, "RECV_COLROW")
   END IF
   call tr_ALLOCATEp(PROD_MATRICES,1,(n_tor*n_var)**2, &
-       1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+       1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
        1, thread_nbr, "PROD_MATRICES")
   call tr_ALLOCATEp(PROD_COLROW, 1, 2, &
-       1, (n_vertex_max*(n_order+1))**2*elem_block_size/thread_nbr, &
+       1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
        1, thread_nbr, "PROD_COLROW")
   call tr_ALLOCATEp(matrix_nbr,1,thread_nbr, "matrix_nbr")
   call tr_ALLOCATEp(matrix_nbr_rcv,1,thread_nbr,1,(n_tor+1)/2,"matrix_nbr_rcv")
@@ -777,7 +785,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 #endif
 
   CALL MPI_Reduce(coefnbr, coefnbr_max, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
-  CALL MPI_Reduce(coefnbr, coefnbr_min, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  CALL MPI_Reduce(coefnbr, coefnbr_min, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
   IF (.NOT. gmres) THEN
      IF (my_id .eq. 0) then
         WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_max, " maximum entries"
@@ -785,7 +793,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      end IF
   ELSE
      CALL MPI_Reduce(coefnbr_prod, coefnbr_prod_max, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
-     CALL MPI_Reduce(coefnbr_prod, coefnbr_prod_min, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+     CALL MPI_Reduce(coefnbr_prod, coefnbr_prod_min, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
      IF (my_id .eq. 0) then
         WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_max, " maximum entries"
         WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ", coefnbr_min, " minimum entries"

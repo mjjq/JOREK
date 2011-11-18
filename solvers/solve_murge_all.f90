@@ -59,7 +59,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   WRITE(*,*) my_id,'*********************************'
 
   call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
-  call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
+  call r3_info_begin (r3_info_index_0, 'solve_murge_all')                  ! timing
   if (use_murge_element) then
      m_loc = murge_local_n * n_tor * n_var
   else
@@ -295,6 +295,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
      endif
   end if
   call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
+  call r3_info_end (r3_info_index_0)         ! timing
 #else
   print *, "Binary built without murge"
   call abort()

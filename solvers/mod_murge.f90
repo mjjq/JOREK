@@ -176,8 +176,8 @@ CONTAINS
              CALL MURGE_SetCommunicator(murge_id_prod, MPI_COMM_WORLD, ierr)
 
              CALL MURGE_SetDefaultOptions(murge_id,      0, ierr)
-             CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINMENT,     &
-                  &                  API_NO,     ierr)  
+!             CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINMENT,     &
+!                  &                  API_NO,     ierr)  
              CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
           END IF
        ELSE

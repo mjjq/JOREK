@@ -150,6 +150,9 @@ version:
 	@echo "" >> version.h
 	@echo "#define compile_command '$(FC)'" >> version.h
 	@echo "#define compile_flags '$(FFLAGS)'" >> version.h
+	@echo "#define compile_includes '$(INCLUDES)'" >> version.h
+	@echo "#define compile_defines '$(DEFINES)'" >> version.h
+	@echo "#define compile_libs '$(LIBS)'" >> version.h
 	-@echo "#define compile_time '`date \"+%F %T\"`'" >> version.h
 	-@echo "#define compile_user '`whoami`'" >> version.h
 	-@echo "#define compile_machine '`hostname`'" >> version.h

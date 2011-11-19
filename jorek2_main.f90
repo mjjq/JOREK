@@ -170,6 +170,9 @@ program JOREK2
     write(*,111) 'compile_machine     ', compile_machine
     write(*,111) 'compile_command     ', compile_command
     write(*,111) 'compile_flags       ', compile_flags
+    write(*,111) 'compile_includes    ', compile_includes
+    write(*,111) 'compile_defines     ', compile_defines
+    write(*,111) 'compile_libs        ', compile_libs
   end if
   
   ! --- Initialise memory tracing

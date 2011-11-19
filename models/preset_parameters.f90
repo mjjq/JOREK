@@ -168,6 +168,8 @@ subroutine preset_parameters
   rho_file      = 'none'
   T_file        = 'none'
   ffprime_file  = 'none'
+  d_perp_file   = 'none'
+  zk_perp_file  = 'none'
 
   produce_live_data = .true.
   

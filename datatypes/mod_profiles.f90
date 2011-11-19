@@ -1,8 +1,9 @@
 !> Routines for reading/writing/manipulating 1D data profiles.
 !!
 !! The module is used to handle numerical input profiles for temperature,
-!! density and FFprime.
+!! density, FFprime, D_perp, and ZK_perp.
 module profiles
+  
   use tr_module 
   
   implicit none
@@ -12,7 +13,7 @@ module profiles
   private
   
   ! --- Public routines
-  public constructProf, destructProf, resizeProf, readProf, writProf, derivProf
+  public constructProf, destructProf, resizeProf, readProf, writProf, derivProf, interpolProf
   
   
   
@@ -20,7 +21,37 @@ module profiles
   
   
   
-  ! Construct a profile.
+  !> Interpolate a given profile to a certain position x0.
+  real*8 function interpolProf(x, y, len, x0)
+    
+    real, allocatable, intent(in) :: x(:)
+    real, allocatable, intent(in) :: y(:)
+    integer,           intent(in) :: len
+    real,              intent(in) :: x0
+    
+    integer :: left, mid, right
+    real    :: aux1, aux2
+    
+    left  = 1
+    right = len
+    do
+      if ( right == left + 1 ) exit
+      mid = (left + right) / 2
+      if ( x(mid) >= x0 ) then
+        right = mid
+      else
+        left = mid
+      end if
+    end do
+    aux1  = (x0 - x(left)) / (x(right) - x(left))
+    aux2  = (1. - aux1)
+    interpolProf = y(left) * aux2 + y(right) * aux1
+    
+  end function interpolProf
+  
+  
+  
+  !> Construct a profile.
   recursive subroutine constructProf(x, y, len)
 
     real, allocatable, intent(inout) :: x(:), y(:)
@@ -36,13 +67,13 @@ module profiles
   
   
   
-  ! Change the size of a profile.
+  !> Change the size of a profile.
   recursive subroutine resizeProf(x, y, len, newLen, keep)
 
     real, allocatable, intent(inout) :: x(:), y(:)
     integer,           intent(inout) :: len
     integer,           intent(in)    :: newLen
-    logical,           intent(in)    :: keep ! Keep the data in the x and y arrays?
+    logical,           intent(in)    :: keep !< Keep the data in the x and y arrays?
     
     real, ALLOCATABLE            :: px(:) ! copy of x (in case keep=.TRUE.)
     real, ALLOCATABLE            :: py(:) ! copy of y (in case keep=.TRUE.)
@@ -88,7 +119,7 @@ module profiles
   
   
   
-  ! Destroy a profile.
+  !> Destroy a profile.
   recursive subroutine destructProf(x, y, len)
 
     real, allocatable, intent(inout) :: x(:), y(:)
@@ -102,12 +133,12 @@ module profiles
   
   
   
-  ! Read a profile from a file.
+  !> Read a profile from a file.
   recursive subroutine readProf(x, y, len, file)
     
     real, allocatable, intent(inout) :: x(:), y(:)
     integer,           intent(inout) :: len
-    CHARACTER(LEN=*),  intent(in)    :: file    ! Filename.
+    CHARACTER(LEN=*),  intent(in)    :: file    !< Filename.
     
     integer :: err
     integer :: usedLen
@@ -153,12 +184,12 @@ module profiles
   
   
   
-  ! Write a profile to a file.
+  !> Write a profile to a file.
   recursive subroutine writProf(x, y, len, file)
     
     real, allocatable, intent(in)    :: x(:), y(:)
     integer,           intent(in)    :: len
-    CHARACTER(LEN=*),  intent(in)    :: file    ! Filename.
+    CHARACTER(LEN=*),  intent(in)    :: file    !< Filename.
     
     integer :: err
     integer :: i
@@ -182,7 +213,7 @@ module profiles
   
   
   
-  ! Determine the derivative of a profile.
+  !> Determine the derivative of a profile.
   recursive subroutine derivProf(x, y, len, yd)
   
     real, allocatable, intent(in)    :: x(:), y(:)

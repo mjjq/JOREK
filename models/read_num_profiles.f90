@@ -37,6 +37,44 @@ subroutine read_num_profiles()
     end if
     FF_1 = 0.
   end if
+  
+  num_d_perp = ( d_perp_file /= 'none' )
+  if ( num_d_perp ) then
+    call readProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, d_perp_file)
+    if ( num_d_perp_len <= 2 ) then 
+      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(d_perp_file)//'".'
+      stop
+    end if
+  end if
+
+  num_zk_perp = ( zk_perp_file /= 'none' )
+  if ( num_zk_perp ) then
+    call readProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, zk_perp_file)
+    if ( num_zk_perp_len <= 2 ) then 
+      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_perp_file)//'".'
+      stop
+    end if
+  end if
+
+  if ( jorek_model == 400 ) then
+    num_zk_e_perp = ( zk_e_perp_file /= 'none' )
+    if ( num_zk_e_perp ) then
+      call readProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, zk_e_perp_file)
+      if ( num_zk_e_perp_len <= 2 ) then 
+        write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_e_perp_file)//'".'
+        stop
+      end if
+    end if
+    
+    num_zk_i_perp = ( zk_i_perp_file /= 'none' )
+    if ( num_zk_i_perp ) then
+      call readProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, zk_i_perp_file)
+      if ( num_zk_i_perp_len <= 2 ) then 
+        write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_i_perp_file)//'".'
+        stop
+      end if
+    end if
+  end if
 
 return
 end subroutine read_num_profiles

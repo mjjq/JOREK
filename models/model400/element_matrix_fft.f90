@@ -13,6 +13,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use tr_module 
+use profiles, only: interpolProf
 
 implicit none
 
@@ -391,9 +392,23 @@ do ms=1, n_gauss
 			              * (1 + Diff(id,6) - Diff(id,6) * tanh(-(psi_norm-(1+4*Diff(id,4)))/Diff(id,4)))   !higher Kperp in SOL
       enddo
       
-      D_prof    = prof(1)
-      ZK_i_prof = prof(2) 
-      ZK_e_prof = prof(3) 
+      if ( num_d_perp ) then
+        D_prof  = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psi_norm)
+      else
+        D_prof    = prof(1)
+      end if
+      
+      if ( num_zk_i_perp ) then
+        ZK_i_prof  = interpolProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, psi_norm)
+      else
+        ZK_i_prof = prof(2) 
+      end if
+      
+      if ( num_zk_e_perp ) then
+        ZK_e_prof  = interpolProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, psi_norm)
+      else
+        ZK_e_prof = prof(3) 
+      end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! Build up the D_perp and K_perp profiles !!!!!!!!!!!! END

@@ -59,5 +59,47 @@ if ( num_ffprime ) then
   call MPI_BCAST(num_ffprime_y2,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
+if ( num_d_perp ) then
+  call MPI_BCAST(num_d_perp_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_d_perp_x,1,num_d_perp_len,"num_d_perp_x")
+     call tr_allocate(num_d_perp_y,1,num_d_perp_len,"num_d_perp_y")
+  end if
+  call MPI_BCAST(num_d_perp_x,num_d_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_d_perp_y,num_d_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
+if ( num_zk_perp ) then
+  call MPI_BCAST(num_zk_perp_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_zk_perp_x,1,num_zk_perp_len,"num_zk_perp_x")
+     call tr_allocate(num_zk_perp_y,1,num_zk_perp_len,"num_zk_perp_y")
+  end if
+  call MPI_BCAST(num_zk_perp_x,num_zk_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_zk_perp_y,num_zk_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
+if ( jorek_model == 400 ) then
+  if ( num_zk_e_perp ) then
+    call MPI_BCAST(num_zk_e_perp_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    if ( my_id /= 0 ) then
+       call tr_allocate(num_zk_e_perp_x,1,num_zk_e_perp_len,"num_zk_e_perp_x")
+       call tr_allocate(num_zk_e_perp_y,1,num_zk_e_perp_len,"num_zk_e_perp_y")
+    end if
+    call MPI_BCAST(num_zk_e_perp_x,num_zk_e_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(num_zk_e_perp_y,num_zk_e_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  end if
+  
+  if ( num_zk_i_perp ) then
+    call MPI_BCAST(num_zk_i_perp_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    if ( my_id /= 0 ) then
+       call tr_allocate(num_zk_i_perp_x,1,num_zk_i_perp_len,"num_zk_i_perp_x")
+       call tr_allocate(num_zk_i_perp_y,1,num_zk_i_perp_len,"num_zk_i_perp_y")
+    end if
+    call MPI_BCAST(num_zk_i_perp_x,num_zk_i_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(num_zk_i_perp_y,num_zk_i_perp_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  end if
+end if
+
 return
 end subroutine broadcast_num_profiles

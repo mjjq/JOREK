@@ -48,6 +48,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
+                D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, use_starwall, resistive_wall,         &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
@@ -70,6 +71,11 @@ if (my_id .eq. 0) then
   xcase = 1
   
   ! --- Model-specific presets
+  Te_file        = 'none'
+  Ti_file        = 'none'
+  ZK_e_perp_file = 'none'
+  ZK_i_perp_file = 'none'
+  
   Ti_0   =  1.d-6
   Ti_1   =  1.d-8
   

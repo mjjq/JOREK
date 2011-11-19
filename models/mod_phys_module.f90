@@ -75,11 +75,7 @@ module phys_module
   real*8  :: heatsource_i        !< Heat source strength (ions), model4xx only
   real*8  :: heatsource_e        !< Heat source strength (electrons), model4xx only
   
-  !> @name Heat and particle diffusivity parameters
-  real*8  :: D_perp(10), D_par
-  real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
-  
-  !> @name Numerical resistivity, viscosity and diffusivities
+  !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num
   
   !> @name Timestepping parameters
@@ -199,6 +195,32 @@ module phys_module
   real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region
   real*8  :: dPSI_up_priv      !< Delta Psi grid extends into the private flux region
   
+  !> @name Analytical heat and particle diffusivity parameters
+  real*8  :: D_perp(10), D_par
+  real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
+
+  !> @name Numerical heat and particle diffusivity profiles
+  character(len=512)  :: d_perp_file        !< ASCII file the profile is read from
+  character(len=512)  :: zk_perp_file       !< ASCII file the profile is read from
+  character(len=512)  :: zk_e_perp_file     !< ASCII file the profile is read from (model400)
+  character(len=512)  :: zk_i_perp_file     !< ASCII file the profile is read from (model400)
+  logical             :: num_d_perp         !< is set true if d_perp_file /= 'none'
+  logical             :: num_zk_perp        !< is set true if zk_perp_file /= 'none'
+  logical             :: num_zk_e_perp      !< is set true if zk_e_perp_file /= 'none' (model400)
+  logical             :: num_zk_i_perp      !< is set true if zk_i_perp_file /= 'none' (model400)
+  integer             :: num_d_perp_len     !< Number of datapoints in the profile
+  integer             :: num_zk_perp_len    !< Number of datapoints in the profile
+  integer             :: num_zk_e_perp_len  !< Number of datapoints in the profile (model400)
+  integer             :: num_zk_i_perp_len  !< Number of datapoints in the profile (model400)
+  real*8, allocatable :: num_d_perp_x(:)    !< Psi_N values of the profile
+  real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of the profile
+  real*8, allocatable :: num_zk_perp_x(:)   !< Psi_N values of the profile
+  real*8, allocatable :: num_zk_perp_y(:)   !< ZK_perp values of the profile
+  real*8, allocatable :: num_zk_e_perp_x(:) !< Psi_N values of the profile (model400)
+  real*8, allocatable :: num_zk_e_perp_y(:) !< ZK_perp values of the profile (model400)
+  real*8, allocatable :: num_zk_i_perp_x(:) !< Psi_N values of the profile (model400)
+  real*8, allocatable :: num_zk_i_perp_y(:) !< ZK_perp values of the profile (model400)
+  
   !> @name Analytical input profile for the density
   real*8  :: rho_0, rho_1,  rho_coef(10)
   
@@ -227,7 +249,7 @@ module phys_module
   real*8, allocatable :: num_T_y2(:)     !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_T_y3(:)     !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   
-  !> @name Numerical input profile for the ion temperature
+  !> @name Numerical input profile for the ion temperature (model400)
   character(len=512)  :: Ti_file         !< ASCII file the profile is read from.
   logical             :: num_Ti          !< is set true if T_file /= 'none'
   integer             :: num_Ti_len      !< Number of points in profile
@@ -237,7 +259,7 @@ module phys_module
   real*8, allocatable :: num_Ti_y2(:)    !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_Ti_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   
-  !> @name Numerical input profile for the electron temperature
+  !> @name Numerical input profile for the electron temperature (model400)
   character(len=512)  :: Te_file         !< ASCII file the profile is read from.
   logical             :: num_Te          !< is set true if T_file /= 'none'
   integer             :: num_Te_len      !< Number of points in profile

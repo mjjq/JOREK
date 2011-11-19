@@ -1,16 +1,19 @@
+!> The routine finds fluxsurfaces by finding crossings with the edges of the elements
 subroutine find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
-!-----------------------------------------------------------------------
-! finds fluxsurfaces by finding crossings at the edge of an element
-!-----------------------------------------------------------------------
+
 use tr_module 
 use data_structure
 
 implicit none
 
+! --- Routine parameters
+logical,                  intent(in)     :: xpoint
+integer,                  intent(in)     :: xcase
 type (type_node_list)   , intent(in)	 :: node_list
 type (type_element_list), intent(in)	 :: element_list
 type (type_surface_list), intent(inout)  :: surface_list
 
+! --- Local variables
 real*8  :: psimin, psimax, a0, a1, a2, a3, PI
 real*8  :: dpsi_dr(4),dpsi_ds(4)
 real*8  :: p1, dp1, dp4, p4, p2, p3, r_psi(4), s_psi(4), tht(4)
@@ -21,8 +24,7 @@ real*8  :: RRg(4),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  :: ZZg(4),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 integer :: l, i_neigh, Xneigh, icount
 integer :: my_id, i, j, k, ifound, iv, im, is, n1, n2, n3
-integer :: ifail, itht(4), itmp,i_elm_xpoint(2), xcase
-logical :: xpoint
+integer :: ifail, itht(4), itmp,i_elm_xpoint(2)
 
 write(*,*) '***********************************'
 write(*,*) '*   find_flux_surfaces            *'

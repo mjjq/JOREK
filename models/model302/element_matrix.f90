@@ -12,6 +12,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use avoid_neg_dens, only: diffusivity_factor
+use profiles, only: interpolProf
 
 implicit none
 
@@ -347,17 +348,25 @@ do ms=1, n_gauss
          psi_norm = 2.d0 - psi_norm
        endif
      endif
-
-     D_prof  = D_perp(1)  * ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4)))) &
-             + D_perp(6) * (D_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+D_perp(5)+D_perp(3)) /D_perp(4))))
-
+     
+     if ( num_d_perp ) then
+       D_prof  = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psi_norm)
+     else
+       D_prof  = D_perp(1)  * ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4)))) &
+               + D_perp(6) * (D_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+D_perp(5)+D_perp(3)) /D_perp(4))))
+     end if
+     
 #ifdef AVOID_NEG_DENS     
      D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
 #endif
-
-     ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4)))) &
-             + ZK_perp(6) * (ZK_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
-
+     
+     if ( num_zk_perp ) then
+       ZK_prof = interpolProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, psi_norm)
+     else
+       ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4)))) &
+               + ZK_perp(6) * (ZK_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
+     end if
+     
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 
      source_pellet = 0.d0

@@ -8,18 +8,6 @@ use phys_module
 
 implicit none
 
-interface
-   subroutine find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
-     use data_structure
-     implicit none
-     logical                  :: xpoint
-     integer                  :: xcase
-     type (type_node_list)    :: node_list
-     type (type_element_list) :: element_list
-     type (type_surface_list) :: surface_list
-   end subroutine find_flux_surfaces
-end interface
-
 ! --- Routine parameters
 type (type_node_list),        intent(in)    :: node_list
 type (type_element_list),     intent(in)    :: element_list

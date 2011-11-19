@@ -22,6 +22,9 @@ real*8             :: psi_bnd, psi_bnd2
 real*8,allocatable :: rplot(:), zplot(:)
 character*13       :: LABEL
 
+psi_bnd  = 0.d0
+psi_bnd2 = 0.d0
+
 if(xpoint) then
   if (xcase .eq. 1) psi_bnd = psi_xpoint(1)
   if (xcase .eq. 2) psi_bnd = psi_xpoint(2)

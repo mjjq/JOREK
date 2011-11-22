@@ -1,6 +1,7 @@
 !> Program to convert a JOREK2 restart file into binary VTK format
 program jorek2vtk
 
+use parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian
@@ -76,19 +77,10 @@ n_vectors = 0
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
 
-!scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar         '/)
-                
-
-scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ','Vpar        ', &
-                  'pressure    ',                                                  &
-                  'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp',     &
-		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp','D_prof      ',     &
-                  'ZK_prof     ','Er          ','Vtheta      '/)
-
-!scalar_names = (/ 'flux        ','U           ','current     ','W           ','density     ','T           ', &
-!                  'pressure    ',                                                  &
-!                  'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp',     &
-!		  'D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
+scalar_names(1:n_var) = variable_names(1:n_var)
+scalar_names(n_var+1:n_scalars) = (/ &
+  'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
+  'D_flux_Vpar ', 'D_flux_Vperp', 'D_prof      ', 'ZK_prof     ', 'Er          ', 'Vtheta      ' /)
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
@@ -145,10 +137,10 @@ do i=1,element_list%n_elements
       BigR  = R
    
       xjac_x  = (R_ss*Z_t**2 - Z_ss*R_t*Z_t - 2.d0*R_st*Z_s*Z_t   &           
-	      + Z_st*(R_s*Z_t + R_t*Z_s) + R_tt*Z_s**2 - Z_tt*R_s*Z_s) / xjac
-	   
+        + Z_st*(R_s*Z_t + R_t*Z_s) + R_tt*Z_s**2 - Z_tt*R_s*Z_s) / xjac
+     
       xjac_y  = (Z_tt*R_s**2 - R_tt*Z_s*R_s - 2.d0*Z_st*R_t*R_s   &           
-	      + R_st*(Z_t*Z_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
+        + R_st*(Z_t*Z_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
 
       inode = inode+1
 
@@ -169,9 +161,13 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
           call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-          call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+          if ( jorek_model >= 300 ) then
+            call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+          else
+            V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
+          end if
 
-	  u0_x  = (   Z_t * U_s - Z_s * U_t ) / xjac
+          u0_x  = (   Z_t * U_s - Z_s * U_t ) / xjac
           u0_y  = ( - R_t * U_s + R_s * U_t ) / xjac
 
           ps_x  = (   Z_t * PS_s - Z_s * PS_t ) / xjac
@@ -183,7 +179,7 @@ do i=1,element_list%n_elements
           zj_x  = (   Z_t * ZJ_s - Z_s * ZJ_t ) / xjac
           zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
 
-	  v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
+          v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
 !===========GDP=========== --- compute added diagnostics
           psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
           Btheta  = (psi_abs/R)          
@@ -210,9 +206,9 @@ do i=1,element_list%n_elements
       else
 
         u0_x = 0.d0; u0_y = 0.d0; ps_x = 0.d0; ps_y  = 0.d0; zj_x  = 0.d0; zj_y  = 0.d0;
-	TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
-	
-	w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
+  TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
+  
+  w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
         
         do i_tor = 1, n_tor
         
@@ -229,7 +225,11 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
           call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-          if ( jorek_model >= 300 ) call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+          if ( jorek_model >= 300 ) then
+            call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+          else
+            V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
+          end if
           
           if ((xjac .gt. 1.d-6)) then      ! avoid the axis
             
@@ -268,7 +268,7 @@ do i=1,element_list%n_elements
           endif
           
         enddo  ! end loop toroidal harmonics
-	    
+      
         ps0 = scalars(inode,1)
         psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
         if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
@@ -301,7 +301,7 @@ do i=1,element_list%n_elements
        
         scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
         ZKpar_T = ZK_par * ((scalars(inode,6)+T_1)/T_0)**2.5
-	
+  
         grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
 !   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp','D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
@@ -407,7 +407,7 @@ buffer = lf//'POINT_DATA '//str1            ; write(ivtk) trim(buffer)
 do i_var =1, n_scalars
   buffer = lf//'SCALARS '//scalar_names(i_var)//' float'//lf ; write(ivtk) trim(buffer)
   buffer = 'LOOKUP_TABLE default'//lf
-	write(ivtk) trim(buffer)
+  write(ivtk) trim(buffer)
   write(ivtk) (real(scalars(i,i_var),4),i=1,nnos)
 enddo
 

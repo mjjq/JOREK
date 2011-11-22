@@ -225,7 +225,8 @@ shift
 infile=`readlink -f $1`
 shift
 sourceDir=`readlink -f .`
-copyfiles="$@"
+copyfiles=`grep _file $infile | grep -v '^ *!' | sed -e "s/^.*= *[\"']\(.*\)[\"'].*$/\1/"`
+copyfiles="$copyfiles $@"
 for copyfile in $copyfiles; do
   if [ ! -f "$copyfile" ]; then
     echo "ERROR: Extra-file '$copyfile' does not exist."

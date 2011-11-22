@@ -13,6 +13,12 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC) \
 	$(DIR)/pastix_getmem.c
 
 
+JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC) \
+	$(DIR)/flush_it.f90		\
+	$(DIR)/trace.f90		\
+	$(DIR)/pastix_getmem.c
+
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) \
 	$(DIR)/flush_it.f90		\
 	$(DIR)/trace.f90		\

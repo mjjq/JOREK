@@ -19,6 +19,7 @@ DIRS =  timing				\
 	diagnostics			\
 	vacuum				\
 	refinement			\
+	postproc			\
 	tools
 
 LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
@@ -82,7 +83,8 @@ JOREK2_FOUR_SRC        = $(PPPSRC)
 # include the description for each module
 include $(patsubst %,%/module.mk,$(DIRS))
 
-SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC))
+SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
+  $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC))
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP))
 
@@ -120,6 +122,10 @@ JOREK2_FOUR_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) 	\
 			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))		\
 			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_FOUR_SRC)))
 
+JOREK2_POSTPROC_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
+
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
 
@@ -129,7 +135,7 @@ cleanall : clean cleandep
 
 clean :	
 	@echo ">> Deleting Object Files <<"
-	-@rm -f $(JOREK2_MAIN_OBJ) $(JOREK2_FOUR_OBJ)
+	-@rm -f $(JOREK2_MAIN_OBJ) $(JOREK2_FOUR_OBJ) $(JOREK2_POSTPROC_OBJ)
 	@echo ">> Deleting Module Files <<"
 	-@rm -f $(MOD_FILES)
 
@@ -211,6 +217,12 @@ jorek2_four : diagnostics/jorek2_four.f90 $(JOREK2_FOUR_OBJ)
 	diagnostics/jorek2_four.f90 \
 	$(JOREK2_FOUR_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_four $(INCLUDES) $(LIBS) $(LIBFFTW)
+
+jorek2_postproc : postproc/jorek2_postproc.f90 $(JOREK2_POSTPROC_OBJ)
+	$(FC) $(FFLAGS)                 \
+	postproc/jorek2_postproc.f90 \
+	$(JOREK2_POSTPROC_OBJ)		\
+	 -o $(JOREK_DIR)/jorek2_postproc $(INCLUDES) $(LIBS) $(LIBFFTW)
 
 jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
 	$(FC) $(FFLAGS_OMP)                  \

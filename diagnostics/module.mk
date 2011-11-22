@@ -26,6 +26,17 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	  \
 	$(DIR)/find_xpoint.f90            \
 	$(DIR)/mod_fourier.f90
 
+JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	  \
+	$(DIR)/boundary_check.f90         \
+	$(DIR)/flux_surface_add_line.f90  \
+	$(DIR)/flux_surface_add_point.f90 \
+	$(DIR)/psi_minmax.f90             \
+	$(DIR)/find_flux_surfaces.f90     \
+	$(DIR)/RZ_minmax.f90              \
+	$(DIR)/integrals.f90              \
+	$(DIR)/find_axis.f90              \
+	$(DIR)/find_xpoint.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 	\
 	$(DIR)/find_axis.f90			\
 	$(DIR)/find_xpoint.f90			\

@@ -11,6 +11,7 @@ jorek2_four
 jorek2_connection2
 jorek2_fieldlines_vtk
 jorek2_diagno
+jorek2_postproc
 jorek_to_helena
 import_eqdsk
 *.lst

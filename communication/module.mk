@@ -29,6 +29,12 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
 	$(DIR)/export_boundary.f90 		\
 	$(DIR)/import_restart.f90
 
+JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	\
+	$(DIR)/export_boundary.f90 		\
+	$(DIR)/broadcast_phys.f90 		\
+	$(DIR)/broadcast_num_profiles.f90	\
+	$(DIR)/import_restart.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/import_restart.f90
 

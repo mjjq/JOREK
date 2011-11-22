@@ -1,0 +1,3 @@
+  postproc/mod_parse_commands.o : convert_character.mod
+  postproc/mod_parse_commands.o : settings.mod
+parse_commands.mod :  postproc/mod_parse_commands.o

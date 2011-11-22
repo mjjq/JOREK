@@ -1,5 +1,5 @@
 !> Initialise input parameters and read the input namelist
-subroutine initialise_parameters(my_id)
+subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
@@ -11,7 +11,11 @@ use vacuum,        only: vacuum_preset
 implicit none
 
 ! --- Routine parameters
-integer, intent(in) :: my_id
+integer,                    intent(in) :: my_id
+character(len=*), optional, intent(in) :: filename
+
+! --- Local variables
+integer :: ierr
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
@@ -60,14 +64,21 @@ if (my_id .eq. 0) then
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
   
-  ! --- DoubleNull flag
-  xcase = 1
-  
   ! --- Model-specific presets
   ! -none-
   
   ! --- Read input parameters from namelist.
-  if (my_id .eq. 0) read(5,in1)
+  if ( present(filename) ) then
+    open(42, file=filename, status='old', action='read', iostat=ierr)
+    if ( ierr /= 0 ) then
+      write(*,*) 'ERROR: COULD NOT OPEN NAMELIST FILE "', trim(filename), '".'
+      stop
+    end if
+    read(42,in1)
+    close(42)
+  else
+    read(5,in1)
+  end if
   
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
@@ -78,7 +89,10 @@ if (my_id .eq. 0) then
     nstep_n(1) = nstep
   endif
   
+  if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(energies,1,n_tor,1,2,1,nstep,"energies",CAT_GRID)
+  
+  if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime",CAT_GRID)
 
   ! --- Read numerical profiles for rho, T, and ff'.

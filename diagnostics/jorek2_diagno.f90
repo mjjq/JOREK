@@ -27,7 +27,7 @@ my_id=0
 
 call initialise_parameters(my_id)
 
-call import_restart(node_list,element_list)
+call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period

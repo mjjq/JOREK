@@ -183,6 +183,9 @@ program JOREK2
   call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
   call r3_info_init ()
   
+  ! --- Initialize mode and mode_type arrays
+  call det_modes()
+  
   ! --- Remove file STOP_NOW if it exists
   if ( my_id == 0 ) then
     open(42, file='STOP_NOW', iostat=ierr)
@@ -260,7 +263,8 @@ program JOREK2
   if ( restart .and. (my_id == 0) ) then
     
     ! --- Read the restart file (jorek_restart.rst)
-    call import_restart(node_list, element_list)
+    call import_restart(node_list, element_list, 'jorek_restart.rst', ierr)
+    if ( ierr /= 0 ) stop
     
     ! --- Write live data for previous time-steps
     do index_now = 1, index_start

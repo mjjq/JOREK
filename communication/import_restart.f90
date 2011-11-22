@@ -1,18 +1,31 @@
-subroutine import_restart(node_list,element_list)
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+!> Imports a restart file written out by the routine export_restart.
+subroutine import_restart(node_list, element_list, filename, error)
+
 use tr_module 
 use data_structure
 use phys_module
+
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+! --- Routine parameters
+type(type_node_list),    intent(inout) :: node_list
+type(type_element_list), intent(inout) :: element_list
+character(len=*),        intent(in)    :: filename
+integer,                 intent(out)   :: error
+
+! --- Local variables
 integer :: i, j, n_tor_tmp
 real*8  :: growth_mag, growth_kin, eta_tmp, visco_tmp, visco_par_tmp, amplitude
 
-open(21,file='jorek_restart.rst', form='unformatted', status='old', action='read')
+error = 0
+
+write(*,*) 'Importing restart file "', trim(filename), '".'
+
+open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
+if ( error /= 0 ) then
+  write(*,*) '...failed!'
+  return
+end if
 
 read(21) n_tor_tmp
 

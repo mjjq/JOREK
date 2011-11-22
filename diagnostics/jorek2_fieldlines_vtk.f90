@@ -46,7 +46,7 @@ my_id=0
 
 call initialise_parameters(my_id)
 
-call import_restart(node_list,element_list)
+call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
 
 allocate(element_neighbours(4,element_list%n_elements))
 
@@ -122,20 +122,26 @@ write(*,*) ' number of elements : ',element_list%n_elements
 
 do i =n_start, n_end
 
+  if ( i_line .ge. n_lines ) cycle
+
   do k=1, nr
 
+    if ( i_line .ge. n_lines ) cycle
+    
     s_ini = real(k)/real(nr+1)
 
     do m=1, np
 
+      if ( i_line .ge. n_lines ) cycle
+            
       t_ini = real(m)/real(np+1)
 
       call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-            
-      if ((R_out .gt. 3.96) .and. (R_out .lt. 4.) .and. &
-          (Z_out .gt. -0.30) .and. (Z_out .lt. -0.25) .and. (i_line .lt. n_lines) ) then
+      
+      if ((R_out .gt. 2.117) .and. (R_out .lt. 2.123) .and. &
+          (Z_out .gt. 0.147) .and. (Z_out .lt. 0.173) .and. (i_line .lt. n_lines) ) then
 	  
-	  write(*,*) R_out,Z_out
+	  write(*,'(i6,2f7.3)') i_line, R_out,Z_out
 
       do i_dir = -1,1,2
 
@@ -147,7 +153,7 @@ do i =n_start, n_end
 
       delta_phi = 2.d0 * PI * float(i_dir) / float(n_period*n_phi)
 
-      call interp_RZ(node_list,element_list,i,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+      !call interp_RZ(node_list,element_list,i,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
              
 
       total_length = 0.d0

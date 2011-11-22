@@ -1,14 +1,23 @@
+!> Subroutine which defines the basis functions derived from a
+!! mixed Bezier/Cubic finite element representation.
+!!
+!! - index 1 : counts the vertex
+!! - index 2 : counts the variables (p,u,v,w)
+!! - the functions are defined on the interval [0,1][0,1]
+!! \see ::basisfunctions1 and ::basisfunctions2
 subroutine basisfunctions(s,t,H,H_s,H_t,H_st)
-!--------------------------------------------------------------
-! subroutine which defines the bass functions
-! derived from a mixed Bezier/Cubic finite element representation.
-!   index 1 : counts the vertex
-!   index 2 : counts the variables (p,u,v,w)
-!
-! the functions are defined on the interval [0,1][0,1]
-!----------------------------------------------------------------
+
 implicit none
-real*8 :: s, t, H(4,4), H_s(4,4), H_t(4,4), H_st(4,4)
+
+! --- Routine parameters
+real*8, intent(in)  :: s          !< s-coordinate in the element
+real*8, intent(in)  :: t          !< t-coordinate in the element
+real*8, intent(out) :: H(4,4)     !< Basis functions
+real*8, intent(out) :: H_s(4,4)   !< Basis functions derived with respect to s
+real*8, intent(out) :: H_t(4,4)   !< Basis functions derived with respect to t
+real*8, intent(out) :: H_st(4,4)  !< Basis functions derived with respect to s and t
+
+! --- Local variables
 real*8 :: scale1, dscale1_ds, dscale1_dt, dscale1_dsdt
 real*8 :: scale2, dscale2_ds, dscale2_dt, dscale2_dsdt
 real*8 :: scale3, dscale3_ds, dscale3_dt, dscale3_dsdt

@@ -18,12 +18,15 @@ program JOREK2_FOUR
   logical                  :: debug
   namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps, m_pol_range, debug
   
+  ! --- Initialize mode and mode_type arrays
+  call det_modes()
+  
   ! --- Initialization
   write(*,*)
   write(*,*) '>>> Initialization <<<'
   call initialise_parameters(0)                 ! default values and namelist input
   call initialise_basis                         ! define the basis functions at the Gaussian points
-  call import_restart(node_list,element_list)   ! read restart file
+  call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)   ! read restart file
   !   --- Preset field line tracing parameters.
   nstpts      = 30
   nmaxsteps   = 2500

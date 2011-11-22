@@ -1,0 +1,19 @@
+!> Fill the mode and mode_type arrays.
+subroutine det_modes()
+  
+  use parameters,  only: n_tor, n_period
+  use phys_module, only: mode, mode_type
+  
+  integer :: itor
+  
+  ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).
+  do itor=1, n_tor
+    mode(itor)        = int(itor / 2) * n_period
+    if ( (itor==1) .or. (mod(itor,2)==0) ) then
+      mode_type(itor) = 'cos'
+    else
+      mode_type(itor) = 'sin'
+    end if
+  end do
+  
+end subroutine det_modes

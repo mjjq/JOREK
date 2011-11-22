@@ -641,24 +641,24 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      call tr_ALLOCATEp(RECV_MATRICES,1,harm_size**2,&
           1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
           1, thread_nbr, &
-          1, (n_tor+1)/2, "RECV_MATRICES")
+          1, (n_tor+1)/2, "RECV_MATRICES",CAT_DMATRIX)
      call tr_ALLOCATEp(SEND_MATRICES, 1, harm_size**2,&
           1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
           1, thread_nbr, &
-          1, (n_tor+1)/2, "SEND_MATRICES") 
+          1, (n_tor+1)/2, "SEND_MATRICES",CAT_DMATRIX) 
      call tr_ALLOCATEp(RECV_COLROW, 1, 2, &
           1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
           1, thread_nbr, &
-          1, (n_tor+1)/2, "RECV_COLROW")
+          1, (n_tor+1)/2, "RECV_COLROW",CAT_DMATRIX)
   END IF
   call tr_ALLOCATEp(PROD_MATRICES,1,(n_tor*n_var)**2, &
        1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
-       1, thread_nbr, "PROD_MATRICES")
+       1, thread_nbr, "PROD_MATRICES",CAT_DMATRIX)
   call tr_ALLOCATEp(PROD_COLROW, 1, 2, &
        1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1), &
-       1, thread_nbr, "PROD_COLROW")
-  call tr_ALLOCATEp(matrix_nbr,1,thread_nbr, "matrix_nbr")
-  call tr_ALLOCATEp(matrix_nbr_rcv,1,thread_nbr,1,(n_tor+1)/2,"matrix_nbr_rcv")
+       1, thread_nbr, "PROD_COLROW",CAT_DMATRIX)
+  call tr_ALLOCATEp(matrix_nbr,1,thread_nbr, "matrix_nbr",CAT_DMATRIX)
+  call tr_ALLOCATEp(matrix_nbr_rcv,1,thread_nbr,1,(n_tor+1)/2,"matrix_nbr_rcv",CAT_DMATRIX)
   
   if (my_id .eq. 0) then
      WRITE(*,*) '****************************************'
@@ -666,7 +666,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      WRITE(*,*) '****************************************'
   end if
 
-  IF (ALLOCATED(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob")
+  IF (ALLOCATED(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   IF (.NOT. gmres) THEN
      column_number = ndof_glob
   ELSE
@@ -677,10 +677,10 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      END IF
   END IF
 
-  call tr_allocate(rhs_glob,1,ndof_glob,"rhs_glob")
+  call tr_allocate(rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
 
-  call tr_allocatep(rhs_loc,1,ndof_glob,"rhs_loc")
-  call tr_allocatep(rhs_loc_thread,1,ndof_glob,1,thread_nbr,"rhs_loc_thread")
+  call tr_allocatep(rhs_loc,1,ndof_glob,"rhs_loc",CAT_DMATRIX)
+  call tr_allocatep(rhs_loc_thread,1,ndof_glob,1,thread_nbr,"rhs_loc_thread",CAT_DMATRIX)
 
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
@@ -841,9 +841,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   !     performed.
 
   Allocate(datas(thread_nbr))
-  call tr_register_mem(sizeof(datas),"datas")
+  call tr_register_mem(sizeof(datas),"datas",CAT_DMATRIX)
   Allocate(threads(thread_nbr))
-  call tr_register_mem(sizeof(threads),"threads")
+  call tr_register_mem(sizeof(threads),"threads",CAT_DMATRIX)
   Do iter = 1, thread_nbr
      !print *, "iter", iter
      datas(iter)%thread_num          = iter
@@ -929,20 +929,20 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
      print *, "ERROR in MURGE call(s)"
      call abort()
   end if
-  call tr_unregister_mem(sizeof(datas),"datas")
+  call tr_unregister_mem(sizeof(datas),"datas",CAT_DMATRIX)
   deallocate(datas)
-  call tr_unregister_mem(sizeof(threads),"threads")
+  call tr_unregister_mem(sizeof(threads),"threads",CAT_DMATRIX)
   deallocate(threads)
 
   IF (gmres .AND. .NOT. solve_only) THEN
-     call tr_deallocatep(send_matrices,"send_matrices")
-     call tr_deallocatep(recv_matrices,"recv_matrices")
-     call tr_deallocatep(recv_colrow,"recv_colrow")
+     call tr_deallocatep(send_matrices,"send_matrices",CAT_DMATRIX)
+     call tr_deallocatep(recv_matrices,"recv_matrices",CAT_DMATRIX)
+     call tr_deallocatep(recv_colrow,"recv_colrow",CAT_DMATRIX)
   END IF
-  call tr_deallocatep(prod_matrices,"prod_matrices")
-  call tr_deallocatep(prod_colrow,"prod_colrow")
-  call tr_deallocatep(matrix_nbr, "matrix_nbr")
-  call tr_deallocatep(matrix_nbr_rcv, "matrix_nbr_rcv")
+  call tr_deallocatep(prod_matrices,"prod_matrices",CAT_DMATRIX)
+  call tr_deallocatep(prod_colrow,"prod_colrow",CAT_DMATRIX)
+  call tr_deallocatep(matrix_nbr, "matrix_nbr",CAT_DMATRIX)
+  call tr_deallocatep(matrix_nbr_rcv, "matrix_nbr_rcv",CAT_DMATRIX)
   CALL SYSTEM_CLOCK(count=t1)
 #ifdef PLENTY_TIMERS
   CALL MPI_Reduce(nb_periods_ass_max, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
@@ -1045,8 +1045,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   end if
 
   IF (gmres .AND. .NOT. solve_only) THEN
-     IF (ASSOCIATED(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
-     call tr_allocatep(mumps_par%rhs,1,column_number,"mumps_par%rhs")
+     IF (ASSOCIATED(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
+     call tr_allocatep(mumps_par%rhs,1,column_number,"mumps_par%rhs",CAT_DMATRIX)
      mumps_par%n = column_number
      mumps_par%rhs = 0.d0
 
@@ -1063,8 +1063,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   END IF
 
   IF (.NOT. gmres) THEN
-     IF(ALLOCATED(column_scaling))   call tr_deallocate(column_scaling,"column_scaling")
-     call tr_allocate(column_scaling,1,column_number,"column_scaling")
+     IF(ALLOCATED(column_scaling))   call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+     call tr_allocate(column_scaling,1,column_number,"column_scaling",CAT_DMATRIX)
 #ifdef USE_MURGE
      CALL MURGE_GetGlobalNorm(murge_id, column_scaling, -1, MURGE_NORM_MAX_COL, ierr)
      CALL MURGE_ApplyGlobalScaling(murge_id, column_scaling, -1, MURGE_SCAL_COL, ierr)
@@ -1080,8 +1080,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   !WRITE (10,*) RHS_glob
   !CLOSE(10)
 
-  call tr_deallocatep(RHS_loc,"RHS_loc")
-  call tr_deallocatep(RHS_loc_thread,"RHS_loc_thread")
+  call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
+  call tr_deallocatep(RHS_loc_thread,"RHS_loc_thread",CAT_DMATRIX)
 
   RETURN
 END SUBROUTINE construct_matrix_murge

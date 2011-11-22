@@ -73,8 +73,8 @@ if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
 endif
     
 surface_list%n_psi =3
-if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
-call tr_allocate(surface_list%psi_values,1,3,"surface_list%psi_values")
+if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
+call tr_allocate(surface_list%psi_values,1,3,"surface_list%psi_values",CAT_GRID)
 surface_list%psi_values = 0 ! XL : uninitialised value.
 
 if (xpoint) then
@@ -108,8 +108,8 @@ j=3
 
 psi_bnd = surface_list%psi_values(j)
 
-call tr_allocate(rplot,1,surface_list%flux_surfaces(j)%n_pieces * nplot,"rplot")
-call tr_allocate(zplot,1,surface_list%flux_surfaces(j)%n_pieces * nplot,"zplot")
+call tr_allocate(rplot,1,surface_list%flux_surfaces(j)%n_pieces * nplot,"rplot",CAT_GRID)
+call tr_allocate(zplot,1,surface_list%flux_surfaces(j)%n_pieces * nplot,"zplot",CAT_GRID)
 
 Rmin =  1.d20
 Rmax = -1.d20
@@ -166,8 +166,8 @@ write(11,*)          n_bnd
 do i=1,n_bnd
   write(11,*) rplot(i),zplot(i)
 enddo
-call tr_deallocate(rplot,"rplot")
-call tr_deallocate(zplot,"zplot")
+call tr_deallocate(rplot,"rplot",CAT_GRID)
+call tr_deallocate(zplot,"zplot",CAT_GRID)
 
 aminor = (Rmax - Rmin) /2.d0
 Rgeo   = (Rmax + Rmin) /2.d0
@@ -186,8 +186,8 @@ write(11,*) current,beta_p,beta_t,beta_n
 n_flux = 201
 
 surface_list%n_psi =n_flux
-if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
-call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
+if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
+call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
 
 do i=1,n_flux
   s_value = float(i)/float(n_flux)

@@ -33,7 +33,7 @@ write(*,*) ' number of boundary elements : ',boundary_list%n_bnd_elements
 write(*,*) ' number of nodes             : ',node_list%n_nodes
 write(*,*) ' bezier                      : ',bezier
 
-call tr_allocate(xp,1,node_list%n_nodes,1,n_dim,"xp")
+call tr_allocate(xp,1,node_list%n_nodes,1,n_dim,"xp",CAT_GRID)
 
 do i=1,node_list%n_nodes
  xp(i,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
@@ -95,12 +95,12 @@ call lincol(0)
 !return
 
 !------------------------------ plot the curved boundaries
-call tr_deallocate(xp,"xp")
+call tr_deallocate(xp,"xp",CAT_GRID)
 
 
 np = 11
 
-call tr_allocate(xp,1,np,1,n_dim,"xp")
+call tr_allocate(xp,1,np,1,n_dim,"xp",CAT_GRID)
 
 iplot = 0
 
@@ -189,12 +189,12 @@ enddo
 
 call lincol(0)
 
-call tr_deallocate(xp,"xp")
+call tr_deallocate(xp,"xp",CAT_GRID)
 
 if (.not. bezier) return
 
 !------------------------------ plot the Bezier points
-call tr_allocate(xp,1,12*element_list%n_elements,1,n_dim,"xp")
+call tr_allocate(xp,1,12*element_list%n_elements,1,n_dim,"xp",CAT_GRID)
 
 iplot = 0
 
@@ -223,7 +223,7 @@ call lincol(1)
 !call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
 call pplot(11,11,xp(:,1),xp(:,2),iplot,1)
 
-call tr_deallocate(xp,"xp")
+call tr_deallocate(xp,"xp",CAT_GRID)
 
 
 return

@@ -91,14 +91,14 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   enddo
 
-  if (.not. allocated(A_glob))    call tr_allocate(A_glob,1,nz_glob,"A_glob")
-  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob")
-  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob")
+  if (.not. allocated(A_glob))    call tr_allocate(A_glob,1,nz_glob,"A_glob",CAT_DMATRIX)
+  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
+  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob",CAT_DMATRIX)
 
-  if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob")
+  if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
 
-  call tr_allocate(rhs_glob,1,ndof_glob,"rhs_glob")
-  call tr_allocatep(rhs_loc,1,ndof_glob,"rhs_loc")
+  call tr_allocate(rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
+  call tr_allocatep(rhs_loc,1,ndof_glob,"rhs_loc",CAT_DMATRIX)
 
   irn_glob = 0
   jcn_glob = 0
@@ -304,7 +304,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-  call tr_deallocatep(RHS_loc,"RHS_loc")
+  call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &

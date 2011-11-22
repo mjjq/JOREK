@@ -34,10 +34,10 @@ call MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER,MPI_SUM,MPI_COMM_
 !------------------------------------------------------- colunm scaling of global distributed matrix
 call cpu_time(t_scale_0)
 
-if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling")
-if (allocated(column_local))    call tr_deallocate(column_local,"column_local")
-call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling")
-call tr_allocate(column_local,1,mumps_par%N,"column_local")
+if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+if (allocated(column_local))    call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
+call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling",CAT_DMATRIX)
+call tr_allocate(column_local,1,mumps_par%N,"column_local",CAT_DMATRIX)
 
 column_local = 1.d-20;   column_scaling = 1.d-20
 do k=1,nz_glob
@@ -59,11 +59,11 @@ if (my_id .eq. 0)  write(*,'(A,f8.3)') ' PASTIX, scale     : ',t_scale_1-t_scale
 call cpu_time(t_comm_0)
 
 !------------------------------------------------------ collect the distributed matrix onto all procs
-if (allocated(counts))        call tr_deallocate(counts,"counts")
-if (allocated(displacements)) call tr_deallocate(displacements,"displacements")
+if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
+if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
 
-call tr_allocate(counts,1,n_cpu,"counts")
-call tr_allocate(displacements,1,n_cpu,"displacements")
+call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
+call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
 
 call MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER,counts,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
@@ -72,15 +72,15 @@ do i=2,n_cpu
   displacements(i) = displacements(i-1) + counts(i-1)
 enddo
 
-if (associated(mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN")
-if (associated(mumps_par%JCN)) call tr_deallocatep(mumps_par%JCN,"mumps_par%JCN")
-if (associated(mumps_par%A) )  call tr_deallocatep(mumps_par%A,"mumps_par%A")
-if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
+if (associated(mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
+if (associated(mumps_par%JCN)) call tr_deallocatep(mumps_par%JCN,"mumps_par%JCN",CAT_DMATRIX)
+if (associated(mumps_par%A) )  call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
 
-call tr_allocatep(mumps_par%IRN,1,mumps_par%nz,"mumps_par%IRN")
-call tr_allocatep(mumps_par%JCN,1,mumps_par%nz,"mumps_par%JCN")
-call tr_allocatep(mumps_par%A,1,mumps_par%nz,"mumps_par%A")
-call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs")
+call tr_allocatep(mumps_par%IRN,1,mumps_par%nz,"mumps_par%IRN",CAT_DMATRIX)
+call tr_allocatep(mumps_par%JCN,1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
+call tr_allocatep(mumps_par%A,1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
+call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
 call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%IRN, &
                     counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -114,8 +114,8 @@ allocate(sparskit_work(n_block+1))
 
 call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
 
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars")
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars")
+if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
 
 #else
 
@@ -124,8 +124,8 @@ allocate(sparskit_work(mumps_par%N + 1))
 
 call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
 
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars")
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars")
+if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 
 #endif
 
@@ -254,9 +254,9 @@ do k=1,mumps_par%n
   deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
 enddo
 
-if (allocated(column_local))  call tr_deallocate(column_local,"column_local")
-if (allocated(counts))        call tr_deallocate(counts,"counts")
-if (allocated(displacements)) call tr_deallocate(displacements,"displacements")
+if (allocated(column_local))  call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
+if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
+if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
 
 return
 end

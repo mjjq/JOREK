@@ -22,16 +22,16 @@ write(*,*) '***************************************'
 write(*,*) '*   reduce from coordinate to CSC     *'
 write(*,*) '***************************************'
 
-call tr_allocate(JCOL,1,NZ,"JCOL")
-call tr_allocate(IJold,1,NZ,"IJold")
+call tr_allocate(JCOL,1,NZ,"JCOL",CAT_DMATRIX)
+call tr_allocate(IJold,1,NZ,"IJold",CAT_DMATRIX)
 
 irn_min = minval(IRN(1:NZ))  ! distributed matrices do not necesarily start at 1
 irn_max = maxval(IRN(1:NZ))
 
 nrows = irn_max - irn_min + 1
-call tr_allocate(itot,1,nrows,"itot")
-call tr_allocate(ipos,1,nrows,"ipos")
-call tr_allocate(istart,1,nrows+1,"istart")
+call tr_allocate(itot,1,nrows,"itot",CAT_DMATRIX)
+call tr_allocate(ipos,1,nrows,"ipos",CAT_DMATRIX)
+call tr_allocate(istart,1,nrows+1,"istart",CAT_DMATRIX)
 
 itot = 0
 do i=1,NZ
@@ -56,14 +56,14 @@ do i=1,nz
 enddo
 n_IRNK = maxval(itot)
 
-call tr_deallocate(itot,"itot")
-call tr_deallocate(ipos,"ipos")
+call tr_deallocate(itot,"itot",CAT_DMATRIX)
+call tr_deallocate(ipos,"ipos",CAT_DMATRIX)
 
 !-------------- combine multiple entries
-call tr_allocate(IRNK,1,n_IRNK,"IRNK")
-call tr_allocate(Anew,1,NZ,"Anew")
-call tr_allocate(Inew,1,NZ,"Inew")
-call tr_allocate(Jnew,1,NZ,"Jnew")
+call tr_allocate(IRNK,1,n_IRNK,"IRNK",CAT_DMATRIX)
+call tr_allocate(Anew,1,NZ,"Anew",CAT_DMATRIX)
+call tr_allocate(Inew,1,NZ,"Inew",CAT_DMATRIX)
+call tr_allocate(Jnew,1,NZ,"Jnew",CAT_DMATRIX)
 
 anew      = 0.
 index_new = 0
@@ -113,12 +113,12 @@ do k=1,nznew
   JCN(k) = JNEW(k)
 enddo
 
-call tr_deallocate(JCOL,"JCOL")
-call tr_deallocate(IJold,"IJold")
-call tr_deallocate(ISTART,"ISTART")
-call tr_deallocate(IRNK,"IRNK")
-call tr_deallocate(Anew,"Anew")
-call tr_deallocate(Inew,"Inew")
-call tr_deallocate(Jnew,"Jnew")
+call tr_deallocate(JCOL,"JCOL",CAT_DMATRIX)
+call tr_deallocate(IJold,"IJold",CAT_DMATRIX)
+call tr_deallocate(ISTART,"ISTART",CAT_DMATRIX)
+call tr_deallocate(IRNK,"IRNK",CAT_DMATRIX)
+call tr_deallocate(Anew,"Anew",CAT_DMATRIX)
+call tr_deallocate(Inew,"Inew",CAT_DMATRIX)
+call tr_deallocate(Jnew,"Jnew",CAT_DMATRIX)
 
 end

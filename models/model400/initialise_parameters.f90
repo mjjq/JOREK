@@ -108,8 +108,8 @@ if (my_id .eq. 0) then
     nstep_n(1) = nstep
   endif
   
-  if (nstep .gt. 0) call tr_allocate(energies,1,n_tor,1,2,1,nstep,"energies")
-  if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime")
+  if (nstep .gt. 0) call tr_allocate(energies,1,n_tor,1,2,1,nstep,"energies",CAT_GRID)
+  if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime",CAT_GRID)
 
   ! --- Read numerical profiles for rho, T, and ff'.
   call read_num_profiles()

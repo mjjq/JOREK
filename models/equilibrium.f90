@@ -335,14 +335,14 @@ if ((xpoint2)) then
   if (xcase2 .eq. 1) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_private
   if (xcase2 .eq. 2) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_up_priv
   if (xcase2 .eq. 3) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_outer + 2*n_inner + 2*n_private + 2*n_up_priv
-  if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
-  call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
+  if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
+  call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
   
   ! Allocate sep_list structure (that's for plotting only)  
   sep_list%n_psi =3
   if(xcase .eq. 3) sep_list%n_psi =6
-  if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values")
-  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values")
+  if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
+  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   
   ! Define the flux values to be plotted...
   psi_axis = psi_axis+0.01 !Just offset a little, because finding surfaces along the side of an element (on the xpoint grid) can be hard...
@@ -352,8 +352,8 @@ if ((xpoint2)) then
   
 else
   surface_list%n_psi = 200  
-  if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
-  call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
+  if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
+  call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
   
   do i = 1, surface_list%n_psi
     surface_list%psi_values(i) = (float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis) + psi_axis
@@ -363,8 +363,8 @@ else
 
   sep_list%n_psi =1
   if(xcase2 .eq. 3) sep_list%n_psi =2
-  if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values")
-  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values")
+  if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
+  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   sep_list%psi_values(1) = psi_bnd
   if(xcase2 .eq. 3) then
     sep_list%psi_values(1) = psi_xpoint(1)
@@ -389,9 +389,9 @@ endif
   
 call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 
-if (allocated(surface_list%psi_values))    call tr_deallocate(surface_list%psi_values,"surface_list%psi_values")
+if (allocated(surface_list%psi_values))    call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
 if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)
-if (allocated(sep_list%psi_values))        call tr_deallocate(sep_list%psi_values,"sep_list%psi_values")
+if (allocated(sep_list%psi_values))        call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
 if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
  
 return

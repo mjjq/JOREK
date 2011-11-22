@@ -44,9 +44,9 @@ if (my_id < M_cpu) ifactor = 1
 
 if (my_id .eq. 0) then
 
-  call tr_allocate(Rsnd_buffer,1,n_dof,"Rsnd_buffer")
-  call tr_allocate(send_counts,1,n_cpu/M_cpu,"send_counts")
-  call tr_allocate(send_disp,1,n_cpu/M_cpu,"send_disp")
+  call tr_allocate(Rsnd_buffer,1,n_dof,"Rsnd_buffer",CAT_GMRES)
+  call tr_allocate(send_counts,1,n_cpu/M_cpu,"send_counts",CAT_GMRES)
+  call tr_allocate(send_disp,1,n_cpu/M_cpu,"send_disp",CAT_GMRES)
   Rsnd_buffer(1:n_loc_n) = x(1:n_dof:n_tor)
 
   do in=2, (n_tor+1)/2
@@ -70,16 +70,16 @@ if (my_id .eq. 0) then
 
   enddo
 else
-  call tr_allocate(Rsnd_buffer,1,1,"Rsnd_buffer")
-  call tr_allocate(send_counts,1,1,"send_counts")
-  call tr_allocate(send_disp,1,1,"send_disp")
+  call tr_allocate(Rsnd_buffer,1,1,"Rsnd_buffer",CAT_GMRES)
+  call tr_allocate(send_counts,1,1,"send_counts",CAT_GMRES)
+  call tr_allocate(send_disp,1,1,"send_disp",CAT_GMRES)
 endif
 
-if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
+if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
 
 if (my_id_n .eq. 0) then
 
-  call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs")
+  call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs",CAT_DMATRIX)
 
   call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
                     mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
@@ -104,9 +104,9 @@ if (my_id_n .eq. 0) then
 endif
 
 
-call tr_deallocate(Rsnd_buffer,"Rsnd_buffer")
-call tr_deallocate(send_counts,"send_counts")
-call tr_deallocate(send_disp,"send_disp")
+call tr_deallocate(Rsnd_buffer,"Rsnd_buffer",CAT_GMRES)
+call tr_deallocate(send_counts,"send_counts",CAT_GMRES)
+call tr_deallocate(send_disp,"send_disp",CAT_GMRES)
 
 
 if (use_mumps) then
@@ -119,7 +119,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 
    if (.not. associated(mumps_par%rhs)) then
       !    write(*,*) ' gmres: RHS not allocated!',my_id, my_id_n
-      call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs")
+      call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs",CAT_DMATRIX)
    endif
    
    if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
@@ -179,9 +179,9 @@ endif
 
 if (my_id_n .eq. 0) then
 
-  call tr_allocate(y_tmp,1,n_dof,"y_tmp")
-  call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts")
-  call tr_allocate(recv_disp,1,n_cpu/M_cpu,"recv_disp")
+  call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES)
+  call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts",CAT_GMRES)
+  call tr_allocate(recv_disp,1,n_cpu/M_cpu,"recv_disp",CAT_GMRES)
 
   y_tmp(1:n_dof) = 0.d0
 
@@ -229,9 +229,9 @@ if (my_id_n .eq. 0) then
 
   endif
 
-  call tr_deallocate(y_tmp,"y_tmp")
-  call tr_deallocate(recv_counts,"recv_counts")
-  call tr_deallocate(recv_disp,"recv_disp")
+  call tr_deallocate(y_tmp,"y_tmp",CAT_GMRES)
+  call tr_deallocate(recv_counts,"recv_counts",CAT_GMRES)
+  call tr_deallocate(recv_disp,"recv_disp",CAT_GMRES)
 endif
 
 call cpu_time(t2)

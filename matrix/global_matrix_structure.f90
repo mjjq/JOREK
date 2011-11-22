@@ -40,8 +40,8 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   n_max = 1536
 
-  call tr_allocate(ijA_size,1,index_max-index_min+1,"ijA_size")
-  call tr_allocate(irn_jcn,1,index_max-index_min+1,1,n_max,"irn_jcn")
+  call tr_allocate(ijA_size,1,index_max-index_min+1,"ijA_size",CAT_DMATRIX)
+  call tr_allocate(irn_jcn,1,index_max-index_min+1,1,n_max,"irn_jcn",CAT_DMATRIX)
 
   ijA_size    = 0
   irn_jcn = 0
@@ -229,7 +229,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
      enddo              ! end loop over boundary elements (ibnd)
   endif                ! check if free boundary on
 
-  call tr_allocate(ijA_index,1,index_max-index_min+1,1,n_max,"ijA_index")
+  call tr_allocate(ijA_index,1,index_max-index_min+1,1,n_max,"ijA_index",CAT_DMATRIX)
 
   ibase = 0
   do i=1,index_max-index_min+1

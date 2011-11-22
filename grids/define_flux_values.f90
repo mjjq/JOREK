@@ -69,7 +69,7 @@ if(xcase .eq. 3) then
 endif
 
 !-------------------------------- Closed flux surfaces
-call tr_allocate(s_tmp,1,n_flux+1,"s_tmp")
+call tr_allocate(s_tmp,1,n_flux+1,"s_tmp",CAT_GRID)
 s_tmp = 0
 j     = 0
 call meshac2(n_flux+1,s_tmp,1.d0,9999.d0,SIG_closed,9999.d0,0.2d0,1.0d0)
@@ -77,11 +77,11 @@ do i=1,n_flux
   flux_list%psi_values(i+j) = psi_axis + (psi_bnd - psi_axis) * s_tmp(i+1)**2
 enddo
 flux_list%psi_values(n_flux) = psi_bnd
-call tr_deallocate(s_tmp,"s_tmp")
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 
 !-------------------------------- Open flux surfaces (in case of single-null)
 !-------------------------------- OR Sandwich flux surfaces (in case of double-null) - in between the two separatrices
-call tr_allocate(s_tmp,1,n_open+1,"s_tmp")
+call tr_allocate(s_tmp,1,n_open+1,"s_tmp",CAT_GRID)
 s_tmp = 0
 j     = n_flux
 if(xcase .ne. 3) then
@@ -96,54 +96,54 @@ else
   enddo
   flux_list%psi_values(n_flux+n_open) = psi_bnd2
 endif
-call tr_deallocate(s_tmp,"s_tmp")
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 
 !-------------------------------- Outer open flux surfaces (in case of double-null)
 if(xcase .eq. 3) then
-  call tr_allocate(s_tmp,1,n_outer+1,"s_tmp")
+  call tr_allocate(s_tmp,1,n_outer+1,"s_tmp",CAT_GRID)
   s_tmp = 0
   j     = n_flux+n_open
   call meshac2(n_outer+1,s_tmp,0.d0,9999.d0,SIG_outer,9999.d0,0.6d0,1.0d0)
   do i=1,n_outer
     flux_list%psi_values(i+j) = psi_axis + (psi_bnd2 - psi_axis) * (1.d0 + dPSI_outer*s_tmp(i+1))**2
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 endif
 
 !-------------------------------- Inner open flux surfaces (in case of double-null)
 if(xcase .eq. 3) then
-  call tr_allocate(s_tmp,1,n_inner+1,"s_tmp")
+  call tr_allocate(s_tmp,1,n_inner+1,"s_tmp",CAT_GRID)
   s_tmp = 0
   j     = n_flux+n_open+n_outer
   call meshac2(n_inner+1,s_tmp,0.d0,9999.d0,SIG_inner,9999.d0,0.6d0,1.0d0)
   do i=1,n_inner
     flux_list%psi_values(i+j) = psi_axis + (psi_bnd2 - psi_axis) * (1.d0 + dPSI_inner*s_tmp(i+1))**2
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 endif
 
 !-------------------------------- Lower private flux surfaces
 if(xcase .ne. 2) then
-  call tr_allocate(s_tmp,1,n_private+1,"s_tmp")
+  call tr_allocate(s_tmp,1,n_private+1,"s_tmp",CAT_GRID)
   s_tmp = 0
   j     = n_flux+n_open+n_outer+n_inner
   call meshac2(n_private+1,s_tmp,0.d0,9999.d0,SIG_private,9999.d0,0.6d0,1.0d0)
   do i=1,n_private
     flux_list%psi_values(i+j) = psi_axis + (psi_xpoint(1) - psi_axis) * (1.d0 - dPSI_private*s_tmp(i+1))**2
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 endif
 
 !-------------------------------- Upper private flux surfaces
 if(xcase .ne. 1) then
-  call tr_allocate(s_tmp,1,n_up_priv+1,"s_tmp")
+  call tr_allocate(s_tmp,1,n_up_priv+1,"s_tmp",CAT_GRID)
   s_tmp = 0
   j     = n_flux+n_open+n_outer+n_inner+n_private
   call meshac2(n_up_priv+1,s_tmp,0.d0,9999.d0,SIG_up_priv,9999.d0,0.6d0,1.0d0)
   do i=1,n_up_priv
     flux_list%psi_values(i+j) = psi_axis + (psi_xpoint(2) - psi_axis) * (1.d0 - dPSI_up_priv*s_tmp(i+1))**2
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 endif
 
 !-------------------------------- Plot separatrices with different colours

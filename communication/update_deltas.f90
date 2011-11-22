@@ -11,7 +11,7 @@ integer               :: my_id, i, j, k, in, index, index_node
 type (type_node_list) :: node_list
 
 if (.not. allocated(deltas)) then
-  call tr_allocate(deltas,1,node_list%n_dof,"deltas")
+  call tr_allocate(deltas,1,node_list%n_dof,"deltas",CAT_FEM)
   deltas = 0.d0
 endif
 

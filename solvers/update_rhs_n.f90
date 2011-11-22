@@ -25,13 +25,13 @@ end interface
 
 !write(*,*) my_id,my_id_n,' starting update_rhs'
 
-call tr_allocate(rhs_delta,1,ndof_glob,"rhs_delta")             ! size could be zero when my_id .gt.0 but needs to be allocated
+call tr_allocate(rhs_delta,1,ndof_glob,"rhs_delta",CAT_PRECOND)             ! size could be zero when my_id .gt.0 but needs to be allocated
 
 rhs_delta(1:ndof_glob) = 0.d0
 
 if (my_id_n .eq.0) then
-  call tr_allocate(rhs_delta_n,1,mumps_par%n,"rhs_delta_n")
-  call tr_allocate(deltas_n,1,mumps_par%n,"deltas_n")
+  call tr_allocate(rhs_delta_n,1,mumps_par%n,"rhs_delta_n",CAT_PRECOND)
+  call tr_allocate(deltas_n,1,mumps_par%n,"deltas_n",CAT_PRECOND)
   rhs_delta_n(1:mumps_par%n) = 0.d0
   deltas_n(1:mumps_par%n)    = 0.d0
 endif
@@ -55,10 +55,10 @@ if (my_id_n .eq. 0) then              ! rhs lives only on masters
 
 endif
 
-call tr_deallocate(rhs_delta,"rhs_delta")
+call tr_deallocate(rhs_delta,"rhs_delta",CAT_PRECOND)
 if (my_id_n .eq.0) then
-   call tr_deallocate(rhs_delta_n,"rhs_delta_n")
-   call tr_deallocate(deltas_n,"deltas_n")
+   call tr_deallocate(rhs_delta_n,"rhs_delta_n",CAT_PRECOND)
+   call tr_deallocate(deltas_n,"deltas_n",CAT_PRECOND)
 end if
 
 return

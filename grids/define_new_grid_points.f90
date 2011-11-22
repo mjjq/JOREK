@@ -86,14 +86,14 @@ nwpts%k_cross = 0
 n_psi   = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv + 1   ! this includes the magnetic axis
 n_tht_2 = n_tht + 2*n_leg + 2*n_up_leg
 
-call tr_allocate(theta_sep,1,n_tht_2,"theta_sep")
+call tr_allocate(theta_sep,1,n_tht_2,"theta_sep",CAT_GRID)
   
 if (xcase .ne. 3) then 
   if (xcase .eq. 1) tht_x1 = atan2(Z_xpoint(1)-Z_axis,R_xpoint(1)-R_axis)
   if (xcase .eq. 2) tht_x1 = atan2(Z_xpoint(2)-Z_axis,R_xpoint(2)-R_axis)
   n_tht_mid = n_tht/2
   
-  call tr_allocate(s_tmp,1,n_tht,"s_tmp")
+  call tr_allocate(s_tmp,1,n_tht,"s_tmp",CAT_GRID)
   s_tmp = 0
   call meshac2(n_tht,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
@@ -102,7 +102,7 @@ if (xcase .ne. 3) then
     if (theta_sep(j) .lt. 0.d0)    theta_sep(j) = theta_sep(j) + 2.d0 * PI
     if (theta_sep(j) .gt. 2.d0*PI) theta_sep(j) = theta_sep(j) - 2.d0 * PI
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   
 else
   if (psi_xpoint(1) .le. psi_xpoint(2)) then
@@ -123,7 +123,7 @@ else
     if(mod(n_tht_mid,2) .eq. 0) n_tht_mid = n_tht_mid + 1
     n_grids(10) = n_tht_mid
     
-    call tr_allocate(s_tmp,1,n_tht_mid,"s_tmp")
+    call tr_allocate(s_tmp,1,n_tht_mid,"s_tmp",CAT_GRID)
     s_tmp = 0
     call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
@@ -132,10 +132,10 @@ else
       if (theta_sep(j) .lt. 0.d0)    theta_sep(j) = theta_sep(j) + 2.d0 * PI
       if (theta_sep(j) .gt. 2.d0*PI) theta_sep(j) = theta_sep(j) - 2.d0 * PI
     enddo
-    call tr_deallocate(s_tmp,"s_tmp")
+    call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   
     n_tht_mid2 = n_tht-n_tht_mid
-    call tr_allocate(s_tmp,1,n_tht_mid2,"s_tmp")
+    call tr_allocate(s_tmp,1,n_tht_mid2,"s_tmp",CAT_GRID)
     s_tmp = 0
     call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
@@ -144,14 +144,14 @@ else
       if (theta_sep(j) .lt. 0.d0)    theta_sep(j) = theta_sep(j) + 2.d0 * PI
       if (theta_sep(j) .gt. 2.d0*PI) theta_sep(j) = theta_sep(j) - 2.d0 * PI
     enddo
-    call tr_deallocate(s_tmp,"s_tmp")
+    call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   else
     n_tht_mid = int(n_tht * (tht_x2 - tht_x1) / (2.d0*PI))
     ! Make sure n_tht_mid is odd and save it to n_grids for later use
     if(mod(n_tht_mid,2) .eq. 0) n_tht_mid = n_tht_mid + 1
     n_grids(10) = n_tht_mid
     
-    call tr_allocate(s_tmp,1,n_tht_mid,"s_tmp")
+    call tr_allocate(s_tmp,1,n_tht_mid,"s_tmp",CAT_GRID)
     s_tmp = 0
     call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
     do j=1,n_tht_mid
@@ -159,10 +159,10 @@ else
       if (theta_sep(j) .lt. 0.d0)    theta_sep(j) = theta_sep(j) + 2.d0 * PI
       if (theta_sep(j) .gt. 2.d0*PI) theta_sep(j) = theta_sep(j) - 2.d0 * PI
     enddo
-    call tr_deallocate(s_tmp,"s_tmp")
+    call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 
     n_tht_mid2 = n_tht-n_tht_mid
-    call tr_allocate(s_tmp,1,n_tht_mid2,"s_tmp")
+    call tr_allocate(s_tmp,1,n_tht_mid2,"s_tmp",CAT_GRID)
     s_tmp = 0
     call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
     do j=n_tht_mid+1,n_tht
@@ -170,7 +170,7 @@ else
       if (theta_sep(j) .lt. 0.d0)    theta_sep(j) = theta_sep(j) + 2.d0 * PI
       if (theta_sep(j) .gt. 2.d0*PI) theta_sep(j) = theta_sep(j) - 2.d0 * PI
     enddo
-    call tr_deallocate(s_tmp,"s_tmp")
+    call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   
   endif      
 endif
@@ -532,7 +532,7 @@ do i=1,4
     if (i .eq. 4) exit
   endif
   
-  call tr_allocate(s_tmp,1,n_loop,"s_tmp")
+  call tr_allocate(s_tmp,1,n_loop,"s_tmp",CAT_GRID)
   s_tmp = 0
   call meshac2(n_loop,s_tmp,0.d0,1.d0,SIG_0,SIG_1,0.6d0,1.0d0)
   do j=1,n_loop
@@ -557,7 +557,7 @@ do i=1,4
     nwpts%Z_min(n_start + j) = ZZg1
 
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   if ( (xcase .ne. 2) .and. (i .eq. 1) ) nwpts%Z_min(n_start+1) = stpts%ZRightCorn_LowerInnerLeg ! this one is known - safer...
   if ( (xcase .ne. 2) .and. (i .eq. 2) ) nwpts%Z_min(n_start+1) = stpts%ZLeftCorn_LowerOuterLeg  ! this one is known - safer...
   if ( (xcase .eq. 3) .and. (i .eq. 3) ) nwpts%Z_min(n_start+1) = stpts%ZRightCorn_UpperInnerLeg ! this one is known - safer...
@@ -637,7 +637,7 @@ do i=1,4
     if (i .eq. 4) exit
   endif
   
-  call tr_allocate(s_tmp,1,n_loop,"s_tmp")
+  call tr_allocate(s_tmp,1,n_loop,"s_tmp",CAT_GRID)
   s_tmp = 0
   call meshac2(n_loop,s_tmp,0.d0,1.d0,SIG_0,SIG_1,0.6d0,1.0d0)
   do j=1,n_loop
@@ -664,7 +664,7 @@ do i=1,4
     nwpts%R_max(n_start + j) = RRg1
 
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   if ( (xcase .eq. 2) .and. (i .eq. 1) ) nwpts%R_max(n_start+n_loop) = nwpts%R_max(n_tht)       ! this one is known - safer...
   if ( (xcase .eq. 2) .and. (i .eq. 2) ) nwpts%R_max(n_start+n_loop) = nwpts%R_max(1)           ! this one is known - safer...
   if ( (xcase .eq. 3) .and. (i .eq. 3) ) nwpts%R_max(n_start+n_loop) = nwpts%R_max(n_tht_mid+1) ! this one is known - safer...
@@ -756,7 +756,7 @@ do i=1,4
     if (i .eq. 4) exit
   endif
   
-  call tr_allocate(s_tmp,1,n_loop,"s_tmp")
+  call tr_allocate(s_tmp,1,n_loop,"s_tmp",CAT_GRID)
   s_tmp = 0
   call meshac2(n_loop,s_tmp,0.d0,1.d0,SIG_0,SIG_1,0.6d0,1.0d0)
   do j=1,n_loop
@@ -781,7 +781,7 @@ do i=1,4
     nwpts%Z_sep(n_start + j) = ZZg1
 
   enddo
-  call tr_deallocate(s_tmp,"s_tmp")
+  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   if ( (xcase .ne. 2) .and. (i .le. 2) ) nwpts%Z_sep(n_start+n_loop) = Z_xpoint(1) ! this one is known - safer...
   if ( (xcase .eq. 3) .and. (i .ge. 3) ) nwpts%Z_sep(n_start+n_loop) = Z_xpoint(2) ! this one is known - safer...
   if   (xcase .eq. 2)                    nwpts%Z_sep(n_start+n_loop) = Z_xpoint(2) ! this one is known - safer...
@@ -940,8 +940,8 @@ endif
 call lincol(3)
 
 npl = 11
-call tr_allocate(xp,1,npl,"xp")
-call tr_allocate(yp,1,npl,"yp")
+call tr_allocate(xp,1,npl,"xp",CAT_GRID)
+call tr_allocate(yp,1,npl,"yp",CAT_GRID)
 do j=1,n_tht_2
 
   do m=1,n_pieces
@@ -967,8 +967,8 @@ do j=1,n_tht_2
   call lincol(0)
 
 enddo
-call tr_deallocate(xp,"xp")
-call tr_deallocate(yp,"yp")
+call tr_deallocate(xp,"xp",CAT_GRID)
+call tr_deallocate(yp,"yp",CAT_GRID)
 
 
 !----------------------------------- find grid_points from crossing of coordinate lines

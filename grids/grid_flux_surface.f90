@@ -62,15 +62,15 @@ surface_list%n_psi = n_flux - 1
 nrnew              = n_flux
 npnew              = n_tht
 
-call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
-call tr_allocate(psi_values,1,surface_list%n_psi+1,"psi_values")
-call tr_allocate(s_values,1,nrnew,"s_values")
-call tr_allocate(radius,1,nrnew,"radius")
-call tr_allocate(tht_start,1,n_pieces_max,"tht_start")
-call tr_allocate(tht_end,1,n_pieces_max,"tht_end")
-call tr_allocate(RRnew,1,4,1,nrnew*npnew,"RRnew")
-call tr_allocate(ZZnew,1,4,1,nrnew*npnew,"ZZnew")
-call tr_allocate(PSInew,1,4,1,nrnew*npnew,"PSInew")
+call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
+call tr_allocate(psi_values,1,surface_list%n_psi+1,"psi_values",CAT_GRID)
+call tr_allocate(s_values,1,nrnew,"s_values",CAT_GRID)
+call tr_allocate(radius,1,nrnew,"radius",CAT_GRID)
+call tr_allocate(tht_start,1,n_pieces_max,"tht_start",CAT_GRID)
+call tr_allocate(tht_end,1,n_pieces_max,"tht_end",CAT_GRID)
+call tr_allocate(RRnew,1,4,1,nrnew*npnew,"RRnew",CAT_GRID)
+call tr_allocate(ZZnew,1,4,1,nrnew*npnew,"ZZnew",CAT_GRID)
+call tr_allocate(PSInew,1,4,1,nrnew*npnew,"PSInew",CAT_GRID)
 
 s_values = 0.d0
 call meshac2(surface_list%n_psi+1,s_values,xr1,xr2,sig1,sig2,0.6d0,1.0d0)
@@ -103,10 +103,10 @@ call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,
 
 !call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 
-call tr_allocate(sp1,1,surface_list%n_psi+1,"sp1")
-call tr_allocate(sp2,1,surface_list%n_psi+1,"sp2")
-call tr_allocate(sp3,1,surface_list%n_psi+1,"sp3")
-call tr_allocate(sp4,1,surface_list%n_psi+1,"sp4")
+call tr_allocate(sp1,1,surface_list%n_psi+1,"sp1",CAT_GRID)
+call tr_allocate(sp2,1,surface_list%n_psi+1,"sp2",CAT_GRID)
+call tr_allocate(sp3,1,surface_list%n_psi+1,"sp3",CAT_GRID)
+call tr_allocate(sp4,1,surface_list%n_psi+1,"sp4",CAT_GRID)
 
 call spline(surface_list%n_psi+1,radius,s_values,0.d0,0.d0,0,sp1,sp2,sp3,sp4)
 

@@ -38,9 +38,9 @@ nplot  = 1001
 i_var  = 2
 i_harm = 1
 
-call tr_allocate(xp,1,nplot,"xp")
-call tr_allocate(yp,1,nplot,"yp")
-call tr_allocate(stmp,1,nplot,"stmp")
+call tr_allocate(xp,1,nplot,"xp",CAT_GRID)
+call tr_allocate(yp,1,nplot,"yp",CAT_GRID)
+call tr_allocate(stmp,1,nplot,"stmp",CAT_GRID)
 
 xr1  = 9999.
 sig1 = 9999.
@@ -97,9 +97,9 @@ enddo
 
 call lplot(1,1,1,xp,yp,iplot,1,'perp. flow',10,'distance',8,'flow',4)
 
-call tr_deallocate(xp,"xp")
-call tr_deallocate(yp,"yp")
-call tr_deallocate(xp,"stmp")
+call tr_deallocate(xp,"xp",CAT_GRID)
+call tr_deallocate(yp,"yp",CAT_GRID)
+call tr_deallocate(xp,"stmp",CAT_GRID)
 
 return
 end

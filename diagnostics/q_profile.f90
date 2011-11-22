@@ -27,7 +27,7 @@ write(*,*) '**********************************'
 write(*,*) '*        q-profile               *'
 write(*,*) '**********************************'
 
-call tr_allocate(q,1,surface_list%n_psi,"q")
+call tr_allocate(q,1,surface_list%n_psi,"q",CAT_GRID)
 
 call determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q)
 
@@ -44,7 +44,7 @@ do i=5, surface_list%n_psi-1
 end do
 close(42)
 
-call tr_deallocate(q,"q")
+call tr_deallocate(q,"q",CAT_GRID)
 
 return
 end subroutine q_profile

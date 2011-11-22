@@ -60,8 +60,8 @@ module profiles
     call destructProf(x, y, len)
     
     len = max(len,1) ! at least length 1
-    call tr_allocate(x,1,len,"x")
-    call tr_allocate(y,1,len,"y")
+    call tr_allocate(x,1,len,"x",CAT_GRID)
+    call tr_allocate(y,1,len,"y",CAT_GRID)
     
   end subroutine constructProf
   
@@ -86,8 +86,8 @@ module profiles
     
     ! --- Backup data from profile if keep=.true.
     if ( keep ) then
-      call tr_allocate(px,1,len,"px")
-      call tr_allocate(py,1,len,"py")
+      call tr_allocate(px,1,len,"px",CAT_GRID)
+      call tr_allocate(py,1,len,"py",CAT_GRID)
       if ( allocated(x) ) then
         px(1:len) = x(1:len)
       else
@@ -101,17 +101,17 @@ module profiles
     end if
     
     ! --- Resize x and y.
-    if ( allocated(x) ) call tr_deallocate(x,"x")
-    if ( allocated(y) ) call tr_deallocate(y,"y")
-    call tr_allocate(x,1,newLen,"x")
-    call tr_allocate(y,1,newLen,"y")
+    if ( allocated(x) ) call tr_deallocate(x,"x",CAT_GRID)
+    if ( allocated(y) ) call tr_deallocate(y,"y",CAT_GRID)
+    call tr_allocate(x,1,newLen,"x",CAT_GRID)
+    call tr_allocate(y,1,newLen,"y",CAT_GRID)
     
     ! --- Restore data to profile if keep=.true.
     if ( keep ) then
       x(1:min(len,newLen)) = px(1:min(len,newLen))
       y(1:min(len,newLen)) = py(1:min(len,newLen))
-      call tr_deallocate(px,"px")
-      call tr_deallocate(py,"py")
+      call tr_deallocate(px,"px",CAT_GRID)
+      call tr_deallocate(py,"py",CAT_GRID)
     end if
     len = newLen
     
@@ -125,8 +125,8 @@ module profiles
     real, allocatable, intent(inout) :: x(:), y(:)
     integer,           intent(inout) :: len
     
-    if ( allocated(x) ) call tr_deallocate(x,"x")
-    if ( allocated(y) ) call tr_deallocate(y,"y")
+    if ( allocated(x) ) call tr_deallocate(x,"x",CAT_GRID)
+    if ( allocated(y) ) call tr_deallocate(y,"y",CAT_GRID)
     len = 0
     
   end subroutine destructprof
@@ -226,8 +226,8 @@ module profiles
     real    :: c(-2:4) ! Coefficients for function values.
     
     ! The derivatives will be determined at the same x-positions as the profile.
-    if ( allocated(yd) ) call tr_deallocate(yd,"yd")
-    call tr_allocate(yd,1,len,"yd") 
+    if ( allocated(yd) ) call tr_deallocate(yd,"yd",CAT_GRID)
+    call tr_allocate(yd,1,len,"yd",CAT_GRID) 
     
     do i = 1, len
       

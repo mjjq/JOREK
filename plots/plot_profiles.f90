@@ -31,8 +31,8 @@ enddo
 
 nplot  = 1001
 
-call tr_allocate(xp,1,nplot,1,2,"xp")
-call tr_allocate(yp,1,nplot,1,n_var,"yp")
+call tr_allocate(xp,1,nplot,1,2,"xp",CAT_GRID)
+call tr_allocate(yp,1,nplot,1,n_var,"yp",CAT_GRID)
 
 !---------------------------------- plot perpendicular equilibrium flow
 
@@ -76,8 +76,8 @@ do i = 1,iplot
 enddo
 
 
-call tr_deallocate(xp,"xp")
-call tr_deallocate(yp,"yp")
+call tr_deallocate(xp,"xp",CAT_GRID)
+call tr_deallocate(yp,"yp",CAT_GRID)
 
 return
 end

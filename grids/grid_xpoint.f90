@@ -74,10 +74,10 @@ write(*,*) ' n_flux_2, n_open_2, n_tht_2 : ', n_flux_2, n_open_2, n_tht_2
 
 flux_list%n_psi = n_flux_2 + n_open_2 + n_private_2
 
-call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values")
-call tr_allocate(s_values,1,n_flux_2+n_open_2+n_private_2,"s_values")
+call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+call tr_allocate(s_values,1,n_flux_2+n_open_2+n_private_2,"s_values",CAT_GRID)
 
-call tr_allocate(s_tmp,1,n_flux_2+1,"s_tmp")
+call tr_allocate(s_tmp,1,n_flux_2+1,"s_tmp",CAT_GRID)
 s_tmp = 0
 call meshac2(n_flux_2+1,s_tmp,1.d0,9999.d0,SIG_closed,9999.d0,0.2d0,1.0d0)
 
@@ -86,7 +86,7 @@ do i=1,n_flux_2
   flux_list%psi_values(i) =  psi_axis + s_values(i)**2 * (psi_xpoint(1) - psi_axis)
 enddo
 
-call tr_deallocate(s_tmp,"s_tmp"); call tr_allocate(s_tmp,1,n_open_2+1,"s_tmp")
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID); call tr_allocate(s_tmp,1,n_open_2+1,"s_tmp",CAT_GRID)
 s_tmp = 0
 call meshac2(n_open_2+1,s_tmp,0.d0,9999.d0,SIG_open,9999.d0,0.6d0,1.0d0)
 
@@ -95,7 +95,7 @@ do i=1,n_open_2
   flux_list%psi_values(i+n_flux_2) =  psi_axis + s_values(i+n_flux_2)**2 * (psi_xpoint(1) - psi_axis)
 enddo
 
-call tr_deallocate(s_tmp,"s_tmp"); call tr_allocate(s_tmp,1,n_private_2+1,"s_tmp")
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID); call tr_allocate(s_tmp,1,n_private_2+1,"s_tmp",CAT_GRID)
 s_tmp = 0
 call meshac2(n_private_2+1,s_tmp,0.d0,9999.d0,SIG_private,9999.d0,0.6d0,1.0d0)
 
@@ -118,12 +118,12 @@ n_psi_2 = n_flux_2 + n_open_2 + n_private_2 + 1                            ! thi
 
 n_tht_3 = n_tht_2 + 2*n_leg_2
 
-call tr_allocate(RR_new,1,n_psi_2,1,n_tht_3,"RR_new")
-call tr_allocate(ZZ_new,1,n_psi_2,1,n_tht_3,"ZZ_new")
-call tr_allocate(ielm_flux,1,n_psi_2,1,n_tht_3,"ielm_flux")
-call tr_allocate(s_flux,1,n_psi_2,1,n_tht_3,"s_flux")
-call tr_allocate(t_flux,1,n_psi_2,1,n_tht_3,"t_flux")
-call tr_allocate(t_tht,1,n_psi_2,1,n_tht_3,"t_tht")
+call tr_allocate(RR_new,1,n_psi_2,1,n_tht_3,"RR_new",CAT_GRID)
+call tr_allocate(ZZ_new,1,n_psi_2,1,n_tht_3,"ZZ_new",CAT_GRID)
+call tr_allocate(ielm_flux,1,n_psi_2,1,n_tht_3,"ielm_flux",CAT_GRID)
+call tr_allocate(s_flux,1,n_psi_2,1,n_tht_3,"s_flux",CAT_GRID)
+call tr_allocate(t_flux,1,n_psi_2,1,n_tht_3,"t_flux",CAT_GRID)
+call tr_allocate(t_tht,1,n_psi_2,1,n_tht_3,"t_tht",CAT_GRID)
 
 !------------------------------------- find some points on the legs
 RL1 = 999.; ZL1 = 1.d10        ! left  bottom point of inner leg (i.e on last flux_surface)
@@ -274,11 +274,11 @@ i_max = n_flux_2 + n_open_2
 
 tht_x = atan2(Z_xpoint(1)-Z_axis,R_xpoint(1)-R_axis)
 
-call tr_allocate(theta_sep,1,n_tht_3,"theta_sep")
-call tr_allocate(R_sep,1,n_tht_3,"R_sep")
-call tr_allocate(Z_sep,1,n_tht_3,"Z_sep")
+call tr_allocate(theta_sep,1,n_tht_3,"theta_sep",CAT_GRID)
+call tr_allocate(R_sep,1,n_tht_3,"R_sep",CAT_GRID)
+call tr_allocate(Z_sep,1,n_tht_3,"Z_sep",CAT_GRID)
 
-call tr_deallocate(s_tmp,"s_tmp"); call tr_allocate(s_tmp,1,n_tht_2,"s_tmp")
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID); call tr_allocate(s_tmp,1,n_tht_2,"s_tmp",CAT_GRID)
 s_tmp = 0
 call meshac2(n_tht_2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
@@ -325,10 +325,10 @@ if (tht_x + 1.5d0*PI .gt. angle_L1) then   ! check if L8 is above L1 : if not ad
 endif
 
 !------------------------------------ find crossing of last fluxsurface
-call tr_allocate(R_max,1,n_tht_3,"R_max")
-call tr_allocate(Z_max,1,n_tht_3,"Z_max")
-call tr_allocate(R_min,1,n_tht_3,"R_min")
-call tr_allocate(Z_min,1,n_tht_3,"Z_min")
+call tr_allocate(R_max,1,n_tht_3,"R_max",CAT_GRID)
+call tr_allocate(Z_max,1,n_tht_3,"Z_max",CAT_GRID)
+call tr_allocate(R_min,1,n_tht_3,"R_min",CAT_GRID)
+call tr_allocate(Z_min,1,n_tht_3,"Z_min",CAT_GRID)
 
 call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L9,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
 call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
@@ -416,7 +416,7 @@ do j=1,n_tht_2
 enddo
 
 !------------------------------ second part of the grid below the x-point
-call tr_deallocate(s_tmp,"s_tmp"); call tr_allocate(s_tmp,1,n_leg_2,"s_tmp")
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID); call tr_allocate(s_tmp,1,n_leg_2,"s_tmp",CAT_GRID)
 s_tmp = 0
 call meshac2(n_leg_2,s_tmp,0.d0,1.d0,SIG_leg_0,SIG_leg_1,0.6d0,1.0d0)
 
@@ -554,8 +554,8 @@ call lplot6(1,1,R_sep,Z_sep,-(n_tht_2+2*n_leg_2),' ')
 
 !------------------------------ interpolation points are known, construct polar coordinate lines
 n_pieces=3
-call tr_allocate(R_polar,1,n_pieces,1,4,1,n_tht_2+2*n_leg_2,"R_polar")
-call tr_allocate(Z_polar,1,n_pieces,1,4,1,n_tht_2+2*n_leg_2,"Z_polar")
+call tr_allocate(R_polar,1,n_pieces,1,4,1,n_tht_2+2*n_leg_2,"R_polar",CAT_GRID)
+call tr_allocate(Z_polar,1,n_pieces,1,4,1,n_tht_2+2*n_leg_2,"Z_polar",CAT_GRID)
 
 do j=1,n_tht_2
 
@@ -638,9 +638,9 @@ enddo
 call lincol(3)
 
 npl = 11
-call tr_allocate(xout,1,2,"xout")
-call tr_allocate(xp,1,npl,"xp")
-call tr_allocate(yp,1,npl,"yp")
+call tr_allocate(xout,1,2,"xout",CAT_GRID)
+call tr_allocate(xp,1,npl,"xp",CAT_GRID)
+call tr_allocate(yp,1,npl,"yp",CAT_GRID)
 do j=1,n_tht_2+2*n_leg_2
 
   do m=1,n_pieces
@@ -666,8 +666,8 @@ do j=1,n_tht_2+2*n_leg_2
   call lincol(0)
 
 enddo
-call tr_deallocate(xp,"xp")
-call tr_deallocate(yp,"yp")
+call tr_deallocate(xp,"xp",CAT_GRID)
+call tr_deallocate(yp,"yp",CAT_GRID)
 !----------------------------------- find grid_points from crossing of coordinate lines
 
 do j=1, n_tht_2          ! the magnetic axis
@@ -682,7 +682,7 @@ do j=1, n_tht_2          ! the magnetic axis
 enddo
 
 
-call tr_allocate(k_cross,1,n_flux_2+n_open_2+n_private_2+1,1,n_tht_2+2*n_leg_2,"k_cross")
+call tr_allocate(k_cross,1,n_flux_2+n_open_2+n_private_2+1,1,n_tht_2+2*n_leg_2,"k_cross",CAT_GRID)
 
 k_cross = 0
 
@@ -755,9 +755,9 @@ enddo
 
 ! --- Allocate data structures for new nodes and elements and initialize them.
 allocate(newnode_list)
-call tr_register_mem(sizeof(newnode_list),"newnode_list")
+call tr_register_mem(sizeof(newnode_list),"newnode_list",CAT_GRID)
 allocate(newelement_list)
-call tr_register_mem(sizeof(newelement_list),"newelement_list")
+call tr_register_mem(sizeof(newelement_list),"newelement_list",CAT_GRID)
 newnode_list%n_nodes = 0
 newnode_list%n_dof   = 0
 do i = 1, n_nodes_max
@@ -1064,8 +1064,8 @@ call nframe(11,11,1,2.0,3.0,-2.0,-1.0,' ',1,'R',1,'Z',1)
 call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
 
 
-call tr_allocate(xp,1,index,"xp")
-call tr_allocate(yp,1,index,"yp")
+call tr_allocate(xp,1,index,"xp",CAT_GRID)
+call tr_allocate(yp,1,index,"yp",CAT_GRID)
 
 do i=1,newnode_list%n_nodes
   xp(i) = newnode_list%node(i)%x(1,1)
@@ -1075,14 +1075,14 @@ do i=1,newnode_list%n_nodes
 enddo
 
 call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
-call tr_deallocate(xp,"xp")
-call tr_deallocate(yp,"yp")
+call tr_deallocate(xp,"xp",CAT_GRID)
+call tr_deallocate(yp,"yp",CAT_GRID)
 
 !***********************************************************************
 !*                   define the new elements                           *
 !***********************************************************************
 
-call tr_allocate(keep,1,n_psi*n_tht*2,1,4,1,2,"keep")
+call tr_allocate(keep,1,n_psi*n_tht*2,1,4,1,2,"keep",CAT_GRID)
 
 do i=1,n_flux-1
 
@@ -1479,35 +1479,35 @@ do i=1, element_list%n_elements
   element_list%element(i)%sons(:) = 0
 enddo
 
-call tr_unregister_mem(sizeof(newnode_list),"newnode_list")
+call tr_unregister_mem(sizeof(newnode_list),"newnode_list",CAT_GRID)
 deallocate(newnode_list)
-call tr_unregister_mem(sizeof(newelement_list),"newelement_list")
+call tr_unregister_mem(sizeof(newelement_list),"newelement_list",CAT_GRID)
 deallocate(newelement_list)
 
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
-call tr_deallocate(s_values,"s_values")
-call tr_deallocate(theta_sep,"theta_sep")
-call tr_deallocate(R_sep,"R_sep")
-call tr_deallocate(Z_sep,"Z_sep")
-call tr_deallocate(R_max,"R_max")
-call tr_deallocate(Z_max,"Z_max")
-call tr_deallocate(R_min,"R_min")
-call tr_deallocate(Z_min,"Z_min")
-call tr_deallocate(s_tmp,"s_tmp")
-call tr_deallocate(R_polar,"R_polar")
-call tr_deallocate(Z_polar,"Z_polar")
-call tr_deallocate(xout,"xout")
-call tr_deallocate(RR_new,"RR_new")
-call tr_deallocate(ZZ_new,"ZZ_new")
-call tr_deallocate(s_flux,"s_flux")
-call tr_deallocate(t_flux,"t_flux")
-call tr_deallocate(t_tht,"t_tht")
-call tr_deallocate(ielm_flux,"ielm_flux")
-call tr_deallocate(keep,"keep")
-call tr_deallocate(k_cross,"k_cross")
+call tr_deallocate(s_values,"s_values",CAT_GRID)
+call tr_deallocate(theta_sep,"theta_sep",CAT_GRID)
+call tr_deallocate(R_sep,"R_sep",CAT_GRID)
+call tr_deallocate(Z_sep,"Z_sep",CAT_GRID)
+call tr_deallocate(R_max,"R_max",CAT_GRID)
+call tr_deallocate(Z_max,"Z_max",CAT_GRID)
+call tr_deallocate(R_min,"R_min",CAT_GRID)
+call tr_deallocate(Z_min,"Z_min",CAT_GRID)
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
+call tr_deallocate(R_polar,"R_polar",CAT_GRID)
+call tr_deallocate(Z_polar,"Z_polar",CAT_GRID)
+call tr_deallocate(xout,"xout",CAT_GRID)
+call tr_deallocate(RR_new,"RR_new",CAT_GRID)
+call tr_deallocate(ZZ_new,"ZZ_new",CAT_GRID)
+call tr_deallocate(s_flux,"s_flux",CAT_GRID)
+call tr_deallocate(t_flux,"t_flux",CAT_GRID)
+call tr_deallocate(t_tht,"t_tht",CAT_GRID)
+call tr_deallocate(ielm_flux,"ielm_flux",CAT_GRID)
+call tr_deallocate(keep,"keep",CAT_GRID)
+call tr_deallocate(k_cross,"k_cross",CAT_GRID)
 
 return
 end subroutine grid_xpoint

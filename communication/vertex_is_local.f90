@@ -24,7 +24,7 @@ SUBROUTINE vertex_is_local(vertex, islocal)
   IF (ALLOCATED(murge_glob2loc)) THEN
 
   ELSE
-     call tr_allocate(murge_glob2loc,1,murge_global_n,"murge_glob2loc")
+     call tr_allocate(murge_glob2loc,1,murge_global_n,"murge_glob2loc",CAT_DMATRIX)
      murge_glob2loc = -1
      DO iter = 1, murge_local_n
         murge_glob2loc(murge_loc2glob(iter)) = iter

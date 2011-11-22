@@ -21,11 +21,11 @@ call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 n_loc_n  = ndof_glob  / n_tor
 M_cpu    = n_cpu / ((n_tor+1)/2)
 
-call tr_allocate(send_counts,1,n_cpu,"dv_send_counts")
-call tr_allocate(send_disp,1,n_cpu,"dv_send_disp")
-call tr_allocate(recv_counts,1,n_cpu,"dv_recv_counts")
-call tr_allocate(recv_disp,1,n_cpu,"dv_recv_disp")
-call tr_allocate(Rsnd_buffer,1,ndof_glob,"dv_Rsnd_buffer")
+call tr_allocate(send_counts,1,n_cpu    ,"dv_send_counts",CAT_DMATRIX)
+call tr_allocate(send_disp,1,n_cpu      ,"dv_send_disp"  ,CAT_DMATRIX)
+call tr_allocate(recv_counts,1,n_cpu    ,"dv_recv_counts",CAT_DMATRIX)
+call tr_allocate(recv_disp,1,n_cpu      ,"dv_recv_disp"  ,CAT_DMATRIX)
+call tr_allocate(Rsnd_buffer,1,ndof_glob,"dv_Rsnd_buffer",CAT_DMATRIX)
 
 if (my_id .eq. 0) then
 
@@ -67,7 +67,7 @@ n_send =  ifactor*n_loc_n
 mumps_par%n =  ifactor*n_loc_n
 
 nz_loc_n = nz_glob    / n_tor**2
-call tr_allocate(sizes,1,n_cpu,"dh_sizes")
+call tr_allocate(sizes,1,n_cpu,"dh_sizes",CAT_DMATRIX)
 
 call mpi_allgather(nz_loc_n,1,MPI_INTEGER,sizes,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
@@ -96,10 +96,11 @@ mumps_par%nz = N_recv
 call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
                   rhs_dis,n_send,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 
-call tr_deallocate(Rsnd_buffer,"dv_Rsnd_buffer")
-call tr_deallocate(send_counts,"dv_send_counts")
-call tr_deallocate(send_disp,"dv_send_disp")
-call tr_deallocate(recv_counts,"dv_recv_counts")
-call tr_deallocate(recv_disp,"dv_recv_disp")
+call tr_deallocate(Rsnd_buffer  ,"dv_Rsnd_buffer" ,CAT_DMATRIX)
+call tr_deallocate(send_counts  ,"dv_send_counts" ,CAT_DMATRIX)
+call tr_deallocate(send_disp    ,"dv_send_disp"   ,CAT_DMATRIX)
+call tr_deallocate(recv_counts  ,"dv_recv_counts" ,CAT_DMATRIX)
+call tr_deallocate(recv_disp    ,"dv_recv_disp"   ,CAT_DMATRIX)
+call tr_deallocate(sizes        ,"dh_sizes"       ,CAT_DMATRIX)
 return
 end

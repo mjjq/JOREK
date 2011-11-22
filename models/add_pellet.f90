@@ -22,11 +22,11 @@ write(*,*) '* adding (non-axisymmetric) pellet density  *'
 write(*,*) '*********************************************'
 
 nfft=1024
-call tr_allocate(delta_n_phi,1,nfft+2,"delta_n_phi")
-call tr_allocate(T_phi,1,nfft+2,"T_phi")
-call tr_allocate(T_phi_s,1,nfft+2,"T_phi_s")
-call tr_allocate(T_phi_t,1,nfft+2,"T_phi_t")
-call tr_allocate(T_phi_st,1,nfft+2,"T_phi_st")
+call tr_allocate(delta_n_phi,1,nfft+2,"delta_n_phi",CAT_GRID)
+call tr_allocate(T_phi,1,nfft+2,"T_phi",CAT_GRID)
+call tr_allocate(T_phi_s,1,nfft+2,"T_phi_s",CAT_GRID)
+call tr_allocate(T_phi_t,1,nfft+2,"T_phi_t",CAT_GRID)
+call tr_allocate(T_phi_st,1,nfft+2,"T_phi_st",CAT_GRID)
 
 PI = 2.d0 * asin(1.d0)
 
@@ -152,6 +152,12 @@ do i=1,node_list%n_nodes
                                     
   enddo
 enddo
+
+call tr_deallocate(delta_n_phi,"delta_n_phi",CAT_GRID)
+call tr_deallocate(T_phi,"T_phi",CAT_GRID)
+call tr_deallocate(T_phi_s,"T_phi_s",CAT_GRID)
+call tr_deallocate(T_phi_t,"T_phi_t",CAT_GRID)
+call tr_deallocate(T_phi_st,"T_phi_st",CAT_GRID)
 
 return
 end

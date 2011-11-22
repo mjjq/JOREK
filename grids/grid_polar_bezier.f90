@@ -35,9 +35,9 @@ real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
 
 
-call tr_allocate(RR,1,4,1,nr*np,"RR")
-call tr_allocate(ZZ,1,4,1,nr*np,"ZZ")
-call tr_allocate(PSI,1,4,1,nr*np,"PSI")
+call tr_allocate(RR,1,4,1,nr*np,"RR",CAT_GRID)
+call tr_allocate(ZZ,1,4,1,nr*np,"ZZ",CAT_GRID)
+call tr_allocate(PSI,1,4,1,nr*np,"PSI",CAT_GRID)
 
 pi = 2.d0*asin(1.d0)
 
@@ -73,19 +73,19 @@ SIG_tht_0 = 999.d0 ! 0.03d0          ! width of accumulation (Gaussian)
 XR_tht_1  = 999.d0 ! 1.d0 !1.d0
 SIG_tht_1 = 999.d0 ! 0.03d0
 
-call tr_allocate(S1,1,nr,"S1")
-call tr_allocate(S2,1,nr,"S2")
-call tr_allocate(SP1,1,nr,"SP1")
-call tr_allocate(SP2,1,nr,"SP2")
-call tr_allocate(SP3,1,nr,"SP3")
-call tr_allocate(SP4,1,nr,"SP4")
+call tr_allocate(S1,1,nr,"S1",CAT_GRID)
+call tr_allocate(S2,1,nr,"S2",CAT_GRID)
+call tr_allocate(SP1,1,nr,"SP1",CAT_GRID)
+call tr_allocate(SP2,1,nr,"SP2",CAT_GRID)
+call tr_allocate(SP3,1,nr,"SP3",CAT_GRID)
+call tr_allocate(SP4,1,nr,"SP4",CAT_GRID)
 S2 = 0.d0
-call tr_allocate(T1,1,np+1,"T1")
-call tr_allocate(T2,1,np+1,"T2")
-call tr_allocate(TP1,1,np+1,"TP1")
-call tr_allocate(TP2,1,np+1,"TP2")
-call tr_allocate(TP3,1,np+1,"TP3")
-call tr_allocate(TP4,1,np+1,"TP4")
+call tr_allocate(T1,1,np+1,"T1",CAT_GRID)
+call tr_allocate(T2,1,np+1,"T2",CAT_GRID)
+call tr_allocate(TP1,1,np+1,"TP1",CAT_GRID)
+call tr_allocate(TP2,1,np+1,"TP2",CAT_GRID)
+call tr_allocate(TP3,1,np+1,"TP3",CAT_GRID)
+call tr_allocate(TP4,1,np+1,"TP4",CAT_GRID)
 T2 = 0.d0
 do i=1,nr
   S1(i) = real(i-1)/real(nr-1)

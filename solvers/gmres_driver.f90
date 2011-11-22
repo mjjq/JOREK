@@ -52,7 +52,7 @@ n_dof = ndof_glob
 
 lwork = m*m + m*(n_dof+5) + 6*n_dof + m + 1
 
-call tr_allocate(work,1,lwork,"work")
+call tr_allocate(work,1,lwork,"work",CAT_GMRES)
 
 work(1:n_dof)         = deltas(1:n_dof)                     ! the initial guess
 work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
@@ -140,7 +140,7 @@ endif
 iter_gmres = info(2) ! Actual number of iterations
 call MPI_BCAST(iter_gmres,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
-call tr_deallocate(work,"work")
+call tr_deallocate(work,"work",CAT_GMRES)
 
 call cpu_time(t2)
 !write(*,'(i3,A,f14.6)') my_id,' gmres TOTAL : ',t2-t1

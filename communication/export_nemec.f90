@@ -50,7 +50,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   
   ! --- Find flux surfaces
   surface_list%n_psi = 400
-  call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values")
+  call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
   do i = 1, surface_list%n_psi
     surface_list%psi_values(i) = (float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis)    &
       + psi_axis
@@ -58,11 +58,11 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
   
   ! --- Determine the q-profile.
-  call tr_allocate(q,1,surface_list%n_psi,"q")
+  call tr_allocate(q,1,surface_list%n_psi,"q",CAT_GRID)
   call determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q)
   
   ! --- Determine the toroidal flux.
-  call tr_allocate(PhiN,1,surface_list%n_psi,"PhiN")
+  call tr_allocate(PhiN,1,surface_list%n_psi,"PhiN",CAT_GRID)
   call determine_PhiN(surface_list, q, PhiN, Phi_edge)
   
   ! --- Write out the iota profile for NEMEC.
@@ -157,9 +157,9 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   end do
   close(42)
   
-  call tr_deallocate(q, "q")
-  call tr_deallocate(PhiN, "PhiN")
-  call tr_deallocate(surface_list%psi_values, "surface_list%psi_values")
+  call tr_deallocate(q, "q",CAT_GRID)
+  call tr_deallocate(PhiN, "PhiN",CAT_GRID)
+  call tr_deallocate(surface_list%psi_values, "surface_list%psi_values",CAT_GRID)
 
   write(*,*) 'END: export_nemec'
   

@@ -25,10 +25,10 @@ mumps_par%rhs     => rhs_glob(1:nz_glob)
 mumps_par%n      = ndof_glob
 mumps_par%nz_loc = nz_glob
 
-if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling")
-if (allocated(column_local))    call tr_deallocate(column_local,"column_local")
-call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling")
-call tr_allocate(column_local,1,mumps_par%N,"column_local")
+if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+if (allocated(column_local))    call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
+call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling",CAT_DMATRIX)
+call tr_allocate(column_local,1,mumps_par%N,"column_local",CAT_DMATRIX)
 
 column_local = 1.d-20;   column_scaling = 1.d-20
 do k=1,mumps_par%nz_loc

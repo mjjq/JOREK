@@ -16,11 +16,11 @@ integer :: ierr
 if ( num_rho ) then
   call MPI_BCAST(num_rho_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
-     call tr_allocate(num_rho_x,1,num_rho_len,"num_rho_x")
-     call tr_allocate(num_rho_y0,1,num_rho_len,"num_rho_y0")
-     call tr_allocate(num_rho_y1,1,num_rho_len,"num_rho_y1")
-     call tr_allocate(num_rho_y2,1,num_rho_len,"num_rho_y2")
-     call tr_allocate(num_rho_y3,1,num_rho_len,"num_rho_y3")
+     call tr_allocate(num_rho_x,1,num_rho_len,"num_rho_x",CAT_UNKNOWN)
+     call tr_allocate(num_rho_y0,1,num_rho_len,"num_rho_y0",CAT_UNKNOWN)
+     call tr_allocate(num_rho_y1,1,num_rho_len,"num_rho_y1",CAT_UNKNOWN)
+     call tr_allocate(num_rho_y2,1,num_rho_len,"num_rho_y2",CAT_UNKNOWN)
+     call tr_allocate(num_rho_y3,1,num_rho_len,"num_rho_y3",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_rho_x,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rho_y0,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
@@ -32,11 +32,11 @@ end if
 if ( num_T ) then
   call MPI_BCAST(num_T_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
-     call tr_allocate(num_T_x,1,num_T_len,"num_T_x")
-     call tr_allocate(num_T_y0,1,num_T_len,"num_T_y0")
-     call tr_allocate(num_T_y1,1,num_T_len,"num_T_y1")
-     call tr_allocate(num_T_y2,1,num_T_len,"num_T_y2")
-     call tr_allocate(num_T_y3,1,num_T_len,"num_T_y3")
+     call tr_allocate(num_T_x,1,num_T_len,"num_T_x",CAT_UNKNOWN)
+     call tr_allocate(num_T_y0,1,num_T_len,"num_T_y0",CAT_UNKNOWN)
+     call tr_allocate(num_T_y1,1,num_T_len,"num_T_y1",CAT_UNKNOWN)
+     call tr_allocate(num_T_y2,1,num_T_len,"num_T_y2",CAT_UNKNOWN)
+     call tr_allocate(num_T_y3,1,num_T_len,"num_T_y3",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_T_x,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_T_y0,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
@@ -48,10 +48,10 @@ end if
 if ( num_ffprime ) then
   call MPI_BCAST(num_ffprime_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
-     call tr_allocate(num_ffprime_x,1,num_ffprime_len,"num_ffprime_x")
-     call tr_allocate(num_ffprime_y0,1,num_ffprime_len,"num_ffprime_y0")
-     call tr_allocate(num_ffprime_y1,1,num_ffprime_len,"num_ffprime_y1")
-     call tr_allocate(num_ffprime_y2,1,num_ffprime_len,"num_ffprime_y2")
+     call tr_allocate(num_ffprime_x,1,num_ffprime_len,"num_ffprime_x",CAT_UNKNOWN)
+     call tr_allocate(num_ffprime_y0,1,num_ffprime_len,"num_ffprime_y0",CAT_UNKNOWN)
+     call tr_allocate(num_ffprime_y1,1,num_ffprime_len,"num_ffprime_y1",CAT_UNKNOWN)
+     call tr_allocate(num_ffprime_y2,1,num_ffprime_len,"num_ffprime_y2",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_ffprime_x,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_ffprime_y0,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

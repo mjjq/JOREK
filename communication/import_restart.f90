@@ -46,11 +46,11 @@ read(21) t_start
 
 if (index_start .ge. 1) then
 
-  if (allocated(xtime)) call tr_deallocate(xtime,"xtime")
-  call tr_allocate(xtime,1,index_start+nstep,"xtime")
+  if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
+  call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
 
-  if (allocated(energies)) call tr_deallocate(energies,"energies")
-  call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies")
+  if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_UNKNOWN)
+  call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies",CAT_UNKNOWN)
 
   energies = 0.d0
 

@@ -41,8 +41,8 @@ endif
 found = 0
 
 nplot=11
-call tr_allocate(rplot,1,nplot,"rplot")
-call tr_allocate(zplot,1,nplot,"zplot")
+call tr_allocate(rplot,1,nplot,"rplot",CAT_GRID)
+call tr_allocate(zplot,1,nplot,"zplot",CAT_GRID)
 
 LABEL= 'Flux surfaces'
 
@@ -175,8 +175,8 @@ enddo
 
 call lincol(0)
 
-call tr_deallocate(rplot,"rplot")
-call tr_deallocate(zplot,"zplot")
+call tr_deallocate(rplot,"rplot",CAT_GRID)
+call tr_deallocate(zplot,"zplot",CAT_GRID)
 
 return
 end subroutine plot_flux_surfaces

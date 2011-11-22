@@ -22,7 +22,8 @@ program JOREK2
   use mumps_module
   use pastix_module
   use murge_module,        only: murge_initialization, murge_setGraph, MURGE_Clean, use_murge,     &
-    use_murge_element, murge_initialised, murge_harmonic, murge_glob2loc, murge_loc2glob, murge_id
+    use_murge_element, murge_initialised, murge_harmonic, murge_glob2loc, murge_loc2glob, murge_id, &
+    murge_termination
   use data_structure
   use phys_module
   use parameters
@@ -420,8 +421,8 @@ program JOREK2
     mumps_par%JOB = -2
     if (my_id == 0) call DMUMPS(mumps_par)
 #endif
-    if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars")
-    if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars")
+    if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
+    if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
   
   end if if_not_restart
   
@@ -499,7 +500,7 @@ program JOREK2
            M_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
         end if
 
-        call tr_allocate(i_tor,1,n_cpu,"i_tor")
+        call tr_allocate(i_tor,1,n_cpu,"i_tor",CAT_UNKNOWN)
         
         do i = 1, n_cpu 
            i_tor(i) =  MOD(i-1, M_cpu)+1
@@ -548,12 +549,12 @@ program JOREK2
         id_elements = my_id
      endif
 
-     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms")
-     call tr_allocate(index_min,1,index_size,"index_min")
-     call tr_allocate(index_max,1,index_size,"index_max")
+     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
+     call tr_allocate(index_min,1,index_size,"index_min",CAT_FEM)
+     call tr_allocate(index_max,1,index_size,"index_max",CAT_FEM)
      if ( .not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres) ) then
-        call tr_allocate(local_index_start,1,n_cpu,"local_index_start")
-        call tr_allocate(local_index_end,1,n_cpu,"local_index_end")
+        call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
+        call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
      end if
      !
      ! Construct index_min, index_max and local_elems
@@ -614,7 +615,7 @@ program JOREK2
 
         ! Check that the number of local elements is the same on each processor
         ! of MPI_COMM_TRANS
-        call tr_allocate(tab_n_local_elems, 1, n_cpu_trans, "tab_n_local_elems")
+        call tr_allocate(tab_n_local_elems, 1, n_cpu_trans, "tab_n_local_elems",CAT_FEM)
         CALL MPI_Allgather(n_local_elms,      1, MPI_INTEGER, &
              &             tab_n_local_elems, 1, MPI_INTEGER, &
              &             MPI_COMM_TRANS, ierr)
@@ -624,10 +625,10 @@ program JOREK2
               call abort()
            end if
         end do
-        call tr_deallocate(tab_n_local_elems, "tab_n_local_elems")
-        IF (ALLOCATED(local_elms)) call tr_deallocate(local_elms,"local_elms")
+        call tr_deallocate(tab_n_local_elems, "tab_n_local_elems",CAT_FEM)
+        IF (ALLOCATED(local_elms)) call tr_deallocate(local_elms,"local_elms",CAT_FEM)
         ! Build local_elms from loc2glob
-        call tr_allocate(local_elms,1,n_local_elms,"local_elms")
+        call tr_allocate(local_elms,1,n_local_elms,"local_elms",CAT_FEM)
 
         n_local_elms = 0
         DO i_elem = 1, element_list%n_elements
@@ -969,13 +970,7 @@ program JOREK2
 #endif
      elseif (use_pastix) then
         if ( use_murge ) then 
-
-
-           IF ( use_murge_element ) THEN
-              IF (ALLOCATED(murge_glob2loc)) call tr_deallocate(murge_glob2loc,"murge_glob2loc")
-              IF (ALLOCATED(murge_loc2glob)) call tr_deallocate(murge_loc2glob,"murge_loc2glob")
-           END IF
-           CALL MURGE_Clean(murge_id, ierr)
+          call murge_termination
         else
            pastix_iparm(2)     = 7                       ! Clean-up
            pastix_iparm(3)     = 7
@@ -1057,10 +1052,10 @@ program JOREK2
      call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
 
      nplot = 501
-     call tr_allocate(xp,1,nplot,"xp")
-     call tr_allocate(yp1,1,nplot,"yp1")
-     call tr_allocate(yp2,1,nplot,"yp2")
-     call tr_allocate(yp3,1,nplot,"yp3")
+     call tr_allocate(xp,1,nplot,"xp",CAT_GRID)
+     call tr_allocate(yp1,1,nplot,"yp1",CAT_GRID)
+     call tr_allocate(yp2,1,nplot,"yp2",CAT_GRID)
+     call tr_allocate(yp3,1,nplot,"yp3",CAT_GRID)
      iplot = 0
 
      if (xpoint) then
@@ -1130,8 +1125,8 @@ program JOREK2
 
      call export_helena(node_list,element_list,bnd_elm_list)
 
-     if (allocated(energies))  call tr_deallocate(energies,"energies")
-     if (allocated(xtime))     call tr_deallocate(xtime,"xtime")
+     if (allocated(energies))  call tr_deallocate(energies,"energies",CAT_UNKNOWN)
+     if (allocated(xtime))     call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
   endif
 
   call r3_info_summary ()                                ! timing

@@ -94,10 +94,10 @@ if (iter .le. 1) then
   write(*,*) ' nz_AA                   : ',nz_AA
 endif
   
-if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A")
-if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs")
-if (.not. associated(mumps_par%irn))   call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn")
-if (.not. associated(mumps_par%jcn))   call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn")
+if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
+if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
+if (.not. associated(mumps_par%irn))   call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
+if (.not. associated(mumps_par%jcn))   call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
 
 mumps_par%irn = 0
 mumps_par%jcn = 0
@@ -290,10 +290,10 @@ if (my_id == 0) then
    mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
    if (mumps_par%NZ /= nnz ) then
       write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
-      if (associated (mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN")
-      if (associated (mumps_par%A)  ) call tr_deallocatep(mumps_par%A,"mumps_par%A")
-      call tr_allocatep(mumps_par%IRN,1,mumps_par%NZ,"mumps_par%IRN")
-      call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A")
+      if (associated (mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
+      if (associated (mumps_par%A)  ) call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%IRN,1,mumps_par%NZ,"mumps_par%IRN",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
       call pastix_fortran_checkmatrix_end(check_data, &
            1, mumps_par%IRN,mumps_par%A, 1)
    endif
@@ -302,15 +302,15 @@ end if
 
 if (   allocated(pastix_perm_vars) .and.     &
      & size(pastix_perm_vars) /= mumps_par%N) then 
-   call tr_deallocate(pastix_perm_vars,"pastix_perm_vars")
+   call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
 end if
 
 if (   allocated(pastix_iperm_vars) .and.     &
      & size(pastix_iperm_vars) /= mumps_par%N) then 
-   call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars")
+   call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
 end if
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars")
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars")
+if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 
 pastix_iparm(1)  = 0          ! insert default values
 pastix_iparm(2)  = 0          ! initializse
@@ -462,10 +462,10 @@ if (refinement) then
   enddo     ! nodes
 endif       ! refinement
 
-call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
-call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
-call tr_deallocatep(mumps_par%A,"mumps_par%A")
-call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
+call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
 
 !deallocate(pastix_perm_vars,pastix_iperm_vars)
   

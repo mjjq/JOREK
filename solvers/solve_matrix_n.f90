@@ -71,7 +71,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #ifdef USE_MUMPS
         !----------------Pre-processing to remove nonzeros in A (MUMPS)
         if (no_zeros_mumps) then
-           call tr_allocate(tmp,1,mumps_par%NZ,"tmp")
+           call tr_allocate(tmp,1,mumps_par%NZ,"tmp",CAT_PRECOND)
            tmp(:)=0
            !
            nz2=0
@@ -83,9 +83,9 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            ENDDO
            WRITE(*,*) '% zeros',my_id,mumps_par%NZ,nz2,REAL(nz2)/REAL(mumps_par%NZ)*100
            !
-           call tr_allocate(A2,1,nz2,"A2")
-           call tr_allocate(irn2,1,nz2,"irn2")
-           call tr_allocate(jcn2,1,nz2,"jcn2")
+           call tr_allocate(A2,1,nz2,"A2",CAT_PRECOND)
+           call tr_allocate(irn2,1,nz2,"irn2",CAT_PRECOND)
+           call tr_allocate(jcn2,1,nz2,"jcn2",CAT_PRECOND)
            !
            A2(:) = 0.d0
            irn2(:) = 0
@@ -97,25 +97,25 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               jcn2(i) = mumps_par%jcn(tmp(i))        
            ENDDO
            !
-           call tr_deallocate(tmp,"tmp")  
+           call tr_deallocate(tmp,"tmp",CAT_PRECOND)  
            !
-           IF (ASSOCIATED(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
-           IF (ASSOCIATED(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
-           IF (ASSOCIATED(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
+           IF (ASSOCIATED(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+           IF (ASSOCIATED(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+           IF (ASSOCIATED(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
            !
            mumps_par%NZ = nz2
            !
-           call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A")
-           call tr_allocatep(mumps_par%irn,1,mumps_par%NZ,"mumps_par%irn")
-           call tr_allocatep(mumps_par%jcn,1,mumps_par%NZ,"mumps_par%jcn")
+           call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
+           call tr_allocatep(mumps_par%irn,1,mumps_par%NZ,"mumps_par%irn",CAT_DMATRIX)
+           call tr_allocatep(mumps_par%jcn,1,mumps_par%NZ,"mumps_par%jcn",CAT_DMATRIX)
            !
            mumps_par%A(:)   = A2(:)
            mumps_par%irn(:) = irn2(:)
            mumps_par%jcn(:) = jcn2(:)
            !
-           call tr_deallocate(a2,"a2")
-           call tr_deallocate(irn2,"irn2")
-           call tr_deallocate(jcn2,"jcn2")
+           call tr_deallocate(a2,"a2",CAT_PRECOND)
+           call tr_deallocate(irn2,"irn2",CAT_PRECOND)
+           call tr_deallocate(jcn2,"jcn2",CAT_PRECOND)
            !
         endif
         !----------------End pre-processing (MUMPS)
@@ -151,7 +151,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
            !----------------Pre-processing to remove nonzeros in A (PASTIX)
            if (no_zeros_pastix) then
-              call tr_allocate(tmp,1,mumps_par%NZ,"tmp")
+              call tr_allocate(tmp,1,mumps_par%NZ,"tmp",CAT_PRECOND)
               tmp(:)=0
               !
               nz2=0
@@ -163,9 +163,9 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               ENDDO
               WRITE(*,*) '% zeros',my_id,mumps_par%NZ,nz2,REAL(nz2)/REAL(mumps_par%NZ)*100
               !
-              call tr_allocate(A2,1,nz2,"A2")
-              call tr_allocate(irn2,1,nz2,"irn2")
-              call tr_allocate(jcn2,1,nz2,"jcn2")
+              call tr_allocate(A2,1,nz2,"A2",CAT_PRECOND)
+              call tr_allocate(irn2,1,nz2,"irn2",CAT_PRECOND)
+              call tr_allocate(jcn2,1,nz2,"jcn2",CAT_PRECOND)
               !
               A2(:) = 0.d0
               irn2(:) = 0
@@ -177,26 +177,26 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  jcn2(i) = mumps_par%jcn(tmp(i))        
               ENDDO
               !
-              call tr_deallocate(tmp,"tmp")  
+              call tr_deallocate(tmp,"tmp",CAT_PRECOND)  
               !
-              IF (ASSOCIATED(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
-              IF (ASSOCIATED(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
-              IF (ASSOCIATED(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
+              IF (ASSOCIATED(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+              IF (ASSOCIATED(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+              IF (ASSOCIATED(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
               !
               kk = mumps_par%NZ  !tmp, just for write(*,*) below
               mumps_par%NZ = nz2
               !
-              call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A")
-              call tr_allocatep(mumps_par%irn,1,mumps_par%NZ,"mumps_par%irn")
-              call tr_allocatep(mumps_par%jcn,1,mumps_par%NZ,"mumps_par%jcn")
+              call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
+              call tr_allocatep(mumps_par%irn,1,mumps_par%NZ,"mumps_par%irn",CAT_DMATRIX)
+              call tr_allocatep(mumps_par%jcn,1,mumps_par%NZ,"mumps_par%jcn",CAT_DMATRIX)
               !
               mumps_par%A(:)   = A2(:)
               mumps_par%irn(:) = irn2(:)
               mumps_par%jcn(:) = jcn2(:)
               !
-              call tr_deallocate(a2,"a2")
-              call tr_deallocate(irn2,"irn2")
-              call tr_deallocate(jcn2,"jcn2")
+              call tr_deallocate(a2,"a2",CAT_PRECOND)
+              call tr_deallocate(irn2,"irn2",CAT_PRECOND)
+              call tr_deallocate(jcn2,"jcn2",CAT_PRECOND)
               !
            endif
            !----------------End pre-processing (PASTIX)
@@ -266,14 +266,14 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
            call MPI_BCAST(nnz_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 #endif
            if (my_id_n .gt. 0) then
-              if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
-              if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
-              if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
-              if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs")
-              call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"mumps_par%irn")
-              call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"mumps_par%jcn")
-              call tr_allocatep(mumps_par%a,1,mumps_par%nz,"mumps_par%a")
-              call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs")
+              if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+              if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+              if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+              if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
+              call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"mumps_par%irn",CAT_DMATRIX)
+              call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"mumps_par%jcn",CAT_DMATRIX)
+              call tr_allocatep(mumps_par%a,1,mumps_par%nz,"mumps_par%a",CAT_DMATRIX)
+              call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
            endif
 
 !!$           call MPI_BCAST(mumps_par%IRN,mumps_par%nz,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -296,10 +296,10 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               k = mumps_par%JCN(mumps_par%N+1)-1
               IF(k/=nz2)THEN
                  WRITE(*,*) 'New nnz to symmetrize',my_id,k,REAL(k)/REAL(kk)*100
-                 call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN")
-                 call tr_deallocatep(mumps_par%A,"mumps_par%A")
-                 call tr_allocatep(mumps_par%A,1,k,"mumps_par%A")
-                 call tr_allocatep(mumps_par%IRN,1,k,"mumps_par%IRN")
+                 call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
+                 call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+                 call tr_allocatep(mumps_par%A,1,k,"mumps_par%A",CAT_DMATRIX)
+                 call tr_allocatep(mumps_par%IRN,1,k,"mumps_par%IRN",CAT_DMATRIX)
                  CALL pastix_fortran_checkmatrix_end(pastix_data,pastix_verb,mumps_par%IRN,mumps_par%A,1)
               ENDIF
            ENDIF
@@ -365,12 +365,14 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                  if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 
 #ifdef USE_BLOCK
-                 allocate(pastix_perm_vars(n_block),pastix_iperm_vars(n_block))
+                 call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
+                 call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
 
                  call pastix_fortran(pastix_data,MPI_COMM_N,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
-                 allocate(pastix_perm_vars(mumps_par%n),pastix_iperm_vars(mumps_par%n))
+                 call tr_allocate(pastix_perm_vars,1 ,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+                 call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 
                  call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
@@ -499,9 +501,9 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
               STOP
            end if
 
-           call tr_deallocatep(mumps_par%A,"special:mumps_par%A")
-           call tr_deallocatep(mumps_par%irn,"special:mumps_par%irn")
-           call tr_deallocatep(mumps_par%jcn,"special:mumps_par%jcn")
+           call tr_deallocatep(mumps_par%A,"special:mumps_par%A",CAT_DMATRIX)
+           call tr_deallocatep(mumps_par%irn,"special:mumps_par%irn",CAT_DMATRIX)
+           call tr_deallocatep(mumps_par%jcn,"special:mumps_par%jcn",CAT_DMATRIX)
 
            CALL CPU_TIME(t_analysis_1)
                  
@@ -588,9 +590,9 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
         if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
-        if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn")
-        if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn")
-        if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A")
+        if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+        if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+        if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
 #ifdef USE_BLOCK
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
                     NULL(),NULL(),NULL(), &
@@ -617,11 +619,11 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
   if (my_id_n .eq. 0) then
 
-     if (allocated(deltas)) call tr_deallocate(deltas,"deltas")
-     call tr_allocate(deltas,1,ndof_glob,"deltas")
+     if (allocated(deltas)) call tr_deallocate(deltas,"deltas",CAT_PRECOND)
+     call tr_allocate(deltas,1,ndof_glob,"deltas",CAT_PRECOND)
      deltas = 0.d0
 
-     call tr_allocate(rhs_tmp,1,ndof_glob,"rhs_tmp")
+     call tr_allocate(rhs_tmp,1,ndof_glob,"rhs_tmp",CAT_PRECOND)
 
      rhs_tmp = 0.d0
 
@@ -641,7 +643,7 @@ subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      endif
      
      call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
-     call tr_deallocate(rhs_tmp,"rhs_tmp")
+     call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
 
   endif
   if (.not. use_murge) then

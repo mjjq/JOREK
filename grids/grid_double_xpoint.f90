@@ -156,13 +156,13 @@ if (xcase .eq. 3) n_tht_2 = 2 * n_tht
 n_psi	        = n_flux   + n_open   + n_outer   + n_inner   + n_private   + n_up_priv + 1   ! this includes the magnetic axis
 n_tht_3         = n_tht_2 + 2*n_leg + 2*n_up_leg
 flux_list%n_psi = n_psi - 1
-call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values")
+call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
 
 !-------------------------------- Allocate sep_list structure (that's for plotting only)
 sep_list%n_psi =3
 if(xcase .eq. 3) sep_list%n_psi =6
-if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values")
-call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values")
+if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
+call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
 
 !-------------------------------- Call the routine
 call define_flux_values(node_list, element_list, flux_list, sep_list, &

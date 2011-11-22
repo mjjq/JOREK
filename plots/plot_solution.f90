@@ -109,7 +109,7 @@ endif
 
 write(*,*) ' min/max : ',psi_min,psi_max
 
-call tr_allocate(xp,1,node_list%n_nodes,1,n_dim,"xp")
+call tr_allocate(xp,1,node_list%n_nodes,1,n_dim,"xp",CAT_GRID)
 
 do i=1,node_list%n_nodes
  xp(i,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
@@ -203,7 +203,7 @@ enddo
 call cplotm(1,1,-1,x_g,y_g,4,-4,1,1,PS,4,zc,nc,'Solution',8,'R [m]',5,'Z [m]',5)
 call lincol(0)
 
-if (allocated(xp)) call tr_deallocate(xp,"xp")
+if (allocated(xp)) call tr_deallocate(xp,"xp",CAT_GRID)
 
 return
 end

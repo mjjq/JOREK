@@ -36,11 +36,11 @@ if (mf .le. 0) then
     write(*,'(A18,f8.4)')  '  Xpoint(angle)   : ',xtheta
 
     n_bnd = 256
-    call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp")
-    call tr_allocate(r_tmp,1,n_bnd,"r_tmp")
-    call tr_allocate(dr_tmp,1,n_bnd,"dr_tmp")
-    call tr_allocate(psi_tmp,1,n_bnd,"psi_tmp")
-    call tr_allocate(dpsi_tmp,1,n_bnd,"dpsi_tmp")
+    call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp",CAT_GRID)
+    call tr_allocate(r_tmp,1,n_bnd,"r_tmp",CAT_GRID)
+    call tr_allocate(dr_tmp,1,n_bnd,"dr_tmp",CAT_GRID)
+    call tr_allocate(psi_tmp,1,n_bnd,"psi_tmp",CAT_GRID)
+    call tr_allocate(dpsi_tmp,1,n_bnd,"dpsi_tmp",CAT_GRID)
 
     do i=1,n_bnd
 
@@ -86,11 +86,11 @@ if (mf .le. 0) then
 
     n_bnd = n_boundary
 
-    call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp")
-    call tr_allocate(r_tmp,1,n_bnd,"r_tmp")
-    call tr_allocate(dr_tmp,1,n_bnd,"dr_tmp")
-    call tr_allocate(psi_tmp,1,n_bnd,"psi_tmp")
-    call tr_allocate(dpsi_tmp,1,n_bnd,"dpsi_tmp")
+    call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp",CAT_GRID)
+    call tr_allocate(r_tmp,1,n_bnd,"r_tmp",CAT_GRID)
+    call tr_allocate(dr_tmp,1,n_bnd,"dr_tmp",CAT_GRID)
+    call tr_allocate(psi_tmp,1,n_bnd,"psi_tmp",CAT_GRID)
+    call tr_allocate(dpsi_tmp,1,n_bnd,"dpsi_tmp",CAT_GRID)
 
     do i=1,n_bnd
 
@@ -132,7 +132,7 @@ if (mf .le. 0) then
     
   endif
 
-  call tr_allocate(work,1,3*n_bnd,"work")
+  call tr_allocate(work,1,3*n_bnd,"work",CAT_GRID)
 
   call TB15A(n_bnd,tht_tmp,r_tmp,dr_tmp,work,6)           ! periodic spline of the radius
   call TB15A(n_bnd,tht_tmp,psi_tmp,dpsi_tmp,work,6)       ! periodic spline of flux
@@ -142,7 +142,7 @@ if (mf .le. 0) then
   call lplot6(1,1,tht_tmp,psi_boundary,-n_bnd,'psi at boundary')
   call lincol(0)
   
-  call tr_deallocate(work,"work")
+  call tr_deallocate(work,"work",CAT_GRID)
 
   mf = 256
 
@@ -175,11 +175,11 @@ if (mf .le. 0) then
 
   fpsi(1) = 0.d0
 
-  call tr_deallocate(tht_tmp,"tht_tmp")
-  call tr_deallocate(r_tmp,"r_tmp")
-  call tr_deallocate(dr_tmp,"dr_tmp")
-  call tr_deallocate(psi_tmp,"psi_tmp")
-  call tr_deallocate(dpsi_tmp,"dpsi_tmp")
+  call tr_deallocate(tht_tmp,"tht_tmp",CAT_GRID)
+  call tr_deallocate(r_tmp,"r_tmp",CAT_GRID)
+  call tr_deallocate(dr_tmp,"dr_tmp",CAT_GRID)
+  call tr_deallocate(psi_tmp,"psi_tmp",CAT_GRID)
+  call tr_deallocate(dpsi_tmp,"dpsi_tmp",CAT_GRID)
 
 else
   write(*,*) ' boundary defined by Fourier series : ',mf

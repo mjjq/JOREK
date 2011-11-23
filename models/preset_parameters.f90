@@ -13,7 +13,7 @@ subroutine preset_parameters
   implicit none
   
   ! --- DoubleNull flag
-  xcase = 1
+  xcase = LOWER_XPOINT
   
   tstep    = 1.d0
   tstep_n  = 1.d0

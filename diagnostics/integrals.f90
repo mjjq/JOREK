@@ -1,22 +1,26 @@
 !> Determines some integrals over the JOREK computational domain to determine the total current etc.
-subroutine Integrals(node_list, element_list, Bgeo, aminor, psi_limit, current,                    &
-                     beta_p, beta_t, beta_n, density, density_in, density_out,                     &
-                     pressure, pressure_in, pressure_out)
+subroutine integrals(node_list, element_list, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, aminor,   &
+  Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure, pressure_in,  &
+  pressure_out)
 
 use parameters
 use data_structure
 use Gauss
 use basis_at_gaussian
 use phys_module
+use domains
 
 implicit none
 
 ! --- Routine parameters
 type(type_node_list),    intent(in)    :: node_list
 type(type_element_list), intent(in)    :: element_list
-real*8,                  intent(out)   :: Bgeo
-real*8,                  intent(in)    :: aminor
+real*8,                  intent(in)    :: R_xpoint(2)
+real*8,                  intent(in)    :: Z_xpoint(2)
+real*8,                  intent(in)    :: psi_xpoint(2)
 real*8,                  intent(in)    :: psi_limit
+real*8,                  intent(in)    :: aminor
+real*8,                  intent(out)   :: Bgeo
 real*8,                  intent(out)   :: current
 real*8,                  intent(out)   :: beta_p
 real*8,                  intent(out)   :: beta_t
@@ -129,30 +133,33 @@ do ife =1, element_list%n_elements
       endif
       ZJ_0  = eq_g(3,ms,mt)
       PS_0  = eq_g(1,ms,mt)
-
+      
       pressure = pressure + rho_00 * T_00 * xjac * BigR * wst
       density  = density  + rho_00       * xjac * BigR * wst
-
-      if (PS_0 .lt. psi_limit) then
-
+      
+      if ( in_plasma(x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
+        xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit) ) then
+        
+        ! --- 3D integrals
         D_int = D_int + rho_00       * xjac * BigR * wst
         P_int = P_int + rho_00 * T_00 * xjac * BigR * wst
         C_int = C_int + ZJ_0 /BigR  * xjac * BigR * wst
         
-        P_hel = P_hel + rho_00 * T_00 * xjac * wst         ! 2D integrals
+        ! --- 2D integrals
+        P_hel = P_hel + rho_00 * T_00 * xjac * wst
         C_hel = C_hel + ZJ_0 /BigR  * xjac * wst
         
         Volume = Volume + 2.d0 * PI * BigR * xjac * wst
         Area   = Area   + xjac * wst
         
       else
-
+        
         D_ext = D_ext + rho_00       * xjac * BigR * wst      
         P_ext = P_ext + rho_00 * T_00 * xjac * BigR * wst
         C_ext = C_ext + ZJ_0 /BigR  * xjac * BigR * wst
         
       endif
-
+      
     enddo
   enddo
 enddo
@@ -173,17 +180,17 @@ beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
 beta_n  = 100.d0 * (4.*PI/10.) * beta_t / (MU_zero * abs(current) /  (aminor * Bgeo))
 
-write(*,*) ' psi_limit : ',psi_limit
+write(*,'(A,f12.7)') ' psi_limit: ',psi_limit
 write(*,'(A,f12.7,A)') ' current  : ',current/1.e6,' MA'
 write(*,'(A,f12.7)') ' beta_p   : ',beta_p
 write(*,'(A,f12.7)') ' beta_t   : ',beta_t
-write(*,'(A,f12.7)') ' beta_n   : ',beta_n
+write(*,'(A,f12.7,A)') ' beta_n   : ',beta_n,' [%]'
 write(*,'(A,f12.7,A)') ' Area     : ',area,' m^2'
 write(*,'(A,f12.7,A)') ' Volume   : ',volume,' m^3'
 
-write(*,'(A,5f10.5)') 'density  (total/in/out) : ',density,  density_in,  density_out 
-write(*,'(A,5f10.5)') 'pressure (total/in/out) : ',pressure, pressure_in, pressure_out 
-write(*,'(A,5f10.5)') 'current  (in/out)       : ',current_in, current_out 
+write(*,'(A,5f10.5)') ' density  (total/in/out) : ',density,  density_in,  density_out 
+write(*,'(A,5f10.5)') ' pressure (total/in/out) : ',pressure, pressure_in, pressure_out 
+write(*,'(A,5f10.5)') ' current  (in/out)       : ',current_in, current_out 
 
 return
 end subroutine integrals

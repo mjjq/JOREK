@@ -177,9 +177,10 @@ write(*,'(A,f8.5,A)') ' amin : ',aminor,' m'
 write(*,'(A,f8.5,A)') ' Rgeo : ',Rgeo,' m'
 write(*,'(A,f8.5,A)') ' Bgeo : ',Bgeo,' T'
 
-call Integrals(node_list,element_list,Bgeo,aminor,psi_bnd,current,beta_p,beta_t,beta_n, &
-               density,density_in,density_out,pressure,pressure_in,pressure_out)
-
+call Integrals(node_list, element_list, R_xpoint, Z_xpoint, psi_xpoint, psi_lim, aminor, Bgeo,     &
+  current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure, pressure_in,        &
+  pressure_out)
+  
 write(11,*) aminor, Rgeo, Bgeo
 write(11,*) current,beta_p,beta_t,beta_n
 

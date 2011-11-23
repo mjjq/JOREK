@@ -5,7 +5,8 @@
 module exec_commands
   
   use parameters,        only: n_var, n_tor, n_order, n_vertex_max, variable_names, jorek_model
-  use phys_module,       only: mode, t_start, xpoint, xcase, index_start, F0, ZK_perp, ZK_par
+  use phys_module,       only: mode, t_start, xpoint, xcase, index_start, F0, ZK_perp, ZK_par,     &
+    LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL
   use data_structure,    only: type_node_list, type_element_list, type_surface_list, type_surface, &
     type_node, type_element
   use nodes_elements,    only: node_list, element_list
@@ -14,6 +15,7 @@ module exec_commands
   use convert_character, only: to_float, to_int, get_variable_number, lower_case
   use postproc_help,     only: general_help, specific_help
   use basis_at_gaussian, only: H, H_s, H_t, wgauss, n_gauss
+  use domains,           only: in_private
   
   
   
@@ -280,9 +282,17 @@ module exec_commands
     ! --- Locate magnetic axis and X-point.
     call find_axis(0, node_list, element_list, psi_axis, R_axis, Z_axis, i_elm_axis, s_axis,       &
       t_axis, ifail)
-    call find_xpoint(0, node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,     &
-      s_xpoint, t_xpoint, xcase, ifail)
-    psi_bnd  = psi_xpoint(1)
+    if ( xpoint ) then
+      call find_xpoint(0, node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,     &
+        s_xpoint, t_xpoint, xcase, ifail)
+      if ( (xcase == DOUBLE_NULL) ) then
+        psi_bnd = minval( psi_xpoint(:) )
+      else
+        psi_bnd = psi_xpoint(1)
+      end if
+    else
+      psi_bnd = 0.d0
+    end if
     ! ### handle cases without x-point or with double x-point ###
     
   end subroutine load_step
@@ -1031,7 +1041,8 @@ module exec_commands
             !
             !     \f$ <P> = ( oint dx P / |grad Psi| ) / ( oint dx 1 / |grad Psi| ) \f$
             !
-            if ( ( ip > 1 ) .and. ( Z(ip) > Z_xpoint(2) ) ) then
+            if ( ( ip > 1 ) .and. ( .not. in_private(R(ip),Z(ip),psi,xpoint,xcase,R_xpoint,        &
+              Z_xpoint,psi_xpoint,99.d0) ) ) then
               dx  = sqrt( (R(ip)-R(ip-1))**2 + (Z(ip)-Z(ip-1))**2 )
               nom = nom + dx * ( P(ip) + P(ip-1) ) / 2.d0 / abs_grad_psi
               den = den + dx / abs_grad_psi
@@ -1181,8 +1192,8 @@ module exec_commands
     
     ! ### add area and volume as parameters to integrals and output them
     
-    call integrals(node_list,element_list,Bgeo,aminor,psi_limit,current,beta_p,beta_t,beta_n,&
-                     density,density_in,density_out,pressure,pressure_in,pressure_out)
+    call integrals(node_list,element_list,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,aminor,Bgeo,      &
+      current,beta_p,beta_t,beta_n,density,density_in,density_out,pressure,pressure_in,pressure_out)
     
     write(file_handle,'(6ES16.7,3x,a,i5.5)') t_start, psi_limit, current/1.e6, beta_p, beta_t,     &
       beta_n, '#step', index_start
@@ -1281,7 +1292,7 @@ module exec_commands
     psi_separatrix = psi_axis + (psi_bnd - psi_axis) * 0.999d0
     call find_flux_surfaces2(1, (/psi_separatrix/), 20, n_seg, R, Z, error)
     
-    ! --- Locate min/max value of R and the appendant Z value
+    ! --- Locate min/max value of R and the corresponding Z value
     allocate (R_b(n_bars+1))
     allocate (n_pts(n_bars+1))
     allocate (Z_b(n_bars+1,10))
@@ -1290,7 +1301,8 @@ module exec_commands
     R_max = -1.d99
     do i = 1, n_seg(1)
       do j = 1, 20
-        if (Z(1, i, j) >= Z_xpoint(1)) then
+        if ( .not. in_private(R(1,i,j),Z(1,i,j),psi_separatrix,xpoint,xcase,R_xpoint,Z_xpoint,     &
+          psi_xpoint,99.d0) ) then
           if (R(1, i, j) < R_min ) then
 	    R_min      = R(1, i, j)
 	    R_b(1)     = R(1, i, j)
@@ -1323,7 +1335,8 @@ module exec_commands
 	    dZ_2  = (dR_2 / dR) * dZ
             Z_tmp = Z(1, l, m+1) - dZ_2       ! Z-position of separatrix-bar intersection
             
-	    if ( Z_tmp < Z_xpoint(1) ) cycle  ! discard points on divertor legs
+	    if ( in_private(R(1,l,m),Z_tmp,psi_separatrix,xpoint,xcase,R_xpoint,Z_xpoint,          &
+              psi_xpoint,99.d0) ) cycle  ! discard points on divertor legs
 	    
 	    n_pts(k) = n_pts(k) + 1
 	    Z_b(k, n_pts(k)) = Z_tmp

@@ -106,7 +106,8 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_ylabel: input profiles'
     write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@input_profiles: "psin"       "FF''"    "dFF''/dpsin"'//        &
-      '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_T"'
+      '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_T"        "D_perp"'//     &
+      '    "ZK_perp"'
     
     do i = 0, 200
       

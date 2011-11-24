@@ -198,7 +198,7 @@ program JOREK2
   murge_initialised  = .false.
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
-  call initialise_and_broadcast_parameters(my_id)
+  call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
   
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)

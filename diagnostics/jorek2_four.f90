@@ -24,7 +24,7 @@ program JOREK2_FOUR
   ! --- Initialization
   write(*,*)
   write(*,*) '>>> Initialization <<<'
-  call initialise_parameters(0)                 ! default values and namelist input
+  call initialise_parameters(0, "__NO_FILENAME__")                 ! default values and namelist input
   call initialise_basis                         ! define the basis functions at the Gaussian points
   call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)   ! read restart file
   !   --- Preset field line tracing parameters.

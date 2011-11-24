@@ -65,8 +65,8 @@ if (my_id .eq. 0) then
   ! -none-
   
   ! --- Read input parameters from namelist.
-  if ( present(filename) ) then
-    open(42, file=filename, status='old', action='read', iostat=ierr)
+  if (trim(filename) .ne. "__NO_FILENAME__" ) then
+     open(42, file=filename, status='old', action='read', iostat=ierr)
     if ( ierr /= 0 ) then
       write(*,*) 'ERROR: COULD NOT OPEN NAMELIST FILE "', trim(filename), '".'
       stop

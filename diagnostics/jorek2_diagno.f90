@@ -25,7 +25,7 @@ write(*,*) '***************************************'
 
 my_id=0
 
-call initialise_parameters(my_id)
+call initialise_parameters(my_id, "__NO_FILENAME__")
 
 call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
 

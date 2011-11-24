@@ -45,7 +45,7 @@ write(*,*) '***************************************'
 
 my_id=0
 
-call initialise_parameters(my_id)
+call initialise_parameters(my_id,  "__NO_FILENAME__")
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 

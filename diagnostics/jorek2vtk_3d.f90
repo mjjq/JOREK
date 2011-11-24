@@ -32,7 +32,7 @@ write(*,*) 'jorek2vtk_3d'
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
-call initialise_parameters(my_id)
+call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
 nsub      = 5  ! Number of subdivisions of the cubic finite elements into linear pieces

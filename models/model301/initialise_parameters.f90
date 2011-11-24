@@ -11,8 +11,8 @@ use vacuum,        only: vacuum_preset
 implicit none
 
 ! --- Routine parameters
-integer,                    intent(in) :: my_id
-character(len=*), optional, intent(in) :: filename
+integer,                      intent(in) :: my_id
+character(len=*),             intent(in) :: filename
 
 ! --- Local variables
 integer :: ierr
@@ -66,8 +66,8 @@ if (my_id .eq. 0) then
   heatsource_psin     = 0.8d0
   
   ! --- Read input parameters from namelist.
-  if ( present(filename) ) then
-    open(42, file=filename, status='old', action='read', iostat=ierr)
+  if (trim(filename) .ne. "__NO_FILENAME__" ) then
+     open(42, file=filename, status='old', action='read', iostat=ierr)
     if ( ierr /= 0 ) then
       write(*,*) 'ERROR: COULD NOT OPEN NAMELIST FILE "', trim(filename), '".'
       stop

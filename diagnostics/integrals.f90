@@ -3,6 +3,7 @@ subroutine integrals(node_list, element_list, R_xpoint, Z_xpoint, psi_xpoint, ps
   Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure, pressure_in,  &
   pressure_out)
 
+use constants
 use parameters
 use data_structure
 use Gauss
@@ -39,7 +40,7 @@ real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 real*8     :: eq_g(n_var,n_gauss,n_gauss), eq_s(n_var,n_gauss,n_gauss), eq_t(n_var,n_gauss,n_gauss)
 integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
-real*8     :: MU_zero, xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area, PI
+real*8     :: xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area
 real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
 
@@ -61,8 +62,6 @@ Volume   = 0.d0
 Area     = 0.d0
 
 Bgeo = F0 / R_geo
-
-PI = 2.d0*asin(1.d0)
 
 do ife =1, element_list%n_elements
 
@@ -172,8 +171,6 @@ pressure_in  = P_int    * 2.d0 * PI
 pressure_out = P_ext    * 2.d0 * PI
 current_in   = C_int    * 2.d0 * PI
 current_out  = C_ext    * 2.d0 * PI
-
-MU_zero = 4.d0*PI * 1.d-7
 
 current = C_hel / MU_zero
 beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )

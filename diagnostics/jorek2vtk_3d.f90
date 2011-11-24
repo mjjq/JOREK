@@ -1,6 +1,7 @@
 !> Program to convert a JOREK2 restart file into binary VTK format
 program jorek2vtk_3d
 
+use constants
 use data_structure
 use phys_module
 implicit none
@@ -17,7 +18,7 @@ integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, index, inde
 character             :: buffer*80, lf*1, str1*10, str2*10
 character*8, allocatable :: scalar_names(:), vector_names(:)
 real*4                :: float
-real*8                :: s, t, phi, PI, angle, cur_pert
+real*8                :: s, t, phi, angle, cur_pert
 real*8                :: P,P_s,P_t,P_st,P_ss,P_tt,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8                :: Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt, ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt, W,W_s,W_t,W_st,W_ss,W_tt
 real*8                :: U,U_s,U_t,U_st,U_ss,U_tt, RHO,RH_s,RH_t,RH_st,RH_ss,RH_tt, TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
@@ -55,15 +56,15 @@ write(*,*) 'periodic        =', periodic
 write(*,*)
 
 ! --- Number of scalars and vectors written to the VTK file
-n_scalars = 4
+n_scalars = 7
 n_vectors = 1
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
 
-scalar_names = (/ 'flux    ','U       ','density ','T       '/)
+scalar_names = (/ 'flux    ','U       ','j       ','omega   ','density ','T       ','v_par   '/)
 vector_names = (/ 'B_field '/)
 
-call import_restart(node_list,element_list)
+call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
 
 nnos = n_plane * nsub*nsub*node_list%n_nodes
 allocate(xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
@@ -85,8 +86,6 @@ vectors = 0.d0
 xyz     = 0
 ien     = 0
 n_points = nsub*nsub*element_list%n_elements        ! number of points in one poloidal plane
-
-PI = 2.d0 * asin(1.d0)
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -153,11 +152,20 @@ do m=1, n_plane
           call interp(node_list,element_list,i,2,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,2) = scalars(inode,2) + P * HZ(i_tor,m)
 
-          call interp(node_list,element_list,i,5,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          call interp(node_list,element_list,i,3,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,3) = scalars(inode,3) + P * HZ(i_tor,m)
 
-          call interp(node_list,element_list,i,6,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          call interp(node_list,element_list,i,4,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,4) = scalars(inode,4) + P * HZ(i_tor,m)
+
+          call interp(node_list,element_list,i,5,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          scalars(inode,5) = scalars(inode,5) + P * HZ(i_tor,m)
+
+          call interp(node_list,element_list,i,6,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          scalars(inode,6) = scalars(inode,6) + P * HZ(i_tor,m)
+
+          call interp(node_list,element_list,i,7,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          scalars(inode,7) = scalars(inode,7) + P * HZ(i_tor,m)
 
 	enddo
 

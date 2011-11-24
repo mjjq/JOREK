@@ -6,6 +6,7 @@ subroutine vacuum_old(my_id,node_list,element_list,bnd_elm_list,bnd_node_list, &
 !---------------------------------------------------------------------
   
   use parameters
+  use constants
   use data_structure
   use gauss
   use basis_at_gaussian
@@ -43,7 +44,7 @@ subroutine vacuum_old(my_id,node_list,element_list,bnd_elm_list,bnd_node_list, &
   integer    :: ilarge_pp, ilarge_jp, ijA_position
   integer    :: in, im
   integer    :: jpsi, iwall, jnode, jtor, jbas, jnode_glob, jnode2, jelem
-  real*8     :: ws, BigR, PI
+  real*8     :: ws, BigR
   real*8     :: A_glob_31
   real*8     :: theta, zeta
   real*8     :: v, ijsize, klsize
@@ -62,8 +63,6 @@ subroutine vacuum_old(my_id,node_list,element_list,bnd_elm_list,bnd_node_list, &
   write(*,*) '************************************'
   write(*,*) '*     VACUUM boundary integral     *'
   write(*,*) '************************************'
-  
-  PI    = 2.d0 * asin(1.d0)
   
   theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
   !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme

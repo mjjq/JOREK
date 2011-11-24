@@ -2,6 +2,7 @@ subroutine Integrals_3D(my_id, node_list,element_list,density_tot,density_in,den
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
+use constants
 use data_structure
 use Gauss
 use basis_at_gaussian
@@ -31,8 +32,8 @@ real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dps
 integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint(2), ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
 real*8  ::  R_axis,Z_axis,s_axis,t_axis 
-real*8  :: current, beta_p, beta_n, beta_t, MU_zero, aminor
-real*8  :: xjac, BigR, wst, P_int, C_int, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, PI, Bgeo, psi_limit
+real*8  :: current, beta_p, beta_n, beta_t, aminor
+real*8  :: xjac, BigR, wst, P_int, C_int, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, P_max, delta_phi, phi, P_tot, D_tot
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
@@ -73,8 +74,6 @@ endif
 
 Bgeo = F0 / R_geo
 
-PI = 2.d0*asin(1.d0)
- 
 delta_phi = 2.d0 * PI / float(n_plane) / float(n_period)
  
 P_max         = 0.d0
@@ -100,7 +99,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, ife_min, ife_max, xpoint, xcase,       &
-!$omp          Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, PI, psi_axis, psi_bnd,       &
+!$omp          Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, psi_axis, psi_bnd,           &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_int, C_ext,                    &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,                     &
@@ -292,8 +291,6 @@ if (use_pellet) then
   call MPI_AllReduce(local_plasma_particles,total_plasma_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_pellet_volume,total_pellet_volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 endif
-
-MU_zero = 4.d0*PI * 1.d-7
 
 current = C_int / MU_zero
 

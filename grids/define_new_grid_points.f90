@@ -2,7 +2,7 @@
 subroutine define_new_grid_points(node_list, element_list, flux_list, &
                                    xcase, R_xpoint, Z_xpoint, psi_xpoint, n_grids, stpts, sigmas, nwpts)
 
-
+use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
@@ -32,7 +32,7 @@ integer             :: npl, ifail, my_id
 real*8              :: delta, ss, tmp1, tmp2
 real*8              :: R_cub1d(4), Z_cub1d(4)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
-real*8              :: PI, tht_x1, tht_x2
+real*8              :: tht_x1, tht_x2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
@@ -52,8 +52,6 @@ write(*,*) '                 Define extrapolation points'
 
 my_id = 1 ! Just don't want the printout...
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-PI = 2.d0 * asin(1.d0)
 
 SIG_theta    = sigmas(2) 
 SIG_leg_0    = sigmas(8) ; SIG_leg_1    = sigmas(9) 

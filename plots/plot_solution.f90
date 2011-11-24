@@ -2,6 +2,7 @@ subroutine plot_solution(node_list,element_list,ivar,iharm,iangle,label)
 !-----------------------------------------------------------------------
 ! plots the 2D solution
 !-----------------------------------------------------------------------
+use constants
 use tr_module 
 use parameters
 use data_structure
@@ -16,7 +17,7 @@ type (type_element_list) :: element_list
 real*8             :: psi_max, psi_min, R_min, R_max, Z_min, Z_max, zc(3)
 real*8,allocatable :: xp(:,:)
 real*8             :: x_g(4,4), x_s(4,4), x_t(4,4), y_g(4,4), y_s(4,4), y_t(4,4)
-real*8             :: PS(4,4),  PSX(4,4), PSY(4,4), xjac, pi, error, error2, error3
+real*8             :: PS(4,4),  PSX(4,4), PSY(4,4), xjac, error, error2, error3
 real*8             :: x_hel, y_hel, ps_solov, psx_solov, psy_solov, psxy_solov
 integer            :: i, kv, kf, ms, mt, nc, iv, ivar, iharm, nlab, in, iangle
 character*(*)      :: label
@@ -132,7 +133,6 @@ zc(1) = -max(abs(psi_max),abs(psi_min))
 zc(2) = 0.
 zc(3) = abs(zc(1))
 
-pi = 2.*asin(1.)
 error = 0.
 
 do i=1,element_list%n_elements

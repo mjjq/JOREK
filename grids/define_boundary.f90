@@ -6,6 +6,7 @@ subroutine Define_Boundary
 !   TRIA  : triangularity
 ! output is contained in the module boundary
 !---------------------------------------------------------------------
+use constants
 use tr_module 
 use phys_module
 
@@ -14,13 +15,11 @@ implicit none
 integer             :: n_bnd, i, j, m
 real*8, allocatable :: r_tmp(:),psi_tmp(:),dr_tmp(:),dpsi_tmp(:),tht_tmp(:)
 real*8, allocatable :: Work(:)
-real*8              :: PI, Vr(4), Vpsi(4), RP, ZP, theta, tht_i
+real*8              :: Vr(4), Vpsi(4), RP, ZP, theta, tht_i
 
 write(*,*) '*******************************************'
 write(*,*) '*    Defining boundary                    *'
 write(*,*) '*******************************************'
-
-PI = 2.d0*asin(1.d0)
 
 !------------------------------- boundary given by ellip, tria etc as splined in r_bnd, psi_bnd (module boundary)
 if (mf .le. 0) then

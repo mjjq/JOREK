@@ -1,6 +1,7 @@
 !> The routine finds fluxsurfaces by finding crossings with the edges of the elements
 subroutine find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
 
+use constants
 use tr_module 
 use data_structure
 
@@ -14,7 +15,7 @@ type (type_element_list), intent(in)	 :: element_list
 type (type_surface_list), intent(inout)  :: surface_list
 
 ! --- Local variables
-real*8  :: psimin, psimax, a0, a1, a2, a3, PI
+real*8  :: psimin, psimax, a0, a1, a2, a3
 real*8  :: dpsi_dr(4),dpsi_ds(4)
 real*8  :: p1, dp1, dp4, p4, p2, p3, r_psi(4), s_psi(4), tht(4)
 real*8  :: s, s2, s3, r_tmp, s_tmp, psr_tmp, pss_tmp, ttmp, tt
@@ -32,7 +33,6 @@ write(*,*) '***********************************'
 !write(*,*) ' n_psi : ',surface_list%n_psi
 !write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
 
-PI = 2.d0* asin(1.d0)
 my_id = 1 ! Just don't want the printout...
 
 if (allocated(surface_list%flux_surfaces)) then

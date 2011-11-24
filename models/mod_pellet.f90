@@ -1,5 +1,6 @@
 module pellet_module
 
+use constants
 
 real*8 :: total_pellet_particles   !< the (total) pellet particles added in this timestep
 real*8 :: total_plasma_particles   !< the total plasma density (before this timestep)
@@ -37,12 +38,10 @@ real*8 :: particle_source           !< particle source (JOREK normalised units)
 real*8 :: volume_source             !< volume of the pellet source (variable used to integrate total pellet volume)
 
 !local variables
-real*8  :: PI, radius, atn, atn_psi, atn_phi, atomic_mass, ablation_rate
+real*8  :: radius, atn, atn_psi, atn_phi, atomic_mass, ablation_rate
 
 particle_source = 0.d0
 volume_source   = 0.d0
-
-PI = 2.d0 *asin(1.d0)
 
 if (pellet_amplitude .gt. 0.) then             ! use the fixed source pellet model 
 
@@ -96,6 +95,7 @@ subroutine update_pellet(my_id,node_List,element_list)
 ! and physical pellet sizes (from the integral of the pellet particle source) *
 !******************************************************************************
 
+use constants
 use data_structure
 use phys_module
 implicit none
@@ -107,22 +107,17 @@ type (type_element_list) :: element_list
 
 real*8  :: psi_axis, psi_bnd
 integer :: my_id, ierr
-real*8  :: PI, zmu0, V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
-
-PI   = 2.d0  * asin(1.d0)
-zmu0 = 4.d-7 * PI
+real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
 if (pellet_amplitude .gt. 0) return
 
 call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
-V_normalisation = 1.d0 / sqrt(central_density * 1.66d-7 * 2.d0 * zmu0) ! assumes Deuterium!
+V_normalisation = 1.d0 / sqrt(central_density * 1.66d-7 * 2.d0 * MU_ZERO) ! assumes Deuterium!
 
 pellet_R = pellet_R + pellet_velocity_R * tstep / V_normalisation
 pellet_Z = pellet_Z + pellet_velocity_Z * tstep / V_normalisation
 
-PI = 2.d0*asin(1.d0)
- 
 total_pellet_particles = total_pellet_particles * central_density * tstep 
 total_plasma_particles = total_plasma_particles * central_density          ! undo normalisation
 

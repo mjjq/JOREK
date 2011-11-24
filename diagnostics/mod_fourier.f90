@@ -3,6 +3,7 @@
 !! physical quantities in (theta_mag, phi)
 module fourier
   
+  use constants
   use tr_module 
   use parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
   use nodes_elements,  only: node_list, element_list
@@ -34,7 +35,6 @@ module fourier
   
   integer :: nequidist_pts !< Number of equidistant points for theta_mag(theta_geo) Fourier trafo
   integer, parameter   :: FFTW_ESTIMATE = 64  !< (constant of the FFTW library)
-  real*8,  parameter   :: PI =  3.141592653589793_8
   
   
   

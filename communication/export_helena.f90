@@ -1,6 +1,7 @@
 !> Export plasma boundary and profiles for later use in HELENA
 subroutine export_helena(node_list,element_list,bnd_elm_list)
 
+use constants
 use tr_module 
 use parameters
 use data_structure
@@ -30,7 +31,7 @@ real*8 :: Te0gi,dTe0gi_dr,dTe0gi_ds,dTe0gi_drs,dTe0gi_drr,dTe0gi_dss
 real*8 :: ZJgi,dZJgi_dr,dZJgi_ds,dZJgi_drs,dZJgi_drr,dZJgi_dss
 real*8 :: RRgi,dRRgi_dr,dRRgi_ds,dRRgi_drs,dRRgi_drr,dRRgi_dss
 real*8 :: ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss
-real*8 :: dRRgi_dt, dZZgi_dt, RZjac, PI, PSI_R, PSI_Z, grad_psi, B_tot2, P0gi, dP0gi_dr,dP0gi_ds, P0_R, P0_Z 
+real*8 :: dRRgi_dt, dZZgi_dt, RZjac, PSI_R, PSI_Z, grad_psi, B_tot2, P0gi, dP0gi_dr,dP0gi_ds, P0_R, P0_Z 
 real*8 :: density, density_in, density_out, pressure, pressure_in, pressure_out
 integer :: i_elm_axis, i_elm_xpoint(2), nplot, i, j, n_bnd, i_elm, k, ip, ig
 integer :: node1, node2, node3, node4, ifail, my_id
@@ -196,8 +197,6 @@ do i=1,n_flux
 enddo
 
 call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
-
-PI = 2.d0 *asin(1.d0)
 
 write(11,*) n_flux-1
 

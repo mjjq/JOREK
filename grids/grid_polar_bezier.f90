@@ -3,6 +3,7 @@ subroutine grid_polar_bezier(Rgeo,Zgeo,amin,acentre,fbnd,fpsi,mf,nr,np,node_list
 ! defines a polar grid using Bezier finite elements (using the HELENA
 ! cubic Hermite elements formulation)
 !***********************************************************************
+use constants
 use tr_module
 use parameters
 use data_structure
@@ -25,7 +26,7 @@ type(type_element_list), intent(inout) :: element_list   ! list of elements with
 ! --- local variables
 real*8              :: angle_start
 real*8, allocatable :: RR(:,:),ZZ(:,:),PSI(:,:)
-real*8              :: pi, dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
+real*8              :: dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
 real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3
 integer             :: i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm,i_sons
 integer             :: n_element_start, n_node_start, n_index_start
@@ -38,8 +39,6 @@ real*8, external    :: spwert
 call tr_allocate(RR,1,4,1,nr*np,"RR",CAT_GRID)
 call tr_allocate(ZZ,1,4,1,nr*np,"ZZ",CAT_GRID)
 call tr_allocate(PSI,1,4,1,nr*np,"PSI",CAT_GRID)
-
-pi = 2.d0*asin(1.d0)
 
 dt = 2.d0*pi/real(np)
 ds = 1.d0/real(nr-1)

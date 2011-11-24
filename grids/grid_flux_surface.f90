@@ -2,6 +2,7 @@ subroutine grid_flux_surface(xpoint,xcase,node_list,element_list,surface_list,n_
 !------------------------------------------------------------------------
 ! subroutine calculates a new flux surface grid (adapted from HELENA20)
 !------------------------------------------------------------------------
+use constants
 use tr_module
 use data_structure
 
@@ -21,7 +22,7 @@ real*8,                   intent(in)    :: sig1, sig2
 ! --- local variables
 integer            :: nrnew, npnew, i, j, k, i_elm, i_elm_axis
 real*8,allocatable :: RRnew(:,:),ZZnew(:,:),PSInew(:,:)
-real*8             :: PI, abltg(3), xtmp
+real*8             :: abltg(3), xtmp
 real*8,allocatable :: s_values(:),radius(:),psi_values(:),tht_start(:),tht_end(:)
 real*8,allocatable :: sp1(:),sp2(:),sp3(:),sp4(:)
 real*8             :: R_axis, Z_axis, psi_axis, s_axis, t_axis
@@ -50,7 +51,6 @@ write(*,*) '**************************************'
 write(*,*) '*         flux surface grid          *'
 write(*,*) '**************************************'
 
-PI = 2.d0*asin(1.d0)
 my_id = 0
  
 i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...

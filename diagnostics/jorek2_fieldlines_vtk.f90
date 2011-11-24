@@ -12,6 +12,7 @@ end module elements_nodes_neighbours
 
 program jorek2_fieldlines_vtk
 
+use constants
 use data_structure
 use phys_module
 use basis_at_gaussian
@@ -29,7 +30,7 @@ integer :: n_start, n_end, n_large, n_total, n_delta, n_scalars, n_vectors
 integer :: i_elm, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_elm_tmp,i_steps, i_field
 real*8  :: R_start, Z_start, P_start, R_line, Z_line, s_line, t_line, p_line, s_mid, t_mid, p_mid, s_out, t_out
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
-real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, PI, delta_s, delta_t, R_keep, Z_keep
+real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, value_out
 character :: buffer*80, lf*1, str1*12, str2*12, str3*24
@@ -71,8 +72,6 @@ enddo
 ! - (local) q-profile
 
 ! step at constant delta_phi
-
-PI = 2.d0 *asin(1.d0)
 
 n_turns = 20
 n_phi   = 1000

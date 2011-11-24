@@ -1,6 +1,7 @@
 !> Implements the free boundary equilibrium.
 module vacuum_equilibrium
   
+  use constants
   use vacuum
   
   implicit none
@@ -100,7 +101,7 @@ module vacuum_equilibrium
   integer    :: index_node, index_node2, index_node3, index_node_bnd
   integer    :: index_node2_bnd, index_node3_bnd, ilarge_pp, ijA_position
   integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-  real*8     :: ws, xjac,  BigR, PI, phi, eps_cyl
+  real*8     :: ws, xjac,  BigR, phi, eps_cyl
   real*8     :: psi_axis, psi_bnd, Z_xpoint(2)
   real*8     :: rhs_glob_1, A_glob_11, A_glob_11_star, RHS_glob_11, ps0
   real*8     :: psi_norm, theta, zeta
@@ -125,7 +126,6 @@ module vacuum_equilibrium
   
   !TS2 testacse
   I_coils = (/ 0., 0., 0., 28800., -239040., -239040., -28800., 0., 0., 54000., 54000., 54000., 54000., 66000., 66000., 66000., 66000./)
-  PI    = 2.d0*asin(1.d0)
   I_coils = I_coils * 4.d-7 * PI 
   
   ilarge = mumps_par%nz                                      ! the number of items in the mumps_par coordinate storage (before the boundary conditions)

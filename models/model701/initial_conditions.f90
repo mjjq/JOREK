@@ -2,6 +2,7 @@ subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_el
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
+use constants
 use data_structure
 use phys_module
 use mod_poiss
@@ -14,7 +15,7 @@ type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
 integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint(2), i_elm, ifail, xcase2
-real*8     :: amplitude, psi, psi_axis, theta, PI
+real*8     :: amplitude, psi, psi_axis, theta
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
@@ -31,7 +32,6 @@ if (my_id .eq. 0) then
   write(*,*) '***************************************'
 endif
 
-PI = 2.d0 *asin(1.d0)
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
 

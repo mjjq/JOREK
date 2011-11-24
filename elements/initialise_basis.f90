@@ -2,7 +2,7 @@ subroutine initialise_basis()
 !---------------------------------------------------------------
 ! calculates the basis functions at the Gaussian points
 !---------------------------------------------------------------
-
+use constants
 use gauss
 use basis_at_gaussian
 use phys_module
@@ -11,7 +11,7 @@ implicit none
 
 ! --- local variables
 integer :: i,k,l
-real*8  :: s,t,phi,PI
+real*8  :: s,t,phi
 real*8 :: G(n_vertex_max,n_order+1,n_gauss,n_gauss)
 real*8 :: G_s(n_vertex_max,n_order+1,n_gauss,n_gauss)
 real*8 :: G_t(n_vertex_max,n_order+1,n_gauss,n_gauss)
@@ -45,8 +45,6 @@ if (abs(maxval(H-G))       .gt. 1d-14) write(*,*) ' error in Basisfunctions H   
 if (abs(maxval(H_s-G_s))   .gt. 1d-14) write(*,*) ' error in Basisfunctions H_s  : ',abs(maxval(H_s-G_s))
 if (abs(maxval(H_t-G_t))   .gt. 1d-14) write(*,*) ' error in Basisfunctions H_t  : ',abs(maxval(H_t-G_t))
 if (abs(maxval(H_st-G_st)) .gt. 1d-14) write(*,*) ' error in Basisfunctions H_st : ',abs(maxval(H_st-G_st))
-
-PI = 2.d0* asin(1.d0)
 
 do k=1,n_plane
 

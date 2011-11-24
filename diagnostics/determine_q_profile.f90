@@ -2,6 +2,7 @@
 !! (adapted from helena20)
 subroutine determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q)
 
+use constants
 use tr_module 
 use data_structure
 use phys_module
@@ -27,11 +28,9 @@ integer :: i_elm, j, k, n1, n2, n3
 real*8  :: t,rr1, rr2, drr1, drr2, ss1, ss2, dss1, dss2, ri, si, dri, dsi, dl
 real*8  :: RRgi, dRRgi_dr, dRRgi_ds, ZZgi, dZZgi_dr, dZZgi_ds, dRRgi_dt, dZZgi_dt
 real*8  :: PSgi, dPSgi_dr, dPSgi_ds, PSI_R, PSI_Z, RZJAC, grad_psi, psi_n
-real*8  :: sum_dl, B_tot2, PI
+real*8  :: sum_dl, B_tot2
 real*8  :: dRRgi_drs,dRRgi_drr,dRRgi_dss, dZZgi_drs,dZZgi_drr,dZZgi_dss, dPSgi_drs,dPSgi_drr,dPSgi_dss
 integer :: i,m, ig, ip
-
-PI = 2.d0 *asin(1.d0)
 
 !write(*,*) '   i     psi           q          sum_dl'
 

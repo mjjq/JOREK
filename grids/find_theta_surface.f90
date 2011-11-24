@@ -3,6 +3,7 @@ subroutine find_theta_surface(node_list,element_list,surface_list,j_surf,theta,R
 ! subroutine finds a theta value on a specific surface
 !---------------------------------------------------------------------------
 
+use constants
 use data_structure
 
 implicit none
@@ -23,7 +24,7 @@ integer,                  intent(out)   :: i_find
 ! --- local variables
 integer :: i, k, i_elm, ifail, iterMax
 real*8  :: ri, dri, si ,dsi, tht_in
-real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, t2, t3, tht1, tht2, PI, tht_out
+real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, t2, t3, tht1, tht2, tht_out
 real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8  :: RRg2,dRRg2_dr,dRRg2_ds,dRRg2_drs,dRRg2_drr,dRRg2_dss
@@ -32,8 +33,6 @@ real*8  :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt, RZ1, RZ2, dRZ1, dRZ2, RZ0, A0
 
 !write(*,'(A,2e16.8)') ' finding THETA on surface : ',surface_list%psi_values(j_surf),theta
 !write(*,'(A,2e16.8)') ' R_axis, Z_axis : ',R_axis, Z_axis
-
-PI = 2.d0 * asin(1.d0)
 
 tht_in = theta
 if (tht_in .lt. 0.d0)    tht_in = tht_in + 2.d0 * PI

@@ -7,6 +7,7 @@ subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, psi_axis, psi_bnd
 ! TO BE CHECKED (see element_matrix)
 !
 !---------------------------------------------------------------
+use constants
 use parameters
 use data_structure
 use gauss
@@ -26,7 +27,7 @@ integer                , intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, kl1, kl2, kl3, kl4, kl5, kl6
-real*8     :: wst, xjac, xjac_s, xjac_t, BigR, r2, PI, phi, eps_cyl
+real*8     :: wst, xjac, xjac_s, xjac_t, BigR, r2, phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
 real*8     :: psi_axis, psi_bnd, Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
@@ -105,7 +106,6 @@ RHS_k = 0.d0
 ELM   = 0.d0
 RHS   = 0.d0
 
-PI    = 2.d0*asin(1.d0)
 GAMMA = 5.d0 / 3.d0
 
 theta = 0.5d0  ; zeta = 0.0d0      ! Crank-Nicholson scheme

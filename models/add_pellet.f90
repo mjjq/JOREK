@@ -1,4 +1,5 @@
 subroutine add_pellet(node_list,element_list,pellet_density,pellet_size,sig_pellet,pellet_R,pellet_Z)
+use constants
 use tr_module
 use data_structure
 implicit none
@@ -15,7 +16,7 @@ real*8 :: density_old, density_ds_old, density_dt_old, density_dsdt_old, T_old, 
 integer :: i, in, nfft
 
 real*8, allocatable :: delta_n_phi(:), T_phi(:), T_phi_s(:), T_phi_t(:), T_phi_st(:)
-real*8              :: amplitude_n(n_tor), amplitude_T(n_tor), amplitude_T_s(n_tor), amplitude_T_t(n_tor), amplitude_T_st(n_tor), sum_A, phi, PI
+real*8              :: amplitude_n(n_tor), amplitude_T(n_tor), amplitude_T_s(n_tor), amplitude_T_t(n_tor), amplitude_T_st(n_tor), sum_A, phi
 
 write(*,*) '*********************************************'
 write(*,*) '* adding (non-axisymmetric) pellet density  *'
@@ -27,8 +28,6 @@ call tr_allocate(T_phi,1,nfft+2,"T_phi",CAT_GRID)
 call tr_allocate(T_phi_s,1,nfft+2,"T_phi_s",CAT_GRID)
 call tr_allocate(T_phi_t,1,nfft+2,"T_phi_t",CAT_GRID)
 call tr_allocate(T_phi_st,1,nfft+2,"T_phi_st",CAT_GRID)
-
-PI = 2.d0 * asin(1.d0)
 
 do i=1,node_list%n_nodes
 

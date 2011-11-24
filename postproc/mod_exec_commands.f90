@@ -4,6 +4,7 @@
 !! @todo Correct treatment of cases without xpoint or double xpoints
 module exec_commands
   
+  use constants
   use parameters,        only: n_var, n_tor, n_order, n_vertex_max, variable_names, jorek_model
   use phys_module,       only: mode, t_start, xpoint, xcase, index_start, F0, ZK_perp, ZK_par,     &
     LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL
@@ -661,9 +662,6 @@ module exec_commands
     end type type_target_plate
     
     ! --- Local variables
-    real*8, parameter   :: pi = 3.1415926535897932384626433832795029
-    real*8, parameter   :: kB  = 1.3804688d-23    ! Boltzmann constant [ J / K ]
-    real*8, parameter   :: mu0 = 4.d-7*pi         ! Magnetic constant [ N / A^2 ]
     character(len=1024) :: target_filename        ! File containing the target plate data
     character(len=1024) :: filename               ! Data output filename
     real*8              :: n0, rho0, m_ion        ! Core particle/mass density, ion mass
@@ -840,27 +838,27 @@ module exec_commands
         dT_dZ    = (dT_ds   * R_t - dT_dt   * R_s ) / xjac
         
         ! --- Temperature in SI units
-        dT_dR_SI = dT_dR / ( kB * mu0 * n0 )
-        dT_dZ_SI = dT_dZ / ( kB * mu0 * n0 )
+        dT_dR_SI = dT_dR / ( K_BOLTZ * MU_ZERO * n0 )
+        dT_dZ_SI = dT_dZ / ( K_BOLTZ * MU_ZERO * n0 )
         
         ! --- Magnetic field direction vector b = B / |B|
         b_R = + dpsi_dZ / sqrt( F0**2 + dpsi_dR**2 + dpsi_dZ**2 )
         b_Z = - dpsi_dR / sqrt( F0**2 + dpsi_dR**2 + dpsi_dZ**2 )
         
         ! --- Parallel velocity in SI units
-        vpar_R_SI = vpar / sqrt( mu0 * rho0 ) * b_R
-        vpar_Z_SI = vpar / sqrt( mu0 * rho0 ) * b_Z
+        vpar_R_SI = vpar / sqrt( MU_ZERO * rho0 ) * b_R
+        vpar_Z_SI = vpar / sqrt( MU_ZERO * rho0 ) * b_Z
         
         ! --- Parallel temperature gradient
         gradpar_T_R = b_R * ( b_R * dT_dR_SI + b_Z * dT_dZ_SI )
         gradpar_T_Z = b_Z * ( b_R * dT_dR_SI + b_Z * dT_dZ_SI )
         
         ! --- Poloidal velocity components
-        velocity_R = - R * du_dZ / sqrt( mu0 * rho0 )
-        velocity_Z = + R * du_dR / sqrt( mu0 * rho0 )
+        velocity_R = - R * du_dZ / sqrt( MU_ZERO * rho0 )
+        velocity_Z = + R * du_dR / sqrt( MU_ZERO * rho0 )
         
         ! --- Energy density
-        energy_dens = 3.d0/2.d0 * rho * Temp / mu0
+        energy_dens = 3.d0/2.d0 * rho * Temp / MU_ZERO
         
         ! --- Heat diffusion coefficients
         ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
@@ -1275,7 +1273,6 @@ module exec_commands
     real*8, allocatable      :: R_b(:)     ! R over all bars
     real*8, allocatable      :: Z_b(:,:)   ! Z over all bars
     real*8, allocatable      :: R(:,:,:), Z(:,:,:)
-    real*8, parameter        :: pi = 3.1415926535897932384626433832795029
     character(len=1024)      :: filename
     
     error = 0

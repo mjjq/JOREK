@@ -2,6 +2,7 @@ subroutine integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, x
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
+use constants
 use parameters
 use data_structure
 use Gauss
@@ -25,12 +26,10 @@ real*8     :: zT,dT_dpsi,dT_dz,ddT_dpsi,ddT_dz,ddT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,
 real*8     :: zTi,zTe,dTi_dpsi,dTe_dpsi,dTi_dz,dTe_dz,ddTi_dpsi,ddTe_dpsi,ddTi_dz,ddTe_dz
 real*8     :: ddTi_dpsi_dz,ddTe_dpsi_dz,dTi_dpsi3,dTe_dpsi3,dTi_dpsi_dz2,dTe_dpsi_dz2,dTi_dpsi2_dz,dTe_dpsi2_dz
 real*8     :: zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz
-real*8     :: current, xjac, BigR, PI, Z_xpoint(2), psi_axis, psi_bnd, wst
+real*8     :: current, xjac, BigR, Z_xpoint(2), psi_axis, psi_bnd, wst
 logical    :: xpoint2
 
 current = 0.d0
-
-PI = 2.d0*asin(1.d0)
 
 do ife =1,  element_list%n_elements
 

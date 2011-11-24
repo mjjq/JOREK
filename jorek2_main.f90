@@ -19,6 +19,7 @@
 !! @date 18-7-2008
 program JOREK2
   
+  use constants
   use mumps_module
   use pastix_module
   use murge_module,        only: murge_initialization, murge_setGraph, MURGE_Clean, use_murge,     &
@@ -98,7 +99,7 @@ program JOREK2
   
   type (type_surface_list) :: surface_list
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
-  real*8                   :: t_matrix_0, t_matrix_1, PI
+  real*8                   :: t_matrix_0, t_matrix_1
   real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
@@ -267,9 +268,11 @@ program JOREK2
     if ( ierr /= 0 ) stop
     
     ! --- Write live data for previous time-steps
-    do index_now = 1, index_start
-      call write_live_data(index_now)
-    end do
+    if ( .not. bench_without_plot ) then
+      do index_now = 1, index_start
+        call write_live_data(index_now)
+      end do
+    end if
     
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
@@ -876,9 +879,6 @@ program JOREK2
        exit
      end if
 
-!     if ( freeboundary .and. (.not. resistive_wall) ) call boundary_check()
-!     if (my_id .eq. 0) call boundary_check()
-
      !-------------------------------------------------------- adapt time step (in progress...)
      mindelta = minval(deltas); maxdelta = maxval(deltas);
 
@@ -929,7 +929,7 @@ program JOREK2
         write(*,*)
 
         ! --- Output energies and growth_rates to text files during the code run
-        call write_live_data(index_now)
+        if ( .not. bench_without_plot ) call write_live_data(index_now)
         
      endif
 
@@ -1007,7 +1007,6 @@ program JOREK2
      call export_restart(node_list,element_list,'jorek_restart.rst')
 
      if (.not. bench_without_plot) then
-        PI = 2.d0*asin(1.d0)
 
         do ivar=1,n_var
            call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))

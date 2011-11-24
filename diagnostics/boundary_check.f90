@@ -33,9 +33,7 @@ subroutine boundary_check()
   real*8   :: P_R, P_Z           ! dPsi/dR, dPsi/dZ
   logical  :: s_const            ! Is the bound. elem. an s=const side of the 2D element?
   
-  if ( .not. NEW_VACUUM ) return ! (old vacuum is not implemented anymore)
-  
-  write(*,*) '@@> boundary_check'
+  if ( .not. NEW_VACUUM ) return ! (boundary check for old vacuum is not implemented anymore)
   
   write(*,*) '************************************'
   write(*,*) '*    check boundary conditions     *'
@@ -151,14 +149,18 @@ subroutine boundary_check()
     
   end do L_MB
   
-  if ( minval(abs(val_integral)) == 0.d0 ) return ! (avoid division by zero in first timestep)
-  
-  write(*,'(A,20ES15.5)') 'relative errors in harmonics:', err_integral(:) / val_integral(:)
+  if ( minval(abs(val_integral)) /= 0.d0 ) then
+    write(*,'(A,20ES15.5)') 'relative errors in harmonics:', err_integral(:) / val_integral(:)
+  end if
   
   !### DEBUG OUTPUT ###
-  !write(88,'(/)')
-  !write(89,'(/)')
-  !write(87,'(I6,1x,20ES15.5)') err_integral(:) / val_integral(:)
+  !write(88,*)
+  !write(88,*)
+  !write(89,*)
+  !write(89,*)
+  !if ( minval(abs(val_integral)) /= 0.d0 ) then ! (avoid division by zero in first timestep)
+  !  write(87,'(20ES15.5)') err_integral(:) / val_integral(:)
+  !end if
   !###
   
   call tr_deallocate(psibnd_vec,"psibnd_vec",CAT_GRID)
@@ -167,7 +169,5 @@ subroutine boundary_check()
   call tr_deallocate(B_par_v,"B_par_v",CAT_GRID)
   call tr_deallocate(val_integral,"val_integral",CAT_GRID)
   call tr_deallocate(err_integral,"err_integral",CAT_GRID)
-  
-  write(*,*) '@@< boundary_check'
   
 end subroutine boundary_check

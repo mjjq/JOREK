@@ -4,6 +4,7 @@ subroutine find_strategic_points(node_list, element_list, flux_list, &
 ! subroutine finds all the strategic points on the legs (Leg corners, strike points etc.)
 !----------------------------------------------------------------------------------------
 
+use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
@@ -26,11 +27,9 @@ integer  :: n_flux,   n_open,   n_outer,   n_inner,   n_private,   n_up_priv
 real*8   :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8   :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8   :: rr1, ss1, s_find(8), t_find(8)
-real*8   :: tht_x, tht_x1, tht_x2, PI
+real*8   :: tht_x, tht_x1, tht_x2
 real*8   :: angle_LowerCorner 
 real*8   :: angle_UpperCorner
-
-PI = 2.d0 * asin(1.d0)
 
 n_flux    = n_grids(1)
 n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)

@@ -12,21 +12,15 @@ module helena_profiles
   real                :: p_bnd
 endmodule
 
-module helena_constants
-  real       :: PI, MU_zero
-  parameter ( PI      = 3.14159265358979323846264338327950288419716939937510 )
-  parameter ( MU_zero = PI * 4.e-7)
-end module
-
-
 program jorek_to_helena
+use constants
 use helena_boundary
 use helena_profiles
 
 implicit none
 
 real*8  :: R_axis,Z_axis,F0,psi_bnd,psi_axis,psi_xpoint
-real*8  :: PI, MU_zero, current, beta_p, beta_t, beta_n
+real*8  :: current, beta_p, beta_t, beta_n
 integer :: i
 
 read(5,*) R_axis,Z_axis,F0
@@ -82,8 +76,6 @@ mf=128
 call fshape
 
 Bgeo    = F0 / Rgeo
-PI      = 2.d0 * asin(1.d0)
-MU_zero = 4.d-7 * PI
 
 write(*,*) ' TEST  B     = ',MU_zero, Rgeo**2, dp_dpsi(1), fdf_dpsi(1)
 
@@ -132,7 +124,7 @@ subroutine fshape
 !-----------------------------------------------------------------------
 use tr_module
 use helena_boundary
-use helena_constants
+use constants
 implicit none
 
 real              :: xj, yj, ga

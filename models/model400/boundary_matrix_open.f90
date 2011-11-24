@@ -7,6 +7,7 @@ subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcas
 ! calculates the matrix contribution of the boundaries of one element
 ! implements the natural boundary conditions
 !---------------------------------------------------------------------
+use constants
 use parameters
 use data_structure
 use gauss
@@ -29,7 +30,7 @@ real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
 integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
-real*8     :: ws, xjac,  BigR, PI, phi, eps_cyl
+real*8     :: ws, xjac,  BigR, phi, eps_cyl
 real*8     :: psi_axis, psi_bnd, Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6, rhs_ij_8
 real*8     :: psi_norm, theta, zeta
@@ -42,9 +43,6 @@ real*8     :: amat_61, amat_65, amat_66, amat_67, amat_68
 real*8     :: amat_81, amat_85, amat_86, amat_87, amat_88
 real*8     :: element_size_ij, element_size_kl
 logical    :: xpoint2
-
-
-PI    = 2.d0*asin(1.d0)
 
 theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 

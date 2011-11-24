@@ -2,15 +2,9 @@
 module phys_module
 
   use parameters
+  use constants
   
   implicit none
-  
-  !> @name Constants which describe the domain of a certain position (used by function which_domain)
-  integer, parameter :: DOMAIN_PLASMA         = 0    !< Plasma region
-  integer, parameter :: DOMAIN_SOL            = 1    !< Scrape-off layer
-  integer, parameter :: DOMAIN_OUTER_SOL      = 2    !< Outer scrape-off layer (double-null)
-  integer, parameter :: DOMAIN_UPPER_PRIVATE  = 3    !< Upper private flux region
-  integer, parameter :: DOMAIN_LOWER_PRIVATE  = 4    !< Lower private flux region
   
   !> @name Various parameters
   real*8  :: eta               !< Resistivity
@@ -30,7 +24,6 @@ module phys_module
   real*8  :: density_reflection!< density reflection coeeficient open fieldlines (model303)
   integer :: mode(n_tor)       !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout              !< Output a restart file every nout timesteps.
-  integer, parameter :: LOWER_XPOINT = 1, UPPER_XPOINT = 2, DOUBLE_NULL = 3
   integer :: xcase             !< DoubleNull: 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull.
   logical :: restart           !< Restart a code run from the restart file jorek_restart.rst?
   logical :: regrid            !< Re-generate the flux-aligned grid (does not work currently)?

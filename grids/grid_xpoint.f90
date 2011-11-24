@@ -5,6 +5,7 @@ subroutine grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg
 ! inclduing a single x-point
 !-----------------------------------------------------------------------
 
+use constants
 use tr_module 
 use data_structure
 
@@ -25,7 +26,7 @@ type (type_element_list), pointer :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
-real*8              :: PI, s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2
+real*8              :: s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
@@ -50,8 +51,6 @@ character*4         :: label
 
 xpoint = .true.
 my_id  = 0
-
-PI = 2.d0 * asin(1.d0)
 
 write(*,*) '*************************************'
 write(*,*) '*          X-point grid             *'

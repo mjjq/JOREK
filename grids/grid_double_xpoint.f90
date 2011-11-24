@@ -6,6 +6,7 @@ subroutine grid_double_xpoint(node_list, element_list, n_flux, n_tht, n_open, n_
 ! inclduing a single x-point
 !-----------------------------------------------------------------------
 
+use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
@@ -30,7 +31,7 @@ type (type_strategic_points)      :: stpts
 type (type_new_points)            :: nwpts
 
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
-real*8              :: PI, s_find(8), t_find(8), tht_x, theta, delta, tmp1, tmp2
+real*8              :: s_find(8), t_find(8), tht_x, theta, delta, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
@@ -59,8 +60,6 @@ character*4         :: label
 
 xpoint = .true.
 my_id  = 1 ! Just don't want the printout...
-
-PI = 2.d0 * asin(1.d0)
 
 write(*,*) ' '
 write(*,*) ' '

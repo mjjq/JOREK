@@ -7,6 +7,7 @@
 !!   be Fourier-expanded by the DESCUR code for NEMEC
 subroutine export_nemec(node_list, element_list, xpoint, xcase)
   
+  use constants
   use data_structure
   
   implicit none
@@ -18,8 +19,6 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   integer,                      intent(in) :: xcase
   
   ! --- Local variables
-  real*8, parameter :: pi  = 3.14159265358979323d0
-  real*8, parameter :: mu0 = 4.d-7 * pi
   real*8 :: pressure, psi_i, Phi_edge
   real*8 :: dens, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz
   real*8 :: temp, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz
@@ -92,7 +91,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
       dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
     call temperature(xpoint, xcase, 0.d0, -10.d0, psi_i, psi_axis, psi_bnd, temp, dT_dpsi, dT_dz,         &
       dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz)
-    pressure = dens * temp / mu0
+    pressure = dens * temp / MU_ZERO
     write(42,*) PhiN(i), pressure
   end do
   close(42)

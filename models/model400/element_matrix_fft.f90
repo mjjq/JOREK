@@ -395,17 +395,17 @@ do ms=1, n_gauss
       if ( num_d_perp ) then
         D_prof  = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psi_norm)
       else
-        D_prof    = prof(1)
+        D_prof  = prof(1)
       end if
       
       if ( num_zk_i_perp ) then
-        ZK_i_prof  = interpolProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, psi_norm)
+        ZK_i_prof = interpolProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, psi_norm)
       else
         ZK_i_prof = prof(2) 
       end if
       
       if ( num_zk_e_perp ) then
-        ZK_e_prof  = interpolProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, psi_norm)
+        ZK_e_prof = interpolProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, psi_norm)
       else
         ZK_e_prof = prof(3) 
       end if

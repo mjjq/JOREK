@@ -5,6 +5,7 @@ use parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian
+use diffusivities, only: get_dperp, get_zkperp
 
 implicit none
 
@@ -293,11 +294,8 @@ do i=1,element_list%n_elements
         endif
 
         Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR  
-        D_prof  = D_perp(1)  * ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4)))) &
-                + D_perp(6) * (D_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+D_perp(5)+D_perp(3)) /D_perp(4))))
-
-        ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4)))) &
-                + ZK_perp(6) * (ZK_perp(2)) * ((0.5d0 - 0.5d0*tanh((-psi_norm+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
+        D_prof  = get_dperp (psi_norm)
+        ZK_prof = get_zkperp(psi_norm)
        
         scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
         ZKpar_T = ZK_par * ((scalars(inode,6)+T_1)/T_0)**2.5

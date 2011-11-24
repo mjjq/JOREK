@@ -30,13 +30,16 @@ module live_data
   !> Open file, write out headers and some parameters.
   subroutine init_live_data()
     
-    use parameters,  only: n_tor, n_plane, n_period, jorek_model, variable_names
-    use phys_module, only: produce_live_data, mode, mode_type
+    use parameters,    only: n_tor, n_plane, n_period, jorek_model, variable_names
+    use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase
+    use diffusivities, only: get_dperp, get_zkperp
     
     implicit none
     
     logical :: opened
-    integer :: n
+    integer :: n, i
+    real*8  :: d ! dummy
+    real*8  :: psin, FFp, dFFp_dpsi, dens, dn_dpsi, temp, dT_dpsi, S_rho, S_T, d_perp, zk_perp
     
     if ( .not. produce_live_data ) return
     
@@ -56,18 +59,21 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_period: ', n_period
-    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies growth_rates times'
+    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies growth_rates times input_profiles'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_times: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@times_xlabel: time step'
     write(LIVE_DATA_HANDLE,'(A)') '@times_ylabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@times_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
+    
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*n_tor
     write(LIVE_DATA_HANDLE,'(A)') '@energies_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel: normalized energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@energies_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: "time"           '
     do n = 1, n_tor
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"E_{mag', mode(n), &
@@ -82,6 +88,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*n_tor
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel: normalized growth rate'
+    write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: "time"           '
     do n = 1, n_tor
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{mag', mode(n), &
@@ -90,6 +97,31 @@ module live_data
     do n = 1, n_tor
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{kin', mode(n), &
         mode_type(n), '}"'
+    end do
+    write(LIVE_DATA_HANDLE,*)
+    
+    ! --- Write input profiles
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_input_profiles: ', 10
+    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
+    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_ylabel: input profiles'
+    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles: "psin"       "FF''"    "dFF''/dpsin"'//        &
+      '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_T"'
+    
+    do i = 0, 200
+      
+      psin = real(i) / real(200) * 1.2d0
+      
+      call density    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,dens,dn_dpsi,d,d,d,d,d,d,d)
+      call temperature(xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,temp,dT_dpsi,d,d,d,d,d,d,d)
+      call sources    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,S_rho,S_T)
+      call FFprime    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,FFp,dFFp_dpsi,d,d,d,d)
+      d_perp  = get_dperp (psin)
+      zk_perp = get_zkperp(psin)
+      
+      write(LIVE_DATA_HANDLE,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens,      &
+        dn_dpsi, temp, dT_dpsi, S_rho, S_T, d_perp, zk_perp
+      
     end do
     write(LIVE_DATA_HANDLE,*)
     

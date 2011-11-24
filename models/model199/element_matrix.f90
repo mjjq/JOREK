@@ -12,7 +12,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use tr_module
-use profiles, only: interpolProf
+use diffusivities, only: get_dperp, get_zkperp
 
 implicit none
 
@@ -210,15 +210,15 @@ do ms=1, n_gauss
      P0_y  = r0_y * T0 + r0 * T0_y
      P0_s  = r0_s * T0 + r0 * T0_s
      P0_t  = r0_t * T0 + r0 * T0_t
-    
+     
      delta_u_x = (   y_t(ms,mt) * delta_s(mp,2,ms,mt) - y_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
      delta_u_y = ( - x_t(ms,mt) * delta_s(mp,2,ms,mt) + x_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
 
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+       eta_T     =   eta * (abs(T0)/T_0)**(-1.5d0)
+       deta_dT   = - eta * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -227,7 +227,7 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
+       visco_T   =   visco * (abs(T0)/T_0)**(-1.5d0)
        dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
      else
        visco_T   = visco
@@ -244,17 +244,8 @@ do ms=1, n_gauss
        endif
      endif
 
-     if ( num_d_perp ) then
-       D_prof  = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psi_norm)
-     else
-       D_prof  = D_perp(1)  * ((1.d0-D_perp(2))  + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4))))
-     end if
-     
-     if ( num_zk_perp ) then
-       ZK_prof = interpolProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, psi_norm)
-     else
-       ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
-     end if
+     D_prof  = get_dperp (psi_norm)
+     ZK_prof = get_zkperp(psi_norm)
 
      do i=1,n_vertex_max
 
@@ -294,6 +285,9 @@ do ms=1, n_gauss
                       + visco_num * (v_s * w0_s + v_t * w0_t)                    * tstep &
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac  
            
+!####################################
+!           rhs_ij_1 = rhs_ij_1 - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac
+!####################################
            rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac
            rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
 
@@ -390,6 +384,11 @@ do ms=1, n_gauss
                  amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                            - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
                            + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep
+
+!####################################
+!                 amat_13 = amat_13 + v * zj / BigR * xjac
+!                 amat_11 = amat_11 + (v_x * psi_x + v_y * psi_y ) / BigR * xjac
+!####################################
 
 !---------------------------------------------------------------- equation 3
                  amat_33 = v * zj / BigR * xjac

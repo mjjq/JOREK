@@ -115,7 +115,9 @@ module live_data
       
       call density    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,dens,dn_dpsi,d,d,d,d,d,d,d)
       call temperature(xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,temp,dT_dpsi,d,d,d,d,d,d,d)
-      call sources    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,S_rho,S_T)
+      !call sources    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,S_rho,S_T)
+      S_rho = 0.d0
+      S_T   = 0.d0
       call FFprime    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,FFp,dFFp_dpsi,d,d,d,d)
       d_perp  = get_dperp (psin)
       zk_perp = get_zkperp(psin)

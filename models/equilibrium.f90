@@ -297,7 +297,7 @@ do i=1,node_list%n_nodes
 enddo
 
 ! --- Find flux surfaces and plot them; determine the q-profile.  
-if ((xpoint2)) then
+if (xpoint2 .and. (n_flux .gt. 1)) then
   
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
   call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
@@ -356,20 +356,15 @@ else
   call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
   
   do i = 1, surface_list%n_psi
-    surface_list%psi_values(i) = (float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis) + psi_axis
+    surface_list%psi_values(i) = 1.25d0*(float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis) + psi_axis
   enddo
   
   call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,surface_list)
 
   sep_list%n_psi =1
-  if(xcase2 .eq. 3) sep_list%n_psi =2
   if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
   call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   sep_list%psi_values(1) = psi_bnd
-  if(xcase2 .eq. 3) then
-    sep_list%psi_values(1) = psi_xpoint(1)
-    sep_list%psi_values(2) = psi_xpoint(2)
-  endif
 
   call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,sep_list)  
 endif
@@ -383,8 +378,13 @@ if (freeboundary_equil) then
   call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   call plot_coils(.false.)
 else
-  call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-  call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+  if (xpoint2 .and. (n_flux .gt. 1)) then
+    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+  else
+    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,0,0)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+  endif
 endif
   
 call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)

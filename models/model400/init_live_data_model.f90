@@ -1,0 +1,43 @@
+!> Model-specific part of the routine init_live_data in ommunication/mod_live_data.f90
+!!
+!! Writes all input profiles to 'macroscopic_vars.dat'.
+subroutine init_live_data_model(file_handle)
+  
+  use phys_module,   only: xpoint, xcase
+  use diffusivities, only: get_dperp, get_zkperp
+  
+  implicit none
+  
+  integer, intent(in) :: file_handle
+  
+  integer :: i
+  real*8  :: psin, FFp, dFFp_dpsi, dens, dn_dpsi, temp, dT_dpsi, S_rho, S_Ti, S_Te, d_perp
+  real*8  :: d ! dummy
+  
+  write(file_handle,'(A,I5)') '@n_input_profiles: ', 10
+  write(file_handle,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
+  write(file_handle,'(A)') '@input_profiles_ylabel: input profiles'
+  write(file_handle,'(A)') '@input_profiles_logy: 0'
+  write(file_handle,'(A)') '@input_profiles: "psin"       "FF''"    "dFF''/dpsin"'              // &
+    '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_Ti"         "S_Te"'      // &
+    '    "D_perp"'
+  
+  do i = 0, 200
+    
+    psin = real(i) / real(200) * 1.2d0
+    
+    call density    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,dens,dn_dpsi,d,d,d,d,d,d,d)
+    call temperature(xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,temp,dT_dpsi,d,d,d,d,d,d,d)
+    call sources    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,S_rho,S_Ti,S_Te)
+    call FFprime    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,FFp,dFFp_dpsi,d,d,d,d)
+    d_perp  = get_dperp (psin)
+    
+    write(file_handle,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
+      temp, dT_dpsi, S_rho, S_Ti, S_Te, d_perp
+      
+    ! ### ZK_e_perp, ZK_i_perp missing ###
+    
+  end do
+  write(file_handle,*)
+  
+end subroutine init_live_data_model

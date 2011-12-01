@@ -32,14 +32,11 @@ module live_data
     
     use parameters,    only: n_tor, n_plane, n_period, jorek_model, variable_names
     use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase
-    use diffusivities, only: get_dperp, get_zkperp
     
     implicit none
     
     logical :: opened
     integer :: n, i
-    real*8  :: d ! dummy
-    real*8  :: psin, FFp, dFFp_dpsi, dens, dn_dpsi, temp, dT_dpsi, S_rho, S_T, d_perp, zk_perp
     
     if ( .not. produce_live_data ) return
     
@@ -100,33 +97,8 @@ module live_data
     end do
     write(LIVE_DATA_HANDLE,*)
     
-    ! --- Write input profiles
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_input_profiles: ', 10
-    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
-    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_ylabel: input profiles'
-    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@input_profiles: "psin"       "FF''"    "dFF''/dpsin"'//        &
-      '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_T"        "D_perp"'//     &
-      '    "ZK_perp"'
-    
-    do i = 0, 200
-      
-      psin = real(i) / real(200) * 1.2d0
-      
-      call density    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,dens,dn_dpsi,d,d,d,d,d,d,d)
-      call temperature(xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,temp,dT_dpsi,d,d,d,d,d,d,d)
-      !call sources    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,S_rho,S_T)
-      S_rho = 0.d0
-      S_T   = 0.d0
-      call FFprime    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,FFp,dFFp_dpsi,d,d,d,d)
-      d_perp  = get_dperp (psin)
-      zk_perp = get_zkperp(psin)
-      
-      write(LIVE_DATA_HANDLE,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens,      &
-        dn_dpsi, temp, dT_dpsi, S_rho, S_T, d_perp, zk_perp
-      
-    end do
-    write(LIVE_DATA_HANDLE,*)
+    ! --- Call the model-specific part of the init_live_data routine
+    call init_live_data_model(LIVE_DATA_HANDLE) 
     
     close(LIVE_DATA_HANDLE)
     

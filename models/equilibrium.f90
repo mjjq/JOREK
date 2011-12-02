@@ -382,7 +382,7 @@ else
     call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
     call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   else
-    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,0,0)
+    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.false.,0)
     call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   endif
 endif

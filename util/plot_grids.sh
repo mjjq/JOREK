@@ -105,7 +105,7 @@ done
 echo ""                                        >> $tmp
 
 if [ "$plotto" == "screen" ]; then
-  echo "pause mouse key"                       >> $tmp
+  echo "pause mouse button1"                   >> $tmp
 fi
 
 gnuplot $tmp

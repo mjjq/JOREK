@@ -53,7 +53,7 @@ module diffusivities
     
     real*8, intent(in) :: psin
     
-    if ( num_d_perp ) then
+    if ( num_zk_perp ) then
       
       get_zkperp = interpolProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, psin)
       

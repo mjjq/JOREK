@@ -10,9 +10,6 @@ subroutine initialise_and_broadcast_parameters(my_id, filename)
   integer,                      intent(in) :: my_id
   character(len=*),             intent(in) :: filename
   
-  ! --- Local parameters
-  integer :: itor
-  
   call initialise_parameters(my_id, filename)
 
   ! --- Broadcast input parameters from MPI thread 0 to the others.

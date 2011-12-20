@@ -194,12 +194,12 @@ if (my_id == 0) then
     if ( .not. num_zk_e_perp ) then
       write(*,230) 'ZK_e_perp           ', ZK_e_perp(1:6)
     else
-      write(*,237) 'ZK_e_perp_file      ', ZK_e_perp_file
+      write(*,237) 'ZK_e_perp_file      ', trim(ZK_e_perp_file)
     end if
     if ( .not. num_zk_i_perp ) then
       write(*,230) 'ZK_i_perp           ', ZK_i_perp(1:6)
     else
-      write(*,237) 'ZK_i_perp_file      ', ZK_i_perp_file
+      write(*,237) 'ZK_i_perp_file      ', trim(ZK_i_perp_file)
     end if
     write(*,230) 'heatsource_e         ', heatsource_e
     write(*,230) 'heatsource_i         ', heatsource_i
@@ -219,13 +219,13 @@ if (my_id == 0) then
   if ( .not. num_zk_perp ) then
     write(*,230) 'ZK_perp             ', ZK_perp(1:6)
   else
-    write(*,237) 'ZK_perp_file        ', ZK_perp_file
+    write(*,237) 'ZK_perp_file        ', trim(ZK_perp_file)
   end if
   write(*,230) 'D_par               ', D_par
   if ( .not. num_d_perp ) then
     write(*,230) 'D_perp              ', D_perp(1:6)
   else
-    write(*,237) 'D_perp_file         ', D_perp_file
+    write(*,237) 'D_perp_file         ', trim(D_perp_file)
   end if
   write(*,230) 'particlesource      ', particlesource
   write(*,230) 'particlesource_psin ', particlesource_psin

@@ -13,6 +13,7 @@ implicit none
 ! --- Routine parameters
 integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
+real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
 integer :: ierr
@@ -102,13 +103,13 @@ if (my_id .eq. 0) then
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime",CAT_GRID)
 
-  ! --- Read numerical profiles for rho, T, and ff'.
-  call read_num_profiles()
-  
-  ! --- Determine the derivatives of the numerical input profiles.
-  call derive_num_profiles()
-  
 endif
 
+! --- Read numerical profiles for rho, T, and ff'.
+call read_num_profiles(my_id)
+
+! --- Determine the derivatives of the numerical input profiles.
+call derive_num_profiles(my_id)
+  
 return
 end subroutine initialise_parameters

@@ -1,13 +1,15 @@
 !> Read numerical input profiles
-subroutine read_num_profiles()
+subroutine read_num_profiles(my_id)
   
   use phys_module
   use profiles
   
   implicit none
   
+  integer, intent(in) :: my_id
+  
   num_rho = ( rho_file /= 'none' )
-  if ( num_rho ) then
+  if ( num_rho .and. ( my_id == 0 ) ) then
     call readProf(num_rho_x, num_rho_y0, num_rho_len, rho_file)
     if ( num_rho_len < 2 ) then 
       write(*,*) '  ERROR: Could not read the numerical profile "'//trim(rho_file)//'".'
@@ -18,7 +20,7 @@ subroutine read_num_profiles()
   end if
   
   num_T = ( T_file /= 'none' )
-  if ( num_T ) then
+  if ( num_T .and. ( my_id == 0 ) ) then
     call readProf(num_T_x, num_T_y0, num_T_len, T_file)
     if ( num_T_len < 2 ) then 
       write(*,*) '  ERROR: Could not read the numerical profile "'//trim(T_file)//'".'
@@ -29,7 +31,7 @@ subroutine read_num_profiles()
   end if
   
   num_ffprime = ( ffprime_file /= 'none' )
-  if ( num_ffprime ) then
+  if ( num_ffprime .and. ( my_id == 0 ) ) then
     call readProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, ffprime_file)
     if ( num_ffprime_len < 2 ) then 
       write(*,*) '  ERROR: Could not read the numerical profile "'//trim(ffprime_file)//'".'
@@ -39,7 +41,7 @@ subroutine read_num_profiles()
   end if
   
   num_d_perp = ( d_perp_file /= 'none' )
-  if ( num_d_perp ) then
+  if ( num_d_perp .and. ( my_id == 0 ) ) then
     call readProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, d_perp_file)
     if ( num_d_perp_len < 2 ) then 
       write(*,*) '  ERROR: Could not read the numerical profile "'//trim(d_perp_file)//'".'
@@ -48,7 +50,7 @@ subroutine read_num_profiles()
   end if
 
   num_zk_perp = ( zk_perp_file /= 'none' )
-  if ( num_zk_perp ) then
+  if ( num_zk_perp .and. ( my_id == 0 ) ) then
     call readProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, zk_perp_file)
     if ( num_zk_perp_len < 2 ) then 
       write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_perp_file)//'".'
@@ -58,7 +60,7 @@ subroutine read_num_profiles()
 
   if ( jorek_model == 400 ) then
     num_zk_e_perp = ( zk_e_perp_file /= 'none' )
-    if ( num_zk_e_perp ) then
+    if ( num_zk_e_perp .and. ( my_id == 0 ) ) then
       call readProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, zk_e_perp_file)
       if ( num_zk_e_perp_len < 2 ) then 
         write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_e_perp_file)//'".'
@@ -67,7 +69,7 @@ subroutine read_num_profiles()
     end if
     
     num_zk_i_perp = ( zk_i_perp_file /= 'none' )
-    if ( num_zk_i_perp ) then
+    if ( num_zk_i_perp .and. ( my_id == 0 ) ) then
       call readProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, zk_i_perp_file)
       if ( num_zk_i_perp_len < 2 ) then 
         write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_i_perp_file)//'".'

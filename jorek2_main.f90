@@ -167,14 +167,14 @@ program JOREK2
     write(*,*) ' OpenMP threads      : ', nbthreads
     write(*,*) ' SVN revision        : ', SVN_VERSION
     111 format(2x,a,': ',a)
-    write(*,111) 'compile_time        ', compile_time
-    write(*,111) 'compile_user        ', compile_user
-    write(*,111) 'compile_machine     ', compile_machine
-    write(*,111) 'compile_command     ', compile_command
-    write(*,111) 'compile_flags       ', compile_flags
-    write(*,111) 'compile_includes    ', compile_includes
-    write(*,111) 'compile_defines     ', compile_defines
-    write(*,111) 'compile_libs        ', compile_libs
+    write(*,111) 'compile_time        ', trim(adjustl(compile_time))
+    write(*,111) 'compile_user        ', trim(adjustl(compile_user))
+    write(*,111) 'compile_machine     ', trim(adjustl(compile_machine))
+    write(*,111) 'compile_command     ', trim(adjustl(compile_command))
+    write(*,111) 'compile_flags       ', trim(adjustl(compile_flags))
+    write(*,111) 'compile_includes    ', trim(adjustl(compile_includes))
+    write(*,111) 'compile_defines     ', trim(adjustl(compile_defines))
+    write(*,111) 'compile_libs        ', trim(adjustl(compile_libs))
   end if
   
   ! --- Initialise memory tracing

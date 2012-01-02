@@ -59,7 +59,7 @@ while [ $# -gt 0 ]; do
   fi
 done
 
-tmp="/tmp/tmp_pg_$$"
+tmp="./local_plot.gnuplot"
 rm -f $tmp
 if [ "$plotto" == "screen" ]; then
   echo "# plot to screen"                      >> $tmp
@@ -78,7 +78,7 @@ echo "set size ratio -1"                       >> $tmp
 echo "set title 'JOREK GRIDS'"                 >> $tmp
 echo "set xlabel 'R'"                          >> $tmp
 echo "set ylabel 'Z'"                          >> $tmp
-echo "set style line 1 lt 1 lc rgb '#c0c0c0'"  >> $tmp
+echo "set style line 1 lt 1 lc rgb '#000000'"  >> $tmp
 echo "set style line 2 lt 1 lc rgb '#0000dd'"  >> $tmp
 echo "set style line 3 lt 1 lc rgb '#00cc00'"  >> $tmp
 echo "plot \\"                                 >> $tmp
@@ -109,5 +109,3 @@ if [ "$plotto" == "screen" ]; then
 fi
 
 gnuplot $tmp
-
-rm -f $tmp

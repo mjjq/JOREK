@@ -67,33 +67,29 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
     
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*n_tor
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*(n_tor+1)/2
     write(LIVE_DATA_HANDLE,'(A)') '@energies_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel: normalized energy'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: "time"           '
-    do n = 1, n_tor
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"E_{mag', mode(n), &
-        mode_type(n), '}"'
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{mag', mode(n), '}"'
     end do
-    do n = 1, n_tor
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"E_{kin', mode(n), &
-        mode_type(n), '}"'
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{kin', mode(n), '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*n_tor
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*(n_tor+1)/2
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel: normalized growth rate'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: "time"           '
-    do n = 1, n_tor
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{mag', mode(n), &
-        mode_type(n), '}"'
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{mag', mode(n), '}"'
     end do
-    do n = 1, n_tor
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,",",A3,A2,1x)',advance='no') '"G_{kin', mode(n), &
-        mode_type(n), '}"'
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{kin', mode(n), '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
     
@@ -116,7 +112,8 @@ module live_data
     
     integer, intent(in) :: index !< Timestep index to write data for
     
-    real*8 :: growth_rates(1:n_tor,1:2)
+    integer :: i, j
+    real*8  :: e1, e2, growth_rate
     
     if ( .not. produce_live_data ) return
     
@@ -124,17 +121,24 @@ module live_data
     
     ! --- Write data to the files.
     write(LIVE_DATA_HANDLE,'(A,I6,1X,ES17.9)') '@times:', index, xtime(index)
-    write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@energies:', xtime(index), energies(1:n_tor,1:2,index)
+    write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@energies:', xtime(index)
+    do j = 1, 2
+      do i = 1, n_tor, 2
+        write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') sum(energies(max(i-1,1):i,j,index))
+      end do
+    end do
+    write(LIVE_DATA_HANDLE,*)
     if ( index > 1 ) then
-      where ( (energies(:,:,index)>0.d0) .and. (energies(:,:,index-1)>0.d0) )
-        growth_rates =                                                                         &
-          0.5d0 * ( LOG(energies(1:n_tor,1:2,index)) - LOG(energies(1:n_tor,1:2,index-1)) )    &
-          / (xtime(index)-xtime(index-1))
-      elsewhere
-        growth_rates = 0.d0
-      end where
-      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@growth_rates:', &
-        (xtime(index)+xtime(index-1))/2.d0, growth_rates
+      write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@growth_rates:', &
+        (xtime(index)+xtime(index-1))/2.d0
+      do j = 1, 2
+        do i = 1, n_tor, 2
+          e1 = sum(energies(max(i-1,1):i,j,index))
+          e2 = sum(energies(max(i-1,1):i,j,index-1))
+          growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
+          write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') growth_rate
+        end do
+      end do
     end if
     
     close(LIVE_DATA_HANDLE)

@@ -109,13 +109,10 @@ ncols=`$extract_live_data n_${qtty} -f $file`
 xlabel=`$extract_live_data ${qtty}_xlabel -f $file`
 ylabel=`$extract_live_data ${qtty}_ylabel -f $file`
 logy=`$extract_live_data ${qtty}_logy -f $file`
-echo "'$logy' '$logy2'"
 if [ -n "$logy2" ]; then
-  echo "a"
   logy=$logy2
 fi
 if [ -z "$logy" ]; then
-  echo "b"
   logy="1"
 fi
 $extract_live_data ${qtty} ${qtty}.dat -f $file

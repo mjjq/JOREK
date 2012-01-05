@@ -46,9 +46,9 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub      = 5  ! Number of subdivisions of the cubic finite elements into linear pieces
-i_tor     = -1 ! If i_tor > 0, only this mode will be included in the vtk file...
-i_plane   = 1  ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
+nsub      = 5             ! Number of subdivisions of the cubic finite elements into linear pieces
+i_tor     = -1            ! If i_tor > 0, only this mode will be included in the vtk file...
+i_plane   = 1             ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -70,8 +70,6 @@ call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
 n_scalars = n_var + 10
-!===========GDP=========== --- increment n_scalars: add Er, Vtheta and [not yet Vneo]
-n_scalars = n_var + 12
 
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
@@ -81,7 +79,7 @@ allocate(scalar_names(n_scalars), vector_names(n_vectors))
 scalar_names(1:n_var) = variable_names(1:n_var)
 scalar_names(n_var+1:n_scalars) = (/ &
   'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
-  'D_flux_Vpar ', 'D_flux_Vperp', 'D_prof      ', 'ZK_prof     ', 'Er          ', 'Vtheta      ' /)
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ' /)
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
@@ -136,11 +134,11 @@ do i=1,element_list%n_elements
       xjac  = R_s * Z_t - R_t * Z_s
       if ( xjac == 0.d0 ) xjac = 1.d-8
       BigR  = R
-   
-      xjac_x  = (R_ss*Z_t**2 - Z_ss*R_t*Z_t - 2.d0*R_st*Z_s*Z_t   &           
+
+      xjac_x  = (R_ss*Z_t**2 - Z_ss*R_t*Z_t - 2.d0*R_st*Z_s*Z_t   & 
         + Z_st*(R_s*Z_t + R_t*Z_s) + R_tt*Z_s**2 - Z_tt*R_s*Z_s) / xjac
-     
-      xjac_y  = (Z_tt*R_s**2 - R_tt*Z_s*R_s - 2.d0*Z_st*R_t*R_s   &           
+
+      xjac_y  = (Z_tt*R_s**2 - R_tt*Z_s*R_s - 2.d0*Z_st*R_t*R_s   &
         + R_st*(Z_t*Z_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
 
       inode = inode+1
@@ -207,19 +205,19 @@ do i=1,element_list%n_elements
       else
 
         u0_x = 0.d0; u0_y = 0.d0; ps_x = 0.d0; ps_y  = 0.d0; zj_x  = 0.d0; zj_y  = 0.d0;
-  TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
-  
-  w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
-        
+        TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
+
+        w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
+
         do i_tor = 1, n_tor
-        
+
           if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
-          
+
           do m=1,n_var
             call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
             scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
-          
+
           call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
           call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
           call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
@@ -231,45 +229,43 @@ do i=1,element_list%n_elements
           else
             V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
           end if
-          
+
           if ((xjac .gt. 1.d-6)) then      ! avoid the axis
-            
+
             u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
             u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
-            
+
             ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
             ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
-            
+
             zj_x  = zj_x   + (   Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
             zj_y  = zj_y   + ( - R_t * ZJ_s + R_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
-            
+
             TT_x  = TT_x   + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
             TT_y  = TT_y   + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
             TT_p  = TT_p   + TT * HZ_p(i_tor,1)
-            
+
             RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
             RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
             RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)
-            
+
             w0_x  = w0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
             w0_y  = w0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
-!            w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2 ) / xjac**2                
-!            w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2 ) / xjac**2               
-            
-            w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2       &             
-                  + w_s * (Z_st*Z_t - Z_tt*Z_s )                                &        
-                  + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2                &             
+
+            w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2       &
+                  + w_s * (Z_st*Z_t - Z_tt*Z_s )                                        & 
+                  + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2                        & 
                   - xjac_x * (w_s* Z_t - w_t * Z_s)  / xjac**2
-            
-            w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2       &             
-                  + w_s * (R_st*R_t - R_tt*R_s )                                 &        
-                  + w_t * (R_st*R_s - R_ss*R_t ) )         / xjac**2             &             
+
+            w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2       &
+                  + w_s * (R_st*R_t - R_tt*R_s )                                        &
+                  + w_t * (R_st*R_s - R_ss*R_t ) )         / xjac**2                    &
                   - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
-            
+
           endif
-          
+
         enddo  ! end loop toroidal harmonics
-      
+
         ps0 = scalars(inode,1)
         psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
         if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
@@ -278,7 +274,7 @@ do i=1,element_list%n_elements
         if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
           psi_norm = 2.d0 - psi_norm
         endif
-        
+
         v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
 !===========GDP=========== --- compute added diagnostics
         psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
@@ -293,13 +289,13 @@ do i=1,element_list%n_elements
            Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
         endif
 
-        Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR  
+        Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR
         D_prof  = get_dperp (psi_norm)
         ZK_prof = get_zkperp(psi_norm)
-       
+
         scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
         ZKpar_T = ZK_par * ((scalars(inode,6)+T_1)/T_0)**2.5
-  
+
         grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
 !   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp','D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
@@ -309,28 +305,25 @@ do i=1,element_list%n_elements
         if (grad_psi .ne. 0.d0) then
 
           scalars(inode,n_var+2)  = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
-                                 
+
           scalars(inode,n_var+3)  = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
-                                 
+
           scalars(inode,n_var+4)  = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
-                                 
+
           scalars(inode,n_var+5)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
-                                 
+
           scalars(inode,n_var+6)  = D_prof * (RHO_x * ps_x + RHO_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
-                                 
+
           scalars(inode,n_var+7)  = scalars(inode,5) * scalars(inode,7) * Btot
-                                 
+
           scalars(inode,n_var+8)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
 
-          scalars(inode,n_var+9)  = D_prof
-
-          scalars(inode,n_var+10) = ZK_prof
 !===========GDP=========== --- added outputs
-          scalars(inode,n_var+11) = Er
+          scalars(inode,n_var+9) = Er
 
-          scalars(inode,n_var+12) = Vtheta
+          scalars(inode,n_var+10) = Vtheta
 
-          !GDP! scalars(inode,n_var+13) = Vneo
+          !GDP! scalars(inode,n_var+11) = Vneo
 
 !           call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
 !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
@@ -361,11 +354,6 @@ do i=1,element_list%n_elements
 ! endif
 enddo
 
-!write(*,*) ' max U       : ',xtime(index_start),maxval(abs(scalars(:,2)))
-!write(*,*) ' max density : ',xtime(index_start),maxval(abs(scalars(:,5)))
-!write(*,*) ' max T       : ',xtime(index_start),maxval(abs(scalars(:,6)))
-!write(*,*) ' max Vpar    : ',xtime(index_start),maxval(abs(scalars(:,7)))
-
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad
 
@@ -374,7 +362,8 @@ lf = char(10) ! line feed character
 #ifdef IBM_MACHINE
 open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
 #else
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+!open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)

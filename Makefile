@@ -79,6 +79,7 @@ JOREK2VTK_SRC          = $(PPPSRC)
 JOREK2FLVTK_SRC	       = $(PPPSRC)
 JOREK2VTK3D_SRC        = $(PPPSRC)
 JOREK2_FOUR_SRC        = $(PPPSRC)
+JOREK2_DIAGNO_SRC      = $(PPPSRC) 
 
 # include the description for each module
 include $(patsubst %,%/module.mk,$(DIRS))

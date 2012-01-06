@@ -100,4 +100,5 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)		\
 	$(DIR)/preset_parameters.f90			\
 	$(DIR)/det_modes.f90                            \
         $(DIR)/mod_constants.f90                        \
+        $(DIR)/mod_domains.f90                          \
         $(DIR)/mod_pellet.f90

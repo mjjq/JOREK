@@ -16,7 +16,7 @@ integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vecto
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 integer,allocatable   :: ien (:,:)
 integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
-integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_plane, index, index_node, my_id
+integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node, my_id
 character             :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:), vector_names(:)
 real*8                :: s, t
@@ -31,7 +31,7 @@ real*8                :: ps0, psi_norm, particle_source, D_prof, ZK_prof, grad_p
 real*8                :: w0_x, w0_y, w0_xx, w0_yy, xjac_x, xjac_y
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode
-!===========GDP=========== --- add the diagnostics Er, Vtheta and [not yet Vneo]
+!====================== --- add the diagnostics Er, Vtheta and [not yet Vneo]
 real*8                :: Er, psi_abs, Vtheta, Btheta
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
@@ -65,6 +65,9 @@ write(*,*) 'nsub            =', nsub
 write(*,*) 'i_tor           =', i_tor
 write(*,*) 'i_plane         =', i_plane
 write(*,*) 'without_n0_mode =', without_n0_mode
+write(*,*) '-----------'
+write(*,*) 'n_tor           =', n_tor
+write(*,*) 'n_period        =', n_period
 write(*,*)
 call flush_it(6)
 
@@ -119,239 +122,271 @@ endif
 
 do i=1,element_list%n_elements
 
-! if(element_list%element(i)%n_sons.eq.0) then
+   ! if(element_list%element(i)%n_sons.eq.0) then
 
-  do j=1,nsub
+   do j=1,nsub
 
-    s = float(j-1)/float(nsub-1)
+      s = float(j-1)/float(nsub-1)
 
-    do k=1,nsub
+      do k=1,nsub
 
-      t = float(k-1)/float(nsub-1)
+         t = float(k-1)/float(nsub-1)
 
-      call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+         call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 
-      xjac  = R_s * Z_t - R_t * Z_s
-      if ( xjac == 0.d0 ) xjac = 1.d-8
-      BigR  = R
+         xjac  = R_s * Z_t - R_t * Z_s
+         if ( xjac == 0.d0 ) xjac = 1.d-8
+         BigR  = R
 
-      xjac_x  = (R_ss*Z_t**2 - Z_ss*R_t*Z_t - 2.d0*R_st*Z_s*Z_t   & 
-        + Z_st*(R_s*Z_t + R_t*Z_s) + R_tt*Z_s**2 - Z_tt*R_s*Z_s) / xjac
+         xjac_x  = (R_ss*Z_t**2 - Z_ss*R_t*Z_t - 2.d0*R_st*Z_s*Z_t   & 
+              + Z_st*(R_s*Z_t + R_t*Z_s) + R_tt*Z_s**2 - Z_tt*R_s*Z_s) / xjac
 
-      xjac_y  = (Z_tt*R_s**2 - R_tt*Z_s*R_s - 2.d0*Z_st*R_t*R_s   &
-        + R_st*(Z_t*Z_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
+         xjac_y  = (Z_tt*R_s**2 - R_tt*Z_s*R_s - 2.d0*Z_st*R_t*R_s   &
+              + R_st*(Z_t*Z_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
 
-      inode = inode+1
+         inode = inode+1
 
-      xyz(1:3,inode) = (/ R, Z, 0.d0/)
+         xyz(1:3,inode) = (/ R, Z, 0.d0/)
 
-      if ((i_tor .ge. 1) .and. (i_tor .le. n_tor)) then
+         !====================== --- specific for axisymmetric quantities
+         ! Put here all quantities that are axisymmetric (n=0 mode only) and should not be summed 
+         ! over all harmonics: for instance, to compute Vtheta, Er, Vneo, etc.
+         ! ===> this corresponds to forcing i_tor = 1 (thus n=0 only)
+         ! NB: i_tor = 2 corresponds to the cosine component of the harmonics ?
+         !     i_tor = 3 corresponds to the sinus component of the harmonics ?
+         
+         ! save old values
+         i_tor_old = -1
+         i_tor     = 1
+         ! compute all derivatives, as in loop below
+         if ((xjac .gt. 1.d-6)) then
 
-        do m=1,n_var
-          call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-          scalars(inode,m) = P
-        enddo
+            call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
+            call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+            call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
+            call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+            call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
+            call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+            if ( jorek_model >= 300 ) then
+               call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+            else
+               V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
+            end if
 
-        if ((xjac .gt. 1.d-6)) then
+            u0_x  = (   Z_t * U_s - Z_s * U_t ) / xjac
+            u0_y  = ( - R_t * U_s + R_s * U_t ) / xjac
 
-          call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
-          call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
-          call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
-          call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
-          call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
-          call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-          if ( jorek_model >= 300 ) then
-            call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-          else
-            V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
-          end if
+            ps_x  = (   Z_t * PS_s - Z_s * PS_t ) / xjac
+            ps_y  = ( - R_t * PS_s + R_s * PS_t ) / xjac
 
-          u0_x  = (   Z_t * U_s - Z_s * U_t ) / xjac
-          u0_y  = ( - R_t * U_s + R_s * U_t ) / xjac
+            TT_x  = (   Z_t * TT_s - Z_s * TT_t ) / xjac
+            TT_y  = ( - R_t * TT_s + R_s * TT_t ) / xjac
 
-          ps_x  = (   Z_t * PS_s - Z_s * PS_t ) / xjac
-          ps_y  = ( - R_t * PS_s + R_s * PS_t ) / xjac
+            zj_x  = (   Z_t * ZJ_s - Z_s * ZJ_t ) / xjac
+            zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
 
-          TT_x  = (   Z_t * TT_s - Z_s * TT_t ) / xjac
-          TT_y  = ( - R_t * TT_s + R_s * TT_t ) / xjac
+            !*** compute diagnostics ***
+            psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
+            Btheta  = (psi_abs/R)          
+            Vtheta  = 0.0
+            ! Vneo    = 0.0
+            Er      = 0.0
+            if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
+               Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
+                    (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
+               ! Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
+               Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
+            endif
+         endif
+         ! save those specific values of axisymmetric parameters
+         if (grad_psi .ne. 0.d0) then
+            scalars(inode,n_var+9) = Er
+            scalars(inode,n_var+10) = Vtheta
+            ! scalars(inode,n_var+11) = Vneo
+         endif
+         ! old values back to normal
+         i_tor = i_tor_old
 
-          zj_x  = (   Z_t * ZJ_s - Z_s * ZJ_t ) / xjac
-          zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
 
-          v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
-!===========GDP=========== --- compute added diagnostics
-          psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
-          Btheta  = (psi_abs/R)          
-          Vtheta  = 0.0
-          !GDP! Vneo    = 0.0
-          Er      = 0.0
-          if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
-             Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
-                  (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
-             !GDP! Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
-             Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
-          endif
+         !====================== --- specific for NON-axisymmetric quantities
+         ! 2 cases, depending on the value of i_tor chosen
+         if ((i_tor .ge. 1) .and. (i_tor .le. n_tor)) then
 
-!	  vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
-!          vectors(inode,:,2) = (/ + ps_y /R * V, - ps_x /R * V, F0/R * V /)
-!          vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * V, + R * u0_x - ps_x /R * V, F0/R * V /)
+            do m=1,n_var
+               call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+               scalars(inode,m) = P
+            enddo
 
-          psi_J = (Ps_s * ZJ_t - PS_t * ZJ_s ) / xjac
-          R_p   = (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
-          error = psi_J - R_p
+            if ((xjac .gt. 1.d-6)) then
 
-        endif
+               call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
+               call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+               call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
+               call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+               call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
+               call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+               if ( jorek_model >= 300 ) then
+                  call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+               else
+                  V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
+               end if
 
-      else
+               u0_x  = (   Z_t * U_s - Z_s * U_t ) / xjac
+               u0_y  = ( - R_t * U_s + R_s * U_t ) / xjac
 
-        u0_x = 0.d0; u0_y = 0.d0; ps_x = 0.d0; ps_y  = 0.d0; zj_x  = 0.d0; zj_y  = 0.d0;
-        TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
+               ps_x  = (   Z_t * PS_s - Z_s * PS_t ) / xjac
+               ps_y  = ( - R_t * PS_s + R_s * PS_t ) / xjac
 
-        w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
+               TT_x  = (   Z_t * TT_s - Z_s * TT_t ) / xjac
+               TT_y  = ( - R_t * TT_s + R_s * TT_t ) / xjac
 
-        do i_tor = 1, n_tor
+               zj_x  = (   Z_t * ZJ_s - Z_s * ZJ_t ) / xjac
+               zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
 
-          if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
+               !*** compute diagnostics ***
+               v_perp  = R * sqrt(u0_x*u0_x + u0_y * u0_y)
 
-          do m=1,n_var
-            call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-            scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
-          enddo
+               !	  vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
+               !          vectors(inode,:,2) = (/ + ps_y /R * V, - ps_x /R * V, F0/R * V /)
+               !          vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * V, + R * u0_x - ps_x /R * V, F0/R * V /)
 
-          call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
-          call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
-          call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
-          call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
-          call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
-          call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-          if ( jorek_model >= 300 ) then
-            call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-          else
-            V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
-          end if
+               psi_J = (Ps_s * ZJ_t - PS_t * ZJ_s ) / xjac
+               R_p   = (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
+               error = psi_J - R_p
 
-          if ((xjac .gt. 1.d-6)) then      ! avoid the axis
+            endif
 
-            u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
-            u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
+         else
 
-            ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
-            ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
+            u0_x = 0.d0; u0_y = 0.d0; ps_x = 0.d0; ps_y  = 0.d0; zj_x  = 0.d0; zj_y  = 0.d0;
+            TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
 
-            zj_x  = zj_x   + (   Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
-            zj_y  = zj_y   + ( - R_t * ZJ_s + R_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
+            w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
 
-            TT_x  = TT_x   + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
-            TT_y  = TT_y   + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
-            TT_p  = TT_p   + TT * HZ_p(i_tor,1)
+            do i_tor = 1, n_tor
 
-            RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
-            RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
-            RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)
+               if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
 
-            w0_x  = w0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
-            w0_y  = w0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
+               do m=1,n_var
+                  call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+                  scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
+               enddo
 
-            w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2       &
-                  + w_s * (Z_st*Z_t - Z_tt*Z_s )                                        & 
-                  + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2                        & 
-                  - xjac_x * (w_s* Z_t - w_t * Z_s)  / xjac**2
+               call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
+               call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+               call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
+               call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+               call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
+               call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+               if ( jorek_model >= 300 ) then
+                  call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+               else
+                  V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
+               end if
 
-            w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2       &
-                  + w_s * (R_st*R_t - R_tt*R_s )                                        &
-                  + w_t * (R_st*R_s - R_ss*R_t ) )         / xjac**2                    &
-                  - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
+               if ((xjac .gt. 1.d-6)) then      ! avoid the axis
 
-          endif
+                  u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
+                  u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
-        enddo  ! end loop toroidal harmonics
+                  ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
+                  ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
 
-        ps0 = scalars(inode,1)
-        psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-          psi_norm = 2.d0 - psi_norm
-        endif
-        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-          psi_norm = 2.d0 - psi_norm
-        endif
+                  zj_x  = zj_x   + (   Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
+                  zj_y  = zj_y   + ( - R_t * ZJ_s + R_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
 
-        v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
-!===========GDP=========== --- compute added diagnostics
-        psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
-        Btheta  = (psi_abs/R)          
-        Vtheta  = 0.0
-        !GDP! Vneo    = 0.0
-        Er      = 0.0
-        if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
-           Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
-                (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
-           !GDP! Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
-           Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
-        endif
+                  TT_x  = TT_x   + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
+                  TT_y  = TT_y   + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
+                  TT_p  = TT_p   + TT * HZ_p(i_tor,1)
 
-        Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR
-        D_prof  = get_dperp (psi_norm)
-        ZK_prof = get_zkperp(psi_norm)
+                  RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
+                  RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
+                  RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)
 
-        scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
-        ZKpar_T = ZK_par * ((scalars(inode,6)+T_1)/T_0)**2.5
+                  w0_x  = w0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
+                  w0_y  = w0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
-        grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
+                  w0_xx = w0_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2       &
+                       + w_s * (Z_st*Z_t - Z_tt*Z_s )                                        & 
+                       + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2                        & 
+                       - xjac_x * (w_s* Z_t - w_t * Z_s)  / xjac**2
 
-!   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp','D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
+                  w0_yy = w0_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2       &
+                       + w_s * (R_st*R_t - R_tt*R_s )                                        &
+                       + w_t * (R_st*R_s - R_ss*R_t ) )         / xjac**2                    &
+                       - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
 
-        scalars(inode,n_var+1)   = scalars(inode,5) * scalars(inode,6)
+               endif
 
-        if (grad_psi .ne. 0.d0) then
+            enddo  ! end loop toroidal harmonics
 
-          scalars(inode,n_var+2)  = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
+            ps0 = scalars(inode,1)
+            psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
+            if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
+               psi_norm = 2.d0 - psi_norm
+            endif
+            if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
+               psi_norm = 2.d0 - psi_norm
+            endif
 
-          scalars(inode,n_var+3)  = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
+            v_perp = R * sqrt(u0_x*u0_x + u0_y * u0_y)
 
-          scalars(inode,n_var+4)  = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
+            Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR
+            D_prof  = get_dperp (psi_norm)
+            ZK_prof = get_zkperp(psi_norm)
 
-          scalars(inode,n_var+5)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
+            scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
+            ZKpar_T = ZK_par * ((scalars(inode,6)+T_1)/T_0)**2.5
 
-          scalars(inode,n_var+6)  = D_prof * (RHO_x * ps_x + RHO_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
+            grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
-          scalars(inode,n_var+7)  = scalars(inode,5) * scalars(inode,7) * Btot
+            !   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp','D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
 
-          scalars(inode,n_var+8)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
+            scalars(inode,n_var+1)   = scalars(inode,5) * scalars(inode,6)
 
-!===========GDP=========== --- added outputs
-          scalars(inode,n_var+9) = Er
+            if (grad_psi .ne. 0.d0) then
 
-          scalars(inode,n_var+10) = Vtheta
+               scalars(inode,n_var+2)  = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
 
-          !GDP! scalars(inode,n_var+11) = Vneo
+               scalars(inode,n_var+3)  = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
 
-!           call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
-!                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
-!                        R,Z,ps0,0.d0,source_pellet)
-!          scalars(inode,n_var+8) =source_pellet
+               scalars(inode,n_var+4)  = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
 
-        endif
+               scalars(inode,n_var+5)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
 
-!        vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
-!        vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
-!        vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
-      
-      endif
-      
-    enddo
-  enddo
+               scalars(inode,n_var+6)  = D_prof * (RHO_x * ps_x + RHO_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
 
-  do j=1,nsub-1
-    do k=1,nsub-1
-      ielm        = ielm+1
-      ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
-      ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
-      ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
-      ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
-    enddo
-  enddo
-  
-! endif
+               scalars(inode,n_var+7)  = scalars(inode,5) * scalars(inode,7) * Btot
+
+               scalars(inode,n_var+8)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
+
+               !           call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
+               !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
+               !                        R,Z,ps0,0.d0,source_pellet)
+               !          scalars(inode,n_var+8) =source_pellet
+
+            endif
+
+            !        vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
+            !        vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
+            !        vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
+
+         endif
+
+      enddo
+   enddo
+
+   do j=1,nsub-1
+      do k=1,nsub-1
+         ielm        = ielm+1
+         ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
+         ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
+         ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
+         ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
+      enddo
+   enddo
+
+   ! endif
 enddo
 
 !--------------------------------------------------- write the binary VTK file

@@ -3,7 +3,7 @@
 #
 # Purpose: Plot JOREK grids
 #
-# Data: 2011-04-12
+# Date: 2011-04-12
 # Author: Matthias Hoelzl, IPP Garching
 #
 
@@ -21,7 +21,7 @@ function usage() {
   echo ""
 }
 
-SCRIPTDIR=`dirname $0`
+SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 
 # --- Some sanity checks
 #   --- Gnuplot available?

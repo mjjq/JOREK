@@ -3,7 +3,7 @@
 #
 # Purpose: Plot energies and growth rates during or after a JOREK code run using GNUPLOT
 #
-# Data: 2011-03-30
+# Date: 2011-03-30
 # Author: Matthias Hoelzl, IPP Garching
 #
 
@@ -24,7 +24,7 @@ function usage() {
   echo ""
 }
 
-SCRIPTDIR=`dirname $0`
+SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 
 # --- Some sanity checks
 #   --- Required scripts available?

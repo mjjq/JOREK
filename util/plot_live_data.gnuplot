@@ -3,7 +3,7 @@
 #
 # Purpose: Plot energies and growth rates during or after a JOREK code run
 #
-# Data: 2011-03-30
+# Date: 2011-03-30
 # Author: Matthias Hoelzl, IPP Garching
 #
 

@@ -1,0 +1,28 @@
+#!/bin/bash -x
+#
+# <<jobscript_comment>>
+#
+
+#MSUB -l walltime=<<runtime>>
+
+#MSUB -l nodes=<<nodes>>:ppn=<<ppn>>
+#MSUB -v tpt=<<tpt>>
+
+#MSUB -j oe
+#MSUB -e ./stderr.txt
+#MSUB -o ./stdout.txt
+
+#MSUB -N <<jobname>>_<<job_step>>
+
+#MSUB -M <<email>>
+#MSUB -m abe
+
+BIN="jorek_model<<model>>_step<<job_step>>"
+NSLOTS="<<mpi>>"
+INP="input<<job_step>>"
+OMP="<<omp>>"
+DIR="<<main_dir>>"
+
+cd $DIR
+export OMP_NUM_THREADS=$OMP
+mpiexec -np $NSLOTS --exports=OMP_NUM_THREADS $BIN < $INP | tee -a logfile

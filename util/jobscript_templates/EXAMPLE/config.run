@@ -1,0 +1,70 @@
+#!/bin/bash
+#
+# Example configuration file for a JOREK simulation. Execute it to create
+#   - binaries,
+#   - input files, and
+#   - jobscripts.
+#
+
+machine="hpcff"            # Jobscript template from trunk/util/jobscript_templates/ to be used
+code_dir="../../../"       # Where is the JOREK trunk?
+template_dir="./"          # Where is the input namelist template called input.template?
+include_files=""           # Which files from '$template_dir' are also required for the run
+compile_threads="8"        # Use how many threads in the compilation
+diagnostics="jorek2vtk"    # Compile these diagnostic tools
+
+# --- General parameters for all job steps
+job_params="
+  jobname=TEST
+  email=YOUR-EMAIL-ADDRESS-HERE
+  omp=8
+"
+code_params="
+  model=199
+"
+input_params="
+  nout=2
+"
+
+# --- Number of job steps
+nsteps="2"
+
+# --- Parameters for job step 1
+if [ -n "$job_step" ] && [ "$job_step" -eq 1 ]; then
+  job_params="$job_params
+    runtime=00:20:00
+    nodes=1
+    mpi=1
+  "
+  code_params="$code_params
+    n_tor=1
+    n_plane=1
+    n_period=1
+  "
+  input_params="$input_params
+    nstep_n=0
+  "
+fi
+
+# --- Parameters for job step 2
+if [ -n "$job_step" ] && [ "$job_step" -eq 2 ]; then
+  job_params="$job_params
+    runtime=04:00:00
+    nodes=2
+    mpi=2
+  "
+  code_params="$code_params
+    n_tor=3
+    n_period=1
+    n_plane=4
+  "
+  input_params="$input_params
+    nstep_n=500
+    tstep_n=1000.
+  "
+fi
+
+# --- Do not remove or change the following lines!
+if [ -z "$PREPARE_RUN_ALREADY_STARTED" ]; then
+  $code_dir/util/prepare_run.sh config.run
+fi

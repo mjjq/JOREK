@@ -4,78 +4,68 @@
 # Purpose: Set the model in the makefile and/or certain parameters in the respective
 #   mod_parameters file.
 #
-# Data: 2011-04-07
+# Date: 2011-04-07
 # Author: Matthias Hoelzl, IPP Garching
 #
 
-
 function usage() {
   echo ""
-  echo "Usage: `basename $0` <key>=<value> [...]"
+  echo "Purpose: Modify or print physics model in config.in and/or Makefile.inc and"
+  echo "  parameters like n_tor in the corresponding mod_parameters file."
   echo ""
-  echo "Purpose: Manipulate model in config.in and/or Makefile.inc and"
-  echo "  the parameters n_tor, n_period, and n_plane in the corresponding"
-  echo "  mod_parameters file."
+  echo "Usage: `basename $0` [<key1>=<value1> [...]]   Modify model and/or parameters"
+  echo "       `basename $0` -p <key>                  Print the value for <key> and exit"
   echo ""
-  echo "If called witout parameters, the current configuration is printed."
-  echo ""
-  echo "Example: `basename $0` model=302 n_tor=3 n_period=8 n_plane=4"
-  echo ""
-  echo "Remark: Call this script from the JOREK trunk."
+  echo "Examples:"
+  echo "  `basename $0` model=302 n_tor=3 n_period=8 n_plane=4"
+  echo "  `basename $0` -p model"
   echo ""
 }
 
-tmp="/tmp/tmp_sc_$$"
-
-SCRIPTDIR=`dirname $0`
+SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
+make_config_files=`ls config.in Makefile.inc 2>/dev/null`
+params="n_tor n_period n_plane n_vertex_max n_nodes_max n_elements_max n_boundary_max n_pieces_max"
 
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-  usage
-  exit
+  usage && exit
+elif [ -z "$make_config_files" ]; then
+  echo "Could not find a make configuration file. Are you in the JOREK trunk?" >&2
+  exit 1
 fi
 
 function key() {
-  echo "`echo $1 | sed -e 's/=.*$//'`"
+  echo $1 | sed -e 's/=.*$//' 
 }
 
 function val() {
-  echo "`echo $1 | sed -e 's/^.*=//'`"
+  echo $1 | sed -e 's/^.*=//' 
 }
 
 function setmodel() {
   model=$1
-
-  # --- Basic checks for the specified model
+  # --- Some checks
   if [ ${#model} -eq 3 ]; then
     model="model$model"
+  elif [ ! ${#model} -eq 8 ] || [[ ! ${model:5:3} =~ ^[0-9]+$ ]]; then
+    echo "ERROR: Illegal model specified: '$model'." >&2
   fi
-  if [ ! ${#model} -eq 8 ] || [[ ! ${model:5:3} =~ ^[0-9]+$ ]]; then
-    echo "ERROR: Illegal model specified: '$model'."
-  fi
-
-  # --- Set MODEL = modelXXX in the makefile configuration files
-  for file in config.in Makefile.inc; do
-    if [ -f $file ]; then
-      cp $file $tmp
-      cat $tmp | sed -e "s/\(^ *MODEL *= *\)[^ ]*\(.*$\)/\1$model\2/" > $file
-    fi
+  # --- Set model in makefile configuration files
+  for file in $make_config_files; do
+    sed -i -e "s/\(^ *MODEL *= *\)[^ ]*\(.*$\)/\1$model\2/" $file
   done
 }
 
 function getmodel() {
   model=""
-  for file in config.in Makefile.inc; do
-    if [ -f $file ]; then
-      model2=`egrep "MODEL *= *model[0-9]*" $file | sed -e "s/^ *MODEL *= *\(model[0-9]*\).*$/\1/"`
-      if [ "$model" != "" ]; then
-        if [ "$model" != "$model2" ]; then
-          echo "ERROR: Models in makefile configuration files do not agree." >&2
-          echo "Call setconfig.sh model=modelXXX to fix that." >&2
-          model="AMBIGUOUS"
-        fi
-      else
-        model=$model2
+  for file in $make_config_files; do
+    model2=`egrep "MODEL *= *model[0-9]*" $file | sed -e "s/^ *MODEL *= *\(model[0-9]*\).*$/\1/"`
+    if [ "$model" != "" ]; then
+      if [ "$model" != "$model2" ]; then
+        echo "ERROR: Models in makefile configuration files do not agree. Call 'config.sh model=modelXXX' to fix that." >&2
+        exit 1
       fi
+    else
+      model=$model2
     fi
   done
   echo $model
@@ -84,57 +74,74 @@ function getmodel() {
 function setparam() {
   key=$1
   val=$2
-  file="models/$model/mod_parameters.f90"
-  if [ ! -f $file ]; then
-    echo "ERROR: File '$file' does not exist."
+  matches=`grep -c ":: *$key" $param_file`
+  if [ "$matches" -ne 1 ]; then
+    echo "ERROR: Could not set parameter $key in $param_file." >&2
     exit 1
+  else
+    sed -i -e "s/\(^.*:: *$key *= *\)[^! ]*\(.*$\)/\1$val\2/" $param_file
   fi
-  cp $file $tmp
-  cat $tmp | sed -e "s/\(^.*:: *$key *= *\)[^! ]*\(.*$\)/\1$val\2/" > $file
+}
+
+function getparam() {
+  key=$1
+  grep ":: *$key[ =]" $param_file | sed -e "s/^.*:: *$key *= *\([^ ]*\).*$/\1/"
 }
 
 function print_info() {
-  config_file="$1"
+  file="$1"
   echo ""
   echo "======================="
-  echo "$config_file"
-  echo "-----------------------"
+  echo "$file:"
   
-  if [ -f "$config_file" ]; then
-    
-    model=`egrep "MODEL *= *model[0-9]*" "$config_file" | sed -e 's/^ *MODEL *= *//' -e 's/ *#.*$//'`
-    echo "  $model"
-    modeldir="models/$model"
-    param="$modeldir/mod_parameters.f90"
-    if [ -d "$modeldir" ]; then
-      egrep "integer.*n_tor"    $param | sed -e 's/^ *//' -e 's/ *!.*$//' -e 's/integer *, *parameter *:: *//' -e 's/  */ /g' -e 's/^/  /'
-      egrep "integer.*n_period" $param | sed -e 's/^ *//' -e 's/ *!.*$//' -e 's/integer *, *parameter *:: *//' -e 's/  */ /g' -e 's/^/  /'
-      egrep "integer.*n_plane"  $param | sed -e 's/^ *//' -e 's/ *!.*$//' -e 's/integer *, *parameter *:: *//' -e 's/  */ /g' -e 's/^/  /'
-    else
-      echo "WARNING: Directory $modeldir does not exist."
-    fi
+  if [ -f "$file" ]; then
+    echo "-----------------------"
+    echo "  `getmodel`"
+    for param in $params; do
+      echo "  $param = `getparam $param`"
+    done
   else
-    echo "(file not found)"
+    echo "  (file not found)"
   fi
   echo "======================="
   echo ""
 }
 
-# --- First set the model (if there is a respective command line argument)
+function check_param_file() {
+  param_file="models/$model/mod_parameters.f90"
+  if [ ! -f $param_file ]; then
+    echo "ERROR: File '$param_file' does not exist." >&2
+    exit 1
+  fi
+}
+
+# --- Determine the model
+model=`getmodel` && check_param_file
+
+# --- If argument -p is given, just print the requested parameter value and exit
+if [ "$1" == "-p" ]; then
+  if [ "$2" == "model" ]; then
+    echo `getmodel | sed -e 's/model//'`
+  else
+    value=`getparam $2`
+    if [ -z "$value" ]; then
+      echo "ERROR: Could not find parameter '$2'." >&2
+      exit 1
+    fi
+    echo "$value"
+  fi
+  exit
+fi
+
+# --- First set the model (if it is specified as a command line argument)
 for arg in $@; do
   if [ `key $arg` == "model" ]; then
     setmodel `val $arg`
   fi
 done
+model=`getmodel` && check_param_file
 
-# --- Determine the model
-model=`getmodel`
-
-if [ "$model" = "AMBIGUOUS" ]; then
-  exit 1
-fi
-
-# --- Then set the parameters
+# --- Set the parameters
 for arg in $@; do
   if [ `key $arg` != "model" ]; then
     setparam `key $arg` `val $arg`
@@ -142,8 +149,7 @@ for arg in $@; do
 done
 
 # --- Print the configuration
-for file in config.in Makefile.inc; do
+for file in $make_config_files; do
   print_info $file
 done
-
-rm -f $tmp
+echo "('`basename $0` -h' for help)"

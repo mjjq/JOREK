@@ -3,7 +3,7 @@
 #
 # Purpose: Plot energies and growth rates during or after a JOREK code run using GRACE
 #
-# Data: 2011-04-08
+# Date: 2011-04-08
 # Author: Matthias Hoelzl, IPP Garching
 #
 
@@ -23,7 +23,7 @@ function usage() {
   echo ""
 }
 
-SCRIPTDIR=`dirname $0`
+SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 
 # --- Some sanity checks
 #   --- Required scripts available?

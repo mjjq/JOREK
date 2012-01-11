@@ -152,7 +152,7 @@ function do_convert () {
 
 
 
-SCRIPTDIR=`dirname $0`
+SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 
 
 

@@ -3,7 +3,7 @@
 #
 # Purpose: Extract data from 'macroscopic_vars.dat' which is written by JOREK during the code run.
 #
-# Data: 2011-03-30
+# Date: 2011-03-30
 # Author: Matthias Hoelzl, IPP Garching
 #
 

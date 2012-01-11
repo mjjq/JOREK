@@ -3,7 +3,7 @@
 #
 # Purpose: Set parameters in a namelist input file.
 #
-# Data: 2011-04-07
+# Date: 2011-04-07
 # Author: Matthias Hoelzl, IPP Garching
 #
 
@@ -26,13 +26,13 @@ function setparam() {
     cat ${inputfile}.bck | sed -e "s/\(^[ \t]*$key[ \t]*=[ \t]*\)[^!]*/\1$val/" > $inputfile
   else
     echo ""
-    echo "ERROR: Found $NBMATCHES entries for '$key' in the input file."
+    echo "ERROR: Found $NBMATCHES entries for '$key' in the input file." >&2
     usage
     exit 1
   fi
 }
 
-SCRIPTDIR=`dirname $0`
+SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 
 if [ $# -lt 2 ] || [ "$1" == "-h" ]; then
   usage
@@ -43,7 +43,7 @@ inputfile="$1"
 shift
 if [ ! -f $inputfile ]; then
   echo ""
-  echo "ERROR: Inputfile '$inputfile' does not exist."
+  echo "ERROR: Inputfile '$inputfile' does not exist." >&2
   usage
   exit 1
 fi
@@ -55,7 +55,7 @@ while [ $# -gt 0 ]; do
   theval="${1#*=}"
   if [ "$thekey" == "$1" ] || [ -z "$theval" ]; then
     echo ""
-    echo "ERROR: Parameter '$1' is not in the form <value>=<key>."
+    echo "ERROR: Parameter '$1' is not in the form <value>=<key>." >&2
     usage
     exit 1
   fi

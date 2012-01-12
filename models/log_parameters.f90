@@ -270,7 +270,15 @@ if (my_id == 0) then
   write(*,230) 'xshift              ', xshift
   write(*,230) 'xleft               ', xleft
   write(*,231) 'n_boundary          ', n_boundary
+!================================MB
+  write(*,*)
   
+  write(*,*)   '  initial parallel (~ toroidal) rotation profile:'
+  write(*,230) '  V_0=            ', V_0
+  write(*,230) '  V_1=            ', V_1
+  write(*,230) '  V_coeff=        ', V_coef(1:10)
+  write(*,*)
+!=================================MB
   if ( n_boundary > 0 ) then
     write(*,233) 'r_boundary          ', r_boundary(1:4), r_boundary(n_boundary-3:n_boundary)
     write(*,233) 'z_boundary          ', z_boundary(1:4), z_boundary(n_boundary-3:n_boundary)

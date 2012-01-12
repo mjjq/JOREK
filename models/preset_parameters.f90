@@ -199,5 +199,12 @@ subroutine preset_parameters
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
   
-  
+ !======================MB rotation profile
+  V_0=0.d0   
+  V_1=0.d0    
+  V_coef=0.d0
+  V_coef(1)=0.d0
+  V_coef(4)=0.1
+  V_coef(5)=1. 
+!======================MB
 end subroutine preset_parameters

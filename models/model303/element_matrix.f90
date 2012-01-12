@@ -58,7 +58,13 @@ real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_15
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 logical    :: xpoint2
-
+!==================MB: velocity profile is kept by a source which compensating diffusion
+real*8     :: amat_27, Btheta2
+real*8     :: Vt0,Vt0_x,Vt0_y
+real*8     :: V_source(n_gauss,n_gauss)
+real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
+real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
+!=======================================
 real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8     :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
@@ -166,7 +172,11 @@ do ms=1, n_gauss
  
     call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
-
+!=========================================MB :velocity profile
+       if ( abs(V_0) .ge. 1.e-19) then 
+        call velocity(xpoint2,y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt), psi_axis, psi_bnd,V_source(ms,mt),dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+       endif
+!======================================MB
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                  dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
@@ -231,6 +241,12 @@ do ms=1, n_gauss
      zj0_p = eq_p(mp,3,ms,mt)
      zj0_s = eq_s(mp,3,ms,mt)
      zj0_t = eq_t(mp,3,ms,mt)
+!=======================================MB:parallel velocity 
+     Vt0   = V_source(ms,mt)
+     Vt0_x = dV_dpsi_source(ms,mt)*ps0_x
+     Vt0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
+
+!=======================================MB
 
      w0    = eq_g(mp,4,ms,mt)
      w0_x  = (   y_t(ms,mt) * eq_s(mp,4,ms,mt) - y_s(ms,mt) * eq_t(mp,4,ms,mt) ) / xjac
@@ -674,7 +690,10 @@ do ms=1, n_gauss
 
            rhs_ij_7 = - v * F0 / BigR * P0_p                                              * xjac * tstep &
                       - v * (P0_s * ps0_t - P0_t * ps0_s)                                        * tstep &
-                      - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR                * xjac * tstep &
+!==============================================MB:(Vt0_x)beg.=>end:(Vt0_y)======parallel velocity source:
+                      - visco_par * (v_x * (vpar0_x-Vt0_x) + v_y * (vpar0_y-Vt0_y)) * BigR* xjac * tstep &
+!=================================MB: end
+
 		      		      
 		      - v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2 * BigR * xjac * tstep &
 		      

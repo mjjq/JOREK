@@ -25,8 +25,8 @@ call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
-
-bufsize = ( 179 * IDBL_EXT + (24+n_tor) * INT_EXT + 33 * ILOG_EXT + 7*512 * CHAR_EXT )
+!==========================MB: velocity +12 double precision
+bufsize = ( (179+12) * IDBL_EXT + (24+n_tor) * INT_EXT + 33 * ILOG_EXT + 7*512 * CHAR_EXT )
 
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastp_buffer")
@@ -114,22 +114,26 @@ if (my_id .eq. 0) then
   call MPI_PACK(heatsource_sig,         1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 164_R
 
   call MPI_PACK(SIG_closed,             1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
-  call MPI_PACK(SIG_open,               1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     
+  call MPI_PACK(SIG_open,               1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
   call MPI_PACK(SIG_outer,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
   call MPI_PACK(SIG_inner,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
   call MPI_PACK(SIG_private,            1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  
   call MPI_PACK(SIG_up_priv,            1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  
-  call MPI_PACK(SIG_leg_0,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
-  call MPI_PACK(SIG_leg_1,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
+  call MPI_PACK(SIG_leg_0,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  call MPI_PACK(SIG_leg_1,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
   call MPI_PACK(SIG_up_leg_0,           1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
   call MPI_PACK(SIG_up_leg_1,           1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
 
-  call MPI_PACK(dPSI_open,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
-  call MPI_PACK(dPSI_outer,             1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  call MPI_PACK(dPSI_open,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  call MPI_PACK(dPSI_outer,             1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  
   call MPI_PACK(dPSI_inner,             1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
   call MPI_PACK(dPSI_private,           1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
   call MPI_PACK(dPSI_up_priv,           1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
-
+!==============================MB velocity +12
+  call MPI_PACK(V_0,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(V_1,1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(V_coef,10,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+!=================
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
@@ -296,6 +300,11 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,dPSI_private, 	  1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,dPSI_up_priv, 	  1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
+!=================MB:initial profile of parallel velocity
+  call MPI_UNPACK(buffer,bufsize,position,V_0,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,V_1,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,V_coef,10,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+!==========================
   call MPI_UNPACK(buffer,bufsize,position,nstep,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,               10,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   

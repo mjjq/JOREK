@@ -285,5 +285,7 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
+!=================================MB
+ real*8  :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303
   
 end module phys_module

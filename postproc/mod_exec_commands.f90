@@ -1022,7 +1022,7 @@ module exec_commands
               Z(ip), Z_s, Z_t, Z_st, Z_ss, Z_tt)
             
             ! --- Determine psi values and derivatives at current position
-            call interp(node_list, element_list, i_elm, ivar, 1, si, ti, psi, psi_s, psi_t, psi_st,  &
+            call interp(node_list, element_list, i_elm, 1, 1, si, ti, psi, psi_s, psi_t, psi_st,  &
               psi_ss, psi_tt)
             
             ! --- Determine averaged quantity and derivatives at current position

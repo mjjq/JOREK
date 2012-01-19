@@ -8,6 +8,7 @@ use parameters
 use data_structure
 use phys_module
 use mod_poiss
+use vacuum
 implicit none
 
           
@@ -127,20 +128,24 @@ enddo
 freeboundary_equil = freeboundary_equil2
 
 current_int = 0.d0
-amix        = 0.96
-ZKP         = 1.0                ! PI feedback on the total current
-ZKI         = 0.01 
+amix        = 0.
+ZKP         = 0.1                ! PI feedback on the total current
+ZKI         = 0. !0.01 
 
 if (freeboundary_equil) then
 
-  n_iter =200
-  
-  call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
-  
+  n_iter = 100
+
+! Target current
+! call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
+  current_ref = 6.d5
+
   do iter=1,n_iter
         
     call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_tot)
-    
+
+    write(10,*) iter, current_tot
+
     current_int = current_int + (current_tot-current_ref)
     
     T_0  = T_0  * (1. - ZKP*(current_tot-current_ref)/current_ref - ZKI*current_int/current_ref)
@@ -173,15 +178,23 @@ if (freeboundary_equil) then
       endif
     endif
 
+! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
+if (iter .lt. 30) then
     call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
 
     if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
       write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
     endif
+endif
        
     if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
     if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
+
+! Vertical feedback - needed for vertically unstable plasmas
+    if (iter .gt. 20) then
+      vertical_FB = 10.*Z_axis ! This parameter is used in vacuum/mod_vacuum_equilibrium.f90 to modify the coils current
+    endif
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1

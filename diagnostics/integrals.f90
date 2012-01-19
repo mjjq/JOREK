@@ -147,7 +147,6 @@ do ife =1, element_list%n_elements
         ! --- 2D integrals
         P_hel = P_hel + rho_00 * T_00 * xjac * wst
         C_hel = C_hel + ZJ_0 /BigR  * xjac * wst
-        
         Volume = Volume + 2.d0 * PI * BigR * xjac * wst
         Area   = Area   + xjac * wst
         

@@ -125,7 +125,39 @@ module vacuum_equilibrium
   !I_coils = -0.005 * I_coils   
   
   !TS2 testacse
-  I_coils = (/ 0., 0., 0., 28800., -239040., -239040., -28800., 0., 0., 54000., 54000., 54000., 54000., 66000., 66000., 66000., 66000./)
+!   I_coils = (/ 0., 0., 0., 28800., -239040., -239040., -28800., 0., 0., 54000., 54000., 54000., 54000., 66000., 66000., 66000., 66000./)
+
+! I_coils = (/ 0., 0., 0., 0., 0., 0., 0., 0., 0., 800000., 0., 0., 0., 800000., 0., 0., 0./)
+
+!Limiter case
+!   I_coils = (/ 0., 0., 0., 0., -440000., -440000., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0./)
+! 
+! vertical_FB = 100000.*vertical_FB
+! 
+! I_coils(10) = -vertical_FB
+! I_coils(11) = -vertical_FB
+! I_coils(12) = -vertical_FB
+! I_coils(13) = -vertical_FB
+! I_coils(14) = vertical_FB
+! I_coils(15) = vertical_FB
+! I_coils(16) = vertical_FB
+! I_coils(17) = vertical_FB
+!End limiter case
+
+!Divertor case
+  I_coils = (/ 0., 0., 0., 0., -400000., -400000., 0., 0., 0., 400000., 0., 0., 0., 400000., 0., 0., 0./)
+I_coils(10) = I_coils(10)*(1.-vertical_FB)
+I_coils(11) = I_coils(11)*(1.-vertical_FB)
+I_coils(12) = I_coils(12)*(1.-vertical_FB)
+I_coils(13) = I_coils(13)*(1.-vertical_FB)
+I_coils(14) = I_coils(14)*(1.+vertical_FB)
+I_coils(15) = I_coils(15)*(1.+vertical_FB)
+I_coils(16) = I_coils(16)*(1.+vertical_FB)
+I_coils(17) = I_coils(17)*(1.+vertical_FB)
+!End divertor case
+
+write(*,*) 'I_coils(10)', I_coils(10)
+
   I_coils = I_coils * 4.d-7 * PI 
   
   ilarge = mumps_par%nz                                      ! the number of items in the mumps_par coordinate storage (before the boundary conditions)
@@ -158,15 +190,15 @@ module vacuum_equilibrium
                      
   	  b_tan(ms)  = b_tan(ms) + external_field(index_node_bnd,k) * I_coils(k) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)
           	
-  	enddo
-  		
+  	  enddo
+
         enddo                                               ! end loop over Gaussian points
       enddo                                                 ! end loop over the two basis function
     enddo                                                   ! end loop over two corners of each boundary element
   
   
     do ms=1, n_gauss                                        ! loop over Gaussian points
-  
+
       ws = wgauss(ms)
   
       BigR = x_g(ms)
@@ -228,7 +260,7 @@ module vacuum_equilibrium
   
                   if ( use_starwall ) then
                     A_glob_11   = v * psi * sqrt(x_s(ms)**2 + y_s(ms)**2)
-                    RHS_glob_11 = v * ps0 * sqrt(x_s(ms)**2 + y_s(ms)**2)
+		RHS_glob_11 = v * ps0 * sqrt(x_s(ms)**2 + y_s(ms)**2)
                   else
                     A_glob_11   = v * psi_s
                     RHS_glob_11 = v * ps0_s 
@@ -239,8 +271,8 @@ module vacuum_equilibrium
                   mumps_par%irn(ilarge) = index_node
                   mumps_par%jcn(ilarge) = index_node3
                   if ( NEW_VACUUM ) then
-                    mumps_par%A(ilarge)   = - ws * A_glob_11 * &
-                    response_m_eq(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder))
+                    mumps_par%A(ilarge)   = (-1.) * (- ws * A_glob_11 * &
+                    response_m_eq(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder)))
                   else
                     mumps_par%A(ilarge)   = - ws * A_glob_11 * &
                     vac_response(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder))

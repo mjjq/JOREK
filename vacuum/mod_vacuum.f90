@@ -45,6 +45,7 @@ module vacuum
   real*8, allocatable :: R_coils(:), Z_coils(:)          !< positions of poloidal field coils
   real*8, allocatable :: dR_coils(:), dZ_coils(:)        !< width/height of poloidal field coils
   real*8, allocatable :: I_coils(:)                      !< coil currents 
+  real*8              :: vertical_FB                     ! a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: external_field(:,:)             !< external poloidal field (n_dof_bnd,n_coils)
   
   !> @name OLD PARAMETERS -- WILL BE REMOVED SOON

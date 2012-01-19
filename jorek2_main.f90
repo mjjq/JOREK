@@ -158,7 +158,7 @@ program JOREK2
   ! --- Determine number of MPI procs
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
   n_cpu = comm_size
-  
+
   if (my_id == 0) then
     write(*,*) '*************************************************'
     write(*,*) '*   3D Reduced MHD : JOREK_2.0                  *'
@@ -176,7 +176,7 @@ program JOREK2
     write(*,111) 'compile_defines     ', trim(adjustl(compile_defines))
     write(*,111) 'compile_libs        ', trim(adjustl(compile_libs))
   end if
-  
+
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
 
@@ -439,7 +439,7 @@ program JOREK2
   if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
-  if ( freeboundary_equil ) call import_external_fields()
+!   if ( freeboundary_equil ) call import_external_fields()
   if ( freeboundary .or. freeboundary_equil ) call get_vacuum_response(my_id, node_list,           &
     bnd_elm_list, bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
   if ( (freeboundary .or. freeboundary_equil) .and. NEW_VACUUM ) call update_response(tstep,       &
@@ -1001,7 +1001,7 @@ program JOREK2
   !***********************************************************************
   !*                          plots etc.                                 *
   !***********************************************************************
-  
+
   if (my_id .eq. 0)  then
 
      call export_restart(node_list,element_list,'jorek_restart.rst')

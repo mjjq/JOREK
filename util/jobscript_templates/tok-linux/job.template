@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+# <<jobscript_comment>>
+#
+#$ -cwd
+#$ -j y
+#$ -l h_cpu=<<runtime>>
+#$ -pe mpich2_tok_production <<procs>>
+#$ -m e
+#$ -M <<email>>
+#$ -notify
+#$ -N J<<jobname>>_<<job_step>>
+#
+
+BIN="jorek_model<<model>>_step<<job_step>>"
+NSLOTS="<<mpi>>"
+INP="input<<job_step>>"
+OMP="<<omp>>"
+DIR="<<main_dir>>"
+
+cd $DIR
+export OMP_NUM_THREADS=$OMP
+mpirun -np $NSLOTS $BIN < $INP | tee -a logfile

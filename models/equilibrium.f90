@@ -56,7 +56,7 @@ freeboundary_equil  = .false.
 
 !------------------------------------ fixed boundary equilibrium
 n_iter      = 200
-psi_bnd     = 0.d0
+psi_bnd     = 99.d0
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
 
@@ -89,6 +89,8 @@ do iter = 1, n_iter
         Z_xpoint(2) = +99.d0
       endif
     endif
+  else
+    psi_bnd = 99.d0
   endif
 
   call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)

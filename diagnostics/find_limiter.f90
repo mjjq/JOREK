@@ -1,23 +1,33 @@
-subroutine find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-!-----------------------------------------------------------------------
-! now only looks for the minimum flux on the boundary. 
-! An arbitrary list deifning the limiter surface should be added
-!
-!-----------------------------------------------------------------------
+!> Finds the limiter position.
+!!
+!! * The routine returns the R, Z, and Psi-value of the limiter point with the smallest Psi-value.
+!! * The points checked are all points on the boundary of the JOREK domain and additional limiter
+!!   points given in the namelist input file (parameters n_limiter, R_limiter, Z_limiter).
+!!
+subroutine find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+
+use phys_module, only: n_limiter, R_limiter, Z_limiter
 use data_structure
 use gauss
 use basis_at_gaussian
 
 implicit none
 
-type (type_node_list)        :: node_list
-type (type_bnd_node_list)    :: bnd_node_list
-type (type_bnd_element_list) :: bnd_elm_list
+! --- Routine parameters
+type (type_node_list),        intent(in)  :: node_list
+type (type_element_list),     intent(in)  :: element_list
+type (type_bnd_element_list), intent(in)  :: bnd_elm_list
+real*8,                       intent(out) :: psi_lim
+real*8,                       intent(out) :: R_lim
+real*8,                       intent(out) :: Z_lim
 
-real*8  :: psi_lim,R_lim,Z_lim,s_lim,t_lim, r_min
+! --- Local variables
+real*8  :: s_lim,t_lim, r_min
 real*8  :: r, psim, psimr, psip, psipr, psma, psmi, psmima, psi_min, psi_max, AA, BB, CC, DD, DET, dummy
 real*8  :: RM, RMR, RP, RPR, ZM, ZMR, ZP, ZPR
-integer :: i_bnd_lim, ibnd, n1, n2, idir1, idir2, i_min
+integer :: i_limiter, i_bnd_lim, ibnd, n1, n2, idir1, idir2, i_min
+real*8  :: psi, psi_s,psi_t,psi_st,psi_ss,psi_tt, s_out, t_out, R_out, Z_out
+integer :: ifail, i_elm
 
 real*8, external :: root
 
@@ -110,5 +120,21 @@ else
   Z_lim   = 0.d0
 endif
 
+! --- Take into account additional limiter points from the namelist input file
+do i_limiter = 1, n_limiter
+  Rp = R_limiter(i_limiter)
+  Zp = Z_limiter(i_limiter)
+  
+  call find_RZ(node_list, element_list, Rp, Zp, R_out, Z_out, i_elm, s_out, t_out, ifail)
+  call interp(node_list, element_list, i_elm, 1, 1, s_out, t_out, psi, psi_s, psi_t, psi_st,       &
+    psi_ss, psi_tt)
+  
+  if (psi .lt. psi_lim) then
+    psi_lim = psi
+    R_lim   = Rp
+    Z_lim   = Zp
+  end if
+end do
+
 return
-END
+end subroutine find_limiter

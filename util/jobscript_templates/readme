@@ -1,3 +1,7 @@
 Directory contains job templates used by prepare_run.sh
 
 Refer to the PDF documentation for details on the prepare_run.sh script.
+
+   hpcff        HPC-FF cluster in Julich, Germany
+   tok-linux    Local Linux cluster at IPP Garching
+   iferc        IFERC-CSC cluster in Japan

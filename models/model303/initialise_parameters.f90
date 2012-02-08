@@ -62,6 +62,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
+                n_limiter, R_limiter, Z_limiter,                    &
                 linear_run, export_for_nemec,                       &
 !==================MB
                 V_0,V_1,V_coef

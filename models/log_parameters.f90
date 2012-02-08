@@ -269,7 +269,6 @@ if (my_id == 0) then
   write(*,230) 'xtheta              ', xtheta
   write(*,230) 'xshift              ', xshift
   write(*,230) 'xleft               ', xleft
-  write(*,231) 'n_boundary          ', n_boundary
 !================================MB
   write(*,*)
   
@@ -279,10 +278,16 @@ if (my_id == 0) then
   write(*,230) '  V_coeff=        ', V_coef(1:10)
   write(*,*)
 !=================================MB
+  write(*,231) 'n_boundary          ', n_boundary
   if ( n_boundary > 0 ) then
     write(*,233) 'r_boundary          ', r_boundary(1:4), r_boundary(n_boundary-3:n_boundary)
     write(*,233) 'z_boundary          ', z_boundary(1:4), z_boundary(n_boundary-3:n_boundary)
     write(*,233) 'psi_boundary        ', psi_boundary(1:4), psi_boundary(n_boundary-3:n_boundary)
+  end if
+  write(*,231) 'n_limiter           ', n_limiter
+  if ( n_limiter > 0 ) then
+    write(*,234) 'r_limiter           ', r_limiter(1:min(9,n_limiter))
+    write(*,234) 'z_limiter           ', z_limiter(1:min(9,n_limiter))
   end if
   
   write(*,232) 'freeboundary_equil  ', freeboundary_equil

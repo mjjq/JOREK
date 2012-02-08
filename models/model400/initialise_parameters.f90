@@ -63,6 +63,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
+                n_limiter, R_limiter, Z_limiter,                    &
                 linear_run, export_for_nemec
 
 if (my_id .eq. 0) then

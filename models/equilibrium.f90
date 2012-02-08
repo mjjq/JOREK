@@ -381,7 +381,7 @@ else
 
   call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,sep_list)  
 endif
-  
+
 if (freeboundary_equil) then
   call plot_coils(.true.)
   call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
@@ -400,7 +400,7 @@ else
   endif
 endif
   
-call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
+call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
 
 if (allocated(surface_list%psi_values))    call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
 if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)

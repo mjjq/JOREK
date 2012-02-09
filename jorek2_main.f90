@@ -99,7 +99,7 @@ program JOREK2
   
   type (type_surface_list) :: surface_list
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
-  real*8                   :: t_matrix_0, t_matrix_1
+  real*8                   :: t_matrix_0, t_matrix_1, psi_lim, R_lim, Z_lim
   real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
@@ -474,18 +474,21 @@ program JOREK2
   
   if (nstep > 0) then
 
-     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
+     call find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i_elm_axis, s_axis,  &
+       t_axis, ifail)
+     
+     psi_bnd = 0.d0
      if (xpoint) then
-        call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,    &
-          s_xpoint, t_xpoint, xcase, ifail)
-        psi_bnd  = psi_xpoint(1)
-        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-          psi_bnd = psi_xpoint(2)
-        endif
-     else
-        psi_bnd = 0.d0
+       call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
+         i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+       psi_bnd  = psi_xpoint(1)
+       if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+         psi_bnd = psi_xpoint(2)
+       endif
      end if
+     call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+     psi_bnd = min( psi_bnd, psi_lim )
+
 
 
      !*******************************************************
@@ -748,15 +751,17 @@ program JOREK2
      call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
      call tr_debug_write("JMAIN:Find_axis_T",T_axis)
 
+     psi_bnd = 0.d0
      if (xpoint) then
-       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-       psi_bnd = psi_xpoint(1)
+       call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
+         i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+       psi_bnd  = psi_xpoint(1)
        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
          psi_bnd = psi_xpoint(2)
        endif
-     else
-       psi_bnd = 0.d0
-     endif
+     end if
+     call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+     psi_bnd = min( psi_bnd, psi_lim )
 
      call cpu_time(t_matrix_0)
 

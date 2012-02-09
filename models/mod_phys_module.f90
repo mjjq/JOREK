@@ -166,6 +166,11 @@ module phys_module
   integer :: n_pol             !< Number of poloidal grid points
   real*8  :: R_geo             !< Center of the grid
   real*8  :: Z_geo             !< Center of the grid
+  real*8  :: psi_axis_init     !< Initial guess for Psi at the magnetic axis
+  real*8  :: XR_r(2)           !< Psi_N position of radial grid accumulation (two positions)
+  real*8  :: SIG_r(2)          !< Width of grid accumulation (two positions)
+  real*8  :: XR_tht(2)         !< Position of poloidal grid accumulation (0...1, two positions)
+  real*8  :: SIG_tht(2)        !< Width of grid accumulation (two positions)
   
   !> @name Flux surface grid
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.

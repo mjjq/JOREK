@@ -125,6 +125,15 @@ if (my_id == 0) then
   write(*,231) 'n_Z                 ', n_Z
   write(*,231) 'n_radial            ', n_radial
   write(*,231) 'n_pol               ', n_pol
+  
+  if ( n_radial > 0 ) then
+    write(*,230) 'psi_axis_init       ', psi_axis_init
+    write(*,230) 'xr_r                ', xr_r(:)
+    write(*,230) 'sig_r               ', sig_r(:)
+    write(*,230) 'xr_tht              ', xr_tht(:)
+    write(*,230) 'sig_tht             ', sig_tht(:)
+  end if
+  
   write(*,231) 'n_tht               ', n_tht
   write(*,231) 'n_flux              ', n_flux
   write(*,232) 'xpoint              ', xpoint

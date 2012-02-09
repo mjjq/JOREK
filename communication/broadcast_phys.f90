@@ -26,7 +26,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 !==========================MB: velocity +12 double precision
-bufsize = ( (179+12+2*max_limiter) * IDBL_EXT + (25+n_tor) * INT_EXT + 33 * ILOG_EXT + 7*512 * CHAR_EXT )
+bufsize = ( (200+2*max_limiter) * IDBL_EXT + (25+n_tor) * INT_EXT + 33 * ILOG_EXT + 7*512 * CHAR_EXT )
 
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastp_buffer")
@@ -113,6 +113,12 @@ if (my_id .eq. 0) then
   call MPI_PACK(heatsource_psin,        1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! 163
   call MPI_PACK(heatsource_sig,         1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)     ! 164_R
 
+  call MPI_PACK(psi_axis_init,          1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  call MPI_PACK(XR_r(:),                2,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  call MPI_PACK(SIG_r(:),               2,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  call MPI_PACK(XR_tht(:),              2,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  call MPI_PACK(SIG_tht(:),             2,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
+  
   call MPI_PACK(SIG_closed,             1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
   call MPI_PACK(SIG_open,               1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   
   call MPI_PACK(SIG_outer,              1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
@@ -285,6 +291,12 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,particlesource_sig,     1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,heatsource_psin,        1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,heatsource_sig,         1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+
+  call MPI_UNPACK(buffer,bufsize,position,psi_axis_init,          1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,XR_r(:),                2,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,SIG_r(:),               2,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,XR_tht(:),              2,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,SIG_tht(:),             2,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,SIG_closed,		  1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,SIG_open,		  1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)

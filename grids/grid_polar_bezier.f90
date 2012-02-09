@@ -1,27 +1,27 @@
+!> Defines a polar grid using Bezier finite elements (using the HELENA
+!! cubic Hermite elements formulation)
 subroutine grid_polar_bezier(Rgeo,Zgeo,amin,acentre,fbnd,fpsi,mf,nr,np,node_list,element_list)
-!***********************************************************************
-! defines a polar grid using Bezier finite elements (using the HELENA
-! cubic Hermite elements formulation)
-!***********************************************************************
+
 use constants
 use tr_module
 use parameters
 use data_structure
+use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht
 
 implicit none
 
 ! --- Routine parameters
-real*8,                  intent(in)    :: Rgeo, Zgeo     ! position of the geometric center
-real*8,                  intent(in)    :: amin           ! minor radius
-real*8,                  intent(in)    :: acentre        ! smallest radius
-real*8,                  intent(in)    :: fbnd(*)        ! Fourier series describing the radius as function
-                                                         !   of the poloidal angle
-real*8,                  intent(in)    :: fpsi(*)        ! Fourier series of flux at the boundary
-integer,                 intent(in)    :: mf             ! Number of Fourier modes in fbnd and fpsi
-integer,                 intent(in)    :: nr             ! number of radial points, (nr-1) elements
-integer,                 intent(in)    :: np             ! number of poloidal points, np elements
-type(type_node_list),    intent(inout) :: node_list      ! list of nodes with grid information
-type(type_element_list), intent(inout) :: element_list   ! list of elements with element information
+real*8,                  intent(in)    :: Rgeo, Zgeo     !< position of the geometric center
+real*8,                  intent(in)    :: amin           !< minor radius
+real*8,                  intent(in)    :: acentre        !< smallest radius
+real*8,                  intent(in)    :: fbnd(*)        !< Fourier series describing the radius as function
+                                                         !!   of the poloidal angle
+real*8,                  intent(in)    :: fpsi(*)        !< Fourier series of flux at the boundary
+integer,                 intent(in)    :: mf             !< Number of Fourier modes in fbnd and fpsi
+integer,                 intent(in)    :: nr             !< number of radial points, (nr-1) elements
+integer,                 intent(in)    :: np             !< number of poloidal points, np elements
+type(type_node_list),    intent(inout) :: node_list      !< list of nodes with grid information
+type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
 
 ! --- local variables
 real*8              :: angle_start
@@ -30,7 +30,7 @@ real*8              :: dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_ax
 real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3
 integer             :: i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm,i_sons
 integer             :: n_element_start, n_node_start, n_index_start
-real*8              :: XR_r_0,XR_r_1, SIG_r_0, SIG_r_1, XR_tht_0, XR_tht_1, SIG_tht_0, SIG_tht_1, abltg(3), dr_ds, dtht_dt
+real*8              :: abltg(3), dr_ds, dtht_dt
 real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
@@ -60,17 +60,7 @@ write(*,*) ' existing number of elements          : ',n_element_start
 write(*,*) ' existing number of nodes             : ',n_node_start
 write(*,*) ' index_start                          : ',n_index_start
 
-psi_axis = -0.1d0
-
-XR_r_0  = 999.d0 !0.80d0         ! mesh accumulation parameters radial position
-SIG_r_0 = 999.d0 !0.1d0          ! width of accumulation (Gaussian)
-XR_r_1  = 999.d0
-SIG_r_1 = 999.d0
-
-XR_tht_0  = 999.d0 ! 0.d0 !0.5d0 !0. ! mesh accumulation parameters poloidal position
-SIG_tht_0 = 999.d0 ! 0.03d0          ! width of accumulation (Gaussian)
-XR_tht_1  = 999.d0 ! 1.d0 !1.d0
-SIG_tht_1 = 999.d0 ! 0.03d0
+psi_axis = psi_axis_init ! Initial guess for Psi at the magnetic axis
 
 call tr_allocate(S1,1,nr,"S1",CAT_GRID)
 call tr_allocate(S2,1,nr,"S2",CAT_GRID)
@@ -93,10 +83,10 @@ do j=1,np+1
   T1(j) = real(j-1)/real(np)
 enddo
 
-call meshac2(nr,S2,XR_r_0,XR_r_1,SIG_r_0,SIG_r_1,0.6d0,1.0d0)
+call meshac2(nr,S2,XR_r(1),XR_r(2),SIG_r(1),SIG_r(2),0.6d0,1.0d0)
 call spline(nr,S1,S2,0.d0,0.d0,2,SP1,SP2,SP3,SP4)
 
-call meshac2(np+1,T2,XR_tht_0,XR_tht_1,SIG_tht_0,SIG_tht_1,0.6d0,1.0d0)
+call meshac2(np+1,T2,XR_tht(1),XR_tht(2),SIG_tht(1),SIG_tht(2),0.6d0,1.0d0)
 call spline(np+1,T1,T2,0.d0,0.d0,2,TP1,TP2,TP3,TP4)
 
 do i=1,nr

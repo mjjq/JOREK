@@ -59,6 +59,12 @@ subroutine preset_parameters
   n_up_leg  = 0
   n_up_priv = 0
   
+  psi_axis_init = 0.1d0
+  XR_r(:)       = 999.d0
+  SIG_r(:)      = 999.d0
+  XR_tht(:)     = 999.d0
+  SIG_tht(:)    = 999.d0
+
   SIG_closed  = 0.1d0
   SIG_open    = 0.1d0
   SIG_outer   = 0.1d0

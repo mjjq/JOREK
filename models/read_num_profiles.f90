@@ -30,6 +30,18 @@ subroutine read_num_profiles(my_id)
     num_T_y0 = num_T_y0 - T_1
   end if
   
+!  num_rhon = ( rhon_file /= 'none' )
+!  if ( num_rhon .and. ( my_id == 0 ) ) then
+!    call readProf(num_rhon_x, num_rhon_y0, num_rhon_len, rhon_file)
+!    if ( num_rhon_len < 2 ) then 
+!      write(*,*) '  ERROR: Could not read the numerical profile !"'//trim(rhon_file)//'".'
+!      stop
+!    end if
+!    rhon_1 = num_rhon_y0(num_rhon_len)
+!    num_rhon_y0 = num_rhon_y0 - rhon_1
+!  end if
+  
+  
   num_ffprime = ( ffprime_file /= 'none' )
   if ( num_ffprime .and. ( my_id == 0 ) ) then
     call readProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, ffprime_file)

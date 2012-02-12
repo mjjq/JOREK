@@ -144,6 +144,17 @@ module phys_module
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
   logical :: use_pellet
   
+  !> @name Massive gas injection-related input parameters
+  real*8  :: mgi_amplitude     !< amplitude of neutral density source
+  real*8  :: mgi_R             !< major radius position of neutral density source
+  real*8  :: mgi_Z             !< Z position of neutral density source
+  real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction 
+  real*8  :: mgi_radius        !< radius of the neutral density source in poloidal plane
+  real*8  :: mgi_sig           !< width of smoothing of the neutral density source in poloidal plane
+  real*8  :: mgi_length        !< width of smoothing of the neutral density source in toroidal direction
+  real*8  :: ksi_ion           !< energy cost of each ionization
+  real*8  :: n_zero            !< central density (needed for ionization source term)
+  
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
   logical :: freeboundary_equil!< use a free or fixed boundary equilibrium?
@@ -207,9 +218,11 @@ module phys_module
   real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region
   real*8  :: dPSI_up_priv      !< Delta Psi grid extends into the private flux region
   
-  !> @name Analytical heat and particle diffusivity parameters
+  !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10), D_par
   real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
+  real*8  :: D_neutral_x, D_neutral_y, D_neutral_p
+  
 
   !> @name Numerical heat and particle diffusivity profiles
   character(len=512)  :: d_perp_file        !< ASCII file the profile is read from
@@ -280,6 +293,20 @@ module phys_module
   real*8, allocatable :: num_Te_y1(:)    !< First derivatives of temperature profile (\f$ dT/d\Psi_N \f$)
   real*8, allocatable :: num_Te_y2(:)    !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_Te_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
+  
+  
+  !> @name Analytical input profile for the neutral density (model 500)
+  real*8  :: rhon_0, rhon_1,  rhon_coef(10)
+  
+  !> @name Numerical input profile for the neutral density (model 500)
+  character(len=512)  :: rhon_file        !< ASCII file the profile is read from.
+  logical             :: num_rhon         !< is set true if rho_file /= 'none'
+  integer             :: num_rhon_len     !< Number of points in profile
+  real*8, allocatable :: num_rhon_x(:)    !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_rhon_y0(:)   !< Values of neutral density profile
+  real*8, allocatable :: num_rhon_y1(:)   !< First derivatives of neutral density profile (\f$ d\rhon/d\Psi_N \f$)
+  real*8, allocatable :: num_rhon_y2(:)   !< Second derivatives of neutral density profile (\f$ d^2\rhon/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_rhon_y3(:)   !< Third derivatives of neutral density profile (\f$ d^3\rhon/d\Psi_N^3 \f$)
   
   !> @name Analytical input profile for FFprime
   real*8  :: FF_0,  FF_1,   FF_coef(10)

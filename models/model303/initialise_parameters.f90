@@ -15,7 +15,7 @@ integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
 
 ! --- Local variables
-integer :: ierr
+integer :: ierr,err,i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -66,9 +66,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 linear_run, export_for_nemec,                       &
 !==================MB
-                V_0,V_1,V_coef
+                V_0,V_1,V_coef,					&
+                R_Z_psi_bnd_file
 
-if (my_id .eq. 0) then
+ if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
@@ -87,9 +88,29 @@ if (my_id .eq. 0) then
     read(42,in1)
     close(42)
   else
+ !   write(*,*) 'before reading namelist',filename, T_file, rho_file,ffprime_file,&
+ !             R_Z_psi_bnd_file
+
     read(5,in1)
-  end if
-  
+    endif
+   write(*,*) 'after reading namelist',filename, T_file, rho_file,ffprime_file,&
+              R_Z_psi_bnd_file
+ !==============================MB==========================
+   if (n_boundary.ne.0) then
+ ! --- Open the file.
+    OPEN(UNIT=43, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in define_boundary: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+      stop
+    endif
+    write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
+
+    do i=1,n_boundary
+    read(43,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+    write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
+    enddo  
+  endif
+ !===============================MB 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else

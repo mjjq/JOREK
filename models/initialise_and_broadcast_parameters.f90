@@ -9,13 +9,20 @@ subroutine initialise_and_broadcast_parameters(my_id, filename)
   ! --- Routine parameters
   integer,                      intent(in) :: my_id
   character(len=*),             intent(in) :: filename
-  
-  call initialise_parameters(my_id, filename)
 
+
+  call initialise_parameters(my_id, filename)
+  
   ! --- Broadcast input parameters from MPI thread 0 to the others.
+
+
   call broadcast_phys(my_id)
+
   
   ! --- Broadcast numerical input profiles from MPI thread 0 to the others.
+
+
   call broadcast_num_profiles(my_id)
+
   
 end subroutine initialise_and_broadcast_parameters

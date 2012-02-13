@@ -12,7 +12,7 @@ use phys_module
 
 implicit none
 
-integer             :: n_bnd, i, j, m
+integer             :: n_bnd, i, j, m,err
 real*8, allocatable :: r_tmp(:),psi_tmp(:),dr_tmp(:),dpsi_tmp(:),tht_tmp(:)
 real*8, allocatable :: Work(:)
 real*8              :: Vr(4), Vpsi(4), RP, ZP, theta, tht_i
@@ -78,11 +78,11 @@ if (mf .le. 0) then
     psi_tmp(n_bnd) = psi_tmp(1)
 
   else
-
-    write(*,'(A)')     ' boundary information from R_boundary, Z_boundary, psi_boundary '
+!==============================MB==========================
+    write(*,'(A)')     ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
     write(*,'(A,i6)')  ' n_boundary : ',n_boundary
     write(*,'(A,2f8.4)')  ' R_geo, Z_geo : ',R_geo, Z_geo
-
+!==============================
     n_bnd = n_boundary
 
     call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp",CAT_GRID)
@@ -92,7 +92,6 @@ if (mf .le. 0) then
     call tr_allocate(dpsi_tmp,1,n_bnd,"dpsi_tmp",CAT_GRID)
 
     do i=1,n_bnd
-
       RP = R_boundary(i) - R_geo
       ZP = Z_boundary(i) - Z_geo
 

@@ -6,7 +6,7 @@
 if [ $# -lt 5 ]; then
    echo "==================================================================================="
    echo " Syntaxe subjorek model_number n_tor n_period n_plane input_file"
-   echo "       Example:  ./subjorek 302 3 1 7 inlowshape"
+   echo "       Example:  subjorek 303 1 1 4 inlowshape"
    echo "==================================================================================="
    echo " "
    exit
@@ -52,7 +52,7 @@ nfs*)
 MPIPROCS=1
 NTHREAD=8
 NNODES=8
-WALLTIME=08:00:00
+WALLTIME=00:30:00
 ((NPES=NNODES*MPIPROCS))
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
@@ -204,7 +204,7 @@ fi
 #------------------------------------------
 EXECNAME=JOR${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 EXECNAMEOUT=${EXECNAME%.*}
-VTKEXECNAME=VTK${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}.exe
+VTKEXECNAME=VTK${MODELNUMBER}_NTOR${NTOR}.exe
 
 # test if the correct jorek and jorek2vtk executables exist given
 # the prescribed set of values for n_tor, n_period, n_plane
@@ -278,6 +278,7 @@ fi
 rho_file=`grep rho_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '|  awk '{print $2}'`
 T_file=`grep T_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '|  awk '{print $2}'`
 ffprime_file=`grep ffprime_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+R_Z_psi_bnd_file=`grep R_Z_psi_bnd_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 
 # copy of the profiles files
 # if they exist 
@@ -341,6 +342,28 @@ if [ "$ffprime_file" != 'none' ]; then
       cp ${ffprime_dir}/${ffprime_file} ${RESDIR}/${ffprime_dir}/${ffprime_file}
    else
       echo "The file " ${ffprime_file} " does not exist, exit"
+      exit
+   fi
+fi
+
+if [ "$R_Z_psi_bnd_file" != 'none' ]; then
+   R_Z_psi_bnd_dir=$(dirname $R_Z_psi_bnd_file)
+   R_Z_psi_bnd_file=$(basename $R_Z_psi_bnd_file)
+   echo " ===> reading of the file profile " ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file}
+   if [ -e ${RESDIR}/${R_Z_psi_bnd_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${R_Z_psi_bnd_dir}"
+   else
+       if [ "${R_Z_psi_bnd_dir}" != "." ]; then
+       	  # echo " creation of ${RESDIR}/${R_Z_psi_bnd_dir} "
+#	  mkdir ${RESDIR}/${T_dir}
+	  mkdir ${RESDIR}/${R_Z_psi_bnd_dir}
+       fi
+   fi
+   if [ -e ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} ]; then
+      # echo " cp ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} ${RESDIR}/${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} "
+      cp ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} ${RESDIR}/${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file}
+   else
+      echo "The file " ${R_Z_psi_bnd_file} " does not exist, exit"
       exit
    fi
 echo "==================================================================================="
@@ -571,11 +594,11 @@ if [ "\$status" -eq "0" ]; then
    # ----------------------------------------
    # thus, list only contains names as "jorek000xxx.rst"
    list_tmp=\$(ls jorek*.rst  >TMP_FILE)
-   # create the array "ARRAY_FOR_RST" of "000xxx" values whilst reading every line of file "TMP_FILE"
+   # create the array "array_GDP" of "000xxx" values whilst reading every line of file "TMP_FILE"
    index="1"
    while read line; do 
      hoho=\${line:5:5}
-     ARRAY_FOR_RST[\$index]=\$hoho
+     array_GDP[\$index]=\$hoho
      (( index = \$index + 1 ))
    done < TMP_FILE
    rm -rf TMP_FILE
@@ -596,11 +619,11 @@ if [ "\$status" -eq "0" ]; then
       cp \${rstfile}   ${RSTDIR}/\${rstfile}
       mv trace*.out ${TRACEDIR}
    else
-      # values in "ARRAY_FOR_RST" to be used are the ones from $NBFILEVTK_INI to the end, i.e. the
+      # values in "array_GDP" to be used are the ones from $NBFILEVTK_INI to the end, i.e. the
       # size of the array, which corresponds to \${NBFILERST_MAIN}
       ((vtkiniplusun=${NBFILEVTK_INI} + 1))
       for (( ifile= \${vtkiniplusun} ; ifile <= \${NBFILERST_MAIN} ; ifile += 1 )); do
-        increment=\${ARRAY_FOR_RST[\${ifile}]}
+        increment=\${array_GDP[\${ifile}]}
         vtkfile='jorek'\${increment}'.vtk'
         rstfile='jorek'\${increment}'.rst'
         echo "==================================================================================="

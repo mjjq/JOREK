@@ -88,7 +88,8 @@ subroutine read_num_profiles(my_id)
         stop
       end if
     end if
-  end if
+    end if
+
 
 return
 end subroutine read_num_profiles

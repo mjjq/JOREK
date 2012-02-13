@@ -17,7 +17,7 @@ real*8,  intent(out) :: temperature_profile, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, &
 
 ! --- Internal variables.
 real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, psi_barrier
-real*8  :: psi_n, delta_psi, sig_T, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
+real*8  :: psi_n, psi_star, delta_psi, sig_T, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
 real*8  :: atn, datn, d2atn, d3atn
 real*8  :: atn_z,   datn_z,   d2atn_z
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u, factor
@@ -25,7 +25,7 @@ real*8  :: cosh1, cosh2, cosh3, cosh3_u
 real*8  :: tanh1, tanh2, tanh2_u
 ! for interpolating numerical profiles
 integer :: left, right, mid
-real*8  :: aux1, aux2
+real*8  :: aux1, aux2, Z_star, Z_star_u
 
 delta_psi = psi_bnd - psi_axis
 psi_n     = (psi - psi_axis) / delta_psi
@@ -51,9 +51,12 @@ if ( .not. num_T ) then ! use analytical representation
   sig_T       = T_coef(4)
   psi_barrier = T_coef(5)
   
-  tanh1 = tanh((psi_n - psi_barrier)/sig_T)
-  cosh1 = cosh((psi_n - psi_barrier)/sig_T)
-  cosh2 = cosh(2.d0*(psi_n - psi_barrier)/sig_T)
+  psi_star = (psi_n - psi_barrier)/sig_T
+  psi_star = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+  
+  tanh1 = tanh(psi_star)
+  cosh1 = cosh(psi_star)
+  cosh2 = cosh(2.d0*psi_star)
   
   atn   = (0.5d0 - 0.5d0*tanh1)
   datn  = - 1.d0/cosh1**2 / (2.d0 * sig_T) / delta_psi
@@ -94,10 +97,15 @@ if (xpoint2) then
   
   sigz            = 0.05d0
 
-  tanh2   = tanh((Z_xpoint(1)-Z)/sigz)
-  cosh3   = cosh((Z_xpoint(1)-Z)/sigz)
-  tanh2_u = tanh((Z-Z_xpoint(2))/sigz)
-  cosh3_u = cosh((Z-Z_xpoint(2))/sigz)
+  Z_star   = (Z_xpoint(1)-Z)/sigz
+  Z_star   = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+  Z_star_u = (Z_xpoint(2)-Z)/sigz
+  Z_star_u = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
+
+  tanh2   = tanh(Z_star)
+  cosh3   = cosh(Z_star)
+  tanh2_u = tanh(Z_star_u)
+  cosh3_u = cosh(Z_star_u)
     
   atn_z 	   = (0.5d0 - 0.5d0*tanh2)
   datn_z	   =  0.5d0/cosh3**2   / sigz

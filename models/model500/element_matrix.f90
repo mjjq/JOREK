@@ -33,6 +33,7 @@ real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7, rhs_ij_8
 real*8     :: rhs_stab_1, rhs_stab_2, rhs_stab_3, rhs_stab_4, rhs_stab_5, rhs_stab_6
+real*8     :: ZK_par_T, dZK_par_dT
 real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y
 real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, S_ion, S_ion_T, S_ion_puiss = 3.9d-1
 real*8     :: Dn0x, Dn0y, Dn0p
@@ -387,6 +388,9 @@ do ms=1, n_gauss
 #ifdef AVOID_NEG_DENS     
      D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
 #endif
+     ZK_par_T = ZK_par * (abs(T0+T_1)/T_0)**(+2.5d0)
+     dZK_par_dT =   ZK_par* (2.5d0)  * abs(T0+T_1)**(+1.5d0) * T_0**(-2.5d0)
+     
      
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 
@@ -559,7 +563,7 @@ do ms=1, n_gauss
                     - v * GAMMA * r0 * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * tstep &
                     - v * GAMMA * r0 * T0 * F0 / BigR * vpar0_p                        * xjac * tstep &
 
-                    - (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T           * xjac * tstep &
+                    - (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T           * xjac * tstep &
                     - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y + v_p*T0_p /BigR**2 )      * xjac * tstep &
                     
 		    - v * BigR * ksiion * r0 * rn0 * S_ion                             * xjac * tstep &
@@ -895,9 +899,9 @@ do ms=1, n_gauss
                  Bgrad_T_psi      = ( T0_x * psi_y - T0_y * psi_x )  / BigR
                  Bgrad_T_T        = ( F0 / BigR * T_p +  T_x * ps0_y - T_y * ps0_x ) / BigR          ! F0 due to absence of normalisation
 
-                 amat_61 = - (ZK_par-ZK_prof) * BigR * BB2_psi / BB2**2 * Bgrad_T_star * Bgrad_T     * xjac * theta * tstep &
-                           + (ZK_par-ZK_prof) * BigR / BB2     * Bgrad_T_star_psi      * Bgrad_T     * xjac * theta * tstep &
-                           + (ZK_par-ZK_prof) * BigR / BB2     * Bgrad_T_star          * Bgrad_T_psi * xjac * theta * tstep &
+                 amat_61 = - (ZK_par_T-ZK_prof) * BigR * BB2_psi / BB2**2 * Bgrad_T_star * Bgrad_T     * xjac * theta * tstep &
+                           + (ZK_par_T-ZK_prof) * BigR / BB2     * Bgrad_T_star_psi      * Bgrad_T     * xjac * theta * tstep &
+                           + (ZK_par_T-ZK_prof) * BigR / BB2     * Bgrad_T_star          * Bgrad_T_psi * xjac * theta * tstep &
                            + v * r0 * Vpar0 * (T0_s * psi_t - T0_t * psi_s)                                 * theta * tstep &
                            + v * r0 * GAMMA * T0 * (vpar0_s * psi_t - vpar0_t * psi_s)                      * theta * tstep
 
@@ -941,9 +945,11 @@ do ms=1, n_gauss
                            + v * r0 * GAMMA * T * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * theta * tstep &
                            + v * r0 * GAMMA * T * F0 / BigR * vpar0_p                       * xjac * theta * tstep &
 
-                           + (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T_T       * xjac * theta * tstep &
+                           + (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T_T       * xjac * theta * tstep &
                            + ZK_prof * BigR * (v_x*T_x + v_y*T_y + v_p*T_p /BigR**2 )       * xjac * theta * tstep &
                            
+			   + dZK_par_dT * T * BigR / BB2 * Bgrad_T_star * Bgrad_T            * xjac * theta * tstep &
+			   
 			   + v * BigR * r0 * rn0 * ksiion * S_ion_T * T                    * xjac * theta * tstep &
                            
 			   + ZK_perp_num  *                                                          &

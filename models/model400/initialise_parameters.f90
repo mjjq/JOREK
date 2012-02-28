@@ -34,7 +34,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                F0,                                                 &
+                F0, time_evol_scheme,                               &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &

@@ -110,6 +110,7 @@ if (my_id == 0) then
   write(*,*)
   write(*,*) 'NAMELIST INPUT PARAMETERS'
   write(*,*) '-------------------------------------------------'
+  write(*,237) 'time_evol_scheme    ', trim(time_evol_scheme)
   write(*,230) 'tstep               ', tstep
   write(*,231) 'nstep               ', nstep
   write(*,230) 'tstep_n             ', tstep_n

@@ -80,9 +80,9 @@ RHS = 0.d0
 
 GAMMA = 5.d0 / 3.d0
 
-theta = 0.5d0  ; zeta = 0.0d0      ! Crank-Nicholson scheme
-!theta = 1.0d0  ; zeta = 0.0d0      ! Euler scheme 
-!theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
+! --- Take time evolution parameters from phys_module
+theta = time_evol_theta
+zeta  = time_evol_zeta
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;

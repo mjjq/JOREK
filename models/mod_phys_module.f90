@@ -95,6 +95,10 @@ module phys_module
   integer :: index_start       !< Time step index at the beginning of the code run (zero or from restart file)
   integer :: index_now         !< Current time step index
   real*8, allocatable :: xtime(:) !< Time values corresponding to the timesteps.
+  character(len=80) :: time_evol_scheme !< Time evolution scheme to use. This determines the values
+                               !! used for time_evol_theta and time_evol_zeta.
+  real*8  :: time_evol_theta   !< Time evolution parameter theta (see documentation)
+  real*8  :: time_evol_zeta    !< Time evolution parameter zeta (see documentation)
   
   !> @name Analytical boundary of initial grid
   !!

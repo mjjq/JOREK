@@ -12,6 +12,8 @@ subroutine preset_parameters
   
   implicit none
   
+  time_evol_scheme = 'Crank-Nicholson'
+  
   ! --- DoubleNull flag
   xcase = LOWER_XPOINT
   

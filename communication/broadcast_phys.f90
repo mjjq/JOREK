@@ -26,7 +26,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 !==========================MB: velocity +12 double precision
-bufsize = ( (224+2*max_limiter) * IDBL_EXT + (25+n_tor) * INT_EXT + 33 * ILOG_EXT + 7*512 * CHAR_EXT )
+bufsize = ( (224+2*max_limiter) * IDBL_EXT + (25+n_tor) * INT_EXT + 33 * ILOG_EXT + 7*512+80 * CHAR_EXT )
 
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastp_buffer")
@@ -195,6 +195,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(bc_natural_open,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(use_pellet,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+  call MPI_PACK(time_evol_scheme,      80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(rho_file,             512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(T_file,               512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ffprime_file,         512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -396,6 +397,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,bc_natural_open,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,use_pellet,             1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
+  call MPI_UNPACK(buffer,bufsize,position,time_evol_scheme,      80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,rho_file,             512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,T_file,               512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ffprime_file,         512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)

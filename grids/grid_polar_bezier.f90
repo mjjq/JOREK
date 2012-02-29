@@ -1,6 +1,6 @@
 !> Defines a polar grid using Bezier finite elements (using the HELENA
 !! cubic Hermite elements formulation)
-subroutine grid_polar_bezier(Rgeo,Zgeo,amin,acentre,fbnd,fpsi,mf,nr,np,node_list,element_list)
+subroutine grid_polar_bezier(Rgeo,Zgeo,amin,acentre,angle_start,fbnd,fpsi,mf,nr,np,node_list,element_list)
 
 use constants
 use tr_module
@@ -14,6 +14,7 @@ implicit none
 real*8,                  intent(in)    :: Rgeo, Zgeo     !< position of the geometric center
 real*8,                  intent(in)    :: amin           !< minor radius
 real*8,                  intent(in)    :: acentre        !< smallest radius
+real*8,                  intent(in)    :: angle_start    !< poloidal angle of first element
 real*8,                  intent(in)    :: fbnd(*)        !< Fourier series describing the radius as function
                                                          !!   of the poloidal angle
 real*8,                  intent(in)    :: fpsi(*)        !< Fourier series of flux at the boundary
@@ -24,7 +25,7 @@ type(type_node_list),    intent(inout) :: node_list      !< list of nodes with g
 type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
 
 ! --- local variables
-real*8              :: angle_start
+real*8              :: si
 real*8, allocatable :: RR(:,:),ZZ(:,:),PSI(:,:)
 real*8              :: dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
 real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3
@@ -42,8 +43,6 @@ call tr_allocate(PSI,1,4,1,nr*np,"PSI",CAT_GRID)
 
 dt = 2.d0*pi/real(np)
 ds = 1.d0/real(nr-1)
-
-angle_start = - 3.d0 * PI /4.d0
 
 n_element_start  = element_list%n_elements
 n_node_start     = node_list%n_nodes
@@ -91,14 +90,16 @@ call spline(np+1,T1,T2,0.d0,0.d0,2,TP1,TP2,TP3,TP4)
 
 do i=1,nr
 
-  radius = spwert(nr,S1(i),SP1,SP2,SP3,SP4,S1,ABLTG)
-  dr_ds  = abltg(1)
+  si = spwert(nr,S1(i),SP1,SP2,SP3,SP4,S1,ABLTG)
+
+  radius = ( acentre + (1.d0-acentre) * si )
+  dr_ds  = (1.d0-acentre) * abltg(1)
   
   do  j=1,np
   
     node   = np*(i-1) + j
 
-    thtj     = spwert(np+1,T1(j),TP1,TP2,TP3,TP4,T1,ABLTG) * 2.d0 * PI
+    thtj     = angle_start + spwert(np+1,T1(j),TP1,TP2,TP3,TP4,T1,ABLTG) * 2.d0 * PI
     dtht_dt  = abltg(1)
 
     RR(1,node) = Rgeo + amin * radius * fbnd(1) * cos(thtj) / 2.d0
@@ -177,8 +178,8 @@ do i=1,nr-1
    element_list%element(index)%vertex(2) = n_node_start + (i  )*np + j
 
    if (j .eq. np) then          
-                 element_list%element(Index)%vertex(4) = (i-1)*np + 1
-                 element_list%element(Index)%vertex(3) =  i*np    + 1
+                 element_list%element(Index)%vertex(4) = n_node_start + (i-1)*np + 1
+                 element_list%element(Index)%vertex(3) = n_node_start + i*np    + 1
    endif    
 
            !Neighbours of the element (refinement procedure)

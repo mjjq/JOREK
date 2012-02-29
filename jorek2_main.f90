@@ -320,7 +320,7 @@ program JOREK2
         
       else if ((n_radial > 0) .and. (n_pol > 0) ) then
         
-        call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,          &
+        call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
           node_list, element_list)
         
       else

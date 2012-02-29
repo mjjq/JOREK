@@ -12,6 +12,7 @@ subroutine grid_bezier_square_polar(nR,nZ,n_radial,R_begin,R_end,Z_begin,Z_end,a
 
 use parameters
 use data_structure
+use constants
 
 implicit none
 
@@ -19,7 +20,7 @@ type(type_node_list)    :: node_list
 type(type_element_list) :: element_list
 
 real*8  :: R_begin, R_end, Z_begin, Z_end, radius,x_tmp(n_order+1,n_dim),index_tmp(n_order+1)
-real*8  :: fbnd(*), fpsi(*), amin, Rgeo, Zgeo, u_length
+real*8  :: fbnd(*), fpsi(*), amin, Rgeo, Zgeo, u_length, angle_start
 integer :: nR, nZ, n_radial, n_pol, mf, i, k, n_node_start, n_element_start, n_element_polar, n_polar, n_glue, n_sqr
 integer :: i_glue, i_polar, n_index_start
 logical :: boundary
@@ -141,7 +142,9 @@ radius = (1.+ 2./(float(n_radial-1))) *sqrt((R_end-R_begin)**2 + (Z_end - Z_begi
 write(*,'(A,i6)') ' number of nodes    : ',node_list%n_nodes
 write(*,'(A,i6)') ' number of elements : ',element_list%n_elements
 
-call grid_polar_bezier(Rgeo,Zgeo,amin,radius,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list)
+angle_start = -0.75 * PI
+
+call grid_polar_bezier(Rgeo,Zgeo,amin,radius,angle_start,fbnd,fpsi,mf,n_radial,n_pol,node_list,element_list)
 
 !-------------- adapt the corner nodes
 !node_list%node(nR*nZ+1)%x(1,2)  = 1.1*node_list%node(nR*nZ+1)%x(1,2)

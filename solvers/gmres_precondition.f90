@@ -11,7 +11,7 @@ use murge_module
 use global_distributed_matrix
 implicit none
 include 'mpif.h'
-integer             :: my_id, my_id_n, MPI_COMM_MASTER, MPI_COMM_N, ierr, i, i_tor(*), n_dof
+integer             :: my_id, my_id_n, MPI_COMM_MASTER, MPI_COMM_N, ierr, i, k, i_tor(*), n_dof
 integer             :: my_id_master
 real*8              :: x(*), y(*)
 real*8, allocatable :: y_tmp(:), Rsnd_buffer(:)
@@ -179,6 +179,11 @@ endif
 
 if (my_id_n .eq. 0) then
 
+!------------------------------------------ undo column scaling
+   do k=1,mumps_par%n
+     mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
+   enddo
+
   call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES)
   call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts",CAT_GMRES)
   call tr_allocate(recv_disp,1,n_cpu/M_cpu,"recv_disp",CAT_GMRES)
@@ -235,8 +240,9 @@ if (my_id_n .eq. 0) then
 endif
 
 call cpu_time(t2)
-if (my_id .eq. 0) then
-   write(*,'(i3,A,f14.6)') my_id,' PRECON TOTAL : ',t2-t1
-end if
+!if (my_id .eq. 0) then
+!   write(*,'(i3,A,f14.6)') my_id,' PRECON TOTAL : ',t2-t1
+!end if
+
 return
 end

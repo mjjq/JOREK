@@ -4,6 +4,7 @@ subroutine import_restart(node_list, element_list, filename, error)
 use tr_module 
 use data_structure
 use phys_module
+use vacuum, only: import_restart_vacuum
 
 implicit none
 
@@ -76,6 +77,8 @@ if (use_pellet) then
   read(21)  pellet_particles, pellet_R, pellet_Z
 endif
 
+call import_restart_vacuum(21, freeboundary, resistive_wall, index_start)
+
 close(21)
 
 write(*,*) '************* restart ******************'
@@ -112,4 +115,4 @@ write(*,*) '********* end restart ******************'
 !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
 
 return
-end
+end subroutine import_restart

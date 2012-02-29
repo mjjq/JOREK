@@ -53,7 +53,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary_equil, freeboundary,                   &
-                use_starwall, resistive_wall,                       &
+                resistive_wall,                                     &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 pastix_smp_only, refinement, grid_to_wall,          &
@@ -73,7 +73,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
-  call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
+  call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
   ! --- Model-specific presets
   particlesource_psin = 100.d0

@@ -12,16 +12,16 @@ module vacuum_equilibrium
   
   
   
+  !> Reads the external fields and the poloidal field coils from the STARWALL output
   subroutine import_external_fields
-  !--------------------------------------------------------
-  ! reads the external fields and the poloidal field coils
-  ! from the STARWALL output
-  !--------------------------------------------------------
   
   use vacuum_response
+  
   implicit none
   
   integer  :: n_dof_bnd_tmp, i, j, n_coils_tmp, itmp, jtmp
+  
+  if ( starwall_harmonics(1) /= 1 ) return ! not required in this case
   
   write(*,*) '**************************'
   write(*,*) '* import external fields *'
@@ -37,12 +37,12 @@ module vacuum_equilibrium
          
   if (n_dof_bnd .ne. n_dof_bnd_tmp) write(*,'(A,2i4)') ' ERROR : wrong number of boundary points :', n_dof_bnd, n_dof_bnd_tmp
          
-  allocate(external_field(n_dof_bnd_tmp,n_coils))           ! allocate external_field matrix
+  allocate(bext_par(n_dof_bnd_tmp,n_coils))
   allocate(I_coils(n_coils))                                 ! allocate the coil currents
          
   do i=1,n_dof_bnd_tmp
     do j=1,n_coils
-      read(11,*) itmp,jtmp,external_field(i,j)
+      read(11,*) itmp,jtmp,bext_par(i,j)
     enddo
   enddo
   
@@ -188,7 +188,7 @@ write(*,*) 'I_coils(10)', I_coils(10)
   
             index_node_bnd = 2 * (bnd_node_list%bnd_node(inode_bnd)%index_starwall-1) + j
                      
-  	  b_tan(ms)  = b_tan(ms) + external_field(index_node_bnd,k) * I_coils(k) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)
+  	  b_tan(ms)  = b_tan(ms) + bext_par(index_node_bnd,k) * I_coils(k) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)
           	
   	  enddo
 
@@ -258,25 +258,15 @@ write(*,*) 'I_coils(10)', I_coils(10)
                   ps0_s = node_list%node(bnd_elm_list%bnd_element(ibnd)%vertex(k))%values(1,ldir,1) &
   		      * H1_s(k,l,ms) * bnd_elm_list%bnd_element(ibnd)%size(k,l)
   
-                  if ( use_starwall ) then
-                    A_glob_11   = v * psi * sqrt(x_s(ms)**2 + y_s(ms)**2)
-		RHS_glob_11 = v * ps0 * sqrt(x_s(ms)**2 + y_s(ms)**2)
-                  else
-                    A_glob_11   = v * psi_s
-                    RHS_glob_11 = v * ps0_s 
-                  end if
+                  A_glob_11   = v * psi * sqrt(x_s(ms)**2 + y_s(ms)**2)
+                  RHS_glob_11 = v * ps0 * sqrt(x_s(ms)**2 + y_s(ms)**2)
   
                   ilarge = ilarge + 1
   		
                   mumps_par%irn(ilarge) = index_node
                   mumps_par%jcn(ilarge) = index_node3
-                  if ( NEW_VACUUM ) then
-                    mumps_par%A(ilarge)   = (-1.) * (- ws * A_glob_11 * &
-                    response_m_eq(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder)))
-                  else
-                    mumps_par%A(ilarge)   = - ws * A_glob_11 * &
-                    vac_response(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder))
-                  end if
+                  mumps_par%A(ilarge)   = (-1.) * (- ws * A_glob_11 * &
+                  response_m_eq(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder)))
                   !###OLD### mumps_par%A(ilarge)   = - ws * A_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,1)
   		
   ! 		  mumps_par%RHS(index_node) = mumps_par%RHS(index_node) - ws * v * RHS_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,1) 

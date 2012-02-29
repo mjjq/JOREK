@@ -30,8 +30,9 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
 
   use data_structure
   use global_distributed_matrix
-  use phys_module, only: F0, GAMMA, freeboundary
-  USE murge_module
+  use phys_module, only: F0, GAMMA
+  use vacuum, only: is_freebound
+  use murge_module
 
   implicit none
   include 'mpif.h'
@@ -196,14 +197,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                     !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
                     if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
 
-                       if ( ( k .eq. 2 )                                          .or. &
-                            ( k .eq. 4 )                                          .or. &
-                            ( k .eq. 5 )                                          .or. &
-                            ( k .eq. 6 )                                          .or. &
-                            ( (freeboundary) .and. (k .eq. 1) .and. (in .eq. 1) ) .or. &
-                            ( (.not. freeboundary) .and. (k .eq. 1) )             .or. &
-                            ( (freeboundary) .and. (k .eq. 3) .and. (in .eq. 1) ) .or. &
-                            ( ( .not. freeboundary) .and. (k .eq. 3 )) ) then
+                       if ( (.not. is_freebound(in,k)) ) then ! apply fixed boundary conditions where necessary
 
                           index_node = node_list%node(inode)%index(1)
                           

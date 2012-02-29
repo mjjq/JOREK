@@ -303,7 +303,6 @@ if (my_id == 0) then
   write(*,232) 'freeboundary_equil  ', freeboundary_equil
   write(*,232) 'freeboundary        ', freeboundary
   if ( freeboundary ) then
-    write(*,232) 'use_starwall        ', use_starwall
     write(*,232) 'resistive_wall      ', resistive_wall
   end if
   

@@ -46,9 +46,9 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 pellet_psi, pellet_delta_psi,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                xcase,                                              &
+                xcase, time_evol_scheme,                            &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, use_starwall, resistive_wall,         &
+                freeboundary, resistive_wall,                       &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
@@ -64,7 +64,7 @@ if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
-  call vacuum_preset(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
+  call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
   ! --- Model-specific presets
   ! -none-

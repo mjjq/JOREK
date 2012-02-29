@@ -32,8 +32,8 @@ program JOREK2
   use nodes_elements
   use pellet_module
   use boundary,            only: boundary_from_grid
-  use vacuum,              only: NEW_VACUUM
-  use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response, update_response
+  use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response, update_response, &
+    init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
   use solve_mat_n
@@ -202,7 +202,7 @@ program JOREK2
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
   
   ! --- Initialize the vacuum part.
-  call vacuum_init(my_id, freeboundary_equil, freeboundary, use_starwall, resistive_wall)
+  call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
 
   ! --- MURGE with ntor=1 doesn't work up to now because i_tor is not allocated correctly
   if (n_tor == 1) then
@@ -342,11 +342,12 @@ program JOREK2
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
-    if ( freeboundary_equil ) call get_vacuum_response(my_id, node_list, bnd_elm_list,             &
-      bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
-    if ( freeboundary_equil .and. NEW_VACUUM ) call update_response(tstep, freeboundary_equil,     &
-      resistive_wall)
-    if ( freeboundary_equil ) call import_external_fields()
+    if ( freeboundary_equil ) then
+      call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
+        resistive_wall)
+      call update_response(tstep, freeboundary_equil, resistive_wall)
+      call import_external_fields()
+    end if
     
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
@@ -440,10 +441,13 @@ program JOREK2
   
   ! --- Fill the vacuum response matrices for freeboundary computations
 !   if ( freeboundary_equil ) call import_external_fields()
-  if ( freeboundary .or. freeboundary_equil ) call get_vacuum_response(my_id, node_list,           &
-    bnd_elm_list, bnd_node_list, freeboundary_equil, use_starwall, resistive_wall)
-  if ( (freeboundary .or. freeboundary_equil) .and. NEW_VACUUM ) call update_response(tstep,       &
-    freeboundary_equil, resistive_wall)
+  if ( freeboundary ) then
+    call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
+      resistive_wall)
+    call update_response(tstep, freeboundary_equil, resistive_wall)
+    call init_wall_currents(resistive_wall)
+    call import_external_fields()
+  end if
   
   call tr_print_memsize("AfterEquilibrium")
     
@@ -738,6 +742,8 @@ program JOREK2
      index_now = index_now + 1
      
      tstep = tstep_n(jstep)
+     
+     if ( freeboundary ) call update_response(tstep, freeboundary_equil, resistive_wall)
      
      if ( my_id == 0 ) then
        write(*,*) '******************************************************'

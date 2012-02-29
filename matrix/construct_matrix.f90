@@ -13,7 +13,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   use phys_module
   use pellet_module
   use nodes_elements
-  use vacuum_response, only: vacuum_boundary_integral, NEW_VACUUM
+  use vacuum_response, only: vacuum_boundary_integral
   use avoid_neg_dens,  only: identify_dens_problems, output_problem_pos, diffusivity_factor
   use mod_ch_nod_rhs_elm
   use mod_boundary_matrix_open
@@ -289,16 +289,11 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   !$omp end parallel
 
 
-  ! --- Add vacuum response (boundary integrals) for free boundary computations
+  ! --- Add vacuum response (boundary integral) for free boundary computations
   if (freeboundary) then
-    if ( NEW_VACUUM ) then
-      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max) !###TODO### move somewhere else
-      call vacuum_boundary_integral(bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, &
-        resistive_wall, index_min, index_max, rhs_loc, tstep)
-    else
-      call vacuum_old(my_id, node_list, element_list, bnd_elm_list, bnd_node_list, index_min, index_max,  &
-        xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, rhs_loc)
-    end if
+    call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max) !###TODO### move somewhere else
+    call vacuum_boundary_integral(bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, &
+      resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
   end if
 
 

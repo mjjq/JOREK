@@ -8,8 +8,9 @@ subroutine boundary_check()
   use data_structure,  only: type_bnd_element 
   use phys_module,     only: resistive_wall
   use nodes_elements,  only: node_list, bnd_node_list, element_list, bnd_elm_list
-  use vacuum_response, only: NEW_VACUUM, n_dof_starwall, n_starwall_harmonics, starwall_harmonics, &
-    response_index, starwall_m_ee, starwall_m_ey, starwall_m_id, wall_curr, det_psibnd_vec
+  use vacuum_response, only: vacuum_debug, n_dof_starwall, n_starwall_harmonics,                   &
+    starwall_harmonics, response_index, starwall_m_ee, starwall_m_ey, starwall_m_id, wall_curr,    &
+    det_psibnd_vec
   
   implicit none
   
@@ -33,7 +34,6 @@ subroutine boundary_check()
   real*8   :: P_R, P_Z           ! dPsi/dR, dPsi/dZ
   logical  :: s_const            ! Is the bound. elem. an s=const side of the 2D element?
   
-  if ( .not. NEW_VACUUM ) return ! (boundary check for old vacuum is not implemented anymore)
   
   write(*,*) '************************************'
   write(*,*) '*    check boundary conditions     *'
@@ -136,10 +136,11 @@ subroutine boundary_check()
         
       end do L_LS
       
-      !### DEBUG OUTPUT ###
-      !write(88,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:)
-      !write(89,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par_v(:)
-      !###
+      ! --- Debugging output
+      if ( vacuum_debug ) then
+        write(88,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:)
+        write(89,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par_v(:)
+      end if
       
       ! --- Integration of B_par_v values and differences between B_par and B_par_v.
       val_integral(:) = val_integral(:) + abs( B_par_v(:) )
@@ -153,15 +154,16 @@ subroutine boundary_check()
     write(*,'(A,20ES15.5)') 'relative errors in harmonics:', err_integral(:) / val_integral(:)
   end if
   
-  !### DEBUG OUTPUT ###
-  !write(88,*)
-  !write(88,*)
-  !write(89,*)
-  !write(89,*)
-  !if ( minval(abs(val_integral)) /= 0.d0 ) then ! (avoid division by zero in first timestep)
-  !  write(87,'(20ES15.5)') err_integral(:) / val_integral(:)
-  !end if
-  !###
+  ! --- Debugging output
+  if ( vacuum_debug ) then
+    write(88,*)
+    write(88,*)
+    write(89,*)
+    write(89,*)
+    if ( minval(abs(val_integral)) /= 0.d0 ) then ! (avoid division by zero in first timestep)
+      write(87,'(20ES15.5)') err_integral(:) / val_integral(:)
+    end if
+  end if
   
   call tr_deallocate(psibnd_vec,"psibnd_vec",CAT_GRID)
   call tr_deallocate(dpsibnd_vec,"dpsibnd_vec",CAT_GRID)

@@ -163,7 +163,6 @@ module phys_module
   !! Input parameters related to the free boundary extension (folder vacuum/).
   logical :: freeboundary_equil!< use a free or fixed boundary equilibrium?
   logical :: freeboundary      !< use free or fixed boundary conditions in time-evolution?
-  logical :: use_starwall      !< use the STARWALL vacuum solution? (free boundary only)
   logical :: resistive_wall    !< use a resistive or ideal wall?    (free boundary only)
   
   !> @name Rectangular Grid

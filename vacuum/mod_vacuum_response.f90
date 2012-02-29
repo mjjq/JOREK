@@ -16,27 +16,15 @@ module vacuum_response
   
   implicit none
   
-  integer, parameter :: ivar_psi = 1 !< Index of Psi variable  @todo: put into mod_parameters later
-  integer, parameter :: ivar_j   = 3 !< Index of j variable    @todo: put into mod_parameters later
-  
-  character(len=7), parameter :: LOG_BEGIN_MARKER = 'BEGIN: '
-  character(len=5), parameter :: LOG_END_MARKER   = 'END: '
-  
-  
-  
-  
   
   
   contains
   
   
   
-  
-  
-  
   !> Get the vacuum response for an ideal or resistive wall.
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
-    freeboundary_equil, use_starwall, resistive_wall)
+    freeboundary_equil, resistive_wall)
   
     use parameters,     only: n_tor
     use data_structure, only: type_node_list, type_bnd_element_list, type_bnd_node_list
@@ -50,15 +38,11 @@ module vacuum_response
     type(type_bnd_element_list), intent(in) :: bnd_elm_list       !< List of boundary elements
     type(type_bnd_node_list),    intent(in) :: bnd_node_list      !< List of boundary nodes
     logical,                     intent(in) :: freeboundary_equil !< Use free boundary equilibrium?
-    logical,                     intent(in) :: use_starwall       !< Use STARWALL response?
     logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
 
     integer :: ierr, dim
     
-    
     n_dof_bnd     = bnd_node_list%n_bnd_nodes * 2 ! Number of boundary degrees of freedom per harmonic
-    
-    write(*,*) LOG_BEGIN_MARKER//' get_vacuum_response'
     
     ! --- Output some information about the boundary.
     230 format(A,' = ',I8)
@@ -66,59 +50,14 @@ module vacuum_response
     write(*,230) 'n_bnd_elements', bnd_elm_list%n_bnd_elements
     write(*,230) 'n_bnd_nodes   ', bnd_node_list%n_bnd_nodes
     write(*,230) 'n_dof_bnd     ', n_dof_bnd
-    write(*,231) 'use_starwall  ', use_starwall
-    if ( use_starwall ) write(*,231) 'resistive_wall', resistive_wall
+    write(*,231) 'resistive_wall', resistive_wall
     
     ! --- Write out the boundary information for STARWALL.
     if (my_id .eq. 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
     
-    ! *************************** NEW IMPLEMENTATION ***********************************
-    if ( NEW_VACUUM ) then
-      if ( my_id == 0 ) then
-        if ( use_starwall ) then
-          call read_starwall_response(freeboundary_equil, resistive_wall)
-        else
-          !### JOREK response currently not implemented ###
-        end if
-      end if
-      call broadcast_starwall_response(my_id, resistive_wall)
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
-    else
-    ! *************************** OLD IMPLEMENTATION ***********************************
-      ! --- Resistive wall
-      if ( resistive_wall ) then
-        
-        ! --- Get the STARWALL response matrices
-        call resistive_wall_starwall(my_id,node_list,bnd_elm_list,bnd_node_list)
-      
-      ! --- Ideal wall 
-      else
-        
-        ! --- Allocate the ideal wall vacuum response matrix
-        if ( allocated(vac_response) ) deallocate(vac_response)
-        dim = response_index(bnd_node_list%n_bnd_nodes,n_tor,2)
-        allocate( vac_response(dim,dim) )
-        vac_response = 0.
-        
-        ! --- Get the STARWALL response matrix
-        if ( use_starwall ) then
-          call ideal_wall_starwall(my_id,node_list,bnd_elm_list,bnd_node_list)
-          
-        ! --- Let JOREK determine the response (works only in special cases; for testing)
-        else
-          call ideal_wall(my_id,node_list,bnd_elm_list,bnd_node_list)
-          
-        end if
-        
-        ! --- Send the vacuum response matrix.
-        call MPI_bcast(vac_response, response_index(bnd_node_list%n_bnd_nodes,n_tor,2)**2, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-        call MPI_Barrier(MPI_COMM_WORLD, ierr)
-        
-      end if
-    end if
-    ! *********************************************************************************
-      
-    write(*,*) LOG_END_MARKER//' get_vacuum_response'
+    if ( my_id == 0 ) call read_starwall_response(freeboundary_equil, resistive_wall)
+    call broadcast_starwall_response(my_id, resistive_wall)
+    call MPI_Barrier(MPI_COMM_WORLD, ierr)
     
   end subroutine get_vacuum_response
   
@@ -144,11 +83,9 @@ module vacuum_response
     real*8            :: TWOPI
     integer           :: i, i_starw, n, is_sin, err
     
-    write(*,*) LOG_BEGIN_MARKER//' Reading STARWALL response matrices'
     TWOPI = 8.d0 * atan(1.d0)
     
     ! --- Determine STARWALL harmonics
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' Determining STARWALL harmonics'
     open(42, file='starwall_harmonics', status='old', action='read', iostat=err)
     if ( err /= 0 ) then
       write(*,*) 'ERROR: Could not open file "starwall_harmonics".'
@@ -164,10 +101,8 @@ module vacuum_response
     write(*,22) 'n_starwall_harmonics =', n_starwall_harmonics
     write(*,22) '=> n_dof_starwall    =', n_dof_starwall
     write(*,*) 'starwall_harmonics   = '//trim(modes_to_str(starwall_harmonics,n_starwall_harmonics,1))
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' Determining STARWALL harmonics'
     
     ! --- Transform STARWALL harmonics to account for periodicity
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' Transforming STARWALL harmonics (JOREK periodicity)'
     do i = 1, n_starwall_harmonics
       i_starw = starwall_harmonics(i)
       n       = i_starw / 2
@@ -183,7 +118,6 @@ module vacuum_response
       starwall_harmonics(i) = i_starw
     end do
     write(*,*) 'starwall_harmonics   = '//trim(modes_to_str(starwall_harmonics,n_starwall_harmonics,n_period))
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' Transforming STARWALL harmonics (JOREK periodicity)'
     
     ! --- Check if i_tor=1 is provided as required for freeboundary equilibrium
     if ( freeboundary_equil .and. (starwall_harmonics(1) /= 1) ) then
@@ -193,11 +127,9 @@ module vacuum_response
     end if
     
     ! --- Read the response matrices.
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' Reading matrices'
     if ( resistive_wall ) then
       write(*,*) 'Reading resistive wall matrices.'
       ! (Determine number of wall currents)
-      write(*,*) LOG_BEGIN_MARKER//' Determining number of wall currents'
       open(42, FILE='starwall_d_yy', status='old', action='read', iostat=err)
       if ( err /= 0 ) then
         write(*,*) 'ERROR: Could not open file "starwall_d_yy".'
@@ -206,7 +138,6 @@ module vacuum_response
       read(42,*) n_wall_curr
       write(*,'(1x,a,i7)') 'n_wall_curr=', n_wall_curr
       close(42)
-      write(*,*) LOG_END_MARKER//' Determining number of wall currents'
       ! (EE matrix)
       dim(:) = n_dof_starwall
       call read_response_matrix( starwall_m_ee, dim, 'starwall_m_ee', err )
@@ -248,10 +179,8 @@ module vacuum_response
         stop      
       end if
     end if
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' Reading matrices'
     
     ! --- Perform import normalizations.
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' Performing import normalizations'
     if ( resistive_wall ) then
       starwall_m_ee(:,:) = starwall_m_ee(:,:) * TWOPI
       starwall_m_ey(:,:) = starwall_m_ey(:,:) * TWOPI
@@ -259,24 +188,19 @@ module vacuum_response
       starwall_m_id(:,:) = starwall_m_id(:,:) * TWOPI
       starwall_m_nw(:,:) = starwall_m_nw(:,:) * TWOPI
     end if
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' Performing import normalizations'
     
     ! --- DEBUGGING: Output checksums
     if ( vacuum_debug ) then
-      write(*,*) LOG_BEGIN_MARKER//' Cecksums'
       if ( resistive_wall ) then
-        write(*,*) 'ee:', sum(abs(starwall_m_ee))
-        write(*,*) 'ey:', sum(abs(starwall_m_ey))
-        write(*,*) 'ye:', sum(abs(starwall_m_ye))
-        write(*,*) 'yy:', sum(abs(starwall_d_yy))      
+        write(*,*) 'ee:', sum(abs(starwall_m_ee)), sum(starwall_m_ee)
+        write(*,*) 'ey:', sum(abs(starwall_m_ey)), sum(starwall_m_ey)
+        write(*,*) 'ye:', sum(abs(starwall_m_ye)), sum(starwall_m_ye)
+        write(*,*) 'yy:', sum(abs(starwall_d_yy)), sum(starwall_d_yy)      
       else
-        write(*,*) 'id:', sum(abs(starwall_m_id))
-        write(*,*) 'nw:', sum(abs(starwall_m_nw))
+        write(*,*) 'id:', sum(abs(starwall_m_id)), sum(starwall_m_id)
+        write(*,*) 'nw:', sum(abs(starwall_m_nw)), sum(starwall_m_nw)
       end if
-      write(*,*) LOG_END_MARKER//' Cecksums'
     end if
-    
-    write(*,*) LOG_END_MARKER//' Reading STARWALL response matrices'
     
   end subroutine read_starwall_response
   
@@ -299,8 +223,6 @@ module vacuum_response
     ! --- Local parameters
     integer :: ierr
     real*8  :: checksum
-    
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' Broadcasting STARWALL response matrices'
     
     ! --- Broadcast matrices and parameters.
     call MPI_bcast(n_dof_starwall, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -344,8 +266,6 @@ module vacuum_response
       write(*,*) my_id, 'debug checksum:', checksum
     end if
     
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' Broadcasting STARWALL response matrices'
-  
   end subroutine broadcast_starwall_response
   
   
@@ -360,7 +280,7 @@ module vacuum_response
   !! expressed by the STARWALL vacuum response in terms of the poloidal magnetic field at the
   !! interface (ideal and resistive wall) and the wall currents (resistive wall).
   subroutine vacuum_boundary_integral(bnd_node_list, node_list, bnd_elm_list,              &
-    freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep)
+    freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
       
     use data_structure, only: type_node_list, type_bnd_node_list, type_bnd_element_list, type_bnd_element
     use parameters,     only: n_plane, n_var, n_tor
@@ -379,6 +299,7 @@ module vacuum_response
     integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     real*8,                      intent(inout) :: rhs_loc(ndof_glob)   !< Part of RHS of MPI proc
     real*8,                      intent(in)    :: tstep                !< delta t, timestep
+    integer,                     intent(in)    :: index_now            !< Current timestep index
     
     ! --- Local variables
     real*8, allocatable :: psibnd_vec(:)    ! Vector of the values of Psi at the boundary
@@ -405,15 +326,12 @@ module vacuum_response
     
     !integer :: rate, t0, t1 !### timing ###
     
-    write(*,*) LOG_BEGIN_MARKER//' vacuum_boundary_integral'
-    
     if ( vacuum_debug ) then
-      write(*,*) LOG_BEGIN_MARKER//' Cecksums'
-      write(*,*) 'rhs_loc: ', sum(abs(rhs_loc))
-      write(*,*) 'A_glob:  ', sum(abs(A_glob))
-      write(*,*) 'irn_glob:', sum(abs(irn_glob))
-      write(*,*) 'jcn_glob:', sum(abs(jcn_glob))
-      write(*,*) LOG_END_MARKER//' Cecksums'
+      write(*,*) 'Before:'
+      write(*,*) 'rhs_loc:     ', sum(abs(rhs_loc))
+      write(*,*) 'A_glob:      ', sum(abs(A_glob))
+      write(*,*) 'irn_glob:    ', sum(abs(irn_glob))
+      write(*,*) 'jcn_glob:    ', sum(abs(jcn_glob))
     end if
     
     ! --- Determine vectors of the psi and deltapsi boundary values.
@@ -422,8 +340,19 @@ module vacuum_response
     ! --- Update the derived response matrices
     call update_response(tstep, freeboundary_equil, resistive_wall)
     
+      write(*,*) 'wall_curr:   ', sum(abs(wall_curr)), sum(wall_curr)
+      write(*,*) 'dwall_curr:  ', sum(abs(dwall_curr)), sum(dwall_curr)
+      write(*,*) 'index_now:', index_now
+      
     ! --- Perform the time-stepping for the wall currents.
-    if ( resistive_wall ) call evolve_wall_currents(psibnd_vec, dpsibnd_vec)
+    if ( resistive_wall .and. (index_now>1) ) call evolve_wall_currents(psibnd_vec, dpsibnd_vec)
+    
+    if ( vacuum_debug ) then
+      write(*,*) 'wall_curr:   ', sum(abs(wall_curr)), sum(wall_curr)
+      write(*,*) 'dwall_curr:  ', sum(abs(dwall_curr)), sum(dwall_curr)
+      write(*,*) 'psibnd_vec:  ', sum(abs(psibnd_vec)), sum(psibnd_vec)
+      write(*,*) 'dpsibnd_vec: ', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
+    end if
     
     call boundary_check()
     
@@ -512,21 +441,24 @@ module vacuum_response
                             !     which corresponds to the matrix entry at l_row_j, j_col_psi.
                             sparsepos_jp = det_sparse_pos(l_row_j,   j_col_psi, index_min)
                             sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min)
-              
+                            
                             ! --- Vacuum response contribution to the lhs of the current equation
-                            amat_contrib = testfunc_l * ws  &
-                              * basfunc_i * sqrt_xs2_ys2 * response_m_pp_lhs(i_resp, j_resp)
+                            amat_contrib = - testfunc_l * ws  &
+                              * basfunc_i * sqrt_xs2_ys2 * response_m_e(i_resp, j_resp)
                             !$omp atomic
                             A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
-
+                            
                           end do L_JS
                         end do L_JD
                       end do L_JB
                       
                       ! --- Contribution of vacuum response to the rhs of the current equation
-                      rhs_contrib = sum( response_m_pp_rhs(i_resp, :) * psibnd_vec(:) )
-                      if ( resistive_wall ) rhs_contrib = rhs_contrib                            &
-                        + sum( response_m_pw_rhs(i_resp, :) * wall_curr(:) )
+                      rhs_contrib = sum( response_m_h(i_resp, :) * psibnd_vec(:) )                 &
+                        + sum( response_m_j(i_resp, :) * dpsibnd_vec(:) )                          &
+                        + sum( bext_par(i_resp, :) * I_coils(:) )
+                      if ( resistive_wall )                                                        &
+                        rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) * wall_curr(:) )  &
+                          + sum( response_m_g(i_resp, :) * dwall_curr(:) )
                       rhs_contrib = rhs_contrib * testfunc_l * ws * basfunc_i * sqrt_xs2_ys2
                       !$omp atomic
                       rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
@@ -553,18 +485,15 @@ module vacuum_response
     !###
     
     if ( vacuum_debug ) then
-      write(*,*) LOG_BEGIN_MARKER//' Cecksums'
+      write(*,*) 'After:'
       write(*,*) 'rhs_loc: ', sum(abs(rhs_loc))
       write(*,*) 'A_glob:  ', sum(abs(A_glob))
       write(*,*) 'irn_glob:', sum(abs(irn_glob))
       write(*,*) 'jcn_glob:', sum(abs(jcn_glob))
-      write(*,*) LOG_END_MARKER//' Cecksums'
     end if
   
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
     if ( allocated(dpsibnd_vec) ) deallocate( dpsibnd_vec )
-    
-    write(*,*) LOG_END_MARKER//' vacuum_boundary_integral'
     
   end subroutine vacuum_boundary_integral
   
@@ -637,8 +566,6 @@ module vacuum_response
     ! --- Local variables
     integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp
     
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' det_psibnd_vec'
-    
     if ( allocated(psibnd_vec) ) deallocate(psibnd_vec)
     allocate( psibnd_vec(n_dof_starwall) )
     if ( allocated(dpsibnd_vec) ) deallocate(dpsibnd_vec)
@@ -660,9 +587,61 @@ module vacuum_response
       end do
     end do
     
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' det_psibnd_vec'
-    
   end subroutine det_psibnd_vec
+  
+  
+  
+  
+  
+  
+  !> Initialize the wall currents (resistive wall) according to the currents that would be present
+  !! in an ideal wall.
+  subroutine init_wall_currents(resistive_wall)
+    
+    use nodes_elements, only: bnd_node_list, node_list
+    
+    implicit none
+    
+    ! --- Routine parameters
+    logical, intent(in) :: resistive_wall
+    
+    ! --- Local variables
+    real*8, allocatable :: psibnd_vec(:)    ! Vector of the values of Psi at the boundary
+    real*8, allocatable :: dpsibnd_vec(:)   ! Vector of the values of deltaPsi at the boundary
+    integer             :: k
+    
+    call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
+    
+    if ( resistive_wall ) then
+      
+      if ( .not. allocated(wall_curr) ) then
+        allocate( wall_curr(n_wall_curr) )
+        do k = 1, n_wall_curr
+          wall_curr(k) = 0.d0!###- sum( starwall_m_ye(k,:) * psibnd_vec(:) )
+        end do
+      end if
+      
+      write(*,*) 'init:', sum(abs(wall_curr)), sum(abs(starwall_m_ye)), sum(abs(psibnd_vec))
+      
+      if ( .not. allocated(dwall_curr) ) then
+        allocate( dwall_curr(n_wall_curr) )
+        do k = 1, n_wall_curr
+          dwall_curr(:) = 0.d0!###- sum( starwall_m_ye(k,:) * dpsibnd_vec(:) )
+        end do
+      end if
+      
+    end if
+    
+    ! --- Also initialize the old_dpsibnd_vec
+    if ( .not. allocated(old_dpsibnd_vec) ) then
+      allocate( old_dpsibnd_vec(n_dof_bnd) )
+      old_dpsibnd_vec(:) = dpsibnd_vec(:)
+    end if
+    
+    deallocate( psibnd_vec )
+    deallocate( dpsibnd_vec )
+    
+  end subroutine init_wall_currents
   
   
   
@@ -679,29 +658,24 @@ module vacuum_response
     real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
-    integer :: i
+    integer :: k
     
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' evolve_wall_currents'
+    write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)
     
-    ! --- Prepare the wall current array on first use.
-    if ( .not. allocated(wall_curr) ) then
-      allocate( wall_curr(n_wall_curr) )
-      wall_curr = 0.d0
-    end if
-    
-    ! --- Influence of wall current on itself (resistive damping)
-    wall_curr(:) = response_d_ww(:) * wall_curr(:)
-    
-    ! --- Influence of plasma on wall currents (induction)
-    do i = 1, n_wall_curr
-      if ( vacuum_implicit ) then
-        wall_curr(i) = wall_curr(i) + sum( response_m_wp(i,:) * dpsibnd_vec(:) )
-      else
-        wall_curr(i) = wall_curr(i) + sum( response_m_wp(i,:) * psibnd_vec(:)  )
-      end if
+    do k = 1, n_wall_curr
+      dwall_curr(k) = sum( response_m_a(k,:) * dpsibnd_vec(:) ) &
+        + response_d_b(k) * wall_curr(k) &
+        + response_d_c(k) * dwall_curr(k) &
+        + sum( response_m_d(k,:) * old_dpsibnd_vec(:) )
     end do
+    wall_curr(:) = wall_curr(:) + dwall_curr(:)
     
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' evolve_wall_currents'
+    write(*,*) 'dpsibnd_vec', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
+    write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
+    write(*,*) 'response_m_a', sum(abs(response_m_a)), sum(response_m_a)
+    write(*,*) 'response_d_b', sum(abs(response_d_b)), sum(response_d_b)
+    write(*,*) 'response_d_c', sum(abs(response_d_c)), sum(response_d_c)
+    write(*,*) 'response_m_d', sum(abs(response_m_d)), sum(response_m_d)
     
   end subroutine evolve_wall_currents
   
@@ -717,6 +691,8 @@ module vacuum_response
   !! - when wall resistivity, tstep, or some other parameters have changed.
   subroutine update_response(tstep, freeboundary_equil, resistive_wall)
     
+    use phys_module, only: time_evol_theta, time_evol_zeta
+    
     implicit none
     
     ! --- Routine parameters
@@ -725,53 +701,71 @@ module vacuum_response
     logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
     
     ! --- Local variables
-    integer :: i, j
+    integer :: i, j, k
     real*8  :: a, b
+    real*8, allocatable :: tmp_d_s(:)
+    real*8  :: theta, zeta
     logical :: update_required
     
     ! --- Local variables to store the previous values of some parameters.
     real*8,  save :: old_thick
     real*8,  save :: old_res
     real*8,  save :: old_tstep
+    real*8,  save :: old_theta
+    real*8,  save :: old_zeta
     logical, save :: old_reswall
     
-    write(*,*) LOG_BEGIN_MARKER//' update_response'
+    theta = 1.d0!time_evol_theta
+    zeta  = 0.d0!time_evol_zeta
     
-    ! --- Update of response matrices is required only, if these parameter values changed (or the matrices are not allocated)
+    ! --- Update response matrices only, if parameter values changed or matrices not allocated
     update_required = ( old_thick   /= wall_thickness      ) &
                  .or. ( old_res     /= wall_resistivity    ) &
                  .or. ( old_tstep   /= tstep               ) &
+                 .or. ( old_theta   /= theta               ) &
+                 .or. ( old_zeta    /= zeta                ) &
                  .or. ( old_reswall .neqv. resistive_wall  ) &
-                 .or. (                       .not. allocated(response_m_pp_rhs)  ) &
-                 .or. (                       .not. allocated(response_m_pp_lhs)  ) &
-                 .or. ( resistive_wall .and. (.not. allocated(response_d_ww))     ) &
-                 .or. ( resistive_wall .and. (.not. allocated(response_m_pw_rhs)) ) &
-                 .or. ( resistive_wall .and. (.not. allocated(response_m_wp))     ) &
-                 .or. (                       .not. allocated(response_m_eq)      )
+                 .or. ( .not. allocated(response_m_a)      ) &
+                 .or. ( .not. allocated(response_d_b)      ) &
+                 .or. ( .not. allocated(response_d_c)      ) &
+                 .or. ( .not. allocated(response_m_d)      ) &
+                 .or. ( .not. allocated(response_m_e)      ) &
+                 .or. ( .not. allocated(response_m_f)      ) &
+                 .or. ( .not. allocated(response_m_g)      ) &
+                 .or. ( .not. allocated(response_m_h)      ) &
+                 .or. ( .not. allocated(response_m_j)      ) &
+                 .or. ( .not. allocated(response_m_eq)     )
     
-    if ( update_required ) then ! (Do nothing, if derived matrices need no update)
-    
+    if ( update_required ) then
       ! --- Remember parameter values.
       old_thick   = wall_thickness
       old_res     = wall_resistivity
       old_tstep   = tstep
+      old_theta   = theta
+      old_zeta    = zeta
       old_reswall = resistive_wall
       
       ! --- Allocate matrices if required
-      if ( .not. allocated(response_m_eq    ) ) &
+      if ( .not. allocated(response_m_eq) ) &
         allocate( response_m_eq(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_pp_rhs) ) &
-        allocate( response_m_pp_rhs(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_pp_lhs) ) &
-        allocate( response_m_pp_lhs(n_dof_starwall, n_dof_starwall) )
-      if ( resistive_wall ) then
-        if ( .not. allocated(response_d_ww)     ) &
-          allocate( response_d_ww(n_wall_curr) )
-        if ( .not. allocated(response_m_pw_rhs) ) &
-          allocate( response_m_pw_rhs(n_dof_starwall, n_wall_curr) )
-        if ( .not. allocated(response_m_wp)     ) &
-          allocate( response_m_wp(n_wall_curr, n_dof_starwall) )
-      end if
+      if ( .not. allocated(response_m_a) ) &
+        allocate( response_m_a(n_wall_curr, n_dof_starwall) )
+      if ( .not. allocated(response_d_b) ) &
+        allocate( response_d_b(n_wall_curr) )
+      if ( .not. allocated(response_d_c) ) &
+        allocate( response_d_c(n_wall_curr) )
+      if ( .not. allocated(response_m_d) ) &
+        allocate( response_m_d(n_wall_curr, n_dof_starwall) )
+      if ( .not. allocated(response_m_e) ) &
+        allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_f) ) &
+        allocate( response_m_f(n_dof_starwall, n_wall_curr) )
+      if ( .not. allocated(response_m_g) ) &
+        allocate( response_m_g(n_dof_starwall, n_wall_curr) )
+      if ( .not. allocated(response_m_h) ) &
+        allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_j) ) &
+        allocate( response_m_j(n_dof_starwall, n_dof_starwall) )
       
       ! --- Derived response matrix for equilibrium
       if ( resistive_wall ) then
@@ -781,82 +775,115 @@ module vacuum_response
       end if
       
       ! --- Derived response matrices for time-evolution
-      
-      !   --- Resistive wall, implicit wall-current time evolution
-      if ( resistive_wall .and. vacuum_implicit ) then
+      if ( resistive_wall ) then
         
-        response_d_ww(:)       = 1.d0 - 1.d0 / &
-          ( 1.d0 + wall_thickness / ( wall_resistivity * tstep * starwall_d_yy(:) ) )
+        allocate( tmp_d_s(n_wall_curr) )
+        
+        tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity / wall_thickness * starwall_d_yy(:)
         
         do j = 1, n_dof_starwall
-          response_m_wp(:,j)     = - starwall_m_ye(:,j) / &
-            ( 1.d0 + tstep * wall_resistivity * starwall_d_yy(:) / wall_thickness )
-        end do
-        do i = 1, n_dof_starwall
-          response_m_pw_rhs(i,:) = starwall_m_ey(i,:) * response_d_ww(:)
+          response_m_a(:,j) = -(1.d0+zeta) * starwall_m_ye(:,j) / tmp_d_s(:)
         end do
         
-        response_m_pp_lhs(:,:) = - starwall_m_ee(:,:) - &
-          matmul( starwall_m_ey(:,:), response_m_wp(:,:) )
-        response_m_pp_rhs(:,:) = starwall_m_ee(:,:)
+        response_d_b(:) = - tstep * wall_resistivity / wall_thickness * starwall_d_yy(:) / tmp_d_s(:)
         
-      !   --- Resistive wall, explicit wall-current time evolution
-      else if ( resistive_wall ) then
+        response_d_c(:) = zeta / tmp_d_s(:)
         
-        response_d_ww(:)       = 1.d0 - &
-          tstep * wall_resistivity * starwall_d_yy(:) / wall_thickness
-        response_m_wp(:,:)     = - starwall_m_ye(:,:)
-        response_m_pw_rhs(:,:) = starwall_m_ey(:,:)
-        response_m_pp_lhs(:,:) = - starwall_m_ee(:,:)
-        response_m_pp_rhs(:,:) = starwall_m_ee(:,:)
+        do j = 1, n_dof_starwall
+          response_m_d(:,j) = zeta * starwall_m_ye(:,j) / tmp_d_s(:)
+        end do
         
-      !   --- Ideal wall
-      else
+        response_m_e(:,:) = starwall_m_ee(:,:) + matmul( starwall_m_ey(:,:), response_m_a(:,:) )
         
-        response_m_pp_lhs(:,:) = - starwall_m_id(:,:)
-        response_m_pp_rhs(:,:) = + starwall_m_id(:,:)
+        do k = 1, n_wall_curr
+          response_m_f(:,k) = starwall_m_ey(:,k) * ( 1.d0 + response_d_b(k) )
+        end do
+        
+        do k = 1, n_wall_curr
+          response_m_g(:,k) = starwall_m_ey(:,k) * response_d_c(k)
+        end do
+        
+        response_m_h(:,:) = starwall_m_ee(:,:)
+        
+        response_m_j(:,:) = matmul( starwall_m_ey(:,:), response_m_d(:,:) )
+        
+        deallocate( tmp_d_s )
+        
+      else ! (Ideal wall)
+        
+        response_m_a(:,:) = 0.d0
+        response_d_b(:)   = 0.d0
+        response_d_c(:)   = 0.d0
+        response_m_d(:,:) = 0.d0
+        response_m_e(:,:) = starwall_m_id(:,:)
+        response_m_f(:,:) = 0.d0
+        response_m_g(:,:) = 0.d0
+        response_m_h(:,:) = starwall_m_id(:,:)
+        response_m_j(:,:) = 0.d0
         
       end if
       
       ! --- DEBUGGING: Perform some consistency checks and output checksums.
       if ( vacuum_debug ) then
-        if ( resistive_wall .and. vacuum_implicit .and. ( wall_resistivity == 0.d0 ) ) then
-          write(*,*) LOG_BEGIN_MARKER//' Consistency with ideal wall'
+        if ( resistive_wall .and. ( wall_resistivity == 0.d0 ) ) then
+          write(*,*) 'DEBUG: Consistency with ideal wall'
           21 format(1x,a,1x,l,1x,2ES14.5)
           call read_starwall_response(freeboundary_equil, .false.)
-          a = sum(abs( response_d_ww - 1.d0 ))
-          write(*,21) 'response_d_ww:    ', a < 1.d-5, a
           
-          a = sum(abs( response_m_wp + starwall_m_ye ))
+          a = sum(abs( response_m_a + starwall_m_ye ))
           b = sum(abs( starwall_m_ye ))
-          write(*,21) 'response_m_wp:    ', a < 1.d-5*b, a/b
+          write(*,21) 'response_m_a:   ', a <= 1.d-5*b, a, b
           
-          a = sum(abs( response_m_pp_rhs - starwall_m_ee ))
-          b = sum(abs( starwall_m_ee ))
-          write(*,21) 'response_m_pp_rhs:', a < 1.d-5*b, a/b
+          a = sum(abs( response_d_b ))
+          write(*,21) 'response_d_b:   ', a <= 1.d-5, a
           
-          a = sum(abs( response_m_pp_lhs + starwall_m_id ))
+          a = sum(abs( response_d_c - zeta/(1.d0+zeta) ))
+          write(*,21) 'response_d_c:   ', a <= 1.d-5, a
+          
+          a = sum(abs( response_m_d - zeta/(1.d0+zeta) * starwall_m_ye ))
+          b = sum(abs( zeta/(1.d0+zeta) * starwall_m_ye ))
+          write(*,21) 'response_m_d:   ', a <= 1.d-5*b, a, b
+          
+          a = sum(abs( response_m_e - starwall_m_id ))
           b = sum(abs( starwall_m_id ))
-          write(*,21) 'response_m_pp_lhs:', a < 1.d-5*b, a/b
+          write(*,21) 'response_m_e:   ', a <= 1.d-5*b, a, b
+          
+          a = sum(abs( response_m_f - starwall_m_ey ))
+          b = sum(abs( starwall_m_ey ))
+          write(*,21) 'response_m_f:   ', a <= 1.d-5*b, a, b
+          
+          a = sum(abs( response_m_g - zeta/(1.d0+zeta)*starwall_m_ey ))
+          b = sum(abs( zeta/(1.d0+zeta)*starwall_m_ey ))
+          write(*,21) 'response_m_g:   ', a <= 1.d-5*b, a, b
+          
+          a = sum(abs( response_m_h - starwall_m_ee ))
+          b = sum(abs( starwall_m_ee ))
+          write(*,21) 'response_m_h:   ', a <= 1.d-5*b, a, b
+          
+          a = sum(abs( response_m_j - zeta/(1.d0+zeta)*matmul(starwall_m_ey,starwall_m_ye) ))
+          b = sum(abs( zeta/(1.d0+zeta)*matmul(starwall_m_ey,starwall_m_ye) ))
+          write(*,21) 'response_m_j:   ', a <= 1.d-5*b, a, b
           
           a = sum(abs( starwall_m_ee-matmul(starwall_m_ey,starwall_m_ye) - starwall_m_id ))
           b = sum(abs( starwall_m_id ))
-          write(*,21) 'ee-ey*ye:         ', a < 1.d-5*b, a/b
-          write(*,*) LOG_END_MARKER//' Consistency with ideal wall'
+          write(*,21) 'ee-ey*ye:       ', a < 1.d-5*b, a, b
+          write(*,*) 'END: Consistency with ideal wall'
         end if
-        write(*,*) LOG_BEGIN_MARKER//' Cecksums'
-        if ( resistive_wall ) then
-          write(*,*) 'd_ww:    ', sum(abs(response_d_ww))
-          write(*,*) 'm_wp:    ', sum(abs(response_m_wp))
-        end if
-        write(*,*) 'm_pp_lhs:', sum(abs(response_m_pp_lhs))
-        write(*,*) 'm_pp_rhs:', sum(abs(response_m_pp_rhs))      
-        write(*,*) LOG_END_MARKER//' Cecksums'
+        write(*,*) 'DEBUG: Checksums'
+        write(*,*) 'm_a:', sum(abs(response_m_a)), sum(response_m_a)
+        write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
+        write(*,*) '1+d_b:', sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
+        write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
+        write(*,*) 'm_d:', sum(abs(response_m_d)), sum(response_m_d)
+        write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
+        write(*,*) 'm_f:', sum(abs(response_m_f)), sum(response_m_f)
+        write(*,*) 'm_g:', sum(abs(response_m_g)), sum(response_m_g)
+        write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
+        write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
+        write(*,*) 'END: Checksums'
       end if
       
     end if
-    
-    write(*,*) LOG_END_MARKER//' update_response'
     
   end subroutine update_response
   
@@ -878,8 +905,6 @@ module vacuum_response
     integer :: dim(2), i, j, i2, j2
     
     err = 0
-    
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' read_response_matrix "'//trim(filename)//'"'
     
     open(42, FILE=trim(filename), status='old', action='read', iostat=err)
     if ( err /= 0 ) return
@@ -912,8 +937,6 @@ module vacuum_response
       
     close(42)
 
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' read_response_matrix "'//trim(filename)//'"'
-    
   end subroutine read_response_matrix
   
   
@@ -932,8 +955,6 @@ module vacuum_response
     
     ! --- Local variables
     integer :: dim, i, i2
-    
-    if ( vacuum_debug ) write(*,*) LOG_BEGIN_MARKER//' read_response_diagonal "'//trim(filename)//'"'
     
     open(42, FILE=trim(filename), status='old', action='read', iostat=err)
     if ( err /= 0 ) return
@@ -963,8 +984,6 @@ module vacuum_response
       
     close(42)
     
-    if ( vacuum_debug ) write(*,*) LOG_END_MARKER//' read_response_diagonal "'//trim(filename)//'"'
-    
   end subroutine read_response_diagonal
   
   
@@ -980,15 +999,11 @@ module vacuum_response
     integer, intent(in)    :: i_starwall !< STARWALL harmonic
     integer, intent(in)    :: ibas       !< Basis function (1 or 2)
     
-    if ( NEW_VACUUM ) then
-      if ( (i_starwall < 0) .or. (i_starwall > n_starwall_harmonics) ) then
-        write(*,*) 'response_index: illegal value i_starwall=', i_starwall
-        stop
-      end if
-      response_index = 2*n_starwall_harmonics*(inode-1) + 2*(i_starwall-1) + ibas
-    else
-      response_index = 4*(inode-1) + 2*(i_starwall-2) + ibas
+    if ( (i_starwall < 0) .or. (i_starwall > n_starwall_harmonics) ) then
+      write(*,*) 'response_index: illegal value i_starwall=', i_starwall
+      stop
     end if
+    response_index = 2*n_starwall_harmonics*(inode-1) + 2*(i_starwall-1) + ibas
     
     if ( response_index < 1 ) then
       write(*,*) 'FATAL: RESPONSE_INDEX < 1 DETECTED'

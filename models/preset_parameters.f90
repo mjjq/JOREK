@@ -37,7 +37,6 @@ subroutine preset_parameters
 
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
-  use_starwall       = .false. ! use the STARWALL vacuum solution? (freeboundary only)
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
 
   bc_natural_open    = .false.! use sheath (Bohm) boundary conditions

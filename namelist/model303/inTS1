@@ -23,8 +23,6 @@
  quad_l = -0.
 
  freeboundary = .f.
- use_starwall = .f.
- resistive_wall = .f.
  xpoint = .f.
 
  R_geo = 2.4

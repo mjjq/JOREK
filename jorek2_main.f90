@@ -489,9 +489,10 @@ program JOREK2
        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
          psi_bnd = psi_xpoint(2)
        endif
+     else
+       call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+       psi_bnd = psi_lim
      end if
-     call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
-     psi_bnd = min( psi_bnd, psi_lim )
 
 
 
@@ -765,9 +766,10 @@ program JOREK2
        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
          psi_bnd = psi_xpoint(2)
        endif
+     else
+       call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+       psi_bnd = psi_lim
      end if
-     call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
-     psi_bnd = min( psi_bnd, psi_lim )
 
      call cpu_time(t_matrix_0)
 

@@ -39,11 +39,11 @@ real*8,allocatable  :: xout(:),xp(:),yp(:)
 real*8              :: dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
 integer,allocatable :: keep(:,:,:)
 integer             :: i, j, k, l, m, i2, j2
-integer             :: n_psi, n_tht_2
+integer             :: n_psi
 integer             :: i_surf
 integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), i_sep, i_max, i_find, npl, ifail
 integer             :: node, index, node_start, index_xpoint, n_xpoint, j_start, j_end
-integer             :: iv, ivp, node_iv, node_ivp, i_elm, n_tht_3
+integer             :: iv, ivp, node_iv, node_ivp, i_elm
 integer             :: my_id, ielm_out
 real*8              :: Rmid, Zmid, R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out
@@ -139,21 +139,14 @@ endif
 !--------------- Define the flux values on which grid will be aligned ----------------------!
 !-------------------------------------------------------------------------------------------!
 
-!-------------------------------- Double values to find the mid_points
-n_tht_2     = 2 * (n_tht - 1) + 1
-if (xcase .eq. 3) n_tht_2 = 2 * n_tht
-
 !-------------------------------- Write some values
 !write(*,*) ' n_flux,   n_open,   n_tht   : ', n_flux,	n_open,   n_tht
-!write(*,*) ' n_flux_2, n_open_2, n_tht_2 : ', n_flux_2, n_open_2, n_tht_2
 !if(xcase .eq. 3) then
 !  write(*,*) ' n_outer,   n_inner   : ', n_outer,   n_inner
-!  write(*,*) ' n_outer_2, n_inner_2 : ', n_outer_2, n_inner_2
 !endif
 
 !-------------------------------- Define number of psi values and allocate flux_list structure
 n_psi	        = n_flux   + n_open   + n_outer   + n_inner   + n_private   + n_up_priv + 1   ! this includes the magnetic axis
-n_tht_3         = n_tht_2 + 2*n_leg + 2*n_up_leg
 flux_list%n_psi = n_psi - 1
 call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
 

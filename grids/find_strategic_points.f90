@@ -368,6 +368,8 @@ endif
 if (xcase .ne. 2) tht_x1 = atan2(Z_xpoint(1)-Z_axis,R_xpoint(1)-R_axis)
 if (xcase .eq. 2) tht_x1 = atan2(Z_xpoint(2)-Z_axis,R_xpoint(2)-R_axis)
 if (xcase .eq. 3) tht_x2 = atan2(Z_xpoint(2)-Z_axis,R_xpoint(2)-R_axis)
+if (tht_x1 .lt. 0.d0) tht_x1 = tht_x1 + 2.d0*PI
+if (tht_x2 .lt. 0.d0) tht_x2 = tht_x2 + 2.d0*PI
 
 if(xcase .ne. 2) then
   
@@ -415,6 +417,7 @@ if(xcase .ne. 2) then
   stpts%RLimit_LowerOuterLeg = RRg1
   stpts%ZLimit_LowerOuterLeg = ZZg1
 
+  i_max = n_flux + n_open + n_outer + n_inner
   call find_theta_surface(node_list,element_list,flux_list,i_max,stpts%angle_LowerLeft,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
   if(i_find .eq. 0) return
   call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
@@ -428,7 +431,7 @@ endif
 
 if(xcase .ne. 1) then
   
-  i_max = n_flux + n_open + n_outer + n_inner
+  i_max = n_flux + n_open + n_outer
   call find_theta_surface(node_list,element_list,flux_list,i_max,stpts%angle_UpperRight,R_xpoint(2),Z_xpoint(2),i_elm_find,s_find,t_find,i_find)
   if(i_find .eq. 0) return
   call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
@@ -438,6 +441,7 @@ if(xcase .ne. 1) then
   stpts%RLimit_UpperOuterLeg = RRg1
   stpts%ZLimit_UpperOuterLeg = ZZg1
 
+  i_max = n_flux + n_open + n_outer + n_inner
   call find_theta_surface(node_list,element_list,flux_list,i_max,stpts%angle_UpperLeft,R_xpoint(2),Z_xpoint(2),i_elm_find,s_find,t_find,i_find)
   if(i_find .eq. 0) return
   call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&

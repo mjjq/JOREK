@@ -454,7 +454,6 @@ enddo
 
 
 
-
 !--------------------------------------------------------------------------!
 !------- Extrapolation points for second part of the grid (Legs) ----------!
 !--------------------------------------------------------------------------!
@@ -809,7 +808,11 @@ write(*,*) '                 Find crossings between coordinate lines'
 
 
 
-!------------------------------ Construct polar coordinate lines
+!--------------------------------------------------------------------------!
+!--------------- First construct polar coordinate lines -------------------!
+!--------------------------------------------------------------------------!
+
+!------------------------------ Central part (without legs)
 do j=1,n_tht
 
   delta = 0.1
@@ -851,6 +854,7 @@ do j=1,n_tht
 
 enddo
 
+!------------------------------ Lower leg
 if(xcase .ne. 2) then
   do j=1,2*n_leg
 
@@ -892,6 +896,7 @@ if(xcase .ne. 2) then
   enddo
 endif
 
+!------------------------------ Upper leg
 if(xcase .ne. 1) then
   do j=1,2*n_up_leg
 
@@ -935,8 +940,8 @@ if(xcase .ne. 1) then
 endif
 
 
+!------------------------------ Plot coordinate lines
 call lincol(3)
-
 npl = 11
 call tr_allocate(xp,1,npl,"xp",CAT_GRID)
 call tr_allocate(yp,1,npl,"yp",CAT_GRID)
@@ -969,35 +974,40 @@ call tr_deallocate(xp,"xp",CAT_GRID)
 call tr_deallocate(yp,"yp",CAT_GRID)
 
 
-!----------------------------------- find grid_points from crossing of coordinate lines
 
-do j=1, n_tht          ! the magnetic axis
 
+
+
+!--------------------------------------------------------------------------!
+!--------- Find grid_points from crossing of coordinate lines -------------!
+!--------------------------------------------------------------------------!
+
+
+!----------------------------------- The magnetic axis
+do j=1, n_tht
   nwpts%RR_new(1,j)    = R_axis
   nwpts%ZZ_new(1,j)    = Z_axis
   nwpts%ielm_flux(1,j) = i_elm_axis
   nwpts%s_flux(1,j)    = s_axis
   nwpts%t_flux(1,j)    = t_axis
   nwpts%t_tht(1,j)     = -1.d0          ! expressed in cubic Hermite (-1<t<+1)
-
 enddo
-
 nwpts%k_cross(1,:) = 1
 
-do i=1,n_flux+n_open+n_outer+n_inner-1        ! The main part (without privates) ! We avoid last surface, points are already known...
+!----------------------------------- The main part (without legs, outer and inner)
+do i=1,n_flux+n_open
   do j=1, n_tht
-    do k=1,n_pieces       ! 3 line pieces per coordinate line
+    
+    do k=1,n_pieces	 ! 3 line pieces per coordinate line
 
       R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-                   nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        	  nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
       Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-                   nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        	  nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-                       nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        	      nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
 
-
-!      if((ifail .eq. 0) .and. (i .eq. n_flux_2+n_open_2+n_outer_2+n_inner_2)) write(*,*)'diff = ',nwpts%RR_new(i+1,j)-nwpts%R_max(j),nwpts%ZZ_new(i+1,j)-nwpts%Z_max(j)
       if (ifail .eq. 0) then
         nwpts%k_cross(i+1,j) = k
         exit
@@ -1006,40 +1016,67 @@ do i=1,n_flux+n_open+n_outer+n_inner-1        ! The main part (without privates)
     enddo
 
     if (ifail .ne. 0) then
-      if (i .eq. n_flux+n_open+n_outer+n_inner) then
+      ! We avoid last surface, points are already known...
+      if ( (i .eq. n_flux+n_open) .and. (xcase .ne. 3) ) then
         nwpts%k_cross(i+1,j) = 3
-	nwpts%RR_new(i+1,j)  = nwpts%R_max(j)
-	nwpts%ZZ_new(i+1,j)  = nwpts%Z_max(j)
-        write(*,*) ' WARNING node not found for last openflux surface -> using RZ_max '
+        nwpts%RR_new(i+1,j)  = nwpts%R_max(j)
+        nwpts%ZZ_new(i+1,j)  = nwpts%Z_max(j)
+        write(*,*) ' WARNING node not found for last open flux surface -> using RZ_max '
       else
-        write(*,*) ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
+        write(*,'(A,i6,i6,i6,f)') ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
       endif
     endif
-
+      
   enddo
 enddo
-!----------------------------------- Print a python file that plots the bound points
-open(100,file='plot_bound_points.py')
-  write(100,'(A)')	   '#!/usr/bin/env python'
-  write(100,'(A)')	   'import numpy as N'
-  write(100,'(A)')	   'import pylab'
-  write(100,'(A)')	   'def main():'
-  write(100,'(A,i6,A)')     ' r = N.zeros(',(n_flux+1)*n_tht,')'
-  write(100,'(A,i6,A)')     ' z = N.zeros(',(n_flux+1)*n_tht,')'
-  do i=1,n_flux+1
-  do j=1,n_tht
-    write(100,'(A,i6,A,f)') ' r[',(i-1)*n_tht+j-1,'] = ',nwpts%RR_new(i+1,j)
-    write(100,'(A,i6,A,f)') ' z[',(i-1)*n_tht+j-1,'] = ',nwpts%ZZ_new(i+1,j)
-  enddo
-  enddo
-  write(100,'(A,i6,A)')     ' for i in range (0,',(n_flux+1)*n_tht,'):'
-  write(100,'(A)')	   '  pylab.plot(r[i:i+1],z[i:i+1], "r.")'
-  write(100,'(A)')	   ' pylab.axis("equal")'
-  write(100,'(A)')	   ' pylab.show()'
-  write(100,'(A)')	   ' '
-  write(100,'(A)')	   'main()'
-close(100)
 
+!----------------------------------- The main inner/outer parts (without legs)
+if (xcase .eq. 3) then
+  do i=n_flux+n_open+1,n_flux+n_open+n_outer+n_inner
+    if (     ( (psi_xpoint(1) .le. psi_xpoint(2)) .and. (i .lt. n_flux+n_open+n_outer+1) )  &
+        .or. ( (psi_xpoint(1) .gt. psi_xpoint(2)) .and. (i .ge. n_flux+n_open+n_outer+1) )  ) then
+      n_start = 1
+      n_loop  = n_tht_mid
+    else
+      n_start = n_tht_mid + 1
+      n_loop  = n_tht
+    endif
+    do j=n_start, n_loop
+      
+      do k=1,n_pieces	   ! 3 line pieces per coordinate line
+
+  	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
+  		    nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+  	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
+  		    nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+
+  	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
+  			nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+
+  	if (ifail .eq. 0) then
+  	  nwpts%k_cross(i+1,j) = k
+  	  exit
+  	endif
+
+      enddo
+
+      if (ifail .ne. 0) then
+        ! We avoid last surface, points are already known...
+        if ( (i .eq. n_flux+n_open+n_outer) .or. (i .eq. n_flux+n_open+n_outer+n_inner) ) then
+          nwpts%k_cross(i+1,j) = 3
+          nwpts%RR_new(i+1,j)  = nwpts%R_max(j)
+          nwpts%ZZ_new(i+1,j)  = nwpts%Z_max(j)
+          write(*,*) ' WARNING node not found for last open flux surface -> using RZ_max '
+        else
+          write(*,'(A,i6,i6,i6,f)') ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
+        endif
+      endif
+  	
+    enddo
+  enddo
+endif
+
+!----------------------------------- The legs and private parts
 if(xcase .ne. 3) then
   do i=n_flux,n_psi-1          ! With the private parts
     do j=n_tht+1, n_tht_2
@@ -1060,8 +1097,18 @@ if(xcase .ne. 3) then
 
       enddo
 
-      if ( (ifail .ne. 0) .and. (xcase .eq. 1) ) write(*,*) ' WARNING node not found for lower part of grid : ',ifail,i,j
-      if ( (ifail .ne. 0) .and. (xcase .eq. 2) ) write(*,*) ' WARNING node not found for upper part of grid : ',ifail,i,j
+      if (ifail .ne. 0) then
+        ! We avoid last surface, points are already known...
+        if (i .eq. n_psi-1) then
+          nwpts%k_cross(i+1,j) = 1
+          nwpts%RR_new(i+1,j)  = nwpts%R_min(j)
+          nwpts%ZZ_new(i+1,j)  = nwpts%Z_min(j)
+          write(*,*) ' WARNING node not found for last private surface -> using RZ_max '
+        else
+          if (xcase .eq. 1) write(*,'(A,i6,i6,i6)') ' WARNING node not found for lower part of grid : ',ifail,i,j
+          if (xcase .eq. 2) write(*,'(A,i6,i6,i6)') ' WARNING node not found for upper part of grid : ',ifail,i,j
+        endif
+      endif
 
     enddo
   enddo
@@ -1092,12 +1139,16 @@ else
 
       enddo
 
-      if (ifail .ne. 0) write(*,*) ' WARNING node not found for the sandwich part of grid : ',ifail,i,j
+      if (ifail .ne. 0) write(*,'(A,i6,i6,i6)') ' WARNING node not found for the sandwich part of grid : ',ifail,i,j
 
     enddo
   enddo
   do i=n_flux+n_open,n_psi-n_private-n_up_priv-1          ! Outer/Inner parts
     do j=n_tht+1, n_tht_2
+      if (      (i .gt. n_flux+n_open+n_outer) .and. (i .gt. n_flux+n_open)                                             &
+          .and. ( (j .gt. n_tht+2*n_leg+n_up_leg) .or. ( (j .gt. n_tht+n_leg)   .and. (j .le. n_tht+2*n_leg) )	        ) ) cycle
+      if (       (i .le. n_flux+n_open+n_outer) .and. (i .gt. n_flux+n_open)                                            &
+          .and. ( (j .le. n_tht+n_leg)	          .or. ( (j .gt. n_tht+2*n_leg) .and. (j .le. n_tht+2*n_leg+n_up_leg) ) ) ) cycle
       do k=1,n_pieces	    ! 3 line pieces per coordinate line
 
     	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
@@ -1115,7 +1166,17 @@ else
 
       enddo
 
-      if (ifail .ne. 0) write(*,*) ' WARNING node not found for the outer/inner part of the legs : ',ifail,i,j
+      if (ifail .ne. 0) then
+        ! We avoid last surface, points are already known...
+        if ( (i .eq. n_flux+n_open+n_outer) .or. (i .eq. n_flux+n_open+n_outer+n_inner) ) then
+          nwpts%k_cross(i+1,j) = 3
+          nwpts%RR_new(i+1,j)  = nwpts%R_max(j)
+          nwpts%ZZ_new(i+1,j)  = nwpts%Z_max(j)
+          write(*,*) ' WARNING node not found for last open flux surface -> using RZ_max '
+        else
+          write(*,'(A,i6,i6,i6)') ' WARNING node not found for the outer/inner part of the legs : ',ifail,i,j
+        endif
+      endif
 
     enddo
   enddo
@@ -1138,7 +1199,17 @@ else
 
       enddo
 
-      if (ifail .ne. 0) write(*,*) ' WARNING node not found lower private part of the grid : ',ifail,i,j
+      if (ifail .ne. 0) then
+        ! We avoid last surface, points are already known...
+        if (i .eq. n_psi-n_up_priv-1) then
+          nwpts%k_cross(i+1,j) = 1
+          nwpts%RR_new(i+1,j)  = nwpts%R_min(j)
+          nwpts%ZZ_new(i+1,j)  = nwpts%Z_min(j)
+          write(*,*) ' WARNING node not found for last lower private surface -> using RZ_max '
+        else
+          write(*,'(A,i6,i6,i6)') ' WARNING node not found lower private part of the grid : ',ifail,i,j
+        endif
+      endif
 
     enddo
   enddo
@@ -1161,7 +1232,17 @@ else
 
       enddo
 
-      if (ifail .ne. 0) write(*,*) ' WARNING node not found upper private part of the grid : ',ifail,i,j
+      if (ifail .ne. 0) then
+        ! We avoid last surface, points are already known...
+        if (i .eq. n_psi-1) then
+          nwpts%k_cross(i+1,j) = 1
+          nwpts%RR_new(i+1,j)  = nwpts%R_min(j)
+          nwpts%ZZ_new(i+1,j)  = nwpts%Z_min(j)
+          write(*,*) ' WARNING node not found for last upper private surface -> using RZ_max '
+        else
+          write(*,'(A,i6,i6,i6)') ' WARNING node not found upper private part of the grid : ',ifail,i,j
+        endif
+      endif
 
     enddo
   enddo

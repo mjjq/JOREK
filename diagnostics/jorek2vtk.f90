@@ -79,6 +79,8 @@ n_vectors = 0
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
 
+grad_psi = 0.d0
+
 scalar_names(1:n_var) = variable_names(1:n_var)
 scalar_names(n_var+1:n_scalars) = (/ &
   'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
@@ -156,7 +158,7 @@ do i=1,element_list%n_elements
          !     i_tor = 3 corresponds to the sinus component of the harmonics ?
          
          ! save old values
-         i_tor_old = -1
+         i_tor_old = i_tor
          i_tor     = 1
          ! compute all derivatives, as in loop below
          if ((xjac .gt. 1.d-6)) then

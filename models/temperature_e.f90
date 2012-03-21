@@ -111,7 +111,7 @@ if (xpoint2) then
     datn_z_u         = 0.d0
     d2atn_z_u        = 0.d0
   endif
-  if(xcase .eq. 2) then
+  if(xcase2 .eq. 2) then
     atn_z            = 1.d0
     datn_z           = 0.d0
     d2atn_z          = 0.d0

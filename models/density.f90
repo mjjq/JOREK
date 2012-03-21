@@ -99,7 +99,7 @@ if (xpoint2) then
   
   Z_star   = (Z_xpoint(1)-Z)/sigz
   Z_star   = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
-  Z_star_u = (Z_xpoint(2)-Z)/sigz
+  Z_star_u = (Z-Z_xpoint(2))/sigz
   Z_star_u = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
 
   tanh2   = tanh(Z_star)
@@ -119,7 +119,7 @@ if (xpoint2) then
     datn_z_u         = 0.d0
     d2atn_z_u        = 0.d0
   endif
-  if(xcase .eq. 2) then
+  if(xcase2 .eq. 2) then
     atn_z            = 1.d0
     datn_z           = 0.d0
     d2atn_z          = 0.d0

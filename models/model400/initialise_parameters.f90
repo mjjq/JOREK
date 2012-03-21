@@ -43,7 +43,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FF_0,  FF_1,  FF_coef,                              &
                 K_i_par, ZK_i_perp, K_e_par, ZK_e_perp,             &
                 Zk_par, ZK_perp, D_par, D_perp,                     &
-                Q_bar, sigma,                                       &
+                Q_bar, sigma, gamma_sheath,                         &
                 particlesource, heatsource,                         &
                 heatsource_i, heatsource_e, tauIC,                  &
                 eta_num, visco_num, visco_par_num,                  &
@@ -65,6 +65,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
                 n_limiter, R_limiter, Z_limiter,                    &
+                bc_natural_open,                                    &
                 linear_run, export_for_nemec
 
 if (my_id .eq. 0) then

@@ -391,6 +391,16 @@ do ms=1, n_gauss
 			              * (1 + Diff(id,6) - Diff(id,6) * tanh(-(psi_norm-(1+4*Diff(id,4)))/Diff(id,4)))   !higher Kperp in SOL
       enddo
       
+      if ( r0 .lt. rho_1 ) then
+	D_prof = D_prof * 10.d0
+      end if	  
+      if ( Te0 .lt. Te_1 ) then
+	ZK_e_prof = ZK_e_prof * 10.d0
+      end if
+      if ( Ti0 .lt. Ti_1 ) then
+	ZK_i_prof = ZK_i_prof * 10.d0
+      end if
+
       if ( num_d_perp ) then
         D_prof  = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psi_norm)
       else

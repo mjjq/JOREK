@@ -337,8 +337,8 @@ do i=1,element_list%n_elements
             D_prof  = get_dperp (psi_norm)
             ZK_prof = get_zkperp(psi_norm)
 
-            scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
-            ZKpar_T = ZK_par * ((scalars(inode,6)+T_1)/T_0)**2.5
+            !scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
+            ZKpar_T = ZK_par * ((max( scalars(inode,6), T_1 )+T_1)/T_0)**2.5
 
             grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 

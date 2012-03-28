@@ -63,10 +63,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
+                linear_run, export_for_nemec, RMP_on, lambda, tset, &
+                RMP_psi_cos_file, RMP_psi_sin_file,                 &
+                V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
-                linear_run, export_for_nemec,                       &
-!==================MB
-                V_0,V_1,V_coef,					&
                 R_Z_psi_bnd_file
 
  if (my_id .eq. 0) then
@@ -88,13 +88,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
     read(42,in1)
     close(42)
   else
- !   write(*,*) 'before reading namelist',filename, T_file, rho_file,ffprime_file,&
- !             R_Z_psi_bnd_file
 
     read(5,in1)
     endif
-   write(*,*) 'after reading namelist',filename, T_file, rho_file,ffprime_file,&
-              R_Z_psi_bnd_file
+   write(*,*) 'Input files: T_file = ',  trim(T_file), 'rho_file = ', trim(rho_file) 
+   write(*,*) 'ffprime_file = ', trim(ffprime_file),  'R_Z_psi_bnd_file = ', trim(R_Z_psi_bnd_file)
  !==============================MB==========================
    if (n_boundary.ne.0) then
  ! --- Open the file.

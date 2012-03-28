@@ -24,8 +24,8 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
-subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    & 
-     &                          n_local_elms, index_min, index_max, xpoint2,   &
+subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
+     &                          n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
      &                          xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only )
 
   use data_structure
@@ -46,6 +46,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   INTEGER                  :: xcase2
   TYPE (type_node_list)    :: node_list
   TYPE (type_element_list) :: element_list
+  TYPE (type_bnd_node_list):: bnd_node_list
   logical                  :: xpoint2
   REAL*8                   :: psi_axis
   REAL*8                   :: psi_bnd
@@ -53,6 +54,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   REAL*8                   :: psi_xpoint(2)
   logical                  :: gmres
   logical                  :: solve_only
+  real*8                   :: rhs_loc(*)
 
   ! Internal parameters
   real*8  :: zbig

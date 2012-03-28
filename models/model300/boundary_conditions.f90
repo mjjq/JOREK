@@ -24,8 +24,8 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
-subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    & 
-     &                          n_local_elms, index_min, index_max, xpoint2,   &
+subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
+     &                          n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
      &                          xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only )
 
   use data_structure
@@ -45,6 +45,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   INTEGER                  :: xcase2
   TYPE (type_node_list)    :: node_list
   TYPE (type_element_list) :: element_list
+  TYPE (type_bnd_node_list):: bnd_node_list
   logical                  :: xpoint2
   REAL*8                   :: psi_axis
   REAL*8                   :: psi_bnd
@@ -52,6 +53,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
   REAL*8                   :: psi_xpoint(2)
   logical                  :: gmres
   logical                  :: solve_only
+  real*8                   :: rhs_loc(*)
 
   ! Internal parameters
   real*8  :: zbig
@@ -262,7 +264,8 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                         & index_node,  kv, in, &
                                         & index_node2, ku, in, &
                                         & - zbig * BigR**2 / ps0_s, murge_ntor, solve_only, gmres)
-                                   RHS_glob(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+
+                                   Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
                                         Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
                                 end if
                              end if
@@ -290,8 +293,14 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                 irn_glob(ilarge_vus) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
                                 jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
                                 A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
-                                RHS_glob(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                     Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
+
+
+                                if (in .eq. 1) then
+                                   RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                        Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
+                                else
+                                   RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
+                                endif
 
                              endif
                           end if
@@ -317,8 +326,8 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                         & index_node2, kv, in, &
                                         & index_node,  kT, in, &
                                         & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction, murge_ntor, solve_only, gmres)
-                                   
-                                   RHS_glob(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
+
+                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
                                         Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
                                 end if
                              end if
@@ -346,8 +355,12 @@ subroutine boundary_conditions( my_id, node_list, element_list, local_elms,    &
                                 jcn_glob(ilarge_vsT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
                                 A_glob(ilarge_vsT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction
 
-                                RHS_glob(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                     Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
+                                if (in .eq. 1) then
+                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
+                                        Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
+                                else
+                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                                endif 
 
                              endif
                           end if

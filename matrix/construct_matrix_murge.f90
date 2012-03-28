@@ -502,7 +502,7 @@ contains
 
 END MODULE THREAD_DATA
 
-SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
+SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, bnd_node_list, local_elms, &
      n_local_elms, xpoint2, xcase2,psi_axis,psi_bnd,Z_xpoint, psi_xpoint, gmres, i_tor, n_cpu, &
      mpi_comm_n, MPI_COMM_TRANS, my_id_trans, n_cpu_trans, solve_only)
   !---------------------------------------------------------------
@@ -511,7 +511,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   !---------------------------------------------------------------
 
   USE tr_module 
-  USE data_structure, only : type_node, type_element, type_element_list&
+  USE data_structure, only : type_node, type_element, type_element_list, type_bnd_node_list&
        &, type_node_list, thread_struct
   USE parameters,     only : n_vertex_max , n_var, n_order, n_tor
   USE murge_module,   only : MURGE_SUCCESS, MURGE_ASSEMBLYBEGIN,   &
@@ -533,6 +533,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
   INTEGER, TARGET                :: my_id
   TYPE (type_node_list), target  :: node_list
   TYPE (type_element_list), target :: element_list
+  TYPE (type_bnd_node_list), target :: bnd_node_list
   INTEGER, target                :: n_local_elms
   INTEGER, target                :: local_elms(n_local_elms)
   LOGICAL, target                :: xpoint2
@@ -1032,8 +1033,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list, local_elms, &
 
   CALL SYSTEM_CLOCK(count=t0)
   CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  CALL boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, 0, &
-       0,         xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only)
+  CALL boundary_conditions(my_id, node_list, element_list, bnd_node_list, local_elms, n_local_elms, 0, &
+       0,  rhs_loc,    xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only)
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max   

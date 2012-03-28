@@ -20,7 +20,8 @@ all: mod_phys_module.o \
      export_boundary.o \
      vertex_is_local.o \
      export_helena.o  \
-     split_broadcast.o
+     split_broadcast.o \
+     broadcast_RMP_profiles.o
 
 modules : mod_live_data.o
 

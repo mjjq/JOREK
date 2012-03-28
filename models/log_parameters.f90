@@ -329,6 +329,15 @@ if (my_id == 0) then
   write(*,232) 'bench_without_plot  ', bench_without_plot
   write(*,232) 'no_zeros_mumps      ', no_zeros_mumps
   write(*,232) 'no_zeros_pastix     ', no_zeros_pastix
+
+  write(*,232) 'RMP_on              ', RMP_on
+  if (RMP_on) then
+     write(*,237) 'RMP_psi_cos_file    ', trim(RMP_psi_cos_file)
+     write(*,237) 'RMP_psi_sin_file    ', trim(RMP_psi_sin_file)
+     write(*,230) 'lambda              ', lambda
+     write(*,230) 'tset                ', tset
+  endif
+  write(*,232) 'output_bnd_elements    ', output_bnd_elements
   write(*,*)
   
 end if

@@ -259,7 +259,7 @@ module phys_module
   real*8, allocatable :: num_rho_y1(:)   !< First derivatives of density profile (\f$ d\rho/d\Psi_N \f$)
   real*8, allocatable :: num_rho_y2(:)   !< Second derivatives of density profile (\f$ d^2\rho/d\Psi_N^2 \f$)
   real*8, allocatable :: num_rho_y3(:)   !< Third derivatives of density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
-  
+
   !> @name Analytical input profile for the temperature
   real*8  :: T_0,   T_1,    T_coef(10)
   real*8  :: Ti_0,  Ti_1,   Ti_coef(10)
@@ -320,7 +320,21 @@ module phys_module
   real*8, allocatable :: num_ffprime_y0(:) !< Values of FFprime profile
   real*8, allocatable :: num_ffprime_y1(:) !< First derivatives of FFprime profile (\f$ dFF'/d\Psi_N \f$)
   real*8, allocatable :: num_ffprime_y2(:) !< Second derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
-  
+
+  !> @name RMP profiles
+  logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat' 
+  logical :: RMP_on            !< Activates RMPs on boundary if .true.
+  character(len=512)  :: RMP_psi_cos_file  !< ASCII file the profiles of psi_RMP_cos and derivatives are read from
+  character(len=512)  :: RMP_psi_sin_file  !< ASCII file the profiles of psi_RMP_sin and derivatives are read from
+  real*8  :: lambda, tset      !< parameters for time dependence of psi_RMP
+  real*8  :: RMP_start_time    !< time when RMP coils have been activated (RMP_on = .t.)
+  real*8, allocatable :: psi_RMP_cos(:)
+  real*8, allocatable :: dpsi_RMP_cos_dR(:)
+  real*8, allocatable :: dpsi_RMP_cos_dZ(:)
+  real*8, allocatable :: psi_RMP_sin(:)
+  real*8, allocatable :: dpsi_RMP_sin_dR(:)
+  real*8, allocatable :: dpsi_RMP_sin_dZ(:)  
+
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral

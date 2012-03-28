@@ -180,6 +180,7 @@ subroutine preset_parameters
   ffprime_file  = 'none'
   d_perp_file   = 'none'
   zk_perp_file  = 'none'
+  R_Z_psi_bnd_file = 'none'
 
   produce_live_data = .true.
   
@@ -206,6 +207,14 @@ subroutine preset_parameters
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
   
+!==== RMP parameters =====
+  RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
+  RMP_psi_cos_file   = 'none'
+  RMP_psi_sin_file   = 'none'
+  lambda=0.0663
+  tset = 150
+  output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
+
   n_limiter = 0
   R_limiter = 0.d0
   Z_limiter = 0.d0
@@ -218,4 +227,5 @@ subroutine preset_parameters
   V_coef(4)=0.1
   V_coef(5)=1. 
 !======================MB
+
 end subroutine preset_parameters

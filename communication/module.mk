@@ -19,7 +19,8 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/vertex_is_local.f90	 	\
 	$(DIR)/export_helena.f90		\
 	$(DIR)/split_broadcast.f90		\
-        $(DIR)/mod_live_data.f90
+        $(DIR)/mod_live_data.f90		\
+        $(DIR)/broadcast_RMP_profiles.f90
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
 	$(DIR)/broadcast_elements.f90 		\
@@ -36,6 +37,10 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	\
 	$(DIR)/import_restart.f90
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
+	$(DIR)/broadcast_elements.f90 		\
+	$(DIR)/broadcast_nodes.f90 		\
+	$(DIR)/broadcast_phys.f90 		\
+	$(DIR)/broadcast_num_profiles.f90	\
 	$(DIR)/import_restart.f90
 
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\

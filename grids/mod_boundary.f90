@@ -11,23 +11,25 @@ module boundary
   !! 
   !! Note: Grid nodes with boundary=3 (located at the edges of the boundary in
   !!       the divertor region) are intentionally added twice to the bnd_node_list.
-  subroutine boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list)
+  subroutine boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos)
 
     use data_structure
 
     implicit none
 
-    type (type_node_list),        intent(in)    :: node_list
+    type (type_node_list),        intent(inout) :: node_list
     type (type_element_list),     intent(in)    :: element_list
     type (type_bnd_node_list),    intent(inout) :: bnd_node_list
     type (type_bnd_element_list), intent(inout) :: bnd_elm_list
+    logical,                      intent(in)    :: infos ! If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundaru_elements.dat' 
 
     integer :: i_elem         ! Element index in element_list.
     integer :: iside          ! Side of the element (1...4).
     integer :: iv1, iv2       ! Numbers of the two nodes on the element side (1...4).
-    integer :: inode1, inode2 ! Indices of the nodes in the node_list.
+    integer :: inode1, inode2, inode  ! Indices of the nodes in the node_list.
     integer :: b1, b2         ! Boundary properties of the two nodes.
-
+    integer :: i
+    
     ! --- Empty the boundary node and element lists.
     bnd_node_list%n_bnd_nodes    = 0
     bnd_elm_list%n_bnd_elements = 0
@@ -65,8 +67,15 @@ module boundary
     ! --- Sort the boundary elements.
     call sort_bnd_elements( bnd_elm_list )
 
+
+!=================== definition of boundary_index
+    do i=1, bnd_node_list%n_bnd_nodes
+       inode = bnd_node_list%bnd_node(i)%index_jorek
+       node_list%node(inode)%boundary_index = i
+    end do
+    
     ! --- Output short (.false.) or verbose (.true.) boundary information.
-    call log_bnd_info(.false., node_list, bnd_node_list, bnd_elm_list)
+    call log_bnd_info(infos, node_list, bnd_node_list, bnd_elm_list)
 
   end subroutine boundary_from_grid
 

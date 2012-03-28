@@ -56,7 +56,7 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   integer :: node_out(n_vertex_max)
   integer :: i_father,INODE_FATHER, ios
   integer, external :: omp_get_num_threads, omp_get_thread_num
-
+  integer :: ilarge_vp, in
   call r3_info_begin (r3_info_index_0, 'construct_matrix')   ! timing
 
   if (my_id .eq. 0) then
@@ -297,13 +297,31 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   end if
 
 
+! previous WRONG formulation
+!!$
+!!$  ! --- Form a global rhs from the rhss of the individual mpi threads.
+!!$  call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+!!$  call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
+!!$
+!!$  ! --- Apply boundary conditions.
+!!$  call boundary_conditions(my_id, node_list, element_list, bnd_node_list, local_elms, n_local_elms, index_min,      &
+!!$       index_max, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, .false., .false.)
+!!$
+!!$
+
+
+! --- Apply boundary conditions.
+
+  call boundary_conditions(my_id, node_list, element_list, bnd_node_list, local_elms, n_local_elms, index_min,      &
+
+       index_max, rhs_loc, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, .false., .false.)
+
+ 
+
   ! --- Form a global rhs from the rhss of the individual mpi threads.
+
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
-
-  ! --- Apply boundary conditions.
-  call boundary_conditions(my_id, node_list, element_list, local_elms, n_local_elms, index_min,      &
-       index_max, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, .false., .false.)
 
   call r3_info_end(r3_info_index_0) !timing
   call tr_print_memsize("EndConstM")

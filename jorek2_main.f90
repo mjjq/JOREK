@@ -70,10 +70,10 @@ program JOREK2
     end subroutine update_rhs_n
     
     subroutine construct_matrix_murge(my_id,node_list,                      &
-      element_list,local_elms,n_local_elms,xpoint2,xcase2,psi_axis,psi_bnd, &
+      element_list,bnd_node_list,local_elms,n_local_elms,xpoint2,xcase2,psi_axis,psi_bnd, &
       z_xpoint,psi_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans,     &
       n_cpu_trans,solve_only)
-      use data_structure, only : type_node, type_element,                   &
+      use data_structure, only : type_node, type_element, type_bnd_node_list,          &
         type_element_list, type_node_list
       integer(kind=4) :: n_cpu
       integer(kind=4), target :: n_local_elms
@@ -81,6 +81,7 @@ program JOREK2
       integer(kind=4), target :: xcase2
       type (type_node_list), target :: node_list
       type (type_element_list), target :: element_list
+      type (type_bnd_node_list), target :: bnd_node_list
       integer(kind=4), target :: local_elms(n_local_elms)
       logical(kind=4), target :: xpoint2
       real(kind=8), target :: psi_axis
@@ -330,7 +331,7 @@ program JOREK2
       end if 
       
       ! --- Determine boundary information from the grid
-      call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
+      call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
       call tr_debug_write("JMAIN:Def_grid elt_list",element_list%n_elements)
       call tr_debug_write("JMAIN:Def_grid node_list",node_list%n_nodes)
@@ -408,7 +409,7 @@ program JOREK2
         end if
         
         ! --- Determine boundary information from the grid
-        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list) 
+        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         
         ! --- Compute the plasma equilibrium
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase)
@@ -437,7 +438,7 @@ program JOREK2
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Determine boundary information from the grid
-  if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list)
+  if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
 !   if ( freeboundary_equil ) call import_external_fields()
@@ -450,10 +451,20 @@ program JOREK2
   end if
   
   call tr_print_memsize("AfterEquilibrium")
+
+  if (RMP_on) then
+     if (my_id == 0) then
+        call read_RMP_profiles(bnd_node_list)
+     endif
+
+  endif
     
   ! --- Broadcast grid information and input parameters to other MPI procs
   call broadcast_elements(my_id, element_list)                ! elements
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) ! boundary elements
+  if (RMP_on) then
+     call broadcast_RMP_profiles(my_id, bnd_node_list)        ! psi_RMP profiles
+  endif
   call broadcast_nodes(my_id, node_list)                      ! nodes
   call broadcast_phys(my_id)                                  ! physics parameters
   n_AA = 0  
@@ -468,6 +479,8 @@ program JOREK2
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+
 
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *
@@ -793,16 +806,19 @@ program JOREK2
      call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
           
      if ( use_pastix .and. use_murge .and. use_murge_element ) then
-        call construct_matrix_murge(my_id, node_list, element_list, local_elms, &
+
+
+        call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms, &
              n_local_ELms,  xpoint,xcase, &
              psi_axis, psi_bnd, Z_xpoint,psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, &
              mpi_comm_trans, my_id_trans, n_cpu_trans, solve_only)        ! construct the matrix from elemental matrices
      else
+
         call construct_matrix(my_id, local_elms, &
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
              xpoint,xcase,psi_axis,psi_bnd,Z_xpoint,psi_xpoint)        ! construct the matrix from elemental matrices
      endif
-     
+
      call system_clock(count=t1)   
      nb_periods = t1-t0
      if (t1<t0) nb_periods = nb_periods + nb_periodes_max
@@ -1025,9 +1041,11 @@ program JOREK2
            call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
         enddo
 
-        do i=1,n_tor,2
-
-           write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
+       ! do i=1,n_tor,2: plots sinus perturbation
+       !cosinus perturbation (ok only for n_tor = 1 or 3) :
+        do i=1,(n_tor+1)/2
+       !    write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
+           write(label,'(A4,i3,A1)') '(n =',(i-1)*n_period,')'
 
            do ivar=1,n_var
               if ((ivar .ne. 3) .and. (ivar .ne. 4)) then

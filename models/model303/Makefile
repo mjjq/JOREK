@@ -8,7 +8,7 @@ all: modules 				\
      boundary_matrix.o   		\
      boundary_matrix_open.o   		\
      boundary_conditions.o 		\
-     initial_conditions.o
+     initial_conditions.o		
 
 modules : mod_parameters.o mod_phys_module.o 
 

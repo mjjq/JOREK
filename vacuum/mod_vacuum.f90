@@ -6,7 +6,7 @@ module vacuum
   implicit none
   
   !> @name General parameters
-  logical, parameter  :: vacuum_debug          = .true.  !< Enable additional output and tests
+  logical, parameter  :: vacuum_debug          = .false. !< Enable additional output and tests
   logical, parameter  :: vacuum_decouple_modes = .false. !< Option to switch off 3D wall mode coupling
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
@@ -162,8 +162,8 @@ module vacuum
     
     if ( vacuum_debug ) then
       write(*,*) 'DEBUG: Checksums'
-      write(*,*) 'wall_curr', sum(abs(wall_curr))
-      write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+      if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
+      if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
       write(*,*) 'END: Checksums'
     end if
     
@@ -201,8 +201,8 @@ module vacuum
     
     if ( vacuum_debug ) then
       write(*,*) 'DEBUG: Checksums'
-      write(*,*) 'wall_curr', sum(abs(wall_curr))
-      write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+      if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
+      if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
       write(*,*) 'END: Checksums'
     end if
     

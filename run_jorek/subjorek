@@ -51,8 +51,8 @@ nfs*)
 # -------------
 MPIPROCS=1
 NTHREAD=8
-NNODES=8
-WALLTIME=00:30:00
+NNODES=2
+WALLTIME=01:00:00
 ((NPES=NNODES*MPIPROCS))
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
@@ -334,7 +334,7 @@ if [ "$ffprime_file" != 'none' ]; then
    else
        if [ "${ffprime_dir}" != "." ]; then
        	  # echo " creation of ${RESDIR}/${ffprime_dir} "
-	  mkdir ${RESDIR}/${T_dir}
+	  mkdir ${RESDIR}/${ffprime_dir}
        fi
    fi
    if [ -e ${ffprime_dir}/${ffprime_file} ]; then

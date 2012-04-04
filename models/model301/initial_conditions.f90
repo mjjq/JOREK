@@ -172,15 +172,15 @@ do i=1,node_list%n_nodes
     if (xcase2 .eq. 2) direction = -direction
     if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
 
+    BigR = node_list%node(i)%x(1,1)
     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+    BigR_s = node_list%node(i)%x(2,1)
 
     do in=1,n_tor
 
-      BigR = node_list%node(i)%x(1,1)
       T0   = node_list%node(i)%values(in,1,6)
       node_list%node(i)%values(in,1,n_var) = direction / Btot * sqrt(GAMMA * T0)
 
-      BigR_s = node_list%node(i)%x(2,1)
       T0_s   = node_list%node(i)%values(in,2,6)
       node_list%node(i)%values(in,2,n_var) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
       node_list%node(i)%values(in,2,n_var) = direction *  node_list%node(i)%values(in,2,n_var)

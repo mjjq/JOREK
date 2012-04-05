@@ -461,7 +461,7 @@ do ms=1, n_gauss
      if ((r0 .lt. 0.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) D_prof  = 1.d-4
 
 !     ZK_perp_num   = 0.d0
-!     ZK_perp_num_T = 0.d0
+     ZK_perp_num_T = 0.d0
 !     if ((T0 .lt. T_1)   .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2) .and. (psi_norm .le. 1.0)) then
 !       ZK_prof = 2.d-4
 !       ZK_perp_num   = 1.d-5 ! * (T0/T_1 - 1.d0)**2
@@ -473,7 +473,7 @@ do ms=1, n_gauss
 !       ZK_perp_num_T = 0.D0 !2.d-2 * (T0/T_1 - 1.d0) / T_1
 !     endif
 !     D_perp_num     = 0.d0
-!     D_perp_num_rho = 0.d0
+     D_perp_num_rho = 0.d0
 !     if ((r0 .lt. rho_1) .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2) .and. (psi_norm .le. 1.0)) then
 !        D_prof = 1.d-4
 !       D_perp_num     = 1.d-5 !* (r0/rho_1 - 1.d0)**2

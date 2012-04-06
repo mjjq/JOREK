@@ -818,6 +818,7 @@ program JOREK2
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
              xpoint,xcase,psi_axis,psi_bnd,Z_xpoint,psi_xpoint)        ! construct the matrix from elemental matrices
      endif
+     call del_thread_buffers()
 
      call system_clock(count=t1)   
      nb_periods = t1-t0
@@ -1165,7 +1166,6 @@ program JOREK2
 
   call r3_info_summary ()                                ! timing
   call MPI_FINALIZE(IERR)                                ! clean up MPI
-  call del_thread_buffers()
 
 
 end program JOREK2

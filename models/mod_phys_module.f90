@@ -38,7 +38,15 @@ module phys_module
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations
   logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
   logical :: export_for_nemec     !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
+
+  ! for HDF5 diagnostics
   logical :: save_diagnostics_HDF5!< Export data in HDF5 format
+  ! Number of digits that ends the filenames of diagnostics
+  integer             :: nbdigits   = 5
+  character(20)       :: numfmt     = "'_d',i5.5"
+  character(20)       :: numfmt_rst = "'_r',i3.3"
+  ! Identity of the processor
+  integer  :: pglobal_id
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'

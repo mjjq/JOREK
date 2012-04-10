@@ -63,7 +63,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-                linear_run, export_for_nemec, RMP_on, lambda, tset, &
+                linear_run, export_for_nemec, save_diagnostics_HDF5,&
+                RMP_on, lambda, tset, &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &

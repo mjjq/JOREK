@@ -17,7 +17,9 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/determine_PhiN.f90         \
 	$(DIR)/RZ_minmax.f90              \
 	$(DIR)/integrals.f90              \
-	$(DIR)/integrals_3D.f90          
+	$(DIR)/integrals_3D.f90           \
+	$(DIR)/output_saving.f90          \
+	$(DIR)/hdf5_io.f90                
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	  \
 	$(DIR)/boundary_check.f90         \

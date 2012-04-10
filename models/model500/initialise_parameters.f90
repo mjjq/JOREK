@@ -69,7 +69,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
                 n_limiter, R_limiter, Z_limiter,                    &
-                linear_run, export_for_nemec, output_bnd_elements
+                linear_run, export_for_nemec, save_diagnostics_HDF5,&
+                output_bnd_elements
 
 if (my_id .eq. 0) then
 

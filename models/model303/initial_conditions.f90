@@ -32,7 +32,6 @@ if (my_id .eq. 0) then
   write(*,*) '*      initial conditions  (303)      *'
   write(*,*) '***************************************'
 endif
-
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
 
@@ -40,11 +39,11 @@ if (my_id .eq. 0) then
 
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-  if (ifail .ne. 0) then
-    call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
-    call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
-    write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
-  endif
+!TEST!  if (ifail .ne. 0) then
+!TEST!    call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
+!TEST!    call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
+!TEST!    write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
+!TEST!  endif
 
   psi_bnd = 0.d0
     

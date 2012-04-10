@@ -69,6 +69,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
   
+  write(*,'(1x,a)',advance='no') ' USE_HDF5            : '
+#ifdef USE_HDF5 
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+  
   write(*,'(1x,a)',advance='no') ' MEMTRACE            : '
 #ifdef MEMTRACE 
   write(*,*) 'on'
@@ -306,29 +313,30 @@ if (my_id == 0) then
     write(*,232) 'resistive_wall      ', resistive_wall
   end if
   
-  write(*,230) 'Q_bar               ', Q_bar
-  write(*,230) 'sigma               ', sigma
-  write(*,230) 'density_reflection  ', density_reflection
-  write(*,230) 'central_density     ', central_density
-  write(*,230) 'gamma_sheath        ', gamma_sheath
-  write(*,232) 'bc_natural_open     ', bc_natural_open
-  write(*,232) 'produce_live_data   ', produce_live_data
-  write(*,232) 'export_for_nemec    ', export_for_nemec
-  write(*,232) 'linear_run          ', linear_run
-  write(*,232) 'gmres               ', gmres
-  write(*,231) 'gmres_max_iter      ', gmres_max_iter
-  write(*,232) 'use_mumps           ', use_mumps
-  write(*,232) 'use_pastix          ', use_pastix
-  write(*,232) 'use_murge           ', use_murge
-  write(*,232) 'use_murge_element   ', use_murge_element
-  write(*,232) 'pastix_smp_only     ', pastix_smp_only
-  write(*,232) 'refinement          ', refinement
-  write(*,232) 'grid_to_wall        ', grid_to_wall
-  write(*,232) 'adaptive_time       ', adaptive_time
-  write(*,232) 'equil               ', equil
-  write(*,232) 'bench_without_plot  ', bench_without_plot
-  write(*,232) 'no_zeros_mumps      ', no_zeros_mumps
-  write(*,232) 'no_zeros_pastix     ', no_zeros_pastix
+  write(*,230) 'Q_bar                 ', Q_bar
+  write(*,230) 'sigma                 ', sigma
+  write(*,230) 'density_reflection    ', density_reflection
+  write(*,230) 'central_density       ', central_density
+  write(*,230) 'gamma_sheath          ', gamma_sheath
+  write(*,232) 'bc_natural_open       ', bc_natural_open
+  write(*,232) 'produce_live_data     ', produce_live_data
+  write(*,232) 'export_for_nemec      ', export_for_nemec
+  write(*,232) 'save_diagnostics_HDF5 ', save_diagnostics_HDF5
+  write(*,232) 'linear_run            ', linear_run
+  write(*,232) 'gmres                 ', gmres
+  write(*,231) 'gmres_max_iter        ', gmres_max_iter
+  write(*,232) 'use_mumps             ', use_mumps
+  write(*,232) 'use_pastix            ', use_pastix
+  write(*,232) 'use_murge             ', use_murge
+  write(*,232) 'use_murge_element     ', use_murge_element
+  write(*,232) 'pastix_smp_only       ', pastix_smp_only
+  write(*,232) 'refinement            ', refinement
+  write(*,232) 'grid_to_wall          ', grid_to_wall
+  write(*,232) 'adaptive_time         ', adaptive_time
+  write(*,232) 'equil                 ', equil
+  write(*,232) 'bench_without_plot    ', bench_without_plot
+  write(*,232) 'no_zeros_mumps        ', no_zeros_mumps
+  write(*,232) 'no_zeros_pastix       ', no_zeros_pastix
 
   write(*,232) 'RMP_on              ', RMP_on
   if (RMP_on) then

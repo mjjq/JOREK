@@ -15,9 +15,11 @@ all : boundary_check.o         \
       RZ_minmax.o              \
       integrals.o              \
       integral_current.o       \
-      integrals_3D.o          
-      
-modules : mod_fourier.o
+      integrals_3D.o           \
+      output_saving.o          \
+      HDF5_io.o
+
+modules : mod_fourier.o \
 
 clean :
 	rm -f *.o *.mod

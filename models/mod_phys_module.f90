@@ -7,37 +7,38 @@ module phys_module
   implicit none
   
   !> @name Various parameters
-  real*8  :: eta               !< Resistivity
-  logical :: eta_T_dependent   !< Resistivity dependent on temperature? Otherwise constant.
-  real*8  :: visco             !< Viscosity
-  logical :: visco_T_dependent !< Viscosity dependent on temperature? Otherwise constant.
-  real*8  :: visco_par         !< Parallel viscosity
-  real*8  :: F0                !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
-  real*8  :: central_density   !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
-  real*8  :: gamma             !< ratio of specific heat (=5/3)
-  real*8  :: Q_bar             !< (model400)
-  real*8  :: sigma             !< (model400)
-  real*8  :: tauIC             !< (model302 and 701)
-  real*8  :: gamma_sheath      !< sheath boundary condition open fieldlines (model303)
-  real*8  :: density_reflection!< density reflection coeeficient open fieldlines (model303)
-  integer :: mode(n_tor)       !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
-  integer :: nout              !< Output a restart file every nout timesteps.
-  integer :: xcase             !< DoubleNull: 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull.
-  logical :: restart           !< Restart a code run from the restart file jorek_restart.rst?
-  logical :: regrid            !< Re-generate the flux-aligned grid (does not work currently)?
-  logical :: import_equil
-  logical :: xpoint            !< X-point geometry?
-  logical :: refinement        !< Use mesh refinement?
-  logical :: bc_natural_open   !< use natural boundary conditions on the open fieldlines
-  logical :: produce_live_data !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
-  logical :: grid_to_wall      !< extend the grid to a physical wall
-  logical :: adaptive_time     !< requires no_mpi for Pastix library
-  logical :: equil             !< compute equilibrium
-  logical :: bench_without_plot!< .true. for benchmark (mesuring elapsed time without plot phases) 
-  logical :: gmres             !< Use iterative GMRES solver
-  integer :: gmres_max_iter    !< Maximum number of GMRES iterations
-  logical :: linear_run        !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
-  logical :: export_for_nemec  !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
+  real*8  :: eta                  !< Resistivity
+  logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
+  real*8  :: visco                !< Viscosity
+  logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
+  real*8  :: visco_par            !< Parallel viscosity
+  real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
+  real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
+  real*8  :: gamma                !< ratio of specific heat (=5/3)
+  real*8  :: Q_bar                !< (model400)
+  real*8  :: sigma                !< (model400)
+  real*8  :: tauIC                !< (model302 and 701)
+  real*8  :: gamma_sheath         !< sheath boundary condition open fieldlines (model303)
+  real*8  :: density_reflection   !< density reflection coeeficient open fieldlines (model303)
+  integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
+  integer :: nout                 !< Output a restart file every nout timesteps.
+  integer :: xcase                !< DoubleNull: 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull.
+  logical :: restart              !< Restart a code run from the restart file jorek_restart.rst?
+  logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
+  logical :: import_equil         
+  logical :: xpoint               !< X-point geometry?
+  logical :: refinement           !< Use mesh refinement?
+  logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
+  logical :: produce_live_data    !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
+  logical :: grid_to_wall         !< extend the grid to a physical wall
+  logical :: adaptive_time        !< requires no_mpi for Pastix library
+  logical :: equil                !< compute equilibrium
+  logical :: bench_without_plot   !< .true. for benchmark (mesuring elapsed time without plot phases) 
+  logical :: gmres                !< Use iterative GMRES solver
+  integer :: gmres_max_iter       !< Maximum number of GMRES iterations
+  logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
+  logical :: export_for_nemec     !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
+  logical :: save_diagnostics_HDF5!< Export data in HDF5 format
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
@@ -120,15 +121,15 @@ module phys_module
   !> @name Fourier expanded boundary of initial grid
   !! Boundary of the non flux-aligned initial polar grid given as Fourier series
   integer :: mf                !< Number of entries in fbnd and fpsi
-  real*8  :: fbnd(1026)        !< Fourier expansion of boundary
-  real*8  :: fpsi(1026)        !< Fourier expansion of the poloidal flux at the boundary
+  real*8  :: fbnd(258)        !< Fourier expansion of boundary
+  real*8  :: fpsi(258)        !< Fourier expansion of the poloidal flux at the boundary
   
   !> @name Numerical boundary of initial grid
   !! Numerical definition of the boundary of the non flux-aligned initial polar grid.
   integer :: n_boundary        !< Number of points in R_boundary, Z_boundary, psi_boundary.
-  real*8  :: R_boundary(1026)  !< Numerical R values defining the boundary
-  real*8  :: Z_boundary(1026)  !< Numerical Z values defining the boundary
-  real*8  :: psi_boundary(1026)!< Numerical values giving the poloidal flux at the boundary
+  real*8  :: R_boundary  (258)!< Numerical R values defining the boundary
+  real*8  :: Z_boundary  (258)!< Numerical Z values defining the boundary
+  real*8  :: psi_boundary(258)!< Numerical values giving the poloidal flux at the boundary
   
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
@@ -293,8 +294,7 @@ module phys_module
   real*8, allocatable :: num_Te_y0(:)    !< Values of temperature profile
   real*8, allocatable :: num_Te_y1(:)    !< First derivatives of temperature profile (\f$ dT/d\Psi_N \f$)
   real*8, allocatable :: num_Te_y2(:)    !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
-  real*8, allocatable :: num_Te_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
-  
+  real*8, allocatable :: num_Te_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)  
   
   !> @name Analytical input profile for the neutral density (model 500)
   real*8  :: rhon_0, rhon_1,  rhon_coef(10)

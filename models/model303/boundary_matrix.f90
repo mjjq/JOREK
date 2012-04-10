@@ -38,9 +38,9 @@ real*8     :: psi, psi_s, vpar, rho,  T
 real*8     :: amat_61, amat_65, amat_66, amat_67
 logical    :: xpoint2
 
-theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
+!theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
-!theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
+theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 

@@ -186,7 +186,8 @@ subroutine preset_parameters
   
   linear_run         = .false.
   
-  export_for_nemec   = .false.
+  export_for_nemec      = .false.
+  save_diagnostics_HDF5 = .false.
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations

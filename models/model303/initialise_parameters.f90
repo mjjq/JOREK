@@ -96,7 +96,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
  !==============================MB==========================
    if (n_boundary.ne.0) then
  ! --- Open the file.
-    OPEN(UNIT=43, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
       write(*,*) 'ERROR in define_boundary: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
       stop
@@ -104,7 +104,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
     write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
 
     do i=1,n_boundary
-    read(43,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+    read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
     write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
     enddo  
   endif

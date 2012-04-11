@@ -612,7 +612,7 @@ program JOREK2
         ! --- Build the graph
         !   TODO : Avoid doubles
         call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms, &
-          element_list, node_list, n_aa, my_id)
+          element_list, node_list, n_aa, my_id, my_id_trans, n_cpu_trans)
         call system_clock(count=t0)
         ! Build local_elms from loc2glob
         n_local_elms = 0
@@ -627,8 +627,8 @@ program JOREK2
               DO i_order = 1, n_order+1
 
                  index_node1 = node_list%node(inode1)%index(i_order)
-
-                 call vertex_is_local(index_node1, is_local)
+                 
+                    call vertex_is_local(index_node1, is_local)
                  IF (is_local) THEN      
                     n_local_elms = n_local_elms + 1
                     EXIT
@@ -641,19 +641,6 @@ program JOREK2
            END DO
         END DO
 
-        ! Check that the number of local elements is the same on each processor
-        ! of MPI_COMM_TRANS
-        call tr_allocate(tab_n_local_elems, 1, n_cpu_trans, "tab_n_local_elems",CAT_FEM)
-        CALL MPI_Allgather(n_local_elms,      1, MPI_INTEGER, &
-             &             tab_n_local_elems, 1, MPI_INTEGER, &
-             &             MPI_COMM_TRANS, ierr)
-        do i = 1, n_cpu_trans
-           if (n_local_elms .ne. tab_n_local_elems(i)) then
-              print *, "ERROR: n_local_elms qhould be the same over MPI_COMM_TRANS"
-              call abort()
-           end if
-        end do
-        call tr_deallocate(tab_n_local_elems, "tab_n_local_elems",CAT_FEM)
         IF (ALLOCATED(local_elms)) call tr_deallocate(local_elms,"local_elms",CAT_FEM)
         ! Build local_elms from loc2glob
         call tr_allocate(local_elms,1,n_local_elms,"local_elms",CAT_FEM)
@@ -670,10 +657,7 @@ program JOREK2
 
                  index_node1 = node_list%node(inode1)%index(i_order)
 
-                 !index_large_i = n_tor * n_var * (index_node1 - 1)
-
-                 !call vertex_is_local(index_node1*n_tor * n_var, loc2glob, local_n, is_local)
-                 call vertex_is_local(index_node1, is_local)
+                    call vertex_is_local(index_node1, is_local)
                  IF (is_local) THEN      
                     n_local_elms = n_local_elms + 1
                     local_elms(n_local_elms) = i_elem
@@ -818,7 +802,7 @@ program JOREK2
              n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
              xpoint,xcase,psi_axis,psi_bnd,Z_xpoint,psi_xpoint)        ! construct the matrix from elemental matrices
      endif
-     call del_thread_buffers()
+     
 
      call system_clock(count=t1)   
      nb_periods = t1-t0
@@ -1004,7 +988,7 @@ program JOREK2
 #endif
      elseif (use_pastix) then
         if ( use_murge ) then 
-          call murge_termination
+          call murge_termination(gmres)
         else
            pastix_iparm(2)     = 7                       ! Clean-up
            pastix_iparm(3)     = 7
@@ -1166,7 +1150,7 @@ program JOREK2
 
   call r3_info_summary ()                                ! timing
   call MPI_FINALIZE(IERR)                                ! clean up MPI
-
+  call del_thread_buffers()
 
 end program JOREK2
 

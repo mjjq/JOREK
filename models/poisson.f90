@@ -285,7 +285,7 @@ if (my_id == 0) then
 
    nnz = mumps_par%JCN(mumps_par%N+1) - 1
    call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
-        1, 0, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
+        1, pastix_sym, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
    write (*,*) "nnz", nnz
    mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
    if (mumps_par%NZ /= nnz ) then

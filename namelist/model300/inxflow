@@ -99,4 +99,6 @@
  rho_coef(4)  =  0.08
  rho_coef(5)  =  0.94d0
 
+ use_murge    = .f.
+ use_murge_element = .f.
 /

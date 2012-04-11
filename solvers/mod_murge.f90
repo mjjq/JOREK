@@ -1,25 +1,26 @@
 !> Variables and and routines related to the MURGE solver interface.
 MODULE murge_module
-  use tr_module 
+  use tr_module
   IMPLICIT NONE
 
   INCLUDE "murge.inc"
   !include "hips.inc"
   ! Indicate which solver is used
-  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_solver  
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_solver
 
   ! Solver identification number
-  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_id      
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_id
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_id_prod
   INTEGER                                     :: murge_harmonic
   ! Local number of element
-  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_local_n 
-  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_local_n_prod 
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_local_n
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_local_n_prod
   ! Global number of element
-  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_global_n 
-  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_global_n_prod 
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_global_n
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_global_n_prod
   ! Number of dof by node
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_ndof
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_ndof_prod
 
   ! Local element list
   INTEGER(KIND=MURGE_INTS_KIND), ALLOCATABLE  :: murge_loc2glob(:)
@@ -72,9 +73,9 @@ MODULE murge_module
 CONTAINS
   !>
   !! Subroutine: murge_add_one_entry
-  !! 
+  !!
   !! Add one entry to the product and/or harminic matrix.
-  !! 
+  !!
   !! @param index_node  row node index
   !! @param k           row var index
   !! @param in          row tor index
@@ -85,9 +86,9 @@ CONTAINS
   !! @param solve_only  Do not add to harmonic matrix if .true.
   !! @param gmres       Do not add to product matrix if .false.
   !!
-  SUBROUTINE murge_add_one_entry( index_node, k, in, index_node2, k2,&
+  SUBROUTINE murge_add_one_entry( index_node, k, in, index_node2, k2,          &
        &                          in2, zbig, murge_ntor, solve_only, gmres )
-    USE parameters 
+    USE parameters
 
     INTEGER :: index_node,  k,  in
     INTEGER :: index_node2, k2, in2
@@ -95,31 +96,31 @@ CONTAINS
     INTEGER :: murge_ntor
     INTEGER(kind=MURGE_INTS_KIND) :: ierr
     LOGICAL :: solve_only, gmres
-    INTEGER(KIND=MURGE_INTS_KIND) :: row_idx, col_idx  
+    INTEGER(KIND=MURGE_INTS_KIND) :: row_idx, col_idx
 #ifdef USE_MURGE
     IF (.NOT. solve_only) THEN
-       row_idx = murge_ndof * (index_node - 1) + (k -1)*murge_ntor + 1 
+       row_idx = murge_ndof * (index_node - 1) + (k -1)*murge_ntor + 1
        col_idx = murge_ndof * (index_node2- 1) + (k2-1)*murge_ntor + 1
-       IF (in /= 1) row_idx = row_idx + MOD(in, 2) 
-       IF (in2 /= 1) col_idx = col_idx + MOD(in2, 2) 
-       CALL MURGE_ASSEMBLYSETVALUE( murge_id, row_idx, col_idx, zbig,&
+       IF (in /= 1) row_idx = row_idx + MOD(in, 2)
+       IF (in2 /= 1) col_idx = col_idx + MOD(in2, 2)
+       CALL MURGE_ASSEMBLYSETVALUE( murge_id, row_idx, col_idx, zbig,          &
             &                       ierr )
        IF (ierr /= MURGE_SUCCESS) THEN
-          WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", &
-               "I", index_node, murge_ndof, k, in, &
+          WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ",                     &
+               "I", index_node, murge_ndof, k, in,                             &
                "J", index_node2, k2, in2
           STOP
        END IF
     END IF
     IF (gmres) THEN
        row_idx = n_tor*n_var * (index_node - 1) + (k -1)*n_tor + in
-       col_idx = n_tor*n_var * (index_node2- 1) + (k2-1)*n_tor + in2 
-       CALL MURGE_ASSEMBLYSETVALUE( murge_id_prod, row_idx, col_idx, zbig,&
+       col_idx = n_tor*n_var * (index_node2- 1) + (k2-1)*n_tor + in2
+       CALL MURGE_ASSEMBLYSETVALUE( murge_id_prod, row_idx, col_idx, zbig,     &
             &                       ierr )
 
        IF (ierr /= MURGE_SUCCESS) THEN
-          WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE(prod) ", &
-               "I", index_node, n_tor, n_var, k, in, &
+          WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE(prod) ",               &
+               "I", index_node, n_tor, n_var, k, in,                           &
                "J", index_node2, k2, in2
           STOP
        END IF
@@ -142,7 +143,7 @@ CONTAINS
     INTEGER, EXTERNAL :: omp_get_num_threads
     INTEGER(KIND=MURGE_INTS_KIND) :: ierr
     INTEGER(KIND=MURGE_INTS_KIND) :: ndof
-    
+
 #ifdef USE_MURGE
 
 
@@ -159,25 +160,33 @@ CONTAINS
           CALL MURGE_Initialize(2, ierr)
           IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
              CALL MURGE_SetDefaultOptions(murge_id_prod, 0, ierr)
-             CALL MURGE_SetOptionINT(murge_id_prod, IPARM_VERBOSE,        &
+             CALL MURGE_SetOptionINT(murge_id_prod, IPARM_VERBOSE,             &
                   &                  API_VERBOSE_YES, ierr)
-             CALL MURGE_SetOptionINT(murge_id_prod,                       &
-                  &                  IPARM_MATRIX_VERIFICATION,           &
+             CALL MURGE_SetOptionINT(murge_id_prod,                            &
+                  &                  IPARM_MATRIX_VERIFICATION,                &
                   &                  API_YES,         ierr)
-             CALL MURGE_SetOptionINT(murge_id_prod, IPARM_THREAD_NBR,     &
+             CALL MURGE_SetOptionINT(murge_id_prod, IPARM_THREAD_NBR,          &
                   &                  murge_nthrd,     ierr)
-             CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_SYM,     &
+             CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_SYM,          &
                   &                  murge_sym,       ierr)
-             CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_BASEVAL, &
+             CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_BASEVAL,      &
                   &                  1,               ierr)
-             ndof = n_tor*n_var
-             CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_DOF,     &
-                  &                  ndof,     ierr)  
+             murge_ndof_prod = n_tor*n_var
+!#define MURGE_PROD_NODE
+#ifdef MURGE_PROD_NODE
+             ndof = murge_ndof_prod
+#else
+             ndof = 1
+#endif
+             CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_DOF,          &
+                  &                  ndof,     ierr)
              CALL MURGE_SetCommunicator(murge_id_prod, MPI_COMM_WORLD, ierr)
+             CALL MURGE_SetOptionREAL(murge_id_prod, DPARM_EPSILON_MAGN_CTRL,  &
+                  &                   murge_pivot,     ierr)
 
              CALL MURGE_SetDefaultOptions(murge_id,      0, ierr)
-!             CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINMENT,     &
-!                  &                  API_NO,     ierr)  
+!             CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINMENT,         &
+!                  &                  API_NO,     ierr)
              CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
           END IF
        ELSE
@@ -190,13 +199,13 @@ CONTAINS
 
        IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
 
-          CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,             &
+          CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,                     &
                &                  API_VERBOSE_YES, ierr)
-          CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, &
+          CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION,         &
                &                  API_YES,         ierr)
           ! refinement : max number of iterations
-          CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,             &
-               &                  murge_iter,      ierr) 
+          CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,                     &
+               &                  murge_iter,      ierr)
           ! degrees of freedom per node (not correct)
           IF (gmres) THEN
              IF ( i_tor(my_id+1) == 1 ) THEN
@@ -204,36 +213,37 @@ CONTAINS
              ELSE
                 murge_ndof = 2*n_var
              END IF
-             CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,         &
-                  &                  2*n_var,      ierr) 
+             CALL MURGE_SetOptionINT(murge_id, IPARM_DOF_COST,                 &
+                  &                  2*n_var,      ierr)
           ELSE
              murge_ndof = n_tor*n_var
           END IF
-          CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF,          &
-               &                  murge_ndof,      ierr) 
+          CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF,                  &
+               &                  murge_ndof,      ierr)
           ! TODO : omp_num_thread
-          CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,          &
+          CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,                  &
                &                  murge_nthrd,     ierr)
-          CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,       &
+          CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,               &
                &                  murge_iluk,      ierr)
-          CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,          &
+          CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,                  &
                &                  murge_ricar,     ierr)
-          CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,  &
+          CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,          &
                &                  murge_amalg,     ierr)
-          CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, &
+          CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION,         &
                &                  API_YES,         ierr)
 
-          CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,  murge_pivot,     ierr)
+          CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,          &
+               &                   murge_pivot,     ierr)
 
        ENDIF
 
 
-       CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_SYM,         &
+       CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_SYM,                     &
             &                  murge_sym,   ierr)
-       CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_BASEVAL,     &
+       CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_BASEVAL,                 &
             &                  1,   ierr)
 
-       CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR, &
+       CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR,          &
             &                   murge_epsilon, ierr)
 
        murge_initialised = .TRUE.
@@ -245,22 +255,31 @@ CONTAINS
 #endif
   END SUBROUTINE murge_initialization
 
-  SUBROUTINE murge_termination
+  SUBROUTINE murge_termination(gmres)
+    LOGICAL :: gmres
+
     integer ierr
 
 #ifdef USE_MURGE
     IF ( use_murge_element ) THEN
-      IF (ALLOCATED(murge_glob2loc)) call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
-      IF (ALLOCATED(murge_loc2glob)) call tr_deallocate(murge_loc2glob,"murge_loc2glob",CAT_DMATRIX)
-      IF (ALLOCATED(murge_loc2glob_prod)) call tr_deallocate(murge_loc2glob_prod,"murge_loc2glob_prod",CAT_DMATRIX)
+      IF (ALLOCATED(murge_glob2loc))                                           &
+           call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
+      IF (ALLOCATED(murge_loc2glob))                                           &
+           call tr_deallocate(murge_loc2glob,"murge_loc2glob",CAT_DMATRIX)
+      IF (ALLOCATED(murge_loc2glob_prod))                                      &
+           call tr_deallocate(murge_loc2glob_prod,"murge_loc2glob_prod",       &
+           &                  CAT_DMATRIX)
     END IF
     CALL MURGE_Clean(murge_id, ierr)
+    if (gmres) then
+       CALL MURGE_Clean(murge_id_prod, ierr)
+    end if
 #endif
 
   END SUBROUTINE murge_termination
 
   SUBROUTINE murge_setGraph(gmres, n, local_elms, n_local_elms, element_list, &
-       &                    node_list, n_aa, my_id)
+       &                    node_list, n_aa, my_id, my_id_trans, n_cpu_trans)
 
     use parameters, only : n_order, n_vertex_max
     use data_structure, only : type_element, type_element_list, type_node_list
@@ -271,38 +290,33 @@ CONTAINS
     type (type_node_list)    :: node_list
     integer :: n_aa
     integer :: my_id
+    integer :: my_id_trans
+    integer :: n_cpu_trans
 
     integer :: local_elms(:)
 
     integer(KIND=MURGE_INTS_KIND) :: ierr
     integer(KIND=MURGE_INTL_KIND) :: nnz
-    integer :: t0, t1
+    integer :: t0, t1, start
     integer :: i_elem
-    integer :: i, k, inode1, knode, i_order, k_order
+    integer :: i, j, k, inode1, knode, i_order, k_order
     integer(KIND=MURGE_INTS_KIND) :: index_node1, index_node2
     type (type_element)      :: element
     integer :: nb_periods, nb_periodes_max, nb_periodes_sec
     character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
-    
+
 #ifdef USE_MURGE
     call tr_debug_write("murge_setgraph begin")
     call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
-    
+
     murge_global_n      = n
     murge_global_n_prod = n
-    nnz = n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max 
+    nnz = n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max
 
     Call MURGE_GRAPHBEGIN(murge_id, murge_global_n, nnz, ierr)
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_GRAPHBEGIN"
        STOP
-    END IF
-    IF (gmres) THEN
-       CALL MURGE_GRAPHBEGIN(murge_id_prod, murge_global_n_prod, nnz, ierr)
-       IF (ierr /= MURGE_SUCCESS) THEN
-          write (*,*) "ERROR in MURGE_GRAPHBEGIN"
-          STOP
-       END IF
     END IF
     call system_clock(count=t0)
 
@@ -328,9 +342,9 @@ CONTAINS
                    index_node2 = node_list%node(knode)%index(k_order)
 
 
-                   CALL MURGE_GRAPHEDGE(murge_id,  &
-                        index_node1,         &
-                        index_node2,         &
+                   CALL MURGE_GRAPHEDGE(murge_id,                              &
+                        index_node1,                                           &
+                        index_node2,                                           &
                         ierr)
                    IF (ierr /= MURGE_SUCCESS) THEN
                       write (*,*) "N", n, n_AA,&
@@ -338,18 +352,6 @@ CONTAINS
                            "J", index_node2
                       STOP
                    END IF
-
-                   CALL MURGE_GRAPHEDGE(murge_id_prod,  &
-                        index_node1,         &
-                        index_node2,         &
-                        ierr)
-                   IF (ierr /= MURGE_SUCCESS) THEN
-                      write (*,*) "N", n, n_AA,&
-                           "I", index_node1, &
-                           "J", index_node2
-                      STOP
-                   END IF
-
 
                 END DO
              END DO
@@ -361,7 +363,8 @@ CONTAINS
     call system_clock(count=t1)
     nb_periods = t1-t0
     if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING) my_id, ' system_clock elapsed time entering graph ',REAL(nb_periods)/nb_periodes_sec
+    write(*,FMT_TIMING) my_id, ' system_clock elapsed time entering graph ',   &
+         REAL(nb_periods)/nb_periodes_sec
 
     call system_clock(count=t0)
     CALL MURGE_GRAPHEND(murge_id, ierr)
@@ -372,14 +375,9 @@ CONTAINS
     call system_clock(count=t1)
     nb_periods = t1-t0
     if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GRAPHEND ',REAL(nb_periods)/nb_periodes_sec
-
-
-    CALL MURGE_GRAPHEND(murge_id_prod, ierr)
-    IF (ierr /= MURGE_SUCCESS) THEN
-       write (*,*) "ERROR in MURGE_GRAPHEND"
-       STOP
-    END IF
+    write(*,FMT_TIMING)                                                        &
+         my_id, ' system_clock elapsed time in MURGE_GRAPHEND ',               &
+         REAL(nb_periods)/nb_periodes_sec
 
     call system_clock(count=t0)
     CALL MURGE_GETLOCALNODENBR(murge_id, murge_local_n, ierr)
@@ -387,44 +385,79 @@ CONTAINS
        write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
        STOP
     END IF
-    CALL MURGE_GETLOCALNODENBR(murge_id_prod, murge_local_n_prod, ierr)
+    murge_local_n_prod =                                                       &
+         (murge_local_n-MOD(murge_local_n, n_cpu_trans))/n_cpu_trans
+    if (my_id_trans .lt. MOD(murge_local_n, n_cpu_trans)) then
+       murge_local_n_prod = murge_local_n_prod + 1
+    end if
+#ifndef MURGE_PROD_NODE
+    murge_local_n_prod = murge_local_n_prod * murge_ndof_prod
+    print *, my_id, "murge_local_n_prod", murge_local_n_prod
+#endif
+    CALL MURGE_PRODUCTSETLOCALNODENBR(murge_id_prod, murge_local_n_prod, ierr)
     IF (ierr /= MURGE_SUCCESS) THEN
-       write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
+       write (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODENBR"
        STOP
     END IF
     call system_clock(count=t1)
     nb_periods = t1-t0
     if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GETLOCALNODENBR ',REAL(nb_periods)/nb_periodes_sec
+    write(*,FMT_TIMING) my_id,                                                 &
+         ' system_clock elapsed time in MURGE_GETLOCALNODENBR ',               &
+         REAL(nb_periods)/nb_periodes_sec
 
 
-    call tr_allocate(murge_loc2glob,1,murge_local_n,"murge_loc2glob",CAT_DMATRIX)
-    call tr_allocate(murge_loc2glob_prod,1,murge_local_n_prod,"murge_loc2glob_prod",CAT_DMATRIX)
+    call tr_allocate(murge_loc2glob, 1, murge_local_n, "murge_loc2glob",       &
+         &           CAT_DMATRIX)
+    call tr_allocate( murge_loc2glob_prod, 1, murge_local_n_prod,              &
+         &            "murge_loc2glob_prod",CAT_DMATRIX)
     write (*,*) "Local number of nodes", murge_local_n, "global",  n
     call system_clock(count=t0)
     CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
-    if (allocated(murge_glob2loc)) call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
+    if (allocated(murge_glob2loc))                                             &
+         call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
 
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
        STOP
     END IF
+    start = murge_local_n_prod*my_id_trans
+#ifndef MURGE_PROD_NODE
+    start = start/ murge_ndof_prod
+#endif
+    start = start + MIN(my_id_trans, MOD(murge_local_n,n_cpu_trans))
 
-    CALL MURGE_GETLOCALNODELIST(murge_id_prod, murge_loc2glob_prod, ierr)
-    if (allocated(murge_glob2loc)) call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
+#ifdef MURGE_PROD_NODE
+    do i = 1, murge_local_n_prod
+       murge_loc2glob_prod(i) = murge_loc2glob(start + i)
+    end do
+#else
+    do i = 1, murge_local_n_prod/murge_ndof_prod
+       do j = 1, murge_ndof_prod
+          murge_loc2glob_prod((i-1)*murge_ndof_prod+j) =                       &
+               (murge_loc2glob(start + i)-1)*murge_ndof_prod+j
+       end do
+    end do
+#endif
+    CALL MURGE_PRODUCTSETLOCALNODELIST(murge_id_prod, murge_loc2glob_prod, ierr)
+    if (allocated(murge_glob2loc_prod))                                        &
+         call tr_deallocate(murge_glob2loc_prod,"murge_glob2loc",CAT_DMATRIX)
 
     IF (ierr /= MURGE_SUCCESS) THEN
-       write (*,*) "ERROR in MURGE_GETLOCALNODELIST"
+       write (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODELIST"
        STOP
     END IF
     call system_clock(count=t1)
     nb_periods = t1-t0
     if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING) my_id, ' system_clock elapsed time in MURGE_GETLOCALNODELIST ',REAL(nb_periods)/nb_periodes_sec
+    write(*,FMT_TIMING) my_id,                                                 &
+         ' system_clock elapsed time in MURGE_GETLOCALNODELIST ',              &
+         REAL(nb_periods)/nb_periodes_sec
 
     !!murge_local_n_prod = murge_local_n/((n_tor+1)/2)
     !!if (my_id == 0) then
-    !!   murge_local_n_prod = murge_local_n_prod + MOD(murge_local_n, (n_tor+1)/2)
+    !!   murge_local_n_prod = murge_local_n_prod +                             &
+    !!       MOD(murge_local_n, (n_tor+1)/2)
     !!end if
     !!allocate (murge_loc2glob_prod(murge_local_n_prod))
     !!iter2=1
@@ -432,7 +465,8 @@ CONTAINS
     !!   murge_loc2glob_prod(iter2) = murge_loc2glob(iter)
     !!   iter2 = iter2 + 1
     !!end do
-    !!call MURGE_SETLOCALNODELIST(murge_id_prod, murge_local_n_prod, murge_loc2glob_prod, ierr)
+    !!call MURGE_SETLOCALNODELIST(murge_id_prod, murge_local_n_prod,           &
+    !!     &                      murge_loc2glob_prod, ierr)
     !!IF (ierr /= MURGE_SUCCESS) THEN
     !!   write (*,*) "ERROR in MURGE_SETLOCALNODELIST"
     !!   STOP

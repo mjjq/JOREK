@@ -323,6 +323,13 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
+  !write(string, '(A8,I2.2,A1)') "matrice_",my_id,"\0"
+  !open(unit=9, file=string, STATUS='replace')
+  !do k = 1, nz_glob
+  !   if (A_glob(k) /= 0.0_8) &
+  !        write(9, '(I8.8,1X,I8.8,1X,E20.12)'), jcn_glob(k), irn_glob(k), A_glob(k)
+  !end do
+  !close(unit=9)
   call r3_info_end(r3_info_index_0) !timing
   call tr_print_memsize("EndConstM")
   return

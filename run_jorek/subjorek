@@ -86,16 +86,16 @@ source /data/JOREK/jorek_env/jorek_env.sh
 ;;
 
 # -----------------------------------------------------------------
-# jade (cines)
+# ccamu (Marseille)
 # -----------------------------------------------------------------
-jade*)
+ccamu*)
 
 # batch control
 # -------------
-MPIPROCS=4
+MPIPROCS=2
 NTHREAD=8
-NNODES=4
-WALLTIME=1800
+NNODES=2
+WALLTIME=01:00:00
 ((NPES=NNODES*MPIPROCS))
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
@@ -105,15 +105,25 @@ echo " "
 
 # Environment
 # -----------
-DIR=$(basename $(dirname $PWD))
-HOMEDIR=/scratch/$USER/${DIR}
-SRCDIR=$HOMEDIR
+DIR=$(dirname $PWD)
+SRCDIR=$DIR
+WKDIR=`pwd`
 UTILDIR=${SRCDIR}/util
 
-DIR=$(basename $PWD)
-WKDIR=${HOMEDIR}/${DIR}
-RESDIR1=${WKDIR}
+DIR=$(basename $(dirname $PWD))
+RESDIR1=/data/${USER}/${DIR}
 RESDIR=${RESDIR1}/${CASE}
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
 
 # Creation of the work directory
 # ------------------------------
@@ -378,9 +388,9 @@ if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
    echo "==================================================================================="
    echo " ***   Restart file does not exist, so INIT"
    out_increment=0
-   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
-   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
-   echo " ============> saving input data to file = " ${CASE}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
+   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}_${out_increment}.out
+   echo " ============> saving input data to file = " ${CASE}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
    echo "==================================================================================="
    echo " "
 else
@@ -388,9 +398,9 @@ else
    echo " ***   Restart file does exist, so LOOP"
    tmp=$(ls ${RESDIR}/*.rst | wc -l)
    (( out_increment= $tmp - 1 ))
-   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
-   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
-   echo " ============> saving input data to file = " ${CASE}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
+   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}_${out_increment}.out
+   echo " ============> saving input data to file = " ${CASE}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
    echo "==================================================================================="
    echo " "
 fi
@@ -405,7 +415,7 @@ case ${ARCH} in
 nfs*)
 
 JOREKENV="source /data/JOREK/jorek_env/jorek_env.sh"
-CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}_${out_increment}.out"
 CMD_SUB="qsub go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
@@ -431,6 +441,46 @@ source /data/JOREK/jorek_env/jorek_env.sh
 mpdallexit &> /dev/null
 sort -u < \$PBS_NODEFILE > ${RESDIR}/machinefile
 mpdboot -n ${NNODES} -f ${RESDIR}/machinefile
+
+EOF
+;;
+# -----------------------------------------------------------------
+# ccamu (Marseille)
+# -----------------------------------------------------------------
+ccamu*)
+
+#CMD_MPIRUN="mpdboot -r oarsh --totalnum=${NNODES} --file=\$OAR_NODEFILE;mpiexec -ppn 1 -n ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}_${out_increment}.out"
+CMD_MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f ${WKDIR}/mach -iface ib0 -n ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}_${out_increment}.out"
+CMD_SUB="oarsub -S ./go_${DATANAME}.cmd"
+CMD_SUBRST='wrapper_oar "'${CMD_SUB}'"'
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#OAR -n jorek
+#OAR -l host=${NNODES},walltime=${WALLTIME}
+#OAR -p nbcores=12 and visu='NO' 
+#OAR -O ${DATANAME}.%jobid%.log
+#OAR -E ${DATANAME}.%jobid%.log 
+
+wrapper_oar() { echo \$1 ; ssh $USER@login "cd ${WKDIR}; \$1 "; }
+
+# environment
+#------------
+ulimit -Sa
+ulimit -Ha
+
+# machinefile creation
+# -------------------
+echo " == hostfile ==="
+cat \$OAR_NODEFILE | sort -u > mach
+cat mach
+echo ''
+
+module list
+
+export OMP_NUM_THREADS=${NTHREAD}
 
 EOF
 ;;

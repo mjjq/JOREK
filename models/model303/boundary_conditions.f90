@@ -105,7 +105,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
         endif
      enddo
      
-     if (psi_test .le. psi_RMP_cos(1)) then
+     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
      !   establish_RMP = (1.d-3)*tstep
       sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
           - ( 1. + exp(-lambda*( 0. - tset )))**(-1) 

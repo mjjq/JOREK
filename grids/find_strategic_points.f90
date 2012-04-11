@@ -463,34 +463,34 @@ write(*,'(A)')                  '|                                              
 
 if (xcase .ne. 2) then
   write(*,'(A)')                '| Lower Legs : ------------------------------------------|'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Upper corner of the Lower Inner Leg  : (',stpts%RLimit_LowerInnerLeg,    ', ', stpts%ZLimit_LowerInnerLeg,    ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Left corner  of the Lower Inner Leg  : (',stpts%RLeftCorn_LowerInnerLeg, ', ', stpts%ZLeftCorn_LowerInnerLeg, ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Strike point of the Lower Inner Leg  : (',stpts%RStrike_LowerInnerLeg,   ', ', stpts%ZStrike_LowerInnerLeg,   ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Right corner of the Lower Inner Leg  : (',stpts%RRightCorn_LowerInnerLeg,', ', stpts%ZRightCorn_LowerInnerLeg,') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Middle of the Lower Private surface  : (',stpts%RMiddle_LowerPrivate,    ', ', stpts%ZMiddle_LowerPrivate ,   ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Left corner  of the Lower Outer Leg  : (',stpts%RLeftCorn_LowerOuterLeg, ', ', stpts%ZLeftCorn_LowerOuterLeg, ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Strike point of the Lower Outer Leg  : (',stpts%RStrike_LowerOuterLeg,   ', ', stpts%ZStrike_LowerOuterLeg,   ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Right corner of the Lower Outer Leg  : (',stpts%RRightCorn_LowerOuterLeg,', ', stpts%ZRightCorn_LowerOuterLeg,') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Upper corner of the Lower Outer Leg  : (',stpts%RLimit_LowerOuterLeg,    ', ', stpts%ZLimit_LowerOuterLeg,    ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Upper corner of the Lower Inner Leg  : (',stpts%RLimit_LowerInnerLeg,    ', ', stpts%ZLimit_LowerInnerLeg,    ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Left corner  of the Lower Inner Leg  : (',stpts%RLeftCorn_LowerInnerLeg, ', ', stpts%ZLeftCorn_LowerInnerLeg, ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Strike point of the Lower Inner Leg  : (',stpts%RStrike_LowerInnerLeg,   ', ', stpts%ZStrike_LowerInnerLeg,   ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Right corner of the Lower Inner Leg  : (',stpts%RRightCorn_LowerInnerLeg,', ', stpts%ZRightCorn_LowerInnerLeg,') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Middle of the Lower Private surface  : (',stpts%RMiddle_LowerPrivate,    ', ', stpts%ZMiddle_LowerPrivate ,   ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Left corner  of the Lower Outer Leg  : (',stpts%RLeftCorn_LowerOuterLeg, ', ', stpts%ZLeftCorn_LowerOuterLeg, ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Strike point of the Lower Outer Leg  : (',stpts%RStrike_LowerOuterLeg,   ', ', stpts%ZStrike_LowerOuterLeg,   ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Right corner of the Lower Outer Leg  : (',stpts%RRightCorn_LowerOuterLeg,', ', stpts%ZRightCorn_LowerOuterLeg,') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Upper corner of the Lower Outer Leg  : (',stpts%RLimit_LowerOuterLeg,    ', ', stpts%ZLimit_LowerOuterLeg,    ') |'
 endif
 
 if (xcase .ne. 1) then
   write(*,'(A)')                '| Upper Legs : ------------------------------------------|'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Lower corner of the Upper Inner Leg  : (',stpts%RLimit_UpperInnerLeg,    ', ', stpts%ZLimit_UpperInnerLeg,    ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Left corner  of the Upper Inner Leg  : (',stpts%RLeftCorn_UpperInnerLeg, ', ', stpts%ZLeftCorn_UpperInnerLeg, ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Strike point of the Upper Inner Leg  : (',stpts%RStrike_UpperInnerLeg,   ', ', stpts%ZStrike_UpperInnerLeg,   ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Right corner of the Upper Inner Leg  : (',stpts%RRightCorn_UpperInnerLeg,', ', stpts%ZRightCorn_UpperInnerLeg,') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Middle of the Upper Private surface  : (',stpts%RMiddle_UpperPrivate,    ', ', stpts%ZMiddle_UpperPrivate ,   ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Left corner  of the Upper Outer Leg  : (',stpts%RLeftCorn_UpperOuterLeg, ', ', stpts%ZLeftCorn_UpperOuterLeg, ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Strike point of the Upper Outer Leg  : (',stpts%RStrike_UpperOuterLeg,   ', ', stpts%ZStrike_UpperOuterLeg,   ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Right corner of the Upper Outer Leg  : (',stpts%RRightCorn_UpperOuterLeg,', ', stpts%ZRightCorn_UpperOuterLeg,') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Lower corner of the Upper Outer Leg  : (',stpts%RLimit_UpperOuterLeg,    ', ', stpts%ZLimit_UpperOuterLeg,    ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Lower corner of the Upper Inner Leg  : (',stpts%RLimit_UpperInnerLeg,    ', ', stpts%ZLimit_UpperInnerLeg,    ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Left corner  of the Upper Inner Leg  : (',stpts%RLeftCorn_UpperInnerLeg, ', ', stpts%ZLeftCorn_UpperInnerLeg, ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Strike point of the Upper Inner Leg  : (',stpts%RStrike_UpperInnerLeg,   ', ', stpts%ZStrike_UpperInnerLeg,   ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Right corner of the Upper Inner Leg  : (',stpts%RRightCorn_UpperInnerLeg,', ', stpts%ZRightCorn_UpperInnerLeg,') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Middle of the Upper Private surface  : (',stpts%RMiddle_UpperPrivate,    ', ', stpts%ZMiddle_UpperPrivate ,   ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Left corner  of the Upper Outer Leg  : (',stpts%RLeftCorn_UpperOuterLeg, ', ', stpts%ZLeftCorn_UpperOuterLeg, ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Strike point of the Upper Outer Leg  : (',stpts%RStrike_UpperOuterLeg,   ', ', stpts%ZStrike_UpperOuterLeg,   ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Right corner of the Upper Outer Leg  : (',stpts%RRightCorn_UpperOuterLeg,', ', stpts%ZRightCorn_UpperOuterLeg,') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Lower corner of the Upper Outer Leg  : (',stpts%RLimit_UpperOuterLeg,    ', ', stpts%ZLimit_UpperOuterLeg,    ') |'
 endif
 
 if (xcase .eq. 3) then
   write(*,'(A)')                '| Secondary Strike Points : -----------------------------|'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,  ', ', stpts%ZSecondStrike_InnerLeg,  ') |'
-  write(*,'(A,f4.2,A,f5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,  ', ', stpts%ZSecondStrike_OuterLeg,  ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,  ', ', stpts%ZSecondStrike_InnerLeg,  ') |'
+  write(*,'(A,F4.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,  ', ', stpts%ZSecondStrike_OuterLeg,  ') |'
 endif
 write(*,'(A)')                  '|________________________________________________________|'
 

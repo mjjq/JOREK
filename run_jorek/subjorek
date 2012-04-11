@@ -111,7 +111,7 @@ WKDIR=`pwd`
 UTILDIR=${SRCDIR}/util
 
 DIR=$(basename $(dirname $PWD))
-RESDIR1=/data/${USER}/${DIR}
+RESDIR1=/scratch/${USER}/${DIR}
 RESDIR=${RESDIR1}/${CASE}
 
 # Creation of the work directory
@@ -226,7 +226,7 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   echo "==================================================================================="
   echo " "
   cd ${SRCDIR}
-
+  
   ${UTILDIR}//setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
 
   if [ -e jorek_model${MODELNUMBER} ]; then rm -f jorek_model${MODELNUMBER}; fi
@@ -234,7 +234,7 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
   # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
   sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make -j 4
+  make -j 4 > output_jorek.out
 
   if [ -e jorek_model${MODELNUMBER} ]; then mv jorek_model${MODELNUMBER} ${EXECNAME}; fi
 fi

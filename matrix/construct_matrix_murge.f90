@@ -141,6 +141,7 @@ CONTAINS
     INTEGER                        :: node, iter, total, t0, t1, tt0, tt1
     INTEGER                        :: thread, iter_dof_row, iter_dof_col
     INTEGER                        :: row, col
+    REAL(KIND=MURGE_COEF_KIND)     :: val
     INTEGER,               POINTER :: matrix_nbr_rcv(:,:), pt_matrix_nbr
 
     elem_size = n_tor*n_vertex_max*(n_order+1)*n_var

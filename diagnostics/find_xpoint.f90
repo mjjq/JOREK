@@ -22,7 +22,7 @@ integer,                  intent(out)   :: ifail
 
 ! --- Local variables
 real*8  :: grad_psi, grad_psi_min(2), ps_s, ps_t
-real*8  :: R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
+real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: ps_x, ps_y, xjac
 integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv
 
@@ -54,6 +54,7 @@ do i=1,element_list%n_elements
       Z_s  = 0.d0
       R_t  = 0.d0 
       Z_t  = 0.d0
+      R    = 0.d0
       Z    = 0.d0
 
       do kf = 1, 4       ! 4 basis functions
@@ -64,6 +65,7 @@ do i=1,element_list%n_elements
           ps_s = ps_s + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
           ps_t = ps_t + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
 
+          R   = R   + node_list%node(iv)%x(kf,1) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
           Z   = Z   + node_list%node(iv)%x(kf,2) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
 
           R_s = R_s + node_list%node(iv)%x(kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
@@ -81,6 +83,7 @@ do i=1,element_list%n_elements
       grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
       
       ! --- Look for the lower Xpoint
+!      if ((grad_psi .lt. grad_psi_min(1)) .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (xcase .ne. 2)) then !MAST!!!
       if ((grad_psi .lt. grad_psi_min(1)) .and. (Z .lt. -0.4d0) .and. (xcase .ne. 2)) then
         grad_psi_min(1) = grad_psi
 	Z_xpoint(1)     = Z
@@ -88,6 +91,7 @@ do i=1,element_list%n_elements
         ij_xpoint(1,1) = ms;         ij_xpoint(1,2)  = mt
       endif
       ! --- And for the upper Xpoint
+!      if ((grad_psi .lt. grad_psi_min(2)) .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (xcase .ne. 1)) then !MAST!!!
       if ((grad_psi .lt. grad_psi_min(2)) .and. (Z .gt.  0.4d0) .and. (xcase .ne. 1)) then
         grad_psi_min(2) = grad_psi
 	Z_xpoint(2)     = Z

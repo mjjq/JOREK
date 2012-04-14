@@ -129,15 +129,15 @@ module phys_module
   !> @name Fourier expanded boundary of initial grid
   !! Boundary of the non flux-aligned initial polar grid given as Fourier series
   integer :: mf                !< Number of entries in fbnd and fpsi
-  real*8  :: fbnd(258)        !< Fourier expansion of boundary
-  real*8  :: fpsi(258)        !< Fourier expansion of the poloidal flux at the boundary
+  real*8  :: fbnd(512)        !< Fourier expansion of boundary
+  real*8  :: fpsi(512)        !< Fourier expansion of the poloidal flux at the boundary
   
   !> @name Numerical boundary of initial grid
   !! Numerical definition of the boundary of the non flux-aligned initial polar grid.
   integer :: n_boundary        !< Number of points in R_boundary, Z_boundary, psi_boundary.
-  real*8  :: R_boundary  (258)!< Numerical R values defining the boundary
-  real*8  :: Z_boundary  (258)!< Numerical Z values defining the boundary
-  real*8  :: psi_boundary(258)!< Numerical values giving the poloidal flux at the boundary
+  real*8  :: R_boundary  (512)!< Numerical R values defining the boundary
+  real*8  :: Z_boundary  (512)!< Numerical Z values defining the boundary
+  real*8  :: psi_boundary(512)!< Numerical values giving the poloidal flux at the boundary
   
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)

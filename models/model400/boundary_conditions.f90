@@ -95,6 +95,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   end if
 
   do loop = 1, loop_nbr
+#ifdef USE_MURGE
      if (loop == 2)  then
         write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
         if (.not. solve_only) then
@@ -106,6 +107,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
         end if
      end if
+#endif
 
      do i=1, n_local_elms
 
@@ -499,6 +501,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
            endif
         enddo
      enddo
+#ifdef USE_MURGE
      if (loop == 2) then
         if (.not. solve_only) then
            CALL MURGE_ASSEMBLYEND(murge_id, ierr)
@@ -507,6 +510,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
            CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
         end if
      end if
+#endif
   end do
   return
 end subroutine boundary_conditions

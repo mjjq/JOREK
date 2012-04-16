@@ -52,7 +52,7 @@ nfs*)
 MPIPROCS=1
 NTHREAD=8
 NNODES=2
-WALLTIME=01:00:00
+WALLTIME=02:00:00
 ((NPES=NNODES*MPIPROCS))
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
@@ -124,6 +124,46 @@ if [ ! -d ${RESDIR} ]; then
    mkdir -p ${RESDIR}
    ln -s ${RESDIR} ${CASE}
 fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+source ${HOME}/.bashrc
+source ${HOME}/.bash_profile
+;;
+
+# -----------------------------------------------------------------
+# jade (cines)
+# -----------------------------------------------------------------
+jade*)
+
+# batch control
+# -------------
+MPIPROCS=4
+NTHREAD=8
+NNODES=4
+WALLTIME=1800
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(basename $(dirname $PWD))
+HOMEDIR=/scratch/$USER/${DIR}
+SRCDIR=$HOMEDIR
+UTILDIR=${SRCDIR}/util
+
+DIR=$(basename $PWD)
+WKDIR=${HOMEDIR}/${DIR}
+RESDIR1=${WKDIR}
+RESDIR=${RESDIR1}/${CASE}
 
 # Creation of the work directory
 # ------------------------------
@@ -226,7 +266,7 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   echo "==================================================================================="
   echo " "
   cd ${SRCDIR}
-  
+
   ${UTILDIR}//setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
 
   if [ -e jorek_model${MODELNUMBER} ]; then rm -f jorek_model${MODELNUMBER}; fi
@@ -285,9 +325,9 @@ fi
 # Names of the profile files for
 # rho, T, ffprime
 # --------------------------
-rho_file=`grep rho_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '|  awk '{print $2}'`
-T_file=`grep T_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '|  awk '{print $2}'`
-ffprime_file=`grep ffprime_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+rho_file=`grep rho_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+T_file=`grep T_file                     $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+ffprime_file=`grep ffprime_file         $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 R_Z_psi_bnd_file=`grep R_Z_psi_bnd_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 
 # copy of the profiles files
@@ -297,7 +337,7 @@ if [ "$rho_file" != 'none' ]; then
    rho_dir=$(dirname $rho_file)
    rho_file=$(basename $rho_file)
    echo "==================================================================================="
-   echo " ===> reading of the profile file " ${rho_dir}/${rho_file}
+   echo " ===> reading of the profile file: " ${rho_dir}/${rho_file}
    if [ -e ${rho_dir}/${rho_file} ]; then
       echo "    ----- storing it to ${RESDIR}/${rho_dir}"
       if [ ! -e ${RESDIR}/${rho_dir} ]; then
@@ -314,10 +354,10 @@ if [ "$rho_file" != 'none' ]; then
 fi
 
 if [ "$T_file" != 'none' ]; then
-echo " T_file =" $T_file
+#echo " T_file =" $T_file
    T_dir=$(dirname $T_file)
    T_file=$(basename $T_file)
-   echo " ===> reading of the profile file " ${T_dir}/${T_file}
+   echo " ===> reading of the profile file: " ${T_dir}/${T_file}
    if [ -e ${RESDIR}/${T_dir} ]; then
       echo "    ----- storing it to ${RESDIR}/${T_dir}"
    else
@@ -338,7 +378,7 @@ fi
 if [ "$ffprime_file" != 'none' ]; then
    ffprime_dir=$(dirname $ffprime_file)
    ffprime_file=$(basename $ffprime_file)
-   echo " ===> reading of the file profile " ${ffprime_dir}/${ffprime_file}
+   echo " ===> reading of the file profile: " ${ffprime_dir}/${ffprime_file}
    if [ -e ${RESDIR}/${ffprime_dir} ]; then
       echo "    ----- storing it to ${RESDIR}/${ffprime_dir}"
    else
@@ -359,13 +399,12 @@ fi
 if [ "$R_Z_psi_bnd_file" != 'none' ]; then
    R_Z_psi_bnd_dir=$(dirname $R_Z_psi_bnd_file)
    R_Z_psi_bnd_file=$(basename $R_Z_psi_bnd_file)
-   echo " ===> reading of the file profile " ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file}
+   echo " ===> reading of the file profile: " ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file}
    if [ -e ${RESDIR}/${R_Z_psi_bnd_dir} ]; then
       echo "    ----- storing it to ${RESDIR}/${R_Z_psi_bnd_dir}"
    else
        if [ "${R_Z_psi_bnd_dir}" != "." ]; then
        	  # echo " creation of ${RESDIR}/${R_Z_psi_bnd_dir} "
-#	  mkdir ${RESDIR}/${T_dir}
 	  mkdir ${RESDIR}/${R_Z_psi_bnd_dir}
        fi
    fi
@@ -388,9 +427,9 @@ if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
    echo "==================================================================================="
    echo " ***   Restart file does not exist, so INIT"
    out_increment=0
-   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
-   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}_${out_increment}.out
-   echo " ============> saving input data to file = " ${CASE}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
+   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
+   echo " ============> saving input data to file = " ${CASE}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
    echo "==================================================================================="
    echo " "
 else
@@ -398,9 +437,9 @@ else
    echo " ***   Restart file does exist, so LOOP"
    tmp=$(ls ${RESDIR}/*.rst | wc -l)
    (( out_increment= $tmp - 1 ))
-   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
-   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}_${out_increment}.out
-   echo " ============> saving input data to file = " ${CASE}/DATA_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}_${out_increment}
+   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
+   echo " ============> saving input data to file = " ${CASE}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
    echo "==================================================================================="
    echo " "
 fi
@@ -415,7 +454,7 @@ case ${ARCH} in
 nfs*)
 
 JOREKENV="source /data/JOREK/jorek_env/jorek_env.sh"
-CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}_${out_increment}.out"
+CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
 CMD_SUB="qsub go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
@@ -444,13 +483,13 @@ mpdboot -n ${NNODES} -f ${RESDIR}/machinefile
 
 EOF
 ;;
+
 # -----------------------------------------------------------------
 # ccamu (Marseille)
 # -----------------------------------------------------------------
 ccamu*)
 
-#CMD_MPIRUN="mpdboot -r oarsh --totalnum=${NNODES} --file=\$OAR_NODEFILE;mpiexec -ppn 1 -n ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}_${out_increment}.out"
-CMD_MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f ${WKDIR}/mach -iface ib0 -n ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}_${out_increment}.out"
+CMD_MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f ${WKDIR}/mach -iface ib0 -n ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
 CMD_SUB="oarsub -S ./go_${DATANAME}.cmd"
 CMD_SUBRST='wrapper_oar "'${CMD_SUB}'"'
 

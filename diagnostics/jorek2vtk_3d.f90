@@ -163,8 +163,12 @@ do m=1, n_plane
 
           call interp(node_list,element_list,i,6,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,6) = scalars(inode,6) + P * HZ(i_tor,m)
-
-          call interp(node_list,element_list,i,7,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          
+          if ( jorek_model > 199 ) then
+            call interp(node_list,element_list,i,7,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          else
+            P = 0.d0
+          end if
           scalars(inode,7) = scalars(inode,7) + P * HZ(i_tor,m)
 
 	enddo

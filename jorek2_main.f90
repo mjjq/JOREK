@@ -69,10 +69,11 @@ program JOREK2
       integer(kind=4) :: mpi_comm_master
     end subroutine update_rhs_n
     
-    subroutine construct_matrix_murge(my_id,node_list,                      &
-      element_list,bnd_node_list,local_elms,n_local_elms,xpoint2,xcase2,psi_axis,psi_bnd, &
-      z_xpoint,psi_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans,     &
-      n_cpu_trans,solve_only)
+    subroutine construct_matrix_murge(my_id, node_list,                          &
+      element_list, bnd_node_list, local_elms, n_local_elms, xpoint2, xcase2,    &
+      minRad, R_axis, Z_axis, psi_axis, psi_bnd, z_xpoint, psi_xpoint,           &
+      gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,              &
+      n_cpu_trans, solve_only)
       use data_structure, only : type_node, type_element, type_bnd_node_list,          &
         type_element_list, type_node_list
       integer(kind=4) :: n_cpu
@@ -84,6 +85,9 @@ program JOREK2
       type (type_bnd_node_list), target :: bnd_node_list
       integer(kind=4), target :: local_elms(n_local_elms)
       logical(kind=4), target :: xpoint2
+      real(kind=8), target :: minRad
+      real(kind=8), target :: R_axis
+      real(kind=8), target :: Z_axis
       real(kind=8), target :: psi_axis
       real(kind=8), target :: psi_bnd
       real(kind=8), target :: z_xpoint(:)
@@ -98,11 +102,11 @@ program JOREK2
     end subroutine construct_matrix_murge
   end interface
   
-  type (type_surface_list) :: surface_list
+  type (type_surface_list) :: surface_list, flux_list
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
   real*8                   :: t_matrix_0, t_matrix_1, psi_lim, R_lim, Z_lim
   real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
-  real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
+  real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis, minRad
   real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
@@ -110,6 +114,10 @@ program JOREK2
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
+  integer                  :: i_find, i_elm_find(8)
+  real*8                   :: Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
+  real*8                   :: Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+  real*8                   :: s_find(8), t_find(8)
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
@@ -735,10 +743,6 @@ program JOREK2
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)
 
-    ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
-    ! --- n_plane, n_var have to remain the same until the end of the program.
-    call new_thread_buffers()
-
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     call flushc !flush the output stream
     call tr_debug_write("JMAIN:Index_now",index_now)
@@ -755,6 +759,10 @@ program JOREK2
       write(*,*) '******************************************************'
     end if
 
+    ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
+    ! --- n_plane, n_var have to remain the same until the end of the program.
+    call new_thread_buffers()
+
     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
     psi_bnd = 0.d0
@@ -769,6 +777,20 @@ program JOREK2
       call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
+    
+    if (jorek_model .eq. 400) then	     
+      flux_list%n_psi = 1
+      call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+      flux_list%psi_values(1) = 1.0
+      call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
+      call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+        	     Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
+        	     Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+      call tr_deallocate(flux_list%psi_values,"flux_list%psi_values",CAT_GRID)
+      minRad = Router - R_axis
+    else
+      minRad = 0.0
+    endif
     
     call tr_debug_write("JMAIN:Find_axis_R",R_axis)
     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
@@ -798,15 +820,14 @@ program JOREK2
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
 
-       call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms, &
-    	    n_local_ELms,  xpoint,xcase, &
-    	    psi_axis, psi_bnd, Z_xpoint,psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, &
-    	    mpi_comm_trans, my_id_trans, n_cpu_trans, solve_only)	 ! construct the matrix from elemental matrices
+       call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms,      &
+    	                           n_local_ELms,  xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, &
+				   psi_bnd, Z_xpoint,psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n,  &
+    	                           mpi_comm_trans, my_id_trans, n_cpu_trans, solve_only)	   ! construct the matrix from elemental matrices
     else
 
-       call construct_matrix(my_id, local_elms, &
-    	    n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
-    	    xpoint,xcase,psi_axis,psi_bnd,Z_xpoint,psi_xpoint)        ! construct the matrix from elemental matrices
+       call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
+    	                     xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, psi_xpoint) ! construct the matrix from elemental matrices
     endif
     
 

@@ -4,7 +4,7 @@
 !! * The points checked are all points on the boundary of the JOREK domain and additional limiter
 !!   points given in the namelist input file (parameters n_limiter, R_limiter, Z_limiter).
 !!
-subroutine find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+subroutine find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
 
 use phys_module, only: n_limiter, R_limiter, Z_limiter
 use data_structure
@@ -14,6 +14,7 @@ use basis_at_gaussian
 implicit none
 
 ! --- Routine parameters
+integer,                      intent(in)  :: my_id
 type (type_node_list),        intent(in)  :: node_list
 type (type_element_list),     intent(in)  :: element_list
 type (type_bnd_element_list), intent(in)  :: bnd_elm_list
@@ -31,9 +32,11 @@ integer :: ifail, i_elm
 
 real*8, external :: root
 
-write(*,*) '*********************************'
-write(*,*) '*     find_limiter              *'
-write(*,*) '*********************************'
+if ( my_id == 0 ) then
+  write(*,*) '*********************************'
+  write(*,*) '*     find_limiter              *'
+  write(*,*) '*********************************'
+end if
 
 psi_lim =  0.d0
 psi_min =  1.d20
@@ -135,6 +138,13 @@ do i_limiter = 1, n_limiter
     Z_lim   = Zp
   end if
 end do
+
+if ( my_id == 0 ) then
+  121 format(1x,a,' =',f12.7)
+  write(*,121) 'R_lim  ', R_lim
+  write(*,121) 'Z_lim  ', Z_lim
+  write(*,121) 'Psi_lim', Psi_lim
+end if
 
 return
 end subroutine find_limiter

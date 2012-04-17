@@ -196,24 +196,28 @@ module boundary
 
     integer             :: i
     character(len=20)   :: s
-
-    121 format(1X,A,I10,A)
-    141 format(3X,A,I10,A)
-    161 format(5X,A,I10,A)
-    182 format(7X,A,15I10)
-    183 format(7X,A,15ES10.2)
+    
+    120 format(3x,77('-'))
+    121 format(3X,A,I10,A)
+    141 format(5X,A,I10,A)
+    161 format(7X,A,I10,A)
+    182 format(9X,A,15I10)
+    183 format(9X,A,15ES10.2)
 
     write(*,*)
-
+    write(*,120)
     write(*,121) 'BOUNDARY INFORMATION:'
-
+    write(*,120)
     write(*,141) 'n_bnd_elements=', bnd_elm_list%n_bnd_elements
     write(*,141) 'n_bnd_nodes   =', bnd_node_list%n_bnd_nodes
+    write(*,120)
 
     if ( verbose ) then
 
       write(*,*)
+      write(*,120)
       write(*,141) 'BOUNDARY ELEMENTS:'
+      write(*,120)
       do i = 1, bnd_elm_list%n_bnd_elements
         write(s,*) i
         write(*,161) '#'//trim(adjustl(s))//':'
@@ -224,9 +228,12 @@ module boundary
         write(*,182) 'side          =', bnd_elm_list%bnd_element(i)%side
         write(*,183) 'size          =', bnd_elm_list%bnd_element(i)%size
       end do
-
+      write(*,120)
       write(*,*)
+      
+      write(*,120)
       write(*,141) 'BOUNDARY NODES:'
+      write(*,120)
       do i = 1, bnd_node_list%n_bnd_nodes
         write(s,*) i
         write(*,161) '#'//trim(adjustl(s))//':'
@@ -234,6 +241,7 @@ module boundary
         write(*,182) 'index_starwall=', bnd_node_list%bnd_node(i)%index_starwall
         write(*,182) 'direction     =', bnd_node_list%bnd_node(i)%direction
       end do
+      write(*,120)
       write(*,*)
 
       write(*,*) 'Writing boundary elements to "./boundary_elements.dat".'

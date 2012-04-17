@@ -8,9 +8,7 @@ subroutine boundary_check()
   use data_structure,  only: type_bnd_element 
   use phys_module,     only: resistive_wall
   use nodes_elements,  only: node_list, bnd_node_list, element_list, bnd_elm_list
-  use vacuum_response, only: vacuum_debug, n_dof_starwall, n_starwall_harmonics,                   &
-    starwall_harmonics, response_index, starwall_m_ee, starwall_m_ey, starwall_m_id, wall_curr,    &
-    det_psibnd_vec
+  use vacuum_response
   
   implicit none
   
@@ -41,10 +39,10 @@ subroutine boundary_check()
   
   call tr_allocate(psibnd_vec,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
   call tr_allocate(dpsibnd_vec,1,n_dof_starwall,"dpsibnd_vec",CAT_GRID)
-  call tr_allocate(B_par,1,n_starwall_harmonics,"B_par",CAT_GRID)
-  call tr_allocate(B_par_v,1,n_starwall_harmonics,"B_par_v",CAT_GRID)
-  call tr_allocate(val_integral,1,n_starwall_harmonics,"val_integral",CAT_GRID)
-  call tr_allocate(err_integral,1,n_starwall_harmonics,"err_integral",CAT_GRID)
+  call tr_allocate(B_par,1,sr%n_tor,"B_par",CAT_GRID)
+  call tr_allocate(B_par_v,1,sr%n_tor,"B_par_v",CAT_GRID)
+  call tr_allocate(val_integral,1,sr%n_tor,"val_integral",CAT_GRID)
+  call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
   
   ! --- Determine vectors with the Psi and deltaPsi values at the boundary.
   call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
@@ -95,8 +93,8 @@ subroutine boundary_check()
       end if
       
       ! --- Select one STARWALL harmonic
-      L_LS: do l_starwall = 1, n_starwall_harmonics
-        l_tor = starwall_harmonics(l_starwall)
+      L_LS: do l_starwall = 1, sr%n_tor
+        l_tor = sr%i_tor(l_starwall)
         
         ! --- Psi value (plus derivatives) at current point (l_tor mode)
         call interp(node_list, element_list, m_elm, 1, l_tor, s_pt, t_pt, P, P_s, P_t, P_st, P_ss, &
@@ -124,11 +122,11 @@ subroutine boundary_check()
             ! --- Determine B_{||,v} as prescribed by the vacuum.
             if ( resistive_wall ) then
               B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
-                + sum( starwall_m_ee(i_resp, :) * psibnd_vec(:) )           &
-                + sum( starwall_m_ey(i_resp, :) * wall_curr(:)  ) )
+                + sum( sr%a_ee(i_resp, :) * psibnd_vec(:) )                 &
+                + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) )
             else
               B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
-                * sum( starwall_m_id(i_resp, :) * psibnd_vec(:) )
+                * sum( sr%a_id(i_resp, :) * psibnd_vec(:) )
             end if
             
           end do L_ID
@@ -151,7 +149,7 @@ subroutine boundary_check()
   end do L_MB
   
   if ( minval(abs(val_integral)) /= 0.d0 ) then
-    write(*,'(A,20ES15.5)') 'relative errors in harmonics:', err_integral(:) / val_integral(:)
+    write(*,'(1x,A,20ES15.5)') 'Relative errors in harmonics:', err_integral(:) / val_integral(:)
   end if
   
   ! --- Debugging output

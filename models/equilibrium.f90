@@ -93,7 +93,7 @@ do iter = 1, n_iter
     psi_bnd = 99.d0
   endif
 
-  call find_limiter(node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+  call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
   if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
     if (psi_lim .lt. psi_bnd) then
       psi_bnd = psi_lim
@@ -182,7 +182,7 @@ if (freeboundary_equil) then
 
 ! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
 if (iter .lt. 30) then
-    call find_limiter(node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+    call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
 
     if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
@@ -385,13 +385,13 @@ else
 endif
 
 if (freeboundary_equil) then
-  call plot_coils(.true.)
+  !call plot_coils(.true.)
   call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
 
   call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-  call plot_coils(.false.)
+  !call plot_coils(.false.)
 else
   if (xpoint2 .and. (n_flux .gt. 1)) then
     call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)

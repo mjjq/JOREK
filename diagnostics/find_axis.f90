@@ -1,39 +1,42 @@
-subroutine find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-!-----------------------------------------------------------------------
-!-----------------------------------------------------------------------
+!> Locate the position of the magnetic axis.
+subroutine find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i_elm_axis, s_axis, &
+  t_axis, ifail)
+
 use data_structure
 use gauss
 use basis_at_gaussian
+use phys_module, only: R_geo
 
 implicit none
 
 interface
    subroutine mnewtax(node_list,element_list,i_elm, r, s, errx, errf, ifail)
-     !-------------------------------------------------------------------------
-     ! solves two non-linear equations using Newtons method (from numerical recipes)
-     ! LU decomposition replaced by explicit solution of 2x2 matrix.
-     !-------------------------------------------------------------------------
      use data_structure
-     
      type (type_node_list)    :: node_list
      type (type_element_list) :: element_list
-
-     real*8    :: r, s
-     real*8    :: errf, errx
+     real*8    :: r, s, errf, errx
      integer   :: ifail, i_elm
    end subroutine mnewtax
 end interface
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+! --- Routine parameters
+integer,                 intent(in)  :: my_id        !< MPI proc number
+type(type_node_list),    intent(in)  :: node_list    !< List of grid nodes
+type(type_element_list), intent(in)  :: element_list !< List of grid elements
+real*8,                  intent(out) :: psi_axis     !< Poloidal flux at axis
+real*8,                  intent(out) :: R_axis       !< R-position of axis
+real*8,                  intent(out) :: Z_axis       !< Z-position of axis
+real*8,                  intent(out) :: s_axis       !< s-position of axis in Bezier element i_elm_axis
+real*8,                  intent(out) :: t_axis       !< t-position of axis in Bezier element i_elm_axis
+integer,                 intent(out) :: i_elm_axis   !< Bezier element, axis is located in
+integer,                 intent(out) :: ifail        !< Error code
 
-real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, grad_psi, ps_x, ps_y, ps_s, ps_t, xjac
+! --- Local variables
+real*8  :: grad_psi, ps_x, ps_y, ps_s, ps_t, xjac
 real*8  :: psi_min, psi_max, grad_psi_min
 real*8  :: R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
-integer :: my_id,i_elm_axis, ij_axis(2), i, iv, ms, mt, kf, kv, ifail
-
+integer :: ij_axis(2), i, iv, ms, mt, kf, kv
 real*8  :: x(2), s, t, xerr, ferr, rs_tolerance
-
 logical :: early_exit
 parameter (rs_tolerance = 1.d-8)
 
@@ -113,4 +116,4 @@ t_axis = t
 if (my_id .eq. 0) write(*,'(A,i6,4f14.8)') ' magnetic axis : ',i_elm_axis,R_axis,Z_axis,psi_axis
 
 return
-END
+end subroutine find_axis

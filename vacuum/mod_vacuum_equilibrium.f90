@@ -13,60 +13,38 @@ module vacuum_equilibrium
   
   
   !> Reads the external fields and the poloidal field coils from the STARWALL output
-  subroutine import_external_fields
+  subroutine import_external_fields(filename)
   
   use vacuum_response
-  
   implicit none
   
-  integer  :: n_dof_bnd_tmp, i, j, n_coils_tmp, itmp, jtmp
+  ! --- Routine parameters
+  character(len=*), intent(in) :: filename
+  ! --- Local variables
+  integer, parameter   :: filehandle = 60
+  integer              :: file_version, n_coils, n_bnd_elems, n_bnd_nodes, dim(2)
+  character(len=512)   :: comment
   
-  if ( starwall_harmonics(1) /= 1 ) return ! not required in this case
+  ! --- Read data from STARWALL response file
+  open(filehandle, file=trim(filename), form='formatted', status='old', action='read')
+  read(filehandle,'(a)') comment
   
-  write(*,*) '**************************'
-  write(*,*) '* import external fields *'
-  write(*,*) '**************************'
-  write(*,*) ' reading from file : response__bext_par'
+  file_version = read_intparam(filehandle, 'file_version')
+  if ( file_version > 1 ) then
+    write(*,*) 'ERROR: COIL data file version ', file_version, ' is not supported.'
+    stop
+  end if
   
-  open(11,file='response_bext_par')                         ! external fields form starwall
+  n_coils     = read_intparam(filehandle, 'n_coils')
+  n_bnd_nodes = read_intparam(filehandle, 'n_bnd_nodes')
+  n_bnd_elems = read_intparam(filehandle, 'n_bnd_elems')
   
-  read(11,*)
-  read(11,*) n_dof_bnd_tmp, n_coils
-                
-  n_dof_bnd_tmp = 2*n_dof_bnd_tmp
-         
-  if (n_dof_bnd .ne. n_dof_bnd_tmp) write(*,'(A,2i4)') ' ERROR : wrong number of boundary points :', n_dof_bnd, n_dof_bnd_tmp
-         
-  allocate(bext_par(n_dof_bnd_tmp,n_coils))
-  allocate(I_coils(n_coils))                                 ! allocate the coil currents
-         
-  do i=1,n_dof_bnd_tmp
-    do j=1,n_coils
-      read(11,*) itmp,jtmp,bext_par(i,j)
-    enddo
-  enddo
+  dim         = (/ n_coils, 2*n_bnd_nodes /)
   
-  close(11)
+  call read_array(filehandle, 'B_t', dim, float2d=bext_tan)
+  call read_array(filehandle, 'B_n', dim, float2d=bext_nor)
+  call read_array(filehandle, 'Psi', dim, float2d=bext_psi)
   
-  open(11,file='coils.txt')                                ! read poloidal field coil geometry (only for plotting)
-  
-  read(11,*);read(11,*);read(11,*);read(11,*)
-  
-  read(11,*) n_coils_tmp
-  
-  if (n_coils_tmp .ne. n_coils) write(*,*) 'INCONSISTENT NUMBER OF COILS (coil.txt)'
-  
-  read(11,*);read(11,*)
-  
-  allocate(R_coils(n_coils_tmp),Z_coils(n_coils_tmp),dR_coils(n_coils_tmp),dZ_coils(n_coils_tmp))
-  
-  do i=1,n_coils_tmp
-    read(11,*) R_coils(i), Z_coils(i), dR_coils(i), dZ_coils(i)
-  enddo
-  
-  close(11)
-  
-  return
   end subroutine import_external_fields
   
   
@@ -188,7 +166,7 @@ write(*,*) 'I_coils(10)', I_coils(10)
   
             index_node_bnd = 2 * (bnd_node_list%bnd_node(inode_bnd)%index_starwall-1) + j
                      
-  	  b_tan(ms)  = b_tan(ms) + bext_par(index_node_bnd,k) * I_coils(k) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)
+  	  b_tan(ms)  = b_tan(ms) + bext_tan(index_node_bnd,k) * I_coils(k) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)
           	
   	  enddo
 

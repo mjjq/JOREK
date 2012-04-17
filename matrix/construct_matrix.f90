@@ -292,8 +292,8 @@ subroutine construct_matrix(my_id,local_elms,n_local_elms,index_min,index_max, &
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if (freeboundary) then
     call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max) !###TODO### move somewhere else
-    call vacuum_boundary_integral(bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, &
-      resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
+    call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list,                   &
+      freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
   end if
 
 

@@ -21,16 +21,6 @@ module vacuum
   real*8, allocatable :: dwall_curr(:)                   !< Change of wall current potentials (\f$\delta Y_k\f$).
   real*8, allocatable :: old_dpsibnd_vec(:)              !< Previous delta Psi values required for time-stepping with zeta/=0
 
-  !> @name STARWALL vacuum response
-  integer              :: n_starwall_harmonics           !< Number of toroidal harmonics in response
-  integer, allocatable :: starwall_harmonics(:)          !< Harmonics in the response
-  real*8,  allocatable :: starwall_d_yy(:)               !< YY-matrix, see documentation
-  real*8,  allocatable :: starwall_m_ye(:,:)             !< YE-matrix, see documentation
-  real*8,  allocatable :: starwall_m_ey(:,:)             !< EY-matrix, see documentation
-  real*8,  allocatable :: starwall_m_ee(:,:)             !< EE-matrix, see documentation
-  real*8,  allocatable :: starwall_m_id(:,:)             !< Ideal wall matrix, see documentation
-  real*8,  allocatable :: starwall_m_nw(:,:)             !< No wall matrix, see documentation
-
   !> @name JOREK vacuum response matrices
   !! Response matrices derived from STARWALL response (w=wall, p=plasma)
   real*8, allocatable :: response_m_a(:,:)               !< \f$\hat{A}\f$ in the documentation
@@ -42,17 +32,44 @@ module vacuum
   real*8, allocatable :: response_m_g(:,:)               !< \f$\hat{G}\f$ in the documentation
   real*8, allocatable :: response_m_h(:,:)               !< \f$\hat{H}\f$ in the documentation
   real*8, allocatable :: response_m_j(:,:)               !< \f$\hat{J}\f$ in the documentation
+  real*8, allocatable :: response_m_k(:,:)               !< \f$\hat{K}\f$ in the documentation
+  real*8, allocatable :: response_m_l(:,:)               !< \f$\hat{L}\f$ in the documentation
   real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
 
- !> @name Coil contributions
+  !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils
-  real*8, allocatable :: R_coils(:), Z_coils(:)          !< positions of poloidal field coils
-  real*8, allocatable :: dR_coils(:), dZ_coils(:)        !< width/height of poloidal field coils
   real*8, allocatable :: I_coils(:)                      !< coil currents 
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
-  real*8, allocatable :: bext_par(:,:)                   !< external poloidal field tangential to
-                                                         !! the interface (n_dof_bnd,n_coils)
+  real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
+  real*8, allocatable :: bext_nor(:,:)                   !< external normal field
+  real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
+  ! ### various variables, some need to be removed
+  real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
+  real*8, allocatable :: dR_coils(:), dZ_coils(:)        ! ### old
+  real*8, allocatable :: coil_voltages(:)                !< Coil voltages
+  
+  type :: t_starwall_response
+    integer :: n_bnd
+    integer :: nd_bez
+    integer :: ncoil
+    integer :: npot_w
+    integer :: n_w
+    integer :: ntri_w
+    integer :: n_tor
+    integer, allocatable :: i_tor(:)
+    real*8,  allocatable :: d_yy(:)
+    real*8,  allocatable :: a_ye(:,:)
+    real*8,  allocatable :: a_ey(:,:)
+    real*8,  allocatable :: a_ee(:,:)
+    real*8,  allocatable :: a_id(:,:)
+    real*8,  allocatable :: a_nw(:,:)
+    real*8,  allocatable :: s_ww(:,:)
+    real*8,  allocatable :: s_ww_inv(:,:)
+    real*8,  allocatable :: xyzpot_w(:,:)
+    integer, allocatable :: jpot_w(:,:)
+  end type t_starwall_response
+  type(t_starwall_response) :: sr
   
   
   contains
@@ -85,11 +102,13 @@ module vacuum
     resistive_wall = freeboundary .and. resistive_wall
         
     ! --- Initialize some variables.
-    n_starwall_harmonics = 0
-    n_wall_curr          = 0
-    n_dof_bnd            = 0
-    n_dof_starwall       = 0
-    n_coils              = 0
+    sr%n_bnd  = 0
+    sr%nd_bez = 0
+    sr%ncoil  = 0
+    sr%npot_w = 0
+    sr%n_w    = 0
+    sr%ntri_w = 0
+    sr%n_tor  = 0
     
   end subroutine vacuum_init
   
@@ -112,8 +131,8 @@ module vacuum
     
     ! --- Free boundary conditions only if STARWALL response provided for this toroidal harmonic
     is_freebound = .false.
-    do i = 1, n_starwall_harmonics
-      is_freebound = is_freebound .or. ( i_tor == starwall_harmonics(i) )
+    do i = 1, sr%n_tor
+      is_freebound = is_freebound .or. ( i_tor == sr%i_tor(i) )
     end do
     
     ! --- Free boundary conditions only for certain variables
@@ -139,7 +158,7 @@ module vacuum
     
     if ( freeboundary .and. (index_start > 0) ) then
       
-      read(21) resistive_wall_rst
+      read(file_handle) resistive_wall_rst
       if ( resistive_wall /= resistive_wall_rst ) then
         write(*,*) 'ERROR: It is currently not possible to restart a JOREK simulation with a'
         write(*,*) '  modified setting for resistive_wall.'
@@ -148,19 +167,31 @@ module vacuum
       
       if ( resistive_wall ) then
         
+        read(file_handle) n_wall_curr, n_dof_starwall
+        
         if ( allocated(wall_curr) ) deallocate(wall_curr)
         allocate( wall_curr(n_wall_curr) )
-        read(21) wall_curr(:)
+        read(file_handle) wall_curr(:)
         
         if ( allocated(dwall_curr) ) deallocate(dwall_curr)
         allocate( dwall_curr(n_wall_curr) )
-        read(21) dwall_curr(:)
+        read(file_handle) dwall_curr(:)
+        
+        allocate( old_dpsibnd_vec(n_dof_starwall) )
+        old_dpsibnd_vec = 0.d0 !###
+        
+        if ( vacuum_debug .and. resistive_wall ) then
+          write(*,*) 'DEBUG: Checksums'
+          write(*,*) 'wall_curr', sum(abs(wall_curr))
+          write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+          write(*,*) 'END: Checksums'
+        end if
         
       end if
       
     end if
     
-    if ( vacuum_debug ) then
+    if ( vacuum_debug .and. resistive_wall ) then
       write(*,*) 'DEBUG: Checksums'
       if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
       if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
@@ -182,7 +213,7 @@ module vacuum
     
     if ( freeboundary .and. (index_now > 0) ) then
       
-      write(21) resistive_wall
+      write(file_handle) resistive_wall
       if ( resistive_wall ) then
         
         if ( (.not. allocated(wall_curr)) .or. (.not. allocated(dwall_curr)) .or.                    &
@@ -190,6 +221,8 @@ module vacuum
           write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: Arrays not allocated.'
           stop
         end if
+        
+        write(file_handle) n_wall_curr, n_dof_starwall
         
         write(file_handle) wall_curr(:)
         
@@ -199,7 +232,7 @@ module vacuum
       
     end if
     
-    if ( vacuum_debug ) then
+    if ( vacuum_debug .and. resistive_wall ) then
       write(*,*) 'DEBUG: Checksums'
       if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
       if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
@@ -207,6 +240,47 @@ module vacuum
     end if
     
   end subroutine export_restart_vacuum
+  
+  
+  
+  !> Broadcast vacuum information between MPI processes
+  subroutine broadcast_vacuum(my_id, resistive_wall)
+    
+    implicit none
+    
+    include 'mpif.h'
+    
+    ! --- Routine parameters
+    integer, intent(in) :: my_id
+    logical, intent(in) :: resistive_wall
+    
+    ! --- Local variables
+    integer :: ierr
+    
+    call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    
+    if ( resistive_wall ) then
+      
+      call MPI_BCAST(n_wall_curr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      
+      if ( my_id /= 0 ) then
+        if ( allocated(wall_curr) ) deallocate(wall_curr)
+        allocate( wall_curr(n_wall_curr) )
+        
+        if ( allocated(dwall_curr) ) deallocate(dwall_curr)
+        allocate( dwall_curr(n_wall_curr) )
+        
+        if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
+        allocate( old_dpsibnd_vec(n_dof_starwall) )
+      end if
+      
+      call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      
+    end if
+    
+  end subroutine broadcast_vacuum
   
   
   

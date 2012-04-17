@@ -317,7 +317,7 @@ pastix_iparm(2)  = 0          ! initializse
 pastix_iparm(3)  = 0
 pastix_nthrd     = nbthreads
 write(*,*) '***********************************'
-write(*,*) '* initialise PastiX                *'
+write(*,*) '* initialise PastiX               *'
 write(*,*) '***********************************'
  
 pastix_data = 0

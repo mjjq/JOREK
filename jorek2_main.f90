@@ -32,8 +32,8 @@ program JOREK2
   use nodes_elements
   use pellet_module
   use boundary,            only: boundary_from_grid
-  use vacuum_response,     only: vacuum_preset, vacuum_init, get_vacuum_response, update_response, &
-    init_wall_currents, I_coils
+  use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum
+  use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
   use solve_mat_n
@@ -140,6 +140,11 @@ program JOREK2
   integer, pointer :: dummy_int(:)
   dummy_real => NULL()
   dummy_int  => NULL()
+  
+  !### BEGIN: FOR TESTING THE VACUUM PART -- WILL BE REMOVED SOON AGAIN
+  allocate( I_coils(11) )
+  I_coils = -2.d0 * mu_zero * (/ 9.84528e+06, -2.84091e+06, -1.2601e+07, -4.07839e+06 , -434692, 5.8e+06, -0.8e+06, -7e+06, -4e+06 , -7.8e+06, 2.29e+07 /)
+  !### END: FOR TESTING THE VACUUM PART
   
   !***********************************************************************
   !*                  intialisation                                      *
@@ -289,6 +294,7 @@ program JOREK2
     end if
     
   end if
+  if ( restart .and. freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -343,7 +349,7 @@ program JOREK2
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)
-      call import_external_fields()
+      call import_external_fields('coil_field.dat')
     end if
     
     ! --- Plot the grid  
@@ -434,16 +440,16 @@ program JOREK2
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Determine boundary information from the grid
-  if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
-!   if ( freeboundary_equil ) call import_external_fields()
+!   if ( freeboundary_equil ) call import_external_fields('coil_field.dat')
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
       resistive_wall)
     call update_response(tstep, freeboundary_equil, resistive_wall)
-    call init_wall_currents(resistive_wall)
-    call import_external_fields()
+    if ( .not. restart ) call init_wall_currents(my_id, resistive_wall)
+    call import_external_fields('coil_field.dat')
   end if
   
   call tr_print_memsize("AfterEquilibrium")
@@ -492,14 +498,14 @@ program JOREK2
     
     psi_bnd = 0.d0
     if (xpoint) then
-      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
-    	i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
+        i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
       psi_bnd  = psi_xpoint(1)
       if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    	psi_bnd = psi_xpoint(2)
+        psi_bnd = psi_xpoint(2)
       endif
     else
-      call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+      call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
 
@@ -751,22 +757,22 @@ program JOREK2
 
     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
+    psi_bnd = 0.d0
+    if (xpoint) then
+      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
+        i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+      psi_bnd  = psi_xpoint(1)
+      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+        psi_bnd = psi_xpoint(2)
+      endif
+    else
+      call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+      psi_bnd = psi_lim
+    end if
+    
     call tr_debug_write("JMAIN:Find_axis_R",R_axis)
     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
     call tr_debug_write("JMAIN:Find_axis_T",T_axis)
-
-    psi_bnd = 0.d0
-    if (xpoint) then
-      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
-    	i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
-      psi_bnd  = psi_xpoint(1)
-      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    	psi_bnd = psi_xpoint(2)
-      endif
-    else
-      call find_limiter(node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
-      psi_bnd = psi_lim
-    end if
 
     call cpu_time(t_matrix_0)
 

@@ -131,8 +131,6 @@ if [ ! -d ${RESDIR} ]; then
    mkdir -p ${RESDIR}
 fi
 
-source ${HOME}/.bashrc
-source ${HOME}/.bash_profile
 ;;
 
 # -----------------------------------------------------------------
@@ -517,6 +515,12 @@ cat \$OAR_NODEFILE | sort -u > mach
 cat mach
 echo ''
 
+echo $ARCH
+# avoid mpd problems and error message "No Modulefiles Currently Loaded"
+#source ~/.bashrc
+#source ~/.bash_profile
+module purge
+module load intel/12.1 mpich2/intel/1.4.1 hdf5-serial
 module list
 
 export OMP_NUM_THREADS=${NTHREAD}
@@ -529,7 +533,7 @@ EOF
 # -----------------------------------------------------------------
 jade*)
 
-CMD_MPIRUN="mpiexec ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}_${out_increment}.out"
+CMD_MPIRUN="mpiexec ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}___${out_increment}.out"
 CMD_SUB="qsub go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
@@ -558,7 +562,7 @@ EOF
 # -----------------------------------------------------------------
 hpcff*)
 
-CMD_MPIRUN="mpiexec -np=${NSLOTS} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}_${out_increment}.out"
+CMD_MPIRUN="mpiexec -np=${NSLOTS} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}___${out_increment}.out"
 CMD_SUB="msub go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 

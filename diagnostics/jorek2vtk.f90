@@ -32,10 +32,10 @@ real*8                :: w0_x, w0_y, w0_xx, w0_yy, xjac_x, xjac_y
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode
 !====================== --- add the diagnostics Er, Vtheta and [not yet Vneo]
-real*8                :: Er, psi_abs, Vtheta, Btheta
+real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
-
+GAMMA=5./3.
 write(*,*) 'jorek2vtk'
 call flush_it(6)
 allocate(node_list)
@@ -52,9 +52,9 @@ i_plane   = 1             ! ... otherwise, all modes will be summed up at the to
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
-open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+open(42, file='vtk.txt', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
-  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  write(*,*) 'Reading parameters from vtk.txt namelist.'
   read(42,vtk_params)
   close(42)
 end if
@@ -68,11 +68,12 @@ write(*,*) 'without_n0_mode =', without_n0_mode
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
 write(*,*) 'n_period        =', n_period
+write(*,*) 'F0        =', F0
 write(*,*)
 call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
-n_scalars = n_var + 10
+n_scalars = n_var + 10+4
 
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
@@ -84,7 +85,8 @@ grad_psi = 0.d0
 scalar_names(1:n_var) = variable_names(1:n_var)
 scalar_names(n_var+1:n_scalars) = (/ &
   'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
-  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ' /)
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ',&
+'Mach_pol    ','Vsound      ','Btot        '/)
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
@@ -198,13 +200,23 @@ do i=1,element_list%n_elements
                     (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
                ! Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
                Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
-            endif
+!======================Mach number===========================================              
+               Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR              
+               Vsound=sqrt(GAMMA*TT)/Btot
+! why term in boundry conditions ? from Vtheta? BigR**2 * U0_s /ps0_s==================????
+               Mach_par=V/Vsound             
+               Mach_pol=Vtheta/Vsound
+         endif
          endif
          ! save those specific values of axisymmetric parameters
          if (grad_psi .ne. 0.d0) then
             scalars(inode,n_var+9) = Er
             scalars(inode,n_var+10) = Vtheta
-            ! scalars(inode,n_var+11) = Vneo
+            scalars(inode,n_var+11) = Mach_par
+            scalars(inode,n_var+12) = Mach_pol
+            scalars(inode,n_var+13) = Vsound
+            scalars(inode,n_var+14) = Btot
+            ! scalars(inode,n_var+15) = Vneo
          endif
          ! old values back to normal
          i_tor = i_tor_old

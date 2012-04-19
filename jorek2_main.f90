@@ -950,7 +950,7 @@ program JOREK2
 
        
        ! --- Output some information about the current timestep
-       130 format(1x,a,i5.5,a,es9.3,a)
+       130 format(1x,a,i5.5,a,es10.3,a)
        131 format(1x,a,2(2(es10.2,' ...',es10.2,',')))
        132 format(1x,'-------------------------------------------------------------------')
        133 format(1x,a,2(es10.2,' at ',i10,','))

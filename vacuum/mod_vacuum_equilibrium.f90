@@ -22,7 +22,7 @@ module vacuum_equilibrium
   character(len=*), intent(in) :: filename
   ! --- Local variables
   integer, parameter   :: filehandle = 60
-  integer              :: file_version, n_coils, n_bnd_elems, n_bnd_nodes, dim(2)
+  integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2)
   character(len=512)   :: comment
   
   ! --- Read data from STARWALL response file

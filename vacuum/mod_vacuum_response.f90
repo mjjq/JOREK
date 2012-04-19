@@ -77,7 +77,7 @@ module vacuum_response
     character(len=20) :: name
     integer           :: ierr
     
-    read(filehandle,'(a12,a24,i)',iostat=ierr) marker, name, read_intparam
+    read(filehandle,'(A12,A24,I10)',iostat=ierr) marker, name, read_intparam
     
     if ( (ierr /= 0) .or. (trim(adjustl(marker)) /= '#@intparam') .or. (trim(adjustl(name)) /= trim(parameter_name)) ) then
       write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'" from STARWALL response.'
@@ -117,7 +117,7 @@ module vacuum_response
       requested_type = 'float'
     end if
     
-    read(filehandle,'(a12,a24,i12,a24,2i12)',iostat=ierr) marker, name, nd, datatype, d
+    read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name, nd, datatype, d
     marker   = adjustl(marker)
     name     = adjustl(name)
     datatype = adjustl(datatype)
@@ -152,7 +152,7 @@ module vacuum_response
       
       if ( allocated(float2d) ) deallocate( float2d )
       allocate( float2d(dim(1),dim(2)) )
-      read(filehandle,'(4es24.16)') float2d(:,:)
+      read(filehandle,'(4ES24.16)') float2d(:,:)
       
     end if
     
@@ -183,7 +183,7 @@ module vacuum_response
     
     ! --- Read data from STARWALL response file
     open(filehandle, file=trim(filename), form='formatted', status='old', action='read')
-    read(filehandle,'(a)') comment
+    read(filehandle,'(A)') comment
     
     file_version = read_intparam(filehandle, 'file_version')
     if ( file_version > 1 ) then
@@ -305,7 +305,7 @@ module vacuum_response
     call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     
-    if ( vacuum_debug ) write(*,'("Checksum",i4,es24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
+    if ( vacuum_debug ) write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
        + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)   &
        + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil   &
        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor
@@ -392,7 +392,7 @@ module vacuum_response
     real*8, allocatable :: tripot_w(:)
     
     ! --- VTK file header
-    write(filename,'(a,i5.5,a)') 'wallcurr.',index,'.vtk'
+    write(filename,'(A,I5.5,A)') 'wallcurr.',index,'.vtk'
     open(filehandle, file=filename, status='replace', action='write')
     140 format(a)
     141 format(a,i8,a)
@@ -907,7 +907,7 @@ module vacuum_response
     real*8, allocatable :: tripot_w(:)
     
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
-    write(*,'(" Wall current potentials (min, max): ",es16.8,"...",es16.8)') minval(tripot_w), maxval(tripot_w)
+    write(*,'(" Wall current potentials (min, max): ",ES16.8,"...",ES16.8)') minval(tripot_w), maxval(tripot_w)
     deallocate( tripot_w )
     
   end subroutine log_wall_curr
@@ -1113,7 +1113,7 @@ module vacuum_response
 
     if ( (dim(1) /= dim_expected(1)) .or. (dim(2) /= dim_expected(2)) ) then
       write(*,*) 'FATAL ERROR: Matrix dimension not as expected. Different resolutions?'
-      write(*,'(1x,a,2i7)') 'dim_expected=',dim_expected
+      write(*,'(1x,A,2I7)') 'dim_expected=',dim_expected
       stop
     end if
     
@@ -1229,11 +1229,11 @@ module vacuum_response
     character(len=3)  :: typ              ! sin or cos
     character(len=30) :: i_tor_str, n_str ! Character string representations for i_tor and n
     
-    write(i_tor_str,'(i)') i_tor
+    write(i_tor_str,'(I10)') i_tor
 
     ! --- Determine toroidal mode number.
     n = int(i_tor / 2) * n_period
-    write(n_str,'(i)') n
+    write(n_str,'(I10)') n
     
     ! --- Determine mode type (sin or cos).
     if ( mod(i_tor,2) == 0 ) then

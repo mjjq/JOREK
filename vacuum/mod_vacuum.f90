@@ -159,7 +159,7 @@ module vacuum
     if ( freeboundary .and. (index_start > 0) ) then
       
       read(file_handle) resistive_wall_rst
-      if ( resistive_wall /= resistive_wall_rst ) then
+      if ( resistive_wall .neqv. resistive_wall_rst ) then
         write(*,*) 'ERROR: It is currently not possible to restart a JOREK simulation with a'
         write(*,*) '  modified setting for resistive_wall.'
         stop

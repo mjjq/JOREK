@@ -7,7 +7,7 @@ FC     = mpif90 -f90=gfortran
 
 FFLAGS_OMP       = -fopenmp 
 FFLAGS           = -g -O0 
-FFLAGS          := $(FFLAGS) -fdefault-real-8
+FFLAGS          := $(FFLAGS) -fdefault-real-8 -fdefault-double-8
 FFLAGS          := $(FFLAGS) -ffree-line-length-none
 FFLAGS          := $(FFLAGS) -x f95-cpp-input
 ## TODO find equivalents of this ifort options

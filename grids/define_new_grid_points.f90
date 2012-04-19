@@ -1023,7 +1023,7 @@ do i=1,n_flux+n_open
         nwpts%ZZ_new(i+1,j)  = nwpts%Z_max(j)
         write(*,*) ' WARNING node not found for last open flux surface -> using RZ_max '
       else
-        write(*,'(A,i6,i6,i6,f)') ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
+        write(*,'(A,I6,I6,I6,F20.10)') ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
       endif
     endif
       
@@ -1068,7 +1068,7 @@ if (xcase .eq. 3) then
           nwpts%ZZ_new(i+1,j)  = nwpts%Z_max(j)
           write(*,*) ' WARNING node not found for last open flux surface -> using RZ_max '
         else
-          write(*,'(A,i6,i6,i6,f)') ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
+          write(*,'(A,I6,I6,I6,F20.10)') ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
         endif
       endif
   	

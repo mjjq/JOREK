@@ -54,7 +54,7 @@ module tr_module
 
   real*8 :: precond_mem = 0
   ! size of real numbers used in jorek
-  integer, private, parameter :: RKIND = 8
+  integer, public, parameter :: RKIND = 8
   ! processor identity
   integer, public :: gmy_id
   ! nb of processors
@@ -77,13 +77,12 @@ module tr_module
   integer, PARAMETER :: CAT_GMRES   = 7
   integer, PARAMETER :: MIN_CAT     = CAT_UNKNOWN
   integer, PARAMETER :: MAX_CAT     = CAT_GMRES
-  CHARACTER(LEN=15) :: &
-    cat_name(MIN_CAT:MAX_CAT) = (/ "UNKNOWN", "MATELEM", "GRID", "FEM", "DMATRIX", "GLOBMAT", "PRECOND", "GMRES" /)
+  CHARACTER(LEN=10) :: &
+    cat_name(MIN_CAT:MAX_CAT) = (/ "UNKNOWN   ", "MATELEM   ", "GRID      ", &
+    "FEM       ",  "DMATRIX   ", "GLOBMAT   ", "PRECOND   ", "GMRES     " /)
   ! used for memory size calculation
   integer*8, private :: max_allocate
   integer*8, private :: nb_allocate(MIN_CAT:MAX_CAT)
-
-
 
 
   !******************************

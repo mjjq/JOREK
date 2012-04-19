@@ -2026,7 +2026,7 @@ C
             ZIY1=FY0+Y1*YFAC                                            
             ZIX2=FX0+X2*XFAC                                            
             ZIY2=FY0+Y2*YFAC                                            
-            IF(IDOT.EQ.1) CALL DLCH(ZIX1,-ZIY1,' ',46,1)                
+            IF(IDOT.EQ.1) CALL DLCH(INT(ZIX1),-INT(ZIY1),' ',46,1)                
             IF(JVEC.EQ.1) CALL ARROW1(ZIX1,ZIY1,ZIX2,ZIY2,L)            
             IF(JVEC.EQ.2) CALL ARROW2(ZIX1,ZIY1,ZIX2,ZIY2,L)            
    50    CONTINUE                                                       
@@ -2515,8 +2515,8 @@ C     * SCALE AND LABEL X-AXIS.
       CALL DLCH((I0+I1)/2-NXNAME*6,J0-43,XNAME,NXNAME,2)                
 C                                                                       
 C     * SCALE AND LABEL Y-AXIS.                                         
-      CALL DRV(I1,J0,I1+15,J0)                                          
-      CALL DRV(I2,J1,I2+15,J1)                                          
+      CALL DRV(FLOAT(I1),FLOAT(J0),FLOAT(I1+15),FLOAT(J0))
+      CALL DRV(FLOAT(I2),FLOAT(J1),FLOAT(I2+15),FLOAT(J1))
       CALL DLCH(I1+20,J0-8,'1',1,2)                                     
       IF(NY.LT.10) THEN                                                 
          NC=1                                                           

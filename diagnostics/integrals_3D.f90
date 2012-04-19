@@ -23,6 +23,7 @@ real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss
 real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
 real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
 real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
+real*8  :: wgauss_copy(n_gauss)
 
 real*8  :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
 real*8  :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
@@ -43,6 +44,7 @@ real*8  :: source_volume, source_pellet
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume  
 
 integer,external :: omp_get_num_threads, omp_get_thread_num
+
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -65,6 +67,7 @@ C_ext    = 0.d0
 Vol      = 0.d0
 P_tot    = 0.d0
 D_tot    = 0.d0
+wgauss_copy = wgauss
 
 if (use_pellet) then
   local_pellet_particles = 0.d0
@@ -104,7 +107,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,                     &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
-!$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume, wgauss)    &
+!$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
+!$omp          wgauss_copy)    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy,  &
@@ -200,7 +204,7 @@ do ife = ife_min, ife_max
 
       do mt=1, n_gauss
 
-        wst = wgauss(ms)*wgauss(mt)
+        wst = wgauss_copy(ms)*wgauss_copy(mt)
 
         xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
         BigR = x_g(ms,mt)

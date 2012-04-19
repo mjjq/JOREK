@@ -151,7 +151,8 @@ program JOREK2
   
   !### BEGIN: FOR TESTING THE VACUUM PART -- WILL BE REMOVED SOON AGAIN
   allocate( I_coils(11) )
-  I_coils = -2.d0 * mu_zero * (/ 9.84528e+06, -2.84091e+06, -1.2601e+07, -4.07839e+06 , -434692, 5.8e+06, -0.8e+06, -7e+06, -4e+06 , -7.8e+06, 2.29e+07 /)
+  I_coils = -2.d0 * mu_zero * (/ 9.84528e+06, -2.84091e+06, -1.2601e+07, &
+       -4.07839e+06 , -434692., 5.8e+06, -0.8e+06, -7e+06, -4e+06 , -7.8e+06, 2.29e+07 /)
   !### END: FOR TESTING THE VACUUM PART
   
   !***********************************************************************
@@ -1029,7 +1030,8 @@ program JOREK2
 
     	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
-    	     call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,NULL(),NULL(),NULL(), &
+    	     call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
+               dummy_int, dummy_int, dummy_real, &
     		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
     	  endif
 

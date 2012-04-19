@@ -162,12 +162,12 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       pastix_iparm(5) = block_size      ! block size
       
       call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-                    NULL(),NULL(),NULL(), &
+                    dummy_int, dummy_int, dummy_real, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
       pastix_iparm(5) = 1      ! block size
       
-      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, NULL(),NULL(),NULL(), &
+      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, dummy_int, dummy_int, dummy_real, &
            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
    end if

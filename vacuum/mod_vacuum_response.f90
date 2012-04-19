@@ -854,7 +854,7 @@ module vacuum_response
       call write_wall_vtk(index_now, resistive_wall)
       if ( vacuum_debug .and. resistive_wall ) then
         call log_wall_curr()
-        call log_coil_curr()
+        !call log_coil_curr()
       end if
     end if
     

@@ -245,6 +245,7 @@ do i=1,n_vertex_max
 enddo
 
 
+current_source  = 0.d0
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -505,6 +506,8 @@ do ms=1, n_gauss
 				 Ti0, Ti0_x, Ti0_y,    &
                                  Te0, Te0_x, Te0_y,    &
 				 Jb)
+      write(*,*)'RHS bootstrap'
+      write(*,*)'Jb',Jb
  
       ! ------------------------------------
       ! --- Now the equations, first the RHS
@@ -557,7 +560,7 @@ do ms=1, n_gauss
             ! --------------------------------
             ! --- Equation 1 (psi - induction)
             ! --------------------------------
- 	    rhs_ij_1 = v * eta_Te  * (zj0 - current_source(ms,mt) + Jb)/ BigR   * xjac * tstep &
+ 	    rhs_ij_1 = v * eta_Te  * (zj0 - current_source(ms,mt) - Jb)/ BigR   * xjac * tstep &
  	  	       + v * (ps0_s * u0_t - ps0_t * u0_s)			       * tstep &
  	  	       - v * eps_cyl * F0 / BigR  * u0_p		        * xjac * tstep &
  	  	       + eta_numm * (v_x * zj0_x + v_y * zj0_y) 	        * xjac * tstep &
@@ -848,7 +851,7 @@ do ms=1, n_gauss
  	    	  BB2_psi	    = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
                   ! --- Bootstrap current coefficients (Wesson formula)
-                  call bootstrap_current_rhs(BigR, minRad, R_axis, &
+                  call bootstrap_current_lhs(BigR, minRad, R_axis, &
                                              psi_axis, psi_bnd,    &
                                              ps0, ps0_x, ps0_y,    &
                                              psi, psi_x, psi_y,    &
@@ -859,6 +862,11 @@ do ms=1, n_gauss
                                              Te0, Te0_x, Te0_y,    &
                                              Te,  Te_x,  Te_y,     &
 				             dJb_psi, dJb_rho, dJb_Ti, dJb_Te)
+		  write(*,*)'Linearised bootstrap'
+		  write(*,*)'dJb_psi',dJb_psi
+		  write(*,*)'dJb_rho',dJb_rho
+		  write(*,*)'dJb_Ti',dJb_Ti
+		  write(*,*)'dJb_Te',dJb_Te
 
 
             	  ! --------------------------------
@@ -866,21 +874,21 @@ do ms=1, n_gauss
             	  ! --------------------------------
  	    	  amat_11 = + v * psi / BigR					            * xjac * (1.d0+zeta)   &
  	  	  	    - v * (psi_s * u0_t - psi_t * u0_s) 			           * theta * tstep &
-			    - v * eta_Te * dJb_psi / BigR                                   * xjac * theta * tstep
+			    + v * eta_Te * dJb_psi / BigR                                   * xjac * theta * tstep
 
  	    	  amat_12 = -  v * (ps0_s * u_t - ps0_t * u_s)  			           * theta * tstep
 
  	    	  amat_12_n = +  eps_cyl * F0 / BigR * v * u_p * xjac			           * theta * tstep
 
  	    	  amat_13 = - eta_numm * (v_x * zj_x + v_y * zj_y)		            * xjac * theta * tstep &
- 	  	  	    - eta_Te * v * zj / BigR				            * xjac * theta * tstep
+ 	  	  	    + eta_Te * v * zj / BigR				            * xjac * theta * tstep
 
- 	    	  amat_15 = - v * eta_Te * dJb_rho / BigR                                   * xjac * theta * tstep
+ 	    	  amat_15 = + v * eta_Te * dJb_rho / BigR                                   * xjac * theta * tstep
 
- 	    	  amat_16 = - v * eta_Te * dJb_Ti  / BigR                                   * xjac * theta * tstep
+ 	    	  amat_16 = + v * eta_Te * dJb_Ti  / BigR                                   * xjac * theta * tstep
 
- 	    	  amat_18 = - deta_dTe * v * Te * (zj0 - current_source(ms,mt) + Jb) / BigR * xjac * theta * tstep &
-		            - v * eta_Te * dJb_Te  / BigR                                   * xjac * theta * tstep
+ 	    	  amat_18 = - deta_dTe * v * Te * (zj0 - current_source(ms,mt) - Jb) / BigR * xjac * theta * tstep &
+		            + v * eta_Te * dJb_Te  / BigR                                   * xjac * theta * tstep
 
 
             	  ! -----------------------------

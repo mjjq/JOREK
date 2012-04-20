@@ -61,6 +61,12 @@ ifeq (1, $(USE_MUMPS))
   DEFINES := $(DEFINES) -DUSE_MUMPS
 endif
 
+ifeq (1, $(USE_HDF5))
+  LIBS     := $(LIBS) $(HDF5LIB)
+  INCLUDES := $(INCLUDES) -I$(HDF5INCLUDE)
+  DEFINES  := $(DEFINES) -DUSE_HDF5
+endif
+
 # Correct preprocessor-defines for IBM XLF Compiler
 IBM_DEFINES = `echo $(DEFINES) | sed -e 's/^/-WF,/' -e 's/  */,/g'`
 
@@ -87,7 +93,7 @@ include $(patsubst %,%/module.mk,$(DIRS))
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
   $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC))
 
-SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP))
+SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
 
 JOREK2_MAIN_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) 	\

@@ -272,7 +272,7 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
   # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
   sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make -j 4 > output_jorek.out
+  make 
 
   if [ -e jorek_model${MODELNUMBER} ]; then mv jorek_model${MODELNUMBER} ${EXECNAME}; fi
 fi
@@ -465,7 +465,7 @@ CMD_SUBRST=${CMD_SUB}
 # ------------------
 cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
-#PBS -N jorek
+#PBS -N ${CASENAME}
 #PBS -V
 #PBS -j oe
 #PBS -l walltime=${WALLTIME}
@@ -500,7 +500,7 @@ CMD_SUBRST='wrapper_oar "'${CMD_SUB}'"'
 # ------------------
 cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
-#OAR -n jorek
+#OAR -n ${CASENAME}
 #OAR -l host=${NNODES},walltime=${WALLTIME}
 #OAR -p nbcores=12 and visu='NO' 
 #OAR -O ${DATANAME}.%jobid%.log
@@ -538,7 +538,7 @@ CMD_SUBRST=${CMD_SUB}
 
 cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
-#PBS -N jorek
+#PBS -N ${CASENAME}
 #PBS -V
 #PBS -j oe
 #PBS -l walltime=${WALLTIME}
@@ -569,7 +569,7 @@ CMD_SUBRST=${CMD_SUB}
 # ------------------
 cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
-#MSUB -N jorek
+#MSUB -N ${CASENAME}
 # nodes=Nb of nodes, ppn=process per node (max.8)
 #MSUB -l nodes=${NODES}:ppn=8
 # maximum walltime currently 24hrs walltime=<hh:mm:ss>

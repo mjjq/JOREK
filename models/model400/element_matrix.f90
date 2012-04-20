@@ -245,7 +245,7 @@ do i=1,n_vertex_max
 enddo
 
 
-current_source  = 0.d0
+!current_source  = 0.d0
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -506,8 +506,6 @@ do ms=1, n_gauss
 				 Ti0, Ti0_x, Ti0_y,    &
                                  Te0, Te0_x, Te0_y,    &
 				 Jb)
-      write(*,*)'RHS bootstrap'
-      write(*,*)'Jb',Jb
  
       ! ------------------------------------
       ! --- Now the equations, first the RHS
@@ -862,11 +860,6 @@ do ms=1, n_gauss
                                              Te0, Te0_x, Te0_y,    &
                                              Te,  Te_x,  Te_y,     &
 				             dJb_psi, dJb_rho, dJb_Ti, dJb_Te)
-		  write(*,*)'Linearised bootstrap'
-		  write(*,*)'dJb_psi',dJb_psi
-		  write(*,*)'dJb_rho',dJb_rho
-		  write(*,*)'dJb_Ti',dJb_Ti
-		  write(*,*)'dJb_Te',dJb_Te
 
 
             	  ! --------------------------------

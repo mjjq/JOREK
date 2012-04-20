@@ -53,7 +53,6 @@ implicit none
 
 type (type_element)               :: element
 type (type_node)                  :: nodes(n_vertex_max)
-type (type_surface_list)          :: flux_list
 
 real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
@@ -63,7 +62,7 @@ integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
 real*8     :: wst, xjac, xjac_s, xjac_t, BigR, r2, phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source_i(n_gauss,n_gauss),heat_source_e(n_gauss,n_gauss)
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2), dj_dpsi, dj_dz
+real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2)
 real*8     :: Bgrad_rho, Bgrad_rho_star, Bgrad_rho_psi, Bgrad_rho_star_psi, Bgrad_rho_rho, Bgrad_rho_rho_n, Bgrad_rho_k_star
 real*8     :: Bgrad_Ti,  Bgrad_Ti_star,  Bgrad_Ti_psi,  Bgrad_Ti_star_psi,  Bgrad_Ti_Ti,   Bgrad_Ti_Ti_n,   Bgrad_Ti_k_star
 real*8     :: Bgrad_Te,  Bgrad_Te_star,  Bgrad_Te_psi,  Bgrad_Te_star_psi,  Bgrad_Te_Te,   Bgrad_Te_Te_n,   Bgrad_Te_k_star
@@ -77,6 +76,7 @@ real*8     :: eta_numm, visco_numm, visco_par_numm, D_perp_numm, K_perp_numm
 real*8     :: atn_D,datn_D,atn_D_n,pol_D,dpol_D,D_min,psi_D
 real*8     :: ZK_i_prof, ZK_e_prof, ZK_i_par, ZK_e_par, dZK_i_par, dZK_e_par, D_prof 
 real*8     :: prof(1:3),Diff(1:3,1:10)
+real*8     :: Jb, dJb_psi, dJb_rho, dJb_Ti, dJb_Te
 
 real*8     :: v, v_x, v_y, v_s, v_t, v_p, v_ss, v_st, v_tt, v_xx, v_yy, v_xs, v_ys, v_xt, v_yt
 real*8     :: ps0, ps0_x, ps0_y, ps0_p,ps0_s,ps0_t
@@ -98,7 +98,7 @@ real*8     :: Te, Te_x, Te_y, Te_s, Te_t, Te_p, Te_ss, Te_st, Te_tt
 real*8     :: P0, P0_x, P0_y, P0_s, P0_t, P0_p
 real*8     :: w0_ss, w0_st, w0_tt, w_ss, w_st, w_tt
 real*8     :: BigR_x, vv2
-real*8     :: amat_11, amat_12, amat_13, amat_18
+real*8     :: amat_11, amat_12, amat_13, amat_15, amat_16, amat_18
 real*8     :: amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_28
 real*8     :: amat_31, amat_33
 real*8     :: amat_42, amat_44
@@ -498,15 +498,14 @@ do ms=1, n_gauss
       ! ---------------------------------------------------
       ! --- Bootstrap current coefficients (Wesson formula)
       ! ---------------------------------------------------
-!      flux_list%n_psi = 1
-!      flux_list%psi_values(1) = 1.0
-!      call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-!      call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, Raxis,Zaxis,i_elm_find,s_find,t_find,i_find)
-!      call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-!                     Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
-!                     Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-               
-
+      call bootstrap_current_rhs(BigR, minRad, R_axis, &
+                                 psi_axis, psi_bnd,    &
+                                 ps0, ps0_x, ps0_y,    &
+				 r0,  r0_x,  r0_y,     &
+				 Ti0, Ti0_x, Ti0_y,    &
+                                 Te0, Te0_x, Te0_y,    &
+				 Jb)
+ 
       ! ------------------------------------
       ! --- Now the equations, first the RHS
       ! ------------------------------------
@@ -558,11 +557,11 @@ do ms=1, n_gauss
             ! --------------------------------
             ! --- Equation 1 (psi - induction)
             ! --------------------------------
- 	    rhs_ij_1 = v * eta_Te  * (zj0 - current_source(ms,mt))/ BigR   * xjac * tstep &
- 	  	       + v * (ps0_s * u0_t - ps0_t * u0_s)			  * tstep &
- 	  	       - v * eps_cyl * F0 / BigR  * u0_p		   * xjac * tstep &
- 	  	       + eta_numm * (v_x * zj0_x + v_y * zj0_y) 	   * xjac * tstep &
- 	  	       + zeta * v * delta_g(mp,1,ms,mt) / BigR  	   * xjac 
+ 	    rhs_ij_1 = v * eta_Te  * (zj0 - current_source(ms,mt) + Jb)/ BigR   * xjac * tstep &
+ 	  	       + v * (ps0_s * u0_t - ps0_t * u0_s)			       * tstep &
+ 	  	       - v * eps_cyl * F0 / BigR  * u0_p		        * xjac * tstep &
+ 	  	       + eta_numm * (v_x * zj0_x + v_y * zj0_y) 	        * xjac * tstep &
+ 	  	       + zeta * v * delta_g(mp,1,ms,mt) / BigR  	        * xjac 
 
             ! -----------------------------
             ! --- Equation 2 (U - momentum)
@@ -800,7 +799,7 @@ do ms=1, n_gauss
             	  !psi_xp = (	y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l) * HHZ_p(in,mp)
             	  !psi_yp = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l) * HHZ_p(in,mp)
 
- 	    	  u   = psi   ; zj   = psi   ; w   = psi   ; rho   = psi   ; Ti   = psi   ; Te   = psi   ; Vpar = psi
+ 	    	  u   = psi   ; zj   = psi   ; w        = psi   ; rho   = psi   ; Ti   = psi   ; Te   = psi   ; Vpar = psi
  	    	  u_x = psi_x ; zj_x = psi_x ; w_x = psi_x ; rho_x = psi_x ; Ti_x = psi_x ; Te_x = psi_x ; Vpar_x = psi_x
  	    	  u_y = psi_y ; zj_y = psi_y ; w_y = psi_y ; rho_y = psi_y ; Ti_y = psi_y ; Te_y = psi_y ; Vpar_y = psi_y
  	    	  u_p = psi_p ; zj_p = psi_p ; w_p = psi_p ; rho_p = psi_p ; Ti_p = psi_p ; Te_p = psi_p ; Vpar_p = psi_p
@@ -846,23 +845,42 @@ do ms=1, n_gauss
  	    	  Bgrad_Te_Te	    = ( Te_x * ps0_y - Te_y * ps0_x ) / BigR	      ! F0 due to absence of normalisation
  	    	  Bgrad_Te_Te_n     = ( F0 / BigR * Te_p) / BigR
  	    	  
- 	    	  BB2_psi	     = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+ 	    	  BB2_psi	    = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+
+                  ! --- Bootstrap current coefficients (Wesson formula)
+                  call bootstrap_current_rhs(BigR, minRad, R_axis, &
+                                             psi_axis, psi_bnd,    &
+                                             ps0, ps0_x, ps0_y,    &
+                                             psi, psi_x, psi_y,    &
+				             r0,  r0_x,  r0_y,     &
+				             rho, rho_x, rho_y,    &
+				             Ti0, Ti0_x, Ti0_y,    &
+				             Ti,  Ti_x,  Ti_y,     &
+                                             Te0, Te0_x, Te0_y,    &
+                                             Te,  Te_x,  Te_y,     &
+				             dJb_psi, dJb_rho, dJb_Ti, dJb_Te)
 
 
             	  ! --------------------------------
             	  ! --- Equation 1 (psi - induction)
             	  ! --------------------------------
- 	    	  amat_11 = + v * psi / BigR					       * xjac * (1.d0+zeta)   &
- 	  	  	    - v * (psi_s * u0_t - psi_t * u0_s) 			      * theta * tstep
+ 	    	  amat_11 = + v * psi / BigR					            * xjac * (1.d0+zeta)   &
+ 	  	  	    - v * (psi_s * u0_t - psi_t * u0_s) 			           * theta * tstep &
+			    - v * eta_Te * dJb_psi / BigR                                   * xjac * theta * tstep
 
- 	    	  amat_12 = -  v * (ps0_s * u_t - ps0_t * u_s)  			      * theta * tstep
+ 	    	  amat_12 = -  v * (ps0_s * u_t - ps0_t * u_s)  			           * theta * tstep
 
- 	    	  amat_12_n = +  eps_cyl * F0 / BigR * v * u_p * xjac			      * theta * tstep
+ 	    	  amat_12_n = +  eps_cyl * F0 / BigR * v * u_p * xjac			           * theta * tstep
 
- 	    	  amat_13 = - eta_numm * (v_x * zj_x + v_y * zj_y)		       * xjac * theta * tstep &
- 	  	  	    - eta_Te * v * zj / BigR				       * xjac * theta * tstep
+ 	    	  amat_13 = - eta_numm * (v_x * zj_x + v_y * zj_y)		            * xjac * theta * tstep &
+ 	  	  	    - eta_Te * v * zj / BigR				            * xjac * theta * tstep
 
- 	    	  amat_18 = - deta_dTe * v * Te * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep
+ 	    	  amat_15 = - v * eta_Te * dJb_rho / BigR                                   * xjac * theta * tstep
+
+ 	    	  amat_16 = - v * eta_Te * dJb_Ti  / BigR                                   * xjac * theta * tstep
+
+ 	    	  amat_18 = - deta_dTe * v * Te * (zj0 - current_source(ms,mt) + Jb) / BigR * xjac * theta * tstep &
+		            - v * eta_Te * dJb_Te  / BigR                                   * xjac * theta * tstep
 
 
             	  ! -----------------------------
@@ -1429,11 +1447,15 @@ do ms=1, n_gauss
  	    	    ELM_p(mp,ij1,kl2)  =  ELM_p(mp,ij1,kl2)  + wst * amat_12  
  	    	    ELM_n(mp,ij1,kl2)  =  ELM_n(mp,ij1,kl2)  + wst * amat_12_n
  	    	    ELM_p(mp,ij1,kl3)  =  ELM_p(mp,ij1,kl3)  + wst * amat_13
+ 	    	    ELM_p(mp,ij1,kl5)  =  ELM_p(mp,ij1,kl5)  + wst * amat_15
+ 	    	    ELM_p(mp,ij1,kl6)  =  ELM_p(mp,ij1,kl6)  + wst * amat_16
  	    	    ELM_p(mp,ij1,kl8)  =  ELM_p(mp,ij1,kl8)  + wst * amat_18
 		  else
 		    ELM(ij1,kl1) = ELM(ij1,kl1) + wst * amat_11
 		    ELM(ij1,kl2) = ELM(ij1,kl2) + wst * amat_12 + wst * amat_12_n
 		    ELM(ij1,kl3) = ELM(ij1,kl3) + wst * amat_13
+		    ELM(ij1,kl5) = ELM(ij1,kl5) + wst * amat_15
+		    ELM(ij1,kl6) = ELM(ij1,kl6) + wst * amat_16
 		    ELM(ij1,kl8) = ELM(ij1,kl8) + wst * amat_18
 		  endif
 

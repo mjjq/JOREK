@@ -1,6 +1,7 @@
 include ../config.in	
 
 all: modules \
+     bootstrap_current.o \
      current.o \
      density.o \
      element_matrix_GS.o \

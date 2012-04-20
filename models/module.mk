@@ -1,7 +1,8 @@
 DIR=models
 JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/initialise_and_broadcast_parameters.f90	\
-	$(DIR)/current.f90 				\
+	$(DIR)/bootstrap_current.f90                    \
+        $(DIR)/current.f90 				\
 	$(DIR)/density.f90 				\
 	$(DIR)/element_matrix_GS.f90 			\
 	$(DIR)/element_matrix_GS_inverse.f90 		\

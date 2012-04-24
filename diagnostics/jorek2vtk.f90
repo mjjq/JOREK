@@ -33,6 +33,7 @@ real*8                :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
 real*8                :: Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt
 real*8                :: Te,Te_s,Te_t,Te_st,Te_ss,Te_tt
 real*8                :: V, V_s, V_t, V_st, V_ss, V_tt
+real*8                :: psi_00, rho_00, Ti_00, Te_00
 real*8                :: ps_x, ps_y
 real*8                :: u0_x, u0_y
 real*8                :: zj_x, zj_y
@@ -310,11 +311,14 @@ do i=1,element_list%n_elements
 
          else
 
-            u0_x = 0.d0; u0_y = 0.d0; ps_x = 0.d0; ps_y  = 0.d0; zj_x  = 0.d0; zj_y  = 0.d0;
-            TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
-            Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0; Te_x  = 0.d0; Te_y  = 0.d0; Te_p  = 0.d0
-
-            w0_x = 0.d0; w0_y = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
+                	u0_x  = 0.d0; u0_y  = 0.d0;
+	    psi = 0.d0; ps_x  = 0.d0; ps_y  = 0.d0; 
+	        	zj_x  = 0.d0; zj_y  = 0.d0;
+                	TT_x  = 0.d0; TT_y  = 0.d0; TT_p  = 0.d0
+	    RHO = 0.d0; RHO_x = 0.d0; RHO_y = 0.d0; RHO_p = 0.d0;
+            Ti  = 0.d0; Ti_x  = 0.d0; Ti_y  = 0.d0; Ti_p  = 0.d0
+	    Te  = 0.d0; Te_x  = 0.d0; Te_y  = 0.d0; Te_p  = 0.d0
+                	w0_x  = 0.d0; w0_y  = 0.d0; w0_xx = 0.d0; w0_yy = 0.d0
 
             do i_tor = 1, n_tor
 
@@ -325,20 +329,20 @@ do i=1,element_list%n_elements
                   scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
                enddo
 
-               call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
-               call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
-               call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
-               call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
-               call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
-               call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+               call interp(node_list,element_list,i,1,i_tor,s,t,Psi_00,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
+               call interp(node_list,element_list,i,2,i_tor,s,t,U     ,U_s,U_t,U_st,U_ss,U_tt)
+               call interp(node_list,element_list,i,3,i_tor,s,t,ZJ    ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
+               call interp(node_list,element_list,i,4,i_tor,s,t,W     ,W_s,W_t,W_st,W_ss,W_tt)
+               call interp(node_list,element_list,i,5,i_tor,s,t,RHO_00,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
+               call interp(node_list,element_list,i,6,i_tor,s,t,TT    ,TT_s,TT_t,TT_st,TT_ss,TT_tt)
                if ( jorek_model >= 300 ) then
                   call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
                else
                   V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
                end if
                if ( jorek_model .eq. 400 ) then
-                  call interp(node_list,element_list,i,6,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
-                  call interp(node_list,element_list,i,8,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
+                  call interp(node_list,element_list,i,6,i_tor,s,t,Ti_00,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
+                  call interp(node_list,element_list,i,8,i_tor,s,t,Te_00,Te_s,Te_t,Te_st,Te_ss,Te_tt)
                end if
 
                if ((xjac .gt. 1.d-6)) then      ! avoid the axis
@@ -346,6 +350,7 @@ do i=1,element_list%n_elements
                   u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
                   u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
+                  psi   = psi    + psi_00 * HZ(i_tor,i_plane)
                   ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
                   ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
 
@@ -357,14 +362,17 @@ do i=1,element_list%n_elements
                   TT_p  = TT_p   + TT * HZ_p(i_tor,1)
 
                   if ( jorek_model .eq. 400 ) then
+                    Ti    = Ti     + Ti_00 * HZ(i_tor,i_plane)
                     Ti_x  = Ti_x   + (   Z_t * Ti_s - Z_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                     Ti_y  = Ti_y   + ( - R_t * Ti_s + R_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                     Ti_p  = Ti_p   + Ti * HZ_p(i_tor,1)
+                    Te    = Ti     + Te_00 * HZ(i_tor,i_plane)
                     Te_x  = Te_x   + (   Z_t * Te_s - Z_s * Te_t )   / xjac * HZ(i_tor,i_plane)
                     Te_y  = Te_y   + ( - R_t * Te_s + R_s * Te_t )   / xjac * HZ(i_tor,i_plane)
                     Te_p  = Te_p   + Te * HZ_p(i_tor,1)
                   end if
 
+                  RHO   = RHO    + RHO_00 * HZ(i_tor,i_plane)
                   RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
                   RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
                   RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)

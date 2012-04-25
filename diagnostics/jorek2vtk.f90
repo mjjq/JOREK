@@ -345,12 +345,17 @@ do i=1,element_list%n_elements
                   call interp(node_list,element_list,i,8,i_tor,s,t,Te_00,Te_s,Te_t,Te_st,Te_ss,Te_tt)
                end if
 
+               psi   = psi    + psi_00 * HZ(i_tor,i_plane)
+               RHO   = RHO    + RHO_00 * HZ(i_tor,i_plane)
+               if ( jorek_model .eq. 400 ) then
+                 Ti  = Ti     + Ti_00  * HZ(i_tor,i_plane)
+                 Te  = Te     + Te_00  * HZ(i_tor,i_plane)
+               end if
                if ((xjac .gt. 1.d-6)) then      ! avoid the axis
 
                   u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
                   u0_y  = u0_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
-                  psi   = psi    + psi_00 * HZ(i_tor,i_plane)
                   ps_x  = ps_x   + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
                   ps_y  = ps_y   + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
 
@@ -362,17 +367,14 @@ do i=1,element_list%n_elements
                   TT_p  = TT_p   + TT * HZ_p(i_tor,1)
 
                   if ( jorek_model .eq. 400 ) then
-                    Ti    = Ti     + Ti_00 * HZ(i_tor,i_plane)
                     Ti_x  = Ti_x   + (   Z_t * Ti_s - Z_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                     Ti_y  = Ti_y   + ( - R_t * Ti_s + R_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                     Ti_p  = Ti_p   + Ti * HZ_p(i_tor,1)
-                    Te    = Ti     + Te_00 * HZ(i_tor,i_plane)
                     Te_x  = Te_x   + (   Z_t * Te_s - Z_s * Te_t )   / xjac * HZ(i_tor,i_plane)
                     Te_y  = Te_y   + ( - R_t * Te_s + R_s * Te_t )   / xjac * HZ(i_tor,i_plane)
                     Te_p  = Te_p   + Te * HZ_p(i_tor,1)
                   end if
 
-                  RHO   = RHO    + RHO_00 * HZ(i_tor,i_plane)
                   RHO_x = RHO_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
                   RHO_y = RHO_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
                   RHO_p = RHO_p  + RHO * HZ_p(i_tor,1)
@@ -426,6 +428,8 @@ do i=1,element_list%n_elements
 
             scalars(inode,n_var+1)   = scalars(inode,5) * scalars(inode,6)
 
+            scalars(inode,n_var+15) = Jb
+
             if (grad_psi .ne. 0.d0) then
 
                scalars(inode,n_var+2)  = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
@@ -441,8 +445,6 @@ do i=1,element_list%n_elements
                scalars(inode,n_var+7)  = scalars(inode,5) * scalars(inode,7) * Btot
 
                scalars(inode,n_var+8)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
-
-               scalars(inode,n_var+15) = Jb
 
                !           call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
                !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &

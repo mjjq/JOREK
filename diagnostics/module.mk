@@ -51,7 +51,17 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC) 	\
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/find_axis.f90			\
-	$(DIR)/find_xpoint.f90
+	$(DIR)/find_xpoint.f90			\
+	$(DIR)/find_flux_surfaces.f90  		\
+	$(DIR)/flux_surface_add_line.f90  	\
+	$(DIR)/flux_surface_add_point.f90  	\
+	$(DIR)/psi_minmax.f90  	                \
+	grids/find_theta_surface.f90  	        \
+	models/bootstrap_current.f90  	        \
+	elements/hermite_1d.f90  	        \
+	solvers/root.f90  	                \
+	solvers/solvP3.f90  	                \
+	solvers/solve_M2.f90
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 	$(DIR)/find_axis.f90			\

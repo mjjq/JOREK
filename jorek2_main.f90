@@ -782,7 +782,8 @@ program JOREK2
     if (jorek_model .eq. 400) then	     
       flux_list%n_psi = 1
       call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-      flux_list%psi_values(1) = 1.0
+      flux_list%psi_values(1) = psi_bnd
+      call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
       call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)  
       call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
       call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&

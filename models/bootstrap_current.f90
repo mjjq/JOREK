@@ -56,20 +56,22 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
   Te_x  = Te0_x / (MU_ZERO*central_density)
   Te_y  = Te0_y / (MU_ZERO*central_density)
         
-  ! --- Derivatives with respect to psi
-  drho = rho_x/ps0_x + rho_y/ps0_y
-  dTi  = Ti_x /ps0_x + Ti_y /ps0_y
-  dTe  = Te_x /ps0_x + Te_y /ps0_y
-        
   ! --- Psi variables, including r~a*sqrt(psi) and X=sqrt(2*r/R0)
   psi_n    = (ps0 - psi_axis) / (psi_bnd - psi_axis)
+  if (psi_n .lt. 1.d-1)  psi_n = 1.d-1
   grad_psi = (ps0_x*ps0_x + ps0_y*ps0_y)**0.5d0
+  if (grad_psi .lt. 1.d-1) grad_psi = 1.d-1
   X        = sqrt(2.d0*minRad*sqrt(psi_n)/R_axis)
 
+  ! --- Derivatives with respect to psi
+  drho = (rho_x*ps0_x + rho_y*ps0_y) / grad_psi**2.d0
+  dTi  = (Ti_x *ps0_x + Ti_y *ps0_y) / grad_psi**2.d0
+  dTe  = (Te_x *ps0_x + Te_y *ps0_y) / grad_psi**2.d0
+        
   ! --- Nue* formula from Wesson : Nue* = R*q / ( eps**(3/2) * (Te/me)**(1/2) * Taue )
   ! --- where Taue is the electron collision time (formula for Nui* is very similar)
-  Nue = 4.0d-28 * F0 * rho / ( Te**2.d0 * X**3.d0 * grad_psi )
-  Nui = 2.7d-28 * F0 * rho / ( Ti**2.d0 * X**3.d0 * grad_psi )
+  Nui = 5.4d-56 * F0 * rho / ( Ti**2.d0 * X**3.d0 * grad_psi )
+  Nue = 9.3d-56 * F0 * rho / ( Te**2.d0 * X**3.d0 * grad_psi )
 
   ! --- Coefficients
   DD  = 2.4d0 + 5.4d0*X  + 2.6d0*X*X
@@ -88,7 +90,7 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
   Jb = BigR*X*rho*Te/DD * ( C1*(dTe/Te+drho/rho) + C2*(dTi/Ti+drho/rho) + C3*dTe/Te + C4*dTi/Ti)
 
   ! --- Current with denormalisation
-  Jb = Jb / MU_ZERO
+  Jb = Jb * MU_ZERO
 
 
 return
@@ -158,7 +160,7 @@ subroutine bootstrap_current_lhs(BigR, minRad, R_axis, &
   real*8              :: Jb3, dJb3_psi, dJb3_rho, dJb3_Te
   real*8              :: Jb4, dJb4_psi, dJb4_rho, dJb4_Te, dJb4_Ti
   real*8              :: Jb
-  real*8, intent(out) ::      dJb_psi, dJb_rho, dJb_Ti,  dJb_Te
+  real*8, intent(out) ::      dJb_psi,  dJb_rho,  dJb_Te,  dJb_Ti
 
   ! --- Need central_density
   if (central_density .lt. 1.d-6) then
@@ -176,53 +178,64 @@ subroutine bootstrap_current_lhs(BigR, minRad, R_axis, &
   ! --- Temperature in Joules
   ! --- Density in 1/(cubic meters)
   rho    = r0     * central_density
+  if (r0 .lt. rho_0*1.d-3) rho = rho_0*1.d-3 * central_density
   rho_x  = r0_x   * central_density
   rho_y  = r0_y   * central_density
   vrho   = rrho   * central_density
   vrho_x = rrho_x * central_density
   vrho_y = rrho_y * central_density
   Ti     = Ti0   / (MU_ZERO*central_density)
+  if (Ti0 .lt. Ti_0*1.d-3) Ti = Ti_0*1.d-3 / (MU_ZERO*central_density)
   Ti_x   = Ti0_x / (MU_ZERO*central_density)
   Ti_y   = Ti0_y / (MU_ZERO*central_density)
   vTi    = TTi   / (MU_ZERO*central_density)
   vTi_x  = TTi_x / (MU_ZERO*central_density)
   vTi_y  = TTi_y / (MU_ZERO*central_density)
   Te     = Te0   / (MU_ZERO*central_density)
+  if (Te0 .lt. Te_0*1.d-3) Te = Te_0*1.d-3 / (MU_ZERO*central_density)
   Te_x   = Te0_x / (MU_ZERO*central_density)
   Te_y   = Te0_y / (MU_ZERO*central_density)
   vTe    = TTe   / (MU_ZERO*central_density)
   vTe_x  = TTe_x / (MU_ZERO*central_density)
   vTe_y  = TTe_y / (MU_ZERO*central_density)
         
-  ! --- Derivatives with respect to psi
-  drho     = rho_x /ps0_x + rho_y /ps0_y
-  drho_rho = vrho_x/ps0_x + vrho_y/ps0_y
-  drho_psi = rho_x /psi_x + rho_y /psi_y
-  dTi      = Ti_x  /ps0_x + Ti_y  /ps0_y
-  dTi_Ti   = vTi_x /ps0_x + vTi_y /ps0_y
-  dTi_psi  = Ti_x  /psi_x + Ti_y  /psi_y
-  dTe      = Te_x  /ps0_x + Te_y  /ps0_y
-  dTe_Te   = vTe_x /ps0_x + vTe_y /ps0_y
-  dTe_psi  = Te_x  /psi_x + Te_y  /psi_y
-        
   ! --- Psi variables, including r~a*sqrt(psi) and X=sqrt(2*r/R0)
   psi_n     = (ps0 - psi_axis) / (psi_bnd - psi_axis)
   dpsi_n    =  psi             / (psi_bnd - psi_axis)
+  if (psi_n .lt. 1.d-1) then
+    psi_n  = 1.d-1
+    dpsi_n = 0.d0
+  endif
   grad_psi  = (ps0_x*ps0_x + ps0_y*ps0_y)**0.5d0
   dgrad_psi = (psi_x*ps0_x + psi_y*ps0_y)/(ps0_x*ps0_x + ps0_y*ps0_y)**0.5d0
+  if (grad_psi .lt. 1.d-1) then
+    grad_psi  = 1.d-1
+    dgrad_psi = 0.d0
+  endif
   X         = sqrt(2.d0*minRad/R_axis) * psi_n**0.25d0
   dX        = sqrt(2.d0*minRad/R_axis) * 0.25d0 * dpsi_n / psi_n**0.75d0
 
+  ! --- Derivatives with respect to psi
+  drho     = (rho_x *ps0_x + rho_y *ps0_y) / grad_psi**2.d0
+  drho_rho = (vrho_x*ps0_x + vrho_y*ps0_y) / grad_psi**2.d0
+  drho_psi = (rho_x *psi_x + rho_y *psi_y) / grad_psi**2.d0 - 2.d0 * (rho_x *ps0_x + rho_y *ps0_y) * dgrad_psi / grad_psi**3.d0
+  dTi      = (Ti_x  *ps0_x + Ti_y  *ps0_y) / grad_psi**2.d0
+  dTi_Ti   = (vTi_x *ps0_x + vTi_y *ps0_y) / grad_psi**2.d0
+  dTi_psi  = (Ti_x  *psi_x + Ti_y  *psi_y) / grad_psi**2.d0 - 2.d0 * (Ti_x  *ps0_x + Ti_y  *ps0_y) * dgrad_psi / grad_psi**3.d0
+  dTe  = (Te_x *ps0_x + Te_y *ps0_y) / grad_psi**2.d0
+  dTe_Te   = (vTe_x *ps0_x + vTe_y *ps0_y) / grad_psi**2.d0
+  dTe_psi  = (Te_x  *psi_x + Te_y  *psi_y) / grad_psi**2.d0 - 2.d0 * (Te_x  *ps0_x + Te_y  *ps0_y) * dgrad_psi / grad_psi**3.d0
+        
   ! --- Nue* formula from Wesson : Nue* = R*q / ( eps**(3/2) * (Te/me)**(1/2) * Taue )
   ! --- where Taue is the electron collision time (formula for Nui* is very similar)
-  Nue      = 4.0d-28 * F0 * rho / ( Te**2.d0 * X**3.d0 * grad_psi       )
-  dNue_Te  = 4.0d-28 * F0 * rho / ( Te**3.d0 * X**3.d0 * grad_psi       ) * (-2.d0 * vTe)
-  dNue_rho = 4.0d-28 * F0 * vrho/ ( Te**2.d0 * X**3.d0 * grad_psi       )
-  dNue_psi = 4.0d-28 * F0 * rho / ( Te**2.d0 * X**4.d0 * grad_psi**2.d0 ) * (-3.d0*dX*grad_psi - X*dgrad_psi)
-  Nui      = 2.7d-28 * F0 * rho / ( Ti**2.d0 * X**3.d0 * grad_psi       )
-  dNui_Ti  = 2.7d-28 * F0 * rho / ( Ti**3.d0 * X**3.d0 * grad_psi       ) * (-2.d0 * vTi)
-  dNui_rho = 2.7d-28 * F0 * vrho/ ( Ti**2.d0 * X**3.d0 * grad_psi       )
-  dNui_psi = 2.7d-28 * F0 * rho / ( Ti**2.d0 * X**4.d0 * grad_psi**2.d0 ) * (-3.d0*dX*grad_psi - X*dgrad_psi)
+  Nui      = 5.4d-56 * F0 * rho / ( Ti**2.d0 * X**3.d0 * grad_psi	)
+  dNui_Ti  = 5.4d-56 * F0 * rho / ( Ti**3.d0 * X**3.d0 * grad_psi	) * (-2.d0 * vTi)
+  dNui_rho = 5.4d-56 * F0 * vrho/ ( Ti**2.d0 * X**3.d0 * grad_psi	)
+  dNui_psi = 5.4d-56 * F0 * rho / ( Ti**2.d0 * X**4.d0 * grad_psi**2.d0 ) * (-3.d0*dX*grad_psi - X*dgrad_psi)
+  Nue      = 9.3d-56 * F0 * rho / ( Te**2.d0 * X**3.d0 * grad_psi	)
+  dNue_Te  = 9.3d-56 * F0 * rho / ( Te**3.d0 * X**3.d0 * grad_psi	) * (-2.d0 * vTe)
+  dNue_rho = 9.3d-56 * F0 * vrho/ ( Te**2.d0 * X**3.d0 * grad_psi	)
+  dNue_psi = 9.3d-56 * F0 * rho / ( Te**2.d0 * X**4.d0 * grad_psi**2.d0 ) * (-3.d0*dX*grad_psi - X*dgrad_psi)
 
   ! --- **************************************************** ---
   ! --- Coefficient DD
@@ -370,10 +383,10 @@ subroutine bootstrap_current_lhs(BigR, minRad, R_axis, &
 
   ! --- **************************************************** ---
   ! --- Current with denormalisation
-  dJb_psi = dJb_psi / MU_ZERO
-  dJb_rho = dJb_rho / MU_ZERO
-  dJb_Ti  = dJb_Ti  / MU_ZERO
-  dJb_Te  = dJb_Te  / MU_ZERO
+  dJb_psi = dJb_psi * MU_ZERO
+  dJb_rho = dJb_rho * MU_ZERO
+  dJb_Ti  = dJb_Ti  * MU_ZERO
+  dJb_Te  = dJb_Te  * MU_ZERO
 
 
 

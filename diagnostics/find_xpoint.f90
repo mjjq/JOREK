@@ -83,16 +83,16 @@ do i=1,element_list%n_elements
       grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
       
       ! --- Look for the lower Xpoint
-!      if ((grad_psi .lt. grad_psi_min(1)) .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (xcase .ne. 2)) then !MAST!!!
-      if ((grad_psi .lt. grad_psi_min(1)) .and. (Z .lt. -0.4d0) .and. (xcase .ne. 2)) then
+      if ((grad_psi .lt. grad_psi_min(1)) .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (xcase .ne. 2)) then !MAST!!!
+!      if ((grad_psi .lt. grad_psi_min(1)) .and. (Z .lt. -0.4d0) .and. (xcase .ne. 2)) then
         grad_psi_min(1) = grad_psi
 	Z_xpoint(1)     = Z
         i_elm_xpoint(1) = i
         ij_xpoint(1,1) = ms;         ij_xpoint(1,2)  = mt
       endif
       ! --- And for the upper Xpoint
-!      if ((grad_psi .lt. grad_psi_min(2)) .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (xcase .ne. 1)) then !MAST!!!
-      if ((grad_psi .lt. grad_psi_min(2)) .and. (Z .gt.  0.4d0) .and. (xcase .ne. 1)) then
+      if ((grad_psi .lt. grad_psi_min(2)) .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (xcase .ne. 1)) then !MAST!!!
+!      if ((grad_psi .lt. grad_psi_min(2)) .and. (Z .gt.  0.4d0) .and. (xcase .ne. 1)) then
         grad_psi_min(2) = grad_psi
 	Z_xpoint(2)     = Z
         i_elm_xpoint(2) = i

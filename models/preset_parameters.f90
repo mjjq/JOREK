@@ -9,6 +9,7 @@ subroutine preset_parameters
   use mumps_module,  only: use_mumps, no_zeros_mumps
   use murge_module,  only: use_murge, use_murge_element
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+  use wsmp_module,   only: use_wsmp
   
   implicit none
   
@@ -195,6 +196,7 @@ subroutine preset_parameters
   use_pastix         = .true.               ! Use PASTIX solver
   use_murge          = .false.              ! Use MURGE interface to PASTIX solver
   use_murge_element  = .false.              ! Build the matrix through murge, not with a CSC.
+  use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   refinement         = .false.              ! enable mesh refinement
   

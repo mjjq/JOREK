@@ -6,6 +6,7 @@ use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+use wsmp_module,   only: use_wsmp
 
 implicit none
 
@@ -43,6 +44,13 @@ if (my_id == 0) then
   
   write(*,'(1x,a)',advance='no') ' USE_PASTIX          : '
 #ifdef USE_PASTIX
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+  
+  write(*,'(1x,a)',advance='no') ' USE_WSMP            : '
+#ifdef USE_WSMP
   write(*,*) 'on'
 #else
   write(*,*) 'off'
@@ -326,6 +334,7 @@ if (my_id == 0) then
   write(*,232) 'gmres                 ', gmres
   write(*,231) 'gmres_max_iter        ', gmres_max_iter
   write(*,232) 'use_mumps             ', use_mumps
+  write(*,232) 'use_wsmp              ', use_wsmp
   write(*,232) 'use_pastix            ', use_pastix
   write(*,232) 'use_murge             ', use_murge
   write(*,232) 'use_murge_element     ', use_murge_element

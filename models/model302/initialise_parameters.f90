@@ -7,6 +7,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
 use vacuum,        only: vacuum_preset
+use wsmp_module,   only: use_wsmp
 
 implicit none
 
@@ -58,6 +59,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                  resistive_wall,                                    &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
+                use_wsmp,                                           &
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &

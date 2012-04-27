@@ -1,16 +1,18 @@
+!> Solve step of the local matrices for each toroidal harmonic (preconditioner for gmres)
 subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
-!-----------------------------------------------------------------------
-! solve step of the local matrices for each toroidal harmonic
-! (preconditioner for gmres)
-!-----------------------------------------------------------------------
+
 use tr_module 
 use parameters
 use mumps_module
 use pastix_module
 use murge_module
+use wsmp_module
 use global_distributed_matrix
+
 implicit none
+
 include 'mpif.h'
+
 integer             :: my_id, my_id_n, MPI_COMM_MASTER, MPI_COMM_N, ierr, i, k, i_tor(*), n_dof
 integer             :: my_id_master
 real*8              :: x(*), y(*)
@@ -140,7 +142,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       print *, "Binary built without murge"
       call abort()
 #endif
-   else
+   else if (use_pastix) then
       pastix_iparm(2) = 5
       pastix_iparm(3) = pastix_endsolve
       pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
@@ -169,6 +171,11 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       
       call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, dummy_int, dummy_int, dummy_real, &
            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#endif
+
+   elseif (use_wsmp) then
+#ifdef USE_WSMP
+     call PWGSMP__back_substitution(mumps_par%rhs, my_id_n)
 #endif
    end if
 
@@ -245,4 +252,4 @@ call cpu_time(t2)
 !end if
 
 return
-end
+end subroutine gmres_precondition

@@ -7,10 +7,11 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
 use vacuum,        only: vacuum_preset
+use wsmp_module,   only: use_wsmp
 
 implicit none
 
-! --- Input variables.
+! --- Routine parameters
 integer,                    intent(in) :: my_id
 character(len=*), optional, intent(in) :: filename
 
@@ -47,6 +48,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, resistive_wall,                       &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
+                use_wsmp,                                           &
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &

@@ -34,6 +34,7 @@ USE_HIPS   = 0
 USE_PASTIX = 1
 USE_PASTIX_MURGE = 1
 USE_MUMPS = 0
+USE_WSMP   = 0
 
 #Scotch library
 SCOTCH_HOME ?= $(HOME)/scotch_5.1
@@ -57,6 +58,9 @@ INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
 INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
+
+#WSMP
+LIB_WSMP = -L$(WSMP_HOME) -lpwsmp64
 
 # LIBFFTW
 #LIBFFTW   = $(HOME)/intel/fftw/install/lib/libfftw3.a

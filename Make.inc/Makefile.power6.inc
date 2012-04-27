@@ -27,6 +27,7 @@ USE_HIPS   = 0
 USE_PASTIX = 1
 USE_PASTIX_MURGE = 1
 USE_MUMPS = 0
+USE_WSMP   = 0
 
 LIBDIR = /afs/ipp/u/mhoelzl/mylib/rs_aix61/
 
@@ -52,6 +53,9 @@ INC_PASTIX       = `$(PASTIX_HOME)/install/pastix-conf --incs`
 #HIPS
 LIBHIPS   = ###
 INCHIPS   = ###
+
+#WSMP
+LIB_WSMP = -L$(WSMP_HOME) -lpwsmp64
 
 # LIBFFTW
 LIBFFTW   = -L/afs/rzg/@sys/lib -lfftw

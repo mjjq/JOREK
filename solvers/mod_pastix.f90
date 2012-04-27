@@ -21,4 +21,4 @@ module pastix_module             ! PastiX specific variables
   integer, parameter    :: pastix_endsolve = 5 ! 5: direct solve, 6: refinement step (not required usually)
   real*8,  parameter    :: pastix_epsilon  = 1.d-12
   real*8,  parameter    :: pastix_pivot    = 1.d-64
-endmodule pastix_module
+end module pastix_module

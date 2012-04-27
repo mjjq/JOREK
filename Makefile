@@ -49,6 +49,11 @@ ifeq (1, $(USE_PASTIX))
   endif
 endif
 
+ifeq (1, $(USE_WSMP))
+  DEFINES  := $(DEFINES) -DUSE_WSMP
+  LIBS     := $(LIBS) $(LIB_WSMP)
+endif
+
 ifeq (1, $(USE_HIPS))
   LIBS := $(LIBS) $(LIBHIPS)
   INCLUDES := $(INCLUDES) $(INCHIPS)

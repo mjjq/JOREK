@@ -1,19 +1,20 @@
 module solve_mat_n
-contains
-  subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-    !---------------------------------------------------------------------
-    ! subroutine solves the system of equation for each harmonic
-    ! using mumps with centralised matrix on the group mpi_group_n (mpi_comm_n)
-    !---------------------------------------------------------------------
-    use tr_module 
-    use parameters
 
+contains
+
+  !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
+  subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+
+    use tr_module
+    use parameters
     use mumps_module
     use murge_module
     use pastix_module
-
+    use wsmp_module
     use global_distributed_matrix
+
     implicit none
+
     include 'mpif.h'
 #include "r3_info.h"
 
@@ -48,6 +49,7 @@ contains
 
       if (use_mumps)  write(*,*) my_id,'*       using solver MUMPS      *'
       if (use_pastix) write(*,*) my_id,'*       using solver PastiX     *'
+      if (use_wsmp)   write(*,*) my_id,'*       using solver WSMP       *'
 
       write(*,*) my_id,'*********************************'
     endif
@@ -59,6 +61,7 @@ contains
       call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
       call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
     endif
+
 
 
     if (.not. solve_only) then
@@ -109,7 +112,7 @@ contains
           write(*,*) 'system_clock elapsed time analysis',REAL(nb_periods)/nb_periodes_sec
         endif
 #endif
-      else ! .not. use_mumps --> use_pastix or use_murge
+      else ! .not. use_mumps --> use_pastix or use_murge or use_wsmp
 
         if (my_id_n .eq. 0) then           
 
@@ -137,8 +140,16 @@ contains
 
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(n_block+1))
-
           call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
+
+          ! WARNING:  USE_BLOCK does not (yet) work with WSMP!!!
+          if (use_wsmp) then
+#ifdef USE_WSMP
+            call PWGSMP__allocate(n_block, nnz_block, my_id_n)
+            call PWGSMP__initialize_matrix(n_block, nnz_block,                                     &
+              mumps_par%a, mumps_par%jcn, mumps_par%irn, my_id_n )
+#endif
+          endif
 
 #else
           if (allocated(sparskit_work)) deallocate(sparskit_work)
@@ -146,7 +157,16 @@ contains
 
           call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
 
+          if (use_wsmp) then
+#ifdef USE_WSMP
+            call PWGSMP__allocate(mumps_par%N, mumps_par%NZ, my_id_n)
+            call PWGSMP__initialize_matrix(mumps_par%N, mumps_par%NZ,                              &
+              mumps_par%a, mumps_par%jcn, mumps_par%irn, my_id_n )
 #endif
+          endif
+#endif
+
+          if (allocated(sparskit_work)) deallocate(sparskit_work)
 
           if (my_id_n .eq. 0) then
             call MPI_Barrier(MPI_COMM_MASTER,ierr)     ! elapsed time analysis end
@@ -155,12 +175,18 @@ contains
             if (t1<t0) nb_periods = nb_periods + nb_periodes_max
             write(*,*) 'system_clock elapsed time coicsr',REAL(nb_periods)/nb_periodes_sec
           endif
-          deallocate(sparskit_work)
 
-        endif
+        else  ! (my_id_n > 0) below
+#ifdef USE_WSMP
+          if (use_wsmp) call PWGSMP__allocate(0, 0, my_id_n)
+#endif
+        endif ! end (my_id_n .eq. 0)
 
 
-        if (.not. pastix_smp_only) then
+
+        ! --- Dstribute data to the MPI "slave" tasks (>0)
+        !     (When using WSMP, this is *not necessary* in 0-master mode!)
+        if ((.not. use_wsmp).and.(.not. pastix_smp_only)) then
 
           !$omp parallel default(none) shared(pastix_nthrd)    
           pastix_nthrd = omp_get_num_threads()
@@ -239,7 +265,7 @@ contains
               print *, "Binary built without murge"
               call abort()
 #endif
-            else
+            elseif (use_pastix) then
 
               !          if (pastix_smp_only) pastix_nthrd = n_cpu_n                ! use the size of the MPIgroup for the number of threads
 
@@ -287,6 +313,10 @@ contains
 #else
               pastix_iparm(IPARM_DOF_NBR+1)            = 1
 #endif
+            else if (use_wsmp) then
+#ifdef USE_WSMP
+              call PWGSMP__initialize_solver(my_id_n, MPI_COMM_N)
+#endif
             end if
             pastix_initialised = .true.
 
@@ -316,7 +346,7 @@ contains
                 STOP
               end if
 
-            else
+            else if (use_pastix) then
               if (my_id_n .eq. 0) then                     ! elapsed time analysis start
                 call MPI_Barrier(MPI_COMM_MASTER,ierr)
                 call system_clock(count=time_ini_0)
@@ -347,6 +377,8 @@ contains
                 write(*,*) 'system_clock elapsed time analysis',REAL(nb_periods)/nb_periodes_sec
               endif
 
+            else if (use_wsmp) then
+              ! do nothing
             endif
 
             pastix_analysed = .true.
@@ -397,7 +429,9 @@ contains
           CALL CPU_TIME(t_analysis_1)
 
           IF (my_id_n .EQ. 0)  WRITE(*,'(i3,A,f8.3)') my_id, ' MURGE_MatrixGlobalCSC  : ',t_analysis_1-t_analysis_0
-        else
+
+        else if (use_pastix) then
+
           call cpu_time(t_fact_0)
 
           pastix_iparm(IPARM_START_TASK+1) = API_TASK_NUMFACT
@@ -427,6 +461,11 @@ contains
             if (time_facto_1<time_facto_0) nb_periods = nb_periods + nb_periodes_max
             write(*,*) 'system_clock elapsed time factorization',REAL(nb_periods)/nb_periodes_sec
           endif
+
+        else if (use_wsmp) then
+#ifdef USE_WSMP
+          call PWGSMP__LU_factorization(my_id_n)
+#endif
         end if
 
       endif
@@ -473,7 +512,7 @@ contains
         print *, "Binary built without murge"
         call abort()
 #endif
-      else
+      else if (use_pastix) then
         call cpu_time(t_solv_0)
 
         pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
@@ -494,6 +533,11 @@ contains
         call cpu_time(t_solv_1)
 
         if (my_id_n .eq.0)  write(*,'(i3,A,f8.3)')  my_id,' PastiX, solv      : ',t_solv_1-t_solv_0
+
+      else if (use_wsmp) then
+#ifdef USE_WSMP
+        call PWGSMP__back_substitution(mumps_par%rhs, my_id_n)
+#endif
       end if
     endif
 

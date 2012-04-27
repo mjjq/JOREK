@@ -23,8 +23,9 @@ program JOREK2
   use mumps_module
   use pastix_module
   use murge_module,        only: murge_initialization, murge_setGraph, MURGE_Clean, use_murge,     &
-    use_murge_element, murge_initialised, murge_harmonic, murge_glob2loc, murge_loc2glob, murge_id, &
+    use_murge_element, murge_initialised, murge_harmonic, murge_glob2loc, murge_loc2glob, murge_id,&
     murge_termination
+  use wsmp_module
   use data_structure
   use phys_module
   use parameters
@@ -235,7 +236,7 @@ program JOREK2
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_FINALIZE(IERR)
     stop
-  else if ( (.not. use_mumps) .and. (.not. use_pastix) ) then
+  else if ( (.not. use_mumps) .and. (.not. use_pastix) .and. (.not. use_wsmp) ) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_FINALIZE(IERR)
     stop
@@ -251,10 +252,37 @@ program JOREK2
     stop
   else if ( use_mumps ) then
 #ifndef USE_MUMPS
-    write(*,*) 'FATAL : use_mumps=.true. is possible only with preprocessor option USE_MUMPS'
+    write(*,*) 'FATAL : use_mumps=.true. requires USE_MUMPS=1 in Makefile.inc'
     call MPI_FINALIZE(IERR)
     stop
 #endif
+  else if ( use_pastix ) then
+#ifndef USE_PASTIX
+    write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
+    call MPI_FINALIZE(IERR)
+    stop
+#endif
+  else if ( use_wsmp ) then
+#ifndef USE_WSMP
+    write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'
+    call MPI_FINALIZE(IERR)
+    stop
+#endif
+#ifdef USE_BLOCK
+    write(*,*) 'FATAL : USE_BLOCK=1 in Makefile.inc is currently not possible with use_wsmp'
+    call MPI_FINALIZE(IERR)
+    stop
+#endif
+    if ( .not. restart ) then
+      write(*,*) 'FATAL : use_wsmp is currently not supported for the equilibrium'
+      call MPI_FINALIZE(IERR)
+      stop
+    end if
+    if ( use_pastix ) then
+      write(*,*) 'FATAL : you should only select one of use_wsmp or use_pastix'
+      call MPI_FINALIZE(IERR)
+      stop
+    end if
   end if
   
   ! --- Initialize live data file which will be filled during the code run
@@ -716,7 +744,7 @@ program JOREK2
        endif
     endif
 
-  endif
+  endif ! (nstep >0)
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
@@ -1035,9 +1063,15 @@ program JOREK2
                dummy_int, dummy_int, dummy_real, &
     		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
     	  endif
-
-
+          
        end if
+
+    elseif (use_wsmp) then
+
+#ifdef USE_WSMP
+      call PWGSMP__deallocate()
+#endif
+
     endif
   endif
   

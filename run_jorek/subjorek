@@ -92,9 +92,15 @@ ccamu*)
 
 # batch control
 # -------------
-MPIPROCS=2
+MPIPROCS=1
 NTHREAD=12
-NNODES=2
+if [ ((MPIPROCS*NTHREAD)) > 12 ]; then
+   echo ""
+   echo " MPIPROCS*NTHREAD is greater than 12, you are trying to run more MPI processes and threads than reasonable"
+   echo " ===> try running MPIPROCS=1 (1 MPI process per node) and NTHREAD=12 ...."
+   exit
+fi
+NNODES=60
 WALLTIME=12:00:00
 ((NPES=NNODES*MPIPROCS))
 echo "==================================================================================="
@@ -272,7 +278,7 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
   # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
   sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make 
+  make
 
   if [ -e jorek_model${MODELNUMBER} ]; then mv jorek_model${MODELNUMBER} ${EXECNAME}; fi
 fi

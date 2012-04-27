@@ -94,14 +94,14 @@ ccamu*)
 # -------------
 MPIPROCS=1
 NTHREAD=12
-if [ ((MPIPROCS*NTHREAD)) > 12 ]; then
-   echo ""
+NNODES=60
+WALLTIME=12:00:00
+((NLIM=MPIPROCS*NTHREAD))
+if [ ${NLIM} >= 13 ]; then
    echo " MPIPROCS*NTHREAD is greater than 12, you are trying to run more MPI processes and threads than reasonable"
    echo " ===> try running MPIPROCS=1 (1 MPI process per node) and NTHREAD=12 ...."
    exit
 fi
-NNODES=60
-WALLTIME=12:00:00
 ((NPES=NNODES*MPIPROCS))
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "

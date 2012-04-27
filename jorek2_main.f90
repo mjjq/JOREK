@@ -449,7 +449,8 @@ program JOREK2
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Determine boundary information from the grid
-  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
+  if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
+  call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
 !   if ( freeboundary_equil ) call import_external_fields('coil_field.dat')
@@ -472,7 +473,6 @@ program JOREK2
     
   ! --- Broadcast grid information and input parameters to other MPI procs
   call broadcast_elements(my_id, element_list)                ! elements
-  call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) ! boundary elements
   if (RMP_on) then
      call broadcast_RMP_profiles(my_id, bnd_node_list)        ! psi_RMP profiles
   endif

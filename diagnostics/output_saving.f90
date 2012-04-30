@@ -25,7 +25,7 @@ module out_save_module
   ! Output saving of the basic model quantities
   !----------------------------------------------
   subroutine HDF5_basics_save(Sindex_now,St_now)
-#ifndef NOHDF5
+#ifdef USE_HDF5
     use hdf5
 #endif
     use parameters,  only: jorek_model, n_tor, n_plane, n_period
@@ -37,7 +37,7 @@ module out_save_module
     integer                , intent(in) :: Sindex_now
     real*8                 , intent(in) :: St_now
 
-#ifndef NOHDF5
+#ifdef USE_HDF5
     character(LEN=100) :: basics_file
     integer(HID_T)     :: file_id
     integer            :: i, ierr
@@ -97,7 +97,7 @@ module out_save_module
 
     call HDF5_close(file_id)
 #else
-    print*,' ==> no savings of the equilibrium HDF5 files, check the NOHDF5 option'
+    print*,' ==> no savings of the equilibrium HDF5 files, check the USE_HDF5 option'
 #endif
 
   end subroutine HDF5_basics_save
@@ -106,7 +106,7 @@ module out_save_module
   ! Output savings for different n_tor values
   !----------------------------------------------
   subroutine hdf5_ntor_profiles_save(Sindex_now)
-#ifndef NOHDF5
+#ifdef USE_HDF5
     use hdf5
 #endif
     use parameters,  only: n_tor
@@ -115,7 +115,7 @@ module out_save_module
     !type(type_element_list), intent(in) :: element_list
     integer                , intent(in) :: Sindex_now
     
-#ifndef NOHDF5
+#ifdef USE_HDF5
     character(LEN=100) :: ntor_profiles_file
     integer(HID_T)     :: file_id
     integer            :: i, ierr
@@ -135,47 +135,38 @@ module out_save_module
             ' ==> error for opening of ',ntor_profiles_file
     end if
 
-write(*,*) '/////////////////////////////*****************////////////////////////////////'
     !*** Compute energies(a, b, c), where:      ***
     !***   a = 1:n_tor  ==> for each n harmonic ***
     !***   b = (1, magnetic) or (2, kinetic)    ***
     !***   c = 1:index_now ==> all times        ***
     Emag_ntor_glob          = 0.d0
-write(*,*) ' energies =  ', energies
     Emag_ntor_glob(1:n_tor) = energies(1:n_tor,1,Sindex_now)
     Ekin_ntor_glob          = 0.d0
     Ekin_ntor_glob(1:n_tor) = energies(1:n_tor,2,Sindex_now)
-write(*,*) ' je suis ici, 1  '
     !*** Compute growth rates            ***
     !***   computed from energies(a,b,c) ***
     Growthrate_mag_ntor_glob          = 0.d0
     Growthrate_kin_ntor_glob          = 0.d0
-write(*,*) ' je suis ici, 2  '
     if (Sindex_now > index_start+1) then
        do i=1,n_tor
           Growthrate_mag_ntor_glob(i) = 0.5d0*log(abs(energies(i,1,Sindex_now)/energies(i,1,Sindex_now-1))) / tstep
           Growthrate_kin_ntor_glob(i) = 0.5d0*log(abs(energies(i,2,Sindex_now)/energies(i,2,Sindex_now-1))) / tstep
        end do
     end if
-write(*,*) ' je suis ici, 3  '
 
     ! -> save : 'kin. and mag. energies   '
     Nbc = n_tor
     call HDF5_array1D_saving(file_id,Emag_ntor_glob(1:),Nbc, &
          'Emag_ntor_glob'//char(0))
-write(*,*) ' je suis ici, 4  '
     call HDF5_array1D_saving(file_id,Ekin_ntor_glob(1:),Nbc, &
          'Ekin_ntor_glob'//char(0))
-write(*,*) ' je suis ici, 5  '
     ! -> save : 'kin. and mag. growth rates   '
     call HDF5_array1D_saving(file_id,Growthrate_mag_ntor_glob(1:),Nbc, &
          'Growthrate_mag_ntor_glob'//char(0))
-write(*,*) ' je suis ici, 6  '
     call HDF5_array1D_saving(file_id,Growthrate_kin_ntor_glob(1:),Nbc, &
          'Growthrate_kin_ntor_glob'//char(0))
-write(*,*) ' je suis ici, 7  '
 #else
-    print*,' ==> no savings of the ntor profiles HDF5 files, check the NOHDF5 option'
+    print*,' ==> no savings of the ntor profiles HDF5 files, check the USE_HDF5 option'
 #endif
 
   end subroutine hdf5_ntor_profiles_save
@@ -184,7 +175,7 @@ write(*,*) ' je suis ici, 7  '
   ! Output saving of the radial profiles
   !----------------------------------------------
   subroutine HDF5_radial_profiles_save(node_list,element_list,Sindex_now,St_now)
-#ifndef NOHDF5
+#ifdef USE_HDF5
     use hdf5
 #endif
     type(type_node_list)   , intent(in) :: node_list
@@ -192,7 +183,7 @@ write(*,*) ' je suis ici, 7  '
     integer                , intent(in) :: Sindex_now
     real*8                 , intent(in) :: St_now
     
-#ifndef NOHDF5
+#ifdef USE_HDF5
     character(LEN=100) :: radial_profiles_file
     integer(HID_T)     :: file_id
     integer            :: i, ierr
@@ -213,7 +204,7 @@ write(*,*) ' je suis ici, 7  '
 
     !*** geometry ***
 #else
-    print*,' ==> no savings of the radial profiles HDF5 files, check the NOHDF5 option'
+    print*,' ==> no savings of the radial profiles HDF5 files, check the USE_HDF5 option'
 #endif
 
   end subroutine HDF5_radial_profiles_save

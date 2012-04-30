@@ -40,6 +40,10 @@ write(21) tstep,eta,visco,visco_par
 write(21) index_now
 write(21) t_now
 
+#ifdef USE_HDF5
+  write(21) h5_nbsave_all
+#endif
+
 if (index_now .gt. 0) then
   write(21) xtime(1:index_now)
   write(21) energies(:,:,1:index_now)

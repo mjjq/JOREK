@@ -58,6 +58,10 @@ read(21) tstep,eta_tmp,visco_tmp,visco_par_tmp
 read(21) index_start
 read(21) t_start
 
+#ifdef USE_HDF5
+  read(21) h5_nbsave_all
+#endif
+
 if (index_start .ge. 1) then
 
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
@@ -83,6 +87,9 @@ close(21)
 
 write(*,*) '************* restart ******************'
 write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
+#ifdef USE_HDF5
+  write(*,'(A19,f14.6,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
+#endif
 write(*,*) '****************************************'
 
 

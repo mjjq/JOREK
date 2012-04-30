@@ -329,7 +329,11 @@ if (my_id == 0) then
   write(*,232) 'bc_natural_open       ', bc_natural_open
   write(*,232) 'produce_live_data     ', produce_live_data
   write(*,232) 'export_for_nemec      ', export_for_nemec
+#ifdef USE_HDF5
   write(*,232) 'save_diagnostics_HDF5 ', save_diagnostics_HDF5
+  write(*,230) 'h5_diag_nbtime        ', h5_diag_nbtime
+!  write(*,232) 'h5_nbsave_all         ', h5_nbsave_all
+#endif
   write(*,232) 'linear_run            ', linear_run
   write(*,232) 'gmres                 ', gmres
   write(*,231) 'gmres_max_iter        ', gmres_max_iter

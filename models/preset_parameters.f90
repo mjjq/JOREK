@@ -188,7 +188,10 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec      = .false.
+#ifdef USE_HDF5
   save_diagnostics_HDF5 = .false.
+  h5_diag_nbtime        = 10.d0
+#endif
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations

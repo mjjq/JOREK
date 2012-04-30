@@ -39,7 +39,12 @@ program JOREK2
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
   use solve_mat_n
   use tr_module
-  
+#ifdef USE_HDF5
+  use hdf5
+  use HDF5_io_module
+  use out_save_module
+#endif
+
   implicit none
   
   include 'mpif.h'
@@ -144,7 +149,9 @@ program JOREK2
   character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
   integer, allocatable     :: tab_n_local_elems(:)
   integer                  :: sum_n_local_elms, max_n_local_elms, min_n_local_elms
-  
+  real*8                   :: t_this
+  integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
+
   real*8,  pointer :: dummy_real(:)
   integer, pointer :: dummy_int(:)
   dummy_real => NULL()
@@ -305,6 +312,36 @@ program JOREK2
     ! --- Read the restart file (jorek_restart.rst)
     call import_restart(node_list, element_list, 'jorek_restart.rst', ierr)
     if ( ierr /= 0 ) stop
+
+#ifdef USE_HDF5
+    if (save_diagnostics_HDF5 .and. (my_id .eq. 0) ) then
+       write(*,*) ' '
+       write(*,*) '*******************************************************************************'
+       write(*,*) '******* Read and initialise quantites for HDF5 saving --RESTART MODE-- ********'
+       ! --- Read and initialise quantites for HDF5 saving
+       ! "h5_nbsave_previous" exists, so set it to "h5_nbsave_all" = number of HDF5 files
+       ! that have been written in the previous run(s)
+       h5_nbsave_previous = h5_nbsave_all
+       write(*,*) '  h5_nbsave_previous = ',h5_nbsave_previous
+       ! number of HDF5 files that have actually been written in the current run
+       h5_nbsave_current  = 0
+       write(*,*) '  h5_nbsave_current  = ',h5_nbsave_current
+       ! consistency test required: "h5_diag_nbtime" cannot be smaller than 1 Alfven
+       ! time otherwise the "modulo" below fails
+       if ( h5_diag_nbtime < 1.d0 ) then
+          h5_diag_nbtime = 1.d0
+          write(*,*) '  -----> your "h5_diag_nbtime" value is stupid and has been set to 1.d0 '
+       else
+          write(*,*) '  h5_diag_nbtime     = ',h5_diag_nbtime
+       endif
+       ! number of HDF5 files that are going to be written in the current run
+       ! if everything goes right
+       t_this = tstep*nstep
+       h5_nbsave = int((t_this)/h5_diag_nbtime)-1 + min(1,mod( floor(t_this),floor(h5_diag_nbtime) ))
+       write(*,*) '  h5_nbsave          = ',h5_nbsave
+       write(*,*) '*******************************************************************************'
+    endif
+#endif
     
     ! --- Write live data for previous time-steps
     if ( .not. bench_without_plot ) then
@@ -343,6 +380,30 @@ program JOREK2
     bnd_elm_list%n_bnd_elements  = 0
     node_list%n_nodes            = 0
     
+#ifdef USE_HDF5
+    if (save_diagnostics_HDF5 .and. (my_id .eq. 0) ) then
+       write(*,*) ' '
+       write(*,*) '*******************************************************************************'
+       write(*,*) '******* Read and initialise quantites for HDF5 saving --INITIAL STEP-- ********'
+       ! --- Read and initialise quantites for HDF5 saving
+       ! "h5_nbsave_previous" does not exist, so = 0
+       h5_nbsave_previous = 0
+       write(*,*) '  h5_nbsave_previous = ',h5_nbsave_previous
+       ! number of HDF5 files that have actually been written in the current run
+       h5_nbsave_current  = 0
+       write(*,*) '  h5_nbsave_current  = ',h5_nbsave_current
+       ! consistency test required: "h5_diag_nbtime" cannot be smaller than 1 Alfven
+       ! time otherwise the "modulo" below fails
+       if ( h5_diag_nbtime < 1.d0 ) then
+          h5_diag_nbtime = 1.d0
+          write(*,*) '  -----> your "h5_diag_nbtime" value is stupid and has been set to 1.d0 '
+       else
+          write(*,*) '  h5_diag_nbtime     = ',h5_diag_nbtime
+       endif
+       write(*,*) '*******************************************************************************'
+    endif
+#endif
+
     if (my_id == 0) then
       
       ! --- Define the boundary of the initial grid
@@ -943,14 +1004,55 @@ program JOREK2
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)
+    
+       !***********************************************************************
+       !*                          output saving for diagnostics              *
+       !*                                                                     *
+       !*  ===> set boolean "save_diagnostics_HDF5" to "true" if wanted       *
+       !*       in the input file, to "false" if not                          *
+       !*  ===> the diagnostics are saved every "h5_diag_nbtime" Alfven times *
+       !***********************************************************************
+#ifdef USE_HDF5
+       !*   0D-1D and 2D diagnostics saving in HDF5 format  *
+       if (save_diagnostics_HDF5 .and. (my_id .eq. 0) ) then
+          ! the number of HDF5 files that:
+          !   - have been written in the previous runs: "h5_nbsave_previous"
+          !   - have been written so far: "h5_nbsave_current"
+          !   - should be written if everything goes right: "h5_nbsave"
+          ! are computed above, around line 288
+          if ( ( (   (mod( floor(t_now),floor(h5_diag_nbtime) ).eq.0).or.(t_now.eq.t_this)   ) &
+               .and. (h5_nbsave_current .le. h5_nbsave) ) &
+               .or. (h5_nbsave_previous .eq. 0)         ) then
+             write(*,*) ' '
+             write(*,*) '*******************************************************************************'
+             write(*,*) '*     BEGIN --- writing the HDF5 diagnostics                                  *'
+             write(*,*) '*******************************************************************************'
+             ! compute quantities in (R,Z) and (psi,theta) coordinates
+!             call HDF5_compute_R_Z_psi_th()
+             write(*,*) ' ===> writing the basic parameters.............................................'
+             call HDF5_basics_save(index_now,t_now)
+             write(*,*) ' ===> writing the n_tor profiles...............................................'
+             call HDF5_ntor_profiles_save(index_now)
+             write(*,*) ' ===> writing the radial (psi) profiles........................................'
+             !call HDF5_radial_profiles_save(index_now)
+             write(*,*) '*******************************************************************************'
+             write(*,*) '*     END --- writing the HDF5 diagnostics                                    *'
+             write(*,*) '*******************************************************************************'
+             write(*,*) ' '
+          endif
+          h5_nbsave_current = h5_nbsave_current + 1
+          ! this quantity is now saved in the restart file and becomes the new h5_nbsave_previous
+          h5_nbsave_all     = h5_nbsave_previous + h5_nbsave_current
+       endif
+#endif
 
-       t_now = t_now + tstep
+          t_now = t_now + tstep
 
-    else
-      if ( my_id == 0 ) write(*,*) ' TIME STEP SKIPPED !', iter_gmres
-      index_now = index_now - 1 ! Undo the time step
-      exit
-    end if
+       else
+          if ( my_id == 0 ) write(*,*) ' TIME STEP SKIPPED !', iter_gmres
+          index_now = index_now - 1 ! Undo the time step
+          exit
+       end if
 
     !-------------------------------------------------------- adapt time step (in progress...)
     mindelta = minval(deltas); maxdelta = maxval(deltas);

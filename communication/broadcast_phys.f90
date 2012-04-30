@@ -26,7 +26,11 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( (228+2*max_limiter) * IDBL_EXT + (27+n_tor) * INT_EXT + 35 * ILOG_EXT + 12*512+80 * CHAR_EXT )
+#ifdef USE_HDF5
+  bufsize = ( (229+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 36 * ILOG_EXT + 12*512+80 * CHAR_EXT )
+#else
+  bufsize = ( (228+2*max_limiter) * IDBL_EXT + (27+n_tor) * INT_EXT + 35 * ILOG_EXT + 12*512+80 * CHAR_EXT )
+endif
 
 allocate(buffer(bufsize))
 
@@ -172,6 +176,12 @@ if (my_id .eq. 0) then
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+#ifdef USE_HDF5
+  call MPI_PACK(save_diagnostics_HDF5,  1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(h5_diag_nbtime,         1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr) !229+2*max_limiter
+  call MPI_PACK(h5_nbsave_all,          1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+#endif
+
   call MPI_PACK(n_flux,                 1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(n_tht,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(n_open,                 1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -224,7 +234,6 @@ if (my_id .eq. 0) then
   call MPI_PACK(num_zk_e_perp,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_zk_i_perp,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(export_for_nemec,       1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(save_diagnostics_HDF5,  1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(linear_run,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(gmres,                  1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(use_mumps,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -385,6 +394,12 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,nstep,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,               10,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   
+#ifdef USE_HDF5
+  call MPI_UNPACK(buffer,bufsize,position,save_diagnostics_HDF5,  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,h5_diag_nbtime,         1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,h5_nbsave_all,	  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+#endif
+
   call MPI_UNPACK(buffer,bufsize,position,n_flux,                 1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_tht,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_open,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -438,7 +453,6 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,num_zk_i_perp,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,export_for_nemec,       1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,save_diagnostics_HDF5,  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,linear_run,             1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,gmres,                  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,use_mumps,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

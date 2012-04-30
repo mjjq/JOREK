@@ -59,8 +59,11 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-                linear_run, export_for_nemec, save_diagnostics_HDF5,&
-                output_bnd_elements,  &
+                linear_run, export_for_nemec,                       &
+#ifdef USE_HDF5
+                save_diagnostics_HDF5,h5_diag_nbtime,               &
+#endif
+                output_bnd_elements,                                &
                 n_limiter, R_limiter, Z_limiter
 
 if (my_id .eq. 0) then

@@ -39,8 +39,10 @@ module phys_module
   logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
   logical :: export_for_nemec     !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
 
+#ifdef USE_HDF5
   ! for HDF5 diagnostics
   logical :: save_diagnostics_HDF5!< Export data in HDF5 format
+#endif
   ! Number of digits that ends the filenames of diagnostics
   integer             :: nbdigits   = 5
   character(20)       :: numfmt     = "'_d',i5.5"
@@ -106,7 +108,11 @@ module phys_module
                                !! used for time_evol_theta and time_evol_zeta.
   real*8  :: time_evol_theta   !< Time evolution parameter theta (see documentation)
   real*8  :: time_evol_zeta    !< Time evolution parameter zeta (see documentation)
-  
+#ifdef USE_HDF5
+  real*8  :: h5_diag_nbtime    !< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
+  integer :: h5_nbsave_all     !< number of HDF5 files written [or # of times the HDF5 saving has been called]
+#endif
+
   !> @name Analytical boundary of initial grid
   !!
   !! Analytical definition of the boundary of the non flux-aligned initial polar grid.

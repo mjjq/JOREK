@@ -30,7 +30,7 @@ call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
   bufsize = ( (229+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 36 * ILOG_EXT + 12*512+80 * CHAR_EXT )
 #else
   bufsize = ( (228+2*max_limiter) * IDBL_EXT + (27+n_tor) * INT_EXT + 35 * ILOG_EXT + 12*512+80 * CHAR_EXT )
-endif
+#endif
 
 allocate(buffer(bufsize))
 

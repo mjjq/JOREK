@@ -95,18 +95,19 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   end if
 
   do loop = 1, loop_nbr
-     if (loop == 2)  then
-        write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
-        if (.not. solve_only) then
-           CALL MURGE_ASSEMBLYBEGIN(murge_id, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
+#ifdef USE_MURGE
+       if (loop == 2)  then
+          write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
+          if (.not. solve_only) then
+            CALL MURGE_ASSEMBLYBEGIN(murge_id, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        end if
-        if (gmres) then
+          end if
+          if (gmres) then
            CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        end if
-     end if
-
+          end if
+       end if
+#endif
      do i=1, n_local_elms
 
         ielm = local_elms(i)
@@ -465,14 +466,16 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
            endif
         enddo
      enddo
-     if (loop == 2) then
-        if (.not. solve_only) then
-           CALL MURGE_ASSEMBLYEND(murge_id, ierr)
+#ifdef USE_MURGE
+        if (loop == 2) then
+           if (.not. solve_only) then
+              CALL MURGE_ASSEMBLYEND(murge_id, ierr)
+           end if
+           if (gmres) then
+              CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
+           end if
         end if
-        if (gmres) then
-           CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
-        end if
-     end if
+#endif
   end do
   return
 end subroutine boundary_conditions

@@ -33,10 +33,15 @@ contains
     !Split broadcast
     character*8 :: type
 
-    real*8,  pointer :: dummy_real(:)
-    integer, pointer :: dummy_int(:)
-    dummy_real => NULL()
-    dummy_int  => NULL()
+#ifdef __GFORTRAN__
+    real*8,  pointer :: DUMMY_REAL(:)
+    integer, pointer :: DUMMY_INT (:)
+    DUMMY_REAL => NULL()
+    DUMMY_INT  => NULL()
+#else
+#define DUMMY_REAL NULL()
+#define DUMMY_INT NULL()
+#endif
 
     call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
@@ -523,11 +528,11 @@ contains
         if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
 #ifdef USE_BLOCK
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-          dummy_int,dummy_int,dummy_real, &
+          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-          dummy_int,dummy_int,dummy_real, &
+          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
         call cpu_time(t_solv_1)

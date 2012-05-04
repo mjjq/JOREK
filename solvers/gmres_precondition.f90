@@ -23,10 +23,15 @@ real*8              :: t1, t2, t3, t4, t5, t6
 real*8, allocatable :: buffer(:)
 integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 
-real*8,  pointer :: dummy_real(:)
-integer, pointer :: dummy_int(:)
-dummy_real => NULL()
-dummy_int  => NULL()
+#ifdef __GFORTRAN__
+real*8,  pointer :: DUMMY_REAL(:)
+integer, pointer :: DUMMY_INT (:)
+DUMMY_REAL => NULL()
+DUMMY_INT  => NULL()
+#else
+#define DUMMY_REAL NULL()
+#define DUMMY_INT NULL()
+#endif
 
 !write(*,*) my_id,my_id_n,' GMRES preconditioning ',MPI_COMM_WORLD
 
@@ -164,12 +169,12 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       pastix_iparm(5) = block_size      ! block size
       
       call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-                    dummy_int, dummy_int, dummy_real, &
+                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
       pastix_iparm(5) = 1      ! block size
       
-      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, dummy_int, dummy_int, dummy_real, &
+      call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
 

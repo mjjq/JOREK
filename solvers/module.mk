@@ -54,7 +54,9 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/mod_mumps.f90 		\
 	$(DIR)/mod_pastix.f90		\
 	$(DIR)/mod_murge.f90 		\
-	$(DIR)/mnewtax.f90
+	$(DIR)/mnewtax.f90              \
+	$(DIR)/mod_wsmp.f90           
+
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 	$(DIR)/mod_mumps.f90 		\

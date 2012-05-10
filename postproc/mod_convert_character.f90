@@ -9,7 +9,7 @@ module convert_character
   
   
   private
-  public lower_case, to_int, to_float, get_variable_number
+  public lower_case, to_int, to_log, to_float, get_variable_number
   
   
   
@@ -48,6 +48,17 @@ module convert_character
     read(s,*,iostat=error) to_int
     if ( error /= 0 ) write(*,*) 'ERROR: Parameter "', trim(s), '" is not an integer number.'
   end function to_int
+  
+  
+  
+  !> Convert a character string to a logical
+  logical function to_log(s, error)
+    character(len=*), intent(in)  :: s     !< Character string to be converted
+    integer,          intent(out) :: error !< Error flag
+    
+    read(s,*,iostat=error) to_log
+    if ( error /= 0 ) write(*,*) 'ERROR: Parameter "', trim(s), '" is not a logical value.'
+  end function to_log
   
   
   

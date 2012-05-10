@@ -13,7 +13,7 @@ module exec_commands
   use nodes_elements,    only: node_list, element_list
   use parse_commands,    only: type_command, print_command
   use settings,          only: set_setting, get_setting, get_int_setting, print_settings
-  use convert_character, only: to_float, to_int, get_variable_number, lower_case
+  use convert_character, only: to_float, to_int, to_log, get_variable_number, lower_case
   use postproc_help,     only: general_help, specific_help
   use basis_at_gaussian, only: H, H_s, H_t, wgauss, n_gauss
   use domains,           only: in_private
@@ -203,6 +203,8 @@ module exec_commands
           call fluxsurfaces(command, file_handle, error)
         case ( 'for' )
           call loop_start(command, error)
+        case ( 'gourdon' )
+          call gourdon(command, file_handle, error)
         case ( 'heatfluxpattern' )
           call heatfluxpattern(command, file_handle, error)
         case ( 'help' )
@@ -232,8 +234,8 @@ module exec_commands
     else if ( exec_mode == LOOP_MODE ) then
       
       select case ( trim(command%option(1)) )
-        case ( 'axis', 'average', 'fluxsurfaces', 'heatfluxpattern', 'line', 'point', 'volume',    &
-          'global_parameters' )
+        case ( 'axis', 'average', 'fluxsurfaces', 'gourdon', 'heatfluxpattern', 'line', 'point',   &
+          'volume', 'global_parameters' )
           call add_to_command_queue(command, error)
         case ( 'help' )
           call help(command, error)
@@ -554,6 +556,255 @@ module exec_commands
     deallocate (surface_list%psi_values)
     
   end subroutine fluxsurfaces
+  
+  
+  
+  !> Implements the 'gourdon' command: Export magnetic field for Gourdon
+  recursive subroutine gourdon(command, file_handle, error)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)     :: command     !< Command to be executed
+    integer,            intent(in)     :: file_handle !< File handle
+    integer,            intent(out)    :: error       !< Error flag
+    
+    ! --- Local variables
+    integer, parameter       :: I_PSI        = 1
+    integer                  :: n_components ! Number of field components (3 or 12)
+    real*8                   :: R_min, R_max, Z_min, Z_max
+    integer                  :: n_R, n_Z, n_phi
+    integer                  :: i, j, k, i_tor
+    real*8                   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, phi
+    real*8, allocatable      :: field(:,:,:,:)
+    character(len=1024)      :: filename
+    real*8                   :: R_out, Z_out, s, t
+    integer                  :: i_elm, ifail
+    real*8                   :: P, P_s, P_t, P_st, P_ss, P_tt, xjac, xjac_R, xjac_Z, HZ, HZ_p
+    real*8                   :: dP_dZ, dP_dR, d2P_dZ_dphi, d2P_dR_dphi, d2P_dZ_dR, d2P_dR2,        &
+      d2P_dZ2, d2P_dR_dZ
+    logical                  :: is_axisym, include_derivs
+
+    error = 0
+    
+    ! --- Some basic checks
+    call check_param_count(command, (/7,8/), error)
+    if ( error /= 0 ) return
+    call check_step_imported(error)
+    if ( error /= 0 ) return
+    
+    R_min = to_float(command%option(2), error)
+    if ( error /= 0 ) return
+    
+    R_max = to_float(command%option(3), error)
+    if ( error /= 0 ) return
+    
+    n_R = to_int(command%option(4), error)
+    if ( error /= 0 ) return
+    
+    Z_min = to_float(command%option(5), error)
+    if ( error /= 0 ) return
+    
+    Z_max = to_float(command%option(6), error)
+    if ( error /= 0 ) return
+    
+    n_Z = to_int(command%option(7), error)
+    if ( error /= 0 ) return
+    
+    n_phi = to_int(command%option(8), error)
+    if ( error /= 0 ) return
+    
+    if ( command%n_options == 8 ) then
+      include_derivs = .false.
+    else if ( command%n_options == 9 ) then
+      include_derivs = to_log(command%option(9),error)
+      if ( error /= 0 ) return
+    end if
+    
+    if ( include_derivs ) then
+      write(filename,'(a,i5.5,a)') 'gourdon-field_DERIVS_step', index_start, '.dat'
+      n_components = 12
+    else
+      write(filename,'(a,i5.5,a)') 'gourdon-field_NODERIVS_step', index_start, '.dat'
+      n_components = 3
+    end if
+    
+    allocate( field(n_components,0:n_R-1,0:n_Z-1,0:n_phi-1) )
+    field(:,:,:,:) = 0.d0
+    
+    write(*,*) 'Calculating field components.'
+    call omp_set_nested(.true.)
+    !$omp parallel do default(none)                                                                &
+    !$omp private(i,j,k,R,Z,R_out,Z_out,i_elm,s,t,ifail,dP_dZ,dP_dR,d2P_dZ_dphi,d2P_dR_dphi,       &
+    !$omp   d2P_dZ_dR,d2P_dR2,d2P_dZ2,d2P_dR_dZ,phi,R_s,R_t,R_st,R_ss,R_tt,Z_s,Z_t,Z_st,Z_ss,      &
+    !$omp   Z_tt,xjac,xjac_R,xjac_Z,i_tor,P,P_s,P_t,P_st,P_ss,P_tt,HZ,HZ_p,file_handle)            &
+    !$omp shared(field,R_min,R_max,Z_min,Z_max,n_R,n_Z,n_phi,node_list,element_list,F0,mode,       &
+    !$omp   n_components,include_derivs)                                                           &
+    !$omp schedule(dynamic)
+    do i = 0, n_R - 1
+      R = R_min + (R_max - R_min) * real(i)/real(n_R)
+      
+      !$omp critical
+      if ( mod(i,max(1,min(n_R/20,40)))==0 ) write(*,'(3x,a,i5,a,i5)') '#',i, ' of', n_R-1
+      !$omp end critical
+      
+      do j = 0, n_Z - 1
+        Z = Z_min + (Z_max - Z_min) * real(j)/real(n_Z)
+        
+        call find_RZ(node_list, element_list, R, Z, R_out, Z_out, i_elm, s, t, ifail)
+        
+        if ( ifail == 0 ) then ! i.e., if (R,Z) is inside the JOREK computational domain
+          
+          do k = 0, n_phi - 1
+            phi = 2.d0*PI * real(k)/real(n_phi)
+            
+            call interp_RZ(node_list, element_list, i_elm, s, t, R, R_s, R_t, R_st, R_ss, R_tt, Z, &
+              Z_s, Z_t, Z_st, Z_ss, Z_tt)
+            
+            xjac   = R_s*Z_t - R_t*Z_s
+            
+            xjac_R = (R_ss*Z_t**2 - Z_ss*R_t*Z_t - 2.d0*R_st*Z_s*Z_t                               &
+              + Z_st*(R_s*Z_t + R_t*Z_s) + R_tt*Z_s**2 - Z_tt*R_s*Z_s) / xjac
+	    
+            xjac_Z = (Z_tt*R_s**2 - R_tt*Z_s*R_s - 2.d0*Z_st*R_t*R_s                               &
+              + R_st*(Z_t*R_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
+            
+            dP_dZ       = 0.d0
+            dP_dR       = 0.d0
+            d2P_dZ_dphi = 0.d0
+            d2P_dR_dphi = 0.d0
+            d2P_dZ_dR   = 0.d0
+            d2P_dR2     = 0.d0
+            d2P_dZ2     = 0.d0
+            d2P_dR_dZ   = 0.d0
+            
+            do i_tor = 1, n_tor
+              call interp(node_list,element_list,i_elm,I_PSI,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+              
+              ! --- Fourier basis function and derivative
+              if ( i_tor == 1 ) then
+                HZ   = 1.d0
+                HZ_p = 0.d0
+              else if ( mod(i_tor,2) == 0 ) then
+                HZ   = cos(mode(i_tor)*phi)
+                HZ_p = - real(mode(i_tor)) * sin(mode(i_tor)*phi)
+              else
+                HZ   = sin(mode(i_tor)*phi)
+                HZ_p = + real(mode(i_tor)) * cos(mode(i_tor)*phi)
+              end if
+              
+              ! --- First and second derivatives of poloidal flux Psi with respect to R, Z, and phi
+              dP_dZ = dP_dZ + ( - R_t * P_s + R_s * P_t ) * HZ / xjac
+              dP_dR = dP_dR + ( + Z_t * P_s - Z_s * P_t ) * HZ / xjac
+              
+              if ( include_derivs ) then
+                d2P_dZ_dphi = d2P_dZ_dphi + ( - R_t * P_s + R_s * P_t ) * HZ_p / xjac
+                
+                d2P_dR_dphi = d2P_dR_dphi + ( + Z_t * P_s - Z_s * P_t ) * HZ_p / xjac
+                
+                d2P_dR2 = d2P_dR2 + ( (P_ss * Z_t**2 - 2.d0*P_st * Z_s*Z_t + P_tt * Z_s**2         &
+                  + P_s * (Z_st*Z_t - Z_tt*Z_s ) + P_t * (Z_st*Z_s - Z_ss*Z_t ) ) / xjac**2        &
+                  - xjac_R * (P_s * Z_t - P_t * Z_s) / xjac**2 ) * HZ
+                
+                d2P_dZ2 = d2P_dZ2 + ( (P_ss * R_t**2 - 2.d0*P_st * R_s*R_t + P_tt * R_s**2         &
+                  + P_s * (R_st*R_t - R_tt*R_s ) + P_t * (R_st*R_s - R_ss*R_t ) ) / xjac**2        &
+                  - xjac_Z * (- P_s * R_t + P_t * R_s ) / xjac**2 ) * HZ
+                
+                d2P_dZ_dR = d2P_dZ_dR + ( (- P_ss * Z_t*R_t - P_tt * R_s*Z_s                       &
+                  + P_st * (Z_s*R_t  + Z_t*R_s  ) - P_s  * (R_st*Z_t - R_tt*Z_s )                  &
+	          - P_t * (R_st*Z_s  - R_ss*Z_t ) ) / xjac**2                                      &
+                  - xjac_R * (- P_s * R_t + P_t * R_s ) / xjac**2 ) * HZ
+                  
+                d2P_dR_dZ = d2P_dZ_dR
+              end if
+            end do
+            
+            ! --- B_phi
+            field(1,i,j,k) = F0 / R
+            
+            ! --- B_R
+            field(2,i,j,k) = dP_dZ / R
+            
+            ! --- B_Z
+            field(3,i,j,k) = -dP_dR / R
+            
+            if ( include_derivs ) then
+              
+              ! --- dB_phi/dphi
+              field(4,i,j,k) = 0.d0
+              
+              ! --- dB_R/dphi
+              field(5,i,j,k) = d2P_dZ_dphi / R
+              
+              ! --- dB_Z/dphi
+              field(6,i,j,k) = - d2P_dR_dphi / R
+              
+              ! --- dB_phi/dR
+              field(7,i,j,k) = - F0 / R**2
+              
+              ! --- dB_R/dR
+              field(8,i,j,k) = - dP_dZ / R**2 + d2P_dZ_dR / R
+              
+              ! --- dB_Z/dR
+              field(9,i,j,k) = dP_dR / R**2 - d2P_dR2 / R
+              
+              ! --- dB_phi/dZ
+              field(10,i,j,k) = 0.d0
+              
+              ! --- dB_R/dZ
+              field(11,i,j,k) = d2P_dZ2 / R
+              
+              ! --- dB_Z/dZ
+              field(12,i,j,k) = - d2P_dR_dZ / R
+              
+            end if
+            
+          end do
+          
+        else ! i.e., if (R,Z) is outside the JOREK computational domain
+          
+          ! Do nothing, field == 0 here.
+          
+        end if
+        
+      end do
+    end do
+    !$omp end parallel do
+    call omp_set_nested(.false.)
+    write(*,*) 'done.'
+    write(*,*) 'Writing data.'
+    
+    ! --- Output data
+    open(unit=file_handle, file=filename, status='replace', action='write', form='unformatted',    &
+      iostat=error)
+    if (error /= 0) then
+      write(*,*) 'ERROR in routine gourdon: Creating file "', trim(filename), '" failed.'
+      return
+    end if
+    
+    write(file_handle) real(n_phi), real(n_R), real(n_Z), real(n_components), real(1), real(n_phi)
+    write(file_handle) (R_max+R_min)/2.d0, (Z_max+Z_min)/2.d0,                                     &
+      (R_max-R_min)/2.d0, (Z_max-Z_min)/2.d0
+    do k = 0, n_phi - 1
+      write(file_handle) field(:,:,:,k)
+    end do
+    
+    is_axisym = .true.
+    i_loop: do i = 0, n_R - 1
+      do j = 0, n_Z - 1
+        do k = 1, n_components
+          if ( maxval(field(k,i,j,:))-minval(field(k,i,j,:)) > 1.e-15 ) then
+            is_axisym = .false.
+            exit i_loop
+          end if
+        end do
+      end do
+    end do i_loop
+    
+    write(*,*) '  Field axisymmetric?', is_axisym
+    
+    close (unit=file_handle)
+    write(*,*) 'done.'
+    
+  end subroutine gourdon
   
   
   

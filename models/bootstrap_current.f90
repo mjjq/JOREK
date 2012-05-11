@@ -47,12 +47,15 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
   ! --- Temperature in Joules
   ! --- Density in 1/(cubic meters)
   rho   = r0   * central_density
+  if (r0 .lt. rho_0*1.d-3) rho = rho_0*1.d-3 * central_density
   rho_x = r0_x * central_density
   rho_y = r0_y * central_density
   Ti    = Ti0   / (MU_ZERO*central_density)
+  if (Ti0 .lt. Ti_0*1.d-3) Ti = Ti_0*1.d-3 / (MU_ZERO*central_density)
   Ti_x  = Ti0_x / (MU_ZERO*central_density)
   Ti_y  = Ti0_y / (MU_ZERO*central_density)
   Te    = Te0   / (MU_ZERO*central_density)
+  if (Te0 .lt. Te_0*1.d-3) Te = Te_0*1.d-3 / (MU_ZERO*central_density)
   Te_x  = Te0_x / (MU_ZERO*central_density)
   Te_y  = Te0_y / (MU_ZERO*central_density)
         
@@ -299,7 +302,7 @@ subroutine bootstrap_current_lhs(BigR, minRad, R_axis, &
             + 0.26d0*Nui*Nui*X**6.d0
 
   dAC4_psi = (   (0.54d0*dX/(1.d0+0.46d0*X)**2.d0 + 0.18d0/sqrt(Nui)*dNui_psi) * (1.d0 + 0.7d0 *sqrt(Nui)         )   &
-               - (  -1.17d0/(1.d0+0.46d0*X)	  + 0.35d0*sqrt(Nui)	     ) * (	 0.25d0/sqrt(Nui)*dNui_psi) ) &
+               - (  -1.17d0/(1.d0+0.46d0*X)	  + 0.35d0*sqrt(Nui)	     ) * (	 0.35d0/sqrt(Nui)*dNui_psi) ) &
 	     / ( 1.d0 + 0.7d0 *sqrt(Nui) )**2.d0								      &
             + 1.56d0*Nui*Nui*X**5.d0*dX + 0.52d0*Nui*dNui_psi*X**6.d0
 
@@ -342,23 +345,23 @@ subroutine bootstrap_current_lhs(BigR, minRad, R_axis, &
   ! --- **************************************************** ---
   ! --- Jb's
   Jb1       =  C1     *(dTe/Te + drho/rho)
-  dJb1_psi  =  dC1_psi*(dTe/Te + drho/rho) + C1*(dTe_psi/Te + drho_psi/rho)
+  dJb1_psi  =  dC1_psi*(dTe/Te + drho/rho)*0.d0 + C1*(dTe_psi/Te + drho_psi/rho)
   dJb1_rho  =  dC1_rho*(dTe/Te + drho/rho) + C1*(             drho_rho/rho - drho*vrho/rho**2.d0)
   dJb1_Te   =  dC1_Te *(dTe/Te + drho/rho) + C1*(dTe_Te/Te - dTe*vTe/Te**2.d0)
 
   Jb2       =  C2     *(dTi/Ti + drho/rho)
-  dJb2_psi  =  dC2_psi*(dTi/Ti + drho/rho) + C2*(dTi_psi/Ti + drho_psi/rho)
+  dJb2_psi  =  dC2_psi*(dTi/Ti + drho/rho)*0.d0 + C2*(dTi_psi/Ti + drho_psi/rho)
   dJb2_rho  =  dC2_rho*(dTi/Ti + drho/rho) + C2*(             drho_rho/rho - drho*vrho/rho**2.d0)
   dJb2_Ti   =  dC2_Ti *(dTi/Ti + drho/rho) + C2*(dTi_Ti/Ti - dTi*vTi/Ti**2.d0)
   dJb2_Te   =  dC2_Te *(dTi/Ti + drho/rho)
 
   Jb3       =  C3     *dTe/Te
-  dJb3_psi  =  dC3_psi*dTe/Te + C3*dTe_psi/Te
+  dJb3_psi  =  dC3_psi*dTe/Te*0.d0 + C3*dTe_psi/Te
   dJb3_rho  =  dC3_rho*dTe/Te
   dJb3_Te   =  dC3_Te *dTe/Te + C3*dTe_Te/Te - C3*dTe*vTe/Te**2.d0
 
   Jb4       =  C4     *dTi/Ti
-  dJb4_psi  =  dC4_psi*dTi/Ti + C4*dTi_psi/Ti
+  dJb4_psi  =  dC4_psi*dTi/Ti*0.d0 + C4*dTi_psi/Ti
   dJb4_rho  =  dC4_rho*dTi/Ti
   dJb4_Ti   =  dC4_Ti *dTi/Ti + C4*dTi_Ti/Ti - C4*dTi*vTi/Ti**2.d0
   dJb4_Te   =  dC4_Te *dTi/Ti
@@ -387,7 +390,6 @@ subroutine bootstrap_current_lhs(BigR, minRad, R_axis, &
   dJb_rho = dJb_rho * MU_ZERO
   dJb_Ti  = dJb_Ti  * MU_ZERO
   dJb_Te  = dJb_Te  * MU_ZERO
-
 
 
 

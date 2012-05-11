@@ -455,14 +455,14 @@ endif
 
 
 ! ---------------------------------- And print the output
-write(*,'(A)')                  ' ________________________________________________________'
-write(*,'(A)')                  '|                                                        |'
-write(*,'(A)')  		'| LEG POINTS (R,Z)                                       |'
-write(*,'(A)')  		'|________________________________________________________|'
-write(*,'(A)')                  '|                                                        |'
+write(*,'(A)')                  ' _________________________________________________________'
+write(*,'(A)')                  '|                                                         |'
+write(*,'(A)')  		'| LEG POINTS (R,Z)                                        |'
+write(*,'(A)')  		'|_________________________________________________________|'
+write(*,'(A)')                  '|                                                         |'
 
 if (xcase .ne. 2) then
-  write(*,'(A)')                '| Lower Legs : ------------------------------------------|'
+  write(*,'(A)')                '| Lower Legs : -------------------------------------------|'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Upper corner of the Lower Inner Leg  : (',stpts%RLimit_LowerInnerLeg,    ', ', stpts%ZLimit_LowerInnerLeg,    ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Lower Inner Leg  : (',stpts%RLeftCorn_LowerInnerLeg, ', ', stpts%ZLeftCorn_LowerInnerLeg, ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Lower Inner Leg  : (',stpts%RStrike_LowerInnerLeg,   ', ', stpts%ZStrike_LowerInnerLeg,   ') |'
@@ -475,7 +475,7 @@ if (xcase .ne. 2) then
 endif
 
 if (xcase .ne. 1) then
-  write(*,'(A)')                '| Upper Legs : ------------------------------------------|'
+  write(*,'(A)')                '| Upper Legs : -------------------------------------------|'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Lower corner of the Upper Inner Leg  : (',stpts%RLimit_UpperInnerLeg,    ', ', stpts%ZLimit_UpperInnerLeg,    ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Upper Inner Leg  : (',stpts%RLeftCorn_UpperInnerLeg, ', ', stpts%ZLeftCorn_UpperInnerLeg, ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Upper Inner Leg  : (',stpts%RStrike_UpperInnerLeg,   ', ', stpts%ZStrike_UpperInnerLeg,   ') |'
@@ -488,11 +488,11 @@ if (xcase .ne. 1) then
 endif
 
 if (xcase .eq. 3) then
-  write(*,'(A)')                '| Secondary Strike Points : -----------------------------|'
+  write(*,'(A)')                '| Secondary Strike Points : ------------------------------|'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,  ', ', stpts%ZSecondStrike_InnerLeg,  ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,  ', ', stpts%ZSecondStrike_OuterLeg,  ') |'
 endif
-write(*,'(A)')                  '|________________________________________________________|'
+write(*,'(A)')                  '|_________________________________________________________|'
 
 
 return

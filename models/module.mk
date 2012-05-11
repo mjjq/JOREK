@@ -77,6 +77,7 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/derive_num_profiles.f90                  \
 	$(DIR)/preset_parameters.f90			\
 	$(DIR)/det_modes.f90                            \
+	$(DIR)/bootstrap_current.f90  	                \
 	$(DIR)/mod_diffusivities.f90                    \
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/mod_phys_module.f90

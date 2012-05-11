@@ -132,9 +132,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 #endif
   
   ELM  => thread_struct(omp_tid)%ELM
-  ELM2 => thread_struct(omp_tid)%ELM2
   RHS  => thread_struct(omp_tid)%RHS
-  RHS2 => thread_struct(omp_tid)%RHS2
+  if (jorek_model .ne. 400) then
+    ELM2 => thread_struct(omp_tid)%ELM2
+    RHS2 => thread_struct(omp_tid)%RHS2
+  endif
 
   !$omp do 
   do ife =1, n_local_elms
@@ -202,8 +204,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
      !------------------------------------------------------- comparing two versions of element_matrix
       ! if (ife .eq. n_local_elms/2) then
-      !   call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM2, RHS2)
-      !   call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
+      !   call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM2, RHS2, omp_tid)
+      !   call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)
       !   do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
       !     if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
       !       write(*,'(i3,A,i6,3e16.8)') my_id,' RHS : ',i,RHS(i),RHS2(i),RHS(i)-RHS2(i)

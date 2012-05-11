@@ -458,13 +458,17 @@ do ms=1, n_gauss
       ! ---------------------------------------------------
       ! --- Bootstrap current coefficients (Wesson formula)
       ! ---------------------------------------------------
-      call bootstrap_current_rhs(BigR, minRad, R_axis, &
-                                 psi_axis, psi_bnd,    &
-                                 ps0, ps0_x, ps0_y,    &
-                                 r0,  r0_x,  r0_y,     &
-                                 Ti0, Ti0_x, Ti0_y,    &
-                                 Te0, Te0_x, Te0_y,    &
-                                 Jb)               
+      if (bootstrap) then
+        call bootstrap_current_rhs(BigR, minRad, R_axis, &
+                                   psi_axis, psi_bnd,    &
+                                   ps0, ps0_x, ps0_y,    &
+                                   r0,  r0_x,  r0_y,     &
+                                   Ti0, Ti0_x, Ti0_y,    &
+                                   Te0, Te0_x, Te0_y,    &
+                                   Jb)
+      else
+        Jb = 0.d0
+      endif
 
       ! --------------------------------------------------------------
       ! --- Heating, current and particle source (the same for all mp)
@@ -832,17 +836,24 @@ do ms=1, n_gauss
                   BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
                   ! --- Bootstrap current coefficients (Wesson formula)
-                  call bootstrap_current_lhs(BigR, minRad, R_axis, &
-                                             psi_axis, psi_bnd,    &
-                                             ps0, ps0_x, ps0_y,    &
-                                             psi, psi_x, psi_y,    &
-                                             r0,  r0_x,  r0_y,     &
-                                             rho, rho_x, rho_y,    &
-                                             Ti0, Ti0_x, Ti0_y,    &
-                                             Ti,  Ti_x,  Ti_y,     &
-                                             Te0, Te0_x, Te0_y,    &
-                                             Te,  Te_x,  Te_y,     &
-                                             dJb_psi, dJb_rho, dJb_Ti, dJb_Te)
+                  if (bootstrap) then
+                    call bootstrap_current_lhs(BigR, minRad, R_axis, &
+                                               psi_axis, psi_bnd,    &
+                                               ps0, ps0_x, ps0_y,    &
+                                               psi, psi_x, psi_y,    &
+                                               r0,  r0_x,  r0_y,     &
+                                               rho, rho_x, rho_y,    &
+                                               Ti0, Ti0_x, Ti0_y,    &
+                                               Ti,  Ti_x,  Ti_y,     &
+                                               Te0, Te0_x, Te0_y,    &
+                                               Te,  Te_x,  Te_y,     &
+                                               dJb_psi, dJb_rho, dJb_Ti, dJb_Te)
+                  else
+                    dJb_psi = 0.d0
+                    dJb_rho = 0.d0
+                    dJb_Ti  = 0.d0
+                    dJb_Te  = 0.d0
+                  endif
 
     		  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     		  !!!!!!!!!! LHS equation 1 (psi - induction) !!!!!!!!!!!!

@@ -27,9 +27,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (329+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 36 * ILOG_EXT + 12*512+80 * CHAR_EXT )
+  bufsize = ( (329+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 37 * ILOG_EXT + 12*512+80 * CHAR_EXT )
 #else
-  bufsize = ( (328+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 35 * ILOG_EXT + 12*512+80 * CHAR_EXT )
+  bufsize = ( (328+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 36 * ILOG_EXT + 12*512+80 * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -214,6 +214,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(regrid,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(import_equil,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(xpoint,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(bootstrap,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(freeboundary,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(resistive_wall,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(bc_natural_open,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -439,6 +440,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,regrid,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,import_equil,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,xpoint,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,bootstrap,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,freeboundary,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,resistive_wall,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,bc_natural_open,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

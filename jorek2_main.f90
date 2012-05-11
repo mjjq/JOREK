@@ -868,7 +868,7 @@ program JOREK2
       psi_bnd = psi_lim
     end if
     
-    if (jorek_model .eq. 400) then	     
+    if (bootstrap) then	     
       flux_list%n_psi = 1
       call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
       flux_list%psi_values(1) = psi_bnd

@@ -107,6 +107,8 @@ subroutine preset_parameters
   Zmax_pfc    = 0.d0
   current_pfc = 0.d0
 
+  bootstrap = .false.
+
   ellip  = 1.d0
   tria_u = 0.d0
   tria_l = 0.d0

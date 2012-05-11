@@ -135,6 +135,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 !.or. (k .eq. 6) &
                                 !.or. (k .eq. 7) &
                                 !.or. (k .eq. 8) &
+                            .or. (k .eq. 9) &
                             ) then
 
 
@@ -430,6 +431,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 				                        .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(1)) )  &
 			          .or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
 				                        .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(2)) ) ))  &  ! private region only
+                            .or. (k .eq. 9)    &
                             ) then
 
                           index_node = node_list%node(inode)%index(1)

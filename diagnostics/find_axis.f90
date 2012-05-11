@@ -34,7 +34,7 @@ integer,                 intent(out) :: ifail        !< Error code
 ! --- Local variables
 real*8  :: grad_psi, ps_x, ps_y, ps_s, ps_t, xjac
 real*8  :: psi_min, psi_max, grad_psi_min
-real*8  :: R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
+real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 integer :: ij_axis(2), i, iv, ms, mt, kf, kv
 real*8  :: x(2), s, t, xerr, ferr, rs_tolerance
 logical :: early_exit
@@ -62,6 +62,7 @@ do i=1,element_list%n_elements
       Z_s  = 0.d0
       R_t  = 0.d0 
       Z_t  = 0.d0
+      R    = 0.d0
       Z    = 0.d0
 
       do kf = 1, 4       ! 4 basis functions
@@ -72,6 +73,7 @@ do i=1,element_list%n_elements
           ps_s = ps_s + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
           ps_t = ps_t + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
 
+          R   = R   + node_list%node(iv)%x(kf,1) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
           Z   = Z   + node_list%node(iv)%x(kf,2) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
 
           R_s = R_s + node_list%node(iv)%x(kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
@@ -88,7 +90,7 @@ do i=1,element_list%n_elements
 
       grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
-!      if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.2d0)) then !MAST!!!
+!      if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.2d0) .and. (R .lt. 1.d0)) then !MAST!!!
       if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.4d0)) then
         grad_psi_min = grad_psi
         i_elm_axis = i

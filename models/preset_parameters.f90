@@ -100,6 +100,13 @@ subroutine preset_parameters
   psi_boundary = 0.d0
   n_boundary   = 0
 
+  n_pfc       = 0
+  Rmin_pfc    = 0.d0
+  Rmax_pfc    = 0.d0
+  Zmin_pfc    = 0.d0
+  Zmax_pfc    = 0.d0
+  current_pfc = 0.d0
+
   ellip  = 1.d0
   tria_u = 0.d0
   tria_l = 0.d0

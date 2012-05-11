@@ -1,4 +1,4 @@
-subroutine element_matrix_GS_perturbation(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
+subroutine element_matrix_GS_perturbation(xpoint2,xcase2,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -6,6 +6,7 @@ use parameters
 use data_structure
 use gauss
 use basis_at_gaussian
+use phys_module
 
 implicit none
 
@@ -21,8 +22,8 @@ real*8     :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vert
 
 real*8     :: xjac, wst
 real*8     :: ps0_x, ps0_y, v, v_x, v_y, psi, psi_x, psi_y, rhs_ij
-integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm, xcase
-logical    :: xpoint
+integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm, xcase2, nc
+logical    :: xpoint2
 real*8     :: Z_xpoint(2),psi_axis,psi_bnd,dj_dpsi,dj_dz
 real*8     :: zn, dn_dpsi, dn_dz,  ddn_dpsi,  ddn_dz,  ddn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
 real*8     :: zT, dT_dpsi, dT_dz,  ddT_dpsi,  ddT_dz,  ddT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
@@ -110,6 +111,16 @@ do ms=1, n_gauss
         v_y = (- x_t(ms,mt) * h_s(i,j,ms,mt) + x_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
 
         rhs_ij =  zFFprime / x_g(ms,mt) - (zn * dT_dpsi + dn_dpsi * zT) * x_g(ms,mt)
+        
+	! --- Add PF coils for MAST
+        if ((.not. restart) .and. (n_pfc .ne. 0)) then
+    	  do nc=1,n_pfc
+    	    if (  (x_g(ms,mt) .lt. Rmax_pfc(nc)) .and. (x_g(ms,mt) .gt. Rmin_pfc(nc)) &
+	    .and. (y_g(ms,mt) .lt. Zmax_pfc(nc)) .and. (y_g(ms,mt) .gt. Zmin_pfc(nc)) )  then
+              rhs_ij = rhs_ij + current_pfc(nc)
+    	    endif
+    	  enddo
+        endif
 
         RHS(index_ij) = RHS(index_ij) + v * rhs_ij  * xjac * wst
 

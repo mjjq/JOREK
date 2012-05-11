@@ -27,9 +27,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (229+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 36 * ILOG_EXT + 12*512+80 * CHAR_EXT )
+  bufsize = ( (329+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 36 * ILOG_EXT + 12*512+80 * CHAR_EXT )
 #else
-  bufsize = ( (228+2*max_limiter) * IDBL_EXT + (27+n_tor) * INT_EXT + 35 * ILOG_EXT + 12*512+80 * CHAR_EXT )
+  bufsize = ( (328+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 35 * ILOG_EXT + 12*512+80 * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -191,6 +191,13 @@ if (my_id .eq. 0) then
   call MPI_PACK(n_private,              1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(n_up_leg,               1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(n_up_priv,              1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
+  call MPI_PACK(n_pfc,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Rmin_pfc,               20,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Rmax_pfc,               20,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Zmin_pfc,               20,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Zmax_pfc,               20,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(current_pfc,            20,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(mode,               n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(index_start,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -409,6 +416,13 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,n_private,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_up_leg,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_up_priv,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  
+  call MPI_UNPACK(buffer,bufsize,position,n_pfc,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Rmin_pfc,              20,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Rmax_pfc,              20,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Zmin_pfc,              20,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Zmax_pfc,              20,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,current_pfc,           20,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,mode,               n_tor,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,index_start,            1,MPI_INTEGER,MPI_COMM_WORLD,ierr)

@@ -1225,9 +1225,14 @@ program JOREK2
        call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
 
        do i=1,n_tor
-    	  call lincol(1)
+	 if (mod(i,2) .eq. 0) then
+	   call lincol(mod(i/2,10))
+	 else
+	   call lincol(mod((i-1)/2,10))
+	 endif
     	  call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
-    	  call lincol(2)
+    	  call lincol(4)
+    	  if (n_tor .eq. 3) call lincol(2)
     	  call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
        enddo
        call lincol(3)

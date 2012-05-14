@@ -134,10 +134,12 @@ if (my_id .eq. 0) then
     Xnorm = Xnorm + deltas(i)**2
   enddo
   write(*,'(A,4e16.8)') ' residu test after : ',sqrt(sum),err,sqrt(Bnorm),sqrt(Xnorm)
-
 endif
 
+call tr_locvnorms("gmres_rhs",rhs_glob,n_dof)
+
 iter_gmres = info(2) ! Actual number of iterations
+call tr_debug_writei("nbiter_gmres", iter_gmres)
 call MPI_BCAST(iter_gmres,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 call tr_deallocate(work,"work",CAT_GMRES)

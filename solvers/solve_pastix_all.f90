@@ -46,7 +46,8 @@ do k=1,nz_glob
 enddo
 
 call MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
-do k=1,nz_glob
+
+do k = 1, nz_glob
   j = jcn_glob(k)
   A_glob(k) = A_glob(k) / column_scaling(j)
 enddo

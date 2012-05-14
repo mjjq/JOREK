@@ -159,7 +159,6 @@ program JOREK2
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
-
   ! --- Initialize OpenMP threads before MPI_init
   call init_threads()
   

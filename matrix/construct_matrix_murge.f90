@@ -1148,6 +1148,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, &
        &          0, MPI_COMM_WORLD, ierr)
 
+  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
+
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0
   IF (t1<t0) nb_periods = nb_periods + nb_periodes_max

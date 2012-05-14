@@ -46,6 +46,7 @@ contains
     call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
+    call tr_vnorms("j_Rhs",mumps_par%rhs,mumps_par%n)
 
     if (my_id .eq. 0) then
       write(*,*) my_id,'*********************************'
@@ -483,6 +484,7 @@ contains
       call system_clock(count=time_solve_0)
     endif
 
+
     if (use_mumps) then
 #ifdef USE_MUMPS
       mumps_par%JOB = 3                                   ! Solve
@@ -499,6 +501,7 @@ contains
 
       if (use_murge) then
 #ifdef USE_MURGE
+        call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
         CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, 0,MURGE_ASSEMBLY_OVW , ierr)
         if (ierr /= MURGE_SUCCESS) then 
           write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
@@ -526,6 +529,9 @@ contains
         if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
         if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
         if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+
+        call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
+
 #ifdef USE_BLOCK
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
@@ -589,6 +595,8 @@ contains
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
 
+      call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
+      call tr_locvnorms("smn_delta",deltas,ndof_glob)
     endif
     if (.not. use_murge) then
       call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+1)) 

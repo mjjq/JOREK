@@ -64,6 +64,9 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max)
   ! timing
   call r3_info_begin (r3_info_index_0, 'solve_murge_all')
+
+  call tr_vnorms("j_Rhs",mumps_par%rhs,mumps_par%n)
+
   if (use_murge_element) then
      m_loc = murge_local_n * n_tor * n_var
   else
@@ -270,6 +273,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   end if
   call system_clock(count=t0)
   if (gmres) then
+     call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
      CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, 0, MURGE_ASSEMBLY_OVW , &
           &                  ierr)
 !      call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
@@ -291,6 +295,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   call system_clock(count=t0)
   mumps_par%rhs = 0.0
   CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, 0, ierr)
+
 !  write(string, '(A8,I2.2)') "sol_",my_id
 !  open(unit=9, file=string, STATUS='replace')
 !  do k = 1, murge_global_n*murge_ndof
@@ -346,6 +351,8 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
 
         call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
 
+        call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
+        call tr_locvnorms("smn_delta",deltas,ndof_glob)
      endif
   end if
   call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)

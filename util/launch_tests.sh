@@ -8,7 +8,7 @@
 # ---------- Following variables has to be changed by the user ----------
 
 # Trunk of jorek to be used
-TRKDIR=/home/latu/gainone
+TRKDIR=/home/latu/newjo
 # Location of 'util' directory that contains 'setinput.sh'
 UTILDIR=${TRKDIR}/util
 # Location of namelist directory that contains input jorek files
@@ -19,7 +19,7 @@ EXEDIR=${TRKDIR}
 BASEDIR=/scratch/latu
 # Mpirun command
 PRERUN="sort -u $OAR_NODEFILE > mach"
-MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 2"
+MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 4"
 
 
 # List of executables used during following simulations

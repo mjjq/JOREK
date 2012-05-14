@@ -3,7 +3,6 @@
 module tr_module
 
   implicit none
-
   interface tr_register_mem
      module procedure tr_register_mem_int4, tr_register_mem_int8
   end interface
@@ -88,6 +87,64 @@ module tr_module
   !******************************
 contains
   !******************************
+
+  subroutine tr_vnorms(prefix,mat,nnz)
+    REAL*8, dimension(:) :: mat
+    character(len=*) :: prefix
+    INTEGER :: nnz
+
+#ifdef NORMTRACE
+    REAL*8  :: lnorms(1:3)
+    REAL*8  :: l1, l2, linf, absv
+    character(len=92) :: bufstring
+    INTEGER :: ierr
+    INTEGER :: i
+    include 'mpif.h'
+    l1 = 0._8
+    l2 = 0._8
+    linf = 0._8
+    do i = 1, nnz
+       absv = abs(mat(i))
+       l2   = l2   + mat(i)*mat(i) 
+       l1   = l1   + absv
+       if (absv .gt. linf) linf = absv
+    end do
+    call MPI_AllReduce(l1,lnorms(1),1,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllReduce(l2,lnorms(2),1,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllReduce(linf,lnorms(3),1,MPI_DOUBLE_PRECISION,&
+         MPI_MAX,MPI_COMM_WORLD,ierr)
+    write(bufstring,'(A20,A4,1X,3E22.13)') trim(prefix), ":gn:", lnorms(1:3)
+    call tr_write(bufstring)
+#endif
+  end subroutine tr_vnorms
+
+  subroutine tr_locvnorms(prefix,mat,nnz)
+    REAL*8, dimension(:) :: mat
+    character(len=*) :: prefix
+    INTEGER :: nnz
+#ifdef NORMTRACE
+    REAL*8  :: lnorms(1:3)
+    REAL*8  :: l1, l2, linf, absv
+    character(len=92) :: bufstring
+    INTEGER :: ierr
+    INTEGER :: i
+    include 'mpif.h'
+    l1 = 0._8
+    l2 = 0._8
+    linf = 0._8
+    do i = 1, nnz
+       absv = abs(mat(i))
+       l2   = l2   + mat(i)*mat(i) 
+       l1   = l1   + absv
+       if (absv .gt. linf) linf = absv
+    end do
+    lnorms(1:3) = (/ l1, l2, linf /)
+    write(bufstring,'(A20,A4,1X,3E22.13)') trim(prefix), ":ln:", lnorms(1:3)
+    call tr_write(bufstring)
+#endif
+  end subroutine tr_locvnorms
 
   !---------------------------------------- 
   ! Init target file in each processor
@@ -1419,7 +1476,7 @@ contains
             SUM(nb_allocate(MIN_CAT:MAX_CAT))/dfloat(GBconst), ' GBytes'
     else 
        write(uout_mem,'(A20,A50,1f10.3,A)') label, &
-            'memsize allocated within Jorek (tr_module) = ', &
+            'memsize allocated within Jorek (total) = ', &
             SUM(nb_allocate(MIN_CAT:MAX_CAT))/dfloat(MBconst), ' MBytes'
     end if
     lcount = rcount - SUM(nb_allocate(MIN_CAT:MAX_CAT))

@@ -956,6 +956,8 @@ program JOREK2
     	  END IF
        else
           call distribute_vector(my_id,rhs_glob,mumps_par%rhs)	       
+          call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
        endif
        call cpu_time(t_send_1)
        if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0

@@ -46,7 +46,7 @@ contains
     call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
-    call tr_vnorms("j_Rhs",mumps_par%rhs,mumps_par%n)
+    call tr_debug_writei("smn_A_mumps_par%n",mumps_par%n)
 
     if (my_id .eq. 0) then
       write(*,*) my_id,'*********************************'
@@ -477,6 +477,7 @@ contains
       endif
 
     endif
+    call tr_debug_writei("smn_B_mumps_par%n",mumps_par%n)
 
 
     if (my_id_n .eq. 0) then                              ! elapsed time solve start
@@ -525,7 +526,14 @@ contains
 
         pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
-        if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+        if (.not. pastix_smp_only) then
+           if (.not. associated(mumps_par%rhs)) then
+              call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
+           endif
+           call tr_vnorms("j_Rhs",mumps_par%rhs,mumps_par%n)
+           call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
+           call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+        end if
         if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
         if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
         if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)

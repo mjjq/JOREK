@@ -14,7 +14,6 @@ all: 	modules 		\
 	solve_mumps_all.o 	\
 	solve_pastix_all.o 	\
 	solvP3.o 		\
-	update_rhs_n.o 		\
 	solve_murge_all.o
 
 modules : 	mod_mumps.o 	\

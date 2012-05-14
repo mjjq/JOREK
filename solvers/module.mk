@@ -13,7 +13,6 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	\
 	$(DIR)/solve_mumps_all.f90 	\
 	$(DIR)/solve_pastix_all.f90 	\
 	$(DIR)/solvP3.f90 		\
-	$(DIR)/update_rhs_n.f90 	\
 	$(DIR)/solve_murge_all.f90	\
 	$(DIR)/mod_mumps.f90 		\
 	$(DIR)/mod_pastix.f90		\

@@ -68,13 +68,6 @@ program JOREK2
       logical(kind=4),             intent(in)    :: xpoint2
     end subroutine equilibrium
      
-    subroutine update_rhs_n(my_id,my_id_n,i_tor,mpi_comm_master)
-      integer(kind=4) :: my_id
-      integer(kind=4) :: my_id_n
-      integer(kind=4) :: i_tor(:)
-      integer(kind=4) :: mpi_comm_master
-    end subroutine update_rhs_n
-    
     subroutine construct_matrix_murge(my_id, node_list,                          &
       element_list, bnd_node_list, local_elms, n_local_elms, xpoint2, xcase2,    &
       minRad, R_axis, Z_axis, psi_axis, psi_bnd, z_xpoint, psi_xpoint,           &
@@ -910,7 +903,6 @@ program JOREK2
     	 
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
-
        call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms,      &
     	                           n_local_ELms,  xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, &
 				   psi_bnd, Z_xpoint,psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n,  &
@@ -955,23 +947,21 @@ program JOREK2
        endif
 
     else
+       call cpu_time(t_send_0)
        if (.not. solve_only) then
-
-    	  call cpu_time(t_send_0)
     	  ! with murge elementary assembly harmonic distribution is already done.
     	  IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
     	     call distribute_harmonics(my_id,my_id_n,n_cpu)
     	  ELSE
     	     call distribute_vector(my_id,rhs_glob,mumps_par%rhs)	       
     	  END IF
-    	  call cpu_time(t_send_1)
-
-    	  if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0
-
-    	  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+       else
+          call distribute_vector(my_id,rhs_glob,mumps_par%rhs)	       
        endif
+       call cpu_time(t_send_1)
+       if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0
+       call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-       if (.not. gmres) call update_rhs_n(my_id,my_id_n, i_tor, MPI_COMM_MASTER)      ! correct the RHS with the previous solution (deltas)
        if (use_murge .and. use_murge_element) then
     	  call solve_murge_all(n_cpu,my_id,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
        else

@@ -8,7 +8,7 @@
 # ---------- Following variables has to be changed by the user ----------
 
 # Trunk of jorek to be used
-TRKDIR=/scratch/jorekgl/trunk2g
+TRKDIR=/home/latu/gainone
 # Location of 'util' directory that contains 'setinput.sh'
 UTILDIR=${TRKDIR}/util
 # Location of namelist directory that contains input jorek files
@@ -16,9 +16,11 @@ NAMEDIR=${TRKDIR}/namelist
 # Location of directory that contains executables of Jorek
 EXEDIR=${TRKDIR}
 # Location of target directory where simulation directory will be created
-BASEDIR=/scratch/jorekgl
+BASEDIR=/scratch/latu
 # Mpirun command
-MPIRUN="mpiexec"
+PRERUN="sort -u $OAR_NODEFILE > mach"
+MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 2"
+
 
 # List of executables used during following simulations
 # The n-th executable has three parameters : 
@@ -64,7 +66,6 @@ echo "Launching simulation"
 echo "Name of the simulation directory : $SIMNAME"
 echo "Model number: $MODNB"
 
-
 # Copy the executables to target simulation directory
 # $WKDIR
 for (( j = 0 ; j < ${#list_idx[@]} ; j++ )); do
@@ -103,11 +104,13 @@ if [ "$MODNB" = "199" ]; then
   if [ ! -f jorek_equil.rst ]; then
       ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1
       EXE=j${model[$i]}_1
+      eval ${PRERUN}
       ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
       cp jorek_restart.rst jorek_equil.rst
   else
       ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000
       EXE=j${model[$i]}_3
+      eval ${PRERUN}
       ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop
       
       ${UTILDIR}/extract_live_data.sh energies energies.dat 
@@ -128,6 +131,7 @@ if [ "$MODNB" = "302" ]; then
   if [ ! -f jorek_equil.rst ]; then
       ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
       EXE=j${model[$i]}_1
+      eval ${PRERUN}
       ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
       status=$?; if [ $status -eq 0 ]; then 
 	  cp jorek_restart.rst jorek_equil.rst
@@ -137,6 +141,7 @@ if [ "$MODNB" = "302" ]; then
 	  cp jorek_equil.rst jorek_restart.rst 
 	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' nout=10
 	  EXE=j${model[$i]}_1
+      eval ${PRERUN}
 	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
 	  status=$?; if [ $status -eq 0 ]; then 
 	      cp jorek_restart.rst jorek_rst1.rst; 
@@ -146,6 +151,7 @@ if [ "$MODNB" = "302" ]; then
 	      cp jorek_rst1.rst jorek_restart.rst 
 	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' nout=10
 	      EXE=j${model[$i]}_3
+      eval ${PRERUN}
 	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
 	      status=$?; if [ $status -eq 0 ]; then 
 		  cp jorek_restart.rst jorek_rst2.rst
@@ -154,6 +160,7 @@ if [ "$MODNB" = "302" ]; then
 	      if [ ! -f jorek_rst3.rst ]; then
 		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10
 		  EXE=j${model[$i]}_3
+      eval ${PRERUN}
 		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop3
 	      fi
 	  fi

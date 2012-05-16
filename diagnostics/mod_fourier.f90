@@ -294,7 +294,8 @@ module fourier
     real*8 :: x, x_s, x_t, y, y_s, y_t
     real*8 :: xjac
     real*8 :: theta_corr
-    real   :: smalldeltaphi
+    real*8 :: smalldeltaphi
+    real*8 :: phi
     logical :: do_not_continue
     
     smalldeltaphi = deltaphi / nsmallsteps
@@ -322,13 +323,16 @@ module fourier
     
     do_not_continue = .false.
     
-    !$omp parallel do                                                                              &
-    !$omp   schedule(dynamic)                                                                      &
-    !$omp   default(shared)                                                                        &
+    !$omp parallel do schedule(dynamic) default(none)                                              &
     !$omp   firstprivate(k,theta_corr,R_out,Z_out,i_elm_out,s_out,t_out,ifail,P,P_s,P_t,j,rn,zn,i, &
-    !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp)
+    !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh)        &
+    !$omp   shared(mapping,do_not_continue,F0,node_list,element_list,nmaxsteps,nsmallsteps,        &
+    !$omp     smalldeltaphi)
     FL_STPTS: do k = mapping.nstpts, 1, -1
       if ( do_not_continue ) cycle
+      
+      theta_corr = 0.d0
+      phi        = 0.d0
       
       ! --- Initialize field line position.
       mapping.rr(k,0) = mapping.R_axis + 0.03*( mapping.R_xpoint(1) - mapping.R_axis ) + &
@@ -346,13 +350,13 @@ module fourier
       
       FL_LARGESTEPS: do j = 1, NMAXSTEPS
         if ( do_not_continue ) cycle
-      
+        
         rn = mapping.rr(k,j-1)
         zn = mapping.zz(k,j-1)
         
         FL_SMALLSTEPS: do i = 1, NSMALLSTEPS
           if ( do_not_continue ) cycle
-        
+          
           ! --- Predictor step
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
@@ -366,12 +370,12 @@ module fourier
           ! - Determine derivatives of R and Z with respect to s and t at current position.
           call interp_RZ0(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
           ! - Determine derivatives of Psi with respect to R and Z.
-          xjac    = x_s*y_t - x_t*y_s
-          dpsi_dzn = ( -x_t*P_s + x_s*P_t ) / xjac
-          dpsi_drn = ( y_t*P_s - y_s*P_t ) / xjac
+          xjac     = x_s*y_t - x_t*y_s
+          dpsi_dzn = ( - x_t*P_s + x_s*P_t ) / xjac
+          dpsi_drn = ( + y_t*P_s - y_s*P_t ) / xjac
           ! - Advance a half step.
-          rh    = rn - 1./rn * dpsi_dzn * SMALLDELTAPHI/2. * rn / F0
-          zh    = zn + 1./rn * dpsi_drn * SMALLDELTAPHI/2. * rn / F0
+          rh = rn - dpsi_dzn/F0*rn * smalldeltaphi/2.
+          zh = zn + dpsi_drn/F0*rn * smalldeltaphi/2.
           
           ! --- Corrector step
           ! - Determine element number and s and t coordinates for given (R, Z) position.
@@ -386,13 +390,15 @@ module fourier
           ! - Determine derivatives of R and Z with respect to s and t at current position.
           call interp_RZ0(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
           ! - Determine derivatives of Psi with respect to R and Z.
-          xjac    = x_s*y_t - x_t*y_s
-          dpsi_dzh = ( -x_t*P_s + x_s*P_t ) / xjac
-          dpsi_drh = ( y_t*P_s - y_s*P_t ) / xjac
+          xjac     = x_s*y_t - x_t*y_s
+          dpsi_dzh = ( - x_t*P_s + x_s*P_t ) / xjac
+          dpsi_drh = ( + y_t*P_s - y_s*P_t ) / xjac
           ! - Advance a full step.
-          rp    = rn - 1./rh * dpsi_dzh * SMALLDELTAPHI * rh / F0
-          zp    = zn + 1./rh * dpsi_drh * SMALLDELTAPHI * rh / F0
-
+          rp = rn - dpsi_dzh/F0*rh * smalldeltaphi
+          zp = zn + dpsi_drh/F0*rh * smalldeltaphi
+          
+          phi = phi + smalldeltaphi
+          
         end do FL_SMALLSTEPS
         
         ! --- Write result of the small steps into the position arrays.
@@ -407,7 +413,7 @@ module fourier
 	  theta_corr = theta_corr - 2.*PI
         mapping.tt(k,j) = mapping.tt(k,j) + theta_corr
         
-        ! --- Finish following field line k, if one poloidal turn has already been completed.
+        ! --- Stop following field line k when one poloidal turn is completed.
         if ( ABS(mapping.tt(k,j) - mapping.tt(k,0)) > 2*PI ) then
           mapping.npts(k) = j
           do l = 0, mapping.npts(k)
@@ -418,6 +424,7 @@ module fourier
           !$omp critical
           write(*,'(" Field line",I4,":    psin=",F7.3,"    npts=",I7)') k, mapping.psin(k),       &
 	    mapping.npts(k)
+          !write(46,*) mapping.psin(k), phi / ( 2. * PI )
           !$omp end critical
           exit
         end if

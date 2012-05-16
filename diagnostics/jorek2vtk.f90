@@ -75,7 +75,7 @@ i_plane   = 1             ! ... otherwise, all modes will be summed up at the to
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
-open(42, file='vtk.txt', action='read', status='old', iostat=ierr)
+open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
   write(*,*) 'Reading parameters from vtk.txt namelist.'
   read(42,vtk_params)

@@ -527,10 +527,6 @@ contains
         pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
         if (.not. pastix_smp_only) then
-           if (.not. associated(mumps_par%rhs)) then
-              call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
-           endif
-           call tr_vnorms("j_Rhs",mumps_par%rhs,mumps_par%n)
            call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
         end if

@@ -23,6 +23,14 @@ use mumps_module
 implicit none
 include 'mpif.h'
 
+interface 
+   subroutine distribute_vector(my_id,rhs,rhs_dis,again)
+     real*8               :: rhs(:), rhs_dis(:)
+     integer              :: my_id
+     logical              :: again
+   end subroutine distribute_vector
+end interface
+
 integer :: my_id, my_id_n, n_cpu, m_cpu, i, j, idisp, nz_loc_n, n_loc_n, n_recv, in, ierr, ifactor
 integer :: index(n_tor+1), index_snd, n_i, n_j, ibufsize
 integer :: i_reduced, j_reduced
@@ -192,15 +200,17 @@ call tr_deallocate(recv_counts,"dh_recv_counts",CAT_DMATRIX)
 call tr_deallocate(recv_disp  ,"dh_recv_disp  ",CAT_DMATRIX)
 call tr_deallocate(sizes      ,"dh_sizes      ",CAT_DMATRIX)
 
-ifactor = 2
-if (my_id .eq. 0)            ifactor = 1
-if (mod(my_id,M_cpu) .ne. 0) ifactor = 0
+if (my_id .lt. M_cpu) then
+   ifactor = 1
+else 
+   ifactor = 2
+end if
 
 mumps_par%n =  ifactor*n_loc_n
 if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
 call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
 
-call distribute_vector(my_id,rhs_glob,mumps_par%rhs)
+call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.false.)
 
 return
 end

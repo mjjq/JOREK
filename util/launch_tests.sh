@@ -8,7 +8,7 @@
 # ---------- Following variables has to be changed by the user ----------
 
 # Trunk of jorek to be used
-TRKDIR=/home/latu/newjo
+TRKDIR=$(readlink -f `dirname $0`)/..
 # Location of 'util' directory that contains 'setinput.sh'
 UTILDIR=${TRKDIR}/util
 # Location of namelist directory that contains input jorek files

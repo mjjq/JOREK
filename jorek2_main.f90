@@ -52,6 +52,17 @@ program JOREK2
 #include "version.h"
   
   interface
+
+    subroutine distribute_vector(my_id,rhs,rhs_dis,again)
+      real*8               :: rhs(:), rhs_dis(:)
+      integer              :: my_id
+      logical              :: again
+    end subroutine distribute_vector
+
+    subroutine distribute_harmonics(my_id,my_id_n,n_cpu)
+      integer              :: my_id, my_id_n,n_cpu
+    end subroutine distribute_harmonics
+
     subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
       integer :: i_tor(:), my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
       integer :: iter_gmres, n_tor
@@ -145,10 +156,15 @@ program JOREK2
   real*8                   :: t_this
   integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
 
-  real*8,  pointer :: dummy_real(:)
-  integer, pointer :: dummy_int(:)
-  dummy_real => NULL()
-  dummy_int  => NULL()
+#ifdef __GFORTRAN__
+    real*8,  pointer :: DUMMY_REAL(:)
+    integer, pointer :: DUMMY_INT (:)
+    DUMMY_REAL => NULL()
+    DUMMY_INT  => NULL()
+#else
+#define DUMMY_REAL NULL()
+#define DUMMY_INT NULL()
+#endif
   
   !### BEGIN: FOR TESTING THE VACUUM PART -- WILL BE REMOVED SOON AGAIN
   allocate( I_coils(11) )
@@ -952,12 +968,10 @@ program JOREK2
     	  IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
     	     call distribute_harmonics(my_id,my_id_n,n_cpu)
     	  ELSE
-    	     call distribute_vector(my_id,rhs_glob,mumps_par%rhs)	       
+    	     call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.false.)	       
     	  END IF
        else
-          call distribute_vector(my_id,rhs_glob,mumps_par%rhs)	       
-          call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
-          call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
        endif
        call cpu_time(t_send_1)
        if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0
@@ -1153,7 +1167,7 @@ program JOREK2
     	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
     	     call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-               dummy_int, dummy_int, dummy_real, &
+               DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
     		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
     	  endif
           

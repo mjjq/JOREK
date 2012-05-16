@@ -65,9 +65,6 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   ! timing
   call r3_info_begin (r3_info_index_0, 'solve_murge_all')
 
-  IF (ASSOCIATED(mumps_par%rhs))                                               &
-       call tr_vnorms("j_Rhs",mumps_par%rhs,mumps_par%n)
-
   if (use_murge_element) then
      m_loc = murge_local_n * n_tor * n_var
   else

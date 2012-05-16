@@ -18,7 +18,7 @@ subroutine init_live_data_model(file_handle)
   write(file_handle,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
   write(file_handle,'(A)') '@input_profiles_ylabel: input profiles'
   write(file_handle,'(A)') '@input_profiles_logy: 0'
-  write(file_handle,'(A)') '@input_profiles: "psin"       "FF''"    "dFF''/dpsin"'              // &
+  write(file_handle,'(A)') '@input_profiles: %"psin"       "FF''"    "dFF''/dpsin"'             // &
     '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_T"        "D_perp"'      // &
     '    "ZK_perp"'
   

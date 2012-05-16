@@ -621,6 +621,10 @@ else
    echo "==================================================================================="
    echo " "
    ${UTILDIR}/setinput.sh ${DATANAME} restart=.t.
+   # generate files using "utils/extract_live_data.sh"
+   ${UTILDIR}/extract_live_data.sh energies       > ${RESDIR}/energies_${DATANAME}.dat
+   ${UTILDIR}/extract_live_data.sh growth_rates   > ${RESDIR}/growth_rates_${DATANAME}.dat
+   ${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}.dat
 fi
 
 # Test if restart files exist
@@ -639,6 +643,12 @@ fi
 # ---------
 export OMP_NUM_THREADS=${NTHREAD}
 ${CMD_MPIRUN}
+
+# generate files using "utils/extract_live_data.sh"
+${UTILDIR}/extract_live_data.sh energies     > ${RESDIR}/energies_${DATANAME}.dat
+${UTILDIR}/extract_live_data.sh growth_rates > ${RESDIR}/growth_rates_${DATANAME}.dat
+${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}.dat
+
 status=\$?
 
 if [ "\$status" -eq "0" ]; then

@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# <<jobscript_comment>>
+#
+
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=<<email>>
+#SBATCH -o stdout.txt
+#SBATCH -e stderr.txt
+
+#SBATCH -J <<jobname>>_<<job_step>>
+#SBATCH -N <<nodes>>
+#SBATCH -n <<mpi>>
+#SBATCH -t <<runtime>>
+
+BIN="./jorek_model<<model>>_step<<job_step>>"
+NSLOTS="$SLURM_NTASKS"
+PPN="<<ppn>>"
+INP="./input<<job_step>>"
+OMP="<<omp>>"
+
+export OMP_STACKSIZE=512m
+export OMP_NUM_THREADS=$OMP
+
+mpirun -ppn $PPN -np $NSLOTS $BIN < $INP | tee -a logfile

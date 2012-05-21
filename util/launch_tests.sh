@@ -23,15 +23,14 @@ MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 4"
 
 
 # List of executables used during following simulations
-# The n-th executable has three parameters : 
-#      model[n] ntor[n] nplane[n]
-declare -a model=( 199 199 199 302 302)
-declare -a ntor=(  1   3   7   1   3  )
-declare -a nplane=(1   4   8   1   8  )
+# The n-th executable has two parameters : 
+#      model[n] ntor[n]
+declare -a model=( 199 199 199 302 302 303 303)
+declare -a ntor=(  1   3   7   1   3   1   3  )
 
-declare -a list_idx=(     0                  3       )
-declare -a list_inputs=(  "in199"            "xx302" )
-declare -a list_orig=(    "model199/intear"  "model300/inxflow" )
+declare -a list_idx=(     0                  3                  5               )
+declare -a list_inputs=(  "in199"            "xx302"            "xx303"         )
+declare -a list_orig=(    "model199/intear"  "model300/inxflow" "model303/jet_a")
 
 #-------------------------------------------------------------------------
 SIMNAME="$1"
@@ -45,6 +44,7 @@ fi
 PREFIX=${SIMNAME:0:$l}
 # Model number
 MODNB=${SIMNAME:$l:3}
+echo "MODNB" $MODNB
 for (( j = 0, notfound=1 ; j < ${#list_idx[@]} ; j++ )); do
     i=${list_idx[$j]}
     if [ "${MODNB}" = "${model[$i]}" ]; then
@@ -159,6 +159,60 @@ if [ "$MODNB" = "302" ]; then
 	  else
 	      if [ ! -f jorek_rst3.rst ]; then
 		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10
+		  EXE=j${model[$i]}_3
+      eval ${PRERUN}
+		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop3
+	      fi
+	  fi
+      fi
+  fi
+  ${UTILDIR}/extract_live_data.sh energies energies.dat 
+  exit 0
+fi
+#Original serie
+#nstep_n= 0.001 0.01 0.05 0.5 1   5   10
+#tstep_n= 10    10   20   20  200 200 100
+# Third Case: model303 point X
+if [ "$MODNB" = "303" ]; then
+  ((j=2))
+  i=${list_idx[$j]}
+  WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
+  cd $WKDIR
+  cp macroscopic_vars.dat old_macros_vars.dat
+  rm -f macroscopic_vars.dat
+  INFILE=${list_inputs[$j]}
+  
+  if [ ! -f jorek_equil.rst ]; then
+      ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
+      EXE=j${model[$i]}_1
+      eval ${PRERUN}
+      ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
+      status=$?; if [ $status -eq 0 ]; then 
+	  cp jorek_restart.rst jorek_equil.rst
+      fi
+  else
+      if [ ! -f jorek_rst1.rst ]; then
+	  cp jorek_equil.rst jorek_restart.rst 
+	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 10, 10, 10, 40, 40' 'tstep_n= 1e-3, 1e-2, 1e-1, 5e-1, 1, 2' nout=10
+	  EXE=j${model[$i]}_1
+      eval ${PRERUN}
+	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
+	  status=$?; if [ $status -eq 0 ]; then 
+	      cp jorek_restart.rst jorek_rst1.rst; 
+	  fi
+      else
+	  if [ ! -f jorek_rst2.rst ]; then
+	      cp jorek_rst1.rst jorek_restart.rst 
+	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 20, 100' 'tstep_n= 2, 5' nout=10
+	      EXE=j${model[$i]}_3
+      eval ${PRERUN}
+	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
+	      status=$?; if [ $status -eq 0 ]; then 
+		  cp jorek_restart.rst jorek_rst2.rst
+	      fi
+	  else
+	      if [ ! -f jorek_rst3.rst ]; then
+		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' nout=10
 		  EXE=j${model[$i]}_3
       eval ${PRERUN}
 		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop3

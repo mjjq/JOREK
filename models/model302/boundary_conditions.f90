@@ -94,6 +94,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
      murge_ntor = n_tor
   end if
 
+
   do loop = 1, loop_nbr
 #ifdef USE_MURGE
      if (loop == 2)  then
@@ -118,6 +119,18 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
            inode = element_list%element(ielm)%vertex(iv)
 
            if (node_list%node(inode)%boundary .ne. 0) then
+
+              if (use_murge .and. use_murge_element .and. (loop .eq. loop_nbr)) then
+                 index_node  = node_list%node(inode)%index(1)             ! position of value
+                 index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
+                 if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3)) then
+                    do in = 1, n_tor
+                       kv = 7
+                       RHS_loc(n_tor * n_var * (index_node-1)  + (kv-1)*n_tor + in) = 0.d0
+                       Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                    end do
+                 end if
+              end if
 
               do in=first_tor, last_tor
 
@@ -246,6 +259,14 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           ku = 2
                           kv = 7
                           kT = 6
+                          if (loop_nbr == loop) then
+                             if (in .eq. 1) then
+                                RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                     Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
+                             else
+                                RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
+                             endif
+                          endif
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
@@ -264,9 +285,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                         & index_node,  kv, in, &
                                         & index_node2, ku, in, &
                                         & - zbig * BigR**2 / ps0_s, murge_ntor, solve_only, gmres)
-
-                                   Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                        Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
                                 end if
                              end if
                           else
@@ -294,14 +312,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
                                 A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
 
-
-                                if (in .eq. 1) then
-                                   RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                        Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
-                                else
-                                   RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
-                                endif
-
                              endif
                           end if
 
@@ -309,6 +319,15 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           index_node2 = node_list%node(inode)%index(2)
                           kv = 7
                           kT = 6
+
+                          if (loop_nbr == loop) then
+                             if (in .eq. 1) then
+                                Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
+                                     Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
+                             else
+                                Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                             endif
+                          endif
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node2, is_local)
                              if (is_local) then
@@ -327,9 +346,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                         & index_node2, kv, in, &
                                         & index_node,  kT, in, &
                                         & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction, murge_ntor, solve_only, gmres)
-
-                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                        Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
                                 end if
                              end if
                           else
@@ -356,13 +372,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 irn_glob(ilarge_vsT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
                                 jcn_glob(ilarge_vsT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
                                 A_glob(ilarge_vsT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction
-
-                                if (in .eq. 1) then
-                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                        Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
-                                else
-                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
-                                endif 
 
                              endif
                           end if
@@ -477,5 +486,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
      end if
 #endif
   end do
+
   return
 end subroutine boundary_conditions

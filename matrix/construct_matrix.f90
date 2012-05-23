@@ -19,7 +19,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mod_boundary_matrix_open
   use mod_elt_matrix
   use mod_elt_matrix_fft
-  
   implicit none
   
   include 'mpif.h'
@@ -60,6 +59,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer :: i_father,INODE_FATHER, ios
   integer, external :: omp_get_num_threads, omp_get_thread_num
   integer :: ilarge_vp, in
+
   call r3_info_begin (r3_info_index_0, 'construct_matrix')   ! timing
 
   if (my_id .eq. 0) then
@@ -314,9 +314,18 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 !!$
 !!$
 
-  call tr_vnorms("cm_A_bef_bc",A_glob,nz_glob)
+
+!! For debugging purpose
+!  call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+!  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
+!  if (my_id .eq. 0) then
+!     write(fname,'(A,I6.6)')"rhs",index_now
+!     call tr_vdump(fname,RHS_glob,ndof_glob)
+!  end if
+
 
 ! --- Apply boundary conditions.
+  call tr_vnorms("cm_A_bef_bc",A_glob,nz_glob)
 
   call boundary_conditions(my_id, node_list, element_list, bnd_node_list, local_elms, n_local_elms, index_min,      &
        index_max, rhs_loc, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, .false., .false.)
@@ -329,8 +338,14 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
-  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
+!! For debugging purpose
+!  if (my_id .eq. 0) then
+!     write(fname,'(A,I6.6)')"rhsbc",index_now
+!     call tr_vdump(fname,RHS_glob,ndof_glob)
+!  end if
 
+  call tr_locvnorms("cm_BCRhs",RHS_glob,ndof_glob)
+  call tr_debug_writei("ndof_glob",ndof_glob)
   !write(string, '(A8,I2.2,A1)') "matrice_",my_id,"\0"
   !open(unit=9, file=string, STATUS='replace')
   !do k = 1, nz_glob

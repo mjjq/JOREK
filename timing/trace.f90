@@ -88,6 +88,22 @@ module tr_module
 contains
   !******************************
 
+  subroutine tr_vdump(filename,mat,nnz)
+    REAL*8, dimension(:) :: mat
+    character(len=*) :: filename
+    INTEGER :: nnz
+    
+#ifdef NORMTRACE
+    INTEGER i
+    open(11, file = filename, status = 'REPLACE', form = 'FORMATTED')
+    do i = 1, nnz
+       write (11,"(I10,E20.12)") i, mat(i)
+    end do
+    close(11)
+#endif
+  end subroutine tr_vdump
+
+
   subroutine tr_vnorms(prefix,mat,nnz)
     REAL*8, dimension(:) :: mat
     character(len=*) :: prefix

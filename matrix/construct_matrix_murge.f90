@@ -575,10 +575,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE global_distributed_matrix, ONLY : RHS_GLOB, column_scaling, ndof_glob
   USE mumps_module, ONLY : mumps_par
   USE thread_data,  ONLY : thread_data_type, LOOP
+  USE phys_module, ONLY : index_now
   IMPLICIT NONE
   INCLUDE 'mpif.h'
 #include "r3_info.h"
-
+  
   ! Subroutine parameters:
   INTEGER, TARGET                :: my_id
   TYPE (type_node_list), TARGET  :: node_list
@@ -1141,6 +1142,17 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   !----------------------- boundary conditions
 
   CALL SYSTEM_CLOCK(count=t0)
+
+!! For debugging purpose
+!  CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, &
+!       &          0, MPI_COMM_WORLD, ierr)
+!
+!  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
+!  if (my_id .eq. 0) then
+!     write(fname,'(A,I6.6)')"rhs",index_now
+!     call tr_vdump(fname,RHS_glob,ndof_glob)
+!  end if
+
   CALL boundary_conditions(my_id, node_list, element_list, bnd_node_list,      &
        &                   local_elms, n_local_elms, 0,                        &
        &                   0,  rhs_loc,    xpoint2, xcase2, psi_axis,          &
@@ -1148,7 +1160,13 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, &
        &          0, MPI_COMM_WORLD, ierr)
 
-  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
+!  if (my_id .eq. 0) then
+!     write(fname,'(A,I6.6)')"rhsbc",index_now
+!     call tr_vdump(fname,RHS_glob,ndof_glob)
+!  end if
+
+  call tr_locvnorms("cm_BCRhs",RHS_glob,ndof_glob)
+  call tr_debug_writei("ndof_glob",ndof_glob)
 
   CALL SYSTEM_CLOCK(count=t1)
   nb_periods = t1-t0

@@ -77,7 +77,7 @@ module vacuum_response
     character(len=20) :: name
     integer           :: ierr
     
-    read(filehandle,'(A12,A24,I10)',iostat=ierr) marker, name, read_intparam
+    read(filehandle,'(A12,A24,I12)',iostat=ierr) marker, name, read_intparam
     
     if ( (ierr /= 0) .or. (trim(adjustl(marker)) /= '#@intparam') .or. (trim(adjustl(name)) /= trim(parameter_name)) ) then
       write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'" from STARWALL response.'
@@ -198,6 +198,7 @@ module vacuum_response
     sr%n_w    = read_intparam(filehandle, 'n_w')
     sr%ntri_w = read_intparam(filehandle, 'ntri_w')
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
+    write(*,*) sr%ntri_w, sr%n_tor
     
     call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
     call read_array(filehandle, 'yy',       (/sr%n_w,0/),            float1d=sr%d_yy)

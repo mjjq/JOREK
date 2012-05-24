@@ -25,6 +25,8 @@ module vacuum_equilibrium
   integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2)
   character(len=512)   :: comment
   
+  if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
+  
   ! --- Read data from STARWALL response file
   open(filehandle, file=trim(filename), form='formatted', status='old', action='read')
   read(filehandle,'(a)') comment

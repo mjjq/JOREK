@@ -94,7 +94,7 @@ ccamu*)
 # -------------
 MPIPROCS=1
 NTHREAD=12
-NNODES=12
+NNODES=4
 WALLTIME=12:00:00
 ((NLIM=MPIPROCS*NTHREAD))
 if [ "${NLIM}" -gt "13" ]; then
@@ -511,7 +511,7 @@ cat <<EOF > go_$DATANAME.cmd
 #OAR -l host=${NNODES},walltime=${WALLTIME}
 #OAR -p nbcores=12 and visu='NO' 
 #OAR -O ${DATANAME}.%jobid%.log
-#OAR -E ${DATANAME}.%jobid%.log 
+#OAR -E ${DATANAME}.%jobid%.err
 
 wrapper_oar() { echo \$1 ; ssh $USER@login "cd ${WKDIR}; \$1 "; }
 
@@ -524,6 +524,7 @@ ulimit -Ha
 # -------------------
 echo " == hostfile ==="
 cat \$OAR_NODEFILE | sort -u > ${RESDIR}/mach
+for i in \$(cat ${RESDIR}/mach); do oarsh \$i hostname; done
 cat ${RESDIR}/mach
 echo ''
 

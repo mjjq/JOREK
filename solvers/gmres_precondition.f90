@@ -23,11 +23,15 @@ real*8              :: t1, t2, t3, t4, t5, t6
 real*8, allocatable :: buffer(:)
 integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 
-#ifdef __GFORTRAN__
-real*8,  pointer :: DUMMY_REAL(:)
-integer, pointer :: DUMMY_INT (:)
-DUMMY_REAL => NULL()
-DUMMY_INT  => NULL()
+#define GCC_VERSION (__GNUC__ * 10000 \
+                      + __GNUC_MINOR__ * 100 \
+                      + __GNUC_PATCHLEVEL__)
+
+#if GCC_VERSION > 40200
+    real*8,  pointer :: DUMMY_REAL(:)
+    integer, pointer :: DUMMY_INT (:)
+    DUMMY_REAL => NULL()
+    DUMMY_INT  => NULL()
 #else
 #define DUMMY_REAL NULL()
 #define DUMMY_INT NULL()

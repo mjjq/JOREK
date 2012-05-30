@@ -118,7 +118,7 @@ endif
 
 !******************************** end of GMRES reverse communication
 
-if (my_id .eq. 0) deltas = work
+if (my_id .eq. 0) deltas(1:n_dof) = work(1:n_dof)
 
 call gmres_matrix_vector(deltas,work(n_dof+1:2*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 

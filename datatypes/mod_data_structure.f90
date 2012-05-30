@@ -127,7 +127,7 @@ contains
     integer i
     if (.not. associated(thread_struct)) then
        allocate(thread_struct(nbthreads))
-       call tr_register_mem(sizeof(thread_struct),"thread_struct")
+       call tr_register_mem(sizeof(thread_struct),"thread_struct",CAT_MATELEM)
        do i = 1, nbthreads
           call tr_debug_write("Init thread_struct, thread_id=",i)
           call tr_allocatep(thread_struct(i)%ELM_p, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1)*n_tor,"ELM_p",CAT_MATELEM)

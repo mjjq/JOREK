@@ -156,7 +156,11 @@ program JOREK2
   real*8                   :: t_this
   integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
 
-#ifdef __GFORTRAN__
+#define GCC_VERSION (__GNUC__ * 10000 \
+                      + __GNUC_MINOR__ * 100 \
+                      + __GNUC_PATCHLEVEL__)
+
+#if GCC_VERSION > 40200
     real*8,  pointer :: DUMMY_REAL(:)
     integer, pointer :: DUMMY_INT (:)
     DUMMY_REAL => NULL()

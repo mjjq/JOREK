@@ -37,7 +37,7 @@ contains
                       + __GNUC_MINOR__ * 100 \
                       + __GNUC_PATCHLEVEL__)
 
-#if GCC_VERSION > 40200
+#if (GCC_VERSION < 40200 && GCC_VERSION > 0)
     real*8,  pointer :: DUMMY_REAL(:)
     integer, pointer :: DUMMY_INT (:)
     DUMMY_REAL => NULL()
@@ -46,6 +46,7 @@ contains
 #define DUMMY_REAL NULL()
 #define DUMMY_INT NULL()
 #endif
+
 
     call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing

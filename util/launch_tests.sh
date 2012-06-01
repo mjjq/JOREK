@@ -97,6 +97,12 @@ if [ "$MODNB" = "199" ]; then
   i=${list_idx[$j]}
   WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
   cd $WKDIR
+  LASTNUM=$(ls  out_loop* | cut -c9- | sort -rn | head -1)
+  if [ -z "LASTNUM" ]; then
+    ((LASTNUM=0))
+  else
+    ((LASTNUM++))
+  fi
   cp macroscopic_vars.dat old_macros_vars.dat 2>/dev/null
   rm -f macroscopic_vars.dat 2>/dev/null
   INFILE=${list_inputs[$j]}
@@ -111,7 +117,7 @@ if [ "$MODNB" = "199" ]; then
       ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000
       EXE=j${model[$i]}_3
       eval ${PRERUN}
-      ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop
+      ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
       
       ${UTILDIR}/extract_live_data.sh energies energies.dat 
   fi
@@ -124,6 +130,12 @@ if [ "$MODNB" = "302" ]; then
   i=${list_idx[$j]}
   WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
   cd $WKDIR
+  if [ -z "LASTNUM" ]; then
+    ((LASTNUM=0))
+  else
+    ((LASTNUM++))
+  fi
+
   cp macroscopic_vars.dat old_macros_vars.dat
   rm -f macroscopic_vars.dat
   INFILE=${list_inputs[$j]}
@@ -161,7 +173,7 @@ if [ "$MODNB" = "302" ]; then
 		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10
 		  EXE=j${model[$i]}_3
       eval ${PRERUN}
-		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop3
+		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
 	      fi
 	  fi
       fi
@@ -178,6 +190,12 @@ if [ "$MODNB" = "303" ]; then
   i=${list_idx[$j]}
   WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
   cd $WKDIR
+  if [ -z "LASTNUM" ]; then
+    ((LASTNUM=0))
+  else
+    ((LASTNUM++))
+  fi
+
   cp macroscopic_vars.dat old_macros_vars.dat
   rm -f macroscopic_vars.dat
   INFILE=${list_inputs[$j]}
@@ -215,7 +233,7 @@ if [ "$MODNB" = "303" ]; then
 		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' nout=10
 		  EXE=j${model[$i]}_3
       eval ${PRERUN}
-		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop3
+		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
 	      fi
 	  fi
       fi

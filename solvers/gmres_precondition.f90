@@ -27,7 +27,7 @@ integer             :: ibuf_size, status(MPI_STATUS_SIZE)
                       + __GNUC_MINOR__ * 100 \
                       + __GNUC_PATCHLEVEL__)
 
-#if GCC_VERSION > 40200
+#if (GCC_VERSION < 40200 && GCC_VERSION > 0)
     real*8,  pointer :: DUMMY_REAL(:)
     integer, pointer :: DUMMY_INT (:)
     DUMMY_REAL => NULL()

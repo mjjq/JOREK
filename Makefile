@@ -143,7 +143,7 @@ MAIN = jorek_$(MODEL)
 
 all: version $(MAIN)
 
-cleanall : clean cleandep
+cleanall : clean cleandep cleangenmod
 
 clean :	
 	@echo ">> Deleting Object Files <<"
@@ -154,6 +154,10 @@ clean :
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -f *.dep */*.dep */*/*.dep
+
+cleangenmod:
+	@echo ">> Deleting auto-generated interface files (*__genmod*) if any <<"
+	-@rm -f *__genmod*
 
 version:
 	@echo "#define SVN_VERSION"                                               > version.h.tmp

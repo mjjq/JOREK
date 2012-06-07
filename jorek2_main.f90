@@ -39,6 +39,7 @@ program JOREK2
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
   use solve_mat_n
   use tr_module
+  use clock_module
 #ifdef USE_HDF5
   use hdf5
   use HDF5_io_module
@@ -47,7 +48,6 @@ program JOREK2
 
   implicit none
   
-  include 'mpif.h'
 #include "r3_info.h"
 #include "version.h"
   
@@ -114,8 +114,9 @@ program JOREK2
   
   type (type_surface_list) :: surface_list, flux_list
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
-  real*8                   :: t_matrix_0, t_matrix_1, psi_lim, R_lim, Z_lim
-  real*8                   :: t_send_0, t_send_1, t_solve_0, t_solve_1, t_solve_2
+  real*8                   :: psi_lim, R_lim, Z_lim
+  real*8                   :: t_matrix, t_send, t_solve
+  type(clcktype)           :: t_itstart, t0, t1
   real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis, minRad
   real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
@@ -149,12 +150,13 @@ program JOREK2
   type (type_element)      :: element
   integer                  :: index_size, id_elements
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
-  integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods, max_periods, min_periods
-  character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
+  REAL*8                   :: max_time, min_time, tsecond
+  character(len=20), parameter :: FMT_TIMING = "(A40,F7.2)"
   integer, allocatable     :: tab_n_local_elems(:)
   integer                  :: sum_n_local_elms, max_n_local_elms, min_n_local_elms
   real*8                   :: t_this
   integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
+  
 
 #define GCC_VERSION (__GNUC__ * 10000 \
                       + __GNUC_MINOR__ * 100 \
@@ -217,7 +219,7 @@ program JOREK2
   call tr_meminit(my_id, n_cpu)
 
   ! --- Initialise timing
-  call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
+  call clck_init()
   call r3_info_init ()
   
   ! --- Initialize mode and mode_type arrays
@@ -726,7 +728,7 @@ program JOREK2
        !   TODO : Avoid doubles
        call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms, &
     	 element_list, node_list, n_aa, my_id, my_id_trans, n_cpu_trans)
-       call system_clock(count=t0)
+       call clck_time(t0)
        ! Build local_elms from loc2glob
        n_local_elms = 0
 
@@ -779,15 +781,13 @@ program JOREK2
     	     END DO
     	  END DO L_I
        END DO
-       call system_clock(count=t1)   
-       nb_periods = t1-t0
-       if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-       
-       CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
-       CALL MPI_Reduce(nb_periods, max_periods, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+       call clck_time(t1)
+       call clck_ldiff(t0,t1,tsecond)
+       CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+       CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
        if (my_id .eq. 0) then
-    	  write(*,FMT_TIMING) my_id, ' maximum elapsed time computing new local element list ',REAL(max_periods)/nb_periodes_sec
-    	  write(*,FMT_TIMING) my_id, ' minimum elapsed time computing new local element list ',REAL(min_periods)/nb_periodes_sec
+    	  write(*,FMT_TIMING) '# Elapsed time local element list ',min_time
+    	  write(*,FMT_TIMING) '# Elapsed time local element list ',max_time
        end if
 
        CALL MPI_Reduce(n_local_elms, sum_n_local_elms, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_N, ierr)
@@ -845,6 +845,7 @@ program JOREK2
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)
+    call clck_time(t_itstart)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     call flushc !flush the output stream
@@ -900,11 +901,8 @@ program JOREK2
     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
     call tr_debug_write("JMAIN:Find_axis_T",T_axis)
 
-    call cpu_time(t_matrix_0)
-
     ! Build the matrix 
-    
-    call system_clock(count=t0)
+    call clck_time(t0)
     if (gmres) then
        solve_only = .false.
        if ((gmres) .and. (istep .gt. 1)) then
@@ -934,21 +932,14 @@ program JOREK2
     endif
     
 
-    call system_clock(count=t1)   
-    nb_periods = t1-t0
-    if (t1<t0) nb_periods = nb_periods + nb_periodes_max
+    call clck_time_barrier(t1)
     if (my_id .eq. 0) then
-      write(*,FMT_TIMING) my_id, ' system_clock elapsed time in construct_matrix ',REAL(nb_periods)/nb_periodes_sec
+       call clck_ldiff(t0,t1,tsecond)
+      write(*,FMT_TIMING) '# Elapsed time construct_matrix ',tsecond
     endif     
-    call cpu_time(t_matrix_1)
 
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
     ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
     call del_thread_buffers()
-
-    if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' matrix  : ',t_matrix_1-t_matrix_0
-
-    call cpu_time(t_solve_0)
 
     if (.not. gmres) then
        if (use_mumps) then
@@ -967,7 +958,7 @@ program JOREK2
        endif
 
     else
-       call cpu_time(t_send_0)
+       call clck_time(t0)
        if (.not. solve_only) then
     	  ! with murge elementary assembly harmonic distribution is already done.
     	  IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
@@ -978,32 +969,36 @@ program JOREK2
        else
           call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
        endif
-       call cpu_time(t_send_1)
-       if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' distribute  : ',t_send_1-t_send_0
-       call MPI_Barrier(MPI_COMM_WORLD,ierr)
+       call clck_time_barrier(t1)
+       call clck_ldiff(t0,t1,tsecond)
+       if (my_id .eq. 0) then
+          write(*,FMT_TIMING) '# Elapsed time distribute ',tsecond
+       end if
 
+       call clck_time(t0)
        if (use_murge .and. use_murge_element) then
     	  call solve_murge_all(n_cpu,my_id,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
        else
     	  call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
        end if
+       call clck_time_barrier(t1)
+       call clck_ldiff(t0,t1,tsecond)
+       if (my_id .eq. 0) then
+          write(*,FMT_TIMING) '# Elapsed time first solve ',tsecond
+       end if
     endif
 
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-    call cpu_time(t_solve_1)
-
+    call clck_time(t0)
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
       call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
     endif
-
-    call cpu_time(t_solve_2)
-
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-    if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' solve : ',t_solve_1-t_solve_0
-    if (my_id .eq. 0) write(*,'(i3,A,f8.3)') my_id,' gmres : ',t_solve_2-t_solve_1
+    call clck_time_barrier(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING) '# Elapsed time gmres/solve ',tsecond
+    end if
 
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
@@ -1144,6 +1139,12 @@ program JOREK2
       exit jstep_loop
     end if
      
+    call clck_time_barrier(t1)
+    call clck_ldiff(t_itstart,t1,tsecond)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING) '# Elapsed time ITERATION ',tsecond
+    end if
+
   enddo istep_loop
   enddo jstep_loop
   

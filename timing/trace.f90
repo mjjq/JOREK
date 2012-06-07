@@ -83,7 +83,6 @@ module tr_module
   integer*8, private :: max_allocate
   integer*8, private :: nb_allocate(MIN_CAT:MAX_CAT)
 
-
   !******************************
 contains
   !******************************

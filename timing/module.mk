@@ -5,6 +5,7 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	\
 	$(DIR)/flushc.c			\
 	$(DIR)/flush_it.f90		\
 	$(DIR)/trace.f90		\
+	$(DIR)/clock.f90		\
 	$(DIR)/pastix_getmem.c
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC) \

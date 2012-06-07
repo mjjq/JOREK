@@ -93,91 +93,96 @@ done
 
 # First Case: model199
 if [ "$MODNB" = "199" ]; then
-  ((j=0))
-  i=${list_idx[$j]}
-  WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
-  cd $WKDIR
-  LASTNUM=$(ls  out_loop* | cut -c9- | sort -rn | head -1)
-  if [ -z "LASTNUM" ]; then
-    ((LASTNUM=0))
-  else
-    ((LASTNUM++))
-  fi
-  cp macroscopic_vars.dat old_macros_vars.dat 2>/dev/null
-  rm -f macroscopic_vars.dat 2>/dev/null
-  INFILE=${list_inputs[$j]}
-  
-  if [ ! -f jorek_equil.rst ]; then
-      ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1
-      EXE=j${model[$i]}_1
-      eval ${PRERUN}
-      ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
-      cp jorek_restart.rst jorek_equil.rst
-  else
-      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000
-      EXE=j${model[$i]}_3
-      eval ${PRERUN}
-      ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
-      
-      ${UTILDIR}/extract_live_data.sh energies energies.dat 
-  fi
+  for c in $(seq 0 2); do
+    ((j=0))
+    i=${list_idx[$j]}
+    WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
+    cd $WKDIR
+    LASTNUM=$(ls  out_loop* | cut -c9- | sort -rn | head -1)
+    if [ -z "$LASTNUM" ]; then
+      ((LASTNUM=0))
+    else
+      ((LASTNUM++))
+    fi
+    cp macroscopic_vars.dat old_macros_vars.dat 2>/dev/null
+    rm -f macroscopic_vars.dat 2>/dev/null
+    INFILE=${list_inputs[$j]}
+    
+    if [ ! -f jorek_equil.rst ]; then
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1
+        EXE=j${model[$i]}_1
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
+        cp jorek_restart.rst jorek_equil.rst
+    else
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000
+        EXE=j${model[$i]}_3
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
+        
+        ${UTILDIR}/extract_live_data.sh energies energies.dat 
+    fi
+  done
   exit 0
 fi 
 
 # Second Case: model302 point X
 if [ "$MODNB" = "302" ]; then
-  ((j=1))
-  i=${list_idx[$j]}
-  WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
-  cd $WKDIR
-  if [ -z "LASTNUM" ]; then
-    ((LASTNUM=0))
-  else
-    ((LASTNUM++))
-  fi
-
-  cp macroscopic_vars.dat old_macros_vars.dat
-  rm -f macroscopic_vars.dat
-  INFILE=${list_inputs[$j]}
+  for c in $(seq 0 5); do
+    ((j=1))
+    i=${list_idx[$j]}
+    WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
+    cd $WKDIR
+    LASTNUM=$(ls  out_loop* | cut -c9- | sort -rn | head -1)
+    if [ -z "$LASTNUM" ]; then
+      ((LASTNUM=0))
+    else
+      ((LASTNUM++))
+    fi
   
-  if [ ! -f jorek_equil.rst ]; then
-      ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
-      EXE=j${model[$i]}_1
-      eval ${PRERUN}
-      ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
-      status=$?; if [ $status -eq 0 ]; then 
-	  cp jorek_restart.rst jorek_equil.rst
-      fi
-  else
-      if [ ! -f jorek_rst1.rst ]; then
-	  cp jorek_equil.rst jorek_restart.rst 
-	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' nout=10
-	  EXE=j${model[$i]}_1
-      eval ${PRERUN}
-	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
-	  status=$?; if [ $status -eq 0 ]; then 
-	      cp jorek_restart.rst jorek_rst1.rst; 
-	  fi
-      else
-	  if [ ! -f jorek_rst2.rst ]; then
-	      cp jorek_rst1.rst jorek_restart.rst 
-	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' nout=10
-	      EXE=j${model[$i]}_3
-      eval ${PRERUN}
-	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
-	      status=$?; if [ $status -eq 0 ]; then 
-		  cp jorek_restart.rst jorek_rst2.rst
-	      fi
-	  else
-	      if [ ! -f jorek_rst3.rst ]; then
-		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10
-		  EXE=j${model[$i]}_3
-      eval ${PRERUN}
-		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
-	      fi
-	  fi
-      fi
-  fi
+    cp macroscopic_vars.dat old_macros_vars.dat
+    rm -f macroscopic_vars.dat
+    INFILE=${list_inputs[$j]}
+    
+    if [ ! -f jorek_equil.rst ]; then
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
+        EXE=j${model[$i]}_1
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
+        status=$?; if [ $status -eq 0 ]; then 
+  	  cp jorek_restart.rst jorek_equil.rst
+        fi
+    else
+        if [ ! -f jorek_rst1.rst ]; then
+  	  cp jorek_equil.rst jorek_restart.rst 
+  	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' nout=10
+  	  EXE=j${model[$i]}_1
+        eval ${PRERUN}
+  	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
+  	  status=$?; if [ $status -eq 0 ]; then 
+  	      cp jorek_restart.rst jorek_rst1.rst; 
+  	  fi
+        else
+  	  if [ ! -f jorek_rst2.rst ]; then
+  	      cp jorek_rst1.rst jorek_restart.rst 
+  	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' nout=10
+  	      EXE=j${model[$i]}_3
+        eval ${PRERUN}
+  	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
+  	      status=$?; if [ $status -eq 0 ]; then 
+  		  cp jorek_restart.rst jorek_rst2.rst
+  	      fi
+  	  else
+  	      if [ ! -f jorek_rst3.rst ]; then
+  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10
+  		  EXE=j${model[$i]}_3
+        eval ${PRERUN}
+  		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
+  	      fi
+  	  fi
+        fi
+    fi
+  done
   ${UTILDIR}/extract_live_data.sh energies energies.dat 
   exit 0
 fi
@@ -186,58 +191,61 @@ fi
 #tstep_n= 10    10   20   20  200 200 100
 # Third Case: model303 point X
 if [ "$MODNB" = "303" ]; then
-  ((j=2))
-  i=${list_idx[$j]}
-  WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
-  cd $WKDIR
-  if [ -z "LASTNUM" ]; then
-    ((LASTNUM=0))
-  else
-    ((LASTNUM++))
-  fi
-
-  cp macroscopic_vars.dat old_macros_vars.dat
-  rm -f macroscopic_vars.dat
-  INFILE=${list_inputs[$j]}
+  for c in $(seq 0 5); do
+    ((j=2))
+    i=${list_idx[$j]}
+    WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
+    cd $WKDIR
+    LASTNUM=$(ls  out_loop* | cut -c9- | sort -rn | head -1)
+    if [ -z "$LASTNUM" ]; then
+      ((LASTNUM=0))
+    else
+      ((LASTNUM++))
+    fi
   
-  if [ ! -f jorek_equil.rst ]; then
-      ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
-      EXE=j${model[$i]}_1
-      eval ${PRERUN}
-      ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
-      status=$?; if [ $status -eq 0 ]; then 
-	  cp jorek_restart.rst jorek_equil.rst
-      fi
-  else
-      if [ ! -f jorek_rst1.rst ]; then
-	  cp jorek_equil.rst jorek_restart.rst 
-	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 10, 10, 10, 40, 40' 'tstep_n= 1e-3, 1e-2, 1e-1, 5e-1, 1, 2' nout=10
-	  EXE=j${model[$i]}_1
-      eval ${PRERUN}
-	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
-	  status=$?; if [ $status -eq 0 ]; then 
-	      cp jorek_restart.rst jorek_rst1.rst; 
-	  fi
-      else
-	  if [ ! -f jorek_rst2.rst ]; then
-	      cp jorek_rst1.rst jorek_restart.rst 
-	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 20, 100' 'tstep_n= 2, 5' nout=10
-	      EXE=j${model[$i]}_3
-      eval ${PRERUN}
-	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
-	      status=$?; if [ $status -eq 0 ]; then 
-		  cp jorek_restart.rst jorek_rst2.rst
-	      fi
-	  else
-	      if [ ! -f jorek_rst3.rst ]; then
-		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' nout=10
-		  EXE=j${model[$i]}_3
-      eval ${PRERUN}
-		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
-	      fi
-	  fi
-      fi
-  fi
+    cp macroscopic_vars.dat old_macros_vars.dat
+    rm -f macroscopic_vars.dat
+    INFILE=${list_inputs[$j]}
+    
+    if [ ! -f jorek_equil.rst ]; then
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
+        EXE=j${model[$i]}_1
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
+        status=$?; if [ $status -eq 0 ]; then 
+  	  cp jorek_restart.rst jorek_equil.rst
+        fi
+    else
+        if [ ! -f jorek_rst1.rst ]; then
+  	  cp jorek_equil.rst jorek_restart.rst 
+  	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 10, 10, 10, 40, 40' 'tstep_n= 1e-3, 1e-2, 1e-1, 5e-1, 1, 2' nout=10
+  	  EXE=j${model[$i]}_1
+        eval ${PRERUN}
+  	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
+  	  status=$?; if [ $status -eq 0 ]; then 
+  	      cp jorek_restart.rst jorek_rst1.rst; 
+  	  fi
+        else
+  	  if [ ! -f jorek_rst2.rst ]; then
+  	      cp jorek_rst1.rst jorek_restart.rst 
+  	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 20, 100' 'tstep_n= 2, 5' nout=10
+  	      EXE=j${model[$i]}_3
+        eval ${PRERUN}
+  	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
+  	      status=$?; if [ $status -eq 0 ]; then 
+  		  cp jorek_restart.rst jorek_rst2.rst
+  	      fi
+  	  else
+  	      if [ ! -f jorek_rst3.rst ]; then
+  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' nout=10
+  		  EXE=j${model[$i]}_3
+        eval ${PRERUN}
+  		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
+  	      fi
+  	  fi
+        fi
+    fi
+  done
   ${UTILDIR}/extract_live_data.sh energies energies.dat 
   exit 0
 fi

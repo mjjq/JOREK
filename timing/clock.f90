@@ -14,7 +14,7 @@ module clock_module
   !-> maximum value of the clock counter   
   integer(8) :: nb_periods_max
 
-
+  character(len=*), parameter :: FMT_TIMING = "(I3,A40,F20.7)"
 
   !******************************
 contains

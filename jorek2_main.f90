@@ -151,7 +151,6 @@ program JOREK2
   integer                  :: index_size, id_elements
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   REAL*8                   :: max_time, min_time, tsecond
-  character(len=20), parameter :: FMT_TIMING = "(A40,F7.2)"
   integer, allocatable     :: tab_n_local_elems(:)
   integer                  :: sum_n_local_elms, max_n_local_elms, min_n_local_elms
   real*8                   :: t_this
@@ -786,8 +785,8 @@ program JOREK2
        CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
        CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
        if (my_id .eq. 0) then
-    	  write(*,FMT_TIMING) '# Elapsed time local element list ',min_time
-    	  write(*,FMT_TIMING) '# Elapsed time local element list ',max_time
+    	  write(*,FMT_TIMING) my_id, '# Elapsed time local element list :',min_time
+    	  write(*,FMT_TIMING) my_id, '# Elapsed time local element list :',max_time
        end if
 
        CALL MPI_Reduce(n_local_elms, sum_n_local_elms, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_N, ierr)
@@ -935,7 +934,7 @@ program JOREK2
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
        call clck_ldiff(t0,t1,tsecond)
-      write(*,FMT_TIMING) '# Elapsed time construct_matrix ',tsecond
+      write(*,FMT_TIMING) my_id, '# Elapsed time construct_matrix :',tsecond
     endif     
 
     ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
@@ -972,7 +971,7 @@ program JOREK2
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
        if (my_id .eq. 0) then
-          write(*,FMT_TIMING) '# Elapsed time distribute ',tsecond
+          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
        end if
 
        call clck_time(t0)
@@ -984,11 +983,11 @@ program JOREK2
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
        if (my_id .eq. 0) then
-          write(*,FMT_TIMING) '# Elapsed time first solve ',tsecond
+          write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
        end if
     endif
 
-    call clck_time(t0)
+    call clck_time_barrier(t0)
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
@@ -997,7 +996,7 @@ program JOREK2
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
-       write(*,FMT_TIMING) '# Elapsed time gmres/solve ',tsecond
+       write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
 
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
@@ -1142,7 +1141,7 @@ program JOREK2
     call clck_time_barrier(t1)
     call clck_ldiff(t_itstart,t1,tsecond)
     if (my_id .eq. 0) then
-       write(*,FMT_TIMING) '# Elapsed time ITERATION ',tsecond
+       write(*,FMT_TIMING)  my_id, '# Elapsed time ITERATION :',tsecond
     end if
 
   enddo istep_loop

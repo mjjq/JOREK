@@ -1,7 +1,7 @@
 module solve_mat_n
 
 contains
-
+ 
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
@@ -12,10 +12,9 @@ contains
     use pastix_module
     use wsmp_module
     use global_distributed_matrix
-
+    use clock_module
     implicit none
 
-    include 'mpif.h'
 #include "r3_info.h"
 
     integer, intent(in) :: my_id
@@ -25,10 +24,9 @@ contains
 
     integer :: i, j, k, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
     integer :: i_reduced, j_reduced, n_i, n_j, index, index1, index2
-    real*8  :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_solv_0, t_solv_1
+    type(clcktype) :: t_itstart, t0, t1, t2, t3
+    real*8  :: tsecond
     real*8, allocatable :: RHS_tmp(:)
-    integer :: t1, t0, time_ini_1,time_ini_0,time_facto_1,time_facto_0, time_solve_0
-    integer :: time_solve_1,nb_periods,nb_periodes_max,nb_periodes_sec
     integer, external :: omp_get_num_threads, omp_get_thread_num
     !Split broadcast
     character*8 :: type
@@ -48,7 +46,6 @@ contains
 #endif
 
 
-    call system_clock(count_rate=nb_periodes_sec,count_max=nb_periodes_max) ! elapsed time
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
     call tr_debug_writei("smn_A_mumps_par%n",mumps_par%n)
@@ -74,7 +71,6 @@ contains
     endif
 
 
-
     if (.not. solve_only) then
 
       !---------------------------------------- column scaling 
@@ -95,15 +91,16 @@ contains
         enddo
       endif
 
+      if (my_id_n .eq. 0) then                          ! elapsed time analysis start
+         call MPI_Barrier(MPI_COMM_MASTER,ierr)
+         call clck_time(t0)
+      endif
+
+
       if (use_mumps) then
 #ifdef USE_MUMPS
 
-        if (my_id_n .eq. 0) then                          ! elapsed time analysis start
-          call MPI_Barrier(MPI_COMM_MASTER,ierr)
-          call system_clock(count=time_ini_0)
-        endif
         mumps_par%JOB = 1                                 ! Analysis, only needed when grid has changed
-        call cpu_time(t_analysis_0)
 
         mumps_par%icntl(7)  = 4                            ! reorderign option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
         mumps_par%icntl(8)  = 7                            ! row and column scaling
@@ -112,24 +109,14 @@ contains
 
         call DMUMPS(mumps_par)
 
-        call cpu_time(t_analysis_1)
-
-        if (my_id_n .eq.0) write(*, '(i3,A,f8.3)') my_id,' MUMPS, analysis  : ',t_analysis_1-t_analysis_0
-        if (my_id_n .eq.0) then                            ! elapsed time analysis end
-          call MPI_Barrier(MPI_COMM_MASTER,ierr)
-          call system_clock(count=time_ini_1)
-          nb_periods = time_ini_1-time_ini_0
-          if (time_ini_1<time_ini_0) nb_periods = nb_periods + nb_periodes_max
-          write(*,*) 'system_clock elapsed time analysis',REAL(nb_periods)/nb_periodes_sec
-        endif
 #endif
       else ! .not. use_mumps --> use_pastix or use_murge or use_wsmp
 
         if (my_id_n .eq. 0) then           
 
-          if (my_id_n .eq. 0) then                     ! elapsed time analysis start
+          if (my_id_n .eq. 0) then                
             call MPI_Barrier(MPI_COMM_MASTER,ierr)
-            call system_clock(count=t0)
+            call clck_time(t2)
           endif
 
 #ifdef USE_BLOCK
@@ -180,11 +167,10 @@ contains
           if (allocated(sparskit_work)) deallocate(sparskit_work)
 
           if (my_id_n .eq. 0) then
-            call MPI_Barrier(MPI_COMM_MASTER,ierr)     ! elapsed time analysis end
-            call system_clock(count=t1)
-            nb_periods = t1-t0
-            if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-            write(*,*) 'system_clock elapsed time coicsr',REAL(nb_periods)/nb_periodes_sec
+            call MPI_Barrier(MPI_COMM_MASTER,ierr) 
+            call clck_time(t3)
+            call clck_ldiff(t2,t3,tsecond)
+            write(*,FMT_TIMING) my_id, '### Elapsed time coicsr :', tsecond
           endif
 
         else  ! (my_id_n > 0) below
@@ -203,7 +189,7 @@ contains
           pastix_nthrd = omp_get_num_threads()
           !$omp end parallel
 
-          if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
+          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
 
           call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -358,13 +344,9 @@ contains
               end if
 
             else if (use_pastix) then
-              if (my_id_n .eq. 0) then                     ! elapsed time analysis start
-                call MPI_Barrier(MPI_COMM_MASTER,ierr)
-                call system_clock(count=time_ini_0)
-              endif
+
               pastix_iparm(IPARM_START_TASK+1) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK+1)   = API_TASK_ANALYSE
-              call cpu_time(t_analysis_0)
 
 #ifdef USE_BLOCK
 
@@ -377,17 +359,6 @@ contains
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
-              call cpu_time(t_analysis_1)
-
-              if (my_id_n .eq.0) write(*, '(i3,A,f8.3)') my_id,' PASTIX, analysis  : ',t_analysis_1-t_analysis_0
-              if (my_id_n .eq. 0) then
-                call MPI_Barrier(MPI_COMM_MASTER,ierr)     ! elapsed time analysis end
-                call system_clock(count=time_ini_1)
-                nb_periods = time_ini_1-time_ini_0
-                if (time_ini_1<time_ini_0) nb_periods = nb_periods + nb_periodes_max
-                write(*,*) 'system_clock elapsed time analysis',REAL(nb_periods)/nb_periodes_sec
-              endif
-
             else if (use_wsmp) then
               ! do nothing
             endif
@@ -400,23 +371,25 @@ contains
       endif   ! (else, use_mumps)
 
 
+      if (my_id_n .eq.0) then                            ! elapsed time analysis end
+         call MPI_Barrier(MPI_COMM_MASTER,ierr)
+         call clck_time(t1)
+         call clck_ldiff(t0,t1,tsecond)
+         write(*, FMT_TIMING) my_id,' ## Elapsed time, analysis :',tsecond
+         call clck_time(t0)                              ! elapsed time facto start 
+      endif
 
       if (use_mumps) then
 #ifdef USE_MUMPS
-        call cpu_time(t_fact_0)
 
         mumps_par%JOB = 2                                   ! factorisation
 
         call DMUMPS(mumps_par)
 
-        call cpu_time(t_fact_1)
-
-        if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' MUMPS, fact      : ',t_fact_1-t_fact_0
         if (my_id_n .eq.0)   write(*,'(i3,A,i8)')    my_id,' MUMPS, mem       : ',mumps_par%info(16)
 #endif
       elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
-        CALL CPU_TIME(t_analysis_0)
         if (use_murge) then
           WRITE(*,*) '***********************************'
           WRITE(*,*) '* Matrix Murge                    *'
@@ -437,20 +410,10 @@ contains
           call tr_deallocatep(mumps_par%irn,"special:mumps_par%irn",CAT_DMATRIX)
           call tr_deallocatep(mumps_par%jcn,"special:mumps_par%jcn",CAT_DMATRIX)
 
-          CALL CPU_TIME(t_analysis_1)
-
-          IF (my_id_n .EQ. 0)  WRITE(*,'(i3,A,f8.3)') my_id, ' MURGE_MatrixGlobalCSC  : ',t_analysis_1-t_analysis_0
-
         else if (use_pastix) then
-
-          call cpu_time(t_fact_0)
 
           pastix_iparm(IPARM_START_TASK+1) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+1)   = API_TASK_NUMFACT
-          if (my_id_n .eq. 0) then                              ! elapsed time factorisation start
-            call MPI_Barrier(MPI_COMM_MASTER,ierr)
-            call system_clock(count=time_facto_0)
-          endif
 
 #ifdef USE_BLOCK
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
@@ -461,18 +424,6 @@ contains
           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
-          call cpu_time(t_fact_1)
-
-          if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' PastiX, fact      : ',t_fact_1-t_fact_0
-
-          if (my_id_n .eq. 0) then                          ! elapsed time factorisation end
-            call MPI_Barrier(MPI_COMM_MASTER,ierr)
-            call system_clock(count=time_facto_1)
-            nb_periods = time_facto_1-time_facto_0
-            if (time_facto_1<time_facto_0) nb_periods = nb_periods + nb_periodes_max
-            write(*,*) 'system_clock elapsed time factorization',REAL(nb_periods)/nb_periodes_sec
-          endif
-
         else if (use_wsmp) then
 #ifdef USE_WSMP
           call PWGSMP__LU_factorization(my_id_n)
@@ -480,28 +431,28 @@ contains
         end if
 
       endif
+      
+      if (my_id_n .eq.0) then                            ! elapsed time facto end
+         call MPI_Barrier(MPI_COMM_MASTER,ierr)
+         call clck_time(t1)
+         call clck_ldiff(t0,t1,tsecond)
+         write(*, FMT_TIMING) my_id,' ## Elapsed time, facto :',tsecond
+         call clck_time(t0)
+      end if
+   endif
+   call tr_debug_writei("smn_B_mumps_par%n",mumps_par%n)
 
-    endif
-    call tr_debug_writei("smn_B_mumps_par%n",mumps_par%n)
 
-
-    if (my_id_n .eq. 0) then                              ! elapsed time solve start
+   if (my_id_n .eq. 0) then                          ! elapsed time solve start
       call MPI_Barrier(MPI_COMM_MASTER,ierr)
-      call system_clock(count=time_solve_0)
-    endif
-
-
-    if (use_mumps) then
+      call clck_time(t0)
+   endif
+   if (use_mumps) then
 #ifdef USE_MUMPS
       mumps_par%JOB = 3                                   ! Solve
 
-      call cpu_time(t_solv_0)
-
       call DMUMPS(mumps_par)
 
-      call cpu_time(t_solv_1)
-
-      if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' MUMPS, solv      : ',t_solv_1-t_solv_0
 #endif
     elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
@@ -513,21 +464,16 @@ contains
           write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
           STOP
         end if
-        call cpu_time(t_fact_0)
         CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, 0, ierr)
-        call cpu_time(t_fact_1)
         if (ierr /= MURGE_SUCCESS) then 
           write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
           STOP
         end if
-        if (my_id_n .eq.0)   write(*,'(i3,A,f8.3)')  my_id,' MURGE_GetGlobalSolution    : ',t_fact_1-t_fact_0
-
 #else
         print *, "Binary built without murge"
         call abort()
 #endif
       else if (use_pastix) then
-        call cpu_time(t_solv_0)
 
         pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
@@ -550,26 +496,21 @@ contains
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
-        call cpu_time(t_solv_1)
-
-        if (my_id_n .eq.0)  write(*,'(i3,A,f8.3)')  my_id,' PastiX, solv      : ',t_solv_1-t_solv_0
-
       else if (use_wsmp) then
 #ifdef USE_WSMP
         call PWGSMP__back_substitution(mumps_par%rhs, my_id_n)
 #endif
-      end if
-    endif
+     end if
+   endif
 
+    if (my_id_n .eq.0) then                            ! elapsed time solve end
+       call MPI_Barrier(MPI_COMM_MASTER,ierr)
+       call clck_time(t1)
+       call clck_ldiff(t0,t1,tsecond)
+       write(*, FMT_TIMING) my_id,' ## Elapsed time, solve :',tsecond
+       call clck_time(t0)
+    end if
 
-    CALL MPI_Barrier(MPI_COMM_WORLD, ierr)
-    if (my_id_n .eq. 0) then                          ! elapsed time factorisation end
-      call MPI_Barrier(MPI_COMM_MASTER,ierr)
-      call system_clock(count=time_solve_1)
-      nb_periods = time_solve_1-time_solve_0
-      if (time_solve_1<time_solve_0) nb_periods = nb_periods + nb_periodes_max
-      write(*,*) 'system_clock elapsed time resolution',REAL(nb_periods)/nb_periodes_sec
-    endif
 
     if (my_id_n .eq. 0) then
 

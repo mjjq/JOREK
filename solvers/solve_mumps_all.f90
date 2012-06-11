@@ -6,8 +6,8 @@ subroutine solve_mumps_all(my_id)
 use tr_module 
 use mumps_module
 use global_distributed_matrix
+use clock_module
 implicit none
-include 'mpif.h'
 
 real*8,allocatable       :: column_local(:)
 real*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1
@@ -48,22 +48,27 @@ mumps_par%icntl(8)  = 7                            ! row and column scaling  7: 
 mumps_par%icntl(18) = 3
 mumps_par%icntl(14) = 50                           ! MAXS
 
-call cpu_time(t_analysis_0)
+call clck_time(t0)
 
 call DMUMPS(mumps_par)
 
-call cpu_time(t_analysis_1)
-if (my_id .eq. 0)  write(*,'(A,f8.3)') ' MUMPS, analysis  : ',t_analysis_1-t_analysis_0
+call clck_time(t1)
+call clck_ldiff(t0,t1,tsecond)
+if (my_id .eq. 0)  then
+   write(*,FMT_TIMING) my_id, '## Elapsed time mumps analyis :', tsecond
+end if
 
-call cpu_time(t_fact_0)
+call clck_time(t0)
 mumps_par%JOB = 2                                   ! factorisation
 call DMUMPS(mumps_par)
 
 mumps_par%JOB = 3                                   ! Solve
+call clck_time(t1)
 call DMUMPS(mumps_par)
-call cpu_time(t_fact_1)
-
-if (my_id .eq. 0) write(*,'(A,f8.3)')  ' MUMPS, fact/solv : ',t_fact_1-t_fact_0
+call clck_ldiff(t0,t1,tsecond)
+if (my_id .eq. 0)  then
+   write(*,FMT_TIMING) my_id, '## Elapsed time mumps fact/solve :', tsecond
+end if
 
 do k=1,mumps_par%n
   deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)

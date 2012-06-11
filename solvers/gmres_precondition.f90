@@ -8,10 +8,9 @@ use pastix_module
 use murge_module
 use wsmp_module
 use global_distributed_matrix
+use clock_module
 
 implicit none
-
-include 'mpif.h'
 
 integer             :: my_id, my_id_n, MPI_COMM_MASTER, MPI_COMM_N, ierr, i, k, i_tor(*), n_dof
 integer             :: my_id_master
@@ -19,7 +18,8 @@ real*8              :: x(*), y(*)
 real*8, allocatable :: y_tmp(:), Rsnd_buffer(:)
 integer             :: index_snd, n_loc_n, n_cpu, n_cpu_n, M_cpu, ifactor, in, j, idisp, index_rcv
 integer, allocatable :: send_counts(:), send_disp(:), recv_counts(:), recv_disp(:)
-real*8              :: t1, t2, t3, t4, t5, t6
+type(clcktype)       :: t0, t1
+real*8               :: tsecond
 real*8, allocatable :: buffer(:)
 integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 
@@ -43,7 +43,7 @@ call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)     ! the number of cpus
 
 if (my_id_n .eq. 0) call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)      ! the id of each cpu in the MASTER group
 
-call cpu_time(t1)
+call clck_time(t0)
 
 n_dof    = ndof_glob
 
@@ -255,10 +255,10 @@ if (my_id_n .eq. 0) then
   call tr_deallocate(recv_disp,"recv_disp",CAT_GMRES)
 endif
 
-call cpu_time(t2)
-!if (my_id .eq. 0) then
-!   write(*,'(i3,A,f14.6)') my_id,' PRECON TOTAL : ',t2-t1
-!end if
-
+call clck_time(t1)
+call clck_ldiff(t0,t1,tsecond)
+if (my_id .eq. 0)  then
+   write(*,FMT_TIMING) my_id, '## Elapsed time precondition :', tsecond
+end if
 return
 end subroutine gmres_precondition

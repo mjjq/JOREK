@@ -5,8 +5,8 @@ use tr_module
 use mumps_module
 use murge_module
 use global_distributed_matrix
+use clock_module
 implicit none
-include 'mpif.h'
 #include "r3_info.h"
 
 interface 
@@ -21,8 +21,10 @@ integer :: revcom, colx, coly, colz, nbscal, lwork, iter_gmres, n_tor
 integer :: irc(5), icntl(8), info(3)
 
 integer :: matvec, precondLeft, precondRight, dotProd, ierr, n_dof
-real*8  :: cntl(5), rinfo(2), sum, err, Bnorm, Xnorm, t1, t2, t3, t4, t5, t6, t7, t8,t9, t10, t11
+real*8  :: cntl(5), rinfo(2), sum, err, Bnorm, Xnorm
 real*8, allocatable :: work(:)
+type(clcktype)           :: t0, t1
+real*8                   :: tsecond
 REAL*8, ALLOCATABLE      :: rhs_tmp(:)
 real*8 ::ZERO, ONE
 parameter (ZERO = 0.0d0, ONE = 1.0d0)
@@ -30,7 +32,7 @@ parameter (matvec=1, precondLeft=2, precondRight=3, dotProd=4)
 
 !write(*,*) ' GMRES DRIVER : ',my_id,my_id_n
 call r3_info_begin (r3_info_index_0, 'gmres_driver')  ! timing
-call cpu_time(t1)
+call clck_time(t0)
 call init_dgmres(icntl,cntl)
 
 icntl(3) = 6            ! output unit
@@ -143,8 +145,9 @@ call MPI_BCAST(iter_gmres,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 call tr_deallocate(work,"work",CAT_GMRES)
 
-call cpu_time(t2)
-!write(*,'(i3,A,f14.6)') my_id,' gmres TOTAL : ',t2-t1
+call clck_time(t1)
+call clck_ldiff(t0,t1,tsecond)
+!if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time gmres :', tsecond
 
 call r3_info_end (r3_info_index_0)  ! timing
 return

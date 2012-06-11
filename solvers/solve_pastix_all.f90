@@ -8,14 +8,15 @@ use parameters
 use mumps_module
 use pastix_module
 use global_distributed_matrix
+use clock_module
 implicit none
-include 'mpif.h'
+
 #include "pastix_fortran.h"
 
 integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
 real*8,allocatable       :: column_local(:)
-real*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1, t_comm_0, t_comm_1
-real*8                   :: t_scale_0, t_scale_1
+type(clcktype)           :: t_itstart, t0, t1, t2, t3
+real*8                   :: tsecond
 integer                  :: i, k, j, ierr, my_id, m_loc
 integer,allocatable      :: counts(:), displacements(:)
 
@@ -32,7 +33,7 @@ call MPI_Allreduce(m_loc,mumps_par%N,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 !------------------------------------------------------- colunm scaling of global distributed matrix
-call cpu_time(t_scale_0)
+call clck_time(t0)
 
 if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
 if (allocated(column_local))    call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
@@ -52,12 +53,11 @@ do k = 1, nz_glob
   A_glob(k) = A_glob(k) / column_scaling(j)
 enddo
 
-call cpu_time(t_scale_1)
+call clck_time(t1)
+call clck_ldiff(t0,t1,tsecond)
+if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time scale :', tsecond
 
-if (my_id .eq. 0)  write(*,'(A,f8.3)') ' PASTIX, scale     : ',t_scale_1-t_scale_0
-
-
-call cpu_time(t_comm_0)
+call clck_time(t0)
 
 !------------------------------------------------------ collect the distributed matrix onto all procs
 if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
@@ -130,9 +130,9 @@ if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mum
 
 #endif
 
-call cpu_time(t_comm_1)
-
-if (my_id .eq. 0)  write(*,'(A,f8.3)') ' PASTIX, comm      : ',t_comm_1-t_comm_0
+call clck_time(t1)
+call clck_ldiff(t0,t1,tsecond)
+if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
 
 
 !$omp parallel default(none) shared(pastix_nthrd)    
@@ -191,7 +191,7 @@ if (.not. pastix_analysed) then
   pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
   pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
  
-  call cpu_time(t_analysis_0)
+  call clck_time(t0)
   
   if (my_id .eq. 0) then
     write(*,*) '***********************************'
@@ -213,15 +213,15 @@ if (.not. pastix_analysed) then
 
 #endif
 
-  call cpu_time(t_analysis_1)
+  call clck_time(t1)
+  call clck_ldiff(t0,t1,tsecond)
+  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond
 
   pastix_analysed = .true.
 
-  if (my_id .eq. 0)  write(*,'(A,f8.3)') ' PASTIX, analysis  : ',t_analysis_1-t_analysis_0
-
 endif
 
-call cpu_time(t_fact_0)
+call clck_time(t0)
 
 pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
 pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
@@ -247,9 +247,9 @@ call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mump
 
 #endif
 
-call cpu_time(t_fact_1)
-
-if (my_id .eq. 0) write(*,'(A,f8.3)')  ' PASTIX, fact/solv : ',t_fact_1-t_fact_0
+call clck_time(t1)
+call clck_ldiff(t0,t1,tsecond)
+if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond
 
 do k=1,mumps_par%n
   deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)

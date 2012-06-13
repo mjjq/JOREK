@@ -271,6 +271,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                             ((k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))      &
 !                            .or. ((k .eq. 1) .and. ((in.ne.2) .and. (in.ne.3)))  &
                             .or. ((k .eq. 1) .and. (in .eq. 1))  & 
+                            .or. ((k .eq. 1) .and. (in .ge. 4))  & 
 !                            .or. ((k .eq. 3) .and. (in .eq. 1))  &                           
                             .or. (k .eq. 2)  &
                             .or. (k .eq. 3)  &
@@ -611,6 +612,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 !                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ((in.eq.2) .or. (in.eq.3)))   &
                             .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))   &
                             .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in.eq.1))        &
+                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .ge. 4))  & 
                             .or. (k .eq. 2)    &
                             .or. (k .eq. 3)    &
                             .or. (k .eq. 4)    &

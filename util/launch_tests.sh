@@ -18,8 +18,12 @@ EXEDIR=${TRKDIR}
 # Location of target directory where simulation directory will be created
 BASEDIR=/scratch/latu
 # Mpirun command
-PRERUN="sort -u $OAR_NODEFILE > mach"
-MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 4"
+if [ -z "$PRERUN" ]; then
+  PRERUN="sort -u $OAR_NODEFILE > mach"
+fi
+if [ -z "$MPIRUN" ]; then
+  MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 4"
+fi
 
 
 # List of executables used during following simulations

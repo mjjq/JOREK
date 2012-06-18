@@ -21,6 +21,12 @@ if [ "$1" = "302" ]; then
   ENDL=290
   COLS="1,3,5"
 fi
+if [ "$1" = "303" ]; then 
+  THR=1e-2
+  BEGL=350
+  ENDL=900
+  COLS="1,3,5"
+fi
 (cd $2; $EXTSCRIPT growth_rates) > o1
 (cd $3; $EXTSCRIPT growth_rates) > o2
 NBL1=`wc -l < o1`
@@ -40,6 +46,8 @@ else
   cat $RPTFILE
 fi
 printf "\n# gnuplot commands to look at growth rates that have been compared :\n"
-printf "    set key autotitle columnhead; plot 'f1' u 1:2 ls 1, 'f1' u 1:3 ls 3, 'f2' u 1:2 ls 4, 'f2' u 1:3 ls 6\n"
+printf "    set key autotitle columnhead;\n"
+printf "    set auto; plot 'f1' u 1:2 ls 1, 'f2' u 1:2 ls 4; pause -1\n"
+printf "    set auto; plot 'f1' u 1:3 ls 3, 'f2' u 1:3 ls 6\n"
 rm -f o1 o2 
 exit $RET

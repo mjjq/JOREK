@@ -132,7 +132,7 @@ fi
 
 # Second Case: model302 point X
 if [ "$MODNB" = "302" ]; then
-  for c in $(seq 0 5); do
+  for c in $(seq 0 9); do
     ((j=1))
     i=${list_idx[$j]}
     WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
@@ -195,7 +195,7 @@ fi
 #tstep_n= 10    10   20   20  200 200 100
 # Third Case: model303 point X
 if [ "$MODNB" = "303" ]; then
-  for c in $(seq 0 5); do
+  for c in $(seq 0 10); do
     ((j=2))
     i=${list_idx[$j]}
     WKDIR=${BASEDIR}/${PREFIX}${model[$i]}

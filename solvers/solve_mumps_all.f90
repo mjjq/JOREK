@@ -10,7 +10,8 @@ use clock_module
 implicit none
 
 real*8,allocatable       :: column_local(:)
-real*8                   :: t_analysis_0, t_analysis_1, t_fact_0, t_fact_1
+real*8                   :: tsecond, t_analysis_0, t_analysis_1, t_fact_0, t_fact_1
+type(clcktype)           :: t0, t1
 integer                  :: k, j, ierr, my_id
 #ifdef USE_MUMPS
 !write(*,*) my_id,'*********************************'

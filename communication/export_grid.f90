@@ -9,7 +9,7 @@ implicit none
 
 type(type_node_list)    :: node_list
 type(type_element_list) :: element_list
-integer :: n_dim_tmp, i, j
+integer :: i, j
 
 write(*,*) '****************************************'
 write(*,*) '* export grid/values                   *'
@@ -17,7 +17,7 @@ write(*,*) '****************************************'
 
 open(21,file='bezier.grid',form='unformatted')
 
-write(21) n_dim_tmp, n_var
+write(21) n_dim, n_var
 write(21) node_list%n_nodes
 
 do i=1, node_list%n_nodes

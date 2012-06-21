@@ -249,6 +249,8 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
 
      pastix_analysed = .TRUE.
 
+     CALL CPU_TIME(t_analysis_1)
+     
      IF (my_id .EQ. 0)                                                         &
           WRITE(*,'(A,f8.3)') ' PASTIX, analysis  : ',t_analysis_1-t_analysis_0
 

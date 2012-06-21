@@ -186,7 +186,10 @@ subroutine preset_parameters
   nout = 9999999
 
   rho_file      = 'none'
+  rhon_file     = 'none'
   T_file        = 'none'
+  Te_file       = 'none'
+  Ti_file       = 'none'
   ffprime_file  = 'none'
   d_perp_file   = 'none'
   zk_perp_file  = 'none'

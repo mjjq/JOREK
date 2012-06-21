@@ -26,10 +26,10 @@ subroutine init_live_data_model(file_handle)
     
     psin = real(i) / real(200) * 1.2d0
     
-    call density    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,dens,dn_dpsi,d1,d2,d3,d4,d5,d6,d7)
-    call temperature(xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,temp,dT_dpsi,d1,d2,d3,d4,d5,d6,d7)
-    call sources    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,S_rho,S_Ti,S_Te)
-    call FFprime    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,FFp,dFFp_dpsi,d1,d2,d3,d4)
+    call density    (xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,dens,dn_dpsi,d1,d2,d3,d4,d5,d6,d7)
+    call temperature(xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,temp,dT_dpsi,d1,d2,d3,d4,d5,d6,d7)
+    call sources    (xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,S_rho,S_Ti,S_Te)
+    call FFprime    (xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,FFp,dFFp_dpsi,d1,d2,d3,d4)
     d_perp  = get_dperp (psin)
     
     write(file_handle,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &

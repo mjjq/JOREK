@@ -28,11 +28,11 @@ subroutine determine_PhiN(surface_list, q, PhiN, Phi_edge)
   integer :: i, icorr, n_psi, icorr_axis, icorr_bnd
   
   ! --- "Correct" how many points at the axis and at the boundary?
+  n_psi=surface_list%n_psi
   icorr_axis = n_psi / 35
   icorr_bnd  = n_psi / 150
   
   ! --- "Correct" the q-profile.
-  n_psi=surface_list%n_psi
   icorr = icorr_axis
   do i = 1, icorr
     q(i) = q(icorr+1) + (surface_list%psi_values(i)-surface_list%psi_values(icorr+1)) *            &

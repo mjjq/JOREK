@@ -87,9 +87,9 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   write(42,*) surface_list%n_psi
   do i = 1, surface_list%n_psi
     psi_i = surface_list%psi_values(i)
-    call density(xpoint, xcase, 0.d0, -10.d0, psi_i, psi_axis, psi_bnd, dens, dn_dpsi, dn_dz, dn_dpsi2,   &
+    call density(xpoint, xcase, 0.d0, (/-99.d0,-99.d0/), psi_i, psi_axis, psi_bnd, dens, dn_dpsi, dn_dz, dn_dpsi2,   &
       dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-    call temperature(xpoint, xcase, 0.d0, -10.d0, psi_i, psi_axis, psi_bnd, temp, dT_dpsi, dT_dz,         &
+    call temperature(xpoint, xcase, 0.d0, (/-99.d0,-99.d0/), psi_i, psi_axis, psi_bnd, temp, dT_dpsi, dT_dz,         &
       dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz)
     pressure = dens * temp / MU_ZERO
     write(42,*) PhiN(i), pressure

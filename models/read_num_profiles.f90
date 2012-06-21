@@ -19,6 +19,17 @@ subroutine read_num_profiles(my_id)
     num_rho_y0 = num_rho_y0 - rho_1
   end if
   
+  num_rhon = ( rhon_file /= 'none' )
+  if ( num_rhon .and. ( my_id == 0 ) ) then
+    call readProf(num_rhon_x, num_rhon_y0, num_rhon_len, rhon_file)
+    if ( num_rhon_len < 2 ) then 
+      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(rhon_file)//'".'
+      stop
+    end if
+    rhon_1 = num_rhon_y0(num_rhon_len)
+    num_rhon_y0 = num_rhon_y0 - rhon_1
+  end if
+  
   num_T = ( T_file /= 'none' )
   if ( num_T .and. ( my_id == 0 ) ) then
     call readProf(num_T_x, num_T_y0, num_T_len, T_file)
@@ -28,6 +39,28 @@ subroutine read_num_profiles(my_id)
     end if
     T_1 = num_T_y0(num_T_len)
     num_T_y0 = num_T_y0 - T_1
+  end if
+  
+  num_Te = ( Te_file /= 'none' )
+  if ( num_Te .and. ( my_id == 0 ) ) then
+    call readProf(num_Te_x, num_Te_y0, num_Te_len, Te_file)
+    if ( num_Te_len < 2 ) then 
+      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(Te_file)//'".'
+      stop
+    end if
+    Te_1 = num_Te_y0(num_Te_len)
+    num_Te_y0 = num_Te_y0 - Te_1
+  end if
+  
+  num_Ti = ( Ti_file /= 'none' )
+  if ( num_Ti .and. ( my_id == 0 ) ) then
+    call readProf(num_Ti_x, num_Ti_y0, num_Ti_len, Ti_file)
+    if ( num_Ti_len < 2 ) then 
+      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(Ti_file)//'".'
+      stop
+    end if
+    Ti_1 = num_Ti_y0(num_Ti_len)
+    num_Ti_y0 = num_Ti_y0 - Ti_1
   end if
   
 !  num_rhon = ( rhon_file /= 'none' )

@@ -33,9 +33,9 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep
   USE murge_module
+  use mpi_mod
 
   implicit none
-  include 'mpif.h'
 
 !!!! WARNING: gmres already defined in phys_module!!! Hence we use phys_module, ONLY...
 

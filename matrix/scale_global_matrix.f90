@@ -4,8 +4,8 @@ subroutine scale_global_matrix
 !***********************************************************************
 use tr_module 
 use global_distributed_matrix
+use mpi_mod
 implicit none
-include 'mpif.h'
 real*8, allocatable :: column_local(:)
 integer :: k,j,ierr
 

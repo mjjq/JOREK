@@ -48,9 +48,9 @@ SUBROUTINE r3_info_init_x ()
   
   ! Written : r. richter, sgi, oct 2006
   
+  use mpi_mod
   IMPLICIT NONE
   
-#include <mpif.h>
 #include "r3_info.h"
   
   ! Local parameters
@@ -508,9 +508,9 @@ SUBROUTINE r3_info_summary_x (omp_num, omp_chars, omp_flops, &
   omp_cnts, omp_sncds)
 
   ! Written : r. richter, sgi, oct 2006 
+  use mpi_mod
   IMPLICIT NONE
 
-#include <mpif.h>
 #include "r3_info.h"
 
   ! Input/output parameters
@@ -819,9 +819,9 @@ SUBROUTINE r3_barrier (ind, name)
 
   ! Written : r. richter, sgi, oct 2006
   
+  use mpi_mod
   IMPLICIT NONE
 
-#include <mpif.h>
 #include "r3_info.h"
 
   ! Input/output parameters

@@ -8,10 +8,10 @@ use Gauss
 use basis_at_gaussian
 use phys_module
 use pellet_module
+use mpi_mod
 
 implicit none
 
-include 'mpif.h'
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list

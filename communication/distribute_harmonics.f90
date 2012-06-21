@@ -19,9 +19,9 @@ use tr_module
 use parameters
 use global_distributed_matrix
 use mumps_module
+use mpi_mod
 
 implicit none
-include 'mpif.h'
 
 interface 
    subroutine distribute_vector(my_id,rhs,rhs_dis,again)

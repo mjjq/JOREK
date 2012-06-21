@@ -6,9 +6,9 @@ subroutine boundary_conditions(my_id,node_list,element_list,local_elms,n_local_e
 use data_structure
 use global_distributed_matrix
 use phys_module
+use mpi_mod
 
 implicit none
-include 'mpif.h'
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list

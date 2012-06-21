@@ -11,8 +11,8 @@ use data_structure
 use mumps_module
 use pastix_module
 use vacuum_equilibrium, only: vacuum_equil
+use mpi_mod
 implicit none
-include 'mpif.h'
 
 ! --- Routine parameters
 integer,                  intent(in)    :: my_id             ! MPI id

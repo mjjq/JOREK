@@ -96,9 +96,9 @@ CONTAINS
          &                      MURGE_ASSEMBLYEND, murge_id,                   &
          &                      murge_id_prod, MURGE_COEF_KIND,                &
          &                      murge_ndof_prod
+    USE mpi_mod
 
     IMPLICIT NONE
-    INCLUDE 'mpif.h'
 
     ! Function parameters
     TYPE(THREAD_DATA_TYPE),  INTENT(INOUT) :: DATA
@@ -576,8 +576,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE mumps_module, ONLY : mumps_par
   USE thread_data,  ONLY : thread_data_type, LOOP
   USE phys_module, ONLY : index_now
+  USE mpi_mod
   IMPLICIT NONE
-  INCLUDE 'mpif.h'
 #include "r3_info.h"
   
   ! Subroutine parameters:

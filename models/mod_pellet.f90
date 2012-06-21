@@ -98,9 +98,9 @@ subroutine update_pellet(my_id,node_List,element_list)
 use constants
 use data_structure
 use phys_module
+use mpi_mod
 implicit none
 
-include 'mpif.h'
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list

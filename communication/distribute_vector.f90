@@ -6,9 +6,9 @@ use tr_module
 use parameters
 use global_distributed_matrix
 use mumps_module
+use mpi_mod
 
 implicit none
-include 'mpif.h'
 
 real*8               :: rhs(:), rhs_dis(:)
 integer              :: my_id, my_id_n, in, j, M_cpu, n_cpu, ifactor

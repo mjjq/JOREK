@@ -3,10 +3,10 @@ SUBROUTINE split_brodcast(type,MPI_COMM_N)
   ! Split MPI_BCAST if MPI buffer beyond 2Go
   ! 
   USE mumps_module
+  USE mpi_mod
   !  
   IMPLICIT NONE
   !
-  INCLUDE 'mpif.h'
   !
   !IN
   CHARACTER*8           :: type

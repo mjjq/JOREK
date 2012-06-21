@@ -3,10 +3,10 @@ subroutine broadcast_boundary(my_id,boundary_list,bnd_node_list)
 
 use tr_module
 use data_structure
+use mpi_mod
 
 implicit none
 
-include 'mpif.h'                                       ! MPI fortran include file
 
 ! --- Routine parameters
 integer,                      intent(in)    :: my_id

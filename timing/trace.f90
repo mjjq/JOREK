@@ -104,6 +104,7 @@ contains
 
 
   subroutine tr_vnorms(prefix,mat,nnz)
+    use mpi_mod
     REAL*8, dimension(:) :: mat
     character(len=*) :: prefix
     INTEGER :: nnz
@@ -114,7 +115,6 @@ contains
     character(len=92) :: bufstring
     INTEGER :: ierr
     INTEGER :: i
-    include 'mpif.h'
     l1 = 0._8
     l2 = 0._8
     linf = 0._8
@@ -136,6 +136,7 @@ contains
   end subroutine tr_vnorms
 
   subroutine tr_locvnorms(prefix,mat,nnz)
+    use mpi_mod
     REAL*8, dimension(:) :: mat
     character(len=*) :: prefix
     INTEGER :: nnz
@@ -145,7 +146,6 @@ contains
     character(len=92) :: bufstring
     INTEGER :: ierr
     INTEGER :: i
-    include 'mpif.h'
     l1 = 0._8
     l2 = 0._8
     linf = 0._8

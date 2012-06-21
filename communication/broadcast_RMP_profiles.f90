@@ -5,10 +5,10 @@ subroutine broadcast_RMP_profiles(my_id, bnd_node_list)
 use tr_module
 use phys_module
 use data_structure
+use mpi_mod
 
 implicit none
 
-include 'mpif.h'               ! MPI fortran include file
 
 integer, intent(in) :: my_id
 type (type_bnd_node_list)    :: bnd_node_list

@@ -8,6 +8,7 @@ use pastix_module
 use murge_module
 use wsmp_module
 use global_distributed_matrix
+use mpi_mod
 use clock_module
 
 implicit none

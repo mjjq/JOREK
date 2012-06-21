@@ -19,9 +19,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mod_boundary_matrix_open
   use mod_elt_matrix
   use mod_elt_matrix_fft
+  use mpi_mod
   implicit none
   
-  include 'mpif.h'
 #include "r3_info.h"
 
   ! --- Routine parameters

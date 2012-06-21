@@ -133,7 +133,7 @@ CONTAINS
 
   SUBROUTINE murge_initialization(gmres, my_id, mpi_comm_n, i_tor)
     USE parameters, ONLY : n_tor, n_var
-    INCLUDE 'mpif.h'
+    USE mpi_mod
 
     LOGICAL :: gmres
     INTEGER :: MPI_COMM_N

@@ -29,10 +29,9 @@ module vacuum_response
   
     use parameters,     only: n_tor
     use data_structure, only: type_node_list, type_bnd_element_list, type_bnd_node_list
-    
-    implicit none
-      
-    include 'mpif.h'
+    use mpi_mod
+
+    implicit none    
     
     integer,                     intent(in) :: my_id              !< MPI proc ID
     type(type_node_list),        intent(in) :: node_list          !< List of boundary nodes
@@ -254,9 +253,9 @@ module vacuum_response
   !> Broadcast the STARWALL response matrices to the other MPI procs.
   subroutine broadcast_starwall_response(my_id, sr)
     
+  use mpi_mod
     implicit none
     
-    include 'mpif.h'
     
     ! --- Routine parameters
     integer,                   intent(in)    :: my_id

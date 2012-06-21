@@ -4,11 +4,11 @@ subroutine Broadcast_nodes(my_id,node_list)
 !----------------------------------------------------------
 use tr_module 
 use data_structure
+use mpi_mod
 implicit none
 
 type (type_node_list)    :: node_list
 
-include 'mpif.h'               ! MPI fortran include file
 type (type_node)         :: anode
 integer                  :: i, ierr, my_id, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT
 character, allocatable   :: buffer(:)

@@ -8,6 +8,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
 use wsmp_module,   only: use_wsmp
+use mpi_mod
 
 implicit none
 
@@ -15,7 +16,6 @@ implicit none
 integer, intent(in) :: my_id
 
 ! --- internal variables
-include 'mpif.h'               ! MPI fortran include file
 integer                :: ierr, INT_EXT, IDBL_EXT, ILOG_EXT, CHAR_EXT, position, bufsize
 character, allocatable :: buffer(:)
 

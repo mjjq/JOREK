@@ -45,6 +45,7 @@ program JOREK2
   use HDF5_io_module
   use out_save_module
 #endif
+  use mpi_mod
 
   implicit none
   

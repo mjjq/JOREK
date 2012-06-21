@@ -24,7 +24,10 @@ DIRS =  timing				\
 
 LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 
-NODEPS = clean cleanall cleandep
+NODEPS = clean cleanall cleandep forcheck forcheck_poincare \
+    forcheck_four forcheck_postproc forcheck_connection2 forcheck_jorek2vtk \
+    forcheck_fieldlines_vtk forcheck_jorek2vtk_3d forcheck_diagno \
+    forcheck_jorek_to_helena forcheck_import_eqdsk
 # If we have neither HIPS or PASTIX_MURGE we need to
 # Use fake murge.
 
@@ -295,3 +298,71 @@ allmodels:
 #	$(MAKE) MODEL=model400 $(filter-out allmodels, ${MAKECMDGOALS})
 #	$(MAKE) MODEL=model701 clean
 #	$(MAKE) MODEL=model701 $(filter-out allmodels, ${MAKECMDGOALS})
+
+#######################################################################
+# Forcheck
+#######################################################################
+COMMA =,
+SPACE :=
+SPACE +=
+OMPI_SRC = /afs/@cell/common/soft/intel/Compiler/11.1/c/include/omp_lib.f
+OMPI_INC = $(dir $(OMPI_SRC))
+
+# to remove the definitions 
+# and evaluate the the shell scripts that return the parameters for pastix
+INC_TMP = $(shell echo $(patsubst -D%,,$(INCLUDES))) 
+
+DEFINES_FCK = $(DEFINES) -DFORCHECK
+
+FCK_INCS = $(strip $(subst -I,,$(subst $(SPACE)-I,$(COMMA),$(INC_TMP))))
+FCK_DEFS = $(strip $(subst -D,,$(subst $(SPACE)-D,$(COMMA),$(strip $(DEFINES_FCK)))))
+FCK_SRC  = $(patsubst %.c,,$(JOREK2_MAIN_SRC))
+FCK_POINCARE_SRC  = $(patsubst %.c,,$(JOREK2_POINCARE_SRC))
+FCK_FOUR_SRC  = $(patsubst %.c,,$(JOREK2_FOUR_SRC))
+FCK_POSTPROC_SRC  = $(patsubst %.c,,$(JOREK2_POSTPROC_SRC))
+FCK_CONNECTION2_SRC  = $(patsubst %.c,,$(JOREK2_CONNECTION2_SRC))
+FCK_JOREK2VTK_SRC  = $(patsubst %.c,,$(JOREK2VTK_SRC))
+FCK_JOREK2FLVTK_SRC  = $(patsubst %.c,,$(JOREK2FLVTK3D_SRC))
+FCK_JOREK2VTK3D_SRC  = $(patsubst %.c,,$(JOREK2VTK3D_SRC))
+FCK_DIAGNO_SRC  = $(patsubst %.c,,$(JOREK2_DIAGNO_SRC))
+
+forcheck :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst -define $(FCK_DEFS) \
+	-I $(FCK_INCS) $(FCK_SRC)  $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_poincare : 
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
+	diagnostics/jorek2_poincare.f90 $(FCK_POINCARE_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_four :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
+	diagnostics/jorek2_four.f90 $(FCK_FOUR_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_postproc :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS),$(OMPI_INC) \
+	diagnostics/jorek2_four.f90 $(FCK_POSTPROC_SRC) $(OMPI_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_connection2 :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
+	diagnostics/jorek2_connection2.f90   	$(FCK_CONNECTION2_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_jorek2vtk :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
+	diagnostics/jorek2vtk.f90  $(FCK_JOREK2VTK_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_fieldlines_vtk :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
+	diagnostics/jorek2_fieldlines_vtk.f90  $(FCK_JOREK2FLVTK_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_jorek2vtk_3d :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
+	diagnostics/jorek2vtk_3d.f90 $(FCK_JOREK2VTK3D_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_diagno :
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
+	diagnostics/jorek2_diagno.f90   $(FCK_DIAGNO_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_jorek_to_helena : 
+	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  \
+	diagnostics/jorek_to_helena.f90 models/mod_constants.f90 timing/trace.f90 \
+	communication/mpi_mod.f90 $(FCKDIR)/share/forcheck/MPI.flb

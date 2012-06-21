@@ -33,8 +33,8 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   use phys_module, only: F0, GAMMA, freeboundary
   USE murge_module
 
+  use mpi_mod
   implicit none
-  include 'mpif.h'
 
   ! Subroutine parameters
   INTEGER                  :: my_id

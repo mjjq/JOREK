@@ -4,8 +4,8 @@ subroutine Broadcast_elements(my_id,element_list)
 !----------------------------------------------------------
 use tr_module
 use data_structure
+use mpi_mod
 implicit none
-include 'mpif.h'               ! MPI fortran include file
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list

@@ -9,8 +9,8 @@ use tr_module
 use parameters
 use global_distributed_matrix
 use murge_module
+use mpi_mod
 implicit none
-include 'mpif.h'
 
 integer             :: i_tor(:), MPI_COMM_MASTER
 real*8              :: x(:), y(:), t1, t2, t3, t4, t5

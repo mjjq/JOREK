@@ -149,13 +149,14 @@ module wsmp_module
   
   !> Initialize the WSMP solver.
   subroutine PWGSMP__initialize_solver(my_id_n, MPI_COMM_N)
+    use mpi_mod
+
     integer, intent(in) :: my_id_n
     integer, intent(in) :: MPI_COMM_N
 
     integer             :: PWGSMP_nthrd
     integer, external   :: omp_get_num_threads
 
-    include 'mpif.h'
 
     if (PWSMP__verbose) WRITE(*,*) "Entering PWGSMP__initialize_solver() ..."
 
@@ -267,9 +268,9 @@ module wsmp_module
   
   !> Perform the LU factorization.
   subroutine PWGSMP__LU_factorization(my_id_n)
+    use mpi_mod
     integer, intent(in)  :: my_id_n
 
-    include 'mpif.h'
 
     if (PWSMP__verbose) WRITE(*,*) "Entering PWGSMP__LU_factorization() ..."
 
@@ -299,11 +300,11 @@ module wsmp_module
   
   !> Perform the back substitution.
   subroutine PWGSMP__back_substitution(rhs, my_id_n)
+    use mpi_mod
     real*8, pointer     :: rhs(:)
     integer, intent(in) :: my_id_n
     integer             :: i
 
-    include 'mpif.h'
 
     if (PWSMP__verbose) WRITE(*,*) "Entering PWGSMP__back_substitution() ..."
 
@@ -394,10 +395,10 @@ module wsmp_module
   
   !> Print an error message and stop the code.
   subroutine wsmp_error_handler(errmsg)
+    use mpi_mod
     character(len=*), intent(in) :: errmsg
-    include 'mpif.h'
     write(*,*) errmsg
-    call MPI_Finalize(MPI_COMM_WORLD,ierr)
+    call MPI_Finalize(ierr)
     stop
   end subroutine wsmp_error_handler
   

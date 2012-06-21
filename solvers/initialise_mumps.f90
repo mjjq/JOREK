@@ -3,10 +3,10 @@ subroutine initialise_mumps(MPI_COMM)
 !
 !-----------------------------------------------------------------------
 use mumps_module
+use mpi_mod
 
 implicit none
 
-include 'mpif.h'
 integer :: MPI_COMM
 #ifdef USE_MUMPS
 mumps_par%COMM = MPI_COMM                      ! Define a communicator for mumps

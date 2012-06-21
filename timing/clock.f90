@@ -1,8 +1,9 @@
 ! module dedicated to time measurement
 module clock_module
 
+  use mpi_mod
+  
   implicit none
-  include 'mpif.h'
 
   public 
   TYPE :: clcktype

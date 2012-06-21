@@ -30,8 +30,8 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   USE pastix_module
   USE murge_module
   USE global_distributed_matrix
+  USE mpi_mod
   IMPLICIT NONE
-  INCLUDE 'mpif.h'
 #include "r3_info.h"
   ! Subroutine parameters:
   INTEGER                  :: n_cpu

@@ -12,7 +12,9 @@ contains
     use pastix_module
     use wsmp_module
     use global_distributed_matrix
+    use mpi_mod 
     use clock_module
+
     implicit none
 
 #include "r3_info.h"

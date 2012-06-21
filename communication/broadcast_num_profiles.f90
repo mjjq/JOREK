@@ -4,10 +4,10 @@ subroutine broadcast_num_profiles(my_id)
 !----------------------------------------------------------
 use tr_module
 use phys_module
+use mpi_mod
 
 implicit none
 
-include 'mpif.h'               ! MPI fortran include file
 
 integer, intent(in) :: my_id
 

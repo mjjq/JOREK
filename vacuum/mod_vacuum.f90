@@ -245,10 +245,9 @@ module vacuum
   
   !> Broadcast vacuum information between MPI processes
   subroutine broadcast_vacuum(my_id, resistive_wall)
-    
+    use mpi_mod
     implicit none
     
-    include 'mpif.h'
     
     ! --- Routine parameters
     integer, intent(in) :: my_id

@@ -7,8 +7,8 @@ use parameters
 use mumps_module
 use pastix_module
 use global_distributed_matrix
+use mpi_mod
 implicit none
-include 'mpif.h'
 
 integer :: i, my_id, i_tor(*), i_reduced, j_reduced, n_i, n_j, index, index1, index2
 integer :: MPI_COMM_N, MPI_COMM_MASTER, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master

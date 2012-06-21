@@ -325,44 +325,45 @@ FCK_JOREK2VTK_SRC  = $(patsubst %.c,,$(JOREK2VTK_SRC))
 FCK_JOREK2FLVTK_SRC  = $(patsubst %.c,,$(JOREK2FLVTK3D_SRC))
 FCK_JOREK2VTK3D_SRC  = $(patsubst %.c,,$(JOREK2VTK3D_SRC))
 FCK_DIAGNO_SRC  = $(patsubst %.c,,$(JOREK2_DIAGNO_SRC))
+FCK_CALL = forchk -allc -ancmpl -anref -declare -dp -l jorek.lst -define $(FCK_DEFS) \
+	-I $(FCK_INCS)
 
 forcheck :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst -define $(FCK_DEFS) \
-	-I $(FCK_INCS) $(FCK_SRC)  $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) $(FCK_SRC) $(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_poincare : 
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
-	diagnostics/jorek2_poincare.f90 $(FCK_POINCARE_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek2_poincare.f90 $(FCK_POINCARE_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_four :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
-	diagnostics/jorek2_four.f90 $(FCK_FOUR_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek2_four.f90 $(FCK_FOUR_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_postproc :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS),$(OMPI_INC) \
-	diagnostics/jorek2_four.f90 $(FCK_POSTPROC_SRC) $(OMPI_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL),$(OMPI_INC) \
+	postproc/jorek2_postproc.f90 $(FCK_POSTPROC_SRC) $(OMPI_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_connection2 :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
-	diagnostics/jorek2_connection2.f90   	$(FCK_CONNECTION2_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek2_connection2.f90 $(FCK_CONNECTION2_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_jorek2vtk :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
-	diagnostics/jorek2vtk.f90  $(FCK_JOREK2VTK_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek2vtk.f90  $(FCK_JOREK2VTK_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_fieldlines_vtk :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
-	diagnostics/jorek2_fieldlines_vtk.f90  $(FCK_JOREK2FLVTK_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek2_fieldlines_vtk.f90  $(FCK_JOREK2FLVTK_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_jorek2vtk_3d :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
-	diagnostics/jorek2vtk_3d.f90 $(FCK_JOREK2VTK3D_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek2vtk_3d.f90 $(FCK_JOREK2VTK3D_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_diagno :
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  -I $(FCK_INCS)  \
-	diagnostics/jorek2_diagno.f90   $(FCK_DIAGNO_SRC) $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek2_diagno.f90   $(FCK_DIAGNO_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_jorek_to_helena : 
-	forchk -allc -ancmpl -anref -declare -dp -l jorek.lst  \
-	diagnostics/jorek_to_helena.f90 models/mod_constants.f90 timing/trace.f90 \
-	communication/mpi_mod.f90 $(FCKDIR)/share/forcheck/MPI.flb
+	$(FCK_CALL) diagnostics/jorek_to_helena.f90 models/mod_constants.f90 \
+	timing/trace.f90 communication/mpi_mod.f90 $(FCKDIR)/share/forcheck/MPI.flb

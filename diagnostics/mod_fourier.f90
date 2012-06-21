@@ -47,25 +47,25 @@ module fourier
     
     type(t_theta_mapping), intent(in) :: mapping
     
-    write(*,'(A,I12,A)')      'nstpts     =', mapping.nstpts,	     ' (number of radial positions)'
-    write(*,'(A,ES12.4,A)')   'R_axis     =', mapping.R_axis,	     ' (R position of magnetic axis)'
-    write(*,'(A,ES12.4,A)')   'Z_axis     =', mapping.Z_axis,	     ' (Z position of magnetic axis)'
-    write(*,'(A,ES12.4,A)')   'psi_axis   =', mapping.psi_axis,      ' (poloidal flux at magnetic axis)'
-    write(*,'(A,ES12.4,A)')   'R_xpoint   =', mapping.R_xpoint(1),   ' (R position of x-point)'
-    write(*,'(A,ES12.4,A)')   'Z_xpoint   =', mapping.Z_xpoint(1),   ' (Z position of x-point)'
-    write(*,'(A,ES12.4,A)')   'psi_xpoint =', mapping.psi_xpoint(1), ' (poloidal flux at x-point)'
+    write(*,'(A,I12,A)')      'nstpts     =', mapping%nstpts,	     ' (number of radial positions)'
+    write(*,'(A,ES12.4,A)')   'R_axis     =', mapping%R_axis,	     ' (R position of magnetic axis)'
+    write(*,'(A,ES12.4,A)')   'Z_axis     =', mapping%Z_axis,	     ' (Z position of magnetic axis)'
+    write(*,'(A,ES12.4,A)')   'psi_axis   =', mapping%psi_axis,      ' (poloidal flux at magnetic axis)'
+    write(*,'(A,ES12.4,A)')   'R_xpoint   =', mapping%R_xpoint(1),   ' (R position of x-point)'
+    write(*,'(A,ES12.4,A)')   'Z_xpoint   =', mapping%Z_xpoint(1),   ' (Z position of x-point)'
+    write(*,'(A,ES12.4,A)')   'psi_xpoint =', mapping%psi_xpoint(1), ' (poloidal flux at x-point)'
     
     write(*,'(A)', ADVANCE='NO') 'psin       ='
-    if ( allocated(mapping.psin) ) then
-      write(*,'(99F7.3)', ADVANCE='NO') mapping.psin
+    if ( allocated(mapping%psin) ) then
+      write(*,'(99F7.3)', ADVANCE='NO') mapping%psin
     else
       write(*,'(A)', ADVANCE='NO') ' not allocated'
     end if
     write(*,'(A)') ' (norm. pol. flux at rad. positions)'
     
     write(*,'(A)', ADVANCE='NO') 'npts       ='
-    if ( allocated(mapping.npts) ) then
-      write(*,'(99I7)', ADVANCE='NO') mapping.npts
+    if ( allocated(mapping%npts) ) then
+      write(*,'(99I7)', ADVANCE='NO') mapping%npts
     else
       write(*,'(A)', ADVANCE='NO') ' not allocated'
     end if
@@ -95,13 +95,13 @@ module fourier
     nequidist_pts = 2*(maxval(m_pol_range))
     
     if ( allocated(vfour) ) deallocate(vfour)
-    allocate(vve(nequidist_pts,nequidist_tor,mapping.nstpts,n_var))
-    allocate(vfour(nequidist_pts/2+1,nequidist_tor,mapping.nstpts,n_var))
+    allocate(vve(nequidist_pts,nequidist_tor,mapping%nstpts,n_var))
+    allocate(vfour(nequidist_pts/2+1,nequidist_tor,mapping%nstpts,n_var))
     vve   = 0.d0
     vfour = 0.d0
     
     
-    do k = 1, mapping.nstpts ! radial positions
+    do k = 1, mapping%nstpts ! radial positions
       
       write(*,'(1x,a,i4)') 'Transforming variables on surface', k
       
@@ -113,7 +113,7 @@ module fourier
 	!$omp     basis_function,G,G_s,G_t,G_st,G_ss,G_tt)
         do i = 1, nequidist_pts  ! poloidal positions
           
-          call find_RZ(node_list,element_list,mapping.rre(k,i-1),mapping.zze(k,i-1),R_out,Z_out,   &
+          call find_RZ(node_list,element_list,mapping%rre(k,i-1),mapping%zze(k,i-1),R_out,Z_out,   &
             i_elm_out,s_out,t_out,ifail)
           
           do iharm = 1, n_tor    ! toroidal harmonics
@@ -196,63 +196,63 @@ module fourier
     nequidist_pts = 2*(maxval(m_pol_range))
     
     ! --- Initialisation
-    mapping.nstpts = nstpts
-    ALLOCATE( mapping.rr(NSTPTS,0:NMAXSTEPS), mapping.zz(NSTPTS,0:NMAXSTEPS),                      &
-              mapping.tt(NSTPTS,0:NMAXSTEPS), mapping.t2(NSTPTS,0:NMAXSTEPS),                      &
-	      mapping.npts(nstpts), mapping.psin(nstpts), mapping.rre(NSTPTS,0:nequidist_pts-1),   &
-	      mapping.zze(NSTPTS,0:nequidist_pts-1) )
-    mapping.rr   = 0.
-    mapping.zz   = 0.
-    mapping.tt   = 0.
-    mapping.t2   = 0.
-    mapping.npts = 0
-    mapping.psin = 0.
-    mapping.rre  = 0.
-    mapping.zze  = 0.
+    mapping%nstpts = nstpts
+    ALLOCATE( mapping%rr(NSTPTS,0:NMAXSTEPS), mapping%zz(NSTPTS,0:NMAXSTEPS),                      &
+              mapping%tt(NSTPTS,0:NMAXSTEPS), mapping%t2(NSTPTS,0:NMAXSTEPS),                      &
+	      mapping%npts(nstpts), mapping%psin(nstpts), mapping%rre(NSTPTS,0:nequidist_pts-1),   &
+	      mapping%zze(NSTPTS,0:nequidist_pts-1) )
+    mapping%rr   = 0.
+    mapping%zz   = 0.
+    mapping%tt   = 0.
+    mapping%t2   = 0.
+    mapping%npts = 0
+    mapping%psin = 0.
+    mapping%rre  = 0.
+    mapping%zze  = 0.
     
     ! --- Trace field lines in the axisymmetric magnetic field component
     call trace_fieldlines(mapping, nmaxsteps, nsmallsteps, deltaphi)
     
     ! --- Interpolate theta_mag to equidistant theta_geo positions.
-    do k = 1, mapping.nstpts
-      if ( mapping.npts(k) < nequidist_pts ) then
+    do k = 1, mapping%nstpts
+      if ( mapping%npts(k) < nequidist_pts ) then
         write(*,'(1x,a)')       'WARNING: Low number of points from field line tracing.'
         write(*,'(3x,a)')       'You may need to decrease deltaphi in "four_params.nml"'
-        write(*,'(3x,a,f5.3)')  'by a factor > ', real(nequidist_pts)/real(mapping.npts(k))
+        write(*,'(3x,a,f5.3)')  'by a factor > ', real(nequidist_pts)/real(mapping%npts(k))
         write(*,'(3x,a,i3)')    'Field line', k
       end if
-      call interpolEquidist(mapping.t2(k,0:mapping.npts(k)), mapping.rr(k,0:mapping.npts(k)),      &
-        mapping.npts(k)+1, mapping.rre(k,0:nequidist_pts-1), mapping.t2(k,0),                      &
-        mapping.t2(k,0)+2.*PI*REAL(nequidist_pts-1)/REAL(nequidist_pts), nequidist_pts)
-      call interpolEquidist(mapping.t2(k,0:mapping.npts(k)), mapping.zz(k,0:mapping.npts(k)),      &
-        mapping.npts(k)+1, mapping.zze(k,0:nequidist_pts-1), mapping.t2(k,0),                      &
-        mapping.t2(k,0)+2.*PI*REAL(nequidist_pts-1)/REAL(nequidist_pts), nequidist_pts)
+      call interpolEquidist(mapping%t2(k,0:mapping%npts(k)), mapping%rr(k,0:mapping%npts(k)),      &
+        mapping%npts(k)+1, mapping%rre(k,0:nequidist_pts-1), mapping%t2(k,0),                      &
+        mapping%t2(k,0)+2.*PI*REAL(nequidist_pts-1)/REAL(nequidist_pts), nequidist_pts)
+      call interpolEquidist(mapping%t2(k,0:mapping%npts(k)), mapping%zz(k,0:mapping%npts(k)),      &
+        mapping%npts(k)+1, mapping%zze(k,0:nequidist_pts-1), mapping%t2(k,0),                      &
+        mapping%t2(k,0)+2.*PI*REAL(nequidist_pts-1)/REAL(nequidist_pts), nequidist_pts)
     end do
     
     ! --- Output some information for debugging.
     if ( debug ) then
       open(42, FILE='determine_theta_mag.rr-zz.dat', ACTION='WRITE', STATUS='REPLACE')
-      do k = 1, mapping.nstpts
-        do j = 0, mapping.npts(k)
-          write(42,*) mapping.rr(k,j), mapping.zz(k,j)
+      do k = 1, mapping%nstpts
+        do j = 0, mapping%npts(k)
+          write(42,*) mapping%rr(k,j), mapping%zz(k,j)
         end do
         write(42,*)
       end do
       close(42)
       
       open(42, FILE='determine_theta_mag.tt-t2.dat', ACTION='WRITE', STATUS='REPLACE')
-      do k = 1, mapping.nstpts
-        do j = 0, mapping.npts(k)
-          write(42,*) mapping.tt(k,j), mapping.t2(k,j)
+      do k = 1, mapping%nstpts
+        do j = 0, mapping%npts(k)
+          write(42,*) mapping%tt(k,j), mapping%t2(k,j)
         end do
         write(42,*)
       end do
       close(42)
       
       open(42, FILE='determine_theta_mag.rre-zze.dat', ACTION='WRITE', STATUS='REPLACE')
-      do k = 1, mapping.nstpts
+      do k = 1, mapping%nstpts
         do j = 0, nequidist_pts
-          write(42,*) mapping.rre(k,MOD(j,nequidist_pts)), mapping.zze(k,MOD(j,nequidist_pts))
+          write(42,*) mapping%rre(k,MOD(j,nequidist_pts)), mapping%zze(k,MOD(j,nequidist_pts))
         end do
         write(42,*)
       end do
@@ -260,8 +260,8 @@ module fourier
   
       open(42, FILE='determine_theta_mag.rre-zze.2.dat', ACTION='WRITE', STATUS='REPLACE')
       do j = 0, nequidist_pts-1
-        do k = 1, mapping.nstpts
-          write(42,*) mapping.rre(k,j), mapping.zze(k,j)
+        do k = 1, mapping%nstpts
+          write(42,*) mapping%rre(k,j), mapping%zze(k,j)
         end do
         write(42,*)
       end do
@@ -303,19 +303,19 @@ module fourier
     
     ! --- Determine position of axis and xpoint/boundary point
     !     Field line tracing will start on nstpts positions between axis and x-point
-    call find_axis(my_id,node_list,element_list,mapping.psi_axis,mapping.R_axis,mapping.Z_axis,    &
-      mapping.i_elm_axis, mapping.s_axis,mapping.t_axis,ifail)
+    call find_axis(my_id,node_list,element_list,mapping%psi_axis,mapping%R_axis,mapping%Z_axis,    &
+      mapping%i_elm_axis, mapping%s_axis,mapping%t_axis,ifail)
     if (xpoint) then
-      call find_xpoint(my_id,node_list,element_list,mapping.psi_xpoint,mapping.R_xpoint,           &
-        mapping.Z_xpoint, mapping.i_elm_xpoint,mapping.s_xpoint,mapping.t_xpoint,xcase,ifail)
+      call find_xpoint(my_id,node_list,element_list,mapping%psi_xpoint,mapping%R_xpoint,           &
+        mapping%Z_xpoint, mapping%i_elm_xpoint,mapping%s_xpoint,mapping%t_xpoint,xcase,ifail)
     else
       ! Determine the position of a boundary node for non-xpoint cases.
       do i = 1, node_list%n_nodes
         if ( node_list%node(i)%boundary == 2 ) then
-          mapping.R_xpoint(1) = node_list%node(i)%x(1,1)
-          mapping.Z_xpoint(1) = node_list%node(i)%x(1,2)
-          call find_RZ(node_list,element_list,mapping.R_xpoint(1),mapping.Z_xpoint(1),R_out,Z_out,       &
-	    mapping.i_elm_xpoint(1),mapping.s_xpoint(1),mapping.t_xpoint(1),ifail)
+          mapping%R_xpoint(1) = node_list%node(i)%x(1,1)
+          mapping%Z_xpoint(1) = node_list%node(i)%x(1,2)
+          call find_RZ(node_list,element_list,mapping%R_xpoint(1),mapping%Z_xpoint(1),R_out,Z_out,       &
+	    mapping%i_elm_xpoint(1),mapping%s_xpoint(1),mapping%t_xpoint(1),ifail)
           exit
         end if
       end do
@@ -328,31 +328,31 @@ module fourier
     !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh)        &
     !$omp   shared(mapping,do_not_continue,F0,node_list,element_list,nmaxsteps,nsmallsteps,        &
     !$omp     smalldeltaphi)
-    FL_STPTS: do k = mapping.nstpts, 1, -1
+    FL_STPTS: do k = mapping%nstpts, 1, -1
       if ( do_not_continue ) cycle
       
       theta_corr = 0.d0
       phi        = 0.d0
       
       ! --- Initialize field line position.
-      mapping.rr(k,0) = mapping.R_axis + 0.03*( mapping.R_xpoint(1) - mapping.R_axis ) + &
-        0.93*( mapping.R_xpoint(1) - mapping.R_axis ) * ( REAL(k-1) / REAL(mapping.nstpts-1) )
-      mapping.zz(k,0) = mapping.Z_axis + 0.03*( mapping.Z_xpoint(1) - mapping.Z_axis ) + &
-        0.93*( mapping.Z_xpoint(1) - mapping.Z_axis ) * ( REAL(k-1) / REAL(mapping.nstpts-1) )
-      mapping.tt(k,0) = atan3( mapping.zz(k,0)-mapping.Z_axis, mapping.rr(k,0)-mapping.R_axis )
+      mapping%rr(k,0) = mapping%R_axis + 0.03*( mapping%R_xpoint(1) - mapping%R_axis ) + &
+        0.93*( mapping%R_xpoint(1) - mapping%R_axis ) * ( REAL(k-1) / REAL(mapping%nstpts-1) )
+      mapping%zz(k,0) = mapping%Z_axis + 0.03*( mapping%Z_xpoint(1) - mapping%Z_axis ) + &
+        0.93*( mapping%Z_xpoint(1) - mapping%Z_axis ) * ( REAL(k-1) / REAL(mapping%nstpts-1) )
+      mapping%tt(k,0) = atan3( mapping%zz(k,0)-mapping%Z_axis, mapping%rr(k,0)-mapping%R_axis )
       theta_corr = 0.
       
       ! --- Determine Psi_normalized
-      call find_RZ(node_list,element_list,mapping.rr(k,0),mapping.zz(k,0),R_out,Z_out,i_elm_out,   &
+      call find_RZ(node_list,element_list,mapping%rr(k,0),mapping%zz(k,0),R_out,Z_out,i_elm_out,   &
         s_out,t_out,ifail)
       call interp0(i_elm_out,1,1,s_out,t_out,P,P_s,P_t)
-      mapping.psin(k) = (P-mapping.psi_axis)/(mapping.psi_xpoint(1)-mapping.psi_axis)
+      mapping%psin(k) = (P-mapping%psi_axis)/(mapping%psi_xpoint(1)-mapping%psi_axis)
       
       FL_LARGESTEPS: do j = 1, NMAXSTEPS
         if ( do_not_continue ) cycle
         
-        rn = mapping.rr(k,j-1)
-        zn = mapping.zz(k,j-1)
+        rn = mapping%rr(k,j-1)
+        zn = mapping%zz(k,j-1)
         
         FL_SMALLSTEPS: do i = 1, NSMALLSTEPS
           if ( do_not_continue ) cycle
@@ -402,29 +402,29 @@ module fourier
         end do FL_SMALLSTEPS
         
         ! --- Write result of the small steps into the position arrays.
-        mapping.rr(k,j) = rp
-        mapping.zz(k,j) = zp
-        mapping.tt(k,j) = atan3( zp-mapping.Z_axis, rp-mapping.R_axis )
+        mapping%rr(k,j) = rp
+        mapping%zz(k,j) = zp
+        mapping%tt(k,j) = atan3( zp-mapping%Z_axis, rp-mapping%R_axis )
         
         ! --- Compensate for theta jumps by 2*PI.
-        if ( (mapping.tt(k,j-1)-theta_corr > 3.*PI/2.) .AND. (mapping.tt(k,j) < PI/2.) )           &
+        if ( (mapping%tt(k,j-1)-theta_corr > 3.*PI/2.) .AND. (mapping%tt(k,j) < PI/2.) )           &
 	  theta_corr = theta_corr + 2.*PI
-        if ( (mapping.tt(k,j) > 3.*PI/2.) .AND. (mapping.tt(k,j-1)-theta_corr < PI/2.) )           &
+        if ( (mapping%tt(k,j) > 3.*PI/2.) .AND. (mapping%tt(k,j-1)-theta_corr < PI/2.) )           &
 	  theta_corr = theta_corr - 2.*PI
-        mapping.tt(k,j) = mapping.tt(k,j) + theta_corr
+        mapping%tt(k,j) = mapping%tt(k,j) + theta_corr
         
         ! --- Stop following field line k when one poloidal turn is completed.
-        if ( ABS(mapping.tt(k,j) - mapping.tt(k,0)) > 2*PI ) then
-          mapping.npts(k) = j
-          do l = 0, mapping.npts(k)
-            mapping.t2(k,l) = REAL(l) / ( mapping.npts(k) - &
-              ( ( mapping.tt(k,mapping.npts(k)) - mapping.tt(k,0) - 2.*PI ) / &
-              ( mapping.tt(k,mapping.npts(k)) - mapping.tt(k,mapping.npts(k)-1) ) ) ) * 2.*PI
+        if ( ABS(mapping%tt(k,j) - mapping%tt(k,0)) > 2*PI ) then
+          mapping%npts(k) = j
+          do l = 0, mapping%npts(k)
+            mapping%t2(k,l) = REAL(l) / ( mapping%npts(k) - &
+              ( ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,0) - 2.*PI ) / &
+              ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,mapping%npts(k)-1) ) ) ) * 2.*PI
           end do
           !$omp critical
-          write(*,'(" Field line",I4,":    psin=",F7.3,"    npts=",I7)') k, mapping.psin(k),       &
-	    mapping.npts(k)
-          !write(46,*) mapping.psin(k), phi / ( 2. * PI )
+          write(*,'(" Field line",I4,":    psin=",F7.3,"    npts=",I7)') k, mapping%psin(k),       &
+	    mapping%npts(k)
+          !write(46,*) mapping%psin(k), phi / ( 2. * PI )
           !$omp end critical
           exit
         end if
@@ -435,9 +435,9 @@ module fourier
     !$omp end parallel do
     
     ! --- Make theta positive.
-    do k = 1, mapping.nstpts
-      mapping.tt(k,0:mapping.npts(k)) = mapping.tt(k,0:mapping.npts(k))                            &
-        - MINVAL( mapping.tt(k,0:mapping.npts(k)) )
+    do k = 1, mapping%nstpts
+      mapping%tt(k,0:mapping%npts(k)) = mapping%tt(k,0:mapping%npts(k))                            &
+        - MINVAL( mapping%tt(k,0:mapping%npts(k)) )
     end do
     
   end subroutine trace_fieldlines

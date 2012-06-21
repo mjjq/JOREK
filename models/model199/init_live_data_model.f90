@@ -12,7 +12,7 @@ subroutine init_live_data_model(file_handle)
   
   integer :: i
   real*8  :: psin, FFp, dFFp_dpsi, dens, dn_dpsi, temp, dT_dpsi, S_rho, S_T, d_perp, zk_perp
-  real*8  :: d ! dummy
+  real*8  :: d, d1, d2, d3, d4, d5, d6 ! dummies
   
   write(file_handle,'(A,I5)') '@n_input_profiles: ', 10
   write(file_handle,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
@@ -26,10 +26,10 @@ subroutine init_live_data_model(file_handle)
     
     psin = real(i) / real(200) * 1.2d0
     
-    call density    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,dens,dn_dpsi,d,d,d,d,d,d,d)
-    call temperature(xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,temp,dT_dpsi,d,d,d,d,d,d,d)
+    call density    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,dens,dn_dpsi,d,d1,d2,d3,d4,d5,d6)
+    call temperature(xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,temp,dT_dpsi,d,d1,d2,d3,d4,d5,d6)
     call sources    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,S_rho,S_T)
-    call FFprime    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,FFp,dFFp_dpsi,d,d,d,d)
+    call FFprime    (xpoint,xcase,0.d0,-99.d0,psin,0.d0,1.d0,FFp,dFFp_dpsi,d,d1,d2,d3)
     d_perp  = get_dperp (psin)
     zk_perp = get_zkperp(psin)
     

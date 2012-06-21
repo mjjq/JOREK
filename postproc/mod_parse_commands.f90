@@ -195,7 +195,7 @@ module parse_commands
       '"abra                                               cadabra"',    &
       '#                                                           ',    &
       ' ## ## abra cadabra                                         ',    &
-      ' #''"                                                       ',    &
+      ' #''"                                                        ',    &
       '"abra" "cadabra"                                            ',    &
       'line temperature 1.6 0.0 0.0 1.2 0.0 0.0                    ' /)
     

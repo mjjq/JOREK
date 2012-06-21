@@ -1227,7 +1227,7 @@ module exec_commands
       ! --- Open file
       write(filename,'(a,a,i5.5,a,i5.5,a)') lower_case(trim(variable_names(ivar))),                &
         '_flux-surface-averaged_steps', loop_min_step, '-', loop_max_step, '.dat'
-      if ( first_step == .true. ) then
+      if ( first_step ) then
         open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
       else
         open(unit=file_handle, file=filename, status='old',     action='write', access='append',   &
@@ -1358,7 +1358,7 @@ module exec_commands
     
     write(*,'(a)') 'Available restart files:'
     do i = 0, 99999
-      write (filename,'(a, i5.5, a)'), 'jorek', i, '.rst'
+      write (filename,'(a, i5.5, a)') 'jorek', i, '.rst'
       inquire (file=filename, exist=file_exists)
       if (file_exists) write(*,'(i6)',advance='no') i
     end do
@@ -1426,7 +1426,7 @@ module exec_commands
     ! --- Open file
     write(filename,'(a,i5.5,a, i5.5, a)') 'plasma-current_steps', loop_min_step, '-',              &
       loop_max_step, '.dat'
-    if ( first_step == .true. ) then
+    if ( first_step ) then
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
       write(file_handle,*) '# time            ###'
     else
@@ -1475,7 +1475,7 @@ module exec_commands
     ! --- Open file
     write(filename,'(a,i5.5,a, i5.5, a)') 'magnetic-axis_steps', loop_min_step, '-', loop_max_step,&
       '.dat'
-    if ( first_step == .true. ) then
+    if ( first_step ) then
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
       write(file_handle,*) '# time            R_axis          Z_axis         psi_axis'
     else
@@ -1637,7 +1637,7 @@ module exec_commands
     ! --- Create plasma-volume data-file
     write(filename,'(a,i5.5,a, i5.5, a)') 'plasma-volume_steps', loop_min_step, '-', loop_max_step,&
        '.dat'
-    if ( first_step == .true. ) then
+    if ( first_step ) then
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
     else
       open(unit=file_handle, file=filename, status='old', action='write', access='append',         &
@@ -1702,7 +1702,7 @@ module exec_commands
     write(filename,100) lower_case(trim(variable_names(ivar))), '_at_', R, ',', Z, ',', phi,        &
       '_steps', loop_min_step, '-', loop_max_step, '.dat'
     
-    if ( first_step == .true. ) then
+    if ( first_step ) then
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
     else
       open(unit=file_handle, file=filename, status='old', action='write', access='append',         &
@@ -1791,7 +1791,7 @@ module exec_commands
     write(filename,110) trim(lower_case(var(1))), '_versus_', trim(var(2)), '_from_', R0, ',', Z0, &
       ',', phi0, '_to_', R1, ',', Z1, ',', phi1, '_steps', loop_min_step, '-', loop_max_step, '.dat'
     
-    if ( first_step == .true. ) then !> default: true
+    if ( first_step ) then !> default: true
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
     else
       open(unit=file_handle, file=filename, status='old',     action='write', access='append',     &

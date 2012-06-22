@@ -14,261 +14,196 @@ module vacuum_equilibrium
   
   !> Reads the external fields and the poloidal field coils from the STARWALL output
   subroutine import_external_fields(filename)
-  
-  use vacuum_response
-  implicit none
-  
-  ! --- Routine parameters
-  character(len=*), intent(in) :: filename
-  ! --- Local variables
-  integer, parameter   :: filehandle = 60
-  integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2)
-  character(len=512)   :: comment
-  
-  if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
-  
-  ! --- Read data from STARWALL response file
-  open(filehandle, file=trim(filename), form='formatted', status='old', action='read')
-  read(filehandle,'(a)') comment
-  
-  file_version = read_intparam(filehandle, 'file_version')
-  if ( file_version > 1 ) then
-    write(*,*) 'ERROR: COIL data file version ', file_version, ' is not supported.'
-    stop
-  end if
-  
-  n_coils     = read_intparam(filehandle, 'n_coils')
-  n_bnd_nodes = read_intparam(filehandle, 'n_bnd_nodes')
-  n_bnd_elems = read_intparam(filehandle, 'n_bnd_elems')
-  
-  dim         = (/ n_coils, 2*n_bnd_nodes /)
-  
-  call read_array(filehandle, 'B_t', dim, float2d=bext_tan)
-  call read_array(filehandle, 'B_n', dim, float2d=bext_nor)
-  call read_array(filehandle, 'Psi', dim, float2d=bext_psi)
-  
+    
+    use vacuum_response
+    implicit none
+    
+    ! --- Routine parameters
+    character(len=*), intent(in) :: filename
+    ! --- Local variables
+    integer, parameter   :: filehandle = 60
+    integer              :: file_version, n_coils, n_bnd_elems, n_bnd_nodes, dim(2), err
+    character(len=512)   :: comment
+    
+    if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
+    
+    ! --- Read data from STARWALL response file
+    open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR: Could not open external field file ',trim(filename),'.'
+      stop
+    end if
+    read(filehandle,'(a)') comment
+    
+    file_version = read_intparam(filehandle, 'file_version')
+    if ( file_version > 1 ) then
+      write(*,*) 'ERROR: COIL data file version ', file_version, ' is not supported.'
+      stop
+    end if
+    
+    n_coils     = read_intparam(filehandle, 'n_coils')
+    n_bnd_nodes = read_intparam(filehandle, 'n_bnd_nodes')
+    n_bnd_elems = read_intparam(filehandle, 'n_bnd_elems')
+    
+    dim         = (/ 2*n_bnd_nodes, n_coils /)
+    
+    call read_array(filehandle, 'B_t', dim, float2d=bext_tan)
+    call read_array(filehandle, 'B_n', dim, float2d=bext_nor)
+    call read_array(filehandle, 'Psi', dim, float2d=bext_psi)
+    
+    32 format(3x,77('-'))
+    33 format(3x,a,i8)
+    34 format(3x,a,1x,a)
+    35 format(3x,a,es20.12)
+    write(*,*)
+    write(*,32)
+    write(*,33) 'EXTERNAL FIELD INFORMATION:'
+    write(*,32)
+    write(*,34) 'filename    =', trim(filename)
+    write(*,33) 'n_coils     =', n_coils
+    write(*,33) 'n_bnd_nodes =', n_bnd_nodes
+    write(*,33) 'n_bnd_elems =', n_bnd_elems
+    if ( vacuum_debug ) then
+      write(*,35) 'sum(bext_tan) =', sum(bext_tan)
+      write(*,35) 'sum(bext_nor) =', sum(bext_nor)
+      write(*,35) 'sum(bext_psi) =', sum(bext_psi)
+    end if
+    write(*,32)
+    write(*,*)
+    
   end subroutine import_external_fields
   
   
   
   
-  subroutine vacuum_equil(node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd)
-  !---------------------------------------------------------------------
-  ! calculates the matrix contribution of the boundary integral of the
-  ! induction equation using the vacuum response from STARWALL
-  !---------------------------------------------------------------------
-  use parameters
-  use data_structure
-  use gauss
-  use basis_at_gaussian
-  use phys_module
-  use mumps_module
-  use vacuum_response
-  
-  implicit none
-  
-  type (type_node_list)        :: node_list
-  type (type_bnd_node_list)    :: bnd_node_list
-  type (type_bnd_element_list) :: bnd_elm_list
-  
-  real*8     :: x_g(n_gauss), x_s(n_gauss)
-  real*8     :: y_g(n_gauss), y_s(n_gauss)
-  
-  real*8     :: b_tan(n_gauss)
-  
-  integer    :: my_id, ibnd,i, j, ms,  kp, kbnd, k, l, jdir, kdir, ldir, imode
-  integer    :: korder, kv, lv, ilarge_vv, inode, knode, inode_bnd, inode2, inode2_bnd
-  integer    :: index_node, index_node2, index_node3, index_node_bnd
-  integer    :: index_node2_bnd, index_node3_bnd, ilarge_pp, ijA_position
-  integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-  real*8     :: ws, xjac,  BigR, phi, eps_cyl
-  real*8     :: psi_axis, psi_bnd, Z_xpoint(2)
-  real*8     :: rhs_glob_1, A_glob_11, A_glob_11_star, RHS_glob_11, ps0
-  real*8     :: psi_norm, theta, zeta
-  
-  real*8     :: s, t, v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
-  real*8     :: ps0_s, psi, psi_s
-  real*8     :: br_coils, bz_coils, psi_coils
-  
-  integer    :: itmp1, itmp2, ilarge
-  logical    :: xpoint2
-  
-  write(*,*) '**************************************************'
-  write(*,*) '*     VACUUM boundary integral (equilibrium)     *'
-  write(*,*) '**************************************************'
-  write(*,*) 'n_coils : ',n_coils
-  
-  ! circular R=10 testcase
-  !R_coils = (/  9.d0, 9.d0, 11.d0, 11.d0 /)
-  !Z_coils = (/ -1.d0, +1.d0,  -1.d0, +1.d0 /) 
-  !I_coils = (/  1d0, 1.d0, -1.d0, -1.d0 /)
-  !I_coils = -0.005 * I_coils   
-  
-  !TS2 testacse
-!   I_coils = (/ 0., 0., 0., 28800., -239040., -239040., -28800., 0., 0., 54000., 54000., 54000., 54000., 66000., 66000., 66000., 66000./)
-
-! I_coils = (/ 0., 0., 0., 0., 0., 0., 0., 0., 0., 800000., 0., 0., 0., 800000., 0., 0., 0./)
-
-!Limiter case
-!   I_coils = (/ 0., 0., 0., 0., -440000., -440000., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0./)
-! 
-! vertical_FB = 100000.*vertical_FB
-! 
-! I_coils(10) = -vertical_FB
-! I_coils(11) = -vertical_FB
-! I_coils(12) = -vertical_FB
-! I_coils(13) = -vertical_FB
-! I_coils(14) = vertical_FB
-! I_coils(15) = vertical_FB
-! I_coils(16) = vertical_FB
-! I_coils(17) = vertical_FB
-!End limiter case
-
-!Divertor case
-  I_coils = (/ 0., 0., 0., 0., -400000., -400000., 0., 0., 0., 400000., 0., 0., 0., 400000., 0., 0., 0./)
-I_coils(10) = I_coils(10)*(1.-vertical_FB)
-I_coils(11) = I_coils(11)*(1.-vertical_FB)
-I_coils(12) = I_coils(12)*(1.-vertical_FB)
-I_coils(13) = I_coils(13)*(1.-vertical_FB)
-I_coils(14) = I_coils(14)*(1.+vertical_FB)
-I_coils(15) = I_coils(15)*(1.+vertical_FB)
-I_coils(16) = I_coils(16)*(1.+vertical_FB)
-I_coils(17) = I_coils(17)*(1.+vertical_FB)
-!End divertor case
-
-write(*,*) 'I_coils(10)', I_coils(10)
-
-  I_coils = I_coils * 4.d-7 * PI 
-  
-  ilarge = mumps_par%nz                                      ! the number of items in the mumps_par coordinate storage (before the boundary conditions)
-  
-  do ibnd = 1, bnd_elm_list%n_bnd_elements                   ! loop over all boundary elements
-  
-    x_g   = 0.d0; x_s   = 0.d0;                              ! values of (x,y) and derivatives on Gaussian points
-    y_g   = 0.d0; y_s   = 0.d0;
-  
-    b_tan = 0.d0
+  !> Calculates the matrix contribution of the boundary integral to the Grad-Shafranov equation
+  !! using the vacuum response from STARWALL
+  subroutine vacuum_equil(node_list, bnd_node_list, bnd_elm_list, psi_axis, psi_bnd)
     
-    do i=1,2                                                ! loop over two corners of each boundary element
-  
-      do j=1,2                                              ! loop over the two basis functions (H, H_s)
-  
-        do ms=1, n_gauss                                    ! loop over Gaussian points, construct coordinates and values
-  
-          inode     = bnd_elm_list%bnd_element(ibnd)%vertex(i)
-          inode_bnd = bnd_elm_list%bnd_element(ibnd)%bnd_vertex(i)
-          jdir      = bnd_elm_list%bnd_element(ibnd)%direction(i,j)
-  		
-          x_g(ms)  = x_g(ms)  + node_list%node(inode)%x(jdir,1) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)         
-          x_s(ms)  = x_s(ms)  + node_list%node(inode)%x(jdir,1) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1_s(i,j,ms)    ! carefull _s is the tangential derivative here!
-          y_g(ms)  = y_g(ms)  + node_list%node(inode)%x(jdir,2) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)
-          y_s(ms)  = y_s(ms)  + node_list%node(inode)%x(jdir,2) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1_s(i,j,ms)
-        
-          do k=1,n_coils
-  
-            index_node_bnd = 2 * (bnd_node_list%bnd_node(inode_bnd)%index_starwall-1) + j
-                     
-  	  b_tan(ms)  = b_tan(ms) + bext_tan(index_node_bnd,k) * I_coils(k) * bnd_elm_list%bnd_element(ibnd)%size(i,j) * H1(i,j,ms)
-          	
-  	  enddo
-
-        enddo                                               ! end loop over Gaussian points
-      enddo                                                 ! end loop over the two basis function
-    enddo                                                   ! end loop over two corners of each boundary element
-  
-  
-    do ms=1, n_gauss                                        ! loop over Gaussian points
-
-      ws = wgauss(ms)
-  
-      BigR = x_g(ms)
-  
-  !    call pfcoils(x_g(ms),y_g(ms),br_coils,bz_coils,psi_coils)
-  
-      do i=1,2                                                                 ! loop over nodes of this piece of boundary
-  
-        inode     = bnd_elm_list%bnd_element(ibnd)%vertex(i)
-        inode_bnd = bnd_elm_list%bnd_element(ibnd)%bnd_vertex(i)
-  
-        do j=1,2                                                               ! loop over basis functions (test functions)
-  
-          jdir = bnd_elm_list%bnd_element(ibnd)%direction(i,j)
-  	
-          index_node = node_list%node(inode)%index(jdir)
-  	
-          index_node_bnd = 2 * (bnd_node_list%bnd_node(inode_bnd)%index_starwall-1) + j
-  
-          v =  H1(i,j,ms) * bnd_elm_list%bnd_element(ibnd)%size(i,j)             ! test function
-  		
-  !        mumps_par%rhs(index_node) = mumps_par%rhs(index_node) + ws * v * (bz_coils * y_s(ms) + br_coils * x_s(ms)) ! boundary integral of external vacuum field (coils)
-  
-          mumps_par%rhs(index_node) = mumps_par%rhs(index_node) + ws * v * b_tan(ms)* sqrt(x_s(ms)**2 + y_s(ms)**2)  ! boundary integral of external vacuum field (coils)
-  
-          do kbnd = 1, bnd_node_list%n_bnd_nodes                               ! kbnd really numbers the nodes of the boundary list
-  
-            do korder = 1, 2                                                   ! loop over basis_functions at node kbnd
-                             
-              kdir  = bnd_node_list%bnd_node(kbnd)%direction(korder)          ! ibnd marks the boundary element (not the node number) i.e. TO BE CHANGED
-              knode = bnd_node_list%bnd_node(kbnd)%index_jorek
-  
-              index_node3 = node_list%node(knode)%index(kdir)
-               
-              !###OLD### index_node3_bnd = 2*(bnd_node_list%bnd_node(kbnd)%index_starwall-1) + korder
-              index_node3_bnd = bnd_node_list%bnd_node(kbnd)%index_starwall
-  
-              do k=1,2                                                        ! loop over nodes in element ibnd (resulting from perturbation at node k_bnd)
-  
-                inode2      = bnd_elm_list%bnd_element(ibnd)%vertex(k)
-                inode2_bnd  = bnd_elm_list%bnd_element(ibnd)%bnd_vertex(k)
-  
-                do l=1,2                                                      ! loop over basis functions
-  
-                  ldir        = bnd_elm_list%bnd_element(ibnd)%direction(k,l)
-  
-                  index_node2     = node_list%node(inode2)%index(ldir)
-  		
-                  !###OLD### index_node2_bnd = 2 * (bnd_node_list%bnd_node(inode2_bnd)%index_starwall-1) + l !#### to be checked
-                  index_node2_bnd = bnd_node_list%bnd_node(inode2_bnd)%index_starwall
-                            
-                  psi   =  H1(k,l,ms)   * bnd_elm_list%bnd_element(ibnd)%size(k,l)          ! test function
-                  psi_s =  H1_s(k,l,ms) * bnd_elm_list%bnd_element(ibnd)%size(k,l)          ! test function derivative (along boundary, i.e. t)
-  
-                  ps0   = node_list%node(bnd_elm_list%bnd_element(ibnd)%vertex(k))%values(1,ldir,1) &
-  		      * H1(k,l,ms)   * bnd_elm_list%bnd_element(ibnd)%size(k,l)
-                  ps0_s = node_list%node(bnd_elm_list%bnd_element(ibnd)%vertex(k))%values(1,ldir,1) &
-  		      * H1_s(k,l,ms) * bnd_elm_list%bnd_element(ibnd)%size(k,l)
-  
-                  A_glob_11   = v * psi * sqrt(x_s(ms)**2 + y_s(ms)**2)
-                  RHS_glob_11 = v * ps0 * sqrt(x_s(ms)**2 + y_s(ms)**2)
-  
-                  ilarge = ilarge + 1
-  		
-                  mumps_par%irn(ilarge) = index_node
-                  mumps_par%jcn(ilarge) = index_node3
-                  mumps_par%A(ilarge)   = (-1.) * (- ws * A_glob_11 * &
-                  response_m_eq(response_index(index_node2_bnd,1,l), response_index(index_node3_bnd,1,korder)))
-                  !###OLD### mumps_par%A(ilarge)   = - ws * A_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,1)
-  		
-  ! 		  mumps_par%RHS(index_node) = mumps_par%RHS(index_node) - ws * v * RHS_glob_11 * vacuum_response(index_node3_bnd,index_node2_bnd,1) 
-  								
-                enddo     ! end loop over basis functions (l)
-              enddo       ! end of loop elemet nodes (k)
-  
-            enddo         ! end loop over order (korder)
-          enddo           ! end of loop over all boundary elements (kbnd)
-  
-        enddo             ! end loop over basis functions (j)
-      enddo               ! end loop over nodes in this boundary element
-  
-    enddo                 ! end of loop over Gaussian points
-  enddo                   ! end of loop over all boundary elements
-  
-  mumps_par%nz = ilarge   ! update the size of the MUMPS matrix
-  
-  return
+    use parameters
+    use data_structure
+    use gauss
+    use basis_at_gaussian
+    use mumps_module
+    use vacuum_response
+    
+    implicit none
+    
+    ! --- Routine parameters
+    type (type_node_list),        intent(in) :: node_list
+    type (type_bnd_node_list),    intent(in) :: bnd_node_list
+    type (type_bnd_element_list), intent(in) :: bnd_elm_list
+    real*8,                       intent(in) :: psi_axis
+    real*8,                       intent(in) :: psi_bnd
+    
+    ! --- Local variables
+    type (type_bnd_element) :: bndelem_m
+    integer :: m_bndelem, l_vertex, l_dof, l_node, l_dir, l_node_bnd, l_index, ms
+    integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp
+    integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
+    real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
+    real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
+    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i
+    
+    ! === ITER LIMITER TEST CASE LIM1 ================================================================
+    n_coils = 12
+    if ( .not. allocated(I_coils) ) allocate( I_coils(n_coils) )
+    I_coils = (/ +5.800000e+06, & ! pf1
+                 -0.800000e+06, & ! pf2
+                 -7.000000e+06, & ! pf3
+                 -4.000000e+06, & ! pf4
+                 -7.800000e+06, & ! pf5
+                 +2.290000e+07, & ! pf6
+                 +9.845280e+06, & ! cs3u
+                 -2.840910e+06, & ! cs2u
+                 -6.300500e+06, & ! cs1u
+                 -6.300500e+06, & ! cs1l
+                 -4.078390e+06, & ! cs2l
+                 -4.346920e+05  & ! cs3l
+              /)
+    write(*,*) 'n_coils                   = ', n_coils
+    write(*,*) 'vertical_FB               = ', vertical_FB
+    write(*,'(a,20es10.2)') 'I_coils (before feedback) = ', I_coils(:)
+    !#####I_coils(1) = I_coils(1) * (1.d0 - vertical_FB)
+    !#####I_coils(6) = I_coils(6) * (1.d0 + vertical_FB)
+    !#####if ( vertical_FB /= 0.d0 ) write(*,'(a,20es10.2)') 'I_coils (after feedback)  = ', I_coils(:)
+    ! ================================================================================================
+    
+    ilarge = mumps_par%nz
+    
+    do m_bndelem = 1, bnd_elm_list%n_bnd_elements
+      bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
+      
+      ! --- Determine the values of R,s and Z,s at the Gaussian points.
+      call det_coord_bnd(bndelem_m, node_list, R=x, Z=y, R_S=x_s, Z_S=y_s)
+      
+      ! --- Select a test function (weak form equation must hold for every test function)
+      do l_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
+        do l_dof = 1, 2 ! (loop over node dofs)
+          l_node     = bndelem_m%vertex(l_vertex)
+          l_dir      = bndelem_m%direction(l_vertex,l_dof)
+          l_node_bnd = bndelem_m%bnd_vertex(l_vertex)
+          l_index    = node_list%node(l_node)%index(l_dir)
+          size_l     = bndelem_m%size(l_vertex,l_dof)
+          
+          ! --- Integration in s-direction is carried out as Gauss quadrature,
+          !       int ds ... = sum_ms wgauss(ms) ...,
+          !     where wgauss(ms) denotes the Gaussian weights.
+          do ms = 1, n_gauss
+            testfunc_l = H1(l_vertex,l_dof,ms) * size_l
+            dA         = sqrt(x_s(ms)**2 + y_s(ms)**2) ! Integration factor from definition of dA
+            
+            ! --- Sum over boundary dofs at which response is calculated
+            do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
+              do i_dof = 1, 2 ! (loop over node dofs)
+                i_node     = bndelem_m%vertex(i_vertex)
+                i_dir      = bndelem_m%direction(i_vertex,i_dof)
+                i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
+                i_index    = node_list%node(i_node)%index(i_dir)
+                size_i     = bndelem_m%size(i_vertex,i_dof)
+                i_resp     = response_index(i_node_bnd,1,i_dof)
+                basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
+                
+                common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
+                B_tan_coil_i           = sum ( I_coils(:) * bext_tan(i_resp,:) )
+                mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i
+                
+                ! --- Sum over boundary dofs contributing to the response
+                do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
+                  do j_dof = 1, 2 ! (loop over node dofs)
+                    j_node     = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
+                    j_dir      = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
+                    j_index    = node_list%node(j_node)%index(j_dir)
+                    j_resp     = response_index(j_node_bnd,1,j_dof)
+                    psi_coil_j = sum( I_coils(:) * bext_psi(j_resp,:) )
+                    
+                    ilarge                 = ilarge + 1
+                    mumps_par%irn(ilarge)  = l_index
+                    mumps_par%jcn(ilarge)  = j_index
+                    mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
+                    mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                                &
+                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j
+                    
+                  end do
+                end do
+                
+              end do
+            end do
+            
+          end do
+          
+        end do
+      end do
+      
+    end do
+    
+    mumps_par%nz = ilarge   ! update the size of the matrix
+    
   end subroutine vacuum_equil
-  
-   
+
+
+
+
   !**********************************************************************
   !* routines borrowed from EQUAL (WZ)                                  *
   !**********************************************************************

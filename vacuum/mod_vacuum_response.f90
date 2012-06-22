@@ -177,11 +177,15 @@ module vacuum_response
     ! --- Local variables
     integer, parameter :: filehandle = 60
     character(len=512) :: comment
-    integer            :: file_version, i, i_starw, n, is_sin
+    integer            :: file_version, i, i_starw, n, is_sin, err
     real*8, allocatable :: tmp(:)
     
     ! --- Read data from STARWALL response file
-    open(filehandle, file=trim(filename), form='formatted', status='old', action='read')
+    open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR: STARWALL response file (',trim(filename),') could not be opened.'
+      stop
+    end if
     read(filehandle,'(A)') comment
     
     file_version = read_intparam(filehandle, 'file_version')
@@ -223,6 +227,8 @@ module vacuum_response
     deallocate( tmp )
     
     ! --- Compute ideal-wall and no-wall response matrices.
+    if ( allocated(sr%a_id) ) deallocate(sr%a_id)
+    if ( allocated(sr%a_nw) ) deallocate(sr%a_nw)
     allocate( sr%a_id(sr%nd_bez,sr%nd_bez), sr%a_nw(sr%nd_bez,sr%nd_bez) )
     sr%a_nw(:,:) = sr%a_ee(:,:)
     sr%a_id(:,:) = sr%a_ee(:,:) - matmul( sr%a_ey(:,:), sr%a_ye(:,:) )

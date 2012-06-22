@@ -173,12 +173,6 @@ program JOREK2
 #endif
 
   
-  !### BEGIN: FOR TESTING THE VACUUM PART -- WILL BE REMOVED SOON AGAIN
-  allocate( I_coils(11) )
-  I_coils = -2.d0 * mu_zero * (/ 9.84528e+06, -2.84091e+06, -1.2601e+07, &
-       -4.07839e+06 , -434692., 5.8e+06, -0.8e+06, -7e+06, -4e+06 , -7.8e+06, 2.29e+07 /)
-  !### END: FOR TESTING THE VACUUM PART
-  
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************

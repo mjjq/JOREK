@@ -41,7 +41,7 @@ real*8   :: zbig, Z_xpoint(2), psi_axis, psi_bnd, psi_xpoint(2), R_xpoint(2), s_
 real*8   :: R_axis, Z_axis, s_axis, t_axis, amix
 integer  :: i_elm_axis, i_elm_xpoint(2)
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
-integer  :: n_elements, inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
+integer  :: inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
 
 real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
 real*8			 :: lambda, mu	
@@ -81,8 +81,6 @@ elseif  (freeboundary_equil .and. (itype .eq. -1)) then
   nz_AA = nz_AA + 128 * bnd_node_list%n_bnd_nodes**2
 endif
   
-n_AA  = node_list%n_nodes * (n_order+1)
-
 n_AA = 0
 do inode = 1, node_list%n_nodes
   n_AA = max(n_AA,node_list%node(inode)%index(4))
@@ -104,8 +102,6 @@ mumps_par%jcn = 0
 mumps_par%A   = 0.d0
 mumps_par%RHS = 0.d0
 
-n_elements = element_list%n_elements
-
 ilarge=0
 
 amix = 0.d0
@@ -117,7 +113,7 @@ if (itype .eq. -1) then
   endif
 endif
     
-do ife =1, n_elements
+do ife =1, element_list%n_elements
 
   element = element_list%element(ife)
   

@@ -37,8 +37,8 @@ real*8     :: R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_xpoint(2)
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
-real*8     :: current_tot, current_ref, current_int, amix, ZKP, ZKI, ZKD, diff, R_xpoint2(2), Z_xpoint2(2)
-real*8     :: sigmas(16)
+real*8     :: current_tot, current_ref, current_int, ZKP, ZKI, ZKD, diff, R_xpoint2(2), Z_xpoint2(2)
+real*8     :: sigmas(16), Z_axis_ref
 integer    :: n_grids(10)
 logical    :: freeboundary_equil2
 
@@ -130,23 +130,30 @@ enddo
 freeboundary_equil = freeboundary_equil2
 
 current_int = 0.d0
-amix        = 0.
 ZKP         = 0.1                ! PI feedback on the total current
 ZKI         = 0. !0.01 
 
 if (freeboundary_equil) then
 
-  n_iter = 100
+  write(*,*)
+  write(*,*) '------------------------------------------------------'
+  write(*,*) '--- Iterative solution of freeboundary equilibrium ---'
+  write(*,*) '------------------------------------------------------'
+  write(*,*)
+
+  n_iter = 999
 
 ! Target current
 ! call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
-  current_ref = 6.d5
+  current_ref = 11.92d6 !###
+  Z_axis_ref  = 0.538d0 !###
 
   do iter=1,n_iter
+    
+    write(*,*)
+    write(*,'(1x,a,i5,a)') '>>> ITERATION', iter, ' <<<'
         
     call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_tot)
-
-    write(10,*) iter, current_tot
 
     current_int = current_int + (current_tot-current_ref)
     
@@ -156,6 +163,8 @@ if (freeboundary_equil) then
     write(*,'(A,8e12.4)') 'FEEDBACK : ',current_ref,current_tot,current_int,T_0, FF_0
                    
     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+    
+    write(10,'(i6,9e20.12)') iter, current_tot, R_axis, Z_axis, psi_bnd-psi_axis
 
     if ((ifail .ne. 0) .and. (iter .le. 5)) then
       call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -195,7 +204,8 @@ endif
 
 ! Vertical feedback - needed for vertically unstable plasmas
     if (iter .gt. 20) then
-      vertical_FB = 10.*Z_axis ! This parameter is used in vacuum/mod_vacuum_equilibrium.f90 to modify the coils current
+      vertical_FB = 10.d0*(Z_axis-Z_axis_ref) ! This parameter is used in vacuum/mod_vacuum_equilibrium.f90 to modify the coils current
+      write(*,*) 'vertical_FB =', vertical_FB
     endif
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &

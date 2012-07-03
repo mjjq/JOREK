@@ -27,9 +27,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (329+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 37 * ILOG_EXT + (10*512+120) * CHAR_EXT )
+  bufsize = ( (329+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 40 * ILOG_EXT + (10*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (328+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 36 * ILOG_EXT + (10*512+120) * CHAR_EXT )
+  bufsize = ( (328+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 39 * ILOG_EXT + (10*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -235,7 +235,10 @@ if (my_id .eq. 0) then
   call MPI_PACK(numfmt_rst,           20,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(num_rho,                1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(num_rhon,               1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_T,                  1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(num_Te,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(num_Ti,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_ffprime,            1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_d_perp,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_zk_perp,            1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -461,7 +464,10 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,numfmt_rst,           20,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,num_rho,                1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,num_rhon,               1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,num_T,                  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,num_Te,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,num_Ti,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,num_ffprime,            1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,num_d_perp,             1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,num_zk_perp,            1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

@@ -22,7 +22,7 @@ integer :: ierr
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 restart, regrid,                                    &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg,                           &
+                n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &

@@ -109,7 +109,7 @@ if (itype .eq. -1) then
   if (freeboundary_equil) then
     amix= 0.95
   else
-    amix = 0.5
+    amix = 0.0
   endif
 endif
     

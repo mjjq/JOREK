@@ -78,11 +78,7 @@ if (mf .le. 0) then
     psi_tmp(n_bnd) = psi_tmp(1)
 
   else
-!==============================MB==========================
-    write(*,'(A)')     ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
-    write(*,'(A,i6)')  ' n_boundary : ',n_boundary
-    write(*,'(A,2f8.4)')  ' R_geo, Z_geo : ',R_geo, Z_geo
-!==============================
+
     n_bnd = n_boundary
 
     call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp",CAT_GRID)

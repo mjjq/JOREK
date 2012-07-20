@@ -157,10 +157,9 @@ program JOREK2
   real*8                   :: t_this
   integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
   
-
 #define GCC_VERSION (__GNUC__ * 10000 \
-                      + __GNUC_MINOR__ * 100 \
-                      + __GNUC_PATCHLEVEL__)
+		     + __GNUC_MINOR__ * 100 \
+		     + __GNUC_PATCHLEVEL__)
 
 #if (GCC_VERSION < 40200 && GCC_VERSION > 0)
     real*8,  pointer :: DUMMY_REAL(:)
@@ -171,7 +170,6 @@ program JOREK2
 #define DUMMY_REAL NULL()
 #define DUMMY_INT NULL()
 #endif
-
   
   !***********************************************************************
   !*                  intialisation                                      *
@@ -182,6 +180,8 @@ program JOREK2
   ! --- Initialise MPI / threaded MPI
   required=MPI_THREAD_MULTIPLE
   call MPI_Init_thread(required, provided, StatInfo)
+
+!  call init_threads()
   
   ! --- Determine ID of each MPI proc
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
@@ -460,9 +460,9 @@ program JOREK2
     end if
     
     ! --- Plot the grid  
-    if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
-      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
-    end if
+!    if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
+!      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
+!    end if
     
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
@@ -491,13 +491,16 @@ program JOREK2
                                     SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,                         &
 		                    SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1, dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv, xcase)
           else
-	    call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-                             SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+	  
+	    if (.not. grid_to_wall) then
+	      call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+                               SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+	    else
+              call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
+                                    SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private,xcase)
+	    endif
+	           
           endif
-!          else
-!            call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-!                                  SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-!          endif
                    
           call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
           
@@ -1166,10 +1169,11 @@ program JOREK2
 
     	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
-    	     call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-               DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
-    		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-    	  endif
+            call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
+                  DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+                  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+   
+       	  endif
           
        end if
 

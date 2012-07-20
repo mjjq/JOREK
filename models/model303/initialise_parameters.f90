@@ -23,7 +23,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta, visco, visco_par,                              &
                 restart, regrid,                                    &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg,                           &
+                n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
@@ -96,25 +96,27 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   else
 
     read(5,in1)
-    endif
-   write(*,*) 'Input files: T_file = ',  trim(T_file), 'rho_file = ', trim(rho_file) 
-   write(*,*) 'ffprime_file = ', trim(ffprime_file),  'R_Z_psi_bnd_file = ', trim(R_Z_psi_bnd_file)
+  endif
+   
  !==============================MB==========================
-   if (n_boundary.ne.0) then
+
+  if (trim(R_Z_psi_bnd_file) .ne. 'none') then
+  
  ! --- Open the file.
     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
-      write(*,*) 'ERROR in define_boundary: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
       stop
     endif
     write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
 
     do i=1,n_boundary
-    read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
-    write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
+      read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+      write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
     enddo  
   endif
  !===============================MB 
+
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else

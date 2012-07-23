@@ -16,7 +16,7 @@ integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
 
 ! --- Local variables
-integer :: ierr
+integer :: ierr, i, err
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -68,7 +68,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-                linear_run, export_for_nemec,                       &
+                linear_run, export_for_nemec, R_Z_psi_bnd_file,     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
@@ -119,6 +119,25 @@ if (my_id .eq. 0) then
   else
     read(5,in1)
   end if
+
+ !==============================R_Z_psi_bnd==========================
+   if (n_boundary.ne.0) then
+ ! --- Open the file.
+    OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in define_boundary: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+      stop
+    endif
+    write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
+
+    do i=1,n_boundary
+    read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+    write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
+    enddo  
+    
+    CLOSE(243)
+  endif
+ !=========================================
   
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)

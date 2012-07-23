@@ -11,15 +11,16 @@ subroutine init_live_data_model(file_handle)
   integer, intent(in) :: file_handle
   
   integer :: i
-  real*8  :: psin, FFp, dFFp_dpsi, dens, dn_dpsi, temp, dT_dpsi, S_rho, S_Ti, S_Te, d_perp
-  real*8  :: d, d1, d2, d3, d4, d5, d6 ! dummies
+  real*8  :: psin, FFp, dFFp_dpsi, dens, dn_dpsi, temp_e, temp_i, dTe_dpsi, dTi_dpsi, S_rho, S_Ti, S_Te, d_perp
+  real*8  :: d, d1, d2, d3, d4, d5, d6, d7 ! dummies
   
   write(file_handle,'(A,I5)') '@n_input_profiles: ', 10
   write(file_handle,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
   write(file_handle,'(A)') '@input_profiles_ylabel: input profiles'
   write(file_handle,'(A)') '@input_profiles_logy: 0'
   write(file_handle,'(A)') '@input_profiles: "psin"       "FF''"    "dFF''/dpsin"'              // &
-    '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_Ti"         "S_Te"'      // &
+    '    "rho"    "drho/dpsin"   "Te"     "dTe/dpsin"     "Ti"      "dTi/dpsin"   "S_rho"     "S_Ti"         "S_Te"'      // &
+ !   '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_Ti"         "S_Te"'      // &
     '    "D_perp"'
   
   do i = 0, 200
@@ -27,13 +28,14 @@ subroutine init_live_data_model(file_handle)
     psin = real(i) / real(200) * 1.2d0
     
     call density    (xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,dens,dn_dpsi,d1,d2,d3,d4,d5,d6,d7)
-    call temperature(xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,temp,dT_dpsi,d1,d2,d3,d4,d5,d6,d7)
+    call temperature_i(xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,temp_i,dTi_dpsi,d1,d2,d3,d4,d5,d6,d7)
+    call temperature_e(xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,temp_e,dTe_dpsi,d1,d2,d3,d4,d5,d6,d7)
     call sources    (xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,S_rho,S_Ti,S_Te)
     call FFprime    (xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,FFp,dFFp_dpsi,d1,d2,d3,d4)
     d_perp  = get_dperp (psin)
     
     write(file_handle,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
-      temp, dT_dpsi, S_rho, S_Ti, S_Te, d_perp
+      temp_e, dTe_dpsi, temp_i, dTi_dpsi, S_rho, S_Ti, S_Te, d_perp
       
     ! ### ZK_e_perp, ZK_i_perp missing ###
     

@@ -69,7 +69,7 @@ program JOREK2
       integer :: iter_gmres, n_tor
     end subroutine gmres_driver
     
-    subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2)
+    subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2, nice_q)
       use data_structure
       integer(kind=4),             intent(in)    :: my_id
       integer(kind=4),             intent(in)    :: xcase2
@@ -78,6 +78,7 @@ program JOREK2
       type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list    
       type (type_bnd_element_list),intent(inout) :: bnd_elm_list    
       logical(kind=4),             intent(in)    :: xpoint2
+      logical,                     intent(in)    :: nice_q
     end subroutine equilibrium
      
     subroutine construct_matrix_murge(my_id, node_list,                          &
@@ -156,7 +157,11 @@ program JOREK2
   integer                  :: sum_n_local_elms, max_n_local_elms, min_n_local_elms
   real*8                   :: t_this
   integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
-  
+! =================== plot NEO coeffs ==================
+  real*8                   :: amu_neo_node, aki_neo_node
+  real*8,allocatable       :: mu_neo(:), ki_neo(:)
+! ======================================================
+
 #define GCC_VERSION (__GNUC__ * 10000 \
 		     + __GNUC_MINOR__ * 100 \
 		     + __GNUC_PATCHLEVEL__)
@@ -476,7 +481,7 @@ program JOREK2
       
       ! --- Compute the plasma equilibrium
       if (equil) then
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase) 
+        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
         if (export_for_nemec) call export_nemec(node_list, element_list, xpoint, xcase)
       end if
 
@@ -524,7 +529,7 @@ program JOREK2
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         
         ! --- Compute the plasma equilibrium
-        call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase)
+        call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
         
       end if
       
@@ -571,27 +576,44 @@ program JOREK2
      endif
 
   endif
-    
+  
   ! --- Broadcast grid information and input parameters to other MPI procs
   call broadcast_elements(my_id, element_list)                ! elements
   if (RMP_on) then
      call broadcast_RMP_profiles(my_id, bnd_node_list)        ! psi_RMP profiles
   endif
+
   call broadcast_nodes(my_id, node_list)                      ! nodes
+
   call broadcast_phys(my_id)                                  ! physics parameters
   n_AA = 0  
   do inode = 1, node_list%n_nodes  
     n_AA = max(n_AA,node_list%node(inode)%index(4))  
   end do
   mumps_par%n = n_AA
-  
+
+! if (RMP_on) then
+!    print*, 'bnd_node_list%n_bnd_nodes', bnd_node_list%n_bnd_nodes
+!    !print*, 'psi_RMP_cos after broadcast RMP3, my_id', psi_RMP_cos(3), my_id
+!    print*, 'psi_RMP_cos after broadcast RMP3, my_id', psi_RMP_cos(bnd_node_list%n_bnd_nodes)
+!    !print*, 'dpsi_RMP_cos_dR after broadcast RMP3, my_id', dpsi_RMP_cos_dR(3), my_id
+!    print*, 'dpsi_RMP_cos_dR after broadcast RMP3, my_id', dpsi_RMP_cos_dR(bnd_node_list%n_bnd_nodes), my_id
+!    !print*, 'dpsi_RMP_cos_dZ after broadcast RMP3, my_id', dpsi_RMP_cos_dZ(3), my_id
+!    print*, 'dpsi_RMP_cos_dZ after broadcast RMP3, my_id', dpsi_RMP_cos_dZ(bnd_node_list%n_bnd_nodes), my_id
+!    !print*, 'psi_RMP_sin after broadcast RMP3, my_id', psi_RMP_sin(3), my_id
+!    print*, 'psi_RMP_sin after broadcast RMP3, my_id', psi_RMP_sin(bnd_node_list%n_bnd_nodes), my_id
+!    !print*, 'dpsi_RMP_sin_dR after broadcast RMP3, my_id', dpsi_RMP_sin_dR(3), my_id
+!    print*, 'dpsi_RMP_sin_dR after broadcast RMP3, my_id', dpsi_RMP_sin_dR(bnd_node_list%n_bnd_nodes), my_id
+!    !print*, 'dpsi_RMP_sin_dZ after broadcast RMP3, my_id', dpsi_RMP_sin_dZ(3), my_id
+!    print*, 'dpsi_RMP_sin_dZ after broadcast RMP3, my_id', dpsi_RMP_sin_dZ(bnd_node_list%n_bnd_nodes), my_id
+! endif
+! 
   call tr_debug_write("JMAIN:End_init elt_list",element_list%n_elements)
   call tr_debug_write("JMAIN:End_init bnd_elt_list",bnd_elm_list%n_bnd_elements)
   call tr_debug_write("JMAIN:End_init node_list",node_list%n_nodes)
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
 
 
   !***********************************************************************
@@ -658,7 +680,6 @@ program JOREK2
     	  i_rank(i) = (i-1) * M_cpu
        enddo
  
-
        call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
        call MPI_GROUP_INCL(MPI_GROUP_WORLD,N_masters,i_rank,MPI_GROUP_MASTER,ierr)
 
@@ -815,7 +836,7 @@ program JOREK2
        endif
     endif
 
-  endif ! (nstep >0)
+ endif ! (nstep >0)
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
@@ -1208,10 +1229,10 @@ program JOREK2
        do i=1,(n_tor+1)/2
       !    write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
     	  write(label,'(A4,i3,A1)') '(n =',(i-1)*n_period,')'
-
+         ! write(*,*)  '2**(i-1)', 2**(i-1)
     	  do ivar=1,n_var
     	     if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
-    		call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+    		call plot_solution(node_list,element_list,ivar,2**(i-1),1,variable_names(ivar)//label)
     	     endif
     	  enddo
 
@@ -1257,6 +1278,11 @@ program JOREK2
     call tr_allocate(yp1,1,nplot,"yp1",CAT_GRID)
     call tr_allocate(yp2,1,nplot,"yp2",CAT_GRID)
     call tr_allocate(yp3,1,nplot,"yp3",CAT_GRID)
+! ---- plot neoclassical coefficients -----
+    if (NEO) then
+       call tr_allocate(mu_neo,1,nplot,"mu_neo",CAT_GRID)
+       call tr_allocate(ki_neo,1,nplot,"ki_neo",CAT_GRID)
+    endif
     iplot = 0
 
     if (xpoint) then
@@ -1299,6 +1325,13 @@ program JOREK2
     	  call FFprime(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
     	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
+       if (NEO) then
+          if (num_neo_file) then
+             call neo_coef (xpoint, xcase, Zp, Z_xpoint, psi, psi_axis,psi_bnd, &
+                  amu_neo_node, aki_neo_node)
+          endif
+       endif
+
     	  zjz	= (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
 
     	  iplot = iplot + 1
@@ -1309,8 +1342,15 @@ program JOREK2
     	  yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
 
     	  !	 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
+           if (NEO) then
+              if ( num_neo_file) then
+                 mu_neo(iplot) = amu_neo_node
+                 ki_neo(iplot) = aki_neo_node
+                 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_xpoint,mu_neo(iplot),ki_neo(iplot)
+              endif
+           endif
 
-       endif
+        endif
 
     enddo
 
@@ -1320,6 +1360,14 @@ program JOREK2
     call lincol(2)
     call lplot6(1,1,xp,yp3,-iplot,' ')
     call lincol(0)
+    if (NEO) then
+       if ( num_neo_file) then
+          call lplot6(1,1,xp,mu_neo,iplot,' ')
+          call lincol(1)
+          call lplot6(1,1,xp,ki_neo,iplot,' ')
+          call lincol(0)
+       end if
+    endif
     call finplt 					 ! close plot file
 
 !  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format

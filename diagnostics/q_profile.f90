@@ -36,8 +36,9 @@ call lplot(2,1,1,surface_list%psi_values(2),q(2),surface_list%n_psi-1,1,'q-profi
 
 ! --- Write out the q-profile versus the poloidal flux to "qprofile.dat".
 open(42, file='qprofile.dat', action='write', status='replace')
-do i=5, surface_list%n_psi-1
-  write(42,'(2ES13.5)') (surface_list%psi_values(i)-psi_axis)/(psi_bnd-psi_axis), q(i)
+!do i=5, surface_list%n_psi-1
+do i=2, surface_list%n_psi
+   write(42,'(2ES13.5)') (surface_list%psi_values(i)-psi_axis)/(psi_bnd-psi_axis), q(i)
 end do
 close(42)
 

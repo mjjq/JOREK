@@ -30,7 +30,8 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
         $(DIR)/mod_constants.f90                        \
         $(DIR)/mod_pellet.f90				\
 	$(DIR)/update_time_evol_params.f90              \
-        $(DIR)/read_RMP_profiles.f90
+        $(DIR)/read_RMP_profiles.f90                    \
+        $(DIR)/neo_coef.f90
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
 	$(DIR)/read_num_profiles.f90 			\
@@ -80,7 +81,8 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/bootstrap_current.f90  	                \
 	$(DIR)/mod_diffusivities.f90                    \
 	$(DIR)/mod_constants.f90                        \
-	$(DIR)/mod_phys_module.f90
+	$(DIR)/mod_phys_module.f90                      \
+        $(DIR)/neo_coef.f90
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)			\
 	$(DIR)/read_num_profiles.f90 			\

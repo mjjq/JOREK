@@ -75,6 +75,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
+                NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 R_Z_psi_bnd_file
 
  if (my_id .eq. 0) then
@@ -98,8 +99,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   else
 
     read(5,in1)
-  endif
-   
+
+ endif
+!    write(*,*) 'Input files: T_file = ',  trim(T_file), ',  rho_file = ', trim(rho_file) 
+!    write(*,*) 'ffprime_file = ', trim(ffprime_file),  ',  R_Z_psi_bnd_file = ', trim(R_Z_psi_bnd_file)
+!    if (NEO) then
+!       write(*,*) 'neo_file = ', trim(neo_file)
+!    endif
+
  !==============================MB==========================
 
   if (trim(R_Z_psi_bnd_file) .ne. 'none') then
@@ -136,7 +143,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
 endif
 
-! --- Read numerical profiles for rho, T, and ff'.
+! --- Read numerical profiles for rho, T, ff' and neoclassical coefficients.
 call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.

@@ -59,7 +59,6 @@ real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 logical    :: xpoint2
 !==================MB: velocity profile is kept by a source which compensating diffusion
-real*8     :: amat_27, Btheta2
 real*8     :: Vt0,Vt0_x,Vt0_y
 real*8     :: V_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
@@ -69,6 +68,12 @@ real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8     :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
 real*8     :: w00_xx, w00_yy, ZK_perp_num_T, D_perp_num_rho !temp variables
+!======================================= NEO
+real*8     :: amat_27, Btheta2
+real*8     :: epsil, Btheta2_psi
+real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
+!======================================= NEO
+
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
@@ -93,6 +98,9 @@ delta_t => thread_struct(tid)%delta_t
 
 ELM = 0.d0
 RHS = 0.d0
+!======================================= NEO
+epsil=1.d-3
+!======================================= NEO
 
 ZK_par_num = 0.d0  !carefull only n=0 is implemented (and needs to be checked)
 TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 2.d0; TG_num7    = 2.d0;
@@ -111,8 +119,17 @@ delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 current_source  = 0.d0
 particle_source = 0.d0
 heat_source     = 0.d0
+V_source=0.d0
+dV_dpsi_source=0.d0
+dV_dz_source=0.d0
 eq_zne          = 0.d0
 eq_zTe          = 0.d0         
+!======================================= NEO
+if ( NEO ) then 
+   amu_neo_prof   = 0.d0
+   aki_neo_prof   = 0.d0
+endif
+!======================================= NEO
 
 do i=1,n_vertex_max
  do j=1,n_order+1
@@ -167,13 +184,20 @@ do i=1,n_vertex_max
  enddo
 enddo
 
+!!$if ( NEO ) then 
+!!$   if (num_neo_file) then
+!!$      write (*,*) 'profiles read from ', neo_file
+!!$   else
+!!$      write (*,*) 'constant neoclass coeffs: ', amu_neo_const, aki_neo_const 
+!!$   endif
+!!$endif
 do ms=1, n_gauss
   do mt=1, n_gauss
  
     call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 !=========================================MB :velocity profile
-       if ( abs(V_0) .ge. 1.e-19) then 
+       if ( abs(V_0) .ge. 1.e-12) then 
         call velocity(xpoint2,y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt), psi_axis, psi_bnd,V_source(ms,mt),dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
        endif
 !======================================MB
@@ -182,6 +206,18 @@ do ms=1, n_gauss
 
     call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                      dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+
+!======================================= NEO
+    if ( NEO ) then 
+       if (num_neo_file) then
+          call neo_coef( xpoint2, xcase2,  &
+               y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, amu_neo_prof(ms,mt), aki_neo_prof(ms,mt))
+       else
+          amu_neo_prof(ms,mt) = amu_neo_const
+          aki_neo_prof(ms,mt) = aki_neo_const
+       endif
+    endif
+!======================================= NEO
   
   enddo
 enddo
@@ -556,6 +592,8 @@ do ms=1, n_gauss
            Bgrad_T        = ( F0 / BigR * T0_p +  T0_x * ps0_y - T0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
 
            BB2 = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
+           Btheta2=(ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
+           Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
            
            v_ps0_x  = v_xx  * ps0_y - v_xy  * ps0_x + v_x  * ps0_xy - v_y * ps0_xx
            v_ps0_y  = v_xy  * ps0_y - v_yy  * ps0_x + v_x  * ps0_yy - v_y * ps0_xy
@@ -609,12 +647,24 @@ do ms=1, n_gauss
                       - v * tauIC * BigR**4 * (p0_s * w0_t - p0_t * w0_s)        * tstep &
 
 		      - tauIC * BigR**3 * p0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
+! FO to be verified:
+!                      -3*v*tauIC* BigR**3 * (p0_x*u0_xy - p0_y*u0_xx) * xjac * tstep &
 		      		      
 		      - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
 		      
 		      + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
 
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
+!------------------------------------------------------------------------ NEO
+           if (NEO) then
+              rhs_ij_2 =  rhs_ij_2  + amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x+ps0_y*v_y)* &
+                   (r0*(ps0_x*u0_x+ps0_y*u0_y)+&
+                   tauIC*(ps0_x*P0_x+ps0_y*P0_y) &
+                   +aki_neo_prof(ms,mt)*tauIC*r0*(ps0_x*T0_x+ps0_y*T0_y)&
+                   -r0*Vpar0*Btheta2)*xjac*tstep*BigR 
+
+           endif
+!------------------------------------------------------------------------ NEO
 
 !###################################################################################################
 !#  equation 3                                                                                     #
@@ -736,6 +786,14 @@ do ms=1, n_gauss
                              * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
                              * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep 
 
+! ------------------------------------------------------ NEO
+           if (NEO) then
+              rhs_ij_7 =  rhs_ij_7  + amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*v*(r0*(ps0_x*u0_x+ps0_y*u0_y)+&
+                   tauIC*(ps0_x*P0_x+ps0_y*P0_y) &
+                   +aki_neo_prof(ms,mt)*tauIC*r0*(ps0_x*T0_x+ps0_y*T0_y)&
+                   -r0*Vpar0*Btheta2)*xjac*tstep*BigR
+           endif
+! ------------------------------------------------------ NEO
 
 !###################################################################################################
 !#  RHS equations end                                                                                  #
@@ -873,6 +931,30 @@ do ms=1, n_gauss
 !###################################################################################################
 
                  amat_21 = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep
+! ------------------------------------------------------ NEO
+           if (NEO) then
+              amat_21 = amat_21 &
+                   -amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(psi_x*v_x+psi_y*v_y)*&
+                   (r0*(ps0_x*u0_x+ps0_y*u0_y)+&
+                   tauIC*(ps0_x*P0_x+ps0_y*P0_y) &
+                   +aki_neo_prof(ms,mt)*tauIC*r0*(ps0_x*T0_x+ps0_y*T0_y)&
+                   -r0*Vpar0*Btheta2)*BigR*xjac*theta*tstep &
+                   
+                   -amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x+ps0_y*v_y)*(r0*(psi_x*u0_x+psi_y*u0_y)+&
+                   tauIC*(psi_x*P0_x+psi_y*P0_y) &
+                   +aki_neo_prof(ms,mt)*tauIC*r0*(psi_x*T0_x+psi_y*T0_y))*BigR*xjac*theta*tstep &
+
+! ========= linearization of 1/(Btheta2**i) , i=2 or 1
+                   -amu_neo_prof(ms,mt)*BB2*(-2*Btheta2_psi)/((Btheta2+epsil)**3)*(ps0_x*v_x+ps0_y*v_y)*&
+                   (r0*(ps0_x*u0_x+ps0_y*u0_y)+&
+                   tauIC*(ps0_x*P0_x+ps0_y*P0_y) &
+                   +aki_neo_prof(ms,mt)*tauIC*r0*(ps0_x*T0_x+ps0_y*T0_y))&
+                   *BigR*xjac*theta*tstep &
+
+                   +amu_neo_prof(ms,mt)*BB2*(-Btheta2_psi)/((Btheta2+epsil)**2)*r0*vpar0*(ps0_x*v_x+ps0_y*v_y)&
+                   *BigR*xjac*tstep*theta 
+           endif
+! ------------------------------------------------------ NEO
 
                  amat_22 = - BigR * r0_hat * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                                 &
                            + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                              * theta * tstep &
@@ -890,11 +972,24 @@ do ms=1, n_gauss
                            + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)     &
                                      * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep
 			    
+! FO to be verified:
+!                          +3*v*tauIC* BigR**3 * (p0_x*u_xy - p0_y*u_xx) * xjac * theta * tstep 
+
 !old!                           + TG_num2 * 0.25d0 * r0_hat * BigR**2 * (w0_x * u_y - w0_y * u_x)       &
 !old!                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &
 !old!                           + TG_num2 * 0.25d0 * r0_hat * BigR**2 * (w0_x * u0_y - w0_y * u0_x)     &
 !old!			            * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   
 !old!
+
+!---------------------------------------- NEO
+                 if ( NEO ) then
+                    amat_22 =  amat_22 &
+                         -amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x+ps0_y*v_y)*r0*(ps0_x*u_x+ps0_y*u_y)&
+                         *BigR*xjac * theta * tstep 
+                 endif
+
+!---------------------------------------- NEO
+
                  amat_23 = - v * (ps0_s * zj_t  - ps0_t * zj_s)                           * theta * tstep  &
                            + eps_cyl * F0 / BigR * v * zj_p  * xjac                       * theta * tstep
 
@@ -929,11 +1024,23 @@ do ms=1, n_gauss
 
                            + TG_num2 * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
+! FO to be verified:
+!                      +3*v*tauIC* BigR**3 * ((rho*T0_x+rho_x*T0)*u0_xy - (rho*T0_y+rho_y*T0)*u0_xx) * xjac * theta * tstep 
+
+!---------------------------------------- NEO
+                 if ( NEO ) then
+                    amat_25 = amat_25 &
+                         -amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x+ps0_y*v_y)*&
+                         (rho*(ps0_x*u0_x+ps0_y*u0_y)+&
+                         tauIC*(ps0_x*(rho_x*T0+rho*T0_x)+ps0_y*(rho_y*T0+rho*T0_y)) &
+                         +aki_neo_prof(ms,mt)*tauIC*rho*(ps0_x*T0_x+ps0_y*T0_y)&
+                         -rho*Vpar0*Btheta2)*BigR*xjac*tstep*theta
+                 endif
+!---------------------------------------- NEO
 
 !old!                           + TG_num2 * 0.25d0 * rho_hat * BigR**2 * (w0_x * u0_y - w0_y * u0_x) &
 !old!                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep 
 !old!
-
 
                  amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                            - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
@@ -948,6 +1055,20 @@ do ms=1, n_gauss
 			                                     - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))       &			                  
 			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
 						 * xjac * theta * tstep 
+! FO to be verified:
+!                          +3*v*tauIC* BigR**3 * ((r0*T_x+r0_x*T)*u0_xy - (r0*T_y+r0_y*T)*u0_xx) * xjac * theta * tstep 
+
+!---------------------------------------- NEO
+                 if ( NEO ) then
+                    amat_26 = amat_26 -amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x+ps0_y*v_y)*&
+                         (tauIC*(ps0_x*(r0_x*T+r0*T_x)+ps0_y*(r0_y*T+r0*T_y)) &
+                         +aki_neo_prof(ms,mt)*tauIC*r0*(ps0_x*T_x+ps0_y*T_y))*BigR*xjac*tstep*theta
+
+                    amat_27= amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*r0*vpar*(ps0_x*v_x+ps0_y*v_y)&
+                         *BigR*xjac*tstep*theta 
+                 endif
+
+!---------------------------------------- NEO
 
 !###################################################################################################
 !#  equation 3                                                                                     #
@@ -1229,6 +1350,26 @@ do ms=1, n_gauss
 
                  amat_72 = 0.d0  
 
+!---------------------------------------- NEO
+                 if ( NEO ) then
+                    amat_71 = amat_71 &
+                         -v*amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*(r0*(psi_x*u0_x+psi_y*u0_y)+&
+                         tauIC*(psi_x*P0_x+psi_y*P0_y) &
+                         +aki_neo_prof(ms,mt)*tauIC*r0*(psi_x*T0_x+psi_y*T0_y))*BigR*xjac*theta*tstep &
+
+                         -v*amu_neo_prof(ms,mt)*(-Btheta2_psi)*BB2/(Btheta2**2)*&
+                         (r0*(ps0_x*u0_x+ps0_y*u0_y)+&
+                         tauIC*(ps0_x*P0_x+ps0_y*P0_y) &                     
+                         +aki_neo_prof(ms,mt)*tauIC*r0*(ps0_x*T0_x+ps0_y*T0_y))*BigR*xjac*theta*tstep
+
+                    amat_72 =  amat_72 &
+                         -v*amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*r0*(ps0_x*u_x+ps0_y*u_y)&
+                         *BigR*xjac * theta * tstep 
+ 
+                 endif
+!---------------------------------------- NEO
+
+
                  amat_75 = + v * (rho_s * T0 * ps0_t - rho_t * T0 * ps0_s)                 * theta * tstep &
                            + v * (rho * T0_s * ps0_t - rho * T0_t * ps0_s)                 * theta * tstep &
                            + v * F0 / BigR * (rho_p * T0 + rho * T0_p)              * xjac * theta * tstep &
@@ -1274,6 +1415,26 @@ do ms=1, n_gauss
                                    * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac + F0 / BigR * vpar_p) / BigR                        &
                                    * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep 
 
+!---------------------------------------- NEO
+                 if ( NEO ) then
+                    amat_75 = amat_75 &
+                         -v*amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)* &
+                         (rho*(ps0_x*u0_x+ps0_y*u0_y)+&
+                         tauIC*(ps0_x*(rho_x*T0+rho*T0_x)+ps0_y*(rho_y*T0+rho*T0_y)) &
+                         +aki_neo_prof(ms,mt)*tauIC*rho*(ps0_x*T0_x+ps0_y*T0_y)&
+                         -rho*Vpar0*Btheta2)*BigR*xjac*tstep*theta
+                    
+                    amat_76 = amat_76 -v*amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)* &
+                         (tauIC*(ps0_x*(r0_x*T+r0*T_x)+ps0_y*(r0_y*T+r0*T_y)) &
+                         +aki_neo_prof(ms,mt)*tauIC*r0*(ps0_x*T_x+ps0_y*T_y))*BigR*xjac*tstep*theta
+               
+                    amat_77= amat_77+ v*amu_neo_prof(ms,mt)*BB2*r0*vpar &
+                         *BigR*xjac*tstep*theta 
+
+                 endif
+!---------------------------------------- NEO
+
+
 !###################################################################################################
 !#  end LHS equations                                                                              #
 !###################################################################################################
@@ -1299,6 +1460,9 @@ do ms=1, n_gauss
                  ELM(ij2,kl4) =  ELM(ij2,kl4) + wst * amat_24
                  ELM(ij2,kl5) =  ELM(ij2,kl5) + wst * amat_25
                  ELM(ij2,kl6) =  ELM(ij2,kl6) + wst * amat_26
+!---------------------------------------- NEO
+                 ELM(ij2,kl7) =  ELM(ij2,kl7) + wst * amat_27
+!---------------------------------------- NEO
 
                  ELM(ij3,kl1) =  ELM(ij3,kl1) + wst * amat_31
                  ELM(ij3,kl3) =  ELM(ij3,kl3) + wst * amat_33

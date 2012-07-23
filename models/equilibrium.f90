@@ -1,4 +1,4 @@
-subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2)
+subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2, nice_q)
 !-----------------------------------------------------------------------
 ! Solve the Grad-Shafranov equation to determine the plasma equilibrium
 !   both freeboundary and fixed boundary solutions
@@ -20,6 +20,7 @@ type (type_bnd_node_list),    intent(inout) :: bnd_node_list
 type (type_bnd_element_list), intent(inout) :: bnd_elm_list
 logical,                      intent(in)    :: xpoint2
 integer,                      intent(in)    :: xcase2
+logical,                      intent(in)    :: nice_q
 
 ! --- Local variables.
 type (type_surface_list) :: surface_list, sep_list
@@ -41,6 +42,10 @@ real*8     :: current_tot, current_ref, current_int, ZKP, ZKI, ZKD, diff, R_xpoi
 real*8     :: sigmas(16), Z_axis_ref
 integer    :: n_grids(10)
 logical    :: freeboundary_equil2
+real*8     :: T_prof
+real*8, allocatable     :: T_profile(:)
+real*8     :: density_prof
+real*8, allocatable     :: density_profile(:)
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -411,13 +416,46 @@ else
     call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   endif
 endif
-  
-call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
+
+if (nice_q) then
+   call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
+endif
+
+!================ Francois 13.04.11 modif to calculate neoclassical coef===========
+! if (allocated(T_profile)) call tr_deallocate(T_profile,"T_profile",CAT_GRID)
+! call tr_allocate(T_profile,1,surface_list%n_psi,"T_profile",CAT_GRID)
+! if (allocated(density_profile)) call tr_deallocate(density_profile,"density_profile",CAT_GRID)
+! call tr_allocate(density_profile,1,surface_list%n_psi,"density_profile",CAT_GRID)
+
+! do i=2,surface_list%n_psi
+!    psi= surface_list%psi_values(i)
+!    call temperature(.false.,xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,T_prof,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+!                                                              dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+!    call density( .false., xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,density_prof,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+!                                                              dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+
+!    T_profile(i)=T_prof
+!    density_profile(i)=density_prof
+! end do
+
+! !T_norm=3.22e-2
+
+
+! ! --- Write out Te and ne profiles to "Te_ne_profiles.dat".
+! open(432, file='Te_ne_profiles.dat', action='write', status='replace')
+! do i=2, surface_list%n_psi
+!    write(432,'(3ES13.5)') T_profile(i), density_profile(i)
+! end do
+! close(432)
+!========================= end modif ===========================================
 
 if (allocated(surface_list%psi_values))    call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
 if (allocated(surface_list%flux_surfaces)) deallocate(surface_list%flux_surfaces)
 if (allocated(sep_list%psi_values))        call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
 if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
- 
+
+! if (allocated(T_profile)) call tr_deallocate(T_profile,"T_profile",CAT_GRID)
+! if (allocated(density_profile)) call tr_deallocate(density_profile,"density_profile",CAT_GRID)
+
 return
 end subroutine equilibrium

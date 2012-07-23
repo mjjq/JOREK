@@ -121,7 +121,20 @@ subroutine read_num_profiles(my_id)
         stop
       end if
     end if
-    end if
+ end if
+
+if (NEO) then
+   num_neo_file= ( neo_file /= 'none')
+   if ( num_neo_file .and. ( my_id == 0 ) ) then
+      write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
+      call readProfNeo(num_neo_psi, num_amu_value, num_aki_value, num_neo_len, neo_file)
+      
+      if ( num_neo_len <= 2 ) then 
+         write(*,*) '  ERROR: Could not read the numerical profile.'
+         stop
+      end if
+   end if
+endif
 
 
 return

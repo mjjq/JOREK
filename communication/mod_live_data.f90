@@ -135,7 +135,11 @@ module live_data
         do i = 1, n_tor, 2
           e1 = sum(energies(max(i-1,1):i,j,index))
           e2 = sum(energies(max(i-1,1):i,j,index-1))
-          growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
+          if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
+             growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
+          else
+             growth_rate = 0.d0
+          endif
           write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') growth_rate
         end do
       end do

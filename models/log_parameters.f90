@@ -359,6 +359,17 @@ if (my_id == 0) then
      write(*,230) 'tset                ', tset
   endif
   write(*,232) 'output_bnd_elements    ', output_bnd_elements
+  write(*,232) 'NEO                    ', NEO
+  if (NEO) then
+     write(*,232) 'neoclass input file?   ', num_neo_file
+     if (num_neo_file) then
+        write(*,237) 'neo_file            ', trim(neo_file)
+     else
+        write(*,230) 'amu_neo_const       ', amu_neo_const
+        write(*,230) 'aki_neo_const       ', aki_neo_const        
+     endif
+  endif
+  
   write(*,*)
   
 end if

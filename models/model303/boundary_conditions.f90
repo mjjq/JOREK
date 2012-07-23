@@ -33,6 +33,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep
   USE murge_module
+  USE tr_module
   use mpi_mod
 
   implicit none
@@ -82,10 +83,20 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   integer :: kp, j, err, itest
 
   if (RMP_on .and. (n_tor .ge. 3)) then
-     allocate(psi_RMP_cos1(bnd_node_list%n_bnd_nodes), dpsi_RMP_cos_dR1(bnd_node_list%n_bnd_nodes), &
-          dpsi_RMP_cos_dZ1(bnd_node_list%n_bnd_nodes), psi_RMP_sin1(bnd_node_list%n_bnd_nodes), &
-          dpsi_RMP_sin_dR1(bnd_node_list%n_bnd_nodes), dpsi_RMP_sin_dZ1(bnd_node_list%n_bnd_nodes))
-!=============== RMP ==============
+ 
+!!$  if (allocated(psi_RMP_cos1))         call tr_deallocate(psi_RMP_cos1,"psi_RMP_cos1",CAT_UNKNOWN)
+!!$  if (allocated(dpsi_RMP_cos_dR1))     call tr_deallocate(dpsi_RMP_cos_dR1,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+!!$  if (allocated(dpsi_RMP_cos_dZ1))     call tr_deallocate(dpsi_RMP_cos_dZ1,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+!!$  if (allocated(psi_RMP_sin1))         call tr_deallocate(psi_RMP_sin1,"psi_RMP_sin1",CAT_UNKNOWN)
+!!$  if (allocated(dpsi_RMP_sin_dR1))     call tr_deallocate(dpsi_RMP_sin_dR1,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+!!$  if (allocated(dpsi_RMP_sin_dZ1))     call tr_deallocate(dpsi_RMP_sin_dZ1,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
+  
+  call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes,"psi_RMP_cos1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+  call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes,"psi_RMP_sin1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
 
      do i = 1, node_list%n_nodes
         if (node_list%node(i)%boundary .ne.0) then
@@ -115,7 +126,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
      endif
      ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*tset ) then establish_RMP =0.0
   
-     
      do j=1, bnd_node_list%n_bnd_nodes  
         psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
         dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
@@ -134,6 +144,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
      endif
 
   endif
+!=============== RMP ==============
 
   zbig = 1.d10
   if (use_murge .and. use_murge_element) then
@@ -715,12 +726,12 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   end do
 
   if (RMP_on) then
-     if (allocated(psi_RMP_cos1)) deallocate(psi_RMP_cos1)
-     if (allocated(dpsi_RMP_cos_dR1)) deallocate(dpsi_RMP_cos_dR1)
-     if (allocated(dpsi_RMP_cos_dZ1)) deallocate(dpsi_RMP_cos_dZ1)
-     if (allocated(psi_RMP_sin1)) deallocate(psi_RMP_sin1)
-     if (allocated(dpsi_RMP_sin_dR1)) deallocate(dpsi_RMP_sin_dR1)
-     if (allocated(dpsi_RMP_sin_dZ1)) deallocate(dpsi_RMP_sin_dZ1)
+     if (allocated(psi_RMP_cos1))         call tr_deallocate(psi_RMP_cos1,"psi_RMP_cos1",CAT_UNKNOWN)
+     if (allocated(dpsi_RMP_cos_dR1))     call tr_deallocate(dpsi_RMP_cos_dR1,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+     if (allocated(dpsi_RMP_cos_dZ1))     call tr_deallocate(dpsi_RMP_cos_dZ1,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+     if (allocated(psi_RMP_sin1))         call tr_deallocate(psi_RMP_sin1,"psi_RMP_sin1",CAT_UNKNOWN)
+     if (allocated(dpsi_RMP_sin_dR1))     call tr_deallocate(dpsi_RMP_sin_dR1,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+     if (allocated(dpsi_RMP_sin_dZ1))     call tr_deallocate(dpsi_RMP_sin_dZ1,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
   endif
 
   return

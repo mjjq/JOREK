@@ -23,7 +23,8 @@ all: modules \
      derive_num_profiles.o \
      preset_parameters.o \
      initialise_and_broadcast_parameters.o \
-     read_RMP_profiles.o
+     read_RMP_profiles.o  \
+     neo_coef.o
 
 modules : mod_parameters.o mod_phys_module.o mod_pellet.o mod_nodes_elements.o mod_avoid_neg_dens.o mod_domains.o
 

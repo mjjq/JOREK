@@ -52,7 +52,7 @@ do i=1,node_list%n_nodes
   read(21) node_list%node(i)%ref_mu		     
   read(21) node_list%node(i)%constrained
 enddo
-
+ 
 read(21) element_list%element(1:element_list%n_elements)
 read(21) tstep,eta_tmp,visco_tmp,visco_par_tmp
 read(21) index_start
@@ -94,11 +94,18 @@ write(*,*) '****************************************'
 
 
 do i=2,index_start
-
- Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
-             / (xtime(i)-xtime(i-1))
+if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
+   Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
+        / (xtime(i)-xtime(i-1))
+else
+    Growth_mag  = 0.
+endif
+if ( (energies(n_tor,2,i).ne.0.) .and. (energies(n_tor,2,i-1).ne.0.)) then
  Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
              / (xtime(i)-xtime(i-1))
+else
+    Growth_kin  = 0.
+endif
 
 ! write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
 ! write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i)

@@ -31,14 +31,13 @@ if ( RMP_on ) then
      call tr_allocate(dpsi_RMP_sin_dR,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR",CAT_UNKNOWN)
      call tr_allocate(dpsi_RMP_sin_dZ,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ",CAT_UNKNOWN)
   end if
-  call MPI_BCAST(psi_RMP_cos,bnd_node_list%n_bnd_nodes,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(dpsi_RMP_cos_dR,bnd_node_list%n_bnd_nodes,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(dpsi_RMP_cos_dZ,bnd_node_list%n_bnd_nodes,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(psi_RMP_sin,bnd_node_list%n_bnd_nodes,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(dpsi_RMP_sin_dR,bnd_node_list%n_bnd_nodes,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(dpsi_RMP_sin_dZ,bnd_node_list%n_bnd_nodes,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(psi_RMP_cos,bnd_node_list%n_bnd_nodes,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(dpsi_RMP_cos_dR,bnd_node_list%n_bnd_nodes,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(dpsi_RMP_cos_dZ,bnd_node_list%n_bnd_nodes,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(psi_RMP_sin,bnd_node_list%n_bnd_nodes,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(dpsi_RMP_sin_dR,bnd_node_list%n_bnd_nodes,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(dpsi_RMP_sin_dZ,bnd_node_list%n_bnd_nodes,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 end if
-
 
 return
 end subroutine broadcast_RMP_profiles

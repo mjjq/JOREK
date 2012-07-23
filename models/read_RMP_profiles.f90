@@ -12,7 +12,6 @@ subroutine read_RMP_profiles(bnd_node_list)
 
   TYPE (type_bnd_node_list):: bnd_node_list
   integer :: j, err
-  real*8  :: establish_RMP !, RMP_start_time
   logical :: exist
 
 
@@ -53,7 +52,16 @@ subroutine read_RMP_profiles(bnd_node_list)
      read (88, *) psi_RMP_sin(j),  dpsi_RMP_sin_dR(j), dpsi_RMP_sin_dZ(j)
   end do
   write (*,*) '**** before multiplying by time variation: ****'
-  write (*,*) 'psi_RMP_cos', psi_RMP_cos
+  write (*,*) 'psi_RMP_cos(1) = ', psi_RMP_cos(1)
+  write (*,*) 'dpsi_RMP_cos_dR(1) = ', dpsi_RMP_cos_dR(1)
+  write (*,*) 'dpsi_RMP_cos_dZ(1) = ', dpsi_RMP_cos_dZ(1)
+  write (*,*) 'psi_RMP_sin(1) = ', psi_RMP_sin(1)
+  write (*,*) 'dpsi_RMP_sin_dR(1) = ', dpsi_RMP_sin_dR(1)
+  write (*,*) 'dpsi_RMP_sin_dZ(1) = ', dpsi_RMP_sin_dZ(1)
+
+
+
+
   close (unit=87)
   close (unit=88)
 

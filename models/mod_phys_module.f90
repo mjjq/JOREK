@@ -346,12 +346,22 @@ module phys_module
   real*8, allocatable :: num_ffprime_y1(:) !< First derivatives of FFprime profile (\f$ dFF'/d\Psi_N \f$)
   real*8, allocatable :: num_ffprime_y2(:) !< Second derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
 
+  !> --- Numerical input profiles for neoclassical coefficients 
+  logical             :: NEO         ! If (NEO == .t.) neoclassical effects are considered
+  character(len=512)  :: neo_file    ! ASCII file the aki and amu profiles is read from.
+  logical             :: num_neo_file    ! is set true if neo_file /= 'none'
+  integer             :: num_neo_len     ! Number of points in aki_neo, mu_neo profiles
+  real*8, allocatable :: num_neo_psi(:)  ! Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_aki_value(:)  !numerical aki profile (PsiN values)
+  real*8, allocatable :: num_amu_value(:)!numerical amu profile (PsiN values)
+  real*8  :: aki_neo_const, amu_neo_const !if ( (NEO) .and. (neo_file=='none')), aki_neo and amu_neo are constants
+
   !> @name RMP profiles
   logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat' 
   logical :: RMP_on            !< Activates RMPs on boundary if .true.
   character(len=512)  :: RMP_psi_cos_file  !< ASCII file the profiles of psi_RMP_cos and derivatives are read from
   character(len=512)  :: RMP_psi_sin_file  !< ASCII file the profiles of psi_RMP_sin and derivatives are read from
-  real*8  :: lambda, tset      !< parameters for time dependence of psi_RMP
+  real*8  :: lambda, tset      !< parameters for time dependence of psi_RMP (sigmoid)
   real*8  :: RMP_start_time    !< time when RMP coils have been activated (RMP_on = .t.)
   real*8, allocatable :: psi_RMP_cos(:)
   real*8, allocatable :: dpsi_RMP_cos_dR(:)

@@ -235,6 +235,13 @@ subroutine preset_parameters
   tset = 150
   output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
 
+! ===== Neoclassical parameters ======
+  NEO = .false.
+  neo_file ='none'
+  amu_neo_const = 0.
+  aki_neo_const = 0.
+  
+
   n_limiter = 0
   R_limiter = 0.d0
   Z_limiter = 0.d0

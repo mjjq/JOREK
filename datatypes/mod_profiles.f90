@@ -13,7 +13,8 @@ module profiles
   private
   
   ! --- Public routines
-  public constructProf, destructProf, resizeProf, readProf, writProf, derivProf, interpolProf
+  public constructProf, destructProf, resizeProf, readProf, writProf, derivProf, interpolProf, &
+       constructProfNeo, destructProfNeo, resizeProfNeo, readProfNeo
   
   
   
@@ -277,6 +278,153 @@ module profiles
     
   end subroutine derivProf
 
+  ! Construct a profile.
+  recursive subroutine constructProfNeo(x1, x2, x3, len)
 
+    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    integer,           intent(inout) :: len
+    
+    call destructProfNeo(x1, x2, x3, len)
+    
+    len = max(len,1) ! at least length 1
+    call tr_allocate(x1,1,len,"x1",CAT_GRID)
+    call tr_allocate(x2,1,len,"x2",CAT_GRID)
+    call tr_allocate(x3,1,len,"x3",CAT_GRID)
+    
+  end subroutine constructProfNeo
+
+ 
+  ! Change the size of a profile.
+  recursive subroutine resizeProfNeo(x1, x2, x3, len, newLen, keep)
+
+    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    integer,           intent(inout) :: len
+    integer,           intent(in)    :: newLen
+    logical,           intent(in)    :: keep !< Keep the data in the x1, x2, x3 arrays?
+    
+    real, ALLOCATABLE            :: px1(:) ! copy of x1 (in case keep=.TRUE.)
+    real, ALLOCATABLE            :: px2(:) ! copy of x2 (in case keep=.TRUE.)
+    real, ALLOCATABLE            :: px3(:) ! copy of x3 (in case keep=.TRUE.)
+    
+    ! --- Recursive call with newLen=1 if newLen < 1.
+    if ( newLen < 1 ) then
+      call resizeProfNeo(x1, x2, x3, len, 1, keep)
+      return
+    end if
+    
+    ! --- Backup data from profile if keep=.true.
+    if ( keep ) then
+      call tr_allocate(px1,1,len,"px1",CAT_GRID)
+      call tr_allocate(px2,1,len,"px2",CAT_GRID)
+      call tr_allocate(px3,1,len,"px3",CAT_GRID)
+      if ( allocated(x1) ) then
+        px1(1:len) = x1(1:len)
+      else
+        px1 = 0.
+      end if
+      if ( allocated(x2) ) then
+        px2(1:len) = x2(1:len)
+      else
+        px2 = 0.
+      end if
+      if ( allocated(x3) ) then
+        px3(1:len) = x3(1:len)
+      else
+        px3 = 0.
+      end if
+    end if
+    
+    ! --- Resize x1, x2 and x3.
+    if ( allocated(x1) ) call tr_deallocate(x1,"x1",CAT_GRID)
+    if ( allocated(x2) ) call tr_deallocate(x2,"x2",CAT_GRID)
+    if ( allocated(x3) ) call tr_deallocate(x3,"x3",CAT_GRID)
+    call tr_allocate(x1,1,newLen,"x1",CAT_GRID)
+    call tr_allocate(x2,1,newLen,"x2",CAT_GRID)
+    call tr_allocate(x3,1,newLen,"x3",CAT_GRID)
+    
+    ! --- Restore data to profile if keep=.true.
+    if ( keep ) then
+      x1(1:min(len,newLen)) = px1(1:min(len,newLen))
+      x2(1:min(len,newLen)) = px2(1:min(len,newLen))
+      x3(1:min(len,newLen)) = px3(1:min(len,newLen))
+      call tr_deallocate(px1,"px1",CAT_GRID)
+      call tr_deallocate(px2,"px2",CAT_GRID)
+      call tr_deallocate(px3,"px3",CAT_GRID)
+    end if
+    len = newLen
+    
+  end subroutine resizeProfNeo
+
+  
+  ! Destroy a profile.
+  recursive subroutine destructProfNeo(x1, x2, x3, len)
+
+    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    integer,           intent(inout) :: len
+    
+    if ( allocated(x1) ) call tr_deallocate(x1,"x1",CAT_GRID)
+    if ( allocated(x2) ) call tr_deallocate(x2,"x2",CAT_GRID)
+    if ( allocated(x3) ) call tr_deallocate(x3,"x3",CAT_GRID)
+    len = 0
+    
+  end subroutine destructProfNeo
+  
+  
+  ! Read a profile from a file.
+  recursive subroutine readProfNeo(x1, x2, x3, len, file)
+    
+    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    integer,           intent(inout) :: len
+    CHARACTER(LEN=*),  intent(in)    :: file    ! Filename.
+    
+    integer :: err
+    integer :: usedLen
+    real    :: xx1, xx2, xx3
+
+   
+    call destructProfNeo(x1, x2, x3, len)
+    
+    ! --- Open the file.
+    OPEN(UNIT=42, FILE=file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in readProfNeo: Cannot open file '//TRIM(file)//'.'
+      return
+    end if
+
+    
+    ! --- Construct prof with an initial length of 10.
+    len = 10
+    call constructProfNeo(x1, x2, x3, len)
+    usedLen = 0
+    
+    ! --- Read profile.
+    do
+      READ(42, *, IOSTAT=err) xx1, xx2, xx3
+
+!      write (*,*) '********* read neo profiles **********'
+!      write (*,*) xx1, xx2, xx3
+      
+      if ( err /= 0 ) exit ! end of profile reached
+      
+      usedLen = usedLen + 1
+      
+      ! Double the profile length if it becomes to small.
+      if ( usedLen > len ) call resizeProfNeo(x1, x2, x3, len, 2*len, .TRUE.)
+      
+      x1(usedLen) = xx1
+      x2(usedLen) = xx2
+      x3(usedLen) = xx3
+      
+    end do
+
+    
+    ! --- Crop the profile to the length that is really used.
+    call resizeProfNeo(x1, x2, x3, len, usedLen, .TRUE.)
+
+    
+    ! --- Close the file.
+    CLOSE(UNIT=42)
+
+  end subroutine readProfNeo
   
 end module profiles

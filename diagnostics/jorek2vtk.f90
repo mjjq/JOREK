@@ -54,8 +54,9 @@ real*8  	      :: s_find(8), t_find(8)
 real*8                :: Jb, minRad
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode
-!====================== --- add the diagnostics Er, Vtheta and [not yet Vneo]
-real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound
+!====================== --- add the diagnostics Er, Vtheta and Vneo
+real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
+real*8                :: amu_neo_node, aki_neo_node
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
 GAMMA=5./3.
@@ -69,10 +70,12 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub      = 2             ! Number of subdivisions of the cubic finite elements into linear pieces
+nsub      = 4             ! Number of subdivisions of the cubic finite elements into linear pieces
 i_tor     = -1            ! If i_tor > 0, only this mode will be included in the vtk file...
+!i_tor     = 2            ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane   = 1             ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
+!without_n0_mode = .true. ! If true, do not include the n=0 mode (i_tor=1)
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -96,7 +99,7 @@ write(*,*)
 call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
-n_scalars = n_var + 10+5
+n_scalars = n_var + 10+6
 
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
@@ -109,7 +112,7 @@ scalar_names(1:n_var) = variable_names(1:n_var)
 scalar_names(n_var+1:n_scalars) = (/ &
   'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
   'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ',&
-  'Mach_pol    ', 'Vsound      ', 'Btot        ', 'J-bootstrap '/)
+  'Mach_pol    ', 'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        '/)
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
@@ -232,20 +235,33 @@ do i=1,element_list%n_elements
             psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
             Btheta  = (psi_abs/R)          
             Vtheta  = 0.0
-            ! Vneo    = 0.0
+            Vneo    = 0.0
             Er      = 0.0
             if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
                Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
                     (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
-               ! Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
+! verifier que les gradients de RHO sont correctement calcules (sous-resolu?)
+               if (NEO) then
+!                  num_neo_file= ( neo_file /= 'none')
+                  if (num_neo_file) then
+                     write(*,*) 'neo_file=',neo_file
+                     write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
+                     call neo_coef( xpoint, xcase, Z, Z_xpoint, Psi ,psi_axis,psi_bnd, &
+                          amu_neo_node, aki_neo_node)
+                     Vneo   = aki_neo_node/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
+                  else
+                     Vneo   = aki_neo_const/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
+                  endif
+               endif
                Er     = -(u0_x*ps_x + u0_y * ps_y)/psi_abs
 !======================Mach number===========================================              
-               Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR              
+               Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR 
+
                Vsound=sqrt(GAMMA*TT)/Btot
-! why term in boundry conditions ? from Vtheta? BigR**2 * U0_s /ps0_s==================????
+               ! why term in boundry conditions ? from Vtheta? BigR**2 * U0_s /ps0_s==================????
                Mach_par=V/Vsound             
                Mach_pol=Vtheta/Vsound
-         endif
+            endif
          endif
          ! save those specific values of axisymmetric parameters
          if (grad_psi .ne. 0.d0) then
@@ -255,7 +271,7 @@ do i=1,element_list%n_elements
             scalars(inode,n_var+12) = Mach_pol
             scalars(inode,n_var+13) = Vsound
             scalars(inode,n_var+14) = Btot
-            ! scalars(inode,n_var+15) = Vneo
+            scalars(inode,n_var+16) = Vneo ! number n_var+16 is jbootstrap, see below.
          endif
          ! old values back to normal
          i_tor = i_tor_old
@@ -483,8 +499,8 @@ lf = char(10) ! line feed character
 #ifdef IBM_MACHINE
 open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
 #else
-!open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
-open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+!open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)

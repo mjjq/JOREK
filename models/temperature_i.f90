@@ -23,6 +23,7 @@ real*8  :: atn_z,   datn_z,   d2atn_z
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u, factor
 real*8  :: cosh1, cosh2, cosh3, cosh3_u
 real*8  :: tanh1, tanh2, tanh2_u
+real*8  :: Z_star, Z_star_u
 ! for interpolating numerical profiles
 integer :: left, right, mid
 real*8  :: aux1, aux2
@@ -92,12 +93,16 @@ end if
 !     approximately zero in the private flux region below the x-point.
 if (xpoint2) then
   
-  sigz            = 0.05d0
+  sigz     = 0.05d0
+  Z_star   = (Z_xpoint(1)-Z)/sigz
+  Z_star   = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+  Z_star_u = (Z-Z_xpoint(2))/sigz
+  Z_star_u = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
 
-  tanh2   = tanh((Z_xpoint(1)-Z)/sigz)
-  cosh3   = cosh((Z_xpoint(1)-Z)/sigz)
-  tanh2_u = tanh((Z-Z_xpoint(2))/sigz)
-  cosh3_u = cosh((Z-Z_xpoint(2))/sigz)
+  tanh2   = tanh(Z_star)
+  cosh3   = cosh(Z_star)
+  tanh2_u = tanh(Z_star_u)
+  cosh3_u = cosh(Z_star_u)
     
   atn_z 	   = (0.5d0 - 0.5d0*tanh2)
   datn_z	   =  0.5d0/cosh3**2   / sigz

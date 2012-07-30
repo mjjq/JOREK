@@ -103,8 +103,8 @@ epsil=1.d-3
 !======================================= NEO
 
 ZK_par_num = 0.d0  !carefull only n=0 is implemented (and needs to be checked)
-TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 2.d0; TG_num7    = 2.d0;
-
+!TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 2.d0; TG_num7    = 2.d0;
+TG_num1    = 0.d0; TG_num2    = 0.d0; TG_num5    = 0.d0; TG_num6    = 0.d0; TG_num7    = 0.d0;
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
 zeta  = time_evol_zeta

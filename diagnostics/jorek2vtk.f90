@@ -231,6 +231,9 @@ do i=1,element_list%n_elements
             zj_x  = (   Z_t * ZJ_s - Z_s * ZJ_t ) / xjac
             zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
 
+            RHO_x = (   Z_t * RHO_s - Z_s * RHO_t ) / xjac
+            RHO_y  = ( - R_t * RHO_s + R_s * RHO_t ) / xjac
+
             !*** compute diagnostics ***
             psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
             Btheta  = (psi_abs/R)          

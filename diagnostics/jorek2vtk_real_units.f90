@@ -99,7 +99,7 @@ write(*,*)
 call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
-n_scalars = n_var + 10+6
+n_scalars = n_var + 17
 
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
@@ -116,7 +116,7 @@ scalar_names(7)='Vpar_km/s   '
 scalar_names(n_var+1:n_scalars) = (/ &
   'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
   'D_flux_Vpar ', 'D_flux_Vperp', 'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_prl    ',&
-  'Mach_pol    ',  'Vsound_km/s', 'Btot_T      ', 'J-bootstrap ', 'Vneo_km/s   '/)
+  'Mach_pol    ',  'Vsound_km/s', 'Btot_T      ', 'J-bootstrap ', 'Vneo_km/s   ', 'psi_norm    '/)
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
@@ -234,6 +234,9 @@ do i=1,element_list%n_elements
 
             zj_x  = (   Z_t * ZJ_s - Z_s * ZJ_t ) / xjac
             zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
+
+            RHO_x = (   Z_t * RHO_s - Z_s * RHO_t ) / xjac
+            RHO_y  = ( - R_t * RHO_s + R_s * RHO_t ) / xjac
 
             !*** compute diagnostics ***
             psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
@@ -465,6 +468,8 @@ do i=1,element_list%n_elements
                scalars(inode,n_var+7)  = scalars(inode,5) * scalars(inode,7) * Btot
 
                scalars(inode,n_var+8)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
+
+               scalars(inode,n_var+17) = psi_norm
 
                !           call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
                !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &

@@ -1441,8 +1441,9 @@ module exec_commands
     
     ! ### add area and volume as parameters to integrals and output them
     
-    call integrals(node_list,element_list,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,aminor,Bgeo,      &
-      current,beta_p,beta_t,beta_n,density,density_in,density_out,pressure,pressure_in,pressure_out)
+    call integrals(node_list,element_list,psi_axis,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,aminor,  &
+      Bgeo,current,beta_p,beta_t,beta_n,density,density_in,density_out,pressure,pressure_in,       &
+      pressure_out)
     
     write(file_handle,'(6ES16.7,3x,a,i5.5)') t_start, psi_limit, current/1.e6, beta_p, beta_t,     &
       beta_n, '#step', index_start

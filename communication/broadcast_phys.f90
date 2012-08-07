@@ -27,9 +27,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (331+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 42 * ILOG_EXT + (11*512+120) * CHAR_EXT )
+  bufsize = ( (331+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (330+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 41 * ILOG_EXT + (11*512+120) * CHAR_EXT )
+  bufsize = ( (330+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -234,6 +234,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(RMP_psi_cos_file,     512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(RMP_psi_sin_file,     512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(R_Z_psi_bnd_file,     512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(wall_file,            512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(numfmt,                20,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(numfmt_rst,            20,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(neo_file,             512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -471,6 +472,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,RMP_psi_cos_file,     512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,RMP_psi_sin_file,     512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,R_Z_psi_bnd_file,     512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,wall_file,            512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,numfmt,                20,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,numfmt_rst,            20,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,neo_file,             512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)

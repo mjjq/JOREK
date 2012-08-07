@@ -154,7 +154,8 @@ theta = time_evol_theta
 zeta  = time_evol_zeta
 
 ! Taylor Galerkin (TG2) stabilisation switches
-TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 0.d0; TG_num7    = 0.d0; TG_num8    = 0.d0;
+!TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 0.d0; TG_num7    = 0.d0; TG_num8    = 0.d0;
+TG_num1    = 0.d0; TG_num2    = 0.d0; TG_num5    = 0.d0; TG_num6    = 0.d0; TG_num7    = 0.d0; TG_num8    = 0.d0;
 
 
 

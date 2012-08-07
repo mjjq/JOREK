@@ -431,6 +431,31 @@ fi
 echo "==================================================================================="
 echo " "
 
+# copy of the wall file if exists
+# ------------------------------
+wall_file=`grep wall_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+echo "==================================================================================="
+if [ "$wall_file" != 'none' ] && [ "$wall_file" != '' ]; then
+   wall_dir=$(dirname $wall_file)
+   wall_file=$(basename $wall_file)
+   echo " ===> reading of the profile file: " ${wall_dir}/${wall_file}
+   if [ -e ${wall_dir}/${wall_file} ]; then
+      echo "    ----- storing it to ${RESDIR}/${wall_dir}"
+      if [ ! -e ${RESDIR}/${wall_dir} ]; then
+         if [ "${wall_dir}" != "." ]; then
+	    # echo " creation of ${RESDIR}/${wall_dir} "
+	    mkdir ${RESDIR}/${wall_dir}
+         fi
+      fi
+      cp ${wall_dir}/${wall_file} ${RESDIR}/wall.txt
+   else
+      echo "The file " ${wall_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no density profile file to read "
+fi
+
 # Execution control
 # -----------------
 if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then

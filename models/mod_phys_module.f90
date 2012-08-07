@@ -376,6 +376,7 @@ module phys_module
 !=================================MB
  real*8  :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303
  character(len=512)  :: R_Z_psi_bnd_file !< ASCII file for R_boundary,Z_boundary, psi_boundary, with n_boundary size.
+ character(len=512)  :: wall_file        !< ASCII file for external wall geometry, if n_ext is greater than zero.
 
   
 end module phys_module

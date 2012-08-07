@@ -196,6 +196,7 @@ subroutine preset_parameters
   d_perp_file   = 'none'
   zk_perp_file  = 'none'
   R_Z_psi_bnd_file = 'none'
+  wall_file     = 'none'
 
   produce_live_data = .true.
   

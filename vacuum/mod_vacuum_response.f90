@@ -23,6 +23,20 @@ module vacuum_response
   
   
   
+  !> Is the filehandle associated with a formatted file?
+  logical function is_formatted(filehandle)
+    implicit none
+    ! --- Routine parameters
+    integer,          intent(in) :: filehandle
+    ! --- Local variables
+    character(len=64) :: format_type
+    
+    inquire(filehandle,form=format_type)
+    is_formatted = ( trim(format_type) == 'FORMATTED' )
+  end function is_formatted
+  
+  
+  
   !> Get the vacuum response for an ideal or resistive wall.
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
     freeboundary_equil, resistive_wall)
@@ -73,15 +87,21 @@ module vacuum_response
     
     ! --- Local variables
     character(len=12) :: marker
-    character(len=20) :: name
+    character(len=24) :: name
     integer           :: ierr
     
-    read(filehandle,'(A12,A24,I12)',iostat=ierr) marker, name, read_intparam
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A12,A24,I12)',iostat=ierr) marker, name, read_intparam
+    else
+      read(filehandle, iostat=ierr) marker, name, read_intparam
+    end if
     
     if ( (ierr /= 0) .or. (trim(adjustl(marker)) /= '#@intparam') .or. (trim(adjustl(name)) /= trim(parameter_name)) ) then
       write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'" from STARWALL response.'
       stop
     end if
+    
+    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=ierr) name, read_intparam
     
   end function read_intparam
   
@@ -116,7 +136,11 @@ module vacuum_response
       requested_type = 'float'
     end if
     
-    read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name, nd, datatype, d
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name, nd, datatype, d
+    else
+      read(filehandle,iostat=ierr) marker, name, nd, datatype, d
+    end if
     marker   = adjustl(marker)
     name     = adjustl(name)
     datatype = adjustl(datatype)
@@ -133,27 +157,46 @@ module vacuum_response
       
       if ( allocated(int1d) ) deallocate( int1d )
       allocate( int1d(dim(1)) )
-      read(filehandle,*) int1d(:)
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) int1d(:)
+      else
+        read(filehandle) int1d(:)
+      end if
       
     else if ( present(int2d) ) then
       
       if ( allocated(int2d) ) deallocate( int2d )
       allocate( int2d(dim(1),dim(2)) )
-      read(filehandle,*) int2d(:,:)
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) int2d(:,:)
+      else
+        read(filehandle) int2d(:,:)
+      end if
       
     else if ( present(float1d) ) then
       
       if ( allocated(float1d) ) deallocate( float1d )
       allocate( float1d(dim(1)) )
-      read(filehandle,*) float1d(:)
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) float1d(:)
+      else
+        read(filehandle) float1d(:)
+      end if
       
     else if ( present(float2d) ) then
       
       if ( allocated(float2d) ) deallocate( float2d )
       allocate( float2d(dim(1),dim(2)) )
-      read(filehandle,'(4ES24.16)') float2d(:,:)
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,'(4ES24.16)') float2d(:,:)
+      else
+        read(filehandle) float2d(:,:)
+      end if
       
     end if
+    
+    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)') name, trim(datatype), d(1:nd)
+
     
   end subroutine read_array
   
@@ -177,16 +220,44 @@ module vacuum_response
     ! --- Local variables
     integer, parameter :: filehandle = 60
     character(len=512) :: comment
-    integer            :: file_version, i, i_starw, n, is_sin, err
+    integer            :: file_version, i, i_starw, n, is_sin, err, i_tmp
+    real*8             :: r_tmp
     real*8, allocatable :: tmp(:)
     
-    ! --- Read data from STARWALL response file
-    open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
+    ! --- Open file
+    !   --- Try to open as unformatted file
+    write(*,*) 'Trying to open response as unformatted file...'
+    open(filehandle, file=trim(filename), form='unformatted', status='old', action='read', &
+      iostat=err)
+    if ( err == 0 ) then
+      read(filehandle,iostat=err) i_tmp, r_tmp
+      if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) then
+        err=-42
+        close(filehandle)
+      end if
+    end if
+    
+    !   --- Try to open as formatted file
     if ( err /= 0 ) then
+      write(*,*) '  ... failed.'
+      write(*,*) 'Trying to open response as formatted file...'
+      open(filehandle, file=trim(filename), form='formatted', status='old', action='read', &
+        iostat=err)
+    end if
+    
+    if ( err /= 0 ) then
+      write(*,*) '  ... failed.'
       write(*,*) 'ERROR: STARWALL response file (',trim(filename),') could not be opened.'
       stop
     end if
-    read(filehandle,'(A)') comment
+    write(*,*) '  ... succeeded.'
+    
+    ! --- Read data from STARWALL response file
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A)') comment
+    else
+      read(filehandle) comment
+    end if
     
     file_version = read_intparam(filehandle, 'file_version')
     if ( file_version > 1 ) then
@@ -201,7 +272,6 @@ module vacuum_response
     sr%n_w    = read_intparam(filehandle, 'n_w')
     sr%ntri_w = read_intparam(filehandle, 'ntri_w')
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
-    write(*,*) sr%ntri_w, sr%n_tor
     
     call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
     call read_array(filehandle, 'yy',       (/sr%n_w,0/),            float1d=sr%d_yy)
@@ -385,6 +455,8 @@ module vacuum_response
   !! * jsurf_w: Surface currents on the wall
   subroutine write_wall_vtk(index, resistive_wall)
     
+    use phys_module, only: nout
+    
     implicit none
     
     ! --- Routine parameters
@@ -396,6 +468,8 @@ module vacuum_response
     integer             :: filehandle = 60, i
     character(len=18)   :: filename
     real*8, allocatable :: tripot_w(:)
+    
+    if ( mod(index,nout) /= 0 ) return
     
     ! --- VTK file header
     write(filename,'(A,I5.5,A)') 'wallcurr.',index,'.vtk'

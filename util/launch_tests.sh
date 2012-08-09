@@ -16,7 +16,9 @@ NAMEDIR=${TRKDIR}/namelist
 # Location of directory that contains executables of Jorek
 EXEDIR=${TRKDIR}
 # Location of target directory where simulation directory will be created
-BASEDIR=/scratch/latu
+if [ -z "$BASEDIR" ]; then
+  BASEDIR=${TRKDIR}
+fi
 # Mpirun command
 if [ -z "$PRERUN" ]; then
   PRERUN="sort -u $OAR_NODEFILE > mach"

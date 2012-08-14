@@ -8,6 +8,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
 use wsmp_module,   only: use_wsmp
+use vacuum,        only: wall_resistivity
 use mpi_mod
 
 implicit none
@@ -27,9 +28,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (331+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (331+2*max_limiter) * IDBL_EXT + (30+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (330+2*max_limiter) * IDBL_EXT + (28+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (330+2*max_limiter) * IDBL_EXT + (29+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -174,6 +175,7 @@ if (my_id .eq. 0) then
 !================= NEO
  call MPI_PACK (aki_neo_const,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
  call MPI_PACK (amu_neo_const,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr) !230+2*max_limiter
+ call MPI_PACK (wall_resistivity,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -413,6 +415,7 @@ if (my_id .ne. 0) then
 !========================== NEO
   call MPI_UNPACK(buffer,bufsize,position,aki_neo_const,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,amu_neo_const,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,wall_resistivity,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,nstep,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,               10,MPI_INTEGER,MPI_COMM_WORLD,ierr)

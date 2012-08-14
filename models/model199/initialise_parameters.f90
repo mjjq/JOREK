@@ -6,7 +6,7 @@ use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
-use vacuum,        only: vacuum_preset
+use vacuum,        only: vacuum_preset, wall_resistivity
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -46,7 +46,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl, xwidth, xsig, xtheta, xshift, xleft, xpoint, &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, resistive_wall,                       &
+                freeboundary, resistive_wall, wall_resistivity,     &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &
                 pastix_smp_only, refinement, grid_to_wall,          &

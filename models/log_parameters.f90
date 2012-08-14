@@ -7,6 +7,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
 use wsmp_module,   only: use_wsmp
+use vacuum,        only: wall_resistivity
 
 implicit none
 
@@ -319,6 +320,9 @@ if (my_id == 0) then
   write(*,232) 'freeboundary        ', freeboundary
   if ( freeboundary ) then
     write(*,232) 'resistive_wall      ', resistive_wall
+    if ( resistive_wall ) then
+      write(*,230) 'wall_resistivity    ', wall_resistivity
+    end if
   end if
   
   write(*,230) 'Q_bar                 ', Q_bar

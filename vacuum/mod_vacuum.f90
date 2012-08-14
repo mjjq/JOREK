@@ -14,8 +14,8 @@ module vacuum
   integer, parameter  :: ivar_j   = 3                    !< Index of j variable
   
   !> @name Resistive wall only
-  real*8              :: wall_resistivity    = 1.d-2     !< Resistivity of the external wall @todo Units etc.??? @todo Make input parameter
-  real*8              :: wall_thickness      = 1.d0      !< Thickness of the external wall @todo Units etc.??? @todo Make input parameter
+  real*8              :: wall_resistivity                !< Resistivity of the external wall
+  real*8              :: wall_thickness      = 1.d0      !< Thickness of the external wall
   integer             :: n_wall_curr                     !< Number of wall current potentials.
   real*8, allocatable :: wall_curr(:)                    !< Wall current potentials (\f$Y_k\f$).
   real*8, allocatable :: dwall_curr(:)                   !< Change of wall current potentials (\f$\delta Y_k\f$).
@@ -86,6 +86,7 @@ module vacuum
     freeboundary_equil   = .false.
     freeboundary         = .false.
     resistive_wall       = .false.
+    wall_resistivity     = 0.d0
     
   end subroutine vacuum_preset
   

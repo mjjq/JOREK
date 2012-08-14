@@ -3,6 +3,7 @@
 # <<jobscript_comment>>
 #
 
+#SBATCH -A <<project>>
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=<<email>>
 #SBATCH -o stdout.txt

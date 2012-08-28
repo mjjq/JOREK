@@ -26,6 +26,9 @@ fi
 if [ -z "$MPIRUN" ]; then
   MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 4"
 fi
+echo BASEDIR=$BASEDIR
+echo PRERUN=$PRERUN
+echo MPIRUN=$MPIRUN
 
 
 # List of executables used during following simulations

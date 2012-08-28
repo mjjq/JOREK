@@ -87,8 +87,8 @@ real*8,                   intent(in)    :: dPSI_open, dPSI_private
 ! --- local variables
 type (type_surface_list) :: flux_list
 
-type (type_node_list), allocatable    :: newnode_list
-type (type_element_list), allocatable :: newelement_list
+type (type_node_list),    pointer     :: newnode_list
+type (type_element_list), pointer     :: newelement_list
 type (type_element)                   :: element
 type (type_node)                      :: nodes(n_vertex_max)
 

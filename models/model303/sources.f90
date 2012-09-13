@@ -29,7 +29,7 @@ end subroutine sources
 
 !====MB===============parallel velocity profile which is kept by the // velocity source implemented in element_matrix.f90
 
-subroutine velocity(xpoint2,Z,Z_xpoint,psi,psi_axis,psi_bnd,velocity_profile,dV_dpsi,dV_dz, &
+subroutine velocity(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,velocity_profile,dV_dpsi,dV_dz, &
                    dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
 !-----------------------------------------------------------------------
 !
@@ -38,12 +38,22 @@ use phys_module
 
 implicit none
 
-logical :: xpoint2
-real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, velocity_profile, psi_barrier
-real*8  :: dV_dpsi, dV_dz, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz
-real*8  :: Z, Z_xpoint, psi, psi_axis, psi_bnd,  psi_n, sig_n, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
-real*8  :: atn, datn, d2atn, d3atn, atn_z, datn_z, d2atn_z, factor
+! --- Routine parameters.
+logical, intent(in)   :: xpoint2
+integer, intent(in)   :: xcase2
+real*8,  intent(in)   :: Z
+real*8,  intent(in)   :: Z_xpoint(2)
+real*8,  intent(in)   :: psi
+real*8,  intent(in)   :: psi_axis
+real*8,  intent(in)   :: psi_bnd
+real*8,  intent(out)  :: velocity_profile, dV_dpsi, dV_dz, dV_dpsi2, dV_dz2, dV_dpsi_dz, &
+                         dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz
 
+real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, psi_barrier
+real*8  :: psi_n, sig_n, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
+real*8  :: atn, datn, d2atn, d3atn, atn_z, datn_z, d2atn_z, factor
+real*8  :: atn_z_u, datn_z_u, d2atn_z_u, Z_star, Z_star_u
+real*8  :: cosh3, cosh3_u, tanh2, tanh2_u
 sig_n       = V_coef(4)
 psi_barrier = V_coef(5)
 
@@ -85,21 +95,58 @@ dV_dpsi_dz2 = 0.d0
 velocity_profile = prof1
 
 if (xpoint2) then
-  sigz    = 0.1d0
 
-  atn_z           =  (0.5d0 - 0.5d0*tanh((Z_xpoint-Z)/sigz))
-  datn_z          =  0.5d0/cosh((Z_xpoint-Z)/sigz)**2 / sigz
-  d2atn_z         = 1.d0/cosh((Z_xpoint-Z)/sigz)**2 /  sigz**2 * tanh((Z_xpoint-Z)/sigz)
+  sigz            = 0.05d0
 
-  velocity_profile =   prof1        * atn_z
-  dV_dpsi         =   dprof1_dpsi  * atn_z
-  dV_dpsi2        =   dprof1_dpsi2 * atn_z
-  dV_dpsi3        =   dprof1_dpsi3 * atn_z
-  dV_dz           = + prof1        * datn_z
-  dV_dz2          = + prof1        * d2atn_z
-  dV_dpsi_dz      =   dprof1_dpsi  * datn_z
-  dV_dpsi2_dz     =   dprof1_dpsi2 * datn_z
-  dV_dpsi_dz2     =   dprof1_dpsi  * d2atn_z
+  Z_star   = (Z_xpoint(1)-Z)/sigz
+  Z_star   = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+  Z_star_u = (Z-Z_xpoint(2))/sigz
+  Z_star_u = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
+
+  tanh2   = tanh(Z_star)
+  cosh3   = cosh(Z_star)
+  tanh2_u = tanh(Z_star_u)
+  cosh3_u = cosh(Z_star_u)
+    
+  atn_z 	   = (0.5d0 - 0.5d0*tanh2)
+  datn_z	   =  0.5d0/cosh3**2   / sigz
+  d2atn_z	   =  1.0d0/cosh3**2   / sigz**2 * tanh2
+  atn_z_u	   = (0.5d0 - 0.5d0*tanh2_u)
+  datn_z_u	   = -0.5d0/cosh3_u**2 / sigz
+  d2atn_z_u	   =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
+  
+  if(xcase2 .eq. 1) then
+    atn_z_u          = 1.d0
+    datn_z_u         = 0.d0
+    d2atn_z_u        = 0.d0
+  endif
+  if(xcase2 .eq. 2) then
+    atn_z            = 1.d0
+    datn_z           = 0.d0
+    d2atn_z          = 0.d0
+  endif
+
+  velocity_profile =   prof1        * atn_z * atn_z_u
+  dV_dpsi         =   dprof1_dpsi  * atn_z * atn_z_u
+  dV_dpsi2        =   dprof1_dpsi2 * atn_z * atn_z_u
+  dV_dpsi3        =   dprof1_dpsi3 * atn_z * atn_z_u
+  dV_dz           = + prof1        * ( datn_z * atn_z_u  +          atn_z * datn_z_u)
+  dV_dz2          = + prof1        * (d2atn_z * atn_z_u  +  2.d0 * datn_z * datn_z_u  +  atn_z *d2atn_z_u)
+  dV_dpsi_dz      =   dprof1_dpsi  * ( datn_z * atn_z_u  +          atn_z * datn_z_u)
+  dV_dpsi2_dz     =   dprof1_dpsi2 * ( datn_z * atn_z_u  +          atn_z * datn_z_u)
+  dV_dpsi_dz2     =   dprof1_dpsi  * (d2atn_z * atn_z_u  +  2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u)
+
+else
+  
+  velocity_profile = prof1
+  dV_dpsi     = dprof1_dpsi!   * factor
+  dV_dpsi2    = dprof1_dpsi2
+  dV_dpsi3    = dprof1_dpsi3!  * factor
+  dV_dz       = 0.d0
+  dV_dz2      = 0.d0
+  dV_dpsi_dz  = 0.d0
+  dV_dpsi2_dz = 0.d0
+  dV_dpsi_dz2 = 0.d0
 
 endif
 

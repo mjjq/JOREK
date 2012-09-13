@@ -1379,7 +1379,7 @@ real*8     :: in_fft(*)
 complex*16 :: out_fft(*)
 
 real*8     :: tmp_fft(2*n+2)
-integer    :: i
+integer    :: i, n
 
 tmp_fft(1:n) = in_fft(1:n)
 

@@ -25,19 +25,19 @@ real*8,                   intent(in)    :: dPSI_open, dPSI_outer, dPSI_inner, dP
 ! --- local variables
 type (type_surface_list) :: flux_list, sep_list
 
-type (type_node_list),    pointer :: newnode_list
-type (type_element_list), pointer :: newelement_list
-type (type_strategic_points)      :: stpts
-type (type_new_points)            :: nwpts
+!type (type_node_list),    pointer :: newnode_list
+!type (type_element_list), pointer :: newelement_list
+type (type_strategic_points) , pointer     :: stpts
+type (type_new_points)       , pointer     :: nwpts
 
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
 real*8              :: s_find(8), t_find(8), tht_x, theta, delta, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
-real*8,allocatable  :: xout(:),xp(:),yp(:)
+!real*8,allocatable  :: xout(:),xp(:),yp(:)
 real*8              :: dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
-integer,allocatable :: keep(:,:,:)
+!integer,allocatable :: keep(:,:,:)
 integer             :: i, j, k, l, m, i2, j2
 integer             :: n_psi
 integer             :: i_surf
@@ -55,7 +55,7 @@ real*8              :: psi_bnd, psi_bnd2
 real*8              :: sigmas(16)
 integer             :: n_grids(10)
 logical             :: xpoint
-real*8,external     :: root
+!real*8,external     :: root
 character*4         :: label
 
 xpoint = .true.
@@ -74,8 +74,10 @@ write(*,*) ' '
 write(*,*) ' '
 
 
-
-
+allocate(stpts)
+allocate(nwpts)
+call tr_register_mem(sizeof(stpts),"stpts",CAT_GRID)
+call tr_register_mem(sizeof(nwpts),"nwpts",CAT_GRID)
 !-------------------------------------------------------------------------------------------!
 !---------------------------- Initialise some internal data --------------------------------!
 !-------------------------------------------------------------------------------------------!
@@ -196,6 +198,11 @@ call define_new_grid_points(node_list, element_list, flux_list, &
 call define_final_grid(node_list, element_list, flux_list, &
 		       xcase, n_grids, stpts, nwpts)
 
+
+deallocate(stpts)
+deallocate(nwpts)
+call tr_unregister_mem(sizeof(stpts),"stpts",CAT_GRID)
+call tr_unregister_mem(sizeof(nwpts),"nwpts",CAT_GRID)
 
 return
 end subroutine grid_double_xpoint

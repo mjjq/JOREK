@@ -211,7 +211,8 @@ endif
 L_IL: do i_lines=1,n_lines
   ip = 0
 
-  write(*,'(2i6,2f8.3)') i_lines,n_lines,R_start(i_lines),Z_start(i_lines)
+  write(*,*)
+  write(*,'(1x,2(a,i6),a,2f8.3)') 'Line',i_lines,' of',n_lines,' started at',R_start(i_lines),Z_start(i_lines)
 
   call find_RZ(node_list,element_list,R_start(i_lines),Z_start(i_lines),R_out,Z_out,i_elm,s_out,t_out,ifail)
   
@@ -223,7 +224,10 @@ L_IL: do i_lines=1,n_lines
   s_line = s_out
   t_line = t_out
   
-  do i_turn = 1, n_turn(i_lines)
+  L_IT: do i_turn = 1, n_turn(i_lines)
+    if ( mod(i_turn-1,max(n_turn(i_lines)/6+1,5)) == 0 ) then
+      write(*,'(3x,2(a,i6))') 'Turn',i_turn,' of',n_turn(i_lines)
+    end if
 
     do i_phi=1,n_phi
     
@@ -316,6 +320,7 @@ L_IL: do i_lines=1,n_lines
       
 	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(4,i_elm_prev)
+              if ( i_elm == 0 ) exit L_IT
 	      i_elm_tmp  = element_neighbours(2,i_elm)
 	      
 	      if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (2)'
@@ -341,6 +346,7 @@ L_IL: do i_lines=1,n_lines
 
 	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(3,i_elm_prev)
+              if ( i_elm == 0 ) exit L_IT
 	      i_elm_tmp  = element_neighbours(1,i_elm)
 	      
 	      if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (3)'
@@ -362,6 +368,7 @@ L_IL: do i_lines=1,n_lines
 
 	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(1,i_elm_prev)
+              if ( i_elm == 0 ) exit L_IT
 	      i_elm_tmp  = element_neighbours(3,i_elm)
 	      
 	      if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (4)',i_elm_prev,i_elm
@@ -417,9 +424,9 @@ L_IL: do i_lines=1,n_lines
 
     if (i_elm .eq. 0) exit
      
-  enddo
+  enddo L_IT
   
-  write(*,*) ' points : ',ip
+  write(*,'(3x,a,i6,a)') '=>',ip,' points'
 
   do i=1,ip
     write(21,'(4e18.8)') Rp(i),Zp(i)

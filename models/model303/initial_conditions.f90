@@ -82,7 +82,7 @@ if (my_id .eq. 0) then
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 !============================MB
     if (abs(V_0) .ge. 1.d-19) then
-    call velocity(xpoint2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
+    call velocity(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
                   dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
     endif
 !============================MB

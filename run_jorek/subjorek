@@ -94,8 +94,8 @@ ccamu*)
 # -------------
 MPIPROCS=1
 NTHREAD=12
-NNODES=4
-WALLTIME=12:00:00
+NNODES=12
+WALLTIME=23:59:00
 ((NLIM=MPIPROCS*NTHREAD))
 if [ "${NLIM}" -gt "13" ]; then
    echo "${NLIM} = ", ${NLIM}
@@ -275,7 +275,7 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
 
   if [ -e jorek_model${MODELNUMBER} ]; then rm -f jorek_model${MODELNUMBER}; fi
-  make cleanall
+  #make cleanall
   # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
   # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
   sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
@@ -334,7 +334,9 @@ rho_file=`grep rho_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | 
 T_file=`grep T_file                     $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 ffprime_file=`grep ffprime_file         $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 R_Z_psi_bnd_file=`grep R_Z_psi_bnd_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
-
+RMP_psi_cos_file=`grep RMP_psi_cos_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+RMP_psi_sin_file=`grep RMP_psi_sin_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+neo_file=`grep neo_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 # copy of the profiles files
 # if they exist 
 # ------------------------------
@@ -406,6 +408,52 @@ else
     echo " ===> no ffprime profile file to read "
 fi
 
+if [ "$RMP_psi_cos_file" != 'none' ] && [ "$RMP_psi_cos_file" != '' ]; then
+   RMP_psi_cos_dir=$(dirname $RMP_psi_cos_file)
+   RMP_psi_cos_file=$(basename $RMP_psi_cos_file)
+   echo " ===> reading of the file profile: " ${RMP_psi_cos_dir}/${RMP_psi_cos_file}
+   if [ -e ${RESDIR}/${RMP_psi_cos_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${RMP_psi_cos_dir}"
+   else
+       if [ "${RMP_psi_cos_dir}" != "." ]; then
+       	  # echo " creation of ${RESDIR}/${RMP_psi_cos_dir} "
+	  mkdir ${RESDIR}/${RMP_psi_cos_dir}
+       fi
+   fi
+   if [ -e ${RMP_psi_cos_dir}/${RMP_psi_cos_file} ]; then
+      # echo " cp ${RMP_psi_cos_dir}/${RMP_psi_cos_file} ${RESDIR}/${RMP_psi_cos_dir}/${RMP_psi_cos_file} "
+      cp ${RMP_psi_cos_dir}/${RMP_psi_cos_file} ${RESDIR}/${RMP_psi_cos_dir}/${RMP_psi_cos_file}
+   else
+      echo "The file " ${RMP_psi_cos_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no RMP_psi_cos profile file to read "
+fi
+
+if [ "$RMP_psi_sin_file" != 'none' ] && [ "$RMP_psi_sin_file" != '' ]; then
+   RMP_psi_sin_dir=$(dirname $RMP_psi_sin_file)
+   RMP_psi_sin_file=$(basename $RMP_psi_sin_file)
+   echo " ===> reading of the file profile: " ${RMP_psi_sin_dir}/${RMP_psi_sin_file}
+   if [ -e ${RESDIR}/${RMP_psi_sin_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${RMP_psi_sin_dir}"
+   else
+       if [ "${RMP_psi_sin_dir}" != "." ]; then
+          # echo " creation of ${RESDIR}/${RMP_psi_sin_dir} "
+          mkdir ${RESDIR}/${RMP_psi_sin_dir}
+       fi
+   fi
+   if [ -e ${RMP_psi_sin_dir}/${RMP_psi_sin_file} ]; then
+      # echo " cp ${RMP_psi_sin_dir}/${RMP_psi_sin_file} ${RESDIR}/${RMP_psi_sin_dir}/${RMP_psi_sin_file} "
+      cp ${RMP_psi_sin_dir}/${RMP_psi_sin_file} ${RESDIR}/${RMP_psi_sin_dir}/${RMP_psi_sin_file}
+   else
+      echo "The file " ${RMP_psi_sin_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no RMP_psi_sin profile file to read "
+fi
+
 if [ "$R_Z_psi_bnd_file" != 'none' ] && [ "$R_Z_psi_bnd_file" != '' ]; then
    R_Z_psi_bnd_dir=$(dirname $R_Z_psi_bnd_file)
    R_Z_psi_bnd_file=$(basename $R_Z_psi_bnd_file)
@@ -428,8 +476,29 @@ if [ "$R_Z_psi_bnd_file" != 'none' ] && [ "$R_Z_psi_bnd_file" != '' ]; then
 else
     echo " ===> no R_Z_psi_bnd profile file to read "
 fi
-echo "==================================================================================="
-echo " "
+
+if [ "$neo_file" != 'none' ] && [ "$neo_file" != '' ]; then
+   neo_dir=$(dirname $neo_file)
+   neo_file=$(basename $neo_file)
+   echo " ===> reading of the file profile: " ${neo_dir}/${neo_file}
+   if [ -e ${RESDIR}/${neo_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${neo_dir}"
+   else
+       if [ "${neo_dir}" != "." ]; then
+          # echo " creation of ${RESDIR}/${neo_dir} "
+          mkdir ${RESDIR}/${neo_dir}
+       fi
+   fi
+   if [ -e ${neo_dir}/${neo_file} ]; then
+      # echo " cp ${neo_dir}/${neo_file} ${RESDIR}/${neo_dir}/${neo_file} "
+      cp ${neo_dir}/${neo_file} ${RESDIR}/${neo_dir}/${neo_file}
+   else
+      echo "The file " ${neo_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no neoclassical profile file to read "
+fi
 
 # copy of the wall file if exists
 # ------------------------------
@@ -453,8 +522,12 @@ if [ "$wall_file" != 'none' ] && [ "$wall_file" != '' ]; then
       exit
    fi
 else
-    echo " ===> no density profile file to read "
+    echo " ===> no wall file to read "
 fi
+
+
+echo "==================================================================================="
+echo " "
 
 # Execution control
 # -----------------

@@ -163,7 +163,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 
                           index_node = node_list%node(inode)%index(2)
 
-                          index_node = node_list%node(inode)%index(1)
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then

@@ -349,6 +349,9 @@ contains
 
               pastix_iparm(IPARM_START_TASK+1) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK+1)   = API_TASK_ANALYSE
+#ifdef USE_MULTFUN
+              pastix_iparm(IPARM_NB_THREAD_COMM+1) = API_THREAD_MULTIPLE
+#endif
 
 #ifdef USE_BLOCK
 
@@ -357,7 +360,6 @@ contains
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #else
-
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
@@ -416,7 +418,9 @@ contains
 
           pastix_iparm(IPARM_START_TASK+1) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+1)   = API_TASK_NUMFACT
-
+#ifdef USE_MULTFUN
+          pastix_iparm(IPARM_NB_THREAD_COMM+1) = API_THREAD_FUNNELED 
+#endif
 #ifdef USE_BLOCK
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
@@ -479,6 +483,9 @@ contains
 
         pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
+#ifdef USE_MULTFUN
+        pastix_iparm(IPARM_NB_THREAD_COMM+1) = API_THREAD_MULTIPLE
+#endif
         if (.not. pastix_smp_only) then
            call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)

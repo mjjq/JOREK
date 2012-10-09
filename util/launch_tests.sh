@@ -1,10 +1,18 @@
 #!/bin/bash
-# Usage:                                                      
-#   # Example For model 199
-#    ./launch_test.sh sim199 # Compute the equilibrium
-#    ./launch_test.sh sim199 # Compute the first 50 time steps
-#    ./launch_test.sh sim199 # Compute the time steps 51 to 100
+if [ $# -ne 1 ]; then
+cat <<EOF
+Usage:                                                      
+# Example for the model 199
+# Compute the reference simulation in the directory sim199
+export BASEDIR="/scratch/login/"
+export PRERUN="export OMP_NUM_THREADS=8" 
+export MPIRUN="mpiexec -machinefile $PBS_NODEFILE -n 4"
 
+./launch_test.sh sim199 
+
+EOF
+exit 1
+fi
 # ---------- Following variables has to be changed by the user ----------
 
 # Trunk of jorek to be used
@@ -26,9 +34,6 @@ fi
 if [ -z "$MPIRUN" ]; then
   MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f mach -iface ib0 -n 4"
 fi
-echo BASEDIR=$BASEDIR
-echo PRERUN=$PRERUN
-echo MPIRUN=$MPIRUN
 
 
 # List of executables used during following simulations

@@ -52,6 +52,11 @@ enddo
 
 if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
+! if we have a symmetric double-null, force the single separatrix
+if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
+  psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+  psi_xpoint(2) = psi_xpoint(1)
+endif
 
 
 do i=1, element_list%n_elements

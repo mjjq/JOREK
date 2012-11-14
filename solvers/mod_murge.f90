@@ -138,11 +138,7 @@ CONTAINS
     IF (gmres) THEN
        row_idx = n_tor*n_var * (index_node - 1) + (k -1)*n_tor + in
        col_idx = n_tor*n_var * (index_node2- 1) + (k2-1)*n_tor + in2
-#  ifdef MURGE_PROD_NODE
        call vertex_is_local_prod(index_node2, is_local)
-#  else
-       call vertex_is_local_prod(col_idx, is_local)
-#  endif
        IF (is_local) THEN
           cnt_prod = cnt_prod + 1
           IF (.not. only_count) THEN
@@ -230,12 +226,7 @@ CONTAINS
              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_BASEVAL,      &
                   &                  1,               ierr)
              murge_ndof_prod = n_tor*n_var
-!#define MURGE_PROD_NODE
-#  ifdef MURGE_PROD_NODE
              ndof = murge_ndof_prod
-#  else
-             ndof = 1
-#  endif
              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_DOF,          &
                   &                  ndof,     ierr)
              CALL MURGE_SetCommunicator(murge_id_prod, MPI_COMM_WORLD, ierr)
@@ -421,9 +412,6 @@ CONTAINS
 
     murge_global_n      = n
     murge_global_n_prod = n
-#  ifndef MURGE_PROD_NODE
-    murge_global_n_prod = murge_global_n_prod*n_tor*n_var
-#  endif
     nnz = n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max
 
     ! Give the graph to MURGE
@@ -699,24 +687,13 @@ CONTAINS
              END DO
           END DO
        END DO
-#    ifndef MURGE_PROD_NODE
-       murge_local_n_prod = murge_local_n_prod * murge_ndof_prod
-#    endif
+
        CALL tr_allocate( murge_loc2glob_prod, 1, murge_local_n_prod,           &
             &            "murge_loc2glob_prod",CAT_DMATRIX)
 
-#    ifdef MURGE_PROD_NODE
        DO i = 1, murge_local_n_prod
           murge_loc2glob_prod(i) = tmp_loc2glob_prod(i)
        END DO
-#    else
-       DO i = 1, murge_local_n_prod/murge_ndof_prod
-          DO j = 1, murge_ndof_prod
-             murge_loc2glob_prod((i-1)*murge_ndof_prod+j) = &
-                  murge_ndof_prod* (tmp_loc2glob_prod(i)-1) + j
-          END DO
-       END DO
-#    endif
 
        CALL tr_deallocate( tmp_loc2glob_prod, "tmp_loc2glob_prod", CAT_DMATRIX)
     ELSE
@@ -727,30 +704,16 @@ CONTAINS
        if (my_id_trans .lt. MOD(murge_local_n, n_cpu_trans)) then
           murge_local_n_prod = murge_local_n_prod + 1
        end if
-#  ifndef MURGE_PROD_NODE
-       murge_local_n_prod = murge_local_n_prod * murge_ndof_prod
-#  endif
 
        CALL tr_allocate( murge_loc2glob_prod, 1, murge_local_n_prod,           &
             &            "murge_loc2glob_prod",CAT_DMATRIX)
        start = murge_local_n_prod*my_id_trans
-#  ifndef MURGE_PROD_NODE
-       start = start/ murge_ndof_prod
-#  endif
+
        start = start + MIN(my_id_trans, MOD(murge_local_n,n_cpu_trans))
 
-#  ifdef MURGE_PROD_NODE
        DO i = 1, murge_local_n_prod
           murge_loc2glob_prod(i) = murge_loc2glob(start + i)
        END DO
-#  else
-       DO i = 1, murge_local_n_prod/murge_ndof_prod
-          DO j = 1, murge_ndof_prod
-             murge_loc2glob_prod((i-1)*murge_ndof_prod+j) =                   &
-                  (murge_loc2glob(start + i)-1)*murge_ndof_prod+j
-          END DO
-       END DO
-#  endif
 #  ifdef MURGE_PROD_NO_COMM
     ENDIF
 #  endif

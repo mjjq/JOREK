@@ -449,7 +449,6 @@ CONTAINS
                    index_node1 = data%PROD_COLROW(1, j, thread)
                    index_node2 = data%PROD_COLROW(2, j, thread)
 #ifdef USE_MURGE
-#  ifdef MURGE_PROD_NODE
 #    ifdef MURGE_USE_SEQUENCE
                    index = DATA%first_entry + DATA%cnt_entries
                    SELECT CASE (DATA%mode)
@@ -489,57 +488,6 @@ CONTAINS
                       RETURN
                    END IF
 #    endif
-#  else
-
-                   DO iter_dof_row = 1, murge_ndof_prod
-                      DO iter_dof_col = 1, murge_ndof_prod
-                         row = (index_node2-1)*murge_ndof_prod+iter_dof_row
-                         col = (index_node1-1)*murge_ndof_prod+iter_dof_col
-                         val = data%PROD_MATRICES(                             &
-                              &  (iter_dof_col-1)*murge_ndof_prod+iter_dof_row,&
-                              &  j, thread)
-
-#    ifdef MURGE_USE_SEQUENCE
-                         IF (row .EQ. 0 .OR. col .EQ. 0) THEN
-                            !$omp critical
-                            PRINT *, row, col, index
-                            !$omp end critical
-                            CALL ABORT()
-                         END IF
-
-                         index = data%first_entry+data%cnt_entries
-
-                         SELECT CASE (data%mode)
-                         CASE (1)
-                         CASE (2)
-                            DATA%ROWS(index) = row
-                            DATA%COLS(index) = col
-                         CASE (3)
-                            DATA%VALS(index) = val
-                         CASE DEFAULT
-                            !$omp critical
-                            WRITE (0,*), __FILE__,__LINE__,"Unknown mode",     &
-                                 &       DATA%mode
-                            !$omp end critical
-                            CALL ABORT()
-                         END SELECT
-                         DATA%cnt_entries = DATA%cnt_entries+1
-#    else
-                         CALL MURGE_ASSEMBLYSETVALUE(murge_id_prod,            &
-                              &                      row, col, val, ierr)
-                         IF (ierr /= MURGE_SUCCESS) THEN
-                            !$omp critical
-                            WRITE (*,*) data%my_id, ":::::",                   &
-                                 "I", row,                                     &
-                                 "J", col, index_node1, ierr
-                            !$omp end critical
-                            data%ok = .FALSE.
-                            RETURN
-                         END IF
-#    endif
-                      END DO
-                   END DO
-#  endif
 #else
                    PRINT *, "Binary built without murge"
                    data%ok = .FALSE.
@@ -1190,11 +1138,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      DEALLOCATE(MURGE_ROWS, MURGE_COLS)
 
      NULLIFY(MURGE_ROWS, MURGE_COLS)
-#  ifdef  MURGE_PROD_NODE
      ALLOCATE(MURGE_VALS(seq_coefnbr*(n_tor*n_var)**2))
-#  else
-     ALLOCATE(MURGE_VALS(seq_coefnbr))
-#  endif
   END IF
   mode = 3
   DO iter = 1, thread_nbr

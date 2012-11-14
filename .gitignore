@@ -1,0 +1,8 @@
+*.o
+*.mod
+*.dep
+Makefile.inc
+j302_1
+j302_3
+version.h
+.fuse_hidden*

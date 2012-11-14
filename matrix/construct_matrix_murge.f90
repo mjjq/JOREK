@@ -974,9 +974,15 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   IF (gmres) THEN
      CALL MURGE_MATRIXRESET(murge_id_prod, ierr)
 #ifndef MURGE_USE_SEQUENCE
+#ifdef MURGE_PROD_NO_COMM
+     CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, coefnbr_prod, MURGE_ASSEMBLY_ADD, &
+          &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_RESPECT,      &
+          &                   murge_sym, ierr)
+#else
      CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, coefnbr_prod, MURGE_ASSEMBLY_ADD, &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_FOOL,         &
           &                   murge_sym, ierr)
+#endif
 #endif
   END IF
 #else

@@ -23,7 +23,7 @@ program JOREK2
   use mumps_module
   use pastix_module
   use murge_module,        only: murge_initialization, murge_setGraph, MURGE_Clean, use_murge,     &
-    use_murge_element, murge_initialised, murge_harmonic, murge_glob2loc, murge_loc2glob, murge_id,&
+    use_murge_element, murge_initialised, murge_glob2loc, murge_loc2glob, murge_id,&
     murge_termination
   use wsmp_module
   use data_structure
@@ -741,10 +741,10 @@ program JOREK2
        ! --- Murge initialisation and graph definition edge by edge
        if (use_murge_element) call murge_initialization(gmres, my_id, MPI_COMM_N, i_tor)
        ! --- Build the graph
-       !   TODO : Avoid doubles
        call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms,      &
             &              element_list, node_list, n_aa, my_id, my_id_trans, &
             &              n_cpu_trans, MPI_COMM_N, MPI_COMM_TRANS)
+
     END IF
     if (use_mumps) then
        if (.not. gmres) then

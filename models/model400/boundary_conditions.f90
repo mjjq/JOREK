@@ -64,47 +64,37 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   integer :: index_large_i, index_node, index_node2, ielm
   integer :: ijA_position,ijA_position2, ilarge2, kv, kTi, kTe, ku, ilarge_vv, ilarge_vTi, ilarge_vTe, ilarge_vus
   integer :: ilarge_vsvs, ilarge_vsTi, ilarge_vsTe, ilarge_vsTis, ilarge_vsTes
-  integer :: loop_nbr, loop, cnt
-  integer :: first_tor, last_tor, murge_ntor, ierr
-  logical :: is_local
+  integer :: loop_nbr, loop, cnt, cnt_prod
+  integer :: ierr
+  logical :: is_local, only_count
   
   zbig = 1.d10
   if (use_murge .and. use_murge_element) then
      ! when we use murge assembly we first count entries then we had them.
-     loop_nbr = 2
-     cnt      = 0
+     loop_nbr   = 2
+     cnt        = 0
+     cnt_prod   = 0
+     only_count = .true.
   else
      ! No need to do 2 loops when we build irn_glob, jcn_glob, A_glob.
-     loop_nbr = 1
-  end if
-
-  if (gmres .and. use_murge .and. use_murge_element) then 
-     if (murge_harmonic == 1) then
-        first_tor = 1
-        last_tor = 1
-        murge_ntor = 1
-     else
-        first_tor = 2*(murge_harmonic-1)
-        last_tor = 2*(murge_harmonic-1)+1
-        murge_ntor = 2
-     end if
-  else
-     first_tor = 1
-     last_tor = n_tor
-     murge_ntor = n_tor
+     loop_nbr   = 1
+     only_count = .false.
   end if
 
   do loop = 1, loop_nbr
 #ifdef USE_MURGE
      if (loop == 2)  then
+        only_count = .false.
         write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
         if (.not. solve_only) then
-           CALL MURGE_ASSEMBLYBEGIN(murge_id, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
-                MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+           CALL MURGE_ASSEMBLYBEGIN( murge_id, cnt,                            &
+                &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,   &
+                &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
         end if
         if (gmres) then
-           CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
-                MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+           CALL MURGE_ASSEMBLYBEGIN( murge_id_prod, cnt_prod,                  &
+                &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,   &
+                &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
         end if
      end if
 #endif
@@ -119,7 +109,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 
            if (node_list%node(inode)%boundary .ne. 0) then
 
-              do in=first_tor, last_tor
+              do in=1, n_tor
 
                  do k=1, n_var
 
@@ -143,15 +133,12 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
-                                if (loop /= loop_nbr) then
-                                   cnt = cnt + 1
-                                else
-                                   call murge_add_one_entry( & 
-                                        & index_node, k, in, &
-                                        & index_node, k, in, &
-                                        & zbig, murge_ntor, solve_only, gmres)
-
-                                end if
+                                call murge_add_one_entry( index_node, k, in, &
+                                     &                    index_node, k, in, &
+                                     &                    zbig, solve_only,  &
+                                     &                    gmres,             &
+                                     &                    cnt, cnt_prod,     &
+                                     &                    only_count)
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -173,14 +160,12 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
-                                if (loop /= loop_nbr) then
-                                   cnt = cnt + 1
-                                else
-                                   call murge_add_one_entry( & 
-                                        & index_node, k, in, &
-                                        & index_node, k, in, &
-                                        & zbig, murge_ntor, solve_only, gmres)
-
+                                call murge_add_one_entry( index_node, k, in, &
+                                     &                    index_node, k, in, &
+                                     &                    zbig, solve_only,  &
+                                     &                    gmres,             &
+                                     &                    cnt, cnt_prod,     &
+                                     &                    only_count)
                                 end if
                              end if
                           else
@@ -254,25 +239,42 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
-                                if (loop /= loop_nbr) then
-                                   cnt = cnt + 3
-                                else
-                                   call murge_add_one_entry( & 
-                                        & index_node, kv,  in, &
-                                        & index_node, kv,  in, &
-                                        & zbig, murge_ntor, solve_only, gmres)
-                                   call murge_add_one_entry( & 
-                                        & index_node, kv,  in, &
-                                        & index_node, kTi, in, &
-                                        & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
-                                   call murge_add_one_entry( & 
-                                        & index_node, kv,  in, &
-                                        & index_node, kTe, in, &
-                                        & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
-                                   call murge_add_one_entry( & 
-                                        & index_node,  kv, in, &
-                                        & index_node2, ku, in, &
-                                        & - zbig * BigR**2 / ps0_s, murge_ntor, solve_only, gmres)
+                                call murge_add_one_entry( index_node, kv, in, &
+                                     &                    index_node, kv, in, &
+                                     &                    zbig, solve_only,   &
+                                     &                    gmres,              &
+                                     &                    cnt, cnt_prod,      &
+                                     &                    only_count)
+                                call murge_add_one_entry( index_node, kv,  in, &
+                                     &                    index_node, kTi, in, &
+                                     &                    - zbig / Btot        &
+                                     &   * 0.5d0                               &
+                                     &   * GAMMA / sqrt(GAMMA*(Ti0 + Te0))     &
+                                     &   * direction,                          &
+                                     &                    solve_only,          &
+                                     &                    gmres,               &
+                                     &                    cnt, cnt_prod,       &
+                                     &                    only_count)
+                                call murge_add_one_entry( index_node, kv,  in, &
+                                     &                    index_node, kTe, in, &
+                                     &                    - zbig / Btot        &
+                                     &   * 0.5d0                               &
+                                     &   * GAMMA / sqrt(GAMMA*(Ti0 + Te0))     &
+                                     &   * direction,                          &
+                                     &                    solve_only,          &
+                                     &                    gmres,               &
+                                     &                    cnt, cnt_prod,       &
+                                     &                    only_count)
+                             if (is_local) then
+                                call murge_add_one_entry( index_node, kv, in,  &
+                                     &                    index_node2, ku, in, &
+                                     &                    - zbig               &
+                                     &   * BigR**2 / ps0_s,                    &
+                                     &                    solve_only,          &
+                                     &                    gmres,               &
+                                     &                    cnt, cnt_prod,       &
+                                     &                    only_count)
+                                if (.not. only_count) then
 
                                    RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
                                         Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*(Ti0 + Te0)) / Btot)
@@ -324,30 +326,38 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node2, is_local)
                              if (is_local) then
-                                if (loop /= loop_nbr) then
-                                   cnt = cnt + 1
-                                else
-                                   call murge_add_one_entry( & 
-                                        & index_node2, kv,  in, &
-                                        & index_node2, kv,  in, &
-                                        & zbig, murge_ntor, solve_only, gmres)
-                                   call murge_add_one_entry( & 
-                                        & index_node2, kv,  in, &
-                                        & index_node2, kTi, in, &
-                                        & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
-                                   call murge_add_one_entry( & 
-                                        & index_node2, kv,  in, &
-                                        & index_node2, kTe, in, &
-                                        & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, murge_ntor, solve_only, gmres)
-                                   call murge_add_one_entry( & 
-                                        & index_node2, kv,  in, &
-                                        & index_node,  kTi, in, &
-                                        & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTi0_ds * direction, murge_ntor, solve_only, gmres)
-                                   call murge_add_one_entry( & 
-                                        & index_node2, kv,  in, &
-                                        & index_node,  kTe, in, &
-                                        & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTe0_ds * direction, murge_ntor, solve_only, gmres)
+                                call murge_add_one_entry( index_node2, kv, in, &
+                                     &                    index_node2, kv, in, &
+                                     &                    zbig, solve_only,   &
+                                     &                    gmres,              &
+                                     &                    cnt, cnt_prod,      &
+                                     &                    only_count)
 
+                                call murge_add_one_entry( index_node2, kv,  in, &
+                                     &                    index_node2, kTi, in, &
+                                     & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, &
+                                     &                    gmres,                &
+                                     &                    cnt, cnt_prod,        &
+                                     &                    only_count)
+                                call murge_add_one_entry( index_node2, kv,  in, &
+                                     &                    index_node2, kTe, in, &
+                                     & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, &
+                                     &                    gmres,                &
+                                     &                    cnt, cnt_prod,        &
+                                     &                    only_count)
+                                call murge_add_one_entry( index_node2, kv,  in, &
+                                     &                    index_node,  kTi, in, &
+                                     & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTi0_ds * direction, &
+                                     &                    gmres,              &
+                                     &                    cnt, cnt_prod,      &
+                                     &                    only_count)
+                                call murge_add_one_entry( index_node2, kv,  in, &
+                                     &                    index_node,  kTe, in, &
+                                     & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTe0_ds * direction, &
+                                     &                    gmres,                &
+                                     &                    cnt, cnt_prod,        &
+                                     &                    only_count)
+                                if (.not. only_count) then 
                                    RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
                                         Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * (dTi0_ds + dTe0_ds) * direction)
                                 end if
@@ -438,15 +448,12 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
-                                if (loop /= loop_nbr) then
-                                   cnt = cnt + 1
-                                else
-                                   call murge_add_one_entry( & 
-                                        & index_node, k, in, &
-                                        & index_node, k, in, &
-                                        & zbig, murge_ntor, solve_only, gmres)
-
-                                end if
+                                call murge_add_one_entry( index_node, k, in, &
+                                     &                    index_node, k, in, &
+                                     &                    zbig, solve_only,  &
+                                     &                    gmres,             &
+                                     &                    cnt, cnt_prod,     &
+                                     &                    only_count)
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -468,13 +475,12 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
-                                if (loop /= loop_nbr) then
-                                   cnt = cnt + 1
-                                else
-                                   call murge_add_one_entry( & 
-                                        & index_node, k, in, &
-                                        & index_node, k, in, &
-                                        & zbig, murge_ntor, solve_only, gmres)
+                                call murge_add_one_entry( index_node, k, in, &
+                                     &                    index_node, k, in, &
+                                     &                    zbig, solve_only,  &
+                                     &                    gmres,             &
+                                     &                    cnt, cnt_prod,     &
+                                     &                    only_count)
 
                                 end if
                              end if

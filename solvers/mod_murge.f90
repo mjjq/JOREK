@@ -94,49 +94,77 @@ CONTAINS
   !! @param zbig        value
   !! @param solve_only  Do not add to harmonic matrix if .true.
   !! @param gmres       Do not add to product matrix if .false.
+  !! @param cnt         Entry counter for precond murge problem.
+  !! @param cnt_prod    Entry counter for product matrix.
+  !! @param only_count  Indicate if we do a count or a real assembly.
   !!
-  SUBROUTINE murge_add_one_entry( index_node, k, in, index_node2, k2,          &
-       &                          in2, zbig, murge_ntor, solve_only, gmres )
+  SUBROUTINE murge_add_one_entry( index_node,  k,  in,                 &
+       &                          index_node2, k2, in2,                &
+       &                          zbig, solve_only, gmres,             &
+       &                          cnt, cnt_prod, only_count)
     USE parameters
 
-    INTEGER :: index_node,  k,  in
-    INTEGER :: index_node2, k2, in2
-    REAL*8  :: zbig
-    INTEGER :: murge_ntor
+    INTEGER, INTENT(IN)    :: index_node,  k,  in
+    INTEGER, INTENT(IN)    :: index_node2, k2, in2
+    REAL*8,  INTENT(IN)    :: zbig
+    LOGICAL, INTENT(IN)    :: solve_only, gmres
+    INTEGER, INTENT(INOUT) :: cnt, cnt_prod
+    LOGICAL, INTENT(IN)    :: only_count
+
     INTEGER(kind=MURGE_INTS_KIND) :: ierr
-    LOGICAL :: solve_only, gmres
     INTEGER(KIND=MURGE_INTS_KIND) :: row_idx, col_idx
+    LOGICAL :: is_local
 #ifdef USE_MURGE
     IF (.NOT. solve_only) THEN
-       row_idx = murge_ndof * (index_node - 1) + (k -1)*murge_ntor + 1
-       col_idx = murge_ndof * (index_node2- 1) + (k2-1)*murge_ntor + 1
-       IF (in /= 1) row_idx = row_idx + MOD(in, 2)
-       IF (in2 /= 1) col_idx = col_idx + MOD(in2, 2)
-       CALL MURGE_ASSEMBLYSETVALUE( murge_id, row_idx, col_idx, zbig,          &
-            &                       ierr )
-       IF (ierr /= MURGE_SUCCESS) THEN
-          WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ",                     &
-               "I", index_node, murge_ndof, k, in,                             &
-               "J", index_node2, k2, in2
-          STOP
+       IF ( (in  .ge. murge_first_tor  .and. in  .le. murge_last_tor) .and. &
+            (in2 .ge. murge_first_tor  .and. in2 .le. murge_last_tor) ) THEN
+          IF (only_count) THEN
+             cnt = cnt + 1
+          ELSE
+             row_idx = murge_ndof * (index_node - 1) + (k -1)*murge_ntor + 1
+             col_idx = murge_ndof * (index_node2- 1) + (k2-1)*murge_ntor + 1
+             IF (in  /= 1) row_idx = row_idx + MOD(in,  2)
+             IF (in2 /= 1) col_idx = col_idx + MOD(in2, 2)
+             CALL MURGE_ASSEMBLYSETVALUE( murge_id, row_idx, col_idx, zbig,    &
+                  &                       ierr )
+             IF (ierr /= MURGE_SUCCESS) THEN
+                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", ierr,         &
+                     "I", index_node, murge_ndof, k, in,                       &
+                     "J", index_node2, k2, in2
+                STOP
+             END IF
+          END IF
        END IF
     END IF
     IF (gmres) THEN
        row_idx = n_tor*n_var * (index_node - 1) + (k -1)*n_tor + in
        col_idx = n_tor*n_var * (index_node2- 1) + (k2-1)*n_tor + in2
-       CALL MURGE_ASSEMBLYSETVALUE( murge_id_prod, row_idx, col_idx, zbig,     &
-            &                       ierr )
+       IF ( (in  .ge. murge_first_tor  .and. in  .le. murge_last_tor) .and. &
+            (in2 .ge. murge_first_tor  .and. in2 .le. murge_last_tor) ) THEN
+#  ifdef MURGE_PROD_NODE
+       !call vertex_is_local_prod(index_node2, is_local)
+#  else
+       !call vertex_is_local_prod(col_idx, is_local)
+#  endif
+       !IF (is_local) THEN
+          IF (only_count) THEN
+             cnt_prod = cnt_prod + 1
+          ELSE
+             CALL MURGE_ASSEMBLYSETVALUE( murge_id_prod, row_idx, col_idx,  &
+                  &                       zbig, ierr )
 
-       IF (ierr /= MURGE_SUCCESS) THEN
-          WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE(prod) ",               &
-               "I", index_node, n_tor, n_var, k, in,                           &
-               "J", index_node2, k2, in2
-          STOP
+             IF (ierr /= MURGE_SUCCESS) THEN
+                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE(prod) ",      &
+                     "I", index_node, n_tor, n_var, k, in,                  &
+                     "J", index_node2, k2, in2
+                STOP
+             END IF
+          END IF
        END IF
     END IF
 #else
-       print *, "Binary built without murge"
-       call abort()
+    PRINT *, "Binary built without murge"
+    CALL abort()
 #endif
   END SUBROUTINE murge_add_one_entry
 

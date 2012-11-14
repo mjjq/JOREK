@@ -123,7 +123,7 @@ program JOREK2
   real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
-  integer                  :: n_local_ELMs, index_total
+  integer                  :: n_local_ELMs
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
@@ -154,7 +154,6 @@ program JOREK2
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   REAL*8                   :: max_time, min_time, tsecond
   integer, allocatable     :: tab_n_local_elems(:)
-  integer                  :: sum_n_local_elms, max_n_local_elms, min_n_local_elms
   real*8                   :: t_this
   integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
 ! =================== plot NEO coeffs ==================
@@ -745,89 +744,9 @@ program JOREK2
        if (use_murge_element) call murge_initialization(gmres, my_id, MPI_COMM_N, i_tor)
        ! --- Build the graph
        !   TODO : Avoid doubles
-       call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms, &
-    	 element_list, node_list, n_aa, my_id, my_id_trans, n_cpu_trans)
-       call clck_time(t0)
-       ! Build local_elms from loc2glob
-       n_local_elms = 0
-
-       DO i_elem = 1, element_list%n_elements
-
-    	  element = element_list%element(i_elem)
-    	  DO i=1,n_vertex_max
-
-    	     inode1 = element%vertex(i)
-
-    	     DO i_order = 1, n_order+1
-
-    		index_node1 = node_list%node(inode1)%index(i_order)
-    		
-    		   call vertex_is_local(index_node1, is_local)
-    		IF (is_local) THEN	
-    		   n_local_elms = n_local_elms + 1
-    		   EXIT
-    		END IF
-    	     END DO
-    	     IF (is_local) THEN      
-    		n_local_elms = n_local_elms + 1
-    		EXIT
-    	     END IF
-    	  END DO
-       END DO
-
-       IF (ALLOCATED(local_elms)) call tr_deallocate(local_elms,"local_elms",CAT_FEM)
-       ! Build local_elms from loc2glob
-       call tr_allocate(local_elms,1,n_local_elms,"local_elms",CAT_FEM)
-
-       n_local_elms = 0
-       DO i_elem = 1, element_list%n_elements
-
-    	  element = element_list%element(i_elem)
-    	  L_I: DO i=1,n_vertex_max
-
-    	     inode1	    = element%vertex(i)
-
-    	     DO i_order = 1, n_order+1
-
-    		index_node1 = node_list%node(inode1)%index(i_order)
-
-    		   call vertex_is_local(index_node1, is_local)
-    		IF (is_local) THEN	
-    		   n_local_elms = n_local_elms + 1
-    		   local_elms(n_local_elms) = i_elem
-    		   exit L_I
-    		END IF
-    	     END DO
-    	  END DO L_I
-       END DO
-       call clck_time(t1)
-       call clck_ldiff(t0,t1,tsecond)
-       CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
-       CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
-       if (my_id .eq. 0) then
-    	  write(*,FMT_TIMING) my_id, '# Elapsed time local element list :',min_time
-    	  write(*,FMT_TIMING) my_id, '# Elapsed time local element list :',max_time
-       end if
-
-       CALL MPI_Reduce(n_local_elms, sum_n_local_elms, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_N, ierr)
-       CALL MPI_Reduce(n_local_elms, max_n_local_elms, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_N, ierr)
-       CALL MPI_Reduce(n_local_elms, min_n_local_elms, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_N, ierr)
-
-       if (my_id .eq. 0) then
-    	  write(*,"(A70,I12)") ' maximum number of elements computed on one cpu ', max_n_local_elms
-    	  write(*,"(A70,I12)") ' minimum number of elements computed on one cpu ', min_n_local_elms
-    	  write(*,"(A70,I12)") ' number of elements computed over all cpus ', sum_n_local_elms
-    	  write(*,"(A70,I12)") ' total number of elements ', element_list%n_elements
-       end if
-
-       index_total = -1
-       do inode=1, node_list%n_nodes
-    	  index_total = max(index_total,maxval(node_list%node(inode)%index))
-       enddo
-
-       ndof_glob  = index_total * n_tor * n_var
-
-       node_list%n_dof = ndof_glob
+       call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms,      &
+            &              element_list, node_list, n_aa, my_id, my_id_trans, &
+            &              n_cpu_trans, MPI_COMM_N)
     END IF
     if (use_mumps) then
        if (.not. gmres) then

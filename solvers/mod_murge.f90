@@ -288,38 +288,46 @@ CONTAINS
   END SUBROUTINE murge_termination
 
   SUBROUTINE murge_setGraph(gmres, n, local_elms, n_local_elms, element_list, &
-       &                    node_list, n_aa, my_id, my_id_trans, n_cpu_trans)
+       &                    node_list, n_aa, my_id, my_id_trans, n_cpu_trans, &
+       &                    MPI_COMM_N)
 
-    use parameters, only : n_order, n_vertex_max
-    use data_structure, only : type_element, type_element_list, type_node_list
-    USE parameters, ONLY : n_tor, n_var
+    USE parameters,                ONLY : n_order, n_vertex_max
+    USE data_structure,            ONLY : type_element, type_element_list,     &
+         &                                type_node_list
+    USE parameters,                ONLY : n_tor, n_var
+    USE global_distributed_matrix, ONLY : ndof_glob
+    USE clock_module,              ONLY : clcktype, clck_time, clck_ldiff,     &
+         &                                FMT_TIMING
+    USE mpi_mod,                   ONLY : MPI_REAL8, MPI_MAX, MPI_COMM_WORLD,  &
+         &                                MPI_MIN, MPI_INTEGER, MPI_SUM
 
-
-    logical :: gmres
-    integer :: n
-    integer :: n_local_elms
-    type (type_element_list) :: element_list
-    type (type_node_list)    :: node_list
-    integer :: n_aa
-    integer :: my_id
-    integer :: my_id_trans
-    integer :: n_cpu_trans
-
-    integer :: local_elms(:)
+    logical,                  INTENT(IN)    :: gmres
+    integer,                  INTENT(IN)    :: n
+    integer, ALLOCATABLE,     INTENT(INOUT) :: local_elms(:)
+    integer,                  INTENT(INOUT) :: n_local_elms
+    type (type_element_list), INTENT(IN)    :: element_list
+    type (type_node_list),    INTENT(INOUT) :: node_list
+    integer,                  INTENT(IN)    :: n_aa
+    integer,                  INTENT(IN)    :: my_id
+    integer,                  INTENT(IN)    :: my_id_trans
+    integer,                  INTENT(IN)    :: n_cpu_trans
+    integer,                  INTENT(IN)    :: MPI_COMM_N
 
     integer(KIND=MURGE_INTS_KIND) :: ierr
     integer(KIND=MURGE_INTL_KIND) :: nnz
-    integer :: t0, t1, start
+    integer :: start
     integer :: i_elem
     integer :: i, j, k, inode1, knode, i_order, k_order
     integer(KIND=MURGE_INTS_KIND) :: index_node1, index_node2
     type (type_element)      :: element
-    integer :: nb_periods, nb_periodes_max, nb_periodes_sec
-    character(len=20), parameter :: FMT_TIMING = "(I2,A70,F7.2)"
+    type(clcktype)           :: t0, t1
+    REAL*8                   :: max_time, min_time, tsecond
+    logical                  :: is_local
+    integer                  :: sum_n_local_elms, max_n_local_elms, min_n_local_elms
+    integer                  :: index_total, inode 
 
 #ifdef USE_MURGE
     call tr_debug_write("murge_setgraph begin")
-    call system_clock(count_rate=nb_periodes_sec, count_max=nb_periodes_max)
 
     murge_global_n      = n
     murge_global_n_prod = n
@@ -333,7 +341,7 @@ CONTAINS
        write (*,*) "ERROR in MURGE_GRAPHBEGIN"
        STOP
     END IF
-    call system_clock(count=t0)
+    call clck_time(t0)
 
     call tr_debug_write("murge_setgraph loop start")
     DO i_elem = 1, n_local_elms
@@ -375,26 +383,32 @@ CONTAINS
     END DO
 
     call tr_debug_write("murge_setgraph loop end")
-    call system_clock(count=t1)
-    nb_periods = t1-t0
-    if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING) my_id, ' system_clock elapsed time entering graph ',   &
-         REAL(nb_periods)/nb_periodes_sec
+    call clck_time(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+    CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING) my_id, '# Elapsed time entering graph :',min_time
+       write(*,FMT_TIMING) my_id, '# Elapsed time entering graph :',max_time
+    end if
 
-    call system_clock(count=t0)
+
+    call clck_time(t0)
     CALL MURGE_GRAPHEND(murge_id, ierr)
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_GRAPHEND"
        STOP
     END IF
-    call system_clock(count=t1)
-    nb_periods = t1-t0
-    if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING)                                                        &
-         my_id, ' system_clock elapsed time in MURGE_GRAPHEND ',               &
-         REAL(nb_periods)/nb_periodes_sec
+    call clck_time(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+    CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING) my_id, '# Elapsed time in MURGE_GRAPHEND :',min_time
+       write(*,FMT_TIMING) my_id, '# Elapsed time in MURGE_GRAPHEND :',max_time
+    end if
 
-    call system_clock(count=t0)
+    call clck_time(t0)
     CALL MURGE_GETLOCALNODENBR(murge_id, murge_local_n, ierr)
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_GETLOCALNODENBR"
@@ -415,20 +429,22 @@ CONTAINS
        write (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODENBR"
        STOP
     END IF
-    call system_clock(count=t1)
-    nb_periods = t1-t0
-    if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING) my_id,                                                 &
-         ' system_clock elapsed time in MURGE_GETLOCALNODENBR ',               &
-         REAL(nb_periods)/nb_periodes_sec
-
+    call clck_time(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+    CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING) my_id, '# Elapsed time in MURGE_GETLOCALNODENBR :',min_time
+       write(*,FMT_TIMING) my_id, '# Elapsed time in MURGE_GETLOCALNODENBR :',max_time
+    end if
 
     call tr_allocate(murge_loc2glob, 1, murge_local_n, "murge_loc2glob",       &
          &           CAT_DMATRIX)
     call tr_allocate( murge_loc2glob_prod, 1, murge_local_n_prod,              &
          &            "murge_loc2glob_prod",CAT_DMATRIX)
     write (*,*) "Local number of nodes", murge_local_n, "global",  n
-    call system_clock(count=t0)
+
+    call clck_time(t0)
     CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, ierr)
     if (allocated(murge_glob2loc))                                             &
          call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
@@ -463,35 +479,93 @@ CONTAINS
        write (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODELIST"
        STOP
     END IF
-    call system_clock(count=t1)
-    nb_periods = t1-t0
-    if (t1<t0) nb_periods = nb_periods + nb_periodes_max
-    write(*,FMT_TIMING) my_id,                                                 &
-         ' system_clock elapsed time in MURGE_GETLOCALNODELIST ',              &
-         REAL(nb_periods)/nb_periodes_sec
+    call clck_time(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+    CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING) my_id, '# Elapsed time in MURGE_GETLOCALNODELIST :',min_time
+       write(*,FMT_TIMING) my_id, '# Elapsed time in MURGE_GETLOCALNODELIST :',max_time
+    end if
 
-    !!murge_local_n_prod = murge_local_n/((n_tor+1)/2)
-    !!if (my_id == 0) then
-    !!   murge_local_n_prod = murge_local_n_prod +                             &
-    !!       MOD(murge_local_n, (n_tor+1)/2)
-    !!end if
-    !!allocate (murge_loc2glob_prod(murge_local_n_prod))
-    !!iter2=1
-    !!do iter = my_id_trans+1, murge_local_n, (n_tor+1)/2
-    !!   murge_loc2glob_prod(iter2) = murge_loc2glob(iter)
-    !!   iter2 = iter2 + 1
-    !!end do
-    !!call MURGE_SETLOCALNODELIST(murge_id_prod, murge_local_n_prod,           &
-    !!     &                      murge_loc2glob_prod, ierr)
-    !!IF (ierr /= MURGE_SUCCESS) THEN
-    !!   write (*,*) "ERROR in MURGE_SETLOCALNODELIST"
-    !!   STOP
-    !!END IF
+    call clck_time(t0)
+    ! Build local_elms from loc2glob
+    n_local_elms = 0
+
+    DO i_elem = 1, element_list%n_elements
+       element = element_list%element(i_elem)
+       LOOP_VERTEX : DO i=1,n_vertex_max
+          inode1 = element%vertex(i)
+          DO i_order = 1, n_order+1
+             index_node1 = node_list%node(inode1)%index(i_order)
+             call vertex_is_local(index_node1, is_local)
+             IF (is_local) THEN	
+                n_local_elms = n_local_elms + 1
+                EXIT LOOP_VERTEX
+             END IF
+          END DO
+       END DO LOOP_VERTEX
+    END DO
+
+    IF (ALLOCATED(local_elms)) call tr_deallocate(local_elms,"local_elms",CAT_FEM)
+    ! Build local_elms from loc2glob
+    call tr_allocate(local_elms,1,n_local_elms,"local_elms",CAT_FEM)
+
+    n_local_elms = 0
+    DO i_elem = 1, element_list%n_elements
+
+       element = element_list%element(i_elem)
+       L_I: DO i=1,n_vertex_max
+
+          inode1	    = element%vertex(i)
+
+          DO i_order = 1, n_order+1
+
+             index_node1 = node_list%node(inode1)%index(i_order)
+      
+             call vertex_is_local(index_node1, is_local)
+             IF (is_local) THEN	
+                n_local_elms = n_local_elms + 1
+                local_elms(n_local_elms) = i_elem
+                exit L_I
+             END IF
+          END DO
+       END DO L_I
+    END DO
+    call clck_time(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    CALL MPI_Reduce(tsecond, max_time, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+    CALL MPI_Reduce(tsecond, min_time, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING) my_id, '# Elapsed time local element list :',min_time
+       write(*,FMT_TIMING) my_id, '# Elapsed time local element list :',max_time
+    end if
+
+    CALL MPI_Reduce(n_local_elms, sum_n_local_elms, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_N, ierr)
+    CALL MPI_Reduce(n_local_elms, max_n_local_elms, 1, MPI_INTEGER, MPI_MAX, 0, MPI_COMM_N, ierr)
+    CALL MPI_Reduce(n_local_elms, min_n_local_elms, 1, MPI_INTEGER, MPI_MIN, 0, MPI_COMM_N, ierr)
+
+    if (my_id .eq. 0) then
+       write(*,"(A70,I12)") ' maximum number of elements computed on one cpu ', max_n_local_elms
+       write(*,"(A70,I12)") ' minimum number of elements computed on one cpu ', min_n_local_elms
+       write(*,"(A70,I12)") ' number of elements computed over all cpus ', sum_n_local_elms
+       write(*,"(A70,I12)") ' total number of elements ', element_list%n_elements
+    end if
+
+    index_total = -1
+    do inode=1, node_list%n_nodes
+       index_total = max(index_total,maxval(node_list%node(inode)%index))
+    enddo
+
+    ndof_glob  = index_total * n_tor * n_var
+    
+    node_list%n_dof = ndof_glob
+
 
     call tr_debug_write("murge_setgraph end")
 #else
-       print *, "Binary built without murge"
-       call abort()
+    print *, "Binary built without murge"
+    call abort()
 #endif
   END SUBROUTINE murge_setGraph
 end module murge_module

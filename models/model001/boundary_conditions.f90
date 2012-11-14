@@ -65,7 +65,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
   integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT
   integer :: loop_nbr, loop, cnt, cnt_prod
-  integer :: first_tor, last_tor, murge_ntor, ierr
+  integer :: first_tor, last_tor, ierr
   logical :: is_local, only_count
   
   zbig = 1.d10

@@ -397,7 +397,7 @@ CONTAINS
        CALL SYSTEM_CLOCK(count=t1)
        data%nb_periods_ass = data%nb_periods_ass + t1-t0
        IF (t1<t0) &
-            data%nb_periods_ass = &data%nb_periods_ass + data%nb_periods_max
+            data%nb_periods_ass = data%nb_periods_ass + data%nb_periods_max
        !$omp critical
        PRINT *, "TEMPS ASS", data%my_id, data%thread_num, t1-t0
        !$omp end critical

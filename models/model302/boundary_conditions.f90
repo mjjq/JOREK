@@ -89,6 +89,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
            write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
            CALL MURGE_ASSEMBLYBEGIN(murge_id, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+           cnt = 0
         end if
         if (gmres) then
            write (*,*) &
@@ -96,6 +97,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                 cnt_prod, " product entries"
            CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, cnt_prod , MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+           cnt_prod = 0
         end if
      end if
 #endif
@@ -424,16 +426,11 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                           if (use_murge .and. use_murge_element) then
                              call vertex_is_local(index_node, is_local)
                              if (is_local) then
-                                if (loop /= loop_nbr) then
-                                   cnt = cnt + 1
-                                else
-                                   call murge_add_one_entry(                  & 
-                                        & index_node, k, in,                  &
-                                        & index_node, k, in,                  &
-                                        & zbig, solve_only, gmres,            &
-                                        & cnt, cnt_prod, only_count)
-
-                                end if
+                                call murge_add_one_entry(                  & 
+                                     & index_node, k, in,                  &
+                                     & index_node, k, in,                  &
+                                     & zbig, solve_only, gmres,            &
+                                     & cnt, cnt_prod, only_count)
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then

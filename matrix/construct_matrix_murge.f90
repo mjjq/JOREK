@@ -660,8 +660,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE global_distributed_matrix, ONLY : RHS_GLOB, column_scaling, ndof_glob
   USE mumps_module, ONLY : mumps_par
   USE thread_data,  ONLY : thread_data_type, LOOP
-  USE phys_module, ONLY : index_now
+  USE phys_module,  ONLY : index_now
   USE mpi_mod
+  USE murge_module, ONLY : murge_assembly_step, murge_elem_block_size
   IMPLICIT NONE
 #include "r3_info.h"
   
@@ -760,13 +761,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
 
   IF (my_id .EQ. 0) PRINT *, "THREAD_NBR", thread_nbr
 
-  elem_block_size = 1*thread_nbr
-  IF (MOD(elem_block_size, ((n_tor+1)/2)) .EQ. 0) THEN
-     elem_block_size = n_local_elms/((n_tor+1)/2)
-  ELSE
-     elem_block_size = ((n_local_elms - MOD(elem_block_size,                   &
-          &                                 ((n_tor+1)/2)))/((n_tor+1)/2))+1
-  END IF
+  elem_block_size = murge_elem_block_size
+
   elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
   ! We allocate too much for harm_0
   harm_size = 2*n_var
@@ -838,13 +834,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   RHS_loc  = 0.d0
   Rhs_loc_thread = 0.d0
 
-  IF (gmres) THEN
-     step = elem_block_size*(n_tor+1)/2
-     CALL MPI_AllReduce(elem_block_size, step, 1, MPI_INTEGER, MPI_SUM,        &
-          &             MPI_COMM_TRANS, ierr)
-  ELSE
-     step = elem_block_size
-  END IF
+  step = murge_assembly_step
+
   !
   ! Count coefnbr
   !

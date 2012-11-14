@@ -1,6 +1,6 @@
 !> Variables and and routines related to the MURGE solver interface.
 MODULE murge_module
-  use tr_module
+  USE tr_module
   IMPLICIT NONE
 
   INCLUDE "murge.inc"
@@ -13,6 +13,9 @@ MODULE murge_module
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_id
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_id_prod
   INTEGER                                     :: murge_harmonic
+  INTEGER                                     :: murge_ntor
+  INTEGER                                     :: murge_first_tor
+  INTEGER                                     :: murge_last_tor
   ! Local number of element
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_local_n
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_local_n_prod
@@ -74,6 +77,8 @@ MODULE murge_module
   INTEGER(KIND=MURGE_INTS_KIND), POINTER      :: MURGE_ROWS(:), MURGE_COLS(:)
   REAL(KIND=MURGE_COEF_KIND),    POINTER      :: MURGE_VALS(:)
   INTEGER,           ALLOCATABLE, TARGET      :: murge_assembly_first_entry(:)
+  INTEGER                                     :: murge_assembly_step
+  INTEGER                                     :: murge_elem_block_size
 CONTAINS
   !>
   !! Subroutine: murge_add_one_entry
@@ -135,14 +140,23 @@ CONTAINS
 #endif
   END SUBROUTINE murge_add_one_entry
 
+
+  !> Subroutine: murge_initialization
+  !!
+  !! Initialize murge instances.
+  !!
+  !! @param gmres       boolean indicating if we are running in GMRES mode.
+  !! @param my_id       Rank of the process in MPI_COMM_WORLD
+  !! @param mpi_comm_n  By harmonic communicator.
+  !! @param i_tor       Harmonic ID.
   SUBROUTINE murge_initialization(gmres, my_id, mpi_comm_n, i_tor)
     USE parameters, ONLY : n_tor, n_var
     USE mpi_mod
 
-    LOGICAL :: gmres
-    INTEGER :: MPI_COMM_N
-    INTEGER :: my_id
-    INTEGER :: i_tor(:)
+    LOGICAL, INTENT(IN) :: gmres
+    INTEGER, INTENT(IN) :: MPI_COMM_N
+    INTEGER, INTENT(IN) :: my_id
+    INTEGER, INTENT(IN) :: i_tor(:)
 
     INTEGER, EXTERNAL :: omp_get_num_threads
     INTEGER(KIND=MURGE_INTS_KIND) :: ierr
@@ -150,10 +164,24 @@ CONTAINS
 
 #ifdef USE_MURGE
 
-    murge_need_rebuild_sequence(1) = .true.
-    murge_need_rebuild_sequence(2) = .true.
-
-    call tr_debug_write("murge_initialised begin")
+    murge_need_rebuild_sequence(1) = .TRUE.
+    murge_need_rebuild_sequence(2) = .TRUE.
+    murge_harmonic  = 1
+    murge_ntor      = n_tor
+    murge_first_tor = 1
+    murge_last_tor  = n_tor
+    if (gmres) then
+       murge_harmonic  = i_tor(my_id+1)
+       murge_ntor      = 2
+       murge_first_tor = 2*(murge_harmonic-1)
+       murge_last_tor  = 2*(murge_harmonic-1)+1
+       if (murge_harmonic .eq. 1) then
+          murge_ntor      = 1
+          murge_first_tor = 1
+          murge_last_tor  = 1
+       end if
+    end if
+    CALL tr_debug_write("murge_initialised begin")
     IF (.NOT. murge_initialised) THEN
        murge_id = 0
        !$omp PARALLEL shared(murge_nthrd)
@@ -179,11 +207,11 @@ CONTAINS
                   &                  1,               ierr)
              murge_ndof_prod = n_tor*n_var
 !#define MURGE_PROD_NODE
-#ifdef MURGE_PROD_NODE
+#  ifdef MURGE_PROD_NODE
              ndof = murge_ndof_prod
-#else
+#  else
              ndof = 1
-#endif
+#  endif
              CALL MURGE_SetOptionINT(murge_id_prod, MURGE_IPARAM_DOF,          &
                   &                  ndof,     ierr)
              CALL MURGE_SetCommunicator(murge_id_prod, MPI_COMM_WORLD, ierr)
@@ -212,6 +240,8 @@ CONTAINS
           ! refinement : max number of iterations
           CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,                     &
                &                  murge_iter,      ierr)
+          CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINEMENT,            &
+               &                  API_NO,      ierr)
           ! degrees of freedom per node (not correct)
           IF (gmres) THEN
              IF ( i_tor(my_id+1) == 1 ) THEN
@@ -254,10 +284,10 @@ CONTAINS
 
        murge_initialised = .TRUE.
     END IF
-    call tr_debug_write("murge_initialised end")
+    CALL tr_debug_write("murge_initialised end")
 #else
-       print *, "Binary built without murge"
-       call abort()
+       PRINT *, "Binary built without murge"
+       CALL abort()
 #endif
   END SUBROUTINE murge_initialization
 
@@ -289,7 +319,7 @@ CONTAINS
 
   SUBROUTINE murge_setGraph(gmres, n, local_elms, n_local_elms, element_list, &
        &                    node_list, n_aa, my_id, my_id_trans, n_cpu_trans, &
-       &                    MPI_COMM_N)
+       &                    MPI_COMM_N, MPI_COMM_TRANS)
 
     USE parameters,                ONLY : n_order, n_vertex_max
     USE data_structure,            ONLY : type_element, type_element_list,     &
@@ -311,7 +341,7 @@ CONTAINS
     integer,                  INTENT(IN)    :: my_id
     integer,                  INTENT(IN)    :: my_id_trans
     integer,                  INTENT(IN)    :: n_cpu_trans
-    integer,                  INTENT(IN)    :: MPI_COMM_N
+    integer,                  INTENT(IN)    :: MPI_COMM_N, MPI_COMM_TRANS
 
     integer(KIND=MURGE_INTS_KIND) :: ierr
     integer(KIND=MURGE_INTL_KIND) :: nnz
@@ -328,6 +358,8 @@ CONTAINS
 
 #ifdef USE_MURGE
     call tr_debug_write("murge_setgraph begin")
+
+
 
     murge_global_n      = n
     murge_global_n_prod = n
@@ -560,6 +592,21 @@ CONTAINS
     ndof_glob  = index_total * n_tor * n_var
     
     node_list%n_dof = ndof_glob
+
+    IF (MOD(n_local_elms, ((n_tor+1)/2)) .EQ. 0) THEN
+       murge_elem_block_size = n_local_elms/((n_tor+1)/2)
+    ELSE
+       murge_elem_block_size = ((n_local_elms - MOD(n_local_elms,       &
+            &                   ((n_tor+1)/2)))/((n_tor+1)/2))+1
+    END IF
+
+    IF (gmres) THEN
+       murge_assembly_step = murge_elem_block_size*(n_tor+1)/2
+       CALL MPI_AllReduce(murge_elem_block_size, murge_assembly_step, 1,   &
+            &             MPI_INTEGER, MPI_SUM, MPI_COMM_TRANS, ierr)
+    ELSE
+       murge_assembly_step = murge_elem_block_size
+    END IF
 
 
     call tr_debug_write("murge_setgraph end")

@@ -65,34 +65,23 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
   integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT
   integer :: loop_nbr, loop, cnt
-  integer :: first_tor, last_tor, murge_ntor, ierr
+  integer :: first_tor, last_tor, ierr
   logical :: is_local
   
   zbig = 1.d10
   if (use_murge .and. use_murge_element) then
      ! when we use murge assembly we first count entries then we had them.
-     loop_nbr = 2
-     cnt      = 0
+     loop_nbr  = 2
+     cnt       = 0
+     first_tor = murge_first_tor
+     last_tor  = murge_last_tor 
   else
      ! No need to do 2 loops when we build irn_glob, jcn_glob, A_glob.
-     loop_nbr = 1
+     loop_nbr  = 1
+     first_tor = 1
+     last_tor  = n_tor
   end if
 
-  if (gmres .and. use_murge .and. use_murge_element) then 
-     if (murge_harmonic == 1) then
-        first_tor = 1
-        last_tor = 1
-        murge_ntor = 1
-     else
-        first_tor = 2*(murge_harmonic-1)
-        last_tor = 2*(murge_harmonic-1)+1
-        murge_ntor = 2
-     end if
-  else
-     first_tor = 1
-     last_tor = n_tor
-     murge_ntor = n_tor
-  end if
 
 
   do loop = 1, loop_nbr

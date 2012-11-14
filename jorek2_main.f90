@@ -652,7 +652,6 @@ program JOREK2
     !* MPI_COMM_MASTER : group of masters of each harmonic *
     !*  		 (i.e id=0 from each MPI_COMM_N)   *
     !*******************************************************
-    murge_harmonic = 1
     if (gmres) then
 
        N_masters = (n_tor+1)/2
@@ -672,7 +671,6 @@ program JOREK2
        do i=1,n_cpu
     	  i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
        enddo
-       murge_harmonic = i_tor(my_id+1)
 
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
        
@@ -746,7 +744,7 @@ program JOREK2
        !   TODO : Avoid doubles
        call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms,      &
             &              element_list, node_list, n_aa, my_id, my_id_trans, &
-            &              n_cpu_trans, MPI_COMM_N)
+            &              n_cpu_trans, MPI_COMM_N, MPI_COMM_TRANS)
     END IF
     if (use_mumps) then
        if (.not. gmres) then

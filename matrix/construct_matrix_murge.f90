@@ -430,9 +430,11 @@ CONTAINS
 #endif
 
                    IF (ierr /= MURGE_SUCCESS) THEN
+                      !$omp critical
                       WRITE (*,*) data%my_id, ":::",                           &
                            "I", index_node2,                                   &
                            "J", index_node1, cnt
+                      !$omp end critical
                       data%ok = .FALSE.
                       RETURN
                    END IF
@@ -463,7 +465,9 @@ CONTAINS
                               &  data%PROD_MATRICES(iter,j,thread)
                       END DO
                    CASE DEFAULT
+                      !$omp critical
                       WRITE (0,*), __FILE__,__LINE__,"Unknown mode", DATA%mode
+                      !$omp end critical
                       CALL ABORT()
                    END SELECT
                    data%cnt_entries = data%cnt_entries+1
@@ -471,14 +475,17 @@ CONTAINS
                    DO iter = 1, (n_tor*n_var)**2
                       coefmtx(iter)= data%PROD_MATRICES(iter,j, thread)
                    END DO
+                   cnt = cnt + 1
                    CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id_prod,             &
                         &                           index_node2,               &
                         &                           index_node1,               &
                         &                           coefmtx, ierr)
                    IF (ierr /= MURGE_SUCCESS) THEN
+                      !$omp critical
                       WRITE (*,*) data%my_id, ":::",                           &
                            "I", index_node2,                                   &
                            "J", index_node1, cnt
+                      !$omp end critical
                       data%ok = .FALSE.
                       RETURN
                    END IF
@@ -495,7 +502,9 @@ CONTAINS
 
 #ifdef MURGE_USE_SEQUENCE
                          IF (row .EQ. 0 .OR. col .EQ. 0) THEN
+                            !$omp critical
                             PRINT *, row, col, index
+                            !$omp end critical
                             CALL ABORT()
                          END IF
 
@@ -509,8 +518,10 @@ CONTAINS
                          CASE (3)
                             DATA%VALS(index) = val
                          CASE DEFAULT
+                            !$omp critical
                             WRITE (0,*), __FILE__,__LINE__,"Unknown mode",     &
                                  &       DATA%mode
+                            !$omp end critical
                             CALL ABORT()
                          END SELECT
                          DATA%cnt_entries = DATA%cnt_entries+1
@@ -518,9 +529,11 @@ CONTAINS
                          CALL MURGE_ASSEMBLYSETVALUE(murge_id_prod,            &
                               &                      row, col, val, ierr)
                          IF (ierr /= MURGE_SUCCESS) THEN
+                            !$omp critical
                             WRITE (*,*) data%my_id, ":::::",                   &
                                  "I", row,                                     &
-                                 "J", col, ierr
+                                 "J", col, index_node1, ierr
+                            !$omp end critical
                             data%ok = .FALSE.
                             RETURN
                          END IF
@@ -811,6 +824,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      WRITE(*,*) '****************************************'
      WRITE(*,*) '*  construct matrix MURGE              *'
      WRITE(*,*) '****************************************'
+     write(*,*) ' solve_only : ', solve_only
   END IF
 
   IF (ALLOCATED(rhs_glob)) CALL tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
@@ -967,12 +981,24 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
 #ifdef USE_MURGE
   IF (.NOT. gmres .OR. .NOT. solve_only) THEN
      CALL MURGE_MATRIXRESET(murge_id, ierr)
+     IF (ierr .ne. MURGE_SUCCESS) then
+        PRINT *, "ERROR in MURGE_MATRIXRESET :", ierr
+        call abort()
+     END IF
      CALL MURGE_ASSEMBLYBEGIN(murge_id, coefnbr, MURGE_ASSEMBLY_ADD,           &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_RESPECT,      &
           &                   murge_sym, ierr)
+     IF (ierr .ne. MURGE_SUCCESS) then
+        PRINT *, "ERROR in MURGE_ASSEMBLYBEGIN :", ierr
+        call abort()
+     END IF
   END IF
   IF (gmres) THEN
      CALL MURGE_MATRIXRESET(murge_id_prod, ierr)
+     IF (ierr .ne. MURGE_SUCCESS) then
+        PRINT *, "ERROR in MURGE_MATRIXRESET :", ierr
+        call abort()
+     END IF
 #ifndef MURGE_USE_SEQUENCE
 #ifdef MURGE_PROD_NO_COMM
      CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, coefnbr_prod, MURGE_ASSEMBLY_ADD, &
@@ -983,6 +1009,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_FOOL,         &
           &                   murge_sym, ierr)
 #endif
+     IF (ierr .ne. MURGE_SUCCESS) then
+        PRINT *, "ERROR in MURGE_ASSEMBLYBEGIN :", ierr
+        call abort()
+     END IF
+
 #endif
   END IF
 #else

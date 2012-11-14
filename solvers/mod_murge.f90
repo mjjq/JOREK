@@ -657,7 +657,10 @@ CONTAINS
                 inode1 = element%vertex(i)
                 DO i_order = 1, n_order+1
                    index_node1 = node_list%node(inode1)%INDEX(i_order)
-                   tmp_local_n_prod = tmp_local_n_prod + 1
+                   CALL vertex_is_local(index_node1, is_local)
+                   IF (is_local) THEN
+                      tmp_local_n_prod = tmp_local_n_prod + 1
+                   END IF
                 END DO
              END DO
           END DO
@@ -678,21 +681,24 @@ CONTAINS
                 inode1 = element%vertex(i)
                 LOOP_ORDER: DO i_order = 1, n_order+1
                    index_node1 = node_list%node(inode1)%INDEX(i_order)
-                   DO j = 1, murge_local_n_prod
-                      IF (index_node1 .EQ. tmp_loc2glob_prod(j)) CYCLE LOOP_ORDER
-                      IF (index_node1 .LT. tmp_loc2glob_prod(j)) THEN
-                         tmp = tmp_loc2glob_prod(j)
-                         tmp_loc2glob_prod(j) = index_node1
-                         index_node1 = tmp
-                      END IF
-                   END DO
-                   murge_local_n_prod = murge_local_n_prod + 1
-                   tmp_loc2glob_prod(murge_local_n_prod) = index_node1
+                   CALL vertex_is_local(index_node1, is_local)
+                   IF (is_local) THEN
+                      DO j = 1, murge_local_n_prod
+                         IF (index_node1 .EQ. tmp_loc2glob_prod(j)) CYCLE LOOP_ORDER
+                         IF (index_node1 .LT. tmp_loc2glob_prod(j)) THEN
+                            tmp = tmp_loc2glob_prod(j)
+                            tmp_loc2glob_prod(j) = index_node1
+                            index_node1 = tmp
+                         END IF
+                      END DO
+                      murge_local_n_prod = murge_local_n_prod + 1
+                      tmp_loc2glob_prod(murge_local_n_prod) = index_node1
+
+                   END IF
                 END DO LOOP_ORDER
              END DO
           END DO
        END DO
-
 #    ifndef MURGE_PROD_NODE
        murge_local_n_prod = murge_local_n_prod * murge_ndof_prod
 #    endif

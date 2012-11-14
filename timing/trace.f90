@@ -1495,7 +1495,11 @@ contains
             SUM(nb_allocate(MIN_CAT:MAX_CAT))/dfloat(MBconst), ' MBytes'
     end if
     lcount = rcount - SUM(nb_allocate(MIN_CAT:MAX_CAT))
-    if (lcount.gt.GBconst) then
+    if (lcount .lt. 0) then
+       write(uout_mem,'(A20,A50,1G10.3,A)') label, &
+            'memsize occupied by libraries/others = ', &
+            dfloat(lcount), ' Bytes'
+    else if (lcount.gt.GBconst) then
        write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize occupied by libraries/others = ', &
             lcount/dfloat(GBconst), ' GBytes'
@@ -1503,10 +1507,14 @@ contains
        write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize occupied by libraries/others = ', &
             lcount/dfloat(MBconst), ' MBytes'
-    else
+    else if (lcount .gt. KBconst) then
        write(uout_mem,'(A20,A50,1f10.3,A)') label, &
             'memsize occupied by libraries/others = ', &
             lcount/dfloat(KBconst), ' KBytes'
+    else
+       write(uout_mem,'(A20,A50,1f10.3,A)') label, &
+            'memsize occupied by libraries/others = ', &
+            lcount, ' Bytes'
     end if
     call pastix_getmem(pcount)
     if (pcount .gt. GBconst) then

@@ -118,9 +118,8 @@ CONTAINS
     IF (.NOT. solve_only) THEN
        IF ( (in  .ge. murge_first_tor  .and. in  .le. murge_last_tor) .and. &
             (in2 .ge. murge_first_tor  .and. in2 .le. murge_last_tor) ) THEN
-          IF (only_count) THEN
-             cnt = cnt + 1
-          ELSE
+          cnt = cnt + 1
+          IF (.not. only_count) THEN
              row_idx = murge_ndof * (index_node - 1) + (k -1)*murge_ntor + 1
              col_idx = murge_ndof * (index_node2- 1) + (k2-1)*murge_ntor + 1
              IF (in  /= 1) row_idx = row_idx + MOD(in,  2)
@@ -128,7 +127,7 @@ CONTAINS
              CALL MURGE_ASSEMBLYSETVALUE( murge_id, row_idx, col_idx, zbig,    &
                   &                       ierr )
              IF (ierr /= MURGE_SUCCESS) THEN
-                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", ierr,         &
+                WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE ", ierr, cnt,    &
                      "I", index_node, murge_ndof, k, in,                       &
                      "J", index_node2, k2, in2
                 STOP
@@ -145,16 +144,15 @@ CONTAINS
        call vertex_is_local_prod(col_idx, is_local)
 #  endif
        IF (is_local) THEN
-          IF (only_count) THEN
-             cnt_prod = cnt_prod + 1
-          ELSE
+          cnt_prod = cnt_prod + 1
+          IF (.not. only_count) THEN
              CALL MURGE_ASSEMBLYSETVALUE( murge_id_prod, row_idx, col_idx,  &
                   &                       zbig, ierr )
 
              IF (ierr /= MURGE_SUCCESS) THEN
                 WRITE (*,*)  "ERROR in MURGE_ASSEMBLYSETVALUE(prod) ",      &
                      "I", index_node, n_tor, n_var, k, in,                  &
-                     "J", index_node2, k2, in2
+                     "J", index_node2, k2, in2, cnt_prod, ierr
                 STOP
              END IF
           END IF

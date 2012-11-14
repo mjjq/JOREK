@@ -56,6 +56,16 @@ fi
 ((l=${#SIMNAME}-3))
 # Name of the prefix of the simulation directory
 PREFIX=${SIMNAME:0:$l}
+# Detect if using murge
+FIRSTLETTERS=${SIMNAME:0:2}
+FIRSTLETTERS=$(echo "${FIRSTLETTERS}" | tr '[:lower:]' '[:upper:]')
+
+if [ "${FIRSTLETTERS}" = "MU" ]; then
+    SET_MURGE="use_murge=.t. use_murge_element=.t."
+else
+    SET_MURGE="use_murge=.f. use_murge_element=.f."
+fi
+
 # Model number
 MODNB=${SIMNAME:$l:3}
 echo "MODNB" $MODNB
@@ -123,13 +133,13 @@ if [ "$MODNB" = "199" ]; then
     INFILE=${list_inputs[$j]}
     
     if [ ! -f jorek_equil.rst ]; then
-        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1 ${SET_MURGE}
         EXE=j${model[$i]}_1
         eval ${PRERUN}
         ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
         cp jorek_restart.rst jorek_equil.rst
     else
-        ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000 ${SET_MURGE}
         EXE=j${model[$i]}_3
         eval ${PRERUN}
         ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
@@ -159,7 +169,7 @@ if [ "$MODNB" = "302" ]; then
     INFILE=${list_inputs[$j]}
     
     if [ ! -f jorek_equil.rst ]; then
-        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0  ${SET_MURGE}
         EXE=j${model[$i]}_1
         eval ${PRERUN}
         ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
@@ -169,7 +179,7 @@ if [ "$MODNB" = "302" ]; then
     else
         if [ ! -f jorek_rst1.rst ]; then
   	  cp jorek_equil.rst jorek_restart.rst 
-  	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' nout=10
+  	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' nout=10 ${SET_MURGE}
   	  EXE=j${model[$i]}_1
         eval ${PRERUN}
   	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
@@ -179,7 +189,7 @@ if [ "$MODNB" = "302" ]; then
         else
   	  if [ ! -f jorek_rst2.rst ]; then
   	      cp jorek_rst1.rst jorek_restart.rst 
-  	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' nout=10
+  	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' nout=10 ${SET_MURGE}
   	      EXE=j${model[$i]}_3
         eval ${PRERUN}
   	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
@@ -188,7 +198,7 @@ if [ "$MODNB" = "302" ]; then
   	      fi
   	  else
   	      if [ ! -f jorek_rst3.rst ]; then
-  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10
+  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10 ${SET_MURGE}
   		  EXE=j${model[$i]}_3
         eval ${PRERUN}
   		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
@@ -222,7 +232,7 @@ if [ "$MODNB" = "303" ]; then
     INFILE=${list_inputs[$j]}
     
     if [ ! -f jorek_equil.rst ]; then
-        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0  ${SET_MURGE}
         EXE=j${model[$i]}_1
         eval ${PRERUN}
         ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
@@ -232,7 +242,7 @@ if [ "$MODNB" = "303" ]; then
     else
         if [ ! -f jorek_rst1.rst ]; then
   	  cp jorek_equil.rst jorek_restart.rst 
-  	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 10, 10, 10, 40, 40' 'tstep_n= 1e-3, 1e-2, 1e-1, 5e-1, 1, 2' nout=10
+  	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 10, 10, 10, 40, 40' 'tstep_n= 1e-3, 1e-2, 1e-1, 5e-1, 1, 2' nout=10 ${SET_MURGE}
   	  EXE=j${model[$i]}_1
         eval ${PRERUN}
   	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
@@ -242,7 +252,7 @@ if [ "$MODNB" = "303" ]; then
         else
   	  if [ ! -f jorek_rst2.rst ]; then
   	      cp jorek_rst1.rst jorek_restart.rst 
-  	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 20, 100' 'tstep_n= 2, 5' nout=10
+  	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 20, 100' 'tstep_n= 2, 5' nout=10 ${SET_MURGE}
   	      EXE=j${model[$i]}_3
         eval ${PRERUN}
   	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
@@ -251,7 +261,7 @@ if [ "$MODNB" = "303" ]; then
   	      fi
   	  else
   	      if [ ! -f jorek_rst3.rst ]; then
-  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' nout=10
+  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' nout=10 ${SET_MURGE}
   		  EXE=j${model[$i]}_3
         eval ${PRERUN}
   		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}

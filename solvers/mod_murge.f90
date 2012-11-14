@@ -4,6 +4,7 @@ MODULE murge_module
   IMPLICIT NONE
 
   INCLUDE "murge.inc"
+
   !include "hips.inc"
   ! Indicate which solver is used
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_solver
@@ -35,6 +36,8 @@ MODULE murge_module
   ! Indicate if we want to use murge element building
   LOGICAL                                     :: use_murge_element
   LOGICAL                                     :: use_hips
+  LOGICAL                                     :: murge_need_rebuild_sequence(2)
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_sequence_id(2)
   ! Indicate if murge has been initialized
   LOGICAL                                     :: murge_initialised
 
@@ -68,8 +71,9 @@ MODULE murge_module
   REAL*8                                      :: murge_pivot
   PARAMETER (murge_pivot=1.d-64)
   INTEGER                                     :: murge_comm
-
-
+  INTEGER(KIND=MURGE_INTS_KIND), POINTER      :: MURGE_ROWS(:), MURGE_COLS(:)
+  REAL(KIND=MURGE_COEF_KIND),    POINTER      :: MURGE_VALS(:)
+  INTEGER,           ALLOCATABLE, TARGET      :: murge_assembly_first_entry(:)
 CONTAINS
   !>
   !! Subroutine: murge_add_one_entry
@@ -146,6 +150,8 @@ CONTAINS
 
 #ifdef USE_MURGE
 
+    murge_need_rebuild_sequence(1) = .true.
+    murge_need_rebuild_sequence(2) = .true.
 
     call tr_debug_write("murge_initialised begin")
     IF (.NOT. murge_initialised) THEN
@@ -262,13 +268,16 @@ CONTAINS
 
 #ifdef USE_MURGE
     IF ( use_murge_element ) THEN
-      IF (ALLOCATED(murge_glob2loc))                                           &
-           call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
-      IF (ALLOCATED(murge_loc2glob))                                           &
-           call tr_deallocate(murge_loc2glob,"murge_loc2glob",CAT_DMATRIX)
-      IF (ALLOCATED(murge_loc2glob_prod))                                      &
-           call tr_deallocate(murge_loc2glob_prod,"murge_loc2glob_prod",       &
-           &                  CAT_DMATRIX)
+       IF (ALLOCATED(murge_glob2loc))                                          &
+            call tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
+       IF (ALLOCATED(murge_loc2glob))                                          &
+            call tr_deallocate(murge_loc2glob,"murge_loc2glob",CAT_DMATRIX)
+       IF (ALLOCATED(murge_loc2glob_prod))                                     &
+            call tr_deallocate(murge_loc2glob_prod,"murge_loc2glob_prod",      &
+            &                  CAT_DMATRIX)
+       IF (ALLOCATED(murge_assembly_first_entry))                              &
+            call tr_deallocate(murge_assembly_first_entry,                     &
+            &                  "murge_assembly_first_entry", CAT_DMATRIX)
     END IF
     CALL MURGE_Clean(murge_id, ierr)
     if (gmres) then
@@ -283,6 +292,9 @@ CONTAINS
 
     use parameters, only : n_order, n_vertex_max
     use data_structure, only : type_element, type_element_list, type_node_list
+    USE parameters, ONLY : n_tor, n_var
+
+
     logical :: gmres
     integer :: n
     integer :: n_local_elms
@@ -311,6 +323,9 @@ CONTAINS
 
     murge_global_n      = n
     murge_global_n_prod = n
+#ifndef MURGE_PROD_NODE
+    murge_global_n_prod = murge_global_n_prod*n_tor*n_var
+#endif
     nnz = n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max
 
     Call MURGE_GRAPHBEGIN(murge_id, murge_global_n, nnz, ierr)
@@ -394,6 +409,7 @@ CONTAINS
     murge_local_n_prod = murge_local_n_prod * murge_ndof_prod
     print *, my_id, "murge_local_n_prod", murge_local_n_prod
 #endif
+    murge_need_rebuild_sequence(1) = .true.
     CALL MURGE_PRODUCTSETLOCALNODENBR(murge_id_prod, murge_local_n_prod, ierr)
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODENBR"
@@ -441,7 +457,7 @@ CONTAINS
 #endif
     CALL MURGE_PRODUCTSETLOCALNODELIST(murge_id_prod, murge_loc2glob_prod, ierr)
     if (allocated(murge_glob2loc_prod))                                        &
-         call tr_deallocate(murge_glob2loc_prod,"murge_glob2loc",CAT_DMATRIX)
+         call tr_deallocate(murge_glob2loc_prod,"murge_glob2loc_prod",CAT_DMATRIX)
 
     IF (ierr /= MURGE_SUCCESS) THEN
        write (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODELIST"

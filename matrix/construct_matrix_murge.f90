@@ -272,20 +272,26 @@ CONTAINS
 
                       CALL vertex_is_local(index_node1, is_local)
                       IF (is_local) THEN
+#ifdef MURGE_USE_SEQUENCE
+                         IF (DATA%mode .eq. 3) THEN
+#endif
+                            ! Set RHS member
+                            DO j = 1, n_var * n_tor
 
-                         ! Set RHS member
-                         DO j = 1, n_var * n_tor
-
-                            ! index in the ELM matrix
-                            index_ij = n_tor * n_var * (n_order+1) * (i-1) +   &
-                                 & n_tor * n_var * (i_order-1) + j
-                            ! index in global matrix
-                            index_rhs = index_large_i+j
-                            data%rhs_loc_thread(index_rhs,data%thread_num) =   &
-                                 data%rhs_loc_thread(index_rhs,                &
-                                 &                   data%thread_num) +        &
-                                 &                   RHS(index_ij)
-                         END DO
+                               ! index in the ELM matrix
+                               index_ij = n_tor * n_var * (n_order+1) *        &
+                                    (i-1) + n_tor * n_var * (i_order-1) + j
+                               ! index in global matrix
+                               index_rhs = index_large_i+j
+                               data%rhs_loc_thread(index_rhs,                  &
+                                    &              data%thread_num) =          &
+                                    data%rhs_loc_thread(index_rhs,             &
+                                    &                   data%thread_num) +     &
+                                    &                   RHS(index_ij)
+                            END DO
+#ifdef MURGE_USE_SEQUENCE
+                         END IF
+#endif
 
                          ! Build nodes Matrices
                          VERTEX_ROW : DO k=1,n_vertex_max
@@ -585,13 +591,20 @@ CONTAINS
 #endif
        !$OMP barrier
     END DO ELEM
-    IF (data%thread_num .EQ. 1) THEN
-       DO thread = 1, data%thread_nbr
-          DO j = 1, data%ndof_glob
-             data%rhs_loc(j) = data%rhs_loc(j) + data%rhs_loc_thread(j,thread)
+#ifdef MURGE_USE_SEQUENCE
+    IF (data%mode .EQ. 3) THEN
+#endif
+       IF (data%thread_num .EQ. 1) THEN
+          DO thread = 1, data%thread_nbr
+             DO j = 1, data%ndof_glob
+                data%rhs_loc(j) = data%rhs_loc(j) + &
+                     data%rhs_loc_thread(j,thread)
+             END DO
           END DO
-       END DO
+       END IF
+#ifdef MURGE_USE_SEQUENCE
     END IF
+#endif
     LOOP = 0
   END FUNCTION LOOP
 

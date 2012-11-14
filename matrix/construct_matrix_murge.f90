@@ -42,7 +42,7 @@ MODULE THREAD_DATA
      INTEGER                            :: thread_num
 #ifdef MURGE_USE_SEQUENCE
      INTEGER                            :: cnt_entries
-     INTEGER,                   POINTER :: first_entry
+     INTEGER                            :: first_entry
 #endif
      LOGICAL                            :: ok
 !#define PLENTY_TIMERS
@@ -307,89 +307,102 @@ CONTAINS
 
                                !coefmtx = 0
                                pt_matrix_nbr = pt_matrix_nbr + 1
-                               DOF_COL : DO j = 1, n_var * n_tor
-                                  ! Row index in the ELM matrix
-                                  index_ij = n_tor * n_var *                   &
-                                       (n_order+1) * (i-1) +                   &
-                                       n_tor * n_var * (i_order-1) + j
-
-                                  DOF_ROW : DO l = 1, n_var * n_tor
-                                     ! BUILD node Matrix
-                                     index_kl  = n_tor * n_var * (n_order      &
-                                          &+1) * (k-1) + n_tor * n_var *       &
-                                          & (k_order-1) + l
-
-                                     IF ( data%gmres .AND.                     &
-                                          .NOT. data%solve_only) THEN
-                                        col_harm =                             &
-                                             INT((MOD(j-1, n_tor)+1)/2) + 1
-                                        row_harm =                             &
-                                             INT((MOD(l-1, n_tor)+1)/2) + 1
-                                        IF (col_harm == row_harm) THEN
-
-                                           IF (col_harm == 1) THEN
-                                              new_col_mat_elem =               &
-                                                   INT((j-1)/n_tor)
-                                              new_row_mat_elem =               &
-                                                   INT((l-1)/n_tor)
-                                              index_send_mtx =                 &
-                                                   n_var*new_col_mat_elem +    &
-                                                   new_row_mat_elem+1
-
-                                           ELSE
-                                              ! (num_var-1)*2 + &
-                                              !   num_tor_local (0 or 1)
-                                              new_col_mat_elem =               &
-                                                   INT((j-1)/n_tor)*2 +        &
-                                                   MOD(MOD(j-1, n_tor)+1,2)
-                                              new_row_mat_elem =               &
-                                                   INT((l-1)/n_tor)*2 +        &
-                                                   &MOD(MOD(l-1, n_tor)+1,2)
-                                              index_send_mtx =                 &
-                                                   n_var*2*new_col_mat_elem +  &
-                                                   new_row_mat_elem+1
-
-                                           END IF
 #ifdef MURGE_USE_SEQUENCE
-                                           IF (data%mode .EQ. 3) THEN
+                               index = DATA%first_entry + DATA%cnt_entries
+                               SELECT CASE (DATA%mode)
+                               CASE (1)
+                               CASE (2)
+                                  DATA%ROWS(index) = index_node2
+                                  DATA%COLS(index) = index_node1
+                               CASE (3)
 #endif
+                                  DOF_COL : DO j = 1, n_var * n_tor
+                                     ! Row index in the ELM matrix
+                                     index_ij = n_tor * n_var *                &
+                                          (n_order+1) * (i-1) +                &
+                                          n_tor * n_var * (i_order-1) + j
+
+                                     DOF_ROW : DO l = 1, n_var * n_tor
+                                        ! BUILD node Matrix
+                                        index_kl  = n_tor * n_var * (n_order   &
+                                             &+1) * (k-1) + n_tor * n_var *    &
+                                             & (k_order-1) + l
+
+                                        IF ( data%gmres .AND.                  &
+                                             .NOT. data%solve_only) THEN
+                                           col_harm =                          &
+                                                INT((MOD(j-1, n_tor)+1)/2) + 1
+                                           row_harm =                          &
+                                                INT((MOD(l-1, n_tor)+1)/2) + 1
+                                           IF (col_harm == row_harm) THEN
+
+                                              IF (col_harm == 1) THEN
+                                                 new_col_mat_elem =            &
+                                                      INT((j-1)/n_tor)
+                                                 new_row_mat_elem =            &
+                                                      INT((l-1)/n_tor)
+                                                 index_send_mtx =              &
+                                                      n_var*new_col_mat_elem + &
+                                                      new_row_mat_elem+1
+
+                                              ELSE
+                                                 ! (num_var-1)*2 + &
+                                                 !   num_tor_local (0 or 1)
+                                                 new_col_mat_elem =            &
+                                                      INT((j-1)/n_tor)*2 +     &
+                                                      MOD(MOD(j-1, n_tor)+1,2)
+                                                 new_row_mat_elem =            &
+                                                      INT((l-1)/n_tor)*2 +     &
+                                                      &MOD(MOD(l-1, n_tor)+1,2)
+                                                 index_send_mtx =              &
+                                                      n_var*2*new_col_mat_elem &
+                                                      + new_row_mat_elem+1
+
+                                              END IF
 
                                               data%SEND_MATRICES(              &
                                                    &          index_send_mtx,  &
                                                    &          pt_matrix_nbr,   &
-                                                &             data%thread_num, &
+                                                   &          data%thread_num, &
                                                    &          col_harm) =      &
                                                    &  ELM(index_kl,index_ij)
-#ifdef MURGE_USE_SEQUENCE
                                            END IF
-#endif
                                         END IF
-                                     END IF
-                                     new_col_mat_elem = j-1
-                                     new_row_mat_elem = l-1
-                                     index_mtx = new_row_mat_elem+1            &
-                                          & +new_col_mat_elem                  &
-                                          & *(n_tor*n_var)
+                                        new_col_mat_elem = j-1
+                                        new_row_mat_elem = l-1
+                                        index_mtx = new_row_mat_elem+1         &
+                                             & +new_col_mat_elem               &
+                                             & *(n_tor*n_var)
 #ifdef MURGE_USE_SEQUENCE
-                                     IF (DATA%mode .EQ. 3) THEN
-#endif
+                                        data%VALS((index-1)*(n_tor*n_var)**2+  &
+                                             &     index_mtx) =                &
+                                             &  ELM(index_kl,index_ij)
+#else
                                         data%PROD_MATRICES(index_mtx,          &
                                              &             pt_matrix_nbr,      &
-                                          &             data%thread_num) =     &
+                                             &             data%thread_num) =  &
                                              & ELM(index_kl,index_ij)
-#ifdef MURGE_USE_SEQUENCE
-                                     END IF
 #endif
-                                     !coefmtx(index_mtx) =&
-                                     !     & ELM(index_kl&
-                                     !     &,index_ij)
-
-                                  END DO DOF_ROW
-                               END DO DOF_COL
-                               data%PROD_COLROW(1, pt_matrix_nbr,              &
-                                    &           data%thread_num) = index_node1
-                               data%PROD_COLROW(2, pt_matrix_nbr,              &
-                                    &           data%thread_num) = index_node2
+                                        !coefmtx(index_mtx) =&
+                                        !     & ELM(index_kl&
+                                        !     &,index_ij)
+                                        
+                                     END DO DOF_ROW
+                                  END DO DOF_COL
+                                  data%PROD_COLROW(1, pt_matrix_nbr,              &
+                                       &           data%thread_num) = index_node1
+                                  data%PROD_COLROW(2, pt_matrix_nbr,              &
+                                       &           data%thread_num) = index_node2
+#ifdef MURGE_USE_SEQUENCE
+                               CASE DEFAULT
+                                  !$omp critical
+                                  WRITE (0,*), __FILE__,__LINE__,                 &
+                                       "Unknown mode", DATA%mode
+                                  !$omp end critical
+                                  CALL ABORT()
+                               END SELECT
+                               data%cnt_entries = data%cnt_entries+1
+#endif
                             END DO ORDER_ROW
                          END DO VERTEX_ROW
                       END IF
@@ -404,9 +417,6 @@ CONTAINS
        data%nb_periods_ass = data%nb_periods_ass + t1-t0
        IF (t1<t0) &
             data%nb_periods_ass = data%nb_periods_ass + data%nb_periods_max
-       !$omp critical
-       PRINT *, "TEMPS ASS", data%my_id, data%thread_num, t1-t0
-       !$omp end critical
 #endif
 
 !$OMP barrier
@@ -455,27 +465,7 @@ CONTAINS
                    index_node1 = data%PROD_COLROW(1, j, thread)
                    index_node2 = data%PROD_COLROW(2, j, thread)
 #ifdef USE_MURGE
-#    ifdef MURGE_USE_SEQUENCE
-                   index = DATA%first_entry + DATA%cnt_entries
-                   SELECT CASE (DATA%mode)
-                   CASE (1)
-                   CASE (2)
-                      DATA%ROWS(index) = index_node2
-                      DATA%COLS(index) = index_node1
-                   CASE (3)
-                      index = (n_tor*n_var)**2*(index-1)
-                      DO iter = 1, (n_tor*n_var)**2
-                         data%VALS(index+iter) =                               &
-                              &  data%PROD_MATRICES(iter,j,thread)
-                      END DO
-                   CASE DEFAULT
-                      !$omp critical
-                      WRITE (0,*), __FILE__,__LINE__,"Unknown mode", DATA%mode
-                      !$omp end critical
-                      CALL ABORT()
-                   END SELECT
-                   data%cnt_entries = data%cnt_entries+1
-#    else
+#  ifndef MURGE_USE_SEQUENCE
                    DO iter = 1, (n_tor*n_var)**2
                       coefmtx(iter)= data%PROD_MATRICES(iter,j, thread)
                    END DO
@@ -493,7 +483,7 @@ CONTAINS
                       data%ok = .FALSE.
                       RETURN
                    END IF
-#    endif
+#  endif
 #else
                    PRINT *, "Binary built without murge"
                    data%ok = .FALSE.
@@ -784,9 +774,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
           1, thread_nbr, &
           1, (n_tor+1)/2, "RECV_COLROW",CAT_DMATRIX)
   END IF
+#ifndef MURGE_USE_SEQUENCE
   CALL tr_ALLOCATEp(PROD_MATRICES,1,(n_tor*n_var)**2,                          &
        1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1),        &
        1, thread_nbr, "PROD_MATRICES",CAT_DMATRIX)
+#endif
   CALL tr_ALLOCATEp(PROD_COLROW, 1, 2,                                         &
        1, (n_vertex_max*(n_order+1))**2*(elem_block_size/thread_nbr+1),        &
        1, thread_nbr, "PROD_COLROW",CAT_DMATRIX)
@@ -1047,7 +1039,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      datas(iter)%thread_num          = iter
 #ifdef MURGE_USE_SEQUENCE
      datas(iter)%cnt_entries         = 0
-     datas(iter)%first_entry         => murge_assembly_first_entry(iter)
+     datas(iter)%first_entry         = murge_assembly_first_entry(iter)
      datas(iter)%mode                => mode
      datas(iter)%VALS                => MURGE_VALS
      datas(iter)%ROWS                => MURGE_ROWS
@@ -1064,7 +1056,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      datas(iter)%rhs_loc             => rhs_loc
      datas(iter)%rhs_loc_thread      => rhs_loc_thread
      datas(iter)%SEND_MATRICES       => SEND_MATRICES
+#ifndef MURGE_USE_SEQUENCE
      datas(iter)%PROD_MATRICES       => PROD_MATRICES
+#endif
      datas(iter)%RECV_MATRICES       => RECV_MATRICES
      datas(iter)%PROD_COLROW         => PROD_COLROW
      datas(iter)%RECV_COLROW         => RECV_COLROW
@@ -1112,12 +1106,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      !$OMP end parallel
 #ifdef MURGE_USE_SEQUENCE
      datas(1)%first_entry = 1
-     PRINT *, "first_entry count_entries"
-     PRINT *, datas(1)%first_entry, datas(1)%cnt_entries
      DO iter = 2, thread_nbr
         datas(iter)%first_entry = datas(iter-1)%first_entry +                  &
              datas(iter-1)%cnt_entries
-        PRINT *, datas(iter)%first_entry, datas(iter)%cnt_entries
      END DO
      seq_coefnbr = datas(thread_nbr)%first_entry +                             &
           &        datas(thread_nbr)%cnt_entries - 1
@@ -1127,6 +1118,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      DO iter = 1, thread_nbr
         datas(iter)%ROWS                => MURGE_ROWS
         datas(iter)%COLS                => MURGE_COLS
+        murge_assembly_first_entry(iter) = datas(iter)%first_entry
      END DO
      mode = 2
      !$OMP parallel private(iter,ret) default(shared)
@@ -1147,7 +1139,6 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
           &                         MURGE_ASSEMBLY_FOOL, MURGE_BOOLEAN_TRUE,   &
           &                         murge_sequence_id(1), ierr)
 #  endif
-     PRINT *, "SETSEQUENCE OK"
      DEALLOCATE(MURGE_ROWS, MURGE_COLS)
 
      NULLIFY(MURGE_ROWS, MURGE_COLS)
@@ -1214,7 +1205,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      CALL tr_deallocatep(recv_matrices,"recv_matrices",CAT_DMATRIX)
      CALL tr_deallocatep(recv_colrow,"recv_colrow",CAT_DMATRIX)
   END IF
+#ifndef MURGE_USE_SEQUENCE
   CALL tr_deallocatep(prod_matrices,"prod_matrices",CAT_DMATRIX)
+#endif
   CALL tr_deallocatep(prod_colrow,"prod_colrow",CAT_DMATRIX)
   CALL tr_deallocatep(matrix_nbr, "matrix_nbr",CAT_DMATRIX)
   CALL tr_deallocatep(matrix_nbr_rcv, "matrix_nbr_rcv",CAT_DMATRIX)

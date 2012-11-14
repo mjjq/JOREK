@@ -76,7 +76,7 @@ MODULE murge_module
   INTEGER                                     :: murge_comm
   INTEGER(KIND=MURGE_INTS_KIND), POINTER      :: MURGE_ROWS(:), MURGE_COLS(:)
   REAL(KIND=MURGE_COEF_KIND),    POINTER      :: MURGE_VALS(:)
-  INTEGER,           ALLOCATABLE, TARGET      :: murge_assembly_first_entry(:)
+  INTEGER,                   ALLOCATABLE      :: murge_assembly_first_entry(:)
   INTEGER                                     :: murge_assembly_step
   INTEGER                                     :: murge_elem_block_size
 CONTAINS

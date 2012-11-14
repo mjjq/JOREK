@@ -27,6 +27,11 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
+#ifdef MURGE_USE_SEQUENCE_HARM
+#  ifndef MURGE_USE_SEQUENCE
+#    define MURGE_USE_SEQUENCE
+#  endif
+#endif
 MODULE THREAD_DATA
   USE tr_module
   USE data_structure,  ONLY : type_element_list,                               &
@@ -43,6 +48,10 @@ MODULE THREAD_DATA
 #ifdef MURGE_USE_SEQUENCE
      INTEGER                            :: cnt_entries
      INTEGER                            :: first_entry
+#endif
+#ifdef MURGE_USE_SEQUENCE_HARM
+     INTEGER                            :: cnt_entries_harm
+     INTEGER                            :: first_entry_harm
 #endif
      LOGICAL                            :: ok
 !#define PLENTY_TIMERS
@@ -64,6 +73,10 @@ MODULE THREAD_DATA
      INTEGER,                   POINTER :: mode
      INTEGER(MURGE_INTS_KIND),  POINTER :: ROWS(:), COLS(:)
      REAL(MURGE_COEF_KIND),     POINTER :: VALS(:)
+#endif
+#ifdef MURGE_USE_SEQUENCE_HARM
+     INTEGER(MURGE_INTS_KIND),  POINTER :: ROWS_HARM(:), COLS_HARM(:)
+     REAL(MURGE_COEF_KIND),     POINTER :: VALS_HARM(:)
 #endif
      INTEGER,                   POINTER :: thread_nbr
      INTEGER,                   POINTER :: my_id
@@ -162,6 +175,7 @@ CONTAINS
     REAL(KIND=MURGE_COEF_KIND)     :: val
     INTEGER,               POINTER :: matrix_nbr_rcv(:,:), pt_matrix_nbr
 
+
     elem_size = n_tor*n_vertex_max*(n_order+1)*n_var
     cnt = 0
     cnt2 = 0
@@ -177,6 +191,9 @@ CONTAINS
     DATA%cnt_entries = 0
 #endif
 
+#ifdef MURGE_USE_SEQUENCE_HARM
+    DATA%cnt_entries_harm = 0
+#endif
     !TODO: anticiper l'allocation ou l'allouer une fois pour toute
     ELEM : DO ife =1, data%n_local_elms, data%step
        pt_matrix_nbr = 0
@@ -227,10 +244,11 @@ CONTAINS
 #endif
                 IF (n_tor .GT. 3) THEN
                    ! use fft for toroidal integration
-                CALL element_matrix_fft(element,nodes, data%xpoint2,            &
-                     &                  data%xcase2, data%minRad,               &
-                     &                  data%R_axis, data%Z_axis, data%psi_axis,&
-                     &                  data%psi_bnd, Data%z_xpoint,            &
+                CALL element_matrix_fft(element,nodes, data%xpoint2,           &
+                     &                  data%xcase2, data%minRad,              &
+                     &                  data%R_axis, data%Z_axis,              &
+                     &                  data%psi_axis,                         &
+                     &                  data%psi_bnd, Data%z_xpoint,           &
                      &                  ELM, RHS, data%thread_num)
                 ELSE
                    ! use direct integration
@@ -386,22 +404,33 @@ CONTAINS
                                         !coefmtx(index_mtx) =&
                                         !     & ELM(index_kl&
                                         !     &,index_ij)
-                                        
                                      END DO DOF_ROW
                                   END DO DOF_COL
-                                  data%PROD_COLROW(1, pt_matrix_nbr,              &
-                                       &           data%thread_num) = index_node1
-                                  data%PROD_COLROW(2, pt_matrix_nbr,              &
-                                       &           data%thread_num) = index_node2
 #ifdef MURGE_USE_SEQUENCE
                                CASE DEFAULT
                                   !$omp critical
-                                  WRITE (0,*), __FILE__,__LINE__,                 &
+                                  WRITE (0,*), __FILE__,__LINE__,              &
                                        "Unknown mode", DATA%mode
                                   !$omp end critical
                                   CALL ABORT()
                                END SELECT
                                data%cnt_entries = data%cnt_entries+1
+#endif
+#ifdef MURGE_USE_SEQUENCE
+                               IF (data%mode .eq. &
+#  ifdef MURGE_USE_SEQUENCE_HARM
+                                    2 &
+#  else
+                                    3 &
+#  endif
+                                    ) THEN
+#endif
+                                  data%PROD_COLROW(1, pt_matrix_nbr,           &
+                                       &        data%thread_num) = index_node1
+                                  data%PROD_COLROW(2, pt_matrix_nbr,           &
+                                       &        data%thread_num) = index_node2
+#ifdef MURGE_USE_SEQUENCE
+                               END IF
 #endif
                             END DO ORDER_ROW
                          END DO VERTEX_ROW
@@ -492,12 +521,35 @@ CONTAINS
                 END DO
              END DO
           END IF
-#ifdef MURGE_USE_SEQUENCE
-          IF (data%mode .eq. 3) THEN
+
+          ! Just so that the first thread doesn't do all the job.
+          IF ((data%thread_nbr == 1 .OR. data%thread_num == 2 ) .AND.      &
+               & .NOT. DATA%solve_only) THEN
+#ifdef MURGE_USE_SEQUENCE_HARM
+             IF (data%mode .eq. 1 ) THEN
+                ! for harmoniques all is done by thread 1
+                ! Needs to be improved...
+                index = 0
+                DO thread = 1, data%thread_nbr
+                   index = index + data%matrix_nbr(thread)
+                END DO
+
+                CALL MPI_Allreduce(index,      &
+                     &             data%cnt_entries_harm, &
+                     &             1, MPI_INTEGER,        &
+                     &             MPI_SUM,               &
+                     &             data%mpi_comm_trans, ierr)
+             END IF
 #endif
-             ! Just so that the first thread doesn't do all the job.
-             IF ((data%thread_nbr == 1 .OR. data%thread_num == 2 ) .AND.      &
-                  & .NOT. DATA%solve_only) THEN
+#ifdef MURGE_USE_SEQUENCE
+             IF (data%mode &
+#  ifdef MURGE_USE_SEQUENCE_HARM
+                  .ge. 2 &
+#  else
+                  .eq. 3 &
+#  endif
+                  ) THEN
+#endif
 
                 matrix_nbr_rcv = 0
 #ifdef PLENTY_TIMERS
@@ -510,25 +562,34 @@ CONTAINS
                      &             data%MPI_COMM_TRANS, ierr)
                 total = total + SUM(matrix_nbr_rcv)
 
-
-                mat_size = &
-                     ((data%elem_block_size/data%thread_nbr+1)*     &
-                     data%thread_nbr)*                              &
-                     (n_vertex_max*(n_order+1)*data%harm_size)**2
-                CALL MPI_Alltoall(data%SEND_MATRICES, mat_size,                &
-                     &            MPI_DOUBLE_PRECISION,                        &
-                     &            data%RECV_MATRICES, mat_size,                &
-                     &            MPI_DOUBLE_PRECISION,                        &
-                     &            data%MPI_COMM_TRANS, ierr)
-
-                prod_size = &
-                     2*((data%elem_block_size/data%thread_nbr+1)*     &
-                     data%thread_nbr)*                                &
-                     (n_vertex_max*(n_order+1))**2
-                CALL MPI_Allgather(data%PROD_COLROW, prod_size, MPI_INTEGER,   &
-                     &            data%RECV_COLROW, prod_size, MPI_INTEGER,    &
-                     &            data%MPI_COMM_TRANS, ierr)
-
+#ifdef MURGE_USE_SEQUENCE_HARM
+                IF (data%mode .eq.3) THEN
+#endif
+                   mat_size = &
+                        ((data%elem_block_size/data%thread_nbr+1)*     &
+                        data%thread_nbr)*                              &
+                        (n_vertex_max*(n_order+1)*data%harm_size)**2
+                   CALL MPI_Alltoall(data%SEND_MATRICES, mat_size,             &
+                        &            MPI_DOUBLE_PRECISION,                     &
+                        &            data%RECV_MATRICES, mat_size,             &
+                        &            MPI_DOUBLE_PRECISION,                     &
+                        &            data%MPI_COMM_TRANS, ierr)
+#ifdef MURGE_USE_SEQUENCE_HARM
+                END IF
+#endif
+#ifdef MURGE_USE_SEQUENCE_HARM
+                IF (data%mode .eq. 2) THEN
+#endif
+                   prod_size = &
+                        2*((data%elem_block_size/data%thread_nbr+1)*     &
+                        data%thread_nbr)*                                &
+                        (n_vertex_max*(n_order+1))**2
+                   CALL MPI_Allgather(data%PROD_COLROW, prod_size, MPI_INTEGER,&
+                        &            data%RECV_COLROW, prod_size, MPI_INTEGER, &
+                        &            data%MPI_COMM_TRANS, ierr)
+#ifdef MURGE_USE_SEQUENCE_HARM
+                END IF
+#endif
 
 #ifdef PLENTY_TIMERS
                 CALL SYSTEM_CLOCK(count=tt1)
@@ -542,11 +603,33 @@ CONTAINS
                       DO i = 1, matrix_nbr_rcv(thread, node)
                          index_node1 = data%RECV_COLROW(1, i, thread, node)
                          index_node2 = data%RECV_COLROW(2, i, thread, node)
+#ifdef USE_MURGE
+#  ifdef MURGE_USE_SEQUENCE_HARM
+                         index = DATA%first_entry_harm + DATA%cnt_entries_harm
+                         SELECT CASE (DATA%mode)
+                         CASE (1)
+                         CASE (2)
+                            DATA%COLS_HARM(index) = index_node1
+                            DATA%ROWS_HARM(index) = index_node2
+                         CASE (3)
+                            DO iter = 1, data%my_harm_size**2
+                               DATA%VALS_HARM((index-1)*data%my_harm_size**2 +    &
+                                    iter) = data%RECV_MATRICES(iter, i,        &
+                                    &                          thread, node)
+                            END DO
+                         CASE DEFAULT
+                            !$omp critical
+                            WRITE (0,*), __FILE__,__LINE__,                 &
+                                 "Unknown mode", DATA%mode
+                            !$omp end critical
+                            CALL ABORT()
+                         END SELECT
+                         data%cnt_entries_harm = data%cnt_entries_harm+1
+#  else
                          DO iter = 1, data%my_harm_size**2
                             coefmtx(iter) = data%RECV_MATRICES(iter, i,        &
                                  &                             thread, node)
                          END DO
-#ifdef USE_MURGE
                          CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id,            &
                               &                          index_node2,          &
                               &                          index_node1,          &
@@ -559,6 +642,7 @@ CONTAINS
                             data%ok = .FALSE.
                             RETURN
                          END IF
+#  endif
 #else
                          PRINT *, "Binary built without murge"
                          data%ok = .FALSE.
@@ -568,10 +652,10 @@ CONTAINS
                       END DO
                    END DO
                 END DO
-             END IF
 #ifdef MURGE_USE_SEQUENCE
-          END IF
+             END IF
 #endif
+          END IF
        END IF
 #ifdef PLENTY_TIMERS
        CALL SYSTEM_CLOCK(count=t1)
@@ -628,8 +712,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
        &                     MURGE_SYM, MURGE_SCAL_COL,                        &
        &                     MURGE_NORM_MAX_COL, murge_need_rebuild_sequence,  &
        &                     MURGE_ROWS, MURGE_COLS, MURGE_VALS,               &
-       &                     MURGE_BOOLEAN_TRUE,                               &
-       &                     murge_sequence_id, murge_assembly_first_entry
+       &                     MURGE_ROWS_HARM, MURGE_COLS_HARM,                 &
+       &                     MURGE_VALS_HARM, MURGE_BOOLEAN_TRUE,              &
+       &                     murge_sequence_id, murge_assembly_first_entry,    &
+       &                     murge_sequence_id_harm,                           &
+       &                     murge_assembly_first_entry_harm
 
   USE global_distributed_matrix, ONLY : RHS_GLOB, column_scaling, ndof_glob
   USE mumps_module, ONLY : mumps_par
@@ -724,6 +811,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   INTEGER, TARGET   :: mode
   INTEGER :: seq_coefnbr, cpu
 #endif
+#ifdef MURGE_USE_SEQUENCE_HARM
+  INTEGER :: seq_coefnbr_harm
+#endif
 
   ! elapsed time
   CALL SYSTEM_CLOCK(count_rate=nb_periodes_sec,count_max=nb_periodes_max)
@@ -736,6 +826,13 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
 !$omp end master
 !$omp end PARALLEL
 
+#ifdef MURGE_USE_SEQUENCE
+  if (.not. gmres) then
+     write(*,*) 'FATAL : MURGE_USE_SEQUENCE only works with GMRES=.true.'
+     call MPI_FINALIZE(IERR)
+     stop
+  end if
+#endif
   IF (my_id .EQ. 0) PRINT *, "THREAD_NBR", thread_nbr
 
   elem_block_size = murge_elem_block_size
@@ -965,6 +1062,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         PRINT *, "ERROR in MURGE_MATRIXRESET :", ierr
         call abort()
      END IF
+#  ifndef MURGE_USE_SEQUENCE_HARM
      CALL MURGE_ASSEMBLYBEGIN(murge_id, coefnbr, MURGE_ASSEMBLY_ADD,           &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_RESPECT,      &
           &                   murge_sym, ierr)
@@ -972,6 +1070,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         PRINT *, "ERROR in MURGE_ASSEMBLYBEGIN :", ierr
         call abort()
      END IF
+#  endif
   END IF
   IF (gmres) THEN
      CALL MURGE_MATRIXRESET(murge_id_prod, ierr)
@@ -1034,6 +1133,14 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      murge_assembly_first_entry = -1
   end if
 #endif
+#ifdef MURGE_USE_SEQUENCE_HARM
+  if (.not. ALLOCATED(murge_assembly_first_entry_harm) ) then
+     ALLOCATE(murge_assembly_first_entry_harm(thread_nbr))
+     CALL tr_register_mem(sizeof(murge_assembly_first_entry_harm),             &
+          "murge_assembly_first_entry_harm",CAT_DMATRIX)
+     murge_assembly_first_entry = -1
+  end if
+#endif
   DO iter = 1, thread_nbr
      !print *, "iter", iter
      datas(iter)%thread_num          = iter
@@ -1044,6 +1151,13 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      datas(iter)%VALS                => MURGE_VALS
      datas(iter)%ROWS                => MURGE_ROWS
      datas(iter)%COLS                => MURGE_COLS
+#endif
+#ifdef MURGE_USE_SEQUENCE_HARM
+     datas(iter)%VALS_HARM           => MURGE_VALS_HARM
+     datas(iter)%ROWS_HARM           => MURGE_ROWS_HARM
+     datas(iter)%COLS_HARM           => MURGE_COLS_HARM
+     datas(iter)%cnt_entries_harm    = 0
+     datas(iter)%first_entry_harm    = murge_assembly_first_entry_harm(iter)
 #endif
      datas(iter)%thread_nbr          => thread_nbr
      datas(iter)%my_id               => my_id
@@ -1104,6 +1218,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      ret = LOOP(datas(iter))
      !$OMP barrier
      !$OMP end parallel
+
 #ifdef MURGE_USE_SEQUENCE
      datas(1)%first_entry = 1
      DO iter = 2, thread_nbr
@@ -1120,12 +1235,31 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         datas(iter)%COLS                => MURGE_COLS
         murge_assembly_first_entry(iter) = datas(iter)%first_entry
      END DO
+#  ifdef MURGE_USE_SEQUENCE_HARM
+     datas(1)%first_entry_harm = 1
+     DO iter = 2, thread_nbr
+        datas(iter)%first_entry_harm = datas(iter-1)%first_entry_harm +   &
+             datas(iter-1)%cnt_entries_harm
+     END DO
+     seq_coefnbr_harm = datas(thread_nbr)%first_entry_harm +                   &
+          &        datas(thread_nbr)%cnt_entries_harm - 1
+
+     ALLOCATE(MURGE_ROWS_HARM(seq_coefnbr_harm))
+     ALLOCATE(MURGE_COLS_HARM(seq_coefnbr_harm))
+     print *, seq_coefnbr_harm
+     DO iter = 1, thread_nbr
+        datas(iter)%ROWS_HARM                => MURGE_ROWS_HARM
+        datas(iter)%COLS_HARM                => MURGE_COLS_HARM
+        murge_assembly_first_entry_harm(iter) = datas(iter)%first_entry_harm
+     END DO
+#  endif
      mode = 2
      !$OMP parallel private(iter,ret) default(shared)
      iter = 1+omp_get_thread_num()
      ret = LOOP(datas(iter))
      !$OMP barrier
      !$OMP end parallel
+
 #  ifdef MURGE_PROD_NO_COMM
      CALL MURGE_AssemblySetSequence(murge_id_prod, seq_coefnbr,                &
           &                         MURGE_ROWS, MURGE_COLS,                    &
@@ -1139,15 +1273,32 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
           &                         MURGE_ASSEMBLY_FOOL, MURGE_BOOLEAN_TRUE,   &
           &                         murge_sequence_id(1), ierr)
 #  endif
+#  ifdef MURGE_USE_SEQUENCE_HARM
+     CALL MURGE_AssemblySetSequence(murge_id, seq_coefnbr_harm,                &
+          &                         MURGE_ROWS_HARM, MURGE_COLS_HARM,          &
+          &                         MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD,    &
+          &                         MURGE_ASSEMBLY_RESPECT, MURGE_BOOLEAN_TRUE,&
+          &                         murge_sequence_id_harm(1), ierr)
+#  endif
      DEALLOCATE(MURGE_ROWS, MURGE_COLS)
-
      NULLIFY(MURGE_ROWS, MURGE_COLS)
      ALLOCATE(MURGE_VALS(seq_coefnbr*(n_tor*n_var)**2))
+#  ifdef MURGE_USE_SEQUENCE_HARM
+     DEALLOCATE(MURGE_ROWS_HARM, MURGE_COLS_HARM)
+     NULLIFY(MURGE_ROWS_HARM, MURGE_COLS_HARM)
+     ALLOCATE(MURGE_VALS_HARM(seq_coefnbr_harm*(my_harm_size**2)))
+#  endif
   END IF
   mode = 3
+#  ifdef MURGE_USE_SEQUENCE_HARM
+  MURGE_VALS_HARM = 0.
+#  endif
+  MURGE_VALS = 0.
   DO iter = 1, thread_nbr
      datas(iter)%VALS                => MURGE_VALS
-     MURGE_VALS = 0.
+#  ifdef MURGE_USE_SEQUENCE_HARM
+     datas(iter)%VALS_HARM           => MURGE_VALS_HARM
+#  endif
   END DO
   !$OMP parallel private(iter,ret) default(shared)
   iter = 1+omp_get_thread_num()
@@ -1156,6 +1307,10 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   !$OMP end parallel
   CALL MURGE_AssemblyUseSequence(murge_id_prod, murge_sequence_id(1),          &
        &                         MURGE_VALS, ierr)
+#  ifdef MURGE_USE_SEQUENCE_HARM
+  CALL MURGE_AssemblyUseSequence(murge_id, murge_sequence_id_harm(1),     &
+       &                         MURGE_VALS_HARM, ierr)
+#  endif
 #endif
   ok = .TRUE.
 #ifdef PLENTY_TIMERS
@@ -1273,13 +1428,14 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
 
   CALL SYSTEM_CLOCK(count=t0)
 
+#ifndef MURGE_USE_SEQUENCE_HARM
   IF (.NOT. gmres .OR. .NOT. solve_only) THEN
-#ifdef USE_MURGE
+#  ifdef USE_MURGE
      CALL MURGE_ASSEMBLYEND(murge_id, ierr)
-#else
+#  else
      PRINT *, "Binary built without murge"
      CALL abort()
-#endif
+#  endif
      IF (ierr /= MURGE_SUCCESS) THEN
         IF (gmres) THEN
            WRITE (*,*) my_id, "::: error in assemblyend",                      &
@@ -1291,6 +1447,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         CALL abort()
      END IF
   END IF
+#endif
 
 #ifndef MURGE_USE_SEQUENCE
   IF (gmres) THEN
@@ -1334,7 +1491,6 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
 !     write(fname,'(A,I6.6)')"rhs",index_now
 !     call tr_vdump(fname,RHS_glob,ndof_glob)
 !  end if
-
   CALL boundary_conditions(my_id, node_list, element_list, bnd_node_list,      &
        &                   local_elms, n_local_elms, 0,                        &
        &                   0,  rhs_loc,    xpoint2, xcase2, psi_axis,          &

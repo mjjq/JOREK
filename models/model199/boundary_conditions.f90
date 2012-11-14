@@ -96,6 +96,8 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
            CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, cnt_prod, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
         end if
+        cnt      = 0
+        cnt_prod = 0
 #else
        print *, "Binary built without murge"
        call abort()

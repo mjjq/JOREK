@@ -278,10 +278,17 @@ program JOREK2
 #endif
   else if ( use_pastix ) then
 #ifndef USE_PASTIX
-    write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
-    call MPI_FINALIZE(IERR)
-    stop
+     write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
+     call MPI_FINALIZE(IERR)
+     stop
 #endif
+     if ( use_murge ) then
+#ifndef USE_MURGE
+        write(*,*) 'FATAL : use_murge=.true. requires USE_PASTIX_MURGE=1 in Makefile.inc'
+        call MPI_FINALIZE(IERR)
+        stop
+#endif
+     endif
   else if ( use_wsmp ) then
 #ifndef USE_WSMP
     write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'

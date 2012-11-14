@@ -1,3 +1,8 @@
+#ifdef MURGE_USE_SEQUENCE_HARM
+#  ifndef MURGE_USE_SEQUENCE
+#    define MURGE_USE_SEQUENCE
+#  endif
+#endif
 !> Variables and and routines related to the MURGE solver interface.
 MODULE murge_module
   USE tr_module
@@ -40,7 +45,7 @@ MODULE murge_module
   LOGICAL                                     :: use_murge_element
   LOGICAL                                     :: use_hips
   LOGICAL                                     :: murge_need_rebuild_sequence(2)
-  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_sequence_id(2)
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_sequence_id(2), murge_sequence_id_harm(2)
   ! Indicate if murge has been initialized
   LOGICAL                                     :: murge_initialised
 
@@ -75,8 +80,10 @@ MODULE murge_module
   PARAMETER (murge_pivot=1.d-64)
   INTEGER                                     :: murge_comm
   INTEGER(KIND=MURGE_INTS_KIND), POINTER      :: MURGE_ROWS(:), MURGE_COLS(:)
-  REAL(KIND=MURGE_COEF_KIND),    POINTER      :: MURGE_VALS(:)
+  INTEGER(KIND=MURGE_INTS_KIND), POINTER      :: MURGE_ROWS_HARM(:), MURGE_COLS_HARM(:)
+  REAL(KIND=MURGE_COEF_KIND),    POINTER      :: MURGE_VALS(:), MURGE_VALS_HARM(:)
   INTEGER,                   ALLOCATABLE      :: murge_assembly_first_entry(:)
+  INTEGER,                   ALLOCATABLE      :: murge_assembly_first_entry_harm(:)
   INTEGER                                     :: murge_assembly_step
   INTEGER                                     :: murge_elem_block_size
 CONTAINS

@@ -94,7 +94,7 @@ for job_step in `seq $nsteps`; do
     echo "    Using $binary_previous (same parameters; soft link)."
     ln -s $binary_previous $binary || exit 1
   else
-    make clean > /dev/null && make -j $compile_threads > /dev/null || exit 1
+    make cleanall > /dev/null && make -j $compile_threads > /dev/null || exit 1
     cp jorek_model${jorek_model} $start_dir/$binary || exit 1
   fi
   code_params_old="$code_params"

@@ -18,6 +18,8 @@ INP="input<<job_step>>"
 OMP="<<omp>>"
 DIR="<<main_dir>>"
 
+module unload intel; module load intel/12.1
+
 cd $DIR
 export OMP_NUM_THREADS=$OMP
 mpirun -np $NSLOTS $BIN < $INP | tee -a logfile

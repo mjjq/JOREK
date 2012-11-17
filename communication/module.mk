@@ -30,12 +30,14 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
 	$(DIR)/broadcast_phys.f90 		\
 	$(DIR)/export_boundary.f90 		\
 	$(DIR)/import_restart.f90		\
+	$(DIR)/vertex_is_local.f90	 	\
 	$(DIR)/mpi_mod.f90
 
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	\
 	$(DIR)/export_boundary.f90 		\
 	$(DIR)/broadcast_phys.f90 		\
 	$(DIR)/broadcast_num_profiles.f90	\
+	$(DIR)/vertex_is_local.f90	 	\
 	$(DIR)/import_restart.f90		\
 	$(DIR)/mpi_mod.f90
 
@@ -54,6 +56,7 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/import_restart.f90		\
+	$(DIR)/vertex_is_local.f90	 	\
 	$(DIR)/mpi_mod.f90
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
@@ -62,6 +65,7 @@ JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 
 JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)		\
 	$(DIR)/import_restart.f90		\
+	$(DIR)/vertex_is_local.f90	 	\
 	$(DIR)/mpi_mod.f90
 
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\

@@ -88,16 +88,21 @@ for job_step in `seq $nsteps`; do
   jorek_model=`$SCRIPTDIR/config.sh -p model`
   binary="jorek_model${jorek_model}_step$job_step"
   rm -f $start_dir/$binary; echo "    $binary"
-  if [ "$code_params_old" == "$code_params" ]; then
-    cd $start_dir
-    binary_previous="jorek_model${jorek_model}_step$[job_step-1]"
-    echo "    Using $binary_previous (same parameters; soft link)."
-    ln -s $binary_previous $binary || exit 1
+  if [ "$binaries_from_template_folder" == "1" ]; then
+    echo "    COPYING BINARIES FROM TEMPLATE FOLDER!"
+    cp $template_dir/$binary $start_dir
   else
-    make cleanall > /dev/null && make -j $compile_threads > /dev/null || exit 1
-    cp jorek_model${jorek_model} $start_dir/$binary || exit 1
+    if [ "$code_params_old" == "$code_params" ]; then
+      cd $start_dir
+      binary_previous="jorek_model${jorek_model}_step$[job_step-1]"
+      echo "    Using $binary_previous (same parameters; soft link)."
+      ln -s $binary_previous $binary || exit 1
+    else
+      make cleanall > /dev/null && make -j $compile_threads > /dev/null || exit 1
+      cp jorek_model${jorek_model} $start_dir/$binary || exit 1
+    fi
+    code_params_old="$code_params"
   fi
-  code_params_old="$code_params"
   echo "  done."
   echo ""
   
@@ -141,7 +146,13 @@ done
 echo "Compiling diagnostic tools."
 echo "  $diagnostics"
 cd $code_dir
-make -j $compile_threads $diagnostics > /dev/null || exit 1
-cp $diagnostics $start_dir
+if [ "$binaries_from_template_folder" == "1" ]; then
+  echo "    COPYING BINARIES FROM TEMPLATE FOLDER!"
+  cd $template_dir
+  cp $diagnostics $start_dir
+else
+  make -j $compile_threads $diagnostics > /dev/null || exit 1
+  cp $diagnostics $start_dir
+fi
 echo "done."
 echo ""

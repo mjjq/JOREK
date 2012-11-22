@@ -1,30 +1,27 @@
+!> Create a square grid based on the Bezier/modified cubic Hermite representation
 subroutine grid_bezier_square(nR,nZ,R_begin,R_end,Z_begin,Z_end,boundary,node_list,element_list)
-!----------------------------------------------------------------
-! subroutine to create a square grid based on the Bezier/modified
-! cubic Hermite representation
-! nR      : number of 'horizontal' nodes
-! nZ      : number of 'verical' points
-! R_begin : starting value for R grid
-! R_end   : end value
-! Z_begin : starting value for Z grid
-! Z_end   : end value
-! boundary : if true, boundary information is filled-in
-!
-! assumes an empty node_list and element_list
-!----------------------------------------------------------------
+
 use parameters
 use data_structure
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-integer                  :: nR, nZ, m, n, i, j, k, iv, inode_0, inode_p, inode, n_elements, i_element, ip, iuv
+! --- Routine parameters
+integer,                 intent(in)    :: nR             !< Number of horizontal nodes (square grid)
+integer,                 intent(in)    :: nZ             !< Number of vertical nodes (square grid)
+real*8,                  intent(in)    :: R_begin        !< R-min (square grid)
+real*8,                  intent(in)    :: R_end          !< R-max (square grid)
+real*8,                  intent(in)    :: Z_begin        !< Z-min (square grid)
+real*8,                  intent(in)    :: Z_end          !< Z-max (square grid)
+logical,                 intent(in)    :: boundary       !< Fill boundary information?
+type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
+type(type_element_list), intent(inout) :: element_list   !< list of finite elements
+
+! --- Local variables
+integer                  :: m, n, i, j, k, iv, inode_0, inode_p, inode, n_elements, i_element, ip, iuv
 integer                  :: n_element_start, n_node_start, n_index_start
-real*8                   :: R_begin, R_end, Z_begin, Z_end
 real*8                   :: xx_0(n_dim),xx_p(n_dim),uv_0(n_dim),uv_p(n_dim)
 real*8, external         :: dlength, ddot
-logical                  :: boundary
 
 write(*,*) '*************************************'
 write(*,*) '*       grid_bezier_square          *'
@@ -131,4 +128,4 @@ do k=1, element_list%n_elements   ! fill in the size of the elements
 enddo
 
 return
-end
+end subroutine grid_bezier_square

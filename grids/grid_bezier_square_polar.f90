@@ -1,29 +1,35 @@
-subroutine grid_bezier_square_polar(nR,nZ,n_radial,R_begin,R_end,Z_begin,Z_end,amin,fbnd,fpsi,mf, &
-                                    boundary,node_list,element_list)
-!***********************************************************************
-! delivers a square grid surrounded by a one transition ring to a polar
-! grid
-!
-! input :
-!
-! output :
-!
-!***********************************************************************
+!> Create a square grid surrounded by a transition ring and a polar grid
+subroutine grid_bezier_square_polar(nR, nZ, n_radial, R_begin, R_end, Z_begin, Z_end, amin, fbnd,  &
+  fpsi, mf, boundary, node_list, element_list)
 
+use constants
 use parameters
 use data_structure
-use constants
 
 implicit none
 
-type(type_node_list)    :: node_list
-type(type_element_list) :: element_list
+! --- Routine parameters
+integer,                 intent(in)    :: nR             !< Number of horizontal nodes (square grid)
+integer,                 intent(in)    :: nZ             !< Number of vertical nodes (square grid)
+integer,                 intent(in)    :: n_radial       !< Number of radial nodes (polar grid)
+real*8,                  intent(in)    :: R_begin        !< R-min (square grid)
+real*8,                  intent(in)    :: R_end          !< R-max (square grid)
+real*8,                  intent(in)    :: Z_begin        !< Z-min (square grid)
+real*8,                  intent(in)    :: Z_end          !< Z-max (square grid)
+real*8,                  intent(in)    :: amin           !< minor radius
+real*8,                  intent(in)    :: fbnd(*)        !< Fourier series describing the radius as
+                                                         !!   function of the poloidal angle
+real*8,                  intent(in)    :: fpsi(*)        !< Fourier series of flux at the boundary
+integer,                 intent(in)    :: mf             !< Number of Fourier modes in fbnd and fpsi
+logical,                 intent(in)    :: boundary       !< (CURRENTLY UNUSED)
+type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
+type(type_element_list), intent(inout) :: element_list   !< list of finite elements
 
-real*8  :: R_begin, R_end, Z_begin, Z_end, radius,x_tmp(n_order+1,n_dim),index_tmp(n_order+1)
-real*8  :: fbnd(*), fpsi(*), amin, Rgeo, Zgeo, u_length, angle_start
-integer :: nR, nZ, n_radial, n_pol, mf, i, k, n_node_start, n_element_start, n_element_polar, n_polar, n_glue, n_sqr
+! --- Local variables
+real*8  :: radius, x_tmp(n_order+1,n_dim), index_tmp(n_order+1)
+real*8  :: Rgeo, Zgeo, u_length, angle_start
+integer :: n_pol, i, k, n_node_start, n_element_start, n_element_polar, n_polar, n_glue, n_sqr
 integer :: i_glue, i_polar, n_index_start
-logical :: boundary
 real*8, external :: dlength
 
 write(*,*) '**********************************'
@@ -134,10 +140,11 @@ element_list%n_elements = element_list%n_elements + 2*(nR-1)+2*(nZ-1)
 
 n_pol    = 2*(nR-1) + 2*(nZ-1)
 
-Rgeo = (R_begin + R_end)/2.
-Zgeo = (Z_begin + Z_end)/2.
+Rgeo = (R_begin + R_end)/2.d0
+Zgeo = (Z_begin + Z_end)/2.d0
 
-radius = (1.+ 2./(float(n_radial-1))) *sqrt((R_end-R_begin)**2 + (Z_end - Z_begin)**2) /2.
+radius = ( 1.d0 + 2.d0/(n_radial-1.d0) ) * sqrt( (R_end-R_begin)**2 + (Z_end-Z_begin)**2 ) / 2.d0
+write(*,*) radius, amin
 
 write(*,'(A,i6)') ' number of nodes    : ',node_list%n_nodes
 write(*,'(A,i6)') ' number of elements : ',element_list%n_elements
@@ -351,4 +358,4 @@ enddo
 
 
 return
-end
+end subroutine grid_bezier_square_polar

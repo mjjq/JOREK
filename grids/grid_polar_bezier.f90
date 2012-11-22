@@ -11,9 +11,10 @@ use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht
 implicit none
 
 ! --- Routine parameters
-real*8,                  intent(in)    :: Rgeo, Zgeo     !< position of the geometric center
+real*8,                  intent(in)    :: Rgeo           !< R-position of geometric center
+real*8,                  intent(in)    :: Zgeo           !< Z-position of geometric center
 real*8,                  intent(in)    :: amin           !< minor radius
-real*8,                  intent(in)    :: acentre        !< smallest radius
+real*8,                  intent(in)    :: acentre        !< inner radius of grid
 real*8,                  intent(in)    :: angle_start    !< poloidal angle of first element
 real*8,                  intent(in)    :: fbnd(*)        !< Fourier series describing the radius as function
                                                          !!   of the poloidal angle
@@ -25,6 +26,7 @@ type(type_node_list),    intent(inout) :: node_list      !< list of nodes with g
 type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
 
 ! --- local variables
+real*8 :: acentre2, radius2
 real*8              :: si
 real*8, allocatable :: RR(:,:),ZZ(:,:),PSI(:,:)
 real*8              :: dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
@@ -88,12 +90,16 @@ call spline(nr,S1,S2,0.d0,0.d0,2,SP1,SP2,SP3,SP4)
 call meshac2(np+1,T2,XR_tht(1),XR_tht(2),SIG_tht(1),SIG_tht(2),0.6d0,1.0d0)
 call spline(np+1,T1,T2,0.d0,0.d0,2,TP1,TP2,TP3,TP4)
 
+acentre2 = acentre * 2.d0 / fbnd(1) !###
+write(*,*) Rgeo, Zgeo, acentre2
+
 do i=1,nr
 
   si = spwert(nr,S1(i),SP1,SP2,SP3,SP4,S1,ABLTG)
 
-  radius = ( acentre + (1.d0-acentre) * si )
-  dr_ds  = (1.d0-acentre) * abltg(1)
+  radius = ( acentre2 + (1.d0-acentre2) * si )
+  radius2= (1.d0-acentre2) * si
+  dr_ds  = (1.d0-acentre2) * abltg(1)
   
   do  j=1,np
   
@@ -101,6 +107,8 @@ do i=1,nr
 
     thtj     = angle_start + spwert(np+1,T1(j),TP1,TP2,TP3,TP4,T1,ABLTG) * 2.d0 * PI
     dtht_dt  = abltg(1)
+    
+    if ( i==1 ) write(*,'(8es15.6)') amin, radius, fbnd(1), cos(thtj) / 2.d0, sin(thtj) / 2.d0
 
     RR(1,node) = Rgeo + amin * radius * fbnd(1) * cos(thtj) / 2.d0
     RR(2,node) =        amin *          fbnd(1) * cos(thtj) / 2.d0
@@ -121,15 +129,15 @@ do i=1,nr
     do m = 2, mf/2
 
       if (m .eq. 2) then
-        rm   = radius * ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ) )
+        rm   = radius2 * ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ) )
         drm  =          ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ))
-        drmt = radius * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
+        drmt = radius2 * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
         drmtr=          (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
       else
-        rm   =      radius**(M-1) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ) )
-        drm  =(M-1)*radius**(M-2) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ))
-        drmt =      radius**(M-1) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
-        drmtr=(M-1)*radius**(M-2) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
+        rm   =      radius2**(M-1) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ) )
+        drm  =(M-1)*radius2**(M-2) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ))
+        drmt =      radius2**(M-1) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
+        drmtr=(M-1)*radius2**(M-2) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
       endif
       RR(1,node) = RR(1,node) + amin * rm  * cos(thtj)
       ZZ(1,node) = ZZ(1,node) + amin * rm  * sin(thtj)

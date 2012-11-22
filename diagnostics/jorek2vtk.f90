@@ -58,6 +58,10 @@ logical               :: without_n0_mode
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
 real*8                :: amu_neo_node, aki_neo_node
 
+mach_par=0.d0
+mach_pol=0.d0
+vsound=0.d0
+
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
 GAMMA=5./3.
 write(*,*) 'jorek2vtk'

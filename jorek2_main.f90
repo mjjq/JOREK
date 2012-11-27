@@ -154,7 +154,7 @@ program JOREK2
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   REAL*8                   :: max_time, min_time, tsecond
   integer, allocatable     :: tab_n_local_elems(:)
-  real*8                   :: t_this
+  real*8                   :: t_this, sum_deltas
   integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
 ! =================== plot NEO coeffs ==================
   real*8                   :: amu_neo_node, aki_neo_node
@@ -471,9 +471,9 @@ program JOREK2
     end if
     
     ! --- Plot the grid  
-!    if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
-!      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
-!    end if
+    if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
+      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
+    end if
     
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
@@ -1081,7 +1081,18 @@ program JOREK2
       end if
       exit jstep_loop
     end if
-     
+    
+    ! --- Exit the code if NaNs are detected.
+    if ( allocated(deltas) ) then
+      sum_deltas = sum(deltas)
+      if ( sum_deltas /= sum_deltas ) then
+    	write(*,*)
+    	write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'
+    	write(*,*)
+        exit jstep_loop
+      end if
+    end if
+    
     call clck_time_barrier(t1)
     call clck_ldiff(t_itstart,t1,tsecond)
     if (my_id .eq. 0) then

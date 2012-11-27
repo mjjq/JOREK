@@ -1,6 +1,6 @@
 !> Create a square grid surrounded by a transition ring and a polar grid
-subroutine grid_bezier_square_polar(nR, nZ, n_radial, R_begin, R_end, Z_begin, Z_end, amin, fbnd,  &
-  fpsi, mf, boundary, node_list, element_list)
+subroutine grid_bezier_square_polar(nR, nZ, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo, Z_geo,&
+  amin, fbnd, fpsi, mf, boundary, node_list, element_list)
 
 use constants
 use parameters
@@ -16,6 +16,8 @@ real*8,                  intent(in)    :: R_begin        !< R-min (square grid)
 real*8,                  intent(in)    :: R_end          !< R-max (square grid)
 real*8,                  intent(in)    :: Z_begin        !< Z-min (square grid)
 real*8,                  intent(in)    :: Z_end          !< Z-max (square grid)
+real*8,                  intent(in)    :: R_geo          !< R-position of grid center
+real*8,                  intent(in)    :: Z_geo          !< Z-position of grid center
 real*8,                  intent(in)    :: amin           !< minor radius
 real*8,                  intent(in)    :: fbnd(*)        !< Fourier series describing the radius as
                                                          !!   function of the poloidal angle
@@ -142,6 +144,13 @@ n_pol    = 2*(nR-1) + 2*(nZ-1)
 
 Rgeo = (R_begin + R_end)/2.d0
 Zgeo = (Z_begin + Z_end)/2.d0
+
+if ( (R_geo /= Rgeo) .or. (Z_geo /= Zgeo) ) then
+  write(*,*) 'ERROR! Input inconsistent. For grid_bezier_square_polar, the following is required:'
+  write(*,*) '  R_geo = (R_begin+R_end)/2 = ', Rgeo
+  write(*,*) '  Z_geo = (Z_begin+Z_end)/2 = ', Zgeo
+  stop
+end if
 
 radius = ( 1.d0 + 2.d0/(n_radial-1.d0) ) * sqrt( (R_end-R_begin)**2 + (Z_end-Z_begin)**2 ) / 2.d0
 write(*,*) radius, amin

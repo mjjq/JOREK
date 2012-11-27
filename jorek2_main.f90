@@ -431,8 +431,8 @@ program JOREK2
       
       if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
         
-        call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, amin,    &
-          fbnd, fpsi, mf, .true., node_list, element_list)
+        call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo,   &
+          Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
         
       else if ((n_R > 0) .and. (n_Z > 0) ) then
         

@@ -76,7 +76,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                R_Z_psi_bnd_file, wall_file
+                R_Z_psi_bnd_file, wall_file,time_evol_scheme
 
  if (my_id .eq. 0) then
 

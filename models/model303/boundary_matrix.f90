@@ -40,7 +40,10 @@ logical    :: xpoint2
 
 !theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
-theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
+!theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
+
+theta=time_evol_theta
+zeta=time_evol_zeta
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 

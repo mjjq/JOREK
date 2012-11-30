@@ -87,8 +87,8 @@ real*8,                   intent(in)    :: dPSI_open, dPSI_private
 ! --- local variables
 type (type_surface_list) :: flux_list
 
-type (type_node_list),    pointer     :: newnode_list
-type (type_element_list), pointer     :: newelement_list
+type (type_node_list), pointer    :: newnode_list
+type (type_element_list), pointer :: newelement_list
 type (type_element)                   :: element
 type (type_node)                      :: nodes(n_vertex_max)
 
@@ -566,8 +566,10 @@ Z_sep(n_tht+2*n_leg) = Z_xpoint(1) ! this one is known
 do j=1,n_leg
 !  R_wall_max(j+n_tht) = R_wall_max(n_tht) + (R_max(n_tht+1) - R_wall_max(n_tht)) * s_tmp(j)
 !  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + (Z_max(n_tht+1) - Z_wall_max(n_tht)) * s_tmp(j)
-  R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.5d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
-  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.5d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
+!  R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.5d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
+!  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.5d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
+  R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.8d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
+  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.8d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
   tht_max = PI
   call find_wall_crossing(R_wall,Z_wall,n_wall,R_max(n_tht+n_leg-j+1)+0.1,Z_wall_max(j+n_tht),tht_max,Rw,Zw,Tw)
   R_wall_max(j+n_tht) = Rw
@@ -652,9 +654,12 @@ enddo
 R_sep(n_tht+2) = (R_sep(n_tht+1) + R_sep(n_tht+3))/2.d0
 Z_sep(n_tht+2) = (Z_sep(n_tht+1) + Z_sep(n_tht+3))/2.d0
 do j=1,n_leg
-  R_sep(n_tht+n_leg+j) = R_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**16 * ( 5.5650 - R_sep(n_tht+n_leg+j))
-  Z_sep(n_tht+n_leg+j) = Z_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**16 * (-4.5559 - Z_sep(n_tht+n_leg+j))
+  R_sep(n_tht+n_leg+j) = R_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**8 * ( 5.5650 - R_sep(n_tht+n_leg+j))
+  Z_sep(n_tht+n_leg+j) = Z_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**8 * (-4.6 - Z_sep(n_tht+n_leg+j))
 enddo
+
+! 5.5650,-4.5559
+
 R_sep(n_tht+n_leg+2) = (R_sep(n_tht+n_leg+1) + R_sep(n_tht+n_leg+3))/2.d0
 Z_sep(n_tht+n_leg+2) = (Z_sep(n_tht+n_leg+1) + Z_sep(n_tht+n_leg+3))/2.d0
 
@@ -1310,7 +1315,7 @@ endif
 write(*,*) ' definition of nodes completed ',newnode_list%n_nodes
 
 !call nframe(11,11,1,2.5,3.5,-2.0,-1.0,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
+!call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 !
 !allocate(xp(index),yp(index))
 !do i=1,newnode_list%n_nodes

@@ -236,6 +236,7 @@ program JOREK2
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
+write(*,*) 'grid_to_wall=', grid_to_wall
   
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
@@ -300,7 +301,7 @@ program JOREK2
     call MPI_FINALIZE(IERR)
     stop
 #endif
-    if ( .not. restart ) then
+      if ( .not. restart ) then
       write(*,*) 'FATAL : use_wsmp is currently not supported for the equilibrium'
       call MPI_FINALIZE(IERR)
       stop
@@ -507,9 +508,10 @@ program JOREK2
 	      call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
 	    else
-!!! (Temporarily commented out due to wrong number of parameters)
-!              call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
-!                                    SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private,xcase)
+!!! works only for ITER wall for the moment
+ !            write(*,*) 'ITER wall started'
+              call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
+                                    SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
 	    endif
 	           
           endif

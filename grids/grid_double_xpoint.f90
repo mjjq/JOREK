@@ -132,13 +132,6 @@ if(xcase .eq. 3) then
     psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_xpoint(2)  
   endif
-  ! if we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
-    psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
-    psi_xpoint(2) = psi_xpoint(1)
-    psi_bnd  = psi_xpoint(1)
-    psi_bnd2 = psi_bnd  
-  endif
 endif
 
 

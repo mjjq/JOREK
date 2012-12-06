@@ -43,7 +43,6 @@ real*8              :: SIG_theta
 real*8              :: SIG_leg_0, SIG_leg_1
 real*8              :: SIG_up_leg_0, SIG_up_leg_1
 real*8              :: SIG_0, SIG_1
-real*8              :: bgf_tht
 
 write(*,*) '*****************************************'
 write(*,*) '* X-point grid : Define new grid points *'
@@ -65,7 +64,6 @@ n_leg	  = n_grids(8); n_up_leg  = n_grids(9)
 
 nwpts%k_cross = 0
 
-bgf_tht  = 0.98d0 !0.8d0
 
 
 !------------------------------------------------------------------------------------------------------------------------!
@@ -95,7 +93,7 @@ if (xcase .ne. 3) then
   
   call tr_allocate(s_tmp,1,n_tht,"s_tmp",CAT_GRID)
   s_tmp = 0
-  call meshac2(n_tht,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
+  call meshac2(n_tht,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
   do j=1,n_tht
     theta_sep(j) = tht_x1 + 2.d0 * PI * s_tmp(j)
@@ -125,7 +123,7 @@ else
     
     call tr_allocate(s_tmp,1,n_tht_mid,"s_tmp",CAT_GRID)
     s_tmp = 0
-    call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
+    call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
     do j=1,n_tht_mid
       theta_sep(j) = (tht_x1-2.d0*PI) + (tht_x2-(tht_x1-2.d0*PI)) * s_tmp(j)
@@ -137,7 +135,7 @@ else
     n_tht_mid2 = n_tht-n_tht_mid
     call tr_allocate(s_tmp,1,n_tht_mid2,"s_tmp",CAT_GRID)
     s_tmp = 0
-    call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
+    call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
 
     do j=n_tht_mid+1,n_tht
       theta_sep(j) = tht_x2 + (tht_x1-tht_x2) * s_tmp(j-n_tht_mid)
@@ -153,7 +151,7 @@ else
     
     call tr_allocate(s_tmp,1,n_tht_mid,"s_tmp",CAT_GRID)
     s_tmp = 0
-    call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
+    call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
     do j=1,n_tht_mid
       theta_sep(j) = tht_x1 + (tht_x2-tht_x1) * s_tmp(j)
       if (theta_sep(j) .lt. 0.d0)    theta_sep(j) = theta_sep(j) + 2.d0 * PI
@@ -164,7 +162,7 @@ else
     n_tht_mid2 = n_tht-n_tht_mid
     call tr_allocate(s_tmp,1,n_tht_mid2,"s_tmp",CAT_GRID)
     s_tmp = 0
-    call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
+    call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,0.8d0,1.0d0)
     do j=n_tht_mid+1,n_tht
       theta_sep(j) = (tht_x2-2.d0*PI) + (tht_x1-(tht_x2-2.d0*PI)) * s_tmp(j-n_tht_mid)
       if (theta_sep(j) .lt. 0.d0)    theta_sep(j) = theta_sep(j) + 2.d0 * PI

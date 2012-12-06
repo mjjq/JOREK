@@ -16,8 +16,7 @@ type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
 integer,                  intent(in)    :: n_grids(10), xcase
 real*8,                   intent(in)    :: sigmas(16)
-real*8,                   intent(in)    :: psi_axis, R_xpoint(2), Z_xpoint(2)
-real*8                                  :: psi_xpoint(2)
+real*8,                   intent(in)    :: psi_axis, psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
 
 ! --- local variables
 real*8, allocatable :: s_tmp(:)
@@ -29,7 +28,6 @@ integer 	    :: n_leg,       n_up_leg
 real*8  	    :: SIG_closed, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv
 real*8  	    :: SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1
 real*8  	    :: dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv
-real*8  	    :: bgf_open, bgf_closed
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: rr, ss, drr, dss, tt
@@ -51,8 +49,6 @@ n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
 n_private = n_grids(6); n_up_priv = n_grids(7)
 n_leg	  = n_grids(8); n_up_leg  = n_grids(9)
 
-bgf_open   = 0.6d0
-bgf_closed = 0.2d0
 
 write(*,*) '*************************************'
 write(*,*) '* X-point grid : Define Flux Values *'
@@ -70,20 +66,13 @@ if(xcase .eq. 3) then
     psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_xpoint(2)  
   endif
-  ! if we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
-    psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
-    psi_xpoint(2) = psi_xpoint(1)
-    psi_bnd  = psi_xpoint(1)
-    psi_bnd2 = psi_bnd  
-  endif
 endif
 
 !-------------------------------- Closed flux surfaces
 call tr_allocate(s_tmp,1,n_flux+1,"s_tmp",CAT_GRID)
 s_tmp = 0
 j     = 0
-call meshac2(n_flux+1,s_tmp,1.d0,9999.d0,SIG_closed,9999.d0,bgf_closed,1.0d0)
+call meshac2(n_flux+1,s_tmp,1.d0,9999.d0,SIG_closed,9999.d0,0.2d0,1.0d0)
 do i=1,n_flux
   flux_list%psi_values(i+j) = psi_axis + (psi_bnd - psi_axis) * s_tmp(i+1)**2
 enddo
@@ -92,24 +81,22 @@ call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 
 !-------------------------------- Open flux surfaces (in case of single-null)
 !-------------------------------- OR Sandwich flux surfaces (in case of double-null) - in between the two separatrices
-if (psi_xpoint(1) .ne. psi_xpoint(2)) then
-  call tr_allocate(s_tmp,1,n_open+1,"s_tmp",CAT_GRID)
-  s_tmp = 0
-  j	= n_flux
-  if(xcase .ne. 3) then
-    call meshac2(n_open+1,s_tmp,0.d0,9999.d0,SIG_open,9999.d0,bgf_open,1.0d0)
-    do i=1,n_open
-      flux_list%psi_values(i+j) = psi_axis + (psi_bnd - psi_axis) * (1.d0 + dPSI_open*s_tmp(i+1))**2
-    enddo
-  else
-    call meshac2(n_open+1,s_tmp,0.d0,1.d0,SIG_open,SIG_open,0.8d0,1.0d0)
-    do i=1,n_open
-      flux_list%psi_values(i+j) = psi_bnd + (psi_bnd2 - psi_bnd) * s_tmp(i+1)
-    enddo
-    flux_list%psi_values(n_flux+n_open) = psi_bnd2
-  endif
-  call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
+call tr_allocate(s_tmp,1,n_open+1,"s_tmp",CAT_GRID)
+s_tmp = 0
+j     = n_flux
+if(xcase .ne. 3) then
+  call meshac2(n_open+1,s_tmp,0.d0,9999.d0,SIG_open,9999.d0,0.6d0,1.0d0)
+  do i=1,n_open
+    flux_list%psi_values(i+j) = psi_axis + (psi_bnd - psi_axis) * (1.d0 + dPSI_open*s_tmp(i+1))**2
+  enddo
+else
+  call meshac2(n_open+1,s_tmp,0.d0,1.d0,SIG_open,SIG_open,0.8d0,1.0d0)
+  do i=1,n_open
+    flux_list%psi_values(i+j) = psi_bnd + (psi_bnd2 - psi_bnd) * s_tmp(i+1)
+  enddo
+  flux_list%psi_values(n_flux+n_open) = psi_bnd2
 endif
+call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 
 !-------------------------------- Outer open flux surfaces (in case of double-null)
 if(xcase .eq. 3) then

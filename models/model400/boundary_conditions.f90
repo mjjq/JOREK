@@ -336,25 +336,25 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 call murge_add_one_entry( index_node2, kv,  in, &
                                      &                    index_node2, kTi, in, &
                                      & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, &
-                                     &                    gmres,                &
+                                     &                    solve_only, gmres,    &
                                      &                    cnt, cnt_prod,        &
                                      &                    only_count)
                                 call murge_add_one_entry( index_node2, kv,  in, &
                                      &                    index_node2, kTe, in, &
                                      & - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*(Ti0 + Te0)) * direction, &
-                                     &                    gmres,                &
+                                     &                    solve_only, gmres,    &
                                      &                    cnt, cnt_prod,        &
                                      &                    only_count)
                                 call murge_add_one_entry( index_node2, kv,  in, &
                                      &                    index_node,  kTi, in, &
                                      & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTi0_ds * direction, &
-                                     &                    gmres,              &
-                                     &                    cnt, cnt_prod,      &
+                                     &                    solve_only, gmres,    &
+                                     &                    cnt, cnt_prod,        &
                                      &                    only_count)
                                 call murge_add_one_entry( index_node2, kv,  in, &
                                      &                    index_node,  kTe, in, &
                                      & + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*(Ti0 + Te0))**(3/2) * dTe0_ds * direction, &
-                                     &                    gmres,                &
+                                     &                    solve_only, gmres,    &
                                      &                    cnt, cnt_prod,        &
                                      &                    only_count)
                                 if (.not. only_count) then 
@@ -482,7 +482,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                      &                    cnt, cnt_prod,     &
                                      &                    only_count)
 
-                                end if
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -498,7 +497,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 A_glob(ilarge2)    = zbig
 
                              endif
-                          end if
+                          endif
                        endif
 
                     endif

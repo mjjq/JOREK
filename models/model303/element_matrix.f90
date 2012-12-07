@@ -1180,6 +1180,7 @@ do ms=1, n_gauss
                            + (ZKpar_T-ZK_prof) * BigR / BB2     * Bgrad_T_star_psi      * Bgrad_T     * xjac * theta * tstep &
                            + (ZKpar_T-ZK_prof) * BigR / BB2     * Bgrad_T_star          * Bgrad_T_psi * xjac * theta * tstep &
                            + v * r0 * Vpar0 * (T0_s * psi_t - T0_t * psi_s)                                 * theta * tstep &
+                           + v * T0 * Vpar0 * (r0_s * psi_t - r0_t * psi_s)                                 * theta * tstep &
                            + v * r0 * GAMMA * T0 * (vpar0_s * psi_t - vpar0_t * psi_s)                      * theta * tstep &
 
                            + ZK_par_num * (v_psi_x  * ps0_y - v_psi_y  * ps0_x + v_ps0_x * psi_y - v_ps0_y * psi_x)          &

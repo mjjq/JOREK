@@ -127,15 +127,14 @@ if (my_id .eq. 0) then
     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
       write(*,*) 'ERROR in define_boundary: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
-      stop
-    endif
-    write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
-
-    do i=1,n_boundary
-    read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
-    write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
-    enddo  
-    
+      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
+    else
+      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
+      do i=1,n_boundary
+        read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
+      enddo
+    endif    
     CLOSE(243)
   endif
  !=========================================

@@ -98,13 +98,13 @@ do iter = 1, n_iter
     psi_bnd = 99.d0
   endif
 
-  call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-  if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
-    if (psi_lim .lt. psi_bnd) then
-      psi_bnd = psi_lim
-      write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
-    endif
-  endif
+!  call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+!  if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
+!    if (psi_lim .lt. psi_bnd) then
+!      psi_bnd = psi_lim
+!      write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
+!    endif
+!  endif
     
   if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
   if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
@@ -135,8 +135,9 @@ enddo
 freeboundary_equil = freeboundary_equil2
 
 current_int = 0.d0
-ZKP         = 0.1                ! PI feedback on the total current
-ZKI         = 0. !0.01 
+ZKP         = 1.                ! PI feedback on the total current changed to Guido's parameters! 
+ZKI         = 0.01 !0.01 
+!amix=0.96
 
 if (freeboundary_equil) then
 
@@ -149,9 +150,9 @@ if (freeboundary_equil) then
   n_iter = 999
 
 ! Target current
-! call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
-  current_ref = 11.92d6 !###
-  Z_axis_ref  = 0.538d0 !###
+ call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
+ ! current_ref = 11.92d6 !### who did this????!!!!!
+ ! Z_axis_ref  = 0.538d0 !###
 
   do iter=1,n_iter
     
@@ -195,14 +196,14 @@ if (freeboundary_equil) then
     endif
 
 ! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
-if (iter .lt. 30) then
+!if (iter .lt. 30) then
     call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
 
     if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
       write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
     endif
-endif
+!endif
        
     if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
     if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail

@@ -47,6 +47,7 @@ JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/broadcast_phys.f90 		\
 	$(DIR)/broadcast_num_profiles.f90	\
 	$(DIR)/import_restart.f90		\
+	$(DIR)/vertex_is_local.f90	 	\
 	$(DIR)/mpi_mod.f90
 
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\

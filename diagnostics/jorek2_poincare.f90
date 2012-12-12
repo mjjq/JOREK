@@ -45,7 +45,11 @@ write(*,*) '***************************************'
 
 my_id=0
 
+! --- Initialize mode and mode_type arrays
+call det_modes()
+
 call initialise_parameters(my_id,  "__NO_FILENAME__")
+call log_parameters(my_id)
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 
@@ -187,7 +191,7 @@ call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_
 psi_bnd = 0.d0
 if ( xpoint ) then
   call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  if ( ifail == 0 ) psi_bnd = psi_xpoint(1)
+  psi_bnd = psi_xpoint(1)
 end if
   
 call begplt('poincare.ps')

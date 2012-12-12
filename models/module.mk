@@ -58,9 +58,11 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)		\
 	$(DIR)/initialise_and_broadcast_parameters.f90	\
+	$(DIR)/log_parameters.f90			\
 	$(DIR)/read_num_profiles.f90 			\
 	$(DIR)/derive_num_profiles.f90                  \
 	$(DIR)/preset_parameters.f90			\
+	$(DIR)/det_modes.f90                            \
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/update_time_evol_params.f90              \
 	$(DIR)/mod_phys_module.f90

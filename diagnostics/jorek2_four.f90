@@ -44,6 +44,7 @@ program JOREK2_FOUR
   else
     write(*,*) 'WARNING: Could not find file four_params.nml -- using default parameters.'
   end if
+  write(42,'(a)') '#      Psi_N     absolute_value     real_part    imaginary_part      phase'
   
   ! --- Log field line tracing parameters.
   write(*,*)
@@ -82,7 +83,7 @@ program JOREK2_FOUR
         write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i, (j-1)*n_period
         l = l + 1
         do k = 1, mapping.nstpts
-          write(42,*) mapping.psin(k), ABS(vfour(i+1,j,k,ivar))
+          write(42,'(5es16.7)') mapping.psin(k), ABS(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)), AIMAG(vfour(i+1,j,k,ivar)), ATAN2(AIMAG(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)))
         end do
         write(42,*)
         write(42,*)

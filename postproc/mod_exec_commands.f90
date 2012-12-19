@@ -217,6 +217,8 @@ module exec_commands
           call log_parameters(0)
         case ( 'point' )
           call point(command, first_step, file_handle, error)
+        case ( 'qprofile' )
+          call qprofile(command, first_step, file_handle, error)
         case ( 'set' )
           call set(command, error)
         case ( 'settings' )
@@ -235,7 +237,7 @@ module exec_commands
       
       select case ( trim(command%option(1)) )
         case ( 'axis', 'average', 'fluxsurfaces', 'gourdon', 'heatfluxpattern', 'line', 'point',   &
-          'volume', 'global_parameters' )
+          'qprofile', 'volume', 'global_parameters' )
           call add_to_command_queue(command, error)
         case ( 'help' )
           call help(command, error)
@@ -1842,6 +1844,70 @@ module exec_commands
     close (unit=file_handle)
     
   end subroutine line
+  
+  
+  
+  !> Output the q-profile as a function of Psi_N
+  recursive subroutine qprofile(command, first_step, file_handle, error)
+  
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(in)  :: file_handle !< File handle
+    integer,            intent(out) :: error       !< Error flag
+
+    
+    ! --- Local variables
+    integer                  :: k
+    real*8, allocatable      :: q(:)
+    type (type_surface_list) :: surface_list
+    character(len=1024)      :: filename
+    
+    error = 0
+    
+    ! ---- File creation
+    110 format(a,2(i5.5,a))
+    write(filename,110) 'qprofile_versus_PsiN_steps', loop_min_step, '-', loop_max_step, '.dat'
+    
+    if ( first_step ) then !> default: true
+      open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
+    else
+      open(unit=file_handle, file=filename, status='old',     action='write', access='append',     &
+        iostat=error)
+    end if
+    write(file_handle,'(a,i5.5,a)') '# step ', index_start, ':'
+    
+    if (error /= 0) then
+      write(*,*) 'ERROR in routine line: Creating/Opening file', trim(filename), '" failed.'
+      return
+    end if
+    
+    surface_list%n_psi = get_int_setting('surfaces', error) ! Number of flux surfaces
+    allocate (surface_list%psi_values(surface_list%n_psi))
+    allocate (q(surface_list%n_psi))
+    
+    do k = 1, surface_list%n_psi
+      surface_list%psi_values(k) = psi_axis + ( psi_bnd - psi_axis ) * &
+        real(k-1)/real(surface_list%n_psi-1)
+    end do
+    
+    ! --- Find flux surfaces
+    call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+      
+    !--- Determine qprofile
+    call determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q)
+          
+    ! --- Write out the qprofile versus Psi_n
+    do k = 2, surface_list%n_psi-1
+      write(file_handle,'(2ES16.7)') (surface_list%psi_values(k)-psi_axis)/(psi_bnd-psi_axis), q(k)
+    end do
+    
+    write(file_handle,*)
+    write(file_handle,*)
+    
+    close (unit=file_handle)
+    
+  end subroutine qprofile
   
   
   

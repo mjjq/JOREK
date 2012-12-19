@@ -30,6 +30,7 @@ module postproc_help
     write(*,*) '  namelist          Load a namelist input file'
     write(*,*) '  params            Print JOREK parameters'
     write(*,*) '  point             Variable-value at a certain position'
+    write(*,*) '  qprofile          Output the q-profile'
     write(*,*) '  set               Change a setting or list all settings'
     write(*,*) '  timesteps         List available restart files'
     write(*,*) '  volume            Calculate the plasma volume'
@@ -198,6 +199,12 @@ module postproc_help
         write(*,*) 'Examples:'
         write(*,*) '  point flux 1.6 0.0 0.0'
         write(*,*) '  point 3    1.7 0.1 0.2'
+      case ( 'qprofile' )
+        write(*,*) 'Usage:'
+        write(*,*) '  qprofile'
+        write(*,*) ''
+        write(*,*) 'Output the q-profile as a function of Psi_N.'
+        write(*,*) ''
       case ( 'set' )
         write(*,*) 'Usage:'
         write(*,*) '  set [<name> <value>]'

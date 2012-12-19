@@ -33,6 +33,7 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	  \
 	$(DIR)/flux_surface_add_line.f90  \
 	$(DIR)/flux_surface_add_point.f90 \
 	$(DIR)/psi_minmax.f90             \
+	$(DIR)/determine_q_profile.f90    \
 	$(DIR)/find_flux_surfaces.f90     \
 	$(DIR)/RZ_minmax.f90              \
 	$(DIR)/integrals.f90              \

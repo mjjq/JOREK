@@ -11,7 +11,7 @@ subroutine read_RMP_profiles(bnd_node_list)
   implicit none
 
   TYPE (type_bnd_node_list):: bnd_node_list
-  integer :: j, err
+  integer :: j, err, k, ierr
   logical :: exist
 
 
@@ -29,9 +29,39 @@ subroutine read_RMP_profiles(bnd_node_list)
      return
   end if
 
-  write (*,*) 'RMP_psi_cos_file', trim(RMP_psi_cos_file)
-  write (*,*) 'RMP_psi_sin_file', trim(RMP_psi_sin_file)
-  write (*,*) 'bnd_node_list%n_bnd_nodes', bnd_node_list%n_bnd_nodes
+  write (*,*) 'RMP_psi_cos_file = ', trim(RMP_psi_cos_file)
+  write (*,*) 'RMP_psi_sin_file = ', trim(RMP_psi_sin_file)
+  write (*,*) 'bnd_node_list%n_bnd_nodes = ', bnd_node_list%n_bnd_nodes
+
+  k=0
+  do
+     k=k+1
+     read(87,'()',iostat=ierr)
+     if(ierr .ne. 0) exit
+  end do
+  k=k-1
+  !write(*,*) 'k = ', k
+  rewind(87)
+
+  if ( k .ne. bnd_node_list%n_bnd_nodes ) then
+     write(*,*) 'ERROR in read_RMP_profiles:  ''RMP_psi_cos_file'' has a wrong dimension'
+     write(*,*) 'k_err = ', k
+     return
+  end if
+  k=0
+  do
+     k=k+1
+     read(88,'()',iostat=ierr)
+     if(ierr .ne. 0) exit
+  end do
+  k=k-1
+  !write(*,*) 'k1 = ', k
+  rewind(88)
+  if ( k .ne. bnd_node_list%n_bnd_nodes ) then
+     write(*,*) 'ERROR in read_RMP_profiles:  ''RMP_psi_sin_file'' has a wrong dimension'
+     write(*,*) 'k1_err = ', k
+     return
+  end if
 
   if (allocated(psi_RMP_cos))         call tr_deallocate(psi_RMP_cos,"psi_RMP_cos",CAT_UNKNOWN)
   if (allocated(dpsi_RMP_cos_dR))     call tr_deallocate(dpsi_RMP_cos_dR,"dpsi_RMP_cos_dR",CAT_UNKNOWN)

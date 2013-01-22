@@ -407,7 +407,7 @@ do ms=1, n_gauss
 
              amat_24 = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)  * theta * tstep  &
                      + BigR * ( v_x * w_x + v_y * w_y) * visco_T  * xjac   * theta * tstep  &
-                     - visco_num * (v_s * w_s + v_t * w_t)                         * tstep
+                     - visco_num * (v_s * w_s + v_t * w_t)                 * theta * tstep
 
              amat_25 = + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)   * xjac * theta * tstep &
                        + rho_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)         * theta * tstep &
@@ -470,7 +470,7 @@ do ms=1, n_gauss
              amat_61_k = - (ZK_par-ZK_prof) * BigR * BB2_psi / BB2**2 * Bgrad_T_k_star * Bgrad_T     * xjac * theta * tstep &
                          + (ZK_par-ZK_prof) * BigR / BB2              * Bgrad_T_k_star * Bgrad_T_psi * xjac * theta * tstep
 
-             amat_62 = - v * BigR**2 * ( T0_x * u_y - T0_y * u_x)             * xjac * theta * tstep &
+             amat_62 = - v * BigR**2 * ( T0_s * u_t - T0_t * u_s)                    * theta * tstep &
                        - v * 2.d0* (GAMMA-1.d0) * BigR * T0 * u_y             * xjac * theta * tstep
 
              amat_66 =   v * T   * BigR * xjac * (1.d0 + zeta)                                           &

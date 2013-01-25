@@ -22,6 +22,9 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC) 		\
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 		\
 	$(DIR)/mod_global_distributed_matrix.f90
 
+JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)               \
+        $(DIR)/mod_global_distributed_matrix.f90
+
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/mod_global_distributed_matrix.f90
 

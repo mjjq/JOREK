@@ -262,8 +262,8 @@ CONTAINS
           ! refinement : max number of iterations
           CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,                     &
                &                  murge_iter,      ierr)
-          CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINEMENT,            &
-               &                  API_NO,      ierr)
+  !        CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINEMENT,            &
+  !             &                  API_NO,      ierr)
           ! degrees of freedom per node (not correct)
           IF (gmres) THEN
              IF ( i_tor(my_id+1) == 1 ) THEN
@@ -725,8 +725,8 @@ CONTAINS
     ENDIF
 #  endif
     murge_need_rebuild_sequence(1) = .TRUE.
-    CALL MURGE_PRODUCTSETLOCALNODENBR(murge_id_prod, murge_local_n_prod,      &
-         murge_ierr)
+!    CALL MURGE_PRODUCTSETLOCALNODENBR(murge_id_prod, murge_local_n_prod,      &
+!         murge_ierr)
     IF (murge_ierr /= MURGE_SUCCESS) THEN
        WRITE (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODENBR"
        STOP
@@ -742,8 +742,8 @@ CONTAINS
 #  endif
 
 
-    CALL MURGE_PRODUCTSETLOCALNODELIST(murge_id_prod, murge_loc2glob_prod, &
-         murge_ierr)
+!    CALL MURGE_PRODUCTSETLOCALNODELIST(murge_id_prod, murge_loc2glob_prod, &
+!         murge_ierr)
     IF (murge_ierr /= MURGE_SUCCESS) THEN
        WRITE (*,*) "ERROR in MURGE_PRODUCTSETLOCALNODELIST"
        STOP

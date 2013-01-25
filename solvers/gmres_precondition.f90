@@ -258,8 +258,8 @@ endif
 
 call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)
-if (my_id .eq. 0)  then
-   write(*,FMT_TIMING) my_id, '## Elapsed time precondition :', tsecond
-end if
+!if (my_id .eq. 0)  then
+!   write(*,FMT_TIMING) my_id, '## Elapsed time precondition :', tsecond
+!end if
 return
 end subroutine gmres_precondition

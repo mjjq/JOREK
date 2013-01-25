@@ -4,7 +4,7 @@
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
 subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, &
-                            xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, psi_xpoint)
+                            xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
   
   use tr_module 
   use parameters
@@ -36,7 +36,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   real*8,  intent(in) :: Z_axis
   real*8,  intent(in) :: psi_axis
   real*8,  intent(in) :: psi_bnd
-  real*8,  intent(in) :: Z_xpoint(2)
+  real*8,  intent(in) :: R_xpoint(2),Z_xpoint(2)
   real*8,  intent(in) :: psi_xpoint(2)
   logical, intent(in) :: xpoint2
 
@@ -117,7 +117,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
   !$omp          index_min, index_max,xpoint2,xcase2,minRad,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,&
-  !$omp          my_id,bc_natural_open,refinement,thread_struct)                                    &
+  !$omp          R_xpoint,my_id,bc_natural_open,refinement,thread_struct)                           &
   !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
@@ -193,12 +193,14 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
            vertex    = (/ iv, iv2 /)
            direction = (/  1, 2   /)
 
-           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
+!           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
 
-         endif
+           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, &
+                                     psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)    ! for open field lines
+          endif
         
        endif
-           
+         
      enddo
 
 
@@ -327,8 +329,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 ! --- Apply boundary conditions.
   call tr_vnorms("cm_A_bef_bc",A_glob,nz_glob)
 
-  call boundary_conditions(my_id, node_list, element_list, bnd_node_list, local_elms, n_local_elms, index_min,      &
-       index_max, rhs_loc, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, .false., .false.)
+  ! --- Apply boundary conditions.
+  call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,            &
+                           index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,  &
+                           R_xpoint, Z_xpoint, psi_xpoint, .false., .false.)
 
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
  

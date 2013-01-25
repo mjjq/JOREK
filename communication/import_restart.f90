@@ -1,5 +1,5 @@
 !> Imports a restart file written out by the routine export_restart.
-subroutine import_restart(node_list, element_list, filename, error)
+subroutine import_restart(node_list, element_list, filename, format_rst, error)
 
 use tr_module 
 use data_structure
@@ -13,14 +13,18 @@ type(type_node_list),    intent(inout) :: node_list
 type(type_element_list), intent(inout) :: element_list
 character(len=*),        intent(in)    :: filename
 integer,                 intent(out)   :: error
+integer,                 intent(in)    :: format_rst  ! format of restart file
 
 ! --- Local variables
-integer :: i, j, n_tor_tmp
-real*8  :: growth_mag, growth_kin, eta_tmp, visco_tmp, visco_par_tmp, amplitude
+integer              :: i, j, m, k, n_tor_tmp
+real*8               :: growth_mag, growth_kin, eta_tmp, visco_tmp, visco_par_tmp, amplitude
+integer, allocatable :: mode_tmp(:)
+real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
 
 error = 0
 
 write(*,*) 'Importing restart file "', trim(filename), '".'
+write(*,*) '  Using format : ',rst_format
 
 open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
 if ( error /= 0 ) then
@@ -30,10 +34,24 @@ end if
 
 read(21) n_tor_tmp
 
+allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))
+
+if (format_rst == 1) then
+  read(21) mode_tmp
+  write(*,*) ' NEW format (1) : ',mode_tmp
+elseif (format_rst == 0) then
+  write(*,*) ' mode : ',mode
+  mode_tmp(1) = mode(1) ! temporary, remove
+  if (n_tor .eq. n_tor_tmp) mode_tmp = mode
+  write(*,*) ' OLD format (0) : '
+  write(*,'(A,32i4)') ' previous modenumbers : ',mode_tmp
+  write(*,'(A,32i4)') ' new mode numbers     : ',mode
+else
+  write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+endif
+
 if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
 if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
-
-n_tor_tmp = min(n_tor,n_tor_tmp)
 
 write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
 
@@ -41,23 +59,46 @@ read(21) node_list%n_nodes,element_list%n_elements
 read(21) node_list%n_dof
 
 do i=1,node_list%n_nodes
+
   read(21) node_list%node(i)%x
-  read(21) node_list%node(i)%values(1:n_tor_tmp,:,:)
-  read(21) node_list%node(i)%deltas(1:n_tor_tmp,:,:)
+
+  read(21) values_tmp
+  read(21) deltas_tmp
+
   read(21) node_list%node(i)%index
   read(21) node_list%node(i)%boundary
-  read(21) node_list%node(i)%parents			     
-  read(21) node_list%node(i)%parent_elem			      
+  read(21) node_list%node(i)%parents
+  read(21) node_list%node(i)%parent_elem
   read(21) node_list%node(i)%ref_lambda
-  read(21) node_list%node(i)%ref_mu		     
+  read(21) node_list%node(i)%ref_mu
   read(21) node_list%node(i)%constrained
+
+  node_list%node(i)%values = 0.d0
+  node_list%node(i)%deltas = 0.d0
+
+  do m=1,n_tor_tmp,2
+    do k=1, n_tor,2
+      if (mode_tmp(m) .eq. mode(k)) then
+        if ((m .eq. 1) .and. (k.eq.1)) then
+          node_list%node(i)%values(k,:,:) = values_tmp(m,:,:)
+          node_list%node(i)%deltas(k,:,:) = deltas_tmp(m,:,:)
+        else
+          node_list%node(i)%values(k-1,:,:) = values_tmp(m-1,:,:)
+          node_list%node(i)%deltas(k-1,:,:) = deltas_tmp(m-1,:,:)
+          node_list%node(i)%values(k,:,:)   = values_tmp(m,:,:)
+          node_list%node(i)%deltas(k,:,:)   = deltas_tmp(m,:,:)
+        endif
+      endif
+    enddo
+  enddo
+
 enddo
- 
+
 read(21) element_list%element(1:element_list%n_elements)
 read(21) tstep,eta_tmp,visco_tmp,visco_par_tmp
 read(21) index_start
 read(21) t_start
-
+ 
 #ifdef USE_HDF5
   read(21) h5_nbsave_all
 #endif

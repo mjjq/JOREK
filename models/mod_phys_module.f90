@@ -14,6 +14,7 @@ module phys_module
   real*8  :: visco_par            !< Parallel viscosity
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
+  real*8  :: central_mass         !< average mass (assumed to be constant in space for the moment)
   real*8  :: gamma                !< ratio of specific heat (=5/3)
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
@@ -23,6 +24,7 @@ module phys_module
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps.
   integer :: xcase                !< DoubleNull: 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull.
+  integer :: rst_format           !< 0 == olf format, 1 == new format for restart file.
   logical :: restart              !< Restart a code run from the restart file jorek_restart.rst?
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
   logical :: import_equil         
@@ -247,9 +249,9 @@ module phys_module
   
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10), D_par
-  real*8  :: ZK_perp(10), ZK_par, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
+  real*8  :: ZK_perp(10), ZK_par, ZK_par_max, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
   real*8  :: D_neutral_x, D_neutral_y, D_neutral_p
-  
+  logical :: ZKpar_T_dependent
 
   !> @name Numerical heat and particle diffusivity profiles
   character(len=512)  :: d_perp_file        !< ASCII file the profile is read from
@@ -370,13 +372,23 @@ module phys_module
   real*8, allocatable :: dpsi_RMP_sin_dR(:)
   real*8, allocatable :: dpsi_RMP_sin_dZ(:)  
 
+  !> @name toroidal rotation profile
+  real*8              :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303
+  character(len=512)  :: R_Z_psi_bnd_file !< ASCII file for R_boundary,Z_boundary, psi_boundary, with n_boundary size.
+  character(len=512)  :: wall_file        !< ASCII file for external wall geometry, if n_ext is greater than zero.
+
+  !> @name gmres parameters
+  integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated
+  integer             :: gmres_m        !< gmres restart (dimension)
+  real*8              :: gmres_4        !< see gmres manual (error ratio between preconditioned and non-preconditioned error
+  real*8              :: gmres_tol      !< the tolerance for the gmres iterations
+  !> @name numerical
+  real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
+  real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
+  real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
+
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
-!=================================MB
- real*8  :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303
- character(len=512)  :: R_Z_psi_bnd_file !< ASCII file for R_boundary,Z_boundary, psi_boundary, with n_boundary size.
- character(len=512)  :: wall_file        !< ASCII file for external wall geometry, if n_ext is greater than zero.
-
   
 end module phys_module

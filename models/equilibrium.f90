@@ -61,7 +61,7 @@ freeboundary_equil  = .false.
 
 !------------------------------------ fixed boundary equilibrium
 n_iter      = 200
-psi_bnd     = 99.d0
+psi_bnd     = 0.d0
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
 
@@ -95,18 +95,18 @@ do iter = 1, n_iter
       endif
     endif
   else
-    psi_bnd = 99.d0
+    psi_bnd = 0.d0
   endif
 
-  if ( xpoint == .false. ) then
-    call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-    if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
-      if (psi_lim .lt. psi_bnd) then
-        psi_bnd = psi_lim
-        write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
-      endif
-    endif
-  endif
+!  if ( xpoint == .false. ) then
+!    call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+!    if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
+!      if (psi_lim .lt. psi_bnd) then
+!        psi_bnd = psi_lim
+!        write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
+!      endif
+!    endif
+!  endif
 
   if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
   if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
@@ -299,6 +299,7 @@ do i=1,node_list%n_nodes
 
   dj_dZ_dpsi = dFFprime_dpsi_dz - R*R * ( dn_dpsi2_dz * zT    + dn_dz * dT_dpsi2     + 2.d0 * dn_dpsi_dz * dT_dpsi  &
                                           + dn_dpsi2    * dT_dz + zn    * dT_dpsi2_dz  + 2.d0 * dn_dpsi    * dT_dpsi_dz)
+
 
   node_list%node(i)%values(1,1,3) = zjz
 

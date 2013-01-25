@@ -242,6 +242,8 @@ if (my_id == 0) then
   end if
   
   write(*,230) 'ZK_par              ', ZK_par
+  write(*,230) 'ZK_par_max          ', ZK_par_max
+  write(*,232) 'ZKpar_T_dependent   ', ZKpar_T_dependent
   if ( .not. num_zk_perp ) then
     write(*,230) 'ZK_perp             ', ZK_perp(1:6)
   else
@@ -341,6 +343,10 @@ if (my_id == 0) then
   write(*,232) 'linear_run            ', linear_run
   write(*,232) 'gmres                 ', gmres
   write(*,231) 'gmres_max_iter        ', gmres_max_iter
+  write(*,230) 'gmres tolerance       ', gmres_tol
+  write(*,231) 'iter_precon           ', iter_precon
+  write(*,231) 'gmres_m               ', gmres_m
+  write(*,230) 'gmres_4               ', gmres_4
   write(*,232) 'use_mumps             ', use_mumps
   write(*,232) 'use_wsmp              ', use_wsmp
   write(*,232) 'use_pastix            ', use_pastix

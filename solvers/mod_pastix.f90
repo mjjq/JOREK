@@ -21,5 +21,5 @@ module pastix_module             ! PastiX specific variables
   integer, parameter    :: pastix_amalg    = 5 
   integer, parameter    :: pastix_endsolve = API_TASK_SOLVE
   real*8,  parameter    :: pastix_epsilon  = 1.d-12
-  real*8,  parameter    :: pastix_pivot    = 1.d-64
+  real*8,  parameter    :: pastix_pivot    = -1.d-16
 end module pastix_module

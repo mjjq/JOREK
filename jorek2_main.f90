@@ -146,7 +146,7 @@ program JOREK2
   real*8                   :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, psi
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
-  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, iter_precon, n_aa, iter_prev
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
@@ -179,13 +179,13 @@ program JOREK2
   !*                  intialisation                                      *
   !***********************************************************************
   ! --- Initialize OpenMP threads before MPI_init
-  call init_threads()
+  !call init_threads()
   
   ! --- Initialise MPI / threaded MPI
   required=MPI_THREAD_MULTIPLE
   call MPI_Init_thread(required, provided, StatInfo)
 
-!  call init_threads()
+  call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
   
   ! --- Determine ID of each MPI proc
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
@@ -331,7 +331,7 @@ write(*,*) 'grid_to_wall=', grid_to_wall
   if ( restart .and. (my_id == 0) ) then
     
     ! --- Read the restart file (jorek_restart.rst)
-    call import_restart(node_list, element_list, 'jorek_restart.rst', ierr)
+    call import_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
 #ifdef USE_HDF5
@@ -417,7 +417,7 @@ write(*,*) 'grid_to_wall=', grid_to_wall
        ! time otherwise the "modulo" below fails
        if ( h5_diag_nbtime < 1.d0 ) then
           h5_diag_nbtime = 1.d0
-          write(*,*) '  -----> your "h5_diag_nbtime" value is stupid and has been set to 1.d0 '
+          write(*,*) '  -----> your "h5_diag_nbtime" value is invalid and has been set to 1.d0 '
        else
           write(*,*) '  h5_diag_nbtime     = ',h5_diag_nbtime
        endif
@@ -873,7 +873,8 @@ write(*,*) 'grid_to_wall=', grid_to_wall
     else
 
        call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
-    	                     xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, psi_xpoint) ! construct the matrix from elemental matrices
+    	                     xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, &
+			     R_xpoint, Z_xpoint, psi_xpoint) ! construct the matrix from elemental matrices
     endif
     
 

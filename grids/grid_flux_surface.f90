@@ -53,7 +53,6 @@ write(*,*) '**************************************'
 
 my_id = 0
  
-i_elm_axis = 1 ! XL : uninitilised value... So let's say it'll be 1, to look in the first case of element array in interp.f90...
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
  
 if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
@@ -77,7 +76,7 @@ call meshac2(surface_list%n_psi+1,s_values,xr1,xr2,sig1,sig2,0.6d0,1.0d0)
 
 psi_values(1) = psi_axis
 
-psi_bnd = -1.d-12
+psi_bnd = -1.d-8
 if (xpoint) then
   psi_bnd = psi_xpoint(1)
   if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
@@ -115,8 +114,6 @@ do i=1,surface_list%n_psi
     xtmp     = spwert(surface_list%n_psi+1,radius(i+1),sp1,sp2,sp3,sp4,radius,abltg)
     dpsi_ds  = abltg(1) * (psi_bnd - psi_axis) * 2.d0 * s_values(i+1)
 
-!    write(*,'(i5,8f12.6)') i,s_values(i+1),surface_list%psi_values(i),xtmp,dpsi_ds
-
     tht_min =  1d20
     tht_max = -1d20
 
@@ -144,8 +141,6 @@ do i=1,surface_list%n_psi
       tht_start(k) = min(tht1,tht2)
       tht_end(k)   = max(tht1,tht2)
 
-!      if ((i .ge.2) .and. (i .le.5)) write(*,'(2i5,2f12.6)') i,k,tht_start(k),tht_end(k)
-
       if ((tht_end(k) - tht_start(k)) .gt. 3.d0*PI/4.d0) then
          tht_tmp      = tht_end(k)
          tht_end(k)   = tht_start(k)
@@ -154,8 +149,6 @@ do i=1,surface_list%n_psi
 
       tht_min = min(tht_min,tht_start(k))
       tht_max = max(tht_max,tht_end(k))
-
-!      if ( (i .ge. 2) .and. (i .le.5 ) ) write(*,'(2i5,2f12.6)') i,k,tht_start(k),tht_end(k)
 
     enddo
 

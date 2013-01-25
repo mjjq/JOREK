@@ -120,11 +120,11 @@ scalar_names(n_var+1:n_scalars) = (/ &
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
-
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
+
+call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 

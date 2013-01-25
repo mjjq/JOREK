@@ -67,7 +67,7 @@ real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
 real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8     :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
-real*8     :: w00_xx, w00_yy, ZK_perp_num_T, D_perp_num_rho !temp variables
+real*8     :: w00_xx, w00_yy 
 !======================================= NEO
 real*8     :: amat_27, Btheta2
 real*8     :: epsil, Btheta2_psi
@@ -102,9 +102,9 @@ RHS = 0.d0
 epsil=1.d-3
 !======================================= NEO
 
-ZK_par_num = 0.d0  !carefull only n=0 is implemented (and needs to be checked)
-!TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 2.d0; TG_num7    = 2.d0;
-TG_num1    = 0.d0; TG_num2    = 0.d0; TG_num5    = 0.d0; TG_num6    = 0.d0; TG_num7    = 0.d0;
+TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 2.d0; TG_num7    = 2.d0;
+!TG_num1    = 0.d0; TG_num2    = 0.d0; TG_num5    = 0.d0; TG_num6    = 0.d0; TG_num7    = 0.d0;
+
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
 zeta  = time_evol_zeta
@@ -198,7 +198,8 @@ do ms=1, n_gauss
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 !=========================================MB :velocity profile
        if ( abs(V_0) .ge. 1.e-12) then 
-        call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt),dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+        call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
+                      dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
        endif
 !======================================MB
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
@@ -471,12 +472,20 @@ do ms=1, n_gauss
        dvisco_dT = 0.d0
      end if
      
-     ZKpar_T = ZK_par * (abs(T0+T_1)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+     if ( ZKpar_T_dependent ) then
+       ZKpar_T   = ZK_par * (abs(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+       dZKpar_dT = ZK_par * (2.5d0)  * abs(T0)**(+1.5d0) * T_0**(-2.5d0)
+       if (ZKpar_T .gt. ZK_par_max) then
+         ZKpar_T   = Zk_par_max
+         dZKpar_dT = 0.d0
+       endif
+     else
+       ZKpar_T   = ZK_par                                            ! parallel conductivity
+       dZKpar_dT = 0.d0
+     endif
 
      eta_num_T   = eta_num                         ! hyperresistivity
      visco_num_T = visco_num                       ! hyperviscosity
-
-     dZKpar_dT =   ZK_par* (2.5d0)  * abs(T0+T_1)**(+1.5d0) * T_0**(-2.5d0)
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
@@ -491,62 +500,47 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-     if ((T0 .lt. T_1)  .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ZK_prof = 2.d-4
-     if ((T0 .lt. T_1)  .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ZK_prof = 2.d-4
-     if ((r0 .lt. 0.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) D_prof  = 1.d-4
-     if ((r0 .lt. 0.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) D_prof  = 1.d-4
+#ifdef AVOID_NEG_DENS     
+     D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
+#endif
 
-!     ZK_perp_num   = 0.d0
-     ZK_perp_num_T = 0.d0
-!     if ((T0 .lt. T_1)   .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2) .and. (psi_norm .le. 1.0)) then
-!       ZK_prof = 2.d-4
-!       ZK_perp_num   = 1.d-5 ! * (T0/T_1 - 1.d0)**2
-!       ZK_perp_num_T = 0.D0 !2.d-2 * (T0/T_1 - 1.d0) / T_1
-!     endif
-!     if ((T0 .lt. T_1)   .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1) .and. (psi_norm .le. 1.0)) then
-!       ZK_prof = 2.d-4
-!       ZK_perp_num   = 1.d-5 ! * (T0/T_1 - 1.d0)**2
-!       ZK_perp_num_T = 0.D0 !2.d-2 * (T0/T_1 - 1.d0) / T_1
-!     endif
-!     D_perp_num     = 0.d0
-     D_perp_num_rho = 0.d0
-!     if ((r0 .lt. rho_1) .and. (y_g(ms,mt) .gt. Z_xpoint(1)) .and. (xcase2 .ne. 2) .and. (psi_norm .le. 1.0)) then
-!        D_prof = 1.d-4
-!       D_perp_num     = 1.d-5 !* (r0/rho_1 - 1.d0)**2
-!       D_perp_num_rho = 0.d0  !2.d-2 * (r0/rho_1 - 1.d0) / rho_1
-!     endif
-!     if ((r0 .lt. rho_1) .and. (y_g(ms,mt) .lt. Z_xpoint(2)) .and. (xcase2 .ne. 1) .and. (psi_norm .le. 1.0)) then
-!        D_prof = 1.d-4
-!       D_perp_num     = 1.d-5 !* (r0/rho_1 - 1.d0)**2
-!       D_perp_num_rho = 0.d0  !2.d-2 * (r0/rho_1 - 1.d0) / rho_1
-!     endif
+     if (xpoint2) then
+     
+       if (r0 .lt. 0.d0)  then
+         D_prof  = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
+       endif
+       if (T0 .lt. 0.d0) then
+         ZK_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
+       endif
+
+       T_min = 1.d-3 !T_1  ITER  1.d-3
+       if (T0 .lt. T_min) then
+         eta_T   = eta    * (max(T0,T_min)/T_0)**(-1.5d0)           ! temperature dependent resistivity
+         visco_T = visco  * (max(T0,T_min)/T_0)**(-1.5d0)           ! temperature dependent viscosity
+         ZKpar_T = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)         ! temperature dependent parallel conductivity
+
+         deta_dT   = 0.d0
+         d2eta_d2T = 0.d0
+         dvisco_dT = 0.d0
+         dZKpar_dT = 0.d0
+       endif
+     endif
 
      phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
 
      source_pellet = 0.d0
      source_volume = 0.d0
-     
-!     call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
-!                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
-!                        x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
 
-!     call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-!                         pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-!                         x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, central_density, pellet_particles,&
-!			 pellet_density, total_pellet_volume, &
-!                         source_pellet2, source_volume)			
+     if (use_pellet) then
 
-     call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-                         pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                         x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
-			 central_density, pellet_particles, pellet_density, total_pellet_volume, &
-                         source_pellet, source_volume)	
-      
-!     if ((mp*ms*mt .eq.1) .and. ((source_pellet .gt. 1e-4) .or. (source_pellet2 .gt. 1e-4)))  then			 
-!       write(*,'(A,8e14.6)') 'CHECK:',x_g(ms,mt),y_g(ms,mt), r0,eq_zne(ms,mt),T0,eq_zTe(ms,mt), source_pellet2,source_pellet			 		
-!     endif
-     
+       call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+                           pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
+                           x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
+                           central_density, pellet_particles, pellet_density, total_pellet_volume, &
+                           source_pellet, source_volume)	
+     endif
+
      do i=1,n_vertex_max
 
        do j=1,n_order+1
@@ -582,9 +576,6 @@ do ms=1, n_gauss
                 - v_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                         &	   
 	        - v_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2           &		
                 - xjac_x * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) )   / xjac**2	   	
-
-!	   v_xx = (v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) + v_tt * y_s(ms,mt)**2 )  / xjac**2  	        
-!	   v_yy = (v_ss * x_t(ms,mt)**2 - 2.d0*v_st * x_s(ms,mt)*x_t(ms,mt) + v_tt * x_s(ms,mt)**2 )  / xjac**2 	        
 
            Bgrad_rho_star = ( F0 / BigR * v_p  +  v_x  * ps0_y - v_y  * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_rho      = ( F0 / BigR * r0_p +  r0_x * ps0_y - r0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
@@ -701,9 +692,6 @@ do ms=1, n_gauss
                     - TG_num5 * 0.25d0 / BigR * vpar0**2 &
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * tstep * tstep        &
-
-!old!                    - TG_num5 * 0.25d0 * BigR**2 * (r0_x * u0_y - r0_y * u0_x)   &
-!old!		             * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep &
 		    
                     + zeta * v * delta_g(mp,5,ms,mt) * BigR                                    * xjac 
 
@@ -749,11 +737,6 @@ do ms=1, n_gauss
                               * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                         &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * tstep * tstep        &
 
-!old!                    - TG_num6 * 0.25d0 * BigR**2 * T0 * (r0_x * u0_y - r0_y * u0_x) &
-!old!		             * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
-!old!                    - TG_num6 * 0.25d0 * BigR**2 * r0 * (T0_x * u0_y - T0_y * u0_x) &
-!old!		             * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
-!old!
                     + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
                     + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac
 
@@ -772,6 +755,9 @@ do ms=1, n_gauss
 		      
 		      - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                * tstep &
 		      + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep &
+
+                      - 0.5d0 * v * vpar0**2 * BB2 * (ps0_s * r0_t - ps0_t * r0_s)                * tstep &
+                      + 0.5d0 * v * vpar0**2 * BB2 * F0 / BigR * r0_p                      * xjac * tstep &
 
                       - visco_par_num * (v_xx + v_x/Bigr + v_yy)*(vpar0_xx + vpar0_x/Bigr + vpar0_yy) * BigR * xjac * tstep &
 		      		      
@@ -972,14 +958,6 @@ do ms=1, n_gauss
                            + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)     &
                                      * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep
 			    
-! FO to be verified:
-!                          +3*v*tauIC* BigR**3 * (p0_x*u_xy - p0_y*u_xx) * xjac * theta * tstep 
-
-!old!                           + TG_num2 * 0.25d0 * r0_hat * BigR**2 * (w0_x * u_y - w0_y * u_x)       &
-!old!                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &
-!old!                           + TG_num2 * 0.25d0 * r0_hat * BigR**2 * (w0_x * u0_y - w0_y * u0_x)     &
-!old!			            * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   
-!old!
 
 !---------------------------------------- NEO
                  if ( NEO ) then
@@ -1003,9 +981,6 @@ do ms=1, n_gauss
                          + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w_x * u0_y - w_y * u0_x)     &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
 
-!old!                         + TG_num2 * 0.25d0 * r0_hat * BigR**2 * (w_x * u0_y - w_y * u0_x)     &
-!old!			          * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep 
-!old!				  
 
                  amat_25 = + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)   * xjac * theta * tstep &
                            + rho_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)         * theta * tstep &
@@ -1037,10 +1012,6 @@ do ms=1, n_gauss
                          -rho*Vpar0*Btheta2)*BigR*xjac*tstep*theta
                  endif
 !---------------------------------------- NEO
-
-!old!                           + TG_num2 * 0.25d0 * rho_hat * BigR**2 * (w0_x * u0_y - w0_y * u0_x) &
-!old!                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep 
-!old!
 
                  amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                            - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
@@ -1117,11 +1088,6 @@ do ms=1, n_gauss
                            + TG_num5 * 0.25d0 * BigR**3 * (r0_x * u0_y - r0_y * u0_x)                                     &
                                                         * ( v_x * u_y  - v_y  * u_x)  * xjac * theta * tstep * tstep 
 			   
-!old!                           + TG_num5 * 0.25d0 * BigR**2 * (r0_x * u_y - r0_y * u_x)              &
-!old!                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
-!old!                           + TG_num5 * 0.25d0 * BigR**2 * (r0_x * u0_y - r0_y * u0_x)            &
-!old!			            * ( v_x * u_y - v_y * u_x) * xjac * theta * tstep * tstep 
-!old!
                  amat_55 = v * rho * BigR * xjac * (1.d0 + zeta)  &
                          - v * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                                       * theta * tstep &
                          - v * 2.d0 * BigR * rho * u0_y                                                * xjac * theta * tstep &
@@ -1135,7 +1101,6 @@ do ms=1, n_gauss
                          - v * 2.d0 * tauIC * (rho_y * T0 + rho*T0_y) * BigR                           * xjac * theta * tstep &
                                                  
                          + D_perp_num     * (v_xx + v_x/BigR + v_yy)*(rho_xx + rho_x/BigR + rho_yy)   * BigR * xjac * theta * tstep &
-                         + D_perp_num_rho * rho *(v_xx + v_x/Bigr + v_yy)*(r0_xx + r0_x/Bigr + r0_yy) * BigR * xjac * theta * tstep &  
 
                          + TG_num5 * 0.25d0 * BigR**3 * (rho_x * u0_y - rho_y * u0_x)                                &
                                                       * ( v_x  * u0_y - v_y   * u0_x) * xjac * theta * tstep * tstep &
@@ -1144,8 +1109,6 @@ do ms=1, n_gauss
                               * (rho_x * ps0_y - rho_y * ps0_x + F0 / BigR * rho_p)                          &
                               * ( v_x * ps0_y -  v_y * ps0_x   + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-!old!                         + TG_num5 * 0.25d0 * BigR**2 * (rho_x * u0_y - rho_y * u0_x)           &
-!old!			          * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep 
 
 		 amat_56 = - v * 2.d0 * tauIC * (T_y * r0 + T*r0_y) * BigR                           * xjac * theta * tstep 
 
@@ -1221,14 +1184,6 @@ do ms=1, n_gauss
                            + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)     &
                                      * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * T0* (r0_x * u_y - r0_y * u_x)       &
-!old!			            * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u_y - T0_y * u_x)       &
-!old!			            * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * T0* (r0_x * u0_y - r0_y * u0_x)     &
-!old!			            * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep    &
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)     &
-!old!			            * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
                 amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)    &
 
@@ -1260,12 +1215,8 @@ do ms=1, n_gauss
                               * rho * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                        &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * T0* (rho_x * u0_y - rho_y * u0_x)      &
-!old!			            * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep &
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * rho * (T0_x * u0_y - T0_y * u0_x)     &
-!old!			            * ( v_x * u0_y - v_y * u0_x) * xjac* theta*tstep*tstep 
 
-                 amat_66 =   v * r0 * T   * BigR * xjac * (1.d0 + zeta)    &
+                 amat_66 =   v * abs(r0) * T   * BigR * xjac * (1.d0 + zeta)    &
 
                            - v * r0 * BigR**2 * ( T_s  * u0_t - T_t  * u0_s)                       * theta * tstep &
                            - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                       * theta * tstep &
@@ -1287,10 +1238,6 @@ do ms=1, n_gauss
                            + dZKpar_dT * T * BigR / BB2 * Bgrad_T_star * Bgrad_T            * xjac * theta * tstep &
 
                            + ZK_perp_num * (v_xx + v_x/BigR + v_yy)*(T_xx + T_x/BigR + T_yy) * BigR * xjac * theta * tstep &
-                           + ZK_perp_num_T * T * (v_xx + v_x/Bigr + v_yy)*(T0_xx + T0_x/Bigr + T0_yy) * BigR * xjac * theta * tstep &
-
-                           + ZK_par_num * (v_ps0_x * ps0_y - v_ps0_y * ps0_x) &
-                                        * (T_ps0_x * ps0_y - T_ps0_y * ps0_x)               * xjac * theta * tstep &
 
                            + TG_num6 * 0.25d0 * BigR**2 * T* (r0_x * u0_y - r0_y * u0_x)         &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
@@ -1306,10 +1253,6 @@ do ms=1, n_gauss
                               * r0 * (T_x * ps0_y - T_y * ps0_x + F0 / BigR * T_p)                            &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * T* (r0_x * u0_y - r0_y * u0_x)         &
-!old!		                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
-!old!                           + TG_num6 * 0.25d0 * BigR**2 * r0* (T_x * u0_y - T_y * u0_x)          &
-!old!		                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep 
 
                  amat_67 = + v * r0 * F0 / BigR * Vpar * T0_p                               * xjac * theta * tstep &
 		           + v * T0 * F0 / BigR * Vpar * r0_p                               * xjac * theta * tstep &
@@ -1338,6 +1281,7 @@ do ms=1, n_gauss
 			 + v * (P0_s * psi_t - P0_t * psi_s)                                            * theta * tstep &
 
                          + 0.5d0 * r0 * vpar0**2 * BB2 * (psi_s * v_t - psi_t * v_s)                    * theta * tstep &
+                         + 0.5d0 * v  * vpar0**2 * BB2 * (psi_s * r0_t - psi_t * r0_s)                  * theta * tstep &
 
                          + v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
 
@@ -1377,6 +1321,8 @@ do ms=1, n_gauss
 
 		           + 0.5d0 * rho * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)    * theta * tstep &
 		           - 0.5d0 * rho * vpar0**2 * BB2 * F0 / BigR * v_p         * xjac * theta * tstep &
+                           + 0.5d0 * v   * vpar0**2 * BB2 * (ps0_s * rho_t - ps0_t * rho_s)* theta * tstep &
+                           - 0.5d0 * v   * vpar0**2 * BB2 * F0 / BigR * rho_p       * xjac * theta * tstep &
 
                            + TG_NUM7 * 0.25d0 * rho * Vpar0**2 * BB2 &
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
@@ -1390,13 +1336,15 @@ do ms=1, n_gauss
                            + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
                            + v * F0 / BigR * (T_p * r0 + T * r0_p)                  * xjac * theta * tstep
 
-                 amat_77 = v * Vpar * r0 * F0**2 / BigR * xjac * (1.d0 + zeta) &
+                 amat_77 = v * Vpar * abs(r0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
                          + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR        * xjac  * theta * tstep &
 
                          + v * (particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR  * xjac * theta * tstep &
 		      
                          + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)                * theta * tstep &
                          - r0 * vpar0 * vpar * BB2 * F0 / BigR * v_p                     * xjac * theta * tstep &
+                         + v  * vpar0 * vpar * BB2 * (ps0_s * r0_t - ps0_t * r0_s)              * theta * tstep &
+                         - v  * vpar0 * vpar * BB2 * F0 / BigR * r0_p                    * xjac * theta * tstep &
                      
                          + visco_par_num * (v_xx + v_x/BigR + v_yy)*(vpar_xx + vpar_x/BigR + vpar_yy) * BigR * xjac * theta * tstep &
 

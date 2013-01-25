@@ -21,7 +21,7 @@ integer :: ierr,err,i
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta, visco, visco_par,                              &
-                restart, regrid, bootstrap,                         &
+                restart, rst_format, regrid, bootstrap,             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -42,7 +42,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
+                ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
                 particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num, time_evol_scheme,                      &
@@ -50,7 +50,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
                 pellet_velocity_R, pellet_velocity_Z,               &
-                central_density, pellet_particles, use_pellet,      &
+                central_density, central_mass,                      &
+		pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, D_perp_file, ZK_perp_file,                   &
@@ -67,6 +68,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
+		gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 linear_run, export_for_nemec,                       &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
@@ -76,7 +78,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                R_Z_psi_bnd_file, wall_file,time_evol_scheme
+                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
+		D_prof_neg, ZK_prof_neg, T_min
 
  if (my_id .eq. 0) then
 

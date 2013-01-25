@@ -25,16 +25,19 @@ subroutine preset_parameters
   
   eta_T_dependent   = .true.
   visco_T_dependent = .true.
+  ZKpar_T_dependent = .true.
 
   eta   = 1.d-5
   visco = 1.d-5
   visco_par = 1.d-5
   
-  central_density = 0.d0  ! the central density in units 10^20 m^-3
+  central_density = 1.d0        ! the central density in units 10^20 m^-3
+  central_mass    = 2.d0        ! the central average ion mass (D)
 
   restart      = .false.
   import_equil = .false.
   regrid       = .false.
+  rst_format   = 0             ! use 'old' format for restart import
 
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
@@ -142,6 +145,10 @@ subroutine preset_parameters
   D_perp(:)  = 0.d0
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
+  
+  D_prof_neg  = 1.d-5
+  ZK_prof_neg = 1.d-5
+  T_min       = 0.001
 
   eta_num       = 0.d0
   visco_num     = 0.d0
@@ -210,6 +217,11 @@ subroutine preset_parameters
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
+  gmres_tol          = 1.d-8                ! converge tolerance GMRES
+  gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
+  gmres_m            = 20                   ! gmres restart parameter
+  iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
+  
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
   use_murge          = .false.              ! Use MURGE interface to PASTIX solver

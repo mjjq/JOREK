@@ -25,8 +25,9 @@
 !*                                                                             *
 !*******************************************************************************
 subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
-     &                          n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
-     &                          xcase2, psi_axis, psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only )
+                                n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
+                                xcase2, R_axis, Z_axis, psi_axis, psi_bnd,              &
+                                R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
 
   use data_structure
   use global_distributed_matrix
@@ -47,10 +48,9 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   TYPE (type_element_list) :: element_list
   TYPE (type_bnd_node_list):: bnd_node_list
   logical                  :: xpoint2
-  REAL*8                   :: psi_axis
+  REAL*8                   :: psi_axis, R_axis, Z_axis
   REAL*8                   :: psi_bnd
-  REAL*8                   :: Z_xpoint(2)
-  REAL*8                   :: psi_xpoint(2)
+  REAL*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
   logical                  :: gmres
   logical                  :: solve_only
   real*8                   :: rhs_loc(*)

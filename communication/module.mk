@@ -71,5 +71,6 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)		\
 
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/import_restart.f90		\
+        $(DIR)/vertex_is_local.f90              \
 	$(DIR)/export_helena.f90		\
 	$(DIR)/mpi_mod.f90

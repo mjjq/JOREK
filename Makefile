@@ -268,7 +268,7 @@ jorek2vtk_3d : diagnostics/jorek2vtk_3d.f90 $(JOREK2VTK3D_OBJ)
 	 -o $(JOREK_DIR)/jorek2vtk_3d $(INCLUDES) $(LIBS)
 
 jorek2_diagno : diagnostics/jorek2_diagno.f90 $(JOREK2_DIAGNO_OBJ)
-	$(FC) $(FFLAGS)                 \
+	$(FC) $(FFLAGS_NO_OMP)                 \
 	diagnostics/jorek2_diagno.f90   \
 	$(JOREK2_DIAGNO_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_diagno $(INCLUDES) $(LIBS)

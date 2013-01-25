@@ -57,6 +57,7 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC) \
 
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC) \
 	$(DIR)/flush_it.f90		\
+        $(DIR)/clock.f90                \
 	$(DIR)/trace.f90		\
 	$(DIR)/pastix_getmem.c
 

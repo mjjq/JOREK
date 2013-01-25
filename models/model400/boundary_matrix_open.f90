@@ -2,7 +2,8 @@ module mod_boundary_matrix_open
   implicit none
 contains
 
-subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)
+subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, &
+                                psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
 ! implements the natural boundary conditions
@@ -35,7 +36,7 @@ integer    :: in, im
 integer    :: ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8
 integer    :: kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
 real*8     :: ws, xjac,  BigR, Z, phi, eps_cyl
-real*8     :: psi_axis, psi_bnd, Z_xpoint(2)
+real*8     :: psi_axis, R_axis, Z_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6, rhs_ij_7, rhs_ij_8
 real*8     :: theta, zeta
 

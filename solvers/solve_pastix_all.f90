@@ -96,6 +96,11 @@ call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
 
 call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
+call clck_time(t1)
+call clck_ldiff(t0,t1,tsecond)
+if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+
+call clck_time(t0)
 
 #ifdef USE_BLOCK
 !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar

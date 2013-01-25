@@ -27,12 +27,12 @@ my_id=0
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
-
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
   write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
+
+call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -48,7 +48,7 @@ do i=2,index_start
  Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
              / (xtime(i)-xtime(i-1))
 
- write(*,'(i7,f12.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
+ !write(*,'(i7,f12.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
 
  write(20,'(i7,f12.3,200e14.6)') i,xtime(i),energies(1,1,i),(energies(in,1,i)+energies(in+1,1,i),in=2,n_tor,2), &
                                             energies(1,2,i),(energies(in,2,i)+energies(in+1,2,i),in=2,n_tor,2)
@@ -56,7 +56,7 @@ do i=2,index_start
 enddo
 close(20)
 
-!call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
 !------------------lowshape3bis outside
 !Rplot(1) = 3.0
@@ -82,14 +82,14 @@ close(20)
 !Zplot(1) = 0.07
 !Zplot(2) = 0.07
 
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+!call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 Rplot(1) = 2.
 Rplot(2) = 4.2
 Zplot(1) = Z_axis
 Zplot(2) = Z_axis 
 
-call plot_profiles(node_list,element_list,Rplot,Zplot)
+!call plot_profiles(node_list,element_list,Rplot,Zplot)
 
 
 !call export_helena(node_list,element_list)

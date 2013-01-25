@@ -91,7 +91,7 @@ do i=1,element_list%n_elements
       grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
 !      if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.2d0) .and. (R .lt. 1.d0)) then !MAST!!!
-      if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.4d0)) then
+      if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.1 * R_geo)) then
         grad_psi_min = grad_psi
         i_elm_axis = i
         ij_axis(1) = ms;         ij_axis(2)  = mt

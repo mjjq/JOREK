@@ -41,4 +41,5 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)	\
 
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
-	$(DIR)/mod_parameters.f90
+	$(DIR)/mod_parameters.f90               \
+        $(DIR)/sources.f90                  

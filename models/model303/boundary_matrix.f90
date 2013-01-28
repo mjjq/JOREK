@@ -90,7 +90,7 @@ do i=1,2
 enddo
 
 
-gamma_sheeth = -3.d0
+!gamma_sheeth = -3.d0
 
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
@@ -127,7 +127,7 @@ do ms=1, n_gauss
 
            v   =  H1(i,j,ms) * element%size(vertex(i),j) * HZ(im,mp)
 
-           rhs_ij_6 = v * gamma_sheeth * r0 * T0 * vpar0 * ps0_s * tstep 
+           rhs_ij_6 = v * gamma_sheath * r0 * T0 * vpar0 * ps0_s * tstep 
 
            ij6 = index_ij + 5*n_tor
 
@@ -148,13 +148,13 @@ do ms=1, n_gauss
                  index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
 
 
-                 amat_61 = - v * gamma_sheeth * r0  * T0 * vpar0 * psi_s * theta * tstep 
+                 amat_61 = - v * gamma_sheath * r0  * T0 * vpar0 * psi_s * theta * tstep 
 
-                 amat_65 = - v * gamma_sheeth * rho * T0 * vpar0 * ps0_s * theta * tstep 
+                 amat_65 = - v * gamma_sheath * rho * T0 * vpar0 * ps0_s * theta * tstep 
 
-                 amat_66 = - v * gamma_sheeth * r0  * T  * vpar0 * ps0_s * theta * tstep 
+                 amat_66 = - v * gamma_sheath * r0  * T  * vpar0 * ps0_s * theta * tstep 
 
-                 amat_67 = - v * gamma_sheeth * r0  * T0 * vpar  * ps0_s * theta * tstep 
+                 amat_67 = - v * gamma_sheath * r0  * T0 * vpar  * ps0_s * theta * tstep 
 		 
 
                  kl1 = index_kl

@@ -780,7 +780,6 @@ write(*,*) 'grid_to_wall=', grid_to_wall
 
   iter_gmres  = 999
   iter_big    = gmres_max_iter
-  iter_precon = 22 
   iter_prev   = 0
 
   call tr_print_memsize("BeforeTimeStepping")

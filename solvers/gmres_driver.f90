@@ -7,6 +7,7 @@ use murge_module
 use global_distributed_matrix
 use mpi_mod
 use clock_module
+use phys_module,  only : gmres_4, gmres_tol, gmres_m
 
 implicit none
 #include "r3_info.h"
@@ -44,13 +45,13 @@ icntl(5) = 3            ! orthogonalization scheme
 icntl(6) = 1            ! initial guess  (1) = user supplied guess
 icntl(8) = 1            ! residual calculation strategy at restart
 
-cntl(1) = 1.d-8         ! stopping tolerance
+cntl(1) = gmres_tol         ! stopping tolerance
 cntl(2) = 1.d0
 cntl(3) = 1.d0
-cntl(4) = 1.d0          ! 1.d0
+cntl(4) = gmres_4          ! 1.d0
 cntl(5) = 1.d0
 
-m = 20
+m = gmres_m 
 
 n_dof = ndof_glob
 

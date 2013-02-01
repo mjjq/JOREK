@@ -6,7 +6,7 @@ use tr_module
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use wsmp_module,   only: use_wsmp
 use vacuum,        only: wall_resistivity
 use mpi_mod
@@ -28,9 +28,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (339+2*max_limiter) * IDBL_EXT + (31+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (340+2*max_limiter+n_var) * IDBL_EXT + (31+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (338+2*max_limiter) * IDBL_EXT + (30+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (339+2*max_limiter+n_var) * IDBL_EXT + (30+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -147,7 +147,9 @@ if (my_id .eq. 0) then
 
   call MPI_PACK(gmres_4,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 194 
   call MPI_PACK(gmres_tol,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 195 
-  
+  call MPI_PACK(tgnum,             n_var,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 195 + n_var
+  call MPI_PACK(pastix_pivot,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 195 + n_var + 1
+
   call MPI_PACK(psi_axis_init,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 196
   call MPI_PACK(XR_r(:),                2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 198
   call MPI_PACK(SIG_r(:),               2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 200
@@ -184,7 +186,7 @@ if (my_id .eq. 0) then
   call MPI_PACK (aki_neo_const,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 236
   call MPI_PACK (amu_neo_const,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 237+2*max_limiter
 
-  call MPI_PACK (wall_resistivity,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 238
+  call MPI_PACK (wall_resistivity,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 238+2*max_limiter+n_var+1
 
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 1
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 11
@@ -210,7 +212,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(Rmax_pfc,               20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 278
   call MPI_PACK(Zmin_pfc,               20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 298
   call MPI_PACK(Zmax_pfc,               20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 318
-  call MPI_PACK(current_pfc,            20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 338+2*max_limiter
+  call MPI_PACK(current_pfc,            20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 338+2*max_limiter+n_var+1
 
   call MPI_PACK(mode,               n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 21+n_tor
   call MPI_PACK(index_start,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 22
@@ -398,6 +400,8 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,gmres_4,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 194
   call MPI_UNPACK(buffer,bufsize,position,gmres_tol,              1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 195
+  call MPI_UNPACK(buffer,bufsize,position,tgnum,              n_var,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 195 + n_var
+  call MPI_UNPACK(buffer,bufsize,position,pastix_pivot,           1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 195 + n_var + 1 
 
   call MPI_UNPACK(buffer,bufsize,position,psi_axis_init,          1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 196
   call MPI_UNPACK(buffer,bufsize,position,XR_r(:),                2,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 198

@@ -5,7 +5,7 @@ use tr_module
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use vacuum,        only: vacuum_preset, wall_resistivity
 use wsmp_module,   only: use_wsmp
 
@@ -68,7 +68,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-		gmres_m, gmres_4, gmres_tol, iter_precon,           &
+                gmres_m, gmres_4, gmres_tol, iter_precon,           &
+                tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
@@ -79,7 +80,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-		D_prof_neg, ZK_prof_neg, T_min
+                D_prof_neg, ZK_prof_neg, T_min
 
  if (my_id .eq. 0) then
 

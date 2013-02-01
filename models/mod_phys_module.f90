@@ -382,6 +382,9 @@ module phys_module
   integer             :: gmres_m        !< gmres restart (dimension)
   real*8              :: gmres_4        !< see gmres manual (error ratio between preconditioned and non-preconditioned error
   real*8              :: gmres_tol      !< the tolerance for the gmres iterations
+
+  !> @name Taylor-Galerkin Stabilisation coefficients
+  real*8              :: tgnum(n_var)
   !> @name numerical
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature

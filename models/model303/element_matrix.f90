@@ -102,8 +102,8 @@ RHS = 0.d0
 epsil=1.d-3
 !======================================= NEO
 
-TG_num1    = 0.d0; TG_num2    = 2.d0; TG_num5    = 2.d0; TG_num6    = 2.d0; TG_num7    = 2.d0;
-!TG_num1    = 0.d0; TG_num2    = 0.d0; TG_num5    = 0.d0; TG_num6    = 0.d0; TG_num7    = 0.d0;
+! --- Taylor-Galerkin Stabilisation coefficients
+TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    = TGNUM(6); TG_num7    = TGNUM(7);
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta

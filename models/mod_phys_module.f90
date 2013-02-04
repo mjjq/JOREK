@@ -10,6 +10,7 @@ module phys_module
   real*8  :: eta                  !< Resistivity
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
   real*8  :: visco                !< Viscosity
+  real*8  :: visco2               !< Second coefficient of viscosity
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$

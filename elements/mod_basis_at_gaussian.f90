@@ -31,6 +31,7 @@ module basis_at_gaussian
 
   real*8 :: HZ(n_tor,n_plane)          !< Basis functions in toroidal direction
   real*8 :: HZ_p(n_tor,n_plane)        !< Derivative of basis functions in toroidal direction
+  real*8 :: HZ_pp(n_tor,n_plane)       !< Second derivative of basis functions in toroidal direction
 
   real*8 :: H1(2,n_order+1,n_gauss)    !< One dimensional basis functions
   real*8 :: H1_s(2,n_order+1,n_gauss)  !< First derivative of one dimensional basis functions

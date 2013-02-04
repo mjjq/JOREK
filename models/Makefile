@@ -12,6 +12,7 @@ all: modules \
      poisson.o \
      equilibrium.o \
      ffprime.o \
+     F_profile.o \  
      chgmt_node.o \
      temperature.o \
      temperature_i.o \

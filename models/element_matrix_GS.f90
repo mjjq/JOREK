@@ -89,16 +89,9 @@ do ms=1, n_gauss
     			zT,dT_dpsi,dT_dz,ddT_dpsi,ddT_dz,ddT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     endif
 
-#ifdef fullmhd
-  call F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
-                 F_prof,dF_dpsi,dF_dz, dF_dpsi2,dF_dz2,dF_dpsi_dz, &
-                 zFFprime,dFFprime_dpsi,ddFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-		 
-#else
     call FFprime(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq2_g(ms,mt),psi_axis,psi_bnd, &
                 zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz)
-#endif
-		
+
     wst = wgauss(ms)*wgauss(mt)
 
     xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)

@@ -57,10 +57,12 @@ do k=1,n_plane
 
 !    write(*,'(A,12i6)') ' ini basis : ',k,i,2*i,2*i+1,mode(2*i),mode(2*i+1)
 
-    HZ(2*i,k)     =                        cos(mode(2*i)  *phi)
-    HZ_p(2*i,k)   = - float(mode(2*i))   * sin(mode(2*i)  *phi)
-    HZ(2*i+1,k)   =                        sin(mode(2*i+1)*phi)
-    HZ_p(2*i+1,k) = + float(mode(2*i+1)) * cos(mode(2*i+1)*phi)
+    HZ(2*i,k)      =                           cos(mode(2*i)  *phi)
+    HZ_p(2*i,k)    = - float(mode(2*i))      * sin(mode(2*i)  *phi)
+    HZ_pp(2*i,k)   = - float(mode(2*i))**2   * cos(mode(2*i)  *phi)
+    HZ(2*i+1,k)    =                           sin(mode(2*i+1)*phi)
+    HZ_p(2*i+1,k)  = + float(mode(2*i+1))    * cos(mode(2*i+1)*phi)
+    HZ_pp(2*i+1,k) = - float(mode(2*i+1))**2 * sin(mode(2*i+1)*phi)
 
   enddo
 
@@ -68,3 +70,4 @@ enddo
 
 return
 end subroutine initialise_basis
+

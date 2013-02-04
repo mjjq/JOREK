@@ -268,15 +268,8 @@ do i=1,node_list%n_nodes
   		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
   endif
 
-#ifdef fullmhd
-  call F_profile(xpoint2, xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
-                 F_prof,dF_dpsi,dF_dz, dF_dpsi2,dF_dz2,dF_dpsi_dz, &
-                 zFFprime,dFFprime_dpsi,ddFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-		 
-#else
   call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                              dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
-#endif
 
   zjz     = zFFprime      - R*R *      (dn_dpsi    * zT + zn * dT_dpsi)
 
@@ -324,9 +317,6 @@ do i=1,node_list%n_nodes
                                   + dj_dZ_dpsi*( node_list%node(i)%x(2,2) * node_list%node(i)%values(1,3,1)   &
                                                + node_list%node(i)%x(3,2) * node_list%node(i)%values(1,2,1) )
 
-#ifdef fullmhd
-  node_list%node(i)%psi_eq(:,:) = node_list%node(i)%values(1,:,:)
-#endif
 
 enddo
 

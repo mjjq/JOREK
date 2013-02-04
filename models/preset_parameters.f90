@@ -30,6 +30,7 @@ subroutine preset_parameters
   eta   = 1.d-5
   visco = 1.d-5
   visco_par = 1.d-5
+  visco2    = 0.d0
   
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)

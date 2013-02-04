@@ -12,7 +12,8 @@ module data_structure
     real*8     :: values(n_tor,n_order+1,n_var)   !< Variable values and derivatives
     real*8     :: deltas(n_tor,n_order+1,n_var)   !< Change of variable values and derivatives in last timestep
 #ifdef fullmhd
-    real*8     :: psi_eq(n_order+1,n_var)         !< equilibrium flux at the nodes
+    real*8     :: psi_eq(n_order+1)               !< equilibrium flux at the nodes
+    real*8     :: Fprof_eq(n_order+1)             !< equilibrium profile R*B_phi at the nodes
 #endif
     integer    :: index(n_order+1)                !< index in the main matrix
     integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes
@@ -96,7 +97,7 @@ module data_structure
      real*8, dimension (:)    , pointer :: RHS2
 
      real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
-     real*8, dimension(:,:,:,:) , pointer :: eq_p
+     real*8, dimension(:,:,:,:) , pointer :: eq_p, eq_pp
      real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt   
      real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
 
@@ -147,7 +148,8 @@ contains
             call tr_allocatep(thread_struct(i)%eq_p   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_p",CAT_MATELEM)
             call tr_allocatep(thread_struct(i)%eq_ss  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_ss",CAT_MATELEM)
             call tr_allocatep(thread_struct(i)%eq_st  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_st",CAT_MATELEM)
-            call tr_allocatep(thread_struct(i)%eq_tt  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_tt",CAT_MATELEM) 
+            call tr_allocatep(thread_struct(i)%eq_tt  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_tt",CAT_MATELEM)
+            call tr_allocatep(thread_struct(i)%eq_pp  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_pp",CAT_MATELEM) 
             call tr_allocatep(thread_struct(i)%delta_g,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_g",CAT_MATELEM) 
             call tr_allocatep(thread_struct(i)%delta_s,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_s",CAT_MATELEM)
             call tr_allocatep(thread_struct(i)%delta_t,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_t",CAT_MATELEM)
@@ -176,7 +178,8 @@ contains
          call tr_deallocatep(thread_struct(i)%eq_p   ,"eq_p",CAT_MATELEM)
          call tr_deallocatep(thread_struct(i)%eq_ss  ,"eq_ss",CAT_MATELEM)
          call tr_deallocatep(thread_struct(i)%eq_st  ,"eq_st",CAT_MATELEM)
-         call tr_deallocatep(thread_struct(i)%eq_tt  ,"eq_tt",CAT_MATELEM) 
+         call tr_deallocatep(thread_struct(i)%eq_tt  ,"eq_tt",CAT_MATELEM)
+         call tr_deallocatep(thread_struct(i)%eq_pp  ,"eq_pp",CAT_MATELEM) 
          call tr_deallocatep(thread_struct(i)%delta_g,"delta_g",CAT_MATELEM) 
          call tr_deallocatep(thread_struct(i)%delta_s,"delta_s",CAT_MATELEM)
          call tr_deallocatep(thread_struct(i)%delta_t,"delta_t",CAT_MATELEM)
@@ -187,4 +190,5 @@ contains
   end subroutine del_thread_buffers
   
 end module data_structure
+
 

@@ -65,6 +65,10 @@ do i=1,node_list%n_nodes
   read(21) values_tmp
   read(21) deltas_tmp
 
+#ifdef fullmhd
+  read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
+  read(21) node_list%node(i)%Fprof_eq             !< equilibrium profile R*B_phi at the nodes
+#endif
   read(21) node_list%node(i)%index
   read(21) node_list%node(i)%boundary
   read(21) node_list%node(i)%parents
@@ -171,3 +175,4 @@ write(*,*) '********* end restart ******************'
 
 return
 end subroutine import_restart
+

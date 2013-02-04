@@ -28,9 +28,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (340+2*max_limiter+n_var) * IDBL_EXT + (31+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (343+2*max_limiter+n_var) * IDBL_EXT + (31+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (339+2*max_limiter+n_var) * IDBL_EXT + (30+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (342+2*max_limiter+n_var) * IDBL_EXT + (30+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -94,6 +94,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(eta,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 141
   call MPI_PACK(visco,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 142
   call MPI_PACK(visco_par,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 143
+  call MPI_PACK(visco2,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
 
   call MPI_PACK(eta_num,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 144
   call MPI_PACK(visco_num,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 145
@@ -199,6 +200,8 @@ if (my_id .eq. 0) then
 
   call MPI_PACK(n_flux,                 1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 12
   call MPI_PACK(n_tht,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 13
+  call MPI_PACK(n_radial,               1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(n_pol,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(n_open,                 1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 14
   call MPI_PACK(n_outer,                1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 15
   call MPI_PACK(n_inner,                1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 16
@@ -347,6 +350,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,eta,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 141
   call MPI_UNPACK(buffer,bufsize,position,visco,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 142
   call MPI_UNPACK(buffer,bufsize,position,visco_par,              1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 143
+  call MPI_UNPACK(buffer,bufsize,position,visco2,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,eta_num,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 144
   call MPI_UNPACK(buffer,bufsize,position,visco_num,              1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 145
@@ -452,7 +456,9 @@ if (my_id .ne. 0) then
 #endif
 
   call MPI_UNPACK(buffer,bufsize,position,n_flux,                 1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 12
-  call MPI_UNPACK(buffer,bufsize,position,n_tht,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 13
+  call MPI_UNPACK(buffer,bufsize,position,n_tht,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 13
+  call MPI_UNPACK(buffer,bufsize,position,n_radial,               1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,n_pol,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_open,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 14
   call MPI_UNPACK(buffer,bufsize,position,n_outer,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 15
   call MPI_UNPACK(buffer,bufsize,position,n_inner,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 16

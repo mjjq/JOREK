@@ -26,6 +26,10 @@ do i=1,node_list%n_nodes
   write(21) node_list%node(i)%x
   write(21) node_list%node(i)%values
   write(21) node_list%node(i)%deltas
+#ifdef fullmhd
+  write(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
+  write(21) node_list%node(i)%Fprof_eq             !< equilibrium profile R*B_phi at the nodes
+#endif
   write(21) node_list%node(i)%index
   write(21) node_list%node(i)%boundary
   write(21) node_list%node(i)%parents
@@ -59,3 +63,4 @@ close(21)
 
 return
 end subroutine export_restart
+

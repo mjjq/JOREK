@@ -11,6 +11,7 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/element_matrix_poisson_inverse.f90 	\
 	$(DIR)/equilibrium.f90 				\
 	$(DIR)/ffprime.f90 				\
+   $(DIR)/F_profile.f90          \
 	$(DIR)/poisson.f90 				\
 	$(DIR)/temperature.f90 				\
 	$(DIR)/temperature_i.f90 			\

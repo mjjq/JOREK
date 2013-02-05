@@ -116,3 +116,22 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)		\
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/mod_domains.f90                          \
 	$(DIR)/mod_pellet.f90
+
+JORDEL_SRC := $(JORDEL_SRC)                       \
+	$(DIR)/read_num_profiles.f90                    \
+	$(DIR)/derive_num_profiles.f90                  \
+	$(DIR)/preset_parameters.f90                    \
+	$(DIR)/det_modes.f90                            \
+	$(DIR)/mod_diffusivities.f90                    \
+	$(DIR)/mod_constants.f90                        \
+	$(DIR)/mod_phys_module.f90                      \
+	$(DIR)/neo_coef.f90
+
+ENBIGGEN_SRC := $(ENBIGGEN_SRC)                       \
+	$(DIR)/read_num_profiles.f90                    \
+	$(DIR)/derive_num_profiles.f90                  \
+	$(DIR)/preset_parameters.f90                    \
+	$(DIR)/det_modes.f90                            \
+	$(DIR)/mod_constants.f90                        \
+	$(DIR)/mod_phys_module.f90
+

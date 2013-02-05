@@ -31,3 +31,10 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)		\
 
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/mod_vacuum.f90			\
+
+JORDEL_SRC := $(JORDEL_SRC)               \
+	$(DIR)/mod_vacuum.f90                   \
+
+ENBIGGEN_SRC := $(ENBIGGEN_SRC)                 \
+	$(DIR)/mod_vacuum.f90                   \
+

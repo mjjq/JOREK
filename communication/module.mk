@@ -74,3 +74,15 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
         $(DIR)/vertex_is_local.f90              \
 	$(DIR)/export_helena.f90		\
 	$(DIR)/mpi_mod.f90
+
+JORDEL_SRC := $(JORDEL_SRC)               \
+	$(DIR)/import_restart.f90               \
+	$(DIR)/vertex_is_local.f90              \
+	$(DIR)/mpi_mod.f90
+
+ENBIGGEN_SRC := $(ENBIGGEN_SRC)               \
+	$(DIR)/import_restart.f90               \
+	$(DIR)/export_restart.f90               \
+	$(DIR)/vertex_is_local.f90              \
+	$(DIR)/mpi_mod.f90
+

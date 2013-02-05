@@ -44,3 +44,12 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
         $(DIR)/sources.f90                      \
 	$(DIR)/mod_parameters.f90
+
+JORDEL_SRC := $(JORDEL_SRC)       \
+	$(DIR)/initialise_parameters.f90        \
+	$(DIR)/mod_parameters.f90
+
+ENBIGGEN_SRC := $(ENBIGGEN_SRC)       \
+	$(DIR)/initialise_parameters.f90        \
+	$(DIR)/mod_parameters.f90
+

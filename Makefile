@@ -89,6 +89,8 @@ endif
 JOREK2_MAIN_SRC        = jorek2_main.f90 $(PPPSRC)
 JOREK2_POINCARE_SRC    = $(PPPSRC)
 JOREK2_CONNECTION2_SRC = $(PPPSRC)
+ENBIGGEN_SRC           = $(PPPSRC)
+JORDEL_SRC             = $(PPPSRC)
 JOREK2VTK_SRC          = $(PPPSRC)
 JOREK2FLVTK_SRC	       = $(PPPSRC)
 JOREK2VTK3D_SRC        = $(PPPSRC)
@@ -99,7 +101,7 @@ JOREK2_DIAGNO_SRC      = $(PPPSRC)
 include $(patsubst %,%/module.mk,$(DIRS))
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
-  $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC))
+  $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC)) $(JORDEL_SRC) $(ENBIGGEN_SRC)
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
@@ -116,6 +118,14 @@ JOREK2_POINCARE_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SR
 JOREK2_CONNECTION2_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) 	\
 				$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_CONNECTION2_SRC)))		\
 				$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_CONNECTION2_SRC)))
+
+ENBIGGEN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(ENBIGGEN_SRC))) \
+		$(patsubst %.f,%.o,$(filter %.f, $(ENBIGGEN_SRC)))     \
+		$(patsubst %.c,%.o,$(filter %.c, $(ENBIGGEN_SRC)))
+
+JORDEL_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JORDEL_SRC))) \
+		$(patsubst %.f,%.o,$(filter %.f, $(JORDEL_SRC)))     \
+		$(patsubst %.c,%.o,$(filter %.c, $(JORDEL_SRC)))
 
 JOREK2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK_SRC))) \
 		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK_SRC)))	\
@@ -249,6 +259,18 @@ jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OB
 	$(JOREK2_CONNECTION2_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_connection $(INCLUDES) $(LIBS)
 
+enbiggen : diagnostics/enbiggen.f90 $(ENBIGGEN_OBJ)
+	$(FC) $(FFLAGS)                 \
+	diagnostics/enbiggen.f90        \
+	$(ENBIGGEN_OBJ)              \
+	-o $(JOREK_DIR)/enbiggen $(INCLUDES) $(LIBS)
+
+jordel : diagnostics/jordel.f90 $(JORDEL_OBJ)
+	$(FC) $(FFLAGS)  \
+	diagnostics/jordel.f90            \
+	$(JORDEL_OBJ)    \
+	-o $(JOREK_DIR)/jordel $(INCLUDES) $(LIBS)
+
 jorek2vtk : diagnostics/jorek2vtk.f90 $(JOREK2VTK_OBJ)
 	$(FC) $(FFLAGS)                 \
 	diagnostics/jorek2vtk.f90       \
@@ -346,6 +368,10 @@ forcheck_postproc :
 
 forcheck_connection2 :
 	$(FCK_CALL) diagnostics/jorek2_connection2.f90 $(FCK_CONNECTION2_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_jordel :
+	$(FCK_CALL) diagnostics/jordel.f90  $(FCK_JORDEL_SRC) \
 	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_jorek2vtk :

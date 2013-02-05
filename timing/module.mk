@@ -67,3 +67,15 @@ JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC) \
 	$(DIR)/trace.f90		\
 	$(DIR)/pastix_getmem.c
 
+JORDEL_SRC := $(JORDEL_SRC) \
+	$(DIR)/flush_it.f90             \
+	$(DIR)/trace.f90                \
+	$(DIR)/clock.f90                \
+	$(DIR)/pastix_getmem.c
+
+ENBIGGEN_SRC := $(ENBIGGEN_SRC) \
+	$(DIR)/flush_it.f90             \
+	$(DIR)/trace.f90                \
+	$(DIR)/clock.f90                \
+	$(DIR)/pastix_getmem.c
+

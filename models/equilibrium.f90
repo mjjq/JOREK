@@ -31,6 +31,7 @@ real*8     :: zT,  dT_dpsi,  dT_dpsi2,  dT_dz,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3, 
 real*8     :: zTi, dTi_dpsi, dTi_dpsi2, dTi_dz, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi2_dz, dTi_dpsi_dz2
 real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi2_dz, dTe_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
+real*8     :: F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_dpsi_dz
 real*8     :: xx, x_s, x_t, x_st, x_ss, x_tt, yy, y_s, y_t, y_st, y_ss, y_tt
 real*8     :: R_axis, Z_axis, s_axis, t_axis, psi_axis,R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: R_lim, Z_lim, s_lim, t_lim, psi_lim, R_out, Z_out, s_out, t_out
@@ -268,8 +269,22 @@ do i=1,node_list%n_nodes
   		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
   endif
 
+#ifdef fullmhd
+    call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,F_prof,dF_dpsi      ,dF_dz      , &
+                                                                dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
+                                                                zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
+                                                                dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
+
+    node_list%node(i)%Fprof_eq(1) =   F_prof
+    node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3)  + dF_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3)  + dF_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3)  + dF_dz * node_list%node(i)%x(4,2)      &
+                                    + dF_dpsi2 * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+                                    + dF_dz2   * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
+#else
   call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                              dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+#endif
 
   zjz     = zFFprime      - R*R *      (dn_dpsi    * zT + zn * dT_dpsi)
 

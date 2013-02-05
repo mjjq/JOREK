@@ -28,6 +28,7 @@ integer :: i_elm, j, k, n1, n2, n3
 real*8  :: t,rr1, rr2, drr1, drr2, ss1, ss2, dss1, dss2, ri, si, dri, dsi, dl
 real*8  :: RRgi, dRRgi_dr, dRRgi_ds, ZZgi, dZZgi_dr, dZZgi_ds, dRRgi_dt, dZZgi_dt
 real*8  :: PSgi, dPSgi_dr, dPSgi_ds, PSI_R, PSI_Z, RZJAC, grad_psi, psi_n
+real*8  :: Fgi,dFgi_dr,dFgi_ds,dFgi_drs,dFgi_drr,dFgi_dss
 real*8  :: sum_dl, B_tot2
 real*8  :: dRRgi_drs,dRRgi_drr,dRRgi_dss, dZZgi_drs,dZZgi_drr,dZZgi_dss, dPSgi_drs,dPSgi_drr,dPSgi_dss
 integer :: i,m, ig, ip
@@ -83,7 +84,13 @@ do i=2, surface_list%n_psi
 
       grad_psi = sqrt(PSI_R * PSI_R + PSI_Z * PSI_Z)
 
-      B_tot2 =  (F0 / RRgi)**2 + (grad_psi/ RRgi)**2
+#ifdef fullmhd
+      call interp(node_list,element_list,i_elm, 456 ,1,ri,si, Fgi, dFgi_dr,dFgi_ds,dFgi_drs,dFgi_drr,dFgi_dss)  ! ivar = 456 for Fprof_eq
+#else
+      Fgi = F0
+#endif
+
+      B_tot2 =  (Fgi / RRgi)**2 + (grad_psi/ RRgi)**2
 
       sum_dl = sum_dl +  wgs(ig) * dl
 
@@ -93,7 +100,7 @@ do i=2, surface_list%n_psi
 
   end do
 
-  q(i) = F0 * q(i) / (2.d0 * PI)
+  q(i) = Fgi * q(i) / (2.d0 * PI)
 
 !  write(*,'(i5,3es13.5)') i, surface_list%psi_values(i), q(i), sum_dl
 

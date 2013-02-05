@@ -105,3 +105,26 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/initialise_basis.f90 		\
 	$(DIR)/interp.f90 			\
 	$(DIR)/interp_RZ.f90
+
+JORDEL_SRC := $(JORDEL_SRC)                    \
+	$(DIR)/mod_gauss.f90                    \
+	$(DIR)/mod_basis_at_gaussian.f90        \
+	$(DIR)/hermite_1d.f90                   \
+	$(DIR)/initialise_basis.f90             \
+	$(DIR)/basis_functions.f90              \
+	$(DIR)/basis_functions1.f90             \
+	$(DIR)/basis_functions2.f90             \
+	$(DIR)/interp.f90                       \
+	$(DIR)/interp_RZ.f90
+
+ENBIGGEN_SRC := $(ENBIGGEN_SRC)               \
+	$(DIR)/mod_gauss.f90                    \
+	$(DIR)/mod_basis_at_gaussian.f90        \
+	$(DIR)/hermite_1d.f90                   \
+	$(DIR)/initialise_basis.f90             \
+	$(DIR)/basis_functions.f90              \
+	$(DIR)/basis_functions1.f90             \
+	$(DIR)/basis_functions2.f90             \
+	$(DIR)/interp.f90                       \
+	$(DIR)/interp_RZ.f90
+

@@ -42,6 +42,7 @@ real*8                :: RHO_x, RHO_y, RHO_p
 real*8                :: TT_x, TT_y, TT_p
 real*8                :: Ti_x, Ti_y, Ti_p
 real*8                :: Te_x, Te_y, Te_p
+real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: ps0, psi_norm, psi_bnd, grad_psi
@@ -103,7 +104,11 @@ write(*,*)
 call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
+#ifdef fullmhd
+n_scalars = n_var + 10+6+3
+#else
 n_scalars = n_var + 10+6
+#endif
 
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
@@ -113,10 +118,21 @@ allocate(scalar_names(n_scalars), vector_names(n_vectors))
 grad_psi = 0.d0
 
 scalar_names(1:n_var) = variable_names(1:n_var)
+
+#ifdef fullmhd
+! Note: most of these additional quantities require modifications for the full MHD models that have not yet been taken into account
+!       ( perhaps two jorek2vtk files can be made in the future, one for the reduced and one for the full MHD models )
+scalar_names(n_var+1:n_scalars) = (/ &
+  'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ',&
+  'Mach_pol    ', 'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        ',&
+  'B_phi       ', 'B_R         ', 'B_Z         '/)
+#else
 scalar_names(n_var+1:n_scalars) = (/ &
   'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
   'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ',&
   'Mach_pol    ', 'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        '/)
+#endif
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
 
@@ -280,6 +296,27 @@ do i=1,element_list%n_elements
             scalars(inode,n_var+14) = Btot
             scalars(inode,n_var+16) = Vneo ! number n_var+16 is jbootstrap, see below.
          endif
+
+#ifdef fullmhd
+            ! Magnetic field components
+            call interp(node_list,element_list,i,var_AR,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+            call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+            call interp(node_list,element_list,i,var_A3,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+
+            AR_Z = ( - R_t * U_s + R_s * U_t ) / xjac
+            AZ_R = (   Z_t * V_s - Z_s * V_t ) / xjac
+            A3_R = (   Z_t * W_s - Z_s * W_t ) / xjac
+            A3_Z = ( - R_t * W_s + R_s * W_t ) / xjac
+            AR_p = 0.d0 ; AZ_p = 0.d0
+
+            call interp(node_list,element_list,i,456,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+            Fprof = W
+
+            scalars(inode,n_var+17) = ( AZ_R - AR_Z )  + Fprof / R      ! B_phi
+            scalars(inode,n_var+18) = ( A3_Z - AZ_p )/ BigR             ! B_R
+            scalars(inode,n_var+19) = ( AR_p - A3_R )/ BigR             ! B_Z
+#endif
+
          ! old values back to normal
          i_tor = i_tor_old
 
@@ -332,6 +369,42 @@ do i=1,element_list%n_elements
 
             endif
 
+#ifdef fullmhd
+               ! Magnetic field components
+               call interp(node_list,element_list,i,var_AR,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+               call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+               call interp(node_list,element_list,i,var_A3,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+
+               AR_Z = ( - R_t * U_s + R_s * U_t ) / xjac
+               AZ_R = (   Z_t * V_s - Z_s * V_t ) / xjac
+               A3_R = (   Z_t * W_s - Z_s * W_t ) / xjac
+               A3_Z = ( - R_t * W_s + R_s * W_t ) / xjac
+
+               if (i_tor == 1) then
+                 AR_p = 0.d0 ; AZ_p = 0.d0
+               elseif (mod(i_tor,2) == 0 ) then ! cosine
+                 call interp(node_list,element_list,i,var_AR,i_tor+1,s,t,U,U_s,U_t,U_st,U_ss,U_tt) ! sine
+                 call interp(node_list,element_list,i,var_AZ,i_tor+1,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+                 AR_p = float(mode(i_tor)) * U
+                 AZ_p = float(mode(i_tor)) * V
+               else                             ! sine
+                 call interp(node_list,element_list,i,var_AR,i_tor-1,s,t,U,U_s,U_t,U_st,U_ss,U_tt) ! cosine
+                 call interp(node_list,element_list,i,var_AZ,i_tor-1,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+                 AR_p = -float(mode(i_tor)) * U
+                 AZ_p = -float(mode(i_tor)) * V
+               endif
+
+               if (i_tor == 1) then
+                 call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
+                 scalars(inode,n_var+17)   = ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
+               else
+                 scalars(inode,n_var+17)   = ( AZ_R - AR_Z )    
+               endif
+               scalars(inode,n_var+18) = ( A3_Z - AZ_p )/ BigR  ! B_R
+               scalars(inode,n_var+19) = ( AR_p - A3_R )/ BigR  ! B_Z
+#endif
+
+
          else
 
                 	u0_x  = 0.d0; u0_y  = 0.d0;
@@ -374,6 +447,44 @@ do i=1,element_list%n_elements
                  Ti  = Ti     + Ti_00  * HZ(i_tor,i_plane)
                  Te  = Te     + Te_00  * HZ(i_tor,i_plane)
                end if
+
+#ifdef fullmhd
+               ! Magnetic field components
+               call interp(node_list,element_list,i,var_AR,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+               call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+               call interp(node_list,element_list,i,var_A3,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+
+               AR_Z = ( - R_t * U_s + R_s * U_t ) / xjac
+               AZ_R = (   Z_t * V_s - Z_s * V_t ) / xjac
+               A3_R = (   Z_t * W_s - Z_s * W_t ) / xjac
+               A3_Z = ( - R_t * W_s + R_s * W_t ) / xjac
+
+               if (i_tor == 1) then
+                 AR_p = 0.d0 ; AZ_p = 0.d0
+               elseif (mod(i_tor,2) == 0 ) then ! cosine
+                 call interp(node_list,element_list,i,var_AR,i_tor+1,s,t,U,U_s,U_t,U_st,U_ss,U_tt) ! sine
+                 call interp(node_list,element_list,i,var_AZ,i_tor+1,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+                 AR_p = float(mode(i_tor)) * U
+                 AZ_p = float(mode(i_tor)) * V
+               else                             ! sine
+                 call interp(node_list,element_list,i,var_AR,i_tor-1,s,t,U,U_s,U_t,U_st,U_ss,U_tt) ! cosine
+                 call interp(node_list,element_list,i,var_AZ,i_tor-1,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+                 AR_p = -float(mode(i_tor)) * U
+                 AZ_p = -float(mode(i_tor)) * V
+               endif
+
+               if (i_tor == 1) then
+                 call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
+                 scalars(inode,n_var+16) = scalars(inode,n_var+17) + ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
+               else
+                 scalars(inode,n_var+16) = scalars(inode,n_var+17) + ( AZ_R - AR_Z )     * HZ(i_tor,i_plane)
+                endif
+
+               scalars(inode,n_var+17) = scalars(inode,n_var+18) + ( A3_Z - AZ_p )/ BigR * HZ(i_tor,i_plane)  ! B_R
+               scalars(inode,n_var+18) = scalars(inode,n_var+19) + ( AR_p - A3_R )/ BigR * HZ(i_tor,i_plane)  ! B_Z
+#endif 
+
+
                if ((xjac .gt. 1.d-6)) then      ! avoid the axis
 
                   u0_x  = u0_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)

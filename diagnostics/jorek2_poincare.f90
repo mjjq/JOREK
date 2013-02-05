@@ -473,6 +473,7 @@ real*8 :: s_in, t_in, p_in, delta_p, delta_s, delta_t
 real*8 :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt, psi_s, psi_t, Zjac
+real*8 :: AR0_Z, AR0_p, AR0_s, AR0_t, AZ0_R, AZ0_p, AZ0_s, AZ0_t, A30_R, A30_Z, BR0, BZ0, Bp0, Fprof
 
 i_var_psi = 1
 
@@ -484,6 +485,22 @@ call interp(node_list,element_list,i_elm,i_var_psi,1,s_in,t_in,P0,P0_s,P0_t,P0_s
 
 psi_s = P0_s 
 psi_t = P0_t 
+
+#ifdef fullmhd
+  call interp(node_list,element_list,i_elm,var_AR,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+  AR0_s = P0_s 
+  AR0_t = P0_t 
+
+  call interp(node_list,element_list,i_elm,var_AZ,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+  AZ0_s = P0_s 
+  AZ0_t = P0_t 
+
+  AR0_p = 0.d0
+  AZ0_p = 0.d0
+
+  call interp(node_list,element_list,i_elm,456,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+  Fprof = P0
+#endif
 
 do i_tor = 1, (n_tor-1)/2
 
@@ -499,10 +516,47 @@ do i_tor = 1, (n_tor-1)/2
   psi_s = psi_s + Psin_s * sin(mode(i_harm+1)*p_in)
   psi_t = psi_t + Psin_t * sin(mode(i_harm+1)*p_in)
 
+#ifdef fullmhd
+  call interp(node_list,element_list,i_elm,var_AR,i_harm,s_in,t_in,Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt)
+  AR0_s = AR0_s + Pcos_s * cos(mode(i_harm)*p_in)
+  AR0_t = AR0_t + Pcos_t * cos(mode(i_harm)*p_in)
+  AR0_p = AR0_p - Pcos   * sin(mode(i_harm)*p_in) * mode(i_harm)
+  call interp(node_list,element_list,i_elm,var_AR,i_harm+1,s_in,t_in,Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt)
+  AR0_s = AR0_s + Psin_s * sin(mode(i_harm+1)*p_in)
+  AR0_t = AR0_t + Psin_t * sin(mode(i_harm+1)*p_in)
+  AR0_p = AR0_p + Psin   * cos(mode(i_harm+1)*p_in) * mode(i_harm+1)
+
+  call interp(node_list,element_list,i_elm,var_AZ,i_harm,s_in,t_in,Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt)
+  AZ0_s = AZ0_s + Pcos_s * cos(mode(i_harm)*p_in)
+  AZ0_t = AZ0_t + Pcos_t * cos(mode(i_harm)*p_in)
+  AZ0_p = AZ0_p - Pcos   * sin(mode(i_harm)*p_in) * mode(i_harm)
+  call interp(node_list,element_list,i_elm,var_AZ,i_harm+1,s_in,t_in,Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt)
+  AZ0_s = AZ0_s + Psin_s * sin(mode(i_harm+1)*p_in)
+  AZ0_t = AZ0_t + Psin_t * sin(mode(i_harm+1)*p_in)
+  AZ0_p = AZ0_p + Psin   * cos(mode(i_harm+1)*p_in) * mode(i_harm+1)
+#endif
+
 enddo
 
+#ifdef fullmhd
+AR0_Z = ( - R_t * AR0_s  + R_s * AR0_t ) / Zjac
+AZ0_R = (   Z_t * AZ0_s  - Z_s * AZ0_t ) / Zjac
+A30_R = (   Z_t * psi_s  - Z_s * psi_t ) / Zjac
+A30_Z = ( - R_t * psi_s  + R_s * psi_t ) / Zjac
+
+BR0 = ( A30_Z - AZ0_p )/ R
+BZ0 = ( AR0_p - A30_R )/ R
+Bp0 = ( AZ0_R - AR0_Z )       +   Fprof / R
+
+! dR/Rdphi = B_R / B_phi ; dZ/Rdphi = B_Z / B_phi
+! ds = (Z_t dR - R_t dZ) / Zjac ; dt = ( -Z_s dR + R_s dZ) / Zjac
+delta_s =  ( Z_t*BR0 - R_t*BZ0) / ( Bp0 * Zjac ) * R * delta_p
+delta_t =  (-Z_s*BR0 + R_s*BZ0) / ( Bp0 * Zjac ) * R * delta_p     
+
+#else
 delta_s =   psi_t * R / (Zjac * F0) * delta_p
 delta_t = - psi_s * R / (Zjac * F0) * delta_p
+#endif
 
 return
 end subroutine step

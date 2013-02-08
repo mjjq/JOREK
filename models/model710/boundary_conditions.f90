@@ -69,7 +69,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   integer :: ierr
   logical :: is_local, only_count
 
-  zbig = 1.d20
+  zbig = 1.d12
   if (use_murge .and. use_murge_element) then
      ! when we use murge assembly we first count entries then we had them.
      loop_nbr = 2

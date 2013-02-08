@@ -169,7 +169,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
      endif
 
-     if ( n_tor >= 3 .and. jorek_model < 700 ) then
+!     if ( n_tor >= 3 .and. jorek_model < 700 ) then
+     if ( n_tor .gt. 3 .and. jorek_model < 700 ) then
        call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)      ! use fft for toroidal integration
      else
        call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)          ! use direct integration

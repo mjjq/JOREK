@@ -513,7 +513,6 @@ do ms=1, n_gauss
          ZK_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
        endif
 
-       T_min = 1.d-3 !T_1  ITER  1.d-3
        if (T0 .lt. T_min) then
          eta_T   = eta    * (max(T0,T_min)/T_0)**(-1.5d0)           ! temperature dependent resistivity
          visco_T = visco  * (max(T0,T_min)/T_0)**(-1.5d0)           ! temperature dependent viscosity

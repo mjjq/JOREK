@@ -143,13 +143,14 @@ subroutine preset_parameters
   ZK_perp(:) = 0.d0
   ZK_perp(1) = 1.d-5; ZK_perp(2) = 0.d0; ZK_perp(3)= 0.d0; ZK_perp(4)= 99.d0; ZK_perp(5) = 99.d0
   ZK_par     = 1.d0
+  ZK_par_max = 1.d20
   D_perp(:)  = 0.d0
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
   
   D_prof_neg  = 1.d-5
   ZK_prof_neg = 1.d-5
-  T_min       = 0.001
+  T_min       = 0.0
 
   eta_num       = 0.d0
   visco_num     = 0.d0

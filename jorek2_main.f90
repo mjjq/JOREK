@@ -182,7 +182,11 @@ program JOREK2
   !call init_threads()
   
   ! --- Initialise MPI / threaded MPI
-  required=MPI_THREAD_MULTIPLE
+#ifdef FUNNELED
+  required = MPI_THREAD_FUNNELED
+#else
+  required = MPI_THREAD_MULTIPLE
+#endif
   call MPI_Init_thread(required, provided, StatInfo)
 
   call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread

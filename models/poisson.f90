@@ -311,6 +311,9 @@ if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mum
 pastix_iparm(1)  = 0          ! insert default values
 pastix_iparm(2)  = 0          ! initializse
 pastix_iparm(3)  = 0
+#ifdef FUNNELED
+  pastix_iparm(52) = 2
+#endif
 pastix_nthrd     = nbthreads
 write(*,*) '***********************************'
 write(*,*) '* initialise PastiX               *'
@@ -335,6 +338,11 @@ pastix_iparm(41) = pastix_sym
 pastix_iparm(42) = pastix_ricar
 pastix_iparm(37) = pastix_iluk
 pastix_iparm(14) = pastix_amalg
+
+
+#ifdef FUNNELED
+  pastix_iparm(52) = 2
+#endif
 
 pastix_dparm(6)  = pastix_epsilon    ! error level refinement
 pastix_dparm(11) = pastix_pivot      ! pivot threshold?

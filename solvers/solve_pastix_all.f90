@@ -153,7 +153,11 @@ if (.not. pastix_initialised) then
   pastix_iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
   pastix_iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
   pastix_iparm(IPARM_END_TASK)          = API_TASK_INIT
-
+#ifdef FUNNELED
+  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_FUNNELED
+#else
+  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_MULTIPLE
+#endif
   if (my_id .eq. 0) then
     write(*,*) '***********************************'
     write(*,*) '* initialise PastiX               *'
@@ -180,6 +184,12 @@ if (.not. pastix_initialised) then
   pastix_iparm(IPARM_INCOMPLETE)         = pastix_ricar
   pastix_iparm(IPARM_LEVEL_OF_FILL)      = pastix_iluk
   pastix_iparm(IPARM_AMALGAMATION_LEVEL) = pastix_amalg
+
+#ifdef FUNNELED
+  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_FUNNELED
+#else
+  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_MULTIPLE
+#endif
   
   pastix_dparm(DPARM_EPSILON_REFINEMENT) = pastix_epsilon             ! error level refinement
   pastix_dparm(DPARM_EPSILON_MAGN_CTRL)  = pastix_pivot               ! pivot threshold?

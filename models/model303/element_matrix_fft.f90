@@ -1,5 +1,9 @@
 module mod_elt_matrix_fft
+
+  implicit none
+
 contains
+
 subroutine element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
@@ -24,7 +28,7 @@ integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, eps_cyl
+real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
 real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2), dj_dpsi, dj_dz, source_pellet, source_volume
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
@@ -101,7 +105,6 @@ ELM_kn => thread_struct(tid)%ELM_kn
 RHS_p  => thread_struct(tid)%RHS_p 
 RHS_k  => thread_struct(tid)%RHS_k 
 
-
 ELM_p = 0.d0
 ELM_n = 0.d0
 ELM_k = 0.d0
@@ -115,16 +118,16 @@ RHS   = 0.d0
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-current_source  = 0.d0
-particle_source = 0.d0
-heat_source     = 0.d0
-
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_st  = 0.d0; y_ss  = 0.d0; y_tt  = 0.d0;
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_st = 0.d0; eq_ss = 0.d0; eq_tt = 0.d0; eq_p = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
+
+current_source  = 0.d0
+particle_source = 0.d0
+heat_source     = 0.d0
 
 do i=1,n_vertex_max
  do j=1,n_order+1
@@ -189,13 +192,13 @@ do ms=1, n_gauss
    wst = wgauss(ms)*wgauss(mt)
 
    xjac    = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
-
+   
    xjac_x  = (x_ss(ms,mt)*y_t(ms,mt)**2 - y_ss(ms,mt)*x_t(ms,mt)*y_t(ms,mt) - 2.d0*x_st(ms,mt)*y_s(ms,mt)*y_t(ms,mt)   &           
-	   + y_st(ms,mt)*(x_s(ms,mt)*y_t(ms,mt) + x_t(ms,mt)*y_s(ms,mt)) &
+	   + y_st(ms,mt)*(x_s(ms,mt)*y_t(ms,mt) + x_t(ms,mt)*y_s(ms,mt))                                               &
 	   + x_tt(ms,mt)*y_s(ms,mt)**2 - y_tt(ms,mt)*x_s(ms,mt)*y_s(ms,mt)) / xjac
 	   
    xjac_y  = (y_tt(ms,mt)*x_s(ms,mt)**2 - x_tt(ms,mt)*y_s(ms,mt)*x_s(ms,mt) - 2.d0*y_st(ms,mt)*x_t(ms,mt)*x_s(ms,mt)   &           
-	   + x_st(ms,mt)*(y_t(ms,mt)*x_s(ms,mt) + y_s(ms,mt)*x_t(ms,mt)) &
+	   + x_st(ms,mt)*(y_t(ms,mt)*x_s(ms,mt) + y_s(ms,mt)*x_t(ms,mt))                                               &
 	   + y_ss(ms,mt)*x_t(ms,mt)**2 - x_ss(ms,mt)*y_t(ms,mt)*x_t(ms,mt)) / xjac
 
    BigR    = x_g(ms,mt)
@@ -351,6 +354,11 @@ do ms=1, n_gauss
        eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
        d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+       if ( xpoint2 .and. (T0 .lt. T_min) ) then
+         eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
+         deta_dT   = 0.d0
+         d2eta_d2T = 0.d0
+       endif
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -361,16 +369,34 @@ do ms=1, n_gauss
      if ( visco_T_dependent ) then
        visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
        dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+       if ( xpoint2 .and. (T0 .lt. T_min) ) then
+         visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+         dvisco_dT = 0.d0
+       endif
      else
        visco_T   = visco
        dvisco_dT = 0.d0
      end if
      
-     ZKpar_T = ZK_par * (abs(T0)/T_0)**(+2.5d0)                  ! temperature dependent paralle conductivity
+     ! --- Temperature dependent parallel heat diffusivity
+     if ( ZKpar_T_dependent ) then
+       ZKpar_T   = ZK_par * (abs(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+       dZKpar_dT = ZK_par * (2.5d0)  * abs(T0)**(+1.5d0) * T_0**(-2.5d0)
+       if (ZKpar_T .gt. ZK_par_max) then
+         ZKpar_T   = Zk_par_max
+         dZKpar_dT = 0.d0
+       endif
+       if ( xpoint2 .and. (T0 .lt. T_min) ) then
+         ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+         dZKpar_dT = 0.d0
+       endif
+     else
+       ZKpar_T   = ZK_par                                            ! parallel conductivity
+       dZKpar_dT = 0.d0
+     endif
 
      eta_num_T   = eta_num   !* eta_T                        ! hyperresistivity
      visco_num_T = visco_num !* visco_T                      ! hyperviscosity
-     dZKpar_dT   = + ZK_par * (2.5d0) * abs(T0)**(+1.5d0) * T_0**(-2.5d0)
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
@@ -385,19 +411,32 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-     phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
+     if (xpoint2) then
+       if (r0 .lt. 0.d0)  then
+         D_prof  = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
+       endif
+       if (T0 .lt. 0.d0) then
+         ZK_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
+       endif
+     endif
+     
+     phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
+     delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
 
      source_pellet = 0.d0
      source_volume = 0.d0
+
+     if (use_pellet) then
 !     call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
 !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
 !                        x_g(ms,mt),y_g(ms,mt),ps0,phi,source_pellet)
    
-     call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-                         pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                         x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, central_density, pellet_particles,&
-			 pellet_density, total_pellet_volume, &
-                         source_pellet, source_volume)			
+       call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+                           pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
+                           x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, &
+                           central_density, pellet_particles, pellet_density, total_pellet_volume, &
+                           source_pellet, source_volume)
+     endif
 
      do i=1,n_vertex_max
 

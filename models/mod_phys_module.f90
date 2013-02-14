@@ -386,7 +386,8 @@ module phys_module
 
   !> @name Taylor-Galerkin Stabilisation coefficients
   real*8              :: tgnum(n_var)
-  !> @name numerical
+  
+  !> @name Numerical parameters
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.

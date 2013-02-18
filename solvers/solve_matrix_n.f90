@@ -275,10 +275,12 @@ contains
               pastix_iparm(IPARM_MODIFY_PARAMETER+1) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+1)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+1)         = API_TASK_INIT
+#ifdef IPARM_THREAD_MULTIPLE
 #ifdef FUNNELED
               pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_FUNNELED
 #else
               pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_MULTIPLE
+#endif
 #endif
               if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 
@@ -309,10 +311,12 @@ contains
               pastix_iparm(IPARM_LEVEL_OF_FILL+1)      = pastix_iluk
               pastix_iparm(IPARM_AMALGAMATION_LEVEL+1) = pastix_amalg
 
+#ifdef IPARM_THREAD_MULTIPLE
 #ifdef FUNNELED
               pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_FUNNELED
 #else
               pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_MULTIPLE
+#endif
 #endif
 
               pastix_dparm(DPARM_EPSILON_REFINEMENT+1) = pastix_epsilon             ! error level refinement

@@ -5,8 +5,9 @@ use tr_module
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use vacuum,        only: vacuum_preset, wall_resistivity
+use wsmp_module,   only: use_wsmp  
 
 implicit none
 
@@ -16,12 +17,20 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-integer :: ierr
+integer :: ierr, i, err
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta, visco, visco_par,                              &
-                restart, regrid,                                    &
+                restart, regrid, bootstrap, rst_format,             &
+                n_pfc,                                              & 
+                use_wsmp,                                           & 
+                zkpar_T_dependent,                                  &  
+                gmres_m, gmres_4, gmres_tol, iter_precon,           & 
+                tgnum,  pastix_pivot,                               &
+                V_0,V_1,V_coef, output_bnd_elements,                & 
+                
+                Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&                                                                                                                                            
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -38,19 +47,19 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 F0, gamma_sheath, density_reflection,               &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
-		rhon_0, rhon_1, rhon_coef,                          &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
+                ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
                 particlesource, heatsource, tauIC,                  &
                 central_density, time_evol_scheme,                  &
+                bc_natural_open,                                    &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num, D_neutral_x, D_neutral_y, D_neutral_p, &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
                 pellet_velocity_R, pellet_velocity_Z,               &
-                central_density, pellet_particles, use_pellet,      &
+                pellet_particles, use_pellet,                       &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &   
 		mgi_sig, mgi_length, n_zero, ksi_ion,               &
 		ellip,tria_u,tria_l,quad_u,quad_l,                  &
@@ -58,8 +67,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   &
-                bc_natural_open,                                    &
+                resistive_wall, wall_resistivity,                   & 
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
@@ -69,16 +77,18 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
                 n_limiter, R_limiter, Z_limiter,                    &
+                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       & 
                 linear_run, export_for_nemec,                       &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
                 output_bnd_elements
 
-if (my_id .eq. 0) then
+ if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
+
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
   ! --- Model-specific presets
@@ -96,9 +106,26 @@ if (my_id .eq. 0) then
   else
     read(5,in1)
   end if
-  
+
+   if (trim(R_Z_psi_bnd_file) .ne. 'none') then
+
+  ! --- Open the file.
+     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+     if ( err /= 0 ) then
+       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+       stop
+     endif
+     write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
+
+     do i=1,n_boundary
+       read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+       write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+     enddo
+   endif
+
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
+
   else
     tstep_n    = 0.d0
     tstep_n(1) = tstep

@@ -244,12 +244,14 @@ do ife = ife_min, ife_max
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
-        vpar0  = eq_g(mp,7,ms,mt)
- 
+        
+	if (jorek_model .gt. 199) then      
+          vpar0  = eq_g(mp,7,ms,mt)
+        else
+          vpar0  = 0.d0
+	endif
+	
         eta_T  =   eta   * (abs(T0)/T_0)**(-1.5d0)
-
-!        r0 = abs(r0)
-!        T0 = max(T0,0.001)
 
         dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
         dTdy   = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
@@ -290,11 +292,6 @@ do ife = ife_min, ife_max
                      psi_axis,psi_limit,current_source)
 
         if (use_pellet) then
-
-!          call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-!                              pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-!                              x_g(ms,mt),y_g(ms,mt), ps0, phi, r0, T0e, central_density, &
-!                              pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)                  
 
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &

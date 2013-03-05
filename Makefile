@@ -96,12 +96,14 @@ JOREK2FLVTK_SRC	       = $(PPPSRC)
 JOREK2VTK3D_SRC        = $(PPPSRC)
 JOREK2_FOUR_SRC        = $(PPPSRC)
 JOREK2_DIAGNO_SRC      = $(PPPSRC) 
+JOREK2_TARGET2VTK_SRC  = $(PPPSRC)
+JOREK2_POWERS          = $(PPPSRC)
 
 # include the description for each module
 include $(patsubst %,%/module.mk,$(DIRS))
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
-  $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC)) $(JORDEL_SRC) $(ENBIGGEN_SRC)
+  $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC) $(JORDEL_SRC) $(ENBIGGEN_SRC) $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC))
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
@@ -150,6 +152,14 @@ JOREK2_FOUR_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) 	\
 JOREK2_POSTPROC_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
 			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
 			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
+
+JOREK2_TARGET2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_TARGET2VTK_SRC)))         \
+                        $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_TARGET2VTK_SRC)))             \
+                        $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_TARGET2VTK_SRC)))
+
+JOREK2_POWERS_OBJ =     $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POWERS_SRC)))     \
+                        $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POWERS_SRC)))         \
+                        $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POWERS_SRC)))
 
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
@@ -301,6 +311,18 @@ jorek_to_helena : diagnostics/jorek_to_helena.f90
 import_eqdsk : util/import_eqdsk.f90
 	$(FC) util/import_eqdsk.f90 -o import_eqdsk $(LIBS)
 
+jorek2_target2vtk : diagnostics/jorek2_target2vtk.f90 $(JOREK2_TARGET2VTK_OBJ)
+	$(FC) $(FFLAGS_NO_OMP)                  \
+        diagnostics/jorek2_target2vtk.f90       \
+        $(JOREK2_TARGET2VTK_OBJ)                \
+         -o $(JOREK_DIR)/jorek2_target2vtk $(INCLUDES) $(LIBS)
+
+jorek2_powers : diagnostics/jorek2_powers.f90 $(JOREK2_POWERS_OBJ)
+	$(FC) $(FFLAGS_NO_OMP)                  \
+        diagnostics/jorek2_powers.f90           \
+        $(JOREK2_POWERS_OBJ)      	        \
+         -o $(JOREK_DIR)/jorek2_powers $(INCLUDES) $(LIBS)
+
 include all_rules.mk
 ifeq (0, $(words $(foreach word, ${NODEPS}, $(findstring ${word}, ${MAKECMDGOALS}))))
 -include $(patsubst %.f, %.dep, $(patsubst %.f90, %.dep, $(SRC_DEP)))
@@ -393,3 +415,11 @@ forcheck_diagno :
 forcheck_jorek_to_helena : 
 	$(FCK_CALL) diagnostics/jorek_to_helena.f90 models/mod_constants.f90 \
 	timing/trace.f90 communication/mpi_mod.f90 $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_jorek2_powers :
+	$(FCK_CALL) diagnostics/jorek2_powers.f90  $(FCK_JOREK2_POWERS_SRC) \
+        $(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_jorek2_target2vtk :
+	$(FCK_CALL) diagnostics/jorek2_target2vtk.f90  $(FCK_JOREK2_TARGET2VTK_SRC) \
+        $(FCKDIR)/share/forcheck/MPI.flb

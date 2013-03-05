@@ -57,6 +57,8 @@ logical               :: without_n0_mode
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
 real*8                :: amu_neo_node, aki_neo_node
+real*8                :: Vperp_e !, qprofile, small_r
+real*8                :: density_tot,density_in,density_out,pressure,pressure_in,pressure_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
 GAMMA=5./3.
@@ -67,12 +69,16 @@ allocate(element_list)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
+mach_par=0.d0
+mach_pol=0.d0
+vsound=0.d0
+
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
 nsub      = 5             ! Number of subdivisions of the cubic finite elements into linear pieces
 i_tor     = -1            ! If i_tor > 0, only this mode will be included in the vtk file...
-!i_tor     = 2 
+!i_tor     = 3 
 i_plane   = 1             ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 !without_n0_mode = .true.
@@ -94,12 +100,13 @@ write(*,*) 'without_n0_mode =', without_n0_mode
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
 write(*,*) 'n_period        =', n_period
-write(*,*) 'F0        =', F0
+write(*,*) 'F0              =', F0
+write(*,*) 'R_geo,Z_geo     =', R_geo, Z_geo
 write(*,*)
 call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
-n_scalars = n_var + 17
+n_scalars = n_var + 18!19
 
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
@@ -115,16 +122,17 @@ scalar_names(6)='Te_keV      '
 scalar_names(7)='Vpar_km/s   '
 scalar_names(n_var+1:n_scalars) = (/ &
   'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
-  'D_flux_Vpar ', 'D_flux_Vperp', 'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_prl    ',&
-  'Mach_pol    ',  'Vsound_km/s', 'Btot_T      ', 'J-bootstrap ', 'Vneo_km/s   ', 'psi_norm    '/)
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
+  'Vsound_km/s ', 'Btot_T      ', 'J-bootstrap ', 'Vneo_km/s   ', 'psi_norm    ', 'Vperp_e     '/)!, &
+!  'qprofile    '/)
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
-
-call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
+
+call import_restart(node_list,element_list, 'jorek_restart.rst',rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -247,7 +255,9 @@ do i=1,element_list%n_elements
             if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
                Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
                     (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
-! verifier que les gradients de RHO sont correctement calcules (sous-resolu?)
+               Vperp_e = -1./Btheta*((u0_x- tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
+                    (u0_y-tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)
+
                if (NEO) then
 !                  num_neo_file= ( neo_file /= 'none')
                   if (num_neo_file) then
@@ -278,7 +288,9 @@ do i=1,element_list%n_elements
             scalars(inode,n_var+12) = Mach_pol
             scalars(inode,n_var+13) = Vsound
             scalars(inode,n_var+14) = Btot
-            scalars(inode,n_var+16) = Vneo ! number n_var+16 is jbootstrap, see below.
+            scalars(inode,n_var+16) = Vneo ! number n_var+15 is jbootstrap, see below.
+            scalars(inode,n_var+18) = Vperp_e ! number n_var+17 is psi_norm, see below.
+            !scalars(inode,n_var+19) = qprofile 
          endif
          ! old values back to normal
          i_tor = i_tor_old
@@ -441,7 +453,10 @@ do i=1,element_list%n_elements
             Btot = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR
             D_prof  = get_dperp (psi_norm)
             ZK_prof = get_zkperp(psi_norm)
-
+            !!!small_r = sqrt((R -R_geo)*(R -R_geo)+(Z -Z_geo)*(Z -Z_geo))
+            !small_r= amin*sqrt(psi_norm)
+            !!!qprofile = small_r*(F0/BigR)/(R*Btheta)
+            !qprofile = F0 / (R*Btheta)
             !scalars(inode,6) = max( scalars(inode,6), T_1 ) ! (workaround to avoid floating invalid error)
             ZKpar_T = ZK_par * ((max( scalars(inode,6), T_1 )+T_1)/T_0)**2.5
 
@@ -522,7 +537,11 @@ scalars(i,17) = scalars(i,17) / t_norm/1.e3
 scalars(i,20) = scalars(i,20) / t_norm/1.e3
 !===================================Vneo in km/s
 scalars(i,23) = scalars(i,23) / t_norm/1.e3
+!===================================Vperp_e in km/s
+scalars(i,25) = scalars(i,25) / t_norm/1.e3
 enddo
+
+call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
 
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad

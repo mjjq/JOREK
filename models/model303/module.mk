@@ -53,3 +53,10 @@ ENBIGGEN_SRC := $(ENBIGGEN_SRC)       \
 	$(DIR)/initialise_parameters.f90        \
 	$(DIR)/mod_parameters.f90
 
+OREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
+        $(DIR)/initialise_parameters.f90        \
+        $(DIR)/mod_parameters.f90
+
+JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) \
+        $(DIR)/initialise_parameters.f90        \
+        $(DIR)/mod_parameters.f90

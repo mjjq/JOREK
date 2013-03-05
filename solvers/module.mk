@@ -107,3 +107,16 @@ ENBIGGEN_SRC := $(ENBIGGEN_SRC)       \
 	$(DIR)/solvP3.f90               \
 	$(DIR)/solve_M2.f90
 
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
+        $(DIR)/mod_mumps.f90            \
+        $(DIR)/mod_pastix.f90           \
+	$(DIR)/mod_murge.f90            \
+        $(DIR)/mnewtax.f90		\
+        $(DIR)/mod_wsmp.f90
+
+JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) \
+        $(DIR)/mod_mumps.f90            \
+        $(DIR)/mod_pastix.f90           \
+        $(DIR)/mod_murge.f90            \
+        $(DIR)/mnewtax.f90		\
+        $(DIR)/mod_wsmp.f90

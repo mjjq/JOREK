@@ -59,7 +59,7 @@ do i_tor=1, n_tor
   write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
+call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -86,13 +86,13 @@ area_div_in  = 0.d0; area_div_out  = 0.d0; area_wall_in  = 0.d0; area_wall_out  
 Q_div_in     = 0.d0; Q_div_out     = 0.d0; Q_wall_in     = 0.d0; Q_wall_out     = 0.d0
 L_div_in     = 0.d0; L_div_out     = 0.d0; L_wall_in     = 0.d0; L_wall_out     = 0.d0
 
-R_in_out   = 5.d0    ! ITER divertor
-Z_wall_out = -3.2350
-Z_wall_in  = -2.5674 
+!R_in_out   = 5.d0    ! ITER divertor
+!Z_wall_out = -3.2350
+!Z_wall_in  = -2.5674 
 
 R_in_out   = 3.03
-Z_wall_out = -1.9858 
-Z_wall_in  = -1.9736
+Z_wall_out = -1.6!-1.9858 
+Z_wall_in  = -1.619!-1.9736
 
 do m=1, n_plane
 
@@ -432,23 +432,35 @@ write(*,'(A,4e16.8,A)') ' inner/outer wall/divertor wetted length         : ',  
                         nTV_wall_in/Q_wall_in/(2.*PI*R_wall_in),nTV_wall_out/Q_wall_out/(2.*PI*R_wall_out), &
                         nTV_div_in/Q_div_in/(2.*PI*R_div_in),   nTV_div_out/Q_div_out/(2.*PI*R_div_out),' [m]'
 
-write(*,'(A,29e16.8)') 'grep2',xtime(index_start),&
+OPEN ( UNIT =77, FILE = 'powers_time.out', ACTION = 'write', POSITION = 'append')
+OPEN ( UNIT =79, FILE = 'powers_time_sum.out', ACTION = 'write', POSITION = 'append')
+
+
+
+write(77,'(33e16.8)')  xtime(index_start),&
                                nTV_wall_in/1.d6,nTV_wall_out/1.d6,nTV_div_in/1.d6,nTV_div_out/1.d6,         &
                                nV2_wall_in/1.d6,nV2_wall_out/1.d6,nV2_div_in/1.d6,nV2_div_out/1.d6,         &
                                Kpar_wall_in/1.d6,Kpar_wall_out/1.d6,Kpar_div_in/1.d6,Kpar_div_out/1.d6,     &
                                Kperp_wall_in/1.d6,Kperp_wall_out/1.d6,Kperp_div_in/1.d6,Kperp_div_out/1.d6, &
                                Tdn_wall_in/1.d6,Tdn_wall_out/1.d6,Tdn_div_in/1.d6,Tdn_div_out/1.d6,         &
                                Dperp_wall_in,Dperp_wall_out,Dperp_div_in,Dperp_div_out,                     &
-                               nV_wall_in,nV_wall_out,nV_div_in,nV_div_out
+                               nV_wall_in,nV_wall_out,nV_div_in,nV_div_out,                                 &
+                               nTV_wall_in/Q_wall_in,nTV_wall_out/Q_wall_out,                               &
+                               nTV_div_in/Q_div_in,nTV_div_out/Q_div_out
 
-write(*,'(A,21e16.8)') 'sum',xtime(index_start),&
+write(79,'(9e16.8)')   xtime(index_start),&
                                (nTV_wall_in   + nTV_wall_out   + nTV_div_in   + nTV_div_out)  /1.d6,         &
                                (nV2_wall_in   + nV2_wall_out   + nV2_div_in   + nV2_div_out)  /1.d6,         &
                                (Kpar_wall_in  + Kpar_wall_out  + Kpar_div_in  + Kpar_div_out) /1.d6,         &
                                (Kperp_wall_in + Kperp_wall_out + Kperp_div_in + Kperp_div_out)/1.d6,         &
                                (Tdn_wall_in   + Tdn_wall_out   + Tdn_div_in   + Tdn_div_out)/1.d6,           &
                                (Dperp_wall_in + Dperp_wall_out + Dperp_div_in + Dperp_div_out),              &
-                               (nV_wall_in    + nV_wall_out    + nV_div_in    + nV_div_out)
+                               (nV_wall_in    + nV_wall_out    + nV_div_in    + nV_div_out),                 &
+                               (nTV_wall_in/Q_wall_in + nTV_wall_out/Q_wall_out + nTV_div_in/Q_div_in +      &
+                               nTV_div_out/Q_div_out)
+
+close (77)
+close (79)
 end
 
 

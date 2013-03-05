@@ -79,3 +79,12 @@ ENBIGGEN_SRC := $(ENBIGGEN_SRC) \
 	$(DIR)/clock.f90                \
 	$(DIR)/pastix_getmem.c
 
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
+        $(DIR)/flush_it.f90             \
+        $(DIR)/trace.f90                \
+        $(DIR)/pastix_getmem.c
+
+JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) \
+        $(DIR)/flush_it.f90             \
+        $(DIR)/trace.f90                \
+        $(DIR)/pastix_getmem.c

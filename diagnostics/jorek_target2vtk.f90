@@ -65,7 +65,7 @@ do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
+call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 

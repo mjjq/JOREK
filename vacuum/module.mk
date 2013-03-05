@@ -16,7 +16,7 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/mod_vacuum.f90			\
-	
+
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/mod_vacuum.f90			\
 
@@ -38,3 +38,8 @@ JORDEL_SRC := $(JORDEL_SRC)               \
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)                 \
 	$(DIR)/mod_vacuum.f90                   \
 
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
+        $(DIR)/mod_vacuum.f90
+
+JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) \
+        $(DIR)/mod_vacuum.f90

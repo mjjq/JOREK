@@ -43,3 +43,11 @@ ENBIGGEN_SRC := $(ENBIGGEN_SRC)                 \
 	$(DIR)/mod_data_structure.f90           \
 	$(DIR)/mod_profiles.f90
 
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
+        $(DIR)/mod_data_structure.f90             \
+        $(DIR)/mod_profiles.f90
+
+JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) 	\
+        $(DIR)/mod_data_structure.f90           \
+        $(DIR)/mod_profiles.f90
+

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-echo $ARCH
+
 # -----------------------------------------------------------------
 # script used to submit the jorek job
 # -----------------------------------------------------------------
@@ -41,7 +41,7 @@ CASE=D${FIRSTCAR}_${LASTCAR_MODEL}_${CASENAME}
 # According to ARCH variable
 # --------------------------
 case ${ARCH} in
-#case "$ARCH" in
+
 # -----------------------------------------------------------------
 # norma (IRFM)
 # -----------------------------------------------------------------
@@ -94,8 +94,8 @@ ccamu*)
 # -------------
 MPIPROCS=1
 NTHREAD=12
-NNODES=12
-WALLTIME=23:59:00
+NNODES=6
+WALLTIME=48:00:00
 ((NLIM=MPIPROCS*NTHREAD))
 if [ "${NLIM}" -gt "13" ]; then
    echo "${NLIM} = ", ${NLIM}
@@ -152,7 +152,7 @@ helios*)
 MPIPROCS=1
 NTHREAD=16
 NNODES=4
-WALLTIME=5:59:00
+WALLTIME=24:00:00
 ((NLIM=MPIPROCS*NTHREAD))
 if [ "${NLIM}" -gt "16" ]; then
    echo "${NLIM} = ", ${NLIM}
@@ -170,11 +170,11 @@ echo " "
 # Environment
 # -----------
 DIR=$(dirname $PWD)
-echo " DIR " $DIR
+# echo " DIR " $DIR
 DIR2=$(dirname $DIR)
-echo " DIR2 " $DIR2
+# echo " DIR2 " $DIR2
 DIR3=$(basename $DIR2)
-echo " DIR3 " $DIR3
+# echo " DIR3 " $DIR3
 HOMEDIR2=$WORKDIR/${DIR}
 HOMEDIR=${DIR}
 SRCDIR=$HOMEDIR
@@ -183,14 +183,14 @@ WKDIR=`pwd`
 
 RESDIR1=$SCRATCHDIR/${DIR3}
 RESDIR=${RESDIR1}/${CASE}
-echo " HOMEDIR " $HOMEDIR
-echo " HOMEDIR2 " $HOMEDIR2
-echo " SRCDIR  " $SRCDIR
-echo " UTILDIR " $UTILDIR
-echo " WKDIR   " $WKDIR
-echo " SCRATCHDIR " $SCRATCHDIR
-echo " RESDIR1    " $RESDIR1
-echo " RESDIR     " $RESDIR
+#echo " HOMEDIR " $HOMEDIR
+#echo " HOMEDIR2 " $HOMEDIR2
+#echo " SRCDIR  " $SRCDIR
+#echo " UTILDIR " $UTILDIR
+#echo " WKDIR   " $WKDIR
+#echo " SCRATCHDIR " $SCRATCHDIR
+#echo " RESDIR1    " $RESDIR1
+#echo " RESDIR     " $RESDIR
 
 
 # Creation of the work directory
@@ -331,6 +331,8 @@ fi
 EXECNAME=JOR${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 EXECNAMEOUT=${EXECNAME%.*}
 VTKEXECNAME=VTK${MODELNUMBER}_NTOR${NTOR}.exe
+TARGET_VTKEXECNAME=TARGET_VTK${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
+POWERSEXECNAME=POWERS${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 
 # test if the correct jorek and jorek2vtk executables exist given
 # the prescribed set of values for n_tor, n_period, n_plane
@@ -373,6 +375,46 @@ if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
   make jorek2vtk
 
   if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2_target2vtk executable" ${TARGET_VTKEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2_target2vtk ]; then rm -f jorek2_target2vtk; fi
+#  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  make jorek2_target2vtk
+
+  if [ -e jorek2_target2vtk ]; then mv jorek2_target2vtk ${TARGET_VTKEXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2_powers executable" ${POWERSEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2_powers ]; then rm -f jorek2_powers; fi
+#  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  make jorek2_powers
+
+  if [ -e jorek2_powers ]; then mv jorek2_powers ${POWERSEXECNAME}; fi
 fi
 cd ${WKDIR}
 
@@ -715,20 +757,21 @@ fi
 echo " NPES " $NPES " NTHREADS " $NTHREAD "MPIPROCS " $MPIPROCS " NNODES " $NNODES
 
 CMD_MPIRUN="mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
-CMD_SUB="sbatch ./go_${DATANAME}.cmd"
+CMD_SUB="sbatch -A JOREK ./go_${DATANAME}.cmd"
+#CMD_SUB="sbatch -A F4E_EU10 ./go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
 # batch job creation
 # ------------------
 cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
-#SBATCH -J jorek                  # jobname
+#SBATCH -J 15MA_ITER              # jobname
 #SBATCH -N ${NNODES}              # number of nodes
 #SBATCH -n ${NPES}                # number of tasks
 #SBATCH -o ${CASENAME}%j.out      # strout filename (%j is jobid)
 #SBATCH -e ${CASENAME}%j.out      # stderr filename (%j is jobid)
 #SBATCH -t ${WALLTIME}            # execute time (hh:mm:ss - max 08:00:00)
-##SBATCH -A JOREK-0
+# #SBATCH -A JOREK-0 
 
 export OMP_NUM_THREADS=${NTHREAD}
 
@@ -813,7 +856,7 @@ if [ ! -e "jorek_restart.rst" ]; then
    echo "==================================================================================="
    echo " "
    nb_restart=0
-   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep=0 tstep=0.001
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep=20 tstep=0.001
 else
    echo "==================================================================================="
    echo " Restart file does exist, so LOOP"
@@ -823,9 +866,9 @@ else
    echo " "
    ${UTILDIR}/setinput.sh ${DATANAME} restart=.t.
    # generate files using "utils/extract_live_data.sh"
-   ${UTILDIR}/extract_live_data.sh energies       > ${RESDIR}/energies_${DATANAME}.dat
-   ${UTILDIR}/extract_live_data.sh growth_rates   > ${RESDIR}/growth_rates_${DATANAME}.dat
-   ${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}.dat
+   ${UTILDIR}/extract_live_data.sh energies       > ${RESDIR}/energies_${DATANAME}___${out_increment}.dat
+   ${UTILDIR}/extract_live_data.sh growth_rates   > ${RESDIR}/growth_rates_${DATANAME}___${out_increment}.dat
+   ${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}___${out_increment}.dat
 fi
 
 # Test if restart files exist
@@ -846,9 +889,9 @@ export OMP_NUM_THREADS=${NTHREAD}
 ${CMD_MPIRUN}
 
 # generate files using "utils/extract_live_data.sh"
-${UTILDIR}/extract_live_data.sh energies     > ${RESDIR}/energies_${DATANAME}.dat
-${UTILDIR}/extract_live_data.sh growth_rates > ${RESDIR}/growth_rates_${DATANAME}.dat
-${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}.dat
+${UTILDIR}/extract_live_data.sh energies     > ${RESDIR}/energies_${DATANAME}___${out_increment}.dat
+${UTILDIR}/extract_live_data.sh growth_rates > ${RESDIR}/growth_rates_${DATANAME}___${out_increment}.dat
+${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}___${out_increment}.dat
 
 status=\$?
 

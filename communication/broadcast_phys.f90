@@ -28,9 +28,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (343+2*max_limiter+n_var) * IDBL_EXT + (31+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (341+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (342+2*max_limiter+n_var) * IDBL_EXT + (30+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (340+2*max_limiter+n_var) * IDBL_EXT + (32+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))

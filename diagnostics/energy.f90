@@ -65,7 +65,7 @@ do ife =1,  element_list%n_elements
 
   do in=1,n_tor
 
-    eq_g(:,:,:) = 0.d0; eq_s(:,:,:) = 0.d0; eq_t(:,:,:) = 0.d0;
+    eq_g(:,:,:) = 0.d0; eq_s(:,:,:) = 0.d0; eq_t(:,:,:) = 0.d0; AR0_p(:,:) = 0.d0; AZ0_p(:,:) = 0.d0
 
     do i=1,n_vertex_max
       do j=1,n_order+1

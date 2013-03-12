@@ -11,7 +11,7 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/element_matrix_poisson_inverse.f90 	\
 	$(DIR)/equilibrium.f90 				\
 	$(DIR)/ffprime.f90 				\
-   $(DIR)/F_profile.f90          \
+	$(DIR)/F_profile.f90				\
 	$(DIR)/poisson.f90 				\
 	$(DIR)/temperature.f90 				\
 	$(DIR)/temperature_i.f90 			\
@@ -140,6 +140,7 @@ JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)       \
         $(DIR)/derive_num_profiles.f90                  \
         $(DIR)/preset_parameters.f90                    \
         $(DIR)/mod_diffusivities.f90                    \
+	$(DIR)/mod_nodes_elements.f90			\
         $(DIR)/mod_phys_module.f90
 
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)               \

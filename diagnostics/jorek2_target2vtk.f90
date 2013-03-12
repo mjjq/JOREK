@@ -11,10 +11,9 @@ use data_structure
 use phys_module
 use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
+use nodes_elements
+use boundary
 implicit none
-
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors, my_id
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -38,6 +37,7 @@ real*8                :: psi, psi_s, psi_t, psi_x, psi_y, T_x, T_y, BB2, normal,
 real*8                :: distance, R_start, Z_start
 logical               :: periodic
 logical               :: without_n0_mode
+integer               :: i_bnd_node, i_node
 
 namelist /vtk_params/ nsub, periodic, without_n0_mode
 
@@ -74,7 +74,6 @@ write(*,*) 'F0        =', F0
 write(*,*)
 call flush_it(6)
 
-
 ivtk = 21                 ! an arbitrary unit number for the VTK output file
 
 n_scalars = 13             ! number of scalars to write to the VTK output file
@@ -97,6 +96,22 @@ call initialise_basis                              ! define the basis functions 
 
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27
 t_norm   = sqrt(MU_zero*rho_norm)
+
+! --- Find the lowest point on the outer divertor target (required later)
+call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+R_start = 1.d99
+Z_start = 1.d99
+do i_bnd_node = 1, bnd_node_list%n_bnd_nodes
+  i_node = bnd_node_list%bnd_node(i_bnd_node)%index_jorek
+  R = node_list%node(i_node)%x(1,1)
+  Z = node_list%node(i_node)%x(1,2)
+  if ( ( node_list%node(i_node)%boundary == 3 ) .and. ( R > R_xpoint(1) ) .and. ( Z < Z_start ) ) then
+    R_start = R
+    Z_start = Z
+  end if
+end do
+write(*,*) R_start, Z_start
 
 n_bnd = 0
 do i=1,element_list%n_elements  
@@ -531,9 +546,6 @@ open(23,file='average_target_profile')
 open(22,file='target_profile')
 write(23,'(A132)') '      time         step            Length         R               Z              nTV.n           KparT.n        Kperp.T        nvT_gam'
 write(22,'(A132)') "  Length          R              Z                angle           heat_flux       part_flux       density         T              Vpar"
-
-R_start =  5.565
-Z_start = -4.56
 
 allocate(tobedone(n_points))
 

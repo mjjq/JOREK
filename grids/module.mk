@@ -54,4 +54,5 @@ JORDEL_SRC := $(JORDEL_SRC)               \
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)               \
 	$(DIR)/find_theta_surface.f90
 
-
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
+	$(DIR)/mod_boundary.f90

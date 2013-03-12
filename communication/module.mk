@@ -90,6 +90,7 @@ JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
         $(DIR)/import_restart.f90                 \
         $(DIR)/broadcast_nodes.f90                \
         $(DIR)/broadcast_phys.f90                 \
+	$(DIR)/vertex_is_local.f90	 	\
         $(DIR)/broadcast_elements.f90
 
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) \

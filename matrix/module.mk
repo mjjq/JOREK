@@ -37,3 +37,5 @@ JORDEL_SRC := $(JORDEL_SRC)                       \
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)                       \
 	$(DIR)/mod_global_distributed_matrix.f90
 
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)       \
+	$(DIR)/mod_global_distributed_matrix.f90

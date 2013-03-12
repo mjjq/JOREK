@@ -37,6 +37,9 @@ real*8                :: rho, rho_s, rho_t, T, T_s, T_t, T_p, vpar, D_prof, ZK_p
 real*8                :: psi, psi_s, psi_t, psi_x, psi_y, T_x, T_y, BB2, normal, rho_norm, t_norm
 real*8                :: distance, R_start, Z_start
 logical               :: periodic
+logical               :: without_n0_mode
+
+namelist /vtk_params/ nsub, periodic, without_n0_mode
 
 write(*,*) '*********************************'
 write(*,*) '* jorek_target2vtk              *'
@@ -46,10 +49,33 @@ write(*,*) '*********************************'
 my_id = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
-periodic = .false.
+! --- Preset parameters
+nsub      = 5             ! Number of subdivisions of the cubic finite elements into linear pieces
+periodic  = .false.
+without_n0_mode = .false. ! If .true., the axisymmetric part will not be included
+
+! --- Read parameters from namelist file 'vtk.nml' if it exists
+open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  read(42,vtk_params)
+  close(42)
+end if
+write(*,*)
+write(*,*) 'Parameters:'
+write(*,*) '-----------'
+write(*,*) 'nsub            =', nsub
+write(*,*) 'periodic        =', periodic
+write(*,*) 'without_n0_mode =', without_n0_mode
+write(*,*) '-----------'
+write(*,*) 'n_tor           =', n_tor
+write(*,*) 'n_period        =', n_period
+write(*,*) 'F0        =', F0
+write(*,*)
+call flush_it(6)
+
 
 ivtk = 21                 ! an arbitrary unit number for the VTK output file
-nsub  = 5                 ! the number of subdivisions of the cubic finite elements into linear pieces
 
 n_scalars = 13             ! number of scalars to write to the VTK output file
 n_vectors = 3
@@ -293,6 +319,8 @@ do m=1, n_plane
           Vpar = 0.d0
 
           do i_tor = 1,n_tor
+            
+            if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
 
             call interp(node_list,element_list,i,1,i_tor,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
             psi   = psi   + PS   * HZ(i_tor,m)

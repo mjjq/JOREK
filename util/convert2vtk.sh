@@ -38,14 +38,14 @@ function usage () {
   echo "  -only <step>-<step> Convert only time steps in the given range"
   echo "  -zip                Compress the .vtk files using gzip"
   echo ""
-  echo "Options passed to jorek2vtk(_3d) via namelist input (see code for details):"
+  echo "Options passed to the binary via namelist input (source code for details):"
   echo "  -i_tor <i_tor>      Select one toroidal mode [default: -1] (2D VTK ONLY)"
   echo "  -i_plane <i_plane>  Select the toroidal plane [default: 1] (2D VTK ONLY)"
   echo "  -no0                Don't include the n=0 mode for i_tor=-1 [default: off]"
   echo "  -nsub <nsub>        Number of finite element subdivisions [default: 5]"
   echo "  -[no]periodic       (Un)set periodicity for 3D plot (3D VTK ONLY)"
   echo ""
-  echo "  binary              jorek2vtk(3d) executable"
+  echo "  binary              executable (jorek2vtk, jorek2vtk_3d, jorek2_target2vtk)"
   echo "  infile              Input file of the corresponding JOREK run"
   echo "  extra-files         Additional files that are required for running"
   echo ""
@@ -55,6 +55,7 @@ function usage () {
   echo "  * With option -i_tor X, '_itorX' is added to the output directory name"
   echo "  * With option -no0, '_no0' is added to the output directory name"
   echo "  * With option -i_plane X, '_iplaneX' is added to the output directory name"
+  echo "  * CURRENTLY MOST OPTIONS DO NOT WORK FOR jorek2_target2vtk"
   echo ""
 }
 
@@ -164,6 +165,7 @@ nsub=""
 i_tor=""
 i_plane=""
 no0=""
+periodic=""
 writenml="no"
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
@@ -291,9 +293,15 @@ else
   if [[ "$binary" == *jorek2vtk_3d* ]]; then
     dir="./vtk3d"
     threeD="yes"
+    target="no"
+  elif [[ "$binary" == *jorek2_target2vtk* ]]; then
+    dir="./vtkTarget"
+    threeD="no"
+    target="yes"
   else
     dir="./vtk"
     threeD="no"
+    target="no"
   fi
   if [ ! -z "$i_tor" ]; then
     dir="${dir}_itor$i_tor"
@@ -306,7 +314,7 @@ else
     dir="${dir}_iplane$i_plane"
     echo ""
     echo "****** i_plane=$i_plane ******"
-  elif [ -z "$i_tor" ] && [ "$threeD" == "no" ]; then
+  elif [ -z "$i_tor" ] && [ "$threeD" == "no" ] && [ "$target" == "no" ]; then
     dir="${dir}_iplane1"
   fi
 fi

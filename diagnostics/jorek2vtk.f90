@@ -85,7 +85,7 @@ without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
-  write(*,*) 'Reading parameters from vtk.txt namelist.'
+  write(*,*) 'Reading parameters from vtk.nml namelist.'
   read(42,vtk_params)
   close(42)
 end if

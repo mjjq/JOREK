@@ -153,13 +153,6 @@ if (.not. pastix_initialised) then
   pastix_iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
   pastix_iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
   pastix_iparm(IPARM_END_TASK)          = API_TASK_INIT
-#ifdef IPARM_THREAD_MULTIPLE
-#ifdef FUNNELED
-  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_FUNNELED
-#else
-  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_MULTIPLE
-#endif
-#endif
   if (my_id .eq. 0) then
     write(*,*) '***********************************'
     write(*,*) '* initialise PastiX               *'
@@ -187,7 +180,7 @@ if (.not. pastix_initialised) then
   pastix_iparm(IPARM_LEVEL_OF_FILL)      = pastix_iluk
   pastix_iparm(IPARM_AMALGAMATION_LEVEL) = pastix_amalg
 
-#ifdef IPARM_THREAD_MULTIPLE
+#ifdef WORLDWAR2
 #ifdef FUNNELED
   pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_FUNNELED
 #else
@@ -246,6 +239,13 @@ call clck_time(t0)
 
 pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
 pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
+#ifdef WORLDWAR2
+#ifdef FUNNELED
+  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_FUNNELED
+#else
+  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_MULTIPLE
+#endif
+#endif
 
 if (my_id .eq. 0) then
   write(*,*) '***********************************'

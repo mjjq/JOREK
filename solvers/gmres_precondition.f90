@@ -56,7 +56,7 @@ if (my_id < M_cpu) ifactor = 1
 
 if (my_id .eq. 0) then
 
-  call tr_allocate(Rsnd_buffer,1,n_dof,"Rsnd_buffer",CAT_GMRES)
+  call tr_allocate(Rsnd_buffer,1,n_dof,"Rsnd_buffer",CAT_GMRES,.false.)
   call tr_allocate(send_counts,1,n_cpu/M_cpu,"send_counts",CAT_GMRES)
   call tr_allocate(send_disp,1,n_cpu/M_cpu,"send_disp",CAT_GMRES)
   Rsnd_buffer(1:n_loc_n) = x(1:n_dof:n_tor)
@@ -120,6 +120,14 @@ call tr_deallocate(Rsnd_buffer,"Rsnd_buffer",CAT_GMRES)
 call tr_deallocate(send_counts,"send_counts",CAT_GMRES)
 call tr_deallocate(send_disp,"send_disp",CAT_GMRES)
 
+
+
+!call clck_time(t1)
+!call clck_ldiff(t0,t1,tsecond)
+!t0 = t1
+!if (my_id_n .eq. 0)  then
+!   write(*,FMT_TIMING) my_id, '## Elapsed time precondition1 :', tsecond
+!end if
 
 if (use_mumps) then
 #ifdef USE_MUMPS
@@ -191,6 +199,13 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 
 endif
 
+!call clck_time(t1)
+!call clck_ldiff(t0,t1,tsecond)
+!t0 = t1
+!if (my_id_n .eq. 0)  then
+!   write(*,FMT_TIMING) my_id, '## Elapsed time precondition2 :', tsecond
+!end if
+
 !write(*,'(2i3,A,2e16.8)') my_id,my_id_n,' precond : rhs after : ',maxval(mumps_par%rhs),minval(mumps_par%rhs)
 
 
@@ -201,7 +216,7 @@ if (my_id_n .eq. 0) then
      mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
    enddo
 
-  call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES)
+  call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES,.false.)
   call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts",CAT_GMRES)
   call tr_allocate(recv_disp,1,n_cpu/M_cpu,"recv_disp",CAT_GMRES)
 
@@ -256,10 +271,11 @@ if (my_id_n .eq. 0) then
   call tr_deallocate(recv_disp,"recv_disp",CAT_GMRES)
 endif
 
-call clck_time(t1)
-call clck_ldiff(t0,t1,tsecond)
-!if (my_id .eq. 0)  then
-!   write(*,FMT_TIMING) my_id, '## Elapsed time precondition :', tsecond
+!call clck_time(t1)
+!call clck_ldiff(t0,t1,tsecond)
+!t0 = t1
+!if (my_id_n .eq. 0)  then
+!   write(*,FMT_TIMING) my_id, '## Elapsed time precondition3 :', tsecond
 !end if
 return
 end subroutine gmres_precondition

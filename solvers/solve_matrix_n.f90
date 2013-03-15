@@ -9,8 +9,8 @@ contains
     use parameters
     use mumps_module
     use murge_module
-    use pastix_module
     use wsmp_module
+    use pastix_module
     use global_distributed_matrix
     use mpi_mod 
     use clock_module
@@ -275,7 +275,7 @@ contains
               pastix_iparm(IPARM_MODIFY_PARAMETER+1) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+1)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+1)         = API_TASK_INIT
-#ifdef IPARM_THREAD_MULTIPLE
+#ifdef WORLDWAR2
 #ifdef FUNNELED
               pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_FUNNELED
 #else
@@ -311,7 +311,7 @@ contains
               pastix_iparm(IPARM_LEVEL_OF_FILL+1)      = pastix_iluk
               pastix_iparm(IPARM_AMALGAMATION_LEVEL+1) = pastix_amalg
 
-#ifdef IPARM_THREAD_MULTIPLE
+#ifdef WORLDWAR2
 #ifdef FUNNELED
               pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_FUNNELED
 #else

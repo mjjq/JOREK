@@ -793,6 +793,7 @@ program JOREK2
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)
     call clck_time(t_itstart)
+    t0 = t_itstart
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     call flushc !flush the output stream
@@ -847,6 +848,11 @@ program JOREK2
     call tr_debug_write("JMAIN:Find_axis_R",R_axis)
     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
     call tr_debug_write("JMAIN:Find_axis_T",T_axis)
+    call clck_time_barrier(t1)
+    call clck_ldiff(t0,t1,tsecond)
+!    if (my_id .eq. 0) then
+!       write(*,FMT_TIMING)  my_id, '# Elapsed time init_time_step :',tsecond
+!    end if
 
     ! Build the matrix 
     call clck_time(t0)
@@ -948,6 +954,7 @@ program JOREK2
        write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
 
+    call clck_time_barrier(t0)
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
        if (use_pellet) then
@@ -1061,6 +1068,11 @@ program JOREK2
        
     endif
 
+    call clck_time_barrier(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING)  my_id, '# Diagnostics :',tsecond
+    end if
     !---------------------------------------------------------timing
     if ( istep == 1 ) then
        call r3_info_print (-3, -2, 'ITERATION	 1')

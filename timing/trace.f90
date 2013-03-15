@@ -421,13 +421,15 @@ contains
     max_allocate = max(max_allocate,SUM(nb_allocate(MIN_CAT:MAX_CAT)))
   end subroutine tr_allocatep1d_i
 
-  subroutine tr_allocatep1d_d(array1d,begin_dim1,end_dim1,var_name,ocategory)
+  subroutine tr_allocatep1d_d(array1d,begin_dim1,end_dim1,var_name,ocategory,pzeroing)
     real(RKIND), dimension(:), pointer    :: array1d
     integer                  , intent(in) :: begin_dim1
     integer                  , intent(in) :: end_dim1
     character*(*), intent(in)             :: var_name
-    integer  , optional, intent(in) :: ocategory
-    integer category
+    logical        , optional, intent(in) :: pzeroing
+    integer        , optional, intent(in) :: ocategory
+    logical :: zeroing
+    integer :: category
 
     integer   :: err
     integer   :: i1
@@ -438,13 +440,20 @@ contains
     else
       category = ocategory
     end if
+    if (.not. present(pzeroing)) then
+      zeroing = .true.
+    else
+      zeroing = pzeroing
+    end if
     allocate(array1d(begin_dim1:end_dim1),stat=err)
     size_array = (end_dim1-begin_dim1+1) * sizeof(myreal)
     call tr_memwriteadd(size_array,'double array1D',var_name,category)
     if (err.eq.0) then
-       do i1 = begin_dim1,end_dim1
-          array1d(i1) = 0._RKIND
-       end do
+       if (zeroing) then
+          do i1 = begin_dim1,end_dim1
+             array1d(i1) = 0._RKIND
+          end do
+       end if
     else
        print*,'problem in allocating ',var_name
        print*,'-> required memory (in Bytes) = ',size_array
@@ -499,15 +508,17 @@ contains
   end subroutine tr_allocatep2d_i
 
   subroutine tr_allocatep2d_d(array2d,begin_dim1,end_dim1, &
-       begin_dim2,end_dim2,var_name,ocategory)
+       begin_dim2,end_dim2,var_name,ocategory,pzeroing)
     real(RKIND)  , dimension(:,:), pointer    :: array2d
     integer                      , intent(in) :: begin_dim1
     integer                      , intent(in) :: end_dim1  
     integer                      , intent(in) :: begin_dim2
     integer                      , intent(in) :: end_dim2
     character*(*)    , intent(in)             :: var_name
-    integer  , optional, intent(in) :: ocategory
-    integer category
+    integer            , optional, intent(in) :: ocategory
+    logical            , optional, intent(in) :: pzeroing
+    logical :: zeroing
+    integer :: category
 
     integer   :: err
     integer   :: i1, i2
@@ -518,17 +529,24 @@ contains
     else
       category = ocategory
     end if
+    if (.not. present(pzeroing)) then
+      zeroing = .true.
+    else
+      zeroing = pzeroing
+    end if
     allocate(array2d(begin_dim1:end_dim1,begin_dim2:end_dim2), &
          stat=err)
     size_array = (end_dim1-begin_dim1+1) * &
          (end_dim2-begin_dim2+1) * sizeof(myreal)
     call tr_memwriteadd(size_array,'double array2D',var_name,category)
     if (err.eq.0) then
-       do i2 = begin_dim2,end_dim2
-          do i1 = begin_dim1,end_dim1
-             array2d(i1,i2) = 0._RKIND
+       if (zeroing) then
+          do i2 = begin_dim2,end_dim2
+             do i1 = begin_dim1,end_dim1
+                array2d(i1,i2) = 0._RKIND
+             end do
           end do
-       end do
+       end if
     else
        print*,'problem in allocating ',var_name
        print*,'-> required memory (in Bytes) = ',size_array
@@ -542,7 +560,7 @@ contains
   ! memory allocation for a 3D array
   !----------------------------------------
   subroutine tr_allocatep3d_d(array3d,begin_dim1,end_dim1, &
-       begin_dim2,end_dim2,begin_dim3,end_dim3,var_name,ocategory)
+       begin_dim2,end_dim2,begin_dim3,end_dim3,var_name,ocategory,pzeroing)
     real(RKIND), dimension(:,:,:), pointer    :: array3d
     integer                      , intent(in) :: begin_dim1
     integer                      , intent(in) :: end_dim1
@@ -551,7 +569,9 @@ contains
     integer                      , intent(in) :: begin_dim3
     integer                      , intent(in) :: end_dim3
     character*(*)    , intent(in)             :: var_name
-    integer  , optional, intent(in) :: ocategory
+    integer            , optional, intent(in) :: ocategory
+    logical            , optional, intent(in) :: pzeroing
+    logical :: zeroing
     integer category
     integer   :: err
     integer   :: i1, i2, i3
@@ -562,6 +582,11 @@ contains
     else
       category = ocategory
     end if
+    if (.not. present(pzeroing)) then
+      zeroing = .true.
+    else
+      zeroing = pzeroing
+    end if
 
     allocate(array3d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
          begin_dim3:end_dim3),stat=err)
@@ -570,13 +595,15 @@ contains
          (end_dim3-begin_dim3+1)* sizeof(myreal)
     call tr_memwriteadd(size_array,'double array3D',var_name,category)
     if (err.eq.0) then
-       do i3 = begin_dim3,end_dim3
-          do i2 = begin_dim2,end_dim2
-             do i1 = begin_dim1,end_dim1
-                array3d(i1,i2,i3) = 0._RKIND
+       if (zeroing) then
+          do i3 = begin_dim3,end_dim3
+             do i2 = begin_dim2,end_dim2
+                do i1 = begin_dim1,end_dim1
+                   array3d(i1,i2,i3) = 0._RKIND
+                end do
              end do
           end do
-       end do
+       end if
     else
        print*,'problem in allocating ',var_name
        print*,'-> required memory (in Bytes) = ',size_array
@@ -590,7 +617,8 @@ contains
   ! memory allocation for a 4D array
   !----------------------------------------
   subroutine tr_allocatep4d_d(array4d,begin_dim1,end_dim1, &
-       begin_dim2,end_dim2,begin_dim3,end_dim3,begin_dim4,end_dim4,var_name,ocategory)
+       begin_dim2,end_dim2,begin_dim3,end_dim3,begin_dim4,end_dim4,&
+       var_name,ocategory,pzeroing)
     real(RKIND), dimension(:,:,:,:), pointer    :: array4d
     integer                        , intent(in) :: begin_dim1
     integer                        , intent(in) :: end_dim1
@@ -601,8 +629,10 @@ contains
     integer                        , intent(in) :: begin_dim4
     integer                        , intent(in) :: end_dim4
     character*(*)                  , intent(in) :: var_name
-    integer  , optional, intent(in) :: ocategory
-    integer category
+    integer              , optional, intent(in) :: ocategory
+    logical              , optional, intent(in) :: pzeroing
+    logical   :: zeroing
+    integer   :: category
     integer   :: err
     integer   :: i1, i2, i3, i4
     integer*8 :: size_array 
@@ -612,6 +642,11 @@ contains
     else
       category = ocategory
     end if
+    if (.not. present(pzeroing)) then
+      zeroing = .true.
+    else
+      zeroing = pzeroing
+    end if
 
     allocate(array4d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
          begin_dim3:end_dim3,begin_dim4:end_dim4),stat=err)
@@ -620,15 +655,17 @@ contains
          (end_dim3-begin_dim3+1)*(end_dim4-begin_dim4+1)* sizeof(myreal)
     call tr_memwriteadd(size_array,'double array4D',var_name,category)
     if (err.eq.0) then
-       do i4 = begin_dim4,end_dim4
-          do i3 = begin_dim3,end_dim3
-             do i2 = begin_dim2,end_dim2
-                do i1 = begin_dim1,end_dim1
-                   array4d(i1,i2,i3,i4) = 0._RKIND
+       if (zeroing) then
+          do i4 = begin_dim4,end_dim4
+             do i3 = begin_dim3,end_dim3
+                do i2 = begin_dim2,end_dim2
+                   do i1 = begin_dim1,end_dim1
+                      array4d(i1,i2,i3,i4) = 0._RKIND
+                   end do
                 end do
              end do
           end do
-       end do
+       end if
     else
        print *,'problem in allocating ',var_name
        print *,'-> required memory (in Bytes) = ',size_array
@@ -774,13 +811,14 @@ contains
     max_allocate = max(max_allocate,SUM(nb_allocate(MIN_CAT:MAX_CAT)))
   end subroutine tr_allocate1d_i
 
-  subroutine tr_allocate1d_d(array1d,begin_dim1,end_dim1,var_name,ocategory)
+  subroutine tr_allocate1d_d(array1d,begin_dim1,end_dim1,var_name,ocategory,pzeroing)
     real(RKIND), dimension(:), allocatable :: array1d
     integer                  , intent(in) :: begin_dim1
     integer                  , intent(in) :: end_dim1
     character*(*), intent(in)             :: var_name
     integer  , optional, intent(in) :: ocategory
-
+    logical, optional, intent(in) :: pzeroing
+    logical :: zeroing
     integer category
     integer   :: err
     integer   :: i1
@@ -791,14 +829,21 @@ contains
     else
       category = ocategory
     end if
+    if (.not. present(pzeroing)) then
+      zeroing = .true.
+    else
+      zeroing = pzeroing
+    end if
 
     allocate(array1d(begin_dim1:end_dim1),stat=err)
     size_array = (end_dim1-begin_dim1+1) * sizeof(myreal)
     call tr_memwriteadd(size_array,'double array1D',var_name,category)
     if (err.eq.0) then
-       do i1 = begin_dim1,end_dim1
-          array1d(i1) = 0._RKIND
-       end do
+       if (zeroing) then
+          do i1 = begin_dim1,end_dim1
+             array1d(i1) = 0._RKIND
+          end do
+       end if
     else
        print*,'problem in allocating ',var_name
        print*,'-> required memory (in Bytes) = ',size_array
@@ -890,7 +935,7 @@ contains
   end subroutine tr_allocate2d_i
 
   subroutine tr_allocate2d_d(array2d,begin_dim1,end_dim1, &
-       begin_dim2,end_dim2,var_name,ocategory)
+       begin_dim2,end_dim2,var_name,ocategory,pzeroing)
     real(RKIND)  , dimension(:,:), allocatable :: array2d
     integer                      , intent(in) :: begin_dim1
     integer                      , intent(in) :: end_dim1  
@@ -898,7 +943,8 @@ contains
     integer                      , intent(in) :: end_dim2
     character*(*)    , intent(in)             :: var_name
     integer  , optional, intent(in) :: ocategory
-
+    logical, optional, intent(in) :: pzeroing
+    logical :: zeroing
     integer category
     integer   :: err
     integer   :: i1, i2
@@ -909,6 +955,11 @@ contains
     else
       category = ocategory
     end if
+    if (.not. present(pzeroing)) then
+      zeroing = .true.
+    else
+      zeroing = pzeroing
+    end if
 
     allocate(array2d(begin_dim1:end_dim1,begin_dim2:end_dim2), &
          stat=err)
@@ -916,11 +967,13 @@ contains
          (end_dim2-begin_dim2+1) * sizeof(myreal)
     call tr_memwriteadd(size_array,'double array2D',var_name,category)
     if (err.eq.0) then
-       do i2 = begin_dim2,end_dim2
-          do i1 = begin_dim1,end_dim1
-             array2d(i1,i2) = 0._RKIND
+       if (zeroing) then
+          do i2 = begin_dim2,end_dim2
+             do i1 = begin_dim1,end_dim1
+                array2d(i1,i2) = 0._RKIND
+             end do
           end do
-       end do
+       end if
     else
        print*,'problem in allocating ',var_name
        print*,'-> required memory (in Bytes) = ',size_array

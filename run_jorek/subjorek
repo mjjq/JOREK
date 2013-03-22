@@ -773,6 +773,10 @@ cat <<EOF > go_$DATANAME.cmd
 #SBATCH -t ${WALLTIME}            # execute time (hh:mm:ss - max 08:00:00)
 # #SBATCH -A JOREK-0 
 
+# environment
+#------------
+ulimit -l unlimited
+
 export OMP_NUM_THREADS=${NTHREAD}
 
 EOF

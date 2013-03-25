@@ -1172,21 +1172,18 @@ program JOREK2
     call export_restart(node_list,element_list,'jorek_restart.rst')
 
     if (.not. bench_without_plot) then
-
+       
        do ivar=1,n_var
     	  call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
        enddo
 
-      ! do i=1,n_tor,2: plots sinus perturbation
-      !cosinus perturbation (ok only for n_tor = 1 or 3) :
-       do i=1,(n_tor+1)/2
-      !    write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
-    	  write(label,'(A4,i3,A1)') '(n =',(i-1)*n_period,')'
-         ! write(*,*)  '2**(i-1)', 2**(i-1)
+       do i=1,n_tor,2
+          write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
+
     	  do ivar=1,n_var
-    	     if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
-    		call plot_solution(node_list,element_list,ivar,2**(i-1),1,variable_names(ivar)//label)
-    	     endif
+          if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
+             call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+          endif
     	  enddo
 
        enddo

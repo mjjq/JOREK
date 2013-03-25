@@ -16,6 +16,9 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC) 			\
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC) 			\
 	$(DIR)/mod_global_distributed_matrix.f90
 
+JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC) 		\
+	$(DIR)/mod_global_distributed_matrix.f90
+
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC) 		\
 	$(DIR)/mod_global_distributed_matrix.f90
 

@@ -11,6 +11,10 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/mod_data_structure.f90		\
 	$(DIR)/mod_profiles.f90
 
+JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)		\
+	$(DIR)/mod_data_structure.f90		\
+	$(DIR)/mod_profiles.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 	\
 	$(DIR)/mod_data_structure.f90		\
 	$(DIR)/mod_profiles.f90

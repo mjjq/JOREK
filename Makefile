@@ -153,6 +153,10 @@ JOREK2_POSTPROC_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SR
 			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
 			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
 
+JOREK2_POVRAY_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POVRAY_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POVRAY_SRC)))	\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POVRAY_SRC)))
+
 JOREK2_TARGET2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_TARGET2VTK_SRC)))         \
                         $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_TARGET2VTK_SRC)))             \
                         $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_TARGET2VTK_SRC)))
@@ -262,6 +266,12 @@ jorek2_postproc : postproc/jorek2_postproc.f90 $(JOREK2_POSTPROC_OBJ)
 	postproc/jorek2_postproc.f90 \
 	$(JOREK2_POSTPROC_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_postproc $(INCLUDES) $(LIBS) $(LIBFFTW)
+
+jorek2_povray : diagnostics/jorek2_povray.f90 $(JOREK2_POVRAY_OBJ)
+	$(FC) $(FFLAGS)                 \
+	diagnostics/jorek2_povray.f90 \
+	$(JOREK2_POVRAY_OBJ)		\
+	 -o $(JOREK_DIR)/jorek2_povray $(INCLUDES) $(LIBS) $(LIBFFTW)
 
 jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
 	$(FC) $(FFLAGS_OMP)                  \

@@ -1,5 +1,6 @@
 DIR = diagnostics
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
+	$(DIR)/mod_diagnostics.f90        \
 	$(DIR)/boundary_check.f90         \
 	$(DIR)/dlength.f90                \
 	$(DIR)/energy.f90                 \
@@ -38,6 +39,16 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	  \
 	$(DIR)/RZ_minmax.f90              \
 	$(DIR)/integrals.f90              \
 	$(DIR)/find_axis.f90              \
+	$(DIR)/find_xpoint.f90
+
+JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)	  \
+	$(DIR)/mod_diagnostics.f90        \
+	$(DIR)/find_axis.f90              \
+	$(DIR)/find_flux_surfaces.f90     \
+	$(DIR)/flux_surface_add_line.f90  	\
+	$(DIR)/flux_surface_add_point.f90  	\
+	$(DIR)/psi_minmax.f90             \
+	$(DIR)/RZ_minmax.f90              \
 	$(DIR)/find_xpoint.f90
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 	\

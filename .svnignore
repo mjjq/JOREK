@@ -13,6 +13,8 @@ jorek2_fieldlines_vtk
 jorek2_diagno
 jorek2_postproc
 jorek_to_helena
+jorek2_target2vtk
+jorek2_povray
 import_eqdsk
 *.lst
 F*.f

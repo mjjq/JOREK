@@ -1,21 +1,19 @@
-
-
-plots/ppplib.o: plots/ppplib.f
+plots/ppplib.o: plots/ppplib.f Makefile Makefile.inc
 	@echo "*** $< ***"
 	$(FC) $(FFLAGS_NOBOUNDS) -c $< -o $@  $(INCLUDES)
 
-solvers/dPackgmres.o: solvers/dPackgmres.f
+solvers/dPackgmres.o: solvers/dPackgmres.f Makefile Makefile.inc
 	@echo "*** $< ***"
 	$(FC) $(FFLAGS_FIXEDFORM) -c $< -o $@  $(INCLUDES)
 
-%.o: %.f90
+%.o: %.f90 Makefile Makefile.inc
 	@echo "*** $< ***"
 	$(FC) $(FFLAGS) -c $< -o $@  $(INCLUDES)
 
-%.o: %.f
+%.o: %.f Makefile Makefile.inc
 	@echo "*** $< ***"
 	$(FC) $(FFLAGS) -c $< -o $@  $(INCLUDES)
 
-%.o: %.c
+%.o: %.c Makefile Makefile.inc
 	@echo "*** $< ***"
 	$(CC) $(CFLAGS) -c $< -o $@  $(CINCLUDES)

@@ -331,6 +331,7 @@ fi
 EXECNAME=JOR${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 EXECNAMEOUT=${EXECNAME%.*}
 VTKEXECNAME=VTK${MODELNUMBER}_NTOR${NTOR}.exe
+VTKEXECNAME_REAL=VTKREAL${MODELNUMBER}_NTOR${NTOR}.exe
 TARGET_VTKEXECNAME=TARGET_VTK${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 POWERSEXECNAME=POWERS${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 
@@ -375,6 +376,26 @@ if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
   make jorek2vtk
 
   if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${VTKEXECNAME_REAL} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2vtk executable" ${VTKEXECNAME_REAL}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2vtk ]; then rm -f jorek2vtk_real; fi
+  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  make jorek2vtk_real
+
+  if [ -e jorek2vtk_real ]; then mv jorek2vtk_real ${VTKEXECNAME_REAL}; fi
 fi
 
 if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
@@ -431,6 +452,24 @@ if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
    exit
 else
     cp ${SRCDIR}/${VTKEXECNAME} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${VTKEXECNAME_REAL} ]; then
+   echo " Executable ${VTKEXECNAME_REAL} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${VTKEXECNAME_REAL} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+   echo " Executable ${TARGET_VTKEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${TARGET_VTKEXECNAME} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+   echo " Executable ${POWERSEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${POWERSEXECNAME} ${RESDIR}/.
 fi
 
 if [ ! -e ${WKDIR}/${DATANAME} ]; then

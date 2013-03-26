@@ -541,7 +541,7 @@ scalars(i,23) = scalars(i,23) / t_norm/1.e3
 scalars(i,25) = scalars(i,25) / t_norm/1.e3
 enddo
 
-call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
+!call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
 
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad

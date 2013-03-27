@@ -40,14 +40,17 @@ if (format_rst == 1) then
   read(21) mode_tmp
   write(*,*) ' NEW format (1) : ',mode_tmp
 elseif (format_rst == 0) then
-  write(*,*) ' mode : ',mode
-  mode_tmp(1) = mode(1) ! temporary, remove
-  if (n_tor .eq. n_tor_tmp) mode_tmp = mode
-  write(*,*) ' OLD format (0) : '
-  write(*,'(A,32i4)') ' previous modenumbers : ',mode_tmp
-  write(*,'(A,32i4)') ' new mode numbers     : ',mode
+   write(*,*) ' mode : ',mode
+   if (n_tor .eq. n_tor_tmp) then 
+      mode_tmp = mode
+   else
+      mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
+   endif
+   write(*,*) ' OLD format (0) : '
+   write(*,'(A,32i4)') ' previous modenumbers : ',mode_tmp
+   write(*,'(A,32i4)') ' new mode numbers     : ',mode
 else
-  write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+   write(*,'(A,i3)') ' restart file format not supported : ',format_rst
 endif
 
 if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'

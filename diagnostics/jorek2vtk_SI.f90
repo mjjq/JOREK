@@ -83,9 +83,9 @@ without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 !without_n0_mode = .true. ! If true, do not include the n=0 mode (i_tor=1)
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
-open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+open(42, file='vtk.txt', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
-  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  write(*,*) 'Reading parameters from vtk.txt namelist.'
   read(42,vtk_params)
   close(42)
 end if
@@ -638,7 +638,7 @@ scalars(i,20) = scalars(i,20) / t_norm/1.e3
 !===================================Vneo in km/s
 scalars(i,23) = scalars(i,23) / t_norm/1.e3
 !===================================Vth_el in km/s
-scalars(i,24) = scalars(i,24) / t_norm/1.e3
+!scalars(i,24) = scalars(i,24) / t_norm/1.e3
 enddo
 
 !--------------------------------------------------- write the binary VTK file

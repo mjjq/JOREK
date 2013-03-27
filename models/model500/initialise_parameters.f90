@@ -7,7 +7,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use vacuum,        only: vacuum_preset, wall_resistivity
-use wsmp_module,   only: use_wsmp  
+use wsmp_module,   only: use_wsmp
 
 implicit none
 
@@ -17,20 +17,12 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-integer :: ierr, i, err
+integer :: ierr,err,i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta, visco, visco_par,                              &
-                restart, regrid, bootstrap, rst_format,             &
-                n_pfc,                                              & 
-                use_wsmp,                                           & 
-                zkpar_T_dependent,                                  &  
-                gmres_m, gmres_4, gmres_tol, iter_precon,           & 
-                tgnum,  pastix_pivot,                               &
-                V_0,V_1,V_coef, output_bnd_elements,                & 
-                
-                Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&                                                                                                                                            
+                restart, rst_format, regrid, bootstrap,             &                                                                                                                         
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -44,45 +36,55 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
+                n_pfc,                                              &
+                Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 F0, gamma_sheath, density_reflection,               &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
+                ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
                 particlesource, heatsource, tauIC,                  &
-                central_density, time_evol_scheme,                  &
-                bc_natural_open,                                    &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, D_neutral_x, D_neutral_y, D_neutral_p, &
+                ZK_perp_num, time_evol_scheme,                      &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
                 pellet_velocity_R, pellet_velocity_Z,               &
+                central_density, central_mass,                      &
                 pellet_particles, use_pellet,                       &
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &   
-		mgi_sig, mgi_length, n_zero, ksi_ion,               &
-		ellip,tria_u,tria_l,quad_u,quad_l,                  &
+                ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   & 
+                resistive_wall, wall_resistivity,                   &
+                bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
+                use_wsmp,                                           &
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
+                zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-                n_limiter, R_limiter, Z_limiter,                    &
-                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       & 
+                gmres_m, gmres_4, gmres_tol, iter_precon,           &
+                tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-                output_bnd_elements
+
+                V_0,V_1,V_coef, output_bnd_elements,                &
+                n_limiter, R_limiter, Z_limiter,                    &
+                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
+                D_prof_neg, ZK_prof_neg, T_min,                     &
+
+                D_neutral_x, D_neutral_y, D_neutral_p,   &
+                mgi_sig, mgi_length, n_zero, ksi_ion,               &  
+                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius
 
  if (my_id .eq. 0) then
 
@@ -104,8 +106,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
     read(42,in1)
     close(42)
   else
+
     read(5,in1)
-  end if
+ endif
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
@@ -132,7 +135,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
     nstep_n    = 0
     nstep_n(1) = nstep
   endif
-  
+
   if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(energies,1,n_tor,1,2,1,nstep,"energies",CAT_GRID)
   

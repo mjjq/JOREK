@@ -21,6 +21,10 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/mod_parameters.f90
 
+JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)               \
+        $(DIR)/initialise_parameters.f90        \
+        $(DIR)/mod_parameters.f90
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/mod_parameters.f90
@@ -43,6 +47,15 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)	\
 
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
+        $(DIR)/sources.f90                      \
+        $(DIR)/mod_parameters.f90
+
+JORDEL_SRC := $(JORDEL_SRC)       \
+       $(DIR)/initialise_parameters.f90        \
+        $(DIR)/mod_parameters.f90
+
+ENBIGGEN_SRC := $(ENBIGGEN_SRC)       \
+        $(DIR)/initialise_parameters.f90        \
 	$(DIR)/mod_parameters.f90
 
 JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \

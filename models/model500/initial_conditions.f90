@@ -28,10 +28,9 @@ logical    :: xpoint2
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
-  write(*,*) '*      initial conditions  (302)      *'
+  write(*,*) '*      initial conditions  (500)      *'
   write(*,*) '***************************************'
 endif
-
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
 
@@ -39,11 +38,11 @@ if (my_id .eq. 0) then
 
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-  if (ifail .ne. 0) then
-    call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
-    call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
-    write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
-  endif
+!TEST!  if (ifail .ne. 0) then
+!TEST!    call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
+!TEST!    call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
+!TEST!    write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
+!TEST!  endif
 
   psi_bnd = 0.d0
     
@@ -55,9 +54,6 @@ if (my_id .eq. 0) then
     endif
     if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
     if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
-  else
-    Z_xpoint(1) = -999.d0
-    Z_xpoint(2) = +999.d0
   endif
 
   call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
@@ -73,14 +69,15 @@ if (my_id .eq. 0) then
     psi = node_list%node(i)%values(1,1,1)
     R   = node_list%node(i)%x(1,1)
     Z   = node_list%node(i)%x(1,2)
+   
 
-    call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+    call density(  xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
     call temperature(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
                                                                dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
-    call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
+    call FFprime(   xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 							       
     zp       = zn * zT
@@ -90,18 +87,22 @@ if (my_id .eq. 0) then
     dp_dz2   = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 							       
 
     node_list%node(i)%values(1,1,5) = zn
-    node_list%node(i)%values(1,2,5) = dn_dpsi  * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,5) = dn_dpsi  * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,5) = dn_dpsi  * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(4,2) &
-                                    + dn_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dn_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,2,5) = dn_dpsi    * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,5) = dn_dpsi    * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,5) = dn_dpsi    * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(4,2) &
+                                    + dn_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dn_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
 
     node_list%node(i)%values(1,1,6) = zT
-    node_list%node(i)%values(1,2,6) = dT_dpsi  * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,6) = dT_dpsi  * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,6) = dT_dpsi  * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(4,2) &
-                                    + dT_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dT_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,2,6) = dT_dpsi    * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,6) = dT_dpsi    * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,6) = dT_dpsi    * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(4,2) &
+                                    + dT_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dT_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
+                                    + dT_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dT_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
 
     node_list%node(i)%values(1,1,2) = - tauIC * zp 
     node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))
@@ -109,8 +110,8 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,4,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,4,1) + dp_dz * node_list%node(i)%x(4,2) &
                                     + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
                                     + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
-
-    node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (filled-in just below with inverse Poisson)
+ 
+    node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
     node_list%node(i)%values(1,:,7) = 0.d0        ! parallel velocity
     
     node_list%node(i)%deltas = 0.d0
@@ -182,7 +183,7 @@ do in=2,n_tor
   endif
 
   call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,in, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)
+               4,2,1, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)
 enddo
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
@@ -205,14 +206,15 @@ do i=1,node_list%n_nodes
     if (xcase2 .eq. 2) direction = -direction
     if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
 
+    BigR = node_list%node(i)%x(1,1)
+    Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+    BigR_s = node_list%node(i)%x(2,1)
+
     do in=1,n_tor
 
-      BigR = node_list%node(i)%x(1,1)
-      Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
       T0   = node_list%node(i)%values(in,1,6)
       node_list%node(i)%values(in,1,n_var) = direction / Btot * sqrt(GAMMA * T0)
 
-      BigR_s = node_list%node(i)%x(2,1)
       T0_s   = node_list%node(i)%values(in,2,6)
       node_list%node(i)%values(in,2,7) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
       node_list%node(i)%values(in,2,7) = direction *  node_list%node(i)%values(in,2,7)

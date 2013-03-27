@@ -189,7 +189,7 @@ subroutine preset_parameters
   pellet_particles  = 0.d0  
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
-
+ 
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0
@@ -271,5 +271,23 @@ subroutine preset_parameters
   V_coef(4)=0.1
   V_coef(5)=1. 
 !======================MB
+
+!======================AF Massive Gas Injection Parameters
+  if (jorek_model .eq. 500) then
+     mgi_amplitude = 0.d0  ! 0.007d0
+     mgi_R      = 3.2d0
+     mgi_Z      =  1.5d0
+     mgi_phi    = 1.57d0
+     mgi_radius =   0.08d0
+     mgi_sig    =  0.05
+     mgi_length =  0.5
+     ksi_ion = 1.0d-23
+     n_zero = 1.0d19
+     D_neutral_x = 1.d-5
+     D_neutral_y = 1.d-5
+     D_neutral_p = 1.d-5   
+  endif
+!======================AF
+ 
 
 end subroutine preset_parameters

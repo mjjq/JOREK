@@ -393,7 +393,19 @@ if (my_id == 0) then
       write(*,REAL_FMT) 'aki_neo_const         ', aki_neo_const        
     endif
   endif
-  
+
+  if ( jorek_model == 500 ) then
+     write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude  
+     write(*,REAL_FMT) 'mgi_R               ',  mgi_R         
+     write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z         
+     write(*,REAL_FMT) 'mgi_phi             ',  mgi_phi       
+     write(*,REAL_FMT) 'mgi_radius          ',  mgi_radius    
+     write(*,REAL_FMT) 'mgi_sig             ',  mgi_sig       
+     write(*,REAL_FMT) 'mgi_length          ',  mgi_length    
+     write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion       
+     write(*,REAL_FMT) 'n_zero              ',  n_zero        
+  endif
+
   write(*,*)
   
 end if

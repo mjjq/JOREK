@@ -20,6 +20,8 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/export_helena.f90		\
 	$(DIR)/split_broadcast.f90		\
         $(DIR)/mod_live_data.f90		\
+        $(DIR)/mod_live_data2.f90               \
+        $(DIR)/mod_live_data3.f90               \
         $(DIR)/broadcast_RMP_profiles.f90	\
 	$(DIR)/mpi_mod.f90
 

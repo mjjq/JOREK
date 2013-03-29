@@ -55,6 +55,10 @@ module phys_module
   integer  :: pglobal_id
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+#ifdef JECCD
+  real*8, allocatable :: energies2(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+  real*8, allocatable :: energies3(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+#endif
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
   
   !> Points used as limiters (see routine find_limiter)
@@ -391,6 +395,15 @@ module phys_module
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
+
+  !> @name ECCD current sources
+  real*8  :: jecamp             ! parameter, not to be confused with jec_source in element_matrix.f90
+  real*8  :: jec_pos            ! extra parameters for ECCD
+  real*8  :: jec_width          ! extra parameters for ECCD
+  real*8  :: nu_jec_fast         ! 1/collision frequency
+  real*8  :: mod_jec            ! extra parameters for ECCD
+  real*8  :: JJ_par             ! velocity of resonent electrons
+  real*8  :: jw1,jw2,jw3        ! parameters to determine current source
 
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)

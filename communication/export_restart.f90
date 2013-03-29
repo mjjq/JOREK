@@ -51,6 +51,10 @@ write(21) t_now
 if (index_now .gt. 0) then
   write(21) xtime(1:index_now)
   write(21) energies(:,:,1:index_now)
+#ifdef JECCD
+  write(21) energies2(:,:,1:index_now)
+  write(21) energies3(:,:,1:index_now)
+#endif
 endif
 
 if (use_pellet) then

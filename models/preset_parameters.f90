@@ -288,6 +288,15 @@ subroutine preset_parameters
      D_neutral_p = 1.d-5   
   endif
 !======================AF
+
+!======================JP ECCD injection parameters
+ nu_jec_fast=1.d1
+ JJ_par=0.d1
+ jecamp=1.d1
+ jec_pos=0.6d0
+ jec_width=0.5d0
+ jw1=5.d-1 ! inner cut-off
+ jw2=1.d0  ! outer cut-off
  
 
 end subroutine preset_parameters

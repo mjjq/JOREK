@@ -28,9 +28,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (341+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (350+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor) * INT_EXT + 42 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (340+2*max_limiter+n_var) * IDBL_EXT + (32+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
+  bufsize = ( (349+2*max_limiter+n_var) * IDBL_EXT + (32+n_tor) * INT_EXT + 41 * ILOG_EXT + (12*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -287,6 +287,16 @@ if (my_id .eq. 0) then
   call MPI_PACK(RMP_on,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 39 
   call MPI_PACK(NEO,                    1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 40 
   call MPI_PACK(num_neo_file,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 41 
+
+  call MPI_PACK(jecamp,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
+  call MPI_PACK(jec_pos,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
+  call MPI_PACK(jec_width,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
+  call MPI_PACK(nu_jec_fast,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(JJ_par,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
+  call MPI_PACK(jw1,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
+  call MPI_PACK(jw2,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
+  call MPI_PACK(jw3,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
+  call MPI_PACK(R_geo,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)! ###
 
 endif
 
@@ -545,6 +555,16 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,RMP_on,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 39
   call MPI_UNPACK(buffer,bufsize,position,NEO,                    1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 40
   call MPI_UNPACK(buffer,bufsize,position,num_neo_file,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 41
+
+  call MPI_UNPACK(buffer,bufsize,position,jecamp,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+  call MPI_UNPACK(buffer,bufsize,position,jec_pos,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+  call MPI_UNPACK(buffer,bufsize,position,jec_width,              1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+  call MPI_UNPACK(buffer,bufsize,position,nu_jec_fast,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,JJ_par,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+  call MPI_UNPACK(buffer,bufsize,position,jw1,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+  call MPI_UNPACK(buffer,bufsize,position,jw2,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+  call MPI_UNPACK(buffer,bufsize,position,jw3,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+  call MPI_UNPACK(buffer,bufsize,position,R_geo,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
 
 endif
 

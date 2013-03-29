@@ -18,7 +18,7 @@
 !! @author Guido Huysmans (Euratom / CEA Association)
 !! @date 18-7-2008
 program JOREK2
-  
+
   use constants
   use mumps_module
   use pastix_module
@@ -37,6 +37,12 @@ program JOREK2
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
+
+#ifdef JECCD
+  use live_data2,          only: init_live_data2, write_live_data2, finalize_live_data2
+  use live_data3,          only: init_live_data3, write_live_data3, finalize_live_data3
+#endif
+
   use solve_mat_n
   use tr_module
   use clock_module
@@ -116,6 +122,9 @@ program JOREK2
   
   type (type_surface_list) :: surface_list, flux_list
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
+#ifdef JECCD
+  real*8                   :: A_tem(n_tor), A_den(n_tor), A_jen(n_tor), A_jec(n_tor)
+#endif
   real*8                   :: psi_lim, R_lim, Z_lim
   real*8                   :: t_matrix, t_send, t_solve
   type(clcktype)           :: t_itstart, t0, t1
@@ -318,6 +327,10 @@ program JOREK2
   
   ! --- Initialize live data file which will be filled during the code run
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data()
+#ifdef JECCD
+  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data2()
+  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data3()
+#endif
   
   ! --- Initialise ppplib plotting library
   if (my_id == 0)  call begplt('jorek2.ps')
@@ -371,6 +384,10 @@ program JOREK2
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
+#ifdef JECCD
+        call write_live_data2(index_now)
+        call write_live_data3(index_now)
+#endif
       end do
     end if
     
@@ -551,7 +568,12 @@ program JOREK2
       ! --- Determine initial energies
       call energy(node_list,element_list,W_mag,W_kin)
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
-      
+
+#ifdef JECCD
+      call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec)
+      write(*,'(A,12e16.8)') ' initial energies2 : ',A_tem,A_den
+      write(*,'(A,12e16.8)') ' initial energies3 : ',A_jen,A_jec
+#endif
     end if ! (my_id == 0)
     
 #ifdef USE_MUMPS
@@ -1040,6 +1062,19 @@ program JOREK2
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
        energies(1:n_tor,2,index_now) = W_kin(1:n_tor)
 
+#ifdef JECCD
+       call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec)
+       write(*,'(A,12e16.8)') ' current energies2 : ',A_tem,A_den
+       write(*,'(A,12e16.8)') ' current energies3 : ',A_jen,A_jec
+
+       energies2(1:n_tor,1,index_now) = A_tem(1:n_tor)
+       energies2(1:n_tor,2,index_now) = A_den(1:n_tor)
+
+       energies3(1:n_tor,1,index_now) = A_jen(1:n_tor)
+       energies3(1:n_tor,2,index_now) = A_jec(1:n_tor)
+
+       write(*,*) ' exiting current energies '
+#endif
        
        ! --- Output some information about the current timestep
        130 format(1x,a,i5.5,a,es10.3,a)
@@ -1065,7 +1100,10 @@ program JOREK2
 
        ! --- Output energies and growth_rates to text files during the code run
        if ( .not. bench_without_plot ) call write_live_data(index_now)
-       
+#ifdef JECCD
+       if ( .not. bench_without_plot ) call write_live_data2(index_now)
+       if ( .not. bench_without_plot ) call write_live_data3(index_now)
+#endif
     endif
 
     call clck_time_barrier(t1)
@@ -1162,6 +1200,10 @@ program JOREK2
   
   ! --- Close open files
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data()
+#ifdef JECCD
+  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data2()
+  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data3()
+#endif
 
   !***********************************************************************
   !*                          plots etc.                                 *
@@ -1326,6 +1368,11 @@ program JOREK2
 
     if (allocated(energies))  call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     if (allocated(xtime))     call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
+
+#ifdef JECCD
+    if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
+    if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
+#endif
   endif
 
   call r3_info_summary ()                                ! timing

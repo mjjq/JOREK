@@ -120,9 +120,25 @@ if (index_start .ge. 1) then
 
   energies = 0.d0
 
+#ifdef JECCD
+  if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
+  call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep,"energies2",CAT_UNKNOWN)
+
+  if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
+  call tr_allocate(energies3,1,n_tor,1,2,1,index_start+nstep,"energies3",CAT_UNKNOWN)
+
+  energies2 = 0.d0
+  energies3 = 0.d0
+
+#endif
+
   read(21) xtime(1:index_start)
   read(21) energies(1:n_tor_tmp,:,1:index_start)
 
+#ifdef JECCD
+  read(21) energies2(1:n_tor_tmp,:,1:index_start)
+  read(21) energies3(1:n_tor_tmp,:,1:index_start)
+#endif
 endif
 
 if (use_pellet) then

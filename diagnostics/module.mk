@@ -4,6 +4,7 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/boundary_check.f90         \
 	$(DIR)/dlength.f90                \
 	$(DIR)/energy.f90                 \
+        $(DIR)/temp.f90                   \
 	$(DIR)/find_axis.f90              \
 	$(DIR)/find_flux_surfaces.f90     \
 	$(DIR)/find_xpoint.f90            \

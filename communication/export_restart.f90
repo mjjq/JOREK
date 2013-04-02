@@ -29,6 +29,8 @@ do i=1,node_list%n_nodes
 #ifdef fullmhd
   write(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
   write(21) node_list%node(i)%Fprof_eq             !< equilibrium profile R*B_phi at the nodes
+#elif altcs
+  write(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
 #endif
   write(21) node_list%node(i)%index
   write(21) node_list%node(i)%boundary

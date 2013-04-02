@@ -34,22 +34,28 @@ module diagnostics
   
   
   !> Determines the value of variable ivar at position (R,Z,phi)
-  real*8 function variable_value_R_Z_phi(ivar, R, Z, phi, no_zero, position_buffer, error)
+  real*8 function variable_value_R_Z_phi(ivar, R, Z, phi, no_zero, error)
     
     ! --- Routine parameters
     integer, intent(in) :: ivar      !< Number of the variable
     real*8,  intent(in) :: R         !< R-position to evaluate the variable at
     real*8,  intent(in) :: Z         !< Z-position to evaluate the variable at
     real*8,  intent(in) :: phi       !< phi-position to evaluate the variable at   
-    logical, intent(in) :: no_zero   !< Leave n=0 part out?
-    type(t_position_buffer), intent(inout) :: position_buffer
+    logical, intent(in) :: no_zero   !< Skip n=0 part?
     integer, intent(out):: error     !< Error flag
-    
+
     ! --- Local variables
+    logical,                 save :: initialized = .false.
+    type(t_position_buffer), save :: position_buffer !< Buffer to avoid unnecessary find_RZ calls
     integer :: ielm, i_harm
     real*8  :: R_out, Z_out, s, t, P, P_s, P_t, P_st, P_ss, P_tt
     
     error = 0
+    
+    if ( .not. initialized ) then
+      position_buffer%R = -99.d0
+      position_buffer%Z = -99.d0
+    end if
     
     if ( (R == position_buffer%R) .and. (Z == position_buffer%Z) ) then
       s    = position_buffer%s
@@ -71,7 +77,7 @@ module diagnostics
   
   
   
-  !> Determines the value of variable ivar at position (s,t) in element i_elm
+  !> Determines the value of variable ivar at position (s,t,phi) in element i_elm
   real*8 function variable_value_ielm_s_t(ivar, i_elm, s, t, phi, no_zero)
     
     ! --- Routine parameters
@@ -80,7 +86,7 @@ module diagnostics
     real*8,  intent(in) :: s         !< s-position to evaluate the variable at
     real*8,  intent(in) :: t         !< t-position to evaluate the variable at
     real*8,  intent(in) :: phi       !< phi-position to evaluate the variable at   
-    logical, intent(in) :: no_zero   !< Leave n=0 part out?
+    logical, intent(in) :: no_zero   !< Skip n=0 part?
     
     ! --- Local variables
     integer :: i_harm
@@ -107,14 +113,14 @@ module diagnostics
   
   
   
-  !> Determines the value of variable ivar at position (s,t) in element i_elm
+  !> Determines the value of variable ivar at toroidal position phi and node i_node
   real*8 function variable_value_inode(ivar, i_node, phi, no_zero)
     
     ! --- Routine parameters
     integer, intent(in) :: ivar      !< Number of the variable
-    integer, intent(in) :: i_node    !< Element index
+    integer, intent(in) :: i_node    !< Node index
     real*8,  intent(in) :: phi       !< phi-position to evaluate the variable at   
-    logical, intent(in) :: no_zero   !< Leave n=0 part out?
+    logical, intent(in) :: no_zero   !< Skip n=0 part?
     
     ! --- Local variables
     integer :: i_harm

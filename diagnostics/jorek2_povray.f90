@@ -27,7 +27,6 @@ program jorek2_povray
   real*8, allocatable :: x_cart(:,:), y_cart(:,:), z_cart(:,:), value(:,:), x_cart2(:,:,:),        &
     y_cart2(:,:,:), z_cart2(:,:,:), value2(:,:,:)
   type(type_surface_list) :: surface_list
-  type(t_position_buffer) :: position_buffer
   
   ! --- Settings
   logical :: no_zero, no_private, symmetric, volume, cover
@@ -235,7 +234,7 @@ program jorek2_povray
           x_cart(ip,i_phi) = + R * cos(phi)
           y_cart(ip,i_phi) = - R * sin(phi)
           z_cart(ip,i_phi) = Z
-          value (ip,i_phi) = variable_value(i_var, R, Z, phi, no_zero, position_buffer, error)
+          value (ip,i_phi) = variable_value(i_var, R, Z, phi, no_zero, error)
           
           if ( (ip == 1) .or. (i_phi == 1) ) cycle
           

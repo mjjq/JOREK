@@ -71,6 +71,8 @@ do i=1,node_list%n_nodes
 #ifdef fullmhd
   read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
   read(21) node_list%node(i)%Fprof_eq             !< equilibrium profile R*B_phi at the nodes
+#elif altcs
+  read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
 #endif
   read(21) node_list%node(i)%index
   read(21) node_list%node(i)%boundary

@@ -14,6 +14,8 @@ module data_structure
 #ifdef fullmhd
     real*8     :: psi_eq(n_order+1)               !< equilibrium flux at the nodes
     real*8     :: Fprof_eq(n_order+1)             !< equilibrium profile R*B_phi at the nodes
+#elif altcs
+    real*8     :: psi_eq(n_order+1)               !< equilibrium flux at the nodes
 #endif
     integer    :: index(n_order+1)                !< index in the main matrix
     integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes

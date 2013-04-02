@@ -55,10 +55,8 @@ module phys_module
   integer  :: pglobal_id
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
-#ifdef JECCD
   real*8, allocatable :: energies2(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
   real*8, allocatable :: energies3(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
-#endif
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
   
   !> Points used as limiters (see routine find_limiter)

@@ -81,6 +81,9 @@ real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t
 real*8, dimension(n_gauss,n_gauss)    :: y_ss, y_st, y_tt
+#ifdef altcs
+real*8, dimension(n_gauss,n_gauss)    ::psieq,psieq_s,psieq_t
+#endif
 
 real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
 real*8, dimension(:,:,:,:) , pointer :: eq_p
@@ -116,6 +119,9 @@ x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_st  = 0.d0; y_ss  = 0.d0; y_tt  = 0.d0;
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_st = 0.d0; eq_ss = 0.d0; eq_tt = 0.d0; eq_p = 0.d0;
 
+#ifdef altcs
+psieq   = 0.d0; psieq_s = 0.d0; psieq_t = 0.d0
+#endif
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 
 current_source  = 0.d0
@@ -155,6 +161,12 @@ do i=1,n_vertex_max
        y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
        y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
+#ifdef altcs
+       psieq(ms,mt)    = psieq(ms,mt)    + nodes(i)%psi_eq(j)*element%size(i,j) * H(i,j,ms,mt)
+       psieq_s(ms,mt)  = psieq_s(ms,mt)  + nodes(i)%psi_eq(j)*element%size(i,j) * H_s(i,j,ms,mt)
+       psieq_t(ms,mt)  = psieq_t(ms,mt)  + nodes(i)%psi_eq(j)*element%size(i,j) * H_t(i,j,ms,mt)
+#endif
+
        do mp=1,n_plane
 
          do k=1,n_var
@@ -193,8 +205,13 @@ enddo
 !!$endif
 do ms=1, n_gauss
   do mt=1, n_gauss
+
+#ifdef altcs
+  call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+#else
+  call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+#endif
  
-    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 !=========================================MB :velocity profile
        if ( abs(V_0) .ge. 1.e-12) then 

@@ -84,39 +84,38 @@ program JOREK2
       type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list    
       type (type_bnd_element_list),intent(inout) :: bnd_elm_list    
       logical(kind=4),             intent(in)    :: xpoint2
-      logical,                     intent(in)    :: nice_q
+      logical(kind=4),             intent(in)    :: nice_q
     end subroutine equilibrium
      
-    subroutine construct_matrix_murge(my_id, node_list,                          &
-      element_list, bnd_node_list, local_elms, n_local_elms, xpoint2, xcase2,    &
-      minRad, R_axis, Z_axis, psi_axis, psi_bnd, z_xpoint, psi_xpoint,           &
-      gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,              &
-      n_cpu_trans, solve_only)
-      use data_structure, only : type_node, type_element, type_bnd_node_list,          &
-        type_element_list, type_node_list
+    subroutine construct_matrix_murge(my_id,node_list,element_list,bnd_node_list,local_elms,       &
+      n_local_elms,xpoint2,xcase2,minrad,r_axis,z_axis,psi_axis,psi_bnd,r_xpoint,z_xpoint,         &
+      psi_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans,n_cpu_trans,solve_only)
+      use data_structure, only : type_node,type_element,type_element_list,type_bnd_node_list,      &
+        type_node_list, thread_struct
       integer(kind=4) :: n_cpu
-      integer(kind=4), target :: n_local_elms
-      integer(kind=4), target :: my_id
-      integer(kind=4), target :: xcase2
-      type (type_node_list), target :: node_list
-      type (type_element_list), target :: element_list
-      type (type_bnd_node_list), target :: bnd_node_list
-      integer(kind=4), target :: local_elms(n_local_elms)
-      logical(kind=4), target :: xpoint2
-      real(kind=8), target :: minRad
-      real(kind=8), target :: R_axis
-      real(kind=8), target :: Z_axis
-      real(kind=8), target :: psi_axis
-      real(kind=8), target :: psi_bnd
-      real(kind=8), target :: z_xpoint(:)
-      real(kind=8), target :: psi_xpoint(:)
-      logical(kind=4), target :: gmres
+      integer(kind=4) ,target :: n_local_elms
+      integer(kind=4) ,target :: my_id
+      type (type_node_list) ,target :: node_list
+      type (type_element_list) ,target :: element_list
+      type (type_bnd_node_list) ,target :: bnd_node_list
+      integer(kind=4) ,target :: local_elms(n_local_elms)
+      logical(kind=4) ,target :: xpoint2
+      integer(kind=4) ,target :: xcase2
+      real(kind=8) ,target :: minrad
+      real(kind=8) ,target :: r_axis
+      real(kind=8) ,target :: z_axis
+      real(kind=8) ,target :: psi_axis
+      real(kind=8) ,target :: psi_bnd
+      real(kind=8) ,target :: r_xpoint(:)
+      real(kind=8) ,target :: z_xpoint(:)
+      real(kind=8) ,target :: psi_xpoint(:)
+      logical(kind=4) ,target :: gmres
       integer(kind=4) :: i_tor(n_cpu)
       integer(kind=4) :: mpi_comm_n
-      integer(kind=4), target :: mpi_comm_trans
-      integer(kind=4), target :: my_id_trans
-      integer(kind=4), target :: n_cpu_trans
-      logical(kind=4), target :: solve_only
+      integer(kind=4) ,target :: mpi_comm_trans
+      integer(kind=4) ,target :: my_id_trans
+      integer(kind=4) ,target :: n_cpu_trans
+      logical(kind=4) ,target :: solve_only
     end subroutine construct_matrix_murge
   end interface
   
@@ -893,18 +892,19 @@ program JOREK2
       call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
-    	 
+    
+    ! --- construct the matrix from elemental matrices
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
        call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms,      &
-    	                           n_local_ELms,  xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, &
-				   psi_bnd, Z_xpoint,psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n,  &
-    	                           mpi_comm_trans, my_id_trans, n_cpu_trans, solve_only)	   ! construct the matrix from elemental matrices
+    	 n_local_ELms, xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,         &
+         Z_xpoint, psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,       &
+         n_cpu_trans, solve_only)
     else
 
-       call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),index_max(my_id+1), &
-    	                     xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, &
-			     R_xpoint, Z_xpoint, psi_xpoint) ! construct the matrix from elemental matrices
+       call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
+         index_max(my_id+1), xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
+         Z_xpoint, psi_xpoint)
     endif
     
 

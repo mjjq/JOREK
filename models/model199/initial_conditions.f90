@@ -55,7 +55,7 @@ if (my_id .eq. 0) then
   endif
 
   if (freeboundary) then
-    call find_limiter(node_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+    call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
     if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
     endif

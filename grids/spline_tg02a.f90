@@ -14,7 +14,7 @@ REAL*8   :: X
 INTEGER  :: IX,N
 REAL*8   :: D(*),S(*),U(*),V(*)
 REAL*8   :: A,B,C,C3,D0,D1,EPS,GAMA,H,HR,HRR,PHI,S0,S1,T,THETA
-INTEGER  :: I,IFLG,J
+INTEGER  :: I,IFLG,J,K
 
 EPS = 1.D-33
 J = 0

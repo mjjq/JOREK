@@ -53,6 +53,7 @@ module diagnostics
     error = 0
     
     if ( .not. initialized ) then
+      initialized       = .true.
       position_buffer%R = -99.d0
       position_buffer%Z = -99.d0
     end if

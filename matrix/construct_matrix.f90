@@ -3,8 +3,8 @@
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, &
-                            xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
+subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, xpoint2, xcase2,&
+  minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
   
   use tr_module 
   use parameters
@@ -36,7 +36,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   real*8,  intent(in) :: Z_axis
   real*8,  intent(in) :: psi_axis
   real*8,  intent(in) :: psi_bnd
-  real*8,  intent(in) :: R_xpoint(2),Z_xpoint(2)
+  real*8,  intent(in) :: R_xpoint(2)
+  real*8,  intent(in) :: Z_xpoint(2)
   real*8,  intent(in) :: psi_xpoint(2)
   logical, intent(in) :: xpoint2
 

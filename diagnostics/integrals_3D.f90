@@ -287,7 +287,7 @@ do ife = ife_min, ife_max
 	gradP_psi_max = max(gradP_psi_max,grad_P_psi)
 
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
-                     particle_source,heat_source,rotation_source)
+                     particle_source,heat_source)
         call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, ps0,&
                      psi_axis,psi_limit,current_source)
 

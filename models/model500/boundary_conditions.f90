@@ -24,11 +24,9 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
-subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
-                                n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
-                                xcase2, R_axis, Z_axis, psi_axis, psi_bnd,              &
-                                R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
-
+subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,         &
+  n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
+  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
 
   use data_structure
   use global_distributed_matrix
@@ -39,22 +37,27 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 
   implicit none
 
-  ! Subroutine parameters
-  integer                  :: my_id
-  integer                  :: local_elms(*)
-  integer                  :: n_local_elms
-  integer                  :: index_min, index_max
-  integer                  :: xcase2
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  type (type_bnd_node_list):: bnd_node_list
-  logical                  :: xpoint2
-  real*8                   :: psi_axis, R_axis, Z_axis
-  real*8                   :: psi_bnd
-  real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
-  logical                  :: gmres
-  logical                  :: solve_only
-  real*8                   :: rhs_loc(*)
+  ! --- Routine parameters
+  integer,                   intent(in)    :: my_id
+  type (type_node_list),     intent(in)    :: node_list
+  type (type_element_list),  intent(in)    :: element_list
+  type (type_bnd_node_list), intent(in)    :: bnd_node_list
+  integer,                   intent(in)    :: local_elms(*)
+  integer,                   intent(in)    :: n_local_elms
+  integer,                   intent(in)    :: index_min
+  integer,                   intent(in)    :: index_max
+  real*8,                    intent(inout) :: rhs_loc(*)
+  logical,                   intent(in)    :: xpoint2
+  integer,                   intent(in)    :: xcase2
+  real*8,                    intent(in)    :: R_axis
+  real*8,                    intent(in)    :: Z_axis
+  real*8,                    intent(in)    :: psi_axis
+  real*8,                    intent(in)    :: psi_bnd
+  real*8,                    intent(in)    :: R_xpoint(2)
+  real*8,                    intent(in)    :: Z_xpoint(2)
+  real*8,                    intent(in)    :: psi_xpoint(2)
+  logical,                   intent(in)    :: gmres
+  logical,                   intent(in)    :: solve_only
 
   ! Internal parameters
   real*8  :: zbig,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1

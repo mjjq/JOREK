@@ -34,8 +34,7 @@
 #endif
 MODULE THREAD_DATA
   USE tr_module
-  USE data_structure,  ONLY : type_element_list,                               &
-       &                      type_node_list
+  USE data_structure,  ONLY : type_element_list, type_node_list
 #ifdef MURGE_USE_SEQUENCE
   USE murge_module, ONLY : MURGE_INTS_KIND, MURGE_COEF_KIND
 #endif
@@ -91,6 +90,7 @@ MODULE THREAD_DATA
      REAL*8,                    POINTER :: Z_axis
      REAL*8,                    POINTER :: psi_axis
      REAL*8,                    POINTER :: psi_bnd
+     REAL*8,                    POINTER :: R_xpoint(:)
      REAL*8,                    POINTER :: Z_xpoint(:)
      REAL*8,                    POINTER :: psi_xpoint(:)
      INTEGER,                   POINTER :: xcase2
@@ -688,7 +688,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      &                            bnd_node_list, local_elms,                   &
      &                            n_local_elms, xpoint2, xcase2,               &
      &                            minRad, R_axis, Z_axis, psi_axis,            &
-     &                            psi_bnd, Z_xpoint, psi_xpoint,               &
+     &                            psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,     &
      &                            gmres, i_tor, n_cpu,                         &
      &                            mpi_comm_n, MPI_COMM_TRANS,                  &
      &                            my_id_trans, n_cpu_trans, solve_only)
@@ -740,6 +740,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   REAL*8, TARGET                 :: Z_axis
   REAL*8, TARGET                 :: psi_axis
   REAL*8, TARGET                 :: psi_bnd
+  REAL*8, TARGET                 :: R_xpoint(:)
   REAL*8, TARGET                 :: Z_xpoint(:)
   REAL*8, TARGET                 :: psi_xpoint(:)
   LOGICAL, TARGET                :: gmres
@@ -1187,6 +1188,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      datas(iter)%Z_axis              => Z_axis
      datas(iter)%psi_axis            => psi_axis
      datas(iter)%psi_bnd             => psi_bnd
+     datas(iter)%R_xpoint            => R_xpoint
      datas(iter)%Z_xpoint            => Z_xpoint
      datas(iter)%psi_xpoint          => psi_xpoint
      datas(iter)%local_elms          => local_elms
@@ -1491,12 +1493,11 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
 !     write(fname,'(A,I6.6)')"rhs",index_now
 !     call tr_vdump(fname,RHS_glob,ndof_glob)
 !  end if
-  CALL boundary_conditions(my_id, node_list, element_list, bnd_node_list,      &
-       &                   local_elms, n_local_elms, 0,                        &
-       &                   0,  rhs_loc,    xpoint2, xcase2, psi_axis,          &
-       &                   psi_bnd, Z_xpoint, psi_xpoint, gmres, solve_only)
-  CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, &
-       &          0, MPI_COMM_WORLD, ierr)
+  CALL boundary_conditions(my_id, node_list, element_list, bnd_node_list, local_elms, n_local_elms,&
+    0, 0, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,         &
+    psi_xpoint, gmres, solve_only)
+  CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD,  &
+    ierr)
 
 !  if (my_id .eq. 0) then
 !     write(fname,'(A,I6.6)')"rhsbc",index_now

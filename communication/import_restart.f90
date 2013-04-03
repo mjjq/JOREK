@@ -47,8 +47,8 @@ elseif (format_rst == 0) then
       mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
    endif
    write(*,*) ' OLD format (0) : '
-   write(*,'(A,32i4)') ' previous modenumbers : ',mode_tmp
-   write(*,'(A,32i4)') ' new mode numbers     : ',mode
+   write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
+   write(*,'(A,999i4)') ' new mode numbers     : ',mode
 else
    write(*,'(A,i3)') ' restart file format not supported : ',format_rst
 endif

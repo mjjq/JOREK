@@ -107,6 +107,9 @@ RHS = 0.d0
 epsil=1.d-3
 !======================================= NEO
 
+zk_par_num = 0.d0
+amat_27    = 0.d0
+
 ! --- Taylor-Galerkin Stabilisation coefficients
 TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    = TGNUM(6); TG_num7    = TGNUM(7);
 

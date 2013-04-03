@@ -112,6 +112,8 @@ delta_t => thread_struct(tid)%delta_t
 ELM = 0.d0
 RHS = 0.d0
 
+zk_par_num = 0.d0
+
 ! --- Taylor-Galerkin Stabilisation coefficients
 TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    = TGNUM(6); TG_num7    = TGNUM(7);
 

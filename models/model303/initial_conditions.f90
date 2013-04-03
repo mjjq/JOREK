@@ -208,6 +208,10 @@ enddo
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
 do i=1,node_list%n_nodes
 
+#ifdef altcs
+    node_list%node(i)%psi_eq(:) = node_list%node(i)%values(1,:,1)
+#endif
+
   if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
 
     ps0_s     = node_list%node(i)%values(1,2,1)

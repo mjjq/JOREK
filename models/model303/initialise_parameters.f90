@@ -142,6 +142,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
   if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(energies,1,n_tor,1,2,1,nstep,"energies",CAT_GRID)
+
+#ifdef JECCD
+  if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_GRID)
+  if (nstep .gt. 0) call tr_allocate(energies2,1,n_tor,1,2,1,nstep,"energies2",CAT_GRID)
+
+  if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_GRID)
+  if (nstep .gt. 0) call tr_allocate(energies3,1,n_tor,1,2,1,nstep,"energies3",CAT_GRID)
+#endif
   
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime",CAT_GRID)

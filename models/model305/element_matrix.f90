@@ -43,8 +43,9 @@ real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7
 real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y, ZKpar_T, dZKpar_dT
 
-real*8     :: Fprof, Fprof_R, Fprof_Z, psieq_R, psieq_Z  ! more accurate current
-
+#ifdef altcs
+real*8     :: psieq_R, psieq_Z  ! more accurate current
+#endif
 real*8     :: v, v_x, v_y, v_s, v_t, v_p, v_ss, v_st, v_tt, v_xx, v_yy, v_xy
 real*8     :: ps0, ps0_x, ps0_y, ps0_p,ps0_s,ps0_t, ps0_ss, ps0_st, ps0_tt, ps0_xx, ps0_xy, ps0_yy
 real*8     :: zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t
@@ -105,7 +106,6 @@ real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t
 real*8, dimension(n_gauss,n_gauss)    :: y_ss, y_st, y_tt
 #ifdef altcs
-real*8, dimension(n_gauss,n_gauss)    :: Fprofile,Fprofile_s,Fprofile_t
 real*8, dimension(n_gauss,n_gauss)    :: psieq,psieq_s,psieq_t
 #endif
 
@@ -239,7 +239,7 @@ do ms=1, n_gauss
 #endif
 ! eccurrent_source is defined in this module, below.
   call eccurrent_source(x_g(ms,mt),y_g(ms,mt),ec_source(ms,mt))
-  call sources(xpoint2,xcase2,y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+  call sources(xpoint2,xcase2,y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 !=========================================MB :velocity profile
        if ( abs(V_0) .ge. 1.e-12) then 
         call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
@@ -290,9 +290,9 @@ do ms=1, n_gauss
    BigR    = x_g(ms,mt)
    BigR_x  = 1.d0
 
-   Fprof = Fprofile(ms,mt)
-   Fprof_R = (   y_t(ms,mt) * Fprofile_s(ms,mt)  - y_s(ms,mt) *Fprofile_t(ms,mt) ) / xjac
-   Fprof_Z = ( - x_t(ms,mt) * Fprofile_s(ms,mt)  + x_s(ms,mt) *Fprofile_t(ms,mt) ) / xjac
+   !Fprof = Fprofile(ms,mt)
+   !Fprof_R = (   y_t(ms,mt) * Fprofile_s(ms,mt)  - y_s(ms,mt) *Fprofile_t(ms,mt) ) / xjac
+   !Fprof_Z = ( - x_t(ms,mt) * Fprofile_s(ms,mt)  + x_s(ms,mt) *Fprofile_t(ms,mt) ) / xjac
 
 
    eps_cyl = 1.d0          ! for cylinder geometry : epscyl = eps
@@ -844,7 +844,8 @@ do ms=1, n_gauss
            !Bdot_jec_star= (F0 / BigR*v_p    + v_x*ps0_y    -x_y*ps0_x)/BigR
            Bgrad_jec    = (F0 / BigR*jec0_p + jec0_x*ps0_y -jec0_y*ps0_x)/BigR
 
-           rhs_ij_8 = v * BigR * nu_jec_fast*ec_source(ms,mt)/(2*PI*BigR) * xjac* tstep &
+           !rhs_ij_8 = v * BigR * nu_jec_fast*ec_source(ms,mt)/(2*PI*BigR) * xjac* tstep &
+           rhs_ij_8 = v * BigR * ec_source(ms,mt) *xjac* tstep &
                     - v * jec0 * nu_jec_fast * BigR* xjac * tstep &
                     + v * JJ_par * BigR/sqrt(BB2) * Bgrad_jec * xjac * tstep &
                     + v * zeta * delta_g(mp,8,ms,mt) * BigR * xjac
@@ -1582,8 +1583,12 @@ zjz=jecamp*exp(-.5*(rad-jec_pos)**2./jec_width**2.)
 
 ! for debugging purposes, a solid annulus of current
 !if(rad.gt.jw1.AND.rad.lt.jw2) then
-!zjz=jecamp
+!zjz=jecamp*(rad-jw1)/(jw2-jw1)
+!elseif(rad.gt.jw2.AND.rad.lt.jw3) then
+!zjz=jecamp*(rad-jw3)/(jw2-jw3)
 !endif
+
+!zjz=jecamp
 
 return
 end subroutine eccurrent_source

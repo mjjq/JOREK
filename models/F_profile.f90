@@ -44,22 +44,22 @@ d3_pert = + FF_coef(6)/cosh((psi_n - FF_coef(7))/FF_coef(8))**4 / (FF_coef(8)**3
 !--------------------------- 
 
 prof0           = sqrt( abs(2.d0 * (psi_bnd - psi_axis) *  & 
-                       -1.d0 * (FF_0 - FF_1) * &
+                       (-1.d0) * (FF_0 - FF_1) * &
                        (psi_n  + FF_coef(1)/2.d0 * psi_n**2 & 
                                + FF_coef(2)/3.d0 * psi_n**3 ) &
                        + F0**2))
 
 dprof0_dpsi     = 1.d0/prof0 * &
-                       -1.d0 * (FF_0 - FF_1) * & 
+                       (-1.d0) * (FF_0 - FF_1) * & 
                        (1.d0   + FF_coef(1) * psi_n  &
                                + FF_coef(2) * psi_n**2 )
  
 dprof0_dpsi2    = -1.d0 * dprof0_dpsi/prof0**2 *  & 
-                       -1.d0 * (FF_0 - FF_1) * & 
+                       (-1.d0) * (FF_0 - FF_1) * & 
                        (1.d0   + FF_coef(1) * psi_n  & 
                                + FF_coef(2) * psi_n**2 ) & 
                   +1.d0/prof0 * 1.d0/(psi_bnd - psi_axis) * & 
-                       -1.d0 * (FF_0 - FF_1) * & 
+                       (-1.d0) * (FF_0 - FF_1) * & 
                        (         FF_coef(1) + FF_coef(2) * 2.d0 * psi_n )
 
 !-- former FF'prof:

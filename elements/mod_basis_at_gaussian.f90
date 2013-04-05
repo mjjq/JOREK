@@ -22,6 +22,10 @@ module basis_at_gaussian
   use parameters
   use Gauss
   
+  implicit none
+  
+  save
+  
   real*8 :: H(n_vertex_max,n_order+1,n_gauss,n_gauss)    !< Basis functions in poloidal plane
   real*8 :: H_s(n_vertex_max,n_order+1,n_gauss,n_gauss)  !< Basis functions in poloidal plane; derivative with respect to first coordinate
   real*8 :: H_t(n_vertex_max,n_order+1,n_gauss,n_gauss)  !< Basis functions in poloidal plane; derivative with respect to second coordinate

@@ -284,8 +284,8 @@ module vacuum_equilibrium
   !**                                                                  ** 
   !********************************************************************** 
   implicit none
-  real*8   ::  a1(1:n),r1(1:n),z1(1:n),br(1:n),bz(1:n)
   integer  ::  n
+  real*8   ::  a1(1:n),r1(1:n),z1(1:n),br(1:n),bz(1:n)
   
   real*8            :: z2,r2z2,den,sden,xnuma,xnum,x1,xalog,cay,ee,brkt,a2                               
   ! elliptic functions approximation (see Handbook of Mathematical Functions p.591
@@ -363,8 +363,8 @@ module vacuum_equilibrium
   !**                                                                  **
   !**********************************************************************
   implicit none
-  real*8   ::  a1(1:n),r1(1:n),z1(1:n),psi(1:n)
   integer  ::  n
+  real*8   ::  a1(1:n),r1(1:n),z1(1:n),psi(1:n)
         
   real*8            :: z2,r2z2,xk,den,sden,xnuma,xnum,x1,xalog,cay,ee,a2 
                                 

@@ -127,6 +127,7 @@ character*4         :: label
 xpoint = .true.
 extend = .true.;   if (n_ext .lt. 1) extend = .false.
 xcase  = 1
+my_id  = 0
 
 PI = 2.d0 * asin(1.d0)
 

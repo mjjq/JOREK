@@ -576,7 +576,7 @@ do ms=1, n_gauss
                       - v * eps_cyl * F0 / BigR * zj0_p                   * xjac * tstep &
                       + BigR**2 * (v_s * p0_t - v_t * p0_s)                      * tstep &
 
-                      - visco_num_T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy) * xjac * tstep &                                                                &
+                      - visco_num_T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy) * xjac * tstep &
 
                       - TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
                                 * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep &
@@ -1127,7 +1127,7 @@ do ms=1, n_gauss
 		       
                        + dZKpar_dT * T * BigR / BB2 * Bgrad_T_star * Bgrad_T           * xjac * theta * tstep &
  
-                       + ZK_perp_num * (v_xx + v_x/BigR + v_yy)*(T_xx + T_x/BigR + T_yy) * BigR * xjac * theta * tstep &                                                                &
+                       + ZK_perp_num * (v_xx + v_x/BigR + v_yy)*(T_xx + T_x/BigR + T_yy) * BigR * xjac * theta * tstep &
 
                    + TG_num6 * 0.25d0 * BigR**2 * T* (r0_x * u0_y - r0_y * u0_x)         &
                              * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
@@ -1728,8 +1728,8 @@ subroutine my_fft(in_fft,out_fft,n)
 real*8     :: in_fft(*)
 complex*16 :: out_fft(*)
 
-real*8     :: tmp_fft(2*n+2)
 integer    :: i, n
+real*8     :: tmp_fft(2*n+2)
 
 tmp_fft(1:n) = in_fft(1:n)
 

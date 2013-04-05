@@ -138,8 +138,8 @@
 !----------------------------------------------------------------------c
 !  Coded by Y. Saad, Sep. 26 1989                                      c
 !----------------------------------------------------------------------c
-      real*8  ::   t(ndof*ndof),tnext(ndof*ndof)
       integer ::   i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
+      real*8  ::   t(ndof*ndof),tnext(ndof*ndof)
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof
       

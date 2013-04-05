@@ -274,6 +274,11 @@ do ife = ife_min, ife_max
 
 	grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
+        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
+                     particle_source,heat_source)
+        call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, ps0,&
+                     psi_axis,psi_limit,current_source)
+
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
         D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
@@ -285,11 +290,6 @@ do ife = ife_min, ife_max
 	
 	gradP_max     = max(gradP_max,grad_P)
 	gradP_psi_max = max(gradP_psi_max,grad_P_psi)
-
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
-                     particle_source,heat_source)
-        call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, ps0,&
-                     psi_axis,psi_limit,current_source)
 
         if (use_pellet) then
 

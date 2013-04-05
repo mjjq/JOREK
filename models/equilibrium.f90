@@ -154,8 +154,8 @@ if (freeboundary_equil) then
 
 ! Target current
  call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
- ! current_ref = 11.92d6 !### who did this????!!!!!
- ! Z_axis_ref  = 0.538d0 !###
+ current_ref = 11.92d6 !###
+ Z_axis_ref  = 0.538d0 !###
 
   do iter=1,n_iter
     

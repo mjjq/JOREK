@@ -1337,8 +1337,8 @@ module vacuum_response
     implicit none
     
     ! --- Routine parameters
-    integer, intent(in) :: i_tors(n_tor) !< Toroidal mode numbers
     integer, intent(in) :: n_tor         !< Dimension of i_tors
+    integer, intent(in) :: i_tors(n_tor) !< Toroidal mode numbers
     integer, intent(in) :: n_period      !< Periodicity
     
     ! --- Local variables

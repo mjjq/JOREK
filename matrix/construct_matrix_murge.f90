@@ -745,8 +745,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   REAL*8, TARGET                 :: psi_xpoint(:)
   LOGICAL, TARGET                :: gmres
   INTEGER, TARGET                :: xcase2
-  INTEGER                        :: i_tor(n_cpu)
   INTEGER                        :: n_cpu
+  INTEGER                        :: i_tor(n_cpu)
   INTEGER                        :: column_number
   INTEGER                        :: mpi_comm_n
   INTEGER, TARGET                :: MPI_COMM_TRANS, my_id_trans, n_cpu_trans

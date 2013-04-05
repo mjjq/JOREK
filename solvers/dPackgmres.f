@@ -1613,11 +1613,11 @@ C*
        icntl(7) = -1
        icntl(8) = 1
 * 
-       cntl(1) = 1.0 d -5
-       cntl(2) = 0.0 d 0
-       cntl(3) = 0.0 d 0
-       cntl(4) = 0.0 d 0
-       cntl(5) = 0.0 d 0
+       cntl(1) = 1.0d-5
+       cntl(2) = 0.0d0
+       cntl(3) = 0.0d0
+       cntl(4) = 0.0d0
+       cntl(5) = 0.0d0
 *
        return
        end

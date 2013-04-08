@@ -40,6 +40,7 @@ MODULE THREAD_DATA
 #endif
   USE mod_elt_matrix_fft
   USE mod_elt_matrix
+  use phys_module, only: n_tor_fft_thresh
 
   TYPE THREAD_DATA_TYPE
      ! -- local variables   --
@@ -242,7 +243,7 @@ CONTAINS
 #ifdef MURGE_USE_SEQUENCE
              IF (DATA%mode .EQ. 3) THEN
 #endif
-                IF (n_tor .GT. 3) THEN
+                IF (n_tor .GE. n_tor_fft_thresh) THEN
                    ! use fft for toroidal integration
                 CALL element_matrix_fft(element,nodes, data%xpoint2,           &
                      &                  data%xcase2, data%minRad,              &

@@ -15,6 +15,8 @@ subroutine preset_parameters
   
   time_evol_scheme = 'Crank-Nicholson'
   
+  n_tor_fft_thresh = 5
+  
   ! --- DoubleNull flag
   xcase = LOWER_XPOINT
   

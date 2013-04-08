@@ -128,6 +128,7 @@ if (my_id == 0) then
   write(*,*) 'NAMELIST INPUT PARAMETERS'
   write(*,*) '-------------------------------------------------'
   write(*,CHAR_FMT) 'time_evol_scheme      ', trim(time_evol_scheme)
+  write(*,INTG_FMT) 'n_tor_fft_thresh      ', n_tor_fft_thresh
   write(*,REAL_FMT) 'tstep                 ', tstep
   write(*,INTG_FMT) 'nstep                 ', nstep
   write(*,REAL_FMT) 'tstep_n               ', tstep_n

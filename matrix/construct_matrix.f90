@@ -118,7 +118,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
   !$omp          index_min, index_max,xpoint2,xcase2,minRad,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,&
-  !$omp          R_xpoint,my_id,bc_natural_open,refinement,thread_struct)                           &
+  !$omp          R_xpoint,my_id,bc_natural_open,refinement,thread_struct,n_tor_fft_thresh)                           &
   !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
@@ -171,7 +171,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
      endif
 
 !     if ( n_tor >= 3 .and. jorek_model < 700 ) then
-     if ( n_tor .gt. 3 .and. jorek_model < 700 ) then
+     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model < 700 ) then
        call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)      ! use fft for toroidal integration
      else
        call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)          ! use direct integration

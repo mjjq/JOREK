@@ -786,9 +786,13 @@ do ms=1, n_gauss
              u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  T_tt = psi_tt ; vpar_tt = psi_tt
              u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  T_st = psi_st ; vpar_st = psi_st
 
-             u_xx = psi_xx ;                    w_xx = psi_xx ; rho_xx = psi_xx ;  T_xx = psi_xx ; vpar_xx = psi_xx
-             u_yy = psi_yy ;                    w_yy = psi_yy ; rho_yy = psi_yy ;  T_yy = psi_yy ; vpar_yy = psi_yy
-             u_xy = psi_xy ;                    w_xy = psi_xy ; rho_xy = psi_xy ;  T_xy = psi_xy ; vpar_xy = psi_xy
+             u_xx = psi_xx ;                                    rho_xx = psi_xx ;  T_xx = psi_xx ; vpar_xx = psi_xx
+             u_yy = psi_yy ;                                    rho_yy = psi_yy ;  T_yy = psi_yy ; vpar_yy = psi_yy
+             u_xy = psi_xy ;                                    rho_xy = psi_xy ;  T_xy = psi_xy ; vpar_xy = psi_xy
+             
+             w_xx = (psi_ss * y_t(ms,mt)**2 - 2.d0*psi_st * y_s(ms,mt)*y_t(ms,mt) + psi_tt * y_s(ms,mt)**2 ) / xjac**2
+             w_yy = (psi_ss * x_t(ms,mt)**2 - 2.d0*psi_st * x_s(ms,mt)*x_t(ms,mt) + psi_tt * x_s(ms,mt)**2 ) / xjac**2
+             w_xy = psi_xy
 
              rho_hat   = BigR**2 * rho
              rho_x_hat = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x

@@ -1059,10 +1059,9 @@ jec_t = psi_t
 
                  amat_24 = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)  * theta * tstep  &
                          + BigR * ( v_x * w_x + v_y * w_y) * visco_T  * xjac   * theta * tstep  &
+                         + v * tauIC * BigR**4 * (p0_s * w_t - p0_t * w_s)              * theta * tstep &
 
                          + visco_num_T * (v_xx + v_x/BigR + v_yy)*(w_xx + w_x/BigR + w_yy) * xjac * theta * tstep    &
-     
-                         + v * tauIC * BigR**4 * (p0_s * w_t - p0_t * w_s)              * theta * tstep &
 
                          + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w_x * u0_y - w_y * u0_x)     &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep

@@ -59,7 +59,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer :: node_out(n_vertex_max)
   integer :: i_father,INODE_FATHER, ios
   integer, external :: omp_get_num_threads, omp_get_thread_num
-  integer :: ilarge_vp, in
+  integer :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
+  logical :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
 
   call r3_info_begin (r3_info_index_0, 'construct_matrix')   ! timing
 
@@ -72,7 +73,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   endif
   call tr_print_memsize("DebConstM")
   i_bnd = 0
-
+  
   do i=1, n_local_elms
 
      ielm = local_elms(i)
@@ -109,6 +110,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   A_glob   = 0.d0
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
+  difference_found = .false.
+  rhs_problem(:)   = .false.
+  elm_problem(:,:) = .false.
 
 #ifdef AVOID_NEG_DENS     
   call identify_dens_problems(my_id)
@@ -118,11 +122,13 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &
   !$omp          index_min, index_max,xpoint2,xcase2,minRad,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,&
-  !$omp          R_xpoint,my_id,bc_natural_open,refinement,thread_struct,n_tor_fft_thresh)                           &
+  !$omp          R_xpoint,my_id,bc_natural_open,refinement,thread_struct,n_tor_fft_thresh,          &
+  !$omp          difference_found,rhs_problem,elm_problem)                           &
   !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,  &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,              &
-  !$omp           i_father,element_father, nodes_father, inode_father, node_out)
+  !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,   &
+  !$omp           ivar, itor, jvertex, jorder, jvar, jtor)
 
 #ifdef _OPENMP
   omp_nthreads = omp_get_num_threads()
@@ -204,26 +210,63 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
        endif
          
      enddo
-
-
-     !------------------------------------------------------- comparing two versions of element_matrix
-      ! if (ife .eq. n_local_elms/2) then
-      !   call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM2, RHS2, omp_tid)
-      !   call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)
-      !   do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
-      !     if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
-      !       write(*,'(i3,A,i6,3e16.8)') my_id,' RHS : ',i,RHS(i),RHS2(i),RHS(i)-RHS2(i)
-      !     endif
-      !   enddo
-      !   do i=1,n_tor*n_vertex_max*(n_order+1)*n_var
-      !     do j=1,n_tor*n_vertex_max*(n_order+1)*n_var
-      !       if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
-      !         write(*,'(i3,A,2i6,3e16.8)') my_id,' ELM : ',i,j,ELM(i,j),ELM2(i,j),ELM(i,j)-ELM2(i,j)
-      !       endif
-      !    enddo
-      !   enddo
-      ! endif
-
+     
+     
+     
+     ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
+#ifdef COMPARE_ELEMENT_MATRIX
+     if (ife .eq. n_local_elms/2) then ! comparison is performed only for one finite element
+       
+       call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,   &
+         psi_bnd, Z_xpoint, ELM2, RHS2, omp_tid)
+       call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,       &
+         psi_bnd, Z_xpoint, ELM, RHS, omp_tid)
+       
+       ! --- Compare right hand side
+       write(*,*)
+       write(*,*) 'Comparing rhs:'
+       write(*,*)
+       write(*,'(A)') '  #    my_id       i ivertex  iorder    ivar    itor             RHS    ' //&
+         '        RHS2        RHS-RHS2'
+       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+         
+         if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
+           call decrypt_index(i, ivertex, iorder, ivar, itor)
+           write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, RHS(i), RHS2(i),     &
+             RHS(i)-RHS2(i)
+           rhs_problem(ivar) = .true.
+           difference_found  = .true.
+         endif
+         
+       enddo
+       
+       ! --- Compare matrix entries
+       write(*,*)
+       write(*,*) 'Comparing elm:'
+       write(*,*)
+       write(*,'(A)') '  #    my_id       i       j ivertex  iorder    ivar    itor jvertex  ' //  &
+         'jorder    jvar    jtor             ELM            ELM2        ELM-ELM2'
+       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+         do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+           
+           if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
+             call decrypt_index(i, ivertex, iorder, ivar, itor)
+             call decrypt_index(j, jvertex, jorder, jvar, jtor)
+             write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,       &
+               jorder, jvar, jtor, ELM(i,j), ELM2(i,j), ELM(i,j)-ELM2(i,j)
+             elm_problem(ivar,jvar) = .true.
+             difference_found       = .true.
+           endif
+           
+        enddo
+       enddo
+       
+     endif
+#endif
+     ! --- End of element_matrix comparison
+     
+     
+     
      if (refinement) then   
        call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
      else
@@ -363,5 +406,62 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   call r3_info_end(r3_info_index_0) !timing
   call tr_print_memsize("EndConstM")
-  return
+  
+#ifdef COMPARE_ELEMENT_MATRIX
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  if ( difference_found ) then
+    write(*,*)
+    write(*,'(i3,a)') my_id, ' ERROR: DIFFERENCES BETWEEN ELEMENT_MATRIX AND ELEMENT_MATRIX_FFT!'
+    do i = 1, n_var
+      if ( rhs_problem(i) ) write(*,'(i5," rhs_ij_",i1)') my_id, i
+    end do
+    write(*,*)
+    do i = 1, n_var
+      do j = 1, n_var
+        if ( elm_problem(i,j) ) write(*,'(i5," amat_",2i1)') my_id, i, j
+      end do
+    end do
+    write(*,*)
+    write(*,*)
+  else
+    write(*,*)
+    write(*,'(i3,a)') my_id, ' BOTH ELEMENT_MATRIX ROUTINES SEEM TO CONSISTENT.'
+    write(*,*)
+  end if
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  if ( difference_found ) stop
+#endif
+  
+  
+  
+  contains
+  
+  
+  
+  !> Helps to interprete an element matrix index
+  subroutine  decrypt_index(ind, ivertex, iorder, ivar, itor)
+  
+    integer, intent(in)  :: ind     !< Element matrix index
+    integer, intent(out) :: ivertex !< Vertex index
+    integer, intent(out) :: iorder  !< Degree of freedom
+    integer, intent(out) :: ivar    !< Variable index
+    integer, intent(out) :: itor    !< Toroidal mode index
+    
+    integer :: ind2
+    
+    ind2 = ind
+    
+    ivertex = ( ind2 - 1 ) / ( n_tor*n_var*(n_order+1) ) + 1
+    ind2 = ind2 - ( ivertex - 1 ) * ( n_tor*n_var*(n_order+1) )
+    
+    iorder = ( ind2 - 1 ) / ( n_tor*n_var ) + 1
+    ind2 = ind2 - ( iorder - 1 ) * ( n_tor*n_var )
+    
+    ivar = ( ind2 - 1 ) / ( n_tor ) + 1
+    ind2 = ind2 - ( ivar - 1 ) * ( n_tor )
+    
+    itor = ind2
+    
+  end subroutine decrypt_index
+
 end subroutine construct_matrix

@@ -100,6 +100,20 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' JECCD               : '
+#ifdef JECCD
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+  write(*,'(1x,a)',advance='no') ' COMPARE_ELEMENT_MATRIX : '
+#ifdef COMPARE_ELEMENT_MATRIX
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,*)
   write(*,*) 'HARD-CODED PARAMETERS'
   write(*,*) '-------------------------------------------------'
@@ -129,6 +143,11 @@ if (my_id == 0) then
   write(*,*) '-------------------------------------------------'
   write(*,CHAR_FMT) 'time_evol_scheme      ', trim(time_evol_scheme)
   write(*,INTG_FMT) 'n_tor_fft_thresh      ', n_tor_fft_thresh
+  if ( n_tor .ge. n_tor_fft_thresh ) then
+    write(*,'(3x,a)') '=> fft version of element_matrix is used'
+  else
+    write(*,'(3x,a)') '=> no-fft version of element_matrix is used'
+  end if
   write(*,REAL_FMT) 'tstep                 ', tstep
   write(*,INTG_FMT) 'nstep                 ', nstep
   write(*,REAL_FMT) 'tstep_n               ', tstep_n

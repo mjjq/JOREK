@@ -7,7 +7,7 @@ module exec_commands
   use constants
   use parameters,        only: n_var, n_tor, n_order, n_vertex_max, variable_names, jorek_model
   use phys_module,       only: mode, t_start, xpoint, xcase, index_start, F0, ZK_perp, ZK_par,     &
-    LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL
+    LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL, rst_format
   use data_structure,    only: type_node_list, type_element_list, type_surface_list, type_surface, &
     type_node, type_element
   use nodes_elements,    only: node_list, element_list
@@ -280,7 +280,7 @@ module exec_commands
     write(*,*)
     
     ! --- Load the restart file
-    call import_restart(node_list, element_list, trim(file_name), error)
+    call import_restart(node_list, element_list, trim(file_name), rst_format, error)
     if ( error /= 0 ) return
     step_imported = .true.
     

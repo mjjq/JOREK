@@ -37,7 +37,7 @@ allocate(element_list)
 ! new do-loop for more vtk files
 Write(fname,"('jorek',i5.5,'.rst')") snum
 Write(fname2,"('jorek',i5.5,'.rst_mod305')") snum
-call import_restart(node_list,element_list, fname, ierr)
+call import_restart(node_list,element_list, fname, rst_format, ierr)
 
 write(6,*) 'enbiggen:  read frame successfully'
 write(6,*) 'enbiggen:  original n_var, n_tor = ', n_var, n_tor, index_start

@@ -64,7 +64,7 @@ allocate(scalar_names(n_scalars), vector_names(n_vectors))
 scalar_names = (/ 'flux    ','U       ','j       ','omega   ','density ','T       ','v_par   '/)
 vector_names = (/ 'B_field '/)
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', ierr)
+call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 
 nnos = n_plane * nsub*nsub*node_list%n_nodes
 allocate(xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))

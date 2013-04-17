@@ -1045,7 +1045,7 @@ do ms=1, n_gauss
                               * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep                  &
                     + TG_num6 * 0.25d0 / BigR * vpar0**2                                                       &
                               * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                          &
-                              * ( v_x * psi_y -  v_y * ps0_x ) * xjac * theta * tstep * tstep
+                              * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep
 
              amat_61_k = - (ZKpar_T-ZK_prof) * BigR * BB2_psi / BB2**2 * Bgrad_T_k_star * Bgrad_T     * xjac * theta * tstep &
                          + (ZKpar_T-ZK_prof) * BigR / BB2              * Bgrad_T_k_star * Bgrad_T_psi * xjac * theta * tstep &

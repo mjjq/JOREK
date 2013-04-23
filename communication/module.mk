@@ -60,6 +60,9 @@ JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)	\
 
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/import_restart.f90		\
+        $(DIR)/broadcast_elements.f90           \
+        $(DIR)/broadcast_nodes.f90              \
+        $(DIR)/broadcast_phys.f90               \
 	$(DIR)/mpi_mod.f90
 
 

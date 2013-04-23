@@ -1,0 +1,11 @@
+ &connecvtk_params
+
+	psi_theta = .t.
+
+	n_turns = 100 !500             ! number of toroidal turns to follow a fieldline
+	n_phi   = 200 !1000            ! number of steps per toroidal turn
+
+	ns = 1                          ! number of (s) starting points within one element
+	nt = 1                          ! number of (t) starting points within one element
+
+ /

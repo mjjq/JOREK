@@ -24,9 +24,12 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
-subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,         &
-  n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
-  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
+subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list,           &
+                                local_elms, n_local_elms, index_min, index_max, rhs_loc, &
+				xpoint2, xcase2,                                         &
+				R_axis, Z_axis, psi_axis,                                &
+				psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,                 &
+				gmres, solve_only )
 
   use data_structure
   use global_distributed_matrix
@@ -169,7 +172,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                      &                    gmres,             &
                                      &                    cnt, cnt_prod,     &
                                      &                    only_count)
-                                end if
                              end if
                           else
                              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -268,7 +270,6 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                      &                    gmres,               &
                                      &                    cnt, cnt_prod,       &
                                      &                    only_count)
-                             if (is_local) then
                                 call murge_add_one_entry( index_node, kv, in,  &
                                      &                    index_node2, ku, in, &
                                      &                    - zbig               &

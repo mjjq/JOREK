@@ -24,8 +24,8 @@ real*8  :: RRg2,dRRg2_dr,dRRg2_ds,dRRg2_drs,dRRg2_drr,dRRg2_dss
 real*8  :: ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss
 real*8  :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt
 real*8  :: RR_flux, dRR_flux, RR_tht, dRR_tht,  ZZ_flux, dZZ_flux, ZZ_tht, dZZ_tht
-real*8  :: R_c(4), Z_c(4), x(2), FVEC(2), FJAC(2,2), p(2)
-real*8  :: tolx, tolf, errx, errf, temp, dis
+real*8  :: R_c(4), Z_c(4), x(2), FVEC(2), FJAC(2,2), p(2), x_previous(2)
+real*8  :: tolx, tolf, errx, errf, temp, dis, max_step
 
 if ((R_c(1) .eq. R_c(3)) .and. (Z_c(1) .eq. Z_c(3))) then
   ifail = 9
@@ -76,6 +76,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
     endif
 
     ifail = 999
+    max_step = 1.005d0
 
     do i=1,ntrial
 
@@ -132,8 +133,13 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
       x = x + p
 
-      x = max(x,-1.005d0)
-      x = min(x,+1.005d0)
+      ! Sometimes you need to look outside the grid...
+      x = max(x,-max_step)
+      x = min(x,+max_step)
+      if(abs(x_previous(1)) .eq. max_step) max_step = max_step + 0.002d0
+      if(abs(x_previous(2)) .eq. max_step) max_step = max_step + 0.002d0
+      x_previous(1) = x(1)
+      x_previous(2) = x(2)
 
 
       if (errx .le. tolx) then

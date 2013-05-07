@@ -397,8 +397,8 @@ module phys_module
 
   !> @name ECCD current sources
   real*8  :: jecamp             ! parameter, not to be confused with jec_source in element_matrix.f90
-  real*8  :: jec_pos            ! extra parameters for ECCD
-  real*8  :: jec_width          ! extra parameters for ECCD
+  real*8  :: jec_pos1, jec_pos2, jec_pos3, jec_pos4
+  real*8  :: jec_width, jec_width2 
   real*8  :: nu_jec_fast         ! 1/collision frequency
   real*8  :: mod_jec            ! extra parameters for ECCD
   real*8  :: JJ_par             ! velocity of resonent electrons

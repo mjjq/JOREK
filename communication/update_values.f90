@@ -36,23 +36,38 @@ if (my_id .eq. 0) then
 
       index_node = node_list%node(i)%index(j)
 
-      do k=1,n_var
-
+#ifdef JECCD
+! the n=0 component of eccd current should never be frozen when linear_run=true
+      do k=1,n_var-1
         do in=i_tor_min,n_tor
-
           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
-
           if (index .gt. 0) then
+            node_list%node(i)%values(in,j,k) = node_list%node(i)%values(in,j,k)+ RHS(index)
+            node_list%node(i)%deltas(in,j,k) = RHS(index)
+          endif  ! index gt 0
+        enddo  ! in over n_tor
+      enddo !k over nvar
 
+! for final variable is the eccd current
+      do in=1,n_tor
+        index = n_tor*n_var * (index_node - 1) + n_tor*(n_var-1) + in
+        if (index .gt. 0) then
+          node_list%node(i)%values(in,j,n_var) = node_list%node(i)%values(in,j,n_var)+RHS(index)
+          node_list%node(i)%deltas(in,j,n_var) = RHS(index)
+        endif  ! index gt 0
+      enddo  ! in over n_tor
+
+#ELSE
+      do k=1,n_var
+        do in=i_tor_min,n_tor
+          index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
+          if (index .gt. 0) then
             node_list%node(i)%values(in,j,k) = node_list%node(i)%values(in,j,k) + RHS(index)
             node_list%node(i)%deltas(in,j,k) = RHS(index)
-
-          endif
-
-        enddo
-
-      enddo
-
+          endif  ! index gt 0
+        enddo  ! in over n_tor
+      enddo !k over nvar
+#ENDIF
     enddo
    
    endif
@@ -61,7 +76,6 @@ if (my_id .eq. 0) then
   enddo
   !stop
   do i = 1, node_list%n_nodes
-   
   if((node_list%node(i)%constrained) ) then   
 
             lambda = node_list%node(i)%ref_lambda
@@ -76,15 +90,125 @@ if (my_id .eq. 0) then
                  Pr(j) = element_list%element(index_elm)%vertex(j)    
             end do 
       
-	   
-  
-
 	     h_u =1.
 	     h_v =1. 
 	     h_w =h_u*h_v 
 
+#ifdef JECCD
+! the n=0 component of eccd current should never be frozen when linear_run=true
+! this bit of code separates out that final equation.
+! update values and deltas for first n_var-1 variables normally
+   do ivar=1,n_var-1
+            Psi = 0.
+            dPsi_ds = 0.
+            dPsi_dt = 0.
+            d2Psi_dsdt = 0.
+
+            Delt=0.
+            Delt_ds=0.
+            Delt_dt=0.
+            Delt_dsdt=0.
+
+     do i_tor = i_tor_min, n_tor
+          do k = 1, n_vertex_max        
+             Pr(k) = element_list%element(index_elm)%vertex(k)
+           if((Pr(k)==parent(1)).or.(Pr(k)==parent(2))) then
+             do l = 1, n_order+1
+                 !  Values      *
+                 Psi(i_tor) = Psi(i_tor) +node_list%node(Pr(k))%values(i_tor,l,ivar)* H(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 dPsi_ds(i_tor) = dPsi_ds(i_tor) +node_list%node(Pr(k))%values(i_tor,l,ivar) * H_s(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 dPsi_dt(i_tor) = dPsi_dt(i_tor) +node_list%node(Pr(k))%values(i_tor,l,ivar) * H_t(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 d2Psi_dsdt(i_tor) = d2Psi_dsdt(i_tor) +node_list%node(Pr(k))%values(i_tor,l,ivar) &
+                     * H_st(k,l) *element_list%element(index_elm)%size(k,l)     
+
+                 !  Deltas      *
+                 Delt(i_tor) = Delt(i_tor) +node_list%node(Pr(k))%deltas(i_tor,l,ivar)* H(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 Delt_ds(i_tor) = Delt_ds(i_tor) +node_list%node(Pr(k))%deltas(i_tor,l,ivar) * H_s(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 Delt_dt(i_tor) =  Delt_dt(i_tor) +node_list%node(Pr(k))%deltas(i_tor,l,ivar) * H_t(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 Delt_dsdt(i_tor) = Delt_dsdt(i_tor)  +node_list%node(Pr(k))%deltas(i_tor,l,ivar) &
+                     * H_st(k,l) *element_list%element(index_elm)%size(k,l)     
+              end do !(l)
+            end if
+          end do !(k)                
+
+       ! Values      *
+       node_list%node(i)%values(i_tor,1,ivar)   = (Psi(i_tor))
+       node_list%node(i)%values(i_tor,2,ivar)   = (dPsi_ds(i_tor)) / (3.*h_u)
+       node_list%node(i)%values(i_tor,3,ivar)   = (dPsi_dt(i_tor)) / (3.*h_v)
+       node_list%node(i)%values(i_tor,4,ivar)   = (d2Psi_dsdt(i_tor)) / (9.*h_w)        
+
+       ! Deltas      *
+       node_list%node(i)%deltas(i_tor,1,ivar)   = (Delt(i_tor) )
+       node_list%node(i)%deltas(i_tor,2,ivar)   = (Delt_ds(i_tor)) / (3.*h_u)
+       node_list%node(i)%deltas(i_tor,3,ivar)   = (Delt_dt(i_tor))/ (3.*h_v)
+       node_list%node(i)%deltas(i_tor,4,ivar)   = (Delt_dsdt(i_tor))/ (9.*h_w)
+    end do!(i_tor)
+  enddo !(ivar) 
+
+!final eccd current variable, update values and deltas with i_tor_min (above) always
+!equal to 1
+
+     Psi = 0.
+     dPsi_ds = 0.
+     dPsi_dt = 0.
+     d2Psi_dsdt = 0.
+
+     Delt=0.
+     Delt_ds=0.
+     Delt_dt=0.
+     Delt_dsdt=0.
+
+     do i_tor = 1, n_tor
+          do k = 1, n_vertex_max
+             Pr(k) = element_list%element(index_elm)%vertex(k)
+           if((Pr(k)==parent(1)).or.(Pr(k)==parent(2))) then
+             do l = 1, n_order+1
+                 ! Values
+                 Psi(i_tor) = Psi(i_tor)+node_list%node(Pr(k))%values(i_tor,l,n_var)* H(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 dPsi_ds(i_tor) = dPsi_ds(i_tor)+node_list%node(Pr(k))%values(i_tor,l,n_var) * H_s(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 dPsi_dt(i_tor) = dPsi_dt(i_tor)+node_list%node(Pr(k))%values(i_tor,l,n_var) * H_t(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 d2Psi_dsdt(i_tor) = d2Psi_dsdt(i_tor)+node_list%node(Pr(k))%values(i_tor,l,n_var) &
+                     * H_st(k,l) *element_list%element(index_elm)%size(k,l)
+
+                 ! Deltas 
+                 Delt(i_tor) = Delt(i_tor)+node_list%node(Pr(k))%deltas(i_tor,l,n_var)* H(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 Delt_ds(i_tor) = Delt_ds(i_tor)+node_list%node(Pr(k))%deltas(i_tor,l,n_var) * H_s(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 Delt_dt(i_tor) =  Delt_dt(i_tor)+node_list%node(Pr(k))%deltas(i_tor,l,n_var) * H_t(k,l) &
+                     *element_list%element(index_elm)%size(k,l)
+                 Delt_dsdt(i_tor) = Delt_dsdt(i_tor)+node_list%node(Pr(k))%deltas(i_tor,l,n_var) &
+                     * H_st(k,l) *element_list%element(index_elm)%size(k,l)
+              end do !(l)
+            end if
+          end do !(k)                
+
+       ! Values  2 
+       node_list%node(i)%values(i_tor,1,n_var)   = (Psi(i_tor))
+       node_list%node(i)%values(i_tor,2,n_var)   = (dPsi_ds(i_tor)) / (3.*h_u)
+       node_list%node(i)%values(i_tor,3,n_var)   = (dPsi_dt(i_tor)) / (3.*h_v)
+       node_list%node(i)%values(i_tor,4,n_var)   = (d2Psi_dsdt(i_tor)) / (9.*h_w)
+
+       ! Deltas  2   *
+       node_list%node(i)%deltas(i_tor,1,n_var)   = (Delt(i_tor) )
+       node_list%node(i)%deltas(i_tor,2,n_var)   = (Delt_ds(i_tor)) / (3.*h_u)
+       node_list%node(i)%deltas(i_tor,3,n_var)   = (Delt_dt(i_tor))/ (3.*h_v)
+       node_list%node(i)%deltas(i_tor,4,n_var)   = (Delt_dsdt(i_tor))/ (9.*h_w)
+    end do!(i_tor)
+
+#ELSE
+
     !***************************************************
-    !     update values and deltas                               *
+    !     update values and deltas                     *
     !***************************************************
    do ivar=1,n_var
 
@@ -99,15 +223,12 @@ if (my_id .eq. 0) then
             Delt_dsdt=0.  
   
      do i_tor = i_tor_min, n_tor     
-          do k = 1, n_vertex_max	        
+          do k = 1, n_vertex_max
              Pr(k) = element_list%element(index_elm)%vertex(k)    
            if((Pr(k)==parent(1)).or.(Pr(k)==parent(2))) then
             
-                 
-	 	      
              do l = 1, n_order+1
                          
-			       
                         !***************
                         !  Values      *
                         !***************
@@ -165,10 +286,9 @@ if (my_id .eq. 0) then
        node_list%node(i)%deltas(i_tor,4,ivar)	= (Delt_dsdt(i_tor))/ (9.*h_w)
      
     end do!(i_tor)
-     
   enddo !(ivar) 
 
-
+#ENDIF
  endif
   
 enddo !(i)

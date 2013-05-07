@@ -661,7 +661,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
 
-           rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt))/ BigR  * xjac * tstep &
+           rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt)-jec0)/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
 
@@ -972,7 +972,7 @@ jec_t = psi_t
                       + v * tauIC * rho /(r0**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep 
 
 
-                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep &
+                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)-jec0) / BigR * xjac * theta * tstep &
 		 
 		        + v * tauIC/(r0*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
 		        + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &
@@ -996,7 +996,7 @@ jec_t = psi_t
 
 !                 amat_13 = - eta_num * (v_s * zj_t + v_t * zj_s)              * theta * tstep
 
-!                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep
+!                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)-jec0) / BigR * xjac * theta * tstep
 
 !###################################################################################################
 !#  equation 2   (perpendicular momentum equation)                                                 #
@@ -1575,10 +1575,17 @@ r1=R-R_geo
 rad=r1**2.+Z**2.
 rad=sqrt(rad)
 
+! positioning a blob
+zjz=exp(-.5*(r1-jec_pos1)**2./jec_width**2.)*&
+    exp(-.5*(Z-jec_pos2)**2./jec_width2**2.) +&
+    exp(-.5*(r1-jec_pos3)**2./jec_width**2.)*&
+    exp(-.5*(Z-jec_pos4)**2./jec_width2**2.)
+
+zjz=zjz*jecamp
+
 ! setting the applied ECCD current normally-distributed on a radial
 ! annulus of the poloidal cross-section.
-
-zjz=jecamp*exp(-.5*(rad-jec_pos)**2./jec_width**2.)
+!zjz=jecamp*exp(-.5*(rad-jec_pos1)**2./jec_width**2.)
 
 ! for debugging purposes, a solid annulus of current
 !if(rad.gt.jw1.AND.rad.lt.jw2) then

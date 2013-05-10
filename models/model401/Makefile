@@ -11,7 +11,7 @@ all: modules 				\
      boundary_matrix_open.o   		#\
 #     vacuum.o 				\
 
-modules : mod_parameters.o mod_phys_module.o 
+modules : mod_parameters.o mod_phys_module.o mod_equation_variables.o 
 
 clean :
 	rm -f *.mod *.o

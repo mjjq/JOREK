@@ -39,7 +39,7 @@ real*8  :: Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, zl1, zl2, partial(2)
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), value_out, psi_bnd
-real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
+real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, element_start_percent
 integer :: i_elm_xpoint, i_elm_axis, elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
 integer :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
 real*4,allocatable :: RZkeep(:,:),scalars(:,:)
@@ -60,7 +60,7 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 write(*,*) 'my_id = ', my_id
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
 
 if (my_id .eq. 0 ) then
    write(*,*) '***************************************'
@@ -82,7 +82,7 @@ n_phi   = 200 !1000            ! number of steps per toroidal turn
 
 ns = 1                          ! number of (s) starting points within one element
 nt = 1                          ! number of (t) starting points within one element
-
+element_start_percent = 0.25
 
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
 open(42, file='connecvtk.nml', action='read', status='old', iostat=ierr)
@@ -103,6 +103,7 @@ if (my_id .eq. 0 ) then
    write(*,*) 'n_phi = ', n_phi
    write(*,*) 'ns = ', ns
    write(*,*) 'nt = ', nt
+   write(*,*) 'element_start = ', element_start_percent, ' percent of nb_elements'
 endif
 
 
@@ -199,7 +200,11 @@ i_strike = 0
 
 write(*,*) ' number of elements : ',element_list%n_elements
 
-elm_start = element_list%n_elements/4.
+if (element_start_percent .ne. 0.) then
+   elm_start = element_list%n_elements*element_start_percent
+else
+   elm_start = 1
+end if
 elm_end   = element_list%n_elements
 
 write(*,*) ' elm start, end : ',elm_start, elm_end
@@ -630,7 +635,7 @@ do i = local_elm_start, local_elm_end
 !write(*,*) 'ikeep1 = ', ikeep
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,1) - psi_axis ) / (psi_bnd - psi_axis )
-                 RZkeep(2,ikeep) = atan( (Z_turn(i_turn,1) - Z_axis) / (R_turn(i_turn,1) - R_axis) )
+                 RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,1) - Z_axis) , (R_turn(i_turn,1) - R_axis) ) / (2.d0*PI)
 !write(*,*) '1my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,1)
@@ -642,7 +647,7 @@ do i = local_elm_start, local_elm_end
 !write(*,*) 'ikeep1 = ', ikeep
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,1) - psi_axis ) / (psi_bnd - psi_axis )
-                 RZkeep(2,ikeep) = atan( (Z_turn(i_turn,1) - Z_axis) / (R_turn(i_turn,1) - R_axis) )
+                 RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,1) - Z_axis) , (R_turn(i_turn,1) - R_axis) ) / (2.d0*PI)
 !write(*,*) '2my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,1)
@@ -672,7 +677,7 @@ do i = local_elm_start, local_elm_end
 !write(*,*) 'ikeep2 = ', ikeep
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,2)  - psi_axis ) / (psi_bnd - psi_axis )
-                 RZkeep(2,ikeep) = atan( (Z_turn(i_turn,2) - Z_axis) / (R_turn(i_turn,2) - R_axis) )
+                 RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,2) - Z_axis) , (R_turn(i_turn,2) - R_axis) ) / (2.d0*PI)
 !write(*,*) '3my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,2)
@@ -684,7 +689,7 @@ do i = local_elm_start, local_elm_end
 !write(*,*) 'ikeep2 = ', ikeep
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,2) - psi_axis ) / (psi_bnd - psi_axis )
-                 RZkeep(2,ikeep) = atan( (Z_turn(i_turn,2) - Z_axis) / (R_turn(i_turn,2) - R_axis) )
+                 RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,2) - Z_axis) , (R_turn(i_turn,2) - R_axis) ) / (2.d0*PI)
 !write(*,*) '4my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,2)

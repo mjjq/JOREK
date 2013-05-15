@@ -277,7 +277,7 @@ jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OB
 	$(FC) $(FFLAGS_OMP)                  \
 	diagnostics/jorek2_connection2.f90   	\
 	$(JOREK2_CONNECTION2_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_connection $(INCLUDES) $(LIBS)
+	 -o $(JOREK_DIR)/jorek2_connection2 $(INCLUDES) $(LIBS)
 
 enbiggen : diagnostics/enbiggen.f90 $(ENBIGGEN_OBJ)
 	$(FC) $(FFLAGS)                 \

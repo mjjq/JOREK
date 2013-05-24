@@ -39,6 +39,7 @@ subroutine read_num_profiles(my_id)
     end if
     T_1 = num_T_y0(num_T_len)
     num_T_y0 = num_T_y0 - T_1
+    T_0 = num_T_y0(1)
   end if
   
   num_Te = ( Te_file /= 'none' )

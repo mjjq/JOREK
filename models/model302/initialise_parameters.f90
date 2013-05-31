@@ -45,7 +45,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource, heatsource, tauIC,                  &
                 central_density, time_evol_scheme,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num,                                        &
+                ZK_perp_num, n_tor_fft_thresh,                      &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &

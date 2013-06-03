@@ -52,18 +52,19 @@ integer 	      :: i_find, i_elm_find(8)
 real*8  	      :: Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  	      :: Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8  	      :: s_find(8), t_find(8)
-real*8                :: Jb, minRad
+real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
-logical               :: without_n0_mode
+logical               :: without_n0_mode, SI_units
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
 real*8                :: amu_neo_node, aki_neo_node
+real*8                :: Vperp_e 
 
 mach_par=0.d0
 mach_pol=0.d0
 vsound=0.d0
 
-namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode
+namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units
 GAMMA=5./3.
 write(*,*) 'jorek2vtk'
 call flush_it(6)
@@ -81,6 +82,7 @@ i_tor     = -1            ! If i_tor > 0, only this mode will be included in the
 i_plane   = 1             ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 !without_n0_mode = .true. ! If true, do not include the n=0 mode (i_tor=1)
+SI_units = .true.
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -99,15 +101,16 @@ write(*,*) 'without_n0_mode =', without_n0_mode
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
 write(*,*) 'n_period        =', n_period
-write(*,*) 'F0        =', F0
+write(*,*) 'F0              =', F0
+write(*,*) 'R_geo,Z_geo     =', R_geo, Z_geo
 write(*,*)
 call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
 #ifdef fullmhd
-n_scalars = n_var + 10+6+3
+n_scalars = n_var + 20+3
 #else
-n_scalars = n_var + 10+6
+n_scalars = n_var + 20
 #endif
 
 ! --- Number of vectors to write to the VTK output file
@@ -118,20 +121,49 @@ allocate(scalar_names(n_scalars), vector_names(n_vectors))
 grad_psi = 0.d0
 
 scalar_names(1:n_var) = variable_names(1:n_var)
+if ( SI_units ) then
+   scalar_names(3)='j_MA/m2     '
+   scalar_names(5)='n_e20m-3    '
+   if (jorek_model .eq. 400) then      
+      scalar_names(6)='Ti_keV      '
+      scalar_names(8)='Te_keV      '
+   else
+      scalar_names(6)='Te_keV      '
+   endif
+   scalar_names(7)='Vpar_km/s   '
+endif
 
 #ifdef fullmhd
 ! Note: most of these additional quantities require modifications for the full MHD models that have not yet been taken into account
 !       ( perhaps two jorek2vtk files can be made in the future, one for the reduced and one for the full MHD models )
+if ( SI_units ) then
+scalar_names(n_var+1:n_scalars) = (/ &
+  'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
+  'Vsound_km/s ', 'Btot_T      ', 'J-bootstrap ', 'Vneo_km/s   ', 'psi_norm    ', 'Vperp_e_km/s', &
+  'ki_neo      ', 'mu_neo      ', 'B_phi       ', 'B_R         ', 'B_Z         '/)
+else
 scalar_names(n_var+1:n_scalars) = (/ &
   'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
-  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ',&
-  'Mach_pol    ', 'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        ',&
-  'B_phi       ', 'B_R         ', 'B_Z         '/)
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ', 'Mach_pol    ', &
+  'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        ', 'psi_norm    ', 'Vperp_e     ', &
+  'ki_neo      ', 'mu_neo      ', 'B_phi       ', 'B_R         ', 'B_Z         '/)
+endif
+
 #else
+if ( SI_units ) then
+scalar_names(n_var+1:n_scalars) = (/ &
+  'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
+  'Vsound_km/s ', 'Btot_T      ', 'J-bootstrap ', 'Vneo_km/s   ', 'psi_norm    ', 'Vperp_e_km/s', &
+  'ki_neo      ', 'mu_neo      '/)
+else
 scalar_names(n_var+1:n_scalars) = (/ &
   'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', 'E_flux_Vperp', 'D_flux_Dperp', &
-  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ',&
-  'Mach_pol    ', 'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        '/)
+  'D_flux_Vpar ', 'D_flux_Vperp', 'Er          ', 'Vtheta      ', 'Mach_par    ', 'Mach_pol    ', &
+  'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        ', 'psi_norm    ', 'Vperp_e     ', &
+  'ki_neo      ', 'mu_neo      '/)
+endif
 #endif
 
 !vector_names = (/ 'v_perp  ','v_par   ','V_tot   '/)
@@ -263,12 +295,14 @@ do i=1,element_list%n_elements
             if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then
                Vtheta = -1./Btheta*((u0_x+ tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
                     (u0_y+tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)+V*Btheta
-! verifier que les gradients de RHO sont correctement calcules (sous-resolu?)
+               Vperp_e = -1./Btheta*((u0_x- tauIC/RHO*(TT_x*RHO+RHO_x*TT))*ps_x + &
+                    (u0_y-tauIC/RHO*(TT_y*RHO+RHO_y*TT))*ps_y)
+
                if (NEO) then
 !                  num_neo_file= ( neo_file /= 'none')
                   if (num_neo_file) then
-                     write(*,*) 'neo_file=',neo_file
-                     write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
+!                     write(*,*) 'neo_file=',neo_file
+!                     write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
                      call neo_coef( xpoint, xcase, Z, Z_xpoint, Psi ,psi_axis,psi_bnd, &
                           amu_neo_node, aki_neo_node)
                      Vneo   = aki_neo_node/Btheta*tauIC*(ps_x*TT_x+ps_y*TT_y)
@@ -294,7 +328,18 @@ do i=1,element_list%n_elements
             scalars(inode,n_var+12) = Mach_pol
             scalars(inode,n_var+13) = Vsound
             scalars(inode,n_var+14) = Btot
-            scalars(inode,n_var+16) = Vneo ! number n_var+16 is jbootstrap, see below.
+            scalars(inode,n_var+16) = Vneo ! number n_var+15 is jbootstrap, see below.
+            scalars(inode,n_var+18) = Vperp_e ! number n_var+17 is psi_norm, see below.
+            if (NEO) then
+               if (num_neo_file) then
+                  scalars(inode,n_var+19) = aki_neo_node
+                  scalars(inode,n_var+20) = amu_neo_node
+               else
+                  scalars(inode,n_var+19) = aki_neo_const
+                  scalars(inode,n_var+20) = amu_neo_const
+               endif
+            endif
+            !scalars(inode,n_var+19) = qprofile 
          endif
 
 #ifdef fullmhd
@@ -312,9 +357,9 @@ do i=1,element_list%n_elements
             call interp(node_list,element_list,i,456,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
             Fprof = W
 
-            scalars(inode,n_var+17) = ( AZ_R - AR_Z )  + Fprof / R      ! B_phi
-            scalars(inode,n_var+18) = ( A3_Z - AZ_p )/ BigR             ! B_R
-            scalars(inode,n_var+19) = ( AR_p - A3_R )/ BigR             ! B_Z
+            scalars(inode,n_var+21) = ( AZ_R - AR_Z )  + Fprof / R      ! B_phi
+            scalars(inode,n_var+22) = ( A3_Z - AZ_p )/ BigR             ! B_R
+            scalars(inode,n_var+23) = ( AR_p - A3_R )/ BigR             ! B_Z
 #endif
 
          ! old values back to normal
@@ -396,12 +441,12 @@ do i=1,element_list%n_elements
 
                if (i_tor == 1) then
                  call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-                 scalars(inode,n_var+17)   = ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
+                 scalars(inode,n_var+21)   = ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
                else
-                 scalars(inode,n_var+17)   = ( AZ_R - AR_Z )    
+                 scalars(inode,n_var+21)   = ( AZ_R - AR_Z )    
                endif
-               scalars(inode,n_var+18) = ( A3_Z - AZ_p )/ BigR  ! B_R
-               scalars(inode,n_var+19) = ( AR_p - A3_R )/ BigR  ! B_Z
+               scalars(inode,n_var+22) = ( A3_Z - AZ_p )/ BigR  ! B_R
+               scalars(inode,n_var+23) = ( AR_p - A3_R )/ BigR  ! B_Z
 #endif
 
 
@@ -475,13 +520,13 @@ do i=1,element_list%n_elements
 
                if (i_tor == 1) then
                  call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-                 scalars(inode,n_var+16) = scalars(inode,n_var+17) + ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
+                 scalars(inode,n_var+21) = scalars(inode,n_var+21) + ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
                else
-                 scalars(inode,n_var+16) = scalars(inode,n_var+17) + ( AZ_R - AR_Z )     * HZ(i_tor,i_plane)
+                 scalars(inode,n_var+21) = scalars(inode,n_var+21) + ( AZ_R - AR_Z )     * HZ(i_tor,i_plane)
                 endif
 
-               scalars(inode,n_var+17) = scalars(inode,n_var+18) + ( A3_Z - AZ_p )/ BigR * HZ(i_tor,i_plane)  ! B_R
-               scalars(inode,n_var+18) = scalars(inode,n_var+19) + ( AR_p - A3_R )/ BigR * HZ(i_tor,i_plane)  ! B_Z
+               scalars(inode,n_var+22) = scalars(inode,n_var+22) + ( A3_Z - AZ_p )/ BigR * HZ(i_tor,i_plane)  ! B_R
+               scalars(inode,n_var+23) = scalars(inode,n_var+23) + ( AR_p - A3_R )/ BigR * HZ(i_tor,i_plane)  ! B_Z
 #endif 
 
 
@@ -580,6 +625,8 @@ do i=1,element_list%n_elements
 
                scalars(inode,n_var+8)  = BigR   * (u0_x * ps_y - u0_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
 
+               scalars(inode,n_var+17) = psi_norm
+
                !           call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
                !                        pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,   &
                !                        R,Z,ps0,0.d0,source_pellet)
@@ -608,6 +655,44 @@ do i=1,element_list%n_elements
 
    ! endif
 enddo
+
+if (SI_units) then
+!===========================================================real values=============
+rho_norm = central_density*1.d20 * 2.d0 * 1.67d-27
+t_norm   = sqrt(MU_zero*rho_norm)
+!=================================================real values============
+ do i=1,nnos
+!============================================j_phi in MA/m2
+scalars(i,3) = scalars(i,3)/ MU_zero*1.e-6 
+!============================================density in 1e20m-3
+scalars(i,5) = scalars(i,5) * central_density
+if ( jorek_model .eq. 400 ) then
+!===========================================ion and electron temperatures in keV
+scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
+scalars(i,8) = scalars(i,8) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
+else
+!===========================================electron temperature in keV
+scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
+endif
+!=====================================Vparal in km/s *Btot!!!
+scalars(i,7) = scalars(i,7)*scalars(i,n_var+14)/t_norm/1.e3
+!=====================Pressure in kPa
+scalars(i,n_var+1) = scalars(i,n_var+1) / MU_zero/1.e3
+!============================Er in kV/m
+scalars(i,n_var+9) = F0*scalars(i,n_var+9) / t_norm/1.e3
+!====================================Vtheta km/s
+scalars(i,n_var+10) = scalars(i,n_var+10) / t_norm/1.e3
+!===================================Vsound in km/s
+scalars(i,n_var+13) = scalars(i,n_var+13) / t_norm/1.e3
+!===================================Vneo in km/s
+scalars(i,n_var+16) = scalars(i,n_var+16) / t_norm/1.e3
+!===================================Vperp_e in km/s
+scalars(i,n_var+18) = scalars(i,n_var+18) / t_norm/1.e3
+! mu_neo in SI units
+scalars(inode,n_var+20) = scalars(inode,n_var+20) / sqrt(rho_norm*MU_zero)
+enddo
+
+endif
 
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad

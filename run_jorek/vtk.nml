@@ -1,0 +1,9 @@
+&vtk_params
+nsub = 5
+i_plane = 1
+i_tor = -1 
+without_n0_mode = .f.
+SI_units = .f.
+
+/
+

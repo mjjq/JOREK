@@ -7,5 +7,6 @@
 
 	ns = 1                          ! number of (s) starting points within one element
 	nt = 1                          ! number of (t) starting points within one element
+	element_start_percent = 0.25
 
  /

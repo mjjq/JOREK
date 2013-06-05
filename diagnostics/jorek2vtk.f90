@@ -82,7 +82,7 @@ i_tor     = -1            ! If i_tor > 0, only this mode will be included in the
 i_plane   = 1             ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
 !without_n0_mode = .true. ! If true, do not include the n=0 mode (i_tor=1)
-SI_units = .true.
+SI_units = .false.
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)

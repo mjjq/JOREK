@@ -272,8 +272,8 @@ program JOREK2
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_FINALIZE(IERR)
     stop
-  else if ((n_plane < 2*(n_tor - 1)) .or. (n_plane < 1)) then
-    write(*,*) ' FATAL : n_plane too small. Required: n_plane >= 2*(n_tor-1)'
+  else if ((n_plane < (n_tor + 1)) .or. (n_plane < 1)) then
+    write(*,*) ' FATAL : n_plane too small. Required: n_plane >= (n_tor+1)'
     write(*,*) '   n_plane=', n_plane, ', n_tor=', n_tor
     call MPI_FINALIZE(IERR)
     stop
@@ -563,7 +563,9 @@ program JOREK2
       
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
-      
+
+!      call remove_centre(node_list,element_list,n_tht,67*(n_tht-1))
+
       ! --- Determine initial energies
       call energy(node_list,element_list,W_mag,W_kin)
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
@@ -658,8 +660,8 @@ program JOREK2
   
   if (nstep > 0) then
 
-    call find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i_elm_axis, s_axis,  &
-      t_axis, ifail)
+!    call find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i_elm_axis, s_axis,  &
+!      t_axis, ifail)
     
     psi_bnd = 0.d0
     if (xpoint) then
@@ -982,11 +984,18 @@ program JOREK2
        if (use_pellet) then
          pellet_volume = total_pellet_volume
          call update_pellet(my_id,node_list,element_list)
+
+         if (my_id == 0) then
+           xtime_pellet_R(index_now)         = pellet_R
+           xtime_pellet_Z(index_now)         = pellet_Z
+           xtime_pellet_particles(index_now) = pellet_particles
+           xtime_phys_ablation(index_now)    = phys_ablation
+          endif
        endif
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)
-    
+ 
        !***********************************************************************
        !*                          output saving for diagnostics              *
        !*                                                                     *
@@ -1263,7 +1272,7 @@ program JOREK2
     endif
 
 !---------------------------------------------- plot equilibrium current profile (to be removed)
-    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
+!    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
 
     nplot = 501
     call tr_allocate(xp,1,nplot,"xp",CAT_GRID)

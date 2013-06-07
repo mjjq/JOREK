@@ -985,12 +985,12 @@ program JOREK2
          pellet_volume = total_pellet_volume
          call update_pellet(my_id,node_list,element_list)
 
-         if (my_id == 0) then
-           xtime_pellet_R(index_now)         = pellet_R
-           xtime_pellet_Z(index_now)         = pellet_Z
-           xtime_pellet_particles(index_now) = pellet_particles
-           xtime_phys_ablation(index_now)    = phys_ablation
-          endif
+!         if (my_id == 0) then
+!           xtime_pellet_R(index_now)         = pellet_R
+!           xtime_pellet_Z(index_now)         = pellet_Z
+!           xtime_pellet_particles(index_now) = pellet_particles
+!           xtime_phys_ablation(index_now)    = phys_ablation
+!          endif
        endif
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values

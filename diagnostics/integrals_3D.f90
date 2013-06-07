@@ -118,8 +118,6 @@ else
 endif
 psi_limit = psi_bnd
 
-write(*,*) 'psi_limit : ',psi_limit
-
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
@@ -147,8 +145,6 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 omp_nthreads = omp_get_num_threads()
 omp_tid      = omp_get_thread_num()
-
-if (omp_tid .eq.0) write(*,*) ' OMP nthreads : ',omp_nthreads
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume, &
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_int, C_ext, &
@@ -244,8 +240,8 @@ do ife = ife_min, ife_max
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
-        
-	if (jorek_model .gt. 199) then      
+
+	if (jorek_model .gt. 199) then
           vpar0  = eq_g(mp,7,ms,mt)
         else
           vpar0  = 0.d0
@@ -266,13 +262,13 @@ do ife = ife_min, ife_max
 
         BB2 = (F0*F0 + dpsidx*dpsidx + dpsidy*dpsidy) / BigR**2
 
-	dPdx = r0 * dTdx + T0 * drhodx
-	dPdy = r0 * dTdy + T0 * drhody
-	
-	grad_P   = sqrt(dPdx**2   + dPdy**2) 
-	grad_psi = sqrt(dpsidx**2 + dpsidy**2)
+        dPdx = r0 * dTdx + T0 * drhodx
+        dPdy = r0 * dTdy + T0 * drhody
 
-	grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
+        grad_P   = sqrt(dPdx**2   + dPdy**2) 
+        grad_psi = sqrt(dpsidx**2 + dpsidy**2)
+
+        grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
                      particle_source,heat_source)
@@ -287,16 +283,16 @@ do ife = ife_min, ife_max
         J2_tot = J2_tot + eta_T * (ZJ0-current_source)**2 * xjac * BigR * wst * delta_phi
 
         P_max = max(P_max,r0 * T0)
-	
-	gradP_max     = max(gradP_max,grad_P)
-	gradP_psi_max = max(gradP_psi_max,grad_P_psi)
+
+        gradP_max     = max(gradP_max,grad_P)
+        gradP_psi_max = max(gradP_psi_max,grad_P_psi)
 
         if (use_pellet) then
 
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
                               x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt), eq_zTe(ms,mt), central_density, &
-                              pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)                  
+                              pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
           local_plasma_particles = local_plasma_particles + r0            * bigR * xjac * wst * delta_phi
@@ -374,9 +370,9 @@ endif
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27
 t_norm   = sqrt(MU_zero*rho_norm)
 
-current_tot  = n_period * C_int / MU_zero / (2.d0 * PI)
-current_in   = n_period * C_int / MU_zero / (2.d0 * PI)
-current_out  = n_period * C_ext / MU_zero / (2.d0 * PI)
+current_tot = n_period * current_in  / MU_zero / (2.d0 * PI)
+current_in  = n_period * current_in  / MU_zero / (2.d0 * PI)
+current_out = n_period * current_out / MU_zero / (2.d0 * PI)
 density_tot = n_period * density_tot * central_density
 density_in  = n_period * density_in  * central_density
 density_out = n_period * density_out * central_density
@@ -400,13 +396,15 @@ heating_in  = n_period * heating_in  / MU_zero / t_norm * 1.5d0
 source_out  = n_period * source_out  * central_density / t_norm
 source_in   = n_period * source_in   * central_density / t_norm
 
-if (index_start .gt. 0) then
-  xt = xtime(index_start) 
-else
-  xt = 0.d0
-endif
 
 if (my_id .eq. 0) then
+
+  if (index_start .gt. 0) then
+    xt = xtime(index_start) 
+  else
+    xt = 0.d0
+  endif
+
   write(*,'(A,3e14.6,A)') ' Time : ',xt,xt*t_norm,t_norm, ' [s]'
   write(*,'(A,2e14.6)')   ' Integrals_3D, PELLET : ',pellet_volume, total_pellet_volume
   write(*,'(A,2e14.6,A)') ' Volume   : ',xt,volume,' [m^3]'

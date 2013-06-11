@@ -224,6 +224,14 @@ if (my_id == 0) then
     write(*,CHAR_FMT) 'rho_file              ', trim(rho_file)
   end if
   
+  if ( num_rot ) then
+    write(*,CHAR_FMT) 'rot_file              ', trim(rot_file)
+  else
+    write(*,REAL_FMT) 'V_0                   ', V_0
+    write(*,REAL_FMT) 'V_1                   ', V_1
+    write(*,REAL_FMT) 'V_coeff               ', V_coef(1:10)
+  end if
+  
   if ( .not. num_T ) then
     write(*,REAL_FMT) 'T_0                   ', T_0
     write(*,REAL_FMT) 'T_1                   ', T_1
@@ -323,9 +331,6 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'xtheta                ', xtheta
   write(*,REAL_FMT) 'xshift                ', xshift
   write(*,REAL_FMT) 'xleft                 ', xleft
-  write(*,REAL_FMT) 'V_0                   ', V_0
-  write(*,REAL_FMT) 'V_1                   ', V_1
-  write(*,REAL_FMT) 'V_coeff               ', V_coef(1:10)
   write(*,CHAR_FMT) 'R_Z_psi_bnd_file      ', R_Z_psi_bnd_file
   write(*,CHAR_FMT) 'wall_file             ', wall_file
   write(*,INTG_FMT) 'n_boundary            ', n_boundary

@@ -50,49 +50,68 @@ real*8,  intent(out)  :: velocity_profile, dV_dpsi, dV_dz, dV_dpsi2, dV_dz2, dV_
                          dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz
 
 real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, psi_barrier
-real*8  :: psi_n, sig_n, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
+real*8  :: psi_n, delta_psi, sig_n, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
 real*8  :: atn, datn, d2atn, d3atn, atn_z, datn_z, d2atn_z, factor
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u, Z_star, Z_star_u
 real*8  :: cosh3, cosh3_u, tanh2, tanh2_u
+! for interpolating numerical profiles
+integer :: left, right, mid
+real*8  :: aux1, aux2
+
 sig_n       = V_coef(4)
 psi_barrier = V_coef(5)
 
 psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
+delta_psi = psi_bnd - psi_axis
 
 factor = 1.d0
 
+if ( .not. num_rot ) then ! use analytical representation
+!---------------------------------------------------------------------------------------------------------------------------
 
-prof0        = (V_0-V_1)*(1.d0 +V_coef(1)*psi_n+ V_coef(2)*psi_n**2+ V_coef(3) * psi_n**3)
-dprof0_dpsi  = (V_0-V_1)*(V_coef(1) + 2.d0 * V_coef(2) * psi_n + 3.d0 * V_coef(3) * psi_n**2) / (psi_bnd - psi_axis)
-dprof0_dpsi2 = (V_0-V_1)*(2.d0 * V_coef(2) + 6.d0 * V_coef(3) * psi_n)                          / (psi_bnd - psi_axis)**2
-dprof0_dpsi3 = (V_0-V_1)*(6.d0 * V_coef(3))                                                       / (psi_bnd - psi_axis)**3
+  prof0        = (V_0-V_1)*(1.d0 +V_coef(1)*psi_n+ V_coef(2)*psi_n**2+ V_coef(3) * psi_n**3)
+  dprof0_dpsi  = (V_0-V_1)*(V_coef(1) + 2.d0 * V_coef(2) * psi_n + 3.d0 * V_coef(3) * psi_n**2) / (psi_bnd - psi_axis)
+  dprof0_dpsi2 = (V_0-V_1)*(2.d0 * V_coef(2) + 6.d0 * V_coef(3) * psi_n)                          / (psi_bnd - psi_axis)**2
+  dprof0_dpsi3 = (V_0-V_1)*(6.d0 * V_coef(3))                                                       / (psi_bnd - psi_axis)**3
 
-atn   = (0.5d0 - 0.5d0*tanh((psi_n - psi_barrier)/sig_n))
+  atn   = (0.5d0 - 0.5d0*tanh((psi_n - psi_barrier)/sig_n))
 
-datn  = - 1.d0/cosh((psi_n - psi_barrier)/sig_n)**2 / (2.d0 * sig_n) / (psi_bnd - psi_axis)
+  datn  = - 1.d0/cosh((psi_n - psi_barrier)/sig_n)**2 / (2.d0 * sig_n) / (psi_bnd - psi_axis)
 
-d2atn =   1.d0/cosh((psi_n - psi_barrier)/sig_n)**2 / (sig_n**2)  &
-      * tanh((psi_n - psi_barrier)/sig_n) / (psi_bnd - psi_axis)**2
+  d2atn =   1.d0/cosh((psi_n - psi_barrier)/sig_n)**2 / (sig_n**2)  &
+        * tanh((psi_n - psi_barrier)/sig_n) / (psi_bnd - psi_axis)**2
 
-d3atn = - 1.d0/cosh((psi_n - psi_barrier)/sig_n)**4 / (sig_n**3)  &
-      * (-2.d0 + cosh(2.d0*(psi_n-psi_barrier)/sig_n) ) / (psi_bnd - psi_axis)**3
+  d3atn = - 1.d0/cosh((psi_n - psi_barrier)/sig_n)**4 / (sig_n**3)  &
+        * (-2.d0 + cosh(2.d0*(psi_n-psi_barrier)/sig_n) ) / (psi_bnd - psi_axis)**3
 
-prof1        = prof0        * atn
-dprof1_dpsi  = dprof0_dpsi  * atn +         prof0       * datn
-dprof1_dpsi2 = dprof0_dpsi2 * atn + 2.d0 * dprof0_dpsi  * datn + prof0              * d2atn
-dprof1_dpsi3 = dprof0_dpsi3 * atn + 3.d0 * dprof0_dpsi2 * datn + 3.d0 * dprof0_dpsi * d2atn + prof0 * d3atn
+  prof1        = prof0        * atn
+  dprof1_dpsi  = dprof0_dpsi  * atn +         prof0       * datn
+  dprof1_dpsi2 = dprof0_dpsi2 * atn + 2.d0 * dprof0_dpsi  * datn + prof0              * d2atn
+  dprof1_dpsi3 = dprof0_dpsi3 * atn + 3.d0 * dprof0_dpsi2 * datn + 3.d0 * dprof0_dpsi * d2atn + prof0 * d3atn
 
-dV_dpsi     = dprof1_dpsi   * factor
-dV_dpsi2    = dprof1_dpsi2
-dV_dpsi3    = dprof1_dpsi3  * factor
+else ! use numerical respresentation
+!---------------------------------------------------------------------------------------------------------------
 
-dV_dz       = 0.d0
-dV_dz2      = 0.d0
-dV_dpsi_dz  = 0.d0
-dV_dpsi2_dz = 0.d0
-dV_dpsi_dz2 = 0.d0
+  left  = 1
+  right = num_rot_len
+  do
+    if ( right == left + 1 ) exit
+    mid = (left + right) / 2
+    if ( num_rot_x(mid) >= psi_n ) then
+      right = mid
+    else
+      left = mid
+    end if
+  end do
+  aux1 = (psi_n - num_rot_x(left)) / (num_rot_x(right) - num_rot_x(left))
+  aux2 = (1. - aux1)
+  prof1        = num_rot_y0(left)   * aux2 + num_rot_y0(right) * aux1
+  dprof1_dpsi  = ( num_rot_y1(left) * aux2 + num_rot_y1(right) * aux1 ) / delta_psi
+  dprof1_dpsi2 = ( num_rot_y2(left) * aux2 + num_rot_y2(right) * aux1 ) / delta_psi**2
+  dprof1_dpsi3 = ( num_rot_y3(left) * aux2 + num_rot_y3(right) * aux1 ) / delta_psi**3
+  
+end if
 
-velocity_profile = prof1
 
 if (xpoint2) then
 
@@ -150,7 +169,9 @@ else
 
 endif
 
-velocity_profile = velocity_profile + V_1
+if ( .not. num_rot ) then 
+  velocity_profile = velocity_profile + V_1
+end if
 
 return
 end

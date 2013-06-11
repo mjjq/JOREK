@@ -208,6 +208,7 @@ subroutine preset_parameters
   zk_perp_file  = 'none'
   R_Z_psi_bnd_file = 'none'
   wall_file     = 'none'
+  rot_file      = 'none'
 
   produce_live_data = .true.
   

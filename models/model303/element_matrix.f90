@@ -217,7 +217,7 @@ do ms=1, n_gauss
  
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 !=========================================MB :velocity profile
-       if ( abs(V_0) .ge. 1.e-12) then 
+       if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
         call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
                       dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
        endif

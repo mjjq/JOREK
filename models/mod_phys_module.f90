@@ -379,6 +379,16 @@ module phys_module
   real*8              :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303
   character(len=512)  :: R_Z_psi_bnd_file !< ASCII file for R_boundary,Z_boundary, psi_boundary, with n_boundary size.
   character(len=512)  :: wall_file        !< ASCII file for external wall geometry, if n_ext is greater than zero.
+  
+  !> @name Numerical input profile for the toroidal rotation
+  character(len=512)  :: rot_file        !< ASCII file the profile is read from.
+  logical             :: num_rot         !< is set true if rot_file /= 'none'
+  integer             :: num_rot_len     !< Number of points in profile
+  real*8, allocatable :: num_rot_x(:)    !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_rot_y0(:)   !< Values of toroidal rotation profile
+  real*8, allocatable :: num_rot_y1(:)   !< First derivatives of toroidal rotation profile with respect to $\Psi_{N}$
+  real*8, allocatable :: num_rot_y2(:)   !< Second derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
+  real*8, allocatable :: num_rot_y3(:)   !< Third derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
 
   !> @name gmres parameters
   integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated

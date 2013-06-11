@@ -81,7 +81,7 @@ if (my_id .eq. 0) then
     call FFprime(   xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 !============================MB
-    if (abs(V_0) .ge. 1.d-19) then
+    if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot)) then
     call velocity(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
                   dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
     endif
@@ -121,7 +121,7 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
     node_list%node(i)%values(1,:,7) = 0.d0        ! parallel velocity
 !=================================MB:  parallel velocity profile
-if (abs(V_0) .ge. 1.d-19) then
+if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
     node_list%node(i)%values(1,1,7) = zV
     node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(2,2)
     node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(3,2)

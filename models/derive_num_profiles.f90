@@ -27,6 +27,12 @@ subroutine derive_num_profiles(my_id)
       call derivProf(num_ffprime_x, num_ffprime_y1, num_ffprime_len, num_ffprime_y2)
     end if
     
+    if ( num_rot ) then
+      call derivProf(num_rot_x, num_rot_y0, num_rot_len, num_rot_y1)
+      call derivProf(num_rot_x, num_rot_y1, num_rot_len, num_rot_y2)
+      call derivProf(num_rot_x, num_rot_y2, num_rot_len, num_rot_y3)
+    end if    
+    
   end if
   
 end subroutine derive_num_profiles

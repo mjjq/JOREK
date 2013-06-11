@@ -29,6 +29,22 @@ if ( num_rho ) then
   call MPI_BCAST(num_rho_y3,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
+if ( ((jorek_model == 303) .or. (jorek_model == 305)) .and. num_rot ) then
+  call MPI_BCAST(num_rot_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_rot_x,1,num_rot_len,"num_rot_x",CAT_UNKNOWN)
+     call tr_allocate(num_rot_y0,1,num_rot_len,"num_rot_y0",CAT_UNKNOWN)
+     call tr_allocate(num_rot_y1,1,num_rot_len,"num_rot_y1",CAT_UNKNOWN)
+     call tr_allocate(num_rot_y2,1,num_rot_len,"num_rot_y2",CAT_UNKNOWN)
+     call tr_allocate(num_rot_y3,1,num_rot_len,"num_rot_y3",CAT_UNKNOWN)
+  end if
+  call MPI_BCAST(num_rot_x,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_rot_y0,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_rot_y1,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_rot_y2,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_rot_y3,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
 if ( num_rhon ) then
   call MPI_BCAST(num_rho_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then

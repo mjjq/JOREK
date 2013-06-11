@@ -137,6 +137,15 @@ if (NEO) then
    end if
 endif
 
+num_rot = ( rot_file /= 'none' )
+if ( (num_rot) .and. ( my_id == 0 ) ) then
+  call readProf(num_rot_x, num_rot_y0, num_rot_len, rot_file)
+  if ( num_rot_len < 2 ) then 
+    write(*,*) '  ERROR: Could not read the numerical profile "'//trim(rot_file)//'".'
+    stop
+  end if
+end if
+
 
 return
 end subroutine read_num_profiles

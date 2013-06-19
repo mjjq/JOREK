@@ -3,6 +3,7 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
+use pellet_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
@@ -49,7 +50,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
-                pellet_velocity_R, pellet_velocity_Z,               &
+                pellet_velocity_R, pellet_velocity_Z, pellet_theta, &
+                pellet_ellipse,                                     &
                 central_density, central_mass,                      &
 		pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
@@ -83,7 +85,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 D_prof_neg, ZK_prof_neg, T_min
 
- if (my_id .eq. 0) then
+if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
@@ -150,9 +152,18 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(energies3,1,n_tor,1,2,1,nstep,"energies3",CAT_GRID)
 #endif
-  
+
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime",CAT_GRID)
+
+  if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_GRID)
+  if (nstep .gt. 0)              call tr_allocate(xtime_pellet_R,1,nstep,"xtime_pellet_R")
+  if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_GRID)
+  if (nstep .gt. 0)              call tr_allocate(xtime_pellet_Z,1,nstep,"xtime_pellet_Z")
+  if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_particles,1,nstep,"xtime_pellet_particles")
+  if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_GRID)
+  if (nstep .gt. 0)                   call tr_allocate(xtime_phys_ablation,1,nstep,"xtime_phys_ablation")
 
 endif
 

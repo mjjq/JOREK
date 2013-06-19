@@ -10,11 +10,18 @@ real*8 :: phys_pellet_volume       !< the physical pellet radius (in m^3)
 real*8 :: pellet_volume            !< approximated value of simulated pellet volume
 real*8 :: pellet_atomic            !< atomic number of pellet mass
 
+real*8 :: phys_ablation            !< physical ablation rate (non normalised)
+
+real*8, allocatable  :: xtime_pellet_R(:)
+real*8, allocatable  :: xtime_pellet_Z(:)
+real*8, allocatable  :: xtime_pellet_particles(:)
+real*8, allocatable  :: xtime_phys_ablation(:)
+
 contains
 
 subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                          R,Z,psi,phi, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume,&
+                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
+                          R,Z,psi,phi, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume, &
                           particle_source, volume_source)
 
 implicit none
@@ -30,6 +37,8 @@ real*8 :: pellet_R, pellet_Z        !< position of the pellet (phi=0)
 real*8 :: pellet_phi                !< length of pellet in toroidal direction
 real*8 :: pellet_radius             !< pellet size (radius) in poloidal plane
 real*8 :: pellet_sig, pellet_length !< sigmas of pellet source in poloidal and toroidal direction
+real*8 :: pellet_ellipse            !< ellipticity of the pellet source in the poloidal plane
+real*8 :: pellet_theta              !< orientation of the pellet ellipse in the poloidal plane
 real*8 :: pellet_psi, pellet_delta_psi
 real*8 :: pellet_volume
 
@@ -47,7 +56,9 @@ if (pellet_amplitude .gt. 0.) then             ! use the fixed source pellet mod
 
   if (phi .gt. PI) phi = 2*PI - phi
 
-  radius = sqrt((R-pellet_R)**2 + (Z-pellet_Z)**2)
+  radius = sqrt(  (cos(pellet_theta)**2 + 1./pellet_ellipse**2 * sin(pellet_theta)**2)*(R-pellet_R)**2  &
+                + (sin(pellet_theta)**2 + 1./pellet_ellipse**2 * cos(pellet_theta)**2)*(Z-pellet_Z)**2  &
+                + 2.*(R-pellet_R)*(Z-pellet_Z)*sin(pellet_theta)*cos(pellet_theta) * (1./pellet_ellipse**2 - 1.) )
 
   atn     = (0.5d0 - 0.5d0*tanh((radius - pellet_radius)/pellet_sig))
   atn_psi = (0.5d0 - 0.5d0*tanh(abs(psi- pellet_psi)/pellet_delta_psi))
@@ -57,16 +68,19 @@ if (pellet_amplitude .gt. 0.) then             ! use the fixed source pellet mod
 
 !S.F. modified here for introducing moving pellet...
 else if (pellet_particles .gt. 0.) then
- 
+
   if (phi .gt. PI) phi = 2*PI - phi
 
-  radius = sqrt((R-pellet_R)**2 + (Z-pellet_Z)**2)
+  radius = sqrt(  (cos(pellet_theta)**2 + 1./pellet_ellipse**2 * sin(pellet_theta)**2)*(R-pellet_R)**2  &
+                + (sin(pellet_theta)**2 + 1./pellet_ellipse**2 * cos(pellet_theta)**2)*(Z-pellet_Z)**2  &
+                + 2.*(R-pellet_R)*(Z-pellet_Z)*sin(pellet_theta)*cos(pellet_theta) * (1./pellet_ellipse**2 - 1.) )
+
   atn     = (0.5d0 - 0.5d0*tanh((radius - pellet_radius)/pellet_sig))
   atn_phi = (0.5d0 - 0.5d0*tanh((phi- pellet_phi)/pellet_length))
   atn_psi = (0.5d0 - 0.5d0*tanh(abs(psi- pellet_psi)/pellet_delta_psi))
-  
+
 !  pellet_volume = PI * pellet_radius**2 * pellet_R * pellet_phi ! simulated pellet volume
-    
+
   phys_pellet_volume = pellet_particles /pellet_density         ! physical pellet volume 
 
 ! the number of particles ablated from the physical pellet in units 10^20 m^-3 per unit of JOREK time
@@ -77,13 +91,13 @@ else if (pellet_particles .gt. 0.) then
  ! ablation_rate = 1.62d5 * central_density**(-0.77) * T0**(1.72) * r0**(0.45) * phys_pellet_volume**(0.48) * pellet_atomic**0.217
 !----------------- NGS model Parks (see Gal NF2008)
   ablation_rate = 2.01d4 * central_density**(-0.81) * T0**(1.64) * r0**(0.33) * phys_pellet_volume**(0.44) * pellet_atomic**0.5
-  
+
 ! particle source in JOREK normalisation
 
   particle_source = ablation_rate / central_density  * atn * atn_phi / pellet_volume
-  
+
   volume_source   = atn * atn_phi
-  
+
 end if
 
 return
@@ -121,18 +135,16 @@ pellet_Z = pellet_Z + pellet_velocity_Z * tstep / V_normalisation
 total_pellet_particles = total_pellet_particles * central_density * tstep 
 total_plasma_particles = total_plasma_particles * central_density          ! undo normalisation
 
+phys_ablation = total_pellet_particles * central_density / sqrt(central_density * MU_ZERO)
+
 if (my_id .eq. 0) then
 
-!  if (pellet_particles .gt. 0.0) then
-
     pellet_particles = max(pellet_particles - total_pellet_particles, 0.d0)
-    
+
     write(*,'(A,4e14.6)') ' pellet (R,Z) =', pellet_R, pellet_Z,pellet_velocity_R/V_normalisation,pellet_velocity_Z/V_normalisation
     write(*,'(A,3e14.6,A)') ' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles,' [10^20]'
     write(*,'(A,4e14.6)') ' remaining particles in pellet      : ', pellet_particles
     write(*,'(A,4e14.6)') ' pellet volume (sim,phys)           : ', total_pellet_volume,pellet_particles/pellet_density
-   
-!  end if
 
 else 
   pellet_particles = 0.0

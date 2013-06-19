@@ -28,9 +28,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (354+2*max_limiter+n_var) * IDBL_EXT + (34+n_tor) * INT_EXT + 43 * ILOG_EXT + (13*512+120) * CHAR_EXT )
+  bufsize = ( (356+2*max_limiter+n_var) * IDBL_EXT + (34+n_tor) * INT_EXT + 43 * ILOG_EXT + (13*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (353+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor) * INT_EXT + 42 * ILOG_EXT + (13*512+120) * CHAR_EXT )
+  bufsize = ( (355+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor) * INT_EXT + 42 * ILOG_EXT + (13*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -114,6 +114,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(pellet_radius,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 157
   call MPI_PACK(pellet_sig,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 158
   call MPI_PACK(pellet_length,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 159
+  call MPI_PACK(pellet_theta,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 159 + 1
+  call MPI_PACK(pellet_ellipse,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 159 + 2
   call MPI_PACK(pellet_psi,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 160
   call MPI_PACK(pellet_delta_psi,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 161
   call MPI_PACK(pellet_velocity_R,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 162
@@ -387,6 +389,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,pellet_radius,          1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 157
   call MPI_UNPACK(buffer,bufsize,position,pellet_sig,             1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 158
   call MPI_UNPACK(buffer,bufsize,position,pellet_length,          1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 159
+  call MPI_UNPACK(buffer,bufsize,position,pellet_theta,           1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 159 + 1
+  call MPI_UNPACK(buffer,bufsize,position,pellet_ellipse,         1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 159 + 2
   call MPI_UNPACK(buffer,bufsize,position,pellet_psi,             1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 160
   call MPI_UNPACK(buffer,bufsize,position,pellet_delta_psi,       1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 161
   call MPI_UNPACK(buffer,bufsize,position,pellet_velocity_R,      1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 162

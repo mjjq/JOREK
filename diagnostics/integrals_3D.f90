@@ -129,7 +129,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int, eta_T,  &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
-!$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,                     &
+!$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          wgauss_copy)    &
@@ -290,7 +290,7 @@ do ife = ife_min, ife_max
         if (use_pellet) then
 
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-                              pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
+                              pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
                               x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt), eq_zTe(ms,mt), central_density, &
                               pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)
 
@@ -406,7 +406,7 @@ if (my_id .eq. 0) then
   endif
 
   write(*,'(A,3e14.6,A)') ' Time : ',xt,xt*t_norm,t_norm, ' [s]'
-  write(*,'(A,2e14.6)')   ' Integrals_3D, PELLET : ',pellet_volume, total_pellet_volume
+  write(*,'(A,4e14.6)')   ' Integrals_3D, PELLET : ',pellet_volume, total_pellet_volume, total_pellet_particles, total_plasma_particles
   write(*,'(A,2e14.6,A)') ' Volume   : ',xt,volume,' [m^3]'
   write(*,'(A,4e14.6,A)') ' density  (total/in/out) : ',xt,density_tot,  density_in,  density_out,'[ 10^20/m^3]'
   write(*,'(A,4e14.6,A)') ' pressure (total/in/out) : ',xt,pressure/1.d6, pressure_in/1.d6, pressure_out/1.d6,' [MJ]'

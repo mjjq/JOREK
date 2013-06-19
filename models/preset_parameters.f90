@@ -181,6 +181,8 @@ subroutine preset_parameters
   pellet_R          = 3.8d0
   pellet_Z          = 0.0d0
   pellet_phi        = 1.57d0
+  pellet_theta      = 0.d0
+  pellet_ellipse    = 5.d0
   pellet_radius     = 0.08d0
   pellet_sig        = 0.02
   pellet_length     = 0.785

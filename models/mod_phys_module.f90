@@ -164,10 +164,12 @@ module phys_module
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
   real*8  :: pellet_R          !< major radius position pellet
   real*8  :: pellet_Z          !< Z position pellet
-  real*8  :: pellet_phi        !< width of the pellet cloud (densioty source) in toroidal 
+  real*8  :: pellet_phi        !< width of the pellet cloud (density source) in toroidal angle
+  real*8  :: pellet_ellipse    !< the ellipticity of the pellet source
   real*8  :: pellet_radius     !< radius of the simulation pellet
   real*8  :: pellet_sig        !< width of smoothing of density source (arctan((r-pellet_radius)/pellet_sig))
   real*8  :: pellet_length     !< width of smoothing of density source in toroidal angle
+  real*8  :: pellet_theta      !< orientation of the pellet ellipse
   real*8  :: pellet_psi        !< pellet_width in poloidal flux
   real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction

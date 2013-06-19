@@ -497,7 +497,7 @@ do ms=1, n_gauss
 
        call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                            pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                           x_g(ms,mt),y_g(ms,mt), ps0, phi, r0,T0, &
+                           x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
                            central_density, pellet_particles, pellet_density, total_pellet_volume, &
                            source_pellet, source_volume)
      endif

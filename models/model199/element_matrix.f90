@@ -78,8 +78,6 @@ delta_t => thread_struct(tid)%delta_t
 ELM = 0.d0
 RHS = 0.d0
 
-GAMMA = 5.d0 / 3.d0
-
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
 zeta  = time_evol_zeta
@@ -285,9 +283,6 @@ do ms=1, n_gauss
                       + visco_num * (v_s * w0_s + v_t * w0_t)                    * tstep &
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac  
            
-!####################################
-!           rhs_ij_1 = rhs_ij_1 - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac
-!####################################
            rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac
            rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
 

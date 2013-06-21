@@ -20,7 +20,7 @@ integer :: ierr
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                eta, visco, restart, regrid,                        &
+                eta, visco, gamma, restart, regrid,                 &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &

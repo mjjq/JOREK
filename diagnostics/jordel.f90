@@ -72,6 +72,11 @@ rpos=.17
 zpos=.44
 tanth=tan(zpos/rpos)
 
+rst_format=0
+
+do k_tor=1, n_tor
+  mode(k_tor) = + int(k_tor / 2) * n_period
+enddo
 
 ! do-loop for multiple restart files
 do ii=snum,fct

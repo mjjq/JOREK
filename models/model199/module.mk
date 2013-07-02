@@ -53,8 +53,10 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 
 JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
         $(DIR)/initialise_parameters.f90        \
-        $(DIR)/mod_parameters.f90
+        $(DIR)/mod_parameters.f90               \
+        $(DIR)/sources.f90
 
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) \
         $(DIR)/initialise_parameters.f90        \
-        $(DIR)/mod_parameters.f90
+        $(DIR)/mod_parameters.f90               \
+        $(DIR)/sources.f90

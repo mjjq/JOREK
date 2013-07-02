@@ -111,11 +111,13 @@ JORDEL_SRC := $(JORDEL_SRC)                     \
 
 JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
 	$(DIR)/find_axis.f90                      \
-        $(DIR)/find_xpoint.f90
+        $(DIR)/find_xpoint.f90                    \
+        $(DIR)/integrals_3D.f90
 
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)   \
         $(DIR)/find_axis.f90                \
 	$(DIR)/find_xpoint.f90              \
+        $(DIR)/integrals_3D.f90             \
         $(DIR)/q_profile.f90                \
         $(DIR)/determine_q_profile.f90
 

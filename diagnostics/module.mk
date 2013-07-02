@@ -60,7 +60,8 @@ JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 	\
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC) 	\
 	$(DIR)/find_axis.f90				\
 	$(DIR)/find_xpoint.f90				\
-	$(DIR)/RZ_minmax.f90
+	$(DIR)/RZ_minmax.f90          \
+  $(DIR)/integrals_3D.f90
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/find_axis.f90			\
@@ -68,13 +69,22 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/find_flux_surfaces.f90  		\
 	$(DIR)/flux_surface_add_line.f90  	\
 	$(DIR)/flux_surface_add_point.f90  	\
+        $(DIR)/integrals_3D.f90                 \
 	$(DIR)/psi_minmax.f90
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 	$(DIR)/find_axis.f90			\
-	$(DIR)/find_xpoint.f90
+	$(DIR)/find_xpoint.f90    \
+  $(DIR)/integrals_3D.f90
 
-JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)
+JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)           \
+	$(DIR)/find_axis.f90			\
+	$(DIR)/find_xpoint.f90			\
+	$(DIR)/find_flux_surfaces.f90  		\
+	$(DIR)/flux_surface_add_line.f90  	\
+	$(DIR)/flux_surface_add_point.f90  	\
+        $(DIR)/integrals_3D.f90                 \
+	$(DIR)/psi_minmax.f90
 
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/find_flux_surfaces.f90  		\

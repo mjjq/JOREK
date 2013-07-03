@@ -41,6 +41,12 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
 	$(DIR)/log_parameters.f90			\
 	$(DIR)/mod_nodes_elements.f90			\
 	$(DIR)/det_modes.f90                            \
+        $(DIR)/mod_pellet.f90				\
+	$(DIR)/mod_domains.f90                          \
+        $(DIR)/density.f90                		\
+	$(DIR)/temperature.f90            		\
+	$(DIR)/current.f90                		\
+	$(DIR)/ffprime.f90 				\
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/mod_phys_module.f90
 
@@ -55,6 +61,11 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/mod_domains.f90                          \
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/update_time_evol_params.f90              \
+        $(DIR)/mod_pellet.f90				\
+        $(DIR)/density.f90                		\
+	$(DIR)/temperature.f90            		\
+	$(DIR)/current.f90                		\
+	$(DIR)/ffprime.f90 				\
 	$(DIR)/mod_nodes_elements.f90
 
 JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)		\
@@ -163,6 +174,12 @@ JORDEL_SRC := $(JORDEL_SRC)                       \
 	$(DIR)/mod_diffusivities.f90                    \
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/mod_phys_module.f90                      \
+	$(DIR)/mod_domains.f90                          \
+        $(DIR)/mod_pellet.f90				\
+        $(DIR)/density.f90                		\
+	$(DIR)/temperature.f90            		\
+	$(DIR)/current.f90                		\
+	$(DIR)/ffprime.f90 				\
 	$(DIR)/neo_coef.f90
 
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)                       \

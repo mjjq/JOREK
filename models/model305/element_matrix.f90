@@ -982,7 +982,7 @@ jec_t = psi_t
 
 
 !! addition for the ECCD current equation
-                 amat_18 = - v * eta_T * jec / BigR     *xjac * theta * tstep
+                 amat_18 =  v * eta_T * jec / BigR     *xjac * theta * tstep
 !!
 
 !---------------------------------------------------------------- equation 1
@@ -1576,16 +1576,16 @@ rad=r1**2.+Z**2.
 rad=sqrt(rad)
 
 ! positioning a blob
-zjz=exp(-.5*(r1-jec_pos1)**2./jec_width**2.)*&
-    exp(-.5*(Z-jec_pos2)**2./jec_width2**2.) +&
-    exp(-.5*(r1-jec_pos3)**2./jec_width**2.)*&
-    exp(-.5*(Z-jec_pos4)**2./jec_width2**2.)
-
-zjz=zjz*jecamp
+!zjz=exp(-.5*(r1-jec_pos1)**2./jec_width**2.)*&
+!    exp(-.5*(Z-jec_pos2)**2./jec_width2**2.) +&
+!    exp(-.5*(r1-jec_pos3)**2./jec_width**2.)*&
+!    exp(-.5*(Z-jec_pos4)**2./jec_width2**2.)
+!
+!zjz=zjz*jecamp
 
 ! setting the applied ECCD current normally-distributed on a radial
 ! annulus of the poloidal cross-section.
-!zjz=jecamp*exp(-.5*(rad-jec_pos1)**2./jec_width**2.)
+zjz=jecamp*exp(-.5*(rad-jec_pos1)**2./jec_width**2.)
 
 ! for debugging purposes, a solid annulus of current
 !if(rad.gt.jw1.AND.rad.lt.jw2) then

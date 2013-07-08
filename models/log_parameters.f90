@@ -43,6 +43,13 @@ if (my_id == 0) then
 #else
   write(*,*) 'off'
 #endif
+
+  write(*,'(1x,a)',advance='no') ' USE_FFTW            : '
+#ifdef USE_FFTW
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
   
   write(*,'(1x,a)',advance='no') ' USE_PASTIX          : '
 #ifdef USE_PASTIX

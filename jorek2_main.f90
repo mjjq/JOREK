@@ -53,7 +53,13 @@ program JOREK2
 #endif
   use mpi_mod
 
+  use, intrinsic :: iso_c_binding
+  
   implicit none
+
+#ifdef USE_FFTW
+  include 'fftw3.f03'
+#endif
   
 #include "r3_info.h"
 #include "version.h"
@@ -168,6 +174,10 @@ program JOREK2
   real*8                   :: amu_neo_node, aki_neo_node
   real*8,allocatable       :: mu_neo(:), ki_neo(:)
 ! ======================================================
+#ifdef USE_FFTW
+  real*8     :: in_fft(1:n_plane)
+  complex*16 :: out_fft(1:n_plane)
+#endif
 
 #define GCC_VERSION (__GNUC__ * 10000 \
 		     + __GNUC_MINOR__ * 100 \
@@ -272,11 +282,17 @@ program JOREK2
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_FINALIZE(IERR)
     stop
-  else if ((n_plane < (n_tor + 1)) .or. (n_plane < 1)) then
-    write(*,*) ' FATAL : n_plane too small. Required: n_plane >= (n_tor+1)'
-    write(*,*) '   n_plane=', n_plane, ', n_tor=', n_tor
+  else if ( n_plane < n_tor ) then
+    write(*,*) ' FATAL: n_plane >= n_tor required.'
     call MPI_FINALIZE(IERR)
     stop
+#ifndef USE_FFTW
+  else if ( ( n_tor >= n_tor_fft_thresh ) .and. ( iand(n_plane,n_plane-1) /= 0 ) ) then
+    write(*,*) ' FATAL: If n_tor >= n_tor_fft_thresh, n_plane must be a power of 2.'
+    write(*,*) ' Hint: USE_FFTW removes this constraint.'
+    call MPI_FINALIZE(IERR)
+    stop
+#endif
   else if ( gmres .and. (nstep > 0) .and. (mod(n_cpu,(n_tor-1)/2+1) /= 0) ) then
     write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',            &
       (n_tor-1)/2+1,' harmonics'
@@ -626,6 +642,11 @@ program JOREK2
     n_AA = max(n_AA,node_list%node(inode)%index(4))  
   end do
   mumps_par%n = n_AA
+
+   ! --- Initialize FFTW
+#ifdef USE_FFTW
+  call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
+#endif
 
 ! if (RMP_on) then
 !    print*, 'bnd_node_list%n_bnd_nodes', bnd_node_list%n_bnd_nodes
@@ -1383,6 +1404,10 @@ program JOREK2
     if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
 #endif
   endif
+  
+#ifdef USE_FFTW
+  call dfftw_destroy_plan(fftw_plan)
+#endif
 
   call r3_info_summary ()                                ! timing
   call MPI_FINALIZE(IERR)                                ! clean up MPI

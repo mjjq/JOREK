@@ -1,6 +1,6 @@
 !> Input parameters and physical variables.
 module phys_module
-
+  
   use parameters
   use constants
   
@@ -406,6 +406,7 @@ module phys_module
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
   integer             :: n_tor_fft_thresh !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
+  integer*8           :: fftw_plan      !< Required for FFTW library
 
   !> @name ECCD current sources
   real*8  :: jecamp             ! parameter, not to be confused with jec_source in element_matrix.f90

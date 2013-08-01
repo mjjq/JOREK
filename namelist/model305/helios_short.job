@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH -J test                            # jobname
+#SBATCH -A FSNAFOM-0                       # low priority queue, delete this line to use your allocation!
+#SBATCH -N 2                               # number of nodes
+#SBATCH -n 2                               # number of tasks
+#SBATCH -c 16                              # number of cores per task
+#SBATCH -o %j.out                          # strout filename (%j is jobid)
+#SBATCH -e %j.err                          # stderr filename (%j is jobid)
+#SBATCH -t 00:30:00                        # execute time
+#SBATCH --mail-user=                       # insert your email here
+#SBATCH --mail-type=all                    # email alerts always
+
+NP=${SLURM_NTASKS}                         # the total number of tasks
+PPN=1                                      # number of tasks per node
+export I_MPI_PIN_DOMAIN=socket             # set fixing the method of the tasks
+export KMP_AFFINITY=scatter                # environment variable of OpenMP runtime  
+export OMP_NUM_THREADS=16                  # number of threads
+export KMP_STACKSIZE=1G                    # openmp stack size  
+
+mpirun -np ${NP} -ppn ${PPN} ./jorek_model305 < intearcomp305

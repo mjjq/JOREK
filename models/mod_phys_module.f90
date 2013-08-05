@@ -375,7 +375,8 @@ module phys_module
   real*8, allocatable :: dpsi_RMP_cos_dZ(:)
   real*8, allocatable :: psi_RMP_sin(:)
   real*8, allocatable :: dpsi_RMP_sin_dR(:)
-  real*8, allocatable :: dpsi_RMP_sin_dZ(:)  
+  real*8, allocatable :: dpsi_RMP_sin_dZ(:) 
+  integer             :: RMP_har_cos,RMP_har_sin ! Harmoics numbers for RMP-cos and RMP-sin(for ex. ntor=3, nperiod=2,RMP_har_cos=2, RMP_har_sin=3)
 
   !> @name toroidal rotation profile
   real*8              :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303

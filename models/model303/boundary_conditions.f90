@@ -24,14 +24,17 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
-subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,         &
-  n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
-  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
+
+subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
+                                n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
+                                xcase2, R_axis, Z_axis, psi_axis, psi_bnd,              &
+                                R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
+
 
   use data_structure
   use global_distributed_matrix
   use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep,RMP_har_cos,RMP_har_sin
   USE murge_module
   USE tr_module
   use mpi_mod
@@ -41,27 +44,22 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 !!!! WARNING: gmres already defined in phys_module!!! Hence we use phys_module, ONLY...
 
 
-  ! --- Routine parameters
-  integer,                   intent(in)    :: my_id
-  type (type_node_list),     intent(in)    :: node_list
-  type (type_element_list),  intent(in)    :: element_list
-  type (type_bnd_node_list), intent(in)    :: bnd_node_list
-  integer,                   intent(in)    :: local_elms(*)
-  integer,                   intent(in)    :: n_local_elms
-  integer,                   intent(in)    :: index_min
-  integer,                   intent(in)    :: index_max
-  real*8,                    intent(inout) :: rhs_loc(*)
-  logical,                   intent(in)    :: xpoint2
-  integer,                   intent(in)    :: xcase2
-  real*8,                    intent(in)    :: R_axis
-  real*8,                    intent(in)    :: Z_axis
-  real*8,                    intent(in)    :: psi_axis
-  real*8,                    intent(in)    :: psi_bnd
-  real*8,                    intent(in)    :: R_xpoint(2)
-  real*8,                    intent(in)    :: Z_xpoint(2)
-  real*8,                    intent(in)    :: psi_xpoint(2)
-  logical,                   intent(in)    :: gmres
-  logical,                   intent(in)    :: solve_only
+  ! Subroutine parameters
+  integer                  :: my_id
+  integer                  :: local_elms(*)
+  integer                  :: n_local_elms
+  integer                  :: index_min, index_max
+  integer                  :: xcase2
+  type (type_node_list)    :: node_list
+  type (type_element_list) :: element_list
+  type (type_bnd_node_list):: bnd_node_list
+  logical                  :: xpoint2
+  real*8                   :: psi_axis, R_axis, Z_axis
+  real*8                   :: psi_bnd
+  real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+  logical                  :: gmres
+  logical                  :: solve_only
+  real*8                   :: rhs_loc(*)
 
   ! Internal parameters
   real*8  :: zbig,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
@@ -83,10 +81,10 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   integer :: ilarge_vp, ilarge_vp2
-  integer :: kp, j, err, itest
+  integer :: kp, j, err, itest 
+
 
   if (RMP_on .and. (n_tor .ge. 3)) then
-   
   call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes,"psi_RMP_cos1",CAT_UNKNOWN)
   call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
   call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
@@ -101,7 +99,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
               if (n_tor .eq. 1) then
                  itest = 1
               else 
-                 itest = 2
+                 itest = RMP_har_cos
               endif
               
               psi_test = node_list%node(i)%values(itest,1,1)
@@ -116,7 +114,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
      !   establish_RMP = (1.d-3)*tstep
       sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
           - ( 1. + exp(-lambda*( 0. - tset )))**(-1) 
-        establish_RMP = lambda*sigmo_fonc*(1-sigmo_fonc)*tstep
+        establish_RMP = (lambda*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
      else
         establish_RMP = 0.0
      endif
@@ -202,9 +200,9 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                        
                        if (RMP_on ) then
 
-                          if ((k.eq.1) .and. ((in.eq.2) .or. (in.eq.3)) .and. (.not. freeboundary)) then
-                             ! in .eq. 2 corresponds to cos(n_perturbation)
-                             ! in .eq. 3 corresponds to sin(n_perturbation)
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin corresponds to sin(n_perturbation)
                                        
                              kp=1    ! variable psi
                              kv=1    ! equation for psi
@@ -216,7 +214,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                              Znode     = node_list%node(inode)%x(1,2) 
                              dZnode_ds = node_list%node(inode)%x(2,2) 
                           
-                             if (in.eq.2) then
+                             if (in.eq.RMP_har_cos) then
                                 delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
                                 delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
                                 delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
@@ -266,8 +264,9 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                       
                        if (                  &
                             ((k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))      &
+                            .or.((k .eq. 1) .and. (RMP_on) .and. ( in .lt. RMP_har_cos))&
                             .or. ((k .eq. 1) .and. (in .eq. 1))  & 
-                            .or. ((k .eq. 1) .and. (in .ge. 4))  & 
+                            .or. ((k .eq. 1) .and. ( RMP_on) .and.(in .gt. RMP_har_sin))  & 
                             .or. (k .eq. 2)  &
                             .or. (k .eq. 3)  &
                             .or. (k .eq. 4)  &
@@ -843,9 +842,9 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                        
                        if (RMP_on ) then
 
-                          if ((k.eq.1) .and. ((in.eq.2) .or. (in.eq.3)) .and. (.not. freeboundary)) then
-                             ! in .eq. 2 corresponds to cos(n_perturbation)
-                             ! in .eq. 3 corresponds to sin(n_perturbation)
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
                
 
                                        
@@ -859,14 +858,14 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                              Znode     = node_list%node(inode)%x(1,2) 
                              dZnode_dt = node_list%node(inode)%x(3,2) 
                           
-                             if (in.eq.2) then
+                             if (in.eq.RMP_har_cos) then
                                 delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
                                 delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
                                 delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
 
                                 if (node_list%node(inode)%boundary_index == 1 ) then
-                                   write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode'
-                                   write (*,*) my_id, delta_psi_rmp, Rnode, Znode
+                                   write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
+                                   write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
                                    write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'      
                                    write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
                                 endif
@@ -878,7 +877,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                              endif
 
                              delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
-                             if (in.eq.2) then
+                             if (in.eq.RMP_har_cos) then
 
                                 if (node_list%node(inode)%boundary_index == 1 ) then
                                    write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
@@ -924,8 +923,10 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                        if (                                                      &
                             ((freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &               ! exclude condition on psi (freeboundary) except n=0
                             .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))   &
+                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos ))   &
+
                             .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .ge. 4))  & 
+                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. (in .gt. RMP_har_sin))  & 
                             .or. (k .eq. 2)    &
                             .or. (k .eq. 3)    &
                             .or. (k .eq. 4)    &

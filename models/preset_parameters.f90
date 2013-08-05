@@ -256,7 +256,8 @@ subroutine preset_parameters
   lambda=0.0663
   tset = 150
   output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
-
+  RMP_har_cos=2
+  RMP_har_sin=3
 ! ===== Neoclassical parameters ======
   NEO = .false.
   neo_file ='none'

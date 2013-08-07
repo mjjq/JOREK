@@ -1,5 +1,12 @@
 program jordel
-!> Program to dump radial psi values extracted from restart file
+!> Small program to extract a radial profile of values from jorek restart files
+!> This program takes as input in the command line the number of a beginning
+!> restart file and a final restart file.  An appropriate call is thus:
+!> ./jordel 10 300 <inputfile
+!> Data is produced in a file "deltas" which the user must create.
+!> The radial cut can be manipulated by defining a single point
+!> with the variables rpos and zpos. The linear cut will pass through that
+!> point and also the origin.
 
 use parameters, only: n_var, variable_names
 use data_structure
@@ -26,7 +33,7 @@ integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 !====================== --- add the diagnostics Er, Vtheta and [not yet Vneo]
 real*8                :: Er, psi_abs, Vtheta, Btheta
 ! alterations
-character *(256)      :: fname,jname1,jname2,jname3,jname4,jname5,jname6
+character *(256)      :: fname,jname1,jname2,jname3,jname4,jname5,jname6,jname7
 integer               :: jj,ii,kk,ij,jk,fct,snum
 character(Len=100)    :: buf
 
@@ -54,7 +61,7 @@ real*8                :: ztop,zbot
                 Read(buf,*) fct
         End If
 
-write(*,*) 'jorek2del'
+write(*,*) 'jor2del'
 
 allocate(node_list)
 allocate(element_list)
@@ -65,18 +72,14 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
 nsub      = 5             ! Number of subdivisions of the cubic finite elements into linear pieces
-i_tor     = 2  !-1        ! If i_tor > 0, only this mode will be included in the vtk file...
+i_tor     = -1            ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane   = 1             ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 
-rpos=.17
-zpos=.44
-tanth=tan(zpos/rpos)
-
-rst_format=0
-
-do k_tor=1, n_tor
-  mode(k_tor) = + int(k_tor / 2) * n_period
-enddo
+! here you choose a r and z position.  the variable is printed out along this
+! line.
+zpos=0.45
+rpos=-0.24
+tanth=(rpos/zpos)  ! tangent of an angle
 
 ! do-loop for multiple restart files
 do ii=snum,fct
@@ -92,7 +95,7 @@ call initialise_basis                              ! define the basis functions 
 
 nnos = nsub*nsub*node_list%n_nodes
 write(6,*) "nnos = ", nnos
-allocate(outs(1:nnos,1:5))
+allocate(outs(1:nnos,1:7))
 
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
   psi_bnd = 0.d0
@@ -111,66 +114,57 @@ do i=1,element_list%n_elements
               + R_st*(Z_t*Z_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
          inode = inode+1
 
-         call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
-         !ps_x  = (   Z_t * PS_s - Z_s * PS_t ) / xjac
-         !ps_y  = ( - R_t * PS_s + R_s * PS_t ) / xjac
+         ! here change the variable number (8) to the one you want to plot in the
+         ! poloidal plane.
+         call interp(node_list,element_list,i,8,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
 
-         !ps_xx = (ps_ss * Z_t**2 - 2.d0*ps_st * Z_s*Z_t + ps_tt * Z_s**2  &
-         !        + ps_s * (Z_st*Z_t - Z_tt*Z_s )                                   & 
-         !        + ps_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2                   & 
-         !        - xjac_x * (ps_s* Z_t - ps_t * Z_s)  / xjac**2
-
-         !ps_yy = (ps_ss * R_t**2 - 2.d0*ps_st * R_s*R_t + ps_tt * R_s**2  &
-         !       + ps_s * (R_st*R_t - R_tt*R_s )                                    &
-         !       + ps_t * (R_st*R_s - R_ss*R_t ) )         / xjac**2                &
-         !       - xjac_y * (- ps_s * R_t + ps_t * R_s )  / xjac**2
-
-        !outs(inode,1) = ps_x
-        !outs(inode,2) = ps_y
-        !outs(inode,3) = ps_xx
-        !outs(inode,4) = ps_yy
-
-        outs(inode,1) = R-10.  ! subtract R_0
+        outs(inode,1) = R-10.  ! subtract R_0, in this case 10
         outs(inode,2) = Z
         outs(inode,3) = Psi
-        outs(inode,4) = Ps_s
-        outs(inode,5) = Ps_ss
 
       enddo  !k loop
    enddo  !j loop
 enddo  ! i loop
 
 !output to data files
-!Write(jname1,"('deltas/psidr1',i5.5,'.jdat')") ii
-!Write(jname2,"('deltas/psidr2',i5.5,'.jdat')") ii
 Write(jname1,"('deltas/dr',i5.5,'.jdat')") ii
 Write(jname2,"('deltas/dz',i5.5,'.jdat')") ii
 Write(jname3,"('deltas/psi',i5.5,'.jdat')") ii
-Write(jname4,"('deltas/psi1',i5.5,'.jdat')") ii
-Write(jname5,"('deltas/psi2',i5.5,'.jdat')") ii
 open(unit=121,file=jname1,action='write',position='append')
 open(unit=122,file=jname2,action='write',position='append')
 open(unit=123,file=jname3,action='write',position='append')
-open(unit=124,file=jname4,action='write',position='append')
-open(unit=125,file=jname5,action='write',position='append')
 
 do jk=1,nnos
-  zbot=outs(jk,1)*tanth-.013
-  ztop=outs(jk,1)*tanth+.013
-  if(outs(jk,1)>0.AND.outs(jk,2)<=ztop.AND.outs(jk,2)>=zbot) then
+  zbot=outs(jk,2)*tanth-.013
+  ztop=outs(jk,2)*tanth+.013
+  if(outs(jk,1)>0.d0) then
+  if(outs(jk,2)<0.d0) then
+  if(outs(jk,1)<=ztop.AND.outs(jk,1)>=zbot) then
+     write(121,*) outs(jk,1)  ! R
+     write(122,*) outs(jk,2)  ! Z
+     write(123,*) outs(jk,3)  ! psi (or other variable chosen above)
+  endif
+  endif
+  endif
+enddo
+
+do jk=1,nnos
+  zbot=outs(jk,2)*tanth-.013
+  ztop=outs(jk,2)*tanth+.013
+  if(outs(jk,1)<0.d0) then
+  if(outs(jk,2)>0.d0) then
+  if(outs(jk,1)<=ztop.AND.outs(jk,1)>=zbot) then
      write(121,*) outs(jk,1)  ! R
      write(122,*) outs(jk,2)  ! Z
      write(123,*) outs(jk,3)  ! psi
-     write(124,*) outs(jk,4)  ! psi/dr
-     write(125,*) outs(jk,5)  ! psi/dr^2
+  endif
+  endif
   endif
 enddo
 
 close(121)
 close(122)
 close(123)
-close(124)
-close(125)
 
 ! write out stuff
 deallocate(outs)

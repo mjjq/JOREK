@@ -425,7 +425,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
     write(*,*)
   else
     write(*,*)
-    write(*,'(i3,a)') my_id, ' BOTH ELEMENT_MATRIX ROUTINES SEEM TO CONSISTENT.'
+    write(*,'(i3,a)') my_id, ' BOTH ELEMENT_MATRIX ROUTINES SEEM TO BE CONSISTENT.'
     write(*,*)
   end if
   call MPI_Barrier(MPI_COMM_WORLD,ierr)

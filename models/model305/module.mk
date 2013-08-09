@@ -56,6 +56,11 @@ JORDEL_SRC := $(JORDEL_SRC)       \
 	$(DIR)/initialise_parameters.f90        \
 	$(DIR)/mod_parameters.f90
 
+JORPOL_SRC := $(JORPOL_SRC)       \
+	$(DIR)/sources.f90                      \
+	$(DIR)/initialise_parameters.f90        \
+	$(DIR)/mod_parameters.f90
+
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)       \
 	$(DIR)/initialise_parameters.f90        \
 	$(DIR)/sources.f90                      \

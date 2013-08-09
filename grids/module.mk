@@ -54,6 +54,9 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 JORDEL_SRC := $(JORDEL_SRC)               \
 	$(DIR)/find_theta_surface.f90
 
+JORPOL_SRC := $(JORPOL_SRC)               \
+	$(DIR)/find_theta_surface.f90
+
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)               \
 	$(DIR)/find_theta_surface.f90
 

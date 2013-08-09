@@ -43,6 +43,10 @@ JORDEL_SRC := $(JORDEL_SRC)                     \
 	$(DIR)/mod_data_structure.f90           \
 	$(DIR)/mod_profiles.f90
 
+JORPOL_SRC := $(JORPOL_SRC)                     \
+	$(DIR)/mod_data_structure.f90           \
+	$(DIR)/mod_profiles.f90
+
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)                 \
 	$(DIR)/mod_data_structure.f90           \
 	$(DIR)/mod_profiles.f90

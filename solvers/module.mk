@@ -112,6 +112,16 @@ JORDEL_SRC := $(JORDEL_SRC)       \
 	$(DIR)/solvP3.f90               \
 	$(DIR)/solve_M2.f90
 
+JORPOL_SRC := $(JORPOL_SRC)       \
+	$(DIR)/mod_mumps.f90            \
+	$(DIR)/mod_pastix.f90           \
+	$(DIR)/mod_murge.f90            \
+	$(DIR)/mnewtax.f90              \
+	$(DIR)/mod_wsmp.f90             \
+	$(DIR)/root.f90                 \
+	$(DIR)/solvP3.f90               \
+	$(DIR)/solve_M2.f90
+
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)       \
 	$(DIR)/mod_mumps.f90            \
 	$(DIR)/mod_pastix.f90           \

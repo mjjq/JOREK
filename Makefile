@@ -96,6 +96,7 @@ JOREK2_POINCARE_SRC    = $(PPPSRC)
 JOREK2_CONNECTION2_SRC = $(PPPSRC)
 ENBIGGEN_SRC           = $(PPPSRC)
 JORDEL_SRC             = $(PPPSRC)
+JORPOL_SRC             = $(PPPSRC)
 JOREK2VTK_SRC          = $(PPPSRC)
 JOREK2FLVTK_SRC	       = $(PPPSRC)
 JOREK2VTK3D_SRC        = $(PPPSRC)
@@ -108,7 +109,7 @@ JOREK2_POWERS          = $(PPPSRC)
 include $(patsubst %,%/module.mk,$(DIRS))
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
-  $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC) $(JORDEL_SRC) $(ENBIGGEN_SRC) $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC))
+  $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC) $(JORDEL_SRC) $(JORPOL_SRC) $(ENBIGGEN_SRC) $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC))
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
@@ -133,6 +134,10 @@ ENBIGGEN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(ENBIGGEN_SRC))) \
 JORDEL_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JORDEL_SRC))) \
 		$(patsubst %.f,%.o,$(filter %.f, $(JORDEL_SRC)))     \
 		$(patsubst %.c,%.o,$(filter %.c, $(JORDEL_SRC)))
+
+JORPOL_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JORPOL_SRC))) \
+		$(patsubst %.f,%.o,$(filter %.f, $(JORPOL_SRC)))     \
+		$(patsubst %.c,%.o,$(filter %.c, $(JORPOL_SRC)))
 
 JOREK2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK_SRC))) \
 		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK_SRC)))	\
@@ -296,6 +301,12 @@ jordel : diagnostics/jordel.f90 $(JORDEL_OBJ)
 	$(JORDEL_OBJ)    \
 	-o $(JOREK_DIR)/jordel $(INCLUDES) $(LIBS)
 
+jorpol : diagnostics/jorpol.f90 $(JORPOL_OBJ)
+	$(FC) $(FFLAGS)  \
+	diagnostics/jorpol.f90            \
+	$(JORPOL_OBJ)    \
+	-o $(JOREK_DIR)/jorpol $(INCLUDES) $(LIBS)
+
 jorek2vtk : diagnostics/jorek2vtk.f90 $(JOREK2VTK_OBJ)
 	$(FC) $(FFLAGS)                 \
 	diagnostics/jorek2vtk.f90       \
@@ -409,6 +420,10 @@ forcheck_connection2 :
 
 forcheck_jordel :
 	$(FCK_CALL) diagnostics/jordel.f90  $(FCK_JORDEL_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_jorpol :
+	$(FCK_CALL) diagnostics/jorpol.f90  $(FCK_JORPOL_SRC) \
 	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_jorek2vtk :

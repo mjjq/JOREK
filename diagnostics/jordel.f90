@@ -95,7 +95,7 @@ call initialise_basis                              ! define the basis functions 
 
 nnos = nsub*nsub*node_list%n_nodes
 write(6,*) "nnos = ", nnos
-allocate(outs(1:nnos,1:7))
+allocate(outs(1:nnos,1:3))
 
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
   psi_bnd = 0.d0

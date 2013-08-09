@@ -80,6 +80,12 @@ JORDEL_SRC := $(JORDEL_SRC) \
 	$(DIR)/clock.f90                \
 	$(DIR)/pastix_getmem.c
 
+JORPOL_SRC := $(JORPOL_SRC) \
+	$(DIR)/flush_it.f90             \
+	$(DIR)/trace.f90                \
+	$(DIR)/clock.f90                \
+	$(DIR)/pastix_getmem.c
+
 ENBIGGEN_SRC := $(ENBIGGEN_SRC) \
 	$(DIR)/flush_it.f90             \
 	$(DIR)/trace.f90                \

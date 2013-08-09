@@ -37,6 +37,9 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)			\
 JORDEL_SRC := $(JORDEL_SRC)                       \
 	$(DIR)/mod_global_distributed_matrix.f90
 
+JORPOL_SRC := $(JORPOL_SRC)                       \
+	$(DIR)/mod_global_distributed_matrix.f90
+
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)                       \
 	$(DIR)/mod_global_distributed_matrix.f90
 

@@ -1022,6 +1022,8 @@ do ms=1, n_gauss
                 
                 amat_27= amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*r0*vpar*(ps0_x*v_x+ps0_y*v_y)&
                      *BigR*xjac*tstep*theta 
+             else
+                amat_27 = 0.d0
              endif
 
 !---------------------------------------- NEO

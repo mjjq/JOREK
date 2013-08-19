@@ -1,6 +1,6 @@
 !> Calculates the q-profile from the flux surface representation
 !! (adapted from helena20)
-subroutine determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q)
+subroutine determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q,rad)
 
 use constants
 use tr_module 
@@ -21,6 +21,7 @@ real*8,                   intent(in)    :: psi_axis
 real*8,                   intent(in)    :: psi_xpoint(2)
 real*8,                   intent(in)    :: Z_xpoint(2)
 real*8,                   intent(inout) :: q(surface_list%n_psi)
+real*8,                   intent(inout) :: rad(surface_list%n_psi)
 
 ! --- Local variables
 integer :: n_int
@@ -35,15 +36,15 @@ integer :: i,m, ig, ip
 
 !write(*,*) '   i     psi           q          sum_dl'
 
-do i=2, surface_list%n_psi
+  rad(:)   = 0.d0
+  q(:)   = 0.d0
 
+do i=2, surface_list%n_psi
+  rad(i)   = 0.d0
   q(i)   = 0.d0
   sum_dl = 0.d0
-
   do k=1, surface_list%flux_surfaces(i)%n_pieces
-
     do ig = 1, 4
-
       t = xgs(ig)
 
       rr1  = surface_list%flux_surfaces(i)%s(1,k)
@@ -95,15 +96,13 @@ do i=2, surface_list%n_psi
       sum_dl = sum_dl +  wgs(ig) * dl
 
       q(i) = q(i) +  wgs(ig) / (RRgi * grad_psi) * dl
-
+      rad(i)= rad(i) + sqrt( (RRgi-R_geo)**2.+(ZZgi-Z_geo)**2.)
     end do
-
   end do
 
   q(i) = Fgi * q(i) / (2.d0 * PI)
-
+  rad(i)=rad(i)/(4.d0*surface_list%flux_surfaces(i)%n_pieces)
 !  write(*,'(i5,3es13.5)') i, surface_list%psi_values(i), q(i), sum_dl
-
 end do
 
 !----------------------------------- values on axis

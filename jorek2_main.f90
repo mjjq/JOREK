@@ -1293,7 +1293,7 @@ program JOREK2
     endif
 
 !---------------------------------------------- plot equilibrium current profile (to be removed)
-!    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
+    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
 
     nplot = 501
     call tr_allocate(xp,1,nplot,"xp",CAT_GRID)

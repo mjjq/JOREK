@@ -1859,7 +1859,7 @@ module exec_commands
     
     ! --- Local variables
     integer                  :: k
-    real*8, allocatable      :: q(:)
+    real*8, allocatable      :: q(:), rad(:)
     type (type_surface_list) :: surface_list
     character(len=1024)      :: filename
     
@@ -1885,6 +1885,7 @@ module exec_commands
     surface_list%n_psi = get_int_setting('surfaces', error) ! Number of flux surfaces
     allocate (surface_list%psi_values(surface_list%n_psi))
     allocate (q(surface_list%n_psi))
+    allocate (rad(surface_list%n_psi))
     
     do k = 1, surface_list%n_psi
       surface_list%psi_values(k) = psi_axis + ( psi_bnd - psi_axis ) * &
@@ -1895,7 +1896,7 @@ module exec_commands
     call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
       
     !--- Determine qprofile
-    call determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q)
+    call determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q,rad)
           
     ! --- Write out the qprofile versus Psi_n
     do k = 2, surface_list%n_psi-1
@@ -1906,7 +1907,8 @@ module exec_commands
     write(file_handle,*)
     
     close (unit=file_handle)
-    
+    deallocate( surface_list%psi_values, q, rad )
+   
   end subroutine qprofile
   
   

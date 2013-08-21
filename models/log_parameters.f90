@@ -338,8 +338,8 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'xtheta                ', xtheta
   write(*,REAL_FMT) 'xshift                ', xshift
   write(*,REAL_FMT) 'xleft                 ', xleft
-  write(*,CHAR_FMT) 'R_Z_psi_bnd_file      ', R_Z_psi_bnd_file
-  write(*,CHAR_FMT) 'wall_file             ', wall_file
+  write(*,CHAR_FMT) 'R_Z_psi_bnd_file      ', trim(R_Z_psi_bnd_file)
+  write(*,CHAR_FMT) 'wall_file             ', trim(wall_file)
   write(*,INTG_FMT) 'n_boundary            ', n_boundary
   if ( n_boundary > 0 ) then
     write(*,REA2_FMT) 'r_boundary            ', r_boundary(1:4), r_boundary(n_boundary-3:n_boundary)

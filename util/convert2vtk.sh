@@ -44,6 +44,7 @@ function usage () {
   echo "  -no0                Don't include the n=0 mode for i_tor=-1 [default: off]"
   echo "  -nsub <nsub>        Number of finite element subdivisions [default: 5]"
   echo "  -[no]periodic       (Un)set periodicity for 3D plot (3D VTK ONLY)"
+  echo "  -si                 Convert to VTK file with SI units (2D VTK ONLY)"
   echo ""
   echo "  binary              executable (jorek2vtk, jorek2vtk_3d, jorek2_target2vtk)"
   echo "  infile              Input file of the corresponding JOREK run"
@@ -167,6 +168,7 @@ i_plane=""
 no0=""
 periodic=""
 writenml="no"
+si_units=""
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
@@ -202,6 +204,10 @@ while [ $# -gt 1 ]; do
     writenml="yes"
   elif [ "$1" == "-periodic" ]; then
     periodic=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-si" ]; then
+    si_units=".true."
     shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
@@ -317,6 +323,9 @@ else
   elif [ -z "$i_tor" ] && [ "$threeD" == "no" ] && [ "$target" == "no" ]; then
     dir="${dir}_iplane1"
   fi
+  if [ ! -z "$si_units" ]; then
+    dir="${dir}_si"
+  fi
 fi
 echo "Writing files to dir='$dir'."
 
@@ -376,6 +385,9 @@ if [ "$writenml" == "yes" ]; then
   fi
   if [ ! -z "$periodic" ]; then
     echo "  periodic = $periodic" >> $vtk_nml
+  fi
+  if [ ! -z "$si_units" ]; then
+    echo "  si_units = $si_units" >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"

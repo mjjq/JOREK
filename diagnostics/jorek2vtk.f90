@@ -98,6 +98,7 @@ write(*,*) 'nsub            =', nsub
 write(*,*) 'i_tor           =', i_tor
 write(*,*) 'i_plane         =', i_plane
 write(*,*) 'without_n0_mode =', without_n0_mode
+write(*,*) 'si_units        =', si_units
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
 write(*,*) 'n_period        =', n_period
@@ -290,6 +291,7 @@ do i=1,element_list%n_elements
             psi_abs = sqrt(ps_x*ps_x + ps_y * ps_y)
             Btheta  = (psi_abs/R)          
             Vtheta  = 0.0
+            Vperp_e = 0.0
             Vneo    = 0.0
             Er      = 0.0
             if ((psi_abs .gt. 1.d-6.and. RHO.gt.1.d-6.and.abs(Btheta).gt.1.d-6))then

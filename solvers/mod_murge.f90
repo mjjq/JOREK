@@ -822,13 +822,14 @@ CONTAINS
 
        murge_local_n_prod =                                                    &
             (murge_local_n-MOD(murge_local_n, n_cpu_trans))/n_cpu_trans
+
+       start = murge_local_n_prod*my_id_trans
        if (my_id_trans .lt. MOD(murge_local_n, n_cpu_trans)) then
           murge_local_n_prod = murge_local_n_prod + 1
        end if
 
        CALL tr_allocate( murge_loc2glob_prod, 1, murge_local_n_prod,           &
             &            "murge_loc2glob_prod",CAT_DMATRIX)
-       start = murge_local_n_prod*my_id_trans
 
        start = start + MIN(my_id_trans, MOD(murge_local_n,n_cpu_trans))
 

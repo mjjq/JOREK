@@ -32,7 +32,7 @@ contains
     integer, external :: omp_get_num_threads, omp_get_thread_num
     !Split broadcast
     character*8 :: type
-
+    INTEGER :: increment
 #define GCC_VERSION (__GNUC__ * 10000 \
                       + __GNUC_MINOR__ * 100 \
                       + __GNUC_PATCHLEVEL__)
@@ -271,15 +271,17 @@ contains
               !$omp parallel default(none) shared(pastix_nthrd)    
               pastix_nthrd = omp_get_num_threads()
               !$omp end parallel
-              !+1 because there is a difference between murge.inc (0 based) and pastix_fortran.h (1 based) 
-              pastix_iparm(IPARM_MODIFY_PARAMETER+1) = API_NO         ! insert default values
-              pastix_iparm(IPARM_START_TASK+1)       = API_TASK_INIT  ! initializse
-              pastix_iparm(IPARM_END_TASK+1)         = API_TASK_INIT
+              !+increment because there can be a difference between murge.inc (0 based) and pastix_fortran.h (1 based)
+              !in old version of PaStiX
+              increment=1-IPARM_MODIFY_PARAMETER
+              pastix_iparm(IPARM_MODIFY_PARAMETER+increment) = API_NO         ! insert default values
+              pastix_iparm(IPARM_START_TASK+increment)       = API_TASK_INIT  ! initializse
+              pastix_iparm(IPARM_END_TASK+increment)         = API_TASK_INIT
 #ifdef WORLDWAR2
 #ifdef FUNNELED
-              pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_FUNNELED
+              pastix_iparm(IPARM_THREAD_COMM_MODE+increment)  = API_THREAD_FUNNELED
 #else
-              pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_MULTIPLE
+              pastix_iparm(IPARM_THREAD_COMM_MODE+increment)  = API_THREAD_MULTIPLE
 #endif
 #endif
               if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -298,33 +300,33 @@ contains
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
 
-              pastix_iparm(IPARM_VERBOSE+1)            = pastix_verb              
-              pastix_iparm(IPARM_ITERMAX+1)            = pastix_iter                ! refinement : max number of iterations
+              pastix_iparm(IPARM_VERBOSE+increment)            = pastix_verb              
+              pastix_iparm(IPARM_ITERMAX+increment)            = pastix_iter                ! refinement : max number of iterations
 
-              pastix_iparm(IPARM_FACTORIZATION+1)      = pastix_facto
-              pastix_iparm(IPARM_THREAD_NBR+1)         = pastix_nthrd               ! number of threads
-              pastix_iparm(IPARM_RHS_MAKING+1)         = pastix_rhs                 ! right hand side (0 : use RHS)
+              pastix_iparm(IPARM_FACTORIZATION+increment)      = pastix_facto
+              pastix_iparm(IPARM_THREAD_NBR+increment)         = pastix_nthrd               ! number of threads
+              pastix_iparm(IPARM_RHS_MAKING+increment)         = pastix_rhs                 ! right hand side (0 : use RHS)
 
-              pastix_iparm(IPARM_SYM+1)                = pastix_sym
+              pastix_iparm(IPARM_SYM+increment)                = pastix_sym
 
-              pastix_iparm(IPARM_INCOMPLETE+1)         = pastix_ricar
-              pastix_iparm(IPARM_LEVEL_OF_FILL+1)      = pastix_iluk
-              pastix_iparm(IPARM_AMALGAMATION_LEVEL+1) = pastix_amalg
+              pastix_iparm(IPARM_INCOMPLETE+increment)         = pastix_ricar
+              pastix_iparm(IPARM_LEVEL_OF_FILL+increment)      = pastix_iluk
+              pastix_iparm(IPARM_AMALGAMATION_LEVEL+increment) = pastix_amalg
 
 #ifdef WORLDWAR2
 #ifdef FUNNELED
-              pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_FUNNELED
+              pastix_iparm(IPARM_THREAD_COMM_MODE+increment)  = API_THREAD_FUNNELED
 #else
-              pastix_iparm(IPARM_THREAD_COMM_MODE+1)  = API_THREAD_MULTIPLE
+              pastix_iparm(IPARM_THREAD_COMM_MODE+increment)  = API_THREAD_MULTIPLE
 #endif
 #endif
 
-              pastix_dparm(DPARM_EPSILON_REFINEMENT+1) = pastix_epsilon             ! error level refinement
-              pastix_dparm(DPARM_EPSILON_MAGN_CTRL+1)  = pastix_pivot               ! pivot threshold
+              pastix_dparm(DPARM_EPSILON_REFINEMENT+increment) = pastix_epsilon             ! error level refinement
+              pastix_dparm(DPARM_EPSILON_MAGN_CTRL+increment)  = pastix_pivot               ! pivot threshold
 #ifdef USE_BLOCK
-              pastix_iparm(IPARM_DOF_NBR+1)            = block_size                 ! block size
+              pastix_iparm(IPARM_DOF_NBR+increment)            = block_size                 ! block size
 #else
-              pastix_iparm(IPARM_DOF_NBR+1)            = 1
+              pastix_iparm(IPARM_DOF_NBR+increment)            = 1
 #endif
             else if (use_wsmp) then
 #ifdef USE_WSMP
@@ -361,8 +363,8 @@ contains
 
             else if (use_pastix) then
 
-              pastix_iparm(IPARM_START_TASK+1) = API_TASK_ORDERING
-              pastix_iparm(IPARM_END_TASK+1)   = API_TASK_ANALYSE
+              pastix_iparm(IPARM_START_TASK+increment) = API_TASK_ORDERING
+              pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_ANALYSE
 
 #ifdef USE_BLOCK
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
@@ -425,8 +427,8 @@ contains
 
         else if (use_pastix) then
 
-          pastix_iparm(IPARM_START_TASK+1) = API_TASK_NUMFACT
-          pastix_iparm(IPARM_END_TASK+1)   = API_TASK_NUMFACT
+          pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
+          pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
 #ifdef USE_BLOCK
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
@@ -487,8 +489,8 @@ contains
 #endif
       else if (use_pastix) then
 
-        pastix_iparm(IPARM_START_TASK+1) = API_TASK_SOLVE
-        pastix_iparm(IPARM_END_TASK+1)   = pastix_endsolve
+        pastix_iparm(IPARM_START_TASK+increment) = API_TASK_SOLVE
+        pastix_iparm(IPARM_END_TASK+increment)   = pastix_endsolve
         if (.not. pastix_smp_only) then
            call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
@@ -561,7 +563,7 @@ contains
       call tr_locvnorms("smn_delta",deltas,ndof_glob)
     endif
     if (.not. use_murge) then
-      call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+1)) 
+      call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+increment)) 
     end if
     call tr_print_memsize("AfterSolveN")
     call r3_info_end (r3_info_index_0)         ! timing

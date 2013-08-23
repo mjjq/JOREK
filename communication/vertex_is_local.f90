@@ -13,6 +13,7 @@ SUBROUTINE vertex_is_local(vertex, islocal)
   INTEGER, INTENT(IN)  :: vertex
   LOGICAL, INTENT(OUT) :: islocal
 
+#ifdef MURGE_USE_DUPLICATE_ELEMENT
   INTEGER              :: iter
   INTEGER              :: imin
   INTEGER              :: imax
@@ -40,7 +41,7 @@ SUBROUTINE vertex_is_local(vertex, islocal)
   ELSE
      islocal = .false.
   END IF
-#ifndef MURGE_USE_DUPLICATE_ELEMENT
+#else
   islocal = .true.
 #endif
 END SUBROUTINE vertex_is_local
@@ -61,6 +62,7 @@ SUBROUTINE vertex_is_local_prod(vertex, islocal)
   INTEGER, INTENT(IN)  :: vertex
   LOGICAL, INTENT(OUT) :: islocal
 
+#ifdef MURGE_USE_DUPLICATE_ELEMENT
   INTEGER              :: iter
   INTEGER              :: imin
   INTEGER              :: imax
@@ -89,4 +91,7 @@ SUBROUTINE vertex_is_local_prod(vertex, islocal)
   ELSE
      islocal = .false.
   END IF
+#else
+  islocal = .true.
+#endif
 END SUBROUTINE vertex_is_local_prod

@@ -414,6 +414,7 @@ CONTAINS
     INTEGER,                  INTENT(IN)    :: MPI_COMM_N
     INTEGER,                  INTENT(IN)    :: MPI_COMM_TRANS
 
+    integer :: n_cpu_n, my_id_n, n_elm_per_cpu, first_elem
     INTEGER(KIND=MURGE_INTS_KIND) :: murge_ierr
     INTEGER(KIND=MURGE_INTL_KIND) :: nnz
     INTEGER :: start, ierr, comm_rank, comm_size
@@ -633,7 +634,7 @@ CONTAINS
 
     CALL clck_time(t0)
 
-#ifdef MURGE_USE_DUPLICATE_ELEMENT
+#  ifdef MURGE_USE_DUPLICATE_ELEMENT
     ! Build local_elms from loc2glob
     n_local_elms = 0
 
@@ -678,7 +679,30 @@ CONTAINS
           END DO
        END DO L_I
     END DO
-#endif 
+#  else
+    ! not MURGE_USE_DUPLICATE_ELEMENT
+
+    ! Distribute elements on MPI_COMM_N
+    CALL MPI_Comm_size(MPI_COMM_N, n_cpu_n, ierr)
+    CALL MPI_COMM_rank(MPI_COMM_N, my_id_n, ierr)
+
+    n_elm_per_cpu = element_list%n_elements/n_cpu_n
+    n_local_elms = n_elm_per_cpu
+    IF (MOD(element_list%n_elements, n_cpu_n) .ne. 0) THEN
+       IF (MOD(element_list%n_elements, n_cpu_n) .gt. my_id_n) THEN
+          n_local_elms = n_local_elms + 1
+       END IF
+    END IF
+    first_elem = n_elm_per_cpu*my_id_n + MIN(my_id_n, MOD(element_list%n_elements, n_cpu_n))
+    IF (ALLOCATED(local_elms)) &
+         CALL tr_deallocate(local_elms,"local_elms",CAT_FEM)
+    ! Build local_elms from loc2glob
+    print *, "first_elem", first_elem, n_local_elms
+    CALL tr_allocate(local_elms,1,n_local_elms,"local_elms",CAT_FEM)
+    DO i = 1, n_local_elms
+       local_elms(i) = i+first_elem
+    END DO
+#  endif
 
     CALL clck_time(t1)
     CALL clck_ldiff(t0,t1,tsecond)
@@ -690,14 +714,15 @@ CONTAINS
        WRITE(*,FMT_TIMING) my_id, '# Elapsed time local element list :',min_time
        WRITE(*,FMT_TIMING) my_id, '# Elapsed time local element list :',max_time
     END IF
+! endif Else MURGE_GETLOCALNODELIST
 #endif
 
     CALL MPI_Reduce( n_local_elms, sum_n_local_elms, 1, MPI_INTEGER, MPI_SUM, &
-         &           0, MPI_COMM_TRANS, ierr)
+         &           0, MPI_COMM_N, ierr)
     CALL MPI_Reduce( n_local_elms, max_n_local_elms, 1, MPI_INTEGER, MPI_MAX, &
-         &           0, MPI_COMM_TRANS, ierr)
+         &           0, MPI_COMM_N, ierr)
     CALL MPI_Reduce( n_local_elms, min_n_local_elms, 1, MPI_INTEGER, MPI_MIN, &
-         &           0, MPI_COMM_TRANS, ierr)
+         &           0, MPI_COMM_N, ierr)
 
     IF (my_id .EQ. 0) THEN
        WRITE(*,"(A70,I12)")                                     &

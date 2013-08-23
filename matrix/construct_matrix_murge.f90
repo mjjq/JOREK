@@ -810,6 +810,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   INTEGER*8,              ALLOCATABLE :: threads(:)
   INTEGER :: ret, retval
   INTEGER, EXTERNAL :: omp_get_num_threads, omp_get_thread_num
+  CHARACTER(LEN=128) :: fname
 #ifdef MURGE_USE_SEQUENCE
   INTEGER, TARGET   :: mode
   INTEGER :: seq_coefnbr, cpu
@@ -1512,11 +1513,10 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   CALL MPI_Reduce(RHS_loc, RHS_glob, ndof_glob, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD,  &
     ierr)
 
-!  if (my_id .eq. 0) then
-!     write(fname,'(A,I6.6)')"rhsbc",index_now
-!     call tr_vdump(fname,RHS_glob,ndof_glob)
-!  end if
-
+  if (my_id .eq. 0) then
+     write(fname,'(A,I6.6)')"rhsbc",index_now
+     call tr_vdump(fname,RHS_glob,ndof_glob)
+  end if
   CALL tr_locvnorms("cm_BCRhs",RHS_glob,ndof_glob)
   CALL tr_debug_writei("ndof_glob",ndof_glob)
 

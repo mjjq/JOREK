@@ -9,6 +9,7 @@ FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp -DUSE_BLOCK
 FFLAGS          := $(FFLAGS) -traceback -xSSE4.2 -align
 FFLAGS          := $(FFLAGS) -O2 -DFUNNELED  # Optimization level
+FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
 
 # --- DEBUGGING
 #   --- Debug symbols for debuggers

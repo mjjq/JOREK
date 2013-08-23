@@ -28,6 +28,7 @@ FFLAGS_NOBOUNDS  := $(FFLAGS)               $(FFLAGS_OMP)
 FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 
 #FFLAGS_NO_OMP    = -fpp -r8 -i4 -O2 -xSSSE3 -align
+FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
 
 # Solvers dependencies
 USE_HIPS   = 0

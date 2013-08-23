@@ -18,6 +18,7 @@ FFLAGS_NOBOUNDS  = $(FFLAGS) -ffixed-form                 $(FFLAGS_OMP)
 FFLAGS          := $(FFLAGS)               -fbounds-check $(FFLAGS_OMP) 
 
 #FFLAGS_NO_OMP   = -fpp -r8 -i4 -O2 -xT -align
+FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
 
 # Solvers dependencies
 USE_HIPS   = 0

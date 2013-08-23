@@ -724,7 +724,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE thread_data,  ONLY : thread_data_type, LOOP
   USE phys_module,  ONLY : index_now
   USE mpi_mod
-  USE murge_module, ONLY : murge_assembly_step, murge_elem_block_size
+  USE murge_module, ONLY : murge_assembly_step, murge_elem_block_size, &
+       murge_global_n, murge_global_n_prod
   IMPLICIT NONE
 #include "r3_info.h"
   
@@ -1065,7 +1066,8 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         call abort()
      END IF
 #  ifndef MURGE_USE_SEQUENCE_HARM
-     CALL MURGE_ASSEMBLYBEGIN(murge_id, coefnbr, MURGE_ASSEMBLY_ADD,           &
+     CALL MURGE_ASSEMBLYBEGIN(murge_id, murge_global_n, coefnbr,               &
+          &                   MURGE_ASSEMBLY_ADD,                              &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_RESPECT,      &
           &                   murge_sym, ierr)
      IF (ierr .ne. MURGE_SUCCESS) then
@@ -1080,13 +1082,16 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         PRINT *, "ERROR in MURGE_MATRIXRESET :", ierr
         call abort()
      END IF
+     print *, "murge_global_n, murge_global_n_prod", murge_global_n, murge_global_n_prod
 #  ifndef MURGE_USE_SEQUENCE
 #    ifdef MURGE_PROD_NO_COMM
-     CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, coefnbr_prod, MURGE_ASSEMBLY_ADD, &
+     CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, murge_global_n_prod, coefnbr_prod,      &
+          &                   MURGE_ASSEMBLY_ADD,                              &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_RESPECT,      &
           &                   murge_sym, ierr)
 #    else
-     CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, coefnbr_prod, MURGE_ASSEMBLY_ADD, &
+     CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, murge_global_n_prod, coefnbr_prod,      &
+          &                   MURGE_ASSEMBLY_ADD,                              &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_FOOL,         &
           &                   murge_sym, ierr)
 #    endif

@@ -87,6 +87,27 @@ MODULE murge_module
   INTEGER                                     :: murge_assembly_step
   INTEGER                                     :: murge_elem_block_size
 CONTAINS
+
+#ifndef MURGE_INTERFACE_MAJOR_VERSION
+#  define NEED_REDEFINE_ASSEMBLYBEGIN
+#else
+! MURGE_INTERFACE_MAJOR_VERSION == 0 does not exists
+#  if MURGE_INTERFACE_MAJOR_VERSION == 1
+#    if MURGE_INTERFACE_MINOR_VERSION < 1
+#      define NEED_REDEFINE_ASSEMBLYBEGIN
+#    endif
+#  endif
+#endif
+
+#ifdef NEED_REDEFINE_ASSEMBLYBEGIN
+  ! Backward compatibility
+   SUBROUTINE MURGE_ASSEMBLYBEGIN(ID, N, COEFNBR, OP, OP2, MODE, SYM, IERROR)
+     INTEGER(KIND=4),      INTENT(IN)  :: ID, OP, OP2, MODE, SYM, N
+     INTEGER(KIND=4),      INTENT(IN)  :: COEFNBR
+     INTEGER(KIND=4),      INTENT(OUT) :: IERROR
+     MURGE_ASSEMBLYBEGIN(ID, COEFNBR, OP, OP2, MODE, SYM, IERROR)
+   END SUBROUTINE MURGE_ASSEMBLYBEGIN
+#endif
   !>
   !! Subroutine: murge_add_one_entry
   !!

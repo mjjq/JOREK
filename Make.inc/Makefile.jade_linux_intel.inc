@@ -9,6 +9,7 @@ FFLAGS           = -O2 -DUSE_R3_INFO_MPI -DUSE_R3_INFO
 FFLAGS          := $(FFLAGS) -r8 -i4 -mcmodel=large
 FFLAGS          := $(FFLAGS) -fpp
 FFLAGS          := $(FFLAGS) -traceback -xT -align
+FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
 
 CFLAGS           = -DUSE_R3_INFO_MPI -DUSE_R3_INFO
 

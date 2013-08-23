@@ -21,6 +21,7 @@ FFLAGS_OMP       = -g -qsmp=noauto -qsmp=omp
 FFLAGS_FIXEDFORM = $(FFLAGS) -qfixed  $(FFLAGS_OMP) 
 FFLAGS_NOBOUNDS  = $(FFLAGS) -qfixed  $(FFLAGS_OMP) 
 FFLAGS          := $(FFLAGS) $(FFLAGS_OMP) 
+FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
 
 # Solvers dependencies
 USE_HIPS   = 0

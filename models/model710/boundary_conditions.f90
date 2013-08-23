@@ -89,14 +89,16 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 #ifdef USE_MURGE
         if (.not. solve_only) then
            write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
-           CALL MURGE_ASSEMBLYBEGIN(murge_id, cnt, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
+           CALL MURGE_ASSEMBLYBEGIN(murge_id, murge_global_n, cnt, &
+                MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,            &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
         end if
         if (gmres) then
            write (*,*) &
                 my_id, ":: Murge Boundary Assembly phase :: ", &
                 cnt_prod, " product entries"
-           CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, cnt_prod, MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
+           CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, murge_global_n_prod, cnt_prod, &
+                MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,                           &
                 MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
         end if
         cnt      = 0

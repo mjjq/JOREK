@@ -40,6 +40,9 @@ SUBROUTINE vertex_is_local(vertex, islocal)
   ELSE
      islocal = .false.
   END IF
+#ifndef MURGE_USE_DUPLICATE_ELEMENT
+  islocal = .true.
+#endif
 END SUBROUTINE vertex_is_local
 
 

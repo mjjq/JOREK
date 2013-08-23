@@ -41,7 +41,7 @@ real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 real*8     :: eq_g(n_var,n_gauss,n_gauss), eq_s(n_var,n_gauss,n_gauss), eq_t(n_var,n_gauss,n_gauss)
 integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
-real*8     :: xjac, BigR, wst, P_int, C_int, ZJ_0, PS_0, Volume, Area
+real*8     :: xjac, BigR, wst, P_int, C_intern, ZJ_0, PS_0, Volume, Area
 real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
 real*8     :: particle_source, heat_source, heating_power
@@ -54,7 +54,7 @@ density  = 0.d0
 pressure = 0.d0
 D_int    = 0.d0
 P_int    = 0.d0
-C_int    = 0.d0
+C_intern = 0.d0
 D_ext    = 0.d0
 P_ext    = 0.d0
 C_ext    = 0.d0
@@ -148,7 +148,7 @@ do ife =1, element_list%n_elements
         ! --- 3D integrals
         D_int = D_int + rho_00       * xjac * BigR * wst
         P_int = P_int + rho_00 * T_00 * xjac * BigR * wst
-        C_int = C_int + ZJ_0 /BigR  * xjac * BigR * wst
+        C_intern = C_intern + ZJ_0 /BigR  * xjac * BigR * wst
         
         ! --- 2D integrals
         P_hel = P_hel + rho_00 * T_00 * xjac * wst
@@ -175,7 +175,7 @@ density_out  = D_ext    * 2.d0 * PI
 pressure     = pressure * 2.d0 * PI
 pressure_in  = P_int    * 2.d0 * PI
 pressure_out = P_ext    * 2.d0 * PI
-current_in   = C_int    * 2.d0 * PI
+current_in   = C_intern * 2.d0 * PI
 current_out  = C_ext    * 2.d0 * PI
 
 current = C_hel / MU_zero

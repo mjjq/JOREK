@@ -16,4 +16,4 @@ solvers/dPackgmres.o: solvers/dPackgmres.f Makefile Makefile.inc
 
 %.o: %.c Makefile Makefile.inc
 	@echo "*** $< ***"
-	$(CC) $(CFLAGS) -c $< -o $@  $(CINCLUDES)
+	$(CC) $(CFLAGS) -c $< -o $@  $(INCLUDES)

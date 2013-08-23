@@ -1039,7 +1039,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ",               &
              n_local_elms_max/n_cpu_trans, " maximum local elements"
         WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ",               &
-             n_local_elms_max/n_cpu_trans, " minimum local elements"
+             n_local_elms_min/n_cpu_trans, " minimum local elements"
         WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ",               &
              n_local_elms_sum/n_cpu_trans, " total elements computed"
         WRITE (*,"(A30,I10,A30)") ":: Murge Assembly phase :: ",               &
@@ -1066,10 +1066,17 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
         call abort()
      END IF
 #  ifndef MURGE_USE_SEQUENCE_HARM
+#    ifndef MURGE_USE_DUPLICATE_ELEMENT
+     CALL MURGE_ASSEMBLYBEGIN(murge_id, murge_global_n, coefnbr,               &
+          &                   MURGE_ASSEMBLY_ADD,                              &
+          &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_FOOL,         &
+          &                   murge_sym, ierr)
+#    else
      CALL MURGE_ASSEMBLYBEGIN(murge_id, murge_global_n, coefnbr,               &
           &                   MURGE_ASSEMBLY_ADD,                              &
           &                   MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_RESPECT,      &
           &                   murge_sym, ierr)
+#    endif
      IF (ierr .ne. MURGE_SUCCESS) then
         PRINT *, "ERROR in MURGE_ASSEMBLYBEGIN :", ierr
         call abort()

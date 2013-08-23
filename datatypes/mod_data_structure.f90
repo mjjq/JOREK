@@ -4,7 +4,13 @@ module data_structure
   use parameters
   use tr_module
   use gauss
+  use ISO_C_BINDING, ONLY : C_INT
+
   implicit none
+
+  TYPE, BIND(C) :: MURGE_UserData_t
+     INTEGER(C_INT) :: nVertexMax
+  END TYPE MURGE_UserData_t
 
   type type_node                                  !< type definition of a node (i.e. a vertex)
     real*8     :: x(n_order+1,n_dim)              !< x,y,z coordinates of points and additional nodal geometry

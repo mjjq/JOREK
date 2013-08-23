@@ -17,7 +17,8 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	\
 	$(DIR)/mod_mumps.f90 		\
 	$(DIR)/mod_pastix.f90		\
 	$(DIR)/mod_murge.f90		\
-	$(DIR)/mod_wsmp.f90
+	$(DIR)/mod_wsmp.f90		\
+	$(DIR)/MURGE_nodelist.c
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
 	$(DIR)/root.f90				\

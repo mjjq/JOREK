@@ -6,6 +6,7 @@
 !> Variables and and routines related to the MURGE solver interface.
 MODULE murge_module
   USE tr_module
+  USE ISO_C_BINDING, ONLY : C_INT, C_PTR
   IMPLICIT NONE
 
   INCLUDE "murge.inc"
@@ -392,7 +393,7 @@ CONTAINS
 
     USE parameters,                ONLY : n_order, n_vertex_max
     USE data_structure,            ONLY : type_element, type_element_list,     &
-         &                                type_node_list
+         &                                type_node_list, MURGE_UserData_t
     USE parameters,                ONLY : n_tor, n_var
     USE global_distributed_matrix, ONLY : ndof_glob
     USE clock_module,              ONLY : clcktype, clck_time, clck_ldiff,     &
@@ -432,15 +433,78 @@ CONTAINS
     INTEGER(KIND=MURGE_INTS_KIND)               :: tmp_local_n_prod, tmp
     INTEGER :: ELM_INDEX
 #endif
-
+#ifdef MURGE_USE_GETLOCALELEMENTLIST
+    type(MURGE_UserData_t) :: d
+    INTEGER(C_INT) :: c_ierr
+    INTEGER(KIND=MURGE_INTS_KIND), PARAMETER :: MURGE_DUPLICATE_ELEMENTS = 0
+    INTEGER(KIND=MURGE_INTS_KIND), PARAMETER :: MURGE_DISTRIBUTE_ELEMENTS = 1
+#  ifdef MURGE_USE_DUPLICATE_ELEMENT
+    INTEGER(C_INT) :: mode = MURGE_DUPLICATE_ELEMENTS
+#  else
+    INTEGER(C_INT) :: mode = MURGE_DISTRIBUTE_ELEMENTS
+#  endif
+#endif
 #ifdef USE_MURGE
-    CALL tr_debug_write("murge_setgraph begin")
+    INTERFACE
+       INTEGER(C_INT) FUNCTION MURGE_GetLocalElementNbr(id, N, globalElementNbr,  &
+            &                                           localElementNbr, mode, d) &
+            BIND(C, name="MURGE_GetLocalElementNbr")
+         USE ISO_C_BINDING, ONLY : C_INT, C_PTR
+         USE data_structure, ONLY : MURGE_UserData_t
 
+         INTEGER(C_INT),  VALUE :: id, N, globalElementNbr
+         INTEGER(C_INT)         :: localElementNbr
+         INTEGER(C_INT),  VALUE :: mode
+         TYPE(MURGE_UserData_t) :: d
+       END FUNCTION MURGE_GetLocalElementNbr
+       
+       INTEGER(C_INT) FUNCTION MURGE_GetLocalElementList(id, element_list) &
+            BIND(C, name="MURGE_GetLocalElementList")
+         USE ISO_C_BINDING, ONLY : C_INT
+         INTEGER(C_INT), VALUE :: id
+         INTEGER(C_INT)        :: element_list(*)
+       END FUNCTION MURGE_GetLocalElementList
+    END INTERFACE
+
+    CALL tr_debug_write("murge_setgraph begin")
 
 
     murge_global_n      = n
     murge_global_n_prod = n
     nnz = n_local_elms*(n_order+1)*(n_order+1)*n_vertex_max*n_vertex_max
+#ifdef MURGE_USE_GETLOCALELEMENTLIST
+    d%nVertexMax = n_vertex_max*(n_order+1)
+    c_ierr = MURGE_GetLocalElementNbr(murge_id, murge_global_n, &
+         &                            element_list%n_elements,  &
+         &                            n_local_elms, mode, d)
+
+    if (n_local_elms .GT. element_list%n_elements) then
+       print *, n_local_elms, "is greater than", element_list%n_elements
+       call abort()
+    end if
+    IF (ALLOCATED(local_elms)) &
+         CALL tr_deallocate(local_elms,"local_elms",CAT_FEM)
+    ! Build local_elms from loc2glob
+    CALL tr_allocate(local_elms,1,n_local_elms,"local_elms",CAT_FEM)
+
+    c_ierr = MURGE_GetLocalElementList(murge_id, local_elms)
+
+    CALL MURGE_GETLOCALNODENBR(murge_id, murge_local_n, murge_ierr)
+    IF (murge_ierr /= MURGE_SUCCESS) THEN
+       WRITE (*,*) "ERROR in MURGE_GETLOCALNODENBR"
+       STOP
+    END IF
+    CALL tr_allocate( murge_loc2glob, 1, murge_local_n,           &
+         &            "murge_loc2glob",CAT_DMATRIX)
+    CALL MURGE_GETLOCALNODELIST(murge_id, murge_loc2glob, murge_ierr)
+    IF (ALLOCATED(murge_glob2loc))                                             &
+         CALL tr_deallocate(murge_glob2loc,"murge_glob2loc",CAT_DMATRIX)
+
+    IF (murge_ierr /= MURGE_SUCCESS) THEN
+       WRITE (*,*) "ERROR in MURGE_GETLOCALNODELIST"
+       STOP
+    END IF
+#else
 
     ! Give the graph to MURGE
     CALL MURGE_GRAPHBEGIN(murge_id, murge_global_n, nnz, murge_ierr)
@@ -568,6 +632,8 @@ CONTAINS
 
 
     CALL clck_time(t0)
+
+#ifdef MURGE_USE_DUPLICATE_ELEMENT
     ! Build local_elms from loc2glob
     n_local_elms = 0
 
@@ -612,6 +678,7 @@ CONTAINS
           END DO
        END DO L_I
     END DO
+#endif 
 
     CALL clck_time(t1)
     CALL clck_ldiff(t0,t1,tsecond)
@@ -623,6 +690,7 @@ CONTAINS
        WRITE(*,FMT_TIMING) my_id, '# Elapsed time local element list :',min_time
        WRITE(*,FMT_TIMING) my_id, '# Elapsed time local element list :',max_time
     END IF
+#endif
 
     CALL MPI_Reduce( n_local_elms, sum_n_local_elms, 1, MPI_INTEGER, MPI_SUM, &
          &           0, MPI_COMM_TRANS, ierr)
@@ -820,4 +888,28 @@ CONTAINS
     CALL abort()
 #endif
   END SUBROUTINE murge_setGraph
+
+  INTEGER(C_INT) FUNCTION getVertices(e, idx) BIND(C, name="getVertices")
+    USE parameters,                ONLY : n_order, n_vertex_max
+    USE data_structure,            ONLY : type_element, type_element_list
+    USE data_structure,            ONLY : type_node_list
+    USE nodes_elements,            ONLY : element_list, node_list
+    INTEGER(C_INT), VALUE :: e
+    INTEGER(C_INT)        :: idx(*)
+    INTEGER :: i, j, i_order, inode1
+    TYPE(type_element) :: element
+    j = 1
+    element = element_list%element(e)
+
+    DO i = 1, n_vertex_max
+       inode1         = element%vertex(i)
+       DO i_order = 1, n_order+1
+          idx(j) = node_list%node(inode1)%index(i_order)
+          j = j + 1
+       END DO
+    END DO
+    getVertices = 0
+    RETURN 
+  END FUNCTION getVertices
+  
 END MODULE murge_module

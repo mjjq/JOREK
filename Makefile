@@ -218,7 +218,7 @@ version:
 
 %.dep:%.f90
 	@echo "Generating Dependencies for$(patsubst %.f90, %.o, $<)"
-	@cpp $(INCLUDES2) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | $(SED) 's/\,.*//' | 					\
+	@cpp $(INCLUDES2) < $< 2>/dev/null| grep -i "^[[:space:]]*use " | grep -v -i "iso_c_binding" | $(SED) 's/\,.*//' | 					\
 		$(AWK) -v file_o=" $(patsubst %.f90, %.o, $<)" '{print file_o" : "tolower($$2)".mod"}' >> $@.tmp || touch $@.tmp;
 	@cpp $(INCLUDES2) < $< 2>/dev/null| 											\
 		$(SED) -n "s@[ ]+include[ ]+'\([^']*\)*.*@$(patsubst %.f90, %.o, $<) : \1@pi" >> $@.tmp || touch $@.tmp;

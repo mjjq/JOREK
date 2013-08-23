@@ -528,7 +528,7 @@ CONTAINS
                & .NOT. DATA%solve_only) THEN
 #ifdef MURGE_USE_SEQUENCE_HARM
              IF (data%mode .eq. 1 ) THEN
-                ! for harmoniques all is done by thread 1
+                ! for harmonics all is done by thread 1
                 ! Needs to be improved...
                 index = 0
                 DO thread = 1, data%thread_nbr
@@ -1290,11 +1290,19 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
           &                         murge_sequence_id(1), ierr)
 #  endif
 #  ifdef MURGE_USE_SEQUENCE_HARM
+#    ifndef MURGE_USE_DUPLICATE_ELEMENT
+     CALL MURGE_AssemblySetSequence(murge_id, seq_coefnbr_harm,                &
+          &                         MURGE_ROWS_HARM, MURGE_COLS_HARM,          &
+          &                         MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD,    &
+          &                         MURGE_ASSEMBLY_FOOL, MURGE_BOOLEAN_TRUE,&
+          &                         murge_sequence_id_harm(1), ierr)
+#    else
      CALL MURGE_AssemblySetSequence(murge_id, seq_coefnbr_harm,                &
           &                         MURGE_ROWS_HARM, MURGE_COLS_HARM,          &
           &                         MURGE_ASSEMBLY_ADD, MURGE_ASSEMBLY_ADD,    &
           &                         MURGE_ASSEMBLY_RESPECT, MURGE_BOOLEAN_TRUE,&
           &                         murge_sequence_id_harm(1), ierr)
+#    endif
 #  endif
      DEALLOCATE(MURGE_ROWS, MURGE_COLS)
      NULLIFY(MURGE_ROWS, MURGE_COLS)

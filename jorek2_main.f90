@@ -93,9 +93,14 @@ program JOREK2
       logical(kind=4),             intent(in)    :: nice_q
     end subroutine equilibrium
      
-    subroutine construct_matrix_murge(my_id,node_list,element_list,bnd_node_list,local_elms,       &
-      n_local_elms,xpoint2,xcase2,minrad,r_axis,z_axis,psi_axis,psi_bnd,r_xpoint,z_xpoint,         &
-      psi_xpoint,gmres,i_tor,n_cpu,mpi_comm_n,mpi_comm_trans,my_id_trans,n_cpu_trans,solve_only)
+    SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
+         &                            bnd_node_list, local_elms,                   &
+         &                            n_local_elms, xpoint2, xcase2,               &
+         &                            minRad, R_axis, Z_axis, psi_axis,            &
+         &                            psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,     &
+         &                            gmres, i_tor, n_cpu,                         &
+         &                            mpi_comm_n, MPI_COMM_TRANS,                  &
+         &                            my_id_trans, n_cpu_trans, solve_only)
       use data_structure, only : type_node,type_element,type_element_list,type_bnd_node_list,      &
         type_node_list, thread_struct
       integer(kind=4) :: n_cpu

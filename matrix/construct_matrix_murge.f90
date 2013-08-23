@@ -726,6 +726,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE mpi_mod
   USE murge_module, ONLY : murge_assembly_step, murge_elem_block_size, &
        murge_global_n, murge_global_n_prod
+  use mod_boundary_conditions, only : boundary_conditions
   IMPLICIT NONE
 #include "r3_info.h"
   

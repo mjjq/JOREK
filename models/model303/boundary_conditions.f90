@@ -24,22 +24,23 @@
 !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
+module mod_boundary_conditions
+contains
+  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
+                                  n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
+                                  xcase2, R_axis, Z_axis, psi_axis, psi_bnd,              &
+                                  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
 
-subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
-                                n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
-                                xcase2, R_axis, Z_axis, psi_axis, psi_bnd,              &
-                                R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
 
-
-  use data_structure
-  use global_distributed_matrix
-  use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
+    use data_structure
+    use global_distributed_matrix
+    use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep,RMP_har_cos,RMP_har_sin
-  USE murge_module
-  USE tr_module
-  use mpi_mod
+    USE murge_module
+    USE tr_module
+    use mpi_mod
 
-  implicit none
+    implicit none
 
 !!!! WARNING: gmres already defined in phys_module!!! Hence we use phys_module, ONLY...
 
@@ -155,20 +156,20 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
 
   do loop = 1, loop_nbr
 #ifdef USE_MURGE
-     if (loop == 2)  then
-        only_count = .false.
-        write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
-        if (.not. solve_only) then
-           CALL MURGE_ASSEMBLYBEGIN( murge_id, murge_global_n, cnt,              &
-                &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,     &
-                &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        end if
-        if (gmres) then
-           CALL MURGE_ASSEMBLYBEGIN( murge_id_prod, murge_global_n_prod, cnt_prod,    &
-                &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,          &
-                &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        end if
-     end if
+       if (loop == 2)  then
+          only_count = .false.
+          write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
+          if (.not. solve_only) then
+             CALL MURGE_ASSEMBLYBEGIN( murge_id, murge_global_n, cnt,              &
+                  &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,     &
+                  &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+          end if
+          if (gmres) then
+             CALL MURGE_ASSEMBLYBEGIN( murge_id_prod, murge_global_n_prod, cnt_prod,    &
+                  &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,          &
+                  &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+          end if
+       end if
 #endif
      do i=1, n_local_elms
 
@@ -273,557 +274,557 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 !.or. (k .eq. 5) &
                                 !.or. (k .eq. 6) &
                                 !.or. (k .eq. 7) &
-                            ) then
+                              ) then
 
 
-                          index_node = node_list%node(inode)%index(1)
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node, is_local)
-                             if (is_local) then
-                                call murge_add_one_entry( index_node, k, in, &
-                                     &                    index_node, k, in, &
-                                     &                    zbig, solve_only,  &
-                                     &                    gmres,             &
-                                     &                    cnt, cnt_prod,     &
-                                     &                    only_count)
-                             end if
-                          else
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                            index_node = node_list%node(inode)%index(1)
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node, is_local)
+                               if (is_local) then
+                                  call murge_add_one_entry( index_node, k, in, &
+                                       &                    index_node, k, in, &
+                                       &                    zbig, solve_only,  &
+                                       &                    gmres,             &
+                                       &                    cnt, cnt_prod,     &
+                                       &                    only_count)
+                               end if
+                            else
+                               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
 
-                                index_large_i = n_tor * n_var * (index_node - 1)
+                                  index_large_i = n_tor * n_var * (index_node - 1)
 
-                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                                  ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
 
-                                irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                A_glob(ilarge2)   = zbig
+                                  irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  A_glob(ilarge2)   = zbig
 
-                             endif
-                          end if
+                               endif
+                            end if
 
-                          index_node = node_list%node(inode)%index(2)
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node, is_local)
-                             if (is_local) then
-                                call murge_add_one_entry( index_node, k, in, &
-                                     &                    index_node, k, in, &
-                                     &                    zbig, solve_only,  &
-                                     &                    gmres,             &
-                                     &                    cnt, cnt_prod,     &
-                                     &                    only_count)
+                            index_node = node_list%node(inode)%index(2)
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node, is_local)
+                               if (is_local) then
+                                  call murge_add_one_entry( index_node, k, in, &
+                                       &                    index_node, k, in, &
+                                       &                    zbig, solve_only,  &
+                                       &                    gmres,             &
+                                       &                    cnt, cnt_prod,     &
+                                       &                    only_count)
 
-                             end if
-                          else
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                               end if
+                            else
+                               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
 
-                                index_large_i = n_tor * n_var * (index_node - 1)
+                                  index_large_i = n_tor * n_var * (index_node - 1)
 
-                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                                  ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
 
-                                irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                A_glob(ilarge2)    = zbig
+                                  irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  A_glob(ilarge2)    = zbig
 
-                             endif
-                          end if
-                       endif
-
-
-                       if (k .eq. 7) then
-
-                          index_node  = node_list%node(inode)%index(1)             ! position of value
-                          index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
-
-                          T0        = abs(node_list%node(inode)%values(1,1,6))
-                          Vpar0     = node_list%node(inode)%values(1,1,7)
-                          BigR      = node_list%node(inode)%x(1,1)
-                          dT0_ds    = node_list%node(inode)%values(1,2,6)
-                          dVpar0_ds = node_list%node(inode)%values(1,2,7)
-                          dBigR_ds  = node_list%node(inode)%x(2,1)
-
-                          ps0_s     = node_list%node(inode)%values(1,2,1)
-                          ps0_t     = node_list%node(inode)%values(1,3,1)
-
-                          U0_s      = node_list%node(inode)%values(1,2,2)
-                          U0_t      = node_list%node(inode)%values(1,3,2)
-
-                          R_s       = node_list%node(inode)%x(2,1)
-                          R_t       = node_list%node(inode)%x(3,1)
-                          Z_s       = node_list%node(inode)%x(2,2)
-                          Z_t       = node_list%node(inode)%x(3,2)
-
-                          xjac  =  R_s*Z_t - R_t*Z_s
-                          ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
-                          ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
-
-                          u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
-                          u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
-
-                          alpha = ((Z_axis) - Z_xpoint(1))/(R_axis - R_xpoint(1))
-
-                          R_inside = alpha*(node_list%node(inode)%x(1,2)-Z_xpoint(1)) &
-                                   + node_list%node(inode)%x(1,1) + alpha**2 * R_xpoint(1)
-                          R_inside = R_inside / (1.d0 + alpha**2)
-                          Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
-
-                          R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
-                          Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
-
-                          direction = ps0_s * (  (node_list%node(inode)%x(1,1)-R_inside)*Z_s &
-                                               - (node_list%node(inode)%x(1,2)-Z_inside)*R_s)
-                          direction = direction / abs(direction)
-
-			  if (xcase2 .eq. 2) then
-			    direction = -direction
-			  elseif ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) then
-			     direction = -direction
-			  endif
-
-                          grad_psi = sqrt(ps0_x**2 + ps0_y**2)
-
-                          Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
-
-                          if (in .eq. 1) then
-
-                             !                write(*,'(A,3e14.6,A,e14.6)') ' Boundary : ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot,&
-                             !                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
-
-                          endif
-
-                          ku = 2
-                          kv = 7
-                          kT = 6
-
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node, is_local)
-                             if (is_local) then
-                                call murge_add_one_entry( index_node, kv, in, &
-                                     &                    index_node, kv, in, &
-                                     &                    zbig, solve_only,   &
-                                     &                    gmres,              &
-                                     &                    cnt, cnt_prod,      &
-                                     &                    only_count)
-
-                                call murge_add_one_entry( index_node, kv, in, &
-                                     &                    index_node, kT, in, &
-                                     &                - zbig / Btot * 0.5d0 * &
-                                     &                GAMMA / sqrt(GAMMA*T0) *&
-                                     &                 direction, solve_only, &
-                                     &                    gmres,              &
-                                     &                    cnt, cnt_prod,      &
-                                     &                    only_count)
-
-                                call murge_add_one_entry( index_node,  kv, in, &
-                                     &                    index_node2, ku, in, &
-                                     &                    - zbig *             &
-                                     &                    BigR**2 / ps0_s,     &
-                                     &                    solve_only,          &
-                                     &                    gmres,               &
-                                     &                    cnt, cnt_prod,       &
-                                     &                    only_count)
-
-                                if (.not. only_count) then
-
-                                   Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                        Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
-                                end if
-                             end if
-                          else
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
-                                call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
-                                call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
-
-                                index_large_i = n_tor * n_var * (index_node - 1)
+                               endif
+                            end if
+                         endif
 
 
-                                ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                                ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                                ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
+                         if (k .eq. 7) then
 
-                                irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                A_glob(ilarge_vv)   =  zbig
+                            index_node  = node_list%node(inode)%index(1)             ! position of value
+                            index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
 
-                                irn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kT-1)*n_tor + in
-                                A_glob(ilarge_vT)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
+                            T0        = abs(node_list%node(inode)%values(1,1,6))
+                            Vpar0     = node_list%node(inode)%values(1,1,7)
+                            BigR      = node_list%node(inode)%x(1,1)
+                            dT0_ds    = node_list%node(inode)%values(1,2,6)
+                            dVpar0_ds = node_list%node(inode)%values(1,2,7)
+                            dBigR_ds  = node_list%node(inode)%x(2,1)
 
-                                irn_glob(ilarge_vus) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
-                                A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
+                            ps0_s     = node_list%node(inode)%values(1,2,1)
+                            ps0_t     = node_list%node(inode)%values(1,3,1)
+
+                            U0_s      = node_list%node(inode)%values(1,2,2)
+                            U0_t      = node_list%node(inode)%values(1,3,2)
+
+                            R_s       = node_list%node(inode)%x(2,1)
+                            R_t       = node_list%node(inode)%x(3,1)
+                            Z_s       = node_list%node(inode)%x(2,2)
+                            Z_t       = node_list%node(inode)%x(3,2)
+
+                            xjac  =  R_s*Z_t - R_t*Z_s
+                            ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
+                            ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
+
+                            u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
+                            u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
+
+                            alpha = ((Z_axis) - Z_xpoint(1))/(R_axis - R_xpoint(1))
+
+                            R_inside = alpha*(node_list%node(inode)%x(1,2)-Z_xpoint(1)) &
+                                 + node_list%node(inode)%x(1,1) + alpha**2 * R_xpoint(1)
+                            R_inside = R_inside / (1.d0 + alpha**2)
+                            Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
+
+                            R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
+                            Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
+
+                            direction = ps0_s * (  (node_list%node(inode)%x(1,1)-R_inside)*Z_s &
+                                 - (node_list%node(inode)%x(1,2)-Z_inside)*R_s)
+                            direction = direction / abs(direction)
+
+                            if (xcase2 .eq. 2) then
+                               direction = -direction
+                            elseif ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) then
+                               direction = -direction
+                            endif
+
+                            grad_psi = sqrt(ps0_x**2 + ps0_y**2)
+
+                            Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+
+                            if (in .eq. 1) then
+
+                               !                write(*,'(A,3e14.6,A,e14.6)') ' Boundary : ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot,&
+                               !                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
+
+                            endif
+
+                            ku = 2
+                            kv = 7
+                            kT = 6
+
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node, is_local)
+                               if (is_local) then
+                                  call murge_add_one_entry( index_node, kv, in, &
+                                       &                    index_node, kv, in, &
+                                       &                    zbig, solve_only,   &
+                                       &                    gmres,              &
+                                       &                    cnt, cnt_prod,      &
+                                       &                    only_count)
+
+                                  call murge_add_one_entry( index_node, kv, in, &
+                                       &                    index_node, kT, in, &
+                                       &                - zbig / Btot * 0.5d0 * &
+                                       &                GAMMA / sqrt(GAMMA*T0) *&
+                                       &                 direction, solve_only, &
+                                       &                    gmres,              &
+                                       &                    cnt, cnt_prod,      &
+                                       &                    only_count)
+
+                                  call murge_add_one_entry( index_node,  kv, in, &
+                                       &                    index_node2, ku, in, &
+                                       &                    - zbig *             &
+                                       &                    BigR**2 / ps0_s,     &
+                                       &                    solve_only,          &
+                                       &                    gmres,               &
+                                       &                    cnt, cnt_prod,       &
+                                       &                    only_count)
+
+                                  if (.not. only_count) then
+
+                                     Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                          Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
+                                  end if
+                               end if
+                            else
+                               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+
+                                  call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
+
+                                  index_large_i = n_tor * n_var * (index_node - 1)
 
 
-                                if (in .eq. 1) then
-                                   RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                        Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
-                                else
-                                   RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
-                                endif
+                                  ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
+                                  ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                                  ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
 
-                             endif
-                          end if
+                                  irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+                                  A_glob(ilarge_vv)   =  zbig
 
-                          index_node  = node_list%node(inode)%index(1)
-                          index_node2 = node_list%node(inode)%index(2)
-                          kv = 7
-                          kT = 6
+                                  irn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kT-1)*n_tor + in
+                                  A_glob(ilarge_vT)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
 
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node2, is_local)
-                             if (is_local) then
+                                  irn_glob(ilarge_vus) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
+                                  A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
 
-                                call murge_add_one_entry( index_node2, kv, in, &
-                                     &                    index_node2, kv, in, &
-                                     &                    zbig, solve_only,    &
-                                     &                    gmres,               &
-                                     &                    cnt, cnt_prod,       &
-                                     &                    only_count)
-                                call murge_add_one_entry( index_node2, kv, in, &
-                                     &                    index_node2, kT, in, &
-                                     &                    - zbig / Btot *      &
-                                     &                    0.5d0 *              &
-                                     &                    GAMMA /              &
-                                     &                    sqrt(GAMMA*T0) *     &
-                                     &                    direction,           &
-                                     &                    solve_only,          &
-                                     &                    gmres,               &
-                                     &                    cnt, cnt_prod,       &
-                                     &                    only_count)
-                                call murge_add_one_entry( index_node2, kv, in, &
-                                     &                    index_node,  kT, in, &
-                                     &                    + zbig / Btot *      &
-                                     &   0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) &
-                                     &   * dT0_ds * direction,                 &
-                                     &                    solve_only,          &
-                                     &                    gmres,               &
-                                     &                    cnt, cnt_prod,       &
-                                     &                    only_count)
-
-                                if (.not. only_count) then
 
                                   if (in .eq. 1) then
-                                    Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                        Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
+                                     RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                          Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
                                   else
-                                    Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
-                                  endif 
-				  
-                                end if
-                             end if
-                          else
-                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+                                     RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
+                                  endif
 
-                                call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position)
-                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+                               endif
+                            end if
 
-                                index_large_i = n_tor * n_var * (index_node2 - 1)
+                            index_node  = node_list%node(inode)%index(1)
+                            index_node2 = node_list%node(inode)%index(2)
+                            kv = 7
+                            kT = 6
+
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node2, is_local)
+                               if (is_local) then
+
+                                  call murge_add_one_entry( index_node2, kv, in, &
+                                       &                    index_node2, kv, in, &
+                                       &                    zbig, solve_only,    &
+                                       &                    gmres,               &
+                                       &                    cnt, cnt_prod,       &
+                                       &                    only_count)
+                                  call murge_add_one_entry( index_node2, kv, in, &
+                                       &                    index_node2, kT, in, &
+                                       &                    - zbig / Btot *      &
+                                       &                    0.5d0 *              &
+                                       &                    GAMMA /              &
+                                       &                    sqrt(GAMMA*T0) *     &
+                                       &                    direction,           &
+                                       &                    solve_only,          &
+                                       &                    gmres,               &
+                                       &                    cnt, cnt_prod,       &
+                                       &                    only_count)
+                                  call murge_add_one_entry( index_node2, kv, in, &
+                                       &                    index_node,  kT, in, &
+                                       &                    + zbig / Btot *      &
+                                       &   0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) &
+                                       &   * dT0_ds * direction,                 &
+                                       &                    solve_only,          &
+                                       &                    gmres,               &
+                                       &                    cnt, cnt_prod,       &
+                                       &                    only_count)
+
+                                  if (.not. only_count) then
+
+                                     if (in .eq. 1) then
+                                        Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
+                                             Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
+                                     else
+                                        Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                                     endif
+
+                                  end if
+                               end if
+                            else
+                               if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+
+                                  call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+
+                                  index_large_i = n_tor * n_var * (index_node2 - 1)
 
 
-                                ilarge_vsvs = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                                ilarge_vsTs = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                                ilarge_vsT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                                  ilarge_vsvs = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
+                                  ilarge_vsTs = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                                  ilarge_vsT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
 
-                                irn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                A_glob(ilarge_vsvs)   = zbig
+                                  irn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  A_glob(ilarge_vsvs)   = zbig
 
-                                irn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kT-1)*n_tor + in
-                                A_glob(ilarge_vsTs)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
+                                  irn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kT-1)*n_tor + in
+                                  A_glob(ilarge_vsTs)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
 
-                                irn_glob(ilarge_vsT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vsT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
-                                A_glob(ilarge_vsT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction
+                                  irn_glob(ilarge_vsT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vsT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
+                                  A_glob(ilarge_vsT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction
 
-                                if (in .eq. 1) then
-                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                        Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
-                                else
-                                   Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
-                                endif 
+                                  if (in .eq. 1) then
+                                     Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
+                                          Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
+                                  else
+                                     Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                                  endif
 
-                             endif
-                          end if
-                       end if
+                               endif
+                            end if
+                         end if
 
-                    end if
+                      end if
 
-!========================================================================
-! conditions for direction 2 (s), i.e. boundary types 5, 9
-! apply fixed bc for variables k=1,2,3,4
-! apply v_par = cs for k=7
-!========================================================================
-                    if    ((node_list%node(inode)%boundary .eq. 5) &
-                      .or. (node_list%node(inode)%boundary .eq. 9)) then
+                      !========================================================================
+                      ! conditions for direction 2 (s), i.e. boundary types 5, 9
+                      ! apply fixed bc for variables k=1,2,3,4
+                      ! apply v_par = cs for k=7
+                      !========================================================================
+                      if    ((node_list%node(inode)%boundary .eq. 5) &
+                           .or. (node_list%node(inode)%boundary .eq. 9)) then
 
 
-                      if (                  &
-                                 (k .eq. 1)  &
-                            .or. (k .eq. 2)  &
-                            .or. (k .eq. 3)  &
-                            .or. (k .eq. 4)  &
+                         if (                  &
+                              (k .eq. 1)  &
+                              .or. (k .eq. 2)  &
+                              .or. (k .eq. 3)  &
+                              .or. (k .eq. 4)  &
                                 !.or. (k .eq. 5) &
                                 !.or. (k .eq. 6) &
                                 !.or. (k .eq. 7) &
-                            ) then
+                              ) then
 
 
-                          index_node = node_list%node(inode)%index(1)
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node, is_local)
-                             if (is_local) then
-                                call murge_add_one_entry( index_node, k, in, &
-                                     &                    index_node, k, in, &
-                                     &                    zbig, solve_only,  &
-                                     &                    gmres,             &
-                                     &                    cnt, cnt_prod,     &
-                                     &                    only_count)
-                             end if
-                          else
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                            index_node = node_list%node(inode)%index(1)
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node, is_local)
+                               if (is_local) then
+                                  call murge_add_one_entry( index_node, k, in, &
+                                       &                    index_node, k, in, &
+                                       &                    zbig, solve_only,  &
+                                       &                    gmres,             &
+                                       &                    cnt, cnt_prod,     &
+                                       &                    only_count)
+                               end if
+                            else
+                               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
 
-                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                                  ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
 
-                                irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                A_glob(ilarge2)   = zbig
+                                  irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  A_glob(ilarge2)   = zbig
 
-                             endif
-                          end if
+                               endif
+                            end if
 
-                          index_node = node_list%node(inode)%index(3)
+                            index_node = node_list%node(inode)%index(3)
 
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node, is_local)
-                             if (is_local) then
-                                call murge_add_one_entry( index_node, k, in, &
-                                     &                    index_node, k, in, &
-                                     &                    zbig, solve_only,  &
-                                     &                    gmres,             &
-                                     &                    cnt, cnt_prod,     &
-                                     &                    only_count)
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node, is_local)
+                               if (is_local) then
+                                  call murge_add_one_entry( index_node, k, in, &
+                                       &                    index_node, k, in, &
+                                       &                    zbig, solve_only,  &
+                                       &                    gmres,             &
+                                       &                    cnt, cnt_prod,     &
+                                       &                    only_count)
 
-                             end if
-                          else
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                               end if
+                            else
+                               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
 
-                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                                  ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
 
-                                irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                                A_glob(ilarge2)    = zbig
+                                  irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                                  A_glob(ilarge2)    = zbig
 
-                             endif
-                          end if
-                       endif
+                               endif
+                            end if
+                         endif
 
 
-                       if (k .eq. 7) then
+                         if (k .eq. 7) then
 
-                          index_node  = node_list%node(inode)%index(1)             ! position of value
-                          index_node2 = node_list%node(inode)%index(3)             ! position of first deriative
+                            index_node  = node_list%node(inode)%index(1)             ! position of value
+                            index_node2 = node_list%node(inode)%index(3)             ! position of first deriative
 
-                          T0        = abs(node_list%node(inode)%values(1,1,6));  T0 = max(T0,0.001)
-                          Vpar0     = node_list%node(inode)%values(1,1,7)
-                          BigR      = node_list%node(inode)%x(1,1)
-                          dT0_dt    = node_list%node(inode)%values(1,3,6)
-                          dVpar0_dt = node_list%node(inode)%values(1,3,7)
-                          dBigR_dt  = node_list%node(inode)%x(3,1)
+                            T0        = abs(node_list%node(inode)%values(1,1,6));  T0 = max(T0,0.001)
+                            Vpar0     = node_list%node(inode)%values(1,1,7)
+                            BigR      = node_list%node(inode)%x(1,1)
+                            dT0_dt    = node_list%node(inode)%values(1,3,6)
+                            dVpar0_dt = node_list%node(inode)%values(1,3,7)
+                            dBigR_dt  = node_list%node(inode)%x(3,1)
 
-                          ps0_s     = node_list%node(inode)%values(1,2,1)
-                          ps0_t     = node_list%node(inode)%values(1,3,1)
+                            ps0_s     = node_list%node(inode)%values(1,2,1)
+                            ps0_t     = node_list%node(inode)%values(1,3,1)
 
-                          U0_s      = node_list%node(inode)%values(1,2,2)
-                          U0_t      = node_list%node(inode)%values(1,3,2)
+                            U0_s      = node_list%node(inode)%values(1,2,2)
+                            U0_t      = node_list%node(inode)%values(1,3,2)
 
-                          R_s       = node_list%node(inode)%x(2,1)
-                          R_t       = node_list%node(inode)%x(3,1)
-                          Z_s       = node_list%node(inode)%x(2,2)
-                          Z_t       = node_list%node(inode)%x(3,2)
+                            R_s       = node_list%node(inode)%x(2,1)
+                            R_t       = node_list%node(inode)%x(3,1)
+                            Z_s       = node_list%node(inode)%x(2,2)
+                            Z_t       = node_list%node(inode)%x(3,2)
 
-                          xjac  =  R_s*Z_t - R_t*Z_s
-                          ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
-                          ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
+                            xjac  =  R_s*Z_t - R_t*Z_s
+                            ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
+                            ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
 
-                          u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
-                          u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
+                            u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
+                            u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
 
-                          alpha = ((Z_axis) - Z_xpoint(1))/(R_axis - R_xpoint(1))
+                            alpha = ((Z_axis) - Z_xpoint(1))/(R_axis - R_xpoint(1))
 
-                          R_inside = alpha*(node_list%node(inode)%x(1,2)-Z_xpoint(1)) &
-                                   + node_list%node(inode)%x(1,1) + alpha**2 * R_xpoint(1)
-                          R_inside = R_inside / (1.d0 + alpha**2)
-                          Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
+                            R_inside = alpha*(node_list%node(inode)%x(1,2)-Z_xpoint(1)) &
+                                 + node_list%node(inode)%x(1,1) + alpha**2 * R_xpoint(1)
+                            R_inside = R_inside / (1.d0 + alpha**2)
+                            Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
 
-                          R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
-                          Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
+                            R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
+                            Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
 
-                          direction = ps0_t * (  (node_list%node(inode)%x(1,1)-R_inside)*Z_t &
-                                               - (node_list%node(inode)%x(1,2)-Z_inside)*R_t)
-                          direction = direction / abs(direction)
+                            direction = ps0_t * (  (node_list%node(inode)%x(1,1)-R_inside)*Z_t &
+                                 - (node_list%node(inode)%x(1,2)-Z_inside)*R_t)
+                            direction = direction / abs(direction)
 
-                          grad_psi = sqrt(ps0_x**2 + ps0_y**2)
+                            grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
-                          Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+                            Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 
-                          ku = 2
-                          kv = 7
-                          kT = 6
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node, is_local)
-                             if (is_local) then
-                                call murge_add_one_entry( index_node, kv, in, &
-                                     &                    index_node, kv, in, &
-                                     &                    zbig, solve_only,   &
-                                     &                    gmres,              &
-                                     &                    cnt, cnt_prod,      &
-                                     &                    only_count)
+                            ku = 2
+                            kv = 7
+                            kT = 6
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node, is_local)
+                               if (is_local) then
+                                  call murge_add_one_entry( index_node, kv, in, &
+                                       &                    index_node, kv, in, &
+                                       &                    zbig, solve_only,   &
+                                       &                    gmres,              &
+                                       &                    cnt, cnt_prod,      &
+                                       &                    only_count)
 
-                                call murge_add_one_entry( index_node, kv, in, &
-                                     &                    index_node, kT, in, &
-                                     &                - zbig / Btot * 0.5d0 * &
-                                     &                GAMMA / sqrt(GAMMA*T0) *&
-                                     &                 direction, solve_only, &
-                                     &                    gmres,              &
-                                     &                    cnt, cnt_prod,      &
-                                     &                    only_count)
+                                  call murge_add_one_entry( index_node, kv, in, &
+                                       &                    index_node, kT, in, &
+                                       &                - zbig / Btot * 0.5d0 * &
+                                       &                GAMMA / sqrt(GAMMA*T0) *&
+                                       &                 direction, solve_only, &
+                                       &                    gmres,              &
+                                       &                    cnt, cnt_prod,      &
+                                       &                    only_count)
 
-                                call murge_add_one_entry( index_node,  kv, in, &
-                                     &                    index_node2, ku, in, &
-                                     &                    - zbig *             &
-                                     &                    BigR**2 / ps0_s,     &
-                                     &                    solve_only,          &
-                                     &                    gmres,               &
-                                     &                    cnt, cnt_prod,       &
-                                     &                    only_count)
+                                  call murge_add_one_entry( index_node,  kv, in, &
+                                       &                    index_node2, ku, in, &
+                                       &                    - zbig *             &
+                                       &                    BigR**2 / ps0_s,     &
+                                       &                    solve_only,          &
+                                       &                    gmres,               &
+                                       &                    cnt, cnt_prod,       &
+                                       &                    only_count)
 
-                                if (.not. only_count) then
-             
-	                          if (in .eq. 1) then
-                                    RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                       Zbig * ( - Vpar0 + BigR**2 * U0_t /ps0_t + direction*sqrt(GAMMA*T0) / Btot)
+                                  if (.not. only_count) then
 
-                                  else
-                                    RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
-                                  endif
+                                     if (in .eq. 1) then
+                                        RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                             Zbig * ( - Vpar0 + BigR**2 * U0_t /ps0_t + direction*sqrt(GAMMA*T0) / Btot)
 
-                                end if
-                             end if
-                          else
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                                     else
+                                        RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
+                                     endif
 
-                                call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
-                                call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
+                                  end if
+                               end if
+                            else
+                               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                                ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                                ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                                ilarge_vut = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
+                                  call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
 
-                                irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                A_glob(ilarge_vv)   =  zbig
+                                  ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
+                                  ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                                  ilarge_vut = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
 
-                                irn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kT-1)*n_tor + in
-                                A_glob(ilarge_vT)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
+                                  irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+                                  A_glob(ilarge_vv)   =  zbig
 
-                                irn_glob(ilarge_vut) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vut) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
-                                A_glob(ilarge_vut)   = - zbig * BigR**2 / ps0_t
+                                  irn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kT-1)*n_tor + in
+                                  A_glob(ilarge_vT)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
 
-                                if (in .eq. 1) then
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                     Zbig * ( - Vpar0 + BigR**2 * U0_t /ps0_t + direction*sqrt(GAMMA*T0) / Btot)
+                                  irn_glob(ilarge_vut) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vut) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
+                                  A_glob(ilarge_vut)   = - zbig * BigR**2 / ps0_t
 
-                                else
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
-                                endif
- !         write(*,'(A,i6,3e16.8)') ' bc5:',inode, Vpar0,direction*sqrt(GAMMA*T0) / Btot, Vpar0-direction*sqrt(GAMMA*T0) / Btot
-
-                             endif
-                          end if
-
-                          index_node  = node_list%node(inode)%index(1)
-                          index_node2 = node_list%node(inode)%index(3)
-                          kv = 7
-                          kT = 6
-                          if (use_murge .and. use_murge_element) then
-                             call vertex_is_local(index_node2, is_local)
-                             if (is_local) then
-                                call murge_add_one_entry( index_node, kv, in, &
-                                     &                    index_node, kv, in, &
-                                     &                    zbig, solve_only,   &
-                                     &                    gmres,              &
-                                     &                    cnt, cnt_prod,      &
-                                     &                    only_count)
-
-                                call murge_add_one_entry( index_node, kv, in, &
-                                     &                    index_node, kT, in, &
-                                     &                - zbig / Btot * 0.5d0 * &
-                                     &                GAMMA / sqrt(GAMMA*T0) *&
-                                     &                 direction, solve_only, &
-                                     &                    gmres,              &
-                                     &                    cnt, cnt_prod,      &
-                                     &                    only_count)
-
-                                call murge_add_one_entry( index_node,  kv, in, &
-                                     &                    index_node2, ku, in, &
-                                     &                    - zbig *             &
-                                     &                    BigR**2 / ps0_s,     &
-                                     &                    solve_only,          &
-                                     &                    gmres,               &
-                                     &                    cnt, cnt_prod,       &
-                                     &                    only_count)
-
-                                if (.not. only_count) then
-  
                                   if (in .eq. 1) then
-                                    RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                       Zbig*(-dVpar0_dt +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction)
+                                     RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
+                                          Zbig * ( - Vpar0 + BigR**2 * U0_t /ps0_t + direction*sqrt(GAMMA*T0) / Btot)
+
                                   else
-                                    RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                                     RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
                                   endif
+                                  !         write(*,'(A,i6,3e16.8)') ' bc5:',inode, Vpar0,direction*sqrt(GAMMA*T0) / Btot, Vpar0-direction*sqrt(GAMMA*T0) / Btot
 
-                                end if
-				
-                             end if
-                          else
-                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+                               endif
+                            end if
 
-                                call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position)
-                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+                            index_node  = node_list%node(inode)%index(1)
+                            index_node2 = node_list%node(inode)%index(3)
+                            kv = 7
+                            kT = 6
+                            if (use_murge .and. use_murge_element) then
+                               call vertex_is_local(index_node2, is_local)
+                               if (is_local) then
+                                  call murge_add_one_entry( index_node, kv, in, &
+                                       &                    index_node, kv, in, &
+                                       &                    zbig, solve_only,   &
+                                       &                    gmres,              &
+                                       &                    cnt, cnt_prod,      &
+                                       &                    only_count)
 
-                                ilarge_vtvt = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                                ilarge_vtTt = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                                ilarge_vtT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                                  call murge_add_one_entry( index_node, kv, in, &
+                                       &                    index_node, kT, in, &
+                                       &                - zbig / Btot * 0.5d0 * &
+                                       &                GAMMA / sqrt(GAMMA*T0) *&
+                                       &                 direction, solve_only, &
+                                       &                    gmres,              &
+                                       &                    cnt, cnt_prod,      &
+                                       &                    only_count)
 
-                                irn_glob(ilarge_vtvt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vtvt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                A_glob(ilarge_vtvt)   = zbig
+                                  call murge_add_one_entry( index_node,  kv, in, &
+                                       &                    index_node2, ku, in, &
+                                       &                    - zbig *             &
+                                       &                    BigR**2 / ps0_s,     &
+                                       &                    solve_only,          &
+                                       &                    gmres,               &
+                                       &                    cnt, cnt_prod,       &
+                                       &                    only_count)
 
-                                irn_glob(ilarge_vtTt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vtTt) =  n_tor * n_var * (index_node2-1) + (kT-1)*n_tor + in
-                                A_glob(ilarge_vtTt)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
+                                  if (.not. only_count) then
 
-                                irn_glob(ilarge_vtT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vtT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
-                                A_glob(ilarge_vtT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_dt * direction
+                                     if (in .eq. 1) then
+                                        RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
+                                             Zbig*(-dVpar0_dt +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction)
+                                     else
+                                        RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                                     endif
 
-                                if (in .eq. 1) then
-                                  RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                     Zbig*(-dVpar0_dt +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction)
-                                else
-                                  RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
-                                endif
+                                  end if
+
+                               end if
+                            else
+                               if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+
+                                  call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position)
+                                  call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+
+                                  ilarge_vtvt = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
+                                  ilarge_vtTt = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                                  ilarge_vtT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+
+                                  irn_glob(ilarge_vtvt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vtvt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  A_glob(ilarge_vtvt)   = zbig
+
+                                  irn_glob(ilarge_vtTt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vtTt) =  n_tor * n_var * (index_node2-1) + (kT-1)*n_tor + in
+                                  A_glob(ilarge_vtTt)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
+
+                                  irn_glob(ilarge_vtT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                  jcn_glob(ilarge_vtT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
+                                  A_glob(ilarge_vtT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_dt * direction
+
+                                  if (in .eq. 1) then
+                                     RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
+                                          Zbig*(-dVpar0_dt +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction)
+                                  else
+                                     RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                                  endif
 
                              endif
                           end if
@@ -999,25 +1000,26 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
         enddo
      enddo
 #ifdef USE_MURGE
-     if (loop == 2) then
-        if (.not. solve_only) then
-           CALL MURGE_ASSEMBLYEND(murge_id, ierr)
-        end if
-        if (gmres) then
-           CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
-        end if
-     end if
+       if (loop == 2) then
+          if (.not. solve_only) then
+             CALL MURGE_ASSEMBLYEND(murge_id, ierr)
+          end if
+          if (gmres) then
+             CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
+          end if
+       end if
 #endif
-  end do
+    end do
 
-  if (RMP_on) then
-     if (allocated(psi_RMP_cos1))         call tr_deallocate(psi_RMP_cos1,"psi_RMP_cos1",CAT_UNKNOWN)
-     if (allocated(dpsi_RMP_cos_dR1))     call tr_deallocate(dpsi_RMP_cos_dR1,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
-     if (allocated(dpsi_RMP_cos_dZ1))     call tr_deallocate(dpsi_RMP_cos_dZ1,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
-     if (allocated(psi_RMP_sin1))         call tr_deallocate(psi_RMP_sin1,"psi_RMP_sin1",CAT_UNKNOWN)
-     if (allocated(dpsi_RMP_sin_dR1))     call tr_deallocate(dpsi_RMP_sin_dR1,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
-     if (allocated(dpsi_RMP_sin_dZ1))     call tr_deallocate(dpsi_RMP_sin_dZ1,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
-  endif
+    if (RMP_on) then
+       if (allocated(psi_RMP_cos1))         call tr_deallocate(psi_RMP_cos1,"psi_RMP_cos1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_cos_dR1))     call tr_deallocate(dpsi_RMP_cos_dR1,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_cos_dZ1))     call tr_deallocate(dpsi_RMP_cos_dZ1,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+       if (allocated(psi_RMP_sin1))         call tr_deallocate(psi_RMP_sin1,"psi_RMP_sin1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_sin_dR1))     call tr_deallocate(dpsi_RMP_sin_dR1,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_sin_dZ1))     call tr_deallocate(dpsi_RMP_sin_dZ1,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
+    endif
 
-  return
-end subroutine boundary_conditions
+    return
+  end subroutine boundary_conditions
+end module mod_boundary_conditions

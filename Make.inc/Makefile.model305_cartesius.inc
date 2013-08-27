@@ -14,6 +14,8 @@ DEFINES = -DJECCD -DUSE_BLOCK -DCOMMON_PTHREAD
 
 # Fortran compiler 
 FC     = mpiifort
+CC     = mpiicc
+
 FFLAGS_OMP       = -openmp -mt_mpi -mkl=sequential
 FFLAGS           = -r8 -i4 -mkl=sequential
 FFLAGS          := $(FFLAGS) -fpp

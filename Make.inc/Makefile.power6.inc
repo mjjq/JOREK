@@ -6,6 +6,8 @@ MODEL = model199
 
 # Fortran compiler 
 FC  = mpxlf_r
+CC  = mpxlc_r
+
 IBMFC = 1
 CPP = /bin/cpp
 SED = gsed

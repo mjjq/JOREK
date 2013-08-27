@@ -13,6 +13,8 @@ DEFINES = -Dfullmhd -DMULTI_FUN -DUSE_BLOCK
 
 # Fortran compiler 
 FC     = mpiifort
+CC     = mpiicc
+
 FFLAGS_OMP       = -openmp -mt_mpi 
 FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp

@@ -4,6 +4,8 @@ MODEL = model199
 
 # Fortran compiler 
 FC     = ifort
+CC     = icc
+
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -O2 -DUSE_R3_INFO_MPI -DUSE_R3_INFO
 FFLAGS          := $(FFLAGS) -r8 -i4 -mcmodel=large

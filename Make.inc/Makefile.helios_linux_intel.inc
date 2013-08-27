@@ -4,6 +4,8 @@ MODEL = model199
 
 # Fortran compiler 
 FC     = mpif90
+CC     = mpicc
+
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp -DUSE_BLOCK

@@ -38,7 +38,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   enddo
   ndof_glob = ndof_glob * n_tor*n_var
 
-  n_max = 1536
+  n_max = 8192
 
   call tr_allocate(ijA_size,1,index_max-index_min+1,"ijA_size",CAT_DMATRIX)
   call tr_allocate(irn_jcn,1,index_max-index_min+1,1,n_max,"irn_jcn",CAT_DMATRIX)

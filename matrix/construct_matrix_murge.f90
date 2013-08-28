@@ -117,11 +117,12 @@ CONTAINS
   INTEGER FUNCTION LOOP(DATA)
     USE data_structure,  ONLY : type_node, type_element
     USE parameters,      ONLY : n_vertex_max , n_var, n_order, n_tor
-    USE murge_module,    ONLY : MURGE_SUCCESS, MURGE_ASSEMBLYBEGIN,            &
+    USE murge_module,    ONLY : MURGE_SUCCESS,                                 &
          &                      MURGE_ASSEMBLYSETNODEVALUES,                   &
          &                      MURGE_ASSEMBLYEND, murge_id,                   &
          &                      murge_id_prod, MURGE_COEF_KIND,                &
          &                      murge_ndof_prod
+    USE murge_module,    ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN
     USE mpi_mod
 
     IMPLICIT NONE
@@ -703,7 +704,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
        &                     type_element_list, type_bnd_node_list,            &
        &                     type_node_list, thread_struct
   USE parameters,     ONLY : n_vertex_max , n_var, n_order, n_tor
-  USE murge_module,   ONLY : MURGE_SUCCESS, MURGE_ASSEMBLYBEGIN,               &
+  USE murge_module,   ONLY : MURGE_SUCCESS,                                    &
        &                     MURGE_ASSEMBLYSETNODEVALUES,                      &
        &                     MURGE_ASSEMBLYEND, murge_id,                      &
        &                     murge_id_prod, MURGE_COEF_KIND,                   &
@@ -718,6 +719,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
        &                     murge_sequence_id, murge_assembly_first_entry,    &
        &                     murge_sequence_id_harm,                           &
        &                     murge_assembly_first_entry_harm
+  USE murge_module,    ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN
 
   USE global_distributed_matrix, ONLY : RHS_GLOB, column_scaling, ndof_glob
   USE mumps_module, ONLY : mumps_par

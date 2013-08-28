@@ -36,7 +36,10 @@ contains
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep,RMP_har_cos,RMP_har_sin
-    USE murge_module
+    USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
+         use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
+         MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
+         MURGE_SUCCESS, murge_add_one_entry
     USE tr_module
     use mpi_mod
 

@@ -33,7 +33,10 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary
-    USE murge_module
+    USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
+         use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
+         MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
+         MURGE_SUCCESS, murge_add_one_entry
     use mpi_mod
 
     implicit none

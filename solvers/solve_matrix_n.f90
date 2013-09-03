@@ -47,6 +47,9 @@ contains
 #define DUMMY_INT NULL()
 #endif
 
+    !+increment because of difference between murge.inc (0 based) and pastix_fortran.h (1 based)
+    !in old version of PaStiX
+    increment=1-IPARM_MODIFY_PARAMETER
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
@@ -271,9 +274,6 @@ contains
               !$omp parallel default(none) shared(pastix_nthrd)    
               pastix_nthrd = omp_get_num_threads()
               !$omp end parallel
-              !+increment because there can be a difference between murge.inc (0 based) and pastix_fortran.h (1 based)
-              !in old version of PaStiX
-              increment=1-IPARM_MODIFY_PARAMETER
               pastix_iparm(IPARM_MODIFY_PARAMETER+increment) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+increment)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+increment)         = API_TASK_INIT

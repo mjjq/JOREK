@@ -153,6 +153,9 @@ subroutine preset_parameters
   D_prof_neg  = 1.d-5
   ZK_prof_neg = 1.d-5
   T_min       = 0.0
+  
+  corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
+  corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
 
   eta_num       = 0.d0
   visco_num     = 0.d0

@@ -57,6 +57,7 @@ JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)	  \
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 	\
 	$(DIR)/find_axis.f90			\
 	$(DIR)/find_xpoint.f90			\
+        $(DIR)/integrals_3D.f90           \
 	$(DIR)/RZ_minmax.f90
 
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC) 	\

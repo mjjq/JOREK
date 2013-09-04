@@ -10,8 +10,8 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use avoid_neg_dens, only: diffusivity_factor
 use diffusivities,  only: get_dperp, get_zkperp
+use corr_neg
 
 implicit none
 
@@ -348,9 +348,9 @@ do ms=1, n_gauss
 
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+       eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -359,8 +359,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+       visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
      else
        visco_T   = visco
        dvisco_dT = 0.d0
@@ -381,10 +381,6 @@ do ms=1, n_gauss
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
-
-#ifdef AVOID_NEG_DENS     
-     D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
-#endif
 
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 

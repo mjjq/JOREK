@@ -10,7 +10,6 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use avoid_neg_dens, only: diffusivity_factor
 use diffusivities,  only: get_dperp, get_zkperp
 
 implicit none
@@ -421,11 +420,6 @@ do ms=1, n_gauss
      S_ion_T = coef_ion_1*exp(-coef_ion_3/T0)*((coef_ion_3/T0)**0.39d0)*1/(T0*(coef_ion_2*T0+coef_ion_3)**2.0d0) &  
              * (coef_ion_3*((coef_ion_2+1)*T0+coef_ion_3)-0.39d0*(T0*(coef_ion_2*T0+coef_ion_3)))                   
 	     
-	     
-#ifdef AVOID_NEG_DENS     
-     D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
-#endif
-
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 
      source_mgi = 0.d0                    

@@ -16,6 +16,7 @@ use basis_at_gaussian
 use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
+use corr_neg
 
 implicit none
 
@@ -474,9 +475,9 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+       eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
        if ( xpoint2 .and. (T0 .lt. T_min) ) then
          eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
          deta_dT   = 0.d0
@@ -490,8 +491,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+       visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
        if ( xpoint2 .and. (T0 .lt. T_min) ) then
          visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
          dvisco_dT = 0.d0
@@ -503,8 +504,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent parallel heat diffusivity
      if ( ZKpar_T_dependent ) then
-       ZKpar_T   = ZK_par * (abs(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-       dZKpar_dT = ZK_par * (2.5d0)  * abs(T0)**(+1.5d0) * T_0**(-2.5d0)
+       ZKpar_T   = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+       dZKpar_dT = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
        if (ZKpar_T .gt. ZK_par_max) then
          ZKpar_T   = Zk_par_max
          dZKpar_dT = 0.d0
@@ -533,10 +534,6 @@ do ms=1, n_gauss
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
-
-#ifdef AVOID_NEG_DENS     
-     D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
-#endif
 
      if (xpoint2) then
        if (r0 .lt. 0.d0)  then

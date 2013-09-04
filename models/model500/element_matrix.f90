@@ -14,7 +14,6 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use avoid_neg_dens, only: diffusivity_factor
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 
@@ -512,10 +511,6 @@ do ms=1, n_gauss
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
-
-#ifdef AVOID_NEG_DENS     
-     D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
-#endif
 
      if (xpoint2) then
        if (r0 .lt. 0.d0)  then

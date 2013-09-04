@@ -580,10 +580,6 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-#ifdef AVOID_NEG_DENS     
-     D_prof = D_prof * diffusivity_factor(x_g(ms,mt), y_g(ms,mt), mp)
-#endif
-
      if (xpoint2) then
        if (r0 .lt. 0.d0)  then
          D_prof  = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3

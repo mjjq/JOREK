@@ -100,13 +100,6 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-  write(*,'(1x,a)',advance='no') ' AVOID_NEG_DENS      : '
-#ifdef AVOID_NEG_DENS
-  write(*,*) 'on'
-#else
-  write(*,*) 'off'
-#endif
-
   write(*,'(1x,a)',advance='no') ' JECCD               : '
 #ifdef JECCD
   write(*,*) 'on'
@@ -309,6 +302,8 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
+  write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)
+  write(*,REAL_FMT) 'corr_neg_dens_coef    ', corr_neg_dens_coef(:)
   
   if ( use_pellet ) then
     write(*,REAL_FMT) 'pellet_amplitude    ', pellet_amplitude

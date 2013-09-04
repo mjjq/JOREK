@@ -14,7 +14,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use pellet_module
   use nodes_elements
   use vacuum_response, only: vacuum_boundary_integral
-  use avoid_neg_dens,  only: identify_dens_problems, output_problem_pos, diffusivity_factor
   use mod_ch_nod_rhs_elm
   use mod_boundary_matrix_open
   use mod_elt_matrix
@@ -114,11 +113,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   difference_found = .false.
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
-
-#ifdef AVOID_NEG_DENS     
-  call identify_dens_problems(my_id)
-  if ( my_id == 0 ) call output_problem_pos()
-#endif
 
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,   &

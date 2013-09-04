@@ -15,6 +15,7 @@ use basis_at_gaussian
 use phys_module
 use tr_module
 use diffusivities, only: get_dperp, get_zkperp
+use corr_neg
 
 implicit none
  
@@ -245,9 +246,9 @@ do ms=1, n_gauss
 
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+       eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -256,8 +257,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+       visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
      else
        visco_T   = visco
        dvisco_dT = 0.d0

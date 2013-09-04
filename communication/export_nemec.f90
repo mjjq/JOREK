@@ -26,7 +26,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   integer :: i, i_elm_xpoint(2), i_elm_axis, ifail
   real*8  :: R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2), psi_bnd
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
-  real*8, allocatable :: q(:), PhiN(:)
+  real*8, allocatable :: q(:), rad(:), PhiN(:)
   integer :: nplot, j, k, i_elm, node1, node2, node3, node4, ip
   real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, ri, dri, si, dsi
   real*8  :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
@@ -58,7 +58,8 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   
   ! --- Determine the q-profile.
   call tr_allocate(q,1,surface_list%n_psi,"q",CAT_GRID)
-  call determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q)
+  call tr_allocate(rad,1,surface_list%n_psi,"rad",CAT_GRID)
+  call determine_q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint,q,rad)
   
   ! --- Determine the toroidal flux.
   call tr_allocate(PhiN,1,surface_list%n_psi,"PhiN",CAT_GRID)
@@ -157,6 +158,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   close(42)
   
   call tr_deallocate(q, "q",CAT_GRID)
+  call tr_deallocate(rad, "rad",CAT_GRID)
   call tr_deallocate(PhiN, "PhiN",CAT_GRID)
   call tr_deallocate(surface_list%psi_values, "surface_list%psi_values",CAT_GRID)
 

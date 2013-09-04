@@ -408,6 +408,8 @@ module phys_module
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
   integer             :: n_tor_fft_thresh !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan      !< Required for FFTW library
+  real*8              :: corr_neg_temp_coef(2) !< Parameters used in models/corr_neg.f90
+  real*8              :: corr_neg_dens_coef(2) !< Parameters used in models/corr_neg.f90
 
   !> @name ECCD current sources
   real*8  :: jecamp             ! parameter, not to be confused with jec_source in element_matrix.f90

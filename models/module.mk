@@ -9,6 +9,7 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/element_matrix_GS_perturbation.f90 	\
 	$(DIR)/element_matrix_poisson.f90 		\
 	$(DIR)/element_matrix_poisson_inverse.f90 	\
+        $(DIR)/mod_corr_neg.f90                         \
 	$(DIR)/equilibrium.f90 				\
 	$(DIR)/ffprime.f90 				\
 	$(DIR)/F_profile.f90				\
@@ -24,7 +25,6 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/read_num_profiles.f90 			\
 	$(DIR)/pellet_source.f90			\
 	$(DIR)/derive_num_profiles.f90                  \
-	$(DIR)/mod_avoid_neg_dens.f90                   \
 	$(DIR)/det_modes.f90                            \
 	$(DIR)/mod_domains.f90                          \
         $(DIR)/mod_diffusivities.f90                    \
@@ -84,12 +84,19 @@ JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)		\
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)		\
 	$(DIR)/initialise_and_broadcast_parameters.f90	\
 	$(DIR)/log_parameters.f90			\
+        $(DIR)/current.f90 				\
+	$(DIR)/temperature.f90            		\
+	$(DIR)/density.f90 				\
 	$(DIR)/read_num_profiles.f90 			\
+	$(DIR)/mod_nodes_elements.f90			\
 	$(DIR)/derive_num_profiles.f90                  \
 	$(DIR)/preset_parameters.f90			\
+        $(DIR)/mod_pellet.f90				\
 	$(DIR)/det_modes.f90                            \
+	$(DIR)/mod_domains.f90                          \
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/update_time_evol_params.f90              \
+	$(DIR)/ffprime.f90 				\
 	$(DIR)/mod_phys_module.f90
 
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
@@ -114,6 +121,7 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/bootstrap_current.f90  	                \
 	$(DIR)/mod_diffusivities.f90                    \
 	$(DIR)/mod_constants.f90                        \
+	$(DIR)/mod_nodes_elements.f90			\
 	$(DIR)/mod_phys_module.f90                      \
         $(DIR)/mod_pellet.f90                           \
         $(DIR)/neo_coef.f90                             \
@@ -142,6 +150,7 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)			\
 	$(DIR)/derive_num_profiles.f90                  \
 	$(DIR)/preset_parameters.f90			\
 	$(DIR)/det_modes.f90                            \
+	$(DIR)/mod_nodes_elements.f90			\
 	$(DIR)/mod_constants.f90                        \
 	$(DIR)/mod_phys_module.f90                      \
         $(DIR)/mod_domains.f90                          \

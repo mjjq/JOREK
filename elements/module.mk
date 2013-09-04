@@ -98,6 +98,7 @@ JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 
 JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)	\
 	$(DIR)/mod_gauss.f90			\
+	$(DIR)/hermite_1d.f90 		\
 	$(DIR)/mod_basis_at_gaussian.f90	\
 	$(DIR)/initialise_basis.f90		\
 	$(DIR)/basis_functions.f90		\

@@ -28,9 +28,9 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 #ifdef USE_HDF5
-  bufsize = ( (356+2*max_limiter+n_var) * IDBL_EXT + (34+n_tor) * INT_EXT + 43 * ILOG_EXT + (13*512+120) * CHAR_EXT )
+  bufsize = ( (358+2*max_limiter+n_var) * IDBL_EXT + (34+n_tor) * INT_EXT + 43 * ILOG_EXT + (13*512+120) * CHAR_EXT )
 #else
-  bufsize = ( (355+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor+2) * INT_EXT + 42 * ILOG_EXT + (13*512+120) * CHAR_EXT )
+  bufsize = ( (357+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor+2) * INT_EXT + 42 * ILOG_EXT + (13*512+120) * CHAR_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -312,6 +312,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(jw3,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(R_geo,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)! ###
 
+  call MPI_PACK(corr_neg_temp_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
 endif
 
 call MPI_BCAST(buffer,bufsize,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
@@ -592,6 +594,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,jw2,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
   call MPI_UNPACK(buffer,bufsize,position,jw3,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
   call MPI_UNPACK(buffer,bufsize,position,R_geo,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
+
+  call MPI_UNPACK(buffer,bufsize,position,corr_neg_temp_coef,     2,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
 endif
 

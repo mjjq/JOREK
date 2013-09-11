@@ -392,7 +392,6 @@ module exec_commands
       call load_step(istep, load_error)
       if ( load_error /= 0 ) cycle
       
-!$omp parallel do default(shared) private(error,thread_id,file_handle)
       do jcmd = 1, n_queued_commands
         
         thread_id   = omp_get_thread_num()
@@ -406,7 +405,6 @@ module exec_commands
         end if
         
       end do
-!$omp end parallel do
       
       first_step = .false.
     end do
@@ -633,7 +631,6 @@ module exec_commands
     field(:,:,:,:) = 0.d0
     
     write(*,*) 'Calculating field components.'
-    call omp_set_nested(.true.)
     !$omp parallel do default(none)                                                                &
     !$omp private(i,j,k,R,Z,R_out,Z_out,i_elm,s,t,ifail,dP_dZ,dP_dR,d2P_dZ_dphi,d2P_dR_dphi,       &
     !$omp   d2P_dZ_dR,d2P_dR2,d2P_dZ2,d2P_dR_dZ,phi,R_s,R_t,R_st,R_ss,R_tt,Z_s,Z_t,Z_st,Z_ss,      &
@@ -770,7 +767,6 @@ module exec_commands
       end do
     end do
     !$omp end parallel do
-    call omp_set_nested(.false.)
     write(*,*) 'done.'
     write(*,*) 'Writing data.'
     

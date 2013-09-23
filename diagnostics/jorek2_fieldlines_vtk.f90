@@ -33,13 +33,21 @@ real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s,
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, value_out
+real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd
+real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, psi_norm_out, theta_out
+integer :: i_elm_xpoint, i_elm_axis
+
 character :: buffer*80, lf*1, str1*12, str2*12, str3*24
 integer :: ivtk, i_var, my_id, ierr
+logical :: psi_theta
+real*8  :: coord_min(2), coord_max(2), coord_out(2)
 
 logical, external :: neighbours
 
+namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
+
 write(*,*) '***************************************'
-write(*,*) '* JOREK2_poincare                     *'
+write(*,*) '* JOREK2_fieldlines_vtk               *'
 write(*,*) '***************************************'
 write(*,*) ' nperiod : ',n_period
 
@@ -47,7 +55,51 @@ my_id=0
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
+! --- Preset parameters 
+  ! steps
+n_turns = 20             ! number of toroidal turns to follow a fieldline
+n_phi   = 1000           ! number of steps per toroidal turn
+n_lines = 800
+  !default coordinates of the starting points.
+psi_theta = .true.
+coord_min(1)= 0.95
+coord_min(2)= -PI/20.d0
+coord_max(1)= 0.97
+coord_max(2)= +PI/20.d0
+
+! --- Read parameters from namelist file 'fieldlines_vtk.nml' if it exists
+open(42, file='fieldlines_vtk.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+if (my_id .eq. 0 ) then
+   write(*,*) 'Reading parameters from fieldlines_vtk.nml namelist.'
+endif
+read(42,fieldlines_vtk_params)
+close(42)
+end if
+
+if (my_id .eq. 0 ) then
+   write(*,*)
+   write(*,*) 'Parameters:'
+   write(*,*) '-----------'
+   write(*,*) 'n_turns = ', n_turns
+   write(*,*) 'n_phi = ', n_phi
+   write(*,*) 'n_lines = ', n_lines
+   write(*,*) 'psi_theta = ', psi_theta
+   write(*,*) 'coord_min = ', coord_min
+   write(*,*) 'coord_max = ', coord_max
+endif
+
+
+do i_tor=1, n_tor
+  mode(i_tor) = + int(i_tor / 2) * n_period
+  if (my_id .eq. 0 ) then
+     write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
+  endif
+enddo
+
 call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+
+call initialise_basis                                       ! define the basis functions at the Gaussian points
 
 allocate(element_neighbours(4,element_list%n_elements))
 
@@ -73,8 +125,8 @@ enddo
 
 ! step at constant delta_phi
 
-n_turns = 20
-n_phi   = 1000
+!n_turns = 20
+!n_phi   = 1000
 
 np = 5
 nr = 2
@@ -87,7 +139,7 @@ i_var_psi = 1
 n_start = 1
 n_end   = element_list%n_elements
 
-n_lines = 800 ! 2* (n_end - n_start + 1) * nr * np
+!n_lines = 800 ! 2* (n_end - n_start + 1) * nr * np
 n_large = n_turns * n_phi * 10
 
 write(*,*) ' n_lines : ',n_lines,n_large
@@ -119,6 +171,31 @@ i_line = 0
 
 write(*,*) ' number of elements : ',element_list%n_elements
 
+if (psi_theta) then
+   !------------------------------------------------- find x-point(s), psi_bnd and psi_axis
+   !xcase = 1
+   write(*,*) ' xpoint : ',xpoint
+   write(*,*) ' xcase : ',xcase
+   if (xpoint) then
+      call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+      psi_bnd = psi_xpoint(1)
+      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+         psi_bnd = psi_xpoint(2)
+      endif
+   else
+      psi_bnd = 0.d0
+   endif
+
+   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+   
+   if (my_id .eq. 0 ) then
+      write(*,*) ' xcase,1st x-point:R,Z,psi: ',xcase, R_xpoint(1),Z_xpoint(1),psi_xpoint(1),psi_bnd
+      !   write(*,*) ' PSI_XPOINT : ',psi_xpoint,i_elm_xpoint
+      write(*,*) ' PSI_AXIS : ',psi_axis,i_elm_axis
+      write(*,*) ' RZ_AXIS : ', R_axis, Z_axis
+   endif
+endif
+
 do i =n_start, n_end
 
   if ( i_line .ge. n_lines ) cycle
@@ -135,12 +212,22 @@ do i =n_start, n_end
             
       t_ini = real(m)/real(np+1)
 
+      call var_value(i,1,s_ini,t_ini,0.d0,value_out)
+
       call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-      
-      if ((R_out .gt. 2.117) .and. (R_out .lt. 2.123) .and. &
-          (Z_out .gt. 0.147) .and. (Z_out .lt. 0.173) .and. (i_line .lt. n_lines) ) then
+      psi_norm_out = ( value_out  - psi_axis ) / (psi_bnd - psi_axis )
+      theta_out = atan2( (Z_out - Z_axis) , (R_out - R_axis) ) !/ (2.d0*PI)      
+      if (psi_theta) then
+         coord_out(1) = psi_norm_out
+         coord_out(2) = theta_out
+      else
+         coord_out(1) = R_out
+         coord_out(2) = Z_out
+      endif
+         if ((coord_out(1) .gt. coord_min(1)) .and. (coord_out(1) .lt. coord_max(1)) .and. &
+              (coord_out(2) .gt. coord_min(2)) .and. (coord_out(2) .lt. coord_max(2)) .and. (i_line .lt. n_lines) ) then
 	  
-	  write(*,'(i6,2f7.3)') i_line, R_out,Z_out
+	  write(*,'(i6,2f7.3)') i_line, coord_out
 
       do i_dir = -1,1,2
 

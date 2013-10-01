@@ -105,6 +105,7 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/preset_parameters.f90			\
 	$(DIR)/det_modes.f90                            \
 	$(DIR)/mod_constants.f90                        \
+        $(DIR)/mod_nodes_elements.f90                   \
 	$(DIR)/mod_phys_module.f90        \
         $(DIR)/mod_pellet.f90             \
 	$(DIR)/mod_domains.f90            \
@@ -239,5 +240,6 @@ JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)               \
         $(DIR)/temperature.f90                          \
         $(DIR)/current.f90                              \
         $(DIR)/ffprime.f90                              \
+        $(DIR)/mod_nodes_elements.f90                   \
         $(DIR)/mod_domains.f90                          \
         $(DIR)/mod_pellet.f90

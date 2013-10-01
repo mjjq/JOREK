@@ -157,7 +157,10 @@ module exec_commands
     error = 0
     
     call find_RZ(node_list, element_list, R, Z, R_out, Z_out, ielm, s, t, error)
-    if ( error /= 0 ) return
+    if ( error /= 0 ) then
+      write(*,*) 'ERROR: in find_RZ', R, Z
+      return
+    end if
     call interp (node_list, element_list, ielm, ivar, i_harm, s, t, variable_mode_value, P_s, P_t, &
       P_st, P_ss, P_tt)
     
@@ -211,6 +214,8 @@ module exec_commands
           call help(command, error)
         case ( 'line' )
           call line(command, first_step, file_handle, error)
+        case ( 'lfs_hfs' )
+          call lfs_hfs(command, first_step, file_handle, error)
         case ( 'namelist' )
           call load_namelist(command, file_handle, error)
         case ( 'params' )
@@ -227,6 +232,8 @@ module exec_commands
           call timesteps 
         case ( 'volume' )
           call plasma_volume(command, first_step, file_handle, error)
+        case ( 'minor_radius' )
+          call minor_radius(command, first_step, file_handle, error)
         case default
           write(*,*) 'Command "', trim(command%option(1)), '" does not exist'
           call general_help() 
@@ -237,7 +244,7 @@ module exec_commands
       
       select case ( trim(command%option(1)) )
         case ( 'axis', 'average', 'fluxsurfaces', 'gourdon', 'heatfluxpattern', 'line', 'point',   &
-          'qprofile', 'volume', 'global_parameters' )
+          'qprofile', 'volume', 'minor_radius', 'global_parameters', 'lfs_hfs' )
           call add_to_command_queue(command, error)
         case ( 'help' )
           call help(command, error)
@@ -1422,11 +1429,12 @@ module exec_commands
     if ( error /= 0 ) return
     
     ! --- Open file
-    write(filename,'(a,i5.5,a, i5.5, a)') 'plasma-current_steps', loop_min_step, '-',              &
+    write(filename,'(a,i5.5,a, i5.5, a)') 'global-params_steps', loop_min_step, '-',               &
       loop_max_step, '.dat'
     if ( first_step ) then
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
-      write(file_handle,*) '# time            ###'
+      write(file_handle,'(1x,a)') '# time            psi_limit       current [MA]    beta_p          '//  &
+        'beta_t          beta_n          W_thermal [J]'
     else
       open(unit=file_handle, file=filename, status='old', action='write', access='append',         &
         iostat=error)
@@ -1443,8 +1451,8 @@ module exec_commands
       Bgeo,current,beta_p,beta_t,beta_n,density,density_in,density_out,pressure,pressure_in,       &
       pressure_out)
     
-    write(file_handle,'(6ES16.7,3x,a,i5.5)') t_start, psi_limit, current/1.e6, beta_p, beta_t,     &
-      beta_n, '#step', index_start
+    write(file_handle,'(7ES16.7,3x,a,i5.5)') t_start, psi_limit, current/1.e6, beta_p, beta_t,     &
+      beta_n, 1.5d0*pressure_in/MU_ZERO, '#step', index_start
     
     close(unit=file_handle)
     
@@ -1655,6 +1663,26 @@ module exec_commands
   
   
   
+  !> ###
+  !!
+  !! ###
+  !!
+  recursive subroutine minor_radius(command, first_step, file_handle, error)
+  
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(in)  :: file_handle !< File handle
+    integer,            intent(out) :: error       !< Error flag
+    
+    error = 0
+    
+    !### not implemented yet
+    
+  end subroutine minor_radius
+  
+  
+  
   !> Variable-value at a certain position
   recursive subroutine point(command, first_step, file_handle, error)
     
@@ -1790,7 +1818,7 @@ module exec_commands
     write(filename,110) trim(lower_case(var(1))), '_versus_', trim(var(2)), '_from_', R0, ',', Z0, &
       ',', phi0, '_to_', R1, ',', Z1, ',', phi1, '_steps', loop_min_step, '-', loop_max_step, '.dat'
     
-    if ( first_step ) then !> default: true
+    if ( first_step ) then
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
     else
       open(unit=file_handle, file=filename, status='old',     action='write', access='append',     &
@@ -1843,6 +1871,124 @@ module exec_commands
   
   
   
+  !> Variable profiles at the low field side.
+  recursive subroutine lfs_hfs(command, first_step, file_handle, error)
+  
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(in)  :: file_handle !< File handle
+    integer,            intent(out) :: error       !< Error flag
+
+    
+    ! --- Local variables
+    integer :: ivar, i
+    character(len=1024) :: filename1, filename2
+    integer :: n_points  ! Number of points
+    integer :: i_point   ! Current point
+    integer :: ielm
+    integer :: file_handle1, file_handle2
+    real*8  :: R0, R1, R_inner, R_outer, Rmid, R_out, Z_out, s, t, s_point, R_i, Psi_norm
+    
+    error = 0
+    file_handle1 = file_handle
+    file_handle2 = file_handle + 1
+    
+    ! --- Transformation of input data
+    call check_param_count(command, 1, error)
+    if ( error /= 0 ) return
+    call check_step_imported(error)
+    if ( error /= 0 ) return
+    ivar = get_variable_number(command%option(2), error)
+    
+    ! ---- File creation
+    132 format(2a,ss,2(i5.5,a))
+    write(filename1,132) trim(lower_case(variable_names(ivar))), '_at_hfs_steps', loop_min_step, '-', loop_max_step, '.dat'
+    write(filename2,132) trim(lower_case(variable_names(ivar))), '_at_lfs_steps', loop_min_step, '-', loop_max_step, '.dat'
+    
+    if ( first_step ) then
+      open(unit=file_handle1, file=filename1, status='replace', action='write', iostat=error)
+      write(file_handle1,'(3a)') '# ', trim(lower_case(variable_names(ivar))), ' profile at high field side'
+      write(file_handle1,'(a)' ) '#'
+      write(file_handle1,'(2a)') '# Psi_N          R              ', trim(lower_case(variable_names(ivar)))
+
+      open(unit=file_handle2, file=filename2, status='replace', action='write', iostat=error)
+      write(file_handle2,'(3a)') '# ', trim(lower_case(variable_names(ivar))), ' profile at low field side'
+      write(file_handle2,'(a)' ) '#'
+      write(file_handle2,'(2a)') '# Psi_N          R              ', trim(lower_case(variable_names(ivar)))
+    else
+      open(unit=file_handle1, file=filename1, status='old',     action='write', access='append',     &
+        iostat=error)
+      open(unit=file_handle2, file=filename2, status='old',     action='write', access='append',     &
+        iostat=error)
+    end if
+    write(file_handle1,'(a,i5.5,a)') '# step ', index_start, ':'
+    write(file_handle2,'(a,i5.5,a)') '# step ', index_start, ':'
+    
+    ! --- Find end point on hfs
+    R0 = R_axis
+    R1 = 0.d0
+    do
+      Rmid = ( R0 + R1 ) / 2.d0
+      call find_RZ(node_list, element_list, (R0+R1)/2.d0, Z_axis, R_out, Z_out, ielm, s, t, error)
+      if ( error /= 0 ) then
+        R1 = Rmid
+      else
+        R0 = Rmid
+      end if
+      if ( R0 - R1 < 1.d-9 ) then
+        R_inner = R0 + 1.d-9
+        exit
+      end if
+    end do
+    
+    ! --- Find end point on lfs
+    R0 = R_axis
+    R1 = 100.d0
+    do
+      Rmid = ( R0 + R1 ) / 2.d0
+      call find_RZ(node_list, element_list, (R0+R1)/2.d0, Z_axis, R_out, Z_out, ielm, s, t, error)
+      if ( error /= 0 ) then
+        R1 = Rmid
+      else
+        R0 = Rmid
+      end if
+      if ( R1 - R0 < 1.d-9 ) then
+        R_outer = R0 - 1.d-9
+        exit
+      end if
+    end do
+    
+    ! --- Write data to file
+    n_points = get_int_setting('linepoints', error) ! get from settings: linepoints
+    
+    do i_point = 0, n_points
+      s_point = real(i_point) / real(n_points)
+      
+      R_i = R_axis + (R_inner-R_axis)*s_point
+      psi_norm = ( variable_mode_value(1, R_i, Z_axis, 1, error) - psi_axis ) / ( psi_bnd - psi_axis )
+      if ( psi_norm > 0 ) &
+        write(file_handle1,'(3ES15.7)') psi_norm, R_i, variable_mode_value(ivar, R_i, Z_axis, 1, error)
+      
+      R_i = R_axis + (R_outer-R_axis)*s_point
+      psi_norm = ( variable_mode_value(1, R_i, Z_axis, 1, error) - psi_axis ) / ( psi_bnd - psi_axis )
+      if ( psi_norm > 0 ) &
+        write(file_handle2,'(3ES15.7)') psi_norm, R_i, variable_mode_value(ivar, R_i, Z_axis, 1, error)
+      
+    end do
+    
+    write(file_handle1,*)
+    write(file_handle1,*)
+    write(file_handle2,*)
+    write(file_handle2,*)
+    
+    close (unit=file_handle1)
+    close (unit=file_handle2)
+    
+  end subroutine lfs_hfs
+  
+  
+  
   !> Output the q-profile as a function of Psi_N
   recursive subroutine qprofile(command, first_step, file_handle, error)
   
@@ -1865,7 +2011,7 @@ module exec_commands
     110 format(a,2(i5.5,a))
     write(filename,110) 'qprofile_versus_PsiN_steps', loop_min_step, '-', loop_max_step, '.dat'
     
-    if ( first_step ) then !> default: true
+    if ( first_step ) then
       open(unit=file_handle, file=filename, status='replace', action='write', iostat=error)
     else
       open(unit=file_handle, file=filename, status='old',     action='write', access='append',     &

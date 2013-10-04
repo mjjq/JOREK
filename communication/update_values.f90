@@ -57,7 +57,7 @@ if (my_id .eq. 0) then
         endif  ! index gt 0
       enddo  ! in over n_tor
 
-#ELSE
+#else
       do k=1,n_var
         do in=i_tor_min,n_tor
           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
@@ -67,7 +67,7 @@ if (my_id .eq. 0) then
           endif  ! index gt 0
         enddo  ! in over n_tor
       enddo !k over nvar
-#ENDIF
+#endif
     enddo
    
    endif
@@ -205,7 +205,7 @@ if (my_id .eq. 0) then
        node_list%node(i)%deltas(i_tor,4,n_var)   = (Delt_dsdt(i_tor))/ (9.*h_w)
     end do!(i_tor)
 
-#ELSE
+#else
 
     !***************************************************
     !     update values and deltas                     *
@@ -288,7 +288,7 @@ if (my_id .eq. 0) then
     end do!(i_tor)
   enddo !(ivar) 
 
-#ENDIF
+#endif
  endif
   
 enddo !(i)

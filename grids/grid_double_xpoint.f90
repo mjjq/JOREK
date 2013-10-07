@@ -19,7 +19,8 @@ implicit none
 ! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
-integer,                  intent(in)    :: n_flux, n_open, xcase
+integer,                  intent(in)    :: n_flux, xcase
+integer                                 :: n_open
 logical,                  intent(in)    :: force_horizontal_Xline
 integer,                  intent(inout) :: n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg  
 real*8,                   intent(in)    :: SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv
@@ -29,8 +30,6 @@ real*8,                   intent(in)    :: dPSI_open, dPSI_outer, dPSI_inner, dP
 ! --- local variables
 type (type_surface_list) :: flux_list, sep_list
 
-!type (type_node_list),    pointer :: newnode_list
-!type (type_element_list), pointer :: newelement_list
 type (type_strategic_points) , pointer     :: stpts
 type (type_new_points)       , pointer     :: nwpts
 
@@ -39,9 +38,7 @@ real*8              :: s_find(8), t_find(8), tht_x, theta, delta, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
-!real*8,allocatable  :: xout(:),xp(:),yp(:)
 real*8              :: dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
-!integer,allocatable :: keep(:,:,:)
 integer             :: i, j, k, l, m, i2, j2
 integer             :: n_psi
 integer             :: i_surf
@@ -59,7 +56,6 @@ real*8              :: psi_bnd, psi_bnd2
 real*8              :: sigmas(16)
 integer             :: n_grids(10)
 logical             :: xpoint
-!real*8,external     :: root
 character*4         :: label
 
 xpoint = .true.
@@ -136,12 +132,14 @@ if(xcase .eq. 3) then
     psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_xpoint(2)  
   endif
-  ! if we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
+  ! If we have a symmetric double-null, force the single separatrix
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
     psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
     psi_xpoint(2) = psi_xpoint(1)
     psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_bnd  
+    n_open     = 0
+    n_grids(3) = 0
   endif
 endif
 
@@ -151,12 +149,6 @@ endif
 !-------------------------------------------------------------------------------------------!
 !--------------- Define the flux values on which grid will be aligned ----------------------!
 !-------------------------------------------------------------------------------------------!
-
-!-------------------------------- Write some values
-!write(*,*) ' n_flux,   n_open,   n_tht   : ', n_flux,	n_open,   n_tht
-!if(xcase .eq. 3) then
-!  write(*,*) ' n_outer,   n_inner   : ', n_outer,   n_inner
-!endif
 
 !-------------------------------- Define number of psi values and allocate flux_list structure
 n_psi	        = n_flux   + n_open   + n_outer   + n_inner   + n_private   + n_up_priv + 1   ! this includes the magnetic axis
@@ -210,6 +202,7 @@ call define_final_grid(node_list, element_list, flux_list, &
 		       xcase, n_grids, stpts, nwpts)
 
 
+!-------------------------------- Deallocate data
 deallocate(stpts)
 deallocate(nwpts)
 call tr_unregister_mem(sizeof(stpts),"stpts",CAT_GRID)

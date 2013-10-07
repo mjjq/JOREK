@@ -7,6 +7,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, &
 
 use tr_module 
 use data_structure
+use grid_xpoint_data
 
 implicit none
 
@@ -21,7 +22,7 @@ real*8                                  :: psi_xpoint(2)
 
 ! --- local variables
 real*8, allocatable :: s_tmp(:)
-integer             :: i, j, n_pieces, i_elm
+integer             :: i, j, nPieces, i_elm
 integer 	    :: n_flux,      n_open
 integer 	    :: n_outer,     n_inner
 integer 	    :: n_private,   n_up_priv 
@@ -70,8 +71,8 @@ if(xcase .eq. 3) then
     psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_xpoint(2)  
   endif
-  ! if we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
+  ! If we have a symmetric double-null, force the single separatrix
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
     psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
     psi_xpoint(2) = psi_xpoint(1)
     psi_bnd  = psi_xpoint(1)
@@ -176,9 +177,9 @@ call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
 call find_flux_surfaces(xpoint,xcase,node_list,element_list,sep_list)  
 if(xcase .eq. 3) then
   do i=1,6
-    n_pieces = sep_list%flux_surfaces(i)%n_pieces
+    nPieces = sep_list%flux_surfaces(i)%n_pieces
     sep_list%flux_surfaces(i)%n_pieces = 0
-    do j=1,n_pieces
+    do j=1,nPieces
       i_elm = sep_list%flux_surfaces(i)%elm(j)
       rr1   = sep_list%flux_surfaces(i)%s(1,j)
       drr1  = sep_list%flux_surfaces(i)%s(2,j)
@@ -245,9 +246,9 @@ if(xcase .eq. 3) then
     enddo
   enddo
 else
-  n_pieces = sep_list%flux_surfaces(3)%n_pieces
+  nPieces = sep_list%flux_surfaces(3)%n_pieces
   sep_list%flux_surfaces(3)%n_pieces = 0
-  do j=1,n_pieces
+  do j=1,nPieces
     i_elm = sep_list%flux_surfaces(3)%elm(j)
     rr1   = sep_list%flux_surfaces(3)%s(1,j)
     drr1  = sep_list%flux_surfaces(3)%s(2,j)

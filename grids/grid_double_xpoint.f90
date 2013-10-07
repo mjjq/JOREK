@@ -1,6 +1,9 @@
-subroutine grid_double_xpoint(node_list, element_list, n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg, &
-                              SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,                         &
-		              SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1, dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv, xcase)
+subroutine grid_double_xpoint(node_list, element_list,								&
+                              n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg,	&
+                              SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, 				&
+			      SIG_private, SIG_up_priv, SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,	&
+			      dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,			&
+			      xcase, force_horizontal_Xline)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
@@ -17,6 +20,7 @@ implicit none
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
 integer,                  intent(in)    :: n_flux, n_open, xcase
+logical,                  intent(in)    :: force_horizontal_Xline
 integer,                  intent(inout) :: n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg  
 real*8,                   intent(in)    :: SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv
 real*8,                   intent(in)    :: SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1
@@ -132,6 +136,13 @@ if(xcase .eq. 3) then
     psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_xpoint(2)  
   endif
+  ! if we have a symmetric double-null, force the single separatrix
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
+    psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+    psi_xpoint(2) = psi_xpoint(1)
+    psi_bnd  = psi_xpoint(1)
+    psi_bnd2 = psi_bnd  
+  endif
 endif
 
 
@@ -176,8 +187,8 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 !-------------------------------------------------------------------------------------------!
 
 !-------------------------------- Call the routine
-call find_strategic_points(node_list, element_list, flux_list, &
-                           xcase, R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
+call find_strategic_points(node_list, element_list, flux_list, xcase, force_horizontal_Xline, &
+                           R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
 
 
 !-------------------------------------------------------------------------------------------!

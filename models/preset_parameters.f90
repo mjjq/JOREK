@@ -131,6 +131,7 @@ subroutine preset_parameters
   xleft  = 0.d0
   xpoint = .false.
   xcase  = 1
+  force_horizontal_Xline = .false.
 
   xr1  = 9999.d0
   sig1 = 9999.d0

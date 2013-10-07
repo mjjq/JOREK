@@ -414,10 +414,13 @@ program JOREK2
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
-        if (xcase .ne. 1) then
-	  call grid_double_xpoint(node_list, element_list, n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg, &
-        		          SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,			    &
-	        	          SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1, dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv, xcase)
+        if (xcase .ne. 10) then
+	  call grid_double_xpoint(node_list, element_list,								&
+                                  n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg,	&
+                                  SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, 				&
+			          SIG_private, SIG_up_priv, SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,		&
+			          dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,			&
+			          xcase, force_horizontal_Xline)
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
         		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
@@ -538,10 +541,13 @@ program JOREK2
         if (xpoint)  then
 
 !          if (.not. grid_to_wall) then
-          if (xcase .ne. 1) then
-	    call grid_double_xpoint(node_list, element_list, n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg, &
-                                    SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,                         &
-		                    SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1, dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv, xcase)
+          if (xcase .ne. 10) then
+	    call grid_double_xpoint(node_list, element_list,								&
+                                    n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg,	&
+                                    SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, 				&
+			            SIG_private, SIG_up_priv, SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,		&
+			            dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,			&
+			            xcase, force_horizontal_Xline)
           else
 	  
 	    if (.not. grid_to_wall) then

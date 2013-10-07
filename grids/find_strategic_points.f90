@@ -1,5 +1,5 @@
-subroutine find_strategic_points(node_list, element_list, flux_list, &
-                                 xcase, R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
+subroutine find_strategic_points(node_list, element_list, flux_list, xcase, force_horizontal_Xline, &
+                                 R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
 !----------------------------------------------------------------------------------------
 ! subroutine finds all the strategic points on the legs (Leg corners, strike points etc.)
 !----------------------------------------------------------------------------------------
@@ -17,7 +17,8 @@ type (type_node_list),        intent(inout) :: node_list
 type (type_element_list),     intent(inout) :: element_list
 type (type_strategic_points), intent(inout) :: stpts
 integer,                      intent(in)    :: n_grids(10) 
-integer,                      intent(in)    :: xcase  
+integer,                      intent(in)    :: xcase
+logical,                      intent(in)    :: force_horizontal_Xline
 real*8,                       intent(in)    :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), R_axis, Z_axis
 
 
@@ -376,10 +377,11 @@ if(xcase .ne. 2) then
   angle_LowerCorner       = atan2(stpts%ZLeftCorn_LowerInnerLeg-Z_xpoint(1),stpts%RLeftCorn_LowerInnerLeg-R_xpoint(1))
   stpts%angle_LowerLeft   = tht_x1 + 1.5d0*PI
   stpts%angle_LowerRight  = tht_x1 + 0.5d0*PI
-  !!! --- Depending on the equilibrium, it may be better to have a horizontal line... (eg. near double-null at JET)
-  !!!stpts%angle_LowerLeft   = PI
-  !!!stpts%angle_LowerRight  = 0.d0
-  !!! --- Depending on the equilibrium, it may be better to have a horizontal line... (eg. near double-null at JET)
+  ! --- Depending on the equilibrium, it may be better to have a horizontal line... (eg. near double-null at JET)
+  if(force_horizontal_Xline) then
+    stpts%angle_LowerLeft   = PI
+    stpts%angle_LowerRight  = 0.d0
+  endif
   if (angle_LowerCorner .lt. 0.d0)          angle_LowerCorner       = angle_LowerCorner       + 2.d0*PI
   if (stpts%angle_LowerLeft   .gt. 2.d0*PI) stpts%angle_LowerLeft   = stpts%angle_LowerLeft   - 2.d0*PI
   if (stpts%angle_LowerRight  .gt. 2.d0*PI) stpts%angle_LowerRight  = stpts%angle_LowerRight  - 2.d0*PI
@@ -397,10 +399,11 @@ if(xcase .ne. 1) then
   angle_UpperCorner       = atan2(stpts%ZLeftCorn_UpperInnerLeg-Z_xpoint(2),stpts%RLeftCorn_UpperInnerLeg-R_xpoint(2))
   stpts%angle_UpperLeft   = tht_x2 + 0.5d0*PI; if(xcase .eq. 2) stpts%angle_UpperLeft   = tht_x1 + 0.5d0*PI
   stpts%angle_UpperRight  = tht_x2 + 1.5d0*PI; if(xcase .eq. 2) stpts%angle_UpperRight  = tht_x1 + 1.5d0*PI
-  !!! --- Depending on the equilibrium, it may be better to have a horizontal line... (eg. near double-null at JET)
-  !!!stpts%angle_UpperLeft   = PI
-  !!!stpts%angle_UpperRight  = 0.d0
-  !!! --- Depending on the equilibrium, it may be better to have a horizontal line... (eg. near double-null at JET)
+  ! --- Depending on the equilibrium, it may be better to have a horizontal line... (eg. near double-null at JET)
+  if(force_horizontal_Xline) then
+    stpts%angle_UpperLeft   = PI
+    stpts%angle_UpperRight  = 0.d0
+  endif
   if (angle_UpperCorner .lt. 0.d0)          angle_UpperCorner       = angle_UpperCorner + 2.d0*PI
   if (stpts%angle_UpperLeft   .gt. 2.d0*PI) stpts%angle_UpperLeft   = stpts%angle_UpperLeft   - 2.d0*PI
   if (stpts%angle_UpperRight  .gt. 2.d0*PI) stpts%angle_UpperRight  = stpts%angle_UpperRight  - 2.d0*PI

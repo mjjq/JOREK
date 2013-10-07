@@ -27,10 +27,9 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
+bufsize = ( (357+2*max_limiter+n_var) * IDBL_EXT + (35+n_tor) * INT_EXT + 43 * ILOG_EXT + (13*512+120) * CHAR_EXT )
 #ifdef USE_HDF5
-  bufsize = ( (358+2*max_limiter+n_var) * IDBL_EXT + (34+n_tor) * INT_EXT + 43 * ILOG_EXT + (13*512+120) * CHAR_EXT )
-#else
-  bufsize = ( (357+2*max_limiter+n_var) * IDBL_EXT + (33+n_tor+2) * INT_EXT + 42 * ILOG_EXT + (13*512+120) * CHAR_EXT )
+  bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -200,6 +199,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(h5_nbsave_all,          1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! i+1
 #endif
 
+  call MPI_PACK(force_horizontal_Xline,	1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! L+1
   call MPI_PACK(n_flux,                 1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 12
   call MPI_PACK(n_tht,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 13
   call MPI_PACK(n_radial,               1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 14
@@ -483,6 +483,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,h5_nbsave_all,	  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! I+1
 #endif
 
+  call MPI_UNPACK(buffer,bufsize,position,force_horizontal_Xline, 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! L+1
   call MPI_UNPACK(buffer,bufsize,position,n_flux,                 1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 12
   call MPI_UNPACK(buffer,bufsize,position,n_tht,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 13
   call MPI_UNPACK(buffer,bufsize,position,n_radial,               1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   !14

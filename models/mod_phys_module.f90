@@ -101,22 +101,22 @@ module phys_module
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num
   
   !> @name Timestepping parameters
-  real*8  :: tstep             !< Size of the timesteps (\f$ \Delta t \f$)
-  real*8  :: tstep_n(10)       !< Alternative to tstep: Up to ten values may be given
-  integer :: nstep             !< Number of timesteps to perform
-  integer :: nstep_n(10)       !< Alternative to nstep: Up to ten values may be given
-  real*8  :: t_start           !< Time value at the start of the code run (zero or from restart file)
-  real*8  :: t_now             !< Current time value in the simulation
-  integer :: index_start       !< Time step index at the beginning of the code run (zero or from restart file)
-  integer :: index_now         !< Current time step index
-  real*8, allocatable :: xtime(:) !< Time values corresponding to the timesteps.
+  real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)
+  real*8  :: tstep_n(10)       		!< Alternative to tstep: Up to ten values may be given
+  integer :: nstep             		!< Number of timesteps to perform
+  integer :: nstep_n(10)       		!< Alternative to nstep: Up to ten values may be given
+  real*8  :: t_start           		!< Time value at the start of the code run (zero or from restart file)
+  real*8  :: t_now             		!< Current time value in the simulation
+  integer :: index_start       		!< Time step index at the beginning of the code run (zero or from restart file)
+  integer :: index_now         		!< Current time step index
+  real*8, allocatable :: xtime(:) 	!< Time values corresponding to the timesteps.
   character(len=80) :: time_evol_scheme !< Time evolution scheme to use. This determines the values
-                               !! used for time_evol_theta and time_evol_zeta.
-  real*8  :: time_evol_theta   !< Time evolution parameter theta (see documentation)
-  real*8  :: time_evol_zeta    !< Time evolution parameter zeta (see documentation)
+                               		!! used for time_evol_theta and time_evol_zeta.
+  real*8  :: time_evol_theta   		!< Time evolution parameter theta (see documentation)
+  real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see documentation)
 #ifdef USE_HDF5
-  real*8  :: h5_diag_nbtime    !< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
-  integer :: h5_nbsave_all     !< number of HDF5 files written [or # of times the HDF5 saving has been called]
+  real*8  :: h5_diag_nbtime    		!< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
+  integer :: h5_nbsave_all     		!< number of HDF5 files written [or # of times the HDF5 saving has been called]
 #endif
 
   !> @name Analytical boundary of initial grid
@@ -140,13 +140,13 @@ module phys_module
   
   !> @name Fourier expanded boundary of initial grid
   !! Boundary of the non flux-aligned initial polar grid given as Fourier series
-  integer :: mf                !< Number of entries in fbnd and fpsi
+  integer :: mf               !< Number of entries in fbnd and fpsi
   real*8  :: fbnd(512)        !< Fourier expansion of boundary
   real*8  :: fpsi(512)        !< Fourier expansion of the poloidal flux at the boundary
   
   !> @name Numerical boundary of initial grid
   !! Numerical definition of the boundary of the non flux-aligned initial polar grid.
-  integer :: n_boundary        !< Number of points in R_boundary, Z_boundary, psi_boundary.
+  integer :: n_boundary       !< Number of points in R_boundary, Z_boundary, psi_boundary.
   real*8  :: R_boundary  (512)!< Numerical R values defining the boundary
   real*8  :: Z_boundary  (512)!< Numerical Z values defining the boundary
   real*8  :: psi_boundary(512)!< Numerical values giving the poloidal flux at the boundary
@@ -206,15 +206,17 @@ module phys_module
   
   !> @name Polar Grid
   !! Parameters defining a non flux-aligned polar grid in the poloidal plane.
-  integer :: n_radial          !< Number of radial grid points
-  integer :: n_pol             !< Number of poloidal grid points
-  real*8  :: R_geo             !< Center of the grid
-  real*8  :: Z_geo             !< Center of the grid
-  real*8  :: psi_axis_init     !< Initial guess for Psi at the magnetic axis
-  real*8  :: XR_r(2)           !< Psi_N position of radial grid accumulation (two positions)
-  real*8  :: SIG_r(2)          !< Width of grid accumulation (two positions)
-  real*8  :: XR_tht(2)         !< Position of poloidal grid accumulation (0...1, two positions)
-  real*8  :: SIG_tht(2)        !< Width of grid accumulation (two positions)
+  logical :: force_horizontal_Xline     !< Force the grid line through Xpoint to be horizontal
+  					!  (instead of perpendicular to line between Xpoint and Axis)
+  integer :: n_radial          		!< Number of radial grid points
+  integer :: n_pol             		!< Number of poloidal grid points
+  real*8  :: R_geo             		!< Center of the grid
+  real*8  :: Z_geo             		!< Center of the grid
+  real*8  :: psi_axis_init     		!< Initial guess for Psi at the magnetic axis
+  real*8  :: XR_r(2)           		!< Psi_N position of radial grid accumulation (two positions)
+  real*8  :: SIG_r(2)          		!< Width of grid accumulation (two positions)
+  real*8  :: XR_tht(2)         		!< Position of poloidal grid accumulation (0...1, two positions)
+  real*8  :: SIG_tht(2)        		!< Width of grid accumulation (two positions)
   
   !> @name Flux surface grid
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.

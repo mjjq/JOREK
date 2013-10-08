@@ -23,7 +23,7 @@ real*8,                       intent(in)    :: psi_xpoint(2), R_xpoint(2), Z_xpo
 
 
 ! --- local variables
-integer  :: i, k, l, i_elm, i_surf, i_find, i_elm_find(8) , i_max
+integer  :: i, k, l, i_elm, i_surf, i_find, i_elm_find(8) , i_max, ifound
 integer  :: n_flux,   n_open,   n_outer,   n_inner,   n_private,   n_up_priv  
 real*8   :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8   :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss

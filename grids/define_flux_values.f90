@@ -93,7 +93,7 @@ call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 
 !-------------------------------- Open flux surfaces (in case of single-null)
 !-------------------------------- OR Sandwich flux surfaces (in case of double-null) - in between the two separatrices
-if (psi_xpoint(1) .ne. psi_xpoint(2)) then
+if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! Ignore in case of symmetric double-null
   call tr_allocate(s_tmp,1,n_open+1,"s_tmp",CAT_GRID)
   s_tmp = 0
   j	= n_flux

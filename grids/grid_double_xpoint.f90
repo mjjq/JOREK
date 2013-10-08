@@ -1,9 +1,4 @@
-subroutine grid_double_xpoint(node_list, element_list,								&
-                              n_flux, n_tht, n_open, n_outer, n_inner, n_private, n_up_priv, n_leg, n_up_leg,	&
-                              SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, 				&
-			      SIG_private, SIG_up_priv, SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,	&
-			      dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,			&
-			      xcase, force_horizontal_Xline)
+subroutine grid_double_xpoint(node_list, element_list)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
@@ -14,18 +9,18 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 
+! --- Input parameters
+use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg, 	&
+                           SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,	&
+                           SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,                               	&
+                           dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,                  	&
+                           xcase, force_horizontal_Xline
+
 implicit none
 
 ! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(inout) :: element_list
-integer,                  intent(in)    :: n_flux, xcase
-integer                                 :: n_open
-logical,                  intent(in)    :: force_horizontal_Xline
-integer,                  intent(inout) :: n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg  
-real*8,                   intent(in)    :: SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv
-real*8,                   intent(in)    :: SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1
-real*8,                   intent(in)    :: dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv
 
 ! --- local variables
 type (type_surface_list) :: flux_list, sep_list
@@ -33,32 +28,15 @@ type (type_surface_list) :: flux_list, sep_list
 type (type_strategic_points) , pointer     :: stpts
 type (type_new_points)       , pointer     :: nwpts
 
-real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
-real*8              :: s_find(8), t_find(8), tht_x, theta, delta, tmp1, tmp2
-real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
-real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
-real*8              :: dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
-integer             :: i, j, k, l, m, i2, j2
+real*8              :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
+real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 integer             :: n_psi
-integer             :: i_surf
-integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), i_sep, i_max, i_find, npl, ifail
-integer             :: node, index, node_start, index_xpoint, n_xpoint, j_start, j_end
-integer             :: iv, ivp, node_iv, node_ivp, i_elm
-integer             :: my_id, ielm_out
-real*8              :: Rmid, Zmid, R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
-real*8              :: R1, Z1, s_out, t_out, R_out, Z_out
-real*8              :: EJAC, RX, RY, SX, SY, CRR, CZZ, CRZ, alpha1, alpha2, alpha_max, alpha_min
-real*8              :: rr, ss, drr, dss, tt
-real*8              :: rr1, ss1, drr1, dss1
-real*8              :: rr2, ss2, drr2, dss2
+integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), ifail
+integer             :: my_id
 real*8              :: psi_bnd, psi_bnd2
 real*8              :: sigmas(16)
 integer             :: n_grids(10)
-logical             :: xpoint
-character*4         :: label
 
-xpoint = .true.
 my_id  = 1 ! Just don't want the printout...
 
 write(*,*) ' '
@@ -138,7 +116,6 @@ if(xcase .eq. 3) then
     psi_xpoint(2) = psi_xpoint(1)
     psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_bnd  
-    n_open     = 0
     n_grids(3) = 0
   endif
 endif

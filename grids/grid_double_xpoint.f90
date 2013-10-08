@@ -26,7 +26,6 @@ integer,                  intent(inout) :: n_tht, n_outer, n_inner, n_private, n
 real*8,                   intent(in)    :: SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv
 real*8,                   intent(in)    :: SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1
 real*8,                   intent(in)    :: dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv
-character(len=512),       intent(in)    :: tokamak_device
 
 ! --- local variables
 type (type_surface_list) :: flux_list, sep_list

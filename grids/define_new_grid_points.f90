@@ -6,6 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
+use phys_module, only:   tokamak_device
 
 implicit none
 
@@ -44,6 +45,7 @@ real*8              :: SIG_leg_0, SIG_leg_1
 real*8              :: SIG_up_leg_0, SIG_up_leg_1
 real*8              :: SIG_0, SIG_1
 real*8              :: bgf_tht
+logical, parameter  :: plot_grid = .false.
 
 write(*,*) '*****************************************'
 write(*,*) '* X-point grid : Define new grid points *'
@@ -565,6 +567,56 @@ do i=1,4
   if ( (xcase .eq. 2) .and. (i .eq. 2) ) nwpts%Z_min(n_start+1) = stpts%ZLeftCorn_UpperOuterLeg  ! this one is known - safer...
 enddo
 
+!------------------------------ Intersection with last surface on wall for MAST
+if(tokamak_device(1:4) .eq. 'MAST') then
+  do i=1,2
+    
+    if (i .eq. 1) then
+      n_loop  = n_leg
+      n_start = 0
+      i_surf  = stpts%i_surf_wall_low
+      Z_beg   = stpts%ZLimit_LowerMastWall
+      Z_end   = stpts%ZLimit_LowerMastWallBox
+      SIG_0   = SIG_leg_0
+      SIG_1   = SIG_leg_1
+    endif
+    if (i .eq. 2) then
+      n_loop  = n_up_leg
+      n_start = n_leg
+      i_surf  = stpts%i_surf_wall_up
+      Z_beg   = stpts%ZLimit_UpperMastWall
+      Z_end   = stpts%ZLimit_UpperMastWallBox
+      SIG_0   = SIG_up_leg_0
+      SIG_1   = SIG_up_leg_1
+    endif
+    
+    call tr_allocate(s_tmp,1,n_loop,"s_tmp",CAT_GRID)
+    s_tmp = 0
+    call meshac2(n_loop,s_tmp,0.d0,1.d0,SIG_0,SIG_1,0.6d0,1.0d0)
+    do j=1,n_loop
+
+      nwpts%Z_wall(n_start + j) = Z_beg + (Z_end-Z_beg) * s_tmp(j)
+
+      call find_Z_surface(node_list,element_list,flux_list,i_surf,nwpts%Z_wall(n_start + j),i_elm_find,s_find,t_find,i_find)
+
+      do k=1,i_find
+
+  	call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
+  		       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
+  		       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+  	if ( (i .eq. 1) .and. (RRg1 .gt. R_xpoint(1)) ) exit
+  	if ( (i .eq. 2) .and. (RRg1 .gt. R_xpoint(2)) ) exit
+
+      enddo
+
+      nwpts%R_wall(n_start + j) = RRg1
+
+    enddo
+    call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
+  enddo
+endif
+
 !------------------------------ Intersections with open surfaces
 do i=1,4
   
@@ -582,8 +634,13 @@ do i=1,4
       n_loop  = n_leg
       n_start = n_tht + n_leg
       i_surf  = n_flux+n_open+n_outer
-      Z_beg   = stpts%ZRightCorn_LowerOuterLeg
-      Z_end   = stpts%ZLimit_LowerOuterLeg
+      if(tokamak_device(1:4) .eq. 'MAST') then
+        R_beg   = stpts%RRightCorn_LowerOuterLeg
+        R_end   = stpts%RLimit_LowerOuterLeg
+      else
+        Z_beg   = stpts%ZRightCorn_LowerOuterLeg
+        Z_end   = stpts%ZLimit_LowerOuterLeg
+      endif
       SIG_0   = SIG_leg_0
       SIG_1   = SIG_leg_1
     endif
@@ -605,8 +662,13 @@ do i=1,4
         n_loop  = n_up_leg
         n_start = n_tht + n_leg + n_leg + n_up_leg
         i_surf  = n_flux+n_open+n_outer
-        Z_beg   = stpts%ZRightCorn_UpperOuterLeg
-        Z_end   = stpts%ZLimit_UpperOuterLeg
+        if(tokamak_device(1:4) .eq. 'MAST') then
+          R_beg   = stpts%RRightCorn_UpperOuterLeg
+          R_end   = stpts%RLimit_UpperOuterLeg
+	else
+          Z_beg   = stpts%ZRightCorn_UpperOuterLeg
+          Z_end   = stpts%ZLimit_UpperOuterLeg
+	endif
         SIG_0   = SIG_up_leg_0
         SIG_1   = SIG_up_leg_1
       else
@@ -641,9 +703,14 @@ do i=1,4
   call meshac2(n_loop,s_tmp,0.d0,1.d0,SIG_0,SIG_1,0.6d0,1.0d0)
   do j=1,n_loop
 
-    nwpts%Z_max(n_start + j) = Z_beg + (Z_end-Z_beg) * s_tmp(j)
+    if ((i .eq. 1) .or. (i .eq. 3) .or. (tokamak_device(1:4) .ne. 'MAST')) then
+      nwpts%Z_max(n_start + j) = Z_beg + (Z_end-Z_beg) * s_tmp(j)
+      call find_Z_surface(node_list,element_list,flux_list,i_surf,nwpts%Z_max(n_start+j),i_elm_find,s_find,t_find,i_find)
+    else
+      nwpts%R_max(n_start + j) = R_beg + (R_end-R_beg) * s_tmp(j)
+      call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_max(n_start+j),i_elm_find,s_find,t_find,i_find)
+    endif
 
-    call find_Z_surface(node_list,element_list,flux_list,i_surf,nwpts%Z_max(n_start+j),i_elm_find,s_find,t_find,i_find)
 
     do k=1,i_find
 
@@ -651,16 +718,25 @@ do i=1,4
     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
     		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-      if ( (xcase .ne. 2) .and. (i .eq. 1) .and. (RRg1 .le. R_xpoint(1)) ) exit
-      if ( (xcase .ne. 2) .and. (i .eq. 2) .and. (RRg1 .ge. R_xpoint(1)) ) exit
-      if ( (xcase .ne. 2) .and. (i .eq. 3) .and. (RRg1 .le. R_xpoint(2)) ) exit
-      if ( (xcase .ne. 2) .and. (i .eq. 4) .and. (RRg1 .ge. R_xpoint(2)) ) exit
-      if ( (xcase .eq. 2) .and. (i .eq. 1) .and. (RRg1 .le. R_xpoint(2)) ) exit
-      if ( (xcase .eq. 2) .and. (i .eq. 2) .and. (RRg1 .ge. R_xpoint(2)) ) exit
+      if   ( (xcase .eq. 2) .and. (i .eq. 1) .and. (RRg1 .le. R_xpoint(2)) ) exit
+      if   ( (xcase .eq. 2) .and. (i .eq. 2) .and. (RRg1 .ge. R_xpoint(2)) ) exit
+      if   ( (xcase .ne. 2) .and. (i .eq. 1) .and. (RRg1 .le. R_xpoint(1)) ) exit
+      if   ( (xcase .ne. 2) .and. (i .eq. 3) .and. (RRg1 .le. R_xpoint(2)) ) exit
+      if (tokamak_device(1:4) .ne. 'MAST') then
+        if ( (xcase .ne. 2) .and. (i .eq. 2) .and. (RRg1 .ge. R_xpoint(1)) ) exit
+        if ( (xcase .ne. 2) .and. (i .eq. 4) .and. (RRg1 .ge. R_xpoint(2)) ) exit
+      else
+        if ( (xcase .ne. 2) .and. (i .eq. 2) .and. (ZZg1 .lt. Z_xpoint(1)) ) exit
+        if ( (xcase .ne. 2) .and. (i .eq. 4) .and. (ZZg1 .ge. Z_xpoint(2)) ) exit
+      endif
 
     enddo
 
-    nwpts%R_max(n_start + j) = RRg1
+    if ((i .eq. 1) .or. (i .eq. 3) .or. (tokamak_device(1:4) .ne. 'MAST')) then
+      nwpts%R_max(n_start + j) = RRg1
+    else
+      nwpts%Z_max(n_start + j) = ZZg1
+    endif
 
   enddo
   call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
@@ -865,35 +941,77 @@ if(xcase .ne. 2) then
     if ( (j .eq. n_leg)   .or. (j .eq. 2*n_leg) )    delta = 0.d0
     if ( (j .eq. n_leg-1) .or. (j .eq. 2*n_leg-1) )  delta = 0.05d0
 
-    nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
-    nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-    nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	    nwpts%R_polar(1,4,n_start+j) ) / 3.d0
-    nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+    if ( (j .le. n_leg) .or. (tokamak_device(1:4) .ne. 'MAST') ) then
+      nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
+      nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	      nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
 
-    nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
-    nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-    nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	    nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
-    nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
+      nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	      nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
 
-    nwpts%R_polar(3,1,n_start+j) = nwpts%R_max(n_start+j)
-    nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_max(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-    nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	    nwpts%R_polar(3,4,n_start+j) ) / 3.d0
-    nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,1,n_start+j) = nwpts%R_max(n_start+j)
+      nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_max(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	      nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
 
-    nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_max(n_start+j)
-    nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_max(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-    nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +         nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
-    nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_max(n_start+j)
+      nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_max(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	      nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
 
-    nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
-    nwpts%R_polar(2,4,n_start+j) = nwpts%R_polar(3,4,n_start+j)
-    nwpts%R_polar(2,2,n_start+j) = ( nwpts%R_polar(2,1,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
-    nwpts%R_polar(2,3,n_start+j) = ( nwpts%R_polar(2,4,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+      nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
+      nwpts%R_polar(2,4,n_start+j) = nwpts%R_polar(3,4,n_start+j)
+      nwpts%R_polar(2,2,n_start+j) = ( nwpts%R_polar(2,1,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+      nwpts%R_polar(2,3,n_start+j) = ( nwpts%R_polar(2,4,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
 
-    nwpts%Z_polar(2,1,n_start+j) = nwpts%Z_polar(1,4,n_start+j)
-    nwpts%Z_polar(2,4,n_start+j) = nwpts%Z_polar(3,4,n_start+j)
-    nwpts%Z_polar(2,2,n_start+j) = ( nwpts%Z_polar(2,1,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
-    nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+      nwpts%Z_polar(2,1,n_start+j) = nwpts%Z_polar(1,4,n_start+j)
+      nwpts%Z_polar(2,4,n_start+j) = nwpts%Z_polar(3,4,n_start+j)
+      nwpts%Z_polar(2,2,n_start+j) = ( nwpts%Z_polar(2,1,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+      nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+    else
+      nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
+      nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	     nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
+      nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	     nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+
+      nwpts%R_polar(3,1,n_start+j) = nwpts%R_wall(j-n_leg)
+      nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_wall(j-n_leg) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	     nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_wall(j-n_leg)
+      nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_wall(j-n_leg) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	     nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+
+      nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
+      nwpts%R_polar(2,4,n_start+j) = nwpts%R_polar(3,4,n_start+j)
+      nwpts%R_polar(2,2,n_start+j) = ( nwpts%R_polar(2,1,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+      nwpts%R_polar(2,3,n_start+j) = ( nwpts%R_polar(2,4,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(2,1,n_start+j) = nwpts%Z_polar(1,4,n_start+j)
+      nwpts%Z_polar(2,4,n_start+j) = nwpts%Z_polar(3,4,n_start+j)
+      nwpts%Z_polar(2,2,n_start+j) = ( nwpts%Z_polar(2,1,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+      nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0	 
+
+      nwpts%R_polar(4,1,n_start+j) = nwpts%R_max(n_start+j)
+      nwpts%R_polar(4,4,n_start+j) = nwpts%R_wall(j-n_leg)
+      nwpts%R_polar(4,2,n_start+j) = ( 2.d0 * nwpts%R_polar(4,1,n_start+j)  +	     nwpts%R_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(4,3,n_start+j) = (        nwpts%R_polar(4,1,n_start+j)  +  2.d0 * nwpts%R_polar(4,4,n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(4,1,n_start+j) = nwpts%Z_max(n_start+j)
+      nwpts%Z_polar(4,4,n_start+j) = nwpts%Z_wall(j-n_leg)
+      nwpts%Z_polar(4,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(4,1,n_start+j)  +	     nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(4,3,n_start+j) = (        nwpts%Z_polar(4,1,n_start+j)  +  2.d0 * nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
+    endif
 
   enddo
 endif
@@ -908,35 +1026,77 @@ if(xcase .ne. 1) then
     if(xcase .eq. 2) n_start = n_tht
     if(xcase .eq. 3) n_start = n_tht+2*n_leg
 
-    nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
-    nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-    nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	    nwpts%R_polar(1,4,n_start+j) ) / 3.d0
-    nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+    if ( (j .le. n_up_leg) .or. (tokamak_device(1:4) .ne. 'MAST') ) then
+      nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
+      nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	      nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
 
-    nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
-    nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-    nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	    nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
-    nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
+      nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	      nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
 
-    nwpts%R_polar(3,1,n_start+j) = nwpts%R_max(n_start+j)
-    nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_max(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-    nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	    nwpts%R_polar(3,4,n_start+j) ) / 3.d0
-    nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,1,n_start+j) = nwpts%R_max(n_start+j)
+      nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_max(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	      nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
 
-    nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_max(n_start+j)
-    nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_max(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-    nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +         nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
-    nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_max(n_start+j)
+      nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_max(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	      nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
 
-    nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
-    nwpts%R_polar(2,4,n_start+j) = nwpts%R_polar(3,4,n_start+j)
-    nwpts%R_polar(2,2,n_start+j) = ( nwpts%R_polar(2,1,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
-    nwpts%R_polar(2,3,n_start+j) = ( nwpts%R_polar(2,4,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+      nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
+      nwpts%R_polar(2,4,n_start+j) = nwpts%R_polar(3,4,n_start+j)
+      nwpts%R_polar(2,2,n_start+j) = ( nwpts%R_polar(2,1,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+      nwpts%R_polar(2,3,n_start+j) = ( nwpts%R_polar(2,4,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
 
-    nwpts%Z_polar(2,1,n_start+j) = nwpts%Z_polar(1,4,n_start+j)
-    nwpts%Z_polar(2,4,n_start+j) = nwpts%Z_polar(3,4,n_start+j)
-    nwpts%Z_polar(2,2,n_start+j) = ( nwpts%Z_polar(2,1,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
-    nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+      nwpts%Z_polar(2,1,n_start+j) = nwpts%Z_polar(1,4,n_start+j)
+      nwpts%Z_polar(2,4,n_start+j) = nwpts%Z_polar(3,4,n_start+j)
+      nwpts%Z_polar(2,2,n_start+j) = ( nwpts%Z_polar(2,1,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+      nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+    else
+      nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
+      nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	      nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
+      nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	      nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+
+      nwpts%R_polar(3,1,n_start+j) = nwpts%R_wall(j-n_up_leg+n_leg)
+      nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_wall(j-n_up_leg+n_leg) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	      nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_wall(j-n_up_leg+n_leg)
+      nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_wall(j-n_up_leg+n_leg) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	      nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+
+      nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
+      nwpts%R_polar(2,4,n_start+j) = nwpts%R_polar(3,4,n_start+j)
+      nwpts%R_polar(2,2,n_start+j) = ( nwpts%R_polar(2,1,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+      nwpts%R_polar(2,3,n_start+j) = ( nwpts%R_polar(2,4,n_start+j) +  2.d0 * nwpts%R_sep(n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(2,1,n_start+j) = nwpts%Z_polar(1,4,n_start+j)
+      nwpts%Z_polar(2,4,n_start+j) = nwpts%Z_polar(3,4,n_start+j)
+      nwpts%Z_polar(2,2,n_start+j) = ( nwpts%Z_polar(2,1,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+      nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
+
+      nwpts%R_polar(4,1,n_start+j) = nwpts%R_max(n_start+j)
+      nwpts%R_polar(4,4,n_start+j) = nwpts%R_wall(j-n_up_leg+n_leg)
+      nwpts%R_polar(4,2,n_start+j) = ( 2.d0 * nwpts%R_polar(4,1,n_start+j)  +	      nwpts%R_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(4,3,n_start+j) = (        nwpts%R_polar(4,1,n_start+j)  +  2.d0 * nwpts%R_polar(4,4,n_start+j) ) / 3.d0
+
+      nwpts%Z_polar(4,1,n_start+j) = nwpts%Z_max(n_start+j)
+      nwpts%Z_polar(4,4,n_start+j) = nwpts%Z_wall(j-n_up_leg+n_leg)
+      nwpts%Z_polar(4,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(4,1,n_start+j)  +	      nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(4,3,n_start+j) = (        nwpts%Z_polar(4,1,n_start+j)  +  2.d0 * nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
+    endif
 
   enddo
 endif
@@ -949,7 +1109,12 @@ call tr_allocate(xp,1,npl,"xp",CAT_GRID)
 call tr_allocate(yp,1,npl,"yp",CAT_GRID)
 do j=1,n_tht_2
 
-  do m=1,n_pieces
+  n_loop = 3
+  if(tokamak_device(1:4) .eq. 'MAST') then
+    if ((j .gt. n_tht+n_leg) .and. (j .le. n_tht+2*n_leg)) n_loop = 4
+    if ((j .gt. n_tht+2*n_leg+n_up_leg) .and. (j .le. n_tht+2*n_leg+2*n_up_leg)) n_loop = 4
+  endif
+  do m=1,n_loop
 
     do k=1,npl
       ss = -1. + 2.*float(k-1)/float(npl-1)
@@ -1254,90 +1419,96 @@ endif
 
 
 !----------------------------------- Print a python file that plots the bound points
-!open(100,file='plot_bound_points.py')
-!  write(100,'(A)')	    '#!/usr/bin/env python'
-!  write(100,'(A)')	    'import numpy as N'
-!  write(100,'(A)')	    'import pylab'
-!  write(100,'(A)')	    'def main():'
-!  write(100,'(A,i6,A)')     ' r = N.zeros(',2*n_tht_2+2*n_leg+2*n_up_leg,')'
-!  write(100,'(A,i6,A)')     ' z = N.zeros(',2*n_tht_2+2*n_leg+2*n_up_leg,')'
-!  do j=1,n_tht_2
-!    write(100,'(A,i6,A,f)') ' r[',j-1,'] = ',nwpts%R_sep(j)
-!    write(100,'(A,i6,A,f)') ' z[',j-1,'] = ',nwpts%Z_sep(j)
-!  enddo
-!  do j=1,n_tht_2
-!    write(100,'(A,i6,A,f)') ' r[',n_tht_2+j-1,'] = ',nwpts%R_max(j)
-!    write(100,'(A,i6,A,f)') ' z[',n_tht_2+j-1,'] = ',nwpts%Z_max(j)
-!  enddo
-!  do j=1,2*n_leg
-!    write(100,'(A,i6,A,f)') ' r[',2*n_tht_2+j-1,'] = ',nwpts%R_min(j)
-!    write(100,'(A,i6,A,f)') ' z[',2*n_tht_2+j-1,'] = ',nwpts%Z_min(j)
-!  enddo
-!  do j=1,2*n_up_leg
-!    write(100,'(A,i6,A,f)') ' r[',2*n_tht_2+2*n_leg+j-1,'] = ',nwpts%R_min(2*n_leg+j)
-!    write(100,'(A,i6,A,f)') ' z[',2*n_tht_2+2*n_leg+j-1,'] = ',nwpts%Z_min(2*n_leg+j)
-!  enddo
-!  write(100,'(A,i6,A)')     ' for i in range (0,',2*n_tht_2+2*n_leg+2*n_up_leg,'):'
-!  write(100,'(A)')	    '  pylab.plot(r[i:i+1],z[i:i+1], "r.")'
-!  write(100,'(A)')	    ' pylab.axis("equal")'
-!  write(100,'(A)')	    ' pylab.show()'
-!  write(100,'(A)')	    ' '
-!  write(100,'(A)')	    'main()'
-!close(100)
+if (plot_grid) then
+  open(100,file='plot_bound_points.py')
+    write(100,'(A)')	     '#!/usr/bin/env python'
+    write(100,'(A)')	     'import numpy as N'
+    write(100,'(A)')	     'import pylab'
+    write(100,'(A)')	     'def main():'
+    write(100,'(A,i6,A)')     ' r = N.zeros(',2*n_tht_2+2*n_leg+2*n_up_leg,')'
+    write(100,'(A,i6,A)')     ' z = N.zeros(',2*n_tht_2+2*n_leg+2*n_up_leg,')'
+    do j=1,n_tht_2
+      write(100,'(A,i6,A,f15.4)') ' r[',j-1,'] = ',nwpts%R_sep(j)
+      write(100,'(A,i6,A,f15.4)') ' z[',j-1,'] = ',nwpts%Z_sep(j)
+    enddo
+    do j=1,n_tht_2
+      write(100,'(A,i6,A,f15.4)') ' r[',n_tht_2+j-1,'] = ',nwpts%R_max(j)
+      write(100,'(A,i6,A,f15.4)') ' z[',n_tht_2+j-1,'] = ',nwpts%Z_max(j)
+    enddo
+    do j=1,2*n_leg
+      write(100,'(A,i6,A,f15.4)') ' r[',2*n_tht_2+j-1,'] = ',nwpts%R_min(j)
+      write(100,'(A,i6,A,f15.4)') ' z[',2*n_tht_2+j-1,'] = ',nwpts%Z_min(j)
+    enddo
+    do j=1,2*n_up_leg
+      write(100,'(A,i6,A,f15.4)') ' r[',2*n_tht_2+2*n_leg+j-1,'] = ',nwpts%R_min(2*n_leg+j)
+      write(100,'(A,i6,A,f15.4)') ' z[',2*n_tht_2+2*n_leg+j-1,'] = ',nwpts%Z_min(2*n_leg+j)
+    enddo
+    write(100,'(A,i6,A)')     ' for i in range (0,',2*n_tht_2+2*n_leg+2*n_up_leg,'):'
+    write(100,'(A)')	     '  pylab.plot(r[i:i+1],z[i:i+1], "r.")'
+    write(100,'(A)')	     ' pylab.axis("equal")'
+    write(100,'(A)')	     ' pylab.show()'
+    write(100,'(A)')	     ' '
+    write(100,'(A)')	     'main()'
+  close(100)
+endif
 
 !----------------------------------- Print a python file that plots the extrapolation points
-!open(101,file='plot_extra_points.py')
-!  write(101,'(A)')	    '#!/usr/bin/env python'
-!  write(101,'(A)')	    'import numpy as N'
-!  write(101,'(A)')	    'import pylab'
-!  write(101,'(A)')	    'def main():'
-!  write(101,'(A,i6,A)')     ' r = N.zeros(',3*n_tht_2,')'
-!  write(101,'(A,i6,A)')     ' z = N.zeros(',3*n_tht_2,')'
-!  do j=1,n_tht
-!    write(101,'(A,i6,A,f)') ' r[',3*(j-1),'] = ',R_axis
-!    write(101,'(A,i6,A,f)') ' z[',3*(j-1),'] = ',Z_axis
-!    write(101,'(A,i6,A,f)') ' r[',3*(j-1)+1,'] = ',nwpts%R_sep(j)
-!    write(101,'(A,i6,A,f)') ' z[',3*(j-1)+1,'] = ',nwpts%Z_sep(j)
-!    write(101,'(A,i6,A,f)') ' r[',3*(j-1)+2,'] = ',nwpts%RR_new(n_psi,j)
-!    write(101,'(A,i6,A,f)') ' z[',3*(j-1)+2,'] = ',nwpts%ZZ_new(n_psi,j)
-!  enddo
-!  do j=n_tht+1,n_tht_2
-!    write(101,'(A,i6,A,f)') ' r[',3*(j-1),'] = ',nwpts%R_min(j)
-!    write(101,'(A,i6,A,f)') ' z[',3*(j-1),'] = ',nwpts%Z_min(j)
-!    write(101,'(A,i6,A,f)') ' r[',3*(j-1)+1,'] = ',nwpts%R_sep(j)
-!    write(101,'(A,i6,A,f)') ' z[',3*(j-1)+1,'] = ',nwpts%Z_sep(j)
-!    write(101,'(A,i6,A,f)') ' r[',3*(j-1)+2,'] = ',nwpts%R_max(j)
-!    write(101,'(A,i6,A,f)') ' z[',3*(j-1)+2,'] = ',nwpts%Z_max(j)
-!  enddo
-!  write(101,'(A,i6,A)')     ' for i in range (0,',n_tht_2,'):'
-!  write(101,'(A)')	    '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r")'
-!  write(101,'(A)')	    '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r+")'
-!  write(101,'(A)')	    ' pylab.axis("equal")'
-!  write(101,'(A)')	    ' pylab.show()'
-!  write(101,'(A)')	    ' '
-!  write(101,'(A)')	    'main()'
-!close(101)
+if (plot_grid) then
+  open(101,file='plot_extra_points.py')
+    write(101,'(A)')	     '#!/usr/bin/env python'
+    write(101,'(A)')	     'import numpy as N'
+    write(101,'(A)')	     'import pylab'
+    write(101,'(A)')	     'def main():'
+    write(101,'(A,i6,A)')     ' r = N.zeros(',3*n_tht_2,')'
+    write(101,'(A,i6,A)')     ' z = N.zeros(',3*n_tht_2,')'
+    do j=1,n_tht
+      write(101,'(A,i6,A,f15.4)') ' r[',3*(j-1),'] = ',R_axis
+      write(101,'(A,i6,A,f15.4)') ' z[',3*(j-1),'] = ',Z_axis
+      write(101,'(A,i6,A,f15.4)') ' r[',3*(j-1)+1,'] = ',nwpts%R_sep(j)
+      write(101,'(A,i6,A,f15.4)') ' z[',3*(j-1)+1,'] = ',nwpts%Z_sep(j)
+      write(101,'(A,i6,A,f15.4)') ' r[',3*(j-1)+2,'] = ',nwpts%RR_new(n_psi,j)
+      write(101,'(A,i6,A,f15.4)') ' z[',3*(j-1)+2,'] = ',nwpts%ZZ_new(n_psi,j)
+    enddo
+    do j=n_tht+1,n_tht_2
+      write(101,'(A,i6,A,f15.4)') ' r[',3*(j-1),'] = ',nwpts%R_min(j)
+      write(101,'(A,i6,A,f15.4)') ' z[',3*(j-1),'] = ',nwpts%Z_min(j)
+      write(101,'(A,i6,A,f15.4)') ' r[',3*(j-1)+1,'] = ',nwpts%R_sep(j)
+      write(101,'(A,i6,A,f15.4)') ' z[',3*(j-1)+1,'] = ',nwpts%Z_sep(j)
+      write(101,'(A,i6,A,f15.4)') ' r[',3*(j-1)+2,'] = ',nwpts%R_max(j)
+      write(101,'(A,i6,A,f15.4)') ' z[',3*(j-1)+2,'] = ',nwpts%Z_max(j)
+    enddo
+    write(101,'(A,i6,A)')     ' for i in range (0,',n_tht_2,'):'
+    write(101,'(A)')	     '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r")'
+    write(101,'(A)')	     '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r+")'
+    write(101,'(A)')	     ' pylab.axis("equal")'
+    write(101,'(A)')	     ' pylab.show()'
+    write(101,'(A)')	     ' '
+    write(101,'(A)')	     'main()'
+  close(101)
+endif
 
 !----------------------------------- Print a python file that plots the new grid points
-!open(102,file='plot_new_points.py')
-!  write(102,'(A)')	   '#!/usr/bin/env python'
-!  write(102,'(A)')	   'import numpy as N'
-!  write(102,'(A)')	   'import pylab'
-!  write(102,'(A)')	   'def main():'
-!  write(102,'(A,i6,A)')     ' r = N.zeros(',(n_psi)*n_tht_2,')'
-!  write(102,'(A,i6,A)')     ' z = N.zeros(',(n_psi)*n_tht_2,')'
-!  do i=1,n_psi
-!    do j=1,n_tht_2
-!    write(102,'(A,i6,A,f)') ' r[',(i-1)*(n_tht_2)+j-1,'] = ',nwpts%RR_new(i,j)
-!    write(102,'(A,i6,A,f)') ' z[',(i-1)*(n_tht_2)+j-1,'] = ',nwpts%ZZ_new(i,j)
-!    enddo
-!  enddo
-!  write(102,'(A,i6,A,i6,A)')' pylab.plot(r[0:',(n_psi)*n_tht_2,'],z[0:',(n_psi)*n_tht_2,'], "r.")'
-!  write(102,'(A)')	   ' pylab.axis("equal")'
-!  write(102,'(A)')	   ' pylab.show()'
-!  write(102,'(A)')	   ' '
-!  write(102,'(A)')	   'main()'
-!close(102)
+if (plot_grid) then
+  open(102,file='plot_new_points.py')
+    write(102,'(A)')	    '#!/usr/bin/env python'
+    write(102,'(A)')	    'import numpy as N'
+    write(102,'(A)')	    'import pylab'
+    write(102,'(A)')	    'def main():'
+    write(102,'(A,i6,A)')     ' r = N.zeros(',(n_psi)*n_tht_2,')'
+    write(102,'(A,i6,A)')     ' z = N.zeros(',(n_psi)*n_tht_2,')'
+    do i=1,n_psi
+      do j=1,n_tht_2
+      write(102,'(A,i6,A,f15.4)') ' r[',(i-1)*(n_tht_2)+j-1,'] = ',nwpts%RR_new(i,j)
+      write(102,'(A,i6,A,f15.4)') ' z[',(i-1)*(n_tht_2)+j-1,'] = ',nwpts%ZZ_new(i,j)
+      enddo
+    enddo
+    write(102,'(A,i6,A,i6,A)')' pylab.plot(r[0:',(n_psi)*n_tht_2,'],z[0:',(n_psi)*n_tht_2,'], "r.")'
+    write(102,'(A)')	    ' pylab.axis("equal")'
+    write(102,'(A)')	    ' pylab.show()'
+    write(102,'(A)')	    ' '
+    write(102,'(A)')	    'main()'
+  close(102)
+endif
 
 return
 end subroutine define_new_grid_points

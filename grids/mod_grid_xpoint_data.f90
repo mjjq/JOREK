@@ -5,7 +5,7 @@ module grid_xpoint_data
   real*8,  parameter :: symmetric_threshold = 1.d-4
   integer, parameter :: n_flux_max = 1024
   integer, parameter :: n_tht_max  = 2048
-  integer, parameter :: n_pieces   = 3
+  integer, parameter :: n_pieces   = 4
 
   type type_strategic_points                      !< type definition for strategic points
     real*8	      :: RLeftCorn_LowerInnerLeg,  ZLeftCorn_LowerInnerLeg  !< LeftCorn_LowerInnerLeg
@@ -30,12 +30,18 @@ module grid_xpoint_data
     real*8	      :: RLimit_UpperInnerLeg,     ZLimit_UpperInnerLeg     !< Limit_UpperInnerLeg 
     real*8	      :: angle_LowerLeft,          angle_LowerRight         !< Angle of horizontal line at lower Xpoint 
     real*8	      :: angle_UpperLeft,          angle_UpperRight         !< Angle of horizontal line at upper Xpoint
+    real*8	      :: RLimit_UpperMastWall,     ZLimit_UpperMastWall     !< Limit_UpperMastWall
+    real*8	      :: RLimit_LowerMastWall,     ZLimit_LowerMastWall     !< Limit_LowerMastWall
+    real*8	      :: RLimit_UpperMastWallBox,  ZLimit_UpperMastWallBox  !< Limit_UpperMastWall
+    real*8	      :: RLimit_LowerMastWallBox,  ZLimit_LowerMastWallBox  !< Limit_LowerMastWall
+    integer	      :: i_surf_wall_low, i_surf_wall_up                    !< Last Surfaces on MastWall
   end type type_strategic_points
   
   type type_new_points                      !< type definition for new grid points
     real*8 	      :: R_sep(n_tht_max), Z_sep(n_tht_max)
     real*8 	      :: R_max(n_tht_max), Z_max(n_tht_max)
     real*8 	      :: R_min(n_tht_max), Z_min(n_tht_max)
+    real*8 	      :: R_wall(n_tht_max),Z_wall(n_tht_max)
     real*8 	      :: RR_new(n_flux_max,n_tht_max),ZZ_new(n_flux_max,n_tht_max)
     real*8 	      :: s_flux(n_flux_max,n_tht_max),t_flux(n_flux_max,n_tht_max),t_tht(n_flux_max,n_tht_max)
     real*8 	      :: R_polar(n_pieces,4,n_tht_max),Z_polar(n_pieces,4,n_tht_max)

@@ -43,6 +43,7 @@ real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, PSI_R, PSI_Z
 real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
+logical, parameter  :: plot_grid = .false.
 
 
 write(*,*) '*****************************************'
@@ -437,109 +438,119 @@ write(*,*) '                 Definition of nodes complete : '
 write(*,*) '                     number of nodes = ',newnode_list%n_nodes
 
 !-------------------------------- Plot all the nodes
-!call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
-!call tr_allocate(xp,1,index,"xp")
-!call tr_allocate(yp,1,index,"yp")
-!do i=1,newnode_list%n_nodes
-!  xp(i) = newnode_list%node(i)%x(1,1)
-!  yp(i) = newnode_list%node(i)%x(1,2)
-!enddo
-!call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
-!call tr_deallocate(xp,"xp")
-!call tr_deallocate(yp,"yp")
+if (plot_grid) then
+  call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
+  call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
+  call tr_allocate(xp,1,index,"xp")
+  call tr_allocate(yp,1,index,"yp")
+  do i=1,newnode_list%n_nodes
+    xp(i) = newnode_list%node(i)%x(1,1)
+    yp(i) = newnode_list%node(i)%x(1,2)
+  enddo
+  call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
+  call tr_deallocate(xp,"xp")
+  call tr_deallocate(yp,"yp")
+endif
 
 !-------------------------------- Plot the boundary nodes only
-!call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .ne. 0) then
-!    index=index+1
-!  endif
-!enddo
-!call tr_allocate(xp,1,index,"xp")
-!call tr_allocate(yp,1,index,"yp")
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .ne. 0) then
-!    index=index+1
-!    xp(index) = newnode_list%node(i)%x(1,1)
-!    yp(index) = newnode_list%node(i)%x(1,2)
-!  endif
-!enddo
-!call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
-!call tr_deallocate(xp,"xp")
-!call tr_deallocate(yp,"yp")
+if (plot_grid) then
+  call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
+  call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .ne. 0) then
+      index=index+1
+    endif
+  enddo
+  call tr_allocate(xp,1,index,"xp")
+  call tr_allocate(yp,1,index,"yp")
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .ne. 0) then
+      index=index+1
+      xp(index) = newnode_list%node(i)%x(1,1)
+      yp(index) = newnode_list%node(i)%x(1,2)
+    endif
+  enddo
+  call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
+  call tr_deallocate(xp,"xp")
+  call tr_deallocate(yp,"yp")
+endif
 
 !-------------------------------- Plot the divertor nodes only
-!call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .eq. 1) then
-!    index=index+1
-!  endif
-!enddo
-!call tr_allocate(xp,1,index,"xp")
-!call tr_allocate(yp,1,index,"yp")
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .eq. 1) then
-!    index=index+1
-!    xp(index) = newnode_list%node(i)%x(1,1)
-!    yp(index) = newnode_list%node(i)%x(1,2)
-!  endif
-!enddo
-!call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
-!call tr_deallocate(xp,"xp")
-!call tr_deallocate(yp,"yp")
+if (plot_grid) then
+  call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
+  call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .eq. 1) then
+      index=index+1
+    endif
+  enddo
+  call tr_allocate(xp,1,index,"xp")
+  call tr_allocate(yp,1,index,"yp")
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .eq. 1) then
+      index=index+1
+      xp(index) = newnode_list%node(i)%x(1,1)
+      yp(index) = newnode_list%node(i)%x(1,2)
+    endif
+  enddo
+  call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
+  call tr_deallocate(xp,"xp")
+  call tr_deallocate(yp,"yp")
+endif
 
 !-------------------------------- Plot the open flux surface nodes only
-!call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .eq. 2) then
-!    index=index+1
-!  endif
-!enddo
-!call tr_allocate(xp,1,index,"xp")
-!call tr_allocate(yp,1,index,"yp")
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .eq. 2) then
-!    index=index+1
-!    xp(index) = newnode_list%node(i)%x(1,1)
-!    yp(index) = newnode_list%node(i)%x(1,2)
-!  endif
-!enddo
-!call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
-!call tr_deallocate(xp,"xp")
-!call tr_deallocate(yp,"yp")
+if (plot_grid) then
+  call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
+  call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .eq. 2) then
+      index=index+1
+    endif
+  enddo
+  call tr_allocate(xp,1,index,"xp")
+  call tr_allocate(yp,1,index,"yp")
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .eq. 2) then
+      index=index+1
+      xp(index) = newnode_list%node(i)%x(1,1)
+      yp(index) = newnode_list%node(i)%x(1,2)
+    endif
+  enddo
+  call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
+  call tr_deallocate(xp,"xp")
+  call tr_deallocate(yp,"yp")
+endif
 
 !-------------------------------- Plot the corner nodes only
-!call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .eq. 3) then
-!    index=index+1
-!  endif
-!enddo
-!call tr_allocate(xp,1,index,"xp")
-!call tr_allocate(yp,1,index,"yp")
-!index=0
-!do i=1,newnode_list%n_nodes
-!  if(newnode_list%node(i)%boundary .eq. 3) then
-!    index=index+1
-!    xp(index) = newnode_list%node(i)%x(1,1)
-!    yp(index) = newnode_list%node(i)%x(1,2)
-!  endif
-!enddo
-!call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
-!call tr_deallocate(xp,"xp")
-!call tr_deallocate(yp,"yp")
+if (plot_grid) then
+  call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
+  call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .eq. 3) then
+      index=index+1
+    endif
+  enddo
+  call tr_allocate(xp,1,index,"xp")
+  call tr_allocate(yp,1,index,"yp")
+  index=0
+  do i=1,newnode_list%n_nodes
+    if(newnode_list%node(i)%boundary .eq. 3) then
+      index=index+1
+      xp(index) = newnode_list%node(i)%x(1,1)
+      yp(index) = newnode_list%node(i)%x(1,2)
+    endif
+  enddo
+  call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
+  call tr_deallocate(xp,"xp")
+  call tr_deallocate(yp,"yp")
+endif
 
 !-------------------------------- Verify that only the Xpoint and the magnetic axis appear more than once
 !do i=n_tht-1,newnode_list%n_nodes
@@ -948,58 +959,62 @@ write(*,*) '                 Definition of elements complete : '
 write(*,*) '                     number of elements = ',newelement_list%n_elements
 
 !-------------------------------- Plot the elements' nodes
-!call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
-!k = 4*index
-!call tr_allocate(xp,1,k,"xp")
-!call tr_allocate(yp,1,k,"yp")
-!do j=1,newelement_list%n_elements
-!  do i=1,4
-!    k = newelement_list%element(j)%vertex(i)
-!    xp(4*(j-1)+i) = newnode_list%node(k)%x(1,1)
-!    yp(4*(j-1)+i) = newnode_list%node(k)%x(1,2)
-!  enddo
-!enddo
-!k = 4*index
-!call lplot(1,1,421,xp,yp,-k,1,'R',1,'Z',1,'nodes',5)
-!call tr_deallocate(xp,"xp")
-!call tr_deallocate(yp,"yp")
+if (plot_grid) then
+  call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
+  call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
+  k = 4*index
+  call tr_allocate(xp,1,k,"xp")
+  call tr_allocate(yp,1,k,"yp")
+  do j=1,newelement_list%n_elements
+    do i=1,4
+      k = newelement_list%element(j)%vertex(i)
+      xp(4*(j-1)+i) = newnode_list%node(k)%x(1,1)
+      yp(4*(j-1)+i) = newnode_list%node(k)%x(1,2)
+    enddo
+  enddo
+  k = 4*index
+  call lplot(1,1,421,xp,yp,-k,1,'R',1,'Z',1,'nodes',5)
+  call tr_deallocate(xp,"xp")
+  call tr_deallocate(yp,"yp")
+endif
 
 !----------------------------------- Print a python file that plots a cross with the 4 nodes of each element
-!n_loop = newelement_list%n_elements
-!open(101,file='plot_elements.py')
-!  write(101,'(A)')	   '#!/usr/bin/env python'
-!  write(101,'(A)')	   'import numpy as N'
-!  write(101,'(A)')	   'import pylab'
-!  write(101,'(A)')	   'def main():'
-!  write(101,'(A,i6,A)')    ' r = N.zeros(',4*n_loop,')'
-!  write(101,'(A,i6,A)')    ' z = N.zeros(',4*n_loop,')'
-!  do j=1,n_loop
-!    do i=1,2
-!      index = newelement_list%element(j)%vertex(i)
-!      write(101,'(A,i6,A,f)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1)
-!      write(101,'(A,i6,A,f)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,2)
-!      index = newelement_list%element(j)%vertex(i+2)
-!      write(101,'(A,i6,A,f)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1)
-!      write(101,'(A,i6,A,f)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,2)
-!    enddo
-!  enddo
-!  write(101,'(A,i6,A)')    ' for i in range (0,',n_loop*2,'):'
-!  write(101,'(A)')	   '  pylab.plot(r[2*i:2*i+2],z[2*i:2*i+2], "r")'
-!  do j=1,n_loop
-!    do i=1,4
-!      index = newelement_list%element(j)%vertex(i)
-!      write(101,'(A,i6,A,f)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1)
-!      write(101,'(A,i6,A,f)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,2)
-!    enddo
-!  enddo
-!  write(101,'(A,i6,A)')    ' for i in range (0,',n_loop,'):'
-!  write(101,'(A)')	   '  pylab.plot(r[4*i:4*i+4],z[4*i:4*i+4], "b")'
-!  write(101,'(A)')	   ' pylab.axis("equal")'
-!  write(101,'(A)')	   ' pylab.show()'
-!  write(101,'(A)')	   ' '
-!  write(101,'(A)')	   'main()'
-!close(101)
+if (plot_grid) then
+  n_loop = newelement_list%n_elements
+  open(101,file='plot_elements.py')
+    write(101,'(A)')	    '#!/usr/bin/env python'
+    write(101,'(A)')	    'import numpy as N'
+    write(101,'(A)')	    'import pylab'
+    write(101,'(A)')	    'def main():'
+    write(101,'(A,i6,A)')    ' r = N.zeros(',4*n_loop,')'
+    write(101,'(A,i6,A)')    ' z = N.zeros(',4*n_loop,')'
+    do j=1,n_loop
+      do i=1,2
+ 	index = newelement_list%element(j)%vertex(i)
+ 	write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1)
+ 	write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,2)
+ 	index = newelement_list%element(j)%vertex(i+2)
+ 	write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1)
+ 	write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,2)
+      enddo
+    enddo
+    write(101,'(A,i6,A)')    ' for i in range (0,',n_loop*2,'):'
+    write(101,'(A)')	    '  pylab.plot(r[2*i:2*i+2],z[2*i:2*i+2], "r")'
+    do j=1,n_loop
+      do i=1,4
+ 	index = newelement_list%element(j)%vertex(i)
+ 	write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1)
+ 	write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,2)
+      enddo
+    enddo
+    write(101,'(A,i6,A)')    ' for i in range (0,',n_loop,'):'
+    write(101,'(A)')	    '  pylab.plot(r[4*i:4*i+4],z[4*i:4*i+4], "b")'
+    write(101,'(A)')	    ' pylab.axis("equal")'
+    write(101,'(A)')	    ' pylab.show()'
+    write(101,'(A)')	    ' '
+    write(101,'(A)')	    'main()'
+  close(101)
+endif
 
 
 

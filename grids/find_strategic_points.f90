@@ -8,6 +8,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
+use phys_module, only:   tokamak_device
 
 implicit none
 
@@ -31,6 +32,7 @@ real*8   :: rr1, ss1, s_find(8), t_find(8)
 real*8   :: tht_x, tht_x1, tht_x2
 real*8   :: angle_LowerCorner 
 real*8   :: angle_UpperCorner
+real*8   :: R_wall_max
 
 n_flux    = n_grids(1)
 n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
@@ -49,15 +51,15 @@ if(xcase .eq. 2) then
   stpts%RRightCorn_LowerInnerLeg = 0.d0;    stpts%ZRightCorn_LowerInnerLeg = 0.d0	   
   stpts%RLeftCorn_LowerOuterLeg  = 0.d0;    stpts%ZLeftCorn_LowerOuterLeg  = 0.d0	   
   stpts%RRightCorn_LowerOuterLeg = 0.d0;    stpts%ZRightCorn_LowerOuterLeg = 0.d0	   
-  stpts%RStrike_LowerInnerLeg	 = 0.d0;     stpts%ZStrike_LowerInnerLeg   = 0.d0 	     
-  stpts%RStrike_LowerOuterLeg	 = 0.d0;     stpts%ZStrike_LowerOuterLeg   = 0.d0 	     
+  stpts%RStrike_LowerInnerLeg	 = 0.d0;    stpts%ZStrike_LowerInnerLeg    = 0.d0 	     
+  stpts%RStrike_LowerOuterLeg	 = 0.d0;    stpts%ZStrike_LowerOuterLeg    = 0.d0 	     
 else
   stpts%RLeftCorn_LowerInnerLeg  = 999.d0;  stpts%ZLeftCorn_LowerInnerLeg  = 1.d10	
   stpts%RRightCorn_LowerInnerLeg = 1.d10;   stpts%ZRightCorn_LowerInnerLeg = 999.d0	
   stpts%RLeftCorn_LowerOuterLeg  = -1.d10;  stpts%ZLeftCorn_LowerOuterLeg  = 999.d0	
-  stpts%RRightCorn_LowerOuterLeg = 999.d0;  stpts%ZRightCorn_LowerOuterLeg = 1.d10	
-  stpts%RStrike_LowerInnerLeg	 = 999.d0;   stpts%ZStrike_LowerInnerLeg   = 1.d10	
-  stpts%RStrike_LowerOuterLeg	 = 999.d0;   stpts%ZStrike_LowerOuterLeg   = 1.d10	
+  stpts%RRightCorn_LowerOuterLeg = -1.d10;  stpts%ZRightCorn_LowerOuterLeg = 1.d10	
+  stpts%RStrike_LowerInnerLeg	 = 999.d0;  stpts%ZStrike_LowerInnerLeg    = 1.d10	
+  stpts%RStrike_LowerOuterLeg	 = 999.d0;  stpts%ZStrike_LowerOuterLeg    = 1.d10	
 endif
 
 if(xcase .eq. 1) then
@@ -65,15 +67,15 @@ if(xcase .eq. 1) then
   stpts%RRightCorn_UpperInnerLeg = 0.d0;    stpts%ZRightCorn_UpperInnerLeg = 0.d0	   
   stpts%RLeftCorn_UpperOuterLeg  = 0.d0;    stpts%ZLeftCorn_UpperOuterLeg  = 0.d0	   
   stpts%RRightCorn_UpperOuterLeg = 0.d0;    stpts%ZRightCorn_UpperOuterLeg = 0.d0	   
-  stpts%RStrike_UpperInnerLeg	 = 0.d0;     stpts%ZStrike_UpperInnerLeg   = 0.d0 	
-  stpts%RStrike_UpperOuterLeg	 = 0.d0;     stpts%ZStrike_UpperOuterLeg   = 0.d0 	
+  stpts%RStrike_UpperInnerLeg	 = 0.d0;    stpts%ZStrike_UpperInnerLeg    = 0.d0 	
+  stpts%RStrike_UpperOuterLeg	 = 0.d0;    stpts%ZStrike_UpperOuterLeg    = 0.d0 	
 else
   stpts%RLeftCorn_UpperInnerLeg  = 999.d0;  stpts%ZLeftCorn_UpperInnerLeg  = -1.d10
   stpts%RRightCorn_UpperInnerLeg = 1.d10;   stpts%ZRightCorn_UpperInnerLeg = 999.d0
   stpts%RLeftCorn_UpperOuterLeg  = -1.d10;  stpts%ZLeftCorn_UpperOuterLeg  = 999.d0
-  stpts%RRightCorn_UpperOuterLeg = 999.d0;  stpts%ZRightCorn_UpperOuterLeg = -1.d10
-  stpts%RStrike_UpperInnerLeg	 = 999.d0;   stpts%ZStrike_UpperInnerLeg   = -1.d10
-  stpts%RStrike_UpperOuterLeg	 = 999.d0;   stpts%ZStrike_UpperOuterLeg   = -1.d10
+  stpts%RRightCorn_UpperOuterLeg = -1.d10;  stpts%ZRightCorn_UpperOuterLeg = -1.d10
+  stpts%RStrike_UpperInnerLeg	 = 999.d0;  stpts%ZStrike_UpperInnerLeg    = -1.d10
+  stpts%RStrike_UpperOuterLeg	 = 999.d0;  stpts%ZStrike_UpperOuterLeg    = -1.d10
 endif
 
 if(xcase .ne. 3) then
@@ -87,6 +89,8 @@ else
     stpts%RSecondStrike_InnerLeg = 999.d0;  stpts%ZSecondStrike_InnerLeg   = -1.d10
     stpts%RSecondStrike_OuterLeg = 999.d0;  stpts%ZSecondStrike_OuterLeg   = -1.d10  
   endif
+  stpts%ZLimit_UpperMastWall =  1.5d0 
+  stpts%ZLimit_LowerMastWall = -1.5d0
 endif
 
 stpts%RMiddle_LowerPrivate	 = 999.d0;  stpts%ZMiddle_LowerPrivate	   = 1.d10
@@ -147,17 +151,84 @@ else
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
         						  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-      if ((ZZg1 .lt. stpts%ZRightCorn_LowerOuterLeg) .and. (RRg1 .gt. R_xpoint(1))) then
-        stpts%RRightCorn_LowerOuterLeg = RRg1
-        stpts%ZRightCorn_LowerOuterLeg = ZZg1
-      endif
-      if ((ZZg1 .gt. stpts%ZRightCorn_UpperOuterLeg) .and. (RRg1 .gt. R_xpoint(2))) then
-        stpts%RRightCorn_UpperOuterLeg = RRg1
-        stpts%ZRightCorn_UpperOuterLeg = ZZg1
+      if(tokamak_device(1:4) .ne. 'MAST') then
+        if ((ZZg1 .lt. stpts%ZRightCorn_LowerOuterLeg) .and. (RRg1 .gt. R_xpoint(1))) then
+          stpts%RRightCorn_LowerOuterLeg = RRg1
+          stpts%ZRightCorn_LowerOuterLeg = ZZg1
+        endif
+        if ((ZZg1 .gt. stpts%ZRightCorn_UpperOuterLeg) .and. (RRg1 .gt. R_xpoint(2))) then
+          stpts%RRightCorn_UpperOuterLeg = RRg1
+          stpts%ZRightCorn_UpperOuterLeg = ZZg1
+        endif
+      else
+        if ((ZZg1 .lt. Z_xpoint(1)) .and. (RRg1 .gt. R_xpoint(1)) .and. (RRg1 .gt. stpts%RRightCorn_LowerOuterLeg)) then
+          stpts%RRightCorn_LowerOuterLeg = RRg1
+          stpts%ZRightCorn_LowerOuterLeg = ZZg1
+        endif
+        if ((ZZg1 .gt. Z_xpoint(2)) .and. (RRg1 .gt. R_xpoint(2)) .and. (RRg1 .gt. stpts%RRightCorn_UpperOuterLeg)) then
+          stpts%RRightCorn_UpperOuterLeg = RRg1
+          stpts%ZRightCorn_UpperOuterLeg = ZZg1
+        endif
       endif
       
     enddo
   enddo
+
+  ! ---------------------------------- The last open flux surface on outer board that intersects MAST lower Wall
+  if(tokamak_device(1:4) .eq. 'MAST') then
+    ifound = 0
+    R_wall_max = 1.73d0
+    do i=n_flux+n_open, n_flux+n_open+n_outer 
+      do k=1,flux_list%flux_surfaces(i)%n_pieces    
+    	do l=1,3,2
+    	  
+    	  rr1	= flux_list%flux_surfaces(i)%s(l,k)
+    	  ss1	= flux_list%flux_surfaces(i)%t(l,k)
+    	  i_elm = flux_list%flux_surfaces(i)%elm(k)
+
+    	  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+    							      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+    	  if ((ZZg1 .lt. stpts%ZLimit_LowerMastWall) .and. (RRg1 .gt. R_wall_max)) then
+    	    stpts%RLimit_LowerMastWall = RRg1
+    	    stpts%ZLimit_LowerMastWall = ZZg1
+  	    ifound = 1
+    	  endif
+    	  
+    	enddo
+      enddo
+      stpts%i_surf_wall_low = i 
+      if (ifound .eq. 1) exit
+    enddo
+  endif
+
+  ! ---------------------------------- The last open flux surface on outer board that intersects MAST upper Wall
+  if(tokamak_device(1:4) .eq. 'MAST') then
+    ifound = 0
+    R_wall_max = 1.723d0
+    do i=n_flux+n_open, n_flux+n_open+n_outer 
+      do k=1,flux_list%flux_surfaces(i)%n_pieces    
+    	do l=1,3,2
+    	  
+    	  rr1	= flux_list%flux_surfaces(i)%s(l,k)
+    	  ss1	= flux_list%flux_surfaces(i)%t(l,k)
+    	  i_elm = flux_list%flux_surfaces(i)%elm(k)
+
+    	  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+    							      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+    	  if ((ZZg1 .gt. stpts%ZLimit_UpperMastWall) .and. (RRg1 .gt. R_wall_max)) then
+    	    stpts%RLimit_UpperMastWall = RRg1
+    	    stpts%ZLimit_UpperMastWall = ZZg1
+  	    ifound = 1
+    	  endif
+    	  
+    	enddo
+      enddo
+      stpts%i_surf_wall_up = i 
+      if (ifound .eq. 1) exit
+    enddo
+  endif
 
   ! ---------------------------------- The last open flux surface (SOL boundary) on inner board (HFS)
   i_surf = n_flux+n_open+n_outer+n_inner 
@@ -438,6 +509,18 @@ if(xcase .ne. 2) then
   stpts%RLimit_LowerInnerLeg = RRg1
   stpts%ZLimit_LowerInnerLeg = ZZg1
 
+  ! --- Now for the last lower wall surface of MAST
+  if(tokamak_device(1:4) .eq. 'MAST') then
+    call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_low,stpts%angle_LowerRight,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
+    if(i_find .eq. 0) return
+    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+    		   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+    		   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+    stpts%RLimit_LowerMastWallBox = RRg1
+    stpts%ZLimit_LowerMastWallBox = ZZg1
+  endif
+
 endif
 
 if(xcase .ne. 1) then
@@ -461,6 +544,18 @@ if(xcase .ne. 1) then
 
   stpts%RLimit_UpperInnerLeg = RRg1
   stpts%ZLimit_UpperInnerLeg = ZZg1
+
+  ! --- Now for the last upper wall surface of MAST
+  if(tokamak_device(1:4) .eq. 'MAST') then
+    call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_up,stpts%angle_UpperRight,R_xpoint(2),Z_xpoint(2),i_elm_find,s_find,t_find,i_find)
+    if(i_find .eq. 0) return
+    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+  		   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+  		   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+    stpts%RLimit_UpperMastWallBox = RRg1
+    stpts%ZLimit_UpperMastWallBox = ZZg1
+  endif
 
 endif
 
@@ -503,6 +598,15 @@ if (xcase .eq. 3) then
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,  ', ', stpts%ZSecondStrike_InnerLeg,  ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,  ', ', stpts%ZSecondStrike_OuterLeg,  ') |'
 endif
+
+if(tokamak_device(1:4) .eq. 'MAST') then
+  write(*,'(A)')                '| Last Outer Surface Intersecting MAST Wall : ------------|'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower MAST wall    : (',stpts%RLimit_LowerMastWall,    ', ', stpts%ZLimit_LowerMastWall,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper MAST wall    : (',stpts%RLimit_UpperMastWall,    ', ', stpts%ZLimit_UpperMastWall,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower Xpoint line  : (',stpts%RLimit_LowerMastWallBox, ', ', stpts%ZLimit_LowerMastWallBox,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper Xpoint line  : (',stpts%RLimit_UpperMastWallBox, ', ', stpts%ZLimit_UpperMastWallBox,  ') |'
+endif
+
 write(*,'(A)')                  '|_________________________________________________________|'
 
 

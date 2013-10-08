@@ -118,6 +118,9 @@ module phys_module
   real*8  :: h5_diag_nbtime    		!< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
   integer :: h5_nbsave_all     		!< number of HDF5 files written [or # of times the HDF5 saving has been called]
 #endif
+  
+  !> @name Machine name
+  character(len=512) :: tokamak_device 	!< Name of the tokamak device we are simulating
 
   !> @name Analytical boundary of initial grid
   !!
@@ -140,16 +143,17 @@ module phys_module
   
   !> @name Fourier expanded boundary of initial grid
   !! Boundary of the non flux-aligned initial polar grid given as Fourier series
-  integer :: mf               !< Number of entries in fbnd and fpsi
-  real*8  :: fbnd(512)        !< Fourier expansion of boundary
-  real*8  :: fpsi(512)        !< Fourier expansion of the poloidal flux at the boundary
+  integer, parameter :: n_bnd_max = 3000 	!< Max number of entries in boundary points
+  integer :: mf              		 	!< Number of entries in fbnd and fpsi
+  real*8  :: fbnd(n_bnd_max)        		!< Fourier expansion of boundary
+  real*8  :: fpsi(n_bnd_max)        		!< Fourier expansion of the poloidal flux at the boundary
   
   !> @name Numerical boundary of initial grid
   !! Numerical definition of the boundary of the non flux-aligned initial polar grid.
-  integer :: n_boundary       !< Number of points in R_boundary, Z_boundary, psi_boundary.
-  real*8  :: R_boundary  (512)!< Numerical R values defining the boundary
-  real*8  :: Z_boundary  (512)!< Numerical Z values defining the boundary
-  real*8  :: psi_boundary(512)!< Numerical values giving the poloidal flux at the boundary
+  integer :: n_boundary       			!< Number of points in R_boundary, Z_boundary, psi_boundary.
+  real*8  :: R_boundary  (n_bnd_max)		!< Numerical R values defining the boundary
+  real*8  :: Z_boundary  (n_bnd_max)		!< Numerical Z values defining the boundary
+  real*8  :: psi_boundary(n_bnd_max)		!< Numerical values giving the poloidal flux at the boundary
   
   !> @name PF coils definition for initial equilibrium (MAST)
   !! Numerical definition of the PF coils definition for initial equilibrium (MAST)

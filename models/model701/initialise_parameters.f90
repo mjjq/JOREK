@@ -35,6 +35,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
+                tokamak_device,                                     &
                 F0, time_evol_scheme,                               &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &

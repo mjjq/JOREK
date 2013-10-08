@@ -27,7 +27,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( (357+2*max_limiter+n_var) * IDBL_EXT + (35+n_tor) * INT_EXT + 43 * ILOG_EXT + (13*512+120) * CHAR_EXT )
+bufsize = ( (357+2*max_limiter+n_var) * IDBL_EXT + (35+n_tor) * INT_EXT + 43 * ILOG_EXT + (14*512+120) * CHAR_EXT )
 #ifdef USE_HDF5
   bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
 #endif
@@ -149,7 +149,7 @@ if (my_id .eq. 0) then
 
   call MPI_PACK(gmres_4,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 194 
   call MPI_PACK(gmres_tol,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 195 
-  call MPI_PACK(tgnum,             n_var,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)       ! 195 + n_var
+  call MPI_PACK(tgnum,              n_var,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 195 + n_var
   call MPI_PACK(pastix_pivot,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 195 + n_var + 1
 
   call MPI_PACK(psi_axis_init,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 196
@@ -185,10 +185,10 @@ if (my_id .eq. 0) then
   call MPI_PACK(V_1,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 225
   call MPI_PACK(V_coef,                10,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 235+2*max_limiter
 !================= NEO
-  call MPI_PACK (aki_neo_const,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 236
-  call MPI_PACK (amu_neo_const,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 237+2*max_limiter
+  call MPI_PACK (aki_neo_const,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 236
+  call MPI_PACK (amu_neo_const,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 237+2*max_limiter
 
-  call MPI_PACK (wall_resistivity,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 238+2*max_limiter+n_var+1
+  call MPI_PACK (wall_resistivity,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 238+2*max_limiter+n_var+1
 
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 1
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 11
@@ -213,11 +213,11 @@ if (my_id .eq. 0) then
   call MPI_PACK(n_up_priv,              1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 22
 
   call MPI_PACK(n_pfc,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 23
-  call MPI_PACK(Rmin_pfc,               20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 258
-  call MPI_PACK(Rmax_pfc,               20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 278
-  call MPI_PACK(Zmin_pfc,               20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 298
-  call MPI_PACK(Zmax_pfc,               20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 318
-  call MPI_PACK(current_pfc,            20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 338+2*max_limiter+n_var+1
+  call MPI_PACK(Rmin_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 258
+  call MPI_PACK(Rmax_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 278
+  call MPI_PACK(Zmin_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 298
+  call MPI_PACK(Zmax_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 318
+  call MPI_PACK(current_pfc,           20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)   ! 338+2*max_limiter+n_var+1
 
   call MPI_PACK(mode,               n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 23+n_tor
   call MPI_PACK(index_start,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 24
@@ -250,6 +250,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(bc_natural_open,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 11
   call MPI_PACK(use_pellet,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 12
 
+  call MPI_PACK(tokamak_device,       512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(time_evol_scheme,      80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(rho_file,             512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(T_file,               512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -533,6 +534,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,bc_natural_open,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 11
   call MPI_UNPACK(buffer,bufsize,position,use_pellet,             1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 12
 
+  call MPI_UNPACK(buffer,bufsize,position,tokamak_device,       512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,time_evol_scheme,      80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,rho_file,             512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,T_file,               512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)

@@ -204,6 +204,8 @@ subroutine preset_parameters
 
   nout = 9999999
 
+  tokamak_device = 'none'
+
   rho_file      = 'none'
   rhon_file     = 'none'
   T_file        = 'none'

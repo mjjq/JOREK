@@ -5,7 +5,7 @@ subroutine find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: R_geo
+use phys_module, only: R_geo, tokamak_device
 
 implicit none
 
@@ -90,11 +90,13 @@ do i=1,element_list%n_elements
 
       grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
-!      if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.2d0) .and. (R .lt. 1.d0)) then !MAST!!!
-      if ((grad_psi .lt. grad_psi_min) .and. (abs(Z) .lt. 0.1 * R_geo)) then
-        grad_psi_min = grad_psi
-        i_elm_axis = i
-        ij_axis(1) = ms;         ij_axis(2)  = mt
+      if (grad_psi .lt. grad_psi_min) then
+        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (abs(Z) .lt. 0.1 * R_geo)) &
+            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. ((abs(Z) .lt. 0.2d0) .and. (R .lt. 1.d0))) ) then
+          grad_psi_min = grad_psi
+          i_elm_axis = i
+          ij_axis(1) = ms;         ij_axis(2)  = mt
+        endif
       endif
       
     enddo

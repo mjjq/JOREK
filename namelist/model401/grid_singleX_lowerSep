@@ -1,0 +1,630 @@
+ &in1
+
+ restart = .f.
+ regrid  = .f.
+ tstep   = .1
+ nstep   = 0
+
+ nout = 1
+
+ fbnd(1)   = 2.
+ fbnd(2:4) = 0.
+ mf        = 0
+ 
+ n_boundary =  512 
+ R_boundary(  1)= 4.000000000e+00, Z_boundary(  1)= 2.000000000e-01, psi_boundary(  1)= 1.180069786e+00 
+ R_boundary(  2)= 3.999921540e+00, Z_boundary(  2)= 2.237550061e-01, psi_boundary(  2)= 1.177673579e+00 
+ R_boundary(  3)= 3.999686122e+00, Z_boundary(  3)= 2.475064208e-01, psi_boundary(  3)= 1.175531124e+00 
+ R_boundary(  4)= 3.999293637e+00, Z_boundary(  4)= 2.712506532e-01, psi_boundary(  4)= 1.173879705e+00 
+ R_boundary(  5)= 3.998743901e+00, Z_boundary(  5)= 2.949841135e-01, psi_boundary(  5)= 1.172796413e+00 
+ R_boundary(  6)= 3.998036658e+00, Z_boundary(  6)= 3.187032134e-01, psi_boundary(  6)= 1.167992183e+00 
+ R_boundary(  7)= 3.997171580e+00, Z_boundary(  7)= 3.424043671e-01, psi_boundary(  7)= 1.167764788e+00 
+ R_boundary(  8)= 3.996148265e+00, Z_boundary(  8)= 3.660839912e-01, psi_boundary(  8)= 1.168025821e+00 
+ R_boundary(  9)= 3.994966243e+00, Z_boundary(  9)= 3.897385056e-01, psi_boundary(  9)= 1.164597326e+00 
+ R_boundary( 10)= 3.993624971e+00, Z_boundary( 10)= 4.133643342e-01, psi_boundary( 10)= 1.165794423e+00 
+ R_boundary( 11)= 3.992123838e+00, Z_boundary( 11)= 4.369579050e-01, psi_boundary( 11)= 1.163230863e+00 
+ R_boundary( 12)= 3.990462164e+00, Z_boundary( 12)= 4.605156510e-01, psi_boundary( 12)= 1.161285874e+00 
+ R_boundary( 13)= 3.988639204e+00, Z_boundary( 13)= 4.840340106e-01, psi_boundary( 13)= 1.159839645e+00 
+ R_boundary( 14)= 3.986654144e+00, Z_boundary( 14)= 5.075094282e-01, psi_boundary( 14)= 1.162679341e+00 
+ R_boundary( 15)= 3.984506110e+00, Z_boundary( 15)= 5.309383546e-01, psi_boundary( 15)= 1.162163697e+00 
+ R_boundary( 16)= 3.982194161e+00, Z_boundary( 16)= 5.543172476e-01, psi_boundary( 16)= 1.161772048e+00 
+ R_boundary( 17)= 3.979717299e+00, Z_boundary( 17)= 5.776425727e-01, psi_boundary( 17)= 1.162159852e+00 
+ R_boundary( 18)= 3.977074464e+00, Z_boundary( 18)= 6.009108034e-01, psi_boundary( 18)= 1.162580716e+00 
+ R_boundary( 19)= 3.974264543e+00, Z_boundary( 19)= 6.241184218e-01, psi_boundary( 19)= 1.163833249e+00 
+ R_boundary( 20)= 3.971286364e+00, Z_boundary( 20)= 6.472619194e-01, psi_boundary( 20)= 1.161055773e+00 
+ R_boundary( 21)= 3.968138706e+00, Z_boundary( 21)= 6.703377971e-01, psi_boundary( 21)= 1.163158006e+00 
+ R_boundary( 22)= 3.964820295e+00, Z_boundary( 22)= 6.933425662e-01, psi_boundary( 22)= 1.165122773e+00 
+ R_boundary( 23)= 3.961329813e+00, Z_boundary( 23)= 7.162727486e-01, psi_boundary( 23)= 1.163524315e+00 
+ R_boundary( 24)= 3.957665894e+00, Z_boundary( 24)= 7.391248776e-01, psi_boundary( 24)= 1.166805664e+00 
+ R_boundary( 25)= 3.953827131e+00, Z_boundary( 25)= 7.618954984e-01, psi_boundary( 25)= 1.165976862e+00 
+ R_boundary( 26)= 3.949812080e+00, Z_boundary( 26)= 7.845811682e-01, psi_boundary( 26)= 1.165520910e+00 
+ R_boundary( 27)= 3.945619258e+00, Z_boundary( 27)= 8.071784574e-01, psi_boundary( 27)= 1.169225938e+00 
+ R_boundary( 28)= 3.941247151e+00, Z_boundary( 28)= 8.296839495e-01, psi_boundary( 28)= 1.169464275e+00 
+ R_boundary( 29)= 3.936694215e+00, Z_boundary( 29)= 8.520942420e-01, psi_boundary( 29)= 1.170052091e+00 
+ R_boundary( 30)= 3.931958879e+00, Z_boundary( 30)= 8.744059468e-01, psi_boundary( 30)= 1.170980604e+00 
+ R_boundary( 31)= 3.927039552e+00, Z_boundary( 31)= 8.966156906e-01, psi_boundary( 31)= 1.172240856e+00 
+ R_boundary( 32)= 3.921934622e+00, Z_boundary( 32)= 9.187201157e-01, psi_boundary( 32)= 1.173823773e+00 
+ R_boundary( 33)= 3.916642463e+00, Z_boundary( 33)= 9.407158802e-01, psi_boundary( 33)= 1.175720119e+00 
+ R_boundary( 34)= 3.911161439e+00, Z_boundary( 34)= 9.625996585e-01, psi_boundary( 34)= 1.174365158e+00 
+ R_boundary( 35)= 3.905489904e+00, Z_boundary( 35)= 9.843681423e-01, psi_boundary( 35)= 1.176898782e+00 
+ R_boundary( 36)= 3.899626212e+00, Z_boundary( 36)= 1.006018040e+00, psi_boundary( 36)= 1.175338313e+00 
+ R_boundary( 37)= 3.893568718e+00, Z_boundary( 37)= 1.027546079e+00, psi_boundary( 37)= 1.178456713e+00 
+ R_boundary( 38)= 3.887315782e+00, Z_boundary( 38)= 1.048949005e+00, psi_boundary( 38)= 1.178447320e+00 
+ R_boundary( 39)= 3.880865774e+00, Z_boundary( 39)= 1.070223581e+00, psi_boundary( 39)= 1.181175879e+00 
+ R_boundary( 40)= 3.874217082e+00, Z_boundary( 40)= 1.091366591e+00, psi_boundary( 40)= 1.181781552e+00 
+ R_boundary( 41)= 3.867368109e+00, Z_boundary( 41)= 1.112374839e+00, psi_boundary( 41)= 1.181724585e+00 
+ R_boundary( 42)= 3.860317287e+00, Z_boundary( 42)= 1.133245148e+00, psi_boundary( 42)= 1.181952567e+00 
+ R_boundary( 43)= 3.853063072e+00, Z_boundary( 43)= 1.153974363e+00, psi_boundary( 43)= 1.182457370e+00 
+ R_boundary( 44)= 3.845603960e+00, Z_boundary( 44)= 1.174559350e+00, psi_boundary( 44)= 1.184262779e+00 
+ R_boundary( 45)= 3.837938482e+00, Z_boundary( 45)= 1.194996998e+00, psi_boundary( 45)= 1.185317032e+00 
+ R_boundary( 46)= 3.830065213e+00, Z_boundary( 46)= 1.215284215e+00, psi_boundary( 46)= 1.183601002e+00 
+ R_boundary( 47)= 3.821982781e+00, Z_boundary( 47)= 1.235417935e+00, psi_boundary( 47)= 1.185213198e+00 
+ R_boundary( 48)= 3.813689866e+00, Z_boundary( 48)= 1.255395115e+00, psi_boundary( 48)= 1.185991392e+00 
+ R_boundary( 49)= 3.805185206e+00, Z_boundary( 49)= 1.275212733e+00, psi_boundary( 49)= 1.185184173e+00 
+ R_boundary( 50)= 3.796467608e+00, Z_boundary( 50)= 1.294867793e+00, psi_boundary( 50)= 1.184700224e+00 
+ R_boundary( 51)= 3.787535946e+00, Z_boundary( 51)= 1.314357325e+00, psi_boundary( 51)= 1.187319082e+00 
+ R_boundary( 52)= 3.778389171e+00, Z_boundary( 52)= 1.333678381e+00, psi_boundary( 52)= 1.186281684e+00 
+ R_boundary( 53)= 3.769026315e+00, Z_boundary( 53)= 1.352828040e+00, psi_boundary( 53)= 1.186647616e+00 
+ R_boundary( 54)= 3.759446494e+00, Z_boundary( 54)= 1.371803408e+00, psi_boundary( 54)= 1.186159072e+00 
+ R_boundary( 55)= 3.749648920e+00, Z_boundary( 55)= 1.390601614e+00, psi_boundary( 55)= 1.185928199e+00 
+ R_boundary( 56)= 3.739632896e+00, Z_boundary( 56)= 1.409219819e+00, psi_boundary( 56)= 1.185947053e+00 
+ R_boundary( 57)= 3.729397832e+00, Z_boundary( 57)= 1.427655205e+00, psi_boundary( 57)= 1.186206965e+00 
+ R_boundary( 58)= 3.718943241e+00, Z_boundary( 58)= 1.445904987e+00, psi_boundary( 58)= 1.185400195e+00 
+ R_boundary( 59)= 3.708268752e+00, Z_boundary( 59)= 1.463966406e+00, psi_boundary( 59)= 1.184993005e+00 
+ R_boundary( 60)= 3.697374109e+00, Z_boundary( 60)= 1.481836730e+00, psi_boundary( 60)= 1.183594933e+00 
+ R_boundary( 61)= 3.686259179e+00, Z_boundary( 61)= 1.499513257e+00, psi_boundary( 61)= 1.184817160e+00 
+ R_boundary( 62)= 3.674923956e+00, Z_boundary( 62)= 1.516993316e+00, psi_boundary( 62)= 1.183959330e+00 
+ R_boundary( 63)= 3.663368567e+00, Z_boundary( 63)= 1.534274264e+00, psi_boundary( 63)= 1.182192841e+00 
+ R_boundary( 64)= 3.651593274e+00, Z_boundary( 64)= 1.551353488e+00, psi_boundary( 64)= 1.181880412e+00 
+ R_boundary( 65)= 3.639598483e+00, Z_boundary( 65)= 1.568228405e+00, psi_boundary( 65)= 1.180632020e+00 
+ R_boundary( 66)= 3.627384743e+00, Z_boundary( 66)= 1.584896466e+00, psi_boundary( 66)= 1.179625767e+00 
+ R_boundary( 67)= 3.614952756e+00, Z_boundary( 67)= 1.601355148e+00, psi_boundary( 67)= 1.178850293e+00 
+ R_boundary( 68)= 3.602303374e+00, Z_boundary( 68)= 1.617601966e+00, psi_boundary( 68)= 1.178293157e+00 
+ R_boundary( 69)= 3.589437610e+00, Z_boundary( 69)= 1.633634461e+00, psi_boundary( 69)= 1.175975566e+00 
+ R_boundary( 70)= 3.576356639e+00, Z_boundary( 70)= 1.649450210e+00, psi_boundary( 70)= 1.175857344e+00 
+ R_boundary( 71)= 3.563061800e+00, Z_boundary( 71)= 1.665046822e+00, psi_boundary( 71)= 1.174036221e+00 
+ R_boundary( 72)= 3.549554600e+00, Z_boundary( 72)= 1.680421939e+00, psi_boundary( 72)= 1.173109463e+00 
+ R_boundary( 73)= 3.535836720e+00, Z_boundary( 73)= 1.695573237e+00, psi_boundary( 73)= 1.171736206e+00 
+ R_boundary( 74)= 3.521910013e+00, Z_boundary( 74)= 1.710498424e+00, psi_boundary( 74)= 1.169395984e+00 
+ R_boundary( 75)= 3.507776511e+00, Z_boundary( 75)= 1.725195245e+00, psi_boundary( 75)= 1.167278127e+00 
+ R_boundary( 76)= 3.493438423e+00, Z_boundary( 76)= 1.739661477e+00, psi_boundary( 76)= 1.166566832e+00 
+ R_boundary( 77)= 3.478898141e+00, Z_boundary( 77)= 1.753894933e+00, psi_boundary( 77)= 1.164870568e+00 
+ R_boundary( 78)= 3.464158241e+00, Z_boundary( 78)= 1.767893462e+00, psi_boundary( 78)= 1.162191584e+00 
+ R_boundary( 79)= 3.449221480e+00, Z_boundary( 79)= 1.781654947e+00, psi_boundary( 79)= 1.160897917e+00 
+ R_boundary( 80)= 3.434090805e+00, Z_boundary( 80)= 1.795177307e+00, psi_boundary( 80)= 1.159794583e+00 
+ R_boundary( 81)= 3.418769346e+00, Z_boundary( 81)= 1.808458498e+00, psi_boundary( 81)= 1.156197394e+00 
+ R_boundary( 82)= 3.403260421e+00, Z_boundary( 82)= 1.821496512e+00, psi_boundary( 82)= 1.155493267e+00 
+ R_boundary( 83)= 3.387567536e+00, Z_boundary( 83)= 1.834289378e+00, psi_boundary( 83)= 1.152360582e+00 
+ R_boundary( 84)= 3.371694384e+00, Z_boundary( 84)= 1.846835162e+00, psi_boundary( 84)= 1.150856461e+00 
+ R_boundary( 85)= 3.355644841e+00, Z_boundary( 85)= 1.859131967e+00, psi_boundary( 85)= 1.148147458e+00 
+ R_boundary( 86)= 3.339422972e+00, Z_boundary( 86)= 1.871177934e+00, psi_boundary( 86)= 1.145650574e+00 
+ R_boundary( 87)= 3.323033026e+00, Z_boundary( 87)= 1.882971242e+00, psi_boundary( 87)= 1.143352970e+00 
+ R_boundary( 88)= 3.306479431e+00, Z_boundary( 88)= 1.894510108e+00, psi_boundary( 88)= 1.142493749e+00 
+ R_boundary( 89)= 3.289766799e+00, Z_boundary( 89)= 1.905792787e+00, psi_boundary( 89)= 1.140523413e+00 
+ R_boundary( 90)= 3.272899919e+00, Z_boundary( 90)= 1.916817573e+00, psi_boundary( 90)= 1.137620280e+00 
+ R_boundary( 91)= 3.255883755e+00, Z_boundary( 91)= 1.927582800e+00, psi_boundary( 91)= 1.133744042e+00 
+ R_boundary( 92)= 3.238723444e+00, Z_boundary( 92)= 1.938086840e+00, psi_boundary( 92)= 1.131222421e+00 
+ R_boundary( 93)= 3.221424290e+00, Z_boundary( 93)= 1.948328105e+00, psi_boundary( 93)= 1.129926086e+00 
+ R_boundary( 94)= 3.203991764e+00, Z_boundary( 94)= 1.958305047e+00, psi_boundary( 94)= 1.126661444e+00 
+ R_boundary( 95)= 3.186431497e+00, Z_boundary( 95)= 1.968016158e+00, psi_boundary( 95)= 1.124608445e+00 
+ R_boundary( 96)= 3.168749275e+00, Z_boundary( 96)= 1.977459968e+00, psi_boundary( 96)= 1.121707520e+00 
+ R_boundary( 97)= 3.150951037e+00, Z_boundary( 97)= 1.986635051e+00, psi_boundary( 97)= 1.118955838e+00 
+ R_boundary( 98)= 3.133042866e+00, Z_boundary( 98)= 1.995540019e+00, psi_boundary( 98)= 1.116432963e+00 
+ R_boundary( 99)= 3.115030987e+00, Z_boundary( 99)= 2.004173526e+00, psi_boundary( 99)= 1.114013007e+00 
+ R_boundary(100)= 3.096921758e+00, Z_boundary(100)= 2.012534267e+00, psi_boundary(100)= 1.110879337e+00 
+ R_boundary(101)= 3.078721665e+00, Z_boundary(101)= 2.020620977e+00, psi_boundary(101)= 1.108788079e+00 
+ R_boundary(102)= 3.060437316e+00, Z_boundary(102)= 2.028432434e+00, psi_boundary(102)= 1.106037912e+00 
+ R_boundary(103)= 3.042075433e+00, Z_boundary(103)= 2.035967458e+00, psi_boundary(103)= 1.103489693e+00 
+ R_boundary(104)= 3.023642847e+00, Z_boundary(104)= 2.043224908e+00, psi_boundary(104)= 1.100964319e+00 
+ R_boundary(105)= 3.005146485e+00, Z_boundary(105)= 2.050203688e+00, psi_boundary(105)= 1.098787704e+00 
+ R_boundary(106)= 2.986593370e+00, Z_boundary(106)= 2.056902742e+00, psi_boundary(106)= 1.095909556e+00 
+ R_boundary(107)= 2.967990606e+00, Z_boundary(107)= 2.063321059e+00, psi_boundary(107)= 1.093889415e+00 
+ R_boundary(108)= 2.949345375e+00, Z_boundary(108)= 2.069457666e+00, psi_boundary(108)= 1.091390125e+00 
+ R_boundary(109)= 2.930664926e+00, Z_boundary(109)= 2.075311637e+00, psi_boundary(109)= 1.089087723e+00 
+ R_boundary(110)= 2.911956565e+00, Z_boundary(110)= 2.080882087e+00, psi_boundary(110)= 1.086976790e+00 
+ R_boundary(111)= 2.893227650e+00, Z_boundary(111)= 2.086168173e+00, psi_boundary(111)= 1.085051991e+00 
+ R_boundary(112)= 2.874485580e+00, Z_boundary(112)= 2.091169096e+00, psi_boundary(112)= 1.083013981e+00 
+ R_boundary(113)= 2.855737784e+00, Z_boundary(113)= 2.095884101e+00, psi_boundary(113)= 1.080644201e+00 
+ R_boundary(114)= 2.836991716e+00, Z_boundary(114)= 2.100312473e+00, psi_boundary(114)= 1.079251286e+00 
+ R_boundary(115)= 2.818254843e+00, Z_boundary(115)= 2.104453545e+00, psi_boundary(115)= 1.077264555e+00 
+ R_boundary(116)= 2.799534633e+00, Z_boundary(116)= 2.108306689e+00, psi_boundary(116)= 1.074721913e+00 
+ R_boundary(117)= 2.780838553e+00, Z_boundary(117)= 2.111871323e+00, psi_boundary(117)= 1.073497567e+00 
+ R_boundary(118)= 2.762174052e+00, Z_boundary(118)= 2.115146909e+00, psi_boundary(118)= 1.072053057e+00 
+ R_boundary(119)= 2.743548557e+00, Z_boundary(119)= 2.118132950e+00, psi_boundary(119)= 1.070080383e+00 
+ R_boundary(120)= 2.724969458e+00, Z_boundary(120)= 2.120828996e+00, psi_boundary(120)= 1.068994591e+00 
+ R_boundary(121)= 2.706444105e+00, Z_boundary(121)= 2.123234639e+00, psi_boundary(121)= 1.067674292e+00 
+ R_boundary(122)= 2.687979793e+00, Z_boundary(122)= 2.125349515e+00, psi_boundary(122)= 1.066246188e+00 
+ R_boundary(123)= 2.669583757e+00, Z_boundary(123)= 2.127173305e+00, psi_boundary(123)= 1.065004929e+00 
+ R_boundary(124)= 2.651263159e+00, Z_boundary(124)= 2.128705733e+00, psi_boundary(124)= 1.064147479e+00 
+ R_boundary(125)= 2.633025082e+00, Z_boundary(125)= 2.129946566e+00, psi_boundary(125)= 1.062630099e+00 
+ R_boundary(126)= 2.614876520e+00, Z_boundary(126)= 2.130895619e+00, psi_boundary(126)= 1.062071163e+00 
+ R_boundary(127)= 2.596824368e+00, Z_boundary(127)= 2.131552746e+00, psi_boundary(127)= 1.060920397e+00 
+ R_boundary(128)= 2.578875416e+00, Z_boundary(128)= 2.131917849e+00, psi_boundary(128)= 1.060075475e+00 
+ R_boundary(129)= 2.561036339e+00, Z_boundary(129)= 2.131990872e+00, psi_boundary(129)= 1.059291224e+00 
+ R_boundary(130)= 2.543313688e+00, Z_boundary(130)= 2.131771805e+00, psi_boundary(130)= 1.058760591e+00 
+ R_boundary(131)= 2.525713884e+00, Z_boundary(131)= 2.131260680e+00, psi_boundary(131)= 1.058372255e+00 
+ R_boundary(132)= 2.508243211e+00, Z_boundary(132)= 2.130457575e+00, psi_boundary(132)= 1.057586272e+00 
+ R_boundary(133)= 2.490907804e+00, Z_boundary(133)= 2.129362612e+00, psi_boundary(133)= 1.057507504e+00 
+ R_boundary(134)= 2.473713648e+00, Z_boundary(134)= 2.127975955e+00, psi_boundary(134)= 1.057076238e+00 
+ R_boundary(135)= 2.456666568e+00, Z_boundary(135)= 2.126297814e+00, psi_boundary(135)= 1.056802720e+00 
+ R_boundary(136)= 2.439772221e+00, Z_boundary(136)= 2.124328444e+00, psi_boundary(136)= 1.056684263e+00 
+ R_boundary(137)= 2.423036095e+00, Z_boundary(137)= 2.122068142e+00, psi_boundary(137)= 1.056718083e+00 
+ R_boundary(138)= 2.406463498e+00, Z_boundary(138)= 2.119517249e+00, psi_boundary(138)= 1.056901226e+00 
+ R_boundary(139)= 2.390059556e+00, Z_boundary(139)= 2.116676152e+00, psi_boundary(139)= 1.057230607e+00 
+ R_boundary(140)= 2.373829207e+00, Z_boundary(140)= 2.113545279e+00, psi_boundary(140)= 1.057292196e+00 
+ R_boundary(141)= 2.357777194e+00, Z_boundary(141)= 2.110125104e+00, psi_boundary(141)= 1.057360618e+00 
+ R_boundary(142)= 2.341908067e+00, Z_boundary(142)= 2.106416145e+00, psi_boundary(142)= 1.058117387e+00 
+ R_boundary(143)= 2.326226171e+00, Z_boundary(143)= 2.102418962e+00, psi_boundary(143)= 1.058629848e+00 
+ R_boundary(144)= 2.310735649e+00, Z_boundary(144)= 2.098134159e+00, psi_boundary(144)= 1.058715844e+00 
+ R_boundary(145)= 2.295440437e+00, Z_boundary(145)= 2.093562384e+00, psi_boundary(145)= 1.059296889e+00 
+ R_boundary(146)= 2.280344260e+00, Z_boundary(146)= 2.088704328e+00, psi_boundary(146)= 1.060234822e+00 
+ R_boundary(147)= 2.265450631e+00, Z_boundary(147)= 2.083560726e+00, psi_boundary(147)= 1.060712540e+00 
+ R_boundary(148)= 2.250762848e+00, Z_boundary(148)= 2.078132356e+00, psi_boundary(148)= 1.061649620e+00 
+ R_boundary(149)= 2.236283995e+00, Z_boundary(149)= 2.072420038e+00, psi_boundary(149)= 1.062365747e+00 
+ R_boundary(150)= 2.222016939e+00, Z_boundary(150)= 2.066424635e+00, psi_boundary(150)= 1.063200956e+00 
+ R_boundary(151)= 2.207964329e+00, Z_boundary(151)= 2.060147054e+00, psi_boundary(151)= 1.064152702e+00 
+ R_boundary(152)= 2.194128598e+00, Z_boundary(152)= 2.053588245e+00, psi_boundary(152)= 1.064913877e+00 
+ R_boundary(153)= 2.180511961e+00, Z_boundary(153)= 2.046749199e+00, psi_boundary(153)= 1.065744202e+00 
+ R_boundary(154)= 2.167116416e+00, Z_boundary(154)= 2.039630949e+00, psi_boundary(154)= 1.067024153e+00 
+ R_boundary(155)= 2.153943746e+00, Z_boundary(155)= 2.032234573e+00, psi_boundary(155)= 1.067743870e+00 
+ R_boundary(156)= 2.140995518e+00, Z_boundary(156)= 2.024561187e+00, psi_boundary(156)= 1.068950794e+00 
+ R_boundary(157)= 2.128273087e+00, Z_boundary(157)= 2.016611953e+00, psi_boundary(157)= 1.069863658e+00 
+ R_boundary(158)= 2.115777598e+00, Z_boundary(158)= 2.008388072e+00, psi_boundary(158)= 1.070864485e+00 
+ R_boundary(159)= 2.103509985e+00, Z_boundary(159)= 1.999890788e+00, psi_boundary(159)= 1.071952293e+00 
+ R_boundary(160)= 2.091470979e+00, Z_boundary(160)= 1.991121384e+00, psi_boundary(160)= 1.073126094e+00 
+ R_boundary(161)= 2.079661106e+00, Z_boundary(161)= 1.982081188e+00, psi_boundary(161)= 1.074132073e+00 
+ R_boundary(162)= 2.068080693e+00, Z_boundary(162)= 1.972771566e+00, psi_boundary(162)= 1.075480935e+00 
+ R_boundary(163)= 2.056729870e+00, Z_boundary(163)= 1.963193924e+00, psi_boundary(163)= 1.076671531e+00 
+ R_boundary(164)= 2.045608576e+00, Z_boundary(164)= 1.953349712e+00, psi_boundary(164)= 1.077454029e+00 
+ R_boundary(165)= 2.034716560e+00, Z_boundary(165)= 1.943240417e+00, psi_boundary(165)= 1.078819762e+00 
+ R_boundary(166)= 2.024053389e+00, Z_boundary(166)= 1.932867569e+00, psi_boundary(166)= 1.079752156e+00 
+ R_boundary(167)= 2.013618449e+00, Z_boundary(167)= 1.922232734e+00, psi_boundary(167)= 1.081293111e+00 
+ R_boundary(168)= 2.003410953e+00, Z_boundary(168)= 1.911337521e+00, psi_boundary(168)= 1.082159355e+00 
+ R_boundary(169)= 1.993429942e+00, Z_boundary(169)= 1.900183578e+00, psi_boundary(169)= 1.083318446e+00 
+ R_boundary(170)= 1.983674295e+00, Z_boundary(170)= 1.888772590e+00, psi_boundary(170)= 1.084341142e+00 
+ R_boundary(171)= 1.974142731e+00, Z_boundary(171)= 1.877106283e+00, psi_boundary(171)= 1.085446445e+00 
+ R_boundary(172)= 1.964833814e+00, Z_boundary(172)= 1.865186420e+00, psi_boundary(172)= 1.086636008e+00 
+ R_boundary(173)= 1.955745962e+00, Z_boundary(173)= 1.853014804e+00, psi_boundary(173)= 1.087911521e+00 
+ R_boundary(174)= 1.946877449e+00, Z_boundary(174)= 1.840593275e+00, psi_boundary(174)= 1.088643136e+00 
+ R_boundary(175)= 1.938226413e+00, Z_boundary(175)= 1.827923711e+00, psi_boundary(175)= 1.090082533e+00 
+ R_boundary(176)= 1.929790863e+00, Z_boundary(176)= 1.815008026e+00, psi_boundary(176)= 1.091613115e+00 
+ R_boundary(177)= 1.921568680e+00, Z_boundary(177)= 1.801848175e+00, psi_boundary(177)= 1.092393730e+00 
+ R_boundary(178)= 1.913557629e+00, Z_boundary(178)= 1.788446146e+00, psi_boundary(178)= 1.093418644e+00 
+ R_boundary(179)= 1.905755363e+00, Z_boundary(179)= 1.774803966e+00, psi_boundary(179)= 1.095054072e+00 
+ R_boundary(180)= 1.898159427e+00, Z_boundary(180)= 1.760923697e+00, psi_boundary(180)= 1.096083931e+00 
+ R_boundary(181)= 1.890767267e+00, Z_boundary(181)= 1.746807437e+00, psi_boundary(181)= 1.097197308e+00 
+ R_boundary(182)= 1.883576233e+00, Z_boundary(182)= 1.732457322e+00, psi_boundary(182)= 1.098396096e+00 
+ R_boundary(183)= 1.876583590e+00, Z_boundary(183)= 1.717875520e+00, psi_boundary(183)= 1.099682047e+00 
+ R_boundary(184)= 1.869786520e+00, Z_boundary(184)= 1.703064236e+00, psi_boundary(184)= 1.100923532e+00 
+ R_boundary(185)= 1.863182128e+00, Z_boundary(185)= 1.688025709e+00, psi_boundary(185)= 1.101591271e+00 
+ R_boundary(186)= 1.856767451e+00, Z_boundary(186)= 1.672762213e+00, psi_boundary(186)= 1.103013322e+00 
+ R_boundary(187)= 1.850539462e+00, Z_boundary(187)= 1.657276056e+00, psi_boundary(187)= 1.104658693e+00 
+ R_boundary(188)= 1.844495075e+00, Z_boundary(188)= 1.641569579e+00, psi_boundary(188)= 1.105427140e+00 
+ R_boundary(189)= 1.838631154e+00, Z_boundary(189)= 1.625645156e+00, psi_boundary(189)= 1.107143172e+00 
+ R_boundary(190)= 1.832944515e+00, Z_boundary(190)= 1.609505194e+00, psi_boundary(190)= 1.108068684e+00 
+ R_boundary(191)= 1.827431934e+00, Z_boundary(191)= 1.593152135e+00, psi_boundary(191)= 1.109063610e+00 
+ R_boundary(192)= 1.822090151e+00, Z_boundary(192)= 1.576588451e+00, psi_boundary(192)= 1.110128408e+00 
+ R_boundary(193)= 1.816915879e+00, Z_boundary(193)= 1.559816645e+00, psi_boundary(193)= 1.112224898e+00 
+ R_boundary(194)= 1.811905804e+00, Z_boundary(194)= 1.542839254e+00, psi_boundary(194)= 1.113362868e+00 
+ R_boundary(195)= 1.807056592e+00, Z_boundary(195)= 1.525658843e+00, psi_boundary(195)= 1.114662366e+00 
+ R_boundary(196)= 1.802364897e+00, Z_boundary(196)= 1.508278011e+00, psi_boundary(196)= 1.115950095e+00 
+ R_boundary(197)= 1.797827364e+00, Z_boundary(197)= 1.490699386e+00, psi_boundary(197)= 1.117391868e+00 
+ R_boundary(198)= 1.793440630e+00, Z_boundary(198)= 1.472925624e+00, psi_boundary(198)= 1.117752738e+00 
+ R_boundary(199)= 1.789201335e+00, Z_boundary(199)= 1.454959413e+00, psi_boundary(199)= 1.119239679e+00 
+ R_boundary(200)= 1.785106122e+00, Z_boundary(200)= 1.436803470e+00, psi_boundary(200)= 1.120800954e+00 
+ R_boundary(201)= 1.781151644e+00, Z_boundary(201)= 1.418460539e+00, psi_boundary(201)= 1.121289636e+00 
+ R_boundary(202)= 1.777334565e+00, Z_boundary(202)= 1.399933393e+00, psi_boundary(202)= 1.122976956e+00 
+ R_boundary(203)= 1.773651566e+00, Z_boundary(203)= 1.381224834e+00, psi_boundary(203)= 1.124739509e+00 
+ R_boundary(204)= 1.770099351e+00, Z_boundary(204)= 1.362337690e+00, psi_boundary(204)= 1.125293820e+00 
+ R_boundary(205)= 1.766674646e+00, Z_boundary(205)= 1.343274816e+00, psi_boundary(205)= 1.125941331e+00 
+ R_boundary(206)= 1.763374204e+00, Z_boundary(206)= 1.324039095e+00, psi_boundary(206)= 1.127823469e+00 
+ R_boundary(207)= 1.760194810e+00, Z_boundary(207)= 1.304633435e+00, psi_boundary(207)= 1.128550128e+00 
+ R_boundary(208)= 1.757133285e+00, Z_boundary(208)= 1.285060769e+00, psi_boundary(208)= 1.129242562e+00 
+ R_boundary(209)= 1.754186484e+00, Z_boundary(209)= 1.265324057e+00, psi_boundary(209)= 1.131307990e+00 
+ R_boundary(210)= 1.751351304e+00, Z_boundary(210)= 1.245426282e+00, psi_boundary(210)= 1.132138433e+00 
+ R_boundary(211)= 1.748624684e+00, Z_boundary(211)= 1.225370453e+00, psi_boundary(211)= 1.132936439e+00 
+ R_boundary(212)= 1.746003609e+00, Z_boundary(212)= 1.205159602e+00, psi_boundary(212)= 1.133759788e+00 
+ R_boundary(213)= 1.743485111e+00, Z_boundary(213)= 1.184796785e+00, psi_boundary(213)= 1.134607666e+00 
+ R_boundary(214)= 1.741066271e+00, Z_boundary(214)= 1.164285080e+00, psi_boundary(214)= 1.135420888e+00 
+ R_boundary(215)= 1.738744224e+00, Z_boundary(215)= 1.143627588e+00, psi_boundary(215)= 1.136314836e+00 
+ R_boundary(216)= 1.736516158e+00, Z_boundary(216)= 1.122827433e+00, psi_boundary(216)= 1.137230270e+00 
+ R_boundary(217)= 1.734379314e+00, Z_boundary(217)= 1.101887759e+00, psi_boundary(217)= 1.138167479e+00 
+ R_boundary(218)= 1.732330996e+00, Z_boundary(218)= 1.080811732e+00, psi_boundary(218)= 1.139069080e+00 
+ R_boundary(219)= 1.730368561e+00, Z_boundary(219)= 1.059602538e+00, psi_boundary(219)= 1.140053235e+00 
+ R_boundary(220)= 1.728489430e+00, Z_boundary(220)= 1.038263384e+00, psi_boundary(220)= 1.139404263e+00 
+ R_boundary(221)= 1.726691085e+00, Z_boundary(221)= 1.016797496e+00, psi_boundary(221)= 1.140420625e+00 
+ R_boundary(222)= 1.724971069e+00, Z_boundary(222)= 9.952081195e-01, psi_boundary(222)= 1.141406253e+00 
+ R_boundary(223)= 1.723326991e+00, Z_boundary(223)= 9.734985183e-01, psi_boundary(223)= 1.142422289e+00 
+ R_boundary(224)= 1.721756523e+00, Z_boundary(224)= 9.516719748e-01, psi_boundary(224)= 1.141846730e+00 
+ R_boundary(225)= 1.720257404e+00, Z_boundary(225)= 9.297317888e-01, psi_boundary(225)= 1.142907763e+00 
+ R_boundary(226)= 1.718827439e+00, Z_boundary(226)= 9.076812773e-01, psi_boundary(226)= 1.142286036e+00 
+ R_boundary(227)= 1.717464498e+00, Z_boundary(227)= 8.855237741e-01, psi_boundary(227)= 1.143401154e+00 
+ R_boundary(228)= 1.716166522e+00, Z_boundary(228)= 8.632626291e-01, psi_boundary(228)= 1.142801345e+00 
+ R_boundary(229)= 1.714931517e+00, Z_boundary(229)= 8.409012078e-01, psi_boundary(229)= 1.143978486e+00 
+ R_boundary(230)= 1.713757560e+00, Z_boundary(230)= 8.184428911e-01, psi_boundary(230)= 1.145196899e+00 
+ R_boundary(231)= 1.712642795e+00, Z_boundary(231)= 7.958910742e-01, psi_boundary(231)= 1.144658631e+00 
+ R_boundary(232)= 1.711585435e+00, Z_boundary(232)= 7.732491668e-01, psi_boundary(232)= 1.144088227e+00 
+ R_boundary(233)= 1.710583765e+00, Z_boundary(233)= 7.505205920e-01, psi_boundary(233)= 1.145414533e+00 
+ R_boundary(234)= 1.709636135e+00, Z_boundary(234)= 7.277087860e-01, psi_boundary(234)= 1.144944985e+00 
+ R_boundary(235)= 1.708740969e+00, Z_boundary(235)= 7.048171976e-01, psi_boundary(235)= 1.146353224e+00 
+ R_boundary(236)= 1.707896758e+00, Z_boundary(236)= 6.818492878e-01, psi_boundary(236)= 1.145908561e+00 
+ R_boundary(237)= 1.707102063e+00, Z_boundary(237)= 6.588085290e-01, psi_boundary(237)= 1.145529927e+00 
+ R_boundary(238)= 1.706355515e+00, Z_boundary(238)= 6.356984046e-01, psi_boundary(238)= 1.147070186e+00 
+ R_boundary(239)= 1.705655815e+00, Z_boundary(239)= 6.125224086e-01, psi_boundary(239)= 1.146739760e+00 
+ R_boundary(240)= 1.705001733e+00, Z_boundary(240)= 5.892840449e-01, psi_boundary(240)= 1.146474087e+00 
+ R_boundary(241)= 1.704392108e+00, Z_boundary(241)= 5.659868267e-01, psi_boundary(241)= 1.146228174e+00 
+ R_boundary(242)= 1.703825850e+00, Z_boundary(242)= 5.426342763e-01, psi_boundary(242)= 1.147968965e+00 
+ R_boundary(243)= 1.703301936e+00, Z_boundary(243)= 5.192299243e-01, psi_boundary(243)= 1.147828654e+00 
+ R_boundary(244)= 1.702819413e+00, Z_boundary(244)= 4.957773092e-01, psi_boundary(244)= 1.147748934e+00 
+ R_boundary(245)= 1.702377397e+00, Z_boundary(245)= 4.722799765e-01, psi_boundary(245)= 1.147718464e+00 
+ R_boundary(246)= 1.701975074e+00, Z_boundary(246)= 4.487414788e-01, psi_boundary(246)= 1.147749634e+00 
+ R_boundary(247)= 1.701611696e+00, Z_boundary(247)= 4.251653749e-01, psi_boundary(247)= 1.149783783e+00 
+ R_boundary(248)= 1.701286585e+00, Z_boundary(248)= 4.015552290e-01, psi_boundary(248)= 1.149942657e+00 
+ R_boundary(249)= 1.700999131e+00, Z_boundary(249)= 3.779146107e-01, psi_boundary(249)= 1.150166430e+00 
+ R_boundary(250)= 1.700748793e+00, Z_boundary(250)= 3.542470942e-01, psi_boundary(250)= 1.150428954e+00 
+ R_boundary(251)= 1.700535096e+00, Z_boundary(251)= 3.305562576e-01, psi_boundary(251)= 1.150778630e+00 
+ R_boundary(252)= 1.700357635e+00, Z_boundary(252)= 3.068456827e-01, psi_boundary(252)= 1.151195101e+00 
+ R_boundary(253)= 1.700216071e+00, Z_boundary(253)= 2.831189542e-01, psi_boundary(253)= 1.151636177e+00 
+ R_boundary(254)= 1.700110135e+00, Z_boundary(254)= 2.593796592e-01, psi_boundary(254)= 1.152182687e+00 
+ R_boundary(255)= 1.700039623e+00, Z_boundary(255)= 2.356313869e-01, psi_boundary(255)= 1.152798031e+00 
+ R_boundary(256)= 1.700004401e+00, Z_boundary(256)= 2.118777275e-01, psi_boundary(256)= 1.153482902e+00 
+ R_boundary(257)= 1.700006574e+00, Z_boundary(257)= 1.881222725e-01, psi_boundary(257)= 1.154172378e+00 
+ R_boundary(258)= 1.700059181e+00, Z_boundary(258)= 1.643686131e-01, psi_boundary(258)= 1.154992473e+00 
+ R_boundary(259)= 1.700164453e+00, Z_boundary(259)= 1.406203408e-01, psi_boundary(259)= 1.155884138e+00 
+ R_boundary(260)= 1.700322507e+00, Z_boundary(260)= 1.168810458e-01, psi_boundary(260)= 1.156848036e+00 
+ R_boundary(261)= 1.700533517e+00, Z_boundary(261)= 9.315431733e-02, psi_boundary(261)= 1.157794442e+00 
+ R_boundary(262)= 1.700797716e+00, Z_boundary(262)= 6.944374242e-02, psi_boundary(262)= 1.158892835e+00 
+ R_boundary(263)= 1.701115397e+00, Z_boundary(263)= 4.575290584e-02, psi_boundary(263)= 1.160057188e+00 
+ R_boundary(264)= 1.701486908e+00, Z_boundary(264)= 2.208538930e-02, psi_boundary(264)= 1.161179938e+00 
+ R_boundary(265)= 1.701912656e+00, Z_boundary(265)=-1.555228978e-03, psi_boundary(265)= 1.160562470e+00 
+ R_boundary(266)= 1.702393107e+00, Z_boundary(266)=-2.516537487e-02, psi_boundary(266)= 1.161911640e+00 
+ R_boundary(267)= 1.702928784e+00, Z_boundary(267)=-4.874147884e-02, psi_boundary(267)= 1.163196789e+00 
+ R_boundary(268)= 1.703520266e+00, Z_boundary(268)=-7.227997650e-02, psi_boundary(268)= 1.164648841e+00 
+ R_boundary(269)= 1.704168193e+00, Z_boundary(269)=-9.577730916e-02, psi_boundary(269)= 1.164159004e+00 
+ R_boundary(270)= 1.704873260e+00, Z_boundary(270)=-1.192299243e-01, psi_boundary(270)= 1.165714424e+00 
+ R_boundary(271)= 1.705636217e+00, Z_boundary(271)=-1.426342763e-01, psi_boundary(271)= 1.167313893e+00 
+ R_boundary(272)= 1.706457875e+00, Z_boundary(272)=-1.659868267e-01, psi_boundary(272)= 1.168816347e+00 
+ R_boundary(273)= 1.707339098e+00, Z_boundary(273)=-1.892840449e-01, psi_boundary(273)= 1.168673062e+00 
+ R_boundary(274)= 1.708280809e+00, Z_boundary(274)=-2.125224086e-01, psi_boundary(274)= 1.170253296e+00 
+ R_boundary(275)= 1.709283984e+00, Z_boundary(275)=-2.356984046e-01, psi_boundary(275)= 1.170211753e+00 
+ R_boundary(276)= 1.710349658e+00, Z_boundary(276)=-2.588085290e-01, psi_boundary(276)= 1.171857018e+00 
+ R_boundary(277)= 1.711478916e+00, Z_boundary(277)=-2.818492878e-01, psi_boundary(277)= 1.171749091e+00 
+ R_boundary(278)= 1.712672904e+00, Z_boundary(278)=-3.048171976e-01, psi_boundary(278)= 1.173595870e+00 
+ R_boundary(279)= 1.713932817e+00, Z_boundary(279)=-3.277087860e-01, psi_boundary(279)= 1.173553329e+00 
+ R_boundary(280)= 1.715259907e+00, Z_boundary(280)=-3.505205920e-01, psi_boundary(280)= 1.175275579e+00 
+ R_boundary(281)= 1.716655477e+00, Z_boundary(281)=-3.732491668e-01, psi_boundary(281)= 1.175279770e+00 
+ R_boundary(282)= 1.718120885e+00, Z_boundary(282)=-3.958910742e-01, psi_boundary(282)= 1.177170949e+00 
+ R_boundary(283)= 1.719657539e+00, Z_boundary(283)=-4.184428911e-01, psi_boundary(283)= 1.177206490e+00 
+ R_boundary(284)= 1.721266898e+00, Z_boundary(284)=-4.409012078e-01, psi_boundary(284)= 1.177257793e+00 
+ R_boundary(285)= 1.722950474e+00, Z_boundary(285)=-4.632626291e-01, psi_boundary(285)= 1.178982792e+00 
+ R_boundary(286)= 1.724709827e+00, Z_boundary(286)=-4.855237741e-01, psi_boundary(286)= 1.179040089e+00 
+ R_boundary(287)= 1.726546567e+00, Z_boundary(287)=-5.076812773e-01, psi_boundary(287)= 1.179101375e+00 
+ R_boundary(288)= 1.728462350e+00, Z_boundary(288)=-5.297317888e-01, psi_boundary(288)= 1.179162752e+00 
+ R_boundary(289)= 1.730458883e+00, Z_boundary(289)=-5.516719748e-01, psi_boundary(289)= 1.180821402e+00 
+ R_boundary(290)= 1.732537916e+00, Z_boundary(290)=-5.734985183e-01, psi_boundary(290)= 1.180708823e+00 
+ R_boundary(291)= 1.734701245e+00, Z_boundary(291)=-5.952081195e-01, psi_boundary(291)= 1.180733695e+00 
+ R_boundary(292)= 1.736950710e+00, Z_boundary(292)=-6.167974960e-01, psi_boundary(292)= 1.180742814e+00 
+ R_boundary(293)= 1.739288195e+00, Z_boundary(293)=-6.382633840e-01, psi_boundary(293)= 1.180593975e+00 
+ R_boundary(294)= 1.741715624e+00, Z_boundary(294)=-6.596025380e-01, psi_boundary(294)= 1.180563093e+00 
+ R_boundary(295)= 1.744234962e+00, Z_boundary(295)=-6.808117319e-01, psi_boundary(295)= 1.180373776e+00 
+ R_boundary(296)= 1.746848211e+00, Z_boundary(296)=-7.018877591e-01, psi_boundary(296)= 1.180287454e+00 
+ R_boundary(297)= 1.749557414e+00, Z_boundary(297)=-7.228274332e-01, psi_boundary(297)= 1.180043400e+00 
+ R_boundary(298)= 1.752364648e+00, Z_boundary(298)=-7.436275884e-01, psi_boundary(298)= 1.178306708e+00 
+ R_boundary(299)= 1.755272022e+00, Z_boundary(299)=-7.642850801e-01, psi_boundary(299)= 1.178013744e+00 
+ R_boundary(300)= 1.758281681e+00, Z_boundary(300)=-7.847967851e-01, psi_boundary(300)= 1.177791196e+00 
+ R_boundary(301)= 1.761395798e+00, Z_boundary(301)=-8.051596022e-01, psi_boundary(301)= 1.177414102e+00 
+ R_boundary(302)= 1.764616576e+00, Z_boundary(302)=-8.253704530e-01, psi_boundary(302)= 1.175593465e+00 
+ R_boundary(303)= 1.767946246e+00, Z_boundary(303)=-8.454262819e-01, psi_boundary(303)= 1.175138622e+00 
+ R_boundary(304)= 1.771387061e+00, Z_boundary(304)=-8.653240566e-01, psi_boundary(304)= 1.174547657e+00 
+ R_boundary(305)= 1.774941299e+00, Z_boundary(305)=-8.850607689e-01, psi_boundary(305)= 1.172638276e+00 
+ R_boundary(306)= 1.778611258e+00, Z_boundary(306)=-9.046334348e-01, psi_boundary(306)= 1.172038487e+00 
+ R_boundary(307)= 1.782399254e+00, Z_boundary(307)=-9.240390953e-01, psi_boundary(307)= 1.169990491e+00 
+ R_boundary(308)= 1.786307618e+00, Z_boundary(308)=-9.432748165e-01, psi_boundary(308)= 1.167982640e+00 
+ R_boundary(309)= 1.790338696e+00, Z_boundary(309)=-9.623376902e-01, psi_boundary(309)= 1.167182809e+00 
+ R_boundary(310)= 1.794494843e+00, Z_boundary(310)=-9.812248343e-01, psi_boundary(310)= 1.165099583e+00 
+ R_boundary(311)= 1.798778425e+00, Z_boundary(311)=-9.999333934e-01, psi_boundary(311)= 1.162941836e+00 
+ R_boundary(312)= 1.803191810e+00, Z_boundary(312)=-1.018460539e+00, psi_boundary(312)= 1.160759836e+00 
+ R_boundary(313)= 1.807737372e+00, Z_boundary(313)=-1.036803470e+00, psi_boundary(313)= 1.158552031e+00 
+ R_boundary(314)= 1.812417483e+00, Z_boundary(314)=-1.054959413e+00, psi_boundary(314)= 1.156316567e+00 
+ R_boundary(315)= 1.817234513e+00, Z_boundary(315)=-1.072925624e+00, psi_boundary(315)= 1.154051264e+00 
+ R_boundary(316)= 1.822190824e+00, Z_boundary(316)=-1.090699386e+00, psi_boundary(316)= 1.151753573e+00 
+ R_boundary(317)= 1.827288771e+00, Z_boundary(317)=-1.108278011e+00, psi_boundary(317)= 1.149419471e+00 
+ R_boundary(318)= 1.832530695e+00, Z_boundary(318)=-1.125658843e+00, psi_boundary(318)= 1.147055426e+00 
+ R_boundary(319)= 1.837918923e+00, Z_boundary(319)=-1.142839254e+00, psi_boundary(319)= 1.144662217e+00 
+ R_boundary(320)= 1.843455762e+00, Z_boundary(320)=-1.159816645e+00, psi_boundary(320)= 1.142217484e+00 
+ R_boundary(321)= 1.849143496e+00, Z_boundary(321)=-1.176588451e+00, psi_boundary(321)= 1.138617183e+00 
+ R_boundary(322)= 1.854984385e+00, Z_boundary(322)=-1.193152135e+00, psi_boundary(322)= 1.136116319e+00 
+ R_boundary(323)= 1.860980659e+00, Z_boundary(323)=-1.209505194e+00, psi_boundary(323)= 1.132453312e+00 
+ R_boundary(324)= 1.867134515e+00, Z_boundary(324)=-1.225645156e+00, psi_boundary(324)= 1.129856864e+00 
+ R_boundary(325)= 1.873448113e+00, Z_boundary(325)=-1.241569579e+00, psi_boundary(325)= 1.126103446e+00 
+ R_boundary(326)= 1.879923575e+00, Z_boundary(326)=-1.257276056e+00, psi_boundary(326)= 1.122299927e+00 
+ R_boundary(327)= 1.886562977e+00, Z_boundary(327)=-1.272762213e+00, psi_boundary(327)= 1.119606563e+00 
+ R_boundary(328)= 1.893368349e+00, Z_boundary(328)=-1.288025709e+00, psi_boundary(328)= 1.115691692e+00 
+ R_boundary(329)= 1.900341670e+00, Z_boundary(329)=-1.303064236e+00, psi_boundary(329)= 1.111809193e+00 
+ R_boundary(330)= 1.907484862e+00, Z_boundary(330)=-1.317875520e+00, psi_boundary(330)= 1.107777949e+00 
+ R_boundary(331)= 1.914799791e+00, Z_boundary(331)=-1.332457322e+00, psi_boundary(331)= 1.103794178e+00 
+ R_boundary(332)= 1.922288259e+00, Z_boundary(332)=-1.346807437e+00, psi_boundary(332)= 1.099764257e+00 
+ R_boundary(333)= 1.929952002e+00, Z_boundary(333)=-1.360923697e+00, psi_boundary(333)= 1.095689671e+00 
+ R_boundary(334)= 1.937792686e+00, Z_boundary(334)=-1.374803966e+00, psi_boundary(334)= 1.090497115e+00 
+ R_boundary(335)= 1.945811901e+00, Z_boundary(335)=-1.388446146e+00, psi_boundary(335)= 1.086343224e+00 
+ R_boundary(336)= 1.954011163e+00, Z_boundary(336)=-1.401848175e+00, psi_boundary(336)= 1.081224994e+00 
+ R_boundary(337)= 1.962391904e+00, Z_boundary(337)=-1.415008026e+00, psi_boundary(337)= 1.077016828e+00 
+ R_boundary(338)= 1.970955471e+00, Z_boundary(338)=-1.427923711e+00, psi_boundary(338)= 1.071872353e+00 
+ R_boundary(339)= 1.979703123e+00, Z_boundary(339)=-1.440593275e+00, psi_boundary(339)= 1.067788451e+00 
+ R_boundary(340)= 1.988636024e+00, Z_boundary(340)=-1.453014804e+00, psi_boundary(340)= 1.062651389e+00 
+ R_boundary(341)= 1.997755246e+00, Z_boundary(341)=-1.465186420e+00, psi_boundary(341)= 1.057535059e+00 
+ R_boundary(342)= 2.007061757e+00, Z_boundary(342)=-1.477106283e+00, psi_boundary(342)= 1.052450459e+00 
+ R_boundary(343)= 2.016556424e+00, Z_boundary(343)=-1.488772590e+00, psi_boundary(343)= 1.047408995e+00 
+ R_boundary(344)= 2.026240008e+00, Z_boundary(344)=-1.500183578e+00, psi_boundary(344)= 1.042421931e+00 
+ R_boundary(345)= 2.036113157e+00, Z_boundary(345)=-1.511337521e+00, psi_boundary(345)= 1.037653562e+00 
+ R_boundary(346)= 2.046176410e+00, Z_boundary(346)=-1.522232734e+00, psi_boundary(346)= 1.032800112e+00 
+ R_boundary(347)= 2.056430185e+00, Z_boundary(347)=-1.532867569e+00, psi_boundary(347)= 1.028173248e+00 
+ R_boundary(348)= 2.066874785e+00, Z_boundary(348)=-1.543240417e+00, psi_boundary(348)= 1.023620813e+00 
+ R_boundary(349)= 2.077510389e+00, Z_boundary(349)=-1.553349712e+00, psi_boundary(349)= 1.018217613e+00 
+ R_boundary(350)= 2.088337049e+00, Z_boundary(350)=-1.563193924e+00, psi_boundary(350)= 1.013819501e+00 
+ R_boundary(351)= 2.099354693e+00, Z_boundary(351)=-1.572771566e+00, psi_boundary(351)= 1.008585176e+00 
+ R_boundary(352)= 2.110563117e+00, Z_boundary(352)=-1.582081188e+00, psi_boundary(352)= 1.003571563e+00 
+ R_boundary(353)= 2.121961982e+00, Z_boundary(353)=-1.591121384e+00, psi_boundary(353)= 9.993355572e-01 
+ R_boundary(354)= 2.133550820e+00, Z_boundary(354)=-1.599890788e+00, psi_boundary(354)= 9.944160525e-01 
+ R_boundary(355)= 2.145329020e+00, Z_boundary(355)=-1.608388072e+00, psi_boundary(355)= 9.895307834e-01 
+ R_boundary(356)= 2.157295836e+00, Z_boundary(356)=-1.616611953e+00, psi_boundary(356)= 9.846648559e-01 
+ R_boundary(357)= 2.169450380e+00, Z_boundary(357)=-1.624561187e+00, psi_boundary(357)= 9.798024374e-01 
+ R_boundary(358)= 2.181791623e+00, Z_boundary(358)=-1.632234573e+00, psi_boundary(358)= 9.749267428e-01 
+ R_boundary(359)= 2.194318393e+00, Z_boundary(359)=-1.639630949e+00, psi_boundary(359)= 9.691817830e-01 
+ R_boundary(360)= 2.207029370e+00, Z_boundary(360)=-1.646749199e+00, psi_boundary(360)= 9.644169173e-01 
+ R_boundary(361)= 2.219923094e+00, Z_boundary(361)=-1.653588245e+00, psi_boundary(361)= 9.596014993e-01 
+ R_boundary(362)= 2.232997954e+00, Z_boundary(362)=-1.660147054e+00, psi_boundary(362)= 9.536379732e-01 
+ R_boundary(363)= 2.246252194e+00, Z_boundary(363)=-1.666424635e+00, psi_boundary(363)= 9.486349600e-01 
+ R_boundary(364)= 2.259683912e+00, Z_boundary(364)=-1.672420038e+00, psi_boundary(364)= 9.426369105e-01 
+ R_boundary(365)= 2.273291057e+00, Z_boundary(365)=-1.678132356e+00, psi_boundary(365)= 9.373692249e-01 
+ R_boundary(366)= 2.287071431e+00, Z_boundary(366)=-1.683560726e+00, psi_boundary(366)= 9.313936227e-01 
+ R_boundary(367)= 2.301022690e+00, Z_boundary(367)=-1.688704328e+00, psi_boundary(367)= 9.249600829e-01 
+ R_boundary(368)= 2.315142342e+00, Z_boundary(368)=-1.693562384e+00, psi_boundary(368)= 9.187792009e-01 
+ R_boundary(369)= 2.329427752e+00, Z_boundary(369)=-1.698134159e+00, psi_boundary(369)= 9.125365611e-01 
+ R_boundary(370)= 2.343876137e+00, Z_boundary(370)=-1.702418962e+00, psi_boundary(370)= 9.057524631e-01 
+ R_boundary(371)= 2.358484573e+00, Z_boundary(371)=-1.706416145e+00, psi_boundary(371)= 8.999550443e-01 
+ R_boundary(372)= 2.373249993e+00, Z_boundary(372)=-1.710125104e+00, psi_boundary(372)= 8.936723913e-01 
+ R_boundary(373)= 2.388169190e+00, Z_boundary(373)=-1.713545279e+00, psi_boundary(373)= 8.874405167e-01 
+ R_boundary(374)= 2.403238818e+00, Z_boundary(374)=-1.716676152e+00, psi_boundary(374)= 8.805232238e-01 
+ R_boundary(375)= 2.418455395e+00, Z_boundary(375)=-1.719517249e+00, psi_boundary(375)= 8.753150441e-01 
+ R_boundary(376)= 2.433815304e+00, Z_boundary(376)=-1.722068142e+00, psi_boundary(376)= 8.703996747e-01 
+ R_boundary(377)= 2.449314797e+00, Z_boundary(377)=-1.724328444e+00, psi_boundary(377)= 8.652444097e-01 
+ R_boundary(378)= 2.464949998e+00, Z_boundary(378)=-1.726297814e+00, psi_boundary(378)= 8.611327910e-01 
+ R_boundary(379)= 2.480716904e+00, Z_boundary(379)=-1.727975955e+00, psi_boundary(379)= 8.570080963e-01 
+ R_boundary(380)= 2.496611389e+00, Z_boundary(380)=-1.729362612e+00, psi_boundary(380)= 8.538226400e-01 
+ R_boundary(381)= 2.512629209e+00, Z_boundary(381)=-1.730457575e+00, psi_boundary(381)= 8.517244453e-01 
+ R_boundary(382)= 2.528766003e+00, Z_boundary(382)=-1.731260680e+00, psi_boundary(382)= 8.493442971e-01 
+ R_boundary(383)= 2.545017299e+00, Z_boundary(383)=-1.731771805e+00, psi_boundary(383)= 8.484916442e-01 
+ R_boundary(384)= 2.561378515e+00, Z_boundary(384)=-1.731990872e+00, psi_boundary(384)= 8.482509425e-01 
+ R_boundary(385)= 2.577844967e+00, Z_boundary(385)=-1.731917849e+00, psi_boundary(385)= 8.485351126e-01 
+ R_boundary(386)= 2.594411870e+00, Z_boundary(386)=-1.731552746e+00, psi_boundary(386)= 8.494198916e-01 
+ R_boundary(387)= 2.611074346e+00, Z_boundary(387)=-1.730895619e+00, psi_boundary(387)= 8.508965166e-01 
+ R_boundary(388)= 2.627827423e+00, Z_boundary(388)=-1.729946566e+00, psi_boundary(388)= 8.538152798e-01 
+ R_boundary(389)= 2.644666046e+00, Z_boundary(389)=-1.728705733e+00, psi_boundary(389)= 8.572859115e-01 
+ R_boundary(390)= 2.661585077e+00, Z_boundary(390)=-1.727173305e+00, psi_boundary(390)= 8.604751731e-01 
+ R_boundary(391)= 2.678579304e+00, Z_boundary(391)=-1.725349515e+00, psi_boundary(391)= 8.650678158e-01 
+ R_boundary(392)= 2.695643442e+00, Z_boundary(392)=-1.723234639e+00, psi_boundary(392)= 8.702295232e-01 
+ R_boundary(393)= 2.712772141e+00, Z_boundary(393)=-1.720828996e+00, psi_boundary(393)= 8.759715223e-01 
+ R_boundary(394)= 2.729959992e+00, Z_boundary(394)=-1.718132950e+00, psi_boundary(394)= 8.839321667e-01 
+ R_boundary(395)= 2.747201531e+00, Z_boundary(395)=-1.715146909e+00, psi_boundary(395)= 8.909253639e-01 
+ R_boundary(396)= 2.764491242e+00, Z_boundary(396)=-1.711871323e+00, psi_boundary(396)= 8.992670605e-01 
+ R_boundary(397)= 2.781823567e+00, Z_boundary(397)=-1.708306689e+00, psi_boundary(397)= 9.081537078e-01 
+ R_boundary(398)= 2.799192912e+00, Z_boundary(398)=-1.704453545e+00, psi_boundary(398)= 9.168654984e-01 
+ R_boundary(399)= 2.816593646e+00, Z_boundary(399)=-1.700312473e+00, psi_boundary(399)= 9.287692903e-01 
+ R_boundary(400)= 2.834020114e+00, Z_boundary(400)=-1.695884101e+00, psi_boundary(400)= 9.392707966e-01 
+ R_boundary(401)= 2.851466641e+00, Z_boundary(401)=-1.691169096e+00, psi_boundary(401)= 9.502411430e-01 
+ R_boundary(402)= 2.868927532e+00, Z_boundary(402)=-1.686168173e+00, psi_boundary(402)= 9.616554633e-01 
+ R_boundary(403)= 2.886397088e+00, Z_boundary(403)=-1.680882087e+00, psi_boundary(403)= 9.755543773e-01 
+ R_boundary(404)= 2.903869601e+00, Z_boundary(404)=-1.675311637e+00, psi_boundary(404)= 9.882272389e-01 
+ R_boundary(405)= 2.921339368e+00, Z_boundary(405)=-1.669457666e+00, psi_boundary(405)= 1.001169735e+00 
+ R_boundary(406)= 2.938800691e+00, Z_boundary(406)=-1.663321059e+00, psi_boundary(406)= 1.014374674e+00 
+ R_boundary(407)= 2.956247888e+00, Z_boundary(407)=-1.656902742e+00, psi_boundary(407)= 1.029677850e+00 
+ R_boundary(408)= 2.973675291e+00, Z_boundary(408)=-1.650203688e+00, psi_boundary(408)= 1.043477822e+00 
+ R_boundary(409)= 2.991077260e+00, Z_boundary(409)=-1.643224908e+00, psi_boundary(409)= 1.057717702e+00 
+ R_boundary(410)= 3.008448181e+00, Z_boundary(410)=-1.635967458e+00, psi_boundary(410)= 1.072052083e+00 
+ R_boundary(411)= 3.025782478e+00, Z_boundary(411)=-1.628432434e+00, psi_boundary(411)= 1.088859309e+00 
+ R_boundary(412)= 3.043074611e+00, Z_boundary(412)=-1.620620977e+00, psi_boundary(412)= 1.103892781e+00 
+ R_boundary(413)= 3.060319088e+00, Z_boundary(413)=-1.612534267e+00, psi_boundary(413)= 1.119198607e+00 
+ R_boundary(414)= 3.077510465e+00, Z_boundary(414)=-1.604173526e+00, psi_boundary(414)= 1.134773069e+00 
+ R_boundary(415)= 3.094643352e+00, Z_boundary(415)=-1.595540019e+00, psi_boundary(415)= 1.150605333e+00 
+ R_boundary(416)= 3.111712422e+00, Z_boundary(416)=-1.586635051e+00, psi_boundary(416)= 1.166479199e+00 
+ R_boundary(417)= 3.128712407e+00, Z_boundary(417)=-1.577459968e+00, psi_boundary(417)= 1.185182960e+00 
+ R_boundary(418)= 3.145638111e+00, Z_boundary(418)=-1.568016158e+00, psi_boundary(418)= 1.201339381e+00 
+ R_boundary(419)= 3.162484409e+00, Z_boundary(419)=-1.558305047e+00, psi_boundary(419)= 1.217539514e+00 
+ R_boundary(420)= 3.179246252e+00, Z_boundary(420)=-1.548328105e+00, psi_boundary(420)= 1.233749532e+00 
+ R_boundary(421)= 3.195918675e+00, Z_boundary(421)=-1.538086840e+00, psi_boundary(421)= 1.249930266e+00 
+ R_boundary(422)= 3.212496792e+00, Z_boundary(422)=-1.527582800e+00, psi_boundary(422)= 1.263332087e+00 
+ R_boundary(423)= 3.228975810e+00, Z_boundary(423)=-1.516817573e+00, psi_boundary(423)= 1.279306880e+00 
+ R_boundary(424)= 3.245351024e+00, Z_boundary(424)=-1.505792787e+00, psi_boundary(424)= 1.294369968e+00 
+ R_boundary(425)= 3.261617825e+00, Z_boundary(425)=-1.494510108e+00, psi_boundary(425)= 1.309852114e+00 
+ R_boundary(426)= 3.277771701e+00, Z_boundary(426)=-1.482971242e+00, psi_boundary(426)= 1.324007495e+00 
+ R_boundary(427)= 3.293808241e+00, Z_boundary(427)=-1.471177934e+00, psi_boundary(427)= 1.334621284e+00 
+ R_boundary(428)= 3.309723134e+00, Z_boundary(428)=-1.459131967e+00, psi_boundary(428)= 1.347054630e+00 
+ R_boundary(429)= 3.325512179e+00, Z_boundary(429)=-1.446835162e+00, psi_boundary(429)= 1.355718277e+00 
+ R_boundary(430)= 3.341171279e+00, Z_boundary(430)=-1.434289378e+00, psi_boundary(430)= 1.365819819e+00 
+ R_boundary(431)= 3.356696447e+00, Z_boundary(431)=-1.421496512e+00, psi_boundary(431)= 1.372137063e+00 
+ R_boundary(432)= 3.372083808e+00, Z_boundary(432)=-1.408458498e+00, psi_boundary(432)= 1.378005972e+00 
+ R_boundary(433)= 3.387329599e+00, Z_boundary(433)=-1.395177307e+00, psi_boundary(433)= 1.381761546e+00 
+ R_boundary(434)= 3.402430171e+00, Z_boundary(434)=-1.381654947e+00, psi_boundary(434)= 1.382667431e+00 
+ R_boundary(435)= 3.417381993e+00, Z_boundary(435)=-1.367893462e+00, psi_boundary(435)= 1.384357790e+00 
+ R_boundary(436)= 3.432181646e+00, Z_boundary(436)=-1.353894933e+00, psi_boundary(436)= 1.383010019e+00 
+ R_boundary(437)= 3.446825831e+00, Z_boundary(437)=-1.339661477e+00, psi_boundary(437)= 1.380881767e+00 
+ R_boundary(438)= 3.461311367e+00, Z_boundary(438)=-1.325195245e+00, psi_boundary(438)= 1.378215625e+00 
+ R_boundary(439)= 3.475635188e+00, Z_boundary(439)=-1.310498424e+00, psi_boundary(439)= 1.375337179e+00 
+ R_boundary(440)= 3.489794350e+00, Z_boundary(440)=-1.295573237e+00, psi_boundary(440)= 1.372569921e+00 
+ R_boundary(441)= 3.503786023e+00, Z_boundary(441)=-1.280421939e+00, psi_boundary(441)= 1.368461005e+00 
+ R_boundary(442)= 3.517607499e+00, Z_boundary(442)=-1.265046822e+00, psi_boundary(442)= 1.365025721e+00 
+ R_boundary(443)= 3.531256185e+00, Z_boundary(443)=-1.249450210e+00, psi_boundary(443)= 1.362397701e+00 
+ R_boundary(444)= 3.544729606e+00, Z_boundary(444)=-1.233634461e+00, psi_boundary(444)= 1.360726521e+00 
+ R_boundary(445)= 3.558025403e+00, Z_boundary(445)=-1.217601966e+00, psi_boundary(445)= 1.358134078e+00 
+ R_boundary(446)= 3.571141332e+00, Z_boundary(446)=-1.201355148e+00, psi_boundary(446)= 1.358326921e+00 
+ R_boundary(447)= 3.584075263e+00, Z_boundary(447)=-1.184896466e+00, psi_boundary(447)= 1.357365258e+00 
+ R_boundary(448)= 3.596825180e+00, Z_boundary(448)=-1.168228405e+00, psi_boundary(448)= 1.357036240e+00 
+ R_boundary(449)= 3.609389178e+00, Z_boundary(449)=-1.151353488e+00, psi_boundary(449)= 1.359349655e+00 
+ R_boundary(450)= 3.621765463e+00, Z_boundary(450)=-1.134274264e+00, psi_boundary(450)= 1.358743772e+00 
+ R_boundary(451)= 3.633952347e+00, Z_boundary(451)=-1.116993316e+00, psi_boundary(451)= 1.359719380e+00 
+ R_boundary(452)= 3.645948252e+00, Z_boundary(452)=-1.099513257e+00, psi_boundary(452)= 1.359709779e+00 
+ R_boundary(453)= 3.657751702e+00, Z_boundary(453)=-1.081836730e+00, psi_boundary(453)= 1.359902450e+00 
+ R_boundary(454)= 3.669361324e+00, Z_boundary(454)=-1.063966406e+00, psi_boundary(454)= 1.360259970e+00 
+ R_boundary(455)= 3.680775846e+00, Z_boundary(455)=-1.045904987e+00, psi_boundary(455)= 1.358462001e+00 
+ R_boundary(456)= 3.691994095e+00, Z_boundary(456)=-1.027655205e+00, psi_boundary(456)= 1.359080669e+00 
+ R_boundary(457)= 3.703014992e+00, Z_boundary(457)=-1.009219819e+00, psi_boundary(457)= 1.359850606e+00 
+ R_boundary(458)= 3.713837552e+00, Z_boundary(458)=-9.906016144e-01, psi_boundary(458)= 1.358400204e+00 
+ R_boundary(459)= 3.724460880e+00, Z_boundary(459)=-9.718034075e-01, psi_boundary(459)= 1.359491129e+00 
+ R_boundary(460)= 3.734884170e+00, Z_boundary(460)=-9.528280400e-01, psi_boundary(460)= 1.358329637e+00 
+ R_boundary(461)= 3.745106702e+00, Z_boundary(461)=-9.336783807e-01, psi_boundary(461)= 1.356105953e+00 
+ R_boundary(462)= 3.755127835e+00, Z_boundary(462)=-9.143573247e-01, psi_boundary(462)= 1.355258549e+00 
+ R_boundary(463)= 3.764947011e+00, Z_boundary(463)=-8.948677932e-01, psi_boundary(463)= 1.353376979e+00 
+ R_boundary(464)= 3.774563748e+00, Z_boundary(464)=-8.752127326e-01, psi_boundary(464)= 1.351682943e+00 
+ R_boundary(465)= 3.783977636e+00, Z_boundary(465)=-8.553951146e-01, psi_boundary(465)= 1.350181779e+00 
+ R_boundary(466)= 3.793188339e+00, Z_boundary(466)=-8.354179353e-01, psi_boundary(466)= 1.350074764e+00 
+ R_boundary(467)= 3.802195584e+00, Z_boundary(467)=-8.152842150e-01, psi_boundary(467)= 1.348962645e+00 
+ R_boundary(468)= 3.810999167e+00, Z_boundary(468)=-7.949969976e-01, psi_boundary(468)= 1.348049302e+00 
+ R_boundary(469)= 3.819598943e+00, Z_boundary(469)=-7.745593503e-01, psi_boundary(469)= 1.344525884e+00 
+ R_boundary(470)= 3.827994825e+00, Z_boundary(470)=-7.539743629e-01, psi_boundary(470)= 1.342795448e+00 
+ R_boundary(471)= 3.836186784e+00, Z_boundary(471)=-7.332451477e-01, psi_boundary(471)= 1.339575467e+00 
+ R_boundary(472)= 3.844174840e+00, Z_boundary(472)=-7.123748386e-01, psi_boundary(472)= 1.336497250e+00 
+ R_boundary(473)= 3.851959063e+00, Z_boundary(473)=-6.913665909e-01, psi_boundary(473)= 1.335358884e+00 
+ R_boundary(474)= 3.859539570e+00, Z_boundary(474)=-6.702235808e-01, psi_boundary(474)= 1.332627568e+00 
+ R_boundary(475)= 3.866916519e+00, Z_boundary(475)=-6.489490048e-01, psi_boundary(475)= 1.330061912e+00 
+ R_boundary(476)= 3.874090109e+00, Z_boundary(476)=-6.275460793e-01, psi_boundary(476)= 1.326517539e+00 
+ R_boundary(477)= 3.881060576e+00, Z_boundary(477)=-6.060180402e-01, psi_boundary(477)= 1.323170014e+00 
+ R_boundary(478)= 3.887828186e+00, Z_boundary(478)=-5.843681423e-01, psi_boundary(478)= 1.321164649e+00 
+ R_boundary(479)= 3.894393240e+00, Z_boundary(479)=-5.625996585e-01, psi_boundary(479)= 1.315040248e+00 
+ R_boundary(480)= 3.900756064e+00, Z_boundary(480)=-5.407158802e-01, psi_boundary(480)= 1.312290279e+00 
+ R_boundary(481)= 3.906917009e+00, Z_boundary(481)=-5.187201157e-01, psi_boundary(481)= 1.306516209e+00 
+ R_boundary(482)= 3.912876448e+00, Z_boundary(482)=-4.966156906e-01, psi_boundary(482)= 1.304214504e+00 
+ R_boundary(483)= 3.918634773e+00, Z_boundary(483)=-4.744059468e-01, psi_boundary(483)= 1.298842702e+00 
+ R_boundary(484)= 3.924192393e+00, Z_boundary(484)=-4.520942420e-01, psi_boundary(484)= 1.297039614e+00 
+ R_boundary(485)= 3.929549728e+00, Z_boundary(485)=-4.296839495e-01, psi_boundary(485)= 1.292124234e+00 
+ R_boundary(486)= 3.934707210e+00, Z_boundary(486)=-4.071784574e-01, psi_boundary(486)= 1.287440492e+00 
+ R_boundary(487)= 3.939665280e+00, Z_boundary(487)=-3.845811682e-01, psi_boundary(487)= 1.283001440e+00 
+ R_boundary(488)= 3.944424383e+00, Z_boundary(488)=-3.618954984e-01, psi_boundary(488)= 1.278820021e+00 
+ R_boundary(489)= 3.948984969e+00, Z_boundary(489)=-3.391248776e-01, psi_boundary(489)= 1.274909168e+00 
+ R_boundary(490)= 3.953347487e+00, Z_boundary(490)=-3.162727486e-01, psi_boundary(490)= 1.270320495e+00 
+ R_boundary(491)= 3.957512386e+00, Z_boundary(491)=-2.933425662e-01, psi_boundary(491)= 1.267011823e+00 
+ R_boundary(492)= 3.961480109e+00, Z_boundary(492)=-2.703377971e-01, psi_boundary(492)= 1.260403390e+00 
+ R_boundary(493)= 3.965251096e+00, Z_boundary(493)=-2.472619194e-01, psi_boundary(493)= 1.256810097e+00 
+ R_boundary(494)= 3.968825777e+00, Z_boundary(494)=-2.241184218e-01, psi_boundary(494)= 1.250802671e+00 
+ R_boundary(495)= 3.972204572e+00, Z_boundary(495)=-2.009108034e-01, psi_boundary(495)= 1.247948941e+00 
+ R_boundary(496)= 3.975387891e+00, Z_boundary(496)=-1.776425727e-01, psi_boundary(496)= 1.242599450e+00 
+ R_boundary(497)= 3.978376129e+00, Z_boundary(497)=-1.543172476e-01, psi_boundary(497)= 1.236789248e+00 
+ R_boundary(498)= 3.981169665e+00, Z_boundary(498)=-1.309383546e-01, psi_boundary(498)= 1.232120979e+00 
+ R_boundary(499)= 3.983768863e+00, Z_boundary(499)=-1.075094282e-01, psi_boundary(499)= 1.227073370e+00 
+ R_boundary(500)= 3.986174067e+00, Z_boundary(500)=-8.403401064e-02, psi_boundary(500)= 1.223130453e+00 
+ R_boundary(501)= 3.988385603e+00, Z_boundary(501)=-6.051565102e-02, psi_boundary(501)= 1.218893088e+00 
+ R_boundary(502)= 3.990403773e+00, Z_boundary(502)=-3.695790499e-02, psi_boundary(502)= 1.215095599e+00 
+ R_boundary(503)= 3.992228860e+00, Z_boundary(503)=-1.336433418e-02, psi_boundary(503)= 1.212336250e+00 
+ R_boundary(504)= 3.993861121e+00, Z_boundary(504)= 1.026149440e-02, psi_boundary(504)= 1.209416805e+00 
+ R_boundary(505)= 3.995300789e+00, Z_boundary(505)= 3.391600884e-02, psi_boundary(505)= 1.203027443e+00 
+ R_boundary(506)= 3.996548074e+00, Z_boundary(506)= 5.759563291e-02, psi_boundary(506)= 1.201523404e+00 
+ R_boundary(507)= 3.997603156e+00, Z_boundary(507)= 8.129678657e-02, psi_boundary(507)= 1.196018925e+00 
+ R_boundary(508)= 3.998466192e+00, Z_boundary(508)= 1.050158865e-01, psi_boundary(508)= 1.194984683e+00 
+ R_boundary(509)= 3.999137308e+00, Z_boundary(509)= 1.287493468e-01, psi_boundary(509)= 1.190813492e+00 
+ R_boundary(510)= 3.999616605e+00, Z_boundary(510)= 1.524935792e-01, psi_boundary(510)= 1.186737328e+00 
+ R_boundary(511)= 3.999904155e+00, Z_boundary(511)= 1.762449939e-01, psi_boundary(511)= 1.183156448e+00 
+ R_boundary(512)= 4.000000000e+00, Z_boundary(512)= 2.000000000e-01, psi_boundary(512)= 1.180069786e+00 
+
+ R_geo    = 2.85
+ Z_geo    = 0.2
+
+ ellip    = 1.75
+ tria_u   = 0.25
+ tria_l   = 0.2
+ quad_u   = -0.15
+ quad_l   = -0.0
+ amin     = 1.  
+
+ xampl    = 0.0
+ xsig     = 0.6
+ xwidth   = 1.5
+ xtheta   = 4.7
+ xleft    = 0.0
+ xshift   = 0.0
+ xpoint   = .t.
+ xcase    = 1
+
+ R_begin = 2.9
+ R_end   = 3.1
+ Z_begin = -0.1
+ Z_end   = 0.1
+
+ F0    = 5.976
+
+ n_R       = 0
+ n_Z       = 0
+ n_radial  = 60
+ n_pol     = 90 
+
+ n_flux    = 25
+ n_tht     = 32 
+ n_open    = 3      ! number of surfaces on outer side (    used for single-null!)
+ n_leg     = 4      ! number of surfaces in lower leg  (    used for single-null!) 
+ n_private = 3      ! number of surfaces in lower priv (    used for single-null!)
+
+ !-------------------- Control the localisation of grid resolution
+ SIG_closed  = 0.08d0!0.05d0	     
+ SIG_open    = 0.3d0!0.2d0	     
+ SIG_private = 0.5d0	     
+ SIG_theta   = 0.01d0 
+ SIG_leg_0   = 0.05d0
+ SIG_leg_1   = 0.2d0
+
+ !-------------------- Control distance between plasma and open flux surface boundaries
+ dPSI_open   = 0.05	! Used for songle-Null plasmas
+ dPSI_private= 0.01	! Used for songle-Null plasmas
+
+ eta   = 5.d-6
+ visco = 1.d-5
+ visco_par = 1.d-5
+
+ eta_num   = 1.d-9
+
+ D_par     = 0.0d0
+ D_perp(1) = 2.d-5
+ D_perp(2) = 0.9d0
+ D_perp(3) = 0.13d0
+ D_perp(4) = 0.01d0
+ D_perp(5) = 0.92d0
+ D_perp(6) = 2.d-5
+
+ ZK_par  = 1.d4
+ ZK_perp(1) = 5.0d-6
+ ZK_perp(2) = 0.8d0
+ ZK_perp(3) = 0.08d0
+ ZK_perp(4) = 0.01d0
+ ZK_perp(5) = 0.96
+ ZK_perp(6) = 5.0d-6
+
+ FF_0        = 2.98   	    !3.7!2.8
+ FF_1        = 0.	    !0.
+ FF_coef(1)  = -0.8	    !-1.4
+ FF_coef(2)  = -0.6d0	    !0.0d0
+ FF_coef(3)  = 0.25d0	    !0.4d0
+ FF_coef(4)  = 0.01d0	    !0.01d0
+ FF_coef(5)  = 0.99d0	    !0.99d0
+ FF_coef(6)  = -0.21        !-0.21!-0.08d0
+ FF_coef(7)  = 0.992d0	    !0.99d0
+ FF_coef(8)  = 0.016d0	    !0.016d0
+
+ heatsource	= 2.d-11
+ particlesource = 1.16d-6
+
+ T_0	   = 0.092
+ T_1	   = 0.8d-3
+ T_coef(1) = -0.853d0
+ T_coef(2) =  0.025d0
+ T_coef(3) =  0.053d0
+ T_coef(4) =  0.015d0
+ T_coef(5) =  1.0004d0
+
+ central_density = 6.25d19
+ rho_0       = 1.
+ rho_1       = 0.002
+ rho_coef(1) =  0.16
+ rho_coef(2) = -1.07
+ rho_coef(3) =  0.653
+ rho_coef(4) =  0.015d0
+ rho_coef(5) =  0.9845
+
+ /

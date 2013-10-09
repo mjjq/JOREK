@@ -1,3 +1,4 @@
+#include "../config.h"
 module solve_mat_n
 
 contains
@@ -33,11 +34,7 @@ contains
     !Split broadcast
     character*8 :: type
     INTEGER :: increment
-#define GCC_VERSION (__GNUC__ * 10000 \
-                      + __GNUC_MINOR__ * 100 \
-                      + __GNUC_PATCHLEVEL__)
-
-#if (GCC_VERSION < 40800 && GCC_VERSION > 0)
+#if (NULL_VAR)
     real*8,  pointer :: DUMMY_REAL(:)
     integer, pointer :: DUMMY_INT (:)
     DUMMY_REAL => NULL()

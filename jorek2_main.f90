@@ -17,6 +17,7 @@
 !!
 !! @author Guido Huysmans (Euratom / CEA Association)
 !! @date 18-7-2008
+#include "../config.h"
 program JOREK2
 
   use constants
@@ -184,11 +185,7 @@ program JOREK2
   complex*16 :: out_fft(1:n_plane)
 #endif
 
-#define GCC_VERSION (__GNUC__ * 10000 \
-		     + __GNUC_MINOR__ * 100 \
-		     + __GNUC_PATCHLEVEL__)
-
-#if (GCC_VERSION < 40800 && GCC_VERSION > 0)
+#if (NULL_VAR)
     real*8,  pointer :: DUMMY_REAL(:)
     integer, pointer :: DUMMY_INT (:)
     DUMMY_REAL => NULL()
@@ -197,7 +194,6 @@ program JOREK2
 #define DUMMY_REAL NULL()
 #define DUMMY_INT NULL()
 #endif
-  
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************

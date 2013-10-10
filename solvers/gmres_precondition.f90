@@ -1,4 +1,3 @@
-#include "../config.h"
 !> Solve step of the local matrices for each toroidal harmonic (preconditioner for gmres)
 subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 
@@ -25,15 +24,8 @@ real*8               :: tsecond
 real*8, allocatable :: buffer(:)
 integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 
-#if (NULL_VAR)
-    real*8,  pointer :: DUMMY_REAL(:)
-    integer, pointer :: DUMMY_INT (:)
-    DUMMY_REAL => NULL()
-    DUMMY_INT  => NULL()
-#else
-#define DUMMY_REAL NULL()
-#define DUMMY_INT NULL()
-#endif
+real*8  :: DUMMY_REAL(1:1)
+integer :: DUMMY_INT (1:1)
 
 !write(*,*) my_id,my_id_n,' GMRES preconditioning ',MPI_COMM_WORLD
 

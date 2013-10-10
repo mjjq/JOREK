@@ -1,4 +1,3 @@
-#include "../config.h"
 module solve_mat_n
 
 contains
@@ -34,15 +33,8 @@ contains
     !Split broadcast
     character*8 :: type
     INTEGER :: increment
-#if (NULL_VAR)
-    real*8,  pointer :: DUMMY_REAL(:)
-    integer, pointer :: DUMMY_INT (:)
-    DUMMY_REAL => NULL()
-    DUMMY_INT  => NULL()
-#else
-#define DUMMY_REAL NULL()
-#define DUMMY_INT NULL()
-#endif
+    real*8  :: DUMMY_REAL(1:1)
+    integer :: DUMMY_INT (1:1)
 
     !+increment because of difference between murge.inc (0 based) and pastix_fortran.h (1 based)
     !in old version of PaStiX

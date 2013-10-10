@@ -17,7 +17,6 @@
 !!
 !! @author Guido Huysmans (Euratom / CEA Association)
 !! @date 18-7-2008
-#include "../config.h"
 program JOREK2
 
   use constants
@@ -185,15 +184,8 @@ program JOREK2
   complex*16 :: out_fft(1:n_plane)
 #endif
 
-#if (NULL_VAR)
-    real*8,  pointer :: DUMMY_REAL(:)
-    integer, pointer :: DUMMY_INT (:)
-    DUMMY_REAL => NULL()
-    DUMMY_INT  => NULL()
-#else
-#define DUMMY_REAL NULL()
-#define DUMMY_INT NULL()
-#endif
+  real*8  :: DUMMY_REAL(1:1)
+  integer :: DUMMY_INT (1:1)
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************

@@ -45,7 +45,7 @@ real*8              :: SIG_leg_0, SIG_leg_1
 real*8              :: SIG_up_leg_0, SIG_up_leg_1
 real*8              :: SIG_0, SIG_1
 real*8              :: bgf_tht
-logical, parameter  :: plot_grid = .false.
+logical, parameter  :: plot_grid = .true.
 
 write(*,*) '*****************************************'
 write(*,*) '* X-point grid : Define new grid points *'

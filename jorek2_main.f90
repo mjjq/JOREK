@@ -198,6 +198,9 @@ program JOREK2
 #else
   required = MPI_THREAD_MULTIPLE
 #endif
+#ifdef STAN_FLAG
+required = 0
+#endif
   call MPI_Init_thread(required, provided, StatInfo)
 
   call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread

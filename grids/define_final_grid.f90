@@ -43,7 +43,7 @@ real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, PSI_R, PSI_Z
 real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
-logical, parameter  :: plot_grid = .false.
+logical, parameter  :: plot_grid = .true.
 
 
 write(*,*) '*****************************************'

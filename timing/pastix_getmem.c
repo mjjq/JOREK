@@ -10,5 +10,7 @@
 unsigned long memAllocGetCurrent ();
 
 void FORTRAN_CALL(pastix_getmem)(int64_t * mem) {
+#ifndef STAN_FLAG
   *mem = memAllocGetCurrent();
+#endif
 }

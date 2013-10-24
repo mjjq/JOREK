@@ -44,7 +44,7 @@ integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: xjac, BigR, wst, P_int, C_intern, ZJ_0, PS_0, Volume, Area
 real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
-real*8     :: particle_source, heat_source, heating_power
+real*8     :: particle_source, heat_source, heat_source_i, heat_source_e, heating_power
 
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
@@ -142,8 +142,14 @@ do ife =1, element_list%n_elements
       if ( in_plasma(x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit) ) then
         
-        call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-          psi_limit, particle_source, heat_source)
+        if (jorek_model .eq. 400) then
+          call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
+	    psi_limit, particle_source, heat_source_i, heat_source_e)
+	    heat_source = heat_source_i + heat_source_e
+        else
+          call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
+            psi_limit, particle_source, heat_source)
+        endif
         
         ! --- 3D integrals
         D_int = D_int + rho_00       * xjac * BigR * wst

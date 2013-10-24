@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+# Jobscript for running JOREK on HYDRA.
+#
+# <<jobscript_comment>>
+#
+# Job name: <<jobname>>
+#
+# @ error = job.err.$(jobid)
+# @ output = job.out.$(jobid)
+# @ job_type = parallel
+# @ node_usage= not_shared
+# @ node = <<nodes>>
+# @ tasks_per_node = <<tasks_per_node>>
+# @ resources = ConsumableCpus(<<omp>>)
+# @ network.MPI = sn_all,not_shared,us
+# @ wall_clock_limit = <<runtime>>
+# @ notification = complete
+# @ notify_user = <<email>>
+# @ queue
+
+BIN="jorek_model<<model>>_step<<job_step>>"
+NSLOTS="<<mpi>>"
+INP="input<<job_step>>"
+OMP="<<omp>>"
+DIR="<<main_dir>>"
+
+module unload intel mpi.ibm mpi.intel mkl fftw
+module load intel mpi.intel mkl fftw
+
+cd $DIR
+
+export OMP_NUM_THREADS=$OMP
+
+mpirun -np $NSLOTS $BIN < $INP | tee -a logfile

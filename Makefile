@@ -37,6 +37,8 @@ VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 
 .SUFFIXES: .o .f90 .f .c
 
+DEFINES := $(DEFINES) -DJOREK_MODEL=`echo $(MODEL) | sed -e 's/model//'`
+
 ifeq (1, $(USE_FFTW))
   LIBS     := $(LIBS) $(LIBFFTW)
   DEFINES  := $(DEFINES) -DUSE_FFTW

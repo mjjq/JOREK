@@ -143,9 +143,11 @@ do ife =1, element_list%n_elements
         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit) ) then
         
         if (jorek_model .eq. 400) then
+#if JOREK_MODEL == 400
           call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
 	    psi_limit, particle_source, heat_source_i, heat_source_e)
 	    heat_source = heat_source_i + heat_source_e
+#endif
         else
           call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
             psi_limit, particle_source, heat_source)

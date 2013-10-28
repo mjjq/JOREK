@@ -44,6 +44,8 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,*) ' JOREK_MODEL         : ', JOREK_MODEL
+
   write(*,'(1x,a)',advance='no') ' USE_FFTW            : '
 #ifdef USE_FFTW
   write(*,*) 'on'

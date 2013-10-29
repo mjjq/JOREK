@@ -33,19 +33,20 @@ real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
 integer    :: vertex(2), direction(2), i, j, j2, ms, mt, mp, k, l, l2, index_ij, index_kl, index, xcase2
 integer    :: in, im
-integer    :: ij1, ij2, ij3, ij4, ij5, ij6, ij7
-integer    :: kl1, kl2, kl3, kl4, kl5, kl6, kl7
+integer    :: ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8
+integer    :: kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
 real*8     :: ws, xjac,  BigR, Z, phi, eps_cyl
 real*8     :: psi_axis, R_axis, Z_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
-real*8     :: rhs_ij_5, rhs_ij_6, rhs_ij_7
+real*8     :: rhs_ij_5, rhs_ij_6, rhs_ij_7, rhs_ij_8
 real*8     :: theta, zeta
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
-real*8     :: ps0, ps0_s, Vpar0, r0, T0  
-real*8     :: psi, psi_s, vpar, rho,  T
+real*8     :: ps0, ps0_s, Vpar0, r0, Ti0, Te0  
+real*8     :: psi, psi_s, vpar, rho,  Ti,  Te
 real*8     :: alpha, normal, DL, Dwall, gas_puff
 real*8     :: amat_51, amat_55, amat_57
 real*8     :: amat_61, amat_65, amat_66, amat_67
+real*8     :: amat_81, amat_85, amat_88, amat_87
 real*8     :: element_size_ij, element_size_kl
 logical    :: xpoint2
 
@@ -116,7 +117,8 @@ do ms=1, n_gauss
      ps0_s = eq_s(mp,1,ms)             ! why not absolute value for normal orientation?
 
      r0    = eq_g(mp,5,ms)
-     T0    = eq_g(mp,6,ms)
+     Ti0   = eq_g(mp,6,ms)
+     Te0   = eq_g(mp,8,ms)
      Vpar0 = eq_g(mp,7,ms)
 
      if (xcase2 .eq. 1) then
@@ -167,13 +169,16 @@ do ms=1, n_gauss
                       + v * gas_puff * DL * BigR                             * tstep  &
                       - v * Dwall * r0 * r0 * DL                             * tstep !* BigR
 
-           rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
+           rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * Ti0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
+           rhs_ij_8 = - v * (gamma_sheath -1.d0) * r0 * Te0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
 
            ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
            ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
+           ij8 = index_ij + 7*n_tor                                          ! local index in element matrix
 
            RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
+           RHS(ij8) = RHS(ij8) + rhs_ij_8 * ws                               ! add to element RHS
 
            do k=1,2                                                          ! loop over nodes
 
@@ -188,7 +193,7 @@ do ms=1, n_gauss
 
                  psi_s = H1_s(k,l,ms) * element_size_kl * HZ(in,mp)
 
-                 rho   = psi    ;    T   = psi  ;    vpar   = psi
+                 rho   = psi    ;    Ti   = psi   ;    Te   = psi   ;    vpar   = psi
 
 !diffuse perp flux only (unless we change the integration by parts of the density equation)
 
@@ -197,12 +202,19 @@ do ms=1, n_gauss
                            + v * Dwall * 2.d0 * r0 * rho * DL                      * theta * tstep ! * BigR
                  amat_57 = - v * density_reflection * r0  * vpar  * ps0_s * normal * theta * tstep 
 
-                 amat_61 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar0 * psi_s * normal * theta * tstep 
-                 amat_65 = + v * (gamma_sheath-1.d0) * rho * T0 * vpar0 * ps0_s * normal * theta * tstep &
-                           + v * (gamma_sheath-1.d0) * rho * T0 * 0.00  * DL	* normal * theta * tstep 
-                 amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * normal * theta * tstep &
-                           + v * (gamma_sheath-1.d0) * r0  * T  * 0.00  * DL	* normal * theta * tstep 
-                 amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * normal * theta * tstep 
+                 amat_61 = + v * (gamma_sheath-1.d0) * r0  * Ti0 * vpar0 * psi_s * normal * theta * tstep 
+                 amat_65 = + v * (gamma_sheath-1.d0) * rho * Ti0 * vpar0 * ps0_s * normal * theta * tstep &
+                           + v * (gamma_sheath-1.d0) * rho * Ti0 * 0.00  * DL    * normal * theta * tstep 
+                 amat_66 = + v * (gamma_sheath-1.d0) * r0  * Ti  * vpar0 * ps0_s * normal * theta * tstep &
+                           + v * (gamma_sheath-1.d0) * r0  * Ti  * 0.00  * DL    * normal * theta * tstep 
+                 amat_67 = + v * (gamma_sheath-1.d0) * r0  * Ti0 * vpar  * ps0_s * normal * theta * tstep 
+
+                 amat_81 = + v * (gamma_sheath-1.d0) * r0  * Te0 * vpar0 * psi_s * normal * theta * tstep 
+                 amat_85 = + v * (gamma_sheath-1.d0) * rho * Te0 * vpar0 * ps0_s * normal * theta * tstep &
+                           + v * (gamma_sheath-1.d0) * rho * Te0 * 0.00  * DL    * normal * theta * tstep 
+                 amat_88 = + v * (gamma_sheath-1.d0) * r0  * Te  * vpar0 * ps0_s * normal * theta * tstep &
+                           + v * (gamma_sheath-1.d0) * r0  * Te  * 0.00  * DL    * normal * theta * tstep 
+                 amat_87 = + v * (gamma_sheath-1.d0) * r0  * Te0 * vpar  * ps0_s * normal * theta * tstep 
 
                  index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
 
@@ -210,6 +222,7 @@ do ms=1, n_gauss
                  kl5 = index_kl + 4*n_tor
                  kl6 = index_kl + 5*n_tor
                  kl7 = index_kl + 6*n_tor
+                 kl8 = index_kl + 7*n_tor
 
                  ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
                  ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55
@@ -219,6 +232,11 @@ do ms=1, n_gauss
                  ELM(ij6,kl5) =  ELM(ij6,kl5) + ws * amat_65
                  ELM(ij6,kl6) =  ELM(ij6,kl6) + ws * amat_66
                  ELM(ij6,kl7) =  ELM(ij6,kl7) + ws * amat_67
+
+                 ELM(ij8,kl1) =  ELM(ij8,kl1) + ws * amat_81
+                 ELM(ij8,kl5) =  ELM(ij8,kl5) + ws * amat_85
+                 ELM(ij8,kl8) =  ELM(ij8,kl8) + ws * amat_88
+                 ELM(ij8,kl7) =  ELM(ij8,kl7) + ws * amat_87
 
                enddo
              enddo

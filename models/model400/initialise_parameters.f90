@@ -6,7 +6,7 @@ use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
-use vacuum,        only: vacuum_preset
+use vacuum,        only: vacuum_preset, wall_resistivity
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -16,7 +16,7 @@ integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
 
 ! --- Local variables
-integer :: ierr
+integer :: ierr, i, err
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -24,7 +24,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 restart, regrid, bootstrap,                         &
                 force_horizontal_Xline,                             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg,                           &
+                n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
@@ -60,7 +60,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
                 D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary,resistive_wall,                        &
+                freeboundary, resistive_wall, wall_resistivity,     &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &
                 pastix_smp_only, refinement, grid_to_wall,          &
@@ -70,7 +70,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-                linear_run, export_for_nemec,                       &
+                linear_run, export_for_nemec, R_Z_psi_bnd_file,     &
+                wall_file,                                          &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
@@ -84,23 +85,31 @@ if (my_id .eq. 0) then
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
   ! --- Model-specific presets
-  T_file         = 'none'
   Te_file        = 'none'
   Ti_file        = 'none'
   ZK_e_perp_file = 'none'
   ZK_i_perp_file = 'none'
   
-  T_0   =  1.d-6
-  T_1   =  1.d-8
+  Ti_0   =  1.d-6
+  Ti_1   =  1.d-8
   
-  T_coef     = 0.d0
-  T_coef(1)  = -1.d0
-
-  heatsource   = 1.e-7
-
-  ZK_perp(1) = 1.d-5; ZK_perp(2) = 0.d0; ZK_perp(3)= 0.d0; ZK_perp(4)= 99.d0; ZK_perp(5) = 99.d0
-  ZK_par     = 1.d+6
+  Te_0   =  1.d-6
+  Te_1   =  1.d-8
   
+  Ti_coef     = 0.d0
+  Ti_coef(1)  = -1.d0
+  Te_coef     = 0.d0
+  Te_coef(1)  = -1.d0
+
+  heatsource_i   = 1.e-7
+  heatsource_e   = 1.e-7
+
+  ZK_i_perp(1) = 1.d-5; ZK_i_perp(2) = 0.d0; ZK_i_perp(3)= 0.d0; ZK_i_perp(4)= 99.d0; ZK_i_perp(5) = 99.d0
+  K_i_par      = 1.d+6
+  
+  ZK_e_perp(1) = 1.d-5; ZK_e_perp(2) = 0.d0; ZK_e_perp(3)= 0.d0; ZK_e_perp(4)= 99.d0; ZK_e_perp(5) = 99.d0
+  K_e_par      = 1.d+7
+
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
      open(42, file=filename, status='old', action='read', iostat=ierr)
@@ -113,6 +122,24 @@ if (my_id .eq. 0) then
   else
     read(5,in1)
   end if
+
+ !==============================R_Z_psi_bnd==========================
+   if (n_boundary.ne.0) then
+ ! --- Open the file.
+    OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in define_boundary: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
+    else
+      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
+      do i=1,n_boundary
+        read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
+      enddo
+    endif    
+    CLOSE(243)
+  endif
+ !=========================================
   
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)

@@ -1,6 +1,5 @@
 !> Determine the heat and particle sources at a given position.
-subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particle_source, heat_source_i,   &
-  heat_source_e)
+subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particle_source, heat_source)
 
 use phys_module
 
@@ -15,29 +14,24 @@ real*8,  intent(in)   :: psi
 real*8,  intent(in)   :: psi_axis
 real*8,  intent(in)   :: psi_bnd
 real*8,  intent(out)  :: particle_source
-real*8,  intent(out)  :: heat_source_i
-real*8,  intent(out)  :: heat_source_e
+real*8,  intent(out)  :: heat_source
 
 ! --- Local variables
-real*8 :: psi_n, sig_Ti, sig_Te
+real*8 :: psi_n, sig_T
 
-sig_Ti = 0.01
-sig_Te = 0.01
+sig_T = 0.01
 
 psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
 
 particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_psin)/particlesource_sig))
 if(xcase2 .eq. 1) then
-  heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
-  heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
+  heat_source   = heatsource   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_T )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
 endif
 if(xcase2 .eq. 2) then
-  heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-  heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
+  heat_source   = heatsource   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_T )) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
 endif
 if(xcase2 .eq. 3) then
-  heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-  heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
+  heat_source   = heatsource   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_T )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
 endif
 
 return

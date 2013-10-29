@@ -2,7 +2,7 @@ DIR = models/model400
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/sources.f90 			\
-	$(DIR)/element_matrix.f90 		\
+	$(DIR)/mod_equation_variables.f90 	\
 	$(DIR)/element_matrix_fft.f90 		\
 	$(DIR)/boundary_matrix_open.f90  	\
 	$(DIR)/boundary_matrix.f90 		\
@@ -16,7 +16,6 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	\
 	$(DIR)/mod_parameters.f90
 
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
-	$(DIR)/sources.f90 			\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/mod_parameters.f90
 
@@ -30,6 +29,7 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
+	$(DIR)/sources.f90 	\
 	$(DIR)/mod_parameters.f90
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)	\
@@ -43,11 +43,3 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)	\
 JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/mod_parameters.f90
-
-JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
-        $(DIR)/initialise_parameters.f90        \
-        $(DIR)/mod_parameters.f90
-
-JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC) \
-        $(DIR)/initialise_parameters.f90        \
-        $(DIR)/mod_parameters.f90

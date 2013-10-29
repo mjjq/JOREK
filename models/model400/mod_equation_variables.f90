@@ -18,7 +18,6 @@ module equation_variables
   real*8 	:: D_prof
   real*8 	:: Ki_prof, Ki_par, dKi_par
   real*8 	:: Ke_prof, Ke_par, dKe_par
-  real*8 	:: tau_IC
   
   ! --- Hyper diffusivities
   real*8 	:: eta_numm, visco_numm, visco_par_numm, D_perp_numm, Ki_perp_numm, Ki_par_num, Ke_perp_numm, Ke_par_num 

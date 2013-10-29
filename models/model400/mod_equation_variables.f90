@@ -18,12 +18,16 @@ module equation_variables
   real*8 	:: D_prof
   real*8 	:: Ki_prof, Ki_par, dKi_par
   real*8 	:: Ke_prof, Ke_par, dKe_par
+  real*8 	:: tau_IC
   
   ! --- Hyper diffusivities
   real*8 	:: eta_numm, visco_numm, visco_par_numm, D_perp_numm, Ki_perp_numm, Ki_par_num, Ke_perp_numm, Ke_par_num 
   real*8 	:: v_ps0_x,   v_ps0_y
   real*8 	:: Ti0_ps0_x, Ti0_ps0_y
   real*8 	:: Te0_ps0_x, Te0_ps0_y
+  
+  ! --- Neoclassical coefficients
+  real*8 	:: tau_IC
   
   ! --- R,Z-coords and jacobians
   real*8 	:: x_g, x_s, x_t, x_ss, x_st, x_tt
@@ -90,6 +94,7 @@ module equation_variables
   !$omp 	Ki_prof, Ki_par, dKi_par,										           &
   !$omp 	Ke_prof, Ke_par, dKe_par,										           &
   !$omp 	eta_numm, visco_numm, visco_par_numm, D_perp_numm, Ki_perp_numm, Ki_par_num, Ke_perp_numm, Ke_par_num,		   &
+  !$omp 	tau_IC,												   		   &
   !$omp 	v_ps0_x,   v_ps0_y,												   &
   !$omp 	Ti0_ps0_x, Ti0_ps0_y,												   &
   !$omp 	Te0_ps0_x, Te0_ps0_y,												   &

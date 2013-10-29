@@ -469,6 +469,15 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if (psi_norm .lt. 0.2d0) visco_numm = visco_numm * 1.d2
   if (psi_norm .lt. 0.2d0) eta_numm   = eta_numm   * 1.d2
 
+  ! ------------------------------------------------------
+  ! --- Diamagnetic terms, avoid problems at the target...
+  ! ------------------------------------------------------
+  tau_IC = tauIC
+  !if ( (psi_norm .gt. 1.d0) .or. ((y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) tau_IC = tau_IC * 1.d-3
+  !if ( (psi_norm .gt. 1.d0) .or. ((y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) tau_IC = tau_IC * 1.d-3
+  if ((y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
+  if ((y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
+  
   ! -------------------------------------------------------------------
   ! --- Heating, current and particle source (the same for all i_plane)
   ! -------------------------------------------------------------------

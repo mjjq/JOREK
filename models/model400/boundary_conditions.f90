@@ -233,7 +233,15 @@ contains
                             u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
                             u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
 
-                            direction = + ps0_x / abs(ps0_x)             ! temporary solution for lower x-point only
+        		    if (tokamak_device(1:4) .eq. 'MAST') then
+        		      if ( (node_list%node(inode)%x(1,1) .gt. (R_xpoint(1)+R_xpoint(2))/2.d0) ) then
+        			direction = 1.d0
+        		      else
+        			direction = -1.d0
+        		      endif
+        		    else
+        		      direction = + ps0_x / abs(ps0_x)  	 ! temporary solution for lower x-point only
+        		    endif
                             if (xcase2 .eq. 2) direction = -direction
                             if ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
 

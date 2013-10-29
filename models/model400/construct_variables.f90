@@ -489,6 +489,10 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     particle_source   = particlesource * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) )
     heat_source_i     = heatsource_i   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
     heat_source_e     = heatsource_e   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
+    
+    if ( abs(V_0) .ge. 1.e-12) then 
+      call velocity(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, V_source)
+    endif
   endif
   
   return

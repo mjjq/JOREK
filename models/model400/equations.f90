@@ -635,6 +635,7 @@ subroutine ELM_main_rhs_7(rhs,rhs_k)
   ! --- The RHS term	      
   rhs(7) = - v * F0 / BigR * P0_p				* xjac * tstep &
 	   - v * (P0_x * ps0_y - P0_y * ps0_x)			* xjac * tstep &
+	   - v * F0 / BigR * r0 * V_source  		  	* xjac * tstep &
 	   - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR	* xjac * tstep &
 	   + zeta * v * r0 * F0**2 / BigR			* xjac *delta_g(7)&  
 	   - visco_par_numm  *  					       &
@@ -670,9 +671,10 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
 
   amat(7,5)   = + v * (rho_x * (Ti0 + Te0)     * ps0_y - rho_y * (Ti0 + Te0)     * ps0_x)	* xjac * theta * tstep &
 		+ v * (rho   * (Ti0_x + Te0_x) * ps0_y - rho   * (Ti0_y + Te0_y) * ps0_x)	* xjac * theta * tstep &
-		+ v * F0 / BigR * rho * Ti0_p							* xjac * theta * tstep 
+	        + v * F0 / BigR * rho * V_source  		  	  			* xjac * theta * tstep &
+		+ v * F0 / BigR * rho * (Ti0_p + Te0_p)						* xjac * theta * tstep 
 
-  amat_n(7,5) = v * F0 / BigR * rho_p * Ti0							* xjac * theta * tstep  
+  amat_n(7,5) = v * F0 / BigR * rho_p * (Ti0 + Te0)						* xjac * theta * tstep  
 
   amat(7,6)   = + v * (Ti_x * r0   * ps0_y - Ti_y * r0   * ps0_x)				* xjac * theta * tstep &
 		+ v * (Ti   * r0_x * ps0_y - Ti	  * r0_y * ps0_x)				* xjac * theta * tstep &

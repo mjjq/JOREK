@@ -10,7 +10,7 @@ module equation_variables
   real*8 	:: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
   real*8 	:: zTi, dTi_dpsi, dTi_dz, dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz
   real*8 	:: zTe, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz
-  real*8 	:: current_source, particle_source, heat_source_i, heat_source_e
+  real*8 	:: current_source, particle_source, heat_source_i, heat_source_e, V_source
   
   ! --- Diffusivities
   real*8 	:: eta_Te,    deta_dTe, d2eta_d2Te
@@ -83,7 +83,7 @@ module equation_variables
   !$omp 	zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz,                      & 
   !$omp 	zTi, dTi_dpsi, dTi_dz, dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,			   &
   !$omp 	zTe, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,			   &
-  !$omp 	current_source, particle_source, heat_source_i, heat_source_e,							   &
+  !$omp 	current_source, particle_source, heat_source_i, heat_source_e, V_source,					   &
   !$omp 	eta_Te,    deta_dTe, d2eta_d2Te,										   &
   !$omp 	visco_Te,  dvisco_dTe,												   &
   !$omp 	D_prof, 													   &

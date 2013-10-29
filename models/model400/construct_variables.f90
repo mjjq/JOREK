@@ -124,18 +124,30 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	ps0_p	     = ps0_p	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	ps0_s	     = ps0_s	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	ps0_t	     = ps0_t	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
+	ps0_ss	     = ps0_ss	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	ps0_tt	     = ps0_tt	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	ps0_st	     = ps0_st	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	ps0_pp	     = ps0_pp	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 2
 	u0	     = u0	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	u0_p	     = u0_p	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	u0_s	     = u0_s	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	u0_t	     = u0_t	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
+	u0_ss	     = u0_ss	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	u0_tt	     = u0_tt	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	u0_st	     = u0_st	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	u0_pp	     = u0_pp	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 3
 	zj0	     = zj0	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	zj0_p	     = zj0_p	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	zj0_s	     = zj0_s	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	zj0_t	     = zj0_t	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
+	zj0_ss	     = zj0_ss	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	zj0_tt	     = zj0_tt	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	zj0_st	     = zj0_st	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	zj0_pp	     = zj0_pp	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 4
 	w0	     = w0	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
@@ -145,6 +157,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	w0_ss	     = w0_ss	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	w0_tt	     = w0_tt	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	w0_st	     = w0_st	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	w0_pp	     = w0_pp	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 5
 	r0	     = r0	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
@@ -154,6 +167,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	r0_ss	     = r0_ss	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	r0_tt	     = r0_tt	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	r0_st	     = r0_st	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	r0_pp	     = r0_pp	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 6
 	Ti0	     = Ti0	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
@@ -173,6 +187,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	Vpar0_ss     = Vpar0_ss   + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Vpar0_tt     = Vpar0_tt   + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Vpar0_st     = Vpar0_st   + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Vpar0_pp     = Vpar0_pp	  + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 8
 	Te0	     = Te0	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
@@ -198,23 +213,88 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   ! --- Variable 1
   ps0_x    = (   y_t * ps0_s - y_s * ps0_t ) / xjac
   ps0_y    = ( - x_t * ps0_s + x_s * ps0_t ) / xjac
+  ps0_xx   = (ps0_ss * y_t**2 - 2.d0*ps0_st * y_s*y_t + ps0_tt * y_s**2  & 	    
+	      + ps0_s * (y_st*y_t - y_tt*y_s )			         &    
+	      + ps0_t * (y_st*y_s - y_ss*y_t ) )       / xjac**2         & 	
+	    - xjac_x * (ps0_s * y_t - ps0_t * y_s)     / xjac**2
+  ps0_yy   = (ps0_ss * x_t**2 - 2.d0*ps0_st * x_s*x_t + ps0_tt * x_s**2  & 	    
+	      + ps0_s * (x_st*x_t - x_tt*x_s )			         &    
+	      + ps0_t * (x_st*x_s - x_ss*x_t ) )       / xjac**2         & 	
+	    - xjac_y * (- ps0_s * x_t + ps0_t * x_s )  / xjac**2
+  ps0_xy   = (- ps0_ss * y_t*x_t - ps0_tt * x_s*y_s		         &
+	      + ps0_st * (y_s*x_t  + y_t*x_s  )  		         &        
+	      - ps0_s  * (x_st*y_t - x_tt*y_s )  		         &    
+	      - ps0_t  * (x_st*y_s - x_ss*y_t )  )     / xjac**2         & 	
+	    - xjac_x * (- ps0_s * x_t + ps0_t * x_s )  / xjac**2
   
   ! --- Variable 2
   u0_x     = (   y_t * u0_s - y_s * u0_t ) / xjac
   u0_y     = ( - x_t * u0_s + x_s * u0_t ) / xjac
+  u0_xx    = (u0_ss * y_t**2 - 2.d0*u0_st * y_s*y_t + u0_tt * y_s**2  & 	    
+	      + u0_s * (y_st*y_t - y_tt*y_s )			      &    
+	      + u0_t * (y_st*y_s - y_ss*y_t ) )      / xjac**2        & 	
+	    - xjac_x * (u0_s * y_t - u0_t * y_s)     / xjac**2
+  u0_yy    = (u0_ss * x_t**2 - 2.d0*u0_st * x_s*x_t + u0_tt * x_s**2  & 	    
+	      + u0_s * (x_st*x_t - x_tt*x_s )			      &    
+	      + u0_t * (x_st*x_s - x_ss*x_t ) )      / xjac**2        & 	
+	    - xjac_y * (- u0_s * x_t + u0_t * x_s )  / xjac**2
+  u0_xy    = (- u0_ss * y_t*x_t - u0_tt * x_s*y_s		      &
+	      + u0_st * (y_s*x_t  + y_t*x_s  )  		      &        
+	      - u0_s  * (x_st*y_t - x_tt*y_s )  		      &    
+	      - u0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
+	    - xjac_x * (- u0_s * x_t + u0_t * x_s )  / xjac**2
   vv2	   = BigR**2 *  ( u0_x * u0_x + u0_y *u0_y  )
   
   ! --- Variable 3
   zj0_x    = (   y_t * zj0_s - y_s * zj0_t ) / xjac
   zj0_y    = ( - x_t * zj0_s + x_s * zj0_t ) / xjac
+  zj0_xx   = (zj0_ss * y_t**2 - 2.d0*zj0_st * y_s*y_t + zj0_tt * y_s**2  & 	    
+	      + zj0_s * (y_st*y_t - y_tt*y_s )			         &    
+	      + zj0_t * (y_st*y_s - y_ss*y_t ) )       / xjac**2         & 	
+	    - xjac_x * (zj0_s * y_t - zj0_t * y_s)     / xjac**2
+  zj0_yy   = (zj0_ss * x_t**2 - 2.d0*zj0_st * x_s*x_t + zj0_tt * x_s**2  & 	    
+	      + zj0_s * (x_st*x_t - x_tt*x_s )			         &    
+	      + zj0_t * (x_st*x_s - x_ss*x_t ) )       / xjac**2         & 	
+	    - xjac_y * (- zj0_s * x_t + zj0_t * x_s )  / xjac**2
+  zj0_xy   = (- zj0_ss * y_t*x_t - zj0_tt * x_s*y_s		         &
+	      + zj0_st * (y_s*x_t  + y_t*x_s  )  		         &        
+	      - zj0_s  * (x_st*y_t - x_tt*y_s )  		         &    
+	      - zj0_t  * (x_st*y_s - x_ss*y_t )  )     / xjac**2         & 	
+	    - xjac_x * (- zj0_s * x_t + zj0_t * x_s )  / xjac**2
   
   ! --- Variable 4
   w0_x     = (   y_t * w0_s - y_s * w0_t ) / xjac
   w0_y     = ( - x_t * w0_s + x_s * w0_t ) / xjac
+  w0_xx    = (w0_ss * y_t**2 - 2.d0*w0_st * y_s*y_t + w0_tt * y_s**2  & 	    
+	      + w0_s * (y_st*y_t - y_tt*y_s )			      &    
+	      + w0_t * (y_st*y_s - y_ss*y_t ) )      / xjac**2        & 	
+	    - xjac_x * (w0_s * y_t - w0_t * y_s)     / xjac**2
+  w0_yy    = (w0_ss * x_t**2 - 2.d0*w0_st * x_s*x_t + w0_tt * x_s**2  & 	    
+	      + w0_s * (x_st*x_t - x_tt*x_s )			      &    
+	      + w0_t * (x_st*x_s - x_ss*x_t ) )      / xjac**2        & 	
+	    - xjac_y * (- w0_s * x_t + w0_t * x_s )  / xjac**2
+  w0_xy    = (- w0_ss * y_t*x_t - w0_tt * x_s*y_s		      &
+	      + w0_st * (y_s*x_t  + y_t*x_s  )  		      &        
+	      - w0_s  * (x_st*y_t - x_tt*y_s )  		      &    
+	      - w0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
+	    - xjac_x * (- w0_s * x_t + w0_t * x_s )  / xjac**2
   
   ! --- Variable 5
   r0_x     = (   y_t * r0_s - y_s * r0_t ) / xjac
   r0_y     = ( - x_t * r0_s + x_s * r0_t ) / xjac
+  r0_xx    = (r0_ss * y_t**2 - 2.d0*r0_st * y_s*y_t + r0_tt * y_s**2  & 	    
+	      + r0_s * (y_st*y_t - y_tt*y_s )			      &    
+	      + r0_t * (y_st*y_s - y_ss*y_t ) )      / xjac**2        & 	
+	    - xjac_x * (r0_s * y_t - r0_t * y_s)     / xjac**2
+  r0_yy    = (r0_ss * x_t**2 - 2.d0*r0_st * x_s*x_t + r0_tt * x_s**2  & 	    
+	      + r0_s * (x_st*x_t - x_tt*x_s )			      &    
+	      + r0_t * (x_st*x_s - x_ss*x_t ) )      / xjac**2        & 	
+	    - xjac_y * (- r0_s * x_t + r0_t * x_s )  / xjac**2
+  r0_xy    = (- r0_ss * y_t*x_t - r0_tt * x_s*y_s		      &
+	      + r0_st * (y_s*x_t  + y_t*x_s  )  		      &        
+	      - r0_s  * (x_st*y_t - x_tt*y_s )  		      &    
+	      - r0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
+	    - xjac_x * (- r0_s * x_t + r0_t * x_s )  / xjac**2
   r0_hat   = BigR**2 * r0
   r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
   r0_y_hat = BigR**2 * r0_y
@@ -241,6 +321,19 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   ! --- Variable 7
   Vpar0_x  = (   y_t * Vpar0_s - y_s * Vpar0_t ) / xjac
   Vpar0_y  = ( - x_t * Vpar0_s + x_s * Vpar0_t ) / xjac
+  Vpar0_xx = (Vpar0_ss * y_t**2 - 2.d0*Vpar0_st * y_s*y_t + Vpar0_tt * y_s**2  &	 
+	      + Vpar0_s * (y_st*y_t - y_tt*y_s )			       &	
+	      + Vpar0_t * (y_st*y_s - y_ss*y_t ) )         / xjac**2           &      
+	    - xjac_x * (Vpar0_s * y_t - Vpar0_t * y_s)     / xjac**2
+  Vpar0_yy = (Vpar0_ss * x_t**2 - 2.d0*Vpar0_st * x_s*x_t + Vpar0_tt * x_s**2  &	 
+	      + Vpar0_s * (x_st*x_t - x_tt*x_s )			       &	
+	      + Vpar0_t * (x_st*x_s - x_ss*x_t ) )         / xjac**2           &      
+	    - xjac_y * (- Vpar0_s * x_t + Vpar0_t * x_s )  / xjac**2
+  Vpar0_xy = (- Vpar0_ss * y_t*x_t - Vpar0_tt * x_s*y_s 		       &
+	      + Vpar0_st * (y_s*x_t  + y_t*x_s  )  		               &	    
+	      - Vpar0_s  * (x_st*y_t - x_tt*y_s )  		               &	
+	      - Vpar0_t  * (x_st*y_s - x_ss*y_t )  )       / xjac**2           &      
+	    - xjac_x * (- Vpar0_s * x_t + Vpar0_t * x_s )  / xjac**2
   
   ! --- Variable 6
   Te0_x     = (   y_t * Te0_s  - y_s * Te0_t ) / xjac
@@ -266,12 +359,16 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   delta_u_y= ( - x_t * delta_s(2) + x_s * delta_t(2) ) / xjac
   
   ! --- Pressure
-  P0	   = r0   * (Ti0 + Te0)
-  P0_x     = r0_x * (Ti0 + Te0) + r0 * (Ti0_x + Te0_x)
-  P0_y     = r0_y * (Ti0 + Te0) + r0 * (Ti0_y + Te0_y)
-  P0_s     = r0_s * (Ti0 + Te0) + r0 * (Ti0_s + Te0_s)
-  P0_t     = r0_t * (Ti0 + Te0) + r0 * (Ti0_t + Te0_t)
-  P0_p     = r0_p * (Ti0 + Te0) + r0 * (Ti0_p + Te0_p)
+  P0	   = r0    * (Ti0 + Te0)
+  P0_x     = r0_x  * (Ti0 + Te0) + r0 * (Ti0_x + Te0_x)
+  P0_y     = r0_y  * (Ti0 + Te0) + r0 * (Ti0_y + Te0_y)
+  P0_s     = r0_s  * (Ti0 + Te0) + r0 * (Ti0_s + Te0_s)
+  P0_t     = r0_t  * (Ti0 + Te0) + r0 * (Ti0_t + Te0_t)
+  P0_p     = r0_p  * (Ti0 + Te0) + r0 * (Ti0_p + Te0_p)
+  P0_pp    = r0_pp * (Ti0 + Te0) + r0 * (Ti0_pp + Te0_pp) + 2.d0 * r0_p * (Ti0_p + Te0_p)
+  P0_xx    = r0_xx * (Ti0 + Te0) + r0 * (Ti0_xx + Te0_xx) + 2.d0 * r0_x * (Ti0_x + Te0_x)
+  P0_yy    = r0_yy * (Ti0 + Te0) + r0 * (Ti0_yy + Te0_yy) + 2.d0 * r0_y * (Ti0_y + Te0_y)
+  P0_xy    = r0_xy * (Ti0 + Te0) + r0 * (Ti0_xy + Te0_xy) + r0_x * (Ti0_y + Te0_y) + r0_y * (Ti0_x + Te0_x)
   
   ! --- Magnetic field amplitude (squared)
   BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
@@ -473,10 +570,10 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
-  !if ( (psi_norm .gt. 1.d0) .or. ((y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) tau_IC = tau_IC * 1.d-3
-  !if ( (psi_norm .gt. 1.d0) .or. ((y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) tau_IC = tau_IC * 1.d-3
-  if ((y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
-  if ((y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
+  !if ( (psi_norm .gt. 1.d0) .or. ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) tau_IC = tau_IC * 1.d-3
+  !if ( (psi_norm .gt. 1.d0) .or. ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) tau_IC = tau_IC * 1.d-3
+  if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
+  if ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
   
   ! -------------------------------------------------------------------
   ! --- Heating, current and particle source (the same for all i_plane)

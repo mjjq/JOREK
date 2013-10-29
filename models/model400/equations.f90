@@ -204,7 +204,7 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
 		+ tau_IC * v * BigR**4 												       &
 			 * ( u0_xy        * (rho_xx*(Ti0+Te0) + 2.d0*rho_x*(Ti0_x+Te0_x) + rho*(Ti0_xx+Te0_xx)  		       &
 			    	            -rho_yy*(Ti0+Te0) - 2.d0*rho_y*(Ti0_y+Te0_y) - rho*(Ti0_yy+Te0_yy))	   		       &					   
-			   -(u0_xx-u0_yy) * (rho_xy*(Ti0+Te0) + rho_x*(Ti0_y+Te0_y)
+			   -(u0_xx-u0_yy) * (rho_xy*(Ti0+Te0) + rho_x*(Ti0_y+Te0_y)						       &
 			                    +rho_y *(Ti0_x+Te0_x) + rho*(Ti0_xy+Te0_xy))		)	* xjac * theta * tstep
 
   amat(2,6)   = - BigR**2 * (v_x * r0_y * Ti   - v_y * r0_x * Ti)						* xjac * theta * tstep &
@@ -219,7 +219,7 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
   
   amat(2,8)   = - BigR**2 * (v_x * r0_y * Te   - v_y * r0_x * Te)						* xjac * theta * tstep &
 		- BigR**2 * (v_x * r0	* Te_y - v_y * r0   * Te_x)						* xjac * theta * tstep &
-		+ dvisco_dTe * Te * ( v_x * w0_x + v_y * w0_y ) * BigR						* xjac * theta * tstep
+		+ dvisco_dTe * Te * ( v_x * w0_x + v_y * w0_y ) * BigR						* xjac * theta * tstep &
                 + tau_IC * v * BigR**4 * r0 * (Te_x *w0_y - Te_y *w0_x)  					* xjac * theta * tstep &
                 + tau_IC * v * BigR**4 * Te  * (r0_x*w0_y - r0_y*w0_x)  					* xjac * theta * tstep &
 		+ tau_IC     * BigR**3 * (r0_y*Te + r0*Te_y) * (v_x*u0_x + v_y*u0_y) 				* xjac * theta * tstep &

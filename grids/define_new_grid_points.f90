@@ -617,7 +617,7 @@ if(tokamak_device(1:4) .eq. 'MAST') then
   enddo
 endif
 
-!------------------------------ Intersections with open surfaces
+!------------------------------ Intersections with separatrices
 do i=1,4
   
   if (xcase .ne. 2) then 
@@ -756,7 +756,7 @@ do i=1,4
   if ( (xcase .eq. 2) .and. (i .eq. 2) ) nwpts%R_max(n_start+n_loop) = nwpts%R_max(n_tht)       ! this one is known - safer...
 enddo
 
-!------------------------------ Intersections with separatrices
+!------------------------------ Intersections with open surfaces
 do i=1,4
   
   if (xcase .ne. 2) then 

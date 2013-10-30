@@ -176,14 +176,21 @@ contains
 		      Te   = psi; Te_x   = psi_x; Te_y   = psi_y; Te_p   = psi_p; Te_s   = psi_s; Te_t   = psi_t
 		      Vpar = psi; Vpar_x = psi_x; Vpar_y = psi_y; Vpar_p = psi_p; Vpar_s = psi_s; Vpar_t = psi_t
 		      
+		      u_ss    = psi_ss; u_tt	= psi_tt; u_st    = psi_st
+		      zj_ss   = psi_ss; zj_tt	= psi_tt; zj_st   = psi_st
 		      w_ss    = psi_ss; w_tt	= psi_tt; w_st    = psi_st
    		      rho_ss  = psi_ss; rho_tt  = psi_tt; rho_st  = psi_st
    		      Ti_ss   = psi_ss; Ti_tt	= psi_tt; Ti_st   = psi_st
    		      Te_ss   = psi_ss; Te_tt	= psi_tt; Te_st   = psi_st
    		      Vpar_ss = psi_ss; Vpar_tt = psi_tt; Vpar_st = psi_st
                       
-		      Ti_xx = psi_xx; Ti_yy = psi_yy; Ti_xy = psi_xy; Ti_pp = psi_pp
-		      Te_xx = psi_xx; Te_yy = psi_yy; Te_xy = psi_xy; Te_pp = psi_pp
+		      u_xx    = psi_xx; u_yy    = psi_yy; u_xy    = psi_xy; u_pp    = psi_pp
+		      zj_xx   = psi_xx; zj_yy   = psi_yy; zj_xy   = psi_xy; zj_pp   = psi_pp
+		      w_xx    = psi_xx; w_yy    = psi_yy; w_xy    = psi_xy; w_pp    = psi_pp
+		      rho_xx  = psi_xx; rho_yy  = psi_yy; rho_xy  = psi_xy; rho_pp  = psi_pp
+		      Ti_xx   = psi_xx; Ti_yy   = psi_yy; Ti_xy   = psi_xy; Ti_pp   = psi_pp
+		      Te_xx   = psi_xx; Te_yy   = psi_yy; Te_xy   = psi_xy; Te_pp   = psi_pp
+		      Vpar_xx = psi_xx; Vpar_yy = psi_yy; Vpar_xy = psi_xy; Vpar_pp = psi_pp
     		      
 		      BB2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
    

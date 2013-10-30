@@ -25,6 +25,7 @@ real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2
 real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
 real*8     :: psi_n, psi_bnd,psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2),psi_lim,R_lim,Z_lim
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t, ps0_x, ps0_y, R_s, R_t, Z_s, Z_t, xjac, direction, Btot
+real*8     :: zV, dV_dpsi, dV_dpsi2, dV_dz, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi2_dz, dV_dpsi_dz2
 logical    :: xpoint2
 
 if (my_id .eq. 0) then
@@ -75,16 +76,22 @@ if (my_id .eq. 0) then
     R   = node_list%node(i)%x(1,1)
     Z   = node_list%node(i)%x(1,2)
 
-    call density(      xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
-                                                               dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+    call density(      xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+                       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
     call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
     		       zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+    
     call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
     		       zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
 
-    call FFprime(      xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
-                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+    call FFprime(      xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+                       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+    
+    if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
+      call velocity(   xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+                       zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz)
+    endif
 
     zp       = zn * (zTi + zTe)
     dp_dpsi  = zn * (dTi_dpsi + dTe_dpsi) + dn_dpsi * (zTi + zTe)
@@ -124,11 +131,25 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,2,7) = 0.d0
     node_list%node(i)%values(1,3,7) = 0.d0
     node_list%node(i)%values(1,4,7) = 0.d0
+
+    if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
+      node_list%node(i)%values(1,1,7) = zV
+      node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(2,2)
+      node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(3,2)
+      node_list%node(i)%values(1,4,7) = dV_dpsi  * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(4,2) &
+                                    + dV_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                 + dV_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    endif
     
     node_list%node(i)%deltas = 0.d0
     
   enddo
 
+endif
+
+if (tauIC .ne. 0.d0) then
+  call Poisson(my_id,2,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               2,4,1, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)      ! inverse Poisson
 endif
 
 
@@ -221,15 +242,16 @@ do i=1,node_list%n_nodes
     if (xcase2 .eq. 2) direction = -direction
     if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
 
+    BigR = node_list%node(i)%x(1,1)
+    Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+    BigR_s = node_list%node(i)%x(2,1)
+    
     do in=1,n_tor
 
-      BigR = node_list%node(i)%x(1,1)
-      Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
       Ti0   = node_list%node(i)%values(in,1,6)
       Te0   = node_list%node(i)%values(in,1,8)
       node_list%node(i)%values(in,1,7) = direction / Btot * sqrt(GAMMA * (Ti0 + Te0))
 
-      BigR_s = node_list%node(i)%x(2,1)
       Ti0_s   = node_list%node(i)%values(in,2,6)
       Te0_s   = node_list%node(i)%values(in,2,8)
       node_list%node(i)%values(in,2,7) = BigR_s / (BigR*Btot) * sqrt(GAMMA * (Ti0 + Te0)) + 0.5d0 / Btot * sqrt(GAMMA / (Ti0 + Te0)) * (Ti0_s + Te0_s)

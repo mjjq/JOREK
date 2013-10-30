@@ -892,7 +892,13 @@ subroutine ELM_main_lhs_8(amat, amat_k, amat_n, amat_kn)
 		 + v * (GAMMA-1.d0) * rho * Te0 * F0/BigR * Vpar0_p					* xjac * theta * tstep &
 		 + v * (GAMMA-1.d0) * rho * Te0 * (Vpar0_x * ps0_y - Vpar0_y * ps0_x)			* xjac * theta * tstep 
 
-  amat(8,6)    = - v * r0 * BigR**2 * (Te_x * u0_y  - Te_y * u0_x)					* xjac * theta * tstep &
+  amat(8,7)    = + v * r0 * F0/BigR * Vpar * Te0_p							* xjac * theta * tstep &
+		 + v * r0 * Vpar * (Te0_x * ps0_y - Te0_y * ps0_x)					* xjac * theta * tstep &
+		 + v * (GAMMA-1.d0) * r0 * Te0 * (Vpar_x * ps0_y - Vpar_y * ps0_x)			* xjac * theta * tstep 
+     
+  amat_n(8,7)  = v * (GAMMA-1.d0) * r0 * Te0 * F0/BigR * Vpar_p  					* xjac * theta * tstep       
+		   
+  amat(8,8)    = - v * r0 * BigR**2 * (Te_x * u0_y  - Te_y * u0_x)					* xjac * theta * tstep &
 		 + v * r0 * Vpar0   * (Te_x * ps0_y - Te_y * ps0_x)					* xjac * theta * tstep &
 		 - v * r0 * (GAMMA-1.d0) * Te * BigR * u0_y * 2.d0					* xjac * theta * tstep &
 		 + v * r0 * (GAMMA-1.d0) * Te * F0/BigR * Vpar0_p					* xjac * theta * tstep &
@@ -911,27 +917,21 @@ subroutine ELM_main_lhs_8(amat, amat_k, amat_n, amat_kn)
 			 - 2.d0 * Te_st * (x_s*x_t + y_s*y_t) ) )     / xjac**4  			* xjac * theta * tstep 
   
   if (r0 .lt. rho_1) then
-    amat(8,6)  = amat(8,6) + v * rho_1 * Te * BigR							* xjac * (1.d0 + zeta)
+    amat(8,8)  = amat(8,8) + v * rho_1 * Te * BigR							* xjac * (1.d0 + zeta)
   else
-    amat(8,6)  = amat(8,6) + v * r0    * Te * BigR							* xjac * (1.d0 + zeta)
+    amat(8,8)  = amat(8,8) + v * r0    * Te * BigR							* xjac * (1.d0 + zeta)
   endif
   
-  amat_k(8,6)  = + (Ke_par-Ke_prof) * BigR / BB2 * Bgrad_Te_k_star * Bgrad_Te_Te			* xjac * theta * tstep &
+  amat_k(8,8)  = + (Ke_par-Ke_prof) * BigR / BB2 * Bgrad_Te_k_star * Bgrad_Te_Te			* xjac * theta * tstep &
 		 + dKe_par * Te     * BigR / BB2 * Bgrad_Te_k_star * Bgrad_Te				* xjac * theta * tstep 
 	      
-  amat_n(8,6)  = + (Ke_par-Ke_prof) * BigR / BB2 * Bgrad_Te_star   * Bgrad_Te_Te_n  			* xjac * theta * tstep &
+  amat_n(8,8)  = + (Ke_par-Ke_prof) * BigR / BB2 * Bgrad_Te_star   * Bgrad_Te_Te_n  			* xjac * theta * tstep &
 		 + v * r0 * Vpar0  * F0/BigR * Te_p							* xjac * theta * tstep 
 
-  amat_kn(8,6) = + (Ke_par-Ke_prof) * BigR / BB2 * Bgrad_Te_k_star * Bgrad_Te_Te_n  			* xjac * theta * tstep &
+  amat_kn(8,8) = + (Ke_par-Ke_prof) * BigR / BB2 * Bgrad_Te_k_star * Bgrad_Te_Te_n  			* xjac * theta * tstep &
 		 +  Ke_par_num * (Te_pp  * v_pp) 							* xjac * theta * tstep &
 		 +  Ke_prof	    * BigR	* (v_p*Te_p /BigR**2 )					* xjac * theta * tstep 
 
-  amat(8,7)    = + v * r0 * F0/BigR * Vpar * Te0_p							* xjac * theta * tstep &
-		 + v * r0 * Vpar * (Te0_x * ps0_y - Te0_y * ps0_x)					* xjac * theta * tstep &
-		 + v * (GAMMA-1.d0) * r0 * Te0 * (Vpar_x * ps0_y - Vpar_y * ps0_x)			* xjac * theta * tstep 
-     
-  amat_n(8,7)  = v * (GAMMA-1.d0) * r0 * Te0 * F0/BigR * Vpar_p  					* xjac * theta * tstep       
-		   
 
   
   return

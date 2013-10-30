@@ -130,6 +130,8 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
         $(DIR)/current.f90                              \
         $(DIR)/ffprime.f90                              \
         $(DIR)/temperature.f90                          \
+        $(DIR)/temperature_i.f90                        \
+        $(DIR)/temperature_e.f90                        \
         $(DIR)/mod_domains.f90
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)			\

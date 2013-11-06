@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# <<jobscript_comment>>
+#
+#$ -cwd
+#
+#$ -P tokp
+#
+#$ -j y
+#
+#$ -l h_rt=<<runtime>>
+#
+#$ -pe impi_hydra <<procs>>
+#
+#$ -m e
+#$ -M <<email>>
+#
+#$ -notify
+#
+#$ -N <<jobname>>_<<job_step>>
+#
+
+BIN="jorek_model<<model>>_step<<job_step>>"
+NSLOTS="<<mpi>>"
+INP="input<<job_step>>"
+OMP="<<omp>>"
+DIR="<<main_dir>>"
+
+module unload intel; module load intel/12.1
+
+cd $DIR
+export OMP_NUM_THREADS=$OMP
+mpirun -np $NSLOTS $BIN < $INP | tee -a logfile

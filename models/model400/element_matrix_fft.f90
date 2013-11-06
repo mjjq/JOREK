@@ -191,6 +191,14 @@ contains
 		      Ti_xx   = psi_xx; Ti_yy   = psi_yy; Ti_xy   = psi_xy; Ti_pp   = psi_pp
 		      Te_xx   = psi_xx; Te_yy   = psi_yy; Te_xy   = psi_xy; Te_pp   = psi_pp
 		      Vpar_xx = psi_xx; Vpar_yy = psi_yy; Vpar_xy = psi_xy; Vpar_pp = psi_pp
+                      
+		      !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
+                      !u_xx = (  psi_ss * y_t**2  + psi_tt * y_s**2  - 2.d0*psi_st * y_s*y_t		) / xjac**2
+                      !u_yy = (  psi_ss * x_t**2  + psi_tt * x_s**2  - 2.d0*psi_st * x_s*x_t		) / xjac**2
+                      !u_xy = (- psi_ss * y_t*x_t - psi_tt * x_s*y_s +	   psi_st * (y_s*x_t + y_t*x_s) ) / xjac**2
+                      !w_xx = u_xx; Ti_xx = u_xx; Te_xx = u_xx;
+                      !w_yy = u_yy; Ti_yy = u_yy; Te_yy = u_yy;
+                      !w_xy = u_xy; Ti_xy = u_xy; Te_xy = u_xy;
     		      
 		      BB2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
    

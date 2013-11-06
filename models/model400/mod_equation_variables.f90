@@ -10,7 +10,7 @@ module equation_variables
   real*8 	:: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
   real*8 	:: zTi, dTi_dpsi, dTi_dz, dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz
   real*8 	:: zTe, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz
-  real*8 	:: current_source, particle_source, heat_source_i, heat_source_e, V_source
+  real*8 	:: current_source, particle_source, heat_source_i, heat_source_e, Vt0_x, Vt0_y
   
   ! --- Diffusivities
   real*8 	:: eta_Te,    deta_dTe, d2eta_d2Te
@@ -68,8 +68,10 @@ module equation_variables
   ! --- Variable 8
   real*8 	:: Te0,   Te0_x,   Te0_y,   Te0_p,   Te0_s,   Te0_t,   Te0_ss,   Te0_st,   Te0_tt,   Te0_xx,   Te0_xy,   Te0_yy,   Te0_pp
   real*8 	:: Te,    Te_x,    Te_y,    Te_p,    Te_s,    Te_t,    Te_ss,	 Te_st,    Te_tt,    Te_xx,    Te_xy,    Te_yy,    Te_pp
-  ! --- Pressure
+  ! --- Pressures
   real*8 	:: P0,	  P0_x,	  P0_y,	    P0_p,    P0_s,    P0_t,				     P0_xx,    P0_xy,    P0_yy,    P0_pp
+  real*8 	:: Pi0,	  Pi0_x,  Pi0_y,    Pi0_p,   Pi0_s,   Pi0_t,				     Pi0_xx,   Pi0_xy,   Pi0_yy,   Pi0_pp
+  real*8 	:: Pe0,	  Pe0_x,  Pe0_y,    Pe0_p,   Pe0_s,   Pe0_t,				     Pe0_xx,   Pe0_xy,   Pe0_yy,   Pe0_pp
   
   ! --- Parallel gradients
   real*8 	:: BB2, BB2_psi
@@ -88,7 +90,7 @@ module equation_variables
   !$omp 	zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz,				   &
   !$omp 	zTi, dTi_dpsi, dTi_dz, dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,				   &
   !$omp 	zTe, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,				   &
-  !$omp 	current_source, particle_source, heat_source_i, heat_source_e, V_source,						   &
+  !$omp 	current_source, particle_source, heat_source_i, heat_source_e, Vt0_x, Vt0_y,						   &
   !$omp 	eta_Te,    deta_dTe, d2eta_d2Te,											   &
   !$omp 	visco_Te,  dvisco_dTe,													   &
   !$omp 	D_prof, 														   &
@@ -124,7 +126,9 @@ module equation_variables
   !$omp 	Vpar,  Vpar_x,  Vpar_y,  Vpar_p,  Vpar_s,  Vpar_t,  Vpar_ss,  Vpar_st,  Vpar_tt,  Vpar_xx,  Vpar_xy,  Vpar_yy,  Vpar_pp,   &
   !$omp 	Te0,   Te0_x,	Te0_y,   Te0_p,   Te0_s,   Te0_t,   Te0_ss,   Te0_st,	Te0_tt,   Te0_xx,   Te0_xy,   Te0_yy,	Te0_pp,    &
   !$omp 	Te,    Te_x,	Te_y,	 Te_p,    Te_s,    Te_t,    Te_ss,    Te_st,	Te_tt,    Te_xx,    Te_xy,    Te_yy,	Te_pp,	   &
-  !$omp 	P0,    P0_x,   P0_y,	 P0_p,    P0_s,    P0_t,				  P0_xx,    P0_xy,    P0_yy,	P0_pp,	   &
+  !$omp 	P0,    P0_x,    P0_y,	 P0_p,    P0_s,    P0_t,				  P0_xx,    P0_xy,    P0_yy,	P0_pp,	   &
+  !$omp 	Pi0,   Pi0_x,   Pi0_y,	 Pi0_p,   Pi0_s,   Pi0_t,				  Pi0_xx,    Pi0_xy,  Pi0_yy,	Pi0_pp,	   &
+  !$omp 	Pe0,   Pe0_x,   Pe0_y,	 Pe0_p,   Pe0_s,   Pe0_t,				  Pe0_xx,    Pe0_xy,  Pe0_yy,	Pe0_pp,	   &
   !$omp 	BB2, BB2_psi,														   &
   !$omp 	Bgrad_rho, Bgrad_rho_star, Bgrad_rho_k_star,										   &
   !$omp 	Bgrad_Ti,  Bgrad_Ti_star,  Bgrad_Ti_k_star,										   &

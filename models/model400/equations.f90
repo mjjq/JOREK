@@ -122,6 +122,11 @@ subroutine ELM_main_rhs_2(rhs,rhs_k)
 	   - tau_IC * v * BigR**4         * (pi0_x * w0_y - pi0_y * w0_x)		* xjac * tstep &
 	   - tau_IC     * BigR**3 * pi0_y * (v_x   * u0_x + v_y   * u0_y)		* xjac * tstep &
 	   - tau_IC * v * BigR**4 * (u0_xy * (pi0_xx-pi0_yy) - pi0_xy * (u0_xx-u0_yy) )	* xjac * tstep &
+           + amu_neo_prof * BB2 / (Btheta2+epsil)**2.d0 * (ps0_x*v_x + ps0_y*v_y) * BigR	       &
+                    * (  r0                         * (ps0_x*u0_x  + ps0_y*u0_y)		       &
+		       + tau_IC                     * (ps0_x*Pi0_x + ps0_y*Pi0_y)		       &
+                       + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)		       &
+                       - r0 * Vpar0 * Btheta2					     )	* xjac * tstep &
 	   + BigR**3 * particle_source * (v_x * u0_x + v_y * u0_y)			* xjac * tstep &
 	   - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y)  		* xjac 	       &		  
 	   - visco_numm  *									       & 
@@ -155,18 +160,37 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
   
   ! --- Internal variables
   real*8 :: rho_hat, rho_x_hat, rho_y_hat
+  real*8 :: Btheta2_psi
   
-  rho_hat   = BigR**2 * rho
-  rho_x_hat = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x
-  rho_y_hat = BigR**2 * rho_y
+  rho_hat     = BigR**2 * rho
+  rho_x_hat   = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x
+  rho_y_hat   = BigR**2 * rho_y
+  Btheta2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) / BigR**2
 
   ! --- The LHS terms
-  amat(2,1)   = - v * (psi_x * zj0_y - psi_y * zj0_x )								* xjac * theta * tstep
+  amat(2,1)   = - v * (psi_x * zj0_y - psi_y * zj0_x )								* xjac * theta * tstep &
+                - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (psi_x*v_x+psi_y*v_y) * BigR					       &
+                               * (  r0                         * (ps0_x*u0_x  + ps0_y*u0_y)					       &
+                                  + tau_IC                     * (ps0_x*Pi0_x + ps0_y*Pi0_y)					       &
+                                  + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)					       &
+                                  - r0 * Vpar0 * Btheta2)	 						* xjac * theta * tstep &
+                - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x+ps0_y*v_y) * BigR					       &
+		               * (  r0                         * (psi_x*u0_x  + psi_y*u0_y)					       &
+                                  + tau_IC                     * (psi_x*Pi0_x + psi_y*Pi0_y)					       &
+                                  + aki_neo_prof * tau_IC * r0 * (psi_x*Ti0_x + psi_y*Ti0_y)	)		* xjac * theta * tstep &
+                + amu_neo_prof * BB2 * 2.d0*Btheta2_psi / (Btheta2+epsil)**3 * (ps0_x*v_x+ps0_y*v_y) * BigR			       &
+                               * (  r0                         * (ps0_x*u0_x  + ps0_y*u0_y)					       &
+                                  + tau_IC                     * (ps0_x*Pi0_x + ps0_y*Pi0_y)					       &
+                                  + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)	)		* xjac * theta * tstep &
+                - amu_neo_prof * BB2 * Btheta2_psi / (Btheta2+epsil)**2								       &
+		               * r0 * vpar0 * (ps0_x*v_x + ps0_y*v_y) * BigR					* xjac * tstep * theta
 
   amat(2,2)   = + r0_hat * BigR**2 * w0 * (v_x * u_y  - v_y  * u_x)						* xjac * theta * tstep &
 		+ BigR**2 * (u_x*u0_x + u_y*u0_y) * (v_x*r0_y_hat - v_y*r0_x_hat)				* xjac * theta * tstep &
 	        + tau_IC * BigR**3 * pi0_y * (v_x* u_x + v_y * u_y)						* xjac * theta * tstep &
 	        + tau_IC * v * BigR**4 * (u_xy * (pi0_xx-pi0_yy) - pi0_xy * (u_xx-u_yy))			* xjac * theta * tstep &
+                - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x + ps0_y*v_y) * BigR					       &
+		               * r0 * (ps0_x*u_x + ps0_y*u_y)							* xjac * theta * tstep &
 		- BigR**3 * particle_source * (v_x * u_x + v_y * u_y)						* xjac * theta * tstep
   
   if (r0 .lt. rho_1) then
@@ -199,7 +223,13 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
 		+ tau_IC     * BigR**3 * (Ti0_y*rho + Ti0*rho_y) * (v_x*u0_x + v_y*u0_y) 			* xjac * theta * tstep &
 		+ tau_IC * v * BigR**4 * ( u0_xy        * (rho_xx*Ti0 + 2.d0*rho_x*Ti0_x + rho*Ti0_xx  				       &
 			    	                          -rho_yy*Ti0 - 2.d0*rho_y*Ti0_y - rho*Ti0_yy)	   			       &					   
-			                 -(u0_xx-u0_yy) * (rho_xy*Ti0 + rho_x*Ti0_y + rho_y*Ti0_x + rho*Ti0_xy))* xjac * theta * tstep
+			                 -(u0_xx-u0_yy) * (rho_xy*Ti0 + rho_x*Ti0_y + rho_y*Ti0_x + rho*Ti0_xy))* xjac * theta * tstep &
+                - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x + ps0_y*v_y) * BigR					       &
+                               * (  rho                         * (ps0_x*u0_x                  + ps0_y*u0_y)			       &
+                                  + tau_IC                      * (ps0_x*rho_x*Ti0   + ps0_y*rho_y*Ti0  )			       &
+                                  + tau_IC                      * (ps0_x*rho  *Ti0_x + ps0_y*rho  *Ti0_y)			       &
+                                  + aki_neo_prof * tau_IC * rho * (ps0_x*Ti0_x                 + ps0_y*Ti0_y)			       &
+                                  -rho * Vpar0 * Btheta2						      )	* xjac * tstep * theta
 
   amat(2,6)   = - BigR**2 * (v_x * r0_y * Ti   - v_y * r0_x * Ti)						* xjac * theta * tstep &
 		- BigR**2 * (v_x * r0	* Ti_y - v_y * r0   * Ti_x)						* xjac * theta * tstep &
@@ -208,7 +238,13 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
 		+ tau_IC     * BigR**3 * (r0_y*Ti + r0*Ti_y) * (v_x*u0_x + v_y*u0_y) 				* xjac * theta * tstep &
 		+ tau_IC * v * BigR**4 * ( u0_xy        * (r0_xx*Ti + 2.d0*r0_x*Ti_x + r0*Ti_xx      				       &
 				                          -r0_yy*Ti - 2.d0*r0_y*Ti_y - r0*Ti_yy)				       &					 
-			                 -(u0_xx-u0_yy) * (r0_xy*Ti + r0_x*Ti_y + r0_y*Ti_x + r0*Ti_xy)	)	* xjac * theta * tstep 
+			                 -(u0_xx-u0_yy) * (r0_xy*Ti + r0_x*Ti_y + r0_y*Ti_x + r0*Ti_xy)	)	* xjac * theta * tstep &
+                - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x + ps0_y*v_y) * BigR					       &
+                               * (  tau_IC                     * (ps0_x*r0_x*Ti   + ps0_y*r0_y*Ti  )				       &
+                                  + tau_IC                     * (ps0_x*r0  *Ti_x + ps0_y*r0  *Ti_y)				       &
+                                  + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti_x+ps0_y*Ti_y)		   )	* xjac * tstep * theta
+  
+  amat(2,7)   = + amu_neo_prof * BB2 / (Btheta2+epsil) * r0 * vpar * (ps0_x*v_x + ps0_y*v_y) * BigR		* xjac * tstep * theta 
   
   amat(2,8)   = - BigR**2 * (v_x * r0_y * Te   - v_y * r0_x * Te)						* xjac * theta * tstep &
 		- BigR**2 * (v_x * r0	* Te_y - v_y * r0   * Te_x)						* xjac * theta * tstep &
@@ -675,19 +711,24 @@ subroutine ELM_main_rhs_7(rhs,rhs_k)
   real*8 :: rhs(n_var),rhs_k(n_var)
   
   ! --- The RHS term	      
-  rhs(7) = - v * F0 / BigR * P0_p				* xjac * tstep &
-	   - v * (P0_x * ps0_y - P0_y * ps0_x)			* xjac * tstep &
-           + visco_par * (v_x * Vt0_x   + v_y * Vt0_y)   * BigR * xjac * tstep &
-	   - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR	* xjac * tstep &
-	   + zeta * v * r0 * F0**2 / BigR			* xjac *delta_g(7)&  
-	   - visco_par_numm  *  					       &
-	     (    (	    v_ss     * (x_t**2 + y_t**2)		       &
-		   +	    v_tt     * (x_s**2 + y_s**2)		       &
-		   - 2.d0 * v_st     * (x_s*x_t + y_s*y_t) )		       &
-		* (	    vpar0_ss * (x_t**2 + y_t**2)		       &
-		   +	    vpar0_tt * (x_s**2 + y_s**2)		       &
-		   - 2.d0 * vpar0_st * (x_s*x_t + y_s*y_t) ) )  	       &
-	     / xjac**4						* xjac * tstep 
+  rhs(7) = - v * F0 / BigR * P0_p							* xjac * tstep &
+	   - v * (P0_x * ps0_y - P0_y * ps0_x)						* xjac * tstep &
+           + visco_par * (v_x * Vt0_x   + v_y * Vt0_y)   * BigR 			* xjac * tstep &
+	   - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR				* xjac * tstep &
+	   + zeta * v * r0 * F0**2 / BigR						* xjac *delta_g(7)&  
+           + v * amu_neo_prof * BB2 / (Btheta2+epsil) * BigR					       &
+	       * (  r0                         * (ps0_x*u0_x  + ps0_y*u0_y)			       &
+                  + tau_IC                     * (ps0_x*Pi0_x + ps0_y*Pi0_y)			       &
+                  + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)			       &
+                  - r0 * Vpar0 * Btheta2					)	* xjac * tstep &
+	   - visco_par_numm  *  								       &
+	     (    (	    v_ss     * (x_t**2 + y_t**2)					       &
+		   +	    v_tt     * (x_s**2 + y_s**2)					       &
+		   - 2.d0 * v_st     * (x_s*x_t + y_s*y_t) )					       &
+		* (	    vpar0_ss * (x_t**2 + y_t**2)					       &
+		   +	    vpar0_tt * (x_s**2 + y_s**2)					       &
+		   - 2.d0 * vpar0_st * (x_s*x_t + y_s*y_t) ) )  				       &
+	     / xjac**4									* xjac * tstep 
   
   return
 
@@ -708,41 +749,67 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
   ! --- Routine variables
   real*8 :: amat(n_var,n_var), amat_k(n_var,n_var), amat_n(n_var,n_var), amat_kn(n_var,n_var)
   
-  ! --- The LHS terms
-  amat(7,1)   = + v * (P0_x * psi_y - P0_y * psi_x)						* xjac * theta * tstep
-
-  amat(7,5)   = + v * (rho_x * (Ti0 + Te0)     * ps0_y - rho_y * (Ti0 + Te0)     * ps0_x)	* xjac * theta * tstep &
-		+ v * (rho   * (Ti0_x + Te0_x) * ps0_y - rho   * (Ti0_y + Te0_y) * ps0_x)	* xjac * theta * tstep &
-		+ v * F0 / BigR * rho * (Ti0_p + Te0_p)						* xjac * theta * tstep 
-
-  amat_n(7,5) = v * F0 / BigR * rho_p * (Ti0 + Te0)						* xjac * theta * tstep  
-
-  amat(7,6)   = + v * (Ti_x * r0   * ps0_y - Ti_y * r0   * ps0_x)				* xjac * theta * tstep &
-		+ v * (Ti   * r0_x * ps0_y - Ti	  * r0_y * ps0_x)				* xjac * theta * tstep &
-		+ v * F0 / BigR * Ti * r0_p							* xjac * theta * tstep 
+  ! --- Internal variables
+  real*8 :: Btheta2_psi
   
-  amat_n(7,6) = v * F0 / BigR * Ti_p * r0							* xjac * theta * tstep
+  Btheta2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) / BigR**2
+  
+  ! --- The LHS terms
+  amat(7,1)   = + v * (P0_x * psi_y - P0_y * psi_x)								* xjac * theta * tstep &
+                - v * amu_neo_prof * BB2 / (Btheta2+epsil) * BigR								       &
+		                   * (  r0                         * (psi_x*u0_x  + psi_y*u0_y)					       &
+                                      + tau_IC                     * (psi_x*Pi0_x + psi_y*Pi0_y)				       &
+                                      + aki_neo_prof * tau_IC * r0 * (psi_x*Ti0_x + psi_y*Ti0_y)  )		* xjac * theta * tstep &
+                + v * amu_neo_prof * Btheta2_psi * BB2 / Btheta2**2.d0 * BigR							       &
+                                   * (  r0                         * (ps0_x*u0_x  + ps0_y*u0_y)					       &
+                                      + tau_IC                     * (ps0_x*Pi0_x + ps0_y*Pi0_y)				       &
+                                      + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)  )		* xjac * theta * tstep
 
-  amat(7,7)   = + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR				* xjac * theta * tstep &
-		+ visco_par_numm  *									  	       &
-		  (    (	v_ss	* (x_t**2 + y_t**2)						  	       &
-			+	v_tt	* (x_s**2 + y_s**2)						  	       &
-			-2.d0 * v_st	* (x_s*x_t + y_s*y_t) ) 					  	       &
-		     * (	Vpar_ss * (x_t**2 + y_t**2)						  	       &
-			+	Vpar_tt * (x_s**2 + y_s**2)						  	       &
-			-2.d0 * Vpar_st * (x_s*x_t + y_s*y_t) ) ) / xjac**4			* xjac * theta * tstep
+  amat(7,2)   = - v * amu_neo_prof * BB2 / (Btheta2+epsil) * r0 * (ps0_x*u_x + ps0_y*u_y) * BigR		* xjac * theta * tstep 
+  
+  amat(7,5)   = + v * (rho_x * (Ti0 + Te0)     * ps0_y - rho_y * (Ti0 + Te0)     * ps0_x)			* xjac * theta * tstep &
+		+ v * (rho   * (Ti0_x + Te0_x) * ps0_y - rho   * (Ti0_y + Te0_y) * ps0_x)			* xjac * theta * tstep &
+		+ v * F0 / BigR * rho * (Ti0_p + Te0_p)								* xjac * theta * tstep & 
+                - v * amu_neo_prof * BB2 / (Btheta2+epsil) * BigR								       &
+                                   * (  rho * (ps0_x*u0_x + ps0_y*u0_y)								       &
+                                      + tau_IC                      * (ps0_x*rho_x*Ti0   + ps0_y*rho_y*Ti0  ) 			       &
+                                      + tau_IC                      * (ps0_x*rho  *Ti0_x + ps0_y*rho  *Ti0_y) 			       &
+                                      + aki_neo_prof * tau_IC * rho * (ps0_x*Ti0_x       + ps0_y*Ti0_y)				       &
+                                      - rho * Vpar0 * Btheta2						      )	* xjac * tstep * theta
+
+  amat_n(7,5) = v * F0 / BigR * rho_p * (Ti0 + Te0)								* xjac * theta * tstep  
+
+  amat(7,6)   = + v * (Ti_x * r0   * ps0_y - Ti_y * r0   * ps0_x)						* xjac * theta * tstep &
+		+ v * (Ti   * r0_x * ps0_y - Ti	  * r0_y * ps0_x)						* xjac * theta * tstep &
+		+ v * F0 / BigR * Ti * r0_p									* xjac * theta * tstep &
+                - v * amu_neo_prof * BB2 / (Btheta2+epsil) * BigR								       &
+                                   * (  tau_IC                     * (ps0_x*r0_x*Ti   + ps0_y*r0_y*Ti  )			       &
+                                      + tau_IC                     * (ps0_x*r0  *Ti_x + ps0_y*r0  *Ti_y)			       &
+                                      + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti_x      + ps0_y*Ti_y     )   )	* xjac * tstep * theta
+  
+  amat_n(7,6) = v * F0 / BigR * Ti_p * r0									* xjac * theta * tstep
+
+  amat(7,7)   = + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR						* xjac * theta * tstep &
+                + v * amu_neo_prof * BB2 * r0 * vpar * BigR 							* xjac * tstep * theta &
+		+ visco_par_numm  *											  	       &
+		  (    (	v_ss	* (x_t**2 + y_t**2)								  	       &
+			+	v_tt	* (x_s**2 + y_s**2)								  	       &
+			-2.d0 * v_st	* (x_s*x_t + y_s*y_t) ) 							  	       &
+		     * (	Vpar_ss * (x_t**2 + y_t**2)								  	       &
+			+	Vpar_tt * (x_s**2 + y_s**2)								  	       &
+			-2.d0 * Vpar_st * (x_s*x_t + y_s*y_t) ) ) / xjac**4					* xjac * theta * tstep
   
   if (r0 .lt. rho_1) then
-    amat(7,7) = amat(7,7) + v * Vpar * rho_1 * F0**2 / BigR					* xjac * (1.d0 + zeta)
+    amat(7,7) = amat(7,7) + v * Vpar * rho_1 * F0**2 / BigR							* xjac * (1.d0 + zeta)
   else
-    amat(7,7) = amat(7,7) + v * Vpar * r0    * F0**2 / BigR					* xjac * (1.d0 + zeta)
+    amat(7,7) = amat(7,7) + v * Vpar * r0    * F0**2 / BigR							* xjac * (1.d0 + zeta)
   endif
 
-  amat(7,8)   = + v * (Te_x * r0   * ps0_y - Te_y * r0   * ps0_x)				* xjac * theta * tstep &
-		+ v * (Te   * r0_x * ps0_y - Te	  * r0_y * ps0_x)				* xjac * theta * tstep &
-		+ v * F0 / BigR * Te * r0_p							* xjac * theta * tstep 
+  amat(7,8)   = + v * (Te_x * r0   * ps0_y - Te_y * r0   * ps0_x)						* xjac * theta * tstep &
+		+ v * (Te   * r0_x * ps0_y - Te	  * r0_y * ps0_x)						* xjac * theta * tstep &
+		+ v * F0 / BigR * Te * r0_p									* xjac * theta * tstep 
   
-  amat_n(7,8) = v * F0 / BigR * Te_p * r0							* xjac * theta * tstep
+  amat_n(7,8) = v * F0 / BigR * Te_p * r0									* xjac * theta * tstep
 
   
   return

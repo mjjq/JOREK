@@ -27,6 +27,8 @@ module equation_variables
   
   ! --- Neoclassical coefficients
   real*8 	:: tau_IC
+  real*8	:: epsil, Btheta2
+  real*8	:: amu_neo_prof, aki_neo_prof
   
   ! --- R,Z-coords and jacobians
   real*8 	:: x_g, x_s, x_t, x_ss, x_st, x_tt
@@ -101,6 +103,8 @@ module equation_variables
   !$omp 	Ti0_ps0_x, Ti0_ps0_y,													   &
   !$omp 	Te0_ps0_x, Te0_ps0_y,													   &
   !$omp 	tau_IC, 														   &
+  !$omp 	epsil, Btheta2, 													   &
+  !$omp 	amu_neo_prof, aki_neo_prof, 												   &
   !$omp 	x_g, x_s, x_t, x_ss, x_st, x_tt,											   &
   !$omp 	y_g, y_s, y_t, y_ss, y_st, y_tt,											   &
   !$omp 	BigR,  BigR_x,														   &

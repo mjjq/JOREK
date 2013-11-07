@@ -72,7 +72,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
                 linear_run, export_for_nemec, R_Z_psi_bnd_file,     &
+                NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 wall_file,                                          &
+                RMP_on, lambda, tset,                               &
+                RMP_psi_cos_file, RMP_psi_sin_file,                 &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif

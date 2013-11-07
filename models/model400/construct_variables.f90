@@ -603,10 +603,11 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   Ke_perp_numm	 = ZK_perp_num		! hyper-conductivity
   Ke_par_num	 = 0.d-10		! hyper-parallel-conductivity
   
-  if (psi_norm .lt. 0.4d0) eta_numm   = eta_numm   * 1.d2
-  if (psi_norm .lt. 0.4d0) visco_numm = visco_numm * 1.d2
-  if (psi_norm .lt. 0.2d0) visco_numm = visco_numm * 1.d2
-  if (psi_norm .lt. 0.2d0) eta_numm   = eta_numm   * 1.d2
+  ! We need hyper diffusivities mostly at the grid axis
+  if (psi_norm .lt. 0.1d0) eta_numm    = eta_numm   * 1.d2
+  if (psi_norm .lt. 0.1d0) visco_numm  = visco_numm * 1.d2
+  if (psi_norm .lt. 0.05d0) visco_numm = visco_numm * 1.d2
+  if (psi_norm .lt. 0.05d0) eta_numm   = eta_numm   * 1.d2
 
   ! ------------------------------------------------------
   ! --- Diamagnetic terms, avoid problems at the target...
@@ -616,8 +617,26 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   !if ( (psi_norm .gt. 1.d0) .or. ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) tau_IC = tau_IC * 1.d-3
   if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
   if ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
-  if (psi_norm .lt. 0.2d0) tau_IC = tau_IC * 1.d-3
-  if (psi_norm .lt. 0.1d0) tau_IC = tau_IC * 1.d-3
+  ! Careful at the grid axis
+  if (psi_norm .lt. 0.1d0)  tau_IC = tau_IC * 1.d-3
+  if (psi_norm .lt. 0.05d0) tau_IC = tau_IC * 1.d-3
+  
+  ! -------------------------
+  ! --- Neoclassical rotation
+  ! -------------------------
+  epsil   = 1.d-3
+  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / BigR**2
+  if ( NEO ) then 
+    if (num_neo_file) then
+      call neo_coef(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, amu_neo_prof, aki_neo_prof)
+    else
+       amu_neo_prof = amu_neo_const
+       aki_neo_prof = aki_neo_const
+    endif
+  else 
+    amu_neo_prof   = 0.d0
+    aki_neo_prof   = 0.d0
+  endif
   
   ! -------------------------------------------------------------------
   ! --- Heating, current and particle source (the same for all i_plane)

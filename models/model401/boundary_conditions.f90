@@ -35,7 +35,7 @@ contains
 
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, freeboundary
+    use phys_module, only: F0, GAMMA, freeboundary, tokamak_device
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -225,10 +225,18 @@ contains
                             u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
                             u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
 
-                            direction = + ps0_x / abs(ps0_x)             ! temporary solution for lower x-point only
+        		    if (tokamak_device(1:4) .eq. 'MAST') then
+        		      if ( (node_list%node(inode)%x(1,1) .gt. (R_xpoint(1)+R_xpoint(2))/2.d0) ) then
+        			direction = 1.d0
+        		      else
+        			direction = -1.d0
+        		      endif
+        		    else
+        		      direction = + ps0_x / abs(ps0_x)  	 ! temporary solution for lower x-point only
+        		    endif
                             if (xcase2 .eq. 2) direction = -direction
                             if ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
-
+ 
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
@@ -397,11 +405,11 @@ contains
                                 !                      .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(2)) ) ))  &  ! private region only
                                 !.or. (k .eq. 6)    &
                               .or.( (k .eq. 6) .and.  &  
-                              (    ((xcase2 .ne. 3) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd)) &
-                              .or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
-                              .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(1)) )  &
-                              .or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
-                              .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(2)) ) ))  &  ! private region only
+                                    (    ((xcase2 .ne. 3) .and. (node_list%node(inode)%values(1,1,1) .lt. psi_bnd)) &
+                                    .or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
+                                                          .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(1)) )  &
+                                    .or. ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) &
+                                                          .and. (node_list%node(inode)%values(1,1,1) .lt. psi_xpoint(2)) ) ))  &  ! private region only
                               .or. (k .eq. 7)    &
                                 !.or. (k .eq. 8)    &
                                 !.or.( (k .eq. 8) .and.  &

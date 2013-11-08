@@ -111,15 +111,36 @@ if (my_id .eq. 0) then
                                     + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
                                     + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
 
+    node_list%node(i)%values(1,1,2) = - tauIC * zp 
+    node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))
+    node_list%node(i)%values(1,3,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,3,1) + dp_dz * node_list%node(i)%x(3,2))
+    node_list%node(i)%values(1,4,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,4,1) + dp_dz * node_list%node(i)%x(4,2) &
+                                    + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
+
     node_list%node(i)%values(1,1,7) = 0.d0        ! parallel velocity
     node_list%node(i)%values(1,2,7) = 0.d0
     node_list%node(i)%values(1,3,7) = 0.d0
     node_list%node(i)%values(1,4,7) = 0.d0
     
+    if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
+      node_list%node(i)%values(1,1,7) = zV
+      node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(2,2)
+      node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(3,2)
+      node_list%node(i)%values(1,4,7) = dV_dpsi  * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(4,2) &
+                                    + dV_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                 + dV_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    endif
+    
     node_list%node(i)%deltas = 0.d0
     
   enddo
 
+endif
+
+if (tauIC .ne. 0.d0) then
+  call Poisson(my_id,2,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               2,4,1, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)      ! inverse Poisson
 endif
 
 
@@ -177,7 +198,15 @@ do i=1,node_list%n_nodes
     ps0_x = (	Z_t * ps0_s - Z_s * ps0_t ) / xjac
     ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
 
-    direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
+    if (tokamak_device(1:4) .eq. 'MAST') then
+      if ( (node_list%node(i)%x(1,1) .gt. (R_xpoint(1)+R_xpoint(2))/2.d0) ) then
+        direction = 1.d0
+      else
+        direction = -1.d0
+      endif
+    else
+      direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
+    endif
     if (xcase2 .eq. 2) direction = -direction
     if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
 

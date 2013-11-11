@@ -161,6 +161,8 @@ JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)			\
         $(DIR)/density.f90                              \
         $(DIR)/current.f90                              \
         $(DIR)/ffprime.f90                              \
+        $(DIR)/temperature_i.f90                        \
+        $(DIR)/temperature_e.f90                        \
         $(DIR)/temperature.f90                          
 
 

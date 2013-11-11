@@ -65,34 +65,34 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   call r3_info_begin (r3_info_index_0, 'construct_matrix')   ! timing
 
   if (my_id .eq. 0) then
-     write(*,*) '****************************************'
-     write(*,*) '*  construct matrix                    *'
-     write(*,*) '****************************************'
-     ! write(*,*) ' n_elements (local)       : ',my_id,n_local_elms
-     ! write(*,*) ' index_min,index_max      : ',my_id,index_min,index_max
+    write(*,*) '****************************************'
+    write(*,*) '*  construct matrix		       *'
+    write(*,*) '****************************************'
+    ! write(*,*) ' n_elements (local)	    : ',my_id,n_local_elms
+    ! write(*,*) ' index_min,index_max      : ',my_id,index_min,index_max
   endif
   call tr_print_memsize("DebConstM")
   i_bnd = 0
   
   do i=1, n_local_elms
 
-     ielm = local_elms(i)
+    ielm = local_elms(i)
 
-     do iv=1,n_vertex_max
+    do iv=1,n_vertex_max
 
-        inode = element_list%element(ielm)%vertex(iv)
+       inode = element_list%element(ielm)%vertex(iv)
 
-        if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
-        if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
-        if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
-        if (i == 1 .and. iv == 1) then
-           index_min_loc = minval(node_list%node(iv)%index)
-           index_max_loc = maxval(node_list%node(iv)%index)
-        else
-           index_min_loc = min(index_min_loc, minval(node_list%node(iv)%index))
-           index_max_loc = max(index_max_loc, maxval(node_list%node(iv)%index))
-        end if
-     enddo
+       if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
+       if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
+       if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
+       if (i == 1 .and. iv == 1) then
+    	  index_min_loc = minval(node_list%node(iv)%index)
+    	  index_max_loc = maxval(node_list%node(iv)%index)
+       else
+    	  index_min_loc = min(index_min_loc, minval(node_list%node(iv)%index))
+    	  index_max_loc = max(index_max_loc, maxval(node_list%node(iv)%index))
+       end if
+    enddo
 
   enddo
 
@@ -142,194 +142,194 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   !$omp do 
   do ife =1, n_local_elms
-     ielm = local_elms(ife)
+    ielm = local_elms(ife)
 
-     element = element_list%element(ielm)
-     
-     if (refinement) then
-       i_father = element_list%element(ielm)%father
+    element = element_list%element(ielm)
+    
+    if (refinement) then
+      i_father = element_list%element(ielm)%father
 
-       if( i_father.ne.0) then
+      if( i_father.ne.0) then
   
-         element_father = element_list%element(i_father)
+    	element_father = element_list%element(i_father)
 
-         do iv = 1, n_vertex_max
-           inode_father=element_father%vertex(iv)
-           nodes_father(iv) = node_list%node(inode_father)
-         enddo
+    	do iv = 1, n_vertex_max
+    	  inode_father=element_father%vertex(iv)
+    	  nodes_father(iv) = node_list%node(inode_father)
+    	enddo
   
-       endif
+      endif
   
-     else
-          
-       do iv = 1, n_vertex_max
+    else
+    	 
+      do iv = 1, n_vertex_max
 
-        inode     = element%vertex(iv)
-        nodes(iv) = node_list%node(inode)
+       inode	 = element%vertex(iv)
+       nodes(iv) = node_list%node(inode)
 
-       enddo
+      enddo
 
-     endif
+    endif
 
-!     if ( n_tor >= 3 .and. jorek_model < 700 ) then
-     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model < 700 ) then
-       call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)      ! use fft for toroidal integration
-     else
-       call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)          ! use direct integration
-     endif
+!    if ( n_tor >= 3 .and. jorek_model < 700 ) then
+    if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model < 700 ) then
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)	   ! use fft for toroidal integration
+    else
+      call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)	   ! use direct integration
+    endif
 
-     do iv = 1, n_vertex_max									 ! boundary integrals
+    do iv = 1, n_vertex_max									! boundary integrals
 
-       iv2  = mod(iv, n_vertex_max) + 1
+      iv2  = mod(iv, n_vertex_max) + 1
 
-       inode1 = element%vertex(iv)
-       inode2 = element%vertex(iv2)
+      inode1 = element%vertex(iv)
+      inode2 = element%vertex(iv2)
 
-       if (bc_natural_open) then
+      if (bc_natural_open) then
 
-         if   (  ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-           .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+    	if   (  ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+    	  .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-           nodes(1)  = node_list%node(inode1)
-           nodes(2)  = node_list%node(inode2)
-           
-           vertex    = (/ iv, iv2 /)
-           direction = (/  1, 2   /)
+    	  nodes(1)  = node_list%node(inode1)
+    	  nodes(2)  = node_list%node(inode2)
+    	  
+    	  vertex    = (/ iv, iv2 /)
+    	  direction = (/  1, 2   /)
 
-!           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
+!   	   call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, psi_axis, psi_bnd, Z_xpoint, ELM, RHS)    ! for open field lines
 
-           call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, &
-                                     psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)    ! for open field lines
-          endif
-        
-       endif
-         
-     enddo
-     
-     
-     
-     ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
+    	  call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, &
+    				    psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)    ! for open field lines
+    	 endif
+       
+      endif
+    	
+    enddo
+    
+    
+    
+    ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
 #ifdef COMPARE_ELEMENT_MATRIX
-     if (ife .eq. n_local_elms/2) then ! comparison is performed only for one finite element
-       
-       call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,   &
-         psi_bnd, Z_xpoint, ELM2, RHS2, omp_tid)
-       call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,       &
-         psi_bnd, Z_xpoint, ELM, RHS, omp_tid)
-       
-       ! --- Compare right hand side
-       write(*,*)
-       write(*,*) 'Comparing rhs:'
-       write(*,*)
-       write(*,'(A)') '  #    my_id       i ivertex  iorder    ivar    itor             RHS    ' //&
-         '        RHS2        RHS-RHS2'
-       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-         
-         if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
-           call decrypt_index(i, ivertex, iorder, ivar, itor)
-           write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, RHS(i), RHS2(i),     &
-             RHS(i)-RHS2(i)
-           rhs_problem(ivar) = .true.
-           difference_found  = .true.
-         endif
-         
+    if (ife .eq. n_local_elms/2) then ! comparison is performed only for one finite element
+      
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,   &
+    	psi_bnd, Z_xpoint, ELM2, RHS2, omp_tid)
+      call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,	  &
+    	psi_bnd, Z_xpoint, ELM, RHS, omp_tid)
+      
+      ! --- Compare right hand side
+      write(*,*)
+      write(*,*) 'Comparing rhs:'
+      write(*,*)
+      write(*,'(A)') '  #    my_id	 i ivertex  iorder    ivar    itor	       RHS    ' //&
+    	'	 RHS2	     RHS-RHS2'
+      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+    	
+    	if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
+    	  call decrypt_index(i, ivertex, iorder, ivar, itor)
+    	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, RHS(i), RHS2(i),	  &
+    	    RHS(i)-RHS2(i)
+    	  rhs_problem(ivar) = .true.
+    	  difference_found  = .true.
+    	endif
+    	
+      enddo
+      
+      ! --- Compare matrix entries
+      write(*,*)
+      write(*,*) 'Comparing elm:'
+      write(*,*)
+      write(*,'(A)') '  #    my_id	 i	 j ivertex  iorder    ivar    itor jvertex  ' //  &
+    	'jorder    jvar    jtor 	    ELM 	   ELM2        ELM-ELM2'
+      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+    	do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+    	  
+    	  if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
+    	    call decrypt_index(i, ivertex, iorder, ivar, itor)
+    	    call decrypt_index(j, jvertex, jorder, jvar, jtor)
+    	    write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,	  &
+    	      jorder, jvar, jtor, ELM(i,j), ELM2(i,j), ELM(i,j)-ELM2(i,j)
+    	    elm_problem(ivar,jvar) = .true.
+    	    difference_found	   = .true.
+    	  endif
+    	  
        enddo
-       
-       ! --- Compare matrix entries
-       write(*,*)
-       write(*,*) 'Comparing elm:'
-       write(*,*)
-       write(*,'(A)') '  #    my_id       i       j ivertex  iorder    ivar    itor jvertex  ' //  &
-         'jorder    jvar    jtor             ELM            ELM2        ELM-ELM2'
-       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-         do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-           
-           if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
-             call decrypt_index(i, ivertex, iorder, ivar, itor)
-             call decrypt_index(j, jvertex, jorder, jvar, jtor)
-             write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,       &
-               jorder, jvar, jtor, ELM(i,j), ELM2(i,j), ELM(i,j)-ELM2(i,j)
-             elm_problem(ivar,jvar) = .true.
-             difference_found       = .true.
-           endif
-           
-        enddo
-       enddo
-       
-     endif
+      enddo
+      
+    endif
 #endif
-     ! --- End of element_matrix comparison
-     
-     
-     
-     if (refinement) then   
-       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
-     else
-       do i=1, n_vertex_max
-         node_out(i) = element%vertex(i)   
-       enddo 
-     endif
+    ! --- End of element_matrix comparison
+    
+    
+    
+    if (refinement) then   
+      call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
+    else
+      do i=1, n_vertex_max
+    	node_out(i) = element%vertex(i)   
+      enddo 
+    endif
 
-     !$omp critical  
+    !$omp critical  
 
-     if ((.not. refinement) .or.(refinement .and. (element%n_sons .eq. 0))) then
-     
-        do i=1,n_vertex_max
+    if ((.not. refinement) .or.(refinement .and. (element%n_sons .eq. 0))) then
+    
+       do i=1,n_vertex_max
 
-           inode1 = node_out(i)
+    	  inode1 = node_out(i)
 
-           do i_order = 1, n_order+1
+    	  do i_order = 1, n_order+1
 
-              index_node1 = node_list%node(inode1)%index(i_order)
+    	     index_node1 = node_list%node(inode1)%index(i_order)
 
-              index_large_i = n_tor * n_var * (index_node1 - 1)
+    	     index_large_i = n_tor * n_var * (index_node1 - 1)
 
-              if ((index_node1 .ge. index_min) .and. (index_node1 .le. index_max)) then
+    	     if ((index_node1 .ge. index_min) .and. (index_node1 .le. index_max)) then
 
-                 do j = 1, n_var * n_tor
+    		do j = 1, n_var * n_tor
 
-                    index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
+    		   index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
 
-                    rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + RHS(index_ij)
+    		   rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + RHS(index_ij)
 
-                    do k=1,n_vertex_max
+    		   do k=1,n_vertex_max
 
-                       knode = node_out(k)
+    		      knode = node_out(k)
 
-                       do k_order = 1, n_order+1
+    		      do k_order = 1, n_order+1
 
-                          index_node2 = node_list%node(knode)%index(k_order)
+    			 index_node2 = node_list%node(knode)%index(k_order)
 
-                          index_large_k = n_tor * n_var * (index_node2 - 1)
+    			 index_large_k = n_tor * n_var * (index_node2 - 1)
 
-                          call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
+    			 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
 
-                          do l = 1, n_var * n_tor
+    			 do l = 1, n_var * n_tor
 
-                             index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   ! index in the ELM matrix
+    			    index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (k_order-1) + l   ! index in the ELM matrix
 
-                             ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor + l
+    			    ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor + l
 
-                             irn_glob(ilarge2) = index_large_i   + j
-                             jcn_glob(ilarge2) = index_large_k   + l
-                             A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
+    			    irn_glob(ilarge2) = index_large_i	+ j
+    			    jcn_glob(ilarge2) = index_large_k	+ l
+    			    A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
 
-                          enddo
+    			 enddo
 
-                       enddo
+    		      enddo
 
-                    enddo
-                 enddo
+    		   enddo
+    		enddo
 
-              endif
+    	     endif
 
-           enddo
+    	  enddo
 
-        enddo
+       enddo
 
-     endif
+    endif
 
-     !$omp end critical
+    !$omp end critical
 
   end do
   !$omp end do

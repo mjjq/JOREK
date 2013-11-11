@@ -73,7 +73,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 produce_live_data, gmres, gmres_max_iter,           &
                 linear_run, export_for_nemec, R_Z_psi_bnd_file,     &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                wall_file,                                          &
+                wall_file,gmres_m, gmres_tol,                       &
                 RMP_on, lambda, tset,                               &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
 #ifdef USE_HDF5

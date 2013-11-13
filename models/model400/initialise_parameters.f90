@@ -35,6 +35,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
+                R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 n_pfc, n_tor_fft_thresh,                            &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
@@ -71,15 +72,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-                linear_run, export_for_nemec, R_Z_psi_bnd_file,     &
+                linear_run, export_for_nemec,                       &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                wall_file,gmres_m, gmres_tol,                       &
+                gmres_m, gmres_tol,                                 &
                 RMP_on, lambda, tset,                               &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
                 output_bnd_elements,                                &
+                wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter, bc_natural_open
 
 if (my_id .eq. 0) then
@@ -132,7 +134,7 @@ if (my_id .eq. 0) then
  ! --- Open the file.
     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
-      write(*,*) 'ERROR in define_boundary: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
       write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
@@ -142,6 +144,24 @@ if (my_id .eq. 0) then
       enddo
     endif    
     CLOSE(243)
+  endif
+ !=========================================
+  
+ !==============================Limiter==========================
+   if (n_limiter.ne.0) then
+ ! --- Open the file.
+    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
+      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
+    else
+      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
+      do i=1,n_limiter
+        read(244,*) R_limiter(i),Z_limiter(i)
+        write(*,*)  R_limiter(i),Z_limiter(i)
+      enddo
+    endif    
+    CLOSE(244)
   endif
  !=========================================
   

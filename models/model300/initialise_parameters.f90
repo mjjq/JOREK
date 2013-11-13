@@ -34,6 +34,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
+                R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 tokamak_device,                                     &
                 F0, time_evol_scheme,                               &
@@ -63,6 +64,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
                 output_bnd_elements,  &
+                wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter
 
 
@@ -87,6 +89,42 @@ if (my_id .eq. 0) then
   else
     read(5,in1)
   end if
+  
+ !==============================R_Z_psi_bnd==========================
+   if (n_boundary.ne.0) then
+ ! --- Open the file.
+    OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
+    else
+      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
+      do i=1,n_boundary
+        read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
+      enddo
+    endif    
+    CLOSE(243)
+  endif
+ !=========================================
+  
+ !==============================Limiter==========================
+   if (n_limiter.ne.0) then
+ ! --- Open the file.
+    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
+      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
+    else
+      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
+      do i=1,n_limiter
+        read(244,*) R_limiter(i),Z_limiter(i)
+        write(*,*)  R_limiter(i),Z_limiter(i)
+      enddo
+    endif    
+    CLOSE(244)
+  endif
+ !=========================================
   
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)

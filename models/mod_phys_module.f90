@@ -60,10 +60,10 @@ module phys_module
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
   
   !> Points used as limiters (see routine find_limiter)
-  integer, parameter :: max_limiter = 100 !< Maximum number of limiter points
-  integer :: n_limiter                    !< Number of limiter points
-  real*8  :: R_limiter(max_limiter)       !< R-positions of the limiter points
-  real*8  :: Z_limiter(max_limiter)       !< Z-positions of the limiter points
+  integer, parameter :: max_limiter = 1000 !< Maximum number of limiter points
+  integer :: n_limiter                     !< Number of limiter points
+  real*8  :: R_limiter(max_limiter)        !< R-positions of the limiter points
+  real*8  :: Z_limiter(max_limiter)        !< Z-positions of the limiter points
   
   !> @name Define X-point geometry by geometrical properties
   !!

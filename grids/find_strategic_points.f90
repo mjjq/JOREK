@@ -99,7 +99,7 @@ stpts%RMiddle_UpperPrivate	 = 999.d0;  stpts%ZMiddle_UpperPrivate	   = -1.d1
 
 
 !--------------------------------------------------------------------------------------------
-!-------------------------------- Now find all the points -----------------------------------
+!------------------- Now find all the points for standard equilibria ------------------------
 !--------------------------------------------------------------------------------------------
 
 if (xcase .ne. 3) then
@@ -173,62 +173,6 @@ else
       
     enddo
   enddo
-
-  ! ---------------------------------- The last open flux surface on outer board that intersects MAST lower Wall
-  if(tokamak_device(1:4) .eq. 'MAST') then
-    ifound = 0
-    R_wall_max = 1.73d0
-    do i=n_flux+n_open, n_flux+n_open+n_outer 
-      do k=1,flux_list%flux_surfaces(i)%n_pieces    
-    	do l=1,3,2
-    	  
-    	  rr1	= flux_list%flux_surfaces(i)%s(l,k)
-    	  ss1	= flux_list%flux_surfaces(i)%t(l,k)
-    	  i_elm = flux_list%flux_surfaces(i)%elm(k)
-
-    	  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-    							      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-    	  if ((ZZg1 .lt. stpts%ZLimit_LowerMastWall) .and. (RRg1 .gt. R_wall_max)) then
-    	    stpts%RLimit_LowerMastWall = RRg1
-    	    stpts%ZLimit_LowerMastWall = ZZg1
-  	    ifound = 1
-    	  endif
-    	  
-    	enddo
-      enddo
-      stpts%i_surf_wall_low = i 
-      if (ifound .eq. 1) exit
-    enddo
-  endif
-
-  ! ---------------------------------- The last open flux surface on outer board that intersects MAST upper Wall
-  if(tokamak_device(1:4) .eq. 'MAST') then
-    ifound = 0
-    R_wall_max = 1.723d0
-    do i=n_flux+n_open, n_flux+n_open+n_outer 
-      do k=1,flux_list%flux_surfaces(i)%n_pieces    
-    	do l=1,3,2
-    	  
-    	  rr1	= flux_list%flux_surfaces(i)%s(l,k)
-    	  ss1	= flux_list%flux_surfaces(i)%t(l,k)
-    	  i_elm = flux_list%flux_surfaces(i)%elm(k)
-
-    	  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-    							      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-    	  if ((ZZg1 .gt. stpts%ZLimit_UpperMastWall) .and. (RRg1 .gt. R_wall_max)) then
-    	    stpts%RLimit_UpperMastWall = RRg1
-    	    stpts%ZLimit_UpperMastWall = ZZg1
-  	    ifound = 1
-    	  endif
-    	  
-    	enddo
-      enddo
-      stpts%i_surf_wall_up = i 
-      if (ifound .eq. 1) exit
-    enddo
-  endif
 
   ! ---------------------------------- The last open flux surface (SOL boundary) on inner board (HFS)
   i_surf = n_flux+n_open+n_outer+n_inner 
@@ -443,6 +387,7 @@ if (xcase .eq. 3) tht_x2 = atan2(Z_xpoint(2)-Z_axis,R_xpoint(2)-R_axis)
 if (tht_x1 .lt. 0.d0) tht_x1 = tht_x1 + 2.d0*PI
 if (tht_x2 .lt. 0.d0) tht_x2 = tht_x2 + 2.d0*PI
 
+! --- First define the lower angle
 if(xcase .ne. 2) then
   
   angle_LowerCorner       = atan2(stpts%ZLeftCorn_LowerInnerLeg-Z_xpoint(1),stpts%RLeftCorn_LowerInnerLeg-R_xpoint(1))
@@ -465,6 +410,7 @@ if(xcase .ne. 2) then
   
 endif
 
+! --- Define the upper angle
 if(xcase .ne. 1) then
 
   angle_UpperCorner       = atan2(stpts%ZLeftCorn_UpperInnerLeg-Z_xpoint(2),stpts%RLeftCorn_UpperInnerLeg-R_xpoint(2))
@@ -487,6 +433,7 @@ if(xcase .ne. 1) then
   
 endif
 
+! --- Then find the lower line
 if(xcase .ne. 2) then
   
   i_max = n_flux + n_open + n_outer
@@ -509,20 +456,9 @@ if(xcase .ne. 2) then
   stpts%RLimit_LowerInnerLeg = RRg1
   stpts%ZLimit_LowerInnerLeg = ZZg1
 
-  ! --- Now for the last lower wall surface of MAST
-  if(tokamak_device(1:4) .eq. 'MAST') then
-    call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_low,stpts%angle_LowerRight,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
-    if(i_find .eq. 0) return
-    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-    		   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-    		   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-    stpts%RLimit_LowerMastWallBox = RRg1
-    stpts%ZLimit_LowerMastWallBox = ZZg1
-  endif
-
 endif
 
+! --- And the upper line
 if(xcase .ne. 1) then
   
   i_max = n_flux + n_open + n_outer
@@ -545,22 +481,96 @@ if(xcase .ne. 1) then
   stpts%RLimit_UpperInnerLeg = RRg1
   stpts%ZLimit_UpperInnerLeg = ZZg1
 
-  ! --- Now for the last upper wall surface of MAST
-  if(tokamak_device(1:4) .eq. 'MAST') then
-    call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_up,stpts%angle_UpperRight,R_xpoint(2),Z_xpoint(2),i_elm_find,s_find,t_find,i_find)
-    if(i_find .eq. 0) return
-    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-  		   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-  		   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+endif
 
-    stpts%RLimit_UpperMastWallBox = RRg1
-    stpts%ZLimit_UpperMastWallBox = ZZg1
-  endif
+
+
+!--------------------------------------------------------------------------------------------
+!------------------- Now find points related to MAST equilibria -----------------------------
+!--------------------------------------------------------------------------------------------
+
+if( (tokamak_device(1:4) .eq. 'MAST') .and. (xcase .eq. 3) ) then
+
+  ! ---------------------------------- The last open flux surface on outer board that intersects MAST lower Wall
+  ifound = 0
+  R_wall_max = 1.73d0
+  do i=n_flux+n_open, n_flux+n_open+n_outer 
+    do k=1,flux_list%flux_surfaces(i)%n_pieces    
+      do l=1,3,2
+  	
+  	rr1   = flux_list%flux_surfaces(i)%s(l,k)
+  	ss1   = flux_list%flux_surfaces(i)%t(l,k)
+  	i_elm = flux_list%flux_surfaces(i)%elm(k)
+
+  	call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+  							    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+  	if ((ZZg1 .lt. stpts%ZLimit_LowerMastWall) .and. (RRg1 .gt. R_wall_max)) then
+  	  stpts%RLimit_LowerMastWall = RRg1
+  	  stpts%ZLimit_LowerMastWall = ZZg1
+          ifound = 1
+  	endif
+  	
+      enddo
+    enddo
+    stpts%i_surf_wall_low = i 
+    if (ifound .eq. 1) exit
+  enddo
+
+  ! ---------------------------------- The last open flux surface on outer board that intersects MAST upper Wall
+  ifound = 0
+  R_wall_max = 1.723d0
+  do i=n_flux+n_open, n_flux+n_open+n_outer 
+    do k=1,flux_list%flux_surfaces(i)%n_pieces    
+      do l=1,3,2
+  	
+  	rr1   = flux_list%flux_surfaces(i)%s(l,k)
+  	ss1   = flux_list%flux_surfaces(i)%t(l,k)
+  	i_elm = flux_list%flux_surfaces(i)%elm(k)
+
+  	call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+  							    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+  	if ((ZZg1 .gt. stpts%ZLimit_UpperMastWall) .and. (RRg1 .gt. R_wall_max)) then
+  	  stpts%RLimit_UpperMastWall = RRg1
+  	  stpts%ZLimit_UpperMastWall = ZZg1
+          ifound = 1
+  	endif
+  	
+      enddo
+    enddo
+    stpts%i_surf_wall_up = i 
+    if (ifound .eq. 1) exit
+  enddo
+
+  ! ---------------------------------- The last lower wall surface of MAST
+  call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_low,stpts%angle_LowerRight,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
+  if(i_find .eq. 0) return
+  call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+  		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+  		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+  stpts%RLimit_LowerMastWallBox = RRg1
+  stpts%ZLimit_LowerMastWallBox = ZZg1
+
+  ! ---------------------------------- The last upper wall surface of MAST
+  call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_up,stpts%angle_UpperRight,R_xpoint(2),Z_xpoint(2),i_elm_find,s_find,t_find,i_find)
+  if(i_find .eq. 0) return
+  call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+        	 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+        	 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+  stpts%RLimit_UpperMastWallBox = RRg1
+  stpts%ZLimit_UpperMastWallBox = ZZg1
 
 endif
 
 
-! ---------------------------------- And print the output
+
+!--------------------------------------------------------------------------------------------
+!------------------- And print the output ---------------------------------------------------
+!--------------------------------------------------------------------------------------------
+
 write(*,'(A)')                  ' _________________________________________________________'
 write(*,'(A)')                  '|                                                         |'
 write(*,'(A)')  		'| LEG POINTS (R,Z)                                        |'
@@ -569,42 +579,42 @@ write(*,'(A)')                  '|                                              
 
 if (xcase .ne. 2) then
   write(*,'(A)')                '| Lower Legs : -------------------------------------------|'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Upper corner of the Lower Inner Leg  : (',stpts%RLimit_LowerInnerLeg,    ', ', stpts%ZLimit_LowerInnerLeg,    ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Lower Inner Leg  : (',stpts%RLeftCorn_LowerInnerLeg, ', ', stpts%ZLeftCorn_LowerInnerLeg, ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Lower Inner Leg  : (',stpts%RStrike_LowerInnerLeg,   ', ', stpts%ZStrike_LowerInnerLeg,   ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Lower Inner Leg  : (',stpts%RRightCorn_LowerInnerLeg,', ', stpts%ZRightCorn_LowerInnerLeg,') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Middle of the Lower Private surface  : (',stpts%RMiddle_LowerPrivate,    ', ', stpts%ZMiddle_LowerPrivate ,   ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Lower Outer Leg  : (',stpts%RLeftCorn_LowerOuterLeg, ', ', stpts%ZLeftCorn_LowerOuterLeg, ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Lower Outer Leg  : (',stpts%RStrike_LowerOuterLeg,   ', ', stpts%ZStrike_LowerOuterLeg,   ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Lower Outer Leg  : (',stpts%RRightCorn_LowerOuterLeg,', ', stpts%ZRightCorn_LowerOuterLeg,') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Upper corner of the Lower Outer Leg  : (',stpts%RLimit_LowerOuterLeg,    ', ', stpts%ZLimit_LowerOuterLeg,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Upper corner of the Lower Inner Leg  : (',stpts%RLimit_LowerInnerLeg,     ', ', stpts%ZLimit_LowerInnerLeg,     ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Lower Inner Leg  : (',stpts%RLeftCorn_LowerInnerLeg,  ', ', stpts%ZLeftCorn_LowerInnerLeg,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Lower Inner Leg  : (',stpts%RStrike_LowerInnerLeg,    ', ', stpts%ZStrike_LowerInnerLeg,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Lower Inner Leg  : (',stpts%RRightCorn_LowerInnerLeg, ', ', stpts%ZRightCorn_LowerInnerLeg, ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Middle of the Lower Private surface  : (',stpts%RMiddle_LowerPrivate,     ', ', stpts%ZMiddle_LowerPrivate ,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Lower Outer Leg  : (',stpts%RLeftCorn_LowerOuterLeg,  ', ', stpts%ZLeftCorn_LowerOuterLeg,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Lower Outer Leg  : (',stpts%RStrike_LowerOuterLeg,    ', ', stpts%ZStrike_LowerOuterLeg,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Lower Outer Leg  : (',stpts%RRightCorn_LowerOuterLeg, ', ', stpts%ZRightCorn_LowerOuterLeg, ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Upper corner of the Lower Outer Leg  : (',stpts%RLimit_LowerOuterLeg,     ', ', stpts%ZLimit_LowerOuterLeg,     ') |'
 endif
 
 if (xcase .ne. 1) then
   write(*,'(A)')                '| Upper Legs : -------------------------------------------|'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Lower corner of the Upper Inner Leg  : (',stpts%RLimit_UpperInnerLeg,    ', ', stpts%ZLimit_UpperInnerLeg,    ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Upper Inner Leg  : (',stpts%RLeftCorn_UpperInnerLeg, ', ', stpts%ZLeftCorn_UpperInnerLeg, ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Upper Inner Leg  : (',stpts%RStrike_UpperInnerLeg,   ', ', stpts%ZStrike_UpperInnerLeg,   ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Upper Inner Leg  : (',stpts%RRightCorn_UpperInnerLeg,', ', stpts%ZRightCorn_UpperInnerLeg,') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Middle of the Upper Private surface  : (',stpts%RMiddle_UpperPrivate,    ', ', stpts%ZMiddle_UpperPrivate ,   ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Upper Outer Leg  : (',stpts%RLeftCorn_UpperOuterLeg, ', ', stpts%ZLeftCorn_UpperOuterLeg, ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Upper Outer Leg  : (',stpts%RStrike_UpperOuterLeg,   ', ', stpts%ZStrike_UpperOuterLeg,   ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Upper Outer Leg  : (',stpts%RRightCorn_UpperOuterLeg,', ', stpts%ZRightCorn_UpperOuterLeg,') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Lower corner of the Upper Outer Leg  : (',stpts%RLimit_UpperOuterLeg,    ', ', stpts%ZLimit_UpperOuterLeg,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Lower corner of the Upper Inner Leg  : (',stpts%RLimit_UpperInnerLeg,     ', ', stpts%ZLimit_UpperInnerLeg,     ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Upper Inner Leg  : (',stpts%RLeftCorn_UpperInnerLeg,  ', ', stpts%ZLeftCorn_UpperInnerLeg,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Upper Inner Leg  : (',stpts%RStrike_UpperInnerLeg,    ', ', stpts%ZStrike_UpperInnerLeg,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Upper Inner Leg  : (',stpts%RRightCorn_UpperInnerLeg, ', ', stpts%ZRightCorn_UpperInnerLeg, ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Middle of the Upper Private surface  : (',stpts%RMiddle_UpperPrivate,     ', ', stpts%ZMiddle_UpperPrivate ,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left corner  of the Upper Outer Leg  : (',stpts%RLeftCorn_UpperOuterLeg,  ', ', stpts%ZLeftCorn_UpperOuterLeg,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Strike point of the Upper Outer Leg  : (',stpts%RStrike_UpperOuterLeg,    ', ', stpts%ZStrike_UpperOuterLeg,    ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right corner of the Upper Outer Leg  : (',stpts%RRightCorn_UpperOuterLeg, ', ', stpts%ZRightCorn_UpperOuterLeg, ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Lower corner of the Upper Outer Leg  : (',stpts%RLimit_UpperOuterLeg,     ', ', stpts%ZLimit_UpperOuterLeg,     ') |'
 endif
 
 if (xcase .eq. 3) then
   write(*,'(A)')                '| Secondary Strike Points : ------------------------------|'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,  ', ', stpts%ZSecondStrike_InnerLeg,  ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,  ', ', stpts%ZSecondStrike_OuterLeg,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,   ', ', stpts%ZSecondStrike_InnerLeg,   ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,   ', ', stpts%ZSecondStrike_OuterLeg,   ') |'
 endif
 
 if(tokamak_device(1:4) .eq. 'MAST') then
   write(*,'(A)')                '| Last Outer Surface Intersecting MAST Wall : ------------|'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower MAST wall    : (',stpts%RLimit_LowerMastWall,    ', ', stpts%ZLimit_LowerMastWall,  ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper MAST wall    : (',stpts%RLimit_UpperMastWall,    ', ', stpts%ZLimit_UpperMastWall,  ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower Xpoint line  : (',stpts%RLimit_LowerMastWallBox, ', ', stpts%ZLimit_LowerMastWallBox,  ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper Xpoint line  : (',stpts%RLimit_UpperMastWallBox, ', ', stpts%ZLimit_UpperMastWallBox,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower MAST wall    : (',stpts%RLimit_LowerMastWall,     ', ', stpts%ZLimit_LowerMastWall,     ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper MAST wall    : (',stpts%RLimit_UpperMastWall,     ', ', stpts%ZLimit_UpperMastWall,     ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower Xpoint line  : (',stpts%RLimit_LowerMastWallBox,  ', ', stpts%ZLimit_LowerMastWallBox,  ') |'
+  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper Xpoint line  : (',stpts%RLimit_UpperMastWallBox,  ', ', stpts%ZLimit_UpperMastWallBox,  ') |'
 endif
 
 write(*,'(A)')                  '|_________________________________________________________|'

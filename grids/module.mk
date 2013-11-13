@@ -8,6 +8,7 @@ JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    \
 	$(DIR)/define_final_grid.f90        \
 	$(DIR)/fft.f90 			    \
 	$(DIR)/fgauss.f90 		    \
+	$(DIR)/find_wall_crossing.f90	    \
 	$(DIR)/find_crossing.f90	    \
 	$(DIR)/find_R_surface.f90 	    \
 	$(DIR)/find_RZ.f90 		    \

@@ -1,67 +1,3 @@
-subroutine find_wall_crossing(R_wall,Z_wall,n_wall,Rp,Zp,tht_p,Rw,Zw,Tw)
-!-----------------------------------------------------------------------
-! subroutine to find the crossing of the line given by (Rp,Zp,tht_p)
-! with one of the wall segments (given by straight lines, R_wall,Z_wall)
-! The result is the position of the crossing (Rw,Zw)
-! (only the first found crossing is returned)
-!-----------------------------------------------------------------------
-
-implicit none
-
-! --- input/output variables
-real*8, intent(in)  :: R_wall(*), Z_wall(*)
-real*8              :: Rp, Zp, tht_p
-real*8, intent(out) :: Rw, Zw, Tw
-integer, intent(in) :: n_wall
-
-! --- local variables
-real*8  :: tan_p, tan12, PI, TWOPI, HALFPI
-integer :: k, my_id
-logical :: found
-
-tan_p  = tan(tht_p)
-HALFPI = asin(1.d0)
-PI     = 2.d0 * HALFPI
-TWOPI  = 2.d0 * PI
-my_id  = 0
-
-Rw = 0.d0; ZW = 0.d0
-
-tht_p = mod(tht_p,TWOPI)
-if (tht_p .lt. -HALFPI) tht_p = tht_p + TWOPI
-if (tht_p .gt. 1.5*PI)  tht_p = tht_p - TWOPI
-
-found = .false.
-
-do k=1,n_wall-1
-
-  if (R_wall(k) .ne. R_wall(k+1)) then
-    tan12 = (Z_wall(k+1) - Z_wall(k))/(R_wall(k+1)-R_wall(k))
-    Rw    = (Z_wall(k) - R_wall(k)*tan12 - Zp + Rp*tan_p ) / (tan_p - tan12)
-    Zw    = Zp + tan_p  * (Rw - Rp)
-  else
-    Rw = R_wall(k)
-    Zw = Zp + tan_p * (Rw - Rp)
-  endif
-
-  if ((Zw-Z_wall(k))*(Zw-Z_wall(k+1)) .le. 0.d0) then
-    Tw = atan2(Z_wall(k+1)-Z_wall(k),R_wall(k+1)-R_wall(k))
-    if (((tht_p .gt. -HALFPI) .and. (tht_p .le. HALFPI))    .and. (Rw .ge. Rp)) then
-      found = .true.
-    elseif (((tht_p .gt. HALFPI) .and. (tht_p .lt. 1.5*PI)) .and. (Rw .le. Rp)) then
-      found = .true.
-    endif
-  endif
-
-  if (found) exit
-
-enddo
-
-if (.not. found) write(*,'(A,6f16.8)') ' CROSSING NOT FOUND : ',Rp,Zp,tht_p,Rw,Zw,Tw
-
-return
-end
-
 subroutine grid_xpoint_wall(node_list, element_list, n_flux, n_open, n_private, n_leg, n_tht, n_ext,&
   SIG_open, SIG_closed, SIG_private, SIG_theta, SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private)
 !-----------------------------------------------------------------------
@@ -74,6 +10,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
+use phys_module, only:   n_limiter, R_limiter, Z_limiter
 
 implicit none
 
@@ -150,6 +87,14 @@ call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_
 
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
+
+
+
+! -------------------------------------------------------------------------------------------
+! --------------------------------- Define Flux Values --------------------------------------
+! -------------------------------------------------------------------------------------------
+
+
 flux_list%n_psi = n_flux - 1 + n_open + n_private            ! excludes the axis
 
 allocate(flux_list%psi_values(flux_list%n_psi))
@@ -225,6 +170,13 @@ call lplot6(21,11,R_wall,Z_wall,-n_wall,'first wall')
 call lincol(0)
 
 
+
+
+
+! -------------------------------------------------------------------------------------------
+! --------------------------------- Find Strategic Points -----------------------------------
+! -------------------------------------------------------------------------------------------
+
 !-------------------------------------- store some data for the new grid
 n_psi   = n_flux + n_open + n_private          ! includes the axis
 n_theta = n_tht + 2*n_leg                      ! includes center and legs
@@ -267,6 +219,13 @@ call find_wall_crossing(R_wall,Z_wall,n_wall,R_xpoint(1),Z_xpoint(1),tht_max,RL8
 
 write(*,'(A,2e16.8)') ' L8 (inside wall crossing) : ',RL8,ZL8  ! inside wall crossing at x-point level
 write(*,'(A,2e16.8)') ' L9 (outside wall crossing): ',RL9,ZL9  ! outside wall crossing at x-point level
+
+
+
+
+! -------------------------------------------------------------------------------------------
+! --------------------------------- Define New Grid Points ----------------------------------
+! -------------------------------------------------------------------------------------------
 
 !------------------------------------- find crossing with separatrix
 do j=2,n_tht-1
@@ -831,6 +790,10 @@ enddo
 !***********************************************************************
 !*     define the new nodes and finite elements    (nodes first)       *
 !***********************************************************************
+
+! --------------------------------------------------------------------------------------
+! --------------------------------- Define Final Grid ----------------------------------
+! --------------------------------------------------------------------------------------
 
 ! --- Allocate data structures for new nodes and elements and initialize them.
 allocate(newnode_list)

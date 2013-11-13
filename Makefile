@@ -340,7 +340,7 @@ import_eqdsk : util/import_eqdsk.f90
 	$(FC) util/import_eqdsk.f90 -o import_eqdsk $(LIBS)
 
 jorek2_target2vtk : diagnostics/jorek2_target2vtk.f90 $(JOREK2_TARGET2VTK_OBJ)
-	$(FC) $(FFLAGS_NO_OMP)                  \
+	$(FC) $(FFLAGS)                         \
         diagnostics/jorek2_target2vtk.f90       \
         $(JOREK2_TARGET2VTK_OBJ)                \
          -o $(JOREK_DIR)/jorek2_target2vtk $(INCLUDES) $(LIBS)

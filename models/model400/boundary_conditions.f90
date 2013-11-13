@@ -212,109 +212,7 @@ contains
               do k=1, n_var
 
 		! ------------------------------------------------------------------------------------------------
-		! ------------------------ First deal with Dirichlet boundary conditions -------------------------
-		! ------------------------------------------------------------------------------------------------
-		
-		apply_dirichlet(1) = .false.
-		apply_dirichlet(2) = .false.
-                
-		!------------------------------------ the open field lines (in case of x-point grid)
-                if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3)) then
-		  ! Determine if we need to apply condition on psi
-		  apply_on_psi = .false.
-                  if (k .eq. 1) then
-                    if 			      (in .eq. 1)             apply_on_psi = .true.
-                    if ( (.not. RMP_on) .and. (in .ge. 2 )          ) apply_on_psi = .true.
-                    if ( (RMP_on)       .and. (in .lt. RMP_har_cos) ) apply_on_psi = .true.
-                    if ( (RMP_on)       .and. (in .gt. RMP_har_sin) ) apply_on_psi = .true.
-		  endif
-                      
-		  ! Apply conditions ?
-                  if (				&
-                           apply_on_psi		& 
-                      .or. (k .eq. 2)		&
-                      .or. (k .eq. 3)		&
-                      .or. (k .eq. 4)		&
-                      ) apply_dirichlet(1) = .true.
-		endif
-
-                !------------------------------------ wall aligned with fluxsurface : wall (in case of x-point grid)
-                if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
-
-		  ! Determine if we are on the private or the inner boundary
-		  on_private		= .false.
-		  on_inner		= .false.
-		  on_inner_or_private	= .false.
-                  if ((xcase2 .ne. 3) .and. (psi_node .lt. psi_bnd)) then
-		    on_inner_or_private = .true.
-		    on_private          = .true.
-		  endif
-                  if  (xcase2 .eq. 3) then
-                    if ( (Znode .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (psi_node .lt. psi_xpoint(1)) )                    on_private = .true.
-                    if ( (Znode .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (psi_node .lt. psi_xpoint(2)) )                    on_private = .true.
-                    if ( (Rnode .lt. (R_xpoint(1)+R_xpoint(2))/2.d0) .and. (psi_node .gt. max(psi_xpoint(2),psi_xpoint(2))) ) on_inner   = .true.
-		  endif
-		  if (on_private .or. on_inner) on_inner_or_private = .true.
-		  
-		  ! Determine if we need to apply condition on psi
-		  apply_on_psi = .false.
-                  if (k .eq. 1) then
-                    if ( (freeboundary) .and. (in .eq. 1) ) apply_on_psi = .true.
-                    if (.not. freeboundary) then
-                      if                        (in .eq. 1)             apply_on_psi = .true.
-                      if ( (.not. RMP_on) .and. (in .ge. 2)           ) apply_on_psi = .true.
-                      if ( (RMP_on)	  .and. (in .lt. RMP_har_cos) ) apply_on_psi = .true.
-                      if ( (RMP_on)	  .and. (in .gt. RMP_har_sin) ) apply_on_psi = .true.
-		    endif
-		  endif
-		  
-		  ! Apply conditions ?
-                  if (  						    		&
-                            (apply_on_psi)	 					&
-                      .or.  (k .eq. 2)	 						&
-                      .or.  (k .eq. 3)	 						&
-                      .or.  (k .eq. 4)	 						&
-                      .or.( (k .eq. 6) .and. (on_inner_or_private) )			& 
-                      .or.  (k .eq. 7)	 						&
-                      .or.( (k .eq. 8) .and. (on_inner_or_private) )			& 
-                      ) apply_dirichlet(2) = .true.
-		endif
-
-                !------------------------------------ Apply Dirichlet boundary condition where we have chosen
-		do jj=1,2
-                
-		  if ( apply_dirichlet(jj) ) then
-		    do kk=1,2
-		      
-		      iside = kk
-		      if ( (kk .eq. 2) .and. (jj .eq. 2) ) iside = 3
-		      index_node = node_list%node(inode)%index(iside)
-                      
-		      if (use_murge .and. use_murge_element) then
-                	call vertex_is_local(index_node, is_local)
-                	if (is_local) then
-                	  call murge_add_one_entry( index_node, k, in, index_node, k, in, &
-                				    zbig, solve_only, gmres, cnt, cnt_prod, only_count)
-                	end if
-                      else
-                	if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                	  call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                	  index_large_i = n_tor * n_var * (index_node - 1)
-                	  ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-
-                	  irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                	  jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                	  A_glob(ilarge2)   =  zbig
-                	endif
-                      end if
-                    enddo
-		  endif
-                
-		enddo
-		    
-		
-		! ------------------------------------------------------------------------------------------------
-		! ------------------------ Then deal with Mach-1 boundary conditions -----------------------------
+		! ------------------------ First deal with Mach-1 boundary conditions ----------------------------
 		! ------------------------------------------------------------------------------------------------
 		
                 !------------------------------------ the open field lines (in case of x-point grid)
@@ -489,6 +387,108 @@ contains
                 end if
 
 	      
+		! -----------------------------------------------------------------------------------------------
+		! ------------------------ Then deal with Dirichlet boundary conditions -------------------------
+		! -----------------------------------------------------------------------------------------------
+		
+		apply_dirichlet(1) = .false.
+		apply_dirichlet(2) = .false.
+                
+		!------------------------------------ the open field lines (in case of x-point grid)
+                if ((node_list%node(inode)%boundary .eq. 1) .or. (node_list%node(inode)%boundary .eq. 3)) then
+		  ! Determine if we need to apply condition on psi
+		  apply_on_psi = .false.
+                  if (k .eq. 1) then
+                    if 			      (in .eq. 1)             apply_on_psi = .true.
+                    if ( (.not. RMP_on) .and. (in .ge. 2 )          ) apply_on_psi = .true.
+                    if ( (RMP_on)       .and. (in .lt. RMP_har_cos) ) apply_on_psi = .true.
+                    if ( (RMP_on)       .and. (in .gt. RMP_har_sin) ) apply_on_psi = .true.
+		  endif
+                      
+		  ! Apply conditions ?
+                  if (				&
+                           apply_on_psi		& 
+                      .or. (k .eq. 2)		&
+                      .or. (k .eq. 3)		&
+                      .or. (k .eq. 4)		&
+                      ) apply_dirichlet(1) = .true.
+		endif
+
+                !------------------------------------ wall aligned with fluxsurface : wall (in case of x-point grid)
+                if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
+
+		  ! Determine if we are on the private or the inner boundary
+		  on_private		= .false.
+		  on_inner		= .false.
+		  on_inner_or_private	= .false.
+                  if ((xcase2 .ne. 3) .and. (psi_node .lt. psi_bnd)) then
+		    on_inner_or_private = .true.
+		    on_private          = .true.
+		  endif
+                  if  (xcase2 .eq. 3) then
+                    if ( (Znode .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (psi_node .lt. psi_xpoint(1)) )                    on_private = .true.
+                    if ( (Znode .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (psi_node .lt. psi_xpoint(2)) )                    on_private = .true.
+                    if ( (Rnode .lt. (R_xpoint(1)+R_xpoint(2))/2.d0) .and. (psi_node .gt. max(psi_xpoint(2),psi_xpoint(2))) ) on_inner   = .true.
+		  endif
+		  if (on_private .or. on_inner) on_inner_or_private = .true.
+		  
+		  ! Determine if we need to apply condition on psi
+		  apply_on_psi = .false.
+                  if (k .eq. 1) then
+                    if ( (freeboundary) .and. (in .eq. 1) ) apply_on_psi = .true.
+                    if (.not. freeboundary) then
+                      if                        (in .eq. 1)             apply_on_psi = .true.
+                      if ( (.not. RMP_on) .and. (in .ge. 2)           ) apply_on_psi = .true.
+                      if ( (RMP_on)	  .and. (in .lt. RMP_har_cos) ) apply_on_psi = .true.
+                      if ( (RMP_on)	  .and. (in .gt. RMP_har_sin) ) apply_on_psi = .true.
+		    endif
+		  endif
+		  
+		  ! Apply conditions ?
+                  if (  						    		&
+                            (apply_on_psi)	 					&
+                      .or.  (k .eq. 2)	 						&
+                      .or.  (k .eq. 3)	 						&
+                      .or.  (k .eq. 4)	 						&
+                      .or.( (k .eq. 6) .and. (on_inner_or_private) )			& 
+                      .or.  (k .eq. 7)	 						&
+                      .or.( (k .eq. 8) .and. (on_inner_or_private) )			& 
+                      ) apply_dirichlet(2) = .true.
+		endif
+
+                !------------------------------------ Apply Dirichlet boundary condition where we have chosen
+		do jj=1,2
+                
+		  if ( apply_dirichlet(jj) ) then
+		    do kk=1,2
+		      
+		      iside = kk
+		      if ( (kk .eq. 2) .and. (jj .eq. 2) ) iside = 3
+		      index_node = node_list%node(inode)%index(iside)
+                      
+		      if (use_murge .and. use_murge_element) then
+                	call vertex_is_local(index_node, is_local)
+                	if (is_local) then
+                	  call murge_add_one_entry( index_node, k, in, index_node, k, in, &
+                				    zbig, solve_only, gmres, cnt, cnt_prod, only_count)
+                	end if
+                      else
+                	if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                	  call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                	  index_large_i = n_tor * n_var * (index_node - 1)
+                	  ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+
+                	  irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                	  jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                	  A_glob(ilarge2)   =  zbig
+                	endif
+                      end if
+                    enddo
+		  endif
+                
+		enddo
+		    
+		
 		! ------------------------------------------------------------------------------------------------
 		! ------------------------ Then deal with RMP boundary conditions --------------------------------
 		! ------------------------------------------------------------------------------------------------

@@ -229,6 +229,8 @@ JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)       \
         $(DIR)/mod_phys_module.f90                      \
         $(DIR)/density.f90                              \
         $(DIR)/temperature.f90                          \
+	$(DIR)/temperature_i.f90 			\
+	$(DIR)/temperature_e.f90 			\
         $(DIR)/current.f90                              \
         $(DIR)/ffprime.f90                              \
         $(DIR)/mod_domains.f90                          \

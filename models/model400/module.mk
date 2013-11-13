@@ -32,6 +32,11 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/sources.f90			\
 	$(DIR)/mod_parameters.f90
 
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)	\
+	$(DIR)/initialise_parameters.f90		\
+	$(DIR)/sources.f90				\
+	$(DIR)/mod_parameters.f90
+
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 	$(DIR)/initialise_parameters.f90	\
 	$(DIR)/mod_parameters.f90

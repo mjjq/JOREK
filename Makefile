@@ -13,6 +13,7 @@ DIRS =  timing				\
 	communication			\
 	elements			\
 	grids				\
+	grids/grid_utils		\
 	matrix				\
 	solvers 			\
 	plots				\

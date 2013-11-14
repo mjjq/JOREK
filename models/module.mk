@@ -111,6 +111,8 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/mod_domains.f90            		\
         $(DIR)/density.f90                		\
 	$(DIR)/temperature.f90            		\
+        $(DIR)/temperature_i.f90                        \
+        $(DIR)/temperature_e.f90                        \
 	$(DIR)/current.f90                		\
 	$(DIR)/ffprime.f90
 

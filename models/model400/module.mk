@@ -24,6 +24,7 @@ JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)		\
 	$(DIR)/mod_parameters.f90
 
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
+        $(DIR)/sources.f90                              \
 	$(DIR)/initialise_parameters.f90		\
 	$(DIR)/mod_parameters.f90
 

@@ -106,12 +106,12 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/det_modes.f90                            \
 	$(DIR)/mod_constants.f90                        \
         $(DIR)/mod_nodes_elements.f90                   \
-	$(DIR)/mod_phys_module.f90        \
-        $(DIR)/mod_pellet.f90             \
-	$(DIR)/mod_domains.f90            \
-        $(DIR)/density.f90                \
-	$(DIR)/temperature.f90            \
-	$(DIR)/current.f90                \
+	$(DIR)/mod_phys_module.f90        		\
+        $(DIR)/mod_pellet.f90             		\
+	$(DIR)/mod_domains.f90            		\
+        $(DIR)/density.f90                		\
+	$(DIR)/temperature.f90            		\
+	$(DIR)/current.f90                		\
 	$(DIR)/ffprime.f90
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
@@ -143,10 +143,10 @@ JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)			\
 	$(DIR)/mod_phys_module.f90                      \
 	$(DIR)/mod_domains.f90                          \
         $(DIR)/mod_pellet.f90                           \
-	$(DIR)/density.f90     \
-	$(DIR)/temperature.f90 \
-	$(DIR)/ffprime.f90     \
-	$(DIR)/current.f90     \
+	$(DIR)/density.f90     				\
+	$(DIR)/temperature.f90 				\
+	$(DIR)/ffprime.f90     				\
+	$(DIR)/current.f90
 
 JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)			\
 	$(DIR)/read_num_profiles.f90 			\
@@ -180,7 +180,7 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)		\
 	$(DIR)/mod_domains.f90                          \
 	$(DIR)/mod_pellet.f90
 
-JORDEL_SRC := $(JORDEL_SRC)                       \
+JORDEL_SRC := $(JORDEL_SRC)                       	\
 	$(DIR)/read_num_profiles.f90                    \
 	$(DIR)/derive_num_profiles.f90                  \
 	$(DIR)/preset_parameters.f90                    \
@@ -196,7 +196,7 @@ JORDEL_SRC := $(JORDEL_SRC)                       \
 	$(DIR)/ffprime.f90 				\
 	$(DIR)/neo_coef.f90
 
-JORPOL_SRC := $(JORPOL_SRC)                       \
+JORPOL_SRC := $(JORPOL_SRC)                       	\
 	$(DIR)/read_num_profiles.f90                    \
 	$(DIR)/derive_num_profiles.f90                  \
 	$(DIR)/preset_parameters.f90                    \
@@ -212,7 +212,7 @@ JORPOL_SRC := $(JORPOL_SRC)                       \
 	$(DIR)/ffprime.f90                              \
 	$(DIR)/neo_coef.f90
 
-ENBIGGEN_SRC := $(ENBIGGEN_SRC)                       \
+ENBIGGEN_SRC := $(ENBIGGEN_SRC)                       	\
 	$(DIR)/read_num_profiles.f90                    \
 	$(DIR)/derive_num_profiles.f90                  \
 	$(DIR)/preset_parameters.f90                    \
@@ -249,3 +249,10 @@ JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)               \
         $(DIR)/mod_nodes_elements.f90                   \
         $(DIR)/mod_domains.f90                          \
         $(DIR)/mod_pellet.f90
+
+JOREK2_IMPORT_PERTURBATION_SRC := $(JOREK2_IMPORT_PERTURBATION_SRC)	\
+	$(DIR)/mod_nodes_elements.f90			\
+	$(DIR)/read_num_profiles.f90                    \
+	$(DIR)/derive_num_profiles.f90                  \
+        $(DIR)/preset_parameters.f90                    \
+        $(DIR)/mod_phys_module.f90                      

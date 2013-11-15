@@ -52,7 +52,7 @@ module data_structure
 
   type type_element_list                          !< type definition for a list of elements
     integer :: n_elements                         !< number of elements in the list
-    type (type_element)  :: element(n_elements_max)     !< list of elements
+    type (type_element) :: element(n_elements_max)!< list of elements
   end type type_element_list
 
   type type_bnd_element                           !< type definition for one boundary element (1D element)
@@ -81,7 +81,9 @@ module data_structure
   end type type_bnd_node_list
 
   type type_surface                               !< type definition for a fluxsurface (in 2D)
-    integer :: n_pieces                           !< number of pieces (each piece is a 3rd order polynomial)
+    integer :: n_pieces                           !< total number of pieces (each piece is a 3rd order polynomial)
+    integer :: n_parts                            !< number of surface parts (eg. one core surf + on private surf)
+    integer :: parts_index(10)                    !< index of the first piece of each surface part (assuming 10 parts max)
     integer :: elm(n_pieces_max)                  !< element containg the current piece
     real*8  :: s(4,n_pieces_max), t(4,n_pieces_max)     !< 4 variables per line piece of the flux surface
    end type type_surface

@@ -15,6 +15,7 @@ all : create_new_node.o 		\
       find_Z_surface.o			\
       find_strategic_points.o		\
       meshac.o				\
+      reorder_flux_surfaces.o		\
       spline_spwert.o			\
       spline_tb15a.o			\
       spline_tg02a.o

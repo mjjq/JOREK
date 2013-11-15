@@ -145,6 +145,7 @@ JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)			\
 	$(DIR)/mod_phys_module.f90                      \
 	$(DIR)/mod_domains.f90                          \
         $(DIR)/mod_pellet.f90                           \
+	$(DIR)/mod_nodes_elements.f90			\
 	$(DIR)/density.f90     				\
 	$(DIR)/temperature.f90 				\
 	$(DIR)/ffprime.f90     				\

@@ -322,6 +322,12 @@ jorek2vtk : diagnostics/jorek2vtk.f90 $(JOREK2VTK_OBJ)
 	$(JOREK2VTK_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2vtk $(INCLUDES) $(LIBS)
 
+jorek2_stan : diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
+	$(FC) $(FFLAGS)                 \
+	diagnostics/jorek2_stan.f90	\
+	$(JOREK2VTK_OBJ)		\
+	 -o $(JOREK_DIR)/jorek2_stan $(INCLUDES) $(LIBS)
+
 jorek2_fieldlines_vtk : diagnostics/jorek2_fieldlines_vtk.f90 $(JOREK2FLVTK_OBJ)
 	$(FC) $(FFLAGS)                   		\
 	diagnostics/jorek2_fieldlines_vtk.f90         	\

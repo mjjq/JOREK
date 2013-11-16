@@ -73,7 +73,8 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/flux_surface_add_line.f90  	\
 	$(DIR)/flux_surface_add_point.f90  	\
         $(DIR)/integrals_3D.f90                 \
-	$(DIR)/psi_minmax.f90
+	$(DIR)/psi_minmax.f90			\
+	$(DIR)/RZ_minmax.f90
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)		\
 	$(DIR)/find_axis.f90			\

@@ -555,8 +555,8 @@ do i=1,element_list%n_elements
                A3_R = (   Z_t * W_s - Z_s * W_t ) / xjac
                A3_Z = ( - R_t * W_s + R_s * W_t ) / xjac
 
-               call interp(node_list,element_list,i,var_AR,i_tor+1,s,t,U,U_s,U_t,U_st,U_ss,U_tt) ! sine
-               call interp(node_list,element_list,i,var_AZ,i_tor+1,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+               call interp(node_list,element_list,i,var_AR,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+               call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
                AR_p = U  * HZ_p(i_tor,i_plane)  
                AZ_p = V  * HZ_p(i_tor,i_plane) 
 

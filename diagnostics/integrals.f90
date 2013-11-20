@@ -1,5 +1,5 @@
 !> Determines some integrals over the JOREK computational domain to determine the total current etc.
-subroutine integrals(node_list, element_list, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
+subroutine integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
   aminor, Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure,       &
   pressure_in, pressure_out)
 
@@ -16,6 +16,8 @@ implicit none
 ! --- Routine parameters
 type(type_node_list),    intent(in)    :: node_list
 type(type_element_list), intent(in)    :: element_list
+real*8,                  intent(in)    :: R_axis
+real*8,                  intent(in)    :: Z_axis
 real*8,                  intent(in)    :: psi_axis
 real*8,                  intent(in)    :: R_xpoint(2)
 real*8,                  intent(in)    :: Z_xpoint(2)
@@ -139,8 +141,8 @@ do ife =1, element_list%n_elements
       pressure = pressure + rho_00 * T_00 * xjac * BigR * wst
       density  = density  + rho_00       * xjac * BigR * wst
       
-      if ( in_plasma(x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
-        xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit) ) then
+      if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
+        xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
         
         if (jorek_model .eq. 400) then
 #if JOREK_MODEL == 400

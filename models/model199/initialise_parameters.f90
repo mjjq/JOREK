@@ -95,7 +95,7 @@ if (my_id .eq. 0) then
  ! --- Open the file.
     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
-      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+      write(*,*) 'Warning in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
       write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
@@ -113,7 +113,7 @@ if (my_id .eq. 0) then
  ! --- Open the file.
     OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
-      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
+      write(*,*) 'Warning in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
       write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 

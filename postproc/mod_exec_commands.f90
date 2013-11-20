@@ -1295,8 +1295,8 @@ module exec_commands
             !
             !     \f$ <P> = ( oint dx P / |grad Psi| ) / ( oint dx 1 / |grad Psi| ) \f$
             !
-            if ( ( ip > 1 ) .and. ( .not. in_private(R(ip),Z(ip),psi,xpoint,xcase,R_xpoint,        &
-              Z_xpoint,psi_xpoint,99.d0) ) ) then
+            if ( ( ip > 1 ) .and. ( .not. in_private(node_list,element_list,R(ip),Z(ip),psi,xpoint,xcase,R_xpoint,        &
+              Z_xpoint,psi_xpoint,99.d0,R_axis,Z_axis,Psi_axis) ) ) then
               dx  = sqrt( (R(ip)-R(ip-1))**2 + (Z(ip)-Z(ip-1))**2 )
               nom = nom + dx * ( P(ip) + P(ip-1) ) / 2.d0 / abs_grad_psi
               den = den + dx / abs_grad_psi
@@ -1556,8 +1556,8 @@ module exec_commands
     R_max = -1.d99
     do i = 1, n_seg(1)
       do j = 1, 20
-        if ( .not. in_private(R(1,i,j),Z(1,i,j),psi_separatrix,xpoint,xcase,R_xpoint,Z_xpoint,     &
-          psi_xpoint,99.d0) ) then
+        if ( .not. in_private(node_list,element_list,R(1,i,j),Z(1,i,j),psi_separatrix,xpoint,xcase,R_xpoint,Z_xpoint,     &
+          psi_xpoint,99.d0,R_axis,Z_axis,psi_axis) ) then
           if (R(1, i, j) < R_min ) then
 	    R_min      = R(1, i, j)
 	    R_b(1)     = R(1, i, j)
@@ -1590,8 +1590,8 @@ module exec_commands
 	    dZ_2  = (dR_2 / dR) * dZ
             Z_tmp = Z(1, l, m+1) - dZ_2       ! Z-position of separatrix-bar intersection
             
-	    if ( in_private(R(1,l,m),Z_tmp,psi_separatrix,xpoint,xcase,R_xpoint,Z_xpoint,          &
-              psi_xpoint,99.d0) ) cycle  ! discard points on divertor legs
+	    if ( in_private(node_list,element_list,R(1,l,m),Z_tmp,psi_separatrix,xpoint,xcase,R_xpoint,Z_xpoint,          &
+              psi_xpoint,99.d0m,R_axis,Z_axis,psi_axis) ) cycle  ! discard points on divertor legs
 	    
 	    n_pts(k) = n_pts(k) + 1
 	    Z_b(k, n_pts(k)) = Z_tmp

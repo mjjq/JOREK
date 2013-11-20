@@ -76,7 +76,7 @@ call meshac2(surface_list%n_psi+1,s_values,xr1,xr2,sig1,sig2,0.6d0,1.0d0)
 
 psi_values(1) = psi_axis
 
-psi_bnd = -1.d-8
+psi_bnd = 1.d-8 * (psi_axis/abs(psi_axis))
 if (xpoint) then
   psi_bnd = psi_xpoint(1)
   if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
@@ -338,8 +338,11 @@ do j=1,npnew
   ELSE
     RRnew(2,inode) = + sign(1.d0,CN)/(sqrt(abs(CX+CY*TN2))*2.d0 *float(nrnew-1))
     ZZnew(2,inode) = + abs(TN)/(sqrt(abs(CX+CY*TN2))*2.d0*float(nrnew-1))
-    RRnew(4,inode) = - (CX+CY*TN2)**(-1.5d0) * CY * abs(TN) / (CN**2 * 2.d0*float(nrnew-1)*float(npnew)/PI)
-    ZZnew(4,inode) = + CX * (CX + CY*TN2)**(-1.5d0) / (CN*abs(CN) * 2.d0*float(nrnew-1)*float(npnew-1)/PI)
+    write(*,*) 'a', CX, CY, TN2
+    write(*,*) 'b', TN, CN, nrnew
+    write(*,*) 'c', npnew, PI
+    RRnew(4,inode) = - abs(CX+CY*TN2)**(-1.5d0) * CY * abs(TN) / (CN**2 * 2.d0*float(nrnew-1)*float(npnew)/PI)
+    ZZnew(4,inode) = + CX * abs(CX + CY*TN2)**(-1.5d0) / (CN*abs(CN) * 2.d0*float(nrnew-1)*float(npnew-1)/PI)
   ENDIF
 
   IF (theta .gt. PI) THEN

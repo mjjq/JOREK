@@ -865,7 +865,7 @@ required = 0
       call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
-    
+  
     if (bootstrap) then	     
       flux_list%n_psi = 1
       call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)

@@ -148,4 +148,33 @@ module diagnostics
   
   
   
+  !> Detects if the poloidal flux has a minimum or a maximum at the magnetic axis
+  !! (i.e., the sign of the plasma current).
+  logical function axis_is_psi_minimum(node_list, element_list, R_axis, Z_axis, psi_axis)
+    
+    use data_structure
+    
+    implicit none
+    
+    ! --- Routine parameters
+    type (type_node_list),    intent(in)  :: node_list
+    type (type_element_list), intent(in)  :: element_list
+    real*8,                   intent(in) :: R_axis
+    real*8,                   intent(in) :: Z_axis
+    real*8,                   intent(in) :: Psi_axis
+    
+    ! --- Local variables
+    integer :: i_elm, ifail, i_var, i_harm
+    real*8  :: R_out, Z_out, s, t, P, P_s, P_t, P_st, P_ss, P_tt
+    
+    call find_RZ(node_list, element_list, R_axis+0.01, Z_axis, R_out, Z_out, i_elm, s, t, ifail)
+    
+    call interp(node_list, element_list, i_elm, 1, 1, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
+    
+    axis_is_psi_minimum = ( psi_axis < P )
+    
+  end function axis_is_psi_minimum
+  
+  
+  
 end module diagnostics

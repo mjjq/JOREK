@@ -56,6 +56,7 @@ real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
+real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
 real*8                :: amu_neo_node, aki_neo_node
@@ -83,7 +84,7 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub            = 4       ! Number of subdivisions of the cubic finite elements into linear pieces
+nsub            = 2       ! Number of subdivisions of the cubic finite elements into linear pieces
 i_tor           = -1      ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane         = 1       ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
@@ -247,7 +248,7 @@ else
   psi_bnd = 0.d0
 endif
 
-if (jorek_model .eq. 400) then      
+if (jorek_model .eq. 000) then      
   flux_list%n_psi = 1
   call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
   flux_list%psi_values(1) = psi_bnd
@@ -261,6 +262,19 @@ if (jorek_model .eq. 400) then
   write(*,*)'minor radius : ',minRad
 else
   minRad = 0.0
+endif
+  
+! --- You may choose to print your poloidal snapshot at a different toroidal angle
+toroidal_angle = 0.d0 ! 2*PI / 6
+if (toroidal_angle .ne. 0.d0) then
+  do i_tor=1, n_tor
+    mode(i_tor) = + int(i_tor / 2) * n_period
+  enddo
+  HZ(1,i_plane)   = 1.d0
+  do i=1,(n_tor-1)/2
+    HZ(2*i,i_plane)      = cos(mode(2*i)   * toroidal_angle )
+    HZ(2*i+1,i_plane)    = sin(mode(2*i+1) * toroidal_angle )
+  enddo
 endif
 
 do i=1,element_list%n_elements

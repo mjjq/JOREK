@@ -16,7 +16,7 @@ integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
 
 ! --- Local variables
-integer :: ierr
+integer :: ierr, err, i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &

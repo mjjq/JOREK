@@ -101,7 +101,9 @@ do i=2, surface_list%n_psi
   end do
 
   q(i) = Fgi * q(i) / (2.d0 * PI)
-  rad(i)=rad(i)/(4.d0*surface_list%flux_surfaces(i)%n_pieces)
+  if ( surface_list%flux_surfaces(i)%n_pieces /= 0 ) then
+    rad(i)=rad(i)/(4.d0*surface_list%flux_surfaces(i)%n_pieces)
+  end if
 !  write(*,'(i5,3es13.5)') i, surface_list%psi_values(i), q(i), sum_dl
 end do
 

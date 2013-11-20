@@ -16,10 +16,10 @@ subroutine find_wall_crossing_with_flux_surface(node_list, element_list, surface
   integer,                  intent(inout)	:: index_wall(20)
   
   ! --- Local variables
-  integer			:: i
+  integer			:: i,j,i_elm,n_tmp,k,l
   integer			:: node1, node2, node3, node4
   integer			:: inside, inside_save
-  real*8			:: dl, si, ti
+  real*8			:: dl, si, ti, dsi, dti, length, length_min
   real*8			:: ss1, dss1
   real*8			:: ss2, dss2
   real*8			:: tt1, dtt1
@@ -95,8 +95,8 @@ subroutine find_wall_crossing_with_flux_surface(node_list, element_list, surface
 	
 	! --- Have we stepped accross the wall?
 	if (inside .ne. inside_save) then
-	  if (     ((Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2))
-	      .or. ((Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) )
+	  if (     ((Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) &
+	      .or. ((Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) ) then
 	    n_int_tmp = n_int_tmp + 1
 	    piece(n_int_tmp) = j
             ! --- Find the wall piece that we've just crossed

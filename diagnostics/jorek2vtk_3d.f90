@@ -37,11 +37,11 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub            = 5        		! Number of subdivisions of the cubic finite elements into linear pieces
+nsub            = 2        		! Number of subdivisions of the cubic finite elements into linear pieces
 without_n0_mode = .false.  		! If true, do not include the n=0 mode (i_tor=1)
 periodic        = .true.		! Are we doing the whole tor?
 density_only    = .false.		! Write density only (for smaller vtk file)
-n_toroidal      = n_plane 		! Number of toroidal snapshots
+n_toroidal      = 200 !n_plane 		! Number of toroidal snapshots
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -66,6 +66,10 @@ else
   n_scalars = 7
   n_vectors = 1
 endif
+
+do i_tor=1, n_tor
+  mode(i_tor) = + int(i_tor / 2) * n_period
+enddo
 
 call import_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
 nnos = n_toroidal * nsub*nsub*node_list%n_nodes
@@ -95,10 +99,6 @@ vectors = 0.d0
 xyz     = 0
 ien     = 0
 n_points = nsub*nsub*element_list%n_elements        ! number of points in one poloidal plane
-
-do i_tor=1, n_tor
-  mode(i_tor) = + int(i_tor / 2) * n_period
-enddo
 
 allocate(HZ(n_tor,n_toroidal))
 
@@ -144,7 +144,7 @@ do m=1, n_toroidal
         do i_tor = 1,n_tor
 
           if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
-          
+         
           if(density_only) then
             call interp(node_list,element_list,i,5,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
             scalars(inode,1) = scalars(inode,1) + P * HZ(i_tor,m)
@@ -274,7 +274,7 @@ do i_var =1, n_scalars
   write(ivtk) (scalars(i,i_var),i=1,nnos)
 enddo
 
-if(density_only) then
+if(.not. density_only) then
   do i_var =1, n_vectors
     buffer = lf//lf//'VECTORS '//vector_names(i_var)//' float'//lf                    ; write(ivtk) trim(buffer)
     write(ivtk) ((vectors(j,i,i_var),i=1,3),j=1,nnos)

@@ -67,7 +67,8 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC) 	\
   $(DIR)/integrals_3D.f90
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
-	$(DIR)/find_axis.f90			\
+	$(DIR)/mod_diagnostics.f90              \
+        $(DIR)/find_axis.f90			\
 	$(DIR)/find_xpoint.f90			\
 	$(DIR)/find_flux_surfaces.f90  		\
 	$(DIR)/flux_surface_add_line.f90  	\

@@ -14,7 +14,7 @@ JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    		\
         $(DIR)/find_strategic_points.f90    		\
 	$(DIR)/find_theta_surface.f90 	    		\
 	$(DIR)/find_wall_crossing.f90	    		\
-	$(DIR)/find_wall_crossing_with_flux_surface.f90	\
+	$(DIR)/find_wall_crossings_with_flux_surface.f90\
 	$(DIR)/find_Z_surface.f90 	    		\
 	$(DIR)/meshac.f90 		    		\
 	$(DIR)/mod_high_resolution_wall.f90 		\
@@ -42,7 +42,7 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/check_point_is_inside_wall.f90 	    	\
 	$(DIR)/find_RZ.f90 		    		\
 	$(DIR)/find_theta_surface.f90			\
-	$(DIR)/find_wall_crossing_with_flux_surface.f90	\
+	$(DIR)/find_wall_crossings_with_flux_surface.f90\
 	$(DIR)/mod_high_resolution_wall.f90 		\
 	$(DIR)/reorder_flux_surfaces.f90
 

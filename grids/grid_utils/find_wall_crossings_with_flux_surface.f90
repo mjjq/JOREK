@@ -1,6 +1,6 @@
 !> This routine finds the intersections of a flux surface with the target (ie. wall below Xpoint)
-subroutine get_target_flux_surfaces(node_list, element_list, surface_list,       &
-                                    psi_bnd, R_axis, Z_axis, R_xpoint, Z_xpoint, &
+subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts, &
+                                    psi_bnd, R_axis, Z_axis, R_xpoint, Z_xpoint,  &
 				    n_int_max, n_int, R_int, Z_int, index_int, ifail)
 
 
@@ -8,19 +8,21 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list,      
   use phys_module
   use high_resolution_wall
   use constants
+  use grid_xpoint_data
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface_list), intent(inout)	:: surface_list
-  integer,                  intent(in)		:: n_int_max
-  integer,                  intent(inout)	:: n_int, ifail
-  real*8,                   intent(inout)	:: R_int(n_int_max), Z_int(n_int_max)
-  real*8,                   intent(inout)	:: R_axis,           Z_axis
-  real*8,                   intent(inout)	:: R_xpoint(2),      Z_xpoint(2)
-  real*8,                   intent(inout)	:: psi_bnd
-  integer,                  intent(inout)	:: index_int(n_int_max,3) ! 1->surface_index, 2->surface_piece_index, 3->wall_piece_index
+  type (type_node_list),        intent(in)	:: node_list
+  type (type_element_list),     intent(in)	:: element_list
+  type (type_surface_list),     intent(inout)	:: surface_list
+  type (type_strategic_points), intent(in)	:: stpts
+  integer,                      intent(in)	:: n_int_max
+  integer,                      intent(inout)	:: n_int, ifail
+  real*8,                       intent(inout)	:: R_int(n_int_max), Z_int(n_int_max)
+  real*8,                       intent(inout)	:: R_axis,           Z_axis
+  real*8,                       intent(inout)	:: R_xpoint(2),      Z_xpoint(2)
+  real*8,                       intent(inout)	:: psi_bnd
+  integer,                      intent(inout)	:: index_int(n_int_max,3) ! 1->surface_index, 2->surface_piece_index, 3->wall_piece_index
   
   ! --- Local variables
   type (type_surface_list)	:: surfaces_tmp
@@ -106,6 +108,30 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list,      
       index_int(n_int,2) = index_int_tmp(i,2)
       index_int(n_int,3) = index_int_tmp(i,3)
     endif
+    if (     ((xcase .ne. 2) .and. (R_int_tmp(i) .gt. stpts%RLimit_LowerOuterLeg) &
+                             .and. (Z_int_tmp(i) .lt. stpts%ZLimit_LowerOuterLeg)) &
+        .or. ((xcase .ne. 1) .and. (R_int_tmp(i) .gt. stpts%RLimit_UpperOuterLeg) &
+	                     .and. (Z_int_tmp(i) .gt. stpts%ZLimit_UpperOuterLeg)) ) then
+      n_int = n_int + 1
+      R_int(n_int) = R_int_tmp(i)
+      Z_int(n_int) = Z_int_tmp(i)
+      index_int(n_int,1) = index_int_tmp(i,1)
+      index_int(n_int,2) = index_int_tmp(i,2)
+      index_int(n_int,3) = index_int_tmp(i,3)
+    endif
+    if (tokamak_device(1:4) .eq. 'MAST') then
+      if (     ((xcase .ne. 2) .and. (R_int_tmp(i) .gt. stpts%RLimit_LowerMastWallBox) &
+        		       .and. (Z_int_tmp(i) .lt. stpts%ZLimit_LowerMastWallBox)) &
+          .or. ((xcase .ne. 1) .and. (R_int_tmp(i) .gt. stpts%RLimit_UpperMastWallBox) &
+    	  		       .and. (Z_int_tmp(i) .gt. stpts%ZLimit_UpperMastWallBox)) ) then
+        n_int = n_int + 1
+        R_int(n_int) = R_int_tmp(i)
+        Z_int(n_int) = Z_int_tmp(i)
+        index_int(n_int,1) = index_int_tmp(i,1)
+        index_int(n_int,2) = index_int_tmp(i,2)
+        index_int(n_int,3) = index_int_tmp(i,3)
+      endif
+    endif
   enddo
   
   ! --- Some debug plots
@@ -173,13 +199,13 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface),      intent(inout)	:: surface
-  integer,                  intent(in)		:: n_int_max
-  integer,                  intent(inout)	:: n_int, ifail
-  real*8,                   intent(inout)	:: R_int(n_int_max), Z_int(n_int_max)
-  integer,                  intent(inout)	:: index_int(n_int_max,3)
+  type (type_node_list),        intent(in)	:: node_list
+  type (type_element_list),     intent(in)	:: element_list
+  type (type_surface),          intent(inout)	:: surface
+  integer,                      intent(in)	:: n_int_max
+  integer,                      intent(inout)	:: n_int, ifail
+  real*8,                       intent(inout)	:: R_int(n_int_max), Z_int(n_int_max)
+  integer,                      intent(inout)	:: index_int(n_int_max,3)
   
   ! --- Local variables
   integer			:: i,j,i_elm,n_tmp,k,l
@@ -190,8 +216,8 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
   real*8			:: ss2, dss2
   real*8			:: tt1, dtt1, tt_int
   real*8			:: tt2, dtt2
-  real*8			:: R,R2,R_save,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt
-  real*8			:: Z,Z2,Z_save,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt
+  real*8			:: R,R2,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt
+  real*8			:: Z,Z2,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt
   real*8			:: R_cub1d(4)
   real*8			:: Z_cub1d(4)
   real*8			:: surface_accuracy
@@ -272,7 +298,8 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
 	      exit
 	    endif
             if ( (ifail .ne. 0) .and. (l .eq. n_limiter-1) ) then
-	      write(*,*)'Warning! Failed to find intersection with wall at',index_int(n_int,2),index_int(n_int,3)
+	      write(*,*)'Warning! Failed to find intersection with wall at piece', index_int(n_int,2)
+	      write(*,*)'Increasing the size of your initial polar grid may help...'
 	      return
 	    endif
 	  enddo
@@ -280,8 +307,6 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
 	
 	! --- Save previous point
 	inside_save = inside
-        R_save = R
-	Z_save = Z
 	
       enddo
         

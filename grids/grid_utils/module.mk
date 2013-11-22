@@ -41,10 +41,14 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/check_point_is_inside_wall.f90 	    	\
+	$(DIR)/define_flux_values.f90 	    		\
+	$(DIR)/fgauss.f90 		    		\
 	$(DIR)/find_crossing.f90	    		\
 	$(DIR)/find_RZ.f90 		    		\
+        $(DIR)/find_strategic_points.f90    		\
 	$(DIR)/find_theta_surface.f90			\
 	$(DIR)/find_wall_crossings_with_flux_surface.f90\
+	$(DIR)/meshac.f90 		    		\
 	$(DIR)/mod_high_resolution_wall.f90 		\
 	$(DIR)/py_plots_grids.f90 		    	\
 	$(DIR)/reorder_flux_surfaces.f90

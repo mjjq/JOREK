@@ -570,22 +570,25 @@ end subroutine find_all_edge_pieces
 
 
 !> This routine removes the private region surface pieces under a given psi_value
-subroutine clean_private(node_list,element_list,flux_list,psi_axis,psi_bnd,Z_xpoint)
+subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint)
 
 
 
   use data_structure
   use reorder_surfaces_parameters
+  use phys_module, only : xcase
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface_list), intent(inout)	:: flux_list
-  real*8,                   intent(in)		:: psi_axis, psi_bnd, Z_xpoint(2)
+  type (type_node_list),        intent(in)	:: node_list
+  type (type_element_list),     intent(in)	:: element_list
+  type (type_surface_list),     intent(inout)	:: flux_list
+  integer,                      intent(in)	:: n_grids(10) 
+  real*8,                       intent(in)	:: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
   
   ! --- Internal parameters
   type (type_surface)	:: surface
+  integer		:: n_flux,   n_open,   n_outer,   n_inner,   n_private,   n_up_priv  
   integer		:: i_surf, i
   integer		:: i_elm
   real*8		:: rr,    ss
@@ -593,48 +596,267 @@ subroutine clean_private(node_list,element_list,flux_list,psi_axis,psi_bnd,Z_xpo
   real*8		:: Z,dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
   real*8		:: psi_limit
   
-  psi_limit = 0.8
-  
-  ! --- Check each piece
-  do i_surf=1,flux_list%n_psi
-    if (flux_list%psi_values(i_surf) .lt. psi_axis + psi_limit*(psi_bnd-psi_axis) ) then
-      surface%n_pieces = 0
-      do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
-        ! --- Get edge point of that surface piece
-        rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
-        ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
-        i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
-        call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-        						  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+  n_flux    = n_grids(1)
+  n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
+  n_private = n_grids(6); n_up_priv = n_grids(7)
+
+  ! --- Loop over each core surface
+  do i_surf=1,n_flux-1
+    surface%n_pieces = 0
+    ! --- Check each piece
+    do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
+      ! --- Get edge point of that surface piece
+      rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
+      ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
+      i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+    							Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+      
+      ! --- If we're in the core, save piece
+      if ( (xcase .eq. 1) .and. (Z .gt. Z_xpoint(1)) ) then
+    	surface%n_pieces = surface%n_pieces + 1
+    	surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+      endif
+      if ( (xcase .eq. 2) .and. (Z .lt. Z_xpoint(2)) ) then
+    	surface%n_pieces = surface%n_pieces + 1
+    	surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+      endif
+      if ( (xcase .eq. 3) .and. (Z .lt. Z_xpoint(2)) .and. (Z .gt. Z_xpoint(1)) ) then
+    	surface%n_pieces = surface%n_pieces + 1
+    	surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+      endif
         
-        ! --- If we're in the core, save piece
-        if ( (Z .lt. Z_xpoint(2)) .and. (Z .gt. Z_xpoint(1)) ) then
-          surface%n_pieces = surface%n_pieces + 1
-          surface%elm(i) = flux_list%flux_surfaces(i_surf)%elm(i)
-          surface%s(:,i) = flux_list%flux_surfaces(i_surf)%s(:,i)
-          surface%t(:,i) = flux_list%flux_surfaces(i_surf)%t(:,i)
-	endif
-	  
-      enddo
-      ! --- Copy saved pieces only
-      do i=1,surface%n_pieces
-        flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
-        flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
-        flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
-      enddo
-      ! --- Make sure the rest is really empty...
-      do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
-        flux_list%flux_surfaces(i_surf)%elm(i) = 0
-        flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
-        flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
-      enddo
-      flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
-    endif
+    enddo
+    ! --- Copy saved pieces only
+    do i=1,surface%n_pieces
+      flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
+      flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
+      flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
+    enddo
+    ! --- Make sure the rest is really empty...
+    do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
+      flux_list%flux_surfaces(i_surf)%elm(i) = 0
+      flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+      flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+    enddo
+    flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
   enddo
   
 
+  ! --- Loop over each sandwich surface
+  if (xcase .eq. 3) then
+    do i_surf=n_flux+1,n_flux+n_open-1
+      surface%n_pieces = 0
+      ! --- Check each piece
+      do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	! --- Get edge point of that surface piece
+    	rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
+    	ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
+    	i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
+    	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+    							  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+    	
+    	! --- If we're in the core, save piece
+    	if ( (psi_xpoint(1) .gt. psi_xpoint(2)) .and. (Z .gt. Z_xpoint(1)) ) then
+    	  surface%n_pieces = surface%n_pieces + 1
+    	  surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	  surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	  surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+    	endif
+    	if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (Z .lt. Z_xpoint(2)) ) then
+    	  surface%n_pieces = surface%n_pieces + 1
+    	  surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	  surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	  surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+    	endif
+    	  
+      enddo
+      ! --- Copy saved pieces only
+      do i=1,surface%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
+      enddo
+      ! --- Make sure the rest is really empty...
+      do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = 0
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+      enddo
+      flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
+    enddo
+  endif
+  
+  
+  ! --- Loop over each outer surface
+  if (xcase .eq. 3) then
+    do i_surf=n_flux+n_open+1,n_flux+n_open+n_outer
+      surface%n_pieces = 0
+      ! --- Check each piece
+      do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	! --- Get edge point of that surface piece
+    	rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
+    	ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
+    	i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
+    	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+    							  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+    	
+    	! --- If we're right of the Xpoints, save piece
+    	if (R .gt. min(R_xpoint(1),R_xpoint(2))) then
+    	  surface%n_pieces = surface%n_pieces + 1
+    	  surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	  surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	  surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+    	endif
+    	  
+      enddo
+      ! --- Copy saved pieces only
+      do i=1,surface%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
+      enddo
+      ! --- Make sure the rest is really empty...
+      do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = 0
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+      enddo
+      flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
+    enddo
+  endif
+  
+  
+  
+  ! --- Loop over each inner surface
+  if (xcase .eq. 3) then
+    do i_surf=n_flux+n_open+n_outer+1,n_flux+n_open+n_outer+n_inner
+      surface%n_pieces = 0
+      ! --- Check each piece
+      do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	! --- Get edge point of that surface piece
+    	rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
+    	ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
+    	i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
+    	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+    							  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+    	
+    	! --- If we're left of the Xpoints, save piece
+    	if (R .lt. max(R_xpoint(1),R_xpoint(2))) then
+    	  surface%n_pieces = surface%n_pieces + 1
+    	  surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	  surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	  surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+    	endif
+    	  
+      enddo
+      ! --- Copy saved pieces only
+      do i=1,surface%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
+      enddo
+      ! --- Make sure the rest is really empty...
+      do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = 0
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+      enddo
+      flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
+    enddo
+  endif
+  
+  
+  ! --- Loop over each private surface
+  do i_surf=n_flux+n_open+n_outer+n_inner+1,n_flux+n_open+n_outer+n_inner+n_private
+    surface%n_pieces = 0
+    ! --- Check each piece
+    do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
+      ! --- Get edge point of that surface piece
+      rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
+      ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
+      i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+  							Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+      
+      ! --- If we're below the lower Xpoints, save piece
+      if ( (xcase .ne. 2) .and. (Z .lt. Z_xpoint(1)) ) then
+  	surface%n_pieces = surface%n_pieces + 1
+  	surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+  	surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+  	surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+      endif
+      ! --- If we're above the upper Xpoints, save piece
+      if ( (xcase .eq. 2) .and. (Z .gt. Z_xpoint(2)) ) then
+  	surface%n_pieces = surface%n_pieces + 1
+  	surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+  	surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+  	surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+      endif
+  	
+    enddo
+    ! --- Copy saved pieces only
+    do i=1,surface%n_pieces
+      flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
+      flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
+      flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
+    enddo
+    ! --- Make sure the rest is really empty...
+    do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
+      flux_list%flux_surfaces(i_surf)%elm(i) = 0
+      flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+      flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+    enddo
+    flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
+  enddo
+  
+  ! --- Loop over each private surface
+  if (xcase .eq. 3) then
+    do i_surf=n_flux+n_open+n_outer+n_inner+n_private+1,n_flux+n_open+n_outer+n_inner+n_private+n_up_priv
+      surface%n_pieces = 0
+      ! --- Check each piece
+      do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	! --- Get edge point of that surface piece
+    	rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
+    	ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
+    	i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
+    	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+    							  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+    	
+    	! --- If we're above the upper Xpoints, save piece
+    	if (Z .gt. Z_xpoint(2)) then
+    	  surface%n_pieces = surface%n_pieces + 1
+    	  surface%elm(surface%n_pieces) = flux_list%flux_surfaces(i_surf)%elm(i)
+    	  surface%s(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%s(:,i)
+    	  surface%t(:,surface%n_pieces) = flux_list%flux_surfaces(i_surf)%t(:,i)
+    	endif
+    	  
+      enddo
+      ! --- Copy saved pieces only
+      do i=1,surface%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
+      enddo
+      ! --- Make sure the rest is really empty...
+      do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
+    	flux_list%flux_surfaces(i_surf)%elm(i) = 0
+    	flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+    	flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+      enddo
+      flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
+    enddo
+  endif
+  
+  
+  
 
-
-end subroutine clean_private
+end subroutine clean_surfaces
 
 

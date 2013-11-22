@@ -15,12 +15,13 @@ subroutine check_point_is_inside_wall(R, Z, inside)
   real*8	:: R_tmp2, Z_tmp2
   
   R_tmp1 = R_limiter(n_limiter)
-  Z_tmp1 = R_limiter(n_limiter)
+  Z_tmp1 = Z_limiter(n_limiter)
   
+  count = 0
   do i=1,n_limiter
     
     R_tmp2 = R_limiter(i)
-    Z_tmp2 = R_limiter(i)
+    Z_tmp2 = Z_limiter(i)
     
     if ( (Z .ge. min(Z_tmp1,Z_tmp2)) .and. (Z .le. max(Z_tmp1,Z_tmp2)) .and. (R .lt. max(R_tmp1, R_tmp2)) ) then
       if (Z_tmp1 .ne. Z_tmp2) then

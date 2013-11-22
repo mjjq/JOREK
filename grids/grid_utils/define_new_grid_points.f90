@@ -1168,9 +1168,9 @@ do i=1,n_flux+n_open
     do k=1,n_pieces	 ! 3 line pieces per coordinate line
 
       R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-        	  nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        	   nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
       Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-        	  nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        	   nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
         	      nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
@@ -1213,9 +1213,9 @@ if (xcase .eq. 3) then
       do k=1,n_pieces	   ! 3 line pieces per coordinate line
 
   	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-  		    nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+  		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
   	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-  		    nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+  		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
   	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
   			nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)

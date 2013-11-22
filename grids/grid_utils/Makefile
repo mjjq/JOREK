@@ -17,6 +17,7 @@ all : check_point_is_inside_wall.o		\
       find_wall_crossing_with_flux_surface.o	\
       find_Z_surface.o				\
       meshac.o					\
+      py_plots_grids.o				\
       reorder_flux_surfaces.o			\
       spline_spwert.o				\
       spline_tb15a.o				\

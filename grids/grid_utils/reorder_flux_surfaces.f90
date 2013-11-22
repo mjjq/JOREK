@@ -36,17 +36,24 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
   real*8	:: Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss
   real*8	:: distance
+  character*256	:: filename
   
   write(*,*) '***********************************'
   write(*,*) '*     reorder_flux_surfaces       *'
   write(*,*) '***********************************'
   
 
-  debug = .true.
-  ier   = 0
+  debug    = .true. ! --- Print python files for plots
+  ier      = 0
   
   ! --- Get a plot?
-  if (debug) call print_py_plot(node_list, element_list, surface_list)
+  if (debug) then
+    filename = 'plot_unordered_flux_surtfaces.py'
+    call print_py_plot_prepare_plot(filename)
+    call print_py_plot_unordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_wall(filename)
+    call print_py_plot_finish_plot(filename)
+  endif
   
   ! --- Loop over all surfaces
   do i_surf = 1, surface_list%n_psi
@@ -135,6 +142,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
       parts_index(n_parts) = nStart
       
       ! --- Loop over end pieces (two per surface)
+      finished = .true.
       do i=1,n_edge_pieces/2
         
 	! --- First swap piece so that it's at the begining of our new part.
@@ -153,29 +161,29 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
 	  ! --- If we didn't find the next piece, check if this should be the end
 	  if (found .eq. 0) then
 	    
+	    ! --- Make sure that if this piece is an edge piece, its index is > n_edge_pieces/2
+            do j=1,n_edge_pieces
+              if (index_edge_pieces(j) .eq. i_piece) then
+                index_save = index_edge_pieces(j)
+	        index_edge_pieces(j) = index_edge_pieces(n_edge_pieces/2+i)
+	        index_edge_pieces(n_edge_pieces/2+i) = index_save
+                exit
+              endif
+            enddo
+	    
 	    ! --- Let's get to the next surface part
 	    if (i .ne. n_edge_pieces/2) then
               n_parts = n_parts + 1
               parts_index(n_parts) = i_piece + 1
-	      ! --- Make sure that this piece is an edge piece and that its index is > n_edge_pieces/2
-              do j=1,n_edge_pieces
-                if (index_edge_pieces(j) .eq. i_piece) then
-            	  index_save = index_edge_pieces(j)
-		  index_edge_pieces(j) = index_edge_pieces(n_edge_pieces/2+i)
-		  index_edge_pieces(n_edge_pieces/2+i) = index_save
-            	  exit
-                endif
-              enddo
 	      exit
-	    endif
-	    
+	    else
 	    ! --- We ran out of edge pieces but there is more, meaning that there is probably a closed surface as well
-	    finished = .true.
-	    if ( (i .eq. n_edge_pieces/2) .and. (i_piece .ne. surface_list%flux_surfaces(i_surf)%n_pieces-1) ) then
-	      finished = .false.
-              nStart   = i_piece + 1
-              n_parts  = n_parts + 1
-              parts_index(n_parts) = i_piece + 1
+	      if (i_piece .ne. surface_list%flux_surfaces(i_surf)%n_pieces-1) then
+	        finished = .false.
+                nStart   = i_piece + 1
+                n_parts  = n_parts + 1
+                parts_index(n_parts) = i_piece + 1
+	      endif
 	    endif
     
 	  endif
@@ -238,7 +246,13 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
     
   enddo
   
-  if (debug) call print_py_plot_ordered(node_list, element_list, surface_list)
+  if (debug) then
+    filename = 'plot_ordered_flux_surtfaces.py'
+    call print_py_plot_prepare_plot(filename)
+    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_wall(filename)
+    call print_py_plot_finish_plot(filename)
+  endif
   
   return
 
@@ -461,46 +475,45 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
   integer,                  intent(inout)	:: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
   
   ! --- Internal parameters
-  integer	:: i, j, k1, k2
+  integer	:: i1, i2
+  integer	:: k1, k2
   logical	:: found(2), invert
   integer	:: i_elm
   integer	:: i_elm2
   real*8	:: rr,    ss
   real*8	:: rr2,   ss2
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
-  real*8	:: Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss
+  real*8	:: R,R2,dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
+  real*8	:: Z,Z2,dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
   real*8	:: distance
   
   n_isolated_pieces = 0
   n_edge_pieces     = 0
   
   ! --- Check each piece
-  do i=1,surface%n_pieces
+  do i1=1,surface%n_pieces
     found(1) = .false.
     found(2) = .false.
     ! --- Check both sides of the piece
     do k1=1,3,2
-      ! --- Get last point of that surface piece
-      rr    = surface%s(k1,i)
-      ss    = surface%t(k1,i)
-      i_elm = surface%elm(i)
+      ! --- Get edge point of that surface piece
+      rr    = surface%s(k1,i1)
+      ss    = surface%t(k1,i1)
+      i_elm = surface%elm(i1)
       call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
     	  					        Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
 
       ! --- Loop over all other pieces
-      do j=1,surface%n_pieces
-        if (j .ne. i) then
+      do i2=1,surface%n_pieces
+        if (i2 .ne. i1) then
           
 	  ! --- Check both sides of the piece
           do k2=1,3,2
-            rr2    = surface%s(k2,j)
-            ss2    = surface%t(k2,j)
-            i_elm2 = surface%elm(j)
+            rr2    = surface%s(k2,i2)
+            ss2    = surface%t(k2,i2)
+            i_elm2 = surface%elm(i2)
 
-            call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
-          							 Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+            call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+          							 Z2,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
             
             distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
             if (distance .lt. accuracy) then
@@ -521,36 +534,29 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
     ! --- Have we found an isolated pieces?
     if ( (.not. found(1)) .and. (.not. found(2)) ) then
       n_isolated_pieces = n_isolated_pieces + 1
-      index_isolated_pieces(n_isolated_pieces) = i
+      index_isolated_pieces(n_isolated_pieces) = i1
     else
       ! --- Have we found an edge pieces?
       if ( (.not. found(1)) .or. (.not. found(2)) ) then
         n_edge_pieces = n_edge_pieces + 1
-        index_edge_pieces(n_edge_pieces) = i
+        index_edge_pieces(n_edge_pieces) = i1
         
         ! --- The edge pieces need to start at the edge. Invert the piece with itself if needed
         if (.not. found(2)) then
           invert = .true.
-	  call swap_surface_pieces(surface, i, i, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
+	  call swap_surface_pieces(surface, i1, i1, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
         endif
       endif
     endif
       
   enddo
   
-
-
-
 end subroutine find_all_edge_pieces
 
 
 
 
 
-  
-
-
-
 
 
 
@@ -563,139 +569,72 @@ end subroutine find_all_edge_pieces
 ! ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
-!> This plots fluxsurface not using the fact that they are ordered (ie. plotting piece after piece)
-subroutine print_py_plot(node_list, element_list, surface_list)
+!> This routine removes the private region surface pieces under a given psi_value
+subroutine clean_private(node_list,element_list,flux_list,psi_axis,psi_bnd,Z_xpoint)
+
+
 
   use data_structure
+  use reorder_surfaces_parameters
   implicit none
   
   ! --- Routine parameters
   type (type_node_list),    intent(in)		:: node_list
   type (type_element_list), intent(in)		:: element_list
-  type (type_surface_list), intent(inout)	:: surface_list
+  type (type_surface_list), intent(inout)	:: flux_list
+  real*8,                   intent(in)		:: psi_axis, psi_bnd, Z_xpoint(2)
   
-  ! --- Internal variables
-  integer	:: i, j
-  integer	:: i_elm
-  real*8	:: rr,    ss
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  ! --- Internal parameters
+  type (type_surface)	:: surface
+  integer		:: i_surf, i
+  integer		:: i_elm
+  real*8		:: rr,    ss
+  real*8		:: R,dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
+  real*8		:: Z,dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  real*8		:: psi_limit
   
-  open(100,file='plot_surfaces.py')
-    write(100,'(A)')			      '#!/usr/bin/env python'
-    write(100,'(A)')			      'import numpy as N'
-    write(100,'(A)')			      'import pylab'
-    write(100,'(A)')			      'def main():'
-    write(100,'(A)')			      ' rplot = N.zeros(2)'
-    write(100,'(A)')			      ' zplot = N.zeros(2)'
-    do i=1,surface_list%n_psi
-      do j=1,surface_list%flux_surfaces(i)%n_pieces
-  	i_elm = surface_list%flux_surfaces(i)%elm(j)
-  	rr    = surface_list%flux_surfaces(i)%s(1,j)
-  	ss    = surface_list%flux_surfaces(i)%t(1,j)
-  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+  psi_limit = 0.8
+  
+  ! --- Check each piece
+  do i_surf=1,flux_list%n_psi
+    if (flux_list%psi_values(i_surf) .lt. psi_axis + psi_limit*(psi_bnd-psi_axis) ) then
+      surface%n_pieces = 0
+      do i=1,flux_list%flux_surfaces(i_surf)%n_pieces
+        ! --- Get edge point of that surface piece
+        rr    = flux_list%flux_surfaces(i_surf)%s(1,i)
+        ss    = flux_list%flux_surfaces(i_surf)%t(1,i)
+        i_elm = flux_list%flux_surfaces(i_surf)%elm(i)
+        call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
         						  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
-  	write(100,'(A,f15.4)')  	      ' rplot[0] = ',R
-  	write(100,'(A,f15.4)')  	      ' zplot[0] = ',Z
-        i_elm = surface_list%flux_surfaces(i)%elm(j)
-  	rr    = surface_list%flux_surfaces(i)%s(3,j)
-  	ss    = surface_list%flux_surfaces(i)%t(3,j)
-  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-        						  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
-  	write(100,'(A,f15.4)')  	      ' rplot[1] = ',R
-  	write(100,'(A,f15.4)')  	      ' zplot[1] = ',Z
-  	write(100,'(A)')		      ' pylab.plot(rplot,zplot, "r")'
+        
+        ! --- If we're in the core, save piece
+        if ( (Z .lt. Z_xpoint(2)) .and. (Z .gt. Z_xpoint(1)) ) then
+          surface%n_pieces = surface%n_pieces + 1
+          surface%elm(i) = flux_list%flux_surfaces(i_surf)%elm(i)
+          surface%s(:,i) = flux_list%flux_surfaces(i_surf)%s(:,i)
+          surface%t(:,i) = flux_list%flux_surfaces(i_surf)%t(:,i)
+	endif
+	  
       enddo
-    enddo
-    write(100,'(A)')			      ' pylab.axis("equal")'
-    write(100,'(A)')			      ' pylab.show()'
-    write(100,'(A)')			      ' '
-    write(100,'(A)')			      'main()'
-  close(100)
-
-
-
-end subroutine print_py_plot
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-! ----------------------------------------------------------------------------------------------------------------------------------------------
-! ----------------------------------------------------------------------------------------------------------------------------------------------
-! ----------------------------------------------------------------------------------------------------------------------------------------------
-! ----------------------------------------------------------------------------------------------------------------------------------------------
-! ----------------------------------------------------------------------------------------------------------------------------------------------
-
-
-!> This plots fluxsurface using the fact that they are ordered (ie. from the first piece of a part until its last one)
-subroutine print_py_plot_ordered(node_list, element_list, surface_list)
-
-  use data_structure
-  implicit none
-  
-  ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface_list), intent(inout)	:: surface_list
-  
-  ! --- Internal variables
-  integer	:: i, j, k
-  integer	:: i_elm
-  real*8	:: rr,    ss
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
-  
-    open(101,file='plot_reordered_surfaces.py')
-      write(101,'(A)')							'#!/usr/bin/env python'
-      write(101,'(A)')							'import numpy as N'
-      write(101,'(A)')							'import pylab'
-      write(101,'(A)')							'def main():'
-      write(101,'(A,i6,A)')						' r = N.zeros(',n_pieces_max,')'
-      write(101,'(A,i6,A)')						' z = N.zeros(',n_pieces_max,')'
-      do i=1,surface_list%n_psi
-        do j=1,surface_list%flux_surfaces(i)%n_parts
-          write(101,'(A,i6)')						' n_points = ', surface_list%flux_surfaces(i)%parts_index(j+1) &
-	                                                                               -surface_list%flux_surfaces(i)%parts_index(j  ) + 1
-          do k = surface_list%flux_surfaces(i)%parts_index(j), surface_list%flux_surfaces(i)%parts_index(j+1)-1
-    	    rr	  = surface_list%flux_surfaces(i)%s(1,k)
-    	    ss	  = surface_list%flux_surfaces(i)%t(1,k)
-    	    i_elm = surface_list%flux_surfaces(i)%elm(k)
-    	    call interp_RZ(node_list,element_list,i_elm,rr,ss,&
-	                   R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-  			   Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
-    	    write(101,'(A,i6,A,f15.4)')					' r[',k-surface_list%flux_surfaces(i)%parts_index(j),'] = ',R
-    	    write(101,'(A,i6,A,f15.4)')					' z[',k-surface_list%flux_surfaces(i)%parts_index(j),'] = ',Z
-          enddo
-    	  rr	= surface_list%flux_surfaces(i)%s(3,surface_list%flux_surfaces(i)%parts_index(j+1)-1)
-    	  ss	= surface_list%flux_surfaces(i)%t(3,surface_list%flux_surfaces(i)%parts_index(j+1)-1)
-    	  i_elm = surface_list%flux_surfaces(i)%elm(surface_list%flux_surfaces(i)%parts_index(j+1)-1)
-    	  call interp_RZ(node_list,element_list,i_elm,rr,ss,&
-	  		 R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-  	        	 Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
-    	  write(101,'(A,i6,A,f15.4)')					' r[',surface_list%flux_surfaces(i)%parts_index(j+1)-surface_list%flux_surfaces(i)%parts_index(j),'] = ',R
-    	  write(101,'(A,i6,A,f15.4)')					' z[',surface_list%flux_surfaces(i)%parts_index(j+1)-surface_list%flux_surfaces(i)%parts_index(j),'] = ',Z
-          write(101,'(A)')						' pylab.plot(r[0:n_points],z[0:n_points], "r")'
-        enddo
+      ! --- Copy saved pieces only
+      do i=1,surface%n_pieces
+        flux_list%flux_surfaces(i_surf)%elm(i) = surface%elm(i) 
+        flux_list%flux_surfaces(i_surf)%s(:,i) = surface%s(:,i)
+        flux_list%flux_surfaces(i_surf)%t(:,i) = surface%t(:,i)
       enddo
-      write(101,'(A)')							' pylab.axis("equal")'
-      write(101,'(A)')							' pylab.show()'
-      write(101,'(A)')							' '
-      write(101,'(A)')							'main()'
-    close(101)
+      ! --- Make sure the rest is really empty...
+      do i=surface%n_pieces+1,flux_list%flux_surfaces(i_surf)%n_pieces
+        flux_list%flux_surfaces(i_surf)%elm(i) = 0
+        flux_list%flux_surfaces(i_surf)%s(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+        flux_list%flux_surfaces(i_surf)%t(:,i) = (/ 0.d0, 0.d0, 0.d0, 0.d0  /)
+      enddo
+      flux_list%flux_surfaces(i_surf)%n_pieces = surface%n_pieces
+    endif
+  enddo
+  
 
-end subroutine print_py_plot_ordered
 
 
+end subroutine clean_private
 
 

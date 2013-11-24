@@ -173,6 +173,14 @@ program jorek2_stan
 				20*flux_list%n_psi, n_target, R_target, Z_target, index_target, ifail)
   
   
+  ! --- For each wall corner on the target, add a flux surface
+  !call add_flux_surfaces_on_wall_corners()
+  
+  
+  ! --- Get intinerary points for the polar lines of the central part of the grid (everything except legs)
+  call find_extrapolation_points_central_part(node_list, element_list, flux_list,    &
+                                              xcase, R_xpoint, Z_xpoint, psi_xpoint, &
+					      n_grids, stpts, sigmas, nwpts)
   
   
   deallocate(flux_list%psi_values)

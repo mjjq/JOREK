@@ -9,6 +9,7 @@ all : check_point_is_inside_wall.o		\
       fft.o					\
       fgauss.o					\
       find_crossing.o				\
+      find_extrapolation_points_central_part.o	\
       find_R_surface.o				\
       find_RZ.o 				\
       find_strategic_points.o			\

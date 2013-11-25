@@ -51,7 +51,8 @@ integer			 :: inode_father, Index_elm, i_father
 integer, dimension(n_vertex_max) :: pr
 integer, dimension(2)		 :: parent
 integer, dimension(n_vertex_max) :: node_out
-integer:: nnz, check_data, ierr
+integer:: nnz, ierr
+integer*8 :: check_data
 
 
 

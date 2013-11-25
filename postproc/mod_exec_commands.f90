@@ -1447,7 +1447,7 @@ module exec_commands
     
     ! ### add area and volume as parameters to integrals and output them
     
-    call integrals(node_list,element_list,psi_axis,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,aminor,  &
+    call integrals(node_list,element_list,R_axis,Z_axis,psi_axis,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,aminor,  &
       Bgeo,current,beta_p,beta_t,beta_n,density,density_in,density_out,pressure,pressure_in,       &
       pressure_out)
     
@@ -1591,7 +1591,7 @@ module exec_commands
             Z_tmp = Z(1, l, m+1) - dZ_2       ! Z-position of separatrix-bar intersection
             
 	    if ( in_private(node_list,element_list,R(1,l,m),Z_tmp,psi_separatrix,xpoint,xcase,R_xpoint,Z_xpoint,          &
-              psi_xpoint,99.d0m,R_axis,Z_axis,psi_axis) ) cycle  ! discard points on divertor legs
+              psi_xpoint,99.d0,R_axis,Z_axis,psi_axis) ) cycle  ! discard points on divertor legs
 	    
 	    n_pts(k) = n_pts(k) + 1
 	    Z_b(k, n_pts(k)) = Z_tmp

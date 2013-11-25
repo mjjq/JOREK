@@ -26,7 +26,7 @@ real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gau
 real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
 
-real*8  :: current_source, particle_source, heat_source, xt, t_norm, rho_norm, rotation_source
+real*8  :: current_source, particle_source, heat_source, heat_source_i, heat_source_e, xt, t_norm, rho_norm, rotation_source
 real*8  :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
 real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
@@ -138,7 +138,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
 !$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,               &
-!$omp           heat_source, particle_source, current_source, rotation_source,                 &
+!$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source,                 &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           omp_nthreads,omp_tid)
@@ -270,8 +270,14 @@ do ife = ife_min, ife_max
 
         grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
+#if JOREK_MODEL == 400
+        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
+                     particle_source,heat_source_i,heat_source_e)
+		     heat_source = heat_source_i + heat_source_e
+#else
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
                      particle_source,heat_source)
+#endif
         call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, ps0,&
                      psi_axis,psi_limit,current_source)
 

@@ -144,16 +144,14 @@ do ife =1, element_list%n_elements
       if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
         
-        if (jorek_model .eq. 400) then
 #if JOREK_MODEL == 400
-          call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-	    psi_limit, particle_source, heat_source_i, heat_source_e)
-	    heat_source = heat_source_i + heat_source_e
+        call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
+          psi_limit, particle_source, heat_source_i, heat_source_e)
+          heat_source = heat_source_i + heat_source_e
+#else
+        call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
+          psi_limit, particle_source, heat_source)
 #endif
-        else
-          call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-            psi_limit, particle_source, heat_source)
-        endif
         
         ! --- 3D integrals
         D_int = D_int + rho_00       * xjac * BigR * wst

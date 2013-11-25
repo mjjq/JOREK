@@ -1053,9 +1053,13 @@ required = 0
           t_now = t_now + tstep
 
        else
-          if ( my_id == 0 ) write(*,*) ' TIME STEP SKIPPED !', iter_gmres
+          if ( my_id == 0 ) then
+             write(*,*)
+             write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
+             write(*,*)
+          end if
           index_now = index_now - 1 ! Undo the time step
-          exit
+          exit jstep_loop
        end if
 
     !-------------------------------------------------------- adapt time step (in progress...)

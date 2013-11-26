@@ -224,6 +224,7 @@ required = 0
     write(*,111) 'compile_time        ', trim(adjustl(compile_time))
     write(*,111) 'compile_user        ', trim(adjustl(compile_user))
     write(*,111) 'compile_machine     ', trim(adjustl(compile_machine))
+    write(*,111) 'compile_dir         ', trim(adjustl(compile_dir))
     write(*,111) 'compile_command     ', trim(adjustl(compile_command))
     write(*,111) 'compile_flags       ', trim(adjustl(compile_flags))
     write(*,111) 'compile_includes    ', trim(adjustl(compile_includes))

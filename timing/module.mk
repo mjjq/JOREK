@@ -42,6 +42,12 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC) 	\
 	$(DIR)/pastix_getmem.c
 
 
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)		\
+	$(DIR)/flush_it.f90				\
+	$(DIR)/trace.f90				\
+	$(DIR)/pastix_getmem.c
+
+
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/flush_it.f90				\
 	$(DIR)/trace.f90				\

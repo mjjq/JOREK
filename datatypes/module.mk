@@ -23,6 +23,10 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC) 	\
 	$(DIR)/mod_data_structure.f90			\
 	$(DIR)/mod_profiles.f90
 
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)		\
+	$(DIR)/mod_data_structure.f90			\
+	$(DIR)/mod_profiles.f90
+
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/mod_data_structure.f90			\
 	$(DIR)/mod_profiles.f90

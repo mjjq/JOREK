@@ -64,6 +64,14 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/mnewtax.f90 				\
 	$(DIR)/mod_wsmp.f90
 
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)		\
+	$(DIR)/root.f90					\
+	$(DIR)/mod_mumps.f90 				\
+	$(DIR)/mod_pastix.f90				\
+	$(DIR)/mod_murge.f90 				\
+	$(DIR)/mnewtax.f90 				\
+	$(DIR)/mod_wsmp.f90
+
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/mod_mumps.f90 				\
 	$(DIR)/mod_pastix.f90				\

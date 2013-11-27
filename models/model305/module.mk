@@ -31,6 +31,11 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/mod_parameters.f90              \
 	$(DIR)/sources.f90
 
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)	\
+	$(DIR)/initialise_parameters.f90 	\
+	$(DIR)/mod_parameters.f90              \
+	$(DIR)/sources.f90
+
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)	\
 	$(DIR)/initialise_parameters.f90 	\
 	$(DIR)/sources.f90                      \

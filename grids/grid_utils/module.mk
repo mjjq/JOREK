@@ -40,6 +40,9 @@ JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)			\
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)		\
 	$(DIR)/find_RZ.f90
 
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)			\
+	$(DIR)/find_RZ.f90
+
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)				\
 	$(DIR)/check_point_is_inside_wall.f90 	    		\
 	$(DIR)/define_flux_values.f90 	    			\

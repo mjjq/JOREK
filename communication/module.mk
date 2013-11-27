@@ -65,6 +65,12 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
         $(DIR)/broadcast_phys.f90               	\
 	$(DIR)/mpi_mod.f90
 
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)	\
+	$(DIR)/import_restart.f90		\
+	$(DIR)/broadcast_elements.f90           \
+	$(DIR)/broadcast_nodes.f90              \
+	$(DIR)/broadcast_phys.f90               \
+	$(DIR)/mpi_mod.f90
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/import_restart.f90			\

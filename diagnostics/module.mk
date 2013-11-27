@@ -70,6 +70,14 @@ JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC) 	\
 	$(DIR)/RZ_minmax.f90          \
         $(DIR)/integrals_3D.f90
 
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC) 	\
+	$(DIR)/mod_diagnostics.f90              \
+	$(DIR)/find_axis.f90				\
+	$(DIR)/find_xpoint.f90				\
+	$(DIR)/RZ_minmax.f90          \
+	$(DIR)/divertor_desc.f90			\
+	$(DIR)/integrals_3D.f90
+
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/mod_diagnostics.f90              \
         $(DIR)/find_axis.f90			\

@@ -28,7 +28,7 @@ LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 NODEPS = clean cleanall cleandep forcheck forcheck_poincare			\
     forcheck_four forcheck_postproc forcheck_connection2 forcheck_jorek2vtk	\
     forcheck_fieldlines_vtk forcheck_jorek2vtk_3d forcheck_diagno		\
-    forcheck_jorek_to_helena forcheck_import_eqdsk
+    forcheck_strikes forcheck_jorek_to_helena forcheck_import_eqdsk
 # If we have neither HIPS or PASTIX_MURGE we need to
 # Use fake murge.
 
@@ -101,6 +101,7 @@ endif
 JOREK2_MAIN_SRC         	= jorek2_main.f90 $(PPPSRC)
 JOREK2_POINCARE_SRC     	= $(PPPSRC)
 JOREK2_CONNECTION2_SRC  	= $(PPPSRC)
+JOREK2_STRIKES_SRC		= $(PPPSRC)
 ENBIGGEN_SRC            	= $(PPPSRC)
 JORDEL_SRC              	= $(PPPSRC)
 JORPOL_SRC              	= $(PPPSRC)
@@ -116,7 +117,7 @@ JOREK2_IMPORT_PERTURBATION_SRC	= $(PPPSRC)
 # include the description for each module
 include $(patsubst %,%/module.mk,$(DIRS))
 
-SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
+SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
           $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC) $(JORDEL_SRC) $(JORPOL_SRC) $(ENBIGGEN_SRC)       \
 	  $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC) $(JOREK2_IMPORT_PERTURBATION_SRC))
 
@@ -135,6 +136,10 @@ JOREK2_POINCARE_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SR
 JOREK2_CONNECTION2_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) 	\
 				$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_CONNECTION2_SRC)))		\
 				$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_CONNECTION2_SRC)))
+
+JOREK2_STRIKES_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_STRIKES_SRC))) 	\
+				$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_STRIKES_SRC)))		\
+				$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_STRIKES_SRC)))
 
 ENBIGGEN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(ENBIGGEN_SRC))) 	\
 		$(patsubst %.f,%.o,$(filter %.f, $(ENBIGGEN_SRC)))      \
@@ -303,6 +308,12 @@ jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OB
 	$(JOREK2_CONNECTION2_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_connection2 $(INCLUDES) $(LIBS)
 
+jorek2_strikes : 	diagnostics/jorek2_strikes_ordered.f90 $(JOREK2_STRIKES_OBJ)
+	$(FC) $(FFLAGS_OMP)                  \
+	diagnostics/jorek2_strikes_ordered.f90   	\
+	$(JOREK2_STRIKES_OBJ)		\
+	 -o $(JOREK_DIR)/jorek2_strikes $(INCLUDES) $(LIBS)
+
 enbiggen : diagnostics/enbiggen.f90 $(ENBIGGEN_OBJ)
 	$(FC) $(FFLAGS)                 \
 	diagnostics/enbiggen.f90        \
@@ -421,6 +432,7 @@ FCK_POINCARE_SRC  = $(patsubst %.c,,$(JOREK2_POINCARE_SRC))
 FCK_FOUR_SRC  = $(patsubst %.c,,$(JOREK2_FOUR_SRC))
 FCK_POSTPROC_SRC  = $(patsubst %.c,,$(JOREK2_POSTPROC_SRC))
 FCK_CONNECTION2_SRC  = $(patsubst %.c,,$(JOREK2_CONNECTION2_SRC))
+FCK_STRIKES_SRC  = $(patsubst %.c,,$(JOREK2_STRIKES_SRC))
 FCK_JOREK2VTK_SRC  = $(patsubst %.c,,$(JOREK2VTK_SRC))
 FCK_JOREK2FLVTK_SRC  = $(patsubst %.c,,$(JOREK2FLVTK3D_SRC))
 FCK_JOREK2VTK3D_SRC  = $(patsubst %.c,,$(JOREK2VTK3D_SRC))
@@ -447,6 +459,10 @@ forcheck_postproc :
 
 forcheck_connection2 :
 	$(FCK_CALL) diagnostics/jorek2_connection2.f90 $(FCK_CONNECTION2_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_strikes :
+	$(FCK_CALL) diagnostics/jorek2_strikes_ordered.f90 $(FCK_STRIKES_SRC) \
 	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_jordel :

@@ -4,6 +4,9 @@ module elements_nodes_neighbours
 
   type (type_node_list)    :: node_list
   type (type_element_list) :: element_list
+  type (type_bnd_node_list)  :: bnd_node_list
+  type (type_bnd_element_list) :: bnd_elm_list
+
   integer,allocatable      :: element_neighbours(:,:)
 
 end module
@@ -17,6 +20,8 @@ use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
 use constants
+use boundary
+use divertor_desc
 
 implicit none
 include 'mpif.h'
@@ -30,7 +35,13 @@ real*8, allocatable :: PS0_strike(:)                                 ! flux at s
 
 real*8,allocatable  :: R_turn(:,:), Z_turn(:,:), C_turn(:,:), C_turn_tmp(:,:)
 real*8,allocatable  :: T_turn(:,:), PSI_turn(:,:), ZN_turn(:,:), PSI_turn_norm(:,:), theta_turn(:,:)
-integer :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m, ns, nt
+real*8,allocatable  :: connection_length_plus(:, :), connection_length_minus(:, :)
+real*8,allocatable  :: connection_length_plus_tmp(:, :), connection_length_minus_tmp(:, :)
+real*8,allocatable  :: connection_length_plus_all(:, :), connection_length_minus_all(:, :)
+integer,allocatable :: n_turn_plus(:,:), n_turn_minus(:,:), n_turn_plus_all(:,:), n_turn_minus_all(:,:)
+integer,allocatable :: n_turn_plus_tmp(:,:), n_turn_minus_tmp(:,:)
+integer :: nk, nk_all, local_ks(1), k_ind
+integer :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m
 integer :: i_elm, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_elm_tmp,i_steps, n_turn_max(2)
 real*8  :: R_start, Z_start, P_start, R_line, Z_line, s_line, t_line, p_line, s_mid, t_mid, p_mid, s_out, t_out
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
@@ -39,8 +50,8 @@ real*8  :: Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, zl1, zl2, partial(2)
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), value_out, psi_bnd
-real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, element_start_percent
-integer :: i_elm_xpoint, i_elm_axis, elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
+real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, element_start_percent, phi_start
+integer :: i_elm_xpoint, i_elm_axis, r_delta, n_div, n_r_start
 integer :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
 real*4,allocatable :: RZkeep(:,:),scalars(:,:)
 real*4             :: ZERO
@@ -48,10 +59,17 @@ integer            :: status(MPI_STATUS_SIZE)
 integer            :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
 character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
+integer :: i_bnd, i_bnd_beg, i_div_part, n_div_parts, n_bnd, inode_k, inode_m, bnd_list(n_boundary_max), bnd_side, v1, v2, ov2
+real*8 startpos, relpos
+real*8, allocatable :: rzpart(:, :)
 logical :: psi_theta
 
 logical, external :: neighbours2
 
+integer f_div, f_testelem_nodes, f_testelem_interp, f_cl_plus, f_cl_minus, f_phistart, f_turns_plus, f_turns_minus, f_divstart, f_divshape
+type(divertor_pos_t), allocatable :: divpos(:)
+REAL*8, ALLOCATABLE :: div_start(:), phis(:)
+integer, allocatable :: k_list(:), local_k_list(:)
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -60,7 +78,7 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 write(*,*) 'my_id = ', my_id
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, element_start_percent
 
 if (my_id .eq. 0 ) then
    write(*,*) '***************************************'
@@ -72,17 +90,17 @@ endif
 n_scalars = 3
 ZERO      = 0.
 
+! no files get read here.
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters 
-psi_theta = .true.
+psi_theta = .false.
 ! step at constant delta_phi
-n_turns = 100 !500             ! number of toroidal turns to follow a fieldline
-n_phi   = 200 !1000            ! number of steps per toroidal turn
+n_turns = 1000 !500             ! number of toroidal turns to follow a fieldline
+n_phi   = 1000 !1000            ! number of steps per toroidal turn
 
-ns = 1                          ! number of (s) starting points within one element
-nt = 1                          ! number of (t) starting points within one element
 element_start_percent = 0.25
+n_div = 5000
 
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
 open(42, file='connecvtk.nml', action='read', status='old', iostat=ierr)
@@ -101,8 +119,6 @@ if (my_id .eq. 0 ) then
    write(*,*) 'psi_theta = ', psi_theta
    write(*,*) 'n_turns = ', n_turns
    write(*,*) 'n_phi = ', n_phi
-   write(*,*) 'ns = ', ns
-   write(*,*) 'nt = ', nt
    write(*,*) 'element_start = ', element_start_percent, ' percent of nb_elements'
 endif
 
@@ -110,11 +126,13 @@ endif
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
   if (my_id .eq. 0 ) then
-     write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
+     write(*,*) my_id,' toroidal mode numbers : ',i_tor,mode(i_tor)
   endif
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+if (my_id .eq. 0) then
+  call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+endif
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 
@@ -132,6 +150,9 @@ write (*,*) 'number of elements= ', element_list%n_elements
 allocate(element_neighbours(4,element_list%n_elements))
 
 element_neighbours = 0
+i_bnd = 0
+
+! the following is expensive and should be parallelized using OpenMP.
 
 do i=1,element_list%n_elements
 
@@ -145,12 +166,117 @@ do i=1,element_list%n_elements
   enddo
 enddo
 
-delta_phi = 2.d0 * PI / float(n_period*n_phi)
+call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos=.false.)
+
+   do i =1, bnd_elm_list%n_bnd_elements
+      associate (el => bnd_elm_list%bnd_element(i))      
+        if(any(node_list%node(el%vertex)%boundary == 1)) then
+           i_bnd = i_bnd + 1
+           bnd_list(i_bnd) = i
+        end if
+      end associate
+   end do
+   n_bnd = i_bnd
+
+   n_div_parts = count(node_list%node(bnd_elm_list%bnd_element(bnd_list(1:n_bnd))%vertex(1))%boundary == 3)
+
+   if (my_id .eq. 0) then
+      open(newunit=f_div, file='divpos.dat', action='write', status='replace')
+
+      print *, 'divertor composed of ', n_div_parts, 'parts'
+   end if
+
+   call alloc_divertor(divertor, n_div_parts)
+   startpos = 0.
+   ov2 = 0
+   i_div_part = 0
+   do i_bnd = 1, n_bnd
+      v1 = bnd_elm_list%bnd_element(bnd_list(i_bnd))%vertex(1)
+      v2 = bnd_elm_list%bnd_element(bnd_list(i_bnd))%vertex(2)
+
+      if (ov2 /= v1) then
+         if (node_list%node(v1)%boundary == 3) then
+            i_bnd_beg = i_bnd
+!            write(f_div, '(2f12.4)')   node_list%node(v1)%x(1, 1:2)
+         else
+            STOP 'boundary node succession broken'
+         endif
+      endif
+
+      if (node_list%node(v2)%boundary == 3) then
+         i_div_part = i_div_part + 1
+
+         allocate(rzpart(2, i_bnd - i_bnd_beg + 2))
+         if (my_id .eq. 0) write(f_div, '(2f12.4)')   node_list%node(bnd_elm_list%bnd_element(bnd_list(i_bnd_beg))%vertex(1))%x(1, 1:2)
+         rzpart(:, 1) = node_list%node(bnd_elm_list%bnd_element(bnd_list(i_bnd_beg))%vertex(1))%x(1, 1:2)
+         do i = i_bnd_beg, i_bnd
+            if (my_id .eq. 0) write(f_div, '(2f12.4)')   node_list%node(bnd_elm_list%bnd_element(bnd_list(i))%vertex(2))%x(1, 1:2)
+            rzpart(:, i-i_bnd_beg+2) = node_list%node(bnd_elm_list%bnd_element(bnd_list(i))%vertex(2))%x(1, 1:2)
+         end do
+
+         if (my_id .eq. 0) then
+            print *, "part ", i_div_part, " from ", startpos
+         end if
+         call init_divpart_data(divertor%divparts(i_div_part), rzpart, startpos)
+         if (my_id .eq. 0) then
+            do j = 1,divertor%divparts(i_div_part)%npts
+               print *, divertor%divparts(i_div_part)%divpts(j)%absdist
+            enddo
+            print *, "to ", startpos
+         end if
+         deallocate(rzpart)
+      end if
+      ov2 = v2
+   enddo
+   if (my_id .eq. 0) then
+      close(f_div)
+      write (*,*) 'closed divpos.dat'
+
+      open(newunit=f_divshape, file='divertor_shape.dat', action='write', status='replace')
+      call save_divertor(f_divshape, .false.)
+      close(f_divshape)
+   end if
+
+!!$   n_div = count(node_list%node(1:node_list%n_nodes)%boundary == 1)
+!!$   print *, 'n_div =', n_div
+!!$
+!!$
+!!$   maxbndind = maxval(node_list%node(1:node_list%n_nodes)%boundary_index, node_list%node(1:node_list%n_nodes)%boundary == 1 )
+!!$
+!!$   print *, 'max boundary index =', maxbndind
+!!$
+!!$   allocate(divnodes(maxbndind))
+!!$
+!!$   divnodes = 0
+!!$
+!!$!   j = 1
+!!$   do i = 1, node_list%n_nodes
+!!$      if (node_list%node(i)%boundary == 1 ) then
+!!$         print *, 'bnd_index=', node_list%node(i)%boundary_index, 'index= ', node_list%node(i)%index(:)
+!!$         divnodes(node_list%node(i)%boundary_index) = i
+!!$!         j = j + 1
+!!$      endif
+!!$   end do
+!!$
+!!$   write (*,*) 'opening divpos.dat'
+!!$   open(newunit=f_div, file='divpos.dat', action='write', status='replace')
+!!$
+!!$   do j = 1, size(divnodes)
+!!$      if (divnodes(j) /= 0) then
+!!$         write(f_div, '(2f12.4)') node_list%node(divnodes(j))%x(1, 1:2)
+!!$      endif
+!!$   enddo
+!!$   close(f_div)
+!!$   write (*,*) 'closed divpos.dat'
+
+! delta_phi gets initialized later in the loop, as it depends on the direction chosen
+! BTW it is unclear why use n_period here.
+!delta_phi = 2.d0 * PI / float(n_period*n_phi)
 tol       = 1.d-6!1.e-6
 
 i_var_psi = 1                                  ! the index of the magnetic flux variable
 
-n_lines = element_list%n_elements * ns * nt    ! number of starting points
+n_lines = n_div * n_phi    ! number of starting points
 
 allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
 allocate(T0_strike(n_lines),T_strike(n_lines),ZN0_strike(n_lines),ZN_strike(n_lines),PS0_strike(n_lines))
@@ -198,54 +324,135 @@ endif
 i_line   = 0
 i_strike = 0
 
-write(*,*) ' number of elements : ',element_list%n_elements
+n_R_start = n_div
 
-if (element_start_percent .ne. 0.) then
-   elm_start = element_list%n_elements*element_start_percent
-else
-   elm_start = 1
-end if
-elm_end   = element_list%n_elements
+!r_delta = (n_R_start - 1) / n_cpu
 
-write(*,*) ' elm start, end : ',elm_start, elm_end
+allocate(k_list(size( (/ (k, k=1+my_id, n_R_start, n_cpu ) /) )))
 
-elm_delta = (elm_end - elm_start) / n_cpu
+k_list = (/ (k, k=1+my_id, n_R_start, n_cpu ) /)
 
-local_elm_start = elm_start + my_id*elm_delta + 1
-local_elm_end   = min(elm_end,elm_start+(my_id+1)*elm_delta)
+!local_r_start = 1 + my_id*r_delta
 
-write(*,*) my_id, local_elm_start, local_elm_end
+!local_r_end   = min(n_R_start,(my_id+1)*r_delta)
 
-!nkeep = (local_elm_end - local_elm_start) * ns * nt * n_turns
+write(*,*) my_id, 'k_list =', k_list
+
+!nkeep = (local_r_end - local_r_start) * n_turns
 
 ikeep = 0
 
 allocate(RZkeep(2,1000000),scalars(1000000,n_scalars))
 
+ALLOCATE(div_start(n_div), divpos(n_div))
+do i=1,n_div
+   div_start(i) = (i/3.0)/n_div
+enddo
+divpos = divdist2divpos(div_start)
 
-do i = local_elm_start, local_elm_end
+if (my_id .eq. 0 ) then
+   open(newunit=f_divstart, file='div_start.dat', action='write', status='replace')
+   do i=1,n_div
+      write(f_divstart, *) div_start(i)
+   end do
+end if
 
-  do k=1, ns
 
-    s_ini = real(k)/real(ns+1)
+if (my_id .eq. 0 ) then
+   open(newunit=f_div, file='divpos_start.dat', action='write', status='replace')
+  do k=1, n_r_start
+     call divpos2ibnd(divpos(k), i_bnd, relpos)
 
-    do m=1, nt
+     if (reversed_edge(bnd_elm_list%bnd_element(bnd_list(i_bnd)), element_list) ) then
+        print *, 'reversed edge'
+        relpos = 1. - relpos
+     endif
+     bnd_side =  bnd_elm_list%bnd_element(bnd_list(i_bnd))%side
+     i = bnd_elm_list%bnd_element(bnd_list(i_bnd))%element
+    if (bnd_side .eq. 1) then
+      s_ini = relpos
+      t_ini = 0.d0
+    elseif (bnd_side .eq. 2) then
+      t_ini = relpos
+      s_ini = 1.d0
+    elseif (bnd_side .eq. 3) then
+      s_ini = 1. - relpos
+      t_ini = 1.d0
+    elseif (bnd_side .eq. 4) then
+      t_ini = 1. - relpos
+      s_ini = 0.d0
+    else
+      write(*,*) 'should not be here'
+    endif
 
-      t_ini = real(m)/real(nt+1)
+    call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+    write(f_div, '(2f12.8, i4)')  R_out, Z_out, bnd_side
+  end do
 
+close(f_div)
+write (*,*) 'closed divpos_start.dat'
+end if
+
+!do i_bnd = local_elm_start, local_elm_end
+
+nk = size(k_list)
+
+allocate(phis(n_phi))
+
+phis = (/ ( 2.d0 * PI * float(m-1) / float(n_phi),  m = 1, n_phi ) /)
+
+if (my_id .eq. 0 ) then
+   open(newunit=f_phistart, file='phi_start.dat', action='write', status='replace')
+   do m=1, n_phi
+      write (f_phistart, *) phis(m)
+   end do
+close (f_phistart)   
+write (*,*) 'closed phi_start.dat'
+end if
+
+allocate(connection_length_plus(nk, n_phi), connection_length_minus(nk, n_phi))
+allocate(n_turn_plus(nk, n_phi), n_turn_minus(nk, n_phi))
+  do k_ind=1, nk
+     k = k_list(k_ind)
+     call divpos2ibnd(divpos(k), i_bnd, relpos)
+
+     if (reversed_edge(bnd_elm_list%bnd_element(bnd_list(i_bnd)), element_list) ) then
+        relpos = 1. - relpos
+     endif
+     bnd_side =  bnd_elm_list%bnd_element(bnd_list(i_bnd))%side
+     i = bnd_elm_list%bnd_element(bnd_list(i_bnd))%element
+    if (bnd_side .eq. 1) then
+      s_ini = relpos
+      t_ini = 0.d0
+    elseif (bnd_side .eq. 2) then
+      t_ini = relpos
+      s_ini = 1.d0
+    elseif (bnd_side .eq. 3) then
+      s_ini = 1. - relpos
+      t_ini = 1.d0
+    elseif (bnd_side .eq. 4) then
+      t_ini = 1. - relpos
+      s_ini = 0.d0
+    else
+      write(*,*) 'should not be here'
+    endif
+
+    do m=1, n_phi
+ 
+      phi_start = phis(m)
+ 
       i_line = i_line + 1
 
       R_turn     = 0.d0
       Z_turn     = 0.d0
       C_turn_tmp = 0.d0
 
-      do i_dir = -1,1,2
+      do i_dir = -1,1,2       ! should one do one direction here
 
       s_line = s_ini
       t_line = t_ini
 
-      delta_phi = 2.d0 * PI * float(i_dir) / float(n_period*n_phi)
-
+      delta_phi = 2.d0 * PI * float(i_dir) / float(n_phi)
 
       call interp_RZ(node_list,element_list,i,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 
@@ -255,7 +462,7 @@ do i = local_elm_start, local_elm_end
       i_elm   = i
       R_start = R_out
       Z_start = Z_out
-      P_start =  PI/4.!0.d0
+      P_start = phi_start
 
      ! write (*,*) 'i_line,R_start,Z_start',i_line,R_start,Z_start
       R_all(i_line) = R_start
@@ -279,10 +486,10 @@ do i = local_elm_start, local_elm_end
       T0_strike(i_strike)  = T_turn(1,(i_dir+1)/2+1)
       PS0_strike(i_strike) = PSI_turn(1,(i_dir+1)/2+1)
 
-      do i_turn = 1, n_turns                 ! loop over toroidal turns
+      torturns: do i_turn = 1, n_turns                 ! loop over toroidal turns
 
         n_turn_max((i_dir+1)/2+1) = i_turn
-!write (*,*) 'n_turn_max = ', n_turn_max(:)
+
         do i_phi=1,n_phi                     ! loop over steps in toroidal angle
 
           delta_phi_local = 0.d0
@@ -375,7 +582,7 @@ do i = local_elm_start, local_elm_end
                     Z_strike(i_strike) = Z_in
                     P_strike(i_strike) = p_line
                     C_strike(i_strike) = total_length + sqrt(abs(dl2))
-                    
+
                     call var_value(i_elm_prev,6,s_line,t_line,p_line,T_strike(i_strike))
                     call var_value(i_elm_prev,5,s_line,t_line,p_line,ZN_strike(i_strike))
 
@@ -423,7 +630,6 @@ do i = local_elm_start, local_elm_end
                     Z_strike(i_strike) = Z_in
                     P_strike(i_strike) = p_line
                     C_strike(i_strike) = total_length + sqrt(abs(dl2))
-!write (*,*) 'popopop 5', my_id, i, i_elm
 
                     call var_value(i_elm_prev,6,s_line,t_line,p_line,T_strike(i_strike))
                     call var_value(i_elm_prev,5,s_line,t_line,p_line,ZN_strike(i_strike))
@@ -479,7 +685,6 @@ do i = local_elm_start, local_elm_end
 
                     call var_value(i_elm_prev,6,s_line,t_line,p_line,T_strike(i_strike))
                     call var_value(i_elm_prev,5,s_line,t_line,p_line,ZN_strike(i_strike))
-!write (*,*) 'popopop 6', my_id, i, i_elm
 
                     inode1 = element_list%element(i_elm_prev)%vertex(3)
                     inode2 = element_list%element(i_elm_prev)%vertex(4)
@@ -525,11 +730,9 @@ do i = local_elm_start, local_elm_end
                     Z_strike(i_strike) = Z_in
                     P_strike(i_strike) = p_line
                     C_strike(i_strike) = total_length + sqrt(abs(dl2))
-!write (*,*) 'popopop 7', my_id, i, i_elm
 
                     call var_value(i_elm_prev,6,s_line,t_line,p_line,T_strike(i_strike))
                     call var_value(i_elm_prev,5,s_line,t_line,p_line,ZN_strike(i_strike))
-!write (*,*) 'popopop 8', my_id, i, i_elm
 
                     inode1 = element_list%element(i_elm_prev)%vertex(1)
                     inode2 = element_list%element(i_elm_prev)%vertex(2)
@@ -586,7 +789,7 @@ do i = local_elm_start, local_elm_end
         call var_value(i_elm,5,s_line,t_line,p_line,ZN_turn(i_turn+1,(i_dir+1)/2+1))
         !PSI_turn_norm (1,(i_dir+1)/2+1)= (PSI_turn(1,(i_dir+1)/2+1)-psi_axis)/(psi_bnd-psi_axis)
 
-      enddo  ! end of loop over toroidal turns
+      enddo torturns ! end of loop over toroidal turns
 
       if (i_elm .ne. 0) then  ! field line still in domain, after n_turn turns
         R_strike(i_strike) = R_in
@@ -602,12 +805,16 @@ do i = local_elm_start, local_elm_end
       if (i_dir .eq. -1) then  
         C_all(i_line) = total_length
         partial(1)    = total_length
+        connection_length_minus(k_ind, m) = total_length
       else
         C_all(i_line) = min(C_all(i_line),total_length)
         partial(2)    = total_length
+        connection_length_plus(k_ind, m) = total_length
       endif
 
       enddo  ! end of two directions
+      n_turn_minus(k_ind, m) = n_turn_max(1)
+      n_turn_plus(k_ind, m) = n_turn_max(2)
 
 !------------------------------- correct the connection lengths
       do i_turn = 1, n_turn_max(1)
@@ -618,47 +825,44 @@ do i = local_elm_start, local_elm_end
       enddo
 
       do i_turn=1,n_turn_max(1)+1                  ! keep only field lines starting inside the plasma
-!write (*,*) 'test_boucle1 = ', (R_turn(i_turn,1) .gt. 0.d0)
+
         if (R_turn(i_turn,1) .gt. 0.d0) then
 
           zl1 = C_turn(i_turn,1)
           zl2 = C_turn(1,1) - C_turn(i_turn,1) + C_turn(1,2) 
-!!$write (*,*) 'test_boucle2.1 = ', (PSI_turn(1,1)    .lt. psi_xpoint(1))
-!!$write (*,*) 'test_boucle2.2 = ', (Z_turn(1,1)      .gt. Z_xpoint(1))
-!!$write (*,*) 'test_boucle2.3 = ', (Z_turn(i_turn,1) .lt. -2.d0)
+
           if ( (  (PSI_turn(1,1).le. psi_bnd)  &
                .and. (Z_turn(1,1) .ge. Z_xpoint(1)) ) &    !.and. (Z_turn(1,1).le.Z_xpoint(2))) then    
                .and. (Z_turn(i_turn,1) .lt. 2.d0)  )  then
 
             if (n_turn_max(1) .lt. n_turns) then
               ikeep = ikeep + 1
-!write(*,*) 'ikeep1 = ', ikeep
+
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,1) - psi_axis ) / (psi_bnd - psi_axis )
                  RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,1) - Z_axis) , (R_turn(i_turn,1) - R_axis) ) / (2.d0*PI)
-!write(*,*) '1my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,1)
                  RZkeep(2,ikeep)            = Z_turn(i_turn,1)
               endif
-              scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(1,1), PSI_turn(i_turn,1) /)
+              scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(1,1), PSI_turn(1,1) /)
+!              scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(i_turn,1),PSI_turn(1,1) /)
             else
               ikeep = ikeep + 1
-!write(*,*) 'ikeep1 = ', ikeep
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,1) - psi_axis ) / (psi_bnd - psi_axis )
                  RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,1) - Z_axis) , (R_turn(i_turn,1) - R_axis) ) / (2.d0*PI)
-!write(*,*) '2my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,1)
                  RZkeep(2,ikeep)            = Z_turn(i_turn,1)
               endif
-              scalars(ikeep,1:n_scalars) = (/ maxval(partial),T_turn(1,1), PSI_turn(i_turn,1) /)
+              scalars(ikeep,1:n_scalars) = (/ maxval(partial),T_turn(1,1), PSI_turn(1,1) /)
+!              scalars(ikeep,1:n_scalars) = (/ maxval(partial),T_turn(i_turn,1), PSI_turn(1,1) /)
             endif 
 
          endif ! attention: ici c'est commente dans l'ancienne version
 
-        Endif
+        endif
       enddo
 
       do i_turn=1,n_turn_max(2)+1          ! keep only field lines starting inside the plasma
@@ -674,49 +878,43 @@ do i = local_elm_start, local_elm_end
 !           if (Z_turn(i_turn,1) .lt. -2.d0) then
             if (n_turn_max(2) .lt. n_turns) then
               ikeep = ikeep + 1
-!write(*,*) 'ikeep2 = ', ikeep
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,2)  - psi_axis ) / (psi_bnd - psi_axis )
                  RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,2) - Z_axis) , (R_turn(i_turn,2) - R_axis) ) / (2.d0*PI)
-!write(*,*) '3my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,2)
                  RZkeep(2,ikeep)            = Z_turn(i_turn,2)
               endif
-              scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(1,2), PSI_turn(i_turn,2) /)
+              scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(1,2), PSI_turn(1,2) /)
+!              scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(i_turn,2), PSI_turn(1,1) /)
             else
               ikeep = ikeep + 1
-!write(*,*) 'ikeep2 = ', ikeep
               if(psi_theta) then
                  RZkeep(1,ikeep) = ( PSI_turn(i_turn,2) - psi_axis ) / (psi_bnd - psi_axis )
                  RZkeep(2,ikeep) = atan2( (Z_turn(i_turn,2) - Z_axis) , (R_turn(i_turn,2) - R_axis) ) / (2.d0*PI)
-!write(*,*) '4my_id, psi, theta = ', my_id, RZkeep(1,ikeep), RZkeep(2,ikeep)
               else
                  RZkeep(1,ikeep)            = R_turn(i_turn,2)
                  RZkeep(2,ikeep)            = Z_turn(i_turn,2)
               endif
-              scalars(ikeep,1:n_scalars) = (/ maxval(partial),T_turn(1,2), PSI_turn(i_turn,2) /)
+!              scalars(ikeep,1:n_scalars) = (/ maxval(partial),T_turn(1,2), PSI_turn(i_turn,2) /)
+              scalars(ikeep,1:n_scalars) = (/ maxval(partial),T_turn(i_turn,2), PSI_turn(1,2) /)
             endif
 
           endif
 
         endif
       enddo
-if ((i == local_elm_start) .or.(i == local_elm_end)) then
-write (*,*) 'popopop 9', my_id, i, scalars(ikeep,1:n_scalars)
-endif
 
     enddo  ! end over loop over starting points within one element ( ns)
   enddo    ! end over loop over starting points within one element ( nt)
 
 
-enddo ! end of loop over elements
+!enddo ! end of loop over elements
 
 !----------------------------------------------- write to VTK file (one after the other)
 ikeep0  = ikeep
 write (*,*) 'ikeep = ', ikeep, 'my_id = ', my_id
 write (*,*) 'ikeep0 = ', ikeep0, 'my_id = ', my_id
-
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 call MPI_Reduce(ikeep,nnos,1,MPI_INTEGER,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -808,6 +1006,91 @@ if (my_id .eq. 0) then
    write(*,*) 'file connection.vtk written'
 endif
 
+! write connection length as a function of the starting points
+
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+call MPI_Reduce(nk,nk_all,1,MPI_INTEGER,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
+if (my_id .eq. 0) then
+   if (nk_all /= n_div) then
+      print *, 'WARNING! nk_all = ' , nk_all, ' but n_div = ', n_div
+   end if
+end if
+
+allocate(connection_length_plus_all(nk_all, n_phi), connection_length_minus_all(nk_all, n_phi))
+allocate(n_turn_plus_all(nk_all, n_phi), n_turn_minus_all(nk_all, n_phi))
+
+open(newunit=f_cl_plus, file='connection_length_plus.dat', action='write', status='replace')
+open(newunit=f_cl_minus, file='connection_length_minus.dat', action='write', status='replace')
+open(newunit=f_turns_plus, file='n_turns_plus.dat', action='write', status='replace')
+open(newunit=f_turns_minus, file='n_turns_minus.dat', action='write', status='replace')
+
+  if (my_id .eq. 0) then
+     connection_length_plus_all(k_list, :) = connection_length_plus
+     connection_length_minus_all(k_list, :) = connection_length_minus
+     n_turn_plus_all(k_list, :) = n_turn_plus
+     n_turn_minus_all(k_list, :) = n_turn_minus
+     do j=1,n_cpu-1
+        call mpi_recv(local_ks,1, MPI_INTEGER, j, j, MPI_COMM_WORLD, status, ierr)
+        print *, 'nk = ', local_ks(1)
+        allocate(local_k_list(local_ks(1)))
+        call mpi_recv(local_k_list, local_ks(1), MPI_INTEGER, j, j, MPI_COMM_WORLD, status, ierr)
+        print *, 'local_k_list =', local_k_list
+        nrecv = local_ks(1)*n_phi
+        if (size(connection_length_plus_all(local_k_list, :)) /= nrecv) print *, 'sizes do not match'
+
+        allocate(connection_length_plus_tmp(local_ks(1), n_phi))
+        allocate(connection_length_minus_tmp(local_ks(1), n_phi))
+        allocate(n_turn_plus_tmp(local_ks(1), n_phi))
+        allocate(n_turn_minus_tmp(local_ks(1), n_phi))
+
+        call mpi_recv(connection_length_plus_tmp, nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(connection_length_minus_tmp, nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(n_turn_plus_tmp, nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(n_turn_minus_tmp, nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+
+        connection_length_plus_all(local_k_list, :) = connection_length_plus_tmp
+        connection_length_minus_all(local_k_list, :) = connection_length_minus_tmp
+        n_turn_plus_all(local_k_list, :) = n_turn_plus_tmp
+        n_turn_minus_all(local_k_list, :) = n_turn_minus_tmp
+
+! for some reason the following does not work, although it would be
+! simpler than the above...
+
+!        do k = 1, local_ks(1)
+!           connection_length_plus_all(local_k_list(k), :) = connection_length_plus_tmp(k, :)
+!        end do
+        
+!        call mpi_recv(connection_length_plus_all(local_k_list, :), nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+!        call mpi_recv(connection_length_minus_all(local_k_list, :), nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+!        call mpi_recv(n_turn_plus_all(local_k_list, :), nrecv, MPI_INTEGER, j, j, MPI_COMM_WORLD, status, ierr)
+!        call mpi_recv(n_turn_minus_all(local_k_list, :), nrecv, MPI_INTEGER, j, j, MPI_COMM_WORLD, status, ierr)
+        deallocate(local_k_list)
+        deallocate(connection_length_plus_tmp)
+        deallocate(connection_length_minus_tmp)
+        deallocate(n_turn_plus_tmp)
+        deallocate(n_turn_minus_tmp)
+     enddo
+     do k=1, nk_all
+        do m=1, n_phi
+           write(f_cl_plus,*) connection_length_plus_all(k,m)
+           write(f_cl_minus,*) connection_length_minus_all(k,m)
+           write(f_turns_plus,*) n_turn_plus_all(k,m)
+           write(f_turns_minus,*) n_turn_minus_all(k,m)
+        end do
+     end do
+  else
+     call mpi_send((/ nk /), 1, MPI_INTEGER, 0, my_id, MPI_COMM_WORLD, ierr)
+     call mpi_send(k_list, nk, MPI_INTEGER, 0, my_id, MPI_COMM_WORLD, ierr)
+     nsend = nk*n_phi
+     call mpi_send(connection_length_plus, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+     call mpi_send(connection_length_minus, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+     call mpi_send(n_turn_plus, nsend, MPI_INTEGER, 0, my_id, MPI_COMM_WORLD, ierr)
+     call mpi_send(n_turn_minus, nsend, MPI_INTEGER, 0, my_id, MPI_COMM_WORLD, ierr)
+  endif
+
+
 deallocate(RZkeep,scalars,scalar_names)
 
 !======================================== write strike point data to file
@@ -893,7 +1176,7 @@ if (my_id .eq. 0) then
   buffer = lf//lf//'POINT_DATA '//str1//lf                                              ; write(ivtk) trim(buffer)
 endif
 !===========================================Temperature in keV
-scalars(:,3) = scalars(:,3) / MU_zero / (central_density * 1d20) / 1.602d-19 /2.*1.e-3 !(assumes Te=Ti=T/2)
+!scalars(:,3) = scalars(:,3) / MU_zero / (central_density * 1d20) / 1.602d-19 /2.*1.e-3 !(assumes Te=Ti=T/2)
 
 do i_var =1, n_scalars
 
@@ -930,6 +1213,34 @@ endif
 
 call MPI_FINALIZE(IERR)                                ! clean up MPI
 
+contains
+  subroutine divpos2ibnd(divpos, i_bnd, relpos)
+    type(divertor_pos_t), intent(in) :: divpos
+    integer, intent(out) :: i_bnd
+    real*8, intent(out) :: relpos
+
+    i_bnd=sum(divertor%divparts(1:divpos%divseg_pos%num_part-1)%npts-1) + divpos%divseg_pos%num_seg
+
+    relpos = divpos%relpos/divseglen(divpos%divseg_pos )
+  end subroutine divpos2ibnd
+
+  logical function reversed_edge(el, element_list)
+    type(type_bnd_element), intent(in) :: el
+    type(type_element_list), intent(in) :: element_list
+
+    integer :: sidemod
+
+    sidemod = mod( el%side, 4 ) + 1
+    if (el%vertex(1) == element_list%element(el%element)%vertex(el%side) .and. &
+         & el%vertex(2) == element_list%element(el%element)%vertex(sidemod) ) then
+       reversed_edge = .false.
+    else if (el%vertex(2) == element_list%element(el%element)%vertex(el%side) .and. &
+         & el%vertex(1) == element_list%element(el%element)%vertex(sidemod) ) then
+       reversed_edge = .true.
+    else
+       stop 'edge element using wrong nodes?'
+    end if
+  end function reversed_edge
 end program jorek2_connection2
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)

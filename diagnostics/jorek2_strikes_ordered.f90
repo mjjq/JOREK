@@ -50,7 +50,7 @@ real*8  :: Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, zl1, zl2, partial(2)
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), value_out, psi_bnd
-real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, element_start_percent, phi_start
+real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, phi_start
 integer :: i_elm_xpoint, i_elm_axis, r_delta, n_div, n_r_start
 integer :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
 real*4,allocatable :: RZkeep(:,:),scalars(:,:)
@@ -78,7 +78,7 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 write(*,*) 'my_id = ', my_id
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, element_start_percent
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi
 
 if (my_id .eq. 0 ) then
    write(*,*) '***************************************'
@@ -99,7 +99,6 @@ psi_theta = .false.
 n_turns = 1000 !500             ! number of toroidal turns to follow a fieldline
 n_phi   = 1000 !1000            ! number of steps per toroidal turn
 
-element_start_percent = 0.25
 n_div = 5000
 
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
@@ -119,7 +118,6 @@ if (my_id .eq. 0 ) then
    write(*,*) 'psi_theta = ', psi_theta
    write(*,*) 'n_turns = ', n_turns
    write(*,*) 'n_phi = ', n_phi
-   write(*,*) 'element_start = ', element_start_percent, ' percent of nb_elements'
 endif
 
 

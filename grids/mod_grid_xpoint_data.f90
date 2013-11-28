@@ -6,6 +6,15 @@ module grid_xpoint_data
   integer, parameter :: n_flux_max = 1024
   integer, parameter :: n_tht_max  = 2048
   integer, parameter :: n_pieces   = 4
+  
+  ! --- Regions
+  integer, parameter	:: core			= 1
+  integer, parameter	:: sandwich		= 2
+  integer, parameter	:: SOL			= 3
+  integer, parameter	:: outer		= 4
+  integer, parameter	:: inner		= 5
+  integer, parameter	:: private		= 6
+  integer, parameter	:: upper_private	= 7
 
   type type_strategic_points                      !< type definition for strategic points
     real*8	      :: RLeftCorn_LowerInnerLeg,   ZLeftCorn_LowerInnerLeg   !< LeftCorn_LowerInnerLeg

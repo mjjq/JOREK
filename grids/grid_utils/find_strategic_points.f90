@@ -622,3 +622,9 @@ write(*,'(A)')                  '|______________________________________________
 
 return
 end subroutine find_strategic_points
+
+
+
+
+
+

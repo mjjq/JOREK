@@ -64,6 +64,8 @@ module phys_module
   integer :: n_limiter                     !< Number of limiter points
   real*8  :: R_limiter(max_limiter)        !< R-positions of the limiter points
   real*8  :: Z_limiter(max_limiter)        !< Z-positions of the limiter points
+  integer :: first_target_point		   !< index of the first target point on the limiter (for xpoint_grid_wall)
+  integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
   !> @name Define X-point geometry by geometrical properties
   !!

@@ -63,6 +63,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_format,                                         &
                 wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter,                    &
+                first_target_point, last_target_point,		    &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif

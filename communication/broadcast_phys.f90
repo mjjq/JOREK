@@ -27,7 +27,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( (357+2*max_limiter+n_var) * IDBL_EXT + (35+n_tor) * INT_EXT + 43 * ILOG_EXT + (14*512+120) * CHAR_EXT )
+bufsize = ( (357+2*max_limiter+n_var) * IDBL_EXT + (37+n_tor) * INT_EXT + 43 * ILOG_EXT + (14*512+120) * CHAR_EXT )
 #ifdef USE_HDF5
   bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
 #endif
@@ -180,6 +180,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(t_start,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 223
   call MPI_PACK(R_limiter,    max_limiter,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
   call MPI_PACK(Z_limiter,    max_limiter,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 223+2*max_limiter
+  call MPI_PACK(first_target_point,	1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(last_target_point,	1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 !==============================MB velocity +12
   call MPI_PACK(V_0,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 224
   call MPI_PACK(V_1,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 225
@@ -464,6 +466,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,t_start,     	          1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 223
   call MPI_UNPACK(buffer,bufsize,position,R_limiter,    max_limiter,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 223 +   max_limiter
   call MPI_UNPACK(buffer,bufsize,position,Z_limiter,    max_limiter,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 223 + 2*max_limiter
+  call MPI_UNPACK(buffer,bufsize,position,first_target_point,	  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,last_target_point,	  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
 !=================MB:initial profile of parallel velocity
   call MPI_UNPACK(buffer,bufsize,position,V_0,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 224

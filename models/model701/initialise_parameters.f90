@@ -68,6 +68,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
 #endif
                 output_bnd_elements,                                &
                 wall_file,                                          &
+                first_target_point, last_target_point,		    &
                 n_limiter, R_limiter, Z_limiter
 
 if (my_id .eq. 0) then

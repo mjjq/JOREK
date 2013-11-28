@@ -82,6 +82,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 wall_file,                                          &
+                first_target_point, last_target_point,		    &
                 n_limiter, R_limiter, Z_limiter,                    &
                 time_evol_scheme,                                   &
                 D_prof_neg, ZK_prof_neg, T_min,                     &

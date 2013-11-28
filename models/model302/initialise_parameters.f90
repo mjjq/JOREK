@@ -76,8 +76,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-                output_bnd_elements,  &
+                output_bnd_elements,  				    &
                 wall_file,                                          &
+                first_target_point, last_target_point,		    &
                 n_limiter, R_limiter, Z_limiter
 
 if (my_id .eq. 0) then

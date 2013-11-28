@@ -63,7 +63,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
                 wall_file,                                          &
-                n_limiter, R_limiter, Z_limiter,
+                n_limiter, R_limiter, Z_limiter,		    &
+                first_target_point, last_target_point,		    &
                 linear_run, export_for_nemec
 
 if (my_id .eq. 0) then

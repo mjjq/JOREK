@@ -318,7 +318,10 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
   integer,                  intent(inout)	:: index_int_surf(n_surf_max,n_int_max) ! index of intersections on surface
   
   ! --- local variables
-  integer		:: i, j, k, i_surf, istart, iend
+  integer		:: i, j, k, i_surf
+  integer		:: i_int, i_int_new
+  integer		:: i_edge, index_min, index_min_new
+  integer		:: istart, iend, ifail
   integer		:: n_flux,      n_open
   integer		:: n_outer,     n_inner
   integer		:: n_private,   n_up_priv 
@@ -329,15 +332,27 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
   integer, parameter	:: UpperRight=4
   integer		:: n_pieces
   integer		:: i_beg(4), i_end(4)
-  integer		:: i_elm, i_int
+  integer		:: i_elm
   real*8		:: ss
   real*8		:: tt
-  real*8		:: R,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt
-  real*8		:: Z,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt
+  real*8		:: R,Redge,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt
+  real*8		:: Z,Zedge,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt
   real*8		:: Rmin_lower,Rmax_lower
   real*8		:: Rmin_upper,Rmax_upper
   character*256		:: filename
-  logical		:: debug
+  logical		:: debug, target_only, more_than_one_target_point
+  integer		:: n_remove_surface, i_remove_surface(n_surf_max)
+  logical		:: remove_surface
+  integer		:: n_int_tmp, index_int_tmp(n_int_max,4)
+  real*8		:: R_int_tmp(n_int_max), Z_int_tmp(n_int_max)
+  integer		:: n_int_surf_new(n_surf_max)
+  integer		:: index_int_surf_new(n_surf_max,n_int_max)
+  integer		:: n_target_new, index_target_new(n_int_max,4)
+  real*8		:: R_target_new(n_int_max), Z_target_new(n_int_max)
+  real*8		:: distance, distance_new, distance_max, accuracy
+  integer		:: i_int_surf_save(4)
+  integer		:: count_target_points(4)
+  
   
   write(*,*) '*******************************************'
   write(*,*) '* X-point grid : Add Flux Values For Wall *'
@@ -350,6 +365,16 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
   n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
   n_private = n_grids(6); n_up_priv = n_grids(7)
   n_leg     = n_grids(8); n_up_leg  = n_grids(9)
+  
+  ! --- Initialise flag of normal surfaces
+  do i_surf = 1,surface_list%n_psi
+    surface_list%flux_surfaces(i_surf)%flag = 0 
+  enddo
+  
+  
+  ! ---------------------------------------------------------------------------------
+  ! -------------- First find the begining and the end of each target ---------------
+  ! ---------------------------------------------------------------------------------
   
   ! --- First find the beginings of targets (in private region)
   Rmax_lower = -1.d10
@@ -422,6 +447,11 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
     enddo
   endif
 
+  
+  ! ---------------------------------------------------------------------------------
+  ! ----------- Then add Flux surfaces for each wall corner on the targets ----------
+  ! ---------------------------------------------------------------------------------
+  
   ! --- Now we need to add flux surfaces at target corners
   if (xcase .ne. 2) then
     istart = i_beg(LowerLeft)
@@ -435,11 +465,6 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
                             R_xpoint,Z_xpoint, psi_xpoint, Z_axis, psi_axis, i,    &
                             n_int_max, n_target, R_target, Z_target, index_target, &
 			    n_surf_max, n_int_surf, index_int_surf)
-      ! --- The grid values need to be updated after we added flux surfaces
-      n_flux	= n_grids(1)
-      n_open	= n_grids(3); n_outer	= n_grids(4); n_inner = n_grids(5)
-      n_private = n_grids(6); n_up_priv = n_grids(7)
-      n_leg	= n_grids(8); n_up_leg  = n_grids(9)
     enddo
     istart = i_beg(LowerRight)
     iend   = i_end(LowerRight)
@@ -452,11 +477,6 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
                             R_xpoint,Z_xpoint, psi_xpoint, Z_axis, psi_axis, i,    &
                             n_int_max, n_target, R_target, Z_target, index_target, &
 			    n_surf_max, n_int_surf, index_int_surf)
-      ! --- The grid values need to be updated after we added flux surfaces
-      n_flux	= n_grids(1)
-      n_open	= n_grids(3); n_outer	= n_grids(4); n_inner = n_grids(5)
-      n_private = n_grids(6); n_up_priv = n_grids(7)
-      n_leg	= n_grids(8); n_up_leg  = n_grids(9)
     enddo
   endif
   if (xcase .ne. 1) then
@@ -471,11 +491,6 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
                             R_xpoint,Z_xpoint, psi_xpoint, Z_axis, psi_axis, i,    &
                             n_int_max, n_target, R_target, Z_target, index_target, &
 			    n_surf_max, n_int_surf, index_int_surf)
-      ! --- The grid values need to be updated after we added flux surfaces
-      n_flux	= n_grids(1)
-      n_open	= n_grids(3); n_outer	= n_grids(4); n_inner = n_grids(5)
-      n_private = n_grids(6); n_up_priv = n_grids(7)
-      n_leg	= n_grids(8); n_up_leg  = n_grids(9)
     enddo
     istart = i_beg(UpperRight)
     iend   = i_end(UpperRight)
@@ -488,13 +503,19 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
                             R_xpoint,Z_xpoint, psi_xpoint, Z_axis, psi_axis, i,    &
                             n_int_max, n_target, R_target, Z_target, index_target, &
 			    n_surf_max, n_int_surf, index_int_surf)
-      ! --- The grid values need to be updated after we added flux surfaces
-      n_flux	= n_grids(1)
-      n_open	= n_grids(3); n_outer	= n_grids(4); n_inner = n_grids(5)
-      n_private = n_grids(6); n_up_priv = n_grids(7)
-      n_leg	= n_grids(8); n_up_leg  = n_grids(9)
     enddo
   endif
+  
+  ! --- The grid values need to be updated after we added flux surfaces
+  n_flux    = n_grids(1)
+  n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
+  n_private = n_grids(6); n_up_priv = n_grids(7)
+  n_leg     = n_grids(8); n_up_leg  = n_grids(9)
+  
+  
+  ! ------------------------------------------------------------------------------------------------------------
+  ! ----------- Then make sure that we have an artificial target that goes up to the last SOL surface ----------
+  ! ------------------------------------------------------------------------------------------------------------
   
   ! --- Re-find end of targets in SOL regions, but this time save it to the intersections
   if (xcase .ne. 3) then
@@ -646,13 +667,268 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
     endif
   endif
   
-      
+  ! --- Print plot file    
   if (debug) then
     filename = 'plot_added_flux_surfaces.py'
+    write(*,*)'number of target intersections found with added surfaces:',n_target
     call print_py_plot_prepare_plot(filename)
     call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
     call print_py_plot_wall(filename)
     call print_py_plot_points(filename,n_target,R_target,Z_target)
+    call print_py_plot_finish_plot(filename)
+  endif
+  
+  
+  ! --------------------------------------------------------------------------------------------------------------------------
+  ! ----------- Finally, we need to treat special cases (see grids/grid_utils/wall_grid_documentation.pdf for info) ----------
+  ! --------------------------------------------------------------------------------------------------------------------------
+  
+  ! --- Get target intersections again
+  target_only = .true.
+  n_target_new = 0
+  do i_surf = 1,surface_list%n_psi
+    if (i_surf .lt. n_flux) cycle
+    call find_wall_crossings_with_flux_surface(node_list, element_list, surface_list%flux_surfaces(i_surf), target_only, &
+                                               n_int_max, n_int_tmp, R_int_tmp, Z_int_tmp, index_int_tmp, ifail)
+
+    if (ifail .ne. 0) then
+      write(*,*) 'Warning! Failed to find all wall intersections for surface',i_surf,ifail
+      return
+    endif
+    
+    ! --- Fill up target arrays
+    do i=1,n_int_tmp
+      R_target_new(n_target_new + i) = R_int_tmp(i)
+      Z_target_new(n_target_new + i) = Z_int_tmp(i)
+      index_target_new(n_target_new + i, 1) = i_surf
+      index_target_new(n_target_new + i, 2) = index_int_tmp(i,2)
+      index_target_new(n_target_new + i, 3) = index_int_tmp(i,3)
+      if (Z_target_new(n_target_new + i) .lt. Z_axis) then
+        if (R_target_new(n_target_new + i) .lt. R_xpoint(1)) then
+          index_target_new(n_target_new + i,4) = LowerLeft
+        else
+          index_target_new(n_target_new + i,4) = LowerRight
+        endif
+      else
+        if (R_target_new(n_target_new + i) .lt. R_xpoint(2)) then
+          index_target_new(n_target_new + i,4) = UpperLeft
+        else
+          index_target_new(n_target_new + i,4) = UpperRight
+        endif
+      endif
+    enddo
+    n_target_new = n_target_new + n_int_tmp
+  enddo
+  
+  ! --- Fill up surface arrays
+  do i_surf = 1,surface_list%n_psi
+    n_int_surf_new(i_surf) = 0
+  enddo
+  do i=1,n_target_new
+    i_surf = index_target_new(i,1)
+    n_int_surf_new(i_surf) = n_int_surf_new(i_surf) + 1
+    index_int_surf_new(i_surf,n_int_surf_new(i_surf)) = i
+  enddo
+  
+  ! --- Make sure wall corners are not duplicated
+  accuracy = 1.d-4
+  n_int_tmp = 0
+  do i_surf = 1,surface_list%n_psi
+    if (i_surf .lt. n_flux) cycle
+    ! --- If this surface has been added for a wall corner then...
+    if (surface_list%flux_surfaces(i_surf)%flag .eq. 1) then
+      do i=1,n_int_surf_new(i_surf)
+        i_int     = index_int_surf(i_surf,1)
+        i_int_new = index_int_surf_new(i_surf,i)
+        distance = sqrt( (R_target_new(i_int_new) - R_target(i_int))**2.d0 + (Z_target_new(i_int_new) - Z_target(i_int))**2.d0 )
+	if (distance .lt. accuracy) cycle
+	! --- If distance is not too small from wall corner, save point
+        n_int_tmp = n_int_tmp + 1
+        R_int_tmp(n_int_tmp) = R_target_new(i_int_new)
+        Z_int_tmp(n_int_tmp) = Z_target_new(i_int_new)
+        index_int_tmp(n_int_tmp,:) = index_target_new(i_int_new,:)
+      enddo
+      ! --- And save the target point itself
+      i_int     = index_int_surf(i_surf,1)
+      n_int_tmp = n_int_tmp + 1
+      R_int_tmp(n_int_tmp) = R_target(i_int)
+      Z_int_tmp(n_int_tmp) = Z_target(i_int)
+      index_int_tmp(n_int_tmp,:) = index_target(i_int,:)
+    else
+      do i=1,n_int_surf_new(i_surf)
+        i_int_new = index_int_surf_new(i_surf,i)
+        n_int_tmp = n_int_tmp + 1
+        R_int_tmp(n_int_tmp) = R_target_new(i_int_new)
+        Z_int_tmp(n_int_tmp) = Z_target_new(i_int_new)
+        index_int_tmp(n_int_tmp,:) = index_target_new(i_int_new,:)
+      enddo
+    endif
+  enddo
+  
+  ! --- Copy back into main array
+  do i=1,n_int_tmp
+    R_target_new(i) = R_int_tmp(i)
+    Z_target_new(i) = Z_int_tmp(i)
+    index_target_new(i,:) = index_int_tmp(i,:)
+  enddo
+  n_target_new = n_int_tmp
+  
+  ! --- Fill up surface arrays again
+  do i_surf = 1,surface_list%n_psi
+    n_int_surf_new(i_surf) = 0
+  enddo
+  do i=1,n_target_new
+    i_surf = index_target_new(i,1)
+    n_int_surf_new(i_surf) = n_int_surf_new(i_surf) + 1
+    index_int_surf_new(i_surf,n_int_surf_new(i_surf)) = i
+  enddo
+  
+  ! --- Go over each surface and check if it is a special case
+  n_remove_surface = 0
+  do i_surf = 1,surface_list%n_psi
+    if (i_surf .lt. n_flux) cycle
+    ! --- Count how many intersections we have on each side LowerLeft/LowerRight/UpperLeft/UpperRight
+    count_target_points(1:4) = 0
+    do i=1,n_int_surf_new(i_surf)
+      i_int_new = index_int_surf_new(i_surf,i)
+      count_target_points(index_target_new(i_int_new,4)) = count_target_points(index_target_new(i_int_new,4)) + 1
+    enddo
+    more_than_one_target_point = .false.
+    do i=1,4
+      if (count_target_points(i) .gt. 1) more_than_one_target_point = .true.
+    enddo
+    ! --- Case 1:
+    ! --- If surface is not on a wall corner and has more than one intersection with target, redefine target point
+    if ( (surface_list%flux_surfaces(i_surf)%flag .eq. 0) .and. (more_than_one_target_point) ) then
+      distance_max = -1.d10
+      i_int_surf_save(1:4) = 0
+      ! --- Loop on all intersections
+      do i=1,n_int_surf_new(i_surf)
+        i_int_new = index_int_surf_new(i_surf,i)
+        ! --- Find the target intersection (ie. the one on the same side LowerLeft/LowerRight/UpperLeft/UpperRight)
+        do j=1,n_int_surf(i_surf)
+	  i_int = index_int_surf(i_surf,j)
+	  if (index_target(i_int,4) .eq. index_target_new(i_int_new,4)) exit
+        enddo
+        distance  = sqrt( (R_target_new(i_int_new) - R_target(i_int))**2.d0 + (Z_target_new(i_int_new) - Z_target(i_int))**2.d0 )
+        ! --- We choose the point that's the furthest away from the target point
+	if (distance .gt. distance_max) then
+	  distance_max = distance
+	  i_int_surf_save(index_target_new(i_int_new,4)) = i_int_new
+	endif
+      enddo
+      ! --- Save those points only (on surface index list)
+      n_int_surf_new(i_surf) = 0
+      do i=1,4
+        if (i_int_surf_save(i) .ne. 0) then
+          n_int_surf_new(i_surf) = n_int_surf_new(i_surf) + 1
+	  index_int_surf_new(i_surf,n_int_surf_new(i_surf)) = i_int_surf_save(i)
+        endif
+      enddo 
+    endif
+    ! --- Case 2:
+    ! --- If surface is on a wall corner and has more than one intersection with target, but target point is last intersection, remove surface
+    ! --- Case 3:
+    ! --- If surface is on a wall corner and has more than one intersection with target, but target point is not last intersection, redefine target points
+    if ( (surface_list%flux_surfaces(i_surf)%flag .eq. 1) .and. (more_than_one_target_point) ) then
+      remove_surface = .true.
+      ! --- Loop on all intersections
+      do i=1,n_int_surf_new(i_surf)
+        i_int_new = index_int_surf_new(i_surf,i)
+        ! --- Find the target intersection (ie. the one on the same side LowerLeft/LowerRight/UpperLeft/UpperRight)
+        do j=1,n_int_surf(i_surf)
+	  i_int = index_int_surf(i_surf,j)
+	  if (index_target(i_int,4) .eq. index_target_new(i_int_new,4)) exit
+        enddo
+        n_pieces = surface_list%flux_surfaces(i_surf)%n_pieces
+	index_min     = min(index_target    (i_int    ,2),n_pieces-index_target    (i_int    ,2))
+        index_min_new = min(index_target_new(i_int_new,2),n_pieces-index_target_new(i_int_new,2))
+        ! --- Check if there is a point that is closer to edge of surface than target point
+	if (index_min_new .lt. index_min) then
+          remove_surface = .false.
+	  exit
+	endif
+	if (index_min_new .eq. index_min) then
+	  if (index_target(i_int,2) .lt. n_pieces-index_target(i_int,2)) then
+	    i_edge = 1
+	  else
+	    i_edge = 3
+	  endif
+          i_elm = surface_list%flux_surfaces(i_surf)%elm(index_target(i_int,2))
+          ss	= surface_list%flux_surfaces(i_surf)%s(i_edge,index_target(i_int,2))
+          tt	= surface_list%flux_surfaces(i_surf)%t(i_edge,index_target(i_int,2))
+          call interp_RZ(node_list,element_list,i_elm,ss,tt,	      &
+                	 Redge,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt, &
+                	 Zedge,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt)
+	  distance     = sqrt( (R_target(i_int)    -Redge)**2.d0 + (Z_target(i_int)    -Zedge)**2.d0 )
+	  distance_new = sqrt( (R_target(i_int_new)-Redge)**2.d0 + (Z_target(i_int_new)-Zedge)**2.d0 )
+	  if (distance_new .lt. distance) then
+            remove_surface = .false.
+	    exit
+	  endif
+	endif
+      enddo
+      ! --- So we need to remove that surface (Case 2)
+      if (remove_surface) then
+        n_remove_surface = n_remove_surface + 1
+        i_remove_surface(n_remove_surface) = i_surf
+      else
+        ! --- If we keep the surface, this means we need to define a new polar coordinates region (Case 3). Flag surface for later...
+        surface_list%flux_surfaces(i_surf)%flag = 2
+      endif
+    endif
+  enddo
+  
+  ! --- Now remove the surfaces
+  do i = 1,n_remove_surface
+    i_surf = i_remove_surface(i)
+    call remove_flux_surface(surface_list, i_surf, n_grids, &
+    			     n_int_max, index_target_new,   &
+    			     n_surf_max, n_int_surf_new, index_int_surf_new)
+    ! --- Need to update the remove_surface array
+    do j=i+1,n_remove_surface
+      i_remove_surface(j) = i_remove_surface(j) - 1
+    enddo
+  enddo
+  
+  ! --- Fill up target arrays without the points of surfaces that were removed
+  n_int_tmp = 0
+  do i_surf = 1,surface_list%n_psi
+    do i=1,n_int_surf_new(i_surf)
+      i_int_new = index_int_surf_new(i_surf,i)
+      n_int_tmp = n_int_tmp + 1
+      R_int_tmp(n_int_tmp)       = R_target_new(i_int_new)
+      Z_int_tmp(n_int_tmp)       = Z_target_new(i_int_new)
+      index_int_tmp(n_int_tmp,:) = index_target_new(i_int_new,:)
+      index_int_surf_new(i_surf,i) = n_int_tmp
+    enddo
+  enddo
+  
+  ! --- And copy into array that is sent back to main program
+  do i=1,n_int_tmp
+    R_target(i)       = R_int_tmp(i)	  
+    Z_target(i)       = Z_int_tmp(i)	  
+    index_target(i,:) = index_int_tmp(i,:)
+  enddo
+  n_target = n_int_tmp
+
+  ! --- Consistency check
+  do i_surf = 1,surface_list%n_psi
+    if ( (n_int_surf_new(i_surf) .gt. 2) .and. (surface_list%flux_surfaces(i_surf)%flag .ne. 2) ) then
+      write(*,*)'Warning! Found more than 2 target points on surface',i_surf
+      write(*,*)'This surface is not flagged for a new polar coords region.'
+      write(*,*)'Something must be wrong, please turn debug flag on and check plots...'
+    endif
+  enddo
+  
+  ! --- Print plot file    
+  if (debug) then
+    filename = 'plot_removed_flux_surfaces.py'
+    write(*,*)'number of target intersections found after removing obsolete surfaces:',n_target_new
+    call print_py_plot_prepare_plot(filename)
+    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_wall(filename)
+    call print_py_plot_points(filename,n_target_new,R_target_new,Z_target_new)
     call print_py_plot_finish_plot(filename)
   endif
   
@@ -668,15 +944,29 @@ end subroutine redefine_flux_values
   
   
   
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, &
                             R_xpoint,Z_xpoint,psi_xpoint, Z_axis,psi_axis, i_wall, &
                             n_int_max, n_target, R_target, Z_target, index_target, &
 			    n_surf_max, n_int_surf, index_int_surf)
-  !------------------------------------------------------------------------
-  ! subroutine redefines the flux values of the flux surfaces to add values
-  ! for the wall corners inside the grid
-  !------------------------------------------------------------------------
+  !-------------------------------------------------------------------------------
+  ! subroutine adds a flux surface for a given wall corner with wall index i_wall
+  !-------------------------------------------------------------------------------
   
   use tr_module 
   use data_structure
@@ -704,7 +994,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   real*8			:: psi_values_tmp(n_surf_max)
   integer			:: n_int_surf_tmp(n_surf_max) ! number of intersections for each surface
   integer			:: index_int_surf_tmp(n_surf_max,n_int_max) ! index of intersections on surface
-  integer			:: i, j, i_surf, i_int, i_add, istart, iend, indent, ifail
+  integer			:: i, j, i_surf, i_int, i_add, istart, iend, indent, ifail, save_piece
   integer			:: n_flux,      n_open
   integer			:: n_outer,     n_inner
   integer			:: n_private,   n_up_priv 
@@ -832,6 +1122,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   do i_surf=1,i_add-1
     ! --- Copy surface
     surface_list_tmp%psi_values(i_surf)				= surface_list%psi_values(i_surf)
+    surface_list_tmp%flux_surfaces(i_surf)%flag			= surface_list%flux_surfaces(i_surf)%flag
     surface_list_tmp%flux_surfaces(i_surf)%psi			= surface_list%flux_surfaces(i_surf)%psi
     surface_list_tmp%flux_surfaces(i_surf)%n_pieces		= surface_list%flux_surfaces(i_surf)%n_pieces	
     surface_list_tmp%flux_surfaces(i_surf)%n_parts		= surface_list%flux_surfaces(i_surf)%n_parts	
@@ -852,6 +1143,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   do i_surf=i_add,surface_list%n_psi
     ! --- Copy surface
     surface_list_tmp%psi_values(i_surf+1)			= surface_list%psi_values(i_surf)
+    surface_list_tmp%flux_surfaces(i_surf+1)%flag		= surface_list%flux_surfaces(i_surf)%flag
     surface_list_tmp%flux_surfaces(i_surf+1)%psi		= surface_list%flux_surfaces(i_surf)%psi
     surface_list_tmp%flux_surfaces(i_surf+1)%n_pieces		= surface_list%flux_surfaces(i_surf)%n_pieces	
     surface_list_tmp%flux_surfaces(i_surf+1)%n_parts		= surface_list%flux_surfaces(i_surf)%n_parts	
@@ -870,6 +1162,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   
   ! --- Copy added surface
   surface_list_tmp%psi_values(i_add)				= surface_list_single%psi_values(1)
+  surface_list_tmp%flux_surfaces(i_add)%flag		  	= 1
   surface_list_tmp%flux_surfaces(i_add)%psi		  	= surface_list_single%flux_surfaces(1)%psi
   surface_list_tmp%flux_surfaces(i_add)%n_pieces		= surface_list_single%flux_surfaces(1)%n_pieces   
   surface_list_tmp%flux_surfaces(i_add)%n_parts		  	= surface_list_single%flux_surfaces(1)%n_parts    
@@ -878,12 +1171,14 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
     surface_list_tmp%flux_surfaces(i_add)%elm(j)		= surface_list_single%flux_surfaces(1)%elm(j)
     surface_list_tmp%flux_surfaces(i_add)%s(:,j)		= surface_list_single%flux_surfaces(1)%s(:,j)
     surface_list_tmp%flux_surfaces(i_add)%t(:,j)		= surface_list_single%flux_surfaces(1)%t(:,j)
+    ! --- Need to find the surface piece on which the target point lies. Find corresponding i_elm
+    if (surface_list_single%flux_surfaces(1)%elm(j) .eq. i_elm_out) save_piece = j
   enddo
   n_target = n_target + 1
   R_target(n_target) = R_out
   Z_target(n_target) = Z_out
   index_target(n_target,1) = i_add
-  index_target(n_target,2) = 0 ! Hopefully we will not need the piece index later, I hope...
+  index_target(n_target,2) = save_piece
   index_target(n_target,3) = i_wall
   if (Z_target(n_target) .lt. Z_axis) then
     if (R_target(n_target) .lt. R_xpoint(1)) then
@@ -911,6 +1206,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   do i_surf=1,surface_list_tmp%n_psi
     ! --- Copy surface
     surface_list%psi_values(i_surf)				= surface_list_tmp%psi_values(i_surf)
+    surface_list%flux_surfaces(i_surf)%flag			= surface_list_tmp%flux_surfaces(i_surf)%flag
     surface_list%flux_surfaces(i_surf)%psi			= surface_list_tmp%flux_surfaces(i_surf)%psi
     surface_list%flux_surfaces(i_surf)%n_pieces			= surface_list_tmp%flux_surfaces(i_surf)%n_pieces       
     surface_list%flux_surfaces(i_surf)%n_parts			= surface_list_tmp%flux_surfaces(i_surf)%n_parts        
@@ -949,4 +1245,131 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   
   return
 end subroutine add_flux_surface
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+subroutine remove_flux_surface(surface_list, i_remove, n_grids,  &
+                               n_int_max, index_target,          &
+			       n_surf_max, n_int_surf, index_int_surf)
+  !--------------------------------------------------------------------------------------------------------
+  ! subroutine removes a flux surface and its intersections with wall for a corresponding index i_remove
+  !--------------------------------------------------------------------------------------------------------
+  
+  use tr_module 
+  use data_structure
+  use grid_xpoint_data
+  use phys_module, only : n_limiter, R_limiter, Z_limiter
+  
+  implicit none
+  
+  ! --- Routine parameters
+  type (type_surface_list), intent(inout)	:: surface_list
+  integer,		    intent(inout)	:: i_remove, n_grids(10)
+  integer,		    intent(inout)	:: n_int_max, index_target(n_int_max,4)
+  integer,                  intent(inout)	:: n_surf_max
+  integer,                  intent(inout)	:: n_int_surf(n_surf_max) ! number of intersections for each surface
+  integer,                  intent(inout)	:: index_int_surf(n_surf_max,n_int_max) ! index of intersections on surface
+  
+  ! --- local variables
+  integer			:: i, j, i_surf, i_int
+  integer			:: n_min, n_max
+  integer			:: n_flux,      n_open
+  integer			:: n_outer,     n_inner
+  integer			:: n_private,   n_up_priv 
+  integer			:: n_leg,       n_up_leg  
+  integer			:: n_target_tmp, index_target_tmp(n_int_max,4)
+  real*8			:: R_target_tmp(n_int_max), Z_target_tmp(n_int_max)
+  real*8			:: psi
+  integer			:: location
+  
+  
+  write(*,*) '*************************************************'
+  write(*,*) '* X-point grid : Removing Flux Surface ',i_remove
+  write(*,*) '*************************************************'
+  
+  ! --- Grid values
+  n_flux    = n_grids(1)
+  n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
+  n_private = n_grids(6); n_up_priv = n_grids(7)
+  n_leg     = n_grids(8); n_up_leg  = n_grids(9)
+
+  ! --- Overwrite surfaces from i_remove up to last surface
+  do i_surf=i_remove+1,surface_list%n_psi
+    ! --- Copy surface
+    surface_list%psi_values(i_surf-1)				= surface_list%psi_values(i_surf)
+    surface_list%flux_surfaces(i_surf-1)%flag			= surface_list%flux_surfaces(i_surf)%flag
+    surface_list%flux_surfaces(i_surf-1)%psi			= surface_list%flux_surfaces(i_surf)%psi
+    surface_list%flux_surfaces(i_surf-1)%n_pieces		= surface_list%flux_surfaces(i_surf)%n_pieces	
+    surface_list%flux_surfaces(i_surf-1)%n_parts		= surface_list%flux_surfaces(i_surf)%n_parts	
+    surface_list%flux_surfaces(i_surf-1)%parts_index(:)		= surface_list%flux_surfaces(i_surf)%parts_index(:)
+    do j=1,surface_list%flux_surfaces(i_surf)%n_pieces
+      surface_list%flux_surfaces(i_surf-1)%elm(j) 		= surface_list%flux_surfaces(i_surf)%elm(j)
+      surface_list%flux_surfaces(i_surf-1)%s(:,j) 		= surface_list%flux_surfaces(i_surf)%s(:,j)
+      surface_list%flux_surfaces(i_surf-1)%t(:,j) 		= surface_list%flux_surfaces(i_surf)%t(:,j)
+    enddo
+    ! --- Copy intersections indexes
+    do j=1,n_int_surf(i_surf)
+      i_int = index_int_surf(i_surf,j)
+      index_int_surf(i_surf-1,j) = i_int
+      index_target(i_int,1) = i_surf-1
+    enddo
+    n_int_surf(i_surf-1) = n_int_surf(i_surf)
+  enddo
+  
+  ! --- The grid values need to be updated after we added flux surfaces
+  
+  ! --- Upper private
+  n_min = n_flux+n_open+n_outer+n_inner+n_private
+  n_max = n_flux+n_open+n_outer+n_inner+n_private+n_up_priv
+  if ( (n_min .lt. i_remove) .and. (i_remove .lt. n_max) ) location = upper_private
+  
+  ! --- Lower private
+  n_min = n_flux+n_open+n_outer+n_inner
+  n_max = n_flux+n_open+n_outer+n_inner+n_private
+  if ( (n_min .lt. i_remove) .and. (i_remove .lt. n_max) ) location = private
+  
+  ! --- Inner
+  n_min = n_flux+n_open+n_outer
+  n_max = n_flux+n_open+n_outer+n_inner
+  if ( (n_min .lt. i_remove) .and. (i_remove .lt. n_max) ) location = inner
+  
+  ! --- Outer
+  n_min = n_flux+n_open
+  n_max = n_flux+n_open+n_outer
+  if ( (n_min .lt. i_remove) .and. (i_remove .lt. n_max) ) location = outer
+  
+  ! --- Open/sandwich
+  n_min = n_flux
+  n_max = n_flux+n_open
+  if ( (n_min .lt. i_remove) .and. (i_remove .lt. n_max) ) location = SOL
+  
+  ! --- Remove the appropriate one
+  if (location .eq. upper_private)	n_up_priv = n_up_priv - 1
+  if (location .eq. private)		n_private = n_private - 1
+  if (location .eq. inner)		n_inner   = n_inner   - 1
+  if (location .eq. outer)		n_outer   = n_outer   - 1
+  if (location .eq. SOL)		n_open    = n_open    - 1
+  
+  ! --- Copy back into array
+  n_grids(1) = n_flux	
+  n_grids(3) = n_open	; n_grids(4) = n_outer  ; n_grids(5) = n_inner
+  n_grids(6) = n_private; n_grids(7) = n_up_priv
+  n_grids(8) = n_leg	; n_grids(9) = n_up_leg 
+  
+  return
+end subroutine remove_flux_surface
   

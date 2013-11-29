@@ -1,7 +1,7 @@
 !> This routine finds the intersections of a flux surface with the target (ie. wall below Xpoint)
-subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts, &
-                                    psi_bnd, R_axis, Z_axis, R_xpoint, Z_xpoint,  &
-				    n_int_max, n_int, R_int, Z_int, index_int,    &
+subroutine get_target_flux_surfaces(node_list, element_list, surface_list, ignore, stpts, &
+                                    psi_bnd, R_axis, Z_axis, R_xpoint, Z_xpoint,          &
+				    n_int_max, n_int, R_int, Z_int, index_int,            &
 				    n_int_surf, index_int_surf, ifail)
 
 
@@ -17,6 +17,7 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts
   type (type_element_list),     intent(in)	:: element_list
   type (type_surface_list),     intent(inout)	:: surface_list
   type (type_strategic_points), intent(in)	:: stpts
+  logical,                      intent(in)	:: ignore(surface_list%n_psi)
   integer,                      intent(in)	:: n_int_max
   integer,                      intent(inout)	:: n_int, ifail
   real*8,                       intent(inout)	:: R_int(n_int_max), Z_int(n_int_max)
@@ -57,6 +58,7 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts
   
   ! --- First get all intersections with wall
   do i_surf = 1,surface_list%n_psi
+    if (ignore(i_surf)) cycle
     call find_wall_crossings_with_flux_surface(node_list, element_list, surface_list%flux_surfaces(i_surf), target_only, &
                                                n_int_max, n_int_tmp, R_int_tmp, Z_int_tmp, index_int_tmp, ifail)
 
@@ -89,11 +91,11 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts
 
   ! --- Copy back into temporary array
   do i=1,n_int
-      R_int_tmp(i) = R_int(i)
-      Z_int_tmp(i) = Z_int(i)
-      index_int_tmp(i,1) = index_int(i,1)
-      index_int_tmp(i,2) = index_int(i,2)
-      index_int_tmp(i,3) = index_int(i,3)
+    R_int_tmp(i) = R_int(i)
+    Z_int_tmp(i) = Z_int(i)
+    index_int_tmp(i,1) = index_int(i,1)
+    index_int_tmp(i,2) = index_int(i,2)
+    index_int_tmp(i,3) = index_int(i,3)
   enddo
   n_int_tmp = n_int
   
@@ -148,15 +150,15 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts
       endif
     endif
   enddo
-  
+ 
   ! --- Copy back into temporary array
   do i=1,n_int
-      R_int_tmp(i) = R_int(i)
-      Z_int_tmp(i) = Z_int(i)
-      index_int_tmp(i,1) = index_int(i,1)
-      index_int_tmp(i,2) = index_int(i,2)
-      index_int_tmp(i,3) = index_int(i,3)
-      index_int_tmp(i,4) = index_int(i,4)
+    R_int_tmp(i) = R_int(i)
+    Z_int_tmp(i) = Z_int(i)
+    index_int_tmp(i,1) = index_int(i,1)
+    index_int_tmp(i,2) = index_int(i,2)
+    index_int_tmp(i,3) = index_int(i,3)
+    index_int_tmp(i,4) = index_int(i,4)
   enddo
   n_int_tmp = n_int
     
@@ -173,6 +175,7 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts
   ! --- Loop on all surfaces to get extrema intersections only (ie. target points)
   n_int = 0
   do i_surf=1,surface_list%n_psi
+    if (ignore(i_surf)) cycle
     max_LowerLeft  = 10000
     max_LowerRight = 10000
     max_UpperLeft  = 10000
@@ -217,19 +220,17 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, stpts
       endif
     enddo
     ! --- Now that we found extrema, save points
-    do i=1,n_int_surf(i_surf)
-      do j=1,4
-        if (save_point(j)) then
-          n_int = n_int + 1
-          i_int = index_int_surf(i_surf,i_save(j))
-          R_int(n_int) = R_int_tmp(i_int)
-          Z_int(n_int) = Z_int_tmp(i_int)
-          index_int(n_int,1) = index_int_tmp(i_int,1)
-          index_int(n_int,2) = index_int_tmp(i_int,2)
-          index_int(n_int,3) = index_int_tmp(i_int,3)
-          index_int(n_int,4) = index_int_tmp(i_int,4)
-        endif
-      enddo
+    do j=1,4
+      if (save_point(j)) then
+    	n_int = n_int + 1
+    	i_int = index_int_surf(i_surf,i_save(j))
+    	R_int(n_int) = R_int_tmp(i_int)
+    	Z_int(n_int) = Z_int_tmp(i_int)
+    	index_int(n_int,1) = index_int_tmp(i_int,1)
+    	index_int(n_int,2) = index_int_tmp(i_int,2)
+    	index_int(n_int,3) = index_int_tmp(i_int,3)
+    	index_int(n_int,4) = index_int_tmp(i_int,4)
+      endif
     enddo
   enddo
   

@@ -19,21 +19,23 @@ program jorek2_stan
   type (type_strategic_points) , pointer     :: stpts
   type (type_new_points)       , pointer     :: nwpts
 
-  real*8              :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
-  real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
-  integer             :: n_psi
-  integer             :: n_int_max
-  integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), ifail
-  integer             :: my_id
-  real*8              :: psi_bnd, psi_bnd2
-  real*8              :: sigmas(16)
-  integer             :: n_grids(10)
+  real*8			:: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
+  real*8			:: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
+  integer			:: n_psi
+  integer			:: n_int_max
+  integer			:: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), ifail
+  integer			:: my_id
+  real*8			:: psi_bnd, psi_bnd2
+  real*8			:: sigmas(16)
+  integer			:: n_grids(10)
 
   integer			:: i_int, i_surf, i, j, k_tor, ierr
   integer			:: n_target
   integer, allocatable		:: index_target(:,:)
   real*8,  allocatable		:: R_target(:), Z_target(:)
   integer, allocatable		:: n_surf_max, n_int_surf(:), index_int_surf(:,:)
+  logical, allocatable		:: ignore(:)
+  logical, parameter		:: wall_grid = .true.
   
   ! --- Initialise input parameters and read the input namelist.
   my_id = 0
@@ -144,20 +146,28 @@ program jorek2_stan
 
   if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 
-  ! --- Record psi-values of flux-surfaces individually
-  do i=1,flux_list%n_psi
-    flux_list%flux_surfaces(i)%psi = flux_list%psi_values(i)
-  enddo
   
-  ! --- Clean up surfaces (eg. remove private part if surface is meant for core region)
-  call clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint)
+  !-------------------------------------------------------------------------------------------!
+  !---------- Clean up and reorder surfaces if we need to cut the grid at the wall -----------!
+  !-------------------------------------------------------------------------------------------!
+
+  if (wall_grid) then
+    ! --- Record psi-values of flux-surfaces individually
+    do i=1,flux_list%n_psi
+      flux_list%flux_surfaces(i)%psi = flux_list%psi_values(i)
+    enddo
+    
+    ! --- Clean up surfaces (eg. remove private part if surface is meant for core region)
+    call clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint)
+    
+    ! --- Order flux surfaces
+    call reorder_flux_surfaces(node_list, element_list, flux_list, ierr)
+    if (ierr .ne. 0) write(*,*)'Warning! reorder_flux_surfaces failed:',ierr
+    
+    ! --- Get high resolution wall
+    !call get_high_resolution_wall(node_list, element_list)
+  endif
   
-  ! --- Order flux surfaces
-  call reorder_flux_surfaces(node_list, element_list, flux_list, ierr)
-  if (ierr .ne. 0) write(*,*)'Warning! reorder_flux_surfaces failed:',ierr
-  
-  ! --- Get high resolution wall
-  !call get_high_resolution_wall(node_list, element_list)
   
   !-------------------------------------------------------------------------------------------!
   !-------- Find all strategic points (leg corners, strike points and private middles) -------!
@@ -168,32 +178,55 @@ program jorek2_stan
                              R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
 
 
-  ! --- Allocate intersection arrays, assuming maximum 20 intersections per surface
-  n_int_max = 20*flux_list%n_psi
-  allocate(R_target(n_int_max), Z_target(n_int_max), index_target(n_int_max,4))
-  ! --- Note, use 10*flux_list%n_psi because we will add more flux surfaces later
-  n_surf_max = 10*flux_list%n_psi
-  allocate(n_int_surf(n_surf_max), index_int_surf(n_surf_max,n_int_max))
+  !-------------------------------------------------------------------------------------------!
+  !------ Find target intersections with flux surfaces and add surfaces at target corners ----!
+  !-------------------------------------------------------------------------------------------!
+
+  if (wall_grid) then
+    ! --- Allocate intersection arrays, assuming maximum 20 intersections per surface
+    n_int_max = 20*flux_list%n_psi
+    allocate(R_target(n_int_max), Z_target(n_int_max), index_target(n_int_max,4))
+    ! --- Note, use 10*flux_list%n_psi because we will add more flux surfaces later
+    n_surf_max = 10*flux_list%n_psi
+    allocate(n_int_surf(n_surf_max), index_int_surf(n_surf_max,n_int_max))
+    
+    ! --- Get flux surfaces that hit the target
+    allocate(ignore(n_surf_max))
+    do i_surf=1,flux_list%n_psi
+      ignore(i_surf) = .false.
+      if (i_surf .lt. n_flux) ignore(i_surf) = .true.
+    enddo
+    call get_target_flux_surfaces(node_list, element_list, flux_list, ignore, stpts,	 &
+    				  psi_bnd, R_axis, Z_axis, R_xpoint, Z_xpoint,  	 &
+  	  			  n_int_max, n_target, R_target, Z_target, index_target, &
+  	  			  n_int_surf, index_int_surf, ifail)
+    
+    ! --- For each wall corner on the target, add a flux surface, and remove obsolete surfaces (see routine or documentation)
+    call redefine_flux_values(node_list, element_list, flux_list, xcase, n_grids,    &
+    			      R_xpoint, Z_xpoint, psi_xpoint, Z_axis, psi_axis,      &
+    			      n_int_max, n_target, R_target, Z_target, index_target, &
+  	  		      n_surf_max, n_int_surf, index_int_surf)
+  endif
   
-  ! --- Get flux surfaces that hit the target
-  call get_target_flux_surfaces(node_list, element_list, flux_list, stpts,             &
-                                psi_bnd, R_axis, Z_axis, R_xpoint, Z_xpoint,           &
-				n_int_max, n_target, R_target, Z_target, index_target, &
-				n_int_surf, index_int_surf, ifail)
   
-  ! --- For each wall corner on the target, add a flux surface
-  call redefine_flux_values(node_list, element_list, flux_list, xcase, n_grids,    &
-                            R_xpoint, Z_xpoint, psi_xpoint, Z_axis, psi_axis,	   &
-                            n_int_max, n_target, R_target, Z_target, index_target, &
-			    n_surf_max, n_int_surf, index_int_surf)
-  
-  
+  !-------------------------------------------------------------------------------------------!
+  !---------------------- Find extrapolation points for the polar coordinates ----------------!
+  !-------------------------------------------------------------------------------------------!
+
   ! --- Get intinerary points for the polar lines of the central part of the grid (everything except legs)
   call find_extrapolation_points_central_part(node_list, element_list, flux_list,    &
                                               xcase, R_xpoint, Z_xpoint, psi_xpoint, &
   					      n_grids, stpts, sigmas, nwpts)
   
+  ! --- Get intinerary points for the polar lines of the leg parts of the grid
+  !call find_extrapolation_points_leg_parts(node_list, element_list, flux_list,    &
+  !                                         xcase, R_xpoint, Z_xpoint, psi_xpoint, &
+  !					   n_grids, stpts, sigmas, nwpts)
+
+
   
+  
+  deallocate(ignore)
   deallocate(flux_list%psi_values)
   deallocate(R_target, Z_target, index_target)
   deallocate(n_int_surf,index_int_surf)

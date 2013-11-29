@@ -81,6 +81,7 @@ module data_structure
   end type type_bnd_node_list
 
   type type_surface                               !< type definition for a fluxsurface (in 2D)
+    integer :: flag                           	  !< Flag surface if you want (used for wall-grid)
     real*8  :: psi                           	  !< psi-value of the surface
     integer :: n_pieces                           !< total number of pieces (each piece is a 3rd order polynomial)
     integer :: n_parts                            !< number of surface parts (eg. one core surf + on private surf)

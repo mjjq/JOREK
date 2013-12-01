@@ -1,4 +1,8 @@
-DIR=grids
+DIR = grids
+
+ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
+	$(DIR)/mod_boundary.f90
+
 JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    \
 	$(DIR)/define_boundary.f90 	    \
 	$(DIR)/grid_bezier_square.f90 	    \
@@ -8,11 +12,4 @@ JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    \
 	$(DIR)/grid_polar_bezier.f90 	    \
 	$(DIR)/grid_xpoint.f90 		    \
         $(DIR)/grid_xpoint_wall.f90         \
-	$(DIR)/mod_grid_xpoint_data.f90	    \
-	$(DIR)/mod_boundary.f90
-
-JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC) \
-	$(DIR)/mod_boundary.f90
-
-JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) \
-	$(DIR)/mod_boundary.f90
+	$(DIR)/mod_grid_xpoint_data.f90

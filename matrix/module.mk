@@ -1,5 +1,8 @@
 DIR = matrix
 
+ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
+	$(DIR)/mod_global_distributed_matrix.f90
+
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC) 			\
 	$(DIR)/coicsr.f90 				\
 	$(DIR)/construct_matrix.f90 			\
@@ -9,39 +12,5 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC) 			\
 	$(DIR)/scale_global_matrix.f90 			\
 	$(DIR)/sort_I_mrgrnk.f90 			\
 	$(DIR)/global_matrix_structure.f90		\
-	$(DIR)/mod_global_distributed_matrix.f90	\
 	$(DIR)/ch_nod_rhs_elm.f90			\
 	$(DIR)/ch_node_struct.f90
-	
-JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC) 			\
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC) 		\
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC) 		\
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC) 		\
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)               \
-        $(DIR)/mod_global_distributed_matrix.f90
-
-JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)			\
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JORDEL_SRC := $(JORDEL_SRC)                       \
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JORPOL_SRC := $(JORPOL_SRC)                       \
-	$(DIR)/mod_global_distributed_matrix.f90
-
-ENBIGGEN_SRC := $(ENBIGGEN_SRC)                       \
-	$(DIR)/mod_global_distributed_matrix.f90
-
-JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)       \
-	$(DIR)/mod_global_distributed_matrix.f90

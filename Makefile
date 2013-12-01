@@ -38,7 +38,8 @@ VPATH = $(MAIN_MODEL_DIR) $(MODEL_DIR) $(DATATYPES_DIR) $(SOLVERS_DIR)
 
 .SUFFIXES: .o .f90 .f .c
 
-DEFINES := $(DEFINES) -DJOREK_MODEL=`echo $(MODEL) | sed -e 's/model//'`
+MODEL_NUMBER = `echo $(MODEL) | sed -e 's/model//'`
+DEFINES := $(DEFINES) -DJOREK_MODEL=$(MODEL_NUMBER)
 
 ifeq (model710, $(MODEL))
   DEFINES  := $(DEFINES) -Dfullmhd
@@ -98,24 +99,26 @@ else
   INCLUDES := $(INCLUDES) $(DEFINES)
 endif
 
-JOREK2_MAIN_SRC         	= jorek2_main.f90 $(PPPSRC)
-JOREK2_POINCARE_SRC     	= $(PPPSRC)
-JOREK2_CONNECTION2_SRC  	= $(PPPSRC)
-JOREK2_STRIKES_SRC		= $(PPPSRC)
-ENBIGGEN_SRC            	= $(PPPSRC)
-JORDEL_SRC              	= $(PPPSRC)
-JORPOL_SRC              	= $(PPPSRC)
-JOREK2VTK_SRC           	= $(PPPSRC)
-JOREK2FLVTK_SRC	        	= $(PPPSRC)
-JOREK2VTK3D_SRC         	= $(PPPSRC)
-JOREK2_FOUR_SRC         	= $(PPPSRC)
-JOREK2_DIAGNO_SRC       	= $(PPPSRC) 
-JOREK2_TARGET2VTK_SRC   	= $(PPPSRC)
-JOREK2_POWERS           	= $(PPPSRC)
-JOREK2_IMPORT_PERTURBATION_SRC	= $(PPPSRC)
-
 # include the description for each module
 include $(patsubst %,%/module.mk,$(DIRS))
+
+JOREK2_MAIN_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC) jorek2_main.f90
+JOREK2_POINCARE_SRC     	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_POSTPROC_SRC     	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_POVRAY_SRC     		+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_CONNECTION2_SRC  	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_STRIKES_SRC		+= $(ALL_BINARIES_SRC) $(PPPSRC)
+ENBIGGEN_SRC            	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JORDEL_SRC              	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JORPOL_SRC              	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2VTK_SRC           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2FLVTK_SRC	        	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2VTK3D_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_FOUR_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_DIAGNO_SRC       	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_TARGET2VTK_SRC   	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_POWERS           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK2_IMPORT_PERTURBATION_SRC	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
           $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC) $(JORDEL_SRC) $(JORPOL_SRC) $(ENBIGGEN_SRC)       \
@@ -123,11 +126,9 @@ SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
-
 JOREK2_MAIN_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) 	\
 			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))		\
 			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_MAIN_SRC)))
-
 
 JOREK2_POINCARE_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SRC))) 	\
 			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POINCARE_SRC)))	\

@@ -32,6 +32,7 @@ program JOREK2
   use global_distributed_matrix
   use nodes_elements
   use pellet_module
+  use equil_info
   use boundary,            only: boundary_from_grid
   use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
@@ -131,6 +132,7 @@ program JOREK2
   end interface
   
   type (type_surface_list) :: surface_list, flux_list
+  type (t_equil_state)     :: equil_state
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
 #ifdef JECCD
   real*8                   :: A_tem(n_tor), A_den(n_tor), A_jen(n_tor), A_jec(n_tor)
@@ -663,7 +665,12 @@ required = 0
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
+  
+  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
+  if ( my_id == 0 ) then
+    call print_equil_state(equil_state, .true.)
+    call save_special_points(equil_state, 'special_equilibrium_points.dat', .false., ierr)
+  end if
 
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *
@@ -674,9 +681,7 @@ required = 0
   
   if (nstep > 0) then
 
-!    call find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i_elm_axis, s_axis,  &
-!      t_axis, ifail)
-    
+    !### THINGS LIKE THIS SHOULD BE REPLACED BY update_equil_state in the future:
     psi_bnd = 0.d0
     if (xpoint) then
       call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
@@ -689,9 +694,8 @@ required = 0
       call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
-
-
-
+    !###
+    
     !*******************************************************
     !*      create groups /communicators		   *
     !* MPI_COMM_N      : group for each harmonic	   *
@@ -852,22 +856,26 @@ required = 0
     ! --- n_plane, n_var have to remain the same until the end of the program.
     call new_thread_buffers()
 
-    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+    call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
     psi_bnd = 0.d0
     if (xpoint) then
-      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
+      call find_xpoint(99,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
         i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
       psi_bnd  = psi_xpoint(1)
       if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
         psi_bnd = psi_xpoint(2)
       endif
     else
-      call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
-  
-    if (bootstrap) then	     
+    
+    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
+    if ( my_id == 0 ) call print_equil_state(equil_state, .false.)
+    psi_bnd = equil_state%psi_bnd
+    
+    if (bootstrap) then
       flux_list%n_psi = 1
       call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
       flux_list%psi_values(1) = psi_bnd

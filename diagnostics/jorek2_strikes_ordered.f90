@@ -99,8 +99,6 @@ psi_theta = .false.
 n_turns = 1000 !500             ! number of toroidal turns to follow a fieldline
 n_phi   = 1000 !1000            ! number of steps per toroidal turn
 
-n_div = 5000
-
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
 open(42, file='connecvtk.nml', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
@@ -274,6 +272,15 @@ tol       = 1.d-6!1.e-6
 
 i_var_psi = 1                                  ! the index of the magnetic flux variable
 
+open(newunit=f_divstart, file='div_start.dat',status='old',action='read')
+n_div = countlines(f_divstart)
+ALLOCATE(div_start(n_div), divpos(n_div))
+do i=1,n_div
+   read(f_divstart, *) div_start(i)
+end do
+divpos = divdist2divpos(div_start)
+close(f_divstart)
+
 n_lines = n_div * n_phi    ! number of starting points
 
 allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
@@ -341,19 +348,6 @@ write(*,*) my_id, 'k_list =', k_list
 ikeep = 0
 
 allocate(RZkeep(2,1000000),scalars(1000000,n_scalars))
-
-ALLOCATE(div_start(n_div), divpos(n_div))
-do i=1,n_div
-   div_start(i) = (i/3.0)/n_div
-enddo
-divpos = divdist2divpos(div_start)
-
-if (my_id .eq. 0 ) then
-   open(newunit=f_divstart, file='div_start.dat', action='write', status='replace')
-   do i=1,n_div
-      write(f_divstart, *) div_start(i)
-   end do
-end if
 
 
 if (my_id .eq. 0 ) then
@@ -1239,6 +1233,21 @@ contains
        stop 'edge element using wrong nodes?'
     end if
   end function reversed_edge
+
+  function countlines(fd)
+    integer countlines
+    integer, intent(in) :: fd
+  
+    integer i
+
+    i=1
+    DO
+       READ(fd,'()', END=100)
+       i=i+1
+    ENDDO
+100 REWIND(fd)
+    countlines = i-1
+  end function countlines
 end program jorek2_connection2
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)

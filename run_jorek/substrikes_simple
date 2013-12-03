@@ -444,6 +444,17 @@ else
     echo " using old namelist file connecvtk.nml "
 fi
 
+if [ ! -e ${RESDIR}/div_start.dat ]; then
+    if [ ! -e ${WKDIR}/div_start.dat ]; then
+	echo " ERROR: input file div_start.dat does not exist, exiting ";
+	exit 1
+    else
+	cp ${WKDIR}/div_start.dat ${RESDIR}/
+    fi
+else
+    echo " using old input file div_start.dat "
+fi
+
 # Execution control
 # -----------------
 echo " ============> writing output in file    = " ${CASE}/${STRIKEXECNAMEOUT}.out

@@ -153,8 +153,8 @@ helios*)
 # batch control
 # -------------
 # mpi procs per nodes
-MPIPROCS=1
-NTHREAD=16
+MPIPROCS=16
+NTHREAD=1
 NNODES=4
 WALLTIME=24:00:00
 ((NLIM=MPIPROCS*NTHREAD))

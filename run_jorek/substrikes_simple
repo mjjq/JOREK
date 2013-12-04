@@ -469,8 +469,8 @@ case ${ARCH} in
 nfs*)
 
 JOREKENV="source /data/JOREK/jorek_env/jorek_env.sh"
-CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
-CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${STRIKEXECNAME} < ${RESDIR}/${NMLNAME} >> ${RESDIR}/${STRIKEXECNAMEOUT}.out"
+CMD_SUB="qsub go_${BASEDATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
 # batch job creation
@@ -554,16 +554,16 @@ if [ $NNODES -eq 0 ]; then
 fi
 echo " NPES " $NPES " NTHREADS " $NTHREAD "MPIPROCS " $MPIPROCS " NNODES " $NNODES
 
-CMD_MPIRUN="mpirun -np ${NPES} ${RESDIR}/${STRIKEXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${STRIKEXECNAMEOUT}___${out_increment}.out"   
-CMD_SUB="sbatch -A JOREK ./go_${DATANAME}.cmd"
+CMD_MPIRUN="mpirun -np ${NPES} ${RESDIR}/${STRIKEXECNAME} < ${RESDIR}/${NMLNAME} >> ${RESDIR}/${STRIKEXECNAMEOUT}.out"   
+CMD_SUB="sbatch -A JOREK ./go_${BASEDATANAME}.cmd"
 #CMD_SUB="sbatch -A F4E_EU10 ./go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
 # batch job creation
 # ------------------
-cat <<EOF > go_$DATANAME.cmd
+cat <<EOF > go_$BASEDATANAME.cmd
 #!/bin/bash
-#SBATCH -J 15MA_ITER              # jobname
+#SBATCH -J ${CASENAME}              # jobname
 #SBATCH -N ${NNODES}              # number of nodes
 #SBATCH -n ${NPES}                # number of tasks
 #SBATCH -o ${CASENAME}%j.out      # strout filename (%j is jobid)
@@ -585,11 +585,11 @@ EOF
 # -----------------------------------------------------------------
 jade*)
 
-CMD_MPIRUN="mpiexec ${RESDIR}/${STRIKEXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${STRIKEXECNAME}___${out_increment}.out"
-CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_MPIRUN="mpiexec ${RESDIR}/${STRIKEXECNAME} < ${RESDIR}/${NMLNAME} >> ${RESDIR}/${STRIKEXECNAME}.out"
+CMD_SUB="qsub go_${BASEDATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
-cat <<EOF > go_$DATANAME.cmd
+cat <<EOF > go_$BASEDATANAME.cmd
 #!/bin/bash
 #PBS -N ${CASENAME}
 #PBS -V
@@ -614,13 +614,13 @@ EOF
 # -----------------------------------------------------------------
 hpcff*)
 
-CMD_MPIRUN="mpiexec -np=${NSLOTS} ${RESDIR}/${STRIKEXECNAME} < ${RESDIR}/${NMLNAME} >> ${RESDIR}/${STRIKEXECNAME}___${out_increment}.out"
-CMD_SUB="msub go_${DATANAME}.cmd"
+CMD_MPIRUN="mpiexec -np=${NSLOTS} ${RESDIR}/${STRIKEXECNAME} < ${RESDIR}/${NMLNAME} >> ${RESDIR}/${STRIKEXECNAME}.out"
+CMD_SUB="msub go_${BASEDATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
 # batch job creation
 # ------------------
-cat <<EOF > go_$DATANAME.cmd
+cat <<EOF > go_$BASEDATANAME.cmd
 #!/bin/bash
 #MSUB -N ${CASENAME}
 # nodes=Nb of nodes, ppn=process per node (max.8)

@@ -16,6 +16,7 @@ use basis_at_gaussian
 use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
+use corr_neg
 
 implicit none
 
@@ -452,14 +453,16 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
-       if ( xpoint2 .and. (T0 .lt. T_min) ) then
-         eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
-         deta_dT   = 0.d0
-         d2eta_d2T = 0.d0
-       endif
+       
+       eta_T     =   eta * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       deta_dT   = - eta * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+
+       !if ( xpoint2 .and. (T0 .lt. T_min) ) then
+        ! eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
+         !deta_dT   = 0.d0
+         !d2eta_d2T = 0.d0
+       !endif
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -468,12 +471,14 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       if ( xpoint2 .and. (T0 .lt. T_min) ) then
-         visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
-         dvisco_dT = 0.d0
-       endif
+       
+       visco_T   =   visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+
+       !if ( xpoint2 .and. (T0 .lt. T_min) ) then
+        ! visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+        ! dvisco_dT = 0.d0
+       !endif
      else
        visco_T   = visco
        dvisco_dT = 0.d0
@@ -481,16 +486,16 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent parallel heat diffusivity
      if ( ZKpar_T_dependent ) then
-       ZKpar_T   = ZK_par * (abs(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-       dZKpar_dT = ZK_par * (2.5d0)  * abs(T0)**(+1.5d0) * T_0**(-2.5d0)
+       ZKpar_T   = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+       dZKpar_dT = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
        if (ZKpar_T .gt. ZK_par_max) then
          ZKpar_T   = Zk_par_max
          dZKpar_dT = 0.d0
        endif
-       if ( xpoint2 .and. (T0 .lt. T_min) ) then
-         ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
-         dZKpar_dT = 0.d0
-       endif
+       !if ( xpoint2 .and. (T0 .lt. T_min) ) then
+        ! ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+         !dZKpar_dT = 0.d0
+       !endif
      else
        ZKpar_T   = ZK_par                                            ! parallel conductivity
        dZKpar_dT = 0.d0
@@ -512,14 +517,15 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-     if (xpoint2) then
-       if (r0 .lt. 0.d0)  then
-         D_prof  = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
-       endif
-       if (T0 .lt. 0.d0) then
-         ZK_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
-       endif
-     endif
+
+    ! if (xpoint2) then
+       !if (r0 .lt. 0.d0)  then
+        ! D_prof  = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
+       !endif
+       !if (T0 .lt. 0.d0) then
+       !  ZK_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
+      ! endif
+     !endif
      
      phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
@@ -527,25 +533,24 @@ do ms=1, n_gauss
      source_pellet = 0.d0
      source_volume = 0.d0
 
-     if (use_pellet) then
-   
-       call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-                           pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-                           x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
-                           central_density, pellet_particles, pellet_density, total_pellet_volume, &
-                           source_pellet, source_volume)
-     endif
+   !  if (use_pellet) then
+  ! 
+   !    call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+    !                       pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
+     !                      x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
+      !                     central_density, pellet_particles, pellet_density, total_pellet_volume, &
+       !                    source_pellet, source_volume)
+    ! endif
 
 
      Dn0x = D_neutral_x      
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
-     S_ion = coef_ion_1*((coef_ion_3/T0)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/T0)*exp(-coef_ion_3/T0)                       
-     S_ion_T = coef_ion_1*exp(-coef_ion_3/T0)*((coef_ion_3/T0)**0.39d0)*1/(T0*(coef_ion_2*T0+coef_ion_3)**2.0d0) &   
-             * (coef_ion_3*((coef_ion_2+1)*T0+coef_ion_3)-0.39d0*(T0*(coef_ion_2*T0+coef_ion_3)))                    
-    
-    
+     S_ion = coef_ion_1*((coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))*exp(-coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))                       
+     S_ion_T = coef_ion_1*exp(-coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))*((coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))**0.39d0)*1/(corr_neg_temp(T0,(/1.d-5,0.3/))*(coef_ion_2*corr_neg_temp(T0,(/1.d-5,0.3/))+coef_ion_3)**2.0d0) &   
+             * (coef_ion_3*((coef_ion_2+1)*corr_neg_temp(T0,(/1.d-5,0.3/))+coef_ion_3)-0.39d0*(corr_neg_temp(T0,(/1.d-5,0.3/))*(coef_ion_2*corr_neg_temp(T0,(/1.d-5,0.3/))+coef_ion_3)))                    
+
      source_mgi = 0.d0                    
      
      call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_length, &       

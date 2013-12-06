@@ -38,7 +38,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                n_pfc, n_tor_fft_thresh,                            &
+                n_pfc, tokamak_device,                              &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 tokamak_device,                                     &
                 F0, gamma_sheath, density_reflection,               &
@@ -64,7 +64,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall, wall_resistivity,                   &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
-                use_wsmp,                                           &
+                use_wsmp, n_tor_fft_thresh,                         &
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &

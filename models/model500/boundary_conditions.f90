@@ -71,7 +71,7 @@ contains
     real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
     integer :: i, in, iv, inode, k
     integer :: index_large_i, index_node, index_node2, ielm
-    integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
+    integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
     integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
     integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
@@ -265,6 +265,7 @@ contains
                             ku = 2
                             kv = 7
                             kT = 6
+                            kn = 8
 
                             if (use_murge .and. use_murge_element) then
                                call vertex_is_local(index_node, is_local)
@@ -294,6 +295,13 @@ contains
                                        &                    cnt, cnt_prod,       &
                                        &                    only_count)
 
+                                  call murge_add_one_entry( index_node, kn, in,&
+                                       &                    index_node, kn, in,&
+                                       &                    zbig, solve_only,&
+                                       &                    gmres,&
+                                       &                    cnt, cnt_prod,&
+                                       &                    only_count)
+
                                   if (.not. only_count) then
 
                                      Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
@@ -312,6 +320,8 @@ contains
                                   ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
                                   ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
                                   ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
+                                  ilarge_vn  = ijA_position - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kn-1)*n_tor + in
+
 
                                   irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
                                   jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
@@ -325,6 +335,9 @@ contains
                                   jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
                                   A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
 
+                                  irn_glob(ilarge_vn) =  n_tor * n_var * (index_node-1) + (kn-1)*n_tor + in
+                                  jcn_glob(ilarge_vn) =  n_tor * n_var * (index_node-1) + (kn-1)*n_tor + in
+                                  A_glob(ilarge_vn)   =  zbig
 
                                   if (in .eq. 1) then
                                      RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
@@ -438,6 +451,7 @@ contains
                                 !.or. (k .eq. 5) &
                                 !.or. (k .eq. 6) &
                                 !.or. (k .eq. 7) &
+                              .or. (k .eq. 8)  &
                               ) then
 
 
@@ -715,6 +729,7 @@ contains
                               .or. (k .eq. 5)    &
                               .or. (k .eq. 6)    &
                               .or. (k .eq. 7)    &
+                              .or. (k .eq. 8)    &
                               ) then
 
                             index_node = node_list%node(inode)%index(1)

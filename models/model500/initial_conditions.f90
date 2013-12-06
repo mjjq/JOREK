@@ -213,7 +213,7 @@ do i=1,node_list%n_nodes
     do in=1,n_tor
 
       T0   = node_list%node(i)%values(in,1,6)
-      node_list%node(i)%values(in,1,n_var) = direction / Btot * sqrt(GAMMA * T0)
+      node_list%node(i)%values(in,1,7) = direction / Btot * sqrt(GAMMA * T0)
 
       T0_s   = node_list%node(i)%values(in,2,6)
       node_list%node(i)%values(in,2,7) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s

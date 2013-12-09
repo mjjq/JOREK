@@ -556,13 +556,13 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
   do j=1, n_vertex_max*n_var*(n_order+1)
 
-!    call dfftw_plan_dft_r2c_1d(plan,n_plane,in_fft,out_fft,FFTW_FORWARD,FFTW_ESTIMATE)
-
     in_fft =  ELM_p(1:n_plane,i,j)
 
-!    call dfftw_execute(plan)
-    
-    call my_fft(in_fft,out_fft,n_plane)
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
+#endif
     
     do k=1,(n_tor+1)/2
 
@@ -612,8 +612,6 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
     enddo
 
-!    call dfftw_destroy_plan(plan)
-
   enddo
 
 enddo
@@ -624,13 +622,13 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
   if (maxval(abs(ELM_n(1:n_plane,i,j))) .ne. 0.d0) then
 
-!    call dfftw_plan_dft_r2c_1d(plan,n_plane,in_fft,out_fft,FFTW_FORWARD,FFTW_ESTIMATE)
-
     in_fft =  ELM_n(1:n_plane,i,j)
 
-!    call dfftw_execute(plan)
-
-    call my_fft(in_fft,out_fft,n_plane)
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
+#endif
 
     do k=1,(n_tor+1)/2
 
@@ -681,8 +679,6 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
     enddo
 
-!    call dfftw_destroy_plan(plan)
-
   endif
   enddo
 
@@ -694,14 +690,14 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
   if (maxval(abs(ELM_k(1:n_plane,i,j))) .ne. 0.d0) then
 
-!    call dfftw_plan_dft_r2c_1d(plan,n_plane,in_fft,out_fft,FFTW_FORWARD,FFTW_ESTIMATE)
-
     in_fft =  ELM_k(1:n_plane,i,j)
 
-!    call dfftw_execute(plan)
-
-    call my_fft(in_fft,out_fft,n_plane)
-
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
+#endif
+    
     do k=1,(n_tor+1)/2
 
       ik      = max(2*(k-1),1)
@@ -751,8 +747,6 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
     enddo
 
-!    call dfftw_destroy_plan(plan)
-
   endif
   enddo
 
@@ -765,14 +759,14 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
   if (maxval(abs(ELM_kn(1:n_plane,i,j))) .ne. 0.d0) then
 
-!    call dfftw_plan_dft_r2c_1d(plan,n_plane,in_fft,out_fft,FFTW_FORWARD,FFTW_ESTIMATE)
-
     in_fft =  ELM_kn(1:n_plane,i,j)
 
-!    call dfftw_execute(plan)
-
-    call my_fft(in_fft,out_fft,n_plane)
-
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
+#endif
+    
     do k=1,(n_tor+1)/2
 
       ik      = max(2*(k-1),1)
@@ -823,8 +817,6 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
     enddo
 
-!    call dfftw_destroy_plan(plan)
-
   endif
   enddo
 
@@ -834,14 +826,14 @@ ELM = 0.5d0 * ELM
 
 do j=1, n_vertex_max*n_var*(n_order+1)
 
-!  call dfftw_plan_dft_r2c_1d(plan,n_plane,in_fft,out_fft,FFTW_FORWARD,FFTW_ESTIMATE)
-
   in_fft = RHS_p(1:n_plane,j)
 
-!  call dfftw_execute(plan)
-
-  call my_fft(in_fft,out_fft,n_plane)
-
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
+#endif
+  
   index = n_tor*(j-1) + 1
 
   RHS(index) = real(out_fft(1))
@@ -855,18 +847,17 @@ do j=1, n_vertex_max*n_var*(n_order+1)
 
   enddo
 
-!  call dfftw_destroy_plan(plan)
- 
 enddo
 
 do j=1, n_vertex_max*n_var*(n_order+1)
 
-!  call dfftw_plan_dft_r2c_1d(plan,n_plane,in_fft,out_fft,FFTW_FORWARD,FFTW_ESTIMATE)
-
   in_fft = RHS_k(1:n_plane,j)
 
-!  call dfftw_execute(plan)
-  call my_fft(in_fft,out_fft,n_plane)
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
+#endif
 
   index = n_tor*(j-1) + 1
   ik    = 1
@@ -882,8 +873,6 @@ do j=1, n_vertex_max*n_var*(n_order+1)
     RHS(index+1) = RHS(index+1) + real(out_fft(k)) * float(mode(ik))
 
   enddo
-
-!  call dfftw_destroy_plan(plan)
 
 enddo
 

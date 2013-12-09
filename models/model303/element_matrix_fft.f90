@@ -1566,7 +1566,7 @@ do i=1,n_vertex_max*n_var*(n_order+1)
   do j=1, n_vertex_max*n_var*(n_order+1)
 
     in_fft =  ELM_p(1:n_plane,i,j)
-#ifdef FFTW
+#ifdef USE_FFTW
     call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
 #else
     call my_fft(in_fft, out_fft, n_plane)

@@ -219,7 +219,7 @@ module fourier
         write(*,'(1x,a)')       'WARNING: Low number of points from field line tracing.'
         write(*,'(3x,a)')       'You may need to decrease deltaphi in "four_params.nml"'
         write(*,'(3x,a,f5.3)')  'by a factor > ', real(nequidist_pts)/real(mapping%npts(k))
-        write(*,'(3x,a,i3)')    'Field line', k
+        write(*,'(3x,a,i6)')    'Field line', k
       end if
       call interpolEquidist(mapping%t2(k,0:mapping%npts(k)), mapping%rr(k,0:mapping%npts(k)),      &
         mapping%npts(k)+1, mapping%rre(k,0:nequidist_pts-1), mapping%t2(k,0),                      &
@@ -295,7 +295,7 @@ module fourier
     real*8 :: xjac
     real*8 :: theta_corr
     real*8 :: smalldeltaphi
-    real*8 :: phi
+    real*8 :: phi, fact
     logical :: do_not_continue
     
     smalldeltaphi = deltaphi / nsmallsteps
@@ -314,8 +314,6 @@ module fourier
         if ( node_list%node(i)%boundary == 2 ) then
           mapping%R_xpoint(1) = node_list%node(i)%x(1,1)
           mapping%Z_xpoint(1) = node_list%node(i)%x(1,2)
-          call find_RZ(node_list,element_list,mapping%R_xpoint(1),mapping%Z_xpoint(1),R_out,Z_out,       &
-	    mapping%i_elm_xpoint(1),mapping%s_xpoint(1),mapping%t_xpoint(1),ifail)
           exit
         end if
       end do
@@ -325,7 +323,7 @@ module fourier
     
     !$omp parallel do schedule(dynamic) default(none)                                              &
     !$omp   firstprivate(k,theta_corr,R_out,Z_out,i_elm_out,s_out,t_out,ifail,P,P_s,P_t,j,rn,zn,i, &
-    !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh)        &
+    !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh,fact)   &
     !$omp   shared(mapping,do_not_continue,F0,node_list,element_list,nmaxsteps,nsmallsteps,        &
     !$omp     smalldeltaphi)
     FL_STPTS: do k = mapping%nstpts, 1, -1
@@ -335,10 +333,9 @@ module fourier
       phi        = 0.d0
       
       ! --- Initialize field line position.
-      mapping%rr(k,0) = mapping%R_axis + 0.03*( mapping%R_xpoint(1) - mapping%R_axis ) + &
-        0.93*( mapping%R_xpoint(1) - mapping%R_axis ) * ( REAL(k-1) / REAL(mapping%nstpts-1) )
-      mapping%zz(k,0) = mapping%Z_axis + 0.03*( mapping%Z_xpoint(1) - mapping%Z_axis ) + &
-        0.93*( mapping%Z_xpoint(1) - mapping%Z_axis ) * ( REAL(k-1) / REAL(mapping%nstpts-1) )
+      fact = 0.001 + 0.998 * ( REAL(k-1) / REAL(mapping%nstpts-1) )
+      mapping%rr(k,0) = mapping%R_axis + fact * ( mapping%R_xpoint(1) - mapping%R_axis )
+      mapping%zz(k,0) = mapping%Z_axis + fact * ( mapping%Z_xpoint(1) - mapping%Z_axis )
       mapping%tt(k,0) = atan3( mapping%zz(k,0)-mapping%Z_axis, mapping%rr(k,0)-mapping%R_axis )
       theta_corr = 0.
       
@@ -422,7 +419,7 @@ module fourier
               ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,mapping%npts(k)-1) ) ) ) * 2.*PI
           end do
           !$omp critical
-          write(*,'(" Field line",I4,":    psin=",F7.3,"    npts=",I7)') k, mapping%psin(k),       &
+          write(*,'(" Field line",I6,":    psin=",F7.3,"    npts=",I7)') k, mapping%psin(k),       &
 	    mapping%npts(k)
           !write(46,*) mapping%psin(k), phi / ( 2. * PI )
           !$omp end critical

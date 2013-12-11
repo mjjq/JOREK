@@ -20,9 +20,9 @@
 #$ -N <<jobname>>_<<job_step>>
 #
 
-BIN="jorek_model<<model>>_step<<job_step>>"
+BIN="./jorek_model<<model>>_step<<job_step>>"
 NSLOTS="<<mpi>>"
-INP="input<<job_step>>"
+INP="./input<<job_step>>"
 OMP="<<omp>>"
 DIR="<<main_dir>>"
 

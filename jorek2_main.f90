@@ -281,8 +281,8 @@ required = 0
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_FINALIZE(IERR)
     stop
-  else if ( n_plane < n_tor ) then
-    write(*,*) ' FATAL: n_plane >= n_tor required.'
+  else if ( n_plane < 2*(n_tor-1) ) then
+    write(*,*) ' FATAL: n_plane >= 2 * (n_tor-1) required to avoid aliasing.'
     call MPI_FINALIZE(IERR)
     stop
 #ifndef USE_FFTW

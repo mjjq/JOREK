@@ -104,14 +104,16 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   integer		      :: i, j, k, i_tor
       
   ! --- Empty before integration
-  ps0	= 0.d0; ps0_p	= 0.d0; ps0_s	= 0.d0; ps0_t	= 0.d0; ps0_ss	 = 0.d0; ps0_tt   = 0.d0; ps0_st   = 0.d0; ps0_pp   = 0.d0
-  u0	= 0.d0; u0_p	= 0.d0; u0_s	= 0.d0; u0_t	= 0.d0; u0_ss	 = 0.d0; u0_tt    = 0.d0; u0_st    = 0.d0; u0_pp    = 0.d0
-  zj0	= 0.d0; zj0_p	= 0.d0; zj0_s	= 0.d0; zj0_t	= 0.d0; zj0_ss	 = 0.d0; zj0_tt   = 0.d0; zj0_st   = 0.d0; zj0_pp   = 0.d0
-  w0	= 0.d0; w0_p	= 0.d0; w0_s	= 0.d0; w0_t	= 0.d0; w0_ss	 = 0.d0; w0_tt    = 0.d0; w0_st    = 0.d0; w0_pp    = 0.d0
-  r0	= 0.d0; r0_p	= 0.d0; r0_s	= 0.d0; r0_t	= 0.d0; r0_ss	 = 0.d0; r0_tt    = 0.d0; r0_st    = 0.d0; r0_pp    = 0.d0
-  Ti0	= 0.d0; Ti0_p	= 0.d0; Ti0_s	= 0.d0; Ti0_t	= 0.d0; Ti0_ss   = 0.d0; Ti0_tt   = 0.d0; Ti0_st   = 0.d0; Ti0_pp   = 0.d0
-  Te0	= 0.d0; Te0_p	= 0.d0; Te0_s	= 0.d0; Te0_t	= 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_pp   = 0.d0
-  Vpar0 = 0.d0; Vpar0_p = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_pp = 0.d0
+  ps0	= 0.d0; ps0_s	= 0.d0; ps0_t	= 0.d0; ps0_ss	 = 0.d0; ps0_tt   = 0.d0; ps0_st   = 0.d0; ps0_p   = 0.d0; ps0_pp   = 0.d0
+  u0	= 0.d0; u0_s	= 0.d0; u0_t	= 0.d0; u0_ss	 = 0.d0; u0_tt    = 0.d0; u0_st    = 0.d0; u0_p    = 0.d0; u0_pp    = 0.d0
+  zj0	= 0.d0; zj0_s	= 0.d0; zj0_t	= 0.d0; zj0_ss	 = 0.d0; zj0_tt   = 0.d0; zj0_st   = 0.d0; zj0_p   = 0.d0; zj0_pp   = 0.d0
+  w0	= 0.d0; w0_s	= 0.d0; w0_t	= 0.d0; w0_ss	 = 0.d0; w0_tt    = 0.d0; w0_st    = 0.d0; w0_p    = 0.d0; w0_pp    = 0.d0
+  r0	= 0.d0; r0_s	= 0.d0; r0_t	= 0.d0; r0_ss	 = 0.d0; r0_tt    = 0.d0; r0_st    = 0.d0; r0_p    = 0.d0; r0_pp    = 0.d0
+  Ti0	= 0.d0; Ti0_s	= 0.d0; Ti0_t	= 0.d0; Ti0_ss   = 0.d0; Ti0_tt   = 0.d0; Ti0_st   = 0.d0; Ti0_p   = 0.d0; Ti0_pp   = 0.d0
+  Te0	= 0.d0; Te0_s	= 0.d0; Te0_t	= 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
+  T0	= 0.d0; T0_s	= 0.d0; T0_t	= 0.d0; T0_ss    = 0.d0; T0_tt    = 0.d0; T0_st    = 0.d0; T0_p    = 0.d0; T0_pp    = 0.d0
+  Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
+  Wdia0 = 0.d0; Wdia0_s = 0.d0; Wdia0_t = 0.d0; Wdia0_ss = 0.d0; Wdia0_tt = 0.d0; Wdia0_st = 0.d0; Wdia0_p = 0.d0; Wdia0_pp = 0.d0
   delta_g = 0.d0 ; delta_s = 0.d0 ; delta_t = 0.d0
 
   ! --- Integrate
@@ -121,84 +123,94 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 
 	! --- Variable 1
 	ps0	     = ps0	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	ps0_p	     = ps0_p	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	ps0_s	     = ps0_s	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	ps0_t	     = ps0_t	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	ps0_ss	     = ps0_ss	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	ps0_tt	     = ps0_tt	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	ps0_st	     = ps0_st	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	ps0_p	     = ps0_p	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	ps0_pp	     = ps0_pp	  + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 2
 	u0	     = u0	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	u0_p	     = u0_p	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	u0_s	     = u0_s	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	u0_t	     = u0_t	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	u0_ss	     = u0_ss	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	u0_tt	     = u0_tt	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	u0_st	     = u0_st	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	u0_p	     = u0_p	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	u0_pp	     = u0_pp	  + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 3
 	zj0	     = zj0	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	zj0_p	     = zj0_p	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	zj0_s	     = zj0_s	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	zj0_t	     = zj0_t	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	zj0_ss	     = zj0_ss	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	zj0_tt	     = zj0_tt	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	zj0_st	     = zj0_st	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	zj0_p	     = zj0_p	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	zj0_pp	     = zj0_pp	  + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 4
 	w0	     = w0	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	w0_p	     = w0_p	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	w0_s	     = w0_s	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	w0_t	     = w0_t	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	w0_ss	     = w0_ss	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	w0_tt	     = w0_tt	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	w0_st	     = w0_st	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	w0_p	     = w0_p	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	w0_pp	     = w0_pp	  + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 5
 	r0	     = r0	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	r0_p	     = r0_p	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	r0_s	     = r0_s	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	r0_t	     = r0_t	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	r0_ss	     = r0_ss	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	r0_tt	     = r0_tt	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	r0_st	     = r0_st	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	r0_p	     = r0_p	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	r0_pp	     = r0_pp	  + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 6
 	Ti0	     = Ti0	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Ti0_p	     = Ti0_p	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	Ti0_s	     = Ti0_s	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Ti0_t	     = Ti0_t	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Ti0_ss	     = Ti0_ss	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Ti0_tt	     = Ti0_tt	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Ti0_st	     = Ti0_st	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Ti0_p	     = Ti0_p	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	Ti0_pp	     = Ti0_pp	  + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
   
 	! --- Variable 7
 	Vpar0	     = Vpar0	  + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Vpar0_p      = Vpar0_p    + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	Vpar0_s      = Vpar0_s    + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Vpar0_t      = Vpar0_t    + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Vpar0_ss     = Vpar0_ss   + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Vpar0_tt     = Vpar0_tt   + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Vpar0_st     = Vpar0_st   + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Vpar0_p      = Vpar0_p    + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	Vpar0_pp     = Vpar0_pp	  + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
 
 	! --- Variable 8
 	Te0	     = Te0	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Te0_p	     = Te0_p	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	Te0_s	     = Te0_s	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Te0_t	     = Te0_t	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Te0_ss	     = Te0_ss	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Te0_tt	     = Te0_tt	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
 	Te0_st	     = Te0_st	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Te0_p	     = Te0_p	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	Te0_pp	     = Te0_pp	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
   
+	! --- Variable 7
+	Wdia0	     = Wdia0	  + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Wdia0_s      = Wdia0_s    + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Wdia0_t      = Wdia0_t    + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Wdia0_ss     = Wdia0_ss   + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Wdia0_tt     = Wdia0_tt   + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Wdia0_st     = Wdia0_st   + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
+	Wdia0_p      = Wdia0_p    + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
+	Wdia0_pp     = Wdia0_pp	  + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
+
 	! --- Deltas
 	do k=1,n_var
 	  delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
@@ -371,9 +383,40 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   !Te0_yy = (  Te0_ss * x_t**2  + Te0_tt * x_s**2  - 2.d0*Te0_st * x_s*x_t             ) / xjac**2
   !Te0_xy = (- Te0_ss * y_t*x_t - Te0_tt * x_s*y_s +      Te0_st * (y_s*x_t + y_t*x_s) ) / xjac**2
   
+  ! --- Variable 7
+  Wdia0_x  = (   y_t * Wdia0_s - y_s * Wdia0_t ) / xjac
+  Wdia0_y  = ( - x_t * Wdia0_s + x_s * Wdia0_t ) / xjac
+  Wdia0_xx = (Wdia0_ss * y_t**2 - 2.d0*Wdia0_st * y_s*y_t + Wdia0_tt * y_s**2  &	 
+	      + Wdia0_s * (y_st*y_t - y_tt*y_s )			       &	
+	      + Wdia0_t * (y_st*y_s - y_ss*y_t ) )         / xjac**2           &      
+	    - xjac_x * (Wdia0_s * y_t - Wdia0_t * y_s)     / xjac**2
+  Wdia0_yy = (Wdia0_ss * x_t**2 - 2.d0*Wdia0_st * x_s*x_t + Wdia0_tt * x_s**2  &	 
+	      + Wdia0_s * (x_st*x_t - x_tt*x_s )			       &	
+	      + Wdia0_t * (x_st*x_s - x_ss*x_t ) )         / xjac**2           &      
+	    - xjac_y * (- Wdia0_s * x_t + Wdia0_t * x_s )  / xjac**2
+  Wdia0_xy = (- Wdia0_ss * y_t*x_t - Wdia0_tt * x_s*y_s 		       &
+	      + Wdia0_st * (y_s*x_t  + y_t*x_s  )  		               &	    
+	      - Wdia0_s  * (x_st*y_t - x_tt*y_s )  		               &	
+	      - Wdia0_t  * (x_st*y_s - x_ss*y_t )  )       / xjac**2           &      
+	    - xjac_x * (- Wdia0_s * x_t + Wdia0_t * x_s )  / xjac**2
+  
   ! --- Deltas
-  delta_u_x= (   y_t * delta_s(2) - y_s * delta_t(2) ) / xjac
-  delta_u_y= ( - x_t * delta_s(2) + x_s * delta_t(2) ) / xjac
+  delta_u_x  = (   y_t * delta_s(2) - y_s * delta_t(2) ) / xjac
+  delta_u_y  = ( - x_t * delta_s(2) + x_s * delta_t(2) ) / xjac
+  delta_ps_x = (   y_t * delta_s(1) - y_s * delta_t(1) ) / xjac
+  delta_ps_y = ( - x_t * delta_s(1) + x_s * delta_t(1) ) / xjac
+  
+  ! --- Total temperature
+  T0	   = (Ti0    + Te0)
+  T0_x     = (Ti0_x  + Te0_x)
+  T0_y     = (Ti0_y  + Te0_y)
+  T0_s     = (Ti0_s  + Te0_s)
+  T0_t     = (Ti0_t  + Te0_t)
+  T0_p     = (Ti0_p  + Te0_p)
+  T0_pp    = (Ti0_pp + Te0_pp)
+  T0_xx    = (Ti0_xx + Te0_xx)
+  T0_yy    = (Ti0_yy + Te0_yy)
+  T0_xy    = (Ti0_xy + Te0_xy)
   
   ! --- Pressure
   P0	   = r0    * (Ti0 + Te0)
@@ -615,9 +658,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   tau_IC = tauIC
   !if ( (psi_norm .gt. 1.d0) .or. ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) tau_IC = tau_IC * 1.d-3
   !if ( (psi_norm .gt. 1.d0) .or. ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) tau_IC = tau_IC * 1.d-3
-  if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
-  if ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
+  !if (psi_norm .gt. 1.04d0) tau_IC = tau_IC * 1.d-3
+  !if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
+  !if ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
   ! Careful at the grid axis
+  !if (psi_norm .gt. 1.d0  ) tau_IC = tau_IC * 1.d-3
+  if ( (y_g .lt. Z_xpoint(1)+0.04d0) .and. (xcase2 .ne. 2) ) tau_IC = 0.d0!tau_IC * 1.d-3
+  !if ( ((ps0 - psi_axis)/(psi_bnd - psi_axis) .lt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = tau_IC * 1.d-3
+  !if ( ((ps0 - psi_axis)/(psi_bnd - psi_axis) .lt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = 0.d0
   if (psi_norm .lt. 0.1d0)  tau_IC = tau_IC * 1.d-3
   if (psi_norm .lt. 0.05d0) tau_IC = tau_IC * 1.d-3
   
@@ -644,20 +692,24 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if (i_plane .eq. 1) then
     call current(xpoint2, xcase2, x_g,y_g, Z_xpoint, ps0,psi_axis,psi_bnd,current_source)
 
-    !call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source_i,heat_source_e)
+    call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source_i,heat_source_e)
     ! --- New source profile: source with exactly the same profile as the initial equilibirum profiles.
-    !call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    !		     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-    !call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    !		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
-    !particle_source = particlesource * ( zn - r0 )
-    !heat_source    = heatsource     * ( zT - T0 )
-    !particle_source = particle_source * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
-    !heat_source    = heat_source     * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
+    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+    call temperature_i(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+    call temperature_e(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
+    particle_source = particlesource * ( zn  - r0 )
+    heat_source_i   = heatsource_i   * ( zTi - Ti0 )
+    heat_source_e   = heatsource_e   * ( zTe - Te0 )
+    particle_source = particle_source * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
+    heat_source_i   = heat_source_i   * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
+    heat_source_e   = heat_source_e   * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
     
-    particle_source   = particlesource * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) )
-    heat_source_i     = heatsource_i   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
-    heat_source_e     = heatsource_e   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
+    !particle_source   = particlesource * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) )
+    !heat_source_i     = heatsource_i   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
+    !heat_source_e     = heatsource_e   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
     
     if ( abs(V_0) .ge. 1.e-12) then 
       call velocity(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, &

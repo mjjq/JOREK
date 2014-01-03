@@ -47,6 +47,7 @@ module equation_variables
   ! --- Variable 1
   real*8 	:: ps0,   ps0_x,   ps0_y,   ps0_p,   ps0_s,   ps0_t,   ps0_ss,   ps0_st,   ps0_tt,   ps0_xx,   ps0_xy,   ps0_yy,   ps0_pp
   real*8 	:: psi,   psi_x,   psi_y,   psi_p,   psi_s,   psi_t,   psi_ss,   psi_st,   psi_tt,   psi_xx,   psi_yy,   psi_xy,   psi_pp
+  real*8 	:: delta_ps_x, delta_ps_y
   ! --- Variable 2
   real*8 	:: u0,    u0_x,    u0_y,    u0_p,    u0_s,    u0_t,    u0_ss,    u0_st,    u0_tt,    u0_xx,    u0_xy,    u0_yy,    u0_pp
   real*8 	:: u,     u_x,     u_y,     u_p,     u_s,     u_t,     u_ss,     u_st,     u_tt,     u_xx,     u_xy,     u_yy,     u_pp
@@ -70,6 +71,11 @@ module equation_variables
   ! --- Variable 8
   real*8 	:: Te0,   Te0_x,   Te0_y,   Te0_p,   Te0_s,   Te0_t,   Te0_ss,   Te0_st,   Te0_tt,   Te0_xx,   Te0_xy,   Te0_yy,   Te0_pp
   real*8 	:: Te,    Te_x,    Te_y,    Te_p,    Te_s,    Te_t,    Te_ss,	 Te_st,    Te_tt,    Te_xx,    Te_xy,    Te_yy,    Te_pp
+  ! --- Variable 9
+  real*8 	:: Wdia0, Wdia0_x, Wdia0_y, Wdia0_p, Wdia0_s, Wdia0_t, Wdia0_ss, Wdia0_st, Wdia0_tt, Wdia0_xx, Wdia0_xy, Wdia0_yy, Wdia0_pp
+  real*8 	:: Wdia,  Wdia_x,  Wdia_y,  Wdia_p,  Wdia_s,  Wdia_t,  Wdia_ss,	 Wdia_st,  Wdia_tt,  Wdia_xx,  Wdia_xy,  Wdia_yy,  Wdia_pp
+  ! --- Total Temperature (or Variable 6?)
+  real*8 	:: T0,    T0_x,    T0_y,    T0_p,    T0_s,    T0_t,    T0_ss,    T0_st,    T0_tt,    T0_xx,    T0_xy,    T0_yy,    T0_pp
   ! --- Pressures
   real*8 	:: P0,	  P0_x,	  P0_y,	    P0_p,    P0_s,    P0_t,				     P0_xx,    P0_xy,    P0_yy,    P0_pp
   real*8 	:: Pi0,	  Pi0_x,  Pi0_y,    Pi0_p,   Pi0_s,   Pi0_t,				     Pi0_xx,   Pi0_xy,   Pi0_yy,   Pi0_pp
@@ -114,6 +120,7 @@ module equation_variables
   !$omp 	v,     v_x,	v_y,	 v_p,	  v_s,     v_t,     v_ss,     v_st,	v_tt,	  v_xx,     v_yy,     v_xy,	v_pp,	   &
   !$omp 	ps0,   ps0_x,	ps0_y,   ps0_p,   ps0_s,   ps0_t,   ps0_ss,   ps0_st,	ps0_tt,   ps0_xx,   ps0_xy,   ps0_yy,	ps0_pp,    &
   !$omp 	psi,   psi_x,	psi_y,   psi_p,   psi_s,   psi_t,   psi_ss,   psi_st,	psi_tt,   psi_xx,   psi_yy,   psi_xy,	psi_pp,    &
+  !$omp 	delta_ps_x, delta_ps_y,													   &
   !$omp 	u0,    u0_x,	u0_y,	 u0_p,    u0_s,    u0_t,    u0_ss,    u0_st,	u0_tt,    u0_xx,    u0_xy,    u0_yy,	u0_pp,	   &
   !$omp 	u,     u_x,	u_y,	 u_p,	  u_s,     u_t,     u_ss,     u_st,	u_tt,	  u_xx,     u_xy,     u_yy,	u_pp,	   &
   !$omp 	vv2,  delta_u_x, delta_u_y,												   &
@@ -130,6 +137,9 @@ module equation_variables
   !$omp 	Vpar,  Vpar_x,  Vpar_y,  Vpar_p,  Vpar_s,  Vpar_t,  Vpar_ss,  Vpar_st,  Vpar_tt,  Vpar_xx,  Vpar_xy,  Vpar_yy,  Vpar_pp,   &
   !$omp 	Te0,   Te0_x,	Te0_y,   Te0_p,   Te0_s,   Te0_t,   Te0_ss,   Te0_st,	Te0_tt,   Te0_xx,   Te0_xy,   Te0_yy,	Te0_pp,    &
   !$omp 	Te,    Te_x,	Te_y,	 Te_p,    Te_s,    Te_t,    Te_ss,    Te_st,	Te_tt,    Te_xx,    Te_xy,    Te_yy,	Te_pp,	   &
+  !$omp 	Wdia0, Wdia0_x, Wdia0_y, Wdia0_p, Wdia0_s, Wdia0_t, Wdia0_ss, Wdia0_st, Wdia0_tt, Wdia0_xx, Wdia0_xy, Wdia0_yy, Wdia0_pp,  &
+  !$omp 	Wdia,  Wdia_x,  Wdia_y,  Wdia_p,  Wdia_s,  Wdia_t,  Wdia_ss,  Wdia_st,  Wdia_tt,  Wdia_xx,  Wdia_xy,  Wdia_yy,  Wdia_pp,   &
+  !$omp 	T0,    T0_x,    T0_y,    T0_p,    T0_s,    T0_t,    T0_ss,    T0_st,    T0_tt,    T0_xx,    T0_xy,    T0_yy,    T0_pp,     &
   !$omp 	P0,    P0_x,    P0_y,	 P0_p,    P0_s,    P0_t,				  P0_xx,    P0_xy,    P0_yy,	P0_pp,	   &
   !$omp 	Pi0,   Pi0_x,   Pi0_y,	 Pi0_p,   Pi0_s,   Pi0_t,				  Pi0_xx,    Pi0_xy,  Pi0_yy,	Pi0_pp,	   &
   !$omp 	Pe0,   Pe0_x,   Pe0_y,	 Pe0_p,   Pe0_s,   Pe0_t,				  Pe0_xx,    Pe0_xy,  Pe0_yy,	Pe0_pp,	   &

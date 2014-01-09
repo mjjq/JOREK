@@ -296,7 +296,7 @@ module fourier
     real*8 :: theta_corr
     real*8 :: smalldeltaphi
     real*8 :: phi, fact
-    logical :: do_not_continue
+    logical :: abort
     
     smalldeltaphi = deltaphi / nsmallsteps
     my_id = 0
@@ -319,15 +319,15 @@ module fourier
       end do
     end if
     
-    do_not_continue = .false.
+    abort = .false.
     
     !$omp parallel do schedule(dynamic) default(none)                                              &
     !$omp   firstprivate(k,theta_corr,R_out,Z_out,i_elm_out,s_out,t_out,ifail,P,P_s,P_t,j,rn,zn,i, &
     !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh,fact)   &
-    !$omp   shared(mapping,do_not_continue,F0,node_list,element_list,nmaxsteps,nsmallsteps,        &
+    !$omp   shared(mapping,abort,F0,node_list,element_list,nmaxsteps,nsmallsteps,                  &
     !$omp     smalldeltaphi)
     FL_STPTS: do k = mapping%nstpts, 1, -1
-      if ( do_not_continue ) cycle
+      if ( abort ) cycle
       
       theta_corr = 0.d0
       phi        = 0.d0
@@ -346,20 +346,20 @@ module fourier
       mapping%psin(k) = (P-mapping%psi_axis)/(mapping%psi_xpoint(1)-mapping%psi_axis)
       
       FL_LARGESTEPS: do j = 1, NMAXSTEPS
-        if ( do_not_continue ) cycle
+        if ( abort ) cycle
         
         rn = mapping%rr(k,j-1)
         zn = mapping%zz(k,j-1)
         
         FL_SMALLSTEPS: do i = 1, NSMALLSTEPS
-          if ( do_not_continue ) cycle
+          if ( abort ) cycle
           
           ! --- Predictor step
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
             write(*,*) 'WARNING: Error in fourier:trace_fieldlines calling find_RZ.'
-            do_not_continue = .true.
+            abort = .true.
 	    cycle
           end if
           ! - Interpolate Psi to current position.
@@ -379,7 +379,7 @@ module fourier
           call find_RZ(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
             write(*,*) 'WARNING: Error in fourier:trace_fieldlines calling find_RZ.'
-            do_not_continue = .true.
+            abort = .true.
 	    cycle
           end if
           ! - Interpolate Psi to current position.
@@ -426,10 +426,21 @@ module fourier
           exit
         end if
         
+        if ( j == NMAXSTEPS ) then
+          write(*,*) 'ERROR: Parameter nmaxsteps is too small! Could not complete poloidal turn.'
+          abort = .true.
+          cycle
+        end if
+        
       end do FL_LARGESTEPS
       
     end do FL_STPTS
     !$omp end parallel do
+    
+    if ( abort ) then
+      write(*,*) 'EXITING jorek2_four after an error occurred.'
+      stop
+    end if
     
     ! --- Make theta positive.
     do k = 1, mapping%nstpts

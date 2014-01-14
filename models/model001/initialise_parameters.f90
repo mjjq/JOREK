@@ -90,7 +90,7 @@ if (my_id .eq. 0) then
   end if
   
  !==============================R_Z_psi_bnd==========================
-   if (n_boundary.ne.0) then
+   if ( (n_boundary.ne.0) .and. (R_Z_psi_bnd_file /= 'none') ) then
  ! --- Open the file.
     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then

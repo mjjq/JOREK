@@ -13,13 +13,16 @@ module vacuum_equilibrium
   
   
   !> Reads the external fields and the poloidal field coils from the STARWALL output
-  subroutine import_external_fields(filename)
+  subroutine import_external_fields(filename, my_id)
     
     use vacuum_response
+    use mpi_mod
+    
     implicit none
     
     ! --- Routine parameters
     character(len=*), intent(in) :: filename
+    integer,          intent(in) :: my_id
     ! --- Local variables
     integer, parameter   :: filehandle = 60
     integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2), err !n_coils already defined in vacuum module
@@ -27,49 +30,101 @@ module vacuum_equilibrium
     
     if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
     
-    ! --- Read data from STARWALL response file
-    open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
-    if ( err /= 0 ) then
-      write(*,*) 'ERROR: Could not open external field file ',trim(filename),'.'
-      stop
+    if ( my_id == 0 ) then
+      
+      ! --- Read data from coil field file (only mpi proc 0 reads the file)
+      open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
+      if ( err /= 0 ) then
+        write(*,*) 'ERROR: Could not open external field file ',trim(filename),'.'
+        stop
+      end if
+      read(filehandle,'(a)') comment
+      
+      file_version = read_intparam(filehandle, 'file_version')
+      if ( file_version > 1 ) then
+        write(*,*) 'ERROR: COIL data file version ', file_version, ' is not supported.'
+        stop
+      end if
+      
+      n_coils     = read_intparam(filehandle, 'n_coils')
+      n_bnd_nodes = read_intparam(filehandle, 'n_bnd_nodes')
+      n_bnd_elems = read_intparam(filehandle, 'n_bnd_elems')
+      
+      dim         = (/ 2*n_bnd_nodes, n_coils /)
+      
+      call read_array(filehandle, 'B_t', dim, float2d=bext_tan)
+      call read_array(filehandle, 'B_n', dim, float2d=bext_nor)
+      call read_array(filehandle, 'Psi', dim, float2d=bext_psi)
+      
+      32 format(3x,77('-'))
+      33 format(3x,a,i8)
+      34 format(3x,a,1x,a)
+      35 format(3x,a,es20.12)
+      write(*,*)
+      write(*,32)
+      write(*,33) 'EXTERNAL FIELD INFORMATION:'
+      write(*,32)
+      write(*,34) 'filename    =', trim(filename)
+      write(*,33) 'n_coils     =', n_coils
+      write(*,33) 'n_bnd_nodes =', n_bnd_nodes
+      write(*,33) 'n_bnd_elems =', n_bnd_elems
+      if ( vacuum_debug ) then
+        write(*,35) 'sum(bext_tan) =', sum(bext_tan)
+        write(*,35) 'sum(bext_nor) =', sum(bext_nor)
+        write(*,35) 'sum(bext_psi) =', sum(bext_psi)
+      end if
+      write(*,32)
+      write(*,*)
+      
+      ! === ITER LIMITER TEST CASE LIM1 ==============================================================
+      if ( n_coils /= 12 ) then
+        write(*,*) 'ITER LIMITER TEST CASE LIM1: 12 coils expected!'
+        stop
+      end if
+      if ( .not. allocated(I_coils) ) then
+        allocate( I_coils(n_coils) )
+        I_coils = (/  0.600000d+7, & ! pf1
+                     -0.080000d+7, & ! pf2
+                     -0.620000d+7, & ! pf3
+                     -0.370000d+7, & ! pf4
+                     -0.680000d+7, & ! pf5
+                      2.190000d+7, & ! pf6
+                      0.984528d+7, & ! cs3u
+                     -0.284091d+7, & ! cs2u
+                     -0.630050d+7, & ! cs1u
+                     -0.630050d+7, & ! cs1l
+                     -0.407839d+7, & ! cs2l
+                     -0.043469d+7  & ! cs3l
+                  /)
+      end if
+      ! ==============================================================================================
+      
     end if
-    read(filehandle,'(a)') comment
     
-    file_version = read_intparam(filehandle, 'file_version')
-    if ( file_version > 1 ) then
-      write(*,*) 'ERROR: COIL data file version ', file_version, ' is not supported.'
-      stop
+    ! --- Broadcast to other MPI procs.
+    call MPI_bcast(n_coils,     1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(n_bnd_nodes, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(n_bnd_elems, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(dim,         2, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+    
+    if ( my_id /= 0 ) then
+      if ( allocated(bext_tan) ) deallocate(bext_tan)
+      allocate( bext_tan(dim(1),dim(2)) )
+      
+      if ( allocated(bext_nor) ) deallocate(bext_nor)
+      allocate( bext_nor(dim(1),dim(2)) )
+      
+      if ( allocated(bext_psi) ) deallocate(bext_psi)
+      allocate( bext_psi(dim(1),dim(2)) )
+      
+      if ( allocated(I_coils) ) deallocate(I_coils)
+      allocate( I_coils(n_coils) )
     end if
     
-    n_coils     = read_intparam(filehandle, 'n_coils')
-    n_bnd_nodes = read_intparam(filehandle, 'n_bnd_nodes')
-    n_bnd_elems = read_intparam(filehandle, 'n_bnd_elems')
-    
-    dim         = (/ 2*n_bnd_nodes, n_coils /)
-    
-    call read_array(filehandle, 'B_t', dim, float2d=bext_tan)
-    call read_array(filehandle, 'B_n', dim, float2d=bext_nor)
-    call read_array(filehandle, 'Psi', dim, float2d=bext_psi)
-    
-    32 format(3x,77('-'))
-    33 format(3x,a,i8)
-    34 format(3x,a,1x,a)
-    35 format(3x,a,es20.12)
-    write(*,*)
-    write(*,32)
-    write(*,33) 'EXTERNAL FIELD INFORMATION:'
-    write(*,32)
-    write(*,34) 'filename    =', trim(filename)
-    write(*,33) 'n_coils     =', n_coils
-    write(*,33) 'n_bnd_nodes =', n_bnd_nodes
-    write(*,33) 'n_bnd_elems =', n_bnd_elems
-    if ( vacuum_debug ) then
-      write(*,35) 'sum(bext_tan) =', sum(bext_tan)
-      write(*,35) 'sum(bext_nor) =', sum(bext_nor)
-      write(*,35) 'sum(bext_psi) =', sum(bext_psi)
-    end if
-    write(*,32)
-    write(*,*)
+    call MPI_bcast(bext_tan, dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(bext_nor, dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(bext_psi, dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(I_coils,  n_coils,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     
   end subroutine import_external_fields
   
@@ -108,24 +163,24 @@ module vacuum_equilibrium
     ! === ITER LIMITER TEST CASE LIM1 ================================================================
     n_coils = 12
     if ( .not. allocated(I_coils) ) allocate( I_coils(n_coils) )
-    I_coils = (/ +5.800000e+06, & ! pf1
-                 -0.800000e+06, & ! pf2
-                 -7.000000e+06, & ! pf3
-                 -4.000000e+06, & ! pf4
-                 -7.800000e+06, & ! pf5
-                 +2.290000e+07, & ! pf6
-                 +9.845280e+06, & ! cs3u
-                 -2.840910e+06, & ! cs2u
-                 -6.300500e+06, & ! cs1u
-                 -6.300500e+06, & ! cs1l
-                 -4.078390e+06, & ! cs2l
-                 -4.346920e+05  & ! cs3l
+    I_coils = (/  0.600000d+7, & ! pf1
+                 -0.080000d+7, & ! pf2
+                 -0.620000d+7, & ! pf3
+                 -0.370000d+7, & ! pf4
+                 -0.680000d+7, & ! pf5
+                  2.190000d+7, & ! pf6
+                  0.984528d+7, & ! cs3u
+                 -0.284091d+7, & ! cs2u
+                 -0.630050d+7, & ! cs1u
+                 -0.630050d+7, & ! cs1l
+                 -0.407839d+7, & ! cs2l
+                 -0.043469d+7  & ! cs3l
               /)
     write(*,*) 'n_coils                   = ', n_coils
     write(*,*) 'vertical_FB               = ', vertical_FB
     write(*,'(a,20es10.2)') 'I_coils (before feedback) = ', I_coils(:)
-    !#####I_coils(1) = I_coils(1) * (1.d0 - vertical_FB)
-    !#####I_coils(6) = I_coils(6) * (1.d0 + vertical_FB)
+    I_coils(1) = I_coils(1) * (1.d0 - vertical_FB)
+    I_coils(6) = I_coils(6) * (1.d0 + vertical_FB)
     !#####if ( vertical_FB /= 0.d0 ) write(*,'(a,20es10.2)') 'I_coils (after feedback)  = ', I_coils(:)
     ! ================================================================================================
     
@@ -161,7 +216,7 @@ module vacuum_equilibrium
                 i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
                 i_index    = node_list%node(i_node)%index(i_dir)
                 size_i     = bndelem_m%size(i_vertex,i_dof)
-                i_resp     = response_index(i_node_bnd,1,i_dof)
+                i_resp     = response_index_eq(i_node_bnd,i_dof)
                 basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
                 
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
@@ -174,7 +229,7 @@ module vacuum_equilibrium
                     j_node     = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
                     j_dir      = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
                     j_index    = node_list%node(j_node)%index(j_dir)
-                    j_resp     = response_index(j_node_bnd,1,j_dof)
+                    j_resp     = response_index_eq(j_node_bnd,j_dof)
                     psi_coil_j = sum( I_coils(:) * bext_psi(j_resp,:) )
                     
                     ilarge                 = ilarge + 1
@@ -183,7 +238,6 @@ module vacuum_equilibrium
                     mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
                     mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                                &
                       + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j
-                    
                   end do
                 end do
                 

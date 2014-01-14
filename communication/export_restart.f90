@@ -63,7 +63,7 @@ if (use_pellet) then
   write(21) pellet_particles, pellet_R, pellet_Z
 endif
 
-call export_restart_vacuum(21, freeboundary, resistive_wall, index_now)
+call export_restart_vacuum(21, freeboundary, resistive_wall)
 
 close(21)
 

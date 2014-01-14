@@ -500,7 +500,7 @@ required = 0
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)
-      call import_external_fields('coil_field.dat')
+      call import_external_fields('coil_field.dat', my_id)
     end if
     
     ! --- Plot the grid  
@@ -610,8 +610,8 @@ required = 0
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
       resistive_wall)
     call update_response(tstep, freeboundary_equil, resistive_wall)
+    call import_external_fields('coil_field.dat', my_id)
     if ( .not. restart ) call init_wall_currents(my_id, resistive_wall)
-    call import_external_fields('coil_field.dat')
   end if
   
   call tr_print_memsize("AfterEquilibrium")

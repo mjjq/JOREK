@@ -146,18 +146,17 @@ module vacuum
   !> Import some vacuum-related data from the restart file  
   !!
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
-  subroutine import_restart_vacuum(file_handle, freeboundary, resistive_wall, index_start)
+  subroutine import_restart_vacuum(file_handle, freeboundary, resistive_wall)
     
     ! --- Routine parameters
     integer, intent(in) :: file_handle
     logical, intent(in) :: freeboundary
     logical, intent(in) :: resistive_wall
-    integer, intent(in) :: index_start
     
     ! --- Local variables
     logical :: resistive_wall_rst
     
-    if ( freeboundary .and. (index_start > 0) ) then
+    if ( freeboundary ) then
       
       read(file_handle) resistive_wall_rst
       if ( resistive_wall .neqv. resistive_wall_rst ) then
@@ -178,6 +177,7 @@ module vacuum
         allocate( dwall_curr(n_wall_curr) )
         read(file_handle) dwall_curr(:)
         
+        if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         old_dpsibnd_vec = 0.d0 !###
         
@@ -204,15 +204,14 @@ module vacuum
   
   
   !> Export some vacuum-related data to the restart file  
-  subroutine export_restart_vacuum(file_handle, freeboundary, resistive_wall, index_now)
+  subroutine export_restart_vacuum(file_handle, freeboundary, resistive_wall)
     
     ! --- Routine parameters
     integer, intent(in) :: file_handle
     logical, intent(in) :: freeboundary
     logical, intent(in) :: resistive_wall
-    integer, intent(in) :: index_now
     
-    if ( freeboundary .and. (index_now > 0) ) then
+    if ( freeboundary ) then
       
       write(file_handle) resistive_wall
       if ( resistive_wall ) then

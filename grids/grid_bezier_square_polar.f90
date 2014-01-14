@@ -145,7 +145,7 @@ n_pol    = 2*(nR-1) + 2*(nZ-1)
 Rgeo = (R_begin + R_end)/2.d0
 Zgeo = (Z_begin + Z_end)/2.d0
 
-if ( (R_geo /= Rgeo) .or. (Z_geo /= Zgeo) ) then
+if ( ( R_geo - Rgeo > 1.d-10 ) .or. ( Z_geo - Zgeo > 1.d-10 ) ) then
   write(*,*) 'ERROR! Input inconsistent. For grid_bezier_square_polar, the following is required:'
   write(*,*) '  R_geo = (R_begin+R_end)/2 = ', Rgeo
   write(*,*) '  Z_geo = (Z_begin+Z_end)/2 = ', Zgeo

@@ -147,7 +147,7 @@ if (use_pellet) then
   read(21)  pellet_particles, pellet_R, pellet_Z
 endif
 
-call import_restart_vacuum(21, freeboundary, resistive_wall, index_start)
+call import_restart_vacuum(21, freeboundary, resistive_wall)
 
 close(21)
 

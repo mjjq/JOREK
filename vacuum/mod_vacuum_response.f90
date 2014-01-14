@@ -284,10 +284,12 @@ module vacuum_response
     call read_array(filehandle, 'jpot_w',   (/sr%ntri_w,3/),         int2d=sr%jpot_w)
     
     close(filehandle)
+    if ( vacuum_debug) write(*,*) 'Finished reading import of vacuum response.'
     
     ! --- Import normalization
     sr%a_ee(:,:) = sr%a_ee(:,:) * 2.d0*PI
     sr%a_ey(:,:) = sr%a_ey(:,:) * 2.d0*PI
+    if ( vacuum_debug) write(*,*) 'Applied import normalization.'
     
     ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates (replace y <-> z)
     allocate( tmp(sr%npot_w) )
@@ -318,6 +320,7 @@ module vacuum_response
       end if
       sr%i_tor(i) = i_starw
     end do
+    if ( vacuum_debug) write(*,*) 'End of routine read_starwall_response.'
     
   end subroutine read_starwall_response
   
@@ -340,6 +343,8 @@ module vacuum_response
     ! --- Local parameters
     integer :: ierr
     real*8  :: checksum
+    
+    if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
     
     ! --- Broadcast parameters.
     call MPI_bcast(sr%n_bnd,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -386,7 +391,7 @@ module vacuum_response
        + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil   &
        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor
     
-    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    if ( vacuum_debug ) write(*,*) my_id, 'Exiting broadcast_starwall_response.'
     
   end subroutine broadcast_starwall_response
   
@@ -576,12 +581,13 @@ module vacuum_response
     ! --- Local variables
     real*8, allocatable :: psibnd_vec(:)    ! Vector of the values of Psi at the boundary
     real*8, allocatable :: dpsibnd_vec(:)   ! Vector of the values of deltaPsi at the boundary
-    real*8   :: ws                          ! Gauss weight for integration in s direction
+    real*8, allocatable :: psibnd_coils(:)  ! Vector of the values of Psi_coil at the boundary
     real*8   :: amat_contrib, rhs_contrib   ! Vacuum response contribution to lhs and rhs
     real*8   :: testfunc_l                  ! j^*_l in documentation
     real*8   :: basfunc_i                   ! b_i in documentation
-    real*8   :: sqrt_xs2_ys2                ! factor from definition of dA
+    real*8   :: dA                          ! factor from definition of dA
     real*8   :: x_s(n_gauss), y_s(n_gauss)  ! values of dR/ds and dZ/ds at Gaussian points
+    real*8   :: common_prefactor
     integer  :: m_bndelem                   ! Boundary element index
     type(type_bnd_element) :: bndelem_m     ! Boundary element corresponding to index m_bndelem
     integer  :: ms                          ! Gauss point index
@@ -591,7 +597,7 @@ module vacuum_response
     integer  :: l_vertex, l_dof, l_dir, l_node, l_node_bnd, l_index, l_tor, l_row_j, l_row_psi
     real*8   :: l_size
     !   --- Quantities related to the boundary dof at which response is calculated
-    integer  :: i_vertex, i_dof, i_dir, i_node, i_node_bnd, i_index, i_starwall, i_tor, i_resp
+    integer  :: i_vertex, i_dof, i_dir, i_node, i_node_bnd, i_index, i_starwall, i_tor, i_resp, i_resp_0
     real*8   :: i_size
     !   --- Quantities related to the boundary dof contributing to the response
     integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_col_psi, j_resp
@@ -601,7 +607,7 @@ module vacuum_response
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
     
     ! --- Determine vectors of the psi and deltapsi boundary values.
-    call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
+    call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
     
     ! --- Update the derived response matrices
     call update_response(tstep, freeboundary_equil, resistive_wall)
@@ -614,7 +620,7 @@ module vacuum_response
       write(*,*) my_id, 'dpsibnd_vec: ', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
     end if
     
-    call boundary_check()
+    !###call boundary_check()
     
     !write(35+my_id,'(4ES20.12)') sum(abs(rhs_loc)), sum(abs(A_glob))
     
@@ -625,12 +631,17 @@ module vacuum_response
     
     ! --- Sum over boundary elements
     !$omp parallel do                                                                              &
-    !$omp default(shared)                                                                          &
+    !$omp default(none)                                                                            &
+    !$omp shared(a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,    &
+    !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,      &
+    !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec, psibnd_coils,       &
+    !$omp   resistive_wall)     &
     !$omp private(m_bndelem, bndelem_m, x_s, y_s, l_vertex, l_dof, l_node, l_dir, l_node_bnd,      &
-    !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, ws, sqrt_xs2_ys2, m_plane,             &
+    !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, dA, m_plane, common_prefactor,         &
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,   &
-    !$omp   i_tor, i_resp, basfunc_i, j_node_bnd, j_dof, j_node, j_dir, j_index, j_starwall,       &
-    !$omp   j_tor, j_resp, j_col_psi, sparsepos_jp, sparsepos_pp, amat_contrib, rhs_contrib)
+    !$omp   i_tor, i_resp, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir, j_index,         &
+    !$omp   j_starwall, j_tor, j_resp, j_col_psi, sparsepos_jp, sparsepos_pp, amat_contrib,        &
+    !$omp   rhs_contrib)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
       
@@ -654,11 +665,10 @@ module vacuum_response
             
             ! --- Loop over Gaussian points -- integration in s-direction
             L_MS: do ms = 1, n_gauss
-              ws = wgauss(ms)
               
               ! --- Integration factor from the definition of dA:
               !     int dA = sum_{m_bndelem} int ds int dphi sqrt{(R,s)^2 + (Z,s)^2}
-              sqrt_xs2_ys2 = sqrt(x_s(ms)**2 + y_s(ms)**2)
+              dA = sqrt(x_s(ms)**2 + y_s(ms)**2)
               
               ! --- Loop over toroidal planes -- integration in phi-direction
               L_MP: do m_plane = 1, n_plane
@@ -675,11 +685,14 @@ module vacuum_response
                     i_index     = node_list%node(i_node)%index(i_dir)
                     i_size      = bndelem_m%size(i_vertex,i_dof)
                     L_IS: do i_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
-                      i_tor  = sr%i_tor(i_starwall)
-                      i_resp = response_index(i_node_bnd,i_starwall,i_dof)
-            
+                      i_tor    = sr%i_tor(i_starwall)
+                      i_resp   = response_index(i_node_bnd,i_starwall,i_dof)
+                      i_resp_0 = response_index_eq(i_node_bnd,i_dof)
+                      
                       ! --- Determine basis function
                       basfunc_i = H1(i_vertex,i_dof,ms) *i_size * HZ(i_tor,m_plane)
+                      
+                      common_prefactor = wgauss(ms) * dA * testfunc_l * basfunc_i
                       
                       ! --- Sum over boundary dofs contributing to the response
                       L_JB: do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
@@ -703,8 +716,7 @@ module vacuum_response
                             sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min)
                             
                             ! --- Vacuum response contribution to the lhs of the current equation
-                            amat_contrib = - testfunc_l * ws  &
-                              * basfunc_i * sqrt_xs2_ys2 * response_m_e(i_resp, j_resp)
+                            amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
                             !$omp atomic
                             A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
                             
@@ -714,13 +726,14 @@ module vacuum_response
                       
                       ! --- Contribution of vacuum response to the rhs of the current equation
                       rhs_contrib = sum( response_m_h(i_resp, :) * psibnd_vec(:) )                 &
-                        + sum( response_m_j(i_resp, :) * dpsibnd_vec(:) )!                          &
-                        !+ sum( bext_tan(i_resp, :) * I_coils(:) )
-                        !+ sum( response_m_l(i_resp, :) * coil_voltages(:) )
-                      if ( resistive_wall )                                                        &
+                        - sum( response_m_h(i_resp,:) * psibnd_coils(:) )                          &
+                        + sum( response_m_j(i_resp, :) * dpsibnd_vec(:) )
+                      if ( i_tor == 1 ) &
+                        rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )
+                      if ( resistive_wall ) &
                         rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) * wall_curr(:) )  &
                           + sum( response_m_g(i_resp, :) * dwall_curr(:) )
-                      rhs_contrib = rhs_contrib * testfunc_l * ws * basfunc_i * sqrt_xs2_ys2
+                      rhs_contrib = rhs_contrib * common_prefactor
                       !$omp atomic
                       rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
                       
@@ -806,7 +819,7 @@ module vacuum_response
   
   
   !> Determine vectors of the psi and deltapsi values at the boundary.
-  subroutine det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
+  subroutine det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
     
     use data_structure, only: type_node_list, type_bnd_node_list
     
@@ -817,14 +830,24 @@ module vacuum_response
     type(type_bnd_node_list), intent(in)  :: bnd_node_list  !< List of boundary grid nodes
     real*8, allocatable,      intent(out) :: psibnd_vec(:)  !< Vector of Psi boundary values
     real*8, allocatable,      intent(out) :: dpsibnd_vec(:) !< Vector of deltaPsi boundary values
+    real*8, allocatable, optional, intent(out) :: psibnd_coils(:)!< Vector of Psi_coil boundary values
     
     ! --- Local variables
-    integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp
+    integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp, j_resp_0
     
     if ( allocated(psibnd_vec) ) deallocate(psibnd_vec)
     allocate( psibnd_vec(n_dof_starwall) )
+    psibnd_vec(:) = 0.d0
+    
     if ( allocated(dpsibnd_vec) ) deallocate(dpsibnd_vec)
     allocate( dpsibnd_vec(n_dof_starwall) )
+    dpsibnd_vec(:) = 0.d0
+    
+    if ( present(psibnd_coils) ) then
+      if ( allocated(psibnd_coils) ) deallocate(psibnd_coils)
+      allocate( psibnd_coils(n_dof_starwall) )
+      psibnd_coils(:) = 0.d0
+    end if
     
     ! --- Determine vector of (delta)psi boundary values.
     do jnode = 1, bnd_node_list%n_bnd_nodes       ! loop over nodes
@@ -833,10 +856,14 @@ module vacuum_response
         jtor = sr%i_tor(j_starwall)     ! (mode corresponding to STARWALL harmonic)
         do jbas = 1, 2                            ! loop over basis functions
           jdir   = bnd_node_list%bnd_node(jnode)%direction(jbas)
-          j_resp = response_index(jnode,j_starwall,jbas)
+          j_resp   = response_index(jnode,j_starwall,jbas)
+          j_resp_0 = response_index_eq(jnode,jbas)
           
           psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, ivar_psi)
           dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, ivar_psi)
+          if ( (present(psibnd_coils)) .and. (jtor==1) .and. (allocated(I_coils)) ) then
+            psibnd_coils( j_resp ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
+          end if
           
         end do
       end do
@@ -1014,7 +1041,7 @@ module vacuum_response
     logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
     
     ! --- Local variables
-    integer :: i, j, k
+    integer :: i, j, k, j2, k2
     real*8  :: a, b
     real*8, allocatable :: tmp_d_s(:)
     real*8  :: theta, zeta
@@ -1062,7 +1089,7 @@ module vacuum_response
       
       ! --- Allocate matrices if required
       if ( .not. allocated(response_m_eq) ) &
-        allocate( response_m_eq(n_dof_starwall, n_dof_starwall) )
+        allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
       if ( .not. allocated(response_m_a) ) &
         allocate( response_m_a(n_wall_curr, n_dof_starwall) )
       if ( .not. allocated(response_d_b) ) &
@@ -1086,8 +1113,14 @@ module vacuum_response
       if ( .not. allocated(response_m_l) ) &
         allocate( response_m_l(n_dof_starwall, sr%ncoil) )
       
-      ! --- Derived response matrix for equilibrium
-      response_m_eq(:,:) = sr%a_ee(:,:)
+      ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
+      do j = 1, 2*sr%n_bnd, 2
+        j2 = (j-1)*sr%n_tor+1
+        do k = 1, 2*sr%n_bnd, 2
+          k2 = (k-1)*sr%n_tor+1
+          response_m_eq(j:j+1,k:k+1) = sr%a_ee(j2:j2+1,k2:k2+1)
+        end do
+      end do
       
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall ) then
@@ -1160,6 +1193,7 @@ module vacuum_response
         write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
         write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
         write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
+        write(*,*) 'm_eq:', sum(abs(response_m_eq(1:128,1:128))), sum(response_m_eq(1:128,1:128))
         write(*,*) 'END: Checksums'
       end if
       
@@ -1289,6 +1323,27 @@ module vacuum_response
     end if
     
   end function response_index
+  
+  
+  
+  
+  
+  
+  !> Determine the index in the response matrix for a certain boundary degree of freedom.
+  integer recursive function response_index_eq(inode, ibas)
+    
+    ! --- Routine parameters
+    integer, intent(in)    :: inode      !< Boundary index of the node
+    integer, intent(in)    :: ibas       !< Basis function (1 or 2)
+    
+    response_index_eq = 2*(inode-1) + ibas
+    
+    if ( response_index_eq < 1 ) then
+      write(*,*) 'FATAL: RESPONSE_INDEX_EQ < 1 DETECTED'
+      stop
+    end if
+    
+  end function response_index_eq
   
   
   

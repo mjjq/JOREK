@@ -179,7 +179,7 @@ module fourier
   !> Determine the magnetic poloidal angle, theta_mag, by performing field line tracing
   !! in the axisymmetric magnetic field component.
   subroutine determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping, m_pol_range,   &
-    psin_range, debug)
+    rad_range, debug)
   
     integer,               intent(in)    :: nstpts      !< Number of radial positions
     integer,               intent(in)    :: nmaxsteps   !< Maximum number of poloidal steps
@@ -187,7 +187,7 @@ module fourier
     integer,               intent(in)    :: nsmallsteps !< Number of small between two large steps
     type(t_theta_mapping), intent(inout) :: mapping
     integer,               intent(in)    :: m_pol_range(2) !< Range of poloidal mode numbers
-    real,                  intent(in)    :: psin_range(2)  !< Range of Psi_n to cover
+    real,                  intent(in)    :: rad_range(2)   !< Range of Psi_n to cover
     logical,               intent(in)    :: debug       !< Output debug information?
     
     integer*8            :: fftw_plan
@@ -212,7 +212,7 @@ module fourier
     mapping%zze  = 0.
     
     ! --- Trace field lines in the axisymmetric magnetic field component
-    call trace_fieldlines(mapping, nmaxsteps, nsmallsteps, deltaphi, psin_range)
+    call trace_fieldlines(mapping, nmaxsteps, nsmallsteps, deltaphi, rad_range)
     
     ! --- Interpolate theta_mag to equidistant theta_geo positions.
     do k = 1, mapping%nstpts
@@ -276,13 +276,13 @@ module fourier
   
   
   !> Trace field lines in the n=0 component of Psi.
-  subroutine trace_fieldlines(mapping, nmaxsteps, nsmallsteps, deltaphi, psin_range)
+  subroutine trace_fieldlines(mapping, nmaxsteps, nsmallsteps, deltaphi, rad_range)
     
     type(t_theta_mapping)   :: mapping
     integer,  intent(in)    :: nmaxsteps    !< Maximum number of poloidal steps
     integer,  intent(in)    :: nsmallsteps  !< Number of small between two large steps
     real*8,   intent(in)    :: deltaphi     !< Toroidal step width of the large steps
-    real,     intent(in)    :: psin_range(2)!< Range of Psi_n to cover
+    real,     intent(in)    :: rad_range(2) !< Range of Psi_n to cover
   
     integer :: i, j, k, l
     real*8  :: rn, zn ! R and Z at previous small step position
@@ -326,7 +326,7 @@ module fourier
     !$omp parallel do schedule(dynamic) default(none)                                              &
     !$omp   firstprivate(k,theta_corr,R_out,Z_out,i_elm_out,s_out,t_out,ifail,P,P_s,P_t,j,rn,zn,i, &
     !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh,fact)   &
-    !$omp   shared(mapping,abort,F0,node_list,element_list,nmaxsteps,nsmallsteps,                  &
+    !$omp   shared(mapping,abort,F0,node_list,element_list,nmaxsteps,nsmallsteps,rad_range,        &
     !$omp     smalldeltaphi)
     FL_STPTS: do k = mapping%nstpts, 1, -1
       if ( abort ) cycle
@@ -335,7 +335,7 @@ module fourier
       phi        = 0.d0
       
       ! --- Initialize field line position.
-      fact = psin_range(1) + (psin_range(2)-psin_range(1)) * ( REAL(k-1) / REAL(mapping%nstpts-1) )
+      fact = rad_range(1) + (rad_range(2)-rad_range(1)) * ( REAL(k-1) / REAL(mapping%nstpts-1) )
       mapping%rr(k,0) = mapping%R_axis + fact * ( mapping%R_xpoint(1) - mapping%R_axis )
       mapping%zz(k,0) = mapping%Z_axis + fact * ( mapping%Z_xpoint(1) - mapping%Z_axis )
       mapping%tt(k,0) = atan3( mapping%zz(k,0)-mapping%Z_axis, mapping%rr(k,0)-mapping%R_axis )

@@ -2,6 +2,6 @@
   nstpts      = 400
   deltaphi    = 0.3,
   m_pol_range = 0, 40,
-  psin_range  = 0.001, 0.999,
+  rad_range   = 0.001, 0.999,
   debug       = .true.,
 /

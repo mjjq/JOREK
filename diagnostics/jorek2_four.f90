@@ -15,9 +15,9 @@ program JOREK2_FOUR
   
   ! ---Field line tracing parameters
   integer                  :: nstpts, nmaxsteps, nsmallsteps
-  real                     :: deltaphi, psin_range(2)
+  real                     :: deltaphi, rad_range(2)
   logical                  :: debug
-  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps, m_pol_range, debug, psin_range
+  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps, m_pol_range, debug, rad_range
   
   ! --- Initialize mode and mode_type arrays
   call det_modes()
@@ -35,7 +35,7 @@ program JOREK2_FOUR
   deltaphi    = 0.3
   nsmallsteps = 3
   m_pol_range = (/0, 7/)
-  psin_range  = (/0.001, 0.999/)
+  rad_range   = (/0.001, 0.999/)
   debug       = .false.
   !   --- If four_params.nml file exists, read field line tracing parameters from that file.
   open(42, file='./four_params.nml', action='READ', status='OLD', iostat=err)
@@ -59,14 +59,14 @@ program JOREK2_FOUR
   write(*,112) 'deltaphi    =', deltaphi
   write(*,111) 'nsmallsteps =', nsmallsteps
   write(*,111) 'm_pol_range =', m_pol_range
-  write(*,112) 'psin_range  =', psin_range
+  write(*,112) 'rad_range   =', rad_range
   write(*,113) 'debug       =', debug
 
   ! --- Determine magnetic coordinates by field line tracing.
   write(*,*)
   write(*,*) '>>> Determining the poloidal straight field line angle theta_star <<<'
   call determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping, m_pol_range,         &
-    psin_range, debug)
+    rad_range, debug)
   
   ! --- Transform the quantities
   write(*,*)

@@ -630,7 +630,7 @@ do i=1,element_list%n_elements
 
         enddo  ! end loop toroidal harmonics
 
-        psi_norm = (scalars(inode,1) - psi_axis)/(psi_bnd - psi_axis)
+        psi_norm = (Ps0 - psi_axis)/(psi_bnd - psi_axis)
         if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
            psi_norm = 2.d0 - psi_norm
         endif

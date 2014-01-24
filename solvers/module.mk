@@ -27,6 +27,10 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/solve_M2.f90 				\
 	$(DIR)/solvP3.f90 				\
 
+DEMO_SRC := $(DEMO_SRC)		\
+	$(DIR)/solve_M2.f90 				\
+	$(DIR)/solvP3.f90 				\
+
 JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)		\
 	$(DIR)/solve_M2.f90 				\
 	$(DIR)/solvP3.f90 				\

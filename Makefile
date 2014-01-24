@@ -119,6 +119,7 @@ JOREK2_DIAGNO_SRC       	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_TARGET2VTK_SRC   	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_POWERS           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_IMPORT_PERTURBATION_SRC	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+DEMO_SRC                        += $(ALL_BINARIES_SRC) $(PPPSRC)
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
           $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC) $(JORDEL_SRC) $(JORPOL_SRC) $(ENBIGGEN_SRC)       \
@@ -193,6 +194,10 @@ JOREK2_POWERS_OBJ =     $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POWERS_SRC
 JOREK2_IMPORT_PERTURBATION_OBJ =	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_IMPORT_PERTURBATION_SRC)))     \
                         		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
                         		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC)))
+
+DEMO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(DEMO_SRC)))     \
+     $(patsubst %.f,%.o,$(filter %.f, $(DEMO_SRC)))         \
+     $(patsubst %.c,%.o,$(filter %.c, $(DEMO_SRC)))
 
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
@@ -396,6 +401,12 @@ jorek2_import_perturbation_tmp : diagnostics/jorek2_import_perturbation.f90 $(JO
         diagnostics/jorek2_import_perturbation.f90	\
         $(JOREK2_IMPORT_PERTURBATION_OBJ)		\
          -o $(JOREK_DIR)/jorek2_import_perturbation $(INCLUDES) $(LIBS)
+
+demo : diagnostics/demo.f90 $(DEMO_OBJ)
+	$(FC) $(FFLAGS) 				\
+        diagnostics/demo.f90	\
+        $(DEMO_OBJ)		\
+         -o $(JOREK_DIR)/demo $(INCLUDES) $(LIBS)
 
 include all_rules.mk
 ifeq (0, $(words $(foreach word, ${NODEPS}, $(findstring ${word}, ${MAKECMDGOALS}))))

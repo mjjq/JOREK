@@ -44,6 +44,11 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
         $(DIR)/mod_pellet.f90				\
 
+DEMO_SRC := $(DEMO_SRC)		\
+        $(DIR)/mod_corr_neg.f90                         \
+	$(DIR)/mod_diffusivities.f90                    \
+        $(DIR)/mod_pellet.f90				\
+
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)		\
         $(DIR)/mod_pellet.f90				\
 

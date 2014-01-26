@@ -1,4 +1,4 @@
-!> This module contains datastructures describing poloidal and toroidal positions.
+!> This module contains datastructures describing lists of poloidal and toroidal positions.
 !! 
 !! Together with mod_expression, this provides a general diagnostic framework for many applications.
 module mod_position
@@ -47,8 +47,9 @@ module mod_position
   
   !> Data structure for a list of poloidal positions
   type t_pol_pos_list
-    integer :: n_pos = 0
-    type(t_pol_pos), allocatable :: pos(:)
+    type(t_pol_pos), allocatable :: pos(:,:)
+    integer :: n_pos(2) = 0
+    logical :: full_turn !< Do the positions cover a full poloidal turn?
   end type t_pol_pos_list
   
   !> Data structure for a toroidal position
@@ -58,9 +59,9 @@ module mod_position
   
   !> Data structure for a list of toroidal positions
   type t_tor_pos_list
-    integer :: n_pos = 0
     type(t_tor_pos), allocatable :: pos(:)
-    logical :: full_period
+    integer :: n_pos = 0
+    logical :: full_period !< Do the positions cover a full toroidal period?
   end type t_tor_pos_list
   
   
@@ -108,13 +109,13 @@ module mod_position
   subroutine alloc_pol_pos(pos_list, n_pos)
     
     type(t_pol_pos_list), intent(inout) :: pos_list
-    integer,              intent(in)    :: n_pos
+    integer,              intent(in)    :: n_pos(2)
     
     call cleanup_pol_pos(pos_list)
     
-    pos_list%n_pos = n_pos
+    pos_list%n_pos(:) = n_pos(:)
     
-    allocate( pos_list%pos(n_pos) )
+    allocate( pos_list%pos(n_pos(1),n_pos(2)) )
     
   end subroutine alloc_pol_pos
   
@@ -144,10 +145,11 @@ module mod_position
   !! - (R,Z) or (ielm,s,t)           -> single position
   !! - (Rmin,Rmax,nR,Zmin,Zmax,nZ)   -> 2D array of positions
   !! - (Rstart,Rend,Zstart,Zend,n)   -> Equidistant points along a straight line
-  !! - (Psi_N)                       -> flux surface
-  !! To be added: All nodes; All nodes with subdivision of elements (for vtk)
+  !! - (PsiN,nTht)                   -> flux surface (equidistant points in theta*)
+  !! - (PsiNmin,PsiNmax,nPsiN,nTht)  -> flux surfaces (equidistant points in theta*)
+  !! To be added: Single node; All nodes; All nodes with subdivision of elements (for vtk)
   subroutine create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s, t, Rmin,  &
-    Rmax, nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN)
+    Rmax, nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':create_pol_pos'
     
@@ -158,20 +160,20 @@ module mod_position
     type(type_element_list),      intent(in)    :: element_list
     type(t_equil_state),          intent(in)    :: eq
     real*8,  optional,            intent(in)    :: R, Z, s, t, Rmin, Rmax, Zmin, Zmax, PsiN,       &
-      Rstart, Rend, Zstart, Zend
-    integer, optional,            intent(in)    :: ielm, nR, nZ, n
+      Rstart, Rend, Zstart, Zend, PsiNmin, PsiNmax
+    integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN
     
     ! --- Local variables
     type(t_pol_pos), pointer :: pos
     real*8  :: R_out,Z_out
-    integer :: i
+    integer :: i, j
     
     ierr = 0
     
     if ( present(R) .and. present(Z) ) then
       
-      call alloc_pol_pos(pos_list, 1)
-      pos   => pos_list%pos(1)
+      call alloc_pol_pos(pos_list, (/1,1/))
+      pos   => pos_list%pos(1,1)
       pos%R = R
       pos%Z = Z
       call find_RZ(node_list, element_list, R, Z, R_out, Z_out, pos%ielm, pos%s, pos%t, ierr)
@@ -181,8 +183,8 @@ module mod_position
       
     else if ( present(ielm) .and. present(s) .and. present(t) ) then
       
-      call alloc_pol_pos(pos_list, 1)
-      pos      => pos_list%pos(1)
+      call alloc_pol_pos(pos_list, (/1,1/))
+      pos      => pos_list%pos(1,1)
       pos%ielm = ielm
       pos%s    = s
       pos%t    = t
@@ -192,27 +194,83 @@ module mod_position
     else if ( present(Rmin) .and. present(Rmax) .and. present(nR) .and. present(Zmin) .and.        &
       present(Zmax) .and. present(nZ) ) then
       
-      !###
-      write(*,*) '### not implemented yet ###'
-      stop
-      !###
+      call alloc_pol_pos(pos_list, (/nR,nZ/))
+      do i = 1, nR
+        do j = 1, nZ
+          pos   => pos_list%pos(i,j)
+          pos%R = Rstart + (Rend-Rstart) * real(i-1)/real(nR-1)
+          pos%Z = Zstart + (Zend-Zstart) * real(j-1)/real(nZ-1)
+          call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
+            ierr)
+          if ( ierr /= 0 ) then
+            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
+            exit
+          end if
+          call fill_pol_pos(pos, node_list, element_list, ierr)
+          if ( ierr /= 0 ) exit
+        end do
+      end do
       
     else if ( present(Rstart) .and. present(Rend) .and. present(Zstart) .and. present(Zend) .and.  &
       present(n) ) then
       
-      call alloc_pol_pos(pos_list, n)
+      call alloc_pol_pos(pos_list, (/1,n/))
       do i = 1, n
-        pos   => pos_list%pos(i)
+        pos   => pos_list%pos(1,i)
         pos%R = Rstart + (Rend-Rstart) * real(i-1)/real(n-1)
         pos%Z = Zstart + (Zend-Zstart) * real(i-1)/real(n-1)
         call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,  &
           ierr)
         if ( ierr /= 0 ) then
-          write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' when calling find_RZ.'
+          write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
           exit
         end if
         call fill_pol_pos(pos, node_list, element_list, ierr)
+        if ( ierr /= 0 ) exit
       end do
+      
+    else if ( present(PsiN) .and. present(nTht) ) then
+      !### single flux surface
+      
+      ! - check psin in range
+      ! - find starting point
+      ! - trace field line
+      ! - make equidistant points in theta*
+      
+      call alloc_pol_pos(pos_list, (/1,nTht/))
+      pos_list%full_turn = .true.
+      do j = 1, nTht
+        pos   => pos_list%pos(1,j)
+        !###
+      end do
+      
+      !###
+      write(*,*) '### not implemented yet ###'
+      stop
+      !###
+      
+    else if ( present(PsiNmin) .and. present(PsiNmax) .and. present(nPsiN) .and. present(nTht) )   &
+      then
+      !### multiple flux surfaces
+      
+      ! ### check psin in range
+      
+      call alloc_pol_pos(pos_list, (/nPsiN,nTht/))
+      pos_list%full_turn = .true.
+      do i = 1, nPsiN
+        ! - find starting point
+        ! - trace field line
+        ! - make equidistant points in theta*
+        do j = 1, nTht
+          pos   => pos_list%pos(i,j)
+          !###
+        end do
+      end do
+      
+      !###
+      write(*,*) '### not implemented yet ###'
+      stop
+      !###
       
     else
       
@@ -230,10 +288,11 @@ module mod_position
   
   
   
-  !> Fill information (R, R_s, ..., Z_tt, element, nodes) for one poloidal position.
-  !!
-  !! Requires that ielm, s, t are already set to correct values.
+  !> Auxilliary routine used by create_pol_pos: Fill information (R, R_s, ..., Z_tt, element, nodes)
+  !! for a single poloidal position. Requires that ielm, s, t are already set to correct values.
   subroutine fill_pol_pos(pos, node_list, element_list, ierr)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':fill_pol_pos'
     
     ! --- Routine parameters
     type(t_pol_pos), pointer, intent(inout) :: pos
@@ -246,10 +305,14 @@ module mod_position
     
     ierr = 0
     
+    if ( (pos%ielm < 0) .or. (pos%ielm > element_list%n_elements) ) then
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': pos%ielm has illegal value.'
+      ierr = 300
+      return
+    end if
+    
     call interp_RZ(node_list, element_list, pos%ielm, pos%s, pos%t, pos%R, pos%R_s, pos%R_t,       &
       pos%R_st, pos%R_ss, pos%R_tt, pos%Z, pos%Z_s, pos%Z_t, pos%Z_st, pos%Z_ss, pos%Z_tt)
-    
-    !### check that ielm in valid range
     
     pos%element = element_list%element(pos%ielm)
     

@@ -18,7 +18,7 @@ program demo
   type(t_pol_pos_list) :: pol_pos_list
   type(t_tor_pos_list) :: tor_pos_list
   integer :: my_id, ierr, k_tor, i
-  real*8, allocatable :: result(:,:,:)
+  real*8, allocatable :: result(:,:,:,:)
   
   allocate(node_list)
   allocate(element_list)
@@ -35,14 +35,15 @@ program demo
   
   call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
   
+  call init_expr()
+  call print_expr()
+  
   ! --- Evaluate several expressions simultaneously at one position.
   call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, R=10.5, Z=0.5)
   
   call create_tor_pos(tor_pos_list, ierr, phi=0.)
   
-  call eval_expr(equil_state, .false., (/ EXPR_R, EXPR_Z, EXPR_PHI, EXPR_XJAC, EXPR_PSI, EXPR_U, &
-    EXPR_ZJ, EXPR_W, EXPR_RHO, EXPR_T, EXPR_VPAR, EXPR_PRES, EXPR_BABS, EXPR_BTOR, EXPR_BR,      &
-    EXPR_BZ, EXPR_CURRDENS /), 17,    &
+  call eval_expr(equil_state, .false., (/ 'R           ', 'Z           ', 'phi         ', 'xjac        ' /), 4,    &
     pol_pos_list, tor_pos_list, result, ierr)
   
   write(*,*) result
@@ -53,11 +54,10 @@ program demo
   
   call create_tor_pos(tor_pos_list, ierr, phi=0.)
   
-  call eval_expr(equil_state, .false., (/ EXPR_R, EXPR_PSIN, EXPR_ETAT, EXPR_BABS, EXPR_T,         &
-    EXPR_RHO, EXPR_ZJ, EXPR_CURRDENS /), 8, pol_pos_list, tor_pos_list, result, ierr)
+  call eval_expr(equil_state, .false., (/ 'R           ', 'Psi_N       ', 'u           ', 'T           ' /), 4, pol_pos_list, tor_pos_list, result, ierr)
   
   do i = 1, 300
-    write(42,'(99es20.12)') result(:,i,1)
+    write(42,'(99es20.12)') result(:,1,i,1)
   end do
   
   ! --- Evaluate expressions along toroidal direction.
@@ -65,10 +65,10 @@ program demo
   
   call create_tor_pos(tor_pos_list, ierr, nphi=128)
   
-  call eval_expr(equil_state, .false., (/ EXPR_PHI, EXPR_T /), 2, pol_pos_list, tor_pos_list, result, ierr)
+  call eval_expr(equil_state, .false., (/ 'phi         ', 'T           ' /), 2, pol_pos_list, tor_pos_list, result, ierr)
   
   do i = 1, 128
-    write(43,'(99es20.12)') result(:,1,i)
+    write(43,'(99es20.12)') result(:,1,1,i)
   end do
   
 end program demo

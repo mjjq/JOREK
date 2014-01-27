@@ -11,6 +11,7 @@ module mod_position
   use parameters
   use equil_info
   use data_structure
+  use mod_straight_field_line
   
   
   
@@ -164,6 +165,7 @@ module mod_position
     integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN
     
     ! --- Local variables
+    type(t_theta_mapping) :: mapping
     type(t_pol_pos), pointer :: pos
     real*8  :: R_out,Z_out
     integer :: i, j
@@ -251,26 +253,34 @@ module mod_position
       
     else if ( present(PsiNmin) .and. present(PsiNmax) .and. present(nPsiN) .and. present(nTht) )   &
       then
-      !### multiple flux surfaces
       
       ! ### check psin in range
       
+      call determine_theta_mag(mapping, node_list, element_list, eq, (/PsiNmin,PsiNmax/), nPsiN,   &
+        nTht, ierr)
+      !### ierr handling
+      
       call alloc_pol_pos(pos_list, (/nPsiN,nTht/))
       pos_list%full_turn = .true.
+      
       do i = 1, nPsiN
-        ! - find starting point
-        ! - trace field line
-        ! - make equidistant points in theta*
         do j = 1, nTht
           pos   => pos_list%pos(i,j)
-          !###
+          pos%R = mapping%rre(i,j-1)
+          pos%Z = mapping%zze(i,j-1)
+          call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
+            ierr)
+          if ( ierr /= 0 ) then
+            write(99,*) pos%R, pos%Z, i, j !###
+            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
+            exit
+          end if
+          call fill_pol_pos(pos, node_list, element_list, ierr)
+          if ( ierr /= 0 ) exit
         end do
       end do
       
-      !###
-      write(*,*) '### not implemented yet ###'
-      stop
-      !###
+      call cleanup_mapping(mapping)
       
     else
       

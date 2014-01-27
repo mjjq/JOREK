@@ -1,4 +1,4 @@
-recursive subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+recursive subroutine find_RZ2(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 !-------------------------------------------------------------------------
 ! solves two non-linear equations using Newtons method (from numerical recipes)
 ! LU decomposition replaced by explicit solution of 2x2 matrix.
@@ -143,4 +143,98 @@ if (ielm_out .eq. 0) ifail = 99
 !write(*,'(A,8e16.8)') ' find_RZ wrong exit ',x,errx,errf
 
 return
-end
+end subroutine find_RZ2
+
+
+
+
+
+!> Optimized version of find_RZ.
+recursive subroutine find_RZ(node_list, element_list, R_find, Z_find, R_out, Z_out, ielm_out,      &
+  s_out, t_out, ifail)
+
+use data_structure
+
+implicit none
+
+! --- Constants
+integer, parameter :: niter     = 20                   !< Maximum number of Newton iterations
+real*8,  parameter :: tolf      = 1.d-6                !< Tolerance for spatial distance
+real*8,  parameter :: tolx      = 1.d-15               !< Tolerance for iteration step width
+real*8,  parameter :: delta     = 0.05d0               !< Maximum number of Newton iterations
+
+! --- Routine parameters
+type (type_node_list),    intent(in)    :: node_list
+type (type_element_list), intent(in)    :: element_list
+real*8,                   intent(in)    :: R_find, Z_find
+real*8,                   intent(out)   :: R_out, Z_out, s_out, t_out
+integer,                  intent(out)   :: ielm_out, ifail
+
+integer :: i, j, k, iv, istart
+real*8  :: Rmin, Rmax, Zmin, Zmax, temp, dis, RR, RR_s, RR_t, ZZ, ZZ_s, ZZ_t, x(2), fvec(2), p(2)
+
+ielm_out = 0
+ifail    = 99
+
+L_EL: do k = 1, element_list%n_elements
+  
+  call RZ_minmax(node_list, element_list, k, Rmin, Rmax, Zmin, Zmax) ! <<< most expensive call!!!
+  
+  if ( (R_find > Rmin - delta) .and. (R_find < Rmax + delta) .and. (Z_find > Zmin - delta) .and.   &
+     (Z_find < Zmax + delta) ) then ! (If the element could be relevant, proceed:)
+    
+    L_ST: do istart = 1, 5
+      
+      ! Try up to five different starting positions inside the element:
+      if (istart == 1) then
+        x(:) = (/ 0.50d0, 0.50d0 /)
+      else if (istart == 2) then
+        x(:) = (/ 0.23d0, 0.23d0 /)
+      else if (istart == 3) then
+        x(:) = (/ 0.77d0, 0.77d0 /)
+      else if (istart == 4) then
+        x(:) = (/ 0.77d0, 0.23d0 /)
+      else if (istart == 5) then
+        x(:) = (/ 0.23d0, 0.77d0 /)
+      end if
+      
+      do i = 1, niter
+        
+        call interp_RZ2(node_list, element_list, k, x(1), x(2), RR, RR_s, RR_t, ZZ, ZZ_s, ZZ_t)
+        
+        fvec(:) = (/ RR - R_find, ZZ - Z_find /)
+        
+        if (sqrt(sum(fvec**2)) <= tolf) then
+          ielm_out = k
+          exit L_EL
+        endif
+        
+        dis  = ZZ_t * RR_s - RR_t * ZZ_s
+        if (dis == 0.d0) exit L_ST
+        
+        p(:) = (/ RR_t * fvec(2) - ZZ_t * fvec(1), ZZ_s * fvec(1) - RR_s * fvec(2) /) / dis
+        
+        p(:) = max( min(p(:),     +0.25d0), -0.25d0 ) ! (limit iteration step size)
+        x(:) = max( min(x(:)+p(:),+1.00d0), -0.00d0 ) ! (restict s and t to valid range)
+        
+        if (sqrt(sum(p**2)) <= tolx) then
+          ielm_out  = k
+          exit L_EL
+        end if
+        
+      end do
+    end do L_ST
+    
+  end if
+  
+end do L_EL
+
+if ( ielm_out /= 0 ) then
+  s_out     = x(1)
+  t_out     = x(2)
+  R_out     = RR
+  Z_out     = ZZ
+  ifail     = 0
+end if
+
+end subroutine find_RZ

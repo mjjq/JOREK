@@ -71,4 +71,15 @@ program demo
     write(43,'(99es20.12)') result(:,1,1,i)
   end do
   
+  ! --- Flux surfaces with straight field line theta.
+  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, PsiNmin=0.01, PsiNmax=0.99, nPsiN=20, nTht=20)
+  
+  call create_tor_pos(tor_pos_list, ierr, nphi=128) !###
+  
+  call eval_expr(equil_state, .false., (/ 'phi         ', 'T           ' /), 2, pol_pos_list, tor_pos_list, result, ierr)
+  
+  !do i = 1, 128
+  !  write(43,'(99es20.12)') result(:,1,1,i)
+  !end do
+  
 end program demo

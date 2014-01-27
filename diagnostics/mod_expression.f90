@@ -2,7 +2,7 @@
 !!
 !! To obtain good performance, evaluate several expressions at several positions in a single call.
 !!
-!! Add a new expression in init_expr() and eval_expr() consistently.
+!! Note: Add a new expressions to init_expr() and eval_expr() consistently.
 module mod_expression
   
   

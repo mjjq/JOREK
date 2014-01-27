@@ -31,7 +31,11 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	  \
 	$(DIR)/boundary_check.f90         \
+	$(DIR)/mod_straight_field_line.f90\
 	$(DIR)/mod_fourier.f90
+
+DEMO_SRC := $(DEMO_SRC)	  \
+	$(DIR)/mod_straight_field_line.f90
 
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	  \
 	$(DIR)/boundary_check.f90         \

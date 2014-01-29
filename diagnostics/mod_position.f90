@@ -149,8 +149,9 @@ module mod_position
   !! - (PsiN,nTht)                   -> flux surface (equidistant points in theta*)
   !! - (PsiNmin,PsiNmax,nPsiN,nTht)  -> flux surfaces (equidistant points in theta*)
   !! To be added: Single node; All nodes; All nodes with subdivision of elements (for vtk)
-  subroutine create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s, t, Rmin,  &
-    Rmax, nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN)
+  recursive subroutine create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s,  &
+    t, Rmin, Rmax, nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax,&
+    nPsiN)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':create_pol_pos'
     
@@ -172,6 +173,7 @@ module mod_position
     
     ierr = 0
     
+    ! --- Single position given by R and Z.
     if ( present(R) .and. present(Z) ) then
       
       call alloc_pol_pos(pos_list, (/1,1/))
@@ -183,6 +185,7 @@ module mod_position
       
       if ( ierr == 0 ) call fill_pol_pos(pos, node_list, element_list, ierr)
       
+    ! --- Single position given by ielm, s, and t.
     else if ( present(ielm) .and. present(s) .and. present(t) ) then
       
       call alloc_pol_pos(pos_list, (/1,1/))
@@ -193,6 +196,7 @@ module mod_position
       
       call fill_pol_pos(pos, node_list, element_list, ierr)
       
+    ! --- Rectangular array of positions in R and Z.
     else if ( present(Rmin) .and. present(Rmax) .and. present(nR) .and. present(Zmin) .and.        &
       present(Zmax) .and. present(nZ) ) then
       
@@ -213,6 +217,7 @@ module mod_position
         end do
       end do
       
+    ! --- Equidistant points along a straight line in R and Z.
     else if ( present(Rstart) .and. present(Rend) .and. present(Zstart) .and. present(Zend) .and.  &
       present(n) ) then
       
@@ -231,41 +236,36 @@ module mod_position
         if ( ierr /= 0 ) exit
       end do
       
+    ! --- Single (closed) flux surface.
     else if ( present(PsiN) .and. present(nTht) ) then
-      !### single flux surface
       
-      ! - check psin in range
-      ! - find starting point
-      ! - trace field line
-      ! - make equidistant points in theta*
+      call create_pol_pos(pos_list, ierr, node_list, element_list, eq, PsiNmin=PsiN, PsiNmax=PsiN, &
+        nPsiN=1)
       
-      call alloc_pol_pos(pos_list, (/1,nTht/))
-      pos_list%full_turn = .true.
-      do j = 1, nTht
-        pos   => pos_list%pos(1,j)
-        !###
-      end do
-      
-      !###
-      write(*,*) '### not implemented yet ###'
-      stop
-      !###
-      
+    ! --- Several (closed) flux surfaces.
     else if ( present(PsiNmin) .and. present(PsiNmax) .and. present(nPsiN) .and. present(nTht) )   &
       then
       
-      ! ### check psin in range
+      if ( (min(PsiNmin,PsiNmax) < 0.d0) .and. (max(PsiNmin,PsiNmax) > 1.d0) ) then
+        write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': PsiNmin and PsiNmax must be between 0 and 1.'
+        ierr = 300
+        return
+      end if 
       
       call determine_theta_mag(mapping, node_list, element_list, eq, (/PsiNmin,PsiNmax/), nPsiN,   &
         nTht, ierr)
-      !### ierr handling
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling determine_theta_mag.'
+        ierr = 400
+        return
+      end if 
       
-      call alloc_pol_pos(pos_list, (/nPsiN,nTht/))
+      call alloc_pol_pos(pos_list, (/nTht,nPsiN/))
       pos_list%full_turn = .true.
       
-      do i = 1, nPsiN
-        do j = 1, nTht
-          pos   => pos_list%pos(i,j)
+      do j = 1, nTht
+        do i = 1, nPsiN
+          pos   => pos_list%pos(j,i)
           pos%R = mapping%rre(i,j-1)
           pos%Z = mapping%zze(i,j-1)
           call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&

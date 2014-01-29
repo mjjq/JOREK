@@ -306,7 +306,7 @@ module mod_expression
     end if
     
     if ( allocated(result) ) deallocate(result)
-    allocate( result(n_expr, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2), tor_pos_list%n_pos) )
+    allocate( result(tor_pos_list%n_pos, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2), n_expr) )
     
     ! --- Loop over positions in the poloidal plane
     loop_pol1: do ipolpos = 1, pol_pos_list%n_pos(1)
@@ -727,13 +727,14 @@ module mod_expression
                 res = zj0 * R !###
                 
               case default
-                write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Illegal expression number.'
+                write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Illegal expression.'
                 ierr = 100
-                res  = 0.d0 / 0.d0
+                return
                 
             end select
             
-            result(iexpr, ipolpos, jpolpos, itorpos) = res
+            result(itorpos, ipolpos, jpolpos, iexpr) = res
+            
           end do loop_expr
         end do loop_tor
       end do loop_pol2

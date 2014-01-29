@@ -4,6 +4,7 @@ module mod_straight_field_line
   
   
   
+  
   use constants
   use tr_module 
   use parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
@@ -15,6 +16,7 @@ module mod_straight_field_line
   
   
   implicit none
+  
   
   
   
@@ -34,7 +36,7 @@ module mod_straight_field_line
   
   ! --- Constants
   character(len=23), parameter, private :: THIS_MOD_NAME = 'mod_straight_field_line'
-  logical,           parameter, private :: DEBUG         = .true.  !< Switch on/off debugging output
+  logical,           parameter, private :: DEBUG         = .false. !< Switch on/off debugging output
   
   
   
@@ -132,6 +134,10 @@ module mod_straight_field_line
   subroutine determine_theta_mag(mapping, node_list, element_list, equil_state, PsiNRange, nPsiN,  &
     nTht, ierr, nmaxsteps2, deltaphi2, nsmallsteps2)
     
+    ! --- Constants
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':determine_theta_mag'
+    
+    ! --- Routine parameters
     type(t_theta_mapping),  intent(inout) :: mapping
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
@@ -144,6 +150,7 @@ module mod_straight_field_line
     real*8,  optional,      intent(in)    :: deltaphi2   !< Toroidal step width of the large steps
     integer, optional,      intent(in)    :: nsmallsteps2!< Number of small steps between large ones
     
+    ! --- Local variables
     integer :: i, j, k, nmaxsteps, nsmallsteps
     real*8  :: deltaphi, test1, test2, test3, suggested_factor
     
@@ -169,7 +176,7 @@ module mod_straight_field_line
     call trace_fieldlines(mapping, node_list, element_list, equil_state, PsiNRange, nmaxsteps,     &
       deltaphi, nsmallsteps, ierr)
     if ( ierr /= 0 ) then
-      write(*,*) 'ERROR calling trace_fieldlines.'
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling trace_fieldlines.'
       return
     end if
     
@@ -242,6 +249,10 @@ module mod_straight_field_line
   subroutine trace_fieldlines(mapping, node_list, element_list, equil_state, PsiNRange,     &
     nmaxsteps, deltaphi, nsmallsteps, ierr)
     
+    ! --- Constants
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':trace_fieldlines'
+    
+    ! --- Routine parameters
     type(t_theta_mapping),  intent(inout) :: mapping
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
@@ -252,6 +263,7 @@ module mod_straight_field_line
     integer,                intent(in)    :: nsmallsteps !< Number of small steps between large ones
     integer,                intent(inout) :: ierr        !< Return code (0 if no errors)
     
+    ! --- Local variables
     integer :: i, j, k, l
     real*8  :: rn, zn ! R and Z at previous small step position
     real*8  :: rp, zp ! R and Z at next small step position
@@ -272,7 +284,9 @@ module mod_straight_field_line
     my_id = 0
     ierr = 0
     
-!###    !$omp parallel do schedule(dynamic) default(none)                                              &
+    !### Update OpenMP parallelization and switch it back on
+    
+!    !$omp parallel do schedule(dynamic) default(none)                                              &
 !    !$omp   firstprivate(k,theta_corr,R_out,Z_out,i_elm_out,s_out,t_out,ifail,P,P_s,P_t,j,rn,zn,i, &
 !    !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh,fact)   &
 !    !$omp   shared(mapping,ierr,F0,node_list,element_list,nmaxsteps,nsmallsteps,rad_range,        &
@@ -295,8 +309,7 @@ module mod_straight_field_line
       do
         Rmid = (Rleft + Rright) / 2.d0
         
-        if ( Rright - Rleft < 1.d-7 ) then
-          ! converged
+        if ( Rright - Rleft < 1.d-7 ) then ! If converged, ...
           mapping%rr(k,0) = Rmid
           mapping%zz(k,0) = equil_state%Z_axis
           mapping%tt(k,0) = 0.d0
@@ -315,6 +328,7 @@ module mod_straight_field_line
       
       !### direction of field line tracing!
       
+      ! --- Perform the field line tracing.
       FL_LARGESTEPS: do j = 1, NMAXSTEPS
         if ( ierr /= 0 ) cycle
         
@@ -328,7 +342,7 @@ module mod_straight_field_line
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
-            write(*,*) 'WARNING: Error in fourier:trace_fieldlines calling find_RZ.'
+            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
             ierr = 100
 	    cycle
           end if
@@ -348,7 +362,7 @@ module mod_straight_field_line
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
-            write(*,*) 'WARNING: Error in fourier:trace_fieldlines calling find_RZ.'
+            write(*,*) 'Error in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
             ierr = 100
 	    cycle
           end if
@@ -391,13 +405,12 @@ module mod_straight_field_line
 !###          !$omp critical
           if ( debug ) write(*,'(" Field line",I6,":    psin=",F7.3,"    npts=",I7)') k,           &
             mapping%psin(k), mapping%npts(k)
-          !write(46,*) mapping%psin(k), phi / ( 2. * PI )
 !###          !$omp end critical
           exit
         end if
         
         if ( j == NMAXSTEPS ) then
-          write(*,*) 'ERROR: Parameter nmaxsteps is too small! Could not complete poloidal turn.'
+          write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': nmaxsteps too small, incomplete poloidal turn.'
           abort = 101
           cycle
         end if
@@ -408,7 +421,7 @@ module mod_straight_field_line
 !###    !$omp end parallel do
     
     if ( ierr /= 0 ) then
-      write(*,*) 'Exiting trace_fieldlines after an error occurred (not completed).'
+      write(*,*) 'Aborting '//trim(THIS_ROUTINE_NAME)//' after an error occurred.'
       stop
     end if
     

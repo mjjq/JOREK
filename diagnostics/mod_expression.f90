@@ -100,8 +100,10 @@ module mod_expression
     call add(exprs_all, i, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, i, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, i, 'T           ', 'Temperature (Electrons plus Ions)                     ')
-    call add(exprs_all, i, 'T_e         ', 'Electron temperature                                  ')
-    call add(exprs_all, i, 'T_i         ', 'Ion temperature                                       ')
+    if ( (jorek_model >= 400) .and. (jorek_model < 499) ) then
+      call add(exprs_all, i, 'T_e         ', 'Electron temperature                                  ')
+      call add(exprs_all, i, 'T_i         ', 'Ion temperature                                       ')
+    end if
     call add(exprs_all, i, 'vpar        ', 'Parallel Velocity                                     ')
     call add(exprs_all, i, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
     call add(exprs_all, i, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
@@ -534,7 +536,7 @@ module mod_expression
                 T0_st    = T0_st    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
                 T0_p     = T0_p     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
                 T0_pp    = T0_pp    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
-                endif
+                end if
 
                 ! --- Parallel Velocity
                 if ( jorek_model >= 300 ) then
@@ -741,11 +743,11 @@ module mod_expression
             if (ZKpar_T .gt. ZK_par_max) then
               ZKpar_T   = Zk_par_max
               dZKpar_dT = 0.d0
-            endif
+            end if
           else
             ZKpar_T   = ZK_par
             dZKpar_dT = 0.d0
-          endif
+          end if
           
           D_prof  = get_dperp (psi_norm)
           ZK_prof = get_zkperp(psi_norm)
@@ -791,7 +793,7 @@ module mod_expression
              Vstar_e = 1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
                   tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
              ! Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
-          endif
+          end if
 
           if (NEO) then
              if (num_neo_file) then
@@ -804,8 +806,8 @@ module mod_expression
                 mu_neo = amu_neo_const
                 ki_neo = aki_neo_const
                 Vneo   = aki_neo_const / Btheta*tauIC * (ps0_R*T0_R + ps0_Z*T0_Z)
-             endif
-          endif  ! NEO
+             end if
+          end if  ! NEO
 
           if ( jorek_model == 400 ) then
 !           To be done later. Needs to call find_axis and find_xpoint but not here 
@@ -815,7 +817,7 @@ module mod_expression
              J_boot = 0.d0
           else
              J_boot = 0.d0
-          endif
+          end if
 
 
           ! --- For switching between normalized and SI units.
@@ -877,18 +879,22 @@ module mod_expression
                 
               case ( 'T_e' )
                  if ( jorek_model == 400 ) then
-                 res = Te0 * fact_T
-              else
-                 res = T0 / 2.d0 * fact_T
-              endif
-
+                   res = Te0 * fact_T
+                 else
+                   ierr = 500
+                   write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': no T_e in this model.'
+                   return
+                 end if
+                
               case ( 'T_i' )
                  if ( jorek_model == 400 ) then
-                 res = Ti0 * fact_T
-              else
-                 res = T0 / 2.d0 * fact_T
-              endif
-              
+                   res = Ti0 * fact_T
+                 else
+                   ierr = 600
+                   write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': no T_i in this model.'
+                   return
+                 end if
+                
               case ( 'vpar' )
                 res = Vpar0 * fact_vpar
                 

@@ -60,7 +60,7 @@ real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
 real*8                :: amu_neo_node, aki_neo_node
-real*8                :: Vperp_e 
+real*8                :: Vperp_e, Psi_tot
 
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
@@ -267,8 +267,8 @@ endif
 ! --- You may choose to print your poloidal snapshot at a different toroidal angle
 toroidal_angle = 0.d0 ! 2*PI / 6
 if (toroidal_angle .ne. 0.d0) then
-  do i_tor=1, n_tor
-    mode(i_tor) = + int(i_tor / 2) * n_period
+  do k_tor=1, n_tor
+    mode(k_tor) = + int(k_tor / 2) * n_period
   enddo
   HZ(1,i_plane)   = 1.d0
   do i=1,(n_tor-1)/2
@@ -629,8 +629,14 @@ do i=1,element_list%n_elements
           endif ! xjac
 
         enddo  ! end loop toroidal harmonics
+        
+        Psi_tot = 0.d0
+        do i_tor =1, n_tor
+           call interp(node_list,element_list,i,1,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+           Psi_tot = Psi_tot + P * HZ(i_tor,i_plane)
+        enddo
 
-        psi_norm = (Ps0 - psi_axis)/(psi_bnd - psi_axis)
+        psi_norm = (Psi_tot - psi_axis)/(psi_bnd - psi_axis)
         if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
            psi_norm = 2.d0 - psi_norm
         endif

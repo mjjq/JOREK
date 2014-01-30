@@ -83,34 +83,50 @@ module mod_expression
     integer :: i
     
     exprs_all%initialized = .true.
-    exprs_all%n_expr      = 23 ! Total number of available expressions.
+    exprs_all%n_expr      = 40 ! Total number of available expressions.
     
     i=0
     
-    call add(exprs_all, i, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
-    call add(exprs_all, i, 'Z           ', 'Cylindrical Coordinate Z                              ')
-    call add(exprs_all, i, 'phi         ', 'Cylindrical Coordinate phi                            ')
-    call add(exprs_all, i, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
-    call add(exprs_all, i, 'Psi         ', 'Poloidal Magnetic Flux                                ')
-    call add(exprs_all, i, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
-    call add(exprs_all, i, 'u           ', 'Velocity Stream Function                              ')
-    call add(exprs_all, i, 'zj          ', 'Toroidal Current Density (multiplied by 1/R###)       ')
-    call add(exprs_all, i, 'omega       ', 'Toroidal Vorticity Component                          ')
-    call add(exprs_all, i, 'rho         ', 'Mass Density                                          ')
-    call add(exprs_all, i, 'T           ', 'Temperature (Electrons plus Ions)                     ')
-    call add(exprs_all, i, 'vpar        ', 'Parallel Velocity                                     ')
-    call add(exprs_all, i, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
-    call add(exprs_all, i, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
-    call add(exprs_all, i, 'zkpar_T     ', 'Temperature Dependent Parallel Heat Diffusivity       ')
-    call add(exprs_all, i, 'dprof       ', 'Particle Diffusivity                                  ')
-    call add(exprs_all, i, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
-    call add(exprs_all, i, 'pres        ', 'Total Pressure                                        ')
-    call add(exprs_all, i, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
-    call add(exprs_all, i, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
-    call add(exprs_all, i, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
-    call add(exprs_all, i, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
-    call add(exprs_all, i, 'currdens    ', 'Physical Current Density (ZJ*R###)                    ')
-    
+    call add(expr_all, i, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
+    call add(expr_all, i, 'Z           ', 'Cylindrical Coordinate Z                              ')
+    call add(expr_all, i, 'phi         ', 'Cylindrical Coordinate phi                            ')
+    call add(expr_all, i, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
+    call add(expr_all, i, 'Psi         ', 'Poloidal Magnetic Flux                                ')
+    call add(expr_all, i, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
+    call add(expr_all, i, 'u           ', 'Velocity Stream Function                              ')
+    call add(expr_all, i, 'zj          ', 'Toroidal Current Density (multiplied by 1/R###)       ')
+    call add(expr_all, i, 'omega       ', 'Toroidal Vorticity Component                          ')
+    call add(expr_all, i, 'rho         ', 'Mass Density                                          ')
+    call add(expr_all, i, 'T           ', 'Temperature (Electrons plus Ions)                     ')
+    call add(expr_all, i, 'T_e         ', 'Electron temperature                                  ')
+    call add(expr_all, i, 'T_i         ', 'Ion temperature                                       ')
+    call add(expr_all, i, 'vpar        ', 'Parallel Velocity                                     ')
+    call add(expr_all, i, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
+    call add(expr_all, i, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
+    call add(expr_all, i, 'zkpar_T     ', 'Temperature Dependent Parallel Heat Diffusivity       ')
+    call add(expr_all, i, 'dprof       ', 'Particle Diffusivity                                  ')
+    call add(expr_all, i, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
+    call add(expr_all, i, 'pres        ', 'Total Pressure                                        ')
+    call add(expr_all, i, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
+    call add(expr_all, i, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
+    call add(expr_all, i, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
+    call add(expr_all, i, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
+    call add(expr_all, i, 'B_theta     ', 'Poloidal Magnetic Field Component                     ')
+    call add(expr_all, i, 'currdens    ', 'Physical Current Density (ZJ*R###)                    ')
+    call add(expr_all, i, 'Er          ', 'Radial electric field                                 ')
+    call add(expr_all, i, 'Vtheta_i    ', 'Ion Poloidal velocity                                 ')
+    call add(expr_all, i, 'Mach_par    ', 'Parallel Mach number                                  ')
+    call add(expr_all, i, 'Mach_pol    ', 'Poloidal Mach number                                  ')
+    call add(expr_all, i, 'V_sound     ', 'Sound speed                                           ')
+    call add(expr_all, i, 'V_neo       ', 'Neoclassical velocity                                 ')
+    call add(expr_all, i, 'Vperp_e     ', 'Electron perpendicular velocity                       ')
+    call add(expr_all, i, 'Vperp_i     ', 'Ion perpendicular velocity                            ')
+    call add(expr_all, i, 'V_ExB       ', 'ExB velocity                                          ')
+    call add(expr_all, i, 'Vstar_e     ', 'Electron diamagnetic velocity                         ')
+    call add(expr_all, i, 'Vstar_i     ', 'Ion diamagnetic velocity                              ')
+    call add(expr_all, i, 'ki_neo      ', 'Neoclassical heat diffusivity                         ')
+    call add(expr_all, i, 'mu_neo      ', 'Neoclassical friction coefficien                      ')
+    call add(expr_all, i, 'J_bootstrap ', 'Bootstrap current                                     ') 
     
     
   end subroutine init_expr
@@ -324,7 +340,7 @@ module mod_expression
     type(type_element)       :: element
     type(type_node)          :: nodes(n_vertex_max)
     integer :: ipolpos, jpolpos, itorpos, iexpr, ielm, i, j, i_tor
-    real*8  :: fact_time ! Normalization factors
+    real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_T, fact_vpar, fact_resistiv, fact_Er ! Normalization factors
     real*8  :: xjac, xjac_R, xjac_Z, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, &
       s, t, H(n_vertex_max,n_order+1), H_s(n_vertex_max,n_order+1), H_t(n_vertex_max,n_order+1),   &
       H_st(n_vertex_max,n_order+1), H_ss(n_vertex_max,n_order+1), H_tt(n_vertex_max,n_order+1),    &
@@ -338,9 +354,10 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z
+      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
-    
+    real*8  :: Ti0, Ti0_s,Ti0_t,Ti0_st,Ti0_ss,Ti0_tt, Ti0_p, Ti0_pp, Te0,Te0_s,Te0_t,Te0_st,Te0_ss,Te0_tt, Te0_p, Te0_pp
+    real*8  :: Er, Vtheta, Mach_par,Mach_pol,Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
     ierr = 0
     
     ! --- Some sanity checks
@@ -485,7 +502,29 @@ module mod_expression
                 r0_p     = r0_p     + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
                 r0_pp    = r0_pp    + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
                 
-                ! --- Temperature
+                if ( jorek_model .eq. 400 ) then
+                ! --- Ion temperature
+                Ti0       = Ti0       + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
+                Ti0_s     = Ti0_s     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
+                Ti0_t     = Ti0_t     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
+                Ti0_ss    = Ti0_ss    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
+                Ti0_tt    = Ti0_tt    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
+                Ti0_st    = Ti0_st    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
+                Ti0_p     = Ti0_p     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
+                Ti0_pp    = Ti0_pp    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+
+                ! --- Electron temperature
+                Te0       = Te0       + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
+                Te0_s     = Te0_s     + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
+                Te0_t     = Te0_t     + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
+                Te0_ss    = Te0_ss    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
+                Te0_tt    = Te0_tt    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
+                Te0_st    = Te0_st    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
+                Te0_p     = Te0_p     + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
+                Te0_pp    = Te0_pp    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+
+                else
+                ! --- Temperature (ion + electron) in models .ne. 400
                 T0       = T0       + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
                 T0_s     = T0_s     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
                 T0_t     = T0_t     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
@@ -494,7 +533,8 @@ module mod_expression
                 T0_st    = T0_st    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
                 T0_p     = T0_p     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
                 T0_pp    = T0_pp    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
-                
+                endif
+
                 ! --- Parallel Velocity
                 if ( jorek_model >= 300 ) then
                   Vpar0    = Vpar0    + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
@@ -672,6 +712,8 @@ module mod_expression
           B_Z      = ps0_R / BigR
           B_tor    = F0    / BigR
           psi_norm = get_psi_n(eq, ps0)
+          Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
+          psi_abs = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
           
           ! --- Some input profiles
           if ( eta_T_dependent ) then
@@ -707,11 +749,92 @@ module mod_expression
           D_prof  = get_dperp (psi_norm)
           ZK_prof = get_zkperp(psi_norm)
           
+!!!! Other parameters (combination of the main variables)
+          ! Initialisation
+          Er      = 0.d0
+          Vtheta  = 0.d0
+	  mach_par= 0.d0
+          mach_pol= 0.d0
+          vsound  = 0.d0
+          Vneo    = 0.d0
+          ki_neo  = 0.d0
+          mu_neo  = 0.d0
+          Vperp_e = 0.d0
+          Vperp_i = 0.d0
+          V_ExB   = 0.d0 
+          Vstar_e  = 0.d0
+          Vstar_i  = 0.d0
+
+          if ((psi_abs .gt. 1.d-6) .and. (r0.gt.1.d-6) .and. (abs(Btheta).gt.1.d-6)) then
+
+             Er       = -(u0_R * ps0_R + u0_Z * ps0_Z) / psi_abs   ! radial electric field
+             
+             Vsound   = sqrt(GAMMA*T0) / sqrt(BB2)                 ! sound speed
+             Mach_par = Vpar0 / Vsound                             ! parallel Mach number
+             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
+
+             Vtheta  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
+                  ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+
+             Vperp_i = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
+                  ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
+
+             Vperp_e = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
+                  ( u0_Z - tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
+
+             V_ExB  = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
+
+             Vstar_i = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
+                  tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+             
+             Vstar_e = 1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
+                  tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+             ! Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
+          endif
+
+          if (NEO) then
+             if (num_neo_file) then
+             ! num_neo_file= ( neo_file /= 'none') : we read neoclassical profiles from input file
+                call neo_coef( xpoint, xcase, Z, Z_xpoint, Ps0 ,psi_axis, psi_bnd, &
+                     mu_neo, ki_neo)
+                Vneo   = ki_neo / Btheta * tauIC  * ( ps0_R*T0_R + ps0_Z*T0_Z )
+             else
+                ! neoclassical coeff are constants 
+                mu_neo = amu_neo_const
+                ki_neo = aki_neo_const
+                Vneo   = aki_neo_const / Btheta*tauIC * (ps0_R*T0_R + ps0_Z*T0_Z)
+             endif
+          endif  ! NEO
+
+          if ( jorek_model .eq. 400 ) then
+!           To be done later. Needs to call find_axis and find_xpoint but not here 
+!           call bootstrap_current_rhs(BigR, 0.0, R_axis, psi_axis, psi_bnd,  &
+!        			     ps0, ps0_R, ps0_Z, r0,  r0_R, r0_Z, &
+!        			     Ti0,  Ti0_R, Ti0_Z, Te0,  Te0_R, Te0_Z, J_boot)
+             J_boot = 0.d0
+          else
+             J_boot = 0.d0
+          endif
+
+
           ! --- For switching between normalized and SI units.
           if ( units == SI_UNITS ) then
-            fact_time = 1.d0 !###
+             rho_norm = central_density *1.d20 * central_mass * mass_proton ! rho_0 = central mass density
+             fact_time = sqrt(MU_zero*rho_norm)                             ! time factor
+             fact_mu_zero = MU_zero                                         ! division by mu_zero for P and J
+             fact_ne = central_density * 1.d20                              ! factor for particle density
+             fact_T = 1.d0 / ( MU_zero * central_density * 1.d20 * EL_CHG ) ! factor for (i+e) temperature
+             fact_vpar = sqrt(BB2) / fact_time                              ! factor for Vparallel
+             fact_resistiv = sqrt ( MU_zero / rho_norm )                    ! factor for resistivity = 1 / (factor for viscosity) 
+             fact_Er = F0 / fact_time
           else if ( units == JOREK_UNITS ) then
-            fact_time = 1.d0
+             fact_time     = 1.d0
+             fact_mu_zero  = 1.d0
+             fact_ne       = 1.d0
+             fact_T        = 1.d0
+             fact_vpar     = 1.d0
+             fact_resistiv = 1.d0
+             fact_Er       = 1.d0
           end if
           
           ! --- Now that everything is prepared, evaluate all the requested expressions.
@@ -740,37 +863,51 @@ module mod_expression
                 res = u0
                 
               case ( 'zj' )
-                res = zj0
+                res = zj0 / fact_mu_zero
                 
               case ( 'omega' )
                 res = w0
                 
               case ( 'rho' )
-                res = r0
+                res = r0 * fact_ne
                 
               case ( 'T' )
-                res = T0
+                res = T0 * fact_T
                 
+              case ( 'T_e' )
+                 if jorek_model .eq. 400 then
+                 res = Te0 * fact_T
+              else
+                 res = T0 / 2.d0 * fact_T
+              endif
+
+              case ( 'T_i' )
+                 if jorek_model .eq. 400 then
+                 res = Ti0 * fact_T
+              else
+                 res = T0 / 2.d0 * fact_T
+              endif
+              
               case ( 'vpar' )
-                res = Vpar0
+                res = Vpar0 * fact_vpar
                 
               case ( 'eta_T' )
-                res = eta_t
+                res = eta_t * fact_resistiv
                 
               case ( 'visco_T' )
-                res = visco_t
+                res = visco_t / fact_resistiv
                 
               case ( 'zkpar_T' )
-                res = zkpar_t
+                res = zkpar_t / fact_time
                 
-              case ( 'dprof' )
-                res = d_prof
+              case ( 'dprof' ) 
+                res = d_prof / fact_time
                 
               case ( 'zkprof' )
-                res = zk_prof
+                res = zk_prof / fact_time
                 
               case ( 'pres' )
-                res = P0
+                res = P0 / fact_mu_zero
                 
               case ( 'B_abs' )
                 res = sqrt(BB2)
@@ -784,9 +921,54 @@ module mod_expression
               case ( 'B_Z' )
                 res = B_Z
                 
-              case ( 'currdens' )
-                res = zj0 * R !###
+              case ( 'B_theta' )
+                res = Btheta
                 
+              case ( 'currdens' )
+                res = zj0 * R / fact_mu_zero !###
+                
+              case ( 'Er')
+                res = Er * fact_Er
+
+              case ( 'Vtheta_i')
+                res = Vtheta_i / fact_time
+
+              case ( 'Mach_par')
+                res = Mach_par
+
+              case ( 'Mach_pol')
+                res = Mach_pol
+
+              case ( 'V_sound')
+                res = V_sound / fact_time
+
+              case ( 'V_neo')
+                res = V_neo / fact_time
+
+              case ( 'Vperp_e')
+                res = Vperp_e / fact_time
+
+              case ( 'Vperp_i')
+                res = Vperp_i / fact_time
+
+              case ( 'V_ExB')
+                res = V_ExB / fact_time
+
+              case ( 'Vstar_e')
+                res = Vstar_e / fact_time
+
+              case ( 'Vstar_i')
+                res = Vstar_i / fact_time
+
+              case ( 'ki_neo')
+                res = ki_neo
+
+              case ( 'mu_neo')
+                res = mu_neo / fact_time
+
+              case ( 'J_bootstrap')
+                res = J_boot ! check if no normalization needed
+
               case default
                 write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Illegal expression ("' //      &
                   trim(expr_list%expr(iexpr)%name) // '")'

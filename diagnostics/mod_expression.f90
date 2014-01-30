@@ -34,8 +34,11 @@ module mod_expression
   
   ! --- Constants
   character(len=14), parameter, private :: THIS_MOD_NAME = 'mod_expression'
-  integer,           parameter          :: LEN_NAME  = 12
-  integer,           parameter          :: LEN_DESCR = 54
+  integer,           parameter          :: JOREK_UNITS   = 0
+  integer,           parameter          :: SI_UNITS      = 1
+  integer,           parameter          :: LEN_NAME      = 12
+  integer,           parameter          :: LEN_DESCR     = 54
+  integer,           parameter          :: N_EXPR_MAX    = 2000
   
   
   
@@ -49,8 +52,8 @@ module mod_expression
   
   ! > List of all available expressions.
   type :: t_expr_list
-    integer                   :: n_expr = 0 !< Number of expressions
-    type(t_expr), allocatable :: expr(:)    !< The expressions
+    integer                   :: n_expr = 0       !< Number of expressions
+    type(t_expr)              :: expr(N_EXPR_MAX) !< The expressions
     logical, private          :: initialized = .false.
   end type t_expr_list
   
@@ -58,8 +61,11 @@ module mod_expression
   
   
   
-  ! --- Module internal data.
-  type(t_expr_list), save, private :: expr_list
+  ! --- Standard lists of expressions (require init_expr call first!).
+  type(t_expr_list), save :: exprs_all           !< All available expressions.
+  type(t_expr_list), save :: exprs_basicvar      !< All expressions for basic variables.
+  type(t_expr_list), save :: exprs_cylcoord      !< All expressions for cylindrical coordinates.
+  type(t_expr_list), save :: exprs_magfield      !< All expressions for the magnetic field.
   
   
   
@@ -76,36 +82,36 @@ module mod_expression
     
     integer :: i
     
-    expr_list%initialized = .true.
-    expr_list%n_expr      = 23 ! Total number of available expressions.
+    exprs_all%initialized = .true.
+    exprs_all%n_expr      = 23 ! Total number of available expressions.
     
-    if ( allocated(expr_list%expr) ) deallocate(expr_list%expr)
-    allocate( expr_list%expr(expr_list%n_expr) )
     i=0
     
-    call add(expr_list, i, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
-    call add(expr_list, i, 'Z           ', 'Cylindrical Coordinate Z                              ')
-    call add(expr_list, i, 'phi         ', 'Cylindrical Coordinate phi                            ')
-    call add(expr_list, i, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
-    call add(expr_list, i, 'Psi         ', 'Poloidal Magnetic Flux                                ')
-    call add(expr_list, i, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
-    call add(expr_list, i, 'u           ', 'Velocity Stream Function                              ')
-    call add(expr_list, i, 'zj          ', 'Toroidal Current Density (multiplied by 1/R###)       ')
-    call add(expr_list, i, 'omega       ', 'Toroidal Vorticity Component                          ')
-    call add(expr_list, i, 'rho         ', 'Mass Density                                          ')
-    call add(expr_list, i, 'T           ', 'Temperature (Electrons plus Ions)                     ')
-    call add(expr_list, i, 'vpar        ', 'Parallel Velocity                                     ')
-    call add(expr_list, i, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
-    call add(expr_list, i, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
-    call add(expr_list, i, 'zkpar_T     ', 'Temperature Dependent Parallel Heat Diffusivity       ')
-    call add(expr_list, i, 'dprof       ', 'Particle Diffusivity                                  ')
-    call add(expr_list, i, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
-    call add(expr_list, i, 'pres        ', 'Total Pressure                                        ')
-    call add(expr_list, i, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
-    call add(expr_list, i, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
-    call add(expr_list, i, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
-    call add(expr_list, i, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
-    call add(expr_list, i, 'currdens    ', 'Physical Current Density (ZJ*R###)                    ')
+    call add(exprs_all, i, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
+    call add(exprs_all, i, 'Z           ', 'Cylindrical Coordinate Z                              ')
+    call add(exprs_all, i, 'phi         ', 'Cylindrical Coordinate phi                            ')
+    call add(exprs_all, i, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
+    call add(exprs_all, i, 'Psi         ', 'Poloidal Magnetic Flux                                ')
+    call add(exprs_all, i, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
+    call add(exprs_all, i, 'u           ', 'Velocity Stream Function                              ')
+    call add(exprs_all, i, 'zj          ', 'Toroidal Current Density (multiplied by 1/R###)       ')
+    call add(exprs_all, i, 'omega       ', 'Toroidal Vorticity Component                          ')
+    call add(exprs_all, i, 'rho         ', 'Mass Density                                          ')
+    call add(exprs_all, i, 'T           ', 'Temperature (Electrons plus Ions)                     ')
+    call add(exprs_all, i, 'vpar        ', 'Parallel Velocity                                     ')
+    call add(exprs_all, i, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
+    call add(exprs_all, i, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
+    call add(exprs_all, i, 'zkpar_T     ', 'Temperature Dependent Parallel Heat Diffusivity       ')
+    call add(exprs_all, i, 'dprof       ', 'Particle Diffusivity                                  ')
+    call add(exprs_all, i, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
+    call add(exprs_all, i, 'pres        ', 'Total Pressure                                        ')
+    call add(exprs_all, i, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
+    call add(exprs_all, i, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
+    call add(exprs_all, i, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
+    call add(exprs_all, i, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
+    call add(exprs_all, i, 'currdens    ', 'Physical Current Density (ZJ*R###)                    ')
+    
+    
     
   end subroutine init_expr
   
@@ -133,17 +139,93 @@ module mod_expression
   
   
   
-  !> Prints a table of the available expressions.
-  subroutine print_expr()
+  !> Create s subset of expressions.
+  function exprs(name,n_expr) result(expr_list)
+    type(t_expr_list) :: expr_list
     
+    ! --- Routine parameters
+    character(len=*), intent(in) :: name(n_expr)
+    integer,          intent(in) :: n_expr
+    
+    ! --- Local variables
+    integer :: i, j
+    
+    expr_list%n_expr = n_expr
+    do i = 1, n_expr
+      j = get_expr_num(exprs_all, trim(name(i)))
+      !### error handling
+      expr_list%expr(i) = exprs_all%expr(j)
+    end do
+    
+  end function exprs
+  
+  
+  
+  
+  
+  !> Merge expression lists.
+  recursive function join_exprs(list1, list2, list3, list4, list5, list6, list7, list8, list9)     &
+    result(expr_list)
+    type(t_expr_list) :: expr_list
+    
+    ! --- Routine parameters
+    type(t_expr_list),           intent(in) :: list1, list2
+    type(t_expr_list), optional, intent(in) :: list3, list4, list5, list6, list7, list8, list9
+    
+    integer :: i, j
+    logical :: found
+    
+    expr_list = list1
+    
+    do i = 1, list2%n_expr
+      
+      ! --- Already in the list? (avoid duplicates)
+      found = .false.
+      do j = 1, expr_list%n_expr
+        if ( expr_list%expr(j)%name == list2%expr(i)%name ) then
+          found = .true.
+          exit
+        end if
+      end do
+      
+      ! --- Add to expr_list
+      if ( .not. found ) then
+        expr_list%n_expr = expr_list%n_expr + 1
+        expr_list%expr(expr_list%n_expr) = list2%expr(i)
+      end if
+      
+    end do
+    
+    ! --- Recursive joins of the remaining lists
+    if ( present(list3) ) expr_list = join_exprs(expr_list, list3)
+    if ( present(list4) ) expr_list = join_exprs(expr_list, list4)
+    if ( present(list5) ) expr_list = join_exprs(expr_list, list5)
+    if ( present(list6) ) expr_list = join_exprs(expr_list, list6)
+    if ( present(list7) ) expr_list = join_exprs(expr_list, list7)
+    if ( present(list8) ) expr_list = join_exprs(expr_list, list8)
+    if ( present(list9) ) expr_list = join_exprs(expr_list, list9)
+    
+  end function join_exprs
+  
+  
+  
+  
+  
+  !> Prints a table of the available expressions.
+  subroutine print_expr(expr_list)
+    
+    ! --- Routine parameters
+    type(t_expr_list),  intent(in) :: expr_list
+    
+    ! --- Local variables
     integer :: i
     
-    900 format(3x,a)
-    901 format(3x,i6.6,' | ',a,' | ',a)
-    902 format(3x,80('-'))
+    900 format(1x,a)
+    901 format(1x,i6.6,' | ',a,' | ',a)
+    902 format(1x,80('-'))
     
     write(*,*)
-    write(*,*) 'Available Diagnostic Expressions: '
+    write(*,*) 'List of Diagnostic Expressions:'
     write(*,*)
     
     write(*,902)
@@ -161,18 +243,19 @@ module mod_expression
   
   
   !> [Private] Find out expression number.
-  integer function get_expr_num(name) result(num)
+  integer function get_expr_num(expr_list, name) result(num)
   
     ! --- Routine parameters
-    character(len=LEN_NAME) :: name
+    type(t_expr_list),       intent(in) :: expr_list
+    character(len=*), intent(in) :: name
     
     ! --- Local variables
     integer :: i
     
     num = -99
     
-    do i = 1, expr_list%n_expr
-      if ( expr_list%expr(i)%name == name ) then
+    do i = 1, exprs_all%n_expr
+      if ( trim(exprs_all%expr(i)%name) == trim(name) ) then
         num = i
         return
       end if
@@ -185,12 +268,13 @@ module mod_expression
   
   
   !> Check that an expression exists.
-  logical function expr_exists(name) result(exists)
+  logical function expr_exists(expr_list, name) result(exists)
   
     ! --- Routine parameters
-    character(len=LEN_NAME) :: name
+    type(t_expr_list),       intent(in) :: expr_list
+    character(len=LEN_NAME), intent(in) :: name
     
-    exists = ( get_expr_num(name) > 0 )
+    exists = ( get_expr_num(expr_list,name) > 0 )
     
   end function expr_exists
   
@@ -206,10 +290,10 @@ module mod_expression
     
     integer :: num
     
-    num = get_expr_num(name)
+    num = get_expr_num(exprs_all,name)
     
     if ( num > 0 ) then
-      descr = expr_list%expr(num)%descr
+      descr = exprs_all%expr(num)%descr
     else
       descr = '<UNKNOWN EXPRESSION>'
     end if
@@ -220,38 +304,15 @@ module mod_expression
   
   
   
-  !> Get a list of all available expressions.
-  subroutine get_full_expr_list(expr_names)
-  
-    ! --- Routine parameters
-    character(len=LEN_NAME), allocatable :: expr_names(:)
-    
-    ! --- Local variables
-    integer :: i
-    
-    if ( allocated(expr_names) ) deallocate(expr_names)
-    allocate(expr_names(expr_list%n_expr))
-    
-    do i = 1, expr_list%n_expr
-      expr_names(i) = expr_list%expr(i)%name
-    end do
-    
-  end subroutine get_full_expr_list
-  
-  
-  
-  
-  
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
-  subroutine eval_expr(eq, si_units, expr, n_expr, pol_pos_list, tor_pos_list, result, ierr)
+  subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
     ! --- Routine parameters
     type(t_equil_state),          intent(in)    :: eq
-    logical,                      intent(in)    :: si_units !< Output SI or JOREK normalized units?
-    character(len=LEN_NAME),      intent(in)    :: expr(n_expr)
-    integer,                      intent(in)    :: n_expr
+    integer,                      intent(in)    :: units !< Output in which units?
+    type(t_expr_list),            intent(in)    :: expr_list
     type(t_pol_pos_list), target, intent(in)    :: pol_pos_list
     type(t_tor_pos_list), target, intent(in)    :: tor_pos_list
     real*8, allocatable,          intent(inout) :: result(:,:,:,:)
@@ -283,8 +344,8 @@ module mod_expression
     ierr = 0
     
     ! --- Some sanity checks
-    if ( n_expr < 1 ) then
-      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': n_expr < 1 encountered.'
+    if ( expr_list%n_expr < 1 ) then
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': expr_list%n_expr < 1 encountered.'
       ierr = -101
       return
     else if ( minval(pol_pos_list%n_pos) < 1 ) then
@@ -306,7 +367,7 @@ module mod_expression
     end if
     
     if ( allocated(result) ) deallocate(result)
-    allocate( result(tor_pos_list%n_pos, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2), n_expr) )
+    allocate( result(tor_pos_list%n_pos, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2), expr_list%n_expr) )
     
     ! --- Loop over positions in the poloidal plane
     loop_pol1: do ipolpos = 1, pol_pos_list%n_pos(1)
@@ -647,16 +708,16 @@ module mod_expression
           ZK_prof = get_zkperp(psi_norm)
           
           ! --- For switching between normalized and SI units.
-          if ( si_units ) then
+          if ( units == SI_UNITS ) then
             fact_time = 1.d0 !###
-          else
+          else if ( units == JOREK_UNITS ) then
             fact_time = 1.d0
           end if
           
           ! --- Now that everything is prepared, evaluate all the requested expressions.
-          loop_expr: do iexpr = 1, n_expr
+          loop_expr: do iexpr = 1, expr_list%n_expr
             
-            select case ( trim(expr(iexpr)) )
+            select case ( trim(expr_list%expr(iexpr)%name) )
               case ( 'R' )
                 res = R
                 
@@ -727,7 +788,8 @@ module mod_expression
                 res = zj0 * R !###
                 
               case default
-                write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Illegal expression.'
+                write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Illegal expression ("' //      &
+                  trim(expr_list%expr(iexpr)%name) // '")'
                 ierr = 100
                 return
                 

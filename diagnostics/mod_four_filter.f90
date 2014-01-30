@@ -1,5 +1,7 @@
 !> This module allows to apply a Fourier analysis or a Fourier filter to the result array
 !! of the routine eval_expr() from the module mod_expression.
+!!
+!! ### take into account n_period!!!
 module mod_four_filter
   
   
@@ -37,7 +39,6 @@ module mod_four_filter
   ! --- Constants
   character(len=15), parameter, private :: THIS_MOD_NAME     = 'mod_four_filter'
   integer,           parameter, private :: MAX_MODE_LIST_LEN = 300
-  integer,           parameter, private :: MINUS_INF         = -99999
   integer,           parameter, private :: PLUS_INF          = +99999
   
   
@@ -168,13 +169,13 @@ module mod_four_filter
       m_start2 = m_start
       m_end2 = PLUS_INF
     else if ( (.not. present(m)) .and. (.not. present(m_start)) .and. (      present(m_end)) ) then
-      m_start2 = MINUS_INF
+      m_start2 = 0
       m_end2 = m_end
     else if ( (.not. present(m)) .and. (      present(m_start)) .and. (      present(m_end)) ) then
       m_start2 = m_start
       m_end2 = m_end
     else if ( (.not. present(m)) .and. (.not. present(m_start)) .and. (.not. present(m_end)) ) then
-      m_start2 = MINUS_INF
+      m_start2 = 0
       m_end2 = PLUS_INF
     else
       write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Invalid combination of m, m_start, m_end.'
@@ -190,13 +191,13 @@ module mod_four_filter
       n_start2 = n_start
       n_end2 = PLUS_INF
     else if ( (.not. present(n)) .and. (.not. present(n_start)) .and. (      present(n_end)) ) then
-      n_start2 = MINUS_INF
+      n_start2 = 0
       n_end2 = n_end
     else if ( (.not. present(n)) .and. (      present(n_start)) .and. (      present(n_end)) ) then
       n_start2 = n_start
       n_end2 = n_end
     else if ( (.not. present(n)) .and. (.not. present(n_start)) .and. (.not. present(n_end)) ) then
-      n_start2 = MINUS_INF
+      n_start2 = 0
       n_end2 = PLUS_INF
     else
       write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Invalid combination of n, n_start, n_end.'
@@ -280,11 +281,7 @@ module mod_four_filter
       return
     end if
     
-    if ( mi == MINUS_INF ) then
-      s = '-inf'
-    else
-      write(s,*) mi
-    end if
+    write(s,*) mi
     descr = trim(descr) // trim(adjustl(s)) // '...'
     
     if ( ma == PLUS_INF ) then
@@ -331,13 +328,10 @@ module mod_four_filter
       n_start = max(filter%keep_list(i)%n_start, 0    )
       n_end   = min(filter%keep_list(i)%n_end,   n_max)
       filt_fact(n_start:n_end,m_start:m_end) = 1.d0
-      write(*,*) n_start,n_end,m_start,m_end
     end do
     
     do m = 0, m_max
       do n = 0, n_max
-        
-        if ( filt_fact(n,m) /= 0.d0 ) write(*,*) 'nonzero', m, n
         
         if ( filt_fact(n,m) == 1.d0 ) cycle ! nothing to be done in this case
         

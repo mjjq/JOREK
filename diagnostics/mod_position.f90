@@ -142,6 +142,31 @@ module mod_position
   
   
   
+  !> Simple function to generate poloidal positions (wrapper for routine create_pol_pos).
+  function pol_pos(node_list, element_list, eq, R, Z, ielm, s, t, Rmin, Rmax, nR, Zmin, Zmax, nZ,  &
+    Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN) result(pos_list)
+    type(t_pol_pos_list), target :: pos_list
+    
+    ! --- Routine parameters
+    type(type_node_list),         intent(in)    :: node_list
+    type(type_element_list),      intent(in)    :: element_list
+    type(t_equil_state),          intent(in)    :: eq
+    real*8,  optional,            intent(in)    :: R, Z, s, t, Rmin, Rmax, Zmin, Zmax, PsiN,       &
+      Rstart, Rend, Zstart, Zend, PsiNmin, PsiNmax
+    integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN
+    
+    ! --- Local variables
+    integer :: ierr
+    
+    call create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s, t, Rmin, Rmax, &
+      nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN)
+    
+  end function pol_pos
+  
+  
+  
+  
+  
   !> Create a poloidal position data structure (one or several poloidal positions) from:
   !! - (R,Z) or (ielm,s,t)           -> single position
   !! - (Rmin,Rmax,nR,Zmin,Zmax,nZ)   -> 2D array of positions
@@ -331,6 +356,25 @@ module mod_position
     end do
     
   end subroutine fill_pol_pos
+  
+  
+  
+  
+  
+  !> Simple function to generate toroidal positions (wrapper for routine create_tor_pos).
+  function tor_pos(phi, iplane, phistart, phiend, nphi) result(pos_list)
+    type(t_tor_pos_list), target :: pos_list
+    
+    ! --- Routine parameters
+    real*8,  optional,            intent(in)    :: phi, phistart, phiend
+    integer, optional,            intent(in)    :: iplane, nphi
+    
+    ! --- Local variables
+    integer :: ierr
+    
+    call create_tor_pos(pos_list, ierr, phi, iplane, phistart, phiend, nphi)
+    
+  end function tor_pos
   
   
   

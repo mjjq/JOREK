@@ -1,4 +1,4 @@
-!> Model for determining the poloidal straight field line angle theta*.
+!> This module determines the poloidal straight field line angle theta*.
 module mod_straight_field_line
   
   
@@ -158,9 +158,9 @@ module mod_straight_field_line
     suggested_factor = 1.d0
     ierr             = 0
     
-    nmaxsteps        = 20 * nTht !###
-    deltaphi         = 20.d0 / real(nTht) !###
-    nsmallsteps      = 3
+    deltaphi         = min(0.3d0, 20.d0 / real(nTht)) !###
+    nmaxsteps        = 400 / deltaphi !###
+    nsmallsteps      = 3 !###
     if ( present(nmaxsteps2)   ) nmaxsteps   = nmaxsteps2
     if ( present(deltaphi2)    ) deltaphi    = deltaphi2
     if ( present(nsmallsteps2) ) nsmallsteps = nsmallsteps2

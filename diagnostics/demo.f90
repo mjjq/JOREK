@@ -1,4 +1,4 @@
-!> Demonstration of the diagnostic framework mod_position / mod_expression
+!> Demonstration of the diagnostic framework mod_position / mod_expression / mod_four_filter / mod_straight_field_line / ...
 program demo
   
   use parameters
@@ -50,7 +50,7 @@ program demo
   
   ! --- Initialize expression module and print all currently available expressions
   call init_expr()
-  call print_expr(exprs_all)
+  call print_exprs(exprs_all)
   
   
   
@@ -58,7 +58,7 @@ program demo
   expr_list = exprs_all
   expr_list = exprs_magfield
   expr_list = join_exprs(exprs_basicvar,exprs_magfield,exprs_cylcoord) !<<< does not work yet, to be done later
-  expr_list = exprs((/'B_R', 'xjac', 'T', 'rho', 'zj'/), 5)
+  expr_list = exprs((/'Psi', 'B_R', 'xjac', 'T', 'rho', 'zj'/), 5)
   
   
   
@@ -105,12 +105,16 @@ program demo
   call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, PsiNmin=0.01,      &
     PsiNmax=0.99, nPsiN=5, nTht=16)
   call create_tor_pos(tor_pos_list, ierr, nphi=16)
+  expr_list = exprs((/'Psi','Psi_N','T', 'xjac', 'zj', 'B_abs'/), 6)
   call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+  n(:) = (/ size(result,1), size(result,2), size(result,3), size(result,4) /)
+  do i = 1, n(2)
+    write(37,'(i,99es20.10)') i,result(1,i,3,:)
+  end do
   
   
   
   ! --- Check that Fourier transforming forward and backward recovers the original data
-  n(:) = (/ size(result,1), size(result,2), size(result,3), size(result,4) /)
   allocate( temp(n(1),n(2),n(3),n(4)) )
   temp(:,:,:,:) = result(:,:,:,:)
   call perform_four_trafo(result, .true.)
@@ -121,10 +125,6 @@ program demo
   
   
   ! --- Apply Fourier filter: Keep harmonics (m,n) = (0...1,0...5) and (m,n)=(<any>,16)
-  do i = 1, n(2)
-    write(37,*) result(1,i,3,1)
-  end do
-  
   call perform_four_trafo(result, .true.)
   call init_four_filter(filter)
   call filter_add(filter, ierr, m_start=0, m_end=1, n_end=5)
@@ -136,7 +136,7 @@ program demo
   ! --- Or simple filtering is possible as a single call:
   call transform_and_filter(result, simple_filter(m=0,n=0)) ! Keep only (m,n)=(0,0)
   do i = 1, n(2)
-    write(39,*) result(1,i,3,1)
+    write(38,'(i,99es20.10)') i,result(1,i,3,:)
   end do
   
 end program demo

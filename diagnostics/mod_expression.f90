@@ -85,49 +85,50 @@ module mod_expression
     exprs_all%initialized = .true.
     exprs_all%n_expr      = 40 ! Total number of available expressions.
     
+    
+    !### create exprs_basicvar etc. and join them to exprs_all in the end
+    
     i=0
-    
-    call add(expr_all, i, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
-    call add(expr_all, i, 'Z           ', 'Cylindrical Coordinate Z                              ')
-    call add(expr_all, i, 'phi         ', 'Cylindrical Coordinate phi                            ')
-    call add(expr_all, i, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
-    call add(expr_all, i, 'Psi         ', 'Poloidal Magnetic Flux                                ')
-    call add(expr_all, i, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
-    call add(expr_all, i, 'u           ', 'Velocity Stream Function                              ')
-    call add(expr_all, i, 'zj          ', 'Toroidal Current Density (multiplied by 1/R###)       ')
-    call add(expr_all, i, 'omega       ', 'Toroidal Vorticity Component                          ')
-    call add(expr_all, i, 'rho         ', 'Mass Density                                          ')
-    call add(expr_all, i, 'T           ', 'Temperature (Electrons plus Ions)                     ')
-    call add(expr_all, i, 'T_e         ', 'Electron temperature                                  ')
-    call add(expr_all, i, 'T_i         ', 'Ion temperature                                       ')
-    call add(expr_all, i, 'vpar        ', 'Parallel Velocity                                     ')
-    call add(expr_all, i, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
-    call add(expr_all, i, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
-    call add(expr_all, i, 'zkpar_T     ', 'Temperature Dependent Parallel Heat Diffusivity       ')
-    call add(expr_all, i, 'dprof       ', 'Particle Diffusivity                                  ')
-    call add(expr_all, i, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
-    call add(expr_all, i, 'pres        ', 'Total Pressure                                        ')
-    call add(expr_all, i, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
-    call add(expr_all, i, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
-    call add(expr_all, i, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
-    call add(expr_all, i, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
-    call add(expr_all, i, 'B_theta     ', 'Poloidal Magnetic Field Component                     ')
-    call add(expr_all, i, 'currdens    ', 'Physical Current Density (ZJ*R###)                    ')
-    call add(expr_all, i, 'Er          ', 'Radial electric field                                 ')
-    call add(expr_all, i, 'Vtheta_i    ', 'Ion Poloidal velocity                                 ')
-    call add(expr_all, i, 'Mach_par    ', 'Parallel Mach number                                  ')
-    call add(expr_all, i, 'Mach_pol    ', 'Poloidal Mach number                                  ')
-    call add(expr_all, i, 'V_sound     ', 'Sound speed                                           ')
-    call add(expr_all, i, 'V_neo       ', 'Neoclassical velocity                                 ')
-    call add(expr_all, i, 'Vperp_e     ', 'Electron perpendicular velocity                       ')
-    call add(expr_all, i, 'Vperp_i     ', 'Ion perpendicular velocity                            ')
-    call add(expr_all, i, 'V_ExB       ', 'ExB velocity                                          ')
-    call add(expr_all, i, 'Vstar_e     ', 'Electron diamagnetic velocity                         ')
-    call add(expr_all, i, 'Vstar_i     ', 'Ion diamagnetic velocity                              ')
-    call add(expr_all, i, 'ki_neo      ', 'Neoclassical heat diffusivity                         ')
-    call add(expr_all, i, 'mu_neo      ', 'Neoclassical friction coefficien                      ')
-    call add(expr_all, i, 'J_bootstrap ', 'Bootstrap current                                     ') 
-    
+    call add(exprs_all, i, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
+    call add(exprs_all, i, 'Z           ', 'Cylindrical Coordinate Z                              ')
+    call add(exprs_all, i, 'phi         ', 'Cylindrical Coordinate phi                            ')
+    call add(exprs_all, i, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
+    call add(exprs_all, i, 'Psi         ', 'Poloidal Magnetic Flux                                ')
+    call add(exprs_all, i, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
+    call add(exprs_all, i, 'u           ', 'Velocity Stream Function                              ')
+    call add(exprs_all, i, 'zj          ', 'Toroidal Current Density (multiplied by 1/R###)       ')
+    call add(exprs_all, i, 'omega       ', 'Toroidal Vorticity Component                          ')
+    call add(exprs_all, i, 'rho         ', 'Mass Density                                          ')
+    call add(exprs_all, i, 'T           ', 'Temperature (Electrons plus Ions)                     ')
+    call add(exprs_all, i, 'T_e         ', 'Electron temperature                                  ')
+    call add(exprs_all, i, 'T_i         ', 'Ion temperature                                       ')
+    call add(exprs_all, i, 'vpar        ', 'Parallel Velocity                                     ')
+    call add(exprs_all, i, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
+    call add(exprs_all, i, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
+    call add(exprs_all, i, 'zkpar_T     ', 'Temperature Dependent Parallel Heat Diffusivity       ')
+    call add(exprs_all, i, 'dprof       ', 'Particle Diffusivity                                  ')
+    call add(exprs_all, i, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
+    call add(exprs_all, i, 'pres        ', 'Total Pressure                                        ')
+    call add(exprs_all, i, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
+    call add(exprs_all, i, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
+    call add(exprs_all, i, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
+    call add(exprs_all, i, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
+    call add(exprs_all, i, 'B_theta     ', 'Poloidal Magnetic Field Component                     ')
+    call add(exprs_all, i, 'currdens    ', 'Physical Current Density (ZJ*R###)                    ')
+    call add(exprs_all, i, 'Er          ', 'Radial electric field                                 ')
+    call add(exprs_all, i, 'Vtheta_i    ', 'Ion Poloidal velocity                                 ')
+    call add(exprs_all, i, 'Mach_par    ', 'Parallel Mach number                                  ')
+    call add(exprs_all, i, 'Mach_pol    ', 'Poloidal Mach number                                  ')
+    call add(exprs_all, i, 'V_sound     ', 'Sound speed                                           ')
+    call add(exprs_all, i, 'V_neo       ', 'Neoclassical velocity                                 ')
+    call add(exprs_all, i, 'Vperp_e     ', 'Electron perpendicular velocity                       ')
+    call add(exprs_all, i, 'Vperp_i     ', 'Ion perpendicular velocity                            ')
+    call add(exprs_all, i, 'V_ExB       ', 'ExB velocity                                          ')
+    call add(exprs_all, i, 'Vstar_e     ', 'Electron diamagnetic velocity                         ')
+    call add(exprs_all, i, 'Vstar_i     ', 'Ion diamagnetic velocity                              ')
+    call add(exprs_all, i, 'ki_neo      ', 'Neoclassical heat diffusivity                         ')
+    call add(exprs_all, i, 'mu_neo      ', 'Neoclassical friction coefficien                      ')
+    call add(exprs_all, i, 'J_bootstrap ', 'Bootstrap current                                     ') 
     
   end subroutine init_expr
   
@@ -135,7 +136,7 @@ module mod_expression
   
   
   
-  !> [Private] Auxilliary routine for init_expr. Create data structure for a single expression.
+  !> [Private] Auxilliary routine for init_expr.
   subroutine add(expr_list, num, name, descr)
     
     ! --- Routine parameters
@@ -155,7 +156,7 @@ module mod_expression
   
   
   
-  !> Create s subset of expressions.
+  !> Creates a subset of all available expressions.
   function exprs(name,n_expr) result(expr_list)
     type(t_expr_list) :: expr_list
     
@@ -179,7 +180,7 @@ module mod_expression
   
   
   
-  !> Merge expression lists.
+  !> Merge several expression lists.
   recursive function join_exprs(list1, list2, list3, list4, list5, list6, list7, list8, list9)     &
     result(expr_list)
     type(t_expr_list) :: expr_list
@@ -227,8 +228,8 @@ module mod_expression
   
   
   
-  !> Prints a table of the available expressions.
-  subroutine print_expr(expr_list)
+  !> Prints an expression list.
+  subroutine print_exprs(expr_list)
     
     ! --- Routine parameters
     type(t_expr_list),  intent(in) :: expr_list
@@ -253,7 +254,7 @@ module mod_expression
     write(*,902)
     write(*,*)
     
-  end subroutine print_expr
+  end subroutine print_exprs
   
   
   
@@ -502,7 +503,7 @@ module mod_expression
                 r0_p     = r0_p     + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
                 r0_pp    = r0_pp    + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
                 
-                if ( jorek_model .eq. 400 ) then
+                if ( jorek_model == 400 ) then
                 ! --- Ion temperature
                 Ti0       = Ti0       + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
                 Ti0_s     = Ti0_s     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
@@ -795,7 +796,7 @@ module mod_expression
           if (NEO) then
              if (num_neo_file) then
              ! num_neo_file= ( neo_file /= 'none') : we read neoclassical profiles from input file
-                call neo_coef( xpoint, xcase, Z, Z_xpoint, Ps0 ,psi_axis, psi_bnd, &
+                call neo_coef( eq%xpoint, eq%xcase, Z, eq%Z_xpoint, Ps0 ,eq%psi_axis, eq%psi_bnd, &
                      mu_neo, ki_neo)
                 Vneo   = ki_neo / Btheta * tauIC  * ( ps0_R*T0_R + ps0_Z*T0_Z )
              else
@@ -806,7 +807,7 @@ module mod_expression
              endif
           endif  ! NEO
 
-          if ( jorek_model .eq. 400 ) then
+          if ( jorek_model == 400 ) then
 !           To be done later. Needs to call find_axis and find_xpoint but not here 
 !           call bootstrap_current_rhs(BigR, 0.0, R_axis, psi_axis, psi_bnd,  &
 !        			     ps0, ps0_R, ps0_Z, r0,  r0_R, r0_Z, &
@@ -875,14 +876,14 @@ module mod_expression
                 res = T0 * fact_T
                 
               case ( 'T_e' )
-                 if jorek_model .eq. 400 then
+                 if ( jorek_model == 400 ) then
                  res = Te0 * fact_T
               else
                  res = T0 / 2.d0 * fact_T
               endif
 
               case ( 'T_i' )
-                 if jorek_model .eq. 400 then
+                 if ( jorek_model == 400 ) then
                  res = Ti0 * fact_T
               else
                  res = T0 / 2.d0 * fact_T
@@ -931,7 +932,7 @@ module mod_expression
                 res = Er * fact_Er
 
               case ( 'Vtheta_i')
-                res = Vtheta_i / fact_time
+!                res = Vtheta_i / fact_time ### vtheta_i not yet defined
 
               case ( 'Mach_par')
                 res = Mach_par
@@ -940,10 +941,10 @@ module mod_expression
                 res = Mach_pol
 
               case ( 'V_sound')
-                res = V_sound / fact_time
+!                res = V_sound / fact_time ### v_sound not yet defined
 
               case ( 'V_neo')
-                res = V_neo / fact_time
+!                res = V_neo / fact_time ### v_neo not yet defined
 
               case ( 'Vperp_e')
                 res = Vperp_e / fact_time

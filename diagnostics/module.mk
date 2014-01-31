@@ -7,8 +7,6 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/find_xpoint.f90				\
 	$(DIR)/integrals_3D.f90				\
 	$(DIR)/mod_diagnostics.f90			\
-	$(DIR)/mod_position.f90				\
-	$(DIR)/mod_expression.f90			\
 	$(DIR)/psi_minmax.f90				\
 	$(DIR)/RZ_minmax.f90
 
@@ -31,13 +29,7 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	  \
 	$(DIR)/boundary_check.f90         \
-	$(DIR)/mod_straight_field_line.f90\
 	$(DIR)/mod_fourier.f90
-
-DEMO_SRC := $(DEMO_SRC)	  \
-	$(DIR)/mod_straight_field_line.f90 \
-	$(DIR)/mod_four_filter.f90
-        
 
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	  \
 	$(DIR)/boundary_check.f90         \

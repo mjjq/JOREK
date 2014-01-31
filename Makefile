@@ -18,6 +18,7 @@ DIRS =  timing				\
 	solvers 			\
 	plots				\
 	diagnostics			\
+        new_diag                        \
 	vacuum				\
 	refinement			\
 	postproc			\

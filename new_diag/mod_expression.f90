@@ -1,5 +1,10 @@
 !> This module calculates "arbitrary" expressions at arbitrary positions for diagnostic purposes.
 !!
+!! Structure of the result(:,:,:,:) array:
+!! - 1st index corresponds to toroidal positions
+!! - 2nd and 3rd index correspond to poloidal plane positions (typically 2nd poloidal, 3rd radial)
+!! - 4th index corresponds to the expressions
+!!
 !! To obtain good performance, evaluate several expressions at several positions in a single call.
 !!
 !! Note: Add a new expressions to init_expr() and eval_expr() consistently.
@@ -85,11 +90,14 @@ module mod_expression
     call add(exprs_all, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
     call add(exprs_all, 'phi         ', 'Cylindrical Coordinate phi                            ')
+    call add(exprs_all, 'theta       ', 'Poloidal Angle Around Magnetic Axis                   ')
+    call add(exprs_all, 'x           ', 'Cartesian Coordinate x                                ')
+    call add(exprs_all, 'y           ', 'Cartesian Coordinate y                                ')
     call add(exprs_all, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
     call add(exprs_all, 'Psi         ', 'Poloidal Magnetic Flux                                ')
     call add(exprs_all, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
     call add(exprs_all, 'u           ', 'Velocity Stream Function                              ')
-    call add(exprs_all, 'zj          ', 'Toroidal Current Density (multiplied by 1/R###)       ')
+    call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
@@ -109,7 +117,7 @@ module mod_expression
     call add(exprs_all, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
     call add(exprs_all, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
     call add(exprs_all, 'B_theta     ', 'Poloidal Magnetic Field Component                     ')
-    call add(exprs_all, 'currdens    ', 'Physical Current Density (ZJ*R###)                    ')
+    call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (ZJ*R)              ')
     call add(exprs_all, 'Er          ', 'Radial electric field                                 ')
     call add(exprs_all, 'Vtheta_i    ', 'Ion Poloidal velocity                                 ')
     call add(exprs_all, 'Mach_par    ', 'Parallel Mach number                                  ')
@@ -338,7 +346,7 @@ module mod_expression
     real*8  :: xjac, xjac_R, xjac_Z, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, &
       s, t, H(n_vertex_max,n_order+1), H_s(n_vertex_max,n_order+1), H_t(n_vertex_max,n_order+1),   &
       H_st(n_vertex_max,n_order+1), H_ss(n_vertex_max,n_order+1), H_tt(n_vertex_max,n_order+1),    &
-      HZ(n_tor), HZ_p(n_tor), HZ_pp(n_tor), phi, res, BigR, BigR_R
+      HZ(n_tor), HZ_p(n_tor), HZ_pp(n_tor), phi, res, BigR, BigR_R, x_cart, y_cart, theta
     real*8  :: ps0, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, ps0_p, ps0_pp, u0, u0_s, u0_t, u0_ss,    &
       u0_tt, u0_st, u0_p, u0_pp, zj0, zj0_s, zj0_t, zj0_ss, zj0_tt, zj0_st, zj0_p, zj0_pp, w0,     &
       w0_s, w0_t, w0_ss, w0_tt, w0_st, w0_p, w0_pp, r0, r0_s, r0_t, r0_ss, r0_tt, r0_st, r0_p,     &
@@ -409,6 +417,10 @@ module mod_expression
         BigR_R = 1.d0 ! Trivial derivative
         call basisfunctions2(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
         
+        ! --- Poloidal angle theta
+        theta = atan2(Z-eq%Z_axis,R-eq%R_axis)
+        if ( theta < 0.d0 ) theta = theta + 2.d0*PI
+        
         ! --- 2D Jacobian
         xjac   = R_s * Z_t - R_t * Z_s
         xjac_R = ( R_ss * Z_t**2 - 2*R_st * Z_s*Z_t + R_tt * Z_s**2 + R_s * (Z_st*Z_t - Z_tt*Z_s )   &
@@ -436,6 +448,10 @@ module mod_expression
             HZ_p(2*i+1)  = + float(mode(2*i+1))    * cos(mode(2*i+1)*phi)
             HZ_pp(2*i+1) = - float(mode(2*i+1))**2 * sin(mode(2*i+1)*phi)
           end do
+          
+          ! --- Cartesian Coordinates
+          x_cart = + R*cos(phi)
+          y_cart = - R*sin(phi)
           
           ps0   = 0.d0; ps0_s   = 0.d0; ps0_t   = 0.d0; ps0_ss   = 0.d0; ps0_tt   = 0.d0; ps0_st   = 0.d0; ps0_p   = 0.d0; ps0_pp   = 0.d0
           u0    = 0.d0; u0_s    = 0.d0; u0_t    = 0.d0; u0_ss    = 0.d0; u0_tt    = 0.d0; u0_st    = 0.d0; u0_p    = 0.d0; u0_pp    = 0.d0
@@ -842,14 +858,23 @@ module mod_expression
               case ( 'R' )
                 res = R
                 
-              case ( 'Z' )
+              case ( 'Z', 'z' )
                 res = Z
                 
               case ( 'phi' )
                 res = phi
                 
+              case ( 'theta' )
+                res = theta
+                
               case ( 'xjac' )
                 res = xjac
+                
+              case ( 'x' )
+                res = x_cart
+                
+              case ( 'y' )
+                res = y_cart
                 
               case ( 'Psi' )
                 res = ps0
@@ -927,7 +952,7 @@ module mod_expression
                 res = Btheta
                 
               case ( 'currdens' )
-                res = zj0 * R / fact_mu_zero !###
+                res = zj0 * R / fact_mu_zero
                 
               case ( 'Er')
                 res = Er * fact_Er

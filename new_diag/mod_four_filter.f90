@@ -40,6 +40,11 @@ module mod_four_filter
   character(len=15), parameter, private :: THIS_MOD_NAME     = 'mod_four_filter'
   integer,           parameter, private :: MAX_MODE_LIST_LEN = 300
   integer,           parameter, private :: PLUS_INF          = +99999
+  integer,           parameter          :: TOROIDAL_TRAFO    = 0
+  integer,           parameter          :: POLOIDAL_TRAFO    = 1
+  integer,           parameter          :: POLTOR_TRAFO      = 2
+  logical,           parameter          :: FORWARD_TRAFO     = .true.
+  logical,           parameter          :: BACKWARD_TRAFO    = .false.
   
   
   
@@ -59,7 +64,7 @@ module mod_four_filter
   
   !> Datatype describing a Fourier filter, i.e., which harmonics to keep.
   type t_four_filter
-    integer                    :: n_keep                         !< Length of keep_list
+    integer                    :: n_keep = 0                     !< Length of keep_list
     type(t_mode_specification) :: keep_list(MAX_MODE_LIST_LEN)   !< Keep when applying filter.
   end type t_four_filter
   
@@ -74,56 +79,173 @@ module mod_four_filter
   
   
   !> Perform a fast Fourier transform of the result array
-  subroutine perform_four_trafo(result, forward)
+  subroutine perform_pol_trafo(result, forward)
     
     ! --- Routine parameters
     real*8, allocatable, intent(inout) :: result(:,:,:,:)
     logical,             intent(in)    :: forward
     
-    ! --- Local variables
-    integer   :: i, j
-    integer*8 :: plan, n(4)
+    call perform_four_trafo(result, POLOIDAL_TRAFO, forward)
     
-    !### use advanced fftw interface
+  end subroutine perform_pol_trafo
+  
+  
+  
+  
+  
+  !> Perform a fast Fourier transform of the result array
+  subroutine perform_tor_trafo(result, forward)
+    
+    ! --- Routine parameters
+    real*8, allocatable, intent(inout) :: result(:,:,:,:)
+    logical,             intent(in)    :: forward
+    
+    call perform_four_trafo(result, TOROIDAL_TRAFO, forward)
+    
+  end subroutine perform_tor_trafo
+  
+  
+  
+  
+  
+  !> Perform a fast Fourier transform of the result array
+  subroutine perform_poltor_trafo(result, forward)
+    
+    ! --- Routine parameters
+    real*8, allocatable, intent(inout) :: result(:,:,:,:)
+    logical,             intent(in)    :: forward
+    
+    call perform_four_trafo(result, POLTOR_TRAFO, forward)
+    
+  end subroutine perform_poltor_trafo
+  
+  
+  
+  
+  
+  !> Perform a fast Fourier transform of the result array
+  subroutine perform_four_trafo(result, trafo_type, forward)
+    
+    ! --- Routine parameters
+    real*8, allocatable, intent(inout) :: result(:,:,:,:)
+    integer,             intent(in)    :: trafo_type !< TOROIDAL_TRAFO, POLOIDAL_TRAFO, POLTOR_TRAFO
+    logical,             intent(in)    :: forward
+    
+    ! --- Local variables
+    integer   :: i, j, k
+    integer*8 :: plan, n(4)
+    real*8, allocatable :: tmp(:)
+    
     !### check result allocated
-    !### allow to perform only 1d transforms
     
     ! --- Dimensionality of result array
     n(:) = (/ size(result,1), size(result,2), size(result,3), size(result,4) /)
     
-    ! --- Normalization for back transform (Fourier to real space)
-    !     (this is done in order to have really the coefficients of the sin and cos functions)
-    if ( .not. forward ) then
-      !### optimize this
-      result(:,:,:,:)             = result(:,:,:,:) / 4
-      result(1,:,:,:)             = result(1,:,:,:) * 2
-      result(:,1,:,:)             = result(:,1,:,:) * 2
-      result(n(1)/2+1:n(1),:,:,:) = -result(n(1)/2+1:n(1),:,:,:)
-      result(:,n(2)/2+1:n(2),:,:) = -result(:,n(2)/2+1:n(2),:,:)
-    end if
-    
-    ! --- Perform the Fast Fourier Transformation
-    if ( forward ) then
-      call dfftw_plan_r2r_2d(plan, n(1), n(2), result, result, FFTW_R2HC, FFTW_R2HC, FFTW_ESTIMATE)
-    else
-      call dfftw_plan_r2r_2d(plan, n(1), n(2), result, result, FFTW_HC2R, FFTW_HC2R, FFTW_ESTIMATE)
-    end if
-    do j = 1, size(result,4)
-      do i = 1, size(result,3)
-        call dfftw_execute_r2r(plan, result(:,:,i,j), result(:,:,i,j))
+    if ( trafo_type == POLTOR_TRAFO ) then
+      
+      ! --- Normalization for back trafo (Fourier to real space) to recover original data
+      if ( .not. forward ) then
+        !### optimize this
+        result(:,:,:,:)             = result(:,:,:,:) / 4
+        result(1,:,:,:)             = result(1,:,:,:) * 2
+        result(:,1,:,:)             = result(:,1,:,:) * 2
+        result(n(1)/2+1:n(1),:,:,:) = -result(n(1)/2+1:n(1),:,:,:)
+        result(:,n(2)/2+1:n(2),:,:) = -result(:,n(2)/2+1:n(2),:,:)
+      end if
+      
+      ! --- Perform the Fast Fourier Transformation
+      if ( forward ) then
+        call dfftw_plan_r2r_2d(plan, n(1), n(2), result, result, FFTW_R2HC, FFTW_R2HC, FFTW_ESTIMATE)
+      else
+        call dfftw_plan_r2r_2d(plan, n(1), n(2), result, result, FFTW_HC2R, FFTW_HC2R, FFTW_ESTIMATE)
+      end if
+      do i = 1, n(4)
+        do j = 1, n(3)
+          call dfftw_execute_r2r(plan, result(:,:,j,i), result(:,:,j,i))
+        end do
       end do
-    end do
-    call dfftw_destroy_plan(plan)
+      call dfftw_destroy_plan(plan)
+      
+      ! --- Normalization for forward trafo (real to Fourier space) to have sin/cos coefficients
+      if ( forward ) then
+        !### optimize this
+        result(:,:,:,:)             = ( result(:,:,:,:) * 4 ) / ( n(2) * n(1) )
+        result(1,:,:,:)             = result(1,:,:,:) / 2
+        result(:,1,:,:)             = result(:,1,:,:) / 2
+        result(n(1)/2+1:n(1),:,:,:) = -result(n(1)/2+1:n(1),:,:,:)
+        result(:,n(2)/2+1:n(2),:,:) = -result(:,n(2)/2+1:n(2),:,:)
+      end if
+      
+    else if ( trafo_type == TOROIDAL_TRAFO ) then
+      
+      ! --- Normalization for back trafo (Fourier to real space) to recover original data
+      if ( .not. forward ) then
+        result(:,:,:,:)             = result(:,:,:,:) / 2
+        result(1,:,:,:)             = result(1,:,:,:) * 2
+        result(n(1)/2+1:n(1),:,:,:) = -result(n(1)/2+1:n(1),:,:,:)
+      end if
+      
+      ! --- Perform the Fast Fourier Transformation
+      if ( forward ) then
+        call dfftw_plan_r2r_1d(plan, n(1), result, result, FFTW_R2HC, FFTW_ESTIMATE)
+      else
+        call dfftw_plan_r2r_1d(plan, n(1), result, result, FFTW_HC2R, FFTW_ESTIMATE)
+      end if
+      do i = 1, n(4)
+        do j = 1, n(3)
+          do k = 1, n(2)
+            call dfftw_execute_r2r(plan, result(:,k,j,i), result(:,k,j,i))
+          end do
+        end do
+      end do
+      call dfftw_destroy_plan(plan)
+      
+      ! --- Normalization for forward trafo (real to Fourier space) to have sin/cos coefficients
+      if ( forward ) then
+        result(:,:,:,:)             = ( result(:,:,:,:) * 2 ) / n(1)
+        result(1,:,:,:)             = result(1,:,:,:) / 2
+        result(n(1)/2+1:n(1),:,:,:) = -result(n(1)/2+1:n(1),:,:,:)
+      end if
     
-    ! --- Normalization for forward transform (real to Fourier space)
-    !     (this is done to recover the original array after one forward and back transform)
-    if ( forward ) then
-      !### optimize this
-      result(:,:,:,:)             = ( result(:,:,:,:) * 4 ) / ( n(2) * n(1) )
-      result(1,:,:,:)             = result(1,:,:,:) / 2
-      result(:,1,:,:)             = result(:,1,:,:) / 2
-      result(n(1)/2+1:n(1),:,:,:) = -result(n(1)/2+1:n(1),:,:,:)
-      result(:,n(2)/2+1:n(2),:,:) = -result(:,n(2)/2+1:n(2),:,:)
+    else if ( trafo_type == POLOIDAL_TRAFO ) then
+      
+      ! --- Normalization for back trafo (Fourier to real space) to recover original data
+      if ( .not. forward ) then
+        result(:,:,:,:)             = result(:,:,:,:) / 2
+        result(:,1,:,:)             = result(:,1,:,:) * 2
+        result(:,n(2)/2+1:n(2),:,:) = -result(:,n(2)/2+1:n(2),:,:)
+      end if
+      
+      ! --- Perform the Fast Fourier Transformation
+      allocate( tmp(n(2)) )
+      if ( forward ) then
+        call dfftw_plan_r2r_1d(plan, n(2), tmp, tmp, FFTW_R2HC, FFTW_ESTIMATE)
+      else
+        call dfftw_plan_r2r_1d(plan, n(2), tmp, tmp, FFTW_HC2R, FFTW_ESTIMATE)
+      end if
+      do i = 1, n(4)
+        do j = 1, n(3)
+          do k = 1, n(1)
+            tmp(:) = result(k,:,j,i)
+            call dfftw_execute_r2r(plan, tmp, tmp)
+            result(k,:,j,i) = tmp(:)
+          end do
+        end do
+      end do
+      deallocate( tmp )
+      call dfftw_destroy_plan(plan)
+      
+      ! --- Normalization for forward trafo (real to Fourier space) to have sin/cos coefficients
+      if ( forward ) then
+        result(:,:,:,:)             = ( result(:,:,:,:) * 2 ) / n(2)
+        result(:,1,:,:)             = result(:,1,:,:) / 2
+        result(:,n(2)/2+1:n(2),:,:) = -result(:,n(2)/2+1:n(2),:,:)
+      end if
+      
+    else
+      
+      !### error
+      
     end if
     
   end subroutine perform_four_trafo
@@ -309,6 +431,8 @@ module mod_four_filter
     integer :: nn(4), num_pol_cos, num_pol_sin, num_tor_cos, num_tor_sin, m_max, n_max, i, m_start,&
       m_end, n_start, n_end, m, n
     
+    !### for a pol or tor only filter, solve problem only in this dimension
+    
     nn(:) = (/ size(result,1), size(result,2), size(result,3), size(result,4) /)
     
     num_pol_cos = nn(2) / 2 + 1
@@ -371,9 +495,11 @@ module mod_four_filter
     real*8, allocatable,            intent(inout) :: result(:,:,:,:)
     type (t_four_filter),           intent(in)    :: filter
     
-    call perform_four_trafo(result, .true.)
+    !### POL/TOR/POLTOR depending on filter
+    
+    call perform_four_trafo(result, POLTOR_TRAFO, .true.)
     call apply_four_filter(result, filter)
-    call perform_four_trafo(result, .false.)
+    call perform_four_trafo(result, POLTOR_TRAFO, .false.)
     
   end subroutine
   

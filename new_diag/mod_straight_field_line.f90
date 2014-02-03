@@ -194,8 +194,13 @@ module mod_straight_field_line
     end do
     
     if ( suggested_factor > 1.d0 ) then
-      !### Warn user to decrease deltaphi
-      write(*,*) 'suggested_factor >=', suggested_factor
+      write(*,*)
+      write(*,*) '*** WARNING ***************************************************************'
+      write(*,*) 'When calling '//trim(THIS_ROUTINE_NAME)//', deltaphi should be decreased'
+      write(*,*) 'Current value for deltaphi:      deltaphi = ', deltaphi
+      write(*,*) 'Recommended value for this case: deltaphi < ', deltaphi / suggested_factor
+      write(*,*) '***************************************************************************'
+      write(*,*)
     end if
     
     ! --- Output some data to files for debugging.

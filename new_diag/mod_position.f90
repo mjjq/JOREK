@@ -261,6 +261,12 @@ module mod_position
         if ( ierr /= 0 ) exit
       end do
       
+    ! --- Equidistant points along a straight line in R at fixed Z (e.g., midplane profiles).
+    else if ( present(Rstart) .and. present(Rend) .and. present(Z) .and. present(n) ) then
+      
+      call create_pol_pos(pos_list, ierr, node_list, element_list, eq, Rstart=Rstart, Rend=Rend,   &
+        Zstart=Z, Zend=Z, n=n)
+      
     ! --- Single (closed) flux surface.
     else if ( present(PsiN) .and. present(nTht) ) then
       
@@ -296,7 +302,6 @@ module mod_position
           call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           if ( ierr /= 0 ) then
-            write(99,*) pos%R, pos%Z, i, j !###
             write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
             exit
           end if

@@ -49,14 +49,14 @@ program demo
   expr_list = exprs_all
   expr_list = exprs_magfield
   expr_list = join_exprs(exprs_basicvar,exprs_magfield,exprs_cylcoord) !<<< does not work yet, to be done later
-  expr_list = exprs((/'Psi', 'B_R', 'xjac', 'T', 'rho', 'zj'/), 5)
+  expr_list = exprs((/'Psi ', 'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 6)
   
   
   
   ! --- Evaluate several expressions at one single position.
   call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, R=10.5, Z=0.5)
   call create_tor_pos(tor_pos_list, ierr, phi=0.)
-  expr_list = exprs((/'B_R', 'xjac', 'T', 'rho', 'zj'/), 5)
+  expr_list = exprs((/'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 5)
   call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
   
   
@@ -69,14 +69,15 @@ program demo
   
   
   ! --- Or as a single call:
-  call eval_expr(equil_state, JOREK_UNITS, exprs((/'B_R', 'xjac', 'T', 'rho', 'zj'/), 5),          &
+  call eval_expr(equil_state, JOREK_UNITS, exprs((/'B_R ', 'xjac', 'T   ', 'rho ', &
+       'zj  '/), 5),          &
     pol_pos(node_list,element_list,equil_state,R=10.5,Z=0.5), tor_pos(phi=0.), result, ierr)
   
   
   
   ! --- Evaluate several expressions on the outboard midplane and write to file.
-  expr_list = exprs((/'R', 'Z', 'Psi_N', 'Psi', 'theta', 'x', 'y', 'phi', 'B_R', 'xjac', 'T',      &
-    'rho', 'zj', 'omega', 'u'/), 15)
+  expr_list = exprs((/'R    ', 'Z    ', 'Psi_N', 'Psi  ', 'theta', 'x    ', 'y    ', &
+       'phi  ', 'B_R  ', 'xjac ', 'T    ', 'rho  ', 'zj   ', 'omega', 'u    '/), 15)
   call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state,                    &
       Rstart=equil_state%R_axis, Rend=equil_state%R_midpl(2)-1.d-3, Zstart=equil_state%Z_axis,     &
       Zend=equil_state%Z_axis, n=500)

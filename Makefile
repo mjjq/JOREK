@@ -193,8 +193,8 @@ JOREK2_POWERS_OBJ =     $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POWERS_SRC
                         $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POWERS_SRC)))
 
 JOREK2_IMPORT_PERTURBATION_OBJ =	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_IMPORT_PERTURBATION_SRC)))     \
-                        		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
-                        		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC)))
+	 		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
+	 		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC))) 
 
 DEMO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(DEMO_SRC)))     \
      $(patsubst %.f,%.o,$(filter %.f, $(DEMO_SRC)))         \
@@ -404,9 +404,8 @@ jorek2_import_perturbation_tmp : diagnostics/jorek2_import_perturbation.f90 $(JO
          -o $(JOREK_DIR)/jorek2_import_perturbation $(INCLUDES) $(LIBS)
 
 demo : diagnostics/demo.f90 $(DEMO_OBJ)
-	$(FC) $(FFLAGS) 				\
-        diagnostics/demo.f90	\
-        $(DEMO_OBJ)		\
+	$(FC) $(FFLAGS) diagnostics/demo.f90 -c -o diagnostics/demo.o 
+	$(FC) $(FFLAGS_OMP) diagnostics/demo.o $(DEMO_OBJ)		\
          -o $(JOREK_DIR)/demo $(INCLUDES) $(LIBS)
 
 include all_rules.mk

@@ -138,6 +138,7 @@ module mod_four_filter
     
     !### check result allocated
     
+#ifdef USE_FFTW
     ! --- Dimensionality of result array
     n(:) = (/ size(result,1), size(result,2), size(result,3), size(result,4) /)
     
@@ -247,7 +248,9 @@ module mod_four_filter
       !### error
       
     end if
-    
+#else
+#error "You need fftw library and to define -DUSE_FFTW"
+#endif    
   end subroutine perform_four_trafo
   
   

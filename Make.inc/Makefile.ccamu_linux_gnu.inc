@@ -22,11 +22,12 @@ FFLAGS          := $(FFLAGS)               -fbounds-check $(FFLAGS_OMP)
 FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
 
 # Solvers dependencies
-USE_HIPS   = 0
-USE_PASTIX = 1
-USE_PASTIX_MURGE = 1
-USE_MUMPS = 0
-USE_WSMP   = 0
+USE_HIPS=0
+USE_PASTIX=1
+USE_PASTIX_MURGE=1
+USE_MUMPS=0
+USE_WSMP=0
+USE_FFTW=1
 
 #Scotch library
 SCOTCH_HOME ?= /home/passeron/jorek_tools/Others/gscotch_5.1
@@ -55,7 +56,9 @@ INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
 LIB_WSMP = -L$(WSMP_HOME) -lpwsmp64
 
 # LIBFFTW
-LIBFFTW   = -L/opt/cluster/fftw/3.2.2/intel-11.1-069/intel-4.0.0.025 -lfftw3
+FFTW_HOME ?= /softs/fftw/gcc47/3.3
+LIBFFTW   = -L$(FFTW_HOME)/lib -lfftw3
+INC_FFTW  = -I$(FFTW_HOME)/include
 
 #LIBLAPACK = $(HOME)/intel/lapack/LAPACK/lapack_LINUX.a -lblas
 #LIBLAPACK = -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core 

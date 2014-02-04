@@ -359,8 +359,8 @@ module mod_expression
       P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
-      Te0_ss, Te0_tt, Te0_p, Te0_pp, Er, Vtheta, Mach_par, Mach_pol, Vsound, Vneo, Vperp_e,        &
-      Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
+      Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
+      Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_T, fact_vpar, fact_resistiv, fact_Er
     
@@ -667,6 +667,14 @@ module mod_expression
           
           T0_R     = (   Z_t * T0_s  - Z_s * T0_t ) / xjac
           T0_Z     = ( - R_t * T0_s  + R_s * T0_t ) / xjac
+
+          if ( jorek_model == 400 ) then
+             Ti0_R     = (   Z_t * Ti0_s  - Z_s * Ti0_t ) / xjac
+             Ti0_Z     = ( - R_t * Ti0_s  + R_s * Ti0_t ) / xjac
+             Te0_R     = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
+             Te0_Z     = ( - R_t * Te0_s  + R_s * Te0_t ) / xjac
+          endif
+
           T0_RR    = (T0_ss * Z_t**2 - 2.d0*T0_st * Z_s*Z_t + T0_tt * Z_s**2 &
                       + T0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
                       + T0_t * (Z_st*Z_s - Z_ss*Z_t ) )        / xjac**2        &
@@ -821,11 +829,9 @@ module mod_expression
           end if  ! NEO
 
           if ( jorek_model == 400 ) then
-!           To be done later. Needs to call find_axis and find_xpoint but not here 
-!           call bootstrap_current_rhs(BigR, 0.0, R_axis, psi_axis, psi_bnd,  &
-!        			     ps0, ps0_R, ps0_Z, r0,  r0_R, r0_Z, &
-!        			     Ti0,  Ti0_R, Ti0_Z, Te0,  Te0_R, Te0_Z, J_boot)
-             J_boot = 0.d0
+           call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd,  &
+        			     ps0, ps0_R, ps0_Z, r0,  r0_R, r0_Z, &
+        			     Ti0,  Ti0_R, Ti0_Z, Te0,  Te0_R, Te0_Z, J_boot)
           else
              J_boot = 0.d0
           end if

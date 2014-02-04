@@ -320,7 +320,7 @@ module mod_diag_output
   
   
   
-  !> Write diagnostic output to an ascii file.
+  !> Write diagnostic output to a vtk file.
   subroutine write_vtk_2d(ierr, expr_list, res2d, filename, i_coord, close1, close2)
     
     ! --- Routine parameters.
@@ -407,7 +407,7 @@ module mod_diag_output
   
   
   
-  !> [Private] Auxilliary routine for write_ascii routines.
+  !> [Private] Auxilliary routine for write_vtk_2d routine.
   subroutine open_vtk_file(ierr, i_file, filename)
     
     ! --- Routine parameters

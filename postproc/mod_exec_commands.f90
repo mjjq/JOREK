@@ -400,8 +400,11 @@ module exec_commands
       if ( load_error /= 0 ) cycle
       
       do jcmd = 1, n_queued_commands
-        
+#ifdef _OPENMP        
         thread_id   = omp_get_thread_num()
+#else
+        thread_id   = 0
+#endif
         file_handle = 17 + thread_id
         
         call exec_command(command_queue(jcmd), first_step, file_handle, error)  

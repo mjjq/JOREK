@@ -155,8 +155,9 @@ module wsmp_module
     integer, intent(in) :: MPI_COMM_N
 
     integer             :: PWGSMP_nthrd
+#ifdef _OPENMP
     integer, external   :: omp_get_num_threads
-
+#endif
 
     if (PWSMP__verbose) WRITE(*,*) "Entering PWGSMP__initialize_solver() ..."
 
@@ -165,7 +166,11 @@ module wsmp_module
     call wsetmpicomm(MPI_COMM_N)
 #endif
     !$omp parallel default(none) shared(PWGSMP_nthrd)
+#ifdef _OPENMP
     PWGSMP_nthrd = omp_get_num_threads()
+#else
+    PWGSMP_nthrd = 1
+#endif
     !$omp end parallel
 #ifdef USE_WSMP
     call wsetmaxthrds(PWGSMP_nthrd)

@@ -6,6 +6,7 @@ program demo
   use phys_module
   use boundary
   use mod_new_diag
+  use basis_at_gaussian
   
   implicit none
   
@@ -31,9 +32,10 @@ program demo
   call det_modes()
   
   call import_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
+
+  call initialise_basis                                       ! define the basis functions at the Gaussian points
   
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-  
   call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
   call print_equil_state(equil_state, .false.)
   
@@ -54,7 +56,7 @@ program demo
   
   
   ! --- Evaluate several expressions at one single position.
-  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, R=10.5, Z=0.5)
+  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, R=3., Z=0.1)
   call create_tor_pos(tor_pos_list, ierr, phi=0.)
   expr_list = exprs((/'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 5)
   call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
@@ -71,7 +73,7 @@ program demo
   ! --- Or as a single call:
   call eval_expr(equil_state, JOREK_UNITS, exprs((/'B_R ', 'xjac', 'T   ', 'rho ', &
        'zj  '/), 5),          &
-    pol_pos(node_list,element_list,equil_state,R=10.5,Z=0.5), tor_pos(phi=0.), result, ierr)
+    pol_pos(node_list,element_list,equil_state,R=3.,Z=0.1), tor_pos(phi=0.), result, ierr)
   
   
   
@@ -90,7 +92,7 @@ program demo
   
   ! --- Evaluate expressions along toroidal direction.
   call eval_expr(equil_state, JOREK_UNITS, expr_list,                                              &
-    pol_pos(node_list,element_list,equil_state,R=10.5,Z=0.5), tor_pos(nphi=128), result, ierr)
+    pol_pos(node_list,element_list,equil_state,R=3.,Z=0.1), tor_pos(nphi=128), result, ierr)
   
   
   

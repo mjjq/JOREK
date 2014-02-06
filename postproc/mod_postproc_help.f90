@@ -122,7 +122,7 @@ module postproc_help
         write(*,*) '  done'
       case ( 'gourdon' ) 
         write(*,*) 'Usage:'
-        write(*,*) '  gourdon <R_min> <R_max> <n_R> <Z_min> <Z_max> <n_Z> <n_phi> [<derivs>]'
+        write(*,*) '  gourdon <R_min> <R_max> <n_R> <Z_min> <Z_max> <n_Z> <n_phi> <fact_phi> <fact_btor> <fact_bpol> [<derivs>]'
         write(*,*) ''
         write(*,*) 'Export the magnetic field for the Gourdon code.'
         write(*,*) ''
@@ -130,6 +130,9 @@ module postproc_help
         write(*,*) '  <R_min>, <R_max>:      R-range to export the field in'
         write(*,*) '  <Z_min>, <Z_max>:      Z-range -"-'
         write(*,*) '  <n_R>, <n_Z>, <n_phi>: Number of points in R-, Z-, phi-directions'
+        write(*,*) '  <fact_phi>:            Transform the toroidal coordinate by this factor (typically +1.d0 or -1.d0)'
+        write(*,*) '  <fact_Btor>:           Transform the B_tor by this factor (should be +1.d0 or -1.d0)'
+        write(*,*) '  <fact_Bpol>:           Transform the B_pol by this factor (should be +1.d0 or -1.d0)'
         write(*,*) '  <derivs>:              Include field derivatives? Can be .true. or'
         write(*,*) '                         .false. (default).'
         write(*,*) ''

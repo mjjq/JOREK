@@ -574,10 +574,16 @@ module exec_commands
     integer,            intent(in)     :: file_handle !< File handle
     integer,            intent(out)    :: error       !< Error flag
     
+    ! ################### IMPORTANT CONSTANTS TO BE ADAPTED #####################
+    logical, parameter :: trafo_btor = .true.
+    logical, parameter :: trafo_bpol = .true.
+    logical, parameter :: trafo_phi  = .true.
+    ! ###########################################################################
+    
     ! --- Local variables
     integer, parameter       :: I_PSI        = 1
     integer                  :: n_components ! Number of field components (3 or 12)
-    real*8                   :: R_min, R_max, Z_min, Z_max
+    real*8                   :: R_min, R_max, Z_min, Z_max, fact_phi, fact_btor, fact_bpol
     integer                  :: n_R, n_Z, n_phi
     integer                  :: i, j, k, i_tor
     real*8                   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, phi
@@ -593,7 +599,7 @@ module exec_commands
     error = 0
     
     ! --- Some basic checks
-    call check_param_count(command, (/7,8/), error)
+    call check_param_count(command, (/10,11/), error)
     if ( error /= 0 ) return
     call check_step_imported(error)
     if ( error /= 0 ) return
@@ -619,10 +625,19 @@ module exec_commands
     n_phi = to_int(command%option(8), error)
     if ( error /= 0 ) return
     
-    if ( command%n_options == 8 ) then
+    fact_phi = to_float(command%option(9), error)
+    if ( error /= 0 ) return
+    
+    fact_btor = to_float(command%option(10), error)
+    if ( error /= 0 ) return
+    
+    fact_bpol = to_float(command%option(11), error)
+    if ( error /= 0 ) return
+    
+    if ( command%n_options == 11 ) then
       include_derivs = .false.
-    else if ( command%n_options == 9 ) then
-      include_derivs = to_log(command%option(9),error)
+    else if ( command%n_options == 12 ) then
+      include_derivs = to_log(command%option(12),error)
       if ( error /= 0 ) return
     end if
     
@@ -643,7 +658,7 @@ module exec_commands
     !$omp   d2P_dZ_dR,d2P_dR2,d2P_dZ2,d2P_dR_dZ,phi,R_s,R_t,R_st,R_ss,R_tt,Z_s,Z_t,Z_st,Z_ss,      &
     !$omp   Z_tt,xjac,xjac_R,xjac_Z,i_tor,P,P_s,P_t,P_st,P_ss,P_tt,HZ,HZ_p,file_handle)            &
     !$omp shared(field,R_min,R_max,Z_min,Z_max,n_R,n_Z,n_phi,node_list,element_list,F0,mode,       &
-    !$omp   n_components,include_derivs)                                                           &
+    !$omp   n_components,include_derivs,fact_phi,fact_bpol,fact_btor)                              &
     !$omp schedule(dynamic)
     do i = 0, n_R - 1
       R = R_min + (R_max - R_min) * real(i)/real(n_R)
@@ -660,7 +675,7 @@ module exec_commands
         if ( ifail == 0 ) then ! i.e., if (R,Z) is inside the JOREK computational domain
           
           do k = 0, n_phi - 1
-            phi = 2.d0*PI * real(k)/real(n_phi)
+            phi = fact_phi * 2.d0*PI * real(k)/real(n_phi)
             
             call interp_RZ(node_list, element_list, i_elm, s, t, R, R_s, R_t, R_st, R_ss, R_tt, Z, &
               Z_s, Z_t, Z_st, Z_ss, Z_tt)
@@ -724,15 +739,18 @@ module exec_commands
             end do
             
             ! --- B_phi
-            field(1,i,j,k) = F0 / R
+            field(1,i,j,k) = F0 / R       * fact_btor
             
             ! --- B_R
-            field(2,i,j,k) = dP_dZ / R
+            field(2,i,j,k) = dP_dZ / R    * fact_bpol
             
             ! --- B_Z
-            field(3,i,j,k) = -dP_dR / R
+            field(3,i,j,k) = -dP_dR / R   * fact_bpol
             
             if ( include_derivs ) then
+              
+              write(*,*) 'SORRY, DERIVATIVES NOT TESTED.'
+              stop
               
               ! --- dB_phi/dphi
               field(4,i,j,k) = 0.d0
@@ -767,7 +785,7 @@ module exec_commands
           
         else ! i.e., if (R,Z) is outside the JOREK computational domain
           
-          ! Do nothing, field == 0 here.
+          ! Do nothing, i.e., field == 0 here.
           
         end if
         

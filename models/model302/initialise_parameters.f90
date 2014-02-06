@@ -17,7 +17,7 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-integer :: ierr
+integer :: ierr, i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -106,8 +106,8 @@ if (my_id .eq. 0) then
  !==============================R_Z_psi_bnd==========================
    if ( (n_boundary.ne.0) .and. (R_Z_psi_bnd_file /= 'none') ) then
  ! --- Open the file.
-    OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
-    if ( err /= 0 ) then
+    OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=ierr)
+    if ( ierr /= 0 ) then
       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
@@ -124,8 +124,8 @@ if (my_id .eq. 0) then
  !==============================Limiter==========================
    if (n_limiter.ne.0) then
  ! --- Open the file.
-    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
-    if ( err /= 0 ) then
+    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=ierr)
+    if ( ierr /= 0 ) then
       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else

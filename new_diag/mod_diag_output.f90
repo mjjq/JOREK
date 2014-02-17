@@ -28,9 +28,10 @@ module mod_diag_output
   
   
   ! --- Constants
-  integer, parameter, private :: STDOUT = 6
-  integer, parameter          :: FORM_TABLE = 0
-  integer, parameter          :: FORM_LIST  = 1
+  character(len=15), parameter, private :: THIS_MOD_NAME = 'mod_diag_output'
+  integer,           parameter, private :: STDOUT = 6
+  integer,           parameter          :: FORM_TABLE = 0
+  integer,           parameter          :: FORM_LIST  = 1
   
   
   
@@ -45,6 +46,8 @@ module mod_diag_output
   !> Reduce the dimensionality of the result array.
   subroutine reduce_result_to_0d(ierr, result, res0d, i1, i2, i3)
     
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':reduce_result_to_0d'
+    
     ! --- Routine parameters.
     integer,              intent(inout) :: ierr
     real*8, allocatable,  intent(in)    :: result(:,:,:,:)
@@ -54,8 +57,9 @@ module mod_diag_output
     ierr = 0
     
     if ( .not. allocated(result) ) then
-      ierr = 100
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': result array not allocated.'
+      ierr = 101
+      return
     end if
     
     if ( allocated(res0d) ) deallocate(res0d)
@@ -72,6 +76,8 @@ module mod_diag_output
   !> Reduce the dimensionality of the result array.
   subroutine reduce_result_to_1d(ierr, result, res1d, i1, i2, i3)
     
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':reduce_result_to_1d'
+    
     ! --- Routine parameters.
     integer,              intent(inout) :: ierr
     real*8, allocatable,  intent(in)    :: result(:,:,:,:)
@@ -81,8 +87,9 @@ module mod_diag_output
     ierr = 0
     
     if ( .not. allocated(result) ) then
-      ierr = 100
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': result array not allocated.'
+      ierr = 101
+      return
     end if
     
     if ( allocated(res1d) ) deallocate(res1d)
@@ -97,7 +104,9 @@ module mod_diag_output
       allocate( res1d(size(result,1),size(result,4)) )
       res1d = result(:,i2,i3,:)
     else
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Two of the paramters i1, i2, i3 required.'
+      ierr = 102
+      return
     end if
     
   end subroutine reduce_result_to_1d
@@ -109,6 +118,8 @@ module mod_diag_output
   !> Reduce the dimensionality of the result array.
   subroutine reduce_result_to_2d(ierr, result, res2d, i1, i2, i3)
     
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':reduce_result_to_2d'
+    
     ! --- Routine parameters.
     integer,              intent(inout) :: ierr
     real*8, allocatable,  intent(in)    :: result(:,:,:,:)
@@ -118,8 +129,9 @@ module mod_diag_output
     ierr = 0
     
     if ( .not. allocated(result) ) then
-      ierr = 100
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': result array not allocated.'
+      ierr = 101
+      return
     end if
     
     if ( allocated(res2d) ) deallocate(res2d)
@@ -134,7 +146,9 @@ module mod_diag_output
       allocate( res2d(size(result,1),size(result,2),size(result,4)) )
       res2d = result(:,:,i3,:)
     else
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': parameter i1 or i2 or i3 required.'
+      ierr = 102
+      return
     end if
     
   end subroutine reduce_result_to_2d
@@ -145,6 +159,8 @@ module mod_diag_output
   
   !> Write diagnostic output to an ascii file.
   subroutine write_ascii_0d(ierr, eq, expr_list, res0d, format, header, filename, append, comment)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':write_ascii_0d'
     
     ! --- Routine parameters.
     integer,                    intent(inout) :: ierr
@@ -163,8 +179,8 @@ module mod_diag_output
     ierr = 0
     
     if ( .not. allocated(res0d) ) then
-      ierr = 100
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': array res0d is not allocated.'
+      ierr = 101
       return
     end if
     
@@ -178,8 +194,9 @@ module mod_diag_output
         write(i_file,'(1x,a,"=",es23.15)') expr_list%expr(i)%name, res0d(i)
       end do
     else
-      ierr = 101
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': parameter format has illegal value.'
+      ierr = 103
+      return
     end if
     
     call close_file(ierr, i_file)
@@ -192,6 +209,8 @@ module mod_diag_output
   
   !> Write diagnostic output to an ascii file.
   subroutine write_ascii_1d(ierr, eq, expr_list, res1d, format, header, filename, append, comment)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':write_ascii_1d'
     
     ! --- Routine parameters.
     integer,                    intent(inout) :: ierr
@@ -210,8 +229,8 @@ module mod_diag_output
     ierr = 0
     
     if ( .not. allocated(res1d) ) then
-      ierr = 100
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': array res1d is not allocated.'
+      ierr = 101
       return
     end if
     
@@ -223,8 +242,9 @@ module mod_diag_output
         write(i_file,'(9999es23.15)') res1d(i,:)
       end do
     else
-      ierr = 101
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': parameter format has illegal value.'
+      ierr = 103
+      return
     end if
     
     call close_file(ierr, i_file)
@@ -238,6 +258,8 @@ module mod_diag_output
   !> [Private] Auxilliary routine for write_ascii routines.
   subroutine open_ascii_file(ierr, i_file, filename, append, comment)
     
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':open_ascii_file'
+    
     ! --- Routine parameters
     integer,                    intent(inout) :: ierr
     integer,                    intent(out)   :: i_file
@@ -246,15 +268,25 @@ module mod_diag_output
     character(len=*), optional, intent(in)    :: comment
     
     ! --- Local variables
-    character(len=32) :: status
+    character(len=32) :: status, access
     
     ierr = 0
     
     if ( present(filename) ) then
       i_file = 133 !###
       status = 'replace'
-      if ( present(append) .and. (append) ) status = 'append'
-      open(i_file, file=trim(filename), form='formatted', status=trim(status), iostat=ierr)
+      access = 'sequential'
+      if ( present(append) .and. (append) ) then
+        status = 'old'
+        access = 'append'
+      end if
+      open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),&
+        iostat=ierr)
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' opening file "'//trim(filename)//'".'
+        write(*,*) ierr
+        return
+      end if
       if ( present(append) .and. (append) ) then
         write(i_file,*)
         write(i_file,*)
@@ -323,6 +355,8 @@ module mod_diag_output
   !> Write diagnostic output to a vtk file.
   subroutine write_vtk_2d(ierr, expr_list, res2d, filename, i_coord, close1, close2)
     
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':write_vtk_2d'
+    
     ! --- Routine parameters.
     integer,                    intent(inout) :: ierr
     type(t_expr_list),          intent(in)    :: expr_list
@@ -341,8 +375,8 @@ module mod_diag_output
     ierr = 0
     
     if ( .not. allocated(res2d) ) then
-      ierr = 100
-      !### error
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': array res2d not allocated.'
+      ierr = 103
       return
     end if
     n(:) = (/ size(res2d,1), size(res2d,2), size(res2d,3) /)
@@ -416,7 +450,6 @@ module mod_diag_output
     character(len=*),           intent(in)    :: filename
     
     ierr = 0
-    
     i_file = 133 !###
     
 #ifdef IBM_MACHINE

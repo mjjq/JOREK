@@ -2,7 +2,7 @@
 !!
 !! Structure of the result(:,:,:,:) array:
 !! - 1st index corresponds to toroidal positions
-!! - 2nd and 3rd index correspond to poloidal plane positions (typically 2nd poloidal, 3rd radial)
+!! - 2nd and 3rd index correspond to positions in poloidal plane (2nd poloidal, 3rd radial)
 !! - 4th index corresponds to the expressions
 !!
 !! To obtain good performance, evaluate several expressions at several positions in a single call.
@@ -57,7 +57,8 @@ module mod_expression
   
   ! > List of expressions.
   type :: t_expr_list
-    integer                   :: n_expr = 0       !< Number of expressions in this list
+    integer                   :: n_expr  = 0      !< Number of expressions in this list
+    integer                   :: n_coord = 0      !< Treat the first n_coord expr.s as coordinates
     type(t_expr)              :: expr(N_EXPR_MAX) !< The expressions
   end type t_expr_list
   
@@ -67,9 +68,9 @@ module mod_expression
   
   ! --- Standard lists of expressions (require init_expr call first!).
   type(t_expr_list), save :: exprs_all           !< All available expressions.
-  type(t_expr_list), save :: exprs_basicvar      !< All expressions for basic variables.  !#### not yet used
-  type(t_expr_list), save :: exprs_cylcoord      !< All expressions for cylindrical coordinates.  !#### not yet used
-  type(t_expr_list), save :: exprs_magfield      !< All expressions for the magnetic field.  !#### not yet used
+!  type(t_expr_list), save :: exprs_basicvar      !< All expressions for basic variables.
+!  type(t_expr_list), save :: exprs_cylcoord      !< All expressions for cylindrical coordinates.
+!  type(t_expr_list), save :: exprs_magfield      !< All expressions for the magnetic field.
   
   
   
@@ -93,9 +94,9 @@ module mod_expression
     call add(exprs_all, 'theta       ', 'Poloidal Angle Around Magnetic Axis                   ')
     call add(exprs_all, 'x           ', 'Cartesian Coordinate x                                ')
     call add(exprs_all, 'y           ', 'Cartesian Coordinate y                                ')
+    call add(exprs_all, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
     call add(exprs_all, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
     call add(exprs_all, 'Psi         ', 'Poloidal Magnetic Flux                                ')
-    call add(exprs_all, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
     call add(exprs_all, 'u           ', 'Velocity Stream Function                              ')
     call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
@@ -131,7 +132,9 @@ module mod_expression
     call add(exprs_all, 'Vstar_i     ', 'Ion diamagnetic velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical heat diffusivity                         ')
     call add(exprs_all, 'mu_neo      ', 'Neoclassical friction coefficient                     ')
-    call add(exprs_all, 'J_bootstrap ', 'Bootstrap current                                     ') 
+    call add(exprs_all, 'J_bootstrap ', 'Bootstrap current                                     ')
+    
+    exprs_all%n_coord = 6
     
   end subroutine init_expr
   
@@ -158,12 +161,13 @@ module mod_expression
   
   
   !> Creates a subset of all available expressions.
-  function exprs(name,n_expr) result(expr_list)
+  function exprs(name, n_expr, n_coord) result(expr_list)
     type(t_expr_list) :: expr_list
     
     ! --- Routine parameters
-    character(len=*), intent(in) :: name(n_expr)
-    integer,          intent(in) :: n_expr
+    character(len=*),  intent(in) :: name(n_expr)
+    integer,           intent(in) :: n_expr
+    integer, optional, intent(in) :: n_coord
     
     ! --- Local variables
     integer :: i, j, k
@@ -176,6 +180,9 @@ module mod_expression
       expr_list%expr(k) = exprs_all%expr(j)
     end do
     expr_list%n_expr = k
+    
+    expr_list%n_coord = 0
+    if ( present(n_coord) ) expr_list%n_coord = n_coord
     
   end function exprs
   
@@ -361,6 +368,7 @@ module mod_expression
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
+    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_T, fact_vpar, fact_resistiv, fact_Er
     
@@ -464,109 +472,123 @@ module mod_expression
           ! --- Reconstruct variables
           do i = 1, n_vertex_max
             do j = 1, n_order+1
+              
+              sz     = element%size(i,j)
+              hh     = H   (i,j)
+              hh_s   = H_s (i,j)
+              hh_t   = H_t (i,j)
+              hh_ss  = H_ss(i,j)
+              hh_tt  = H_tt(i,j)
+              hh_st  = H_st(i,j)
+              
               do i_tor = 1, n_tor
                 
+                hhz    = HZ   (i_tor)
+                hhz_p  = HZ_p (i_tor)
+                hhz_pp = HZ_pp(i_tor)
+                vv(:)  = nodes(i)%values(i_tor,j,:)
+                
                 ! --- Poloidal Flux
-                ps0      = ps0      + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                ps0_s    = ps0_s    + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                ps0_t    = ps0_t    + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                ps0_ss   = ps0_ss   + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                ps0_tt   = ps0_tt   + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                ps0_st   = ps0_st   + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                ps0_p    = ps0_p    + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                ps0_pp   = ps0_pp   + nodes(i)%values(i_tor,j,1) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+                ps0      = ps0      + vv(1) * sz * hh    * hhz
+                ps0_s    = ps0_s    + vv(1) * sz * hh_s  * hhz
+                ps0_t    = ps0_t    + vv(1) * sz * hh_t  * hhz
+                ps0_ss   = ps0_ss   + vv(1) * sz * hh_ss * hhz
+                ps0_tt   = ps0_tt   + vv(1) * sz * hh_tt * hhz
+                ps0_st   = ps0_st   + vv(1) * sz * hh_st * hhz
+                ps0_p    = ps0_p    + vv(1) * sz * hh    * hhz_p
+                ps0_pp   = ps0_pp   + vv(1) * sz * hh    * hhz_pp
                 
                 ! --- Stream Function
-                u0       = u0       + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                u0_s     = u0_s     + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                u0_t     = u0_t     + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                u0_ss    = u0_ss    + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                u0_tt    = u0_tt    + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                u0_st    = u0_st    + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                u0_p     = u0_p     + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                u0_pp    = u0_pp    + nodes(i)%values(i_tor,j,2) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+                u0       = u0       + vv(2) * sz * hh    * hhz
+                u0_s     = u0_s     + vv(2) * sz * hh_s  * hhz
+                u0_t     = u0_t     + vv(2) * sz * hh_t  * hhz
+                u0_ss    = u0_ss    + vv(2) * sz * hh_ss * hhz
+                u0_tt    = u0_tt    + vv(2) * sz * hh_tt * hhz
+                u0_st    = u0_st    + vv(2) * sz * hh_st * hhz
+                u0_p     = u0_p     + vv(2) * sz * hh    * hhz_p
+                u0_pp    = u0_pp    + vv(2) * sz * hh    * hhz_pp
                 
                 ! --- Current
-                zj0      = zj0      + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                zj0_s    = zj0_s    + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                zj0_t    = zj0_t    + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                zj0_ss   = zj0_ss   + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                zj0_tt   = zj0_tt   + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                zj0_st   = zj0_st   + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                zj0_p    = zj0_p    + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                zj0_pp   = zj0_pp   + nodes(i)%values(i_tor,j,3) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+                zj0      = zj0      + vv(3) * sz * hh    * hhz
+                zj0_s    = zj0_s    + vv(3) * sz * hh_s  * hhz
+                zj0_t    = zj0_t    + vv(3) * sz * hh_t  * hhz
+                zj0_ss   = zj0_ss   + vv(3) * sz * hh_ss * hhz
+                zj0_tt   = zj0_tt   + vv(3) * sz * hh_tt * hhz
+                zj0_st   = zj0_st   + vv(3) * sz * hh_st * hhz
+                zj0_p    = zj0_p    + vv(3) * sz * hh    * hhz_p
+                zj0_pp   = zj0_pp   + vv(3) * sz * hh    * hhz_pp
                 
                 ! --- Vorticity
-                w0       = w0       + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                w0_s     = w0_s     + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                w0_t     = w0_t     + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                w0_ss    = w0_ss    + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                w0_tt    = w0_tt    + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                w0_st    = w0_st    + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                w0_p     = w0_p     + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                w0_pp    = w0_pp    + nodes(i)%values(i_tor,j,4) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+                w0       = w0       + vv(4) * sz * hh    * hhz
+                w0_s     = w0_s     + vv(4) * sz * hh_s  * hhz
+                w0_t     = w0_t     + vv(4) * sz * hh_t  * hhz
+                w0_ss    = w0_ss    + vv(4) * sz * hh_ss * hhz
+                w0_tt    = w0_tt    + vv(4) * sz * hh_tt * hhz
+                w0_st    = w0_st    + vv(4) * sz * hh_st * hhz
+                w0_p     = w0_p     + vv(4) * sz * hh    * hhz_p
+                w0_pp    = w0_pp    + vv(4) * sz * hh    * hhz_pp
                 
                 ! --- Density
-                r0       = r0       + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                r0_s     = r0_s     + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                r0_t     = r0_t     + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                r0_ss    = r0_ss    + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                r0_tt    = r0_tt    + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                r0_st    = r0_st    + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                r0_p     = r0_p     + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                r0_pp    = r0_pp    + nodes(i)%values(i_tor,j,5) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+                r0       = r0       + vv(5) * sz * hh    * hhz
+                r0_s     = r0_s     + vv(5) * sz * hh_s  * hhz
+                r0_t     = r0_t     + vv(5) * sz * hh_t  * hhz
+                r0_ss    = r0_ss    + vv(5) * sz * hh_ss * hhz
+                r0_tt    = r0_tt    + vv(5) * sz * hh_tt * hhz
+                r0_st    = r0_st    + vv(5) * sz * hh_st * hhz
+                r0_p     = r0_p     + vv(5) * sz * hh    * hhz_p
+                r0_pp    = r0_pp    + vv(5) * sz * hh    * hhz_pp
                 
                 if ( jorek_model == 400 ) then
-                ! --- Ion temperature
-                Ti0       = Ti0       + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                Ti0_s     = Ti0_s     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                Ti0_t     = Ti0_t     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                Ti0_ss    = Ti0_ss    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                Ti0_tt    = Ti0_tt    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                Ti0_st    = Ti0_st    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                Ti0_p     = Ti0_p     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                Ti0_pp    = Ti0_pp    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
-
-                ! --- Electron temperature
-                Te0       = Te0       + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                Te0_s     = Te0_s     + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                Te0_t     = Te0_t     + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                Te0_ss    = Te0_ss    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                Te0_tt    = Te0_tt    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                Te0_st    = Te0_st    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                Te0_p     = Te0_p     + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                Te0_pp    = Te0_pp    + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
-
+                  ! --- Ion temperature
+                  Ti0       = Ti0       + vv(6) * sz * hh    * hhz
+                  Ti0_s     = Ti0_s     + vv(6) * sz * hh_s  * hhz
+                  Ti0_t     = Ti0_t     + vv(6) * sz * hh_t  * hhz
+                  Ti0_ss    = Ti0_ss    + vv(6) * sz * hh_ss * hhz
+                  Ti0_tt    = Ti0_tt    + vv(6) * sz * hh_tt * hhz
+                  Ti0_st    = Ti0_st    + vv(6) * sz * hh_st * hhz
+                  Ti0_p     = Ti0_p     + vv(6) * sz * hh    * hhz_p
+                  Ti0_pp    = Ti0_pp    + vv(6) * sz * hh    * hhz_pp
+                  
+                  ! --- Electron temperature
+                  Te0       = Te0       + vv(8) * sz * hh    * hhz
+                  Te0_s     = Te0_s     + vv(8) * sz * hh_s  * hhz
+                  Te0_t     = Te0_t     + vv(8) * sz * hh_t  * hhz
+                  Te0_ss    = Te0_ss    + vv(8) * sz * hh_ss * hhz
+                  Te0_tt    = Te0_tt    + vv(8) * sz * hh_tt * hhz
+                  Te0_st    = Te0_st    + vv(8) * sz * hh_st * hhz
+                  Te0_p     = Te0_p     + vv(8) * sz * hh    * hhz_p
+                  Te0_pp    = Te0_pp    + vv(8) * sz * hh    * hhz_pp
+                  
                 else
-                ! --- Temperature (ion + electron) in models .ne. 400
-                T0       = T0       + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                T0_s     = T0_s     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                T0_t     = T0_t     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                T0_ss    = T0_ss    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                T0_tt    = T0_tt    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                T0_st    = T0_st    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                T0_p     = T0_p     + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                T0_pp    = T0_pp    + nodes(i)%values(i_tor,j,6) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+                  ! --- Temperature (ion + electron) in models .ne. 400
+                  T0       = T0       + vv(6) * sz * hh    * hhz
+                  T0_s     = T0_s     + vv(6) * sz * hh_s  * hhz
+                  T0_t     = T0_t     + vv(6) * sz * hh_t  * hhz
+                  T0_ss    = T0_ss    + vv(6) * sz * hh_ss * hhz
+                  T0_tt    = T0_tt    + vv(6) * sz * hh_tt * hhz
+                  T0_st    = T0_st    + vv(6) * sz * hh_st * hhz
+                  T0_p     = T0_p     + vv(6) * sz * hh    * hhz_p
+                  T0_pp    = T0_pp    + vv(6) * sz * hh    * hhz_pp
                 end if
-
+                
                 ! --- Parallel Velocity
                 if ( jorek_model >= 300 ) then
-                  Vpar0    = Vpar0    + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                  Vpar0_s  = Vpar0_s  + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                  Vpar0_t  = Vpar0_t  + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                  Vpar0_ss = Vpar0_ss + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_ss(i,j) * HZ   (i_tor)
-                  Vpar0_tt = Vpar0_tt + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_tt(i,j) * HZ   (i_tor)
-                  Vpar0_st = Vpar0_st + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H_st(i,j) * HZ   (i_tor)
-                  Vpar0_p  = Vpar0_p  + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j) * HZ_p (i_tor)
-                  Vpar0_pp = Vpar0_pp + nodes(i)%values(i_tor,j,7) * element%size(i,j) * H   (i,j) * HZ_pp(i_tor)
+                  Vpar0    = Vpar0    + vv(7) * sz * hh    * hhz
+                  Vpar0_s  = Vpar0_s  + vv(7) * sz * hh_s  * hhz
+                  Vpar0_t  = Vpar0_t  + vv(7) * sz * hh_t  * hhz
+                  Vpar0_ss = Vpar0_ss + vv(7) * sz * hh_ss * hhz
+                  Vpar0_tt = Vpar0_tt + vv(7) * sz * hh_tt * hhz
+                  Vpar0_st = Vpar0_st + vv(7) * sz * hh_st * hhz
+                  Vpar0_p  = Vpar0_p  + vv(7) * sz * hh    * hhz_p
+                  Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
                 end if
                 
                 ! --- Deltas
                 !do k=1,n_var
-                !  delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * element%size(i,j) * H   (i,j) * HZ   (i_tor)
-                !  delta_s(k) = delta_s(k) + nodes(i)%deltas(i_tor,j,k) * element%size(i,j) * H_s (i,j) * HZ   (i_tor)
-                !  delta_t(k) = delta_t(k) + nodes(i)%deltas(i_tor,j,k) * element%size(i,j) * H_t (i,j) * HZ   (i_tor)
-                !enddo                        
+                !  delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh    * hhz
+                !  delta_s(k) = delta_s(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh_s  * hhz
+                !  delta_t(k) = delta_t(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh_t  * hhz
+                !enddo
                 
               enddo
             enddo
@@ -771,8 +793,7 @@ module mod_expression
           D_prof  = get_dperp (psi_norm)
           ZK_prof = get_zkperp(psi_norm)
           
-!!!! Other parameters (combination of the main variables)
-          ! Initialisation
+          ! --- Other parameters (combination of the main variables)
           Er      = 0.d0
           Vtheta  = 0.d0
 	  mach_par= 0.d0
@@ -786,58 +807,54 @@ module mod_expression
           V_ExB   = 0.d0 
           Vstar_e  = 0.d0
           Vstar_i  = 0.d0
-
-          if ((psi_abs .gt. 1.d-6) .and. (r0.gt.1.d-6) .and. (abs(Btheta).gt.1.d-6)) then
-
-             Er       = -(u0_R * ps0_R + u0_Z * ps0_Z) / psi_abs   ! radial electric field
-             
-             Vsound   = sqrt(GAMMA*T0) / sqrt(BB2)                 ! sound speed
-             Mach_par = Vpar0 / Vsound                             ! parallel Mach number
-             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
-
-             Vtheta  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
-                  ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
-
-             Vperp_i = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
-                  ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
-
-             Vperp_e = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
-                  ( u0_Z - tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
-
-             V_ExB  = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
-
-             Vstar_i = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
-                  tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
-             
-             Vstar_e = 1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
-                  tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
-             ! Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
+          
+          if ( (psi_abs > 1.d-6) .and. (r0 > 1.d-6) .and. (abs(Btheta) > 1.d-6) ) then
+            
+            Er       = -(u0_R * ps0_R + u0_Z * ps0_Z) / psi_abs   ! radial electric field
+            
+            Vsound   = sqrt(GAMMA*T0) / sqrt(BB2)                 ! sound speed
+            Mach_par = Vpar0 / Vsound                             ! parallel Mach number
+            Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
+            
+            Vtheta  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
+                 ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+            
+            Vperp_i = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
+                 ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
+            
+            Vperp_e = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
+                 ( u0_Z - tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
+            
+            V_ExB  = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
+            
+            Vstar_i = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
+                 tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+            
+            Vstar_e = 1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
+                 tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+            ! Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
-
+          
           if (NEO) then
-             if (num_neo_file) then
-             ! num_neo_file= ( neo_file /= 'none') : we read neoclassical profiles from input file
-                call neo_coef( eq%xpoint, eq%xcase, Z, eq%Z_xpoint, Ps0 ,eq%psi_axis, eq%psi_bnd, &
-                     mu_neo, ki_neo)
-                Vneo   = ki_neo / Btheta * tauIC  * ( ps0_R*T0_R + ps0_Z*T0_Z )
-             else
-                ! neoclassical coeff are constants 
-                mu_neo = amu_neo_const
-                ki_neo = aki_neo_const
-                Vneo   = aki_neo_const / Btheta*tauIC * (ps0_R*T0_R + ps0_Z*T0_Z)
-             end if
-          end if  ! NEO
-
-          if ( jorek_model == 400 ) then
-           call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd,  &
-        			     ps0, ps0_R, ps0_Z, r0,  r0_R, r0_Z, &
-        			     Ti0,  Ti0_R, Ti0_Z, Te0,  Te0_R, Te0_Z, J_boot)
-          else
-             J_boot = 0.d0
+            if (num_neo_file) then ! (read neoclassical profiles from ascii file)
+              call neo_coef( eq%xpoint, eq%xcase, Z, eq%Z_xpoint, Ps0 ,eq%psi_axis, eq%psi_bnd,    &
+                mu_neo, ki_neo)
+              Vneo = ki_neo / Btheta * tauIC  * ( ps0_R*T0_R + ps0_Z*T0_Z )
+            else ! (use constant neoclassical coefficients from namelist input file)
+              mu_neo = amu_neo_const
+              ki_neo = aki_neo_const
+              Vneo   = aki_neo_const / Btheta*tauIC * (ps0_R*T0_R + ps0_Z*T0_Z)
+            end if
           end if
-
-
-          ! --- For switching between normalized and SI units.
+          
+          if ( jorek_model == 400 ) then
+!###            call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,  &
+!###              ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+          else
+            J_boot = 0.d0
+          end if
+          
+          ! --- Factors for switching between normalized and SI units.
           if ( units == SI_UNITS ) then
              rho_norm      = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
              fact_time     = sqrt(MU_zero*rho_norm)                                ! time factor
@@ -960,47 +977,47 @@ module mod_expression
               case ( 'currdens' )
                 res = zj0 * R / fact_mu_zero
                 
-              case ( 'Er')
+              case ( 'Er' )
                 res = Er * fact_Er
                 
-!              case ( 'Vtheta_i')
+!              case ( 'Vtheta_i' )
 !                res = Vtheta_i / fact_time ### vtheta_i not yet defined
                 
-              case ( 'Mach_par')
+              case ( 'Mach_par' )
                 res = Mach_par
                 
-              case ( 'Mach_pol')
+              case ( 'Mach_pol' )
                 res = Mach_pol
                 
-!              case ( 'V_sound')
-!                res = V_sound / fact_time ### v_sound not yet defined
+              case ( 'V_sound' )
+                res = Vsound / fact_time
                 
-!              case ( 'V_neo')
-!                res = V_neo / fact_time ### v_neo not yet defined
+              case ( 'V_neo' )
+                res = Vneo / fact_time
                 
-              case ( 'Vperp_e')
+              case ( 'Vperp_e' )
                 res = Vperp_e / fact_time
                 
-              case ( 'Vperp_i')
+              case ( 'Vperp_i' )
                 res = Vperp_i / fact_time
                 
-              case ( 'V_ExB')
+              case ( 'V_ExB' )
                 res = V_ExB / fact_time
                 
-              case ( 'Vstar_e')
+              case ( 'Vstar_e' )
                 res = Vstar_e / fact_time
                 
-              case ( 'Vstar_i')
+              case ( 'Vstar_i' )
                 res = Vstar_i / fact_time
                 
-              case ( 'ki_neo')
+              case ( 'ki_neo' )
                 res = ki_neo
                 
-              case ( 'mu_neo')
+              case ( 'mu_neo' )
                 res = mu_neo / fact_time
                 
-              case ( 'J_bootstrap')
-                res = J_boot ! check if no normalization needed
+              case ( 'J_bootstrap' )
+                res = J_boot ! ### check if no normalization needed
                 
               case default
                 write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Illegal expression ("' //      &

@@ -29,9 +29,20 @@ module mod_new_diag
   
   
   ! --- Constants
-  integer, parameter :: HIGHFIELD_SIDE = 0
-  integer, parameter :: LOWFIELD_SIDE  = 1
-  integer, parameter :: BOTH_SIDES     = 2
+  character(len=15), parameter, private :: THIS_MOD_NAME      = 'mod_new_diag'
+  
+  !    --- Used by routine midplane_profile
+  integer,           parameter          :: HIGHFIELD_SIDE     = 0
+  integer,           parameter          :: LOWFIELD_SIDE      = 1
+  integer,           parameter          :: BOTH_SIDES         = 2
+  
+  !   --- Used by routine fourier_analysis
+  integer,           parameter          :: OUTP_ABS_VALUE     = 0
+  integer,           parameter          :: OUTP_REALPART      = 1
+  integer,           parameter          :: OUTP_IMAGINARYPART = 2
+  integer,           parameter          :: OUTP_PHASE         = 3
+  character(len=33), parameter, private :: OUTP_NAMES(0:3) = (/ 'absolute_value', 'real_part     ',&
+    'imaginary_part', 'complex_phase ' /)
   
   
   
@@ -44,26 +55,38 @@ module mod_new_diag
   
   
   
-  !> Init???
+  !> Initialize the new_diag framework
+  subroutine init_new_diag(verbose)
+    
+    ! --- Routine paramters
+    logical, intent(in) :: verbose !< Print some information
+    
+    call init_expr()
+    if ( verbose ) call print_exprs(exprs_all)
+    
+  end subroutine init_new_diag
   
   
   
   
   
   !> Toroidally averaged expressions on the midplane.
-  subroutine midplane_profiles(node_list, element_list, eq, units, expr_list, res1d, side, n_pts,  &
-    ierr)
+  subroutine midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, n_pts,  &
+    ierr, filename)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
     
     ! --- Routine parameters
-    type(type_node_list),           intent(in)    :: node_list
-    type(type_element_list),        intent(in)    :: element_list
-    type(t_equil_state),            intent(in)    :: eq
-    integer,                        intent(in)    :: units !< Output in which units?
-    type(t_expr_list),              intent(in)    :: expr_list
-    real*8, allocatable,            intent(inout) :: res1d(:,:)
-    integer,                        intent(in)    :: side
-    integer,                        intent(in)    :: n_pts
-    integer,                        intent(out)   :: ierr
+    type(type_node_list),           intent(in)    :: node_list    !< List of grid nodes
+    type(type_element_list),        intent(in)    :: element_list !< List of grid elements
+    type(t_equil_state),            intent(in)    :: eq           !< Plasma equilibrium information
+    integer,                        intent(in)    :: units        !< Output in which units?
+    type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
+    real*8, allocatable,            intent(inout) :: res1d(:,:)   !< Result array
+    integer,                        intent(in)    :: side         !< Side of plasma (hfs, lfs, both)
+    integer,                        intent(in)    :: n_pts        !< Number of points in profiles
+    integer,                        intent(out)   :: ierr         !< Error code
+    character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
     
     ! --- Local variables
     real*8               :: Rstart, Rend
@@ -83,29 +106,238 @@ module mod_new_diag
       Rstart = eq%R_midpl(1) + 1.d-3
       Rend   = eq%R_midpl(2) - 1.d-3
     else
-      !### error
+      ierr = 100
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': parameter side has illegal value'
+      return
     end if
     pol_pos_list = pol_pos(node_list, element_list, eq, Rstart=Rstart, Rend=Rend, Z=eq%Z_axis,     &
       n=n_pts)
     tor_pos_list = tor_pos(nphi=4*n_plane) !###
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-    call transform_and_filter(result, simple_filter(n=0))
+    call apply_four_filter(result, simple_filter(n=0), expr_list%n_coord, ierr)
     call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
     
-    deallocate(result)
+    if ( allocated(result) ) deallocate(result)
     call cleanup_pol_pos(pol_pos_list)
     call cleanup_tor_pos(tor_pos_list)
     
-  end subroutine midplane_profiles
+    if ( present(filename) ) then
+      call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
+        filename=filename, append=.false.)
+    end if
+    
+  end subroutine midplane_profile
   
   
   
   
   
   !> Construct poloidally and toroidally averaged profiles.
-  !subroutine average_profiles(eq, res1d, ierr)
-  !end subroutine average_profiles
+  subroutine average_profiles(node_list, element_list, eq, units, expr_list, res1d, nPsiN, ierr,   &
+    filename)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
+    
+    ! --- Routine parameters
+    type(type_node_list),           intent(in)    :: node_list    !< List of grid nodes
+    type(type_element_list),        intent(in)    :: element_list !< List of grid elements
+    type(t_equil_state),            intent(in)    :: eq           !< Plasma equilibrium information
+    integer,                        intent(in)    :: units        !< Output in which units?
+    type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
+    real*8, allocatable,            intent(inout) :: res1d(:,:)   !< Result array
+    integer,                        intent(in)    :: nPsiN        !< Number of points for profiles
+    integer,                        intent(out)   :: ierr         !< Error code
+    character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    
+    ! --- Local variables
+    real*8, allocatable  :: result(:,:,:,:)
+    type(t_pol_pos_list) :: pol_pos_list
+    type(t_tor_pos_list) :: tor_pos_list
+    
+    ierr = 0
+    
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_plane) !###
+    tor_pos_list = tor_pos(nphi=4*n_plane) !###
+    
+    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
+    call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
+    
+    if ( allocated(result) ) deallocate(result)
+    call cleanup_pol_pos(pol_pos_list)
+    call cleanup_tor_pos(tor_pos_list)
+    
+    if ( present(filename) ) then
+      call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
+        filename=filename, append=.false.)
+    end if
+    
+  end subroutine average_profiles
+  
+  
+  
+  
+  
+  !> Profiles along a straight line in the poloidal plane.
+  subroutine lineout_profiles(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,   &
+    Zstart, Rend, Zend, nPts, ierr, filename)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':lineout_profiles'
+    
+    ! --- Routine parameters
+    type(type_node_list),           intent(in)    :: node_list    !< List of grid nodes
+    type(type_element_list),        intent(in)    :: element_list !< List of grid elements
+    type(t_equil_state),            intent(in)    :: eq           !< Plasma equilibrium information
+    integer,                        intent(in)    :: units        !< Output in which units?
+    type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
+    real*8, allocatable,            intent(inout) :: res1d(:,:)   !< Result array
+    real*8,                         intent(in)    :: phi          !< Toroidal position
+    real*8,                         intent(in)    :: Rstart       !< R-coordinate for start of line
+    real*8,                         intent(in)    :: Zstart       !< Z-coordinate for start of line
+    real*8,                         intent(in)    :: Rend         !< R-coordinate for end of line
+    real*8,                         intent(in)    :: Zend         !< Z-coordinate for end of line
+    integer,                        intent(in)    :: nPts         !< Number of points along line
+    integer,                        intent(out)   :: ierr         !< Error code
+    character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    
+    ! --- Local variables
+    real*8, allocatable  :: result(:,:,:,:)
+    type(t_pol_pos_list) :: pol_pos_list
+    type(t_tor_pos_list) :: tor_pos_list
+    
+    ierr = 0
+    
+    pol_pos_list = pol_pos(node_list, element_list, eq, Rstart=Rstart, Rend=Rend, Zstart=Zstart,   &
+      Zend=Zend, n=nPts)
+    tor_pos_list = tor_pos(phi=phi)
+    
+    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
+    
+    if ( allocated(result) ) deallocate(result)
+    call cleanup_pol_pos(pol_pos_list)
+    call cleanup_tor_pos(tor_pos_list)
+    
+    if ( present(filename) ) then
+      call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
+        filename=filename, append=.false.)
+    end if
+    
+  end subroutine lineout_profiles
+  
+  
+  
+  
+  
+  !> Perform a 2D Fourier analysis of the given expressions in straight field line coordinates.
+  subroutine fourier_analysis(node_list, element_list, eq, units, expr_list, cp, nPsiN, ierr,      &
+    filename_start, output_type2)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':fourier_analysis'
+    
+    type(type_node_list),           intent(in)    :: node_list    !< List of grid nodes
+    type(type_element_list),        intent(in)    :: element_list !< List of grid elements
+    type(t_equil_state),            intent(in)    :: eq           !< Plasma equilibrium information
+    integer,                        intent(in)    :: units        !< Output in which units?
+    type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
+    complex*16, allocatable,        intent(inout) :: cp(:,:,:,:)  !< Complex Fourier coefficients
+    integer,                        intent(in)    :: nPsiN        !< Number of points for profiles
+    integer,                        intent(out)   :: ierr         !< Error code
+    character(len=*), optional,     intent(in)    :: filename_start !< Start of filename [optional]
+    integer,          optional,     intent(in)    :: output_type2 !< Output what? [optional]
+    
+    ! --- Local variables
+    integer :: nn(4), output_type, m, n, m_max, n_max, i, j
+    real*8, allocatable  :: result(:,:,:,:), outp(:,:,:,:), out1d(:,:)
+    character(len=256)   :: comment, filename
+    type(t_pol_pos_list) :: pol_pos_list
+    type(t_tor_pos_list) :: tor_pos_list
+    logical :: append
+    
+    ierr = 0
+    
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_plane) !########
+    tor_pos_list = tor_pos(nphi=4*n_plane) !########
+    
+    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    
+    call perform_four_trafo(result, cp, POLTOR_TRAFO, ierr)
+    
+    ! --- Output to files if parameter filename_start is present, otherwise just return cp array.
+    if ( present(filename_start) ) then
+      
+      output_type = OUTP_ABS_VALUE ! preset
+      if ( present(output_type2) ) output_type = output_type
+      
+      nn(:) = (/ size(cp,1), size(cp,2), size(cp,3), size(cp,4) /)
+      n_max = nn(1) - 1
+      m_max = nn(2) / 2
+      
+      allocate( outp(nn(1),nn(2),nn(3),nn(4)) )
+      allocate( out1d(nn(3),nn(4)) )
+      
+      ! --- Output absolute value/real part/imaginary part/phase of complex Fourier components?
+      if ( output_type == OUTP_ABS_VALUE ) then
+        
+        outp(:,:,:,:) = abs(cp(:,:,:,:))
+        
+      else if ( output_type == OUTP_REALPART ) then
+        
+        outp(:,:,:,:) = real(cp(:,:,:,:))
+        
+      else if ( output_type == OUTP_IMAGINARYPART ) then
+        
+        outp(:,:,:,:) = aimag(cp(:,:,:,:))
+        
+      else if ( output_type == OUTP_PHASE ) then
+        
+        outp(:,:,:,:) = atan(real(cp(:,:,:,:))/aimag(cp(:,:,:,:))) !#########correct?
+        
+      else
+        
+        ierr = 100
+        write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': parameter output_type has illegal value'
+        return
+        
+      end if
+      
+      ! --- Always take the 0/0 component for coordinate expressions
+      do i = 1, expr_list%n_coord
+        do j = 1, nn(3)
+          outp(:,:,j,i) = cp(1,1,j,i)
+        end do
+      end do
+      
+      do n = 0, n_max ! toroidal mode number
+        do m = -m_max, m_max ! poloidal mode number
+          
+          if ( m >= 0 ) then
+            out1d(:,:) = outp(n+1,m+1,:,:)
+          else
+            out1d(:,:) = outp(n+1,nn(2)-abs(m)+1,:,:)
+          end if
+          
+          write(filename,'(4a,i3.3,a,sp,i4.3,a)') trim(filename_start), '_',                       &
+            trim(OUTP_NAMES(output_type)), '_n', n, '_m', m, '.dat'
+          
+          write(comment,'(a,sp,i4.3,a,i4.3)') trim(OUTP_NAMES(output_type))//'s for m/n=', m, '/', n
+          
+          call write_ascii_1d(ierr, eq, expr_list, out1d, FORM_TABLE, .true., filename,            &
+            append=.false., comment=trim(comment))
+          
+          append = .true.
+          
+        end do
+      end do
+      
+    end if
+    
+    if ( allocated(result) ) deallocate(result)
+    if ( allocated(outp ) ) deallocate(outp )
+    if ( allocated(out1d) ) deallocate(out1d)
+    
+  end subroutine fourier_analysis
   
   
   

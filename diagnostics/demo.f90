@@ -42,13 +42,23 @@ program demo
   ! --- Initialize the new_diag framework and print some information (.true.)
   call init_new_diag(.true.)
   
+  
+  
   ! --- Select some expressions for the analysis (include required coordinates).
-  expr_list = exprs((/'R    ', 'Z    ', 'Psi_N', 'theta', 'x    ', 'y    ', 'phi  ', 'Psi  ',      &
-    'B_R  ', 'xjac ', 'T    ', 'rho  ', 'zj   ', 'omega', 'u    '/), 15, n_coord=7)
+  expr_list = exprs((/'Psi_N', 'Psi  ', 'T    ', 'rho  ', 'zj   ', 'omega', 'u    '/), 7, 1)
   
   ! --- Perform a 2D Fourier analysis.
-  call fourier_analysis(node_list, element_list, equil_state, JOREK_UNITS, expr_list, cp, 50, ierr,&
+  call fourier_analysis(node_list, element_list, equil_state, JOREK_UNITS, expr_list, cp, 99, ierr,&
     'fourier', OUTP_ABS_VALUE)
+  
+  ! --- Poloidally and toroidally averaged profiles.
+  call average_profiles(node_list, element_list, equil_state, JOREK_UNITS, expr_list, res1d, 99,   &
+    ierr, filename='average_profiles.dat')
+  
+  
+  
+  ! --- Select some expressions for the analysis (include required coordinates).
+  expr_list = exprs((/'R    ', 'Psi  ', 'T    ', 'rho  ', 'zj   ', 'omega', 'u    '/), 7, 1)
   
   ! --- Toroidally averaged midplane profiles (hfs and lfs)
   call midplane_profile(node_list, element_list, equil_state, JOREK_UNITS, expr_list, res1d,       &
@@ -57,10 +67,6 @@ program demo
     LOWFIELD_SIDE, 25, ierr, filename='lfs_profiles.dat')
   call midplane_profile(node_list, element_list, equil_state, JOREK_UNITS, expr_list, res1d,       &
     BOTH_SIDES, 25, ierr, filename='hfslfs_profiles.dat')
-  
-  ! --- Poloidally and toroidally averaged profiles.
-  call average_profiles(node_list, element_list, equil_state, JOREK_UNITS, expr_list, res1d, 50,   &
-    ierr, filename='average_profiles.dat')
   
   ! --- Profiles along a straight line in the poloidal plane.
   call lineout_profiles(node_list, element_list, equil_state, JOREK_UNITS, expr_list, res1d, 0.d0, &

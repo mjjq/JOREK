@@ -292,7 +292,7 @@ module mod_new_diag
         
       else if ( output_type == OUTP_PHASE ) then
         
-        outp(:,:,:,:) = atan(real(cp(:,:,:,:))/aimag(cp(:,:,:,:))) !#########correct?
+        outp(:,:,:,:) = atan2( real(cp(:,:,:,:)), aimag(cp(:,:,:,:)) ) !#########correct?
         
       else
         
@@ -302,13 +302,14 @@ module mod_new_diag
         
       end if
       
-      ! --- Always take the 0/0 component for coordinate expressions
+      ! --- Always take the 0/0 component for coordinate expressions!
       do i = 1, expr_list%n_coord
         do j = 1, nn(3)
-          outp(:,:,j,i) = cp(1,1,j,i)
+          outp(:,:,j,i) = real( cp(1,1,j,i) )
         end do
       end do
       
+      ! --- Output the Fourier components to ascii files
       do n = 0, n_max ! toroidal mode number
         do m = -m_max, m_max ! poloidal mode number
           
@@ -334,8 +335,8 @@ module mod_new_diag
     end if
     
     if ( allocated(result) ) deallocate(result)
-    if ( allocated(outp ) ) deallocate(outp )
-    if ( allocated(out1d) ) deallocate(out1d)
+    if ( allocated(outp )  ) deallocate(outp  )
+    if ( allocated(out1d)  ) deallocate(out1d )
     
   end subroutine fourier_analysis
   

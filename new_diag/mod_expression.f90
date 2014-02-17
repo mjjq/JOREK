@@ -102,7 +102,7 @@ module mod_expression
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
-    if ( (jorek_model >= 400) .and. (jorek_model < 499) ) then
+    if ( jorek_model == 400 ) then
       call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
       call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
     end if
@@ -133,8 +133,6 @@ module mod_expression
     call add(exprs_all, 'ki_neo      ', 'Neoclassical heat diffusivity                         ')
     call add(exprs_all, 'mu_neo      ', 'Neoclassical friction coefficient                     ')
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap current                                     ')
-    
-    exprs_all%n_coord = 6
     
   end subroutine init_expr
   
@@ -610,7 +608,7 @@ module mod_expression
                       - ps0_s  * (R_st*Z_t - R_tt*Z_s )                          &
                       - ps0_t  * (R_st*Z_s - R_ss*Z_t )  )     / xjac**2         &
                     - xjac_R * (- ps0_s * R_t + ps0_t * R_s )  / xjac**2
-        
+          
           u0_R     = (   Z_t * u0_s - Z_s * u0_t ) / xjac
           u0_Z     = ( - R_t * u0_s + R_s * u0_t ) / xjac
           u0_RR    = (u0_ss * Z_t**2 - 2.d0*u0_st * Z_s*Z_t + u0_tt * Z_s**2  &

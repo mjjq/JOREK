@@ -28,7 +28,7 @@ module mod_straight_field_line
   
   
   private
-  public determine_theta_mag, log_mapping, t_theta_mapping, cleanup_mapping
+  public determine_theta_mag, log_mapping, t_theta_mapping, cleanup_mapping, new_determine_theta_mag!###
   
   
   
@@ -283,19 +283,17 @@ module mod_straight_field_line
     real*8 :: theta_corr
     real*8 :: smalldeltaphi
     real*8 :: phi, fact, Rleft, Rright, Rmid
-    logical :: abort
     
     smalldeltaphi = deltaphi / nsmallsteps
     my_id = 0
-    ierr = 0
+    ierr  = 0
     
-    !### Update OpenMP parallelization and switch it back on
-    
-!    !$omp parallel do schedule(dynamic) default(none)                                              &
-!    !$omp   firstprivate(k,theta_corr,R_out,Z_out,i_elm_out,s_out,t_out,ifail,P,P_s,P_t,j,rn,zn,i, &
-!    !$omp     x,x_s,x_t,y,y_s,y_t,xjac,dpsi_dzn,dpsi_drn,rh,zh,rp,zp,phi,dpsi_dzh,dpsi_drh,fact)   &
-!    !$omp   shared(mapping,ierr,F0,node_list,element_list,nmaxsteps,nsmallsteps,rad_range,        &
-!    !$omp     smalldeltaphi)
+    !$omp parallel do schedule(dynamic) default(none)                                              &
+    !$omp   firstprivate(k, theta_corr, phi, Rleft, Rright, Rmid, i_elm_out, s_out, t_out, P, P_s, &
+    !$omp     P_t, rn, zn,i, R_out, Z_out, ifail, x, x_s, x_t, y, y_s, y_t, xjac, dpsi_dzn,        &
+    !$omp     dpsi_drn, rh, zh, rp, zp, l, dpsi_dzh, dpsi_drh)                                     &
+    !$omp   shared(mapping, node_list, element_list, equil_state, ierr, F0, smalldeltaphi,         &
+    !$omp   psinrange, nmaxsteps, nsmallsteps)
     FL_STPTS: do k = mapping%nstpts, 1, -1 ! (inverse order better for OpenMP parallelization)
       if ( ierr /= 0 ) cycle
       
@@ -407,23 +405,25 @@ module mod_straight_field_line
               ( ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,0) - 2.*PI ) / &
               ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,mapping%npts(k)-1) ) ) ) * 2.*PI
           end do
-!###          !$omp critical
-          if ( debug ) write(*,'(" Field line",I6,":    psin=",F7.3,"    npts=",I7)') k,           &
-            mapping%psin(k), mapping%npts(k)
-!###          !$omp end critical
+          if ( debug ) then 
+            !$omp critical
+            write(*,'(" Field line",I6,":    psin=",F7.3,"    npts=",I7)') k, mapping%psin(k),     &
+              mapping%npts(k)
+            !$omp end critical
+          end if
           exit
         end if
         
         if ( j == NMAXSTEPS ) then
           write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': nmaxsteps too small, incomplete poloidal turn.'
-          abort = 101
+          ierr = 101
           cycle
         end if
         
       end do FL_LARGESTEPS
       
     end do FL_STPTS
-!###    !$omp end parallel do
+    !$omp end parallel do
     
     if ( ierr /= 0 ) then
       write(*,*) 'Aborting '//trim(THIS_ROUTINE_NAME)//' after an error occurred.'

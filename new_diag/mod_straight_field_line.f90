@@ -28,7 +28,7 @@ module mod_straight_field_line
   
   
   private
-  public determine_theta_mag, log_mapping, t_theta_mapping, cleanup_mapping, new_determine_theta_mag!###
+  public determine_theta_mag, log_mapping, t_theta_mapping, cleanup_mapping
   
   
   

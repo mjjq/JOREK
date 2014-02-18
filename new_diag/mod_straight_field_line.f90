@@ -28,7 +28,7 @@ module mod_straight_field_line
   
   
   private
-  public determine_theta_mag, log_mapping, t_theta_mapping, cleanup_mapping
+  public determine_theta_mag, log_mapping, t_theta_mapping, cleanup_mapping, new_determine_theta_mag!###
   
   
   
@@ -60,6 +60,91 @@ module mod_straight_field_line
   
   
   contains
+  
+  
+  
+  
+  
+  !> NOTHING USEFUL YET...
+  subroutine new_determine_theta_mag(node_list, element_list, eq, PsiNRange, nPsiN, nTht, &
+    ierr)
+    
+    use data_structure
+    
+    ! --- Constants
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':NEW_determine_theta_mag' !###
+    
+    ! --- Routine parameters
+!    type(t_theta_mapping),  intent(inout) :: mapping
+    type(type_node_list),   intent(in)    :: node_list
+    type(type_element_list),intent(in)    :: element_list
+    type(t_equil_state),    intent(in)    :: eq          !< Equilibrium state information
+    real,                   intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
+    integer,                intent(in)    :: nPsiN       !< Number of flux surfaces
+    integer,                intent(in)    :: nTht        !< Number of points in theta*
+    integer,                intent(inout) :: ierr        !< Error code
+    
+    ! --- Local variables
+    type(type_surface_list) :: surface_list
+    integer :: i, i_elm, j, ip, nplot=5
+    real*8  :: psi_n, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
+    real*8  :: u, ss1, dss1, ss2, dss2, si, dsi, tt1, dtt1, tt2, dtt2, ti, dti
+    
+    surface_list%n_psi = nPsiN
+    allocate( surface_list%psi_values   (nPsiN) )
+    
+    do i = 1, nPsiN
+      psi_n = PsiNRange(1) + (PsiNRange(2)-PsiNRange(1)) * real(i-1)/real(nPsiN-1)
+      surface_list%psi_values(i) = eq%psi_axis + ( eq%psi_bnd - eq%psi_axis ) * psi_n
+    end do
+    
+    call find_flux_surfaces(eq%xpoint, eq%xcase, node_list, element_list, surface_list)
+    
+    !###
+    ! --- Loop over all flux surfaces
+    do i = 1, surface_list%n_psi
+      
+      ! --- Loop over all segments of this flux surface
+      do j = 1, surface_list%flux_surfaces(i)%n_pieces
+        
+        ! --- Bezier element, in which the current flux surface segment is located
+        i_elm = surface_list%flux_surfaces(i)%elm(j)
+        
+        ss1  = surface_list%flux_surfaces(i)%s(1,j)
+        dss1 = surface_list%flux_surfaces(i)%s(2,j)
+        ss2  = surface_list%flux_surfaces(i)%s(3,j)
+        dss2 = surface_list%flux_surfaces(i)%s(4,j)
+        
+        tt1  = surface_list%flux_surfaces(i)%t(1,j)
+        dtt1 = surface_list%flux_surfaces(i)%t(2,j)
+        tt2  = surface_list%flux_surfaces(i)%t(3,j)
+        dtt2 = surface_list%flux_surfaces(i)%t(4,j)
+        
+        ! --- Loop over nplot points in a flux surface segment
+        do ip = 1, nplot
+          u = -1. + 2.*float(ip-1)/float(nplot-1)
+          
+          ! --- Determine s and t values of the current point inside element i_elm
+          call CUB1D(ss1, dss1, ss2, dss2, u, si, dsi)
+          call CUB1D(tt1, dtt1, tt2, dtt2, u, ti, dti)
+          
+          ! --- Determine (R,Z)-coordinates of the current point on the current flux surface
+          call interp_RZ(node_list, element_list, i_elm, si, ti, R, R_s, R_t, R_st, R_ss, R_tt, &
+            Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+            
+          ! --- Write out the (R,Z)-coordinates
+          write(61,'(2ES16.7)') R, Z
+        end do
+        
+        write(61,*)
+        write(61,*)
+        
+      end do
+      
+    end do
+    !###
+    
+  end subroutine new_determine_theta_mag
   
   
   

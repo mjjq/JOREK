@@ -102,10 +102,10 @@ module mod_expression
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
-    if ( jorek_model == 400 ) then
-      call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
-      call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
-    end if
+#if JOREK_MODEL == 400
+    call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
+    call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
+#endif
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
     call add(exprs_all, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
     call add(exprs_all, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
@@ -465,6 +465,8 @@ module mod_expression
           w0    = 0.d0; w0_s    = 0.d0; w0_t    = 0.d0; w0_ss    = 0.d0; w0_tt    = 0.d0; w0_st    = 0.d0; w0_p    = 0.d0; w0_pp    = 0.d0
           r0    = 0.d0; r0_s    = 0.d0; r0_t    = 0.d0; r0_ss    = 0.d0; r0_tt    = 0.d0; r0_st    = 0.d0; r0_p    = 0.d0; r0_pp    = 0.d0
           T0    = 0.d0; T0_s    = 0.d0; T0_t    = 0.d0; T0_ss    = 0.d0; T0_tt    = 0.d0; T0_st    = 0.d0; T0_p    = 0.d0; T0_pp    = 0.d0
+          Ti0   = 0.d0; Ti0_s   = 0.d0; Ti0_t   = 0.d0; Ti0_ss   = 0.d0; Ti0_tt   = 0.d0; Ti0_st   = 0.d0; Ti0_p   = 0.d0; Ti0_pp   = 0.d0
+          Te0   = 0.d0; Te0_s   = 0.d0; Te0_t   = 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
           Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
           
           ! --- Reconstruct variables
@@ -536,51 +538,48 @@ module mod_expression
                 r0_p     = r0_p     + vv(5) * sz * hh    * hhz_p
                 r0_pp    = r0_pp    + vv(5) * sz * hh    * hhz_pp
                 
-                if ( jorek_model == 400 ) then
-                  ! --- Ion temperature
-                  Ti0       = Ti0       + vv(6) * sz * hh    * hhz
-                  Ti0_s     = Ti0_s     + vv(6) * sz * hh_s  * hhz
-                  Ti0_t     = Ti0_t     + vv(6) * sz * hh_t  * hhz
-                  Ti0_ss    = Ti0_ss    + vv(6) * sz * hh_ss * hhz
-                  Ti0_tt    = Ti0_tt    + vv(6) * sz * hh_tt * hhz
-                  Ti0_st    = Ti0_st    + vv(6) * sz * hh_st * hhz
-                  Ti0_p     = Ti0_p     + vv(6) * sz * hh    * hhz_p
-                  Ti0_pp    = Ti0_pp    + vv(6) * sz * hh    * hhz_pp
-                  
-                  ! --- Electron temperature
-                  Te0       = Te0       + vv(8) * sz * hh    * hhz
-                  Te0_s     = Te0_s     + vv(8) * sz * hh_s  * hhz
-                  Te0_t     = Te0_t     + vv(8) * sz * hh_t  * hhz
-                  Te0_ss    = Te0_ss    + vv(8) * sz * hh_ss * hhz
-                  Te0_tt    = Te0_tt    + vv(8) * sz * hh_tt * hhz
-                  Te0_st    = Te0_st    + vv(8) * sz * hh_st * hhz
-                  Te0_p     = Te0_p     + vv(8) * sz * hh    * hhz_p
-                  Te0_pp    = Te0_pp    + vv(8) * sz * hh    * hhz_pp
-                  
-                else
-                  ! --- Temperature (ion + electron) in models .ne. 400
-                  T0       = T0       + vv(6) * sz * hh    * hhz
-                  T0_s     = T0_s     + vv(6) * sz * hh_s  * hhz
-                  T0_t     = T0_t     + vv(6) * sz * hh_t  * hhz
-                  T0_ss    = T0_ss    + vv(6) * sz * hh_ss * hhz
-                  T0_tt    = T0_tt    + vv(6) * sz * hh_tt * hhz
-                  T0_st    = T0_st    + vv(6) * sz * hh_st * hhz
-                  T0_p     = T0_p     + vv(6) * sz * hh    * hhz_p
-                  T0_pp    = T0_pp    + vv(6) * sz * hh    * hhz_pp
-                end if
+#if JOREK_MODEL == 400
+                ! --- Ion temperature
+                Ti0       = Ti0       + vv(6) * sz * hh    * hhz
+                Ti0_s     = Ti0_s     + vv(6) * sz * hh_s  * hhz
+                Ti0_t     = Ti0_t     + vv(6) * sz * hh_t  * hhz
+                Ti0_ss    = Ti0_ss    + vv(6) * sz * hh_ss * hhz
+                Ti0_tt    = Ti0_tt    + vv(6) * sz * hh_tt * hhz
+                Ti0_st    = Ti0_st    + vv(6) * sz * hh_st * hhz
+                Ti0_p     = Ti0_p     + vv(6) * sz * hh    * hhz_p
+                Ti0_pp    = Ti0_pp    + vv(6) * sz * hh    * hhz_pp
                 
+                ! --- Electron temperature
+                Te0       = Te0       + vv(8) * sz * hh    * hhz
+                Te0_s     = Te0_s     + vv(8) * sz * hh_s  * hhz
+                Te0_t     = Te0_t     + vv(8) * sz * hh_t  * hhz
+                Te0_ss    = Te0_ss    + vv(8) * sz * hh_ss * hhz
+                Te0_tt    = Te0_tt    + vv(8) * sz * hh_tt * hhz
+                Te0_st    = Te0_st    + vv(8) * sz * hh_st * hhz
+                Te0_p     = Te0_p     + vv(8) * sz * hh    * hhz_p
+                Te0_pp    = Te0_pp    + vv(8) * sz * hh    * hhz_pp
+#else
+                ! --- Temperature (ion + electron) in models .ne. 400
+                T0       = T0       + vv(6) * sz * hh    * hhz
+                T0_s     = T0_s     + vv(6) * sz * hh_s  * hhz
+                T0_t     = T0_t     + vv(6) * sz * hh_t  * hhz
+                T0_ss    = T0_ss    + vv(6) * sz * hh_ss * hhz
+                T0_tt    = T0_tt    + vv(6) * sz * hh_tt * hhz
+                T0_st    = T0_st    + vv(6) * sz * hh_st * hhz
+                T0_p     = T0_p     + vv(6) * sz * hh    * hhz_p
+                T0_pp    = T0_pp    + vv(6) * sz * hh    * hhz_pp
+#endif
                 ! --- Parallel Velocity
-                if ( jorek_model >= 300 ) then
-                  Vpar0    = Vpar0    + vv(7) * sz * hh    * hhz
-                  Vpar0_s  = Vpar0_s  + vv(7) * sz * hh_s  * hhz
-                  Vpar0_t  = Vpar0_t  + vv(7) * sz * hh_t  * hhz
-                  Vpar0_ss = Vpar0_ss + vv(7) * sz * hh_ss * hhz
-                  Vpar0_tt = Vpar0_tt + vv(7) * sz * hh_tt * hhz
-                  Vpar0_st = Vpar0_st + vv(7) * sz * hh_st * hhz
-                  Vpar0_p  = Vpar0_p  + vv(7) * sz * hh    * hhz_p
-                  Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
-                end if
-                
+#if JOREK_MODEL >= 300
+                Vpar0    = Vpar0    + vv(7) * sz * hh    * hhz
+                Vpar0_s  = Vpar0_s  + vv(7) * sz * hh_s  * hhz
+                Vpar0_t  = Vpar0_t  + vv(7) * sz * hh_t  * hhz
+                Vpar0_ss = Vpar0_ss + vv(7) * sz * hh_ss * hhz
+                Vpar0_tt = Vpar0_tt + vv(7) * sz * hh_tt * hhz
+                Vpar0_st = Vpar0_st + vv(7) * sz * hh_st * hhz
+                Vpar0_p  = Vpar0_p  + vv(7) * sz * hh    * hhz_p
+                Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
+#endif
                 ! --- Deltas
                 !do k=1,n_var
                 !  delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh    * hhz
@@ -687,14 +686,12 @@ module mod_expression
           
           T0_R     = (   Z_t * T0_s  - Z_s * T0_t ) / xjac
           T0_Z     = ( - R_t * T0_s  + R_s * T0_t ) / xjac
-
-          if ( jorek_model == 400 ) then
-             Ti0_R     = (   Z_t * Ti0_s  - Z_s * Ti0_t ) / xjac
-             Ti0_Z     = ( - R_t * Ti0_s  + R_s * Ti0_t ) / xjac
-             Te0_R     = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
-             Te0_Z     = ( - R_t * Te0_s  + R_s * Te0_t ) / xjac
-          endif
-
+#if JOREK_MODEL == 400
+          Ti0_R     = (   Z_t * Ti0_s  - Z_s * Ti0_t ) / xjac
+          Ti0_Z     = ( - R_t * Ti0_s  + R_s * Ti0_t ) / xjac
+          Te0_R     = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
+          Te0_Z     = ( - R_t * Te0_s  + R_s * Te0_t ) / xjac
+#endif
           T0_RR    = (T0_ss * Z_t**2 - 2.d0*T0_st * Z_s*Z_t + T0_tt * Z_s**2 &
                       + T0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
                       + T0_t * (Z_st*Z_s - Z_ss*Z_t ) )        / xjac**2        &
@@ -830,7 +827,7 @@ module mod_expression
             
             Vstar_e = 1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
                  tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
-            ! Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
+            ! ### Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
           
           if (NEO) then
@@ -845,13 +842,12 @@ module mod_expression
             end if
           end if
           
-          if ( jorek_model == 400 ) then
-!###            call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,  &
-!###              ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
-          else
-            J_boot = 0.d0
-          end if
-          
+#if JOREK_MODEL == 400
+          call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,    &
+            ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+#else
+          J_boot = 0.d0
+#endif
           ! --- Factors for switching between normalized and SI units.
           if ( units == SI_UNITS ) then
              rho_norm      = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
@@ -917,25 +913,13 @@ module mod_expression
                 
               case ( 'T' )
                 res = T0 * fact_T
-                
+#if JOREK_MODEL == 400
               case ( 'T_e' )
-                 if ( jorek_model == 400 ) then
-                   res = Te0 * fact_T
-                 else
-                   ierr = 500
-                   write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': no T_e in this model.'
-                   return
-                 end if
-                
+                res = Te0 * fact_T
+              
               case ( 'T_i' )
-                 if ( jorek_model == 400 ) then
-                   res = Ti0 * fact_T
-                 else
-                   ierr = 600
-                   write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': no T_i in this model.'
-                   return
-                 end if
-                
+                res = Ti0 * fact_T
+#endif
               case ( 'vpar' )
                 res = Vpar0 * fact_vpar
                 

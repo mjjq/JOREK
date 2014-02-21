@@ -26,7 +26,6 @@ module postproc_help
 !    write(*,*) '  global_parameters Output global parameters (beta_p, plasma current, ...)'
 !    write(*,*) '  gourdon           Export the magnetic field for Gourdon'
 !    write(*,*) '  heatfluxpattern   Determine the heat flux pattern on a target plate'
-!    write(*,*) '  lfs_hfs           Variable profiles on low and high field sides'
 !    write(*,*) '  line              Variable-value along a line in (R,Z,phi)'
     write(*,*) '  mark_coords       Mark expressions as coordinates'
     write(*,*) '  midplane          Toroidally averaged expressions on the midplane'

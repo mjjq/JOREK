@@ -183,7 +183,7 @@ module mod_new_diag
   
   !> Profiles along a straight line in the poloidal plane.
   subroutine lineout_profiles(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,   &
-    Zstart, Rend, Zend, nPts, ierr, filename)
+    Zstart, Rend, Zend, nPts, ierr, filename, append)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':lineout_profiles'
     
@@ -202,6 +202,7 @@ module mod_new_diag
     integer,                        intent(in)    :: nPts         !< Number of points along line
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
     
     ! --- Local variables
     real*8, allocatable  :: result(:,:,:,:)
@@ -223,7 +224,7 @@ module mod_new_diag
     
     if ( present(filename) ) then
       call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
-        filename=filename, append=.false.)
+        filename=filename, append=append, blanks=.true.)
     end if
     
   end subroutine lineout_profiles

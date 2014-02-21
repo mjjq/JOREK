@@ -9,7 +9,7 @@ module convert_character
   
   
   private
-  public lower_case, to_int, to_log, to_float, get_variable_number
+  public lower_case, to_int, to_log, to_float, real2str
   
   
   
@@ -73,25 +73,14 @@ module convert_character
   
   
   
-  !> Get the variable number for a given character string that can contain the variable name or
-  !! its index.
-  integer function get_variable_number(s, error)
-    Character(len=*), intent(in)     :: s
-    integer,          intent(out)    :: error
+  !> Convert a real number into a character string (for filename generation).
+  character(len=7) function real2str(r) result(s)
+    real*8, intent(in) :: r
     
-    integer  :: i
+    write(s,'(f7.3)') r
+    s = adjustl(s)
     
-    error = 0
-    
-    do i = 1, n_var
-      if ( lower_case(trim(s)) == lower_case(trim(variable_names(i))) ) then
-        get_variable_number = i
-        return
-      end if
-    end do
-    get_variable_number = to_int(s, error)
-    
-  end function get_variable_number
+  end function real2str
   
   
   

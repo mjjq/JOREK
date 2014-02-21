@@ -54,12 +54,11 @@ module exec_commands
   
   
   !> Execute a command
-  subroutine exec_command(command, first_step, file_handle, ierr)
+  subroutine exec_command(command, first_step, ierr)
     
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
-    integer,            intent(in)  :: file_handle !< File handle
     integer,            intent(out) :: ierr        !< Error flag
     
     ierr = 0
@@ -86,32 +85,32 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'average' )
           call average(command, first_step, ierr)
-        case ( 'global_parameters' )
-!          call global_parameters(command, first_step, file_handle, ierr)
+!        case ( 'global_parameters' )
+!          call global_parameters(command, first_step, ierr)
         case ( 'expressions' )
           call expressions(command, ierr)
-        case ( 'fluxsurfaces' )
-!          call fluxsurfaces(command, file_handle, ierr)
+!        case ( 'fluxsurfaces' )
+!          call fluxsurfaces(command, ierr)
         case ( 'for' )
           call loop_start(command, ierr)
-        case ( 'gourdon' )
-!          call gourdon(command, file_handle, ierr)
+!        case ( 'gourdon' )
+!          call gourdon(command, ierr)
         case ( 'help' )
           call help(command, ierr)
-        case ( 'line' )
-!          call line(command, first_step, file_handle, ierr)
+        case ( 'pol_line' )
+          call pol_line(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )
           call midplane(command, first_step, ierr)
         case ( 'namelist' )
-          call load_namelist(command, file_handle, ierr)
+          call load_namelist(command, ierr)
         case ( 'params' )
           call log_parameters(0)
         case ( 'point' )
           call point(command, first_step, ierr)
         case ( 'qprofile' )
-!          call qprofile(command, first_step, file_handle, ierr)
+!          call qprofile(command, first_step, ierr)
         case ( 'set' )
           call set(command, ierr)
         case ( 'timesteps' )
@@ -125,7 +124,8 @@ module exec_commands
     else if ( exec_mode == LOOP_MODE ) then
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point' )
+        case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
+          'pol_line' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -254,7 +254,6 @@ module exec_commands
     
     ! --- Local variables
     integer :: jcmd, istep, load_error
-    integer :: thread_id, file_handle
     logical :: first_step ! Is true for the first timestep loaded in the for-loop
     
     ierr = 0
@@ -271,14 +270,8 @@ module exec_commands
       if ( load_error /= 0 ) cycle
       
       do jcmd = 1, n_queued_commands
-#ifdef _OPENMP        
-        thread_id   = omp_get_thread_num()
-#else
-        thread_id   = 0
-#endif
-        file_handle = 17 + thread_id
         
-        call exec_command(command_queue(jcmd), first_step, file_handle, ierr)  
+        call exec_command(command_queue(jcmd), first_step, ierr)  
         if ( ierr /= 0 ) then
           write(*,*) 'ERROR executing the following command (ignoring it):'
           call print_command(command_queue(jcmd))
@@ -394,22 +387,25 @@ module exec_commands
   
   
   !> Load a specific namelist input file
-  subroutine load_namelist(command, file_handle, ierr)
+  subroutine load_namelist(command, ierr)
     
     use phys_module     
     
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
-    integer,            intent(in)  :: file_handle !< File handle
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
     character(len=1024) ::  filename
     logical             ::  file_exists
- 
+    
     ierr = 0
     
-    !### check param count
+    if ( command%n_args /= 1 ) then
+      call report_error('namelist', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
     
     filename = trim(command%args(1))
     inquire (file=filename, exist=file_exists)
@@ -546,9 +542,9 @@ module exec_commands
     integer, intent(in) :: min_step, max_step
     
     if ( loop_min_step /= loop_max_step ) then
-      write(step_range_string,'(a,i5.5,a,i5.5)') '_steps', min_step, '-', max_step
+      write(step_range_string,'(a,i5.5,a,i5.5)') '_s', min_step, '..', max_step
     else
-      write(step_range_string,'(a,i5.5)') '_step', min_step
+      write(step_range_string,'(a,i5.5)') '_s', min_step
     end if
     
   end function step_range_string
@@ -576,6 +572,9 @@ module exec_commands
       return
     end if
     
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
     R = to_float(command%args(1), ierr)
     if ( ierr /= 0 ) return
     
@@ -587,9 +586,8 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    100 format(a,sp,es10.3,a,es10.3,a,es10.3,2a)
-    write(filename,100) 'exprs_at_R', R, '_Z', Z, '_phi', phi,                                     &
-      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    write(filename,'(8a)') 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',         &
+      trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),               &
       tor_pos(phi=phi), result, ierr)
@@ -612,7 +610,6 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    real*8  :: R, Z, phi
     integer :: units, npts
     character(len=1024) :: filename
     
@@ -623,6 +620,9 @@ module exec_commands
       ierr = 1
       return
     end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('linepoints', ierr)
@@ -637,6 +637,60 @@ module exec_commands
   
   
   
+  !> Expressions along a line in the poloidal plane.
+  subroutine pol_line(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: Rstart, Zstart, Rend, Zend, phi
+    integer :: units, npts
+    character(len=1024) :: filename
+    
+    ierr = 0
+    
+    if ( command%n_args /= 5 ) then
+      call report_error('average', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    Rstart = to_float(command%args(1), ierr)
+    if ( ierr /= 0 ) return
+    
+    Zstart = to_float(command%args(2), ierr)
+    if ( ierr /= 0 ) return
+    
+    Rend = to_float(command%args(3), ierr)
+    if ( ierr /= 0 ) return
+    
+    Zend = to_float(command%args(4), ierr)
+    if ( ierr /= 0 ) return
+    
+    phi = to_float(command%args(5), ierr)
+    if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    npts  = get_int_setting('linepoints', ierr)
+    
+    300 format(12a)
+    write(filename,300) 'exprs_along_line_R', trim(real2str(Rstart)), '..', trim(real2str(Rend)),  &
+      '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p', trim(real2str(phi)),         &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    call lineout_profiles(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,       &
+      Zstart, Rend, Zend, npts, ierr, filename, append=(.not.first_step))
+    
+  end subroutine pol_line
+  
+  
+  
   !> Toroidally and poloidally averaged expressions.
   subroutine average(command, first_step, ierr)
     
@@ -646,7 +700,6 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    real*8  :: R, Z, phi
     integer :: units, npts
     character(len=1024) :: filename
     type(t_pol_pos_list), save :: pol_pos_list
@@ -659,6 +712,9 @@ module exec_commands
       ierr = 1
       return
     end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('surfaces', ierr)

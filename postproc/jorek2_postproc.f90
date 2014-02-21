@@ -15,7 +15,6 @@ program jorek2_postproc
   
   implicit none
   
-  integer, parameter :: file_handle = 17
   type(type_command) :: command
   integer            :: ierr
   
@@ -57,7 +56,7 @@ program jorek2_postproc
     if ( (command%args(0) == 'exit') .or. (command%args(0) == 'quit') ) stop
     
     ! --- Execute the command
-    call exec_command(command, .true., file_handle, ierr)
+    call exec_command(command, .true., ierr)
     if ( ierr /= 0 ) then
       write(*,*) 'ERROR in exec_command'
       cycle

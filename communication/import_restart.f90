@@ -24,7 +24,7 @@ real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
 error = 0
 
 write(*,*) 'Importing restart file "', trim(filename), '".'
-write(*,*) '  Using format : ',rst_format
+!write(*,*) '  Using format : ',rst_format
 
 open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
 if ( error /= 0 ) then
@@ -38,15 +38,15 @@ allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(
 
 if (format_rst == 1) then
   read(21) mode_tmp
-  write(*,*) ' NEW format (1) : ',mode_tmp
+  write(*,*) 'NEW format (1) : ',mode_tmp
 elseif (format_rst == 0) then
-   write(*,*) ' mode : ',mode
+   !write(*,*) ' mode : ',mode
    if (n_tor .eq. n_tor_tmp) then 
       mode_tmp = mode
    else
       mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
    endif
-   write(*,*) ' OLD format (0) : '
+   write(*,*) 'OLD format (0)'
    write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
    write(*,'(A,999i4)') ' new mode numbers     : ',mode
 else
@@ -190,7 +190,7 @@ if (n_tor_tmp .lt. n_tor) then ! initialise new harmonics (only density and temp
   enddo
 endif
 
-write(*,*) '********* end restart ******************'
+!write(*,*) '********* end restart ******************'
 
 !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
 

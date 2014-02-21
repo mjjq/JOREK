@@ -430,7 +430,7 @@ module mod_straight_field_line
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
-            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
+            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (1).'
             ierr = 100
 	    cycle
           end if
@@ -450,7 +450,7 @@ module mod_straight_field_line
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
-            write(*,*) 'Error in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
+            write(*,*) 'Error in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (2).'
             ierr = 100
 	    cycle
           end if

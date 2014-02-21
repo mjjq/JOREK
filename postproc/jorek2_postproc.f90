@@ -8,6 +8,7 @@ program jorek2_postproc
   
   use nodes_elements, only: node_list, element_list
   use phys_module
+  use mod_new_diag
   use parse_commands, only: read_command, type_command
   use exec_commands,  only: exec_command, specific_help
   use settings,       only: set_setting
@@ -16,7 +17,7 @@ program jorek2_postproc
   
   integer, parameter :: file_handle = 17
   type(type_command) :: command
-  integer            :: error
+  integer            :: ierr
   
   ! --- Initialize mode and mode_type arrays
   call det_modes()
@@ -24,12 +25,19 @@ program jorek2_postproc
   ! --- Initialize the basis functions
   call initialise_basis()
   
+  ! --- Initialize the new_diag package.
+  call init_new_diag(.false.)
+  
+  ! --- Preset namelist input parameters
+  call preset_parameters()
+  
   ! --- Preset some parameters
-  call set_setting('linepoints',      '200',   error)
-  call set_setting('tor_points',      '50',    error)
-  call set_setting('surfaces',        '100',   error)
-  call set_setting('verbose',         'false', error)
-  call set_setting('debug',           'false', error)
+  call set_setting('units',           '0',     ierr) ! JOREK units by default
+  call set_setting('linepoints',      '200',   ierr)
+  call set_setting('tor_points',      '50',    ierr)
+  call set_setting('surfaces',        '100',   ierr)
+  call set_setting('verbose',         'false', ierr)
+  call set_setting('debug',           'false', ierr)
   
   ! --- Print getting started information
   call specific_help('getting_started')
@@ -37,20 +45,20 @@ program jorek2_postproc
   do ! (main loop: Read, parse, and execute one command after the other)
     
     ! --- Read and parse a command line
-    call read_command(command, error)
-    if ( error /= 0 ) then
+    call read_command(command, ierr)
+    if ( ierr /= 0 ) then
       write(*,*) 'ERROR in read_command'
       cycle
-    else if ( command%n_options == 0 ) then
+    else if ( command%n_args < 0 ) then
       cycle
     end if
     
     ! --- Exit upon user request
-    if ( (command%option(1) == 'exit') .or. (command%option(1) == 'quit') ) stop
+    if ( (command%args(0) == 'exit') .or. (command%args(0) == 'quit') ) stop
     
     ! --- Execute the command
-    call exec_command(command, .true., file_handle, error)
-    if ( error /= 0 ) then
+    call exec_command(command, .true., file_handle, ierr)
+    if ( ierr /= 0 ) then
       write(*,*) 'ERROR in exec_command'
       cycle
     end if

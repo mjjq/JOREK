@@ -158,7 +158,8 @@ module mod_diag_output
   
   
   !> Write diagnostic output to an ascii file.
-  subroutine write_ascii_0d(ierr, eq, expr_list, res0d, format, header, filename, append, comment)
+  subroutine write_ascii_0d(ierr, eq, expr_list, res0d, format, header, filename, append, blanks,  &
+    comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':write_ascii_0d'
     
@@ -171,6 +172,7 @@ module mod_diag_output
     logical,          optional, intent(in)    :: header
     character(len=*), optional, intent(in)    :: filename
     logical,          optional, intent(in)    :: append
+    logical,          optional, intent(in)    :: blanks
     character(len=*), optional, intent(in)    :: comment
     
     ! --- Local variables.
@@ -184,7 +186,7 @@ module mod_diag_output
       return
     end if
     
-    call open_ascii_file(ierr, i_file, filename, append, comment)
+    call open_ascii_file(ierr, i_file, filename, append, blanks, comment)
     
     if ( format == FORM_TABLE ) then
       call write_ascii_header(i_file, expr_list, header)
@@ -208,7 +210,8 @@ module mod_diag_output
   
   
   !> Write diagnostic output to an ascii file.
-  subroutine write_ascii_1d(ierr, eq, expr_list, res1d, format, header, filename, append, comment)
+  subroutine write_ascii_1d(ierr, eq, expr_list, res1d, format, header, filename, append, blanks,  &
+    comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':write_ascii_1d'
     
@@ -221,6 +224,7 @@ module mod_diag_output
     logical,          optional, intent(in)    :: header
     character(len=*), optional, intent(in)    :: filename
     logical,          optional, intent(in)    :: append
+    logical,          optional, intent(in)    :: blanks
     character(len=*), optional, intent(in)    :: comment
     
     ! --- Local variables.
@@ -234,7 +238,7 @@ module mod_diag_output
       return
     end if
     
-    call open_ascii_file(ierr, i_file, filename, append, comment)
+    call open_ascii_file(ierr, i_file, filename, append, blanks, comment)
     
     if ( format == FORM_TABLE ) then
       call write_ascii_header(i_file, expr_list, header)
@@ -256,7 +260,7 @@ module mod_diag_output
   
   
   !> [Private] Auxilliary routine for write_ascii routines.
-  subroutine open_ascii_file(ierr, i_file, filename, append, comment)
+  subroutine open_ascii_file(ierr, i_file, filename, append, blanks, comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':open_ascii_file'
     
@@ -265,6 +269,7 @@ module mod_diag_output
     integer,                    intent(out)   :: i_file
     character(len=*), optional, intent(in)    :: filename
     logical,          optional, intent(in)    :: append
+    logical,          optional, intent(in)    :: blanks !< Blank lines? Only for append.
     character(len=*), optional, intent(in)    :: comment
     
     ! --- Local variables
@@ -287,7 +292,7 @@ module mod_diag_output
         write(*,*) ierr
         return
       end if
-      if ( present(append) .and. (append) ) then
+      if ( present(append) .and. (append) .and. present(blanks) .and. (blanks) ) then
         write(i_file,*)
         write(i_file,*)
       end if

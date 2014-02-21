@@ -316,7 +316,7 @@ module mod_position
     else if ( present(nPsiN) .and. present(nTht) ) then
       
       call create_pol_pos(pos_list, ierr, node_list, element_list, eq, nTht=nTht, nPsiN=nPsiN,     &
-        psiNmin=0.005d0, psiNmax=0.995d0)
+        psiNmin=0.005d0, psiNmax=0.990d0)
       
     else
       

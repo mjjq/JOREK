@@ -72,7 +72,7 @@ module mod_new_diag
   
   !> Toroidally averaged expressions on the midplane.
   subroutine midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, n_pts,  &
-    ierr, filename)
+    ierr, filename, append)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
     
@@ -87,6 +87,7 @@ module mod_new_diag
     integer,                        intent(in)    :: n_pts        !< Number of points in profiles
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
     
     ! --- Local variables
     real*8               :: Rstart, Rend
@@ -124,7 +125,7 @@ module mod_new_diag
     
     if ( present(filename) ) then
       call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
-        filename=filename, append=.false.)
+        filename=filename, append=append, blanks=.true.)
     end if
     
   end subroutine midplane_profile
@@ -135,7 +136,7 @@ module mod_new_diag
   
   !> Construct poloidally and toroidally averaged profiles.
   subroutine average_profiles(node_list, element_list, eq, units, expr_list, res1d, nPsiN, ierr,   &
-    filename)
+    filename, append)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
     
@@ -149,6 +150,7 @@ module mod_new_diag
     integer,                        intent(in)    :: nPsiN        !< Number of points for profiles
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
     
     ! --- Local variables
     real*8, allocatable  :: result(:,:,:,:)
@@ -157,8 +159,8 @@ module mod_new_diag
     
     ierr = 0
     
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_plane) !###
-    tor_pos_list = tor_pos(nphi=4*n_plane) !###
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6)!###*4*n_plane) !###
+    tor_pos_list = tor_pos(nphi=4)!###*n_plane) !###
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
@@ -170,7 +172,7 @@ module mod_new_diag
     
     if ( present(filename) ) then
       call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
-        filename=filename, append=.false.)
+        filename=filename, append=append, blanks=.true.)
     end if
     
   end subroutine average_profiles

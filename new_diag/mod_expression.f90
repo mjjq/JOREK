@@ -39,11 +39,12 @@ module mod_expression
   
   ! --- Constants
   character(len=14), parameter, private :: THIS_MOD_NAME = 'mod_expression'
-  integer,           parameter          :: JOREK_UNITS   = 0
-  integer,           parameter          :: SI_UNITS      = 1
-  integer,           parameter          :: LEN_NAME      = 12
-  integer,           parameter          :: LEN_DESCR     = 54
-  integer,           parameter          :: N_EXPR_MAX    = 2000
+  integer,           parameter, private :: LEN_NAME      = 12
+  integer,           parameter, private :: LEN_DESCR     = 54
+  integer,           parameter, private :: N_EXPR_MAX    = 2000
+  !   --- Constants selecting a unit system for expression output
+  integer,           parameter          :: JOREK_UNITS   = 0 !< Output expressions in JOREK units
+  integer,           parameter          :: SI_UNITS      = 1 !< Output expressions in SI units
   
   
   
@@ -68,9 +69,6 @@ module mod_expression
   
   ! --- Standard lists of expressions (require init_expr call first!).
   type(t_expr_list), save :: exprs_all           !< All available expressions.
-!  type(t_expr_list), save :: exprs_basicvar      !< All expressions for basic variables.
-!  type(t_expr_list), save :: exprs_cylcoord      !< All expressions for cylindrical coordinates.
-!  type(t_expr_list), save :: exprs_magfield      !< All expressions for the magnetic field.
   
   
   
@@ -85,27 +83,24 @@ module mod_expression
   !> Initialization for the module. Should be called before any other 
   subroutine init_expr()
     
-    !### create exprs_basicvar etc. and join them to exprs_all in the end
-    
     exprs_all%n_expr = 0
-    call add(exprs_all, 'R           ', 'Major Radius R / Cylindrical Coordinate R             ')
+    call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
     call add(exprs_all, 'phi         ', 'Cylindrical Coordinate phi                            ')
-    call add(exprs_all, 'theta       ', 'Poloidal Angle Around Magnetic Axis                   ')
+    call add(exprs_all, 'theta       ', 'Poloidal Angle With Respect to Magnetic Axis          ')
     call add(exprs_all, 'x           ', 'Cartesian Coordinate x                                ')
     call add(exprs_all, 'y           ', 'Cartesian Coordinate y                                ')
+    call add(exprs_all, 'z           ', 'Cartesian Coordinate z (== Cylindrical Z)             ')
     call add(exprs_all, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
     call add(exprs_all, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
     call add(exprs_all, 'Psi         ', 'Poloidal Magnetic Flux                                ')
     call add(exprs_all, 'u           ', 'Velocity Stream Function                              ')
+    call add(exprs_all, 'Phi         ', 'Electric Potential Phi                                ')
     call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
+    call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj*R)           ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
-#if JOREK_MODEL == 400
-    call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
-    call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
-#endif
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
     call add(exprs_all, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
     call add(exprs_all, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
@@ -115,24 +110,27 @@ module mod_expression
     call add(exprs_all, 'pres        ', 'Total Pressure                                        ')
     call add(exprs_all, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
     call add(exprs_all, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
-    call add(exprs_all, 'B_R         ', 'Magnetic Field Component Along the Major Radius R     ')
+    call add(exprs_all, 'B_R         ', 'Magnetic Field Component Along R                      ')
     call add(exprs_all, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
     call add(exprs_all, 'B_theta     ', 'Poloidal Magnetic Field Component                     ')
-    call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (ZJ*R)              ')
-    call add(exprs_all, 'Er          ', 'Radial electric field                                 ')
-    call add(exprs_all, 'Vtheta_i    ', 'Ion Poloidal velocity                                 ')
-    call add(exprs_all, 'Mach_par    ', 'Parallel Mach number                                  ')
-    call add(exprs_all, 'Mach_pol    ', 'Poloidal Mach number                                  ')
-    call add(exprs_all, 'V_sound     ', 'Sound speed                                           ')
-    call add(exprs_all, 'V_neo       ', 'Neoclassical velocity                                 ')
-    call add(exprs_all, 'Vperp_e     ', 'Electron perpendicular velocity                       ')
-    call add(exprs_all, 'Vperp_i     ', 'Ion perpendicular velocity                            ')
-    call add(exprs_all, 'V_ExB       ', 'ExB velocity                                          ')
-    call add(exprs_all, 'Vstar_e     ', 'Electron diamagnetic velocity                         ')
-    call add(exprs_all, 'Vstar_i     ', 'Ion diamagnetic velocity                              ')
-    call add(exprs_all, 'ki_neo      ', 'Neoclassical heat diffusivity                         ')
-    call add(exprs_all, 'mu_neo      ', 'Neoclassical friction coefficient                     ')
-    call add(exprs_all, 'J_bootstrap ', 'Bootstrap current                                     ')
+    call add(exprs_all, 'Er          ', 'Radial Electric Field                                 ')
+    call add(exprs_all, 'Vtheta_i    ', 'Ion Poloidal Velocity                                 ')
+    call add(exprs_all, 'Mach_par    ', 'Parallel Mach Number                                  ')
+    call add(exprs_all, 'Mach_pol    ', 'Poloidal Mach Number                                  ')
+    call add(exprs_all, 'V_sound     ', 'Sound Speed                                           ')
+    call add(exprs_all, 'V_neo       ', 'Neoclassical Velocity                                 ')
+    call add(exprs_all, 'Vperp_e     ', 'Electron Perpendicular Velocity                       ')
+    call add(exprs_all, 'Vperp_i     ', 'Ion Perpendicular Velocity                            ')
+    call add(exprs_all, 'V_ExB       ', 'ExB Velocity                                          ')
+    call add(exprs_all, 'Vstar_e     ', 'Electron Diamagnetic Velocity                         ')
+    call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
+    call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
+    call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
+#if JOREK_MODEL == 400
+    call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
+    call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
+    call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
+#endif
     
   end subroutine init_expr
   
@@ -162,6 +160,8 @@ module mod_expression
   function exprs(name, n_expr, n_coord) result(expr_list)
     type(t_expr_list) :: expr_list
     
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
+    
     ! --- Routine parameters
     character(len=*),  intent(in) :: name(n_expr)
     integer,           intent(in) :: n_expr
@@ -173,7 +173,11 @@ module mod_expression
     k = 0
     do i = 1, n_expr
       j = get_expr_num(exprs_all, trim(name(i)))
-      if ( j < 1 ) cycle ! Unknown expression names are ignored
+      if ( j < 1 ) then
+        write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Unknown expression "'//trim(name(i)) &
+          //'" ignored.'
+        cycle
+      end if
       k = k + 1
       expr_list%expr(k) = exprs_all%expr(j)
     end do
@@ -188,7 +192,7 @@ module mod_expression
   
   
   
-  !> Merge several expression lists.
+  !> Merge several expression lists.    ### NOT USED AT PRESENT
   recursive function join_exprs(list1, list2, list3, list4, list5, list6, list7, list8, list9)     &
     result(expr_list)
     type(t_expr_list) :: expr_list
@@ -236,31 +240,44 @@ module mod_expression
   
   
   
-  !> Prints an expression list.
-  subroutine print_exprs(expr_list)
+  !> Prints an expression list in a readable table format.
+  subroutine print_exprs(expr_list, short)
     
     ! --- Routine parameters
     type(t_expr_list),  intent(in) :: expr_list
+    logical, optional,  intent(in) :: short
     
     ! --- Local variables
     integer :: i
     
-    900 format(1x,a)
-    901 format(1x,i6.6,' | ',a,' | ',a)
-    902 format(1x,80('-'))
-    
-    write(*,*)
-    write(*,*) 'List of Diagnostic Expressions:'
-    write(*,*)
-    
-    write(*,902)
-    write(*,900) 'Number | Name         | Description'
-    write(*,902)
-    do i = 1, expr_list%n_expr
-      write(*,901) i, expr_list%expr(i)%name, expr_list%expr(i)%descr
-    end do
-    write(*,902)
-    write(*,*)
+    if ( present(short) .and. (short) ) then
+      
+      905 format(1x,a,',')
+      do i = 1, expr_list%n_expr
+        write(*,905,advance='no') trim(expr_list%expr(i)%name)
+      end do
+      write(*,*)
+      
+    else
+      
+      900 format(1x,a)
+      901 format(1x,i6.6,' | ',a,' | ',a)
+      902 format(1x,80('-'))
+      
+      write(*,*)
+      write(*,*) 'List of Diagnostic Expressions:'
+      write(*,*)
+      
+      write(*,902)
+      write(*,900) 'Number | Name         | Description'
+      write(*,902)
+      do i = 1, expr_list%n_expr
+        write(*,901) i, expr_list%expr(i)%name, expr_list%expr(i)%descr
+      end do
+      write(*,902)
+      write(*,*)
+      
+    end if
     
   end subroutine print_exprs
   
@@ -269,7 +286,7 @@ module mod_expression
   
   !> Find out expression number in an expression list.
   integer function get_expr_num(expr_list, name) result(num)
-  
+    
     ! --- Routine parameters
     type(t_expr_list),       intent(in) :: expr_list
     character(len=*), intent(in) :: name
@@ -293,7 +310,7 @@ module mod_expression
   
   !> Check that an expression exists.
   logical function expr_exists(expr_list, name) result(exists)
-  
+    
     ! --- Routine parameters
     type(t_expr_list),       intent(in) :: expr_list
     character(len=LEN_NAME), intent(in) :: name
@@ -308,7 +325,7 @@ module mod_expression
   
   !> Get the description of an expression.
   character(len=LEN_DESCR) function expr_descr(name) result(descr)
-  
+    
     ! --- Routine parameters
     character(len=LEN_NAME) :: name
     
@@ -347,7 +364,7 @@ module mod_expression
     type(t_tor_pos), pointer :: tor_pos
     type(type_element)       :: element
     type(type_node)          :: nodes(n_vertex_max)
-    integer :: ipolpos, jpolpos, itorpos, iexpr, ielm, i, j, i_tor
+    integer :: ipolpos, jpolpos, itorpos, iexpr, ielm, i, j, k, i_tor
     real*8  :: xjac, xjac_R, xjac_Z, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, &
       s, t, H(n_vertex_max,n_order+1), H_s(n_vertex_max,n_order+1), H_t(n_vertex_max,n_order+1),   &
       H_st(n_vertex_max,n_order+1), H_ss(n_vertex_max,n_order+1), H_tt(n_vertex_max,n_order+1),    &
@@ -367,6 +384,7 @@ module mod_expression
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
+    real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_T, fact_vpar, fact_resistiv, fact_Er
     
@@ -396,7 +414,8 @@ module mod_expression
     end if
     
     if ( allocated(result) ) deallocate(result)
-    allocate( result(tor_pos_list%n_pos, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2), expr_list%n_expr) )
+    allocate( result(tor_pos_list%n_pos, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2),             &
+      expr_list%n_expr) )
     
     ! --- Loop over positions in the poloidal plane
     loop_pol1: do ipolpos = 1, pol_pos_list%n_pos(1)
@@ -424,7 +443,7 @@ module mod_expression
         call basisfunctions2(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
         
         ! --- Poloidal angle theta
-        theta = atan2(Z-eq%Z_axis,R-eq%R_axis)
+        theta = atan2(Z-eq%Z_axis, R-eq%R_axis)
         if ( theta < 0.d0 ) theta = theta + 2.d0*PI
         
         ! --- 2D Jacobian
@@ -468,18 +487,19 @@ module mod_expression
           Ti0   = 0.d0; Ti0_s   = 0.d0; Ti0_t   = 0.d0; Ti0_ss   = 0.d0; Ti0_tt   = 0.d0; Ti0_st   = 0.d0; Ti0_p   = 0.d0; Ti0_pp   = 0.d0
           Te0   = 0.d0; Te0_s   = 0.d0; Te0_t   = 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
           Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
+          delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
           
           ! --- Reconstruct variables
           do i = 1, n_vertex_max
             do j = 1, n_order+1
               
-              sz     = element%size(i,j)
-              hh     = H   (i,j)
-              hh_s   = H_s (i,j)
-              hh_t   = H_t (i,j)
-              hh_ss  = H_ss(i,j)
-              hh_tt  = H_tt(i,j)
-              hh_st  = H_st(i,j)
+              sz    = element%size(i,j)
+              hh    = H   (i,j)
+              hh_s  = H_s (i,j)
+              hh_t  = H_t (i,j)
+              hh_ss = H_ss(i,j)
+              hh_tt = H_tt(i,j)
+              hh_st = H_st(i,j)
               
               do i_tor = 1, n_tor
                 
@@ -581,15 +601,15 @@ module mod_expression
                 Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
 #endif
                 ! --- Deltas
-                !do k=1,n_var
-                !  delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh    * hhz
-                !  delta_s(k) = delta_s(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh_s  * hhz
-                !  delta_t(k) = delta_t(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh_t  * hhz
-                !enddo
+                do k = 1, n_var
+                  delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh    * hhz
+                  delta_s(k) = delta_s(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh_s  * hhz
+                  delta_t(k) = delta_t(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh_t  * hhz
+                end do
                 
-              enddo
-            enddo
-          enddo
+              end do
+            end do
+          end do
           
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
@@ -789,17 +809,17 @@ module mod_expression
           ZK_prof = get_zkperp(psi_norm)
           
           ! --- Other parameters (combination of the main variables)
-          Er      = 0.d0
-          Vtheta  = 0.d0
-	  mach_par= 0.d0
-          mach_pol= 0.d0
-          vsound  = 0.d0
-          Vneo    = 0.d0
-          ki_neo  = 0.d0
-          mu_neo  = 0.d0
-          Vperp_e = 0.d0
-          Vperp_i = 0.d0
-          V_ExB   = 0.d0 
+          Er       = 0.d0
+          Vtheta   = 0.d0
+	  mach_par = 0.d0
+          mach_pol = 0.d0
+          vsound   = 0.d0
+          Vneo     = 0.d0
+          ki_neo   = 0.d0
+          mu_neo   = 0.d0
+          Vperp_e  = 0.d0
+          Vperp_i  = 0.d0
+          V_ExB    = 0.d0 
           Vstar_e  = 0.d0
           Vstar_i  = 0.d0
           
@@ -811,22 +831,22 @@ module mod_expression
             Mach_par = Vpar0 / Vsound                             ! parallel Mach number
             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
             
-            Vtheta  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
-                 ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+            Vtheta   = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
+              ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
             
-            Vperp_i = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
-                 ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
+            Vperp_i  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
+              ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z )
             
-            Vperp_e = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  + &
-                 ( u0_Z - tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z)
+            Vperp_e  = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
+              ( u0_Z - tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z )
             
-            V_ExB  = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
+            V_ExB    = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
             
-            Vstar_i = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
-                 tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_i  = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
+              tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
             
-            Vstar_e = 1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  + &
-                 tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_e  = +1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
+              tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
             ! ### Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
           
@@ -838,7 +858,7 @@ module mod_expression
             else ! (use constant neoclassical coefficients from namelist input file)
               mu_neo = amu_neo_const
               ki_neo = aki_neo_const
-              Vneo   = aki_neo_const / Btheta*tauIC * (ps0_R*T0_R + ps0_Z*T0_Z)
+              Vneo   = aki_neo_const / Btheta * tauIC * ( ps0_R*T0_R + ps0_Z*T0_Z )
             end if
           end if
           
@@ -848,7 +868,7 @@ module mod_expression
 #else
           J_boot = 0.d0
 #endif
-          ! --- Factors for switching between normalized and SI units.
+          ! --- Factors for switching between JOREK normalized and SI units.
           if ( units == SI_UNITS ) then
              rho_norm      = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
              fact_time     = sqrt(MU_zero*rho_norm)                                ! time factor
@@ -868,7 +888,7 @@ module mod_expression
              fact_Er       = 1.d0
           end if
           
-          ! --- Now that everything is prepared, evaluate all the requested expressions.
+          ! --- Now that everything is prepared, evaluate the requested expressions.
           loop_expr: do iexpr = 1, expr_list%n_expr
             
             select case ( trim(expr_list%expr(iexpr)%name) )
@@ -902,6 +922,9 @@ module mod_expression
               case ( 'u' )
                 res = u0
                 
+              case ( 'Phi' )
+                res = u0 * F0 !### sign?
+                
               case ( 'zj' )
                 res = zj0 / fact_mu_zero
                 
@@ -913,13 +936,7 @@ module mod_expression
                 
               case ( 'T' )
                 res = T0 * fact_T
-#if JOREK_MODEL == 400
-              case ( 'T_e' )
-                res = Te0 * fact_T
               
-              case ( 'T_i' )
-                res = Ti0 * fact_T
-#endif
               case ( 'vpar' )
                 res = Vpar0 * fact_vpar
                 
@@ -997,10 +1014,16 @@ module mod_expression
                 
               case ( 'mu_neo' )
                 res = mu_neo / fact_time
-                
+#if JOREK_MODEL == 400
+              case ( 'T_e' )
+                res = Te0 * fact_T
+              
+              case ( 'T_i' )
+                res = Ti0 * fact_T
+              
               case ( 'J_bootstrap' )
                 res = J_boot ! ### check if no normalization needed
-                
+#endif
               case default
                 write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Illegal expression ("' //      &
                   trim(expr_list%expr(iexpr)%name) // '")'

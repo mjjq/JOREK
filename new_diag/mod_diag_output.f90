@@ -186,10 +186,10 @@ module mod_diag_output
       return
     end if
     
-    call open_ascii_file(ierr, i_file, filename, append, blanks, comment)
+    call open_ascii_file(ierr, i_file, filename, append, blanks)
     
     if ( format == FORM_TABLE ) then
-      call write_ascii_header(i_file, expr_list, header)
+      call write_ascii_header(i_file, expr_list, header, comment)
       write(i_file,'(9999es23.15)') res0d(:)
     else if ( format == FORM_LIST ) then
       do i = 1, size(res0d)
@@ -238,10 +238,10 @@ module mod_diag_output
       return
     end if
     
-    call open_ascii_file(ierr, i_file, filename, append, blanks, comment)
+    call open_ascii_file(ierr, i_file, filename, append, blanks)
     
     if ( format == FORM_TABLE ) then
-      call write_ascii_header(i_file, expr_list, header)
+      call write_ascii_header(i_file, expr_list, header, comment)
       do i = 1, size(res1d,1)
         write(i_file,'(9999es23.15)') res1d(i,:)
       end do
@@ -260,7 +260,7 @@ module mod_diag_output
   
   
   !> [Private] Auxilliary routine for write_ascii routines.
-  subroutine open_ascii_file(ierr, i_file, filename, append, blanks, comment)
+  subroutine open_ascii_file(ierr, i_file, filename, append, blanks)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':open_ascii_file'
     
@@ -270,7 +270,6 @@ module mod_diag_output
     character(len=*), optional, intent(in)    :: filename
     logical,          optional, intent(in)    :: append
     logical,          optional, intent(in)    :: blanks !< Blank lines? Only for append.
-    character(len=*), optional, intent(in)    :: comment
     
     ! --- Local variables
     character(len=32) :: status, access
@@ -296,7 +295,6 @@ module mod_diag_output
         write(i_file,*)
         write(i_file,*)
       end if
-      if ( present(comment) ) write(i_file,'(2a)') '# ', trim(comment)
     else
       i_file = STDOUT
       write(i_file,*)
@@ -331,12 +329,13 @@ module mod_diag_output
   
   
   !> [Private] Auxilliary routine for write_ascii routines.
-  subroutine write_ascii_header(i_file, expr_list, header)
+  subroutine write_ascii_header(i_file, expr_list, header, comment)
     
     ! --- Routine parameters
     integer,           intent(in) :: i_file
     type(t_expr_list), intent(in) :: expr_list
     logical, optional, intent(in) :: header
+    character(len=*), optional, intent(in) :: comment
     
     ! --- Local variables
     character(len=23) :: s
@@ -350,6 +349,7 @@ module mod_diag_output
       end do
       write(i_file,'(a)')
     end if
+    if ( present(comment) ) write(i_file,'(a,a)') '# ', trim(comment)
     
   end subroutine write_ascii_header
   

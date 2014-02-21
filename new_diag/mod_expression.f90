@@ -93,6 +93,7 @@ module mod_expression
     call add(exprs_all, 'z           ', 'Cartesian Coordinate z (== Cylindrical Z)             ')
     call add(exprs_all, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
     call add(exprs_all, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
+    call add(exprs_all, 't           ', 'Simulation time                                       ')
     call add(exprs_all, 'Psi         ', 'Poloidal Magnetic Flux                                ')
     call add(exprs_all, 'u           ', 'Velocity Stream Function                              ')
     call add(exprs_all, 'Phi         ', 'Electric Potential Phi                                ')
@@ -912,6 +913,9 @@ module mod_expression
                 
               case ( 'y' )
                 res = y_cart
+                
+              case ( 't' )
+                res = t_now * fact_time
                 
               case ( 'Psi' )
                 res = ps0

@@ -22,6 +22,8 @@ module exec_commands
   
   
   
+  character(len=11), parameter, private :: DIR = './postproc/'
+  
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
   integer, parameter :: LOOP_MODE   = 2 !< Mode started by 'for' and ended by 'done' commands
   integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_MODE)
@@ -34,6 +36,7 @@ module exec_commands
   
   logical,             private, save :: input_loaded  = .false. !< Has an input file been loaded?
   logical,             private, save :: step_imported = .false. !< Has a restart file been imported?
+  logical,             private, save :: dir_created   = .false. !< Postproc directory created?
   type(t_equil_state), private, save :: eq !< Equilibrium state; updated when time step is loaded
   type(t_expr_list),   private, save :: expr_list
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:)
@@ -63,6 +66,11 @@ module exec_commands
     
     ierr = 0
     
+    if ( .not. dir_created ) then
+      call system('mkdir -p '//DIR)
+      dir_created = .true.
+    end if
+    
     if ( get_setting('debug',ierr) == 'true' ) then
       write(*,'(a)') 'Exec_command was called with:'
       call print_command(command)
@@ -87,6 +95,8 @@ module exec_commands
           call average(command, first_step, ierr)
 !        case ( 'global_parameters' )
 !          call global_parameters(command, first_step, ierr)
+        case ( 'equil_params' )
+          call equil_params(command, first_step, ierr)
         case ( 'expressions' )
           call expressions(command, ierr)
 !        case ( 'fluxsurfaces' )
@@ -109,7 +119,7 @@ module exec_commands
           call log_parameters(0)
         case ( 'point' )
           call point(command, first_step, ierr)
-        case ( 'qprofile' )
+!        case ( 'qprofile' )
 !          call qprofile(command, first_step, ierr)
         case ( 'set' )
           call set(command, ierr)
@@ -125,7 +135,7 @@ module exec_commands
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
-          'pol_line' )
+          'pol_line', 'equil_params' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -174,7 +184,8 @@ module exec_commands
     
     ! --- Locate magnetic axis and X-point.
     call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, eq)
-    call print_equil_state(eq, .false.)
+    
+    t_now = t_start
     
     step_imported = .true.
     
@@ -489,9 +500,6 @@ module exec_commands
     type(type_command), intent(in)  :: command     !< Command to be executed
     integer,            intent(out) :: ierr        !< Error flag
     
-    ! --- Local variables
-    character(len=1024) :: filename
-    
     ierr = 0
     
     if ( command%n_args == 0 ) then
@@ -519,7 +527,6 @@ module exec_commands
     
     ! --- Local variables
     integer :: n_coord
-    character(len=1024) :: filename
     
     ierr = 0
     
@@ -586,7 +593,7 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    write(filename,'(8a)') 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',         &
+    write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',    &
       trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),               &
@@ -611,7 +618,7 @@ module exec_commands
     
     ! --- Local variables
     integer :: units, npts
-    character(len=1024) :: filename
+    character(len=1024) :: filename, comment
     
     ierr = 0
     
@@ -627,11 +634,13 @@ module exec_commands
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('linepoints', ierr)
     
-    write(filename,'(3a)') 'exprs_midplane', trim(step_range_string(loop_min_step,loop_max_step)), &
-      '.dat'
+    write(filename,'(4a)') DIR, 'exprs_midplane',                                                  &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    write(comment,'(a,i6.6)') 'time step #', index_start
     
     call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, BOTH_SIDES, npts,  &
-      ierr, filename=trim(filename), append=(.not.first_step) )
+      ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane
   
@@ -648,7 +657,7 @@ module exec_commands
     ! --- Local variables
     real*8  :: Rstart, Zstart, Rend, Zend, phi
     integer :: units, npts
-    character(len=1024) :: filename
+    character(len=1024) :: filename, comment
     
     ierr = 0
     
@@ -679,13 +688,14 @@ module exec_commands
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('linepoints', ierr)
     
-    300 format(12a)
-    write(filename,300) 'exprs_along_line_R', trim(real2str(Rstart)), '..', trim(real2str(Rend)),  &
-      '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p', trim(real2str(phi)),         &
-      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    write(filename,'(15a)') DIR, 'exprs_along_line_R', trim(real2str(Rstart)), '..',               &
+      trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',        &
+      trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    write(comment,'(a,i6.6)') 'time step #', index_start
     
     call lineout_profiles(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,       &
-      Zstart, Rend, Zend, npts, ierr, filename, append=(.not.first_step))
+      Zstart, Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine pol_line
   
@@ -701,7 +711,7 @@ module exec_commands
     
     ! --- Local variables
     integer :: units, npts
-    character(len=1024) :: filename
+    character(len=1024) :: filename, comment
     type(t_pol_pos_list), save :: pol_pos_list
     type(t_tor_pos_list), save :: tor_pos_list
     
@@ -719,7 +729,7 @@ module exec_commands
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('surfaces', ierr)
     
-    write(filename,'(3a)') 'exprs_averaged',                                                       &
+    write(filename,'(4a)') DIR, 'exprs_averaged',                                                  &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*4*n_plane) !###
@@ -729,10 +739,73 @@ module exec_commands
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
     call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
     
+    write(comment,'(a,i6.6)') 'time step #', index_start
+    
     call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                     &
-      filename=trim(filename), append=(.not.first_step), blanks=.true.)
+      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
     
   end subroutine average
+  
+  
+  
+  !> Output equilibrium information.
+  subroutine equil_params(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, i_file
+    character(len=1024) :: filename, status, access
+    real*8 :: time
+    
+    ierr = 0
+    
+    if ( command%n_args /= 0 ) then
+      call report_error('equil_params', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    units = get_int_setting('units', ierr)
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    write(filename,'(4a)') DIR, 'equil_params',                                                    &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '# time                R_axis              Z_axis              '//       &
+        'Psi_axis            R_xpoint(1)         Z_xpoint(1)         Psi_xpoint(1)       '//       &
+        'R_xpoint(2)         Z_xpoint(2)         Psi_xpoint(2)       R_lim               '//       &
+        'Z_lim               Psi_lim             Psi_bnd'
+    end if
+    
+    ! (not elegant, admittedly... but guarantees consistent time normalization:)
+    call eval_expr(eq, units, exprs('t',1),                                                        &
+      pol_pos(node_list,element_list,eq,R=eq%R_axis,Z=eq%Z_axis), tor_pos(phi=0.d0), result, ierr)
+    time = result(1,1,1,1)
+    
+    write(i_file,'(es20.13,33f20.16)') time, eq%R_axis, eq%Z_axis, eq%Psi_axis, eq%R_xpoint(1),    &
+      eq%Z_xpoint(1), eq%Psi_xpoint(1), eq%R_xpoint(2), eq%Z_xpoint(2), eq%Psi_xpoint(2), eq%R_lim,&
+      eq%Z_lim, eq%Psi_lim, eq%Psi_bnd
+    
+    close(i_file)
+    
+  end subroutine equil_params
   
   
   

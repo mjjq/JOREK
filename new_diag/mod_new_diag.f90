@@ -72,7 +72,7 @@ module mod_new_diag
   
   !> Toroidally averaged expressions on the midplane.
   subroutine midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, n_pts,  &
-    ierr, filename, append)
+    ierr, filename, append, comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
     
@@ -88,6 +88,7 @@ module mod_new_diag
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
     logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
+    character(len=*), optional,     intent(in)    :: comment      !< Comment for ascii file [opti.]
     
     ! --- Local variables
     real*8               :: Rstart, Rend
@@ -125,7 +126,7 @@ module mod_new_diag
     
     if ( present(filename) ) then
       call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
-        filename=filename, append=append, blanks=.true.)
+        filename=filename, append=append, blanks=.true., comment=comment)
     end if
     
   end subroutine midplane_profile
@@ -136,7 +137,7 @@ module mod_new_diag
   
   !> Construct poloidally and toroidally averaged profiles.
   subroutine average_profiles(node_list, element_list, eq, units, expr_list, res1d, nPsiN, ierr,   &
-    filename, append)
+    filename, append, comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
     
@@ -151,6 +152,7 @@ module mod_new_diag
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
     logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
+    character(len=*), optional,     intent(in)    :: comment      !< Comment for ascii file [opti.]
     
     ! --- Local variables
     real*8, allocatable  :: result(:,:,:,:)
@@ -172,7 +174,7 @@ module mod_new_diag
     
     if ( present(filename) ) then
       call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
-        filename=filename, append=append, blanks=.true.)
+        filename=filename, append=append, blanks=.true., comment=comment)
     end if
     
   end subroutine average_profiles
@@ -183,7 +185,7 @@ module mod_new_diag
   
   !> Profiles along a straight line in the poloidal plane.
   subroutine lineout_profiles(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,   &
-    Zstart, Rend, Zend, nPts, ierr, filename, append)
+    Zstart, Rend, Zend, nPts, ierr, filename, append, comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':lineout_profiles'
     
@@ -203,6 +205,7 @@ module mod_new_diag
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
     logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
+    character(len=*), optional,     intent(in)    :: comment      !< Comment for ascii file [opti.]
     
     ! --- Local variables
     real*8, allocatable  :: result(:,:,:,:)
@@ -224,7 +227,7 @@ module mod_new_diag
     
     if ( present(filename) ) then
       call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
-        filename=filename, append=append, blanks=.true.)
+        filename=filename, append=append, blanks=.true., comment=comment)
     end if
     
   end subroutine lineout_profiles

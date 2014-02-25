@@ -109,6 +109,8 @@ module exec_commands
           call help(command, ierr)
         case ( 'pol_line' )
           call pol_line(command, first_step, ierr)
+        case ( 'tor_line' )
+          call tor_line(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )
@@ -119,8 +121,8 @@ module exec_commands
           call log_parameters(0)
         case ( 'point' )
           call point(command, first_step, ierr)
-!        case ( 'qprofile' )
-!          call qprofile(command, first_step, ierr)
+        case ( 'qprofile' )
+          call qprofile(command, first_step, ierr)
         case ( 'set' )
           call set(command, ierr)
         case ( 'timesteps' )
@@ -135,7 +137,7 @@ module exec_commands
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
-          'pol_line', 'equil_params' )
+          'pol_line', 'tor_line', 'equil_params', 'qprofile' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -694,10 +696,62 @@ module exec_commands
     
     write(comment,'(a,i6.6)') 'time step #', index_start
     
-    call lineout_profiles(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,       &
-      Zstart, Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
+    call pol_lineout(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart, Zstart,    &
+      Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine pol_line
+  
+  
+  
+  !> Expressions along a toroidal line.
+  subroutine tor_line(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: R, Z, phi_start, phi_end
+    integer :: units, npts
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    if ( command%n_args /= 4 ) then
+      call report_error('average', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    R = to_float(command%args(1), ierr)
+    if ( ierr /= 0 ) return
+    
+    Z = to_float(command%args(2), ierr)
+    if ( ierr /= 0 ) return
+    
+    phi_start = to_float(command%args(3), ierr)
+    if ( ierr /= 0 ) return
+    
+    phi_end = to_float(command%args(4), ierr)
+    if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    npts  = get_int_setting('linepoints', ierr)
+    
+    write(filename,'(15a)') DIR, 'exprs_along_line_R', trim(real2str(R)), '_Z', trim(real2str(Z)), &
+      '_p', trim(real2str(phi_start)), '..', trim(real2str(phi_end)),                              &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    write(comment,'(a,i6.6)') 'time step #', index_start
+    
+    call tor_lineout(node_list, element_list, eq, units, expr_list, res1d, phi_start, phi_end, R,  &
+      Z, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
+    
+  end subroutine tor_line
   
   
   
@@ -806,6 +860,70 @@ module exec_commands
     close(i_file)
     
   end subroutine equil_params
+  
+  
+  
+  !> Output the q-profile as a function of Psi_N
+  recursive subroutine qprofile(command, first_step, ierr)
+  
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+
+    
+    ! --- Local variables
+    integer                  :: k, k2, npts
+    real*8, allocatable      :: q(:), rad(:)
+    type (type_surface_list) :: surface_list
+    character(len=1024)      :: filename, comment
+    type(t_expr_list)        :: tmp_expr_list
+    
+    ierr = 0
+    
+    if ( command%n_args /= 0 ) then
+      call report_error('average', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    npts  = get_int_setting('surfaces', ierr)
+    
+    write(filename,'(4a)') DIR, 'qprofile', trim(step_range_string(loop_min_step,loop_max_step)),  &
+      '.dat'
+    
+    ! --- Find flux surfaces and determine q-profile
+    surface_list%n_psi = npts
+    allocate( surface_list%psi_values(npts), q(npts), rad(npts) )
+    do k = 1, npts
+      surface_list%psi_values(k) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * real(k-1)/real(npts-1)
+    end do
+    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
+      eq%Z_xpoint, q, rad)
+    
+    ! --- Write out q-profile versus Psi_n
+    tmp_expr_list%n_expr = 0
+    tmp_expr_list%expr(1)%name = 'Psi_n'
+    tmp_expr_list%expr(2)%name = 'q'
+    write(comment,'(a,i6.6)') 'time step #', index_start
+    if ( allocated(res1d) ) deallocate(res1d)
+    allocate(res1d(npts-2,2))
+    do k2 = 1, npts-2
+      k = k2 + 1 ! to avoid first and last point of q-profile which often is bad
+      res1d(k2,:) = (/ get_psi_n(eq, surface_list%psi_values(k)), q(k) /)
+    end do
+    
+    call write_ascii_1d(ierr, eq, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
+      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+    
+    ! --- Clean up.
+    deallocate( surface_list%psi_values, q, rad )
+    
+  end subroutine qprofile
   
   
   

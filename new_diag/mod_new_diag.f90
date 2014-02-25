@@ -184,7 +184,7 @@ module mod_new_diag
   
   
   !> Profiles along a straight line in the poloidal plane.
-  subroutine lineout_profiles(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,   &
+  subroutine pol_lineout(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart,        &
     Zstart, Rend, Zend, nPts, ierr, filename, append, comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':lineout_profiles'
@@ -230,7 +230,58 @@ module mod_new_diag
         filename=filename, append=append, blanks=.true., comment=comment)
     end if
     
-  end subroutine lineout_profiles
+  end subroutine pol_lineout
+  
+  
+  
+  
+  
+  !> Profiles along a toroidal line.
+  subroutine tor_lineout(node_list, element_list, eq, units, expr_list, res1d, phi_start, phi_end, &
+    R, Z, nPts, ierr, filename, append, comment)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':lineout_profiles'
+    
+    ! --- Routine parameters
+    type(type_node_list),           intent(in)    :: node_list    !< List of grid nodes
+    type(type_element_list),        intent(in)    :: element_list !< List of grid elements
+    type(t_equil_state),            intent(in)    :: eq           !< Plasma equilibrium information
+    integer,                        intent(in)    :: units        !< Output in which units?
+    type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
+    real*8, allocatable,            intent(inout) :: res1d(:,:)   !< Result array
+    real*8,                         intent(in)    :: phi_start    !< Toroidal start position
+    real*8,                         intent(in)    :: phi_end      !< Toroidal end position
+    real*8,                         intent(in)    :: R            !< R-coordinate of line
+    real*8,                         intent(in)    :: Z            !< Z-coordinate of line
+    integer,                        intent(in)    :: nPts         !< Number of points along line
+    integer,                        intent(out)   :: ierr         !< Error code
+    character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
+    character(len=*), optional,     intent(in)    :: comment      !< Comment for ascii file [opti.]
+    
+    ! --- Local variables
+    real*8, allocatable  :: result(:,:,:,:)
+    type(t_pol_pos_list) :: pol_pos_list
+    type(t_tor_pos_list) :: tor_pos_list
+    
+    ierr = 0
+    
+    pol_pos_list = pol_pos(node_list, element_list, eq, R=R, Z=Z)
+    tor_pos_list = tor_pos(phistart=phi_start, phiend=phi_end, nphi=nPts)
+    
+    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call reduce_result_to_1d(ierr, result, res1d, i2=1, i3=1)
+    
+    if ( allocated(result) ) deallocate(result)
+    call cleanup_pol_pos(pol_pos_list)
+    call cleanup_tor_pos(tor_pos_list)
+    
+    if ( present(filename) ) then
+      call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                   &
+        filename=filename, append=append, blanks=.true., comment=comment)
+    end if
+    
+  end subroutine tor_lineout
   
   
   

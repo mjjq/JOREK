@@ -114,8 +114,8 @@ module exec_commands
           call loop_start(command, ierr)
         case ( 'four2d' )
           call four2d(command, ierr)
-!        case ( 'gourdon' )
-!          call gourdon(command, ierr)
+        case ( 'gourdon' )
+          call gourdon(command, first_step, ierr)
         case ( 'help' )
           call help(command, ierr)
         case ( 'pol_line' )
@@ -151,7 +151,7 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
           'pol_line', 'tor_line', 'equil_params', 'qprofile', 'fluxsurfaces', 'separatrix',        &
-          'four2d' )
+          'four2d', 'gourdon' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -678,7 +678,7 @@ module exec_commands
     ierr = 0
     
     if ( command%n_args /= 5 ) then
-      call report_error('average', 'Wrong number of parameters.', command)
+      call report_error('pol_line', 'Wrong number of parameters.', command)
       ierr = 1
       return
     end if
@@ -733,7 +733,7 @@ module exec_commands
     ierr = 0
     
     if ( command%n_args /= 4 ) then
-      call report_error('average', 'Wrong number of parameters.', command)
+      call report_error('tor_line', 'Wrong number of parameters.', command)
       ierr = 1
       return
     end if
@@ -896,7 +896,7 @@ module exec_commands
     ierr = 0
     
     if ( command%n_args /= 0 ) then
-      call report_error('average', 'Wrong number of parameters.', command)
+      call report_error('qprofile', 'Wrong number of parameters.', command)
       ierr = 1
       return
     end if
@@ -961,7 +961,7 @@ module exec_commands
     ierr = 0
     
     if ( command%n_args /= 0 ) then
-      call report_error('average', 'Wrong number of parameters.', command)
+      call report_error('fluxsurfaces', 'Wrong number of parameters.', command)
       ierr = 1
       return
     end if
@@ -1066,7 +1066,7 @@ module exec_commands
     ierr = 0
     
     if ( command%n_args /= 0 ) then
-      call report_error('average', 'Wrong number of parameters.', command)
+      call report_error('separatrix', 'Wrong number of parameters.', command)
       ierr = 1
       return
     end if
@@ -1134,7 +1134,7 @@ module exec_commands
   
   
   
-  !> Performa 2D Fourier analysis (in straight field line coordinates).
+  !> Perform a 2D Fourier analysis (in straight field line coordinates).
   subroutine four2d(command, ierr)
     
     ! --- Routine parameters
@@ -1150,7 +1150,7 @@ module exec_commands
     ierr = 0
     
     if ( command%n_args /= 0 ) then
-      call report_error('average', 'Wrong number of parameters.', command)
+      call report_error('four2d', 'Wrong number of parameters.', command)
       ierr = 1
       return
     end if
@@ -1169,6 +1169,116 @@ module exec_commands
     if ( allocated(cp) ) deallocate(cp)
     
   end subroutine four2d
+  
+  
+  
+  !> Output magnetic fields for the Gourdon code.
+  subroutine gourdon(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, npts, n_R, n_Z, n_phi, i, j, k
+    character(len=1024) :: filename
+    real*8 :: R_min, R_max, Z_min, Z_max, R_max2, Z_max2, phi_max2, fact_phi, fact_btor, fact_bpol,&
+      tmp
+    real*8, allocatable :: field(:,:,:,:)
+    type(t_pol_pos_list), save :: pol_pos_list
+    type(t_tor_pos_list), save :: tor_pos_list
+    type(t_expr_list),    save :: tmp_expr_list
+    
+    ierr = 0
+    
+    if ( command%n_args /= 10 ) then
+      call report_error('gourdon', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    R_min = to_float(command%args(1), ierr)
+    if ( ierr /= 0 ) return
+    
+    R_max = to_float(command%args(2), ierr)
+    if ( ierr /= 0 ) return
+    
+    n_R = to_int(command%args(3), ierr)
+    if ( ierr /= 0 ) return
+    
+    Z_min = to_float(command%args(4), ierr)
+    if ( ierr /= 0 ) return
+    
+    Z_max = to_float(command%args(5), ierr)
+    if ( ierr /= 0 ) return
+    
+    n_Z = to_int(command%args(6), ierr)
+    if ( ierr /= 0 ) return
+    
+    n_phi = to_int(command%args(7), ierr)
+    if ( ierr /= 0 ) return
+    
+    ! --- The following three parameters are correction factors which allow to transform the field
+    !     between different coordinate systems.
+    fact_phi = to_float(command%args(8), ierr)
+    if ( ierr /= 0 ) return
+    
+    fact_btor = to_float(command%args(9), ierr)
+    if ( ierr /= 0 ) return
+    
+    fact_bpol = to_float(command%args(10), ierr)
+    if ( ierr /= 0 ) return
+    
+    write(filename,'(3a)') DIR, 'gourdon', trim(step_range_string(index_now,index_now))
+    
+    ! --- Take into account that the last points are not included in Gourdon format!
+    R_max2   = R_min + real(n_R-1)/real(n_R) * (R_max-R_min)
+    Z_max2   = Z_min + real(n_Z-1)/real(n_Z) * (Z_max-Z_min)
+    phi_max2 = real(n_phi-1)/real(n_phi) * 2.d0 * pi         * fact_phi
+    
+    ! --- Make sure that positions outside the JOREK domain get value 0.
+    tmp = expr_outside_value
+    expr_outside_value = 0.d0
+    
+    ! --- Calculate the magnetic field components.
+    if ( first_step ) then ! (Positions remain unchanged for all time steps)
+      call create_pol_pos(pol_pos_list, ierr, node_list, element_list, eq, Rmin=R_min, Rmax=R_max2,&
+        nR=n_R-1, Zmin=Z_min, Zmax=Z_max-1, nZ=n_Z-1)
+      tor_pos_list  = tor_pos(phistart=0.d0, phiend=phi_max2, nphi=n_phi-1)
+      tmp_expr_list = exprs((/'B_tor', 'B_R  ', 'B_Z  '/), 3)
+    end if
+    call eval_expr(eq, units, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    
+    ! --- Write out the data.
+    open(122, file=filename, status='replace', action='write', form='unformatted', iostat=ierr)
+    if (ierr /= 0) then
+      write(*,*) 'ERROR in routine gourdon: Creating file "', trim(filename), '" failed.'
+      return
+    end if
+    write(122) real(n_phi), real(n_R), real(n_Z), real(3), real(1), real(n_phi)
+    write(122) (R_max+R_min)/2.d0, (Z_max+Z_min)/2.d0, (R_max-R_min)/2.d0, (Z_max-Z_min)/2.d0
+    allocate(field(3,n_R-1,n_Z-1,n_phi-1))
+    do k = 1, n_Z-1
+      do j = 1, n_R-1
+        do i = 1, 3
+          field(i,j,k,:) = result(:,j,k,i)
+        end do
+      end do
+    end do
+    do k = 0, n_phi - 1
+      write(122) field(:,:,:,k)
+    end do
+    close(122)
+    
+    ! --- Clean up.
+    expr_outside_value = tmp ! change back
+    if ( allocated(field) ) deallocate(field)
+    
+  end subroutine gourdon
   
   
   

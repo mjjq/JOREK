@@ -40,6 +40,7 @@ module mod_position
   
   !> Data structure for a poloidal position
   type t_pol_pos
+    logical            :: outside = .false. !< Outside computational domain?
     real*8             :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, s, t
     integer            :: ielm
     type(type_element) :: element
@@ -226,21 +227,23 @@ module mod_position
       present(Zmax) .and. present(nZ) ) then
       
       call alloc_pol_pos(pos_list, (/nR,nZ/))
+      !$OMP parallel do default(none) firstprivate(i,j,pos,R_out,Z_out,ierr)                       &
+      !$OMP shared(nR,nZ,node_list,element_list,pos_list,Rmin,Rmax,Zmin,Zmax) schedule(dynamic)
       do i = 1, nR
         do j = 1, nZ
           pos   => pos_list%pos(i,j)
-          pos%R = Rstart + (Rend-Rstart) * real(i-1)/real(nR-1)
-          pos%Z = Zstart + (Zend-Zstart) * real(j-1)/real(nZ-1)
+          pos%R = Rmin + (Rmax-Rmin) * real(i-1)/real(nR-1)
+          pos%Z = Rmin + (Zmax-Zmin) * real(j-1)/real(nZ-1)
           call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           if ( ierr /= 0 ) then
-            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
-            exit
+            pos%outside = .true.
+          else
+            call fill_pol_pos(pos, node_list, element_list, ierr)
           end if
-          call fill_pol_pos(pos, node_list, element_list, ierr)
-          if ( ierr /= 0 ) exit
         end do
       end do
+      !$OMP end parallel do
       
     ! --- Equidistant points along a straight line in R and Z.
     else if ( present(Rstart) .and. present(Rend) .and. present(Zstart) .and. present(Zend) .and.  &

@@ -50,6 +50,15 @@ module mod_expression
   
   
   
+  ! --- Externally visible variables.
+  !> Set expressions to this value for positions located outside the JOREK domain. This value may
+  !! be changed by programs using the new_diag package -- this is not a constant.
+  real*8, save :: expr_outside_value = 0.d0 / 0.d0
+  
+  
+  
+  
+  
   !> Datatype containing information on a single expression.
   type :: t_expr
     character(len=LEN_NAME)  :: name  !< Short name for the expression
@@ -422,6 +431,11 @@ module mod_expression
     loop_pol1: do ipolpos = 1, pol_pos_list%n_pos(1)
       loop_pol2: do jpolpos = 1, pol_pos_list%n_pos(2)
         pol_pos => pol_pos_list%pos(ipolpos,jpolpos)
+        
+        if ( pol_pos%outside ) then
+          result(:, ipolpos, jpolpos, :) = expr_outside_value
+          cycle
+        end if
         
         ! --- Poloidal Coordinates and Basis Functions
         R    = pol_pos%R

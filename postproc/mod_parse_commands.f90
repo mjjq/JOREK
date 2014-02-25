@@ -1,5 +1,4 @@
-!> Module for reading and parsing a command
-!! (used by jorek2_postproc)
+!> Module for reading and parsing a command (used by jorek2_postproc)
 module parse_commands
 
   use convert_character,    only: lower_case

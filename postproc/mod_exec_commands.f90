@@ -1,4 +1,4 @@
-!> Module for execution of user commands (part of jorek2_postproc)
+!> Module for execution of user commands (used by jorek2_postproc)
 module exec_commands
   
   use constants
@@ -22,7 +22,7 @@ module exec_commands
   
   
   
-  character(len=11), parameter, private :: DIR = './postproc/'
+  character(len=11), parameter, private :: DIR = './postproc/' !< All output goes here!
   
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
   integer, parameter :: LOOP_MODE   = 2 !< Mode started by 'for' and ended by 'done' commands
@@ -37,9 +37,13 @@ module exec_commands
   logical,             private, save :: input_loaded  = .false. !< Has an input file been loaded?
   logical,             private, save :: step_imported = .false. !< Has a restart file been imported?
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
+  logical,             private, save :: exprs_selected= .false. !< Expressions selected?
+  logical,             private, save :: verbose
+  logical,             private, save :: debug
   type(t_equil_state), private, save :: eq !< Equilibrium state; updated when time step is loaded
   type(t_expr_list),   private, save :: expr_list
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:)
+  complex*16, allocatable, private, save :: cp(:,:,:,:)
   
   
   
@@ -87,8 +91,13 @@ module exec_commands
         return
       end if
       
-      write(*,*)
-      write(*,*) '- Executing "'//trim(command%args(0))//'"'
+      verbose = get_log_setting('verbose', ierr)
+      debug   = get_log_setting('debug', ierr)
+      
+      if ( verbose .or. debug ) then
+        write(*,*)
+        write(*,*) '- Executing "'//trim(command%args(0))//'"'
+      end if
       
       select case ( trim(command%args(0)) )
         case ( 'average' )
@@ -99,10 +108,12 @@ module exec_commands
           call equil_params(command, first_step, ierr)
         case ( 'expressions' )
           call expressions(command, ierr)
-!        case ( 'fluxsurfaces' )
-!          call fluxsurfaces(command, ierr)
+        case ( 'fluxsurfaces' )
+          call fluxsurfaces(command, ierr)
         case ( 'for' )
           call loop_start(command, ierr)
+        case ( 'four2d' )
+          call four2d(command, ierr)
 !        case ( 'gourdon' )
 !          call gourdon(command, ierr)
         case ( 'help' )
@@ -123,6 +134,8 @@ module exec_commands
           call point(command, first_step, ierr)
         case ( 'qprofile' )
           call qprofile(command, first_step, ierr)
+        case ( 'separatrix' )
+          call separatrix(command, ierr)
         case ( 'set' )
           call set(command, ierr)
         case ( 'timesteps' )
@@ -137,7 +150,8 @@ module exec_commands
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
-          'pol_line', 'tor_line', 'equil_params', 'qprofile' )
+          'pol_line', 'tor_line', 'equil_params', 'qprofile', 'fluxsurfaces', 'separatrix',        &
+          'four2d' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -924,6 +938,237 @@ module exec_commands
     deallocate( surface_list%psi_values, q, rad )
     
   end subroutine qprofile
+  
+  
+  
+  !> Output the flux surfaces.
+  recursive subroutine fluxsurfaces(command, ierr)
+  
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+
+    
+    ! --- Local variables
+    integer                  :: i, j, i_elm, npts, ip, nplot, i_file
+    type (type_surface_list) :: surface_list
+    character(len=1024)      :: filename, comment
+    type(t_expr_list)        :: tmp_expr_list
+    real*8                   :: psi_min, psi_max, psi_min2, psi_max2, ss1, dss1, ss2, dss2, tt1,   &
+      dtt1, tt2, dtt2, u, si, dsi, ti, dti, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss,&
+      Z_tt
+    
+    ierr = 0
+    
+    if ( command%n_args /= 0 ) then
+      call report_error('average', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    npts  = get_int_setting('surfaces', ierr)
+    
+    write(filename,'(4a)') DIR, 'fluxsurfaces', trim(step_range_string(index_start,index_start)),  &
+      '.dat'
+    
+    ! --- Find minimum and maximum psi values
+    psi_min=+1.d99
+    psi_max=-1.d99
+    do i_elm = 1, element_list%n_elements
+      call psi_minmax(node_list, element_list, i_elm, psi_min2, psi_max2)
+      psi_min = min(psi_min,psi_min2)
+      psi_max = max(psi_max,psi_max2)
+    end do
+    psi_min = psi_min + 0.001*(psi_max-psi_min)
+    psi_max = psi_max - 0.001*(psi_max-psi_min)
+    
+    ! --- Find flux surfaces
+    surface_list%n_psi = npts
+    allocate( surface_list%psi_values(npts) )
+    do i = 1, npts
+      surface_list%psi_values(i) = psi_min + (psi_max-psi_min) * real(i-1)/real(npts-1)
+    end do
+    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    
+    ! --- Write out flux surfaces
+    nplot  = 5
+    i_file = 111
+    call open_ascii_file(ierr, i_file, filename, .false.)
+    do i = 1, npts
+      
+      ! --- Loop over all segments of this flux surface
+      do j=1,surface_list%flux_surfaces(i)%n_pieces
+        
+        ! --- Bezier element, in which the current flux surface segment is located
+        i_elm = surface_list%flux_surfaces(i)%elm(j)
+        ss1  = surface_list%flux_surfaces(i)%s(1,j)
+        dss1 = surface_list%flux_surfaces(i)%s(2,j)
+        ss2  = surface_list%flux_surfaces(i)%s(3,j)
+        dss2 = surface_list%flux_surfaces(i)%s(4,j)
+        
+        tt1  = surface_list%flux_surfaces(i)%t(1,j)
+        dtt1 = surface_list%flux_surfaces(i)%t(2,j)
+        tt2  = surface_list%flux_surfaces(i)%t(3,j)
+        dtt2 = surface_list%flux_surfaces(i)%t(4,j)
+        
+        ! --- Loop over nplot points in a flux surface segment
+        do ip = 1, nplot
+          u = -1. + 2.*float(ip-1)/float(nplot-1)
+          
+          ! --- Determine s and t values of the current point inside element i_elm
+          call CUB1D(ss1, dss1, ss2, dss2, u, si, dsi)
+          call CUB1D(tt1, dtt1, tt2, dtt2, u, ti, dti)
+          
+          ! --- Determine (R,Z)-coordinates of the current point on the current flux surface
+          call interp_RZ(node_list, element_list, i_elm, si, ti, R, R_s, R_t, R_st, R_ss, R_tt, &
+            Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+            
+          ! --- Write out the (R,Z)-coordinates
+          write(i_file,'(2ES16.7)') R, Z
+        end do
+        
+        write(i_file,*)
+        write(i_file,*)
+      
+      end do
+      
+    end do
+    
+    close(i_file)
+    
+    ! --- Clean up.
+    if ( allocated(surface_list%psi_values) ) deallocate( surface_list%psi_values)
+    
+  end subroutine fluxsurfaces
+  
+  
+  
+  !> Output the separatrix.
+  recursive subroutine separatrix(command, ierr)
+  
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+
+    
+    ! --- Local variables
+    integer                  :: i, j, i_elm, npts, ip, nplot, i_file
+    type (type_surface_list) :: surface_list
+    character(len=1024)      :: filename, comment
+    type(t_expr_list)        :: tmp_expr_list
+    real*8                   :: psi_min, psi_max, psi_min2, psi_max2, ss1, dss1, ss2, dss2, tt1,   &
+      dtt1, tt2, dtt2, u, si, dsi, ti, dti, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss,&
+      Z_tt
+    
+    ierr = 0
+    
+    if ( command%n_args /= 0 ) then
+      call report_error('average', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    write(filename,'(4a)') DIR, 'separatrix', trim(step_range_string(index_start,index_start)),    &
+      '.dat'
+    
+    ! --- Find flux surfaces
+    npts = 1
+    surface_list%n_psi = 1
+    allocate( surface_list%psi_values(1) )
+    surface_list%psi_values(1) = eq%psi_bnd
+    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    
+    ! --- Write out flux surfaces
+    nplot  = 5
+    i_file = 111
+    call open_ascii_file(ierr, i_file, filename, .false.)
+    i = 1
+    ! --- Loop over all segments of this flux surface
+    do j=1,surface_list%flux_surfaces(i)%n_pieces
+      
+      ! --- Bezier element, in which the current flux surface segment is located
+      i_elm = surface_list%flux_surfaces(i)%elm(j)
+      ss1  = surface_list%flux_surfaces(i)%s(1,j)
+      dss1 = surface_list%flux_surfaces(i)%s(2,j)
+      ss2  = surface_list%flux_surfaces(i)%s(3,j)
+      dss2 = surface_list%flux_surfaces(i)%s(4,j)
+      
+      tt1  = surface_list%flux_surfaces(i)%t(1,j)
+      dtt1 = surface_list%flux_surfaces(i)%t(2,j)
+      tt2  = surface_list%flux_surfaces(i)%t(3,j)
+      dtt2 = surface_list%flux_surfaces(i)%t(4,j)
+      
+      ! --- Loop over nplot points in a flux surface segment
+      do ip = 1, nplot
+        u = -1. + 2.*float(ip-1)/float(nplot-1)
+        
+        ! --- Determine s and t values of the current point inside element i_elm
+        call CUB1D(ss1, dss1, ss2, dss2, u, si, dsi)
+        call CUB1D(tt1, dtt1, tt2, dtt2, u, ti, dti)
+        
+        ! --- Determine (R,Z)-coordinates of the current point on the current flux surface
+        call interp_RZ(node_list, element_list, i_elm, si, ti, R, R_s, R_t, R_st, R_ss, R_tt,      &
+          Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+          
+        ! --- Write out the (R,Z)-coordinates
+        write(i_file,'(2ES16.7)') R, Z
+      end do
+      
+      write(i_file,*)
+      write(i_file,*)
+    
+    end do
+    
+    close(i_file)
+    
+    ! --- Clean up.
+    if ( allocated(surface_list%psi_values) ) deallocate( surface_list%psi_values)
+    
+  end subroutine separatrix
+  
+  
+  
+  !> Performa 2D Fourier analysis (in straight field line coordinates).
+  subroutine four2d(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, npts
+    character(len=1024) :: filename_start
+    type(t_pol_pos_list), save :: pol_pos_list
+    type(t_tor_pos_list), save :: tor_pos_list
+    
+    ierr = 0
+    
+    if ( command%n_args /= 0 ) then
+      call report_error('average', 'Wrong number of parameters.', command)
+      ierr = 1
+      return
+    end if
+    
+    call check_step_imported(ierr)
+    if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    npts  = get_int_setting('surfaces', ierr)
+    
+    write(filename_start,'(3a)') DIR, 'exprs_four2d', trim(step_range_string(index_now,index_now))
+    
+    call fourier_analysis(node_list, element_list, eq, units, expr_list, cp, npts, ierr,           &
+      filename_start, OUTP_ABS_VALUE)
+    
+    if ( allocated(cp) ) deallocate(cp)
+    
+  end subroutine four2d
   
   
   

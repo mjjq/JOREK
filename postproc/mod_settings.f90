@@ -1,5 +1,4 @@
-!> Module for settings which can be modified with the 'set' command
-!! (used by jorek2_postproc)
+!> Module for settings which can be modified with the 'set' command (used by jorek2_postproc)
 module settings
   
   use convert_character
@@ -19,7 +18,8 @@ module settings
   
   
   private
-  public set_setting, get_setting, get_int_setting, get_float_setting, print_settings
+  public set_setting, get_setting, get_int_setting, get_float_setting, get_log_setting,            &
+    print_settings
   
   
   
@@ -121,7 +121,24 @@ module settings
     get_float_setting = to_float(value, error)
   end function get_float_setting
   
-
+  
+  
+  !> Returns the logical value of a setting
+  real*8 function get_log_setting(name, error)
+    
+    ! --- Routine parameters
+    character(len=*),   intent(in)     :: name     !< Name of requested setting
+    integer,            intent(out)    :: error   !< Error flag
+    
+    character(len=1024) :: value
+    
+    value = get_setting(name, error)
+    if ( error /= 0 ) return
+    
+    get_log_setting = to_log(value, error)
+  end function get_log_setting
+  
+  
   
   !> List all existing settings
   subroutine print_settings()

@@ -1,9 +1,6 @@
-!> Program for post-processing data written out as JOREK restart files (jorekXXXXX.rst).
+!> Program for post-processing jorek data.
 !!
-!! * Interactive use: Call './jorek2_postproc' in your run folder. You will get some
-!!   'getting started' information. Enter 'help' to see a list of available commands
-!!   or 'help <command>' for command-specific usage information.
-!! * Script: Run './jorek2_postproc < script'
+!! Documentation at http://jorek.eu/wiki
 program jorek2_postproc
   
   use nodes_elements, only: node_list, element_list
@@ -31,7 +28,7 @@ program jorek2_postproc
   call preset_parameters()
   
   ! --- Preset some parameters
-  call set_setting('units',           '0',     ierr) ! JOREK units by default
+  call set_setting('units',           '0',     ierr) ! JOREK units ("set units 1" for SI-units)
   call set_setting('linepoints',      '200',   ierr)
   call set_setting('tor_points',      '50',    ierr)
   call set_setting('surfaces',        '100',   ierr)

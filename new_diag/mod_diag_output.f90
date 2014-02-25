@@ -21,7 +21,7 @@ module mod_diag_output
   
   
   public
-  private write_ascii_header, open_ascii_file, close_file, open_vtk_file
+  private write_ascii_header, close_file, open_vtk_file
   
   
   

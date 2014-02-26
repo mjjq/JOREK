@@ -45,6 +45,10 @@ module mod_position
     integer            :: ielm
     type(type_element) :: element
     type(type_node)    :: nodes(n_vertex_max)
+    ! --- The following quantities will only be available in certain cases of poloidal positions
+    real*8             :: theta_star !< Straight field line angle (for flux surfaces)
+    real*8             :: r_minor    !< Minor radius from A = r_minor^2 pi (for flux surfaces)
+    real*8             :: length     !< Length along a line (for line)
   end type t_pol_pos
   
   !> Data structure for a list of poloidal positions
@@ -113,11 +117,21 @@ module mod_position
     type(t_pol_pos_list), intent(inout) :: pos_list
     integer,              intent(in)    :: n_pos(2)
     
+    integer :: i, j
+    
     call cleanup_pol_pos(pos_list)
     
     pos_list%n_pos(:) = n_pos(:)
     
     allocate( pos_list%pos(n_pos(1),n_pos(2)) )
+    
+    do j = 1, n_pos(2)
+      do i = 1, n_pos(1)
+        pos_list%pos(i,j)%theta_star = 0.d0/0.d0
+        pos_list%pos(i,j)%length     = 0.d0/0.d0
+        pos_list%pos(i,j)%r_minor    = 0.d0/0.d0
+      end do
+    end do
     
   end subroutine alloc_pol_pos
   
@@ -194,8 +208,9 @@ module mod_position
     ! --- Local variables
     type(t_theta_mapping) :: mapping
     type(t_pol_pos), pointer :: pos
-    real*8  :: R_out,Z_out
-    integer :: i, j
+    real*8  :: R_out, Z_out, hh, gx, gy, gg, ax, ay
+    integer :: i, j, full_length
+    real*8, allocatable :: surface(:) !< Poloidal surface inside flux surface (for r_minor)
     
     ierr = 0
     
@@ -250,10 +265,12 @@ module mod_position
       present(n) ) then
       
       call alloc_pol_pos(pos_list, (/1,n/))
+      full_length = sqrt( (Rend-Rstart)**2 + (Zend-Zstart)**2 )
       do i = 1, n
         pos   => pos_list%pos(1,i)
         pos%R = Rstart + (Rend-Rstart) * real(i-1)/real(n-1)
         pos%Z = Zstart + (Zend-Zstart) * real(i-1)/real(n-1)
+        pos%length = full_length * real(i-1)/real(n-1)
         call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,  &
           ierr)
         if ( ierr /= 0 ) then
@@ -294,6 +311,8 @@ module mod_position
         return
       end if 
       
+      allocate(surface(nPsiN))
+      surface(:) = 0.d0
       call alloc_pol_pos(pos_list, (/nTht,nPsiN/))
       pos_list%full_turn = .true.
       
@@ -302,6 +321,7 @@ module mod_position
           pos   => pos_list%pos(j,i)
           pos%R = mapping%rre(i,j-1)
           pos%Z = mapping%zze(i,j-1)
+          pos%theta_star = 2.d0 * PI * real(j-1) / real(nTht-1) !######### check if nTht or nTht-1
           call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           if ( ierr /= 0 ) then
@@ -310,10 +330,29 @@ module mod_position
           end if
           call fill_pol_pos(pos, node_list, element_list, ierr)
           if ( ierr /= 0 ) exit
+          
+          ! --- Calculate poloidal surface inside flux surface (for r_minor)
+          if ( j /= 0 ) then
+            gx = pos_list%pos(j,i)%R - pos_list%pos(j-1,i)%R
+            gy = pos_list%pos(j,i)%Z - pos_list%pos(j-1,i)%Z
+            gg = sqrt( gx**2 + gy**2 )
+            ax = pos_list%pos(j,i)%R - eq%R_axis
+            ay = pos_list%pos(j,i)%Z - eq%Z_axis
+            hh = ( gy * ax - gx * ay ) / gg
+            surface(i) = surface(i) + hh * gg / 2.d0
+          end if
+        end do
+      end do
+      
+      ! --- Fill in r_minor
+      do j = 1, nTht
+        do i = 1, nPsiN
+          pos_list%pos(j,i)%r_minor = sqrt( surface(i) / PI )
         end do
       end do
       
       call cleanup_mapping(mapping)
+      deallocate(surface)
       
     ! --- Several (closed) flux surfaces.
     else if ( present(nPsiN) .and. present(nTht) ) then

@@ -97,6 +97,9 @@ module mod_expression
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
     call add(exprs_all, 'phi         ', 'Cylindrical Coordinate phi                            ')
     call add(exprs_all, 'theta       ', 'Poloidal Angle With Respect to Magnetic Axis          ')
+    call add(exprs_all, 'theta_star  ', 'Poloidal Straight Field Line Angle (for flux surfaces)')
+    call add(exprs_all, 'length      ', 'Length Along Poloidal Line (for poloidal lines)       ')
+    call add(exprs_all, 'r_minor     ', 'Minor Radius From A = r_minor^2 pi (for flux surfaces)')
     call add(exprs_all, 'x           ', 'Cartesian Coordinate x                                ')
     call add(exprs_all, 'y           ', 'Cartesian Coordinate y                                ')
     call add(exprs_all, 'z           ', 'Cartesian Coordinate z (== Cylindrical Z)             ')
@@ -918,6 +921,15 @@ module mod_expression
                 
               case ( 'theta' )
                 res = theta
+                
+              case ( 'theta_star' )
+                res = pol_pos%theta_star
+                
+              case ( 'length' )
+                res = pol_pos%length
+                
+              case ( 'r_minor' )
+                res = pol_pos%r_minor
                 
               case ( 'xjac' )
                 res = xjac

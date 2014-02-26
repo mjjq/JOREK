@@ -10,11 +10,13 @@ module exec_commands
   use boundary
   use basis_at_gaussian
   use mod_new_diag
+  use domains
   use parse_commands
   use settings
   use convert_character
   use postproc_help
-  use domains
+  
+  
   
   
   
@@ -22,7 +24,8 @@ module exec_commands
   
   
   
-  character(len=11), parameter, private :: DIR = './postproc/' !< All output goes here!
+  
+  character(len=11), parameter, private :: DIR = './postproc/' !< Output goes into this directory!
   
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
   integer, parameter :: LOOP_MODE   = 2 !< Mode started by 'for' and ended by 'done' commands
@@ -37,7 +40,6 @@ module exec_commands
   logical,             private, save :: input_loaded  = .false. !< Has an input file been loaded?
   logical,             private, save :: step_imported = .false. !< Has a restart file been imported?
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
-  logical,             private, save :: exprs_selected= .false. !< Expressions selected?
   logical,             private, save :: verbose
   logical,             private, save :: debug
   type(t_equil_state), private, save :: eq !< Equilibrium state; updated when time step is loaded
@@ -47,8 +49,12 @@ module exec_commands
   
   
   
+  
+  
   private
-  public exec_command, general_help, specific_help
+  public exec_command, general_help, specific_help, clean_up
+  
+  
   
   
   
@@ -56,7 +62,11 @@ module exec_commands
   
   
   
+  
+  
   contains
+  
+  
   
   
   
@@ -80,6 +90,9 @@ module exec_commands
       call print_command(command)
       write(*,*)
     end if
+    
+    ! --- Free shared module arrays
+    call clean_up()
     
     ! --- In normal mode, some commands are directly executed
     if ( exec_mode == NORMAL_MODE ) then
@@ -118,6 +131,8 @@ module exec_commands
           call gourdon(command, first_step, ierr)
         case ( 'help' )
           call help(command, ierr)
+        case ( 'jorek-units' )
+          call select_jorek_units(command, ierr)
         case ( 'pol_line' )
           call pol_line(command, first_step, ierr)
         case ( 'tor_line' )
@@ -138,6 +153,8 @@ module exec_commands
           call separatrix(command, ierr)
         case ( 'set' )
           call set(command, ierr)
+        case ( 'si-units' )
+          call select_si_units(command, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -151,7 +168,7 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
           'pol_line', 'tor_line', 'equil_params', 'qprofile', 'fluxsurfaces', 'separatrix',        &
-          'four2d', 'gourdon' )
+          'four2d', 'gourdon', 'jorek-units', 'si-units' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -165,6 +182,8 @@ module exec_commands
     end if
     
   end subroutine exec_command
+  
+  
   
   
   
@@ -201,11 +220,12 @@ module exec_commands
     ! --- Locate magnetic axis and X-point.
     call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, eq)
     
-    t_now = t_start
-    
+    t_now         = t_start
     step_imported = .true.
     
   end subroutine load_step
+  
+  
   
   
   
@@ -223,11 +243,11 @@ module exec_commands
     
     ierr = 0
     
-    !### check param count
+    ! --- Some checks.
+    call check_args(command%n_args,ierr,3,5);  if ( ierr /= 0 ) return
     
     if ( trim(command%args(1)) /= 'step' ) then
-      write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-      call specific_help('for')
+      call report_error('for', 'Wrong syntax.', command)
       return
     end if
     
@@ -270,6 +290,8 @@ module exec_commands
   
   
   
+  
+  
   !> Is called upon the 'done' command of a for loop and executes all commands enclosed in the loop.
   subroutine loop_end(command, ierr)
     
@@ -302,6 +324,7 @@ module exec_commands
         if ( ierr /= 0 ) then
           write(*,*) 'ERROR executing the following command (ignoring it):'
           call print_command(command_queue(jcmd))
+          call specific_help(command_queue(jcmd)%args(0))
           ierr = 0
         end if
         
@@ -318,6 +341,8 @@ module exec_commands
     n_queued_commands = 0
     
   end subroutine loop_end
+  
+  
   
   
   
@@ -343,6 +368,8 @@ module exec_commands
   
   
   
+  
+  
   !> Retrieve a command from the command queue (currently not used!)
   subroutine get_from_command_queue(command, ierr)
     
@@ -363,6 +390,21 @@ module exec_commands
     command_queue(1:n_queued_commands) = command_queue(2:n_queued_commands+1)
     
   end subroutine get_from_command_queue
+  
+  
+  
+  
+  
+  !> Clean up global module arrays.
+  subroutine clean_up()
+    if ( allocated(result) ) deallocate(result)
+    if ( allocated(res2d)  ) deallocate(res2d)
+    if ( allocated(res1d)  ) deallocate(res1d)
+    if ( allocated(res0d)  ) deallocate(res0d)
+    if ( allocated(cp)     ) deallocate(cp)
+  end subroutine clean_up
+  
+  
   
   
   
@@ -394,6 +436,8 @@ module exec_commands
   
   
   
+  
+  
   !> List all existing restart files
   subroutine timesteps()
     
@@ -413,6 +457,8 @@ module exec_commands
   
   
   
+  
+  
   !> Load a specific namelist input file
   subroutine load_namelist(command, ierr)
     
@@ -428,11 +474,8 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 1 ) then
-      call report_error('namelist', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
+    ! --- Some checks.
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
     
     filename = trim(command%args(1))
     inquire (file=filename, exist=file_exists)
@@ -451,12 +494,13 @@ module exec_commands
   
   
   
+  
+  
   !> Check if a restart file has already been imported
   subroutine check_step_imported(ierr)
     integer, intent(out) :: ierr !< Error flag
     
     ierr = 0
-  
     if ( .not. step_imported ) then
       ierr = 1
       write(*,*) 'ERROR: No restart file has been imported yet. Use the "for" loop:'
@@ -464,6 +508,43 @@ module exec_commands
     end if
     
   end subroutine check_step_imported
+  
+  
+  
+  
+  
+  !> Check if expressions have been selected.
+  subroutine check_exprs_selected(ierr)
+    integer, intent(out) :: ierr !< Error flag
+    
+    ierr = 0
+    if ( expr_list%n_expr <= 0 ) then
+      ierr = 1
+      write(*,*) 'ERROR: No physical expressions selected yet. Use command "expressions":'
+      call specific_help('expressions')
+    end if
+    
+  end subroutine check_exprs_selected
+  
+  
+  
+  
+  
+  !> Check number of arguments correct.
+  subroutine check_args(nargs,ierr,ok1,ok2,ok3,ok4)
+    integer, intent(in)              :: nargs               !< Number of arguments.
+    integer, intent(inout)           :: ierr                !< Error code.
+    integer, intent(in),    optional :: ok1, ok2, ok3, ok4
+    
+    ierr = 1
+    if ( present(ok1) .and. (nargs==ok1) ) ierr = 0
+    if ( present(ok2) .and. (nargs==ok2) ) ierr = 0
+    if ( present(ok3) .and. (nargs==ok3) ) ierr = 0
+    if ( present(ok4) .and. (nargs==ok4) ) ierr = 0
+    if ( ierr /= 0 ) write(*,*) 'ERROR: Wrong number of parameters for command.'
+  end subroutine check_args
+  
+  
   
   
   
@@ -491,6 +572,8 @@ module exec_commands
   
   
   
+  
+  
   !> Report an error message.
   subroutine report_error(routine, message, command)
     
@@ -506,6 +589,8 @@ module exec_commands
     if ( present(command) ) call specific_help(trim(command%args(0)))
     
   end subroutine report_error
+  
+  
   
   
   
@@ -525,12 +610,13 @@ module exec_commands
     else
       
       expr_list = exprs(command%args(1:command%n_args), command%n_args)
-      
       call print_exprs(expr_list,.true.)
       
     end if
     
   end subroutine expressions
+  
+  
   
   
   
@@ -546,16 +632,13 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 1 ) then
-      call report_error('mark_coords', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
-    
-    n_coord = to_int(command%args(1), ierr)
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    n_coord = to_int(command%args(1), ierr); if ( ierr /= 0 ) return
     expr_list%n_coord = n_coord
     
   end subroutine mark_coords
+  
+  
   
   
   
@@ -574,6 +657,8 @@ module exec_commands
   
   
   
+  
+  
   !> Evaluate expressions at a single point.
   subroutine point(command, first_step, ierr)
     
@@ -589,24 +674,15 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 3 ) then
-      call report_error('point', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
+    ! --- Some checks
+    call check_args(command%n_args,ierr,3);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
-    
-    R = to_float(command%args(1), ierr)
-    if ( ierr /= 0 ) return
-    
-    Z = to_float(command%args(2), ierr)
-    if ( ierr /= 0 ) return
-    
-    phi = to_float(command%args(3), ierr)
-    if ( ierr /= 0 ) return
-    
+    ! --- Preparation
+    R     = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Z     = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    phi   = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
     units = get_int_setting('units', ierr)
     
     write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',    &
@@ -624,6 +700,8 @@ module exec_commands
   
   
   
+  
+  
   !> Evaluate expressions on the midplane.
   subroutine midplane(command, first_step, ierr)
     
@@ -638,14 +716,10 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 0 ) then
-      call report_error('midplane', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
-    
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('linepoints', ierr)
@@ -659,6 +733,8 @@ module exec_commands
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane
+  
+  
   
   
   
@@ -677,32 +753,19 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 5 ) then
-      call report_error('pol_line', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
+    ! --- Some checks
+    call check_args(command%n_args,ierr,5);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
-    
-    Rstart = to_float(command%args(1), ierr)
-    if ( ierr /= 0 ) return
-    
-    Zstart = to_float(command%args(2), ierr)
-    if ( ierr /= 0 ) return
-    
-    Rend = to_float(command%args(3), ierr)
-    if ( ierr /= 0 ) return
-    
-    Zend = to_float(command%args(4), ierr)
-    if ( ierr /= 0 ) return
-    
-    phi = to_float(command%args(5), ierr)
-    if ( ierr /= 0 ) return
-    
-    units = get_int_setting('units', ierr)
-    npts  = get_int_setting('linepoints', ierr)
+    ! --- Preparation
+    Rstart = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Zstart = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    Rend   = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
+    Zend   = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    phi    = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    units  = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    npts   = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
     
     write(filename,'(15a)') DIR, 'exprs_along_line_R', trim(real2str(Rstart)), '..',               &
       trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',        &
@@ -714,6 +777,8 @@ module exec_commands
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine pol_line
+  
+  
   
   
   
@@ -732,29 +797,18 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 4 ) then
-      call report_error('tor_line', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
+    ! --- Some checks
+    call check_args(command%n_args,ierr,4);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
-    
-    R = to_float(command%args(1), ierr)
-    if ( ierr /= 0 ) return
-    
-    Z = to_float(command%args(2), ierr)
-    if ( ierr /= 0 ) return
-    
-    phi_start = to_float(command%args(3), ierr)
-    if ( ierr /= 0 ) return
-    
-    phi_end = to_float(command%args(4), ierr)
-    if ( ierr /= 0 ) return
-    
-    units = get_int_setting('units', ierr)
-    npts  = get_int_setting('linepoints', ierr)
+    ! --- Preparation
+    R         = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Z         = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    phi_start = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
+    phi_end   = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    npts      = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
     
     write(filename,'(15a)') DIR, 'exprs_along_line_R', trim(real2str(R)), '_Z', trim(real2str(Z)), &
       '_p', trim(real2str(phi_start)), '..', trim(real2str(phi_end)),                              &
@@ -766,6 +820,8 @@ module exec_commands
       Z, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine tor_line
+  
+  
   
   
   
@@ -785,14 +841,10 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 0 ) then
-      call report_error('average', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
-    
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('surfaces', ierr)
@@ -816,6 +868,8 @@ module exec_commands
   
   
   
+  
+  
   !> Output equilibrium information.
   subroutine equil_params(command, first_step, ierr)
     
@@ -831,16 +885,11 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 0 ) then
-      call report_error('equil_params', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
-    
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
     
     write(filename,'(4a)') DIR, 'equil_params',                                                    &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
@@ -877,6 +926,8 @@ module exec_commands
   
   
   
+  
+  
   !> Output the q-profile as a function of Psi_N
   recursive subroutine qprofile(command, first_step, ierr)
   
@@ -895,14 +946,9 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 0 ) then
-      call report_error('qprofile', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
-    
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
     
     npts  = get_int_setting('surfaces', ierr)
     
@@ -924,7 +970,6 @@ module exec_commands
     tmp_expr_list%expr(1)%name = 'Psi_n'
     tmp_expr_list%expr(2)%name = 'q'
     write(comment,'(a,i6.6)') 'time step #', index_start
-    if ( allocated(res1d) ) deallocate(res1d)
     allocate(res1d(npts-2,2))
     do k2 = 1, npts-2
       k = k2 + 1 ! to avoid first and last point of q-profile which often is bad
@@ -935,9 +980,14 @@ module exec_commands
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
     
     ! --- Clean up.
-    deallocate( surface_list%psi_values, q, rad )
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    if ( allocated(q)                          ) deallocate(q)
+    if ( allocated(rad)                        ) deallocate(rad)
     
   end subroutine qprofile
+  
+  
   
   
   
@@ -947,7 +997,7 @@ module exec_commands
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     integer,            intent(out) :: ierr        !< Error flag
-
+    
     
     ! --- Local variables
     integer                  :: i, j, i_elm, npts, ip, nplot, i_file
@@ -960,14 +1010,9 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 0 ) then
-      call report_error('fluxsurfaces', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
-    
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
     
     npts  = get_int_setting('surfaces', ierr)
     
@@ -1040,9 +1085,12 @@ module exec_commands
     close(i_file)
     
     ! --- Clean up.
-    if ( allocated(surface_list%psi_values) ) deallocate( surface_list%psi_values)
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
     
   end subroutine fluxsurfaces
+  
+  
   
   
   
@@ -1052,7 +1100,6 @@ module exec_commands
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     integer,            intent(out) :: ierr        !< Error flag
-
     
     ! --- Local variables
     integer                  :: i, j, i_elm, npts, ip, nplot, i_file
@@ -1065,14 +1112,9 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 0 ) then
-      call report_error('separatrix', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
-    
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
     
     write(filename,'(4a)') DIR, 'separatrix', trim(step_range_string(index_start,index_start)),    &
       '.dat'
@@ -1128,9 +1170,12 @@ module exec_commands
     close(i_file)
     
     ! --- Clean up.
-    if ( allocated(surface_list%psi_values) ) deallocate( surface_list%psi_values)
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
     
   end subroutine separatrix
+  
+  
   
   
   
@@ -1149,14 +1194,10 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 0 ) then
-      call report_error('four2d', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
-    
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('surfaces', ierr)
@@ -1166,13 +1207,13 @@ module exec_commands
     call fourier_analysis(node_list, element_list, eq, units, expr_list, cp, npts, ierr,           &
       filename_start, OUTP_ABS_VALUE)
     
-    if ( allocated(cp) ) deallocate(cp)
-    
   end subroutine four2d
   
   
   
-  !> Output magnetic fields for the Gourdon code.
+  
+  
+  !> Output magnetic field for the Gourdon code.
   subroutine gourdon(command, first_step, ierr)
     
     ! --- Routine parameters
@@ -1192,46 +1233,23 @@ module exec_commands
     
     ierr = 0
     
-    if ( command%n_args /= 10 ) then
-      call report_error('gourdon', 'Wrong number of parameters.', command)
-      ierr = 1
-      return
-    end if
+    ! --- Some checks
+    call check_args(command%n_args,ierr,10); if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
     
-    call check_step_imported(ierr)
-    if ( ierr /= 0 ) return
-    
-    R_min = to_float(command%args(1), ierr)
-    if ( ierr /= 0 ) return
-    
-    R_max = to_float(command%args(2), ierr)
-    if ( ierr /= 0 ) return
-    
-    n_R = to_int(command%args(3), ierr)
-    if ( ierr /= 0 ) return
-    
-    Z_min = to_float(command%args(4), ierr)
-    if ( ierr /= 0 ) return
-    
-    Z_max = to_float(command%args(5), ierr)
-    if ( ierr /= 0 ) return
-    
-    n_Z = to_int(command%args(6), ierr)
-    if ( ierr /= 0 ) return
-    
-    n_phi = to_int(command%args(7), ierr)
-    if ( ierr /= 0 ) return
-    
-    ! --- The following three parameters are correction factors which allow to transform the field
-    !     between different coordinate systems.
-    fact_phi = to_float(command%args(8), ierr)
-    if ( ierr /= 0 ) return
-    
-    fact_btor = to_float(command%args(9), ierr)
-    if ( ierr /= 0 ) return
-    
-    fact_bpol = to_float(command%args(10), ierr)
-    if ( ierr /= 0 ) return
+    ! --- Preparation
+    R_min = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    R_max = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    n_R   = to_int  (command%args(3), ierr); if ( ierr /= 0 ) return
+    Z_min = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    Z_max = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    n_Z   = to_int  (command%args(6), ierr); if ( ierr /= 0 ) return
+    n_phi = to_int  (command%args(7), ierr); if ( ierr /= 0 ) return
+    !   --- The following three parameters are correction factors which allow to
+    !     transform the field between different coordinate systems.
+    fact_phi  = to_float(command%args(8),  ierr); if ( ierr /= 0 ) return
+    fact_btor = to_float(command%args(9),  ierr); if ( ierr /= 0 ) return
+    fact_bpol = to_float(command%args(10), ierr); if ( ierr /= 0 ) return
     
     write(filename,'(3a)') DIR, 'gourdon', trim(step_range_string(index_now,index_now))
     
@@ -1240,18 +1258,29 @@ module exec_commands
     Z_max2   = Z_min + real(n_Z-1)/real(n_Z) * (Z_max-Z_min)
     phi_max2 = real(n_phi-1)/real(n_phi) * 2.d0 * pi         * fact_phi
     
-    ! --- Make sure that positions outside the JOREK domain get value 0.
+    ! --- Make sure that positions outside the JOREK domain get bfield=0.
     tmp = expr_outside_value
     expr_outside_value = 0.d0
     
-    ! --- Calculate the magnetic field components.
-    if ( first_step ) then ! (Positions remain unchanged for all time steps)
+    ! --- Calculate field components.
+    if ( first_step ) then ! (Positions remain unchanged for all time steps, compute only once)
       call create_pol_pos(pol_pos_list, ierr, node_list, element_list, eq, Rmin=R_min, Rmax=R_max2,&
         nR=n_R-1, Zmin=Z_min, Zmax=Z_max-1, nZ=n_Z-1)
       tor_pos_list  = tor_pos(phistart=0.d0, phiend=phi_max2, nphi=n_phi-1)
       tmp_expr_list = exprs((/'B_tor', 'B_R  ', 'B_Z  '/), 3)
     end if
-    call eval_expr(eq, units, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call eval_expr(eq, JOREK_UNITS, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    if ( fact_btor /= 1.d0 ) result(:,:,:,1  ) = result(:,:,:,1  ) * fact_btor
+    if ( fact_bpol /= 1.d0 ) result(:,:,:,2:3) = result(:,:,:,2:3) * fact_bpol
+    allocate(field(3,n_R-1,n_Z-1,n_phi-1))
+    !    --- Array transform for file output...
+    do k = 1, n_Z-1
+      do j = 1, n_R-1
+        do i = 1, 3
+          field(i,j,k,:) = result(:,j,k,i)
+        end do
+      end do
+    end do
     
     ! --- Write out the data.
     open(122, file=filename, status='replace', action='write', form='unformatted', iostat=ierr)
@@ -1261,24 +1290,58 @@ module exec_commands
     end if
     write(122) real(n_phi), real(n_R), real(n_Z), real(3), real(1), real(n_phi)
     write(122) (R_max+R_min)/2.d0, (Z_max+Z_min)/2.d0, (R_max-R_min)/2.d0, (Z_max-Z_min)/2.d0
-    allocate(field(3,n_R-1,n_Z-1,n_phi-1))
-    do k = 1, n_Z-1
-      do j = 1, n_R-1
-        do i = 1, 3
-          field(i,j,k,:) = result(:,j,k,i)
-        end do
-      end do
-    end do
     do k = 0, n_phi - 1
       write(122) field(:,:,:,k)
     end do
     close(122)
     
     ! --- Clean up.
-    expr_outside_value = tmp ! change back
-    if ( allocated(field) ) deallocate(field)
+    expr_outside_value = tmp ! restore previous value
+    if ( allocated(field ) ) deallocate(field)
     
   end subroutine gourdon
+  
+  
+  
+  
+  
+  !> Select JOREK normalized units.
+  subroutine select_jorek_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('units', '0', ierr)
+    
+  end subroutine select_jorek_units
+  
+  
+  
+  
+  
+  !> Select SI units.
+  subroutine select_si_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('units', '1', ierr)
+    
+  end subroutine select_si_units
+  
+  
   
   
   

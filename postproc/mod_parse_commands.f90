@@ -198,7 +198,7 @@ module parse_commands
       '"abra" "cadabra"                                            ',    &
       'line temperature 1.6 0.0 0.0 1.2 0.0 0.0                    ' /)
     
-    call set_setting('debut',   'true', error)
+    call set_setting('debug',   'true', error)
     call set_setting('verbose', 'true', error)
     do i = 1, size(test_string,1)
       write(*,*)

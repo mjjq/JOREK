@@ -208,8 +208,8 @@ module mod_position
     ! --- Local variables
     type(t_theta_mapping) :: mapping
     type(t_pol_pos), pointer :: pos
-    real*8  :: R_out, Z_out, hh, gx, gy, gg, ax, ay
-    integer :: i, j, full_length
+    real*8  :: R_out, Z_out, hh, gx, gy, gg, ax, ay, full_length
+    integer :: i, j
     real*8, allocatable :: surface(:) !< Poloidal surface inside flux surface (for r_minor)
     
     ierr = 0

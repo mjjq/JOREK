@@ -221,6 +221,7 @@ module exec_commands
     call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, eq)
     
     t_now         = t_start
+    index_now     = index_start
     step_imported = .true.
     
   end subroutine load_step

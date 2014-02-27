@@ -1,7 +1,7 @@
-subroutine plot_grid(node_list, element_list, boundary_list, bnd_node_list, frame, bezier, gridname)
-!----------------------------------------------------------------
-! plot the grid of finite elements with the correct curved edges
-!----------------------------------------------------------------
+!> Plot the grid of finite elements with the correct curved edges
+subroutine plot_grid(node_list, element_list, boundary_list, bnd_node_list, frame, bezier, &
+  gridname)
+
 use tr_module 
 use parameters
 use data_structure

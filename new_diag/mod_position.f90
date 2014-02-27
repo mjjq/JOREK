@@ -248,7 +248,8 @@ module mod_position
         do j = 1, nZ
           pos   => pos_list%pos(i,j)
           pos%R = Rmin + (Rmax-Rmin) * real(i-1)/real(nR-1)
-          pos%Z = Rmin + (Zmax-Zmin) * real(j-1)/real(nZ-1)
+          pos%Z = Zmin + (Zmax-Zmin) * real(j-1)/real(nZ-1)
+          ierr = 0
           call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           if ( ierr /= 0 ) then

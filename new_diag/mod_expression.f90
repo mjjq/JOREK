@@ -785,9 +785,9 @@ module mod_expression
           
           ! --- Some things related to the magnetic field
           BB2      = (F0*F0 + ps0_R * ps0_R + ps0_Z * ps0_Z ) / BigR**2
-          B_R      = ps0_Z / BigR
-          B_Z      = ps0_R / BigR
-          B_tor    = F0    / BigR
+          B_R      = + ps0_Z / BigR
+          B_Z      = - ps0_R / BigR
+          B_tor    = + F0    / BigR
           psi_norm = get_psi_n(eq, ps0)
           Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
           psi_abs = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)

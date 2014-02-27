@@ -436,7 +436,7 @@ module mod_four_filter
         
         n = n_in_period * n_period ! toroidal mode number
         
-        write(37,'(18i7)') m, n, m_max, n_max, size(filt_fact,2), size(filt_fact,1)
+        !###write(37,'(18i7)') m, n, m_max, n_max, size(filt_fact,2), size(filt_fact,1)
         
         if ( filt_fact(n,m) == 1.d0 ) cycle ! nothing to be done in this case
         

@@ -26,6 +26,7 @@ module postproc_help
     write(*,*) '  for               Loop over one or several timesteps'
     write(*,*) '  four2d            Perform a 2D Fourier analysis'
     write(*,*) '  gourdon           Export magnetic field for Gourdon'
+    write(*,*) '  grid              Output the grid'
     write(*,*) '  help              Print interactive help information'
     write(*,*) '  jorek-units       Switch to JOREK normalized units'
     write(*,*) '  mark_coords       Mark expressions as coordinates'
@@ -174,6 +175,14 @@ module postproc_help
         write(*,*) ''
         write(*,*) 'Examples:'
         write(*,*) '  gourdon 1.2285 2.2035 200 -0.614 0.886 256 800 -1. -1. 1.'
+      case ( 'grid' ) 
+        write(*,*) 'Usage:'
+        write(*,*) '  grid'
+        write(*,*) ''
+        write(*,*) 'Export the computational grid.'
+        write(*,*) ''
+        write(*,*) 'Examples:'
+        write(*,*) '  grid'
       case ( 'help' ) 
         write(*,*) 'Usage:'
         write(*,*) '  help [command]'

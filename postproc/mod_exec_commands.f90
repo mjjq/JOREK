@@ -129,6 +129,8 @@ module exec_commands
           call four2d(command, ierr)
         case ( 'gourdon' )
           call gourdon(command, first_step, ierr)
+        case ( 'grid' )
+          call grid(command, ierr)
         case ( 'help' )
           call help(command, ierr)
         case ( 'jorek-units' )
@@ -167,8 +169,8 @@ module exec_commands
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
-          'pol_line', 'tor_line', 'equil_params', 'qprofile', 'fluxsurfaces', 'separatrix',        &
-          'four2d', 'gourdon', 'jorek-units', 'si-units' )
+          'pol_line', 'tor_line', 'equil_params', 'qprofile', 'fluxsurfaces', 'separatrix', 'set', &
+          'four2d', 'gourdon', 'jorek-units', 'si-units', 'grid' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -728,7 +730,7 @@ module exec_commands
     write(filename,'(4a)') DIR, 'exprs_midplane',                                                  &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
-    write(comment,'(a,i6.6)') 'time step #', index_start
+    write(comment,'(a,i6.6)') 'time step #', index_now
     
     call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, BOTH_SIDES, npts,  &
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
@@ -772,7 +774,7 @@ module exec_commands
       trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',        &
       trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
-    write(comment,'(a,i6.6)') 'time step #', index_start
+    write(comment,'(a,i6.6)') 'time step #', index_now
     
     call pol_lineout(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart, Zstart,    &
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
@@ -815,7 +817,7 @@ module exec_commands
       '_p', trim(real2str(phi_start)), '..', trim(real2str(phi_end)),                              &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
-    write(comment,'(a,i6.6)') 'time step #', index_start
+    write(comment,'(a,i6.6)') 'time step #', index_now
     
     call tor_lineout(node_list, element_list, eq, units, expr_list, res1d, phi_start, phi_end, R,  &
       Z, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
@@ -860,7 +862,7 @@ module exec_commands
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
     call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
     
-    write(comment,'(a,i6.6)') 'time step #', index_start
+    write(comment,'(a,i6.6)') 'time step #', index_now
     
     call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                     &
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
@@ -970,7 +972,7 @@ module exec_commands
     tmp_expr_list%n_expr = 0
     tmp_expr_list%expr(1)%name = 'Psi_n'
     tmp_expr_list%expr(2)%name = 'q'
-    write(comment,'(a,i6.6)') 'time step #', index_start
+    write(comment,'(a,i6.6)') 'time step #', index_now
     allocate(res1d(npts-2,2))
     do k2 = 1, npts-2
       k = k2 + 1 ! to avoid first and last point of q-profile which often is bad
@@ -1255,9 +1257,9 @@ module exec_commands
     write(filename,'(3a)') DIR, 'gourdon', trim(step_range_string(index_now,index_now))
     
     ! --- Take into account that the last points are not included in Gourdon format!
-    R_max2   = R_min + real(n_R-1)/real(n_R) * (R_max-R_min)
-    Z_max2   = Z_min + real(n_Z-1)/real(n_Z) * (Z_max-Z_min)
-    phi_max2 = real(n_phi-1)/real(n_phi) * 2.d0 * pi         * fact_phi
+    R_max2   = R_max   - (R_max-R_min) / real(n_R)
+    Z_max2   = Z_max   - (Z_max-Z_min) / real(n_Z)
+    phi_max2 = 2.d0*pi - (2.d0*pi)     / real(n_phi)    * fact_phi
     
     ! --- Make sure that positions outside the JOREK domain get bfield=0.
     tmp = expr_outside_value
@@ -1266,19 +1268,19 @@ module exec_commands
     ! --- Calculate field components.
     if ( first_step ) then ! (Positions remain unchanged for all time steps, compute only once)
       call create_pol_pos(pol_pos_list, ierr, node_list, element_list, eq, Rmin=R_min, Rmax=R_max2,&
-        nR=n_R-1, Zmin=Z_min, Zmax=Z_max-1, nZ=n_Z-1)
-      tor_pos_list  = tor_pos(phistart=0.d0, phiend=phi_max2, nphi=n_phi-1)
+        nR=n_R, Zmin=Z_min, Zmax=Z_max2, nZ=n_Z)
+      tor_pos_list  = tor_pos(phistart=0.d0, phiend=phi_max2, nphi=n_phi)
       tmp_expr_list = exprs((/'B_tor', 'B_R  ', 'B_Z  '/), 3)
     end if
     call eval_expr(eq, JOREK_UNITS, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
     if ( fact_btor /= 1.d0 ) result(:,:,:,1  ) = result(:,:,:,1  ) * fact_btor
     if ( fact_bpol /= 1.d0 ) result(:,:,:,2:3) = result(:,:,:,2:3) * fact_bpol
-    allocate(field(3,n_R-1,n_Z-1,n_phi-1))
+    allocate(field(3,0:n_R-1,0:n_Z-1,0:n_phi-1))
     !    --- Array transform for file output...
-    do k = 1, n_Z-1
-      do j = 1, n_R-1
+    do k = 0, n_Z-1
+      do j = 0, n_R-1
         do i = 1, 3
-          field(i,j,k,:) = result(:,j,k,i)
+          field(i,j,k,0:n_phi-1) = result(1:n_phi,j+1,k+1,i)
         end do
       end do
     end do
@@ -1341,6 +1343,29 @@ module exec_commands
     call set_setting('units', '1', ierr)
     
   end subroutine select_si_units
+  
+  
+  
+  
+  
+  !> Output the computational grid.
+  subroutine grid(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,          &
+      trim(step_range_string(index_now,index_now)))
+    
+    call system('mv '//'grid_'//trim(step_range_string(index_now,index_now))//'.dat '//DIR)
+    
+  end subroutine grid
   
   
   

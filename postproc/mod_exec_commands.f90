@@ -647,7 +647,7 @@ module exec_commands
     
     integer, intent(in) :: min_step, max_step
     
-    if ( loop_min_step /= loop_max_step ) then
+    if ( min_step /= max_step ) then
       write(step_range_string,'(a,i5.5,a,i5.5)') '_s', min_step, '..', max_step
     else
       write(step_range_string,'(a,i5.5)') '_s', min_step

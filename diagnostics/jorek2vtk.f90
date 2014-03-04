@@ -358,6 +358,8 @@ do i=1,element_list%n_elements
 	  mach_par= 0.d0
           mach_pol= 0.d0
           vsound  = 0.d0
+          amu_neo_node = 0.d0
+          aki_neo_node = 0.d0
 
           if ((psi_abs .gt. 1.d-6) .and. (ZN0.gt.1.d-6) .and. (abs(Btheta).gt.1.d-6)) then
 

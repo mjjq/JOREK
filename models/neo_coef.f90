@@ -36,40 +36,6 @@ real*8  :: aux1, aux2
 real*8  :: Z_star, Z_star_u
 psi_n = (psi_node - psi_axis) / (psi_bnd - psi_axis)
 psi_n = max( min(psi_n, 2.), 0. )
-
-! write(*,*) 'num_neo_len=', num_neo_len, 'file=', neo_file
-
-
-!  do i=1,num_neo_len
-
-!num_neo_psi(i)=1
-!num_amu_value(i)=1
-!num_aki_value(i)=1
-!end do 
-
-!write(*,*) 'on est dans neo_coef'
-!write(*,*) 'num_neo_psi(i), num_amu_value(i), num_aki_value(i)'
-
-!  do i=1,num_neo_len
-!write(*,*) num_neo_psi(i), num_amu_value(i), num_aki_value(i)
-!end do 
-
-
-! interpolation (correspondance between psi_node and num_neo_psi)
-
-
-
-! read the profiles of ki and mu (depending on psi only)
-
-!   open(74, FILE='neoclass_coef.dat', status='old',  action='read')
-!  open(74,  FILE=TRIM(neo_file), status='old',  action='read')
-
-  ! num_neo_len=199
-
-!   do i=1,num_neo_len
-!      read (74,*) num_neo_psi(i), num_amu_value(i), num_aki_value(i)
-!   end do
-
   
   ! --- Interpolate profiles to position psi_n by bisections.
   left  = 1
@@ -120,8 +86,13 @@ else
    aki_neo_node = prof1
    amu_neo_node = prof2
 end if
-!write(*,*) '***********************************************'
 
-!write(*,*) 'psi', psi_node, num_neo_psi(left), num_neo_psi(right)
+! set ki=0 and  mu_neo=0 in the SOL and the private region
+if ( (psi_n .gt. 1.d0 ) &
+     .or. ( xpoint2 .and. (xcase2 .ne. 2) .and. (Z .lt. Z_xpoint(1)) ) &
+     .or. ( xpoint2 .and. (xcase2 .ne. 1) .and. (Z .gt. Z_xpoint(2)) ) ) then
+   aki_neo_node = 0.d0
+   amu_neo_node = 0.d0
+endif
 
- end subroutine neo_coef
+end subroutine neo_coef

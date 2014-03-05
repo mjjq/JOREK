@@ -16,6 +16,7 @@ subroutine preset_parameters
   time_evol_scheme = 'Crank-Nicholson'
   
   n_tor_fft_thresh = 5
+  if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
   
   ! --- DoubleNull flag
   xcase = LOWER_XPOINT
@@ -303,6 +304,8 @@ subroutine preset_parameters
 
 !======================JP ECCD injection parameters
  nu_jec_fast=1.d1
+ nu_jec1_fast=1.d1
+ nu_jec2_fast=1.d1
  JJ_par=0.d1
  jecamp=1.d1
  jec_pos1=0.6d0

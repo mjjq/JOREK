@@ -3,13 +3,15 @@
 
 # model directory
 #MODEL = model305
-MODEL = model710
+MODEL = model306
+#MODEL = model710
 
 # for model305 with global outputs and alternative current source
 #DEFINES = -DJECCD -Daltcs -DUSE_BLOCK
+DEFINES = -DJECCD -DUSE_BLOCK
 
 # for full mhd model710
-DEFINES = -Dfullmhd -DMULTI_FUN -DUSE_BLOCK
+#DEFINES = -Dfullmhd -DMULTI_FUN -DUSE_BLOCK
 
 # Fortran compiler 
 FC     = mpiifort

@@ -424,6 +424,7 @@ module phys_module
   real*8  :: jec_pos1, jec_pos2, jec_pos3, jec_pos4
   real*8  :: jec_width, jec_width2 
   real*8  :: nu_jec_fast         ! 1/collision frequency
+  real*8  :: nu_jec1_fast,nu_jec2_fast         ! 1/collision frequency
   real*8  :: mod_jec            ! extra parameters for ECCD
   real*8  :: JJ_par             ! velocity of resonent electrons
   real*8  :: jw1,jw2,jw3        ! parameters to determine current source

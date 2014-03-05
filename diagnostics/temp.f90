@@ -90,7 +90,6 @@ do ife =1,  element_list%n_elements
 !--------------------------------------------------- sum over the Gaussian integration points
     do ms=1, n_gauss
       do mt=1, n_gauss
-
         wst = wgauss(ms)*wgauss(mt)
         xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
         BigR = x_g(ms,mt)
@@ -110,7 +109,9 @@ do ife =1,  element_list%n_elements
 ! eccd current
    jec  = 0.d0
    if(jorek_model == 305) then
-     jec  = eq_g(n_var,ms,mt) ! the eccd current should always be the last equation
+     jec=eq_g(n_var,ms,mt) ! the eccd current should always be the last equation
+   elseif(jorek_model == 306) then
+     jec=eq_g(n_var,ms,mt)+eq_g(n_var-1,ms,mt) ! the eccd current is the sum of two currents
    else
      jec = p0  ! when not applying eccd, this last array is global pressure
    endif

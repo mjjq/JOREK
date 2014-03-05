@@ -124,7 +124,7 @@ module settings
   
   
   !> Returns the logical value of a setting
-  real*8 function get_log_setting(name, error)
+  logical function get_log_setting(name, error)
     
     ! --- Routine parameters
     character(len=*),   intent(in)     :: name     !< Name of requested setting

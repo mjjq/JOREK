@@ -127,9 +127,9 @@ module mod_position
     
     do j = 1, n_pos(2)
       do i = 1, n_pos(1)
-        pos_list%pos(i,j)%theta_star = 0.d0/0.d0
-        pos_list%pos(i,j)%length     = 0.d0/0.d0
-        pos_list%pos(i,j)%r_minor    = 0.d0/0.d0
+        pos_list%pos(i,j)%theta_star = 0.d0
+        pos_list%pos(i,j)%length     = 0.d0
+        pos_list%pos(i,j)%r_minor    = 0.d0
       end do
     end do
     
@@ -242,8 +242,10 @@ module mod_position
       present(Zmax) .and. present(nZ) ) then
       
       call alloc_pol_pos(pos_list, (/nR,nZ/))
-      !$OMP parallel do default(none) firstprivate(i,j,pos,R_out,Z_out,ierr)                       &
-      !$OMP shared(nR,nZ,node_list,element_list,pos_list,Rmin,Rmax,Zmin,Zmax) schedule(dynamic)
+      !$OMP parallel do default(none) firstprivate(pos,R_out,Z_out,ierr)                        & 
+      !$OMP shared(nR,nZ,node_list,element_list,pos_list,Rmin,Rmax,Zmin,Zmax) schedule(dynamic) &
+      !$OMP private(i,j)
+
       do i = 1, nR
         do j = 1, nZ
           pos   => pos_list%pos(i,j)
@@ -339,6 +341,15 @@ module mod_position
             gg = sqrt( gx**2 + gy**2 )
             ax = pos_list%pos(j,i)%R - eq%R_axis
             ay = pos_list%pos(j,i)%Z - eq%Z_axis
+            hh = ( gy * ax - gx * ay ) / gg
+            surface(i) = surface(i) + hh * gg / 2.d0
+          else 
+             ! (if (j .eq. 1) )
+            gx = pos_list%pos(1,i)%R - pos_list%pos(nTht,i)%R
+            gy = pos_list%pos(1,i)%Z - pos_list%pos(nTht,i)%Z
+            gg = sqrt( gx**2 + gy**2 )
+            ax = pos_list%pos(1,i)%R - eq%R_axis
+            ay = pos_list%pos(1,i)%Z - eq%Z_axis
             hh = ( gy * ax - gx * ay ) / gg
             surface(i) = surface(i) + hh * gg / 2.d0
           end if

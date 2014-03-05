@@ -374,11 +374,12 @@ module mod_straight_field_line
     ierr  = 0
     
     !$omp parallel do schedule(dynamic) default(none)                                              &
-    !$omp   firstprivate(k, theta_corr, phi, Rleft, Rright, Rmid, i_elm_out, s_out, t_out, P, P_s, &
+    !$omp   firstprivate(theta_corr, phi, Rleft, Rright, Rmid, i_elm_out, s_out, t_out, P, P_s, &
     !$omp     P_t, rn, zn,i, R_out, Z_out, ifail, x, x_s, x_t, y, y_s, y_t, xjac, dpsi_dzn,        &
     !$omp     dpsi_drn, rh, zh, rp, zp, l, dpsi_dzh, dpsi_drh)                                     &
     !$omp   shared(mapping, node_list, element_list, equil_state, ierr, F0, smalldeltaphi,         &
-    !$omp   psinrange, nmaxsteps, nsmallsteps)
+    !$omp   psinrange, nmaxsteps, nsmallsteps)                                                     &
+    !$omp   private(k)
     FL_STPTS: do k = mapping%nstpts, 1, -1 ! (inverse order better for OpenMP parallelization)
       if ( ierr /= 0 ) cycle
       

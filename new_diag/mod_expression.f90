@@ -51,9 +51,12 @@ module mod_expression
   
   
   ! --- Externally visible variables.
-  !> Set expressions to this value for positions located outside the JOREK domain. This value may
-  !! be changed by programs using the new_diag package -- this is not a constant.
-  real*8, save :: expr_outside_value = 0.d0 / 0.d0
+  !> Expressions evaluate to this value for positions outside the JOREK domain.
+  !! This value may be changed by programs using the new_diag package!
+  real*8, save :: expr_outside_value = 0.d0
+  !> Coordinate expressions evaluate to this value for positions outside the JOREK domain.
+  !! This value may be changed by programs using the new_diag package!
+  real*8, save :: expr_outside_coord = 0.d0
   
   
   
@@ -436,7 +439,8 @@ module mod_expression
         pol_pos => pol_pos_list%pos(ipolpos,jpolpos)
         
         if ( pol_pos%outside ) then
-          result(:, ipolpos, jpolpos, :) = expr_outside_value
+          result(:, ipolpos, jpolpos, :expr_list%n_coord  ) = expr_outside_coord
+          result(:, ipolpos, jpolpos, expr_list%n_coord+1:) = expr_outside_value
           cycle
         end if
         

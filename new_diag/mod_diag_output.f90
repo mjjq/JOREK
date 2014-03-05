@@ -414,8 +414,8 @@ module mod_diag_output
     buffer = lf//'CELLS '//str1//' '//str2//lf  ; write(i_file) trim(buffer)
     do j = 1, n2
       do i = 1, n1
-        write(i_file) int(4,4), int(i-1+(j-1)*n(1),4), int(i-1+(mod(j-0,n(2)-1))*n(1),4),          &
-          int(mod(i-0,n(1)-1)+(mod(j-0,n(2)-1))*n(1),4), int(mod(i-0,n(1)-1)+(j-1)*n(1),4)
+        write(i_file) int(4,4), int(i-1+(j-1)*n(1),4), int(i-1+mod(j-0,n(2))*n(1),4),              &
+          int(mod(i-0,n(1))+mod(j-0,n(2))*n(1),4), int(mod(i-0,n(1))+(j-1)*n(1),4)
       end do
     end do
     
@@ -428,7 +428,7 @@ module mod_diag_output
     write(str1(1:12),'(i12)') n_pts
     buffer = lf//'POINT_DATA '//str1            ; write(i_file) trim(buffer)
     
-    do i_var = 1, n(3)
+    do i_var = expr_list%n_coord+1, expr_list%n_expr
       buffer = lf//'SCALARS '//expr_list%expr(i_var)%name//' float'//lf ; write(i_file) trim(buffer)
       buffer = 'LOOKUP_TABLE default'//lf;                                write(i_file) trim(buffer)
       do j = 1, n(2)

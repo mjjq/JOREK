@@ -17,3 +17,6 @@ JOREK2_DIAGNO_SRC := $(JOREK2_DIAGNO_SRC)	\
 
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)   \
 	$(DIR)/plot_grid.f90
+
+DEMO_SRC := $(DEMO_SRC)	  \
+	$(DIR)/plot_grid.f90

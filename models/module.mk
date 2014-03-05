@@ -18,6 +18,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
         $(DIR)/temperature.f90                          \
 	$(DIR)/temperature_e.f90 			\
 	$(DIR)/temperature_i.f90 			\
+        $(DIR)/mod_corr_neg.f90                         \
 	$(DIR)/update_time_evol_params.f90
 
 JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
@@ -27,7 +28,6 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/element_matrix_GS_perturbation.f90 	\
 	$(DIR)/element_matrix_poisson.f90 		\
 	$(DIR)/element_matrix_poisson_inverse.f90 	\
-        $(DIR)/mod_corr_neg.f90                         \
 	$(DIR)/equilibrium.f90 				\
 	$(DIR)/F_profile.f90				\
 	$(DIR)/poisson.f90 				\
@@ -43,12 +43,10 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
 
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
         $(DIR)/mod_diffusivities.f90                    \
-        $(DIR)/mod_corr_neg.f90                         \
         $(DIR)/mod_pellet.f90				\
         $(DIR)/neo_coef.f90
 
 DEMO_SRC := $(DEMO_SRC)		\
-        $(DIR)/mod_corr_neg.f90                         \
 	$(DIR)/mod_diffusivities.f90                    \
         $(DIR)/mod_pellet.f90				\
 	$(DIR)/neo_coef.f90

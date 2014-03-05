@@ -333,7 +333,7 @@ module mod_position
           if ( ierr /= 0 ) exit
           
           ! --- Calculate poloidal surface inside flux surface (for r_minor)
-          if ( j /= 0 ) then
+          if ( j /= 1 ) then
             gx = pos_list%pos(j,i)%R - pos_list%pos(j-1,i)%R
             gy = pos_list%pos(j,i)%Z - pos_list%pos(j-1,i)%Z
             gg = sqrt( gx**2 + gy**2 )
@@ -495,6 +495,51 @@ module mod_position
     end if
     
   end subroutine create_tor_pos
+  
+  
+  
+  
+  
+  !> Output positions to a file for debugging purposes.
+  subroutine output_pos(filename, pol_pos_list, tor_pos_list)
+    
+    character(len=*),               intent(in) :: filename
+    type(t_pol_pos_list), optional, intent(in) :: pol_pos_list
+    type(t_tor_pos_list), optional, intent(in) :: tor_pos_list
+    
+    integer :: i, j, k
+    
+    open(37, file=trim(filename))
+    
+    if ( present(pol_pos_list) .and. present(tor_pos_list) ) then
+      do j = 1, pol_pos_list%n_pos(2)
+        do i = 1, pol_pos_list%n_pos(1)
+          do k = 1, tor_pos_list%n_pos
+            write(37,'(9es25.15)') pol_pos_list%pos(i,j)%R, pol_pos_list%pos(i,j)%Z,               &
+              pol_pos_list%pos(i,j)%theta_star, pol_pos_list%pos(i,j)%r_minor,                     &
+              pol_pos_list%pos(i,j)%length, tor_pos_list%pos(k)%phi
+          end do
+        end do
+      end do
+    else if ( present(pol_pos_list) ) then
+      do j = 1, pol_pos_list%n_pos(2)
+        do i = 1, pol_pos_list%n_pos(1)
+            write(37,'(9es25.15)') pol_pos_list%pos(i,j)%R, pol_pos_list%pos(i,j)%Z,               &
+              pol_pos_list%pos(i,j)%theta_star, pol_pos_list%pos(i,j)%r_minor,                     &
+              pol_pos_list%pos(i,j)%length
+        end do
+      end do
+    else if ( present(tor_pos_list) ) then
+      do k = 1, tor_pos_list%n_pos
+        write(37,'(9es25.15)') tor_pos_list%pos(k)%phi
+      end do
+    else
+      write(*,*) 'WARNING: output_pos has no data to output...'
+    end if
+    
+    close(37)
+    
+  end subroutine output_pos
   
   
   

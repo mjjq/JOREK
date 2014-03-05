@@ -30,8 +30,9 @@ module exec_commands
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
   integer, parameter :: LOOP_MODE   = 2 !< Mode started by 'for' and ended by 'done' commands
   integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_MODE)
-  integer :: loop_min_step              !< Smallest timestep index for current loop
-  integer :: loop_max_step              !< Largest timestep index for current loop
+  integer :: loop_min_step              !< Smallest timestep index of for loop
+  integer :: loop_max_step              !< Largest timestep index of for loop
+  integer :: loop_inc_step              !< Timestep index step width of for loop
   
   integer, parameter :: MAX_QUEUE_LENGTH  = 9999         !< Maximum length of command queue
   integer            :: n_queued_commands = 0            !< Number of commands in the queue
@@ -247,7 +248,7 @@ module exec_commands
     ierr = 0
     
     ! --- Some checks.
-    call check_args(command%n_args,ierr,3,5);  if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,3,5,7);  if ( ierr /= 0 ) return
     
     if ( trim(command%args(1)) /= 'step' ) then
       call report_error('for', 'Wrong syntax.', command)
@@ -268,7 +269,8 @@ module exec_commands
         return
       end if
       loop_max_step = loop_min_step
-    else ! for step <XXX> to <YYY> do
+      loop_inc_step = 1
+    else if ( command%n_args == 5 ) then! for step <XXX> to <YYY> do
       if ( trim(command%args(3)) /= 'to' ) then
         write(*,*) 'ERROR: Wrong syntax for "for" statement.'
         call specific_help('for')
@@ -281,6 +283,35 @@ module exec_commands
         return
       end if
       if ( trim(command%args(5)) /= 'do' ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+      loop_inc_step = 1
+    else if ( command%n_args == 7 ) then! for step <XXX> to <YYY> by <ZZZ> do
+      if ( trim(command%args(3)) /= 'to' ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+      loop_max_step = to_int(command%args(4),ierr)
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+      if ( trim(command%args(5)) /= 'by' ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+      loop_inc_step = to_int(command%args(6),ierr)
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+      if ( trim(command%args(7)) /= 'do' ) then
         write(*,*) 'ERROR: Wrong syntax for "for" statement.'
         call specific_help('for')
         return
@@ -317,7 +348,7 @@ module exec_commands
     end if
     
     first_step = .true.
-    do istep = loop_min_step, loop_max_step
+    do istep = loop_min_step, loop_max_step, loop_inc_step
       call load_step(istep, load_error)
       if ( load_error /= 0 ) cycle
       

@@ -313,20 +313,22 @@ module mod_four_filter
     
     ! --- Poloidal mode number(s).
     if ( present(mabs) ) then
-      filter_add(filter, ierr, m=+mabs, n, n_start, n_end)
-      filter_add(filter, ierr, m=-mabs, n, n_start, n_end)
+      call filter_add(filter, ierr, m=+mabs, n=n, n_start=n_start, n_end=n_end)
+      call filter_add(filter, ierr, m=-mabs, n=n, n_start=n_start, n_end=n_end)
       return
     else if ( (      present(mabs_start)) .and. (      present(mabs_end)) ) then
-      filter_add(filter, ierr, m_start=+mabs_start, m_end=+mabs_start, n, n_start, n_end)
-      filter_add(filter, ierr, m_start=-mabs_start, m_end=-mabs_start, n, n_start, n_end)
+      call filter_add(filter, ierr, m_start=+mabs_start, m_end=+mabs_start, n=n, n_start=n_start,  &
+        n_end=n_end)
+      call filter_add(filter, ierr, m_start=-mabs_start, m_end=-mabs_start, n=n, n_start=n_start,  &
+        n_end=n_end)
       return
     else if ( (.not. present(mabs_start)) .and. (      present(mabs_end)) ) then
-      filter_add(filter, ierr, m_end=+mabs_end, n, n_start, n_end)
-      filter_add(filter, ierr, m_end=-mabs_end, n, n_start, n_end)
+      call filter_add(filter, ierr, m_end=+mabs_end, n=n, n_start=n_start, n_end=n_end)
+      call filter_add(filter, ierr, m_end=-mabs_end, n=n, n_start=n_start, n_end=n_end)
       return
     else if ( (      present(mabs_start)) .and. (.not. present(mabs_end)) ) then
-      filter_add(filter, ierr, m_start=+mabs_start, n, n_start, n_end)
-      filter_add(filter, ierr, m_start=-mabs_start, n, n_start, n_end)
+      call filter_add(filter, ierr, m_start=+mabs_start, n=n, n_start=n_start, n_end=n_end)
+      call filter_add(filter, ierr, m_start=-mabs_start, n=n, n_start=n_start, n_end=n_end)
       return
     else if ( (      present(m)) .and. (.not. present(m_start)) .and. (.not. present(m_end)) ) then
       m_start2 = m

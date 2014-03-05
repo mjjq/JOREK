@@ -7,10 +7,10 @@ contains
 subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM,RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
-! using the equations for model306, which is the same as model303, but solves
-! an two additional current equations, which sum to the total ECCD current.  
-! These currents are injected inside the magnetic islands.
-! version to be debugged 28/2/2014
+! using the equations for model305, which is the same as model303, but solves
+! an additional equation for the ECCD current, injected inside
+! the magnetic islands.
+! version to be debugged 2/4/2013
 ! Author:                                                                    
 !   Jane Pratt - J.L.Pratt@differ.nl                                
 !---------------------------------------------------------------
@@ -85,27 +85,20 @@ real*8     :: epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 !======================================= NEO
 
-!bookmark (alterations and additions for 2 ECCD currents)
-integer    :: kl8,ij8,kl9,ij9
+!bookmark (alterations and additions for ECCD current)
+integer    :: kl8,ij8
 real*8     :: zero1,zero2,zero3
-real*8     :: rhs_ij_8,rhs_ij_9
-real*8     :: Bgrad_jec1_star,  Bgrad_jec1,Bdot_jec1_star
-real*8     :: Bgrad_jec1_star_psi, Bgrad_jec1_psi, Bgrad_jec1_jec
-real*8     :: Bgrad_jec2_star,  Bgrad_jec2,Bdot_jec_star
-real*8     :: Bgrad_jec2_star_psi, Bgrad_jec2_psi, Bgrad_jec2_jec
+real*8     :: rhs_ij_8
+real*8     :: Bgrad_jec_star,  Bgrad_jec,Bdot_jec_star
+real*8     :: Bgrad_jec_star_psi, Bgrad_jec_psi, Bgrad_jec_jec
 real*8     :: ec_source(n_gauss,n_gauss),radd
 real*8     :: amat_81, amat_88, amat_18
-real*8     :: amat_91, amat_99, amat_19
-real*8     :: jec10, jec10_x, jec10_y, jec10_p, jec10_s, jec10_t
-real*8     :: jec1, jec1_x, jec1_y, jec1_p, jec1_s, jec1_t
-real*8     :: jec20, jec20_x, jec20_y, jec20_p, jec20_s, jec20_t
-real*8     :: jec2, jec2_x, jec2_y, jec2_p, jec2_s, jec2_t
-
+real*8     :: jec0, jec0_x, jec0_y, jec0_p, jec0_s, jec0_t
+real*8     :: jec, jec_x, jec_y, jec_p, jec_s, jec_t
 !real*8     :: BB1, BB1_psi
 !real*8                             :: jbs,pnot_x !bootstrap current
 !real*8, dimension(n_gauss,n_gauss) :: pnot
 !!
-
 
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
@@ -366,9 +359,9 @@ do ms=1, n_gauss
      r0_st = eq_st(mp,5,ms,mt)
      r0_tt = eq_tt(mp,5,ms,mt)
 
-     r0_hat   = BigR**2. * abs(r0)
-     r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2. * r0_x
-     r0_y_hat = BigR**2. * r0_y
+     r0_hat   = BigR**2 * abs(r0)
+     r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
+     r0_y_hat = BigR**2 * r0_y
 
 ! temperature
      T0    = eq_g(mp,6,ms,mt)
@@ -392,21 +385,13 @@ do ms=1, n_gauss
      Vpar0_st = eq_st(mp,7,ms,mt)
      Vpar0_tt = eq_tt(mp,7,ms,mt)
 
-!ECCD current 1
-     jec10    = eq_g(mp,8,ms,mt)
-     jec10_x  = (   y_t(ms,mt) * eq_s(mp,8,ms,mt) - y_s(ms,mt) *eq_t(mp,8,ms,mt)) / xjac
-     jec10_y  = ( - x_t(ms,mt) * eq_s(mp,8,ms,mt) + x_s(ms,mt) *eq_t(mp,8,ms,mt)) / xjac
-     jec10_p  = eq_p(mp,8,ms,mt)
-     jec10_s  = eq_s(mp,8,ms,mt)
-     jec10_t  = eq_t(mp,8,ms,mt)
-
-!ECCD current 2
-     jec20    = eq_g(mp,9,ms,mt)
-     jec20_x  = (   y_t(ms,mt) * eq_s(mp,9,ms,mt) - y_s(ms,mt) *eq_t(mp,9,ms,mt))/ xjac
-     jec20_y  = ( - x_t(ms,mt) * eq_s(mp,9,ms,mt) + x_s(ms,mt) *eq_t(mp,9,ms,mt))/ xjac
-     jec20_p  = eq_p(mp,9,ms,mt)
-     jec20_s  = eq_s(mp,9,ms,mt)
-     jec20_t  = eq_t(mp,9,ms,mt)
+!ECCD current
+     jec0    = eq_g(mp,8,ms,mt)
+     jec0_x  = (   y_t(ms,mt) * eq_s(mp,8,ms,mt) - y_s(ms,mt) *eq_t(mp,8,ms,mt)) / xjac
+     jec0_y  = ( - x_t(ms,mt) * eq_s(mp,8,ms,mt) + x_s(ms,mt) *eq_t(mp,8,ms,mt)) / xjac
+     jec0_p  = eq_p(mp,8,ms,mt)
+     jec0_s  = eq_s(mp,8,ms,mt)
+     jec0_t  = eq_t(mp,8,ms,mt)
 
 ! pressure
      P0    = abs(r0 * T0)
@@ -420,37 +405,37 @@ do ms=1, n_gauss
      P0_st = r0_st * T0 + r0_s * T0_t + r0_t * T0_s + r0 * T0_st
 
 ! second derivatives:
-     ps0_xx = (ps0_ss * y_t(ms,mt)**2. - 2.d0*ps0_st * y_s(ms,mt)*y_t(ms,mt) + ps0_tt * y_s(ms,mt)**2. &
+     ps0_xx = (ps0_ss * y_t(ms,mt)**2 - 2.d0*ps0_st * y_s(ms,mt)*y_t(ms,mt) + ps0_tt * y_s(ms,mt)**2 &
              + ps0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
-             + ps0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2.             &
-             - xjac_x * (ps0_s* y_t(ms,mt) - ps0_t * y_s(ms,mt))  / xjac**2.
+             + ps0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2             &
+             - xjac_x * (ps0_s* y_t(ms,mt) - ps0_t * y_s(ms,mt))  / xjac**2
 
-     ps0_yy = (ps0_ss * x_t(ms,mt)**2. - 2.d0*ps0_st * x_s(ms,mt)*x_t(ms,mt) + ps0_tt * x_s(ms,mt)**2. &
-             + ps0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
-             + ps0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2.              &
-             - xjac_y * (- ps0_s * x_t(ms,mt) + ps0_t * x_s(ms,mt) )  / xjac**2.
+     ps0_yy = (ps0_ss * x_t(ms,mt)**2 - 2.d0*ps0_st * x_s(ms,mt)*x_t(ms,mt) + ps0_tt * x_s(ms,mt)**2 &
+             + ps0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                            &
+             + ps0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2             &
+             - xjac_y * (- ps0_s * x_t(ms,mt) + ps0_t * x_s(ms,mt) )  / xjac**2
 
      ps0_xy = (- ps0_ss * y_t(ms,mt)*x_t(ms,mt) - ps0_tt * x_s(ms,mt)*y_s(ms,mt)                     &
               + ps0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                          &
               - ps0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                          &
-              - ps0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2.            &
-              - xjac_x * (- ps0_s * x_t(ms,mt) + ps0_t * x_s(ms,mt) )   / xjac**2.
+              - ps0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2             &
+              - xjac_x * (- ps0_s * x_t(ms,mt) + ps0_t * x_s(ms,mt) )   / xjac**2
 
-     u0_xx = (u0_ss * y_t(ms,mt)**2. - 2.d0*u0_st * y_s(ms,mt)*y_t(ms,mt) + u0_tt * y_s(ms,mt)**2     &
-           + u0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                &
-           + u0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )      / xjac**2.              &
-           - xjac_x * (u0_s * y_t(ms,mt) - u0_t * y_s(ms,mt)) / xjac**2.
+     u0_xx = (u0_ss * y_t(ms,mt)**2 - 2.d0*u0_st * y_s(ms,mt)*y_t(ms,mt) + u0_tt * y_s(ms,mt)**2     &
+           + u0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                               &
+           + u0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )      / xjac**2              &
+           - xjac_x * (u0_s * y_t(ms,mt) - u0_t * y_s(ms,mt)) / xjac**2
 
-     u0_yy = (u0_ss * x_t(ms,mt)**2. - 2.d0*u0_st * x_s(ms,mt)*x_t(ms,mt) + u0_tt * x_s(ms,mt)**2.    &
-           + u0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                                &
-           + u0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )      / xjac**2.              &
-           - xjac_y * (- u0_s * x_t(ms,mt) + u0_t * x_s(ms,mt) ) / xjac**2.
+     u0_yy = (u0_ss * x_t(ms,mt)**2 - 2.d0*u0_st * x_s(ms,mt)*x_t(ms,mt) + u0_tt * x_s(ms,mt)**2     &
+           + u0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                               &
+           + u0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )      / xjac**2              &
+           - xjac_y * (- u0_s * x_t(ms,mt) + u0_t * x_s(ms,mt) ) / xjac**2
 
      u0_xy = (- u0_ss * y_t(ms,mt)*x_t(ms,mt) - u0_tt * x_s(ms,mt)*y_s(ms,mt)                        &
               + u0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                           &
               - u0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                           &
-              - u0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2.            &
-              - xjac_x * (- u0_s * x_t(ms,mt) + u0_t * x_s(ms,mt) )   / xjac**2.
+              - u0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2             &
+              - xjac_x * (- u0_s * x_t(ms,mt) + u0_t * x_s(ms,mt) )   / xjac**2
 
 !     w0_xx = (w0_ss * y_t(ms,mt)**2 - 2.d0*w0_st * y_s(ms,mt)*y_t(ms,mt) + w0_tt * y_s(ms,mt)**2     &
 !            + w0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
@@ -465,60 +450,60 @@ do ms=1, n_gauss
      w0_xy = (- w0_ss * y_t(ms,mt)*x_t(ms,mt) - w0_tt * x_s(ms,mt)*y_s(ms,mt)                        &
               + w0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                           &
               - w0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                           &
-              - w0_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2.              &
-              - xjac_x * (- w0_s * x_t(ms,mt) + w0_t * x_s(ms,mt) )   / xjac**2.
+              - w0_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2              &
+              - xjac_x * (- w0_s * x_t(ms,mt) + w0_t * x_s(ms,mt) )   / xjac**2
 
 !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
-     w0_xx = (w0_ss * y_t(ms,mt)**2 - 2.d0*w0_st * y_s(ms,mt)*y_t(ms,mt) + w0_tt * y_s(ms,mt)**2. )     / xjac**2.
-     w0_yy = (w0_ss * x_t(ms,mt)**2 - 2.d0*w0_st * x_s(ms,mt)*x_t(ms,mt) + w0_tt * x_s(ms,mt)**2. )     / xjac**2.
+     w0_xx = (w0_ss * y_t(ms,mt)**2 - 2.d0*w0_st * y_s(ms,mt)*y_t(ms,mt) + w0_tt * y_s(ms,mt)**2 )     / xjac**2
+     w0_yy = (w0_ss * x_t(ms,mt)**2 - 2.d0*w0_st * x_s(ms,mt)*x_t(ms,mt) + w0_tt * x_s(ms,mt)**2 )     / xjac**2
 
-     r0_xx = (r0_ss * y_t(ms,mt)**2 - 2.d0*r0_st * y_s(ms,mt)*y_t(ms,mt) + r0_tt * y_s(ms,mt)**2.     &
-	    + r0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                  &
-	    + r0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2.                  &
-            - xjac_x * (r0_s* y_t(ms,mt) - r0_t * y_s(ms,mt))  / xjac**2.
+     r0_xx = (r0_ss * y_t(ms,mt)**2 - 2.d0*r0_st * y_s(ms,mt)*y_t(ms,mt) + r0_tt * y_s(ms,mt)**2     &
+	    + r0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
+	    + r0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2               &
+            - xjac_x * (r0_s* y_t(ms,mt) - r0_t * y_s(ms,mt))  / xjac**2
 
-     r0_yy = (r0_ss * x_t(ms,mt)**2 - 2.d0*r0_st * x_s(ms,mt)*x_t(ms,mt) + r0_tt * x_s(ms,mt)**2.    &
+     r0_yy = (r0_ss * x_t(ms,mt)**2 - 2.d0*r0_st * x_s(ms,mt)*x_t(ms,mt) + r0_tt * x_s(ms,mt)**2     &
             + r0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
-	    + r0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2.               &	
-            - xjac_y * (- r0_s * x_t(ms,mt) + r0_t * x_s(ms,mt) )  / xjac**2.
+	    + r0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            &	
+            - xjac_y * (- r0_s * x_t(ms,mt) + r0_t * x_s(ms,mt) )  / xjac**2
 
      r0_xy = (- r0_ss * y_t(ms,mt)*x_t(ms,mt) - r0_tt * x_s(ms,mt)*y_s(ms,mt)                        &
      	      + r0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                           &
               - r0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                           &
-	          - r0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2.             &	
-              - xjac_x * (- r0_s * x_t(ms,mt) + r0_t * x_s(ms,mt) )   / xjac**2.
+	      - r0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2              &	
+              - xjac_x * (- r0_s * x_t(ms,mt) + r0_t * x_s(ms,mt) )   / xjac**2
 
-     T0_xx = (T0_ss * y_t(ms,mt)**2 - 2.d0*T0_st * y_s(ms,mt)*y_t(ms,mt) + T0_tt * y_s(ms,mt)**2.    &
-	    + T0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                  &
-	    + T0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2.                  &	
-            - xjac_x * (T0_s * y_t(ms,mt) - T0_t * y_s(ms,mt))  / xjac**2.
+     T0_xx = (T0_ss * y_t(ms,mt)**2 - 2.d0*T0_st * y_s(ms,mt)*y_t(ms,mt) + T0_tt * y_s(ms,mt)**2     &
+	    + T0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
+	    + T0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2               &	
+            - xjac_x * (T0_s * y_t(ms,mt) - T0_t * y_s(ms,mt))  / xjac**2
 
-     T0_yy = (T0_ss * x_t(ms,mt)**2 - 2.d0*T0_st * x_s(ms,mt)*x_t(ms,mt) + T0_tt * x_s(ms,mt)**2.    &
+     T0_yy = (T0_ss * x_t(ms,mt)**2 - 2.d0*T0_st * x_s(ms,mt)*x_t(ms,mt) + T0_tt * x_s(ms,mt)**2     &
             + T0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
-	        + T0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2.           &	
-            - xjac_y * (- T0_s * x_t(ms,mt) + T0_t * x_s(ms,mt) )  / xjac**2.
+	    + T0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            &	
+            - xjac_y * (- T0_s * x_t(ms,mt) + T0_t * x_s(ms,mt) )  / xjac**2
 
      T0_xy = (- T0_ss * y_t(ms,mt)*x_t(ms,mt) - T0_tt * x_s(ms,mt)*y_s(ms,mt)                        &
      	      + T0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                           &
               - T0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                           &
-	          - T0_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2.            &
-              - xjac_x * (- T0_s * x_t(ms,mt) + T0_t * x_s(ms,mt) )   / xjac**2.
+	      - T0_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2             &
+              - xjac_x * (- T0_s * x_t(ms,mt) + T0_t * x_s(ms,mt) )   / xjac**2
 
-     vpar0_xx = (vpar0_ss * y_t(ms,mt)**2 - 2.d0*vpar0_st * y_s(ms,mt)*y_t(ms,mt) + vpar0_tt * y_s(ms,mt)**2. &
-               + vpar0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                 &
-               + vpar0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )   / xjac**2.                  &
-               - xjac_x * (vpar0_s * y_t(ms,mt) - vpar0_t * y_s(ms,mt)) / xjac**2.
+     vpar0_xx = (vpar0_ss * y_t(ms,mt)**2 - 2.d0*vpar0_st * y_s(ms,mt)*y_t(ms,mt) + vpar0_tt * y_s(ms,mt)**2 &
+               + vpar0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                &
+               + vpar0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )   / xjac**2                  &
+               - xjac_x * (vpar0_s * y_t(ms,mt) - vpar0_t * y_s(ms,mt)) / xjac**2
 
-     vpar0_yy = (vpar0_ss * x_t(ms,mt)**2 - 2.d0*vpar0_st * x_s(ms,mt)*x_t(ms,mt) + vpar0_tt * x_s(ms,mt)**2. &
-               + vpar0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                                 &
-               + vpar0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )      / xjac**2.               &
-               - xjac_y * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) ) / xjac**2.
+     vpar0_yy = (vpar0_ss * x_t(ms,mt)**2 - 2.d0*vpar0_st * x_s(ms,mt)*x_t(ms,mt) + vpar0_tt * x_s(ms,mt)**2 &
+               + vpar0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                                &
+               + vpar0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )      / xjac**2               &
+               - xjac_y * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) ) / xjac**2
 
      vpar0_xy = (- vpar0_ss * y_t(ms,mt)*x_t(ms,mt) - vpar0_tt * x_s(ms,mt)*y_s(ms,mt)                       &
                  + vpar0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                             &
                  - vpar0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                             &
-                 - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2.              &
-                 - xjac_x * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) )   / xjac**2.
+                 - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               &
+                 - xjac_x * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) )   / xjac**2
 
      P0_xx = r0_xx * T0 + 2.d0 * r0_x * T0_x + r0 * T0_xx
      P0_yy = r0_yy * T0 + 2.d0 * r0_y * T0_y + r0 * T0_yy
@@ -649,28 +634,28 @@ do ms=1, n_gauss
            v_tt = h_tt(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
            v_st = h_st(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
 	   
-	       v_xx = (v_ss * y_t(ms,mt)**2. - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) + v_tt * y_s(ms,mt)**2. &	        
-	            + v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                           &	   
-	            + v_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2.             &		
-	            - xjac_x * (v_s * y_t(ms,mt) - v_t * y_s(ms,mt)) / xjac**2.
+	   v_xx = (v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) + v_tt * y_s(ms,mt)**2  &	        
+		+ v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                          &	   
+	        + v_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2             &		
+		- xjac_x * (v_s * y_t(ms,mt) - v_t * y_s(ms,mt)) / xjac**2
 
-	       v_yy = (v_ss * x_t(ms,mt)**2 - 2.d0*v_st * x_s(ms,mt)*x_t(ms,mt) + v_tt * x_s(ms,mt)**2. &	        
-		        + v_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                          &	   
-	            + v_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )     / xjac**2.         &		
-		        - xjac_y * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) ) / xjac**2.
+	   v_yy = (v_ss * x_t(ms,mt)**2 - 2.d0*v_st * x_s(ms,mt)*x_t(ms,mt) + v_tt * x_s(ms,mt)**2  &	        
+		+ v_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                          &	   
+	        + v_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )     / xjac**2          &		
+		- xjac_y * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) ) / xjac**2
 
            v_xy = (- v_ss * y_t(ms,mt)*x_t(ms,mt) - v_tt * x_s(ms,mt)*y_s(ms,mt)                    &
      	        + v_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                         &        
                 - v_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                         &	   
-	           - v_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2.           &		
-                - xjac_x * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) )   / xjac**2.   	
+	        - v_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2           &		
+                - xjac_x * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) )   / xjac**2	   	
 
            Bgrad_rho_star = ( F0 / BigR * v_p  +  v_x  * ps0_y - v_y  * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_rho      = ( F0 / BigR * r0_p +  r0_x * ps0_y - r0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_T_star   = ( F0 / BigR * v_p  +  v_x  * ps0_y - v_y  * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_T        = ( F0 / BigR * T0_p +  T0_x * ps0_y - T0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
 
-           BB2 = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2.
+           BB2 = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
            Btheta2=(ps0_x * ps0_x + ps0_y * ps0_y )/BigR
 !           Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
            
@@ -681,12 +666,13 @@ do ms=1, n_gauss
 !#  equation 1   (induction equation)                                                              #
 !###################################################################################################
 
-           rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt)-(jec20-jec10))/ BigR  * xjac * tstep &
+
+           rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt)-jec0)/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
 
-                      - v * tauIC/(r0*BB2) * F0**2./BigR**2. * (ps0_s * p0_t - ps0_t * p0_s) * tstep &		      
-                      + v * tauIC/(r0*BB2) * F0**3./BigR**3. * eps_cyl * p0_p * xjac * tstep &
+                      - v * tauIC/(r0*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &		      
+                      + v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
 
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
                       + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
@@ -857,27 +843,18 @@ do ms=1, n_gauss
 ! ------------------------------------------------------ NEO
 
 !###################################################################################################
-!#  equation 8 (first ECCD current equation)
+!#  equation 8 (ECCD current equation)
 !###################################################################################################
 
-           Bgrad_jec1    = (F0 / BigR*jec10_p + jec10_x*ps0_y -jec10_y*ps0_x)/BigR
+           !Bgrad_jec = b dot grad j
+           !Bdot_jec_star= (F0 / BigR*v_p    + v_x*ps0_y    -x_y*ps0_x)/BigR
+           Bgrad_jec    = (F0 / BigR*jec0_p + jec0_x*ps0_y -jec0_y*ps0_x)/BigR
 
-           rhs_ij_8 = - v * BigR * ec_source(ms,mt) *xjac* tstep &
-                    - v * jec10 * nu_jec1_fast * BigR* xjac * tstep &
-                    + v * JJ_par * BigR/sqrt(BB2) * Bgrad_jec1 * xjac * tstep &
+           !rhs_ij_8 = v * BigR * nu_jec_fast*ec_source(ms,mt)/(2*PI*BigR) * xjac* tstep &
+           rhs_ij_8 = v * BigR * ec_source(ms,mt) *xjac* tstep &
+                    - v * jec0 * nu_jec_fast * BigR* xjac * tstep &
+                    + v * JJ_par * BigR/sqrt(BB2) * Bgrad_jec * xjac * tstep &
                     + v * zeta * delta_g(mp,8,ms,mt) * BigR * xjac
-
-!###################################################################################################
-!#  equation 9 (second ECCD current equation)
-!###################################################################################################
-
-           Bgrad_jec2    = (F0 / BigR*jec20_p + jec20_x*ps0_y -jec20_y*ps0_x)/BigR
-
-           rhs_ij_9 = v * BigR * ec_source(ms,mt) *xjac* tstep &
-                    - v * jec20 * nu_jec2_fast * BigR* xjac * tstep &
-                    + v * JJ_par * BigR/sqrt(BB2) * Bgrad_jec2 * xjac * tstep &
-                    + v * zeta * delta_g(mp,9,ms,mt) * BigR * xjac
-
 
 !###################################################################################################
 !#  RHS equations end                                                                                  #
@@ -891,7 +868,6 @@ do ms=1, n_gauss
            ij6 = index_ij + 5*n_tor
            ij7 = index_ij + 6*n_tor
            ij8 = index_ij + 7*n_tor
-           ij9 = index_ij + 8*n_tor
 
            RHS(ij1) = RHS(ij1) + rhs_ij_1 * wst
            RHS(ij2) = RHS(ij2) + rhs_ij_2 * wst
@@ -901,7 +877,6 @@ do ms=1, n_gauss
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * wst
            RHS(ij7) = RHS(ij7) + rhs_ij_7 * wst
            RHS(ij8) = RHS(ij8) + rhs_ij_8 * wst
-           RHS(ij9) = RHS(ij9) + rhs_ij_9 * wst
 
            do k=1,n_vertex_max
 
@@ -951,20 +926,13 @@ do ms=1, n_gauss
                  u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  T_st = psi_st ; vpar_st = psi_st
 
 
-! additions for the two ECCD current equations
-jec1   = psi
-jec1_x = psi_x
-jec1_y = psi_y
-jec1_p = psi_p
-jec1_s = psi_s
-jec1_t = psi_t
-
-jec2   = psi
-jec2_x = psi_x
-jec2_y = psi_y
-jec2_p = psi_p
-jec2_s = psi_s
-jec2_t = psi_t
+! additions for the ECCD current equation
+jec   = psi
+jec_x = psi_x
+jec_y = psi_y
+jec_p = psi_p
+jec_s = psi_s
+jec_t = psi_t
 !!
 
                  u_xx = psi_xx ;                                    rho_xx = psi_xx ;  T_xx = psi_xx ; vpar_xx = psi_xx
@@ -1010,18 +978,17 @@ jec2_t = psi_t
                       + v * tauIC * rho /(r0**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep 
 
 
-                amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)-(jec20+jec10)) / BigR * xjac * theta * tstep &
+                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)-jec0) / BigR * xjac * theta * tstep &
 		 
 		        + v * tauIC/(r0*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
 		        + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &
 			   
-                        - v * tauIC/(r0*BB2) * F0**3./BigR**3. * eps_cyl * r0 * T_p  * xjac * theta * tstep &
-                        - v * tauIC/(r0*BB2) * F0**3./BigR**3. * eps_cyl * T  * r0_p * xjac * theta * tstep 
+                        - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep &
+                        - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac * theta * tstep 
 
 
-!! additions for the two ECCD current equations
-                 amat_18 =  v * eta_T * jec1 / BigR     *xjac * theta * tstep
-                 amat_19 =  v * eta_T * jec2 / BigR     *xjac * theta * tstep
+!! addition for the ECCD current equation
+                 amat_18 =  v * eta_T * jec / BigR     *xjac * theta * tstep
 !!
 
 !---------------------------------------------------------------- equation 1
@@ -1507,32 +1474,18 @@ jec2_t = psi_t
                  endif
 !---------------------------------------- NEO
 !###################################################################################################
-!#  equation 8 first ECCD current
+!#  equation 8   ECCD current
 !###################################################################################################
 
-       Bgrad_jec1_psi      = ( jec10_x * psi_y - jec10_y * psi_x )  /BigR
-       Bgrad_jec1_jec      = ( F0 / BigR * jec1_p +  jec1_x * ps0_y -jec1_y *ps0_x ) / BigR
+       Bgrad_jec_psi      = ( jec0_x * psi_y - jec0_y * psi_x )  /BigR
+       Bgrad_jec_jec      = ( F0 / BigR * jec_p +  jec_x * ps0_y -jec_y *ps0_x ) / BigR
 
-       amat_81 =  -JJ_par*BigR/sqrt(BB2)       *v*Bgrad_jec1_psi*xjac*theta*tstep &
-       +JJ_par*BigR*sqrt(BB2)*BB2_psi /(2.*BB2**2)  *v *Bgrad_jec1*xjac*theta*tstep
+       amat_81 =  -JJ_par*BigR/sqrt(BB2)       *v*Bgrad_jec_psi*xjac*theta*tstep &
+       +JJ_par*BigR*sqrt(BB2)*BB2_psi /(2.*BB2**2)  *v *Bgrad_jec*xjac*theta*tstep
 
-       amat_88 =  v * jec1 * BigR * xjac * (1.d0 + zeta) &
-                + v * nu_jec1_fast * BigR * jec1 * xjac * theta * tstep &
-                - v * JJ_par*BigR/sqrt(BB2)* Bgrad_jec1_jec * xjac * theta *tstep
-
-!###################################################################################################
-!#  equation 9 second ECCD current
-!###################################################################################################
-
-       Bgrad_jec2_psi      = ( jec20_x * psi_y - jec20_y * psi_x )  /BigR
-       Bgrad_jec2_jec      = ( F0 / BigR * jec2_p +  jec2_x * ps0_y -jec2_y *ps0_x )/ BigR
-
-       amat_91 =  -JJ_par*BigR/sqrt(BB2)       *v*Bgrad_jec2_psi*xjac*theta*tstep  &
-       +JJ_par*BigR*sqrt(BB2)*BB2_psi /(2.*BB2**2)  *v*Bgrad_jec2*xjac*theta*tstep
-
-       amat_99 =  v * jec2 * BigR * xjac * (1.d0 + zeta) &
-                + v * nu_jec2_fast * BigR * jec2 * xjac * theta * tstep &
-                - v * JJ_par*BigR/sqrt(BB2)* Bgrad_jec2_jec * xjac * theta *tstep
+       amat_88 =  v * jec * BigR * xjac * (1.d0 + zeta) &
+                + v * nu_jec_fast * BigR * jec * xjac * theta * tstep &
+                - v * JJ_par*BigR/sqrt(BB2)* Bgrad_jec_jec * xjac * theta *tstep
 
 !###################################################################################################
 !#  end LHS equations                                                                              #
@@ -1547,7 +1500,6 @@ jec2_t = psi_t
                  kl6 = index_kl + 5*n_tor
                  kl7 = index_kl + 6*n_tor
                  kl8 = index_kl + 7*n_tor
-                 kl9 = index_kl + 8*n_tor
 
                  ELM(ij1,kl1) =  ELM(ij1,kl1) + wst * amat_11
                  ELM(ij1,kl2) =  ELM(ij1,kl2) + wst * amat_12
@@ -1555,7 +1507,6 @@ jec2_t = psi_t
                  ELM(ij1,kl5) =  ELM(ij1,kl5) + wst * amat_15
                  ELM(ij1,kl6) =  ELM(ij1,kl6) + wst * amat_16
                  ELM(ij1,kl8) =  ELM(ij1,kl8) + wst * amat_18
-                 ELM(ij1,kl9) =  ELM(ij1,kl9) + wst * amat_19
 
                  ELM(ij2,kl1) =  ELM(ij2,kl1) + wst * amat_21
                  ELM(ij2,kl2) =  ELM(ij2,kl2) + wst * amat_22
@@ -1593,9 +1544,6 @@ jec2_t = psi_t
 
                  ELM(ij8,kl1) =  ELM(ij8,kl1) + wst * amat_81
                  ELM(ij8,kl8) =  ELM(ij8,kl8) + wst * amat_88
-
-                 ELM(ij9,kl1) =  ELM(ij9,kl1) + wst * amat_91
-                 ELM(ij9,kl9) =  ELM(ij9,kl9) + wst * amat_99
 
                enddo
              enddo

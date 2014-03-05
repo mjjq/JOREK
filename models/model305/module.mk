@@ -1,4 +1,10 @@
-DIR = models/model305
+DIR = models/model306
+
+ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
+	$(DIR)/initialise_parameters.f90		\
+	$(DIR)/mod_parameters.f90			\
+	$(DIR)/sources.f90
+
 
 ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/initialise_parameters.f90		\
@@ -7,7 +13,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)		\
 	$(DIR)/element_matrix.f90 		\
-	$(DIR)/element_matrix_fft.f90 		\
+        $(DIR)/element_matrix_fft.f90           \
 	$(DIR)/boundary_matrix_open.f90  	\
 	$(DIR)/boundary_matrix.f90 		\
 	$(DIR)/boundary_conditions.f90 		\

@@ -29,7 +29,7 @@ logical    :: xpoint2
 real*8     :: zV, dV_dpsi, dV_dpsi2, dV_dz, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi2_dz, dV_dpsi_dz2
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
-  write(*,*) '*      initial conditions  (305)      *'
+  write(*,*) '*      initial conditions  (306)      *'
   write(*,*) '***************************************'
 endif
 Z_xpoint(1) = -99.d0
@@ -132,6 +132,8 @@ if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
 !=================================MB: parallel velocity
    
     node_list%node(i)%values(1,:,8) = 0.d0        ! ECCD current 
+
+    node_list%node(i)%values(1,:,9) = 0.d0        ! ECCD current 
  
     node_list%node(i)%deltas = 0.d0
 

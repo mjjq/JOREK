@@ -48,7 +48,9 @@ real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 
+#ifdef _OPENMP
 integer,external :: omp_get_num_threads, omp_get_thread_num
+#endif
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -142,9 +144,13 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           omp_nthreads,omp_tid)
-
+#ifdef OPENMP
 omp_nthreads = omp_get_num_threads()
 omp_tid      = omp_get_thread_num()
+#else
+omp_nthreads = 1
+omp_tid      = 0
+#endif
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume, &
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &

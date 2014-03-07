@@ -149,14 +149,16 @@ module wsmp_module
   
   !> Initialize the WSMP solver.
   subroutine PWGSMP__initialize_solver(my_id_n, MPI_COMM_N)
+
     use mpi_mod
 
     integer, intent(in) :: my_id_n
     integer, intent(in) :: MPI_COMM_N
 
     integer             :: PWGSMP_nthrd
+#ifdef _OPENMP
     integer, external   :: omp_get_num_threads
-
+#endif
 
     if (PWSMP__verbose) WRITE(*,*) "Entering PWGSMP__initialize_solver() ..."
 
@@ -164,12 +166,17 @@ module wsmp_module
 #ifdef USE_WSMP
     call wsetmpicomm(MPI_COMM_N)
 #endif
+#ifdef _OPENMP
     !$omp parallel default(none) shared(PWGSMP_nthrd)
     PWGSMP_nthrd = omp_get_num_threads()
     !$omp end parallel
+#else
+    PWGSMP_nthrd = 1
+#endif
 #ifdef USE_WSMP
     call wsetmaxthrds(PWGSMP_nthrd)
 #endif
+
 
     call MPI_BCAST(PWGSMP__matrix%rank, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr)
 

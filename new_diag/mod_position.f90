@@ -159,7 +159,8 @@ module mod_position
   
   !> Simple function to generate poloidal positions (wrapper for routine create_pol_pos).
   function pol_pos(node_list, element_list, eq, R, Z, ielm, s, t, Rmin, Rmax, nR, Zmin, Zmax, nZ,  &
-    Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN) result(pos_list)
+    Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN, nmaxsteps, deltaphi,       &
+    nsmallsteps) result(pos_list)
     type(t_pol_pos_list), target :: pos_list
     
     ! --- Routine parameters
@@ -167,8 +168,9 @@ module mod_position
     type(type_element_list),      intent(in)    :: element_list
     type(t_equil_state),          intent(in)    :: eq
     real*8,  optional,            intent(in)    :: R, Z, s, t, Rmin, Rmax, Zmin, Zmax, PsiN,       &
-      Rstart, Rend, Zstart, Zend, PsiNmin, PsiNmax
-    integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN
+      Rstart, Rend, Zstart, Zend, PsiNmin, PsiNmax, deltaphi
+    integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN, nmaxsteps,        &
+      nsmallsteps
     
     ! --- Local variables
     integer :: ierr
@@ -188,10 +190,10 @@ module mod_position
   !! - (Rstart,Rend,Zstart,Zend,n)   -> Equidistant points along a straight line
   !! - (PsiN,nTht)                   -> flux surface (equidistant points in theta*)
   !! - (PsiNmin,PsiNmax,nPsiN,nTht)  -> flux surfaces (equidistant points in theta*)
-  !! To be added: Single node; All nodes; All nodes with subdivision of elements (for vtk)
+  !! To be added: Single node; All nodes; All nodes with subdivision of elements (for vtk) ###
   recursive subroutine create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s,  &
     t, Rmin, Rmax, nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax,&
-    nPsiN)
+    nPsiN, nmaxsteps, deltaphi, nsmallsteps)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':create_pol_pos'
     
@@ -202,8 +204,9 @@ module mod_position
     type(type_element_list),      intent(in)    :: element_list
     type(t_equil_state),          intent(in)    :: eq
     real*8,  optional,            intent(in)    :: R, Z, s, t, Rmin, Rmax, Zmin, Zmax, PsiN,       &
-      Rstart, Rend, Zstart, Zend, PsiNmin, PsiNmax
-    integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN
+      Rstart, Rend, Zstart, Zend, PsiNmin, PsiNmax, deltaphi
+    integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN, nmaxsteps,        &
+      nsmallsteps
     
     ! --- Local variables
     type(t_theta_mapping) :: mapping
@@ -222,9 +225,8 @@ module mod_position
       pos%R = R
       pos%Z = Z
       call find_RZ(node_list, element_list, R, Z, R_out, Z_out, pos%ielm, pos%s, pos%t, ierr)
-      if ( ierr /= 0 ) write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' when calling find_RZ.'
-      
-      if ( ierr == 0 ) call fill_pol_pos(pos, node_list, element_list, ierr)
+      pos%outside = ( ierr /= 0 )
+      call fill_pol_pos(pos, node_list, element_list)
       
     ! --- Single position given by ielm, s, and t.
     else if ( present(ielm) .and. present(s) .and. present(t) ) then
@@ -234,18 +236,16 @@ module mod_position
       pos%ielm = ielm
       pos%s    = s
       pos%t    = t
-      
-      call fill_pol_pos(pos, node_list, element_list, ierr)
+      call fill_pol_pos(pos, node_list, element_list)
       
     ! --- Rectangular array of positions in R and Z.
     else if ( present(Rmin) .and. present(Rmax) .and. present(nR) .and. present(Zmin) .and.        &
       present(Zmax) .and. present(nZ) ) then
       
       call alloc_pol_pos(pos_list, (/nR,nZ/))
-      !$OMP parallel do default(none) firstprivate(pos,R_out,Z_out,ierr)                        & 
-      !$OMP shared(nR,nZ,node_list,element_list,pos_list,Rmin,Rmax,Zmin,Zmax) schedule(dynamic) &
-      !$OMP private(i,j)
-
+      
+      !$OMP parallel do default(none) firstprivate(pos,R_out,Z_out,ierr) private(i,j)              & 
+      !$OMP shared(nR,nZ,node_list,element_list,pos_list,Rmin,Rmax,Zmin,Zmax) schedule(static)
       do i = 1, nR
         do j = 1, nZ
           pos   => pos_list%pos(i,j)
@@ -254,11 +254,8 @@ module mod_position
           ierr = 0
           call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
-          if ( ierr /= 0 ) then
-            pos%outside = .true.
-          else
-            call fill_pol_pos(pos, node_list, element_list, ierr)
-          end if
+          pos%outside = ( ierr /= 0 )
+          call fill_pol_pos(pos, node_list, element_list)
         end do
       end do
       !$OMP end parallel do
@@ -276,12 +273,8 @@ module mod_position
         pos%length = full_length * real(i-1)/real(n-1)
         call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,  &
           ierr)
-        if ( ierr /= 0 ) then
-          write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
-          exit
-        end if
-        call fill_pol_pos(pos, node_list, element_list, ierr)
-        if ( ierr /= 0 ) exit
+        pos%outside = ( ierr /= 0 )
+        call fill_pol_pos(pos, node_list, element_list)
       end do
       
     ! --- Equidistant points along a straight line in R at fixed Z (e.g., midplane profiles).
@@ -307,7 +300,8 @@ module mod_position
       end if 
       
       call determine_theta_mag(mapping, node_list, element_list, eq, (/PsiNmin,PsiNmax/), nPsiN,   &
-        nTht, ierr)
+        nTht, ierr, nmaxsteps2=nmaxsteps, deltaphi2=deltaphi, nsmallsteps2=nsmallsteps)
+        ! (Optional parameters passed on to this routine: nmaxsteps, deltaphi, nsmallsteps)
       if ( ierr /= 0 ) then
         write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling determine_theta_mag.'
         ierr = 400
@@ -327,32 +321,22 @@ module mod_position
           pos%theta_star = 2.d0 * PI * real(j-1) / real(nTht-1) !######### check if nTht or nTht-1
           call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
-          if ( ierr /= 0 ) then
-            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ.'
-            exit
-          end if
-          call fill_pol_pos(pos, node_list, element_list, ierr)
-          if ( ierr /= 0 ) exit
+          pos%outside = ( ierr /= 0 )
+          call fill_pol_pos(pos, node_list, element_list)
           
           ! --- Calculate poloidal surface inside flux surface (for r_minor)
           if ( j /= 1 ) then
             gx = pos_list%pos(j,i)%R - pos_list%pos(j-1,i)%R
             gy = pos_list%pos(j,i)%Z - pos_list%pos(j-1,i)%Z
-            gg = sqrt( gx**2 + gy**2 )
-            ax = pos_list%pos(j,i)%R - eq%R_axis
-            ay = pos_list%pos(j,i)%Z - eq%Z_axis
-            hh = ( gy * ax - gx * ay ) / gg
-            surface(i) = surface(i) + hh * gg / 2.d0
-          else 
-             ! (if (j .eq. 1) )
+          else ! if (j == 1) ######### check if this is necessary (it is, if first point /= last point in flux surface!)
             gx = pos_list%pos(1,i)%R - pos_list%pos(nTht,i)%R
             gy = pos_list%pos(1,i)%Z - pos_list%pos(nTht,i)%Z
-            gg = sqrt( gx**2 + gy**2 )
-            ax = pos_list%pos(1,i)%R - eq%R_axis
-            ay = pos_list%pos(1,i)%Z - eq%Z_axis
-            hh = ( gy * ax - gx * ay ) / gg
-            surface(i) = surface(i) + hh * gg / 2.d0
           end if
+          gg = sqrt( gx**2 + gy**2 )
+          ax = pos_list%pos(j,i)%R - eq%R_axis
+          ay = pos_list%pos(j,i)%Z - eq%Z_axis
+          hh = ( gy * ax - gx * ay ) / gg
+          surface(i) = surface(i) + hh * gg / 2.d0
         end do
       end do
       
@@ -370,7 +354,7 @@ module mod_position
     else if ( present(nPsiN) .and. present(nTht) ) then
       
       call create_pol_pos(pos_list, ierr, node_list, element_list, eq, nTht=nTht, nPsiN=nPsiN,     &
-        psiNmin=0.005d0, psiNmax=0.990d0)
+        psiNmin=0.001d0, psiNmax=0.998d0)
       
     else
       
@@ -390,30 +374,21 @@ module mod_position
   
   !> Auxilliary routine used by create_pol_pos: Fill information (R, R_s, ..., Z_tt, element, nodes)
   !! for a single poloidal position. Requires that ielm, s, t are already set to correct values.
-  subroutine fill_pol_pos(pos, node_list, element_list, ierr)
-    
-    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':fill_pol_pos'
+  subroutine fill_pol_pos(pos, node_list, element_list)
     
     ! --- Routine parameters
     type(t_pol_pos), pointer, intent(inout) :: pos
     type(type_node_list),     intent(in)    :: node_list
     type(type_element_list),  intent(in)    :: element_list
-    integer,                  intent(out)   :: ierr
     
     ! --- Local variables
     integer :: i
     
-    ierr = 0
-    
-    if ( (pos%ielm < 0) .or. (pos%ielm > element_list%n_elements) ) then
-      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': pos%ielm has illegal value.'
-      ierr = 300
-      return
-    end if
+    if ( (pos%ielm < 0) .or. (pos%ielm > element_list%n_elements) ) pos%outside = .true.
+    if ( pos%outside ) return
     
     call interp_RZ(node_list, element_list, pos%ielm, pos%s, pos%t, pos%R, pos%R_s, pos%R_t,       &
       pos%R_st, pos%R_ss, pos%R_tt, pos%Z, pos%Z_s, pos%Z_t, pos%Z_st, pos%Z_ss, pos%Z_tt)
-    
     pos%element = element_list%element(pos%ielm)
     
     do i = 1, n_vertex_max

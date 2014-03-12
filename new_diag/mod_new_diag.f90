@@ -289,7 +289,7 @@ module mod_new_diag
   
   !> Perform a 2D Fourier analysis of the given expressions in straight field line coordinates.
   subroutine fourier_analysis(node_list, element_list, eq, units, expr_list, cp, nPsiN, ierr,      &
-    filename_start, output_type2)
+    filename_start, output_type2, nsmallsteps)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':fourier_analysis'
     
@@ -303,6 +303,7 @@ module mod_new_diag
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename_start !< Start of filename [optional]
     integer,          optional,     intent(in)    :: output_type2 !< Output what? [optional]
+    integer,          optional,     intent(in)    :: nsmallsteps  !< Parameter for pol_pos [opt.]
     
     ! --- Local variables
     integer :: nn(4), output_type, m, n, m_max, n_max, i, j
@@ -314,7 +315,8 @@ module mod_new_diag
     
     ierr = 0
     
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_plane) !########
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_plane,             &
+      nsmallsteps=nsmallsteps) !########
     tor_pos_list = tor_pos(nphi=4*n_plane) !########
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
@@ -368,6 +370,8 @@ module mod_new_diag
       
       ! --- Output the Fourier components to ascii files
       do n = 0, n_max ! toroidal mode number
+        write(filename,'(4a,i3.3,a)') trim(filename_start), '_', trim(OUTP_NAMES(output_type)),    &
+          '_n', n, '.dat'
         do m = -m_max, m_max ! poloidal mode number
           
           if ( m >= 0 ) then
@@ -376,15 +380,9 @@ module mod_new_diag
             out1d(:,:) = outp(n+1,nn(2)-abs(m)+1,:,:)
           end if
           
-          write(filename,'(4a,i3.3,a,sp,i4.3,a)') trim(filename_start), '_',                       &
-            trim(OUTP_NAMES(output_type)), '_n', n, '_m', m, '.dat'
-          
           write(comment,'(a,sp,i4.3,a,i4.3)') trim(OUTP_NAMES(output_type))//'s for m/n=', m, '/', n
-          
           call write_ascii_1d(ierr, eq, expr_list, out1d, FORM_TABLE, .true., filename,            &
-            append=.false., comment=trim(comment))
-          
-          append = .true.
+            append=(m/=-m_max), comment=trim(comment))
           
         end do
       end do

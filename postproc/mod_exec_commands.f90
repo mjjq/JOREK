@@ -868,7 +868,7 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: units, npts
+    integer :: units, npts, nsmall
     character(len=1024) :: filename, comment
     type(t_pol_pos_list), save :: pol_pos_list
     type(t_tor_pos_list), save :: tor_pos_list
@@ -882,12 +882,15 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('surfaces', ierr)
+    nsmall= get_int_setting('nsmallsteps', ierr)
     
     write(filename,'(4a)') DIR, 'exprs_averaged',                                                  &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*4*n_plane) !###
-    tor_pos_list = tor_pos(nphi=4*n_plane) !###
+    ! ### is nTht and nphi really chosen well???
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*n_plane,                &
+      nsmallsteps=nsmall)
+    tor_pos_list = tor_pos(nphi=n_plane)
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
@@ -1221,7 +1224,7 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: units, npts
+    integer :: units, npts, nsmall
     character(len=1024) :: filename_start
     type(t_pol_pos_list), save :: pol_pos_list
     type(t_tor_pos_list), save :: tor_pos_list
@@ -1235,11 +1238,12 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('surfaces', ierr)
+    nsmall= get_int_setting('nsmallsteps', ierr)
     
     write(filename_start,'(3a)') DIR, 'exprs_four2d', trim(step_range_string(index_now,index_now))
     
     call fourier_analysis(node_list, element_list, eq, units, expr_list, cp, npts, ierr,           &
-      filename_start, OUTP_ABS_VALUE)
+      filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall)
     
   end subroutine four2d
   

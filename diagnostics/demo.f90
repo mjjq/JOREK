@@ -142,7 +142,7 @@ program demo
   call write_vtk_2d(ierr, expr_list, res2d, 'test4.vtk', (/3,4/), close1=.true.)
   call reduce_result_to_2d(ierr, result, res2d, i1=5)
   call write_vtk_2d(ierr, expr_list, res2d, 'test5.vtk', (/3,4/), close1=.true.)
-    call reduce_result_to_2d(ierr, result, res2d, i1=6)
+  call reduce_result_to_2d(ierr, result, res2d, i1=6)
   call write_vtk_2d(ierr, expr_list, res2d, 'test6.vtk', (/3,4/), close1=.true.)
   call reduce_result_to_2d(ierr, result, res2d, i1=7)
   call write_vtk_2d(ierr, expr_list, res2d, 'test7.vtk', (/3,4/), close1=.true.)

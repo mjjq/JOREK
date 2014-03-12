@@ -34,6 +34,7 @@ program jorek2_postproc
   call set_setting('surfaces',        '100',   ierr)
   call set_setting('verbose',         'false', ierr)
   call set_setting('debug',           'false', ierr)
+  call set_setting('nsmallsteps',     '3',     ierr) ! numerical parameter for straight field lines
   
   ! --- Print getting started information
   call specific_help('getting_started')

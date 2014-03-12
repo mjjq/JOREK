@@ -315,9 +315,9 @@ module mod_new_diag
     
     ierr = 0
     
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_plane,             &
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_tor,               &
       nsmallsteps=nsmallsteps) !########
-    tor_pos_list = tor_pos(nphi=4*n_plane) !########
+    tor_pos_list = tor_pos(nphi=4*n_tor) !########
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     

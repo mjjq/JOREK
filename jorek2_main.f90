@@ -34,7 +34,7 @@ program JOREK2
   use pellet_module
   use equil_info
   use boundary,            only: boundary_from_grid
-  use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum
+  use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum, wall_curr_initialized
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
@@ -611,7 +611,7 @@ required = 0
       resistive_wall)
     call update_response(tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
-    if ( .not. restart ) call init_wall_currents(my_id, resistive_wall)
+    if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   
   call tr_print_memsize("AfterEquilibrium")

@@ -15,7 +15,8 @@ module vacuum
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity                !< Resistivity of the external wall
-  real*8              :: wall_thickness      = 1.d0      !< Thickness of the external wall
+  real*8              :: wall_thickness        = 1.d0    !< Thickness of the external wall
+  logical             :: wall_curr_initialized = .false. !< Have the wall currents been initialized?
   integer             :: n_wall_curr                     !< Number of wall current potentials.
   real*8, allocatable :: wall_curr(:)                    !< Wall current potentials (\f$Y_k\f$).
   real*8, allocatable :: dwall_curr(:)                   !< Change of wall current potentials (\f$\delta Y_k\f$).
@@ -155,11 +156,16 @@ module vacuum
     
     ! --- Local variables
     logical :: resistive_wall_rst
+    integer :: ierr
     
     if ( freeboundary ) then
       
-      read(file_handle) resistive_wall_rst
-      if ( resistive_wall .neqv. resistive_wall_rst ) then
+      read(file_handle, iostat=ierr) resistive_wall_rst
+      if ( ierr /= 0 ) then
+        write(*,*) 'WARNING: Restarting a simulation with freeboundary=.t. which was run with'
+        write(*,*) '  freeboundary=.f. so far.'
+        return
+      else if ( resistive_wall .neqv. resistive_wall_rst ) then
         write(*,*) 'ERROR: It is currently not possible to restart a JOREK simulation with a'
         write(*,*) '  modified setting for resistive_wall.'
         stop
@@ -187,6 +193,8 @@ module vacuum
           write(*,*) 'dwall_curr', sum(abs(dwall_curr))
           write(*,*) 'END: Checksums'
         end if
+        
+        wall_curr_initialized = .true.
         
       end if
       

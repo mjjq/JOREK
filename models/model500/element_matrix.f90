@@ -45,7 +45,7 @@ real*8     :: u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_st, u0_tt, u0_xx, u0_x
 real*8     :: w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_st, w0_tt, w0_xx, w0_xy, w0_yy
 real*8     :: Vpar0, Vpar0_x, Vpar0_y, Vpar0_p, Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt, vpar0_xx, vpar0_xy, vpar0_yy
 real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy, r0_hat, r0_x_hat, r0_y_hat
-real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy
+real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T_corr
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_yy, psi_xy
 real*8     :: zj, zj_x, zj_y, zj_p, zj_s, zj_t, zj_ss, zj_st, zj_tt
 real*8     :: vpar, vpar_x, vpar_y, vpar_s, vpar_t, vpar_p, vpar_ss, vpar_st, vpar_tt, vpar_xx, vpar_xy, vpar_yy
@@ -317,6 +317,8 @@ do ms=1, n_gauss
      T0_ss = eq_ss(mp,6,ms,mt)
      T0_tt = eq_tt(mp,6,ms,mt)
      T0_st = eq_st(mp,6,ms,mt)
+     
+     T_corr = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
 
      Vpar0    = eq_g(mp,7,ms,mt)
      Vpar0_x  = (   y_t(ms,mt) * eq_s(mp,7,ms,mt) - y_s(ms,mt) * eq_t(mp,7,ms,mt) ) / xjac
@@ -454,9 +456,9 @@ do ms=1, n_gauss
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
        
-       eta_T     =   eta * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+       eta_T     =   eta * (T_corr/T_0)**(-1.5d0)
+       deta_dT   = - eta * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta * (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0)
 
        !if ( xpoint2 .and. (T0 .lt. T_min) ) then
         ! eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
@@ -472,8 +474,8 @@ do ms=1, n_gauss
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
        
-       visco_T   =   visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+       visco_T   =   visco * (T_corr/T_0)**(-1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
 
        !if ( xpoint2 .and. (T0 .lt. T_min) ) then
         ! visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
@@ -486,8 +488,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent parallel heat diffusivity
      if ( ZKpar_T_dependent ) then
-       ZKpar_T   = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-       dZKpar_dT = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
+       ZKpar_T   = ZK_par * (T_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+       dZKpar_dT = ZK_par * (2.5d0)  * T_corr**(+1.5d0) * T_0**(-2.5d0)
        if (ZKpar_T .gt. ZK_par_max) then
          ZKpar_T   = Zk_par_max
          dZKpar_dT = 0.d0

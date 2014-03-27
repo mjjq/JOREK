@@ -11,6 +11,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use diffusivities,  only: get_dperp, get_zkperp
+use corr_neg
 
 implicit none
 
@@ -42,7 +43,7 @@ real*8     :: u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_tt, u0_st, u0_xx, u0_x
 real*8     :: w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_st, w0_tt, w0_xx, w0_xy, w0_yy
 real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy, r0_hat, r0_x_hat, r0_y_hat
 real*8     :: rn0, rn0_x, rn0_y, rn0_p, rn0_s, rn0_t, rn0_ss, rn0_st, rn0_tt, rn0_hat, rn0_x_hat, rn0_y_hat
-real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy
+real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T_corr
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_xy, psi_yy
 real*8     :: zj, zj_x, zj_y, zj_p, zj_s, zj_t, zj_ss, zj_st, zj_tt
 real*8     :: u, u_x, u_y, u_p, u_s, u_t, u_ss, u_st, u_tt, u_xx, u_xy, u_yy
@@ -294,6 +295,8 @@ do ms=1, n_gauss
      T0_tt = eq_tt(mp,6,ms,mt)
      T0_st = eq_st(mp,6,ms,mt)
 
+     T_corr = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
+
      Vpar0    = eq_g(mp,7,ms,mt)
      Vpar0_x  = (   y_t(ms,mt) * eq_s(mp,7,ms,mt) - y_s(ms,mt) * eq_t(mp,7,ms,mt) ) / xjac
      Vpar0_y  = ( - x_t(ms,mt) * eq_s(mp,7,ms,mt) + x_s(ms,mt) * eq_t(mp,7,ms,mt) ) / xjac
@@ -377,9 +380,9 @@ do ms=1, n_gauss
 
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+       eta_T     = eta   * (T_corr/T_0)**(-1.5d0)
+       deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0)
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -388,8 +391,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+       visco_T   = visco * (T_corr/T_0)**(-1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
      else
        visco_T   = visco
        dvisco_dT = 0.d0
@@ -415,10 +418,9 @@ do ms=1, n_gauss
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
-     S_ion = coef_ion_1*((coef_ion_3/T0)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/T0)*exp(-coef_ion_3/T0) 
-     
-     S_ion_T = coef_ion_1*exp(-coef_ion_3/T0)*((coef_ion_3/T0)**0.39d0)*1/(T0*(coef_ion_2*T0+coef_ion_3)**2.0d0) &  
-             * (coef_ion_3*((coef_ion_2+1)*T0+coef_ion_3)-0.39d0*(T0*(coef_ion_2*T0+coef_ion_3)))                   
+     S_ion = coef_ion_1*((coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))*exp(-coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))                       
+     S_ion_T = coef_ion_1*exp(-coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))*((coef_ion_3/corr_neg_temp(T0,(/1.d-5,0.3/)))**0.39d0)*1/(corr_neg_temp(T0,(/1.d-5,0.3/))*(coef_ion_2*corr_neg_temp(T0,(/1.d-5,0.3/))+coef_ion_3)**2.0d0) &   
+             * (coef_ion_3*((coef_ion_2+1)*corr_neg_temp(T0,(/1.d-5,0.3/))+coef_ion_3)-0.39d0*(corr_neg_temp(T0,(/1.d-5,0.3/))*(coef_ion_2*corr_neg_temp(T0,(/1.d-5,0.3/))+coef_ion_3)))                    
 	     
      phi = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
 

@@ -663,9 +663,9 @@ do i=1,element_list%n_elements
 
         grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
-!        if ((SI_units) .and. (jorek_model .ge. 300)) then
-!          scalars(inode,7) = scalars(inode,7) * sign(Btot,F0)   ! with si-units= .f. gives jorek variable, otherwise physical v_par
-!        endif
+        if ((SI_units) .and. (jorek_model .ge. 300)) then
+          scalars(inode,7) = scalars(inode,7) * sign(Btot,F0)   ! with si-units= .f. gives jorek variable, otherwise physical v_par
+        endif
 
         !   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp','D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
 

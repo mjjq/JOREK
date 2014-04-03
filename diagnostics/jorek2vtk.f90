@@ -618,12 +618,12 @@ do i=1,element_list%n_elements
              w_x  = w_x   + (	Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
              w_y  = w_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
-             w_xx = w_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2       &
+             w_xx = w_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2        &
         	  + w_s * (Z_st*Z_t - Z_tt*Z_s )					& 
         	  + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2			& 
         	  - xjac_x * (w_s* Z_t - w_t * Z_s)  / xjac**2
 
-             w_yy = w_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2       &
+             w_yy = w_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2        &
         	  + w_s * (R_st*R_t - R_tt*R_s )					&
         	  + w_t * (R_st*R_s - R_ss*R_t ) )	   / xjac**2			&
         	  - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
@@ -631,7 +631,7 @@ do i=1,element_list%n_elements
           endif ! xjac
 
         enddo  ! end loop toroidal harmonics
-        
+
         Psi_tot = 0.d0
         do i_tor =1, n_tor
            call interp(node_list,element_list,i,1,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
@@ -662,6 +662,10 @@ do i=1,element_list%n_elements
         ZKpar_T = ZK_par * ((max( scalars(inode,6), T_min ))/T_0)**2.5
 
         grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
+
+!        if ((SI_units) .and. (jorek_model .ge. 300)) then
+!          scalars(inode,7) = scalars(inode,7) * sign(Btot,F0)   ! with si-units= .f. gives jorek variable, otherwise physical v_par
+!        endif
 
         !   'E_flux_Kpar ','E_flux_kperp','E_flux_Vpar ','E_flux_Vperp','D_flux_Dperp','D_flux_Vpar ','D_flux_Vperp'/)
 
@@ -743,7 +747,7 @@ if (SI_units) then
       scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
     endif
     !=====================================Vparal in km/s *Btot!!!
-    scalars(i,7) = scalars(i,7)*Btot /t_norm/1.e3
+    scalars(i,7) = scalars(i,7) /t_norm/1.e3
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,n_var+1) = scalars(i,n_var+1) / MU_zero/1.e3
     if (include_neo) then

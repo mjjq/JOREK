@@ -408,7 +408,7 @@ required = 0
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
-        if (xcase .ne. 10) then
+        if (xcase .ge. 2) then
 	  call grid_double_xpoint(node_list, element_list)
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
@@ -530,7 +530,7 @@ required = 0
         if (xpoint)  then
 
 !          if (.not. grid_to_wall) then
-          if (xcase .ne. 10) then
+          if (xcase .ge. 2) then
 	    call grid_double_xpoint(node_list, element_list)
           else
 	  

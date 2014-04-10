@@ -5,12 +5,12 @@ module parameters
 
   integer, parameter :: jorek_model    = 400       !< JOREK physics model
 
-  integer, parameter :: n_var          = 9         !< number of variables
+  integer, parameter :: n_var          = 8         !< number of variables
   integer, parameter :: n_dim          = 2         !< number of dimensions
   integer, parameter :: n_order        = 3         !< order of the polynomial basis
-  integer, parameter :: n_tor          = 1!3!21!1!21         !< number of toroidal harmonics
-  integer, parameter :: n_period       = 1!3!2!1!2         !< periodicity in toroidal direction
-  integer, parameter :: n_plane        = 1!8!128!1!128         !< number of toroidal angles
+  integer, parameter :: n_tor          = 1!3!15!11!9!3!3!11!3!21!1!21         !< number of toroidal harmonics
+  integer, parameter :: n_period       = 1!3!3!4!6!6!6!4!4!2!1!2         !< periodicity in toroidal direction
+  integer, parameter :: n_plane        = 1!8!64!64!32!8!8!64!8!128!1!128         !< number of toroidal angles
   integer, parameter :: n_vertex_max   = 4         !< maximum number of corners of an element
   integer, parameter :: n_nodes_max    = 100001     !< maximum number of nodes
   integer, parameter :: n_elements_max = 100001     !< maximum number of elements
@@ -23,7 +23,6 @@ module parameters
   !> Names of the physical variables
   character(len=11) :: variable_names(n_var) =                       &
     (/ 'Flux       ','Potential  ','Current    ','Vorticity  ',      &
-       'Density    ','Ions_Temp  ','V_parallel ','Elec_Temp  ',      &
-       'Omega*     ' /)
+       'Density    ','Ions_Temp  ','V_parallel ','Elec_Temp  '/)
  
 end module parameters

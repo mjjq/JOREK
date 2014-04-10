@@ -136,7 +136,6 @@ contains
 		call ELM_main_rhs_6(rhs_tmp, rhs_k_tmp)
 		call ELM_main_rhs_7(rhs_tmp, rhs_k_tmp)
 		call ELM_main_rhs_8(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_9(rhs_tmp, rhs_k_tmp)
     		
 
     		! --- Fill up the matrix
@@ -178,7 +177,6 @@ contains
 		      Ti   = psi; Ti_x   = psi_x; Ti_y   = psi_y; Ti_p   = psi_p; Ti_s   = psi_s; Ti_t   = psi_t
 		      Te   = psi; Te_x   = psi_x; Te_y   = psi_y; Te_p   = psi_p; Te_s   = psi_s; Te_t   = psi_t
 		      Vpar = psi; Vpar_x = psi_x; Vpar_y = psi_y; Vpar_p = psi_p; Vpar_s = psi_s; Vpar_t = psi_t
-		      Wdia = psi; Wdia_x = psi_x; Wdia_y = psi_y; Wdia_p = psi_p; Wdia_s = psi_s; Wdia_t = psi_t
 		      
 		      u_ss    = psi_ss; u_tt	= psi_tt; u_st    = psi_st
 		      zj_ss   = psi_ss; zj_tt	= psi_tt; zj_st   = psi_st
@@ -187,7 +185,6 @@ contains
    		      Ti_ss   = psi_ss; Ti_tt	= psi_tt; Ti_st   = psi_st
    		      Te_ss   = psi_ss; Te_tt	= psi_tt; Te_st   = psi_st
    		      Vpar_ss = psi_ss; Vpar_tt = psi_tt; Vpar_st = psi_st
-   		      Wdia_ss = psi_ss; Wdia_tt = psi_tt; Wdia_st = psi_st
                       
 		      u_xx    = psi_xx; u_yy    = psi_yy; u_xy    = psi_xy; u_pp    = psi_pp
 		      zj_xx   = psi_xx; zj_yy   = psi_yy; zj_xy   = psi_xy; zj_pp   = psi_pp
@@ -196,7 +193,6 @@ contains
 		      Ti_xx   = psi_xx; Ti_yy   = psi_yy; Ti_xy   = psi_xy; Ti_pp   = psi_pp
 		      Te_xx   = psi_xx; Te_yy   = psi_yy; Te_xy   = psi_xy; Te_pp   = psi_pp
 		      Vpar_xx = psi_xx; Vpar_yy = psi_yy; Vpar_xy = psi_xy; Vpar_pp = psi_pp
-		      Wdia_xx = psi_xx; Wdia_yy = psi_yy; Wdia_xy = psi_xy; Wdia_pp = psi_pp
                       
 		      !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
                       !u_xx = (  psi_ss * y_t**2  + psi_tt * y_s**2  - 2.d0*psi_st * y_s*y_t		) / xjac**2
@@ -220,7 +216,6 @@ contains
     		      call ELM_main_lhs_6(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
     		      call ELM_main_lhs_7(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
     		      call ELM_main_lhs_8(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_9(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
 		      
     		      ! --- Fill up the matrix
     		      if (n_tor .gt. 3) then

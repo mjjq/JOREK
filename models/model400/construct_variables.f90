@@ -113,7 +113,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   Te0	= 0.d0; Te0_s	= 0.d0; Te0_t	= 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
   T0	= 0.d0; T0_s	= 0.d0; T0_t	= 0.d0; T0_ss    = 0.d0; T0_tt    = 0.d0; T0_st    = 0.d0; T0_p    = 0.d0; T0_pp    = 0.d0
   Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
-  Wdia0 = 0.d0; Wdia0_s = 0.d0; Wdia0_t = 0.d0; Wdia0_ss = 0.d0; Wdia0_tt = 0.d0; Wdia0_st = 0.d0; Wdia0_p = 0.d0; Wdia0_pp = 0.d0
   delta_g = 0.d0 ; delta_s = 0.d0 ; delta_t = 0.d0
 
   ! --- Integrate
@@ -201,16 +200,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	Te0_p	     = Te0_p	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
 	Te0_pp	     = Te0_pp	  + nodes(i)%values(i_tor,j,8) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
   
-	! --- Variable 7
-	Wdia0	     = Wdia0	  + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Wdia0_s      = Wdia0_s    + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_s (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Wdia0_t      = Wdia0_t    + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_t (i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Wdia0_ss     = Wdia0_ss   + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Wdia0_tt     = Wdia0_tt   + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Wdia0_st     = Wdia0_st   + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H_st(i,j,ms,mt) * HZ   (i_tor,i_plane)
-	Wdia0_p      = Wdia0_p    + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H   (i,j,ms,mt) * HZ_p (i_tor,i_plane)
-	Wdia0_pp     = Wdia0_pp	  + nodes(i)%values(i_tor,j,9) * element%size(i,j) * H   (i,j,ms,mt) * HZ_pp(i_tor,i_plane)
-
 	! --- Deltas
 	do k=1,n_var
 	  delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (i_tor,i_plane)
@@ -383,23 +372,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   !Te0_yy = (  Te0_ss * x_t**2  + Te0_tt * x_s**2  - 2.d0*Te0_st * x_s*x_t             ) / xjac**2
   !Te0_xy = (- Te0_ss * y_t*x_t - Te0_tt * x_s*y_s +      Te0_st * (y_s*x_t + y_t*x_s) ) / xjac**2
   
-  ! --- Variable 7
-  Wdia0_x  = (   y_t * Wdia0_s - y_s * Wdia0_t ) / xjac
-  Wdia0_y  = ( - x_t * Wdia0_s + x_s * Wdia0_t ) / xjac
-  Wdia0_xx = (Wdia0_ss * y_t**2 - 2.d0*Wdia0_st * y_s*y_t + Wdia0_tt * y_s**2  &	 
-	      + Wdia0_s * (y_st*y_t - y_tt*y_s )			       &	
-	      + Wdia0_t * (y_st*y_s - y_ss*y_t ) )         / xjac**2           &      
-	    - xjac_x * (Wdia0_s * y_t - Wdia0_t * y_s)     / xjac**2
-  Wdia0_yy = (Wdia0_ss * x_t**2 - 2.d0*Wdia0_st * x_s*x_t + Wdia0_tt * x_s**2  &	 
-	      + Wdia0_s * (x_st*x_t - x_tt*x_s )			       &	
-	      + Wdia0_t * (x_st*x_s - x_ss*x_t ) )         / xjac**2           &      
-	    - xjac_y * (- Wdia0_s * x_t + Wdia0_t * x_s )  / xjac**2
-  Wdia0_xy = (- Wdia0_ss * y_t*x_t - Wdia0_tt * x_s*y_s 		       &
-	      + Wdia0_st * (y_s*x_t  + y_t*x_s  )  		               &	    
-	      - Wdia0_s  * (x_st*y_t - x_tt*y_s )  		               &	
-	      - Wdia0_t  * (x_st*y_s - x_ss*y_t )  )       / xjac**2           &      
-	    - xjac_x * (- Wdia0_s * x_t + Wdia0_t * x_s )  / xjac**2
-  
   ! --- Deltas
   delta_u_x  = (   y_t * delta_s(2) - y_s * delta_t(2) ) / xjac
   delta_u_y  = ( - x_t * delta_s(2) + x_s * delta_t(2) ) / xjac
@@ -457,6 +429,9 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   ! --- Magnetic field amplitude (squared)
   BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
   
+  !if (r0 .eq. 0.d0) r0 = rho_1
+  !if (Ti0 .lt. 1.d-3*Ti_1) Ti0 = 1.d-3*Ti_1
+  !if (Te0 .lt. 1.d-3*Te_1) Te0 = 1.d-3*Te_1
   return
 
 end subroutine ELM_build_variables
@@ -499,7 +474,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: psi_norm, psi_D
   real*8		      :: atn_D, datn_D, atn_D_n, pol_D, dpol_D, D_min
   real*8		      :: prof(1:3),Diff(1:3,1:10)
-  real*8		      :: V_source, dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
+  real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
       
   ! -------------------------------------
   ! --- Temperature dependent resistivity
@@ -507,8 +482,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if ( eta_T_dependent ) then
     if ( Te0 .lt. Te_1 ) then
       eta_Te	 =   eta   * (Te_1/Te_0)**(-1.5d0)
-      deta_dTe	 = - eta   * (1.5d0)  * Te_1**(-2.5d0) * Te_0**(1.5d0)
-      d2eta_d2Te =   eta   * (3.75d0) * Te_1**(-3.5d0) * Te_0**(1.5d0)
+      deta_dTe	 =   0.d0 
+      d2eta_d2Te =   0.d0
     else
       eta_Te	 =   eta   * (Te0 /Te_0)**(-1.5d0)
       deta_dTe	 = - eta   * (1.5d0)  * Te0 **(-2.5d0) * Te_0**(1.5d0)
@@ -526,7 +501,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if ( visco_T_dependent ) then
     if ( Te0 .lt. Te_1 ) then
       visco_Te	 =   visco * (Te_1/Te_0)**(-1.5d0)
-      dvisco_dTe = - visco * (1.5d0)  * Te_1**(-2.5d0) * Te_0**(1.5d0)
+      dvisco_dTe =   0.d0
     else
       visco_Te	 =   visco * (Te0 /Te_0)**(-1.5d0)
       dvisco_dTe = - visco * (1.5d0)  * Te0 **(-2.5d0) * Te_0**(1.5d0)
@@ -605,35 +580,25 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   Ki_prof = prof(2) 
   Ke_prof = prof(3) 
   
-  ! --- Avoid negative density 
-  if ( r0 .lt. rho_1 ) then
-    !D_prof  = D_prof  * 1.d2
-  endif       
-  if ( Ti0 .lt. Ti_1 ) then
-    !Ki_prof = Ki_prof * 1.d0
-  endif
-  if ( Te0 .lt. Te_1 ) then
-    !Ke_prof = Ke_prof * 1.d0
-  endif
-
   ! -----------------------------------------------------
   ! --- Parallel conductivity profiles (Braginskii model)
   ! -----------------------------------------------------
-  if ( Ti0 .lt. Ti_1 ) then
-    Ki_par  = K_i_par	        * Ti_1**(2.5d0) 
-    dKi_par = K_i_par * (2.5d0) * Ti_1**(1.5d0)
+  if ( Ti0 .lt. Ti_1*1.d-3 ) then
+    Ki_par  = K_i_par	        * (Ti_1*1.d-3)**(2.5d0) 
+    dKi_par = 0.d0 
   else
     Ki_par  = K_i_par	        * Ti0 **(2.5d0) 
     dKi_par = K_i_par * (2.5d0) * Ti0 **(1.5d0)
   endif
-  if ( Ti0 .lt. Ti_1 ) then
-    Ke_par  = K_e_par	        * Te_1**(2.5d0) 
-    dKe_par = K_e_par * (2.5d0) * Te_1**(1.5d0)
+  if ( Te0 .lt. Te_1*1.d-3 ) then
+    Ke_par  = K_e_par	        * (Te_1*1.d-3)**(2.5d0) 
+    dKe_par = 0.d0
   else
     Ke_par  = K_e_par	        * Te0 **(2.5d0) 
     dKe_par = K_e_par * (2.5d0) * Te0 **(1.5d0)
   endif
   
+ 
   ! -------------------------
   ! --- Hyper diffusivitities
   ! -------------------------
@@ -649,21 +614,36 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! We need hyper diffusivities mostly at the grid axis
   if (psi_norm .lt. 0.1d0) eta_numm    = eta_numm   * 1.d2
   if (psi_norm .lt. 0.1d0) visco_numm  = visco_numm * 1.d2
-  if (psi_norm .lt. 0.05d0) visco_numm = visco_numm * 1.d2
-  if (psi_norm .lt. 0.05d0) eta_numm   = eta_numm   * 1.d2
+  if (psi_norm .lt. 0.05d0) visco_numm = visco_numm * 1.d4
+  if (psi_norm .lt. 0.05d0) eta_numm   = eta_numm   * 1.d4
 
+  ! ------------------------------------------------
+  ! --- Taylor Galerkin (TG2) stabilisation switches
+  ! ------------------------------------------------
+  TG_num1 = 0.d0;
+  TG_num2 = 2.d0;
+  TG_num5 = 0.d0;
+  TG_num6 = 0.d0;
+  TG_num7 = 0.d0;
+  TG_num8 = 0.d0;
+  
+  
   ! ------------------------------------------------------
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
-  !if ( (psi_norm .gt. 1.d0) .or. ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) tau_IC = tau_IC * 1.d-3
+  !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh(-( y_g - (Z_xpoint(1)+0.05d0) )/0.01d0))
+  !if ( (psi_norm .gt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = tau_IC * 1.d-3
+  !if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh((psi_norm - 0.99d0)/0.005d0))
+  !if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh((psi_norm - 1.d0)/0.01d0))
+  tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh((psi_norm - 1.04d0)/0.01d0))
   !if ( (psi_norm .gt. 1.d0) .or. ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) tau_IC = tau_IC * 1.d-3
   !if (psi_norm .gt. 1.04d0) tau_IC = tau_IC * 1.d-3
   !if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
   !if ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
   ! Careful at the grid axis
   !if (psi_norm .gt. 1.d0  ) tau_IC = tau_IC * 1.d-3
-  if ( (y_g .lt. Z_xpoint(1)+0.04d0) .and. (xcase2 .ne. 2) ) tau_IC = 0.d0!tau_IC * 1.d-3
+  !if ( (y_g .lt. Z_xpoint(1)+0.04d0) .and. (xcase2 .ne. 2) ) tau_IC = 0.d0!tau_IC * 1.d-3
   !if ( ((ps0 - psi_axis)/(psi_bnd - psi_axis) .lt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = tau_IC * 1.d-3
   !if ( ((ps0 - psi_axis)/(psi_bnd - psi_axis) .lt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = 0.d0
   if (psi_norm .lt. 0.1d0)  tau_IC = tau_IC * 1.d-3
@@ -706,7 +686,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     particle_source = particle_source * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
     heat_source_i   = heat_source_i   * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
     heat_source_e   = heat_source_e   * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
-    
+
     !particle_source   = particlesource * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) )
     !heat_source_i     = heatsource_i   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
     !heat_source_e     = heatsource_e   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
@@ -719,6 +699,24 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     endif
   endif
   
+  ! --- Avoid negative density/temperature
+  if ( r0 .lt. rho_1 ) then
+    D_prof  = D_prof  !* 1.d2
+    !particle_source = 1.d-2
+  endif       
+  if ( Ti0 .lt. Ti_1 ) then
+    Ki_prof = Ki_prof !* 1.d2
+    Ki_par  = Ki_par  !* 1.d2
+    dKi_par = dKi_par !* 1.d2
+    !heat_source_i = 1.d-4
+  endif
+  if ( Te0 .lt. Te_1 ) then
+    Ke_prof = Ke_prof !* 1.d2
+    Ke_par  = Ke_par  !* 1.d2
+    dKe_par = dKe_par !* 1.d2
+    !heat_source_e = 1.d-4
+  endif
+    
   return
 
 end subroutine ELM_build_diffusivities_and_sources

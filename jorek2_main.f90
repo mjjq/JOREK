@@ -421,7 +421,7 @@ required = 0
     end if
     
   end if
-  if ( restart .and. freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
+  if ( restart .and. freeboundary_equil ) call broadcast_vacuum(my_id, resistive_wall)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -501,6 +501,7 @@ required = 0
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)
       call import_external_fields('coil_field.dat', my_id)
+      if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
     end if
     
     ! --- Plot the grid  

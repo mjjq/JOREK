@@ -220,7 +220,7 @@ module vacuum_response
     ! --- Local variables
     integer, parameter :: filehandle = 60
     character(len=512) :: comment
-    integer            :: file_version, i, i_starw, n, is_sin, err, i_tmp
+    integer            :: file_version, i, j, i_starw, n, is_sin, err, i_tmp
     real*8             :: r_tmp
     real*8, allocatable :: tmp(:)
     
@@ -306,20 +306,23 @@ module vacuum_response
     sr%a_id(:,:) = sr%a_ee(:,:) - matmul( sr%a_ey(:,:), sr%a_ye(:,:) )
     
     ! --- Transform STARWALL harmonics to account for periodicity
+    j = 0
     do i = 1, sr%n_tor
       i_starw = sr%i_tor(i)
       n       = i_starw / 2
       is_sin  = i_starw - 2 * n
       i_starw = 2 * n/n_period + is_sin
       if ( (mod(n, n_period) /= 0) .or. (i_starw < 1) .or. (i_starw > n_tor) ) then
-        write(*,*) 'ERROR: STARWALL harmonic has no JOREK equivalent!'
+        write(*,*) 'WARNING: STARWALL harmonic has no JOREK equivalent!'
         write(*,*) 'i_starw    =', sr%i_tor(i)
         write(*,*) 'n_period   =', n_period 
         write(*,*) 'n_tor      =', n_tor
-        stop
+      else
+        j = j + 1
+        sr%i_tor(j) = i_starw
       end if
-      sr%i_tor(i) = i_starw
     end do
+    sr%n_tor = j
     if ( vacuum_debug) write(*,*) 'End of routine read_starwall_response.'
     
   end subroutine read_starwall_response
@@ -685,8 +688,8 @@ module vacuum_response
                     i_index     = node_list%node(i_node)%index(i_dir)
                     i_size      = bndelem_m%size(i_vertex,i_dof)
                     L_IS: do i_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
-                      i_tor    = sr%i_tor(i_starwall)
-                      i_resp   = response_index(i_node_bnd,i_starwall,i_dof)
+                      i_tor  = sr%i_tor(i_starwall)
+                      i_resp = response_index(i_node_bnd,i_starwall,i_dof)
                       i_resp_0 = response_index_eq(i_node_bnd,i_dof)
                       
                       ! --- Determine basis function
@@ -728,9 +731,9 @@ module vacuum_response
                       rhs_contrib = sum( response_m_h(i_resp, :) * psibnd_vec(:) )                 &
                         - sum( response_m_h(i_resp,:) * psibnd_coils(:) )                          &
                         + sum( response_m_j(i_resp, :) * dpsibnd_vec(:) )
-                      if ( i_tor == 1 ) &
-                        rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )
-                      if ( resistive_wall ) &
+                      if ( l_tor == 1 ) rhs_contrib = rhs_contrib                                  &
+                        - sum( bext_tan(i_resp_0, :) * I_coils(:) )
+                      if ( resistive_wall )                                                        &
                         rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) * wall_curr(:) )  &
                           + sum( response_m_g(i_resp, :) * dwall_curr(:) )
                       rhs_contrib = rhs_contrib * common_prefactor
@@ -842,6 +845,11 @@ module vacuum_response
     if ( allocated(dpsibnd_vec) ) deallocate(dpsibnd_vec)
     allocate( dpsibnd_vec(n_dof_starwall) )
     dpsibnd_vec(:) = 0.d0
+    if ( present(psibnd_coils) ) then
+      if ( allocated(psibnd_coils) ) deallocate(psibnd_coils)
+      allocate( psibnd_coils(n_dof_starwall) )
+      psibnd_coils(:) = 0.d0
+    end if
     
     if ( present(psibnd_coils) ) then
       if ( allocated(psibnd_coils) ) deallocate(psibnd_coils)
@@ -861,8 +869,9 @@ module vacuum_response
           
           psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, ivar_psi)
           dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, ivar_psi)
-          if ( (present(psibnd_coils)) .and. (jtor==1) .and. (allocated(I_coils)) ) then
-            psibnd_coils( j_resp ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
+          if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) ) then
+            j_resp_0 = 2*(jnode-1) + jbas
+            psibnd_coils( j_resp_0 ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
           end if
           
         end do
@@ -914,10 +923,9 @@ module vacuum_response
     end if
     
     ! --- Also initialize the old_dpsibnd_vec
-    if ( .not. allocated(old_dpsibnd_vec) ) then
-      allocate( old_dpsibnd_vec(n_dof_starwall) )
-      old_dpsibnd_vec(:) = dpsibnd_vec(:)
-    end if
+    if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
+    allocate( old_dpsibnd_vec(n_dof_starwall) )
+    old_dpsibnd_vec(:) = dpsibnd_vec(:)
     
     if ( my_id == 0 ) call write_wall_vtk(0, resistive_wall)
     deallocate( psibnd_vec, dpsibnd_vec )
@@ -947,6 +955,11 @@ module vacuum_response
     integer :: k
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)
+    
+    if ( (.not. allocated(old_dpsibnd_vec)) .or. (size(old_dpsibnd_vec,1)/= n_dof_starwall) ) then
+      if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
+      allocate( old_dpsibnd_vec(n_dof_starwall) )
+    end if
     
     do k = 1, n_wall_curr
       dwall_curr(k) = sum( response_m_a(k,:) * dpsibnd_vec(:) ) &

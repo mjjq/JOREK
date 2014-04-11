@@ -245,10 +245,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	      - u0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- u0_s * x_t + u0_t * x_s )  / xjac**2
   vv2	   = BigR**2 *  ( u0_x * u0_x + u0_y *u0_y  )
-  !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
-  !u0_xx = (  u0_ss * y_t**2  + u0_tt * y_s**2  - 2.d0*u0_st * y_s*y_t	          ) / xjac**2
-  !u0_yy = (  u0_ss * x_t**2  + u0_tt * x_s**2  - 2.d0*u0_st * x_s*x_t	          ) / xjac**2
-  !u0_xy = (- u0_ss * y_t*x_t - u0_tt * x_s*y_s +      u0_st * (y_s*x_t + y_t*x_s) ) / xjac**2
   
   ! --- Variable 3
   zj0_x    = (   y_t * zj0_s - y_s * zj0_t ) / xjac
@@ -283,10 +279,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	      - w0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - w0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- w0_s * x_t + w0_t * x_s )  / xjac**2
-  !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
-  !w0_xx = (  w0_ss * y_t**2  + w0_tt * y_s**2  - 2.d0*w0_st * y_s*y_t	          ) / xjac**2
-  !w0_yy = (  w0_ss * x_t**2  + w0_tt * x_s**2  - 2.d0*w0_st * x_s*x_t	          ) / xjac**2
-  !w0_xy = (- w0_ss * y_t*x_t - w0_tt * x_s*y_s +      w0_st * (y_s*x_t + y_t*x_s) ) / xjac**2
   
   ! --- Variable 5
   r0_x     = (   y_t * r0_s - y_s * r0_t ) / xjac
@@ -326,10 +318,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	       - xjac_x * (- Ti0_s * x_t + Ti0_t * x_s )  / xjac**2
   Ti0_ps0_x = Ti0_xx * ps0_y - Ti0_xy * ps0_x + Ti0_x * ps0_xy - Ti0_y * ps0_xx
   Ti0_ps0_y = Ti0_xy * ps0_y - Ti0_yy * ps0_x + Ti0_x * ps0_yy - Ti0_y * ps0_xy
-  !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
-  !Ti0_xx = (  Ti0_ss * y_t**2  + Ti0_tt * y_s**2  - 2.d0*Ti0_st * y_s*y_t             ) / xjac**2
-  !Ti0_yy = (  Ti0_ss * x_t**2  + Ti0_tt * x_s**2  - 2.d0*Ti0_st * x_s*x_t             ) / xjac**2
-  !Ti0_xy = (- Ti0_ss * y_t*x_t - Ti0_tt * x_s*y_s +      Ti0_st * (y_s*x_t + y_t*x_s) ) / xjac**2
 
   
   ! --- Variable 7
@@ -367,10 +355,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	       - xjac_x * (- Te0_s * x_t + Te0_t * x_s )  / xjac**2
   Te0_ps0_x = Te0_xx * ps0_y - Te0_xy * ps0_x + Te0_x * ps0_xy - Te0_y * ps0_xx
   Te0_ps0_y = Te0_xy * ps0_y - Te0_yy * ps0_x + Te0_x * ps0_yy - Te0_y * ps0_xy
-  !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
-  !Te0_xx = (  Te0_ss * y_t**2  + Te0_tt * y_s**2  - 2.d0*Te0_st * y_s*y_t             ) / xjac**2
-  !Te0_yy = (  Te0_ss * x_t**2  + Te0_tt * x_s**2  - 2.d0*Te0_st * x_s*x_t             ) / xjac**2
-  !Te0_xy = (- Te0_ss * y_t*x_t - Te0_tt * x_s*y_s +      Te0_st * (y_s*x_t + y_t*x_s) ) / xjac**2
   
   ! --- Deltas
   delta_u_x  = (   y_t * delta_s(2) - y_s * delta_t(2) ) / xjac
@@ -429,9 +413,6 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   ! --- Magnetic field amplitude (squared)
   BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
   
-  !if (r0 .eq. 0.d0) r0 = rho_1
-  !if (Ti0 .lt. 1.d-3*Ti_1) Ti0 = 1.d-3*Ti_1
-  !if (Te0 .lt. 1.d-3*Te_1) Te0 = 1.d-3*Te_1
   return
 
 end subroutine ELM_build_variables
@@ -632,20 +613,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
-  !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh(-( y_g - (Z_xpoint(1)+0.05d0) )/0.01d0))
-  !if ( (psi_norm .gt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = tau_IC * 1.d-3
-  !if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh((psi_norm - 0.99d0)/0.005d0))
-  !if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh((psi_norm - 1.d0)/0.01d0))
   tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh((psi_norm - 1.04d0)/0.01d0))
-  !if ( (psi_norm .gt. 1.d0) .or. ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) tau_IC = tau_IC * 1.d-3
-  !if (psi_norm .gt. 1.04d0) tau_IC = tau_IC * 1.d-3
-  !if ((y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) tau_IC = tau_IC * 1.d-3
-  !if ((y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) tau_IC = tau_IC * 1.d-3
-  ! Careful at the grid axis
-  !if (psi_norm .gt. 1.d0  ) tau_IC = tau_IC * 1.d-3
-  !if ( (y_g .lt. Z_xpoint(1)+0.04d0) .and. (xcase2 .ne. 2) ) tau_IC = 0.d0!tau_IC * 1.d-3
-  !if ( ((ps0 - psi_axis)/(psi_bnd - psi_axis) .lt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = tau_IC * 1.d-3
-  !if ( ((ps0 - psi_axis)/(psi_bnd - psi_axis) .lt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2) ) tau_IC = 0.d0
   if (psi_norm .lt. 0.1d0)  tau_IC = tau_IC * 1.d-3
   if (psi_norm .lt. 0.05d0) tau_IC = tau_IC * 1.d-3
   

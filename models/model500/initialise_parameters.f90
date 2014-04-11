@@ -23,7 +23,6 @@ integer :: ierr,err,i
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap,             &                                                                                                                         
-                force_horizontal_Xline,                             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -36,11 +35,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
-                R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 n_pfc, tokamak_device,                              &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
-                tokamak_device,                                     &
                 F0, gamma_sheath, density_reflection,               &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
@@ -81,15 +78,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #endif
 
                 V_0,V_1,V_coef, output_bnd_elements,                &
-                wall_file,                                          &
-                first_target_point, last_target_point,		    &
                 n_limiter, R_limiter, Z_limiter,                    &
-                time_evol_scheme,                                   &
+                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
 
-                D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_length, n_zero, ksi_ion,               &  
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius
+                D_neutral_x, D_neutral_y, D_neutral_p,   &
+                mgi_sig, mgi_length, n_zero, ksi_ion, RMP_on, lambda, tset,    &  
+                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius, &
+                RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file 
 
  if (my_id .eq. 0) then
 
@@ -115,42 +111,22 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
     read(5,in1)
  endif
 
- !==============================R_Z_psi_bnd==========================
-   if ( (n_boundary.ne.0) .and. (R_Z_psi_bnd_file /= 'none') ) then
- ! --- Open the file.
-    OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
-    if ( err /= 0 ) then
-      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
-      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
-    else
-      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
-      do i=1,n_boundary
-        read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
-        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
-      enddo
-    endif    
-    CLOSE(243)
-  endif
- !=========================================
-  
- !==============================Limiter==========================
-   if (n_limiter.ne.0) then
- ! --- Open the file.
-    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
-    if ( err /= 0 ) then
-      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
-      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
-    else
-      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
-      do i=1,n_limiter
-        read(244,*) R_limiter(i),Z_limiter(i)
-        write(*,*)  R_limiter(i),Z_limiter(i)
-      enddo
-    endif    
-    CLOSE(244)
-  endif
- !=========================================
-  
+   if (trim(R_Z_psi_bnd_file) .ne. 'none') then
+
+  ! --- Open the file.
+     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+     if ( err /= 0 ) then
+       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
+       stop
+     endif
+     write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
+
+     do i=1,n_boundary
+       read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+       write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+     enddo
+   endif
+
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
 

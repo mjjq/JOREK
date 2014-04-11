@@ -32,7 +32,8 @@ contains
 
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, freeboundary, tstep
+    use phys_module, only: F0, GAMMA, freeboundary, tstep, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, RMP_har_cos,RMP_har_sin
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -76,6 +77,72 @@ contains
     integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
     logical :: is_local, only_count
+
+!=============== RMP ==============
+  real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
+  real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
+  real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
+  real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
+  integer :: ilarge_vp, ilarge_vp2
+  integer :: kp, j, err, itest
+
+
+  if (RMP_on .and. (n_tor .ge. 3)) then
+  call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes,"psi_RMP_cos1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+  call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes,"psi_RMP_sin1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+  call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
+
+  do i = 1, node_list%n_nodes
+        if (node_list%node(i)%boundary .ne.0) then
+           if (node_list%node(i)%boundary_index == 1 ) then
+
+              if (n_tor .eq. 1) then
+                 itest = 1
+              else
+                 itest = RMP_har_cos
+              endif
+
+              psi_test = node_list%node(i)%values(itest,1,1)
+              if (my_id == 0) then
+                 write (*,*) 'psi_bnd at previous time step', psi_test
+              endif
+           endif
+        endif
+     enddo
+
+     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
+ !   establish_RMP = (1.d-3)*tstep
+      sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
+          - ( 1. + exp(-lambda*( 0. - tset )))**(-1)
+        establish_RMP = (lambda*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep
+     else
+        establish_RMP = 0.0
+     endif
+     ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*tset ) then establish_RMP =0.0
+
+     do j=1, bnd_node_list%n_bnd_nodes
+        psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
+        dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
+        dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
+        psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
+        dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
+        dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
+     end do
+
+     if (my_id == 0) then
+
+        write (*,*) 'psi_RMP_cos1(1) and derivatives after multiplication in boundary conditions'
+        write (*,*) psi_RMP_cos1(1), dpsi_RMP_cos_dR1(1), dpsi_RMP_cos_dZ1(1)
+        write (*,*) 'establish_RMP', establish_RMP
+
+     endif
+
+  endif
+!=============== RMP ==============
+
     zbig = 1.d12
     if (use_murge .and. use_murge_element) then
        ! when we use murge assembly we first count entries then we had them.
@@ -130,9 +197,82 @@ contains
                            .or. (node_list%node(inode)%boundary .eq. 9) &
                            .or. (node_list%node(inode)%boundary .eq. 3)) then
 
+
+
+!====================================== beginning RMPs at boundary ======================================================
+!================================== type 1 - boundary: only depends on 's'
+! ======================================================================================================================
+
+                       if (RMP_on ) then
+
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin corresponds to sin(n_perturbation)
+
+                             kp=1    ! variable psi
+                             kv=1    ! equation for psi
+
+                             index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+
+                             Rnode     = node_list%node(inode)%x(1,1)
+                             dRnode_ds = node_list%node(inode)%x(2,1)
+                             Znode     = node_list%node(inode)%x(1,2)
+                             dZnode_ds = node_list%node(inode)%x(2,2)
+
+                             if (in.eq.RMP_har_cos) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
+
+                             else
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+
+                             endif
+
+                             delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
+
+                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+
+                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+
+                                !-------- index dans A_glob
+                                ilarge_vp  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
+
+                                Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp
+
+                                irn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+                                jcn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kp-1)*n_tor + in
+                                A_glob(ilarge_vp)   = ZBIG
+                             endif
+
+                             index_node2 = node_list%node(inode)%index(2)
+
+                           
+                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+
+                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
+
+                                Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_ds
+
+                                irn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                jcn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kp-1)*n_tor + in
+                                A_glob(ilarge_vp2)   = ZBIG
+                             endif
+                          endif
+
+
+                       endif !(end RMP)
+!======================================= end RMPs ==================================
+
+
                          if (                  &
-                              ((k .eq. 1) .and. ( in .ge. 2 ))      &
+                              ((k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))      &
+                              .or.((k .eq. 1) .and. (RMP_on) .and. ( in .lt. RMP_har_cos))&
                               .or. ((k .eq. 1) .and. (in .eq. 1))  & 
+                              .or. ((k .eq. 1) .and. (RMP_on) .and.(in .gt. RMP_har_sin))  &
                               .or. ((k .eq. 1) .and. (in .ge. 4))  & 
                               .or. (k .eq. 2)  &
                               .or. (k .eq. 3)  &
@@ -718,10 +858,98 @@ contains
                       !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
                       if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
 
+
+!====================================== begining RMPs at boundary ======================================================
+!================================== type 2 - boundary: only depends on 't'
+! ======================================================================================================================
+
+                       if (RMP_on ) then
+
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
+
+
+
+                             kp=1    ! variable psi
+                             kv=1    ! equation for psi
+
+                             index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+
+                             Rnode     = node_list%node(inode)%x(1,1)
+                             dRnode_dt = node_list%node(inode)%x(3,1)
+                             Znode     = node_list%node(inode)%x(1,2)
+                             dZnode_dt = node_list%node(inode)%x(3,2)
+
+                             if (in.eq.RMP_har_cos) then
+
+     delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
+                                   write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
+                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'
+                                   write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
+                                endif
+                             else
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+
+                             endif
+
+   delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
+                             if (in.eq.RMP_har_cos) then
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
+                                   write (*,*) 'delta_psi_rmp_ds', delta_psi_rmp_ds
+                                endif
+                             endif
+
+                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+
+                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+
+                                !-------- index dans A_glob
+                                ilarge_vp  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
+
+                                Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp
+
+                                irn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
+  jcn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kp-1)*n_tor + in
+                                A_glob(ilarge_vp)   = ZBIG
+
+                             endif
+
+                             index_node2 = node_list%node(inode)%index(3)
+
+                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+
+                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
+
+                                Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_dt
+
+                                irn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
+                                jcn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kp-1)*n_tor + in
+                                A_glob(ilarge_vp2)   = ZBIG
+
+                             endif
+                          endif
+                       endif
+
+!======================================= end RMPs ==================================
+
+
                          if (                                                      &
                               ((freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &               ! exclude condition on psi (freeboundary) except n=0
-                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( in .ge. 2 ))   &
-                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &
+                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))   &
+                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos ))   &
+                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))   &
+                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. (in .gt. RMP_har_sin))  &
                               .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .ge. 4))  & 
                               .or. (k .eq. 2)    &
                               .or. (k .eq. 3)    &
@@ -806,6 +1034,16 @@ contains
        end if
 #endif
     end do
+
+   if (RMP_on) then
+       if (allocated(psi_RMP_cos1))         call tr_deallocate(psi_RMP_cos1,"psi_RMP_cos1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_cos_dR1))     call tr_deallocate(dpsi_RMP_cos_dR1,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_cos_dZ1))     call tr_deallocate(dpsi_RMP_cos_dZ1,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+       if (allocated(psi_RMP_sin1))         call tr_deallocate(psi_RMP_sin1,"psi_RMP_sin1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_sin_dR1))     call tr_deallocate(dpsi_RMP_sin_dR1,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+       if (allocated(dpsi_RMP_sin_dZ1))     call tr_deallocate(dpsi_RMP_sin_dZ1,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
+    endif
+
     return
   end subroutine boundary_conditions
 end module mod_boundary_conditions

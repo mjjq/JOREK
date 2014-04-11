@@ -8,6 +8,7 @@ module phys_module
   
   !> @name Various parameters
   real*8  :: eta                  !< Resistivity
+  real*8  :: eta_T_0              !< Initial resistivity
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
   real*8  :: visco                !< Viscosity
   real*8  :: visco2               !< Second coefficient of viscosity

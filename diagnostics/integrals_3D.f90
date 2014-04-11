@@ -10,6 +10,9 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+#if JOREK_MODEL == 500
+use mgi_module
+#endif
 
 implicit none
 
@@ -47,6 +50,9 @@ real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
+#if JOREK_MODEL == 500
+real*8  :: n_particles_inj, n_particles_plasma, source_mgi, rn0
+#endif
 
 #ifdef _OPENMP
 integer,external :: omp_get_num_threads, omp_get_thread_num
@@ -63,6 +69,7 @@ if (my_id .eq. 0) then
   write(*,*) ' n_plane : ',n_plane
   write(*,*) ' n_cpu   : ',n_cpu
 endif
+
 
 density_tot  = 0.d0
 pressure = 0.d0
@@ -99,6 +106,11 @@ if (use_pellet) then
   local_pellet_volume    = 0.d0
 endif
 
+#if JOREK_MODEL == 500
+n_particles_inj = 0.d0
+n_particles_plasma = 0.d0
+#endif
+
 Bgeo = F0 / R_geo
 
 delta_phi = 2.d0 * PI / float(n_plane) / float(n_period)
@@ -124,6 +136,31 @@ ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
+#if JOREK_MODEL == 500
+!$omp parallel default(none)                                                                   &
+!$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
+!$omp          R_xpoint, Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
+!$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int,    &
+!$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int, eta_T,  &
+!$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
+!$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
+!$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
+!$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
+!$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
+!$omp          total_n_particles_inj, total_n_particles_plasma, &
+!$omp          n_particles_inj, n_particles_plasma, mgi_amplitude, mgi_R, mgi_Z,  &
+!$omp          mgi_phi, mgi_radius, mgi_sig, mgi_length,    &
+!$omp          wgauss_copy)    &
+!$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
+!$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
+!$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
+!$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
+!$omp           P_max, source_pellet, source_volume, rn0, source_mgi, eq_zne, eq_zTe, vpar0, BB2,               &
+!$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source,                 &
+!$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
+!$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
+!$omp           omp_nthreads,omp_tid)
+#else
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
@@ -144,6 +181,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           omp_nthreads,omp_tid)
+#endif
+
 #ifdef OPENMP
 omp_nthreads = omp_get_num_threads()
 omp_tid      = omp_get_thread_num()
@@ -252,6 +291,10 @@ do ife = ife_min, ife_max
         else
           vpar0  = 0.d0
 	endif
+
+#if JOREK_MODEL == 500
+        rn0    = eq_g(mp,8,ms,mt)
+#endif
 	
         eta_T  =   eta   * (abs(T0)/T_0)**(-1.5d0)
 
@@ -311,6 +354,16 @@ do ife = ife_min, ife_max
           local_pellet_volume    = local_pellet_volume    + source_volume * bigR * xjac * wst * delta_phi 
 
         endif
+
+#if JOREK_MODEL == 500 
+          
+        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_length, &
+                        x_g(ms,mt),y_g(ms,mt),phi,source_mgi)
+
+        n_particles_inj      = n_particles_inj + source_mgi * bigR * xjac * wst * delta_phi
+        n_particles_plasma   = n_particles_plasma + rn0 * bigR * xjac * wst * delta_phi
+
+#endif
 
         if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
 
@@ -379,6 +432,11 @@ if (use_pellet) then
   call MPI_AllReduce(local_pellet_volume,total_pellet_volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 endif
 
+#if JOREK_MODEL == 500 
+  call MPI_AllReduce(n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_AllReduce(n_particles_plasma, total_n_particles_plasma,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#endif
+
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27
 t_norm   = sqrt(MU_zero*rho_norm)
 
@@ -423,6 +481,8 @@ if (my_id .eq. 0) then
   write(*,'(A,4e14.6,A)') ' density  (total/in/out) : ',xt,density_tot,  density_in,  density_out,'[ 10^20/m^3]'
   write(*,'(A,4e14.6,A)') ' pressure (total/in/out) : ',xt,pressure/1.d6, pressure_in/1.d6, pressure_out/1.d6,' [MJ]'
   write(*,'(A,4e14.6,A)') ' kinetic parallel (total/in/out) : ',xt,kin_par_tot/1.d6, kin_par_in/1.d6, kin_par_out/1.d6,' [MJ]'
+
+
   write(*,'(A,4e14.6,A)') ' kinetic perp (total/in/out) : ',xt,kin_perp_tot/1.d6, kin_perp_in/1.d6, kin_perp_out/1.d6,' [MJ]'
   write(*,'(A,4e14.6,A)') ' magnetic (total/in/out) : ',xt,mag_tot/1.d6, mag_in/1.d6, mag_out/1.d6,' [MJ]'
   write(*,'(A,3e14.6,A)') ' current  (in/out)       : ',xt,current_in/1.d6, current_out/1.d6, ' [MA]'
@@ -437,6 +497,13 @@ if (my_id .eq. 0) then
 
   write(*,'(A,20e14.6)') 'sum ',xt,density_tot,pressure/1.d6,kin_par_tot/1.d6,kin_perp_tot/1.d6,mag_tot/1.d6, &
                                  Ohm_tot/1.d6,heating_in/1d6+heating_out/1.d6 ,source_in+source_out
+
+#if JOREK_MODEL == 500
+  write(*,'(A,4e14.6)')   ' Integrals_3D, MGI : ', total_n_particles_inj, total_n_particles_plasma
+#endif
+
 endif
+
 return
+
 end

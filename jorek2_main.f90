@@ -54,6 +54,10 @@ program JOREK2
 #endif
   use mpi_mod
 
+#if JOREK_MODEL == 500
+  use mgi_module
+#endif
+
   use, intrinsic :: iso_c_binding
   
   implicit none
@@ -1015,6 +1019,10 @@ required = 0
 !           xtime_phys_ablation(index_now)    = phys_ablation
 !          endif
        endif
+
+#if JOREK_MODEL == 500
+       call update_mgi(my_id,node_list,element_list)
+#endif
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)

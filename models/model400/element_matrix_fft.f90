@@ -4,6 +4,7 @@ contains
   ! --- Include all the routines directly for runtime efficiency
   INCLUDE "construct_variables.f90"
   INCLUDE "equations.f90"
+  INCLUDE "equations_numm.f90"
   INCLUDE "apply_fft.f90"
 
 
@@ -128,14 +129,19 @@ contains
 		
 		rhs_tmp   = 0.d0
 		rhs_k_tmp = 0.d0
-		call ELM_main_rhs_1(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_2(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_3(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_4(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_5(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_6(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_7(rhs_tmp, rhs_k_tmp)
-		call ELM_main_rhs_8(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_1  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_2  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_3  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_4  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_5  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_6  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_7  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_8  	(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_2_numm(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_5_numm(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_6_numm(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_7_numm(rhs_tmp, rhs_k_tmp)
+		call ELM_main_rhs_8_numm(rhs_tmp, rhs_k_tmp)
     		
 
     		! --- Fill up the matrix
@@ -208,14 +214,19 @@ contains
     		      amat_k_tmp  = 0.d0
     		      amat_n_tmp  = 0.d0
     		      amat_kn_tmp = 0.d0
-		      call ELM_main_lhs_1(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_2(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_3(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_4(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_5(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_6(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_7(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
-    		      call ELM_main_lhs_8(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+		      call ELM_main_lhs_1     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_2     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_3     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_4     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_5     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_6     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_7     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_8     (amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_2_numm(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_5_numm(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_6_numm(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_7_numm(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
+    		      call ELM_main_lhs_8_numm(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
 		      
     		      ! --- Fill up the matrix
     		      if (n_tor .gt. 3) then

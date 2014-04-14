@@ -33,7 +33,11 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
 
     in_fft = RHS_p(1:n_plane,j)
 
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
     call my_fft(in_fft, out_fft, n_plane)
+#endif
 
     index = n_tor*(j-1) + 1
 
@@ -55,7 +59,11 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
 
     in_fft = RHS_k(1:n_plane,j)
 
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
     call my_fft(in_fft, out_fft, n_plane)
+#endif
 
     index = n_tor*(j-1) + 1
     ik    = 1
@@ -80,7 +88,11 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
 
       in_fft =  ELM_p(1:n_plane,i,j)
 
+#ifdef USE_FFTW
+      call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
       call my_fft(in_fft, out_fft, n_plane)
+#endif
 
       do k=1,(n_tor+1)/2
 
@@ -138,7 +150,11 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
 
 	in_fft =  ELM_n(1:n_plane,i,j)
 
-	call my_fft(in_fft, out_fft, n_plane)
+#ifdef USE_FFTW
+        call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+        call my_fft(in_fft, out_fft, n_plane)
+#endif
 
 	do k=1,(n_tor+1)/2
 
@@ -198,7 +214,11 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
 
 	in_fft =  ELM_k(1:n_plane,i,j)
 
-	call my_fft(in_fft, out_fft, n_plane)
+#ifdef USE_FFTW
+        call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+        call my_fft(in_fft, out_fft, n_plane)
+#endif
 
 	do k=1,(n_tor+1)/2
 
@@ -259,7 +279,11 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
 
 	in_fft =  ELM_kn(1:n_plane,i,j)
 
-	call my_fft(in_fft, out_fft, n_plane)
+#ifdef USE_FFTW
+        call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+        call my_fft(in_fft, out_fft, n_plane)
+#endif
 
 	do k=1,(n_tor+1)/2
 

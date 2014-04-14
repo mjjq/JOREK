@@ -5,6 +5,7 @@ all: modules 				\
      sources.o 				\
      element_matrix.o 			\
      element_matrix_fft.o 		\
+     apply_fft.o 			\
      boundary_conditions.o 		\
      initial_conditions.o		\
      boundary_matrix.o   		\

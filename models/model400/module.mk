@@ -7,6 +7,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/mod_equation_variables.f90 		\
+	$(DIR)/apply_fft.f90 				\
 	$(DIR)/element_matrix_fft.f90 			\
 	$(DIR)/boundary_matrix_open.f90  		\
 	$(DIR)/boundary_matrix.f90 			\

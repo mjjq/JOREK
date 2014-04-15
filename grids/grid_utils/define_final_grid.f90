@@ -23,7 +23,7 @@ integer,                      intent(in)    :: n_grids(10), xcase
 type (type_node_list),    pointer :: newnode_list
 type (type_element_list), pointer :: newelement_list
 
-integer             :: i, j, k, l, my_id, ifail, n_tmp
+integer             :: i, j, j2, k, l, my_id, ifail, n_tmp
 integer             :: i_elm_xpoint(2), i_elm_axis
 integer             :: n_loop, n_loop2, n_start_connect
 integer             :: n_psi, n_tht_mid, n_tht_mid2
@@ -693,6 +693,7 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
     do l=1, n_loop
 
       j = l
+      j2 = l
       index = index + 1
       newelement_list%element(index)%size = 1.d0
 
@@ -721,21 +722,21 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
       if ( (i .eq. n_open) .and. (xcase .eq. 3) ) then
         if (psi_xpoint(1) .le. psi_xpoint(2)) then
           if (l .le. n_xpoint_3) then
-            newelement_list%element(index)%vertex(2) = n_start_outer + j - 1
-            newelement_list%element(index)%vertex(3) = n_start_outer + j
+            newelement_list%element(index)%vertex(2) = n_start_outer + j2 - 1
+            newelement_list%element(index)%vertex(3) = n_start_outer + j2
           else
-            j = j-n_xpoint_3
-            newelement_list%element(index)%vertex(2) = n_start_inner + n_up_leg-1 - 1 + j - 1
-            newelement_list%element(index)%vertex(3) = n_start_inner + n_up_leg-1 - 1 + j
+            j2 = j2-n_xpoint_3
+            newelement_list%element(index)%vertex(2) = n_start_inner + n_up_leg-1 - 1 + j2 - 1
+            newelement_list%element(index)%vertex(3) = n_start_inner + n_up_leg-1 - 1 + j2
           endif
         else
           if (l .le. n_xpoint_3) then
-            newelement_list%element(index)%vertex(2) = n_start_inner + j - 1
-            newelement_list%element(index)%vertex(3) = n_start_inner + j
+            newelement_list%element(index)%vertex(2) = n_start_inner + j2 - 1
+            newelement_list%element(index)%vertex(3) = n_start_inner + j2
           else
-            j = j-n_xpoint_3
-            newelement_list%element(index)%vertex(2) = n_start_outer + n_leg-1 - 1 + j - 1
-            newelement_list%element(index)%vertex(3) = n_start_outer + n_leg-1 - 1 + j
+            j2 = j2-n_xpoint_3
+            newelement_list%element(index)%vertex(2) = n_start_outer + n_leg-1 - 1 + j2 - 1
+            newelement_list%element(index)%vertex(3) = n_start_outer + n_leg-1 - 1 + j2
           endif
         endif
         if (l .eq. n_xpoint_3) then ! Special case for element arriving at second Xpoint

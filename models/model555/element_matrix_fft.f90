@@ -111,7 +111,8 @@ contains
 
     	  call ELM_build_neutral_variables(element, nodes, ms, mt, i_plane)
           
-    	  call ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
+    	  call ELM_build_diffusivities_and_sources        (element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
+          call ELM_build_neutral_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
 
     	  ! --- Now the equations, first the RHS
     	  do i_vertex =1,n_vertex_max

@@ -310,12 +310,13 @@ if (my_id .eq. 0) then
   call MPI_PACK(jec_width,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(jec_width2,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(nu_jec_fast,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(nu_jec1_fast,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(nu_jec2_fast,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(JJ_par,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(jw1,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(jw2,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(jw3,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(R_geo,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)! ###
-
   call MPI_PACK(corr_neg_temp_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 endif
@@ -598,6 +599,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,jec_width,              1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
   call MPI_UNPACK(buffer,bufsize,position,jec_width2,             1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
   call MPI_UNPACK(buffer,bufsize,position,nu_jec_fast,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,nu_jec1_fast,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,nu_jec2_fast,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,JJ_par,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
   call MPI_UNPACK(buffer,bufsize,position,jw1,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
   call MPI_UNPACK(buffer,bufsize,position,jw2,                    1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###

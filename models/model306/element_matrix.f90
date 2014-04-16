@@ -681,7 +681,7 @@ do ms=1, n_gauss
 !#  equation 1   (induction equation)                                                              #
 !###################################################################################################
 
-           rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt)-(jec20-jec10))/ BigR  * xjac * tstep &
+           rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt)-(jec20+jec10))/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
 
@@ -1644,6 +1644,7 @@ rad=sqrt(rad)
 ! setting the applied ECCD current normally-distributed on a radial
 ! annulus of the poloidal cross-section.
 zjz=jecamp*exp(-.5*(rad-jec_pos1)**2./jec_width**2.)
+!zjz=1.d0
 
 ! for debugging purposes, a solid annulus of current
 !if(rad.gt.jw1.AND.rad.lt.jw2) then

@@ -56,6 +56,9 @@ if (index_now .gt. 0) then
 #ifdef JECCD
   write(21) energies2(:,:,1:index_now)
   write(21) energies3(:,:,1:index_now)
+#ifdef JEC2DIAG
+  write(21) energies4(:,:,1:index_now)
+#endif
 #endif
 endif
 

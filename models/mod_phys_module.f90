@@ -56,8 +56,10 @@ module phys_module
   integer  :: pglobal_id
   
   real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
-  real*8, allocatable :: energies2(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
-  real*8, allocatable :: energies3(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+  real*8, allocatable :: energies2(:,:,:)  !< global density and temperature at timesteps.
+  real*8, allocatable :: energies3(:,:,:)  !< global currents (general and total eccd) at timesteps.
+  real*8, allocatable :: energies4(:,:,:)  !< global applied eccd currents j1 and j2 at timesteps.
+
   character(len=3)    :: mode_type(n_tor) !< 'cos' or 'sin'
   
   !> Points used as limiters (see routine find_limiter)

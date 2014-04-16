@@ -8,7 +8,8 @@ MODEL = model306
 
 # for model305 with global outputs and alternative current source
 #DEFINES = -DJECCD -Daltcs -DUSE_BLOCK
-DEFINES = -DJECCD -DUSE_BLOCK
+#DEFINES = -DJECCD -DUSE_BLOCK
+DEFINES = -DJECCD -DUSE_BLOCK -DJEC2DIAG
 
 # for full mhd model710
 #DEFINES = -Dfullmhd -DMULTI_FUN -DUSE_BLOCK

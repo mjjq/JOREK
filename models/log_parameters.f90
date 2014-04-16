@@ -423,7 +423,17 @@ if (my_id == 0) then
     endif
   endif
 
-  if ( jorek_model == 500 ) then
+  if(jorek_model == 306 ) then
+     write(*,REAL_FMT) 'nu_jec1_fast        ',  nu_jec1_fast
+     write(*,REAL_FMT) 'nu_jec2_fast        ',  nu_jec2_fast
+     write(*,REAL_FMT) 'JJ_par              ',  JJ_par
+     write(*,REAL_FMT) 'jec_pos1            ',  jec_pos1
+     write(*,REAL_FMT) 'jec_width           ',  jec_width
+     write(*,REAL_FMT) 'jecamp              ',  jecamp
+  endif
+
+
+  if(jorek_model == 500 ) then
      write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude  
      write(*,REAL_FMT) 'mgi_R               ',  mgi_R         
      write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z         

@@ -175,6 +175,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
   if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(energies3,1,n_tor,1,2,1,nstep,"energies3",CAT_GRID)
+
+  if (allocated(energies4)) call tr_deallocate(energies4,"energies4",CAT_GRID)
+  if (nstep .gt. 0) call tr_allocate(energies4,1,n_tor,1,2,1,nstep,"energies4",CAT_GRID)
 #endif
   
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_GRID)

@@ -129,9 +129,16 @@ if (index_start .ge. 1) then
   if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
   call tr_allocate(energies3,1,n_tor,1,2,1,index_start+nstep,"energies3",CAT_UNKNOWN)
 
+#ifdef JEC2DIAG
+  if (allocated(energies4)) call tr_deallocate(energies4,"energies4",CAT_UNKNOWN)
+  call tr_allocate(energies4,1,n_tor,1,2,1,index_start+nstep,"energies4",CAT_UNKNOWN)
+#endif
+
   energies2 = 0.d0
   energies3 = 0.d0
-
+#ifdef JEC2DIAG
+  energies4 = 0.d0
+#endif
 #endif
 
   read(21) xtime(1:index_start)
@@ -140,6 +147,9 @@ if (index_start .ge. 1) then
 #ifdef JECCD
   read(21) energies2(1:n_tor_tmp,:,1:index_start)
   read(21) energies3(1:n_tor_tmp,:,1:index_start)
+#ifdef JEC2DIAG
+  read(21) energies4(1:n_tor_tmp,:,1:index_start)
+#endif
 #endif
 endif
 

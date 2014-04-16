@@ -39,9 +39,13 @@ program JOREK2
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
 
+! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
   use live_data2,          only: init_live_data2, write_live_data2, finalize_live_data2
   use live_data3,          only: init_live_data3, write_live_data3, finalize_live_data3
+#ifdef JEC2DIAG
+  use live_data4,          only: init_live_data4, write_live_data4, finalize_live_data4
+#endif
 #endif
 
   use solve_mat_n
@@ -139,7 +143,7 @@ program JOREK2
   type (t_equil_state)     :: equil_state
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
 #ifdef JECCD
-  real*8                   :: A_tem(n_tor), A_den(n_tor), A_jen(n_tor), A_jec(n_tor)
+  real*8                   :: A_tem(n_tor), A_den(n_tor), A_jen(n_tor), A_jec(n_tor),A_jec1(n_tor), A_jec2(n_tor)
 #endif
   real*8                   :: psi_lim, R_lim, Z_lim
   real*8                   :: t_matrix, t_send, t_solve
@@ -348,6 +352,10 @@ required = 0
 #ifdef JECCD
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data2()
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data3()
+  if (my_id == 0) write(6,*) "initializing live data"
+#ifdef JEC2DIAG
+   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data4()
+#endif
 #endif
   
   ! --- Initialise ppplib plotting library
@@ -405,6 +413,9 @@ required = 0
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
+#ifdef JEC2DIAG
+        call write_live_data4(index_now)
+#endif
 #endif
       end do
     end if
@@ -587,9 +598,12 @@ required = 0
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
 
 #ifdef JECCD
-      call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec)
+      call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
       write(*,'(A,12e16.8)') ' initial energies2 : ',A_tem,A_den
       write(*,'(A,12e16.8)') ' initial energies3 : ',A_jen,A_jec
+#ifdef JEC2DIAG
+      write(*,'(A,12e16.8)') ' initial energies4 : ',A_jec1,A_jec2
+#endif
 #endif
     end if ! (my_id == 0)
     
@@ -1107,9 +1121,12 @@ required = 0
        energies(1:n_tor,2,index_now) = W_kin(1:n_tor)
 
 #ifdef JECCD
-       call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec)
+       call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
        write(*,'(A,12e16.8)') ' current energies2 : ',A_tem,A_den
        write(*,'(A,12e16.8)') ' current energies3 : ',A_jen,A_jec
+#ifdef JEC2DIAG
+       write(*,'(A,12e16.8)') ' current energies4 : ',A_jec1,A_jec2
+#endif
 
        energies2(1:n_tor,1,index_now) = A_tem(1:n_tor)
        energies2(1:n_tor,2,index_now) = A_den(1:n_tor)
@@ -1117,7 +1134,12 @@ required = 0
        energies3(1:n_tor,1,index_now) = A_jen(1:n_tor)
        energies3(1:n_tor,2,index_now) = A_jec(1:n_tor)
 
-       write(*,*) ' exiting current energies '
+#ifdef JEC2DIAG
+       energies4(1:n_tor,1,index_now) = A_jec1(1:n_tor)
+       energies4(1:n_tor,2,index_now) = A_jec2(1:n_tor)
+#endif
+
+       write(6,*) ' exiting current energies '
 #endif
        
        ! --- Output some information about the current timestep
@@ -1147,6 +1169,9 @@ required = 0
 #ifdef JECCD
        if ( .not. bench_without_plot ) call write_live_data2(index_now)
        if ( .not. bench_without_plot ) call write_live_data3(index_now)
+#ifdef JEC2DIAG
+       if ( .not. bench_without_plot ) call write_live_data4(index_now)
+#endif
 #endif
     endif
 
@@ -1247,6 +1272,9 @@ required = 0
 #ifdef JECCD
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data2()
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data3()
+#ifdef JEC2DIAG
+  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data4()
+#endif
 #endif
 
   !***********************************************************************
@@ -1416,6 +1444,9 @@ required = 0
 #ifdef JECCD
     if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
     if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
+#ifdef JEC2DIAG
+    if (allocated(energies4)) call tr_deallocate(energies4,"energies4",CAT_UNKNOWN)
+#endif
 #endif
   endif
   

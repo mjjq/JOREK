@@ -26,6 +26,7 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
         $(DIR)/mod_live_data.f90			\
         $(DIR)/mod_live_data2.f90               	\
         $(DIR)/mod_live_data3.f90               	\
+        $(DIR)/mod_live_data4.f90                       \
         $(DIR)/broadcast_RMP_profiles.f90
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\

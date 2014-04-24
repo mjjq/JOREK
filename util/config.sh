@@ -79,13 +79,13 @@ function setparam() {
     echo "ERROR: Could not set parameter $key in $param_file." >&2
     exit 1
   else
-    sed -i -e "s/\(^.*:: *$key *= *\)[^! ]*\(.*$\)/\1$val\2/" $param_file
+    sed -i -e "s/\(^.*:: *$key *= *\)[^ !\t]*\(.*$\)/\1$val\2/" $param_file
   fi
 }
 
 function getparam() {
   key=$1
-  grep ":: *$key[ =]" $param_file | sed -e "s/^.*:: *$key *= *\([^ ]*\).*$/\1/"
+  grep ":: *$key[ =]" $param_file | sed -e "s/^.*:: *$key *= *\([^ !\t]*\).*$/\1/"
 }
 
 function print_info() {

@@ -72,7 +72,7 @@ subroutine ELM_main_lhs_1(amat, amat_k, amat_n, amat_kn)
   amat(1,3)   = - eta_numm * (v_x * zj_x + v_y * zj_y)							* xjac * theta * tstep	&
 	        - eta_T * v * zj / BigR									* xjac * theta * tstep
 
-  amat(1,8)   = - deta_dT * v * T * (zj0 - current_source) / BigR					* xjac * theta * tstep	
+  amat(1,6)   = - deta_dT * v * T * (zj0 - current_source) / BigR					* xjac * theta * tstep	
 
   ! ------------------------------------
   ! --- The LHS terms (diamagnetic part)
@@ -91,12 +91,12 @@ subroutine ELM_main_lhs_1(amat, amat_k, amat_n, amat_kn)
   amat_n(1,5) = amat_n(1,5)													&
                 - v * tau_IC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T0 * rho_p				* xjac * theta * tstep
   
-  amat(1,8)   = amat(1,8)													&
+  amat(1,6)   = amat(1,6)													&
                 + v * tau_IC/(r0*BB2) * F0**2/BigR**2 * r0 * (ps0_x*T_y  - ps0_y*T_x ) 			* xjac * theta * tstep	&
 	        + v * tau_IC/(r0*BB2) * F0**2/BigR**2 * T  * (ps0_x*r0_y - ps0_y*r0_x)			* xjac * theta * tstep	&
 		- v * tau_IC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T * r0_p				* xjac * theta * tstep 
 
-  amat_n(1,8) = amat_n(1,8)													&
+  amat_n(1,6) = amat_n(1,6)													&
                 - v * tau_IC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p				* xjac * theta * tstep 
   
   return

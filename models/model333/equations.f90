@@ -303,8 +303,8 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
 	        - tau_IC * BigR**4 * ( r0_xx*T + r0*T_xx + 2.d0*r0_x*T_x       								&
 		                     + r0_x*T/BigR + r0*T_x/BigR									&
 		                     + r0_yy*T + r0*T_yy + 2.d0*r0_y*T_y ) * (v_x * u0_y - v_y * u0_x)		* xjac * theta * tstep	&
-	        + tau_IC * BigR**4 / r0 * ( r0_x * (r0_x*T0 + r0*T0_x)									&
-		                          + r0_y * (r0_y*T0 + r0*T0_y) )   * (v_x * u0_y - v_y * u0_x)		* xjac * theta * tstep	&
+	        + tau_IC * BigR**4 / r0 * ( r0_x * (r0_x*T + r0*T_x)									&
+		                          + r0_y * (r0_y*T + r0*T_y) )     * (v_x * u0_y - v_y * u0_x)		* xjac * theta * tstep	&
 	        ! --- Neoclassical term
                 - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x + ps0_y*v_y) * BigR						&
                                * (  tau_IC                     * (ps0_x*r0_x*T   + ps0_y*r0_y*T  )					&

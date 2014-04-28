@@ -31,6 +31,7 @@ contains
     use diffusivities, only: get_dperp, get_zkperp
     use corr_neg
     use pellet_module
+    use mod_elm_apply_fft
 
     implicit none
     

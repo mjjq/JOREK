@@ -409,16 +409,16 @@ subroutine ELM_main_rhs_4(rhs,rhs_k)
   
   ! ----------------	      
   ! --- The RHS term	      
-  rhs(4) = 0.d0
+  !rhs(4) = 0.d0
   
   ! ----------------------------	      
   ! --- The RHS term (main part)	      
-  !rhs(4) = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  			* BigR * xjac * tstep	&
+  rhs(4) = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  			* BigR * xjac * tstep	&
   
   ! -----------------------------------    
   ! --- The RHS term (diamagnetic part)	      
-  !rhs(4) = rhs(4)										&
-  !	    - tau_IC / r0 * ( v_x  * P0_x + v_y  * P0_y)         	* BigR * xjac * tstep	
+  rhs(4) = rhs(4)										&
+  	   - tau_IC / r0 * ( v_x  * P0_x + v_y  * P0_y)         	* BigR * xjac * tstep	
 
   return
 

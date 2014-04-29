@@ -26,6 +26,7 @@ contains
     use phys_module
     use tr_module 
     use profiles, only: interpolProf
+    use mod_elm_apply_fft
 
     implicit none
     

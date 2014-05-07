@@ -51,8 +51,8 @@ subroutine ELM_build_RZ_and_Jacobians(element, nodes, ms, mt)
     enddo
   enddo
   
-  BigR    = x_g
-  BigR_x  = 1.d0
+  R    = x_g
+  R_x  = 1.d0
   
   ! --- Jacobians
   xjac    = x_s*y_t - x_t*y_s
@@ -244,7 +244,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	      - u0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - u0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- u0_s * x_t + u0_t * x_s )  / xjac**2
-  vv2	   = BigR**2 *  ( u0_x * u0_x + u0_y *u0_y  )
+  vv2	   = R**2 *  ( u0_x * u0_x + u0_y *u0_y  )
   
   ! --- Variable 3
   zj0_x    = (   y_t * zj0_s - y_s * zj0_t ) / xjac
@@ -296,9 +296,9 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	      - r0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - r0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- r0_s * x_t + r0_t * x_s )  / xjac**2
-  r0_hat   = BigR**2 * r0
-  r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
-  r0_y_hat = BigR**2 * r0_y
+  r0_hat   = R**2 * r0
+  r0_x_hat = 2.d0 * R * R_x  * r0 + R**2 * r0_x
+  r0_y_hat = R**2 * r0_y
   
   ! --- Variable 6
   Ti0_x     = (   y_t * Ti0_s  - y_s * Ti0_t ) / xjac
@@ -411,7 +411,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   Pe0_xy   = r0_xy * Te0 + r0 * Te0_xy + r0_x * Te0_y + r0_y * Te0_x
   
   ! --- Magnetic field amplitude (squared)
-  BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
+  BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/R**2
   
   return
 
@@ -613,15 +613,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
-  tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh((psi_norm - 1.04d0)/0.01d0))
-  if (psi_norm .lt. 0.1d0)  tau_IC = tau_IC * 1.d-3
-  if (psi_norm .lt. 0.05d0) tau_IC = tau_IC * 1.d-3
+  call density(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+  Wdia = tau_IC / zn
   
   ! -------------------------
   ! --- Neoclassical rotation
   ! -------------------------
   epsil   = 1.d-3
-  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / BigR**2
+  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / R**2
   if ( NEO ) then 
     if (num_neo_file) then
       call neo_coef(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, amu_neo_prof, aki_neo_prof)

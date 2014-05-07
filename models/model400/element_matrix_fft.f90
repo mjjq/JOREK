@@ -3,7 +3,7 @@ contains
 
   ! --- Include all the routines directly for runtime efficiency
   INCLUDE "construct_variables.f90"
-  INCLUDE "equations.f90"
+  INCLUDE "equations_Wdia.f90"
   INCLUDE "equations_numm.f90"
 
 
@@ -200,7 +200,7 @@ contains
 		      Te_xx   = psi_xx; Te_yy   = psi_yy; Te_xy   = psi_xy; Te_pp   = psi_pp
 		      Vpar_xx = psi_xx; Vpar_yy = psi_yy; Vpar_xy = psi_xy; Vpar_pp = psi_pp
                       
-		      BB2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+		      BB2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) / R**2
    
     		      amat_tmp    = 0.d0
     		      amat_k_tmp  = 0.d0

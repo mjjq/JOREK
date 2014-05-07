@@ -79,7 +79,7 @@ subroutine ELM_main_lhs_1(amat, amat_k, amat_n, amat_kn)
   amat(1,1)   = amat(1,1)													&
                 - v * tau_IC/(r0*BB2**2) * BB2_psi * F0**2/BigR**2 * (ps0_x*pe0_y - ps0_y*pe0_x)	* xjac * theta * tstep	&
                 + v * tau_IC/(r0*BB2**2) * BB2_psi * F0**3/BigR**3 * eps_cyl * pe0_p			* xjac * theta * tstep	&
-                + v * tau_IC/(r0*BB2) * F0**2/BigR**2 * (psi_x * pe0_y - psi_y * pe0_x)			* xjac * theta * tstep
+                + v * tau_IC/(r0*BB2)              * F0**2/BigR**2 * (psi_x*pe0_y - psi_y*pe0_x)	* xjac * theta * tstep
   
   amat(1,5)   = amat(1,5)													&
                 + v * tau_IC/(r0*BB2) * F0**2/BigR**2 * Te0 * (ps0_x*rho_y - ps0_y*rho_x)		* xjac * theta * tstep	&
@@ -456,8 +456,8 @@ subroutine ELM_main_lhs_4(amat, amat_k, amat_n, amat_kn)
               - tau_IC * rho / r0**2.d0            * (v_x   * Pi0_x       + v_y   * Pi0_y      ) * BigR  	* xjac * tstep	
 
   amat(4,6) = amat(4,6)									        	    			&
-              + tau_IC / r0                       * (v_x   * r0   *Ti_x  + v_y   * r0   *Ti_y ) * BigR    	* xjac * tstep	&
-              + tau_IC / r0                       * (v_x   * r0_x *Ti    + v_y   * r0_y *Ti   ) * BigR    	* xjac * tstep	
+              + tau_IC / r0                        * (v_x   * r0   *Ti_x  + v_y   * r0   *Ti_y ) * BigR    	* xjac * tstep	&
+              + tau_IC / r0                        * (v_x   * r0_x *Ti    + v_y   * r0_y *Ti   ) * BigR    	* xjac * tstep	
 
   
   return

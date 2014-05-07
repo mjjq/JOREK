@@ -751,7 +751,7 @@ contains
         ilarge_vv  = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Vpar-1)*n_tor + i_tor
         ilarge_vTi = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Ti  -1)*n_tor + i_tor
         ilarge_vTe = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Te  -1)*n_tor + i_tor
-        ilarge_vus = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_u   -1)*n_tor + i_tor
+        !ilarge_vus = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_u   -1)*n_tor + i_tor
 
         irn_glob(ilarge_vv)  = n_tor * n_var * (index_node-1) + (k_Vpar-1)*n_tor + i_tor
         jcn_glob(ilarge_vv)  = n_tor * n_var * (index_node-1) + (k_Vpar-1)*n_tor + i_tor
@@ -765,12 +765,13 @@ contains
         jcn_glob(ilarge_vTe) = n_tor * n_var * (index_node-1) + (k_Te  -1)*n_tor + i_tor
         A_glob(ilarge_vTe)   = dmach1
 
-        irn_glob(ilarge_vus) = n_tor * n_var * (index_node -1) + (k_Vpar-1)*n_tor + i_tor
-        jcn_glob(ilarge_vus) = n_tor * n_var * (index_node2-1) + (k_u   -1)*n_tor + i_tor
-        A_glob(ilarge_vus)   = dmach_u
+        !irn_glob(ilarge_vus) = n_tor * n_var * (index_node -1) + (k_Vpar-1)*n_tor + i_tor
+        !jcn_glob(ilarge_vus) = n_tor * n_var * (index_node2-1) + (k_u   -1)*n_tor + i_tor
+        !A_glob(ilarge_vus)   = dmach_u
 
         if (i_tor .eq. 1) then
-          RHS_loc(index_rhs) = - Zbig*Vpar0 - mach_u - mach1
+          !RHS_loc(index_rhs) = - Zbig*Vpar0 - mach_u - mach1
+          RHS_loc(index_rhs) = - Zbig*Vpar0 - mach1
         else
           RHS_loc(index_rhs) = 0.d0
         endif

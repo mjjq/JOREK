@@ -458,7 +458,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: prof(1:3),Diff(1:3,1:10)
   real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
   real*8		      :: distance_xpoint
-  logical, parameter	      :: avoid_xpoint = .t.
+  logical, parameter	      :: avoid_xpoint = .true.
       
   ! -------------------------------------
   ! --- Temperature dependent resistivity

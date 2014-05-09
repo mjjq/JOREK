@@ -249,15 +249,16 @@ CONTAINS
                 CALL element_matrix_fft(element,nodes, data%xpoint2,           &
                      &                  data%xcase2, data%minRad,              &
                      &                  data%R_axis, data%Z_axis,              &
-                     &                  data%psi_axis,                         &
-                     &                  data%psi_bnd, Data%z_xpoint,           &
+                     &                  data%psi_axis, data%psi_bnd,           &
+		     &                  data%R_xpoint, data%z_xpoint,          &
                      &                  ELM, RHS, data%thread_num)
                 ELSE
                    ! use direct integration
                 CALL element_matrix(element,nodes, data%xpoint2,               &
                      &              data%xcase2, data%minRad,                  &
-                     &              data%R_axis, data%Z_axis, data%psi_axis,   &
-                     &              data%psi_bnd, Data%z_xpoint,               &
+                     &              data%R_axis, data%Z_axis,                  &
+                     &              data%psi_axis, data%psi_bnd,               &
+		     &              data%R_xpoint, data%z_xpoint,              &
                      &              ELM, RHS, data%thread_num)
                    DO iv = 1, n_vertex_max ! boundary integrals
 

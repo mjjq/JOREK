@@ -173,9 +173,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 !    if ( n_tor >= 3 .and. jorek_model < 700 ) then
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model < 700 ) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)	   ! use fft for toroidal integration
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use fft for toroidal integration
     else
-      call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, omp_tid)	   ! use direct integration
+      call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use direct integration
     endif
 
     do iv = 1, n_vertex_max									! boundary integrals
@@ -213,9 +213,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
     if (ife .eq. n_local_elms/2) then ! comparison is performed only for one finite element
       
       call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,   &
-    	psi_bnd, Z_xpoint, ELM2, RHS2, omp_tid)
+    	psi_bnd, R_xpoint, Z_xpoint, ELM2, RHS2, omp_tid)
       call element_matrix(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis,	  &
-    	psi_bnd, Z_xpoint, ELM, RHS, omp_tid)
+    	psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)
       
       ! --- Compare right hand side
       write(*,*)

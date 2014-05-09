@@ -1,6 +1,6 @@
 module mod_elt_matrix_fft
 contains
-subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -18,7 +18,7 @@ real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
 integer, intent(in) :: tid
 
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2)
+real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 logical    :: xpoint2
 
 real*8, dimension(:,:,:) , pointer :: ELM_p

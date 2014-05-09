@@ -431,7 +431,7 @@ end subroutine ELM_build_variables
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
-subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
+subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
@@ -449,7 +449,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   logical		      :: xpoint2
   integer		      :: xcase2
   integer		      :: i_plane
-  real*8		      :: R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2)
+  real*8		      :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
   
   ! --- Internal variables
   integer		      :: id
@@ -457,6 +457,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: atn_D, datn_D, atn_D_n, pol_D, dpol_D, D_min
   real*8		      :: prof(1:3),Diff(1:3,1:10)
   real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
+  real*8		      :: distance_xpoint
+  logical, parameter	      :: avoid_xpoint = .t.
       
   ! -------------------------------------
   ! --- Temperature dependent resistivity
@@ -614,6 +616,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
+  if (avoid_xpoint) then
+    if (xpoint2 .and.  (xcase2 .ne. 2) ) then
+      distance_xpoint = sqrt( (x_g - R_xpoint(1))**2 + (y_g - Z_xpoint(1))**2 )
+      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
+    endif
+    if (xpoint2 .and.  (xcase2 .ne. 1) ) then
+      distance_xpoint = sqrt( (x_g - R_xpoint(2))**2 + (y_g - Z_xpoint(2))**2 )
+      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
+    endif
+  endif
   
   ! -------------------------
   ! --- Neoclassical rotation

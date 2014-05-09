@@ -296,6 +296,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	      - r0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - r0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- r0_s * x_t + r0_t * x_s )  / xjac**2
+  r0min    = max(r0,rho_1)
   r0_hat   = R**2 * r0
   r0_x_hat = 2.d0 * R * R_x  * r0 + R**2 * r0_x
   r0_y_hat = R**2 * r0_y
@@ -613,8 +614,6 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
-  call density(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-  Wdia = tau_IC / zn
   
   ! -------------------------
   ! --- Neoclassical rotation
@@ -637,30 +636,38 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Heating, current and particle source (the same for all i_plane)
   ! -------------------------------------------------------------------
   if (i_plane .eq. 1) then
+    ! --- Current source
     call current(xpoint2, xcase2, x_g,y_g, Z_xpoint, ps0,psi_axis,psi_bnd,current_source)
 
+    ! --- Density source and heating
     call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source_i,heat_source_e)
-    ! --- New source profile: source with exactly the same profile as the initial equilibirum profiles.
-    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-    call temperature_i(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		       zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
-    call temperature_e(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		       zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
+    ! --- Old simple uniform sources
+    !particle_source   = particlesource * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) )
+    !heat_source_i     = heatsource_i   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
+    !heat_source_e     = heatsource_e   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
+    ! --- New source profile: depends on initial equilibirum profiles.
+    call density      (xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+    call temperature_i(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+    call temperature_e(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
     particle_source = particlesource * ( zn  - r0 )
     heat_source_i   = heatsource_i   * ( zTi - Ti0 )
     heat_source_e   = heatsource_e   * ( zTe - Te0 )
     particle_source = particle_source * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
     heat_source_i   = heat_source_i   * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
     heat_source_e   = heat_source_e   * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
+    if( (xpoint2) .and. (xcase2 .ne. 2) .and. (y_g .le. Z_xpoint(1)) ) particle_source = 0.d0
+    if( (xpoint2) .and. (xcase2 .ne. 2) .and. (y_g .le. Z_xpoint(1)) ) heat_source_i   = 0.d0
+    if( (xpoint2) .and. (xcase2 .ne. 2) .and. (y_g .le. Z_xpoint(1)) ) heat_source_e   = 0.d0
+    if( (xpoint2) .and. (xcase2 .ne. 1) .and. (y_g .ge. Z_xpoint(2)) ) particle_source = 0.d0
+    if( (xpoint2) .and. (xcase2 .ne. 1) .and. (y_g .ge. Z_xpoint(2)) ) heat_source_i   = 0.d0
+    if( (xpoint2) .and. (xcase2 .ne. 1) .and. (y_g .ge. Z_xpoint(2)) ) heat_source_e   = 0.d0
+    if(particle_source .le. 0.d0) particle_source = 0.d0
+    if(heat_source_i   .le. 0.d0) heat_source_i   = 0.d0
+    if(heat_source_e   .le. 0.d0) heat_source_e   = 0.d0
 
-    !particle_source   = particlesource * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) )
-    !heat_source_i     = heatsource_i   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
-    !heat_source_e     = heatsource_e   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
-    
+    ! --- Toroidal momentum source
     if ( abs(V_0) .ge. 1.e-12) then 
-      call velocity(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, &
-                    V_source, dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+      call velocity(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, V_source,dV_dpsi_source,dV_dz_source,dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz)
       Vt0_x = dV_dpsi_source * ps0_x
       Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
     endif

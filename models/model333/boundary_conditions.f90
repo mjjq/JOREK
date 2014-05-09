@@ -442,9 +442,6 @@ contains
                                   call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
                                   call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
 
-                                  index_large_i = n_tor * n_var * (index_node - 1)
-
-
                                   ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
                                   ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
                                   ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
@@ -460,7 +457,6 @@ contains
                                   irn_glob(ilarge_vus) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
                                   jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
                                   A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
-
 
                                   if (in .eq. 1) then
                                      RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
@@ -747,11 +743,9 @@ contains
                                   if (in .eq. 1) then
                                      RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
                                           Zbig * ( - Vpar0 + BigR**2 * U0_t /ps0_t + direction*sqrt(GAMMA*T0) / Btot)
-
                                   else
                                      RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
                                   endif
-                                  !         write(*,'(A,i6,3e16.8)') ' bc5:',inode, Vpar0,direction*sqrt(GAMMA*T0) / Btot, Vpar0-direction*sqrt(GAMMA*T0) / Btot
 
                                endif
                             end if

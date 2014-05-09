@@ -27,7 +27,7 @@ module equation_variables
   real*8	:: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8
   
   ! --- Neoclassical coefficients
-  real*8 	:: tau_IC, Wdia
+  real*8 	:: tau_IC, r0min
   real*8	:: epsil, Btheta2
   real*8	:: amu_neo_prof, aki_neo_prof
   
@@ -107,7 +107,7 @@ module equation_variables
   !$omp 	Ti0_ps0_x, Ti0_ps0_y,													   &
   !$omp 	Te0_ps0_x, Te0_ps0_y,													   &
   !$omp 	TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8,									   &
-  !$omp 	tau_IC, Wdia, 														   &
+  !$omp 	tau_IC, r0min, 														   &
   !$omp 	epsil, Btheta2, 													   &
   !$omp 	amu_neo_prof, aki_neo_prof, 												   &
   !$omp 	x_g, x_s, x_t, x_ss, x_st, x_tt,											   &

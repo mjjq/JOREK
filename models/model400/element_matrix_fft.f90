@@ -3,7 +3,7 @@ contains
 
   ! --- Include all the routines directly for runtime efficiency
   INCLUDE "construct_variables.f90"
-  INCLUDE "equations_Wdia.f90"
+  INCLUDE "equations.f90"
   INCLUDE "equations_numm.f90"
 
 

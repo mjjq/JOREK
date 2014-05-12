@@ -456,6 +456,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: psi_norm, psi_D
   real*8		      :: atn_D, datn_D, atn_D_n, pol_D, dpol_D, D_min
   real*8		      :: prof(1:3),Diff(1:3,1:10)
+  real*8                      :: Ti_min_Kpar, Te_min_Kpar
   real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
   real*8		      :: distance_xpoint
   logical, parameter	      :: avoid_xpoint = .true.
@@ -567,15 +568,17 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -----------------------------------------------------
   ! --- Parallel conductivity profiles (Braginskii model)
   ! -----------------------------------------------------
-  if ( Ti0 .lt. Ti_1*1.d-3 ) then
-    Ki_par  = K_i_par	        * (Ti_1*1.d-3)**(2.5d0) 
+  Ti_min_Kpar = 5.d0 * Ti_1
+  if ( Ti0 .lt. Ti_min_Kpar ) then
+    Ki_par  = K_i_par	        * Ti_min_Kpar**(2.5d0) 
     dKi_par = 0.d0 
   else
     Ki_par  = K_i_par	        * Ti0 **(2.5d0) 
     dKi_par = K_i_par * (2.5d0) * Ti0 **(1.5d0)
   endif
-  if ( Te0 .lt. Te_1*1.d-3 ) then
-    Ke_par  = K_e_par	        * (Te_1*1.d-3)**(2.5d0) 
+  Te_min_Kpar = 5.d0 * Te_1
+  if ( Te0 .lt. Te_min_Kpar ) then
+    Ke_par  = K_e_par	        * Te_min_Kpar**(2.5d0) 
     dKe_par = 0.d0
   else
     Ke_par  = K_e_par	        * Te0 **(2.5d0) 
@@ -605,7 +608,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Taylor Galerkin (TG2) stabilisation switches
   ! ------------------------------------------------
   TG_num1 = 0.d0;
-  TG_num2 = 2.d0;
+  TG_num2 = 0.d0;
   TG_num5 = 0.d0;
   TG_num6 = 0.d0;
   TG_num7 = 0.d0;
@@ -623,7 +626,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     endif
     if (xpoint2 .and.  (xcase2 .ne. 1) ) then
       distance_xpoint = sqrt( (x_g - R_xpoint(2))**2 + (y_g - Z_xpoint(2))**2 )
-      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
+      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.15d0)/0.01d0 ) )
     endif
   endif
   
@@ -690,17 +693,17 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     D_prof  = D_prof  !* 1.d2
     !particle_source = 1.d-2
   endif       
-  if ( Ti0 .lt. Ti_1 ) then
+  if ( Ti0 .lt. 1.d-2*Ti_1 ) then
     Ki_prof = Ki_prof !* 1.d2
     Ki_par  = Ki_par  !* 1.d2
     dKi_par = dKi_par !* 1.d2
-    !heat_source_i = 1.d-4
+    heat_source_i = 1.d-4
   endif
-  if ( Te0 .lt. Te_1 ) then
+  if ( Te0 .lt. 1.d-2*Te_1 ) then
     Ke_prof = Ke_prof !* 1.d2
     Ke_par  = Ke_par  !* 1.d2
     dKe_par = dKe_par !* 1.d2
-    !heat_source_e = 1.d-4
+    heat_source_e = 1.d-4
   endif
     
   return

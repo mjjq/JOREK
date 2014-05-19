@@ -604,7 +604,9 @@ module vacuum_response
     real*8   :: i_size
     !   --- Quantities related to the boundary dof contributing to the response
     integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_col_psi, j_resp
-    
+#ifdef __GFORTRAN__
+    real*8 :: wgauss_copy(4)
+#endif
     !integer :: rate, t0, t1 !### timing ###
     
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
@@ -632,12 +634,18 @@ module vacuum_response
     !call system_clock(count=t0)
     !###
     
+#ifdef __GFORTRAN__
+    wgauss_copy(1:4) = wgauss(1:4)
+#endif
     ! --- Sum over boundary elements
     !$omp parallel do                                                                              &
     !$omp default(none)                                                                            &
     !$omp shared(a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,    &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,      &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec, psibnd_coils,       &
+#ifdef __GFORTRAN__
+    !$omp   wgauss_copy,                                                                                &
+#endif
     !$omp   resistive_wall)     &
     !$omp private(m_bndelem, bndelem_m, x_s, y_s, l_vertex, l_dof, l_node, l_dir, l_node_bnd,      &
     !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, dA, m_plane, common_prefactor,         &
@@ -695,8 +703,11 @@ module vacuum_response
                       ! --- Determine basis function
                       basfunc_i = H1(i_vertex,i_dof,ms) *i_size * HZ(i_tor,m_plane)
                       
+#ifdef __GFORTRAN__
+                      common_prefactor = wgauss_copy(ms) * dA * testfunc_l * basfunc_i
+#else
                       common_prefactor = wgauss(ms) * dA * testfunc_l * basfunc_i
-                      
+#endif                      
                       ! --- Sum over boundary dofs contributing to the response
                       L_JB: do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
                         L_JD: do j_dof = 1, 2 ! (loop over node dofs)

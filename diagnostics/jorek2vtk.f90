@@ -171,7 +171,7 @@ if ( SI_units ) then
       scalar_names(6)='Ti_keV      '
       scalar_names(8)='Te_keV      '
    else
-      scalar_names(6)='Te+Ti_keV   '
+      scalar_names(6)='Te_keV      '
    endif
    scalar_names(7)='Vpar_km/s   '
 endif

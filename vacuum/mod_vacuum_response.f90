@@ -1374,9 +1374,11 @@ module vacuum_response
   
   
   
-  !> Return a description of a given toroidal mode. @todo put somewhere else
+  !> Return a description for a given toroidal mode index (mode number, cos/sin).
   character(len=12) function mode_to_str(i_tor, n_period)
-  
+    
+    use phys_module, only: mode, mode_type
+    
     implicit none
     
     ! --- Routine parameters
@@ -1388,18 +1390,10 @@ module vacuum_response
     character(len=3)  :: typ              ! sin or cos
     character(len=30) :: i_tor_str, n_str ! Character string representations for i_tor and n
     
-    write(i_tor_str,'(I10)') i_tor
-
-    ! --- Determine toroidal mode number.
-    n = int(i_tor / 2) * n_period
-    write(n_str,'(I10)') n
-    
-    ! --- Determine mode type (sin or cos).
-    if ( mod(i_tor,2) == 0 ) then
-      typ = 'sin'
-    else
-      typ = 'cos'
-    end if
+    write(i_tor_str,'(I10)') i_tor   ! toroidal mode index
+    n   = mode(i_tor)                ! toroidal mode number
+    write(n_str,'(I10)') n           !  -"-
+    typ = mode_type(i_tor)           ! sin or cos
     
     mode_to_str = trim(adjustl(i_tor_str))//' (n='//trim(adjustl(n_str))//' '//trim(typ)//')'
     
@@ -1410,7 +1404,7 @@ module vacuum_response
   
   
   
-  !> Return a description of several toroidal modes. @todo put somewhere else
+  !> Return a description of several toroidal modes.
   character(len=1400) function modes_to_str(i_tors, n_tor, n_period)
   
     implicit none

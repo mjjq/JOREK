@@ -56,8 +56,6 @@ module vacuum_response
 
     integer :: i,j, ierr, dim
     logical :: exists
-
-!    n_dof_bnd     = bnd_node_list%n_bnd_nodes * 2 ! Number of boundary degrees of freedom per harmonic
  
     do i=1, bnd_node_list%n_bnd_nodes
       exists = .false.
@@ -621,6 +619,8 @@ module vacuum_response
     real*8   :: i_size
     !   --- Quantities related to the boundary dof contributing to the response
     integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_col_psi, j_resp
+
+    integer  :: i_resp_old, j_resp_old
 #ifdef __GFORTRAN__
     real*8 :: wgauss_copy(4)
 #endif
@@ -643,13 +643,6 @@ module vacuum_response
     end if
 
     call boundary_check()
-    
-    !write(35+my_id,'(4ES20.12)') sum(abs(rhs_loc)), sum(abs(A_glob))
-    
-    !### timing ###
-    !call system_clock(count_rate=rate)
-    !call system_clock(count=t0)
-    !###
     
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
@@ -736,13 +729,13 @@ module vacuum_response
                       i_resp_0 = response_index_eq(i_node_bnd,i_dof)
 
                       ! --- Determine basis function
-                      basfunc_i = H1(i_vertex,i_dof,ms) *i_size * HZ(i_tor,m_plane)
-                      
+                      basfunc_i = H1(i_vertex,i_dof,ms) * i_size * HZ(i_tor,m_plane)
+
 #ifdef __GFORTRAN__
                       common_prefactor = wgauss_copy(ms) * dA * testfunc_l * basfunc_i
 #else
                       common_prefactor = wgauss(ms) * dA * testfunc_l * basfunc_i
-#endif                      
+#endif
                       ! --- Sum over boundary dofs contributing to the response
                       L_JB: do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
 
@@ -786,14 +779,19 @@ module vacuum_response
                       end do L_JB
 
                       ! --- Contribution of vacuum response to the rhs of the current equation
-                      rhs_contrib = sum( response_m_h(i_resp, :) * psibnd_vec(:) )                 &
-                        - sum( response_m_h(i_resp,:) * psibnd_coils(:) )                          &
-                        + sum( response_m_j(i_resp, :) * dpsibnd_vec(:) )
-                      if ( l_tor == 1 ) rhs_contrib = rhs_contrib                                  &
-                        - sum( bext_tan(i_resp_0, :) * I_coils(:) )
-                      if ( resistive_wall )                                                        &
-                        rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) * wall_curr(:) )  &
-                          + sum( response_m_g(i_resp, :) * dwall_curr(:) )
+
+                      rhs_contrib = sum( response_m_h(i_resp,:) * psibnd_vec(:)   )                 &
+                                  - sum( response_m_h(i_resp,:) * psibnd_coils(:) )                 &
+                                  + sum( response_m_j(i_resp,:) * dpsibnd_vec(:)  )
+
+                      if ( l_tor == 1 ) &
+                        rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )
+
+                      if ( resistive_wall ) &
+                        rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) *  wall_curr(:) )  &
+                                                  + sum( response_m_g(i_resp, :) * dwall_curr(:) )
+
+
                       rhs_contrib = rhs_contrib * common_prefactor
                       !$omp atomic
                       rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
@@ -905,6 +903,7 @@ module vacuum_response
     if ( allocated(dpsibnd_vec) ) deallocate(dpsibnd_vec)
     allocate( dpsibnd_vec(n_dof_starwall) )
     dpsibnd_vec(:) = 0.d0
+
     if ( present(psibnd_coils) ) then
       if ( allocated(psibnd_coils) ) deallocate(psibnd_coils)
       allocate( psibnd_coils(n_dof_starwall) )
@@ -935,6 +934,7 @@ module vacuum_response
 
           psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, ivar_psi)
           dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, ivar_psi)
+
           if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) ) then
             j_resp_0 = 2*(jnode-1) + jbas
             psibnd_coils( j_resp_0 ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
@@ -1445,6 +1445,7 @@ module vacuum_response
     character(len=3)  :: typ              ! sin or cos
     character(len=30) :: i_tor_str, n_str ! Character string representations for i_tor and n
     
+
     write(i_tor_str,'(I10)') i_tor   ! toroidal mode index
     n   = mode(i_tor)                ! toroidal mode number
     write(n_str,'(I10)') n           !  -"-

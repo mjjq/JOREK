@@ -436,7 +436,7 @@ required = 0
     end if
     
   end if
-  if ( restart .and. freeboundary_equil ) call broadcast_vacuum(my_id, resistive_wall)
+  if ( restart .and. freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -511,7 +511,7 @@ required = 0
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
-    if ( freeboundary_equil ) then
+    if ( freeboundary ) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)

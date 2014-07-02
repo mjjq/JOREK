@@ -583,6 +583,8 @@ required = 0
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         
+	call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+        
         ! --- Compute the plasma equilibrium
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
         

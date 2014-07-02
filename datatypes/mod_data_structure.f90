@@ -71,7 +71,8 @@ module data_structure
   
   type type_bnd_node                              !< type definition for one boundary node
     integer :: index_jorek                        !< index of the node in the node_list
-    integer :: index_starwall                     !< index of the node in STARWALL numbering
+    integer :: index_starwall(2)                  !< index of the node in STARWALL numbering
+    integer :: n_dof                              !< total number of degrees of freedom for this boundary node
     integer :: direction(2)                       !< which direction is along the boundary?
   end type type_bnd_node
   

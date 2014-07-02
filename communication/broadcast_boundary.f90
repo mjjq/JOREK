@@ -26,7 +26,7 @@ call MPI_BCAST(bnd_node_list%n_bnd_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 bufsize = boundary_list%n_bnd_elements * (10*INT_EXT + 4*IDBL_EXT) + &
-          bnd_node_list%n_bnd_nodes    * (4*INT_EXT)
+          bnd_node_list%n_bnd_nodes    * (6*INT_EXT)
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastb_buffer")
 
@@ -50,8 +50,9 @@ if (my_id == 0) then
     abnd_node = bnd_node_list%bnd_node(ind)
 
     call MPI_PACK(abnd_node%index_jorek,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(abnd_node%index_starwall,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(abnd_node%index_starwall,2,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(abnd_node%direction,2,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(abnd_node%n_dof,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   end do
   
 end if
@@ -77,8 +78,9 @@ if (my_id /= 0) then
   do ind=1,bnd_node_list%n_bnd_nodes
 
     call MPI_UNPACK(buffer,bufsize,position,abnd_node%index_jorek,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    call MPI_UNPACK(buffer,bufsize,position,abnd_node%index_starwall,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,abnd_node%index_starwall,2,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,abnd_node%direction,2,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,abnd_node%n_dof,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     
     bnd_node_list%bnd_node(ind) = abnd_node
   end do

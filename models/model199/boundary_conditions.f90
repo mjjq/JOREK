@@ -133,6 +133,8 @@ contains
 
                          if ((k .eq. 1) .or. (k .eq. 2) .or. (k .eq. 3) .or. &
                               (k .eq. 4) .or. (k .eq. 5) .or. (k .eq. 6) ) then
+ 
+                          if ( (.not. is_freebound(in,k)) ) then ! apply fixed boundary conditions where necessary
 
                             index_node = node_list%node(inode)%index(1)
                             if (use_murge .and. use_murge_element) then
@@ -190,8 +192,8 @@ contains
                                endif
                             end if
 
-                         endif
-
+                          endif
+                        endif
                       endif
 
                       !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)

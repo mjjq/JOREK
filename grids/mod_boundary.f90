@@ -31,7 +31,7 @@ module boundary
     integer :: i, j, index_bnd, i_dof
     
     ! --- Empty the boundary node and element lists.
-    bnd_node_list%n_bnd_nodes    = 0
+    bnd_node_list%n_bnd_nodes   = 0
     bnd_elm_list%n_bnd_elements = 0
 
     ! --- Go through all elements of the grid and find out which are located
@@ -75,56 +75,18 @@ module boundary
     end do
 
 !=================== define index in the response matrix (including corners whose nodes appear twice)
-    do i=1, bnd_node_list%n_bnd_nodes
-
-      bnd_node_list%bnd_node(i)%n_dof = 1
-      bnd_node_list%bnd_node(i)%index_starwall = (/ 0, 0 /)
-
-      do j=1, bnd_node_list%n_bnd_nodes            ! check for identical nodes on the boundary)
-
-        if (bnd_node_list%bnd_node(j)%index_jorek .eq. bnd_node_list%bnd_node(i)%index_jorek) then
-
-          bnd_node_list%bnd_node(i)%n_dof = bnd_node_list%bnd_node(i)%n_dof + 1
-
-        endif
-
-      enddo
-    enddo
 
     index_bnd = 0
 
     do i=1, bnd_node_list%n_bnd_nodes
 
-      if (bnd_node_list%bnd_node(i)%n_dof .eq. 2) then
+      bnd_node_list%bnd_node(i)%index_starwall = (/index_bnd+1,index_bnd+2/)
+      bnd_node_list%bnd_node(i)%n_dof = 2
 
-        bnd_node_list%bnd_node(i)%index_starwall = (/index_bnd+1,index_bnd+2/)
- 
-        index_bnd = index_bnd + bnd_node_list%bnd_node(i)%n_dof
-
-      elseif (bnd_node_list%bnd_node(i)%index_starwall(1) .eq. 0) then
-
-        i_dof = 1
-
-        do j=1, bnd_node_list%n_bnd_nodes
-
-          if (bnd_node_list%bnd_node(j)%index_jorek .eq. bnd_node_list%bnd_node(i)%index_jorek) then
-
-            write(*,'(A,2i5)') ' adding corner node : ',i,bnd_node_list%bnd_node(i)%index_jorek
-
-            bnd_node_list%bnd_node(j)%index_starwall = (/index_bnd + 1, index_bnd + i_dof + 1/)
-
-            write(*,*)  ' corner bnd index : ',j, bnd_node_list%bnd_node(j)%index_starwall
-            i_dof = i_dof + 1
-
-          endif
-
-        enddo
-
-        index_bnd = index_bnd + bnd_node_list%bnd_node(i)%n_dof
-
-      endif
+      index_bnd = index_bnd + bnd_node_list%bnd_node(i)%n_dof
 
       write(*,*)  'bnd index : ',i, bnd_node_list%bnd_node(i)%index_starwall
+
     enddo
 
     ! --- Output short (.false.) or verbose (.true.) boundary information.

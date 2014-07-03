@@ -62,7 +62,8 @@ JORPOL_SRC := $(JORPOL_SRC)                    		\
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)               		\
 	$(DIR)/hermite_1d.f90
 
-JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)
+JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)	\
+	$(DIR)/hermite_1d.f90
 
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)               \
         $(DIR)/hermite_1d.f90

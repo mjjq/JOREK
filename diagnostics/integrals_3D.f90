@@ -286,11 +286,11 @@ do ife = ife_min, ife_max
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
 
-	if (jorek_model .gt. 199) then
-          vpar0  = eq_g(mp,min(7,n_tor),ms,mt) ! min: to make model199 compile with "-check bounds"
-        else
-          vpar0  = 0.d0
-	endif
+#if JOREK_MODEL > 299
+        vpar0 = eq_g(mp,7,ms,mt)
+#else
+        vpar0 = 0.d0
+#endif
 
 #if JOREK_MODEL == 500
         rn0    = eq_g(mp,8,ms,mt)

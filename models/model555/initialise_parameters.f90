@@ -80,6 +80,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
+                D_neutral_x, D_neutral_y, D_neutral_p,   	    &
+                mgi_sig, mgi_length, n_zero, ksi_ion,               &  
+                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 output_bnd_elements,                                &
                 wall_file,                                          &
                 first_target_point, last_target_point,		    &

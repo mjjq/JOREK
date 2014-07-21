@@ -59,9 +59,8 @@ integer            :: status(MPI_STATUS_SIZE)
 integer            :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
 character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
-integer :: i_bnd, i_bnd_beg, i_div_part, n_div_parts, n_bnd, inode_k, inode_m, bnd_list(n_boundary_max), v1, v2, ov2
+integer :: i_bnd, n_bnd, bnd_list(n_boundary_max)
 real*8 startpos
-real*8, allocatable :: rzpart(:, :)
 logical :: psi_theta
 
 logical, external :: neighbours2
@@ -174,60 +173,9 @@ call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos=
    end do
    n_bnd = i_bnd
 
-   n_div_parts = count(node_list%node(bnd_elm_list%bnd_element(bnd_list(1:n_bnd))%vertex(1))%boundary == 3)
+   call divertor_from_boundary(node_list, bnd_elm_list%bnd_element(bnd_list(1:n_bnd)), divertor)
 
    if (my_id .eq. 0) then
-      open(newunit=f_div, file='divpos.dat', action='write', status='replace')
-
-      print *, 'divertor composed of ', n_div_parts, 'parts'
-   end if
-
-   call alloc_divertor(divertor, n_div_parts)
-   startpos = 0.
-   ov2 = 0
-   i_div_part = 0
-   do i_bnd = 1, n_bnd
-      v1 = bnd_elm_list%bnd_element(bnd_list(i_bnd))%vertex(1)
-      v2 = bnd_elm_list%bnd_element(bnd_list(i_bnd))%vertex(2)
-
-      if (ov2 /= v1) then
-         if (node_list%node(v1)%boundary == 3) then
-            i_bnd_beg = i_bnd
-!            write(f_div, '(2f12.4)')   node_list%node(v1)%x(1, 1:2)
-         else
-            STOP 'boundary node succession broken'
-         endif
-      endif
-
-      if (node_list%node(v2)%boundary == 3) then
-         i_div_part = i_div_part + 1
-
-         allocate(rzpart(2, i_bnd - i_bnd_beg + 2))
-         if (my_id .eq. 0) write(f_div, '(2f12.4)')   node_list%node(bnd_elm_list%bnd_element(bnd_list(i_bnd_beg))%vertex(1))%x(1, 1:2)
-         rzpart(:, 1) = node_list%node(bnd_elm_list%bnd_element(bnd_list(i_bnd_beg))%vertex(1))%x(1, 1:2)
-         do i = i_bnd_beg, i_bnd
-            if (my_id .eq. 0) write(f_div, '(2f12.4)')   node_list%node(bnd_elm_list%bnd_element(bnd_list(i))%vertex(2))%x(1, 1:2)
-            rzpart(:, i-i_bnd_beg+2) = node_list%node(bnd_elm_list%bnd_element(bnd_list(i))%vertex(2))%x(1, 1:2)
-         end do
-
-         if (my_id .eq. 0) then
-            print *, "part ", i_div_part, " from ", startpos
-         end if
-         call init_divpart_data(divertor%divparts(i_div_part), rzpart, startpos)
-         if (my_id .eq. 0) then
-            do j = 1,divertor%divparts(i_div_part)%npts
-               print *, divertor%divparts(i_div_part)%divpts(j)%absdist
-            enddo
-            print *, "to ", startpos
-         end if
-         deallocate(rzpart)
-      end if
-      ov2 = v2
-   enddo
-   if (my_id .eq. 0) then
-      close(f_div)
-      write (*,*) 'closed divpos.dat'
-
       open(newunit=f_divshape, file='divertor_shape.dat', action='write', status='replace')
       call save_divertor(f_divshape, .false.)
       close(f_divshape)
@@ -1257,8 +1205,54 @@ contains
       write(*,*) 'should not be here'
     endif
   end subroutine bndelm2s_t_elm
-  
 
+  subroutine divertor_from_boundary(node_list, bnd_elements, divertor)
+    type(type_node_list), intent(in) :: node_list
+    type(type_bnd_element), intent(in) :: bnd_elements(:)
+
+    type(divertor_t), intent(out) :: divertor
+
+    integer i_bnd_beg, i_div_part, n_div_parts, v1, v2, ov2
+    integer :: i_bnd, n_bnd, i
+    real*8 startpos
+    real*8, allocatable :: rzpart(:, :)
+
+    n_bnd = size(bnd_elements)
+    n_div_parts = count(node_list%node(bnd_elements%vertex(1))%boundary == 3)
+
+    call alloc_divertor(divertor, n_div_parts)
+    startpos = 0.
+    ov2 = 0
+    i_div_part = 0
+    do i_bnd = 1, n_bnd
+      v1 = bnd_elements(i_bnd)%vertex(1)
+      v2 = bnd_elements(i_bnd)%vertex(2)
+
+      if (ov2 /= v1) then
+         if (node_list%node(v1)%boundary == 3) then
+            i_bnd_beg = i_bnd
+!            write(f_div, '(2f12.4)')   node_list%node(v1)%x(1, 1:2)
+         else
+            STOP 'boundary node succession broken'
+         endif
+      endif
+
+      if (node_list%node(v2)%boundary == 3) then
+         i_div_part = i_div_part + 1
+
+         allocate(rzpart(2, i_bnd - i_bnd_beg + 2))
+
+         rzpart(:, 1) = node_list%node(bnd_elements(i_bnd_beg)%vertex(1))%x(1, 1:2)
+         do i = i_bnd_beg, i_bnd
+            rzpart(:, i-i_bnd_beg+2) = node_list%node(bnd_elements(i)%vertex(2))%x(1, 1:2)
+         end do
+
+         call init_divpart_data(divertor%divparts(i_div_part), rzpart, startpos)
+         deallocate(rzpart)
+      end if
+      ov2 = v2
+    enddo
+  end subroutine divertor_from_boundary
 end program jorek2_connection2
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)

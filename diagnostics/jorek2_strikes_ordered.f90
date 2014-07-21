@@ -59,8 +59,8 @@ integer            :: status(MPI_STATUS_SIZE)
 integer            :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
 character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
-integer :: i_bnd, i_bnd_beg, i_div_part, n_div_parts, n_bnd, inode_k, inode_m, bnd_list(n_boundary_max), bnd_side, v1, v2, ov2
-real*8 startpos, relpos
+integer :: i_bnd, i_bnd_beg, i_div_part, n_div_parts, n_bnd, inode_k, inode_m, bnd_list(n_boundary_max), v1, v2, ov2
+real*8 startpos
 real*8, allocatable :: rzpart(:, :)
 logical :: psi_theta
 
@@ -353,32 +353,10 @@ allocate(RZkeep(2,1000000),scalars(1000000,n_scalars))
 if (my_id .eq. 0 ) then
    open(newunit=f_div, file='divpos_start.dat', action='write', status='replace')
   do k=1, n_r_start
-     call divpos2ibnd(divpos(k), i_bnd, relpos)
+     call divpos2s_t_elm_bnd(element_list, bnd_elm_list%bnd_element(bnd_list(1:n_bnd)), divpos(k), s_ini, t_ini, i)
 
-     if (reversed_edge(bnd_elm_list%bnd_element(bnd_list(i_bnd)), element_list) ) then
-        print *, 'reversed edge'
-        relpos = 1. - relpos
-     endif
-     bnd_side =  bnd_elm_list%bnd_element(bnd_list(i_bnd))%side
-     i = bnd_elm_list%bnd_element(bnd_list(i_bnd))%element
-    if (bnd_side .eq. 1) then
-      s_ini = relpos
-      t_ini = 0.d0
-    elseif (bnd_side .eq. 2) then
-      t_ini = relpos
-      s_ini = 1.d0
-    elseif (bnd_side .eq. 3) then
-      s_ini = 1. - relpos
-      t_ini = 1.d0
-    elseif (bnd_side .eq. 4) then
-      t_ini = 1. - relpos
-      s_ini = 0.d0
-    else
-      write(*,*) 'should not be here'
-    endif
-
-    call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-    write(f_div, '(2f12.8, i4)')  R_out, Z_out, bnd_side
+     call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+     write(f_div, '(2f12.8, i4)')  R_out, Z_out
   end do
 
 close(f_div)
@@ -406,28 +384,8 @@ allocate(connection_length_plus(nk, n_phi), connection_length_minus(nk, n_phi))
 allocate(n_turn_plus(nk, n_phi), n_turn_minus(nk, n_phi))
   do k_ind=1, nk
      k = k_list(k_ind)
-     call divpos2ibnd(divpos(k), i_bnd, relpos)
 
-     if (reversed_edge(bnd_elm_list%bnd_element(bnd_list(i_bnd)), element_list) ) then
-        relpos = 1. - relpos
-     endif
-     bnd_side =  bnd_elm_list%bnd_element(bnd_list(i_bnd))%side
-     i = bnd_elm_list%bnd_element(bnd_list(i_bnd))%element
-    if (bnd_side .eq. 1) then
-      s_ini = relpos
-      t_ini = 0.d0
-    elseif (bnd_side .eq. 2) then
-      t_ini = relpos
-      s_ini = 1.d0
-    elseif (bnd_side .eq. 3) then
-      s_ini = 1. - relpos
-      t_ini = 1.d0
-    elseif (bnd_side .eq. 4) then
-      t_ini = 1. - relpos
-      s_ini = 0.d0
-    else
-      write(*,*) 'should not be here'
-    endif
+    call divpos2s_t_elm_bnd(element_list, bnd_elm_list%bnd_element(bnd_list(1:n_bnd)), divpos(k), s_ini, t_ini, i)
 
     do m=1, n_phi
  
@@ -1248,6 +1206,59 @@ contains
 100 REWIND(fd)
     countlines = i-1
   end function countlines
+
+  subroutine divpos2s_t_elm_bnd(element_list, bnd_elements, divpos, s, t, e)
+    type (type_element_list), intent(in) :: element_list
+    type(divertor_pos_t), intent(in) :: divpos
+    type(type_bnd_element), intent(in) :: bnd_elements(:)
+
+    real*8, intent(out) :: s, t
+    integer, intent(out) :: e
+
+    real*8 relpos
+    integer i_bnd
+
+    call divpos2ibnd(divpos, i_bnd, relpos)
+
+    call bndelm2s_t_elm(element_list, bnd_elements(i_bnd), relpos, s, t, e)
+  end subroutine divpos2s_t_elm_bnd
+  
+  subroutine bndelm2s_t_elm(element_list, bnd_el, r, s, t, e)
+    type (type_element_list), intent(in) :: element_list
+    type (type_bnd_element), intent(in) :: bnd_el
+    real*8, intent(in) :: r
+
+    real*8, intent(out) :: s, t
+    integer, intent(out) :: e
+
+    integer bnd_side
+    real*8 relpos
+
+    relpos = r
+    if (reversed_edge(bnd_el, element_list) ) then
+       print *, 'reversed edge'
+       relpos = 1. - relpos
+    endif
+    bnd_side =  bnd_el%side
+    e = bnd_el%element
+    if (bnd_side .eq. 1) then
+      s = relpos
+      t = 0.d0
+    elseif (bnd_side .eq. 2) then
+      t = relpos
+      s = 1.d0
+    elseif (bnd_side .eq. 3) then
+      s = 1. - relpos
+      t = 1.d0
+    elseif (bnd_side .eq. 4) then
+      t = 1. - relpos
+      s = 0.d0
+    else
+      write(*,*) 'should not be here'
+    endif
+  end subroutine bndelm2s_t_elm
+  
+
 end program jorek2_connection2
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)

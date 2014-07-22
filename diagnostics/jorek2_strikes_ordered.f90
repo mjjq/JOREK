@@ -4,8 +4,6 @@ module elements_nodes_neighbours
 
   type (type_node_list)    :: node_list
   type (type_element_list) :: element_list
-  type (type_bnd_node_list)  :: bnd_node_list
-  type (type_bnd_element_list) :: bnd_elm_list
 
   integer,allocatable      :: element_neighbours(:,:)
 
@@ -59,7 +57,8 @@ integer            :: status(MPI_STATUS_SIZE)
 integer            :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
 character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
-integer :: i_bnd, n_bnd, bnd_list(n_boundary_max)
+type(type_bnd_element), allocatable :: bnd_elements(:)
+
 real*8 startpos
 logical :: psi_theta
 
@@ -145,7 +144,6 @@ write (*,*) 'number of elements= ', element_list%n_elements
 allocate(element_neighbours(4,element_list%n_elements))
 
 element_neighbours = 0
-i_bnd = 0
 
 ! the following is expensive and should be parallelized using OpenMP.
 
@@ -161,19 +159,7 @@ do i=1,element_list%n_elements
   enddo
 enddo
 
-call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos=.false.)
-
-   do i =1, bnd_elm_list%n_bnd_elements
-      associate (el => bnd_elm_list%bnd_element(i))      
-        if(any(node_list%node(el%vertex)%boundary == 1)) then
-           i_bnd = i_bnd + 1
-           bnd_list(i_bnd) = i
-        end if
-      end associate
-   end do
-   n_bnd = i_bnd
-
-   call divertor_from_boundary(node_list, bnd_elm_list%bnd_element(bnd_list(1:n_bnd)), divertor)
+call divertor_from_grid(node_list,element_list, bnd_elements, divertor)
 
    if (my_id .eq. 0) then
       open(newunit=f_divshape, file='divertor_shape.dat', action='write', status='replace')
@@ -301,7 +287,7 @@ allocate(RZkeep(2,1000000),scalars(1000000,n_scalars))
 if (my_id .eq. 0 ) then
    open(newunit=f_div, file='divpos_start.dat', action='write', status='replace')
   do k=1, n_r_start
-     call divpos2s_t_elm_bnd(element_list, bnd_elm_list%bnd_element(bnd_list(1:n_bnd)), divpos(k), s_ini, t_ini, i)
+     call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
 
      call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
      write(f_div, '(2f12.8, i4)')  R_out, Z_out
@@ -333,7 +319,7 @@ allocate(n_turn_plus(nk, n_phi), n_turn_minus(nk, n_phi))
   do k_ind=1, nk
      k = k_list(k_ind)
 
-    call divpos2s_t_elm_bnd(element_list, bnd_elm_list%bnd_element(bnd_list(1:n_bnd)), divpos(k), s_ini, t_ini, i)
+    call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
 
     do m=1, n_phi
  
@@ -1206,6 +1192,39 @@ contains
     endif
   end subroutine bndelm2s_t_elm
 
+  subroutine divertor_from_grid(node_list,element_list, bnd_elements, divertor)
+    type(type_node_list), intent(inout) :: node_list
+    type (type_element_list), intent(in) :: element_list
+
+    type(type_bnd_element), intent(out), allocatable :: bnd_elements(:)
+    type(divertor_t), intent(out) :: divertor
+
+    integer i, i_bnd, n_bnd, bnd_list(n_boundary_max)
+    type (type_bnd_node_list)  :: bnd_node_list
+    type (type_bnd_element_list) :: bnd_elm_list
+
+
+    call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos=.false.)
+
+    i_bnd = 0
+
+    do i =1, bnd_elm_list%n_bnd_elements
+      associate (el => bnd_elm_list%bnd_element(i))      
+        if(any(node_list%node(el%vertex)%boundary == 1)) then
+           i_bnd = i_bnd + 1
+           bnd_list(i_bnd) = i
+        end if
+      end associate
+   end do
+   n_bnd = i_bnd
+
+   allocate(bnd_elements(n_bnd))
+
+   bnd_elements=bnd_elm_list%bnd_element(bnd_list(1:n_bnd))
+
+   call divertor_from_boundary(node_list, bnd_elements, divertor)
+ end subroutine divertor_from_grid
+  
   subroutine divertor_from_boundary(node_list, bnd_elements, divertor)
     type(type_node_list), intent(in) :: node_list
     type(type_bnd_element), intent(in) :: bnd_elements(:)

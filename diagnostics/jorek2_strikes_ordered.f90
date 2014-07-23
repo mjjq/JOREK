@@ -1204,7 +1204,7 @@ contains
     type (type_bnd_element_list) :: bnd_elm_list
 
 
-    call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos=.false.)
+    call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos=my_id==0)
 
     i_bnd = 0
 

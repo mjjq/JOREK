@@ -33,6 +33,7 @@ module phys_module
   logical :: xpoint               !< X-point geometry?
   logical :: bootstrap            !< Bootstrap-current?
   logical :: refinement           !< Use mesh refinement?
+  logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
   logical :: grid_to_wall         !< extend the grid to a physical wall

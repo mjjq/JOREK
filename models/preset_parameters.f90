@@ -47,6 +47,7 @@ subroutine preset_parameters
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
 
+  bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
   bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
   density_reflection = 0.d0   ! reflection coefficient for outgoing density

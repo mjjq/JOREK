@@ -4,10 +4,10 @@
  restart = .f.
  regrid  = .f.
  tstep   = 300.d0
- nstep   = 12
+ nstep   = 120
 
  nout = 1
- linear_run = .true.
+ linear_run = .f.
 
  time_evol_scheme ='Crank-Nicholson'
 
@@ -45,27 +45,27 @@
 
  n_R      = 0
  n_Z      = 0
- n_radial = 40
- n_pol    = 32
+ n_radial = 51
+ n_pol    = 16
 
- n_flux   = 40
- n_tht    = 32
+ n_flux   = 41
+ n_tht    = 16
  n_open   = 0
  n_leg    = 0
  n_private = 0
 
- eta   = 1.d-5
- visco = 0.d-6
- visco2= 0.d0
-
- eta_T_dependent = .false.
- visco_T_dependent = .false.
+ eta   = 1.d-6
+ visco = 1.d-7
+ eta_T_dependent = .t.
+ visco_T_dependent = .t.
+ eta_num = 0.d-12
+ visco_num=0.d-12
 
  D_par  = 0.d0
- D_perp = 0.d-5
+ D_perp = 1.d-7
 
- ZK_par  = 0.d0
- ZK_perp = 0.d-5
+ ZK_par  = 1.d0
+ ZK_perp = 1.d-7
 
  FF_0 = 2.d0
  FF_1 = 0.

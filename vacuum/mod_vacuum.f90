@@ -270,6 +270,8 @@ module vacuum
       
       call MPI_BCAST(n_wall_curr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       
+      if ( n_wall_curr == 0 ) return
+      
       if ( my_id /= 0 ) then
         if ( allocated(wall_curr) ) deallocate(wall_curr)
         allocate( wall_curr(n_wall_curr) )

@@ -1199,7 +1199,7 @@ contains
     type(type_bnd_element), intent(out), allocatable :: bnd_elements(:)
     type(divertor_t), intent(out) :: divertor
 
-    integer i, i_bnd, n_bnd, bnd_list(n_boundary_max)
+    integer i, i_bnd, n_bnd, bnd_list(n_boundary_max), i_bnd_rel, i_bnd_start
     type (type_bnd_node_list)  :: bnd_node_list
     type (type_bnd_element_list) :: bnd_elm_list
 
@@ -1208,7 +1208,16 @@ contains
 
     i_bnd = 0
 
-    do i =1, bnd_elm_list%n_bnd_elements
+    i_bnd_start = minloc(node_list%node(bnd_elm_list%bnd_element&
+         &(1:bnd_elm_list%n_bnd_elements)%vertex(1))%x(1,1), &
+         &dim=1, mask=node_list%node(bnd_elm_list%bnd_element&
+         &(1:bnd_elm_list%n_bnd_elements)%vertex(1))%boundary == 3 &
+         & .and. node_list%node(bnd_elm_list%bnd_element&
+         &(1:bnd_elm_list%n_bnd_elements)%vertex(2))%boundary == 1)
+
+    do i_bnd_rel =1, bnd_elm_list%n_bnd_elements
+      !i: absolute postition in bnd_elm_list, i_bnd_rel: relative to i_bnd_start
+      i = modulo(i_bnd_rel+i_bnd_start-2, bnd_elm_list%n_bnd_elements)+1
       associate (el => bnd_elm_list%bnd_element(i))      
         if(any(node_list%node(el%vertex)%boundary == 1)) then
            i_bnd = i_bnd + 1
@@ -1236,6 +1245,7 @@ contains
     real*8 startpos
     real*8, allocatable :: rzpart(:, :)
 
+    i_bnd_beg = 0
     n_bnd = size(bnd_elements)
     n_div_parts = count(node_list%node(bnd_elements%vertex(1))%boundary == 3)
 
@@ -1249,25 +1259,47 @@ contains
 
       if (ov2 /= v1) then
          if (node_list%node(v1)%boundary == 3) then
-            i_bnd_beg = i_bnd
-!            write(f_div, '(2f12.4)')   node_list%node(v1)%x(1, 1:2)
+            if (node_list%node(v2)%boundary == 1) then
+               ! start of a divertor segment
+               i_bnd_beg = i_bnd
+            else
+               stop 'start of segment not in divertor'
+            end if
          else
+            print *, 'ov2=', ov2, 'v1 =', v1, 'v2=', v2
+            print *, 'node_list%node(ov2)%boundary=', node_list%node(ov2)%boundary
+            print *, 'node_list%node(v1)%boundary=', node_list%node(v1)%boundary
+            print *, 'node_list%node(v2)%boundary=', node_list%node(v2)%boundary
+            print *, 'i_bnd= ', i_bnd
             STOP 'boundary node succession broken'
          endif
       endif
 
       if (node_list%node(v2)%boundary == 3) then
-         i_div_part = i_div_part + 1
+         if (node_list%node(v1)%boundary == 1) then
+            ! end of a divertor segment
 
-         allocate(rzpart(2, i_bnd - i_bnd_beg + 2))
+            if (i_bnd_beg == 0) then
+              print *, 'i_bnd= ', i_bnd
+              print *, 'ov2=', ov2, 'v1 =', v1, 'v2=', v2
 
-         rzpart(:, 1) = node_list%node(bnd_elements(i_bnd_beg)%vertex(1))%x(1, 1:2)
-         do i = i_bnd_beg, i_bnd
-            rzpart(:, i-i_bnd_beg+2) = node_list%node(bnd_elements(i)%vertex(2))%x(1, 1:2)
-         end do
+              stop 'end of segment before start'
+            end if
+            
+            i_div_part = i_div_part + 1
+            if (i_div_part > n_div_parts) stop '# of divertor parts mismatch'
+            allocate(rzpart(2, i_bnd - i_bnd_beg + 2))
 
-         call init_divpart_data(divertor%divparts(i_div_part), rzpart, startpos)
-         deallocate(rzpart)
+            rzpart(:, 1) = node_list%node(bnd_elements(i_bnd_beg)%vertex(1))%x(1, 1:2)
+            do i = i_bnd_beg, i_bnd
+               rzpart(:, i-i_bnd_beg+2) = node_list%node(bnd_elements(i)%vertex(2))%x(1, 1:2)
+            end do
+
+            call init_divpart_data(divertor%divparts(i_div_part), rzpart, startpos)
+            deallocate(rzpart)
+         else
+            stop 'end of segment not in divertor'
+         endif
       end if
       ov2 = v2
     enddo

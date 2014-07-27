@@ -36,6 +36,7 @@ real*8,allocatable  :: T_turn(:,:), PSI_turn(:,:), ZN_turn(:,:), PSI_turn_norm(:
 real*8,allocatable  :: connection_length_plus(:, :), connection_length_minus(:, :)
 real*8,allocatable  :: connection_length_plus_tmp(:, :), connection_length_minus_tmp(:, :)
 real*8,allocatable  :: connection_length_plus_all(:, :), connection_length_minus_all(:, :)
+real*8,allocatable  :: heatflux_div(:, :), dens_div(:, :), temp_div(:, :)
 integer,allocatable :: n_turn_plus(:,:), n_turn_minus(:,:), n_turn_plus_all(:,:), n_turn_minus_all(:,:)
 integer,allocatable :: n_turn_plus_tmp(:,:), n_turn_minus_tmp(:,:)
 integer :: nk, nk_all, local_ks(1), k_ind
@@ -65,6 +66,7 @@ logical :: psi_theta
 logical, external :: neighbours2
 
 integer f_div, f_testelem_nodes, f_testelem_interp, f_cl_plus, f_cl_minus, f_phistart, f_turns_plus, f_turns_minus, f_divstart, f_divshape
+integer f_heatflux, f_dens, f_temp
 type(divertor_pos_t), allocatable :: divpos(:)
 REAL*8, ALLOCATABLE :: div_start(:), phis(:)
 integer, allocatable :: k_list(:), local_k_list(:)
@@ -312,6 +314,34 @@ if (my_id .eq. 0 ) then
    end do
 close (f_phistart)   
 write (*,*) 'closed phi_start.dat'
+
+write (*,*) 'calculating heat flux'
+allocate(heatflux_div(n_R_start, n_phi), dens_div(n_R_start, n_phi), &
+     &temp_div(n_R_start, n_phi))
+do k=1, n_R_start
+   do m=1, n_phi
+      call quantities_divpos(node_list, element_list, &
+           &bnd_elements, divpos(k),  phis(m), heatflux_div(k, m), &
+           &dens_div(k, m), temp_div(k, m))
+   end do
+end do
+write (*,*) 'open heat_flux.dat'
+open(newunit=f_heatflux, file='heat_flux.dat', action='write', status='replace')
+open(newunit=f_temp, file='temperature.dat', action='write', status='replace')
+open(newunit=f_dens, file='density.dat', action='write', status='replace')
+
+do k=1, n_R_start
+   do m=1, n_phi
+      write(f_heatflux,*) heatflux_div(k,m)
+      write(f_temp,*) temp_div(k,m)
+      write(f_dens,*) dens_div(k,m)
+   end do
+end do
+
+close(f_heatflux)
+close(f_temp)
+close(f_dens)
+write (*,*) 'closed heat_flux.dat'
 end if
 
 allocate(connection_length_plus(nk, n_phi), connection_length_minus(nk, n_phi))
@@ -1141,6 +1171,84 @@ contains
     countlines = i-1
   end function countlines
 
+  subroutine quantities_local(node_list, element_list, sg, tg, i, phi, heatflux, rho, T)
+    type (type_element_list), intent(in) :: element_list
+    type (type_node_list), intent(in) :: node_list
+
+    real*8, intent(in) :: phi, sg, tg
+    integer, intent(in) :: i
+
+    real*8, intent(out)   :: rho, T, heatflux
+
+    real*8                :: vpar
+    real*8                :: psi, psi_s, psi_t, psi_x, psi_y, BB2
+    real*8                :: BigR, xjac
+    real*8                :: R,R_s,R_t,R_st,R_ss,R_tt, Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
+    real*8                :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt, VP,VP_s,VP_t,VP_st,VP_ss,VP_tt
+    real*8                :: RH,RH_s,RH_t,RH_st,RH_ss,RH_tt, TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
+
+    logical               :: without_n0_mode = .false.
+    integer               :: i_tor
+    real*8                :: Hz_local(n_tor)
+
+
+    call interp_RZ(node_list,element_list,i,sg,tg,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+    BigR = R
+    xjac = R_s * Z_t - R_t * Z_s
+
+    psi = 0.d0; psi_s = 0.d0; psi_t = 0.d0;
+    rho = 0.d0
+    T   = 0.d0
+    Vpar = 0.d0
+
+    HZ_local(1)   = 1.d0
+    do i_tor = 1, (n_tor-1) / 2
+       HZ_local(2*i_tor)      = cos(mode(2*i_tor)  *phi)
+       HZ_local(2*i_tor+1)    = sin(mode(2*i_tor+1)*phi)
+    end do
+
+    do i_tor = 1,n_tor
+       if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
+
+       call interp(node_list,element_list,i,1,i_tor,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
+       psi   = psi   + PS   * HZ_local(i_tor)
+
+       call interp(node_list,element_list,i,5,i_tor,sg,tg,RH,RH_s,RH_t,RH_st,RH_ss,RH_tt)
+       rho   = rho   + RH   * HZ_local(i_tor)
+
+       call interp(node_list,element_list,i,6,i_tor,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+       T   = T   + TT   * HZ_local(i_tor)
+
+       call interp(node_list,element_list,i,7,i_tor,sg,tg,VP,VP_s,VP_t,VP_st,VP_ss,VP_tt)
+       Vpar = Vpar + VP * HZ_local(i_tor)
+
+    enddo
+    psi_x = (   Z_t * psi_s - Z_s * psi_t ) / xjac
+    psi_y = ( - R_t * psi_s + R_s * psi_t ) / xjac
+
+    BB2 = (F0**2 + (psi_x*psi_x+psi_y*psi_y)) / BigR**2
+
+
+    heatflux = gamma_sheath * rho * T * abs(Vpar) * sqrt(BB2)
+  end subroutine quantities_local
+
+  subroutine quantities_divpos(node_list, element_list, bnd_elements, divpos,  phi, heatflux, rho, T)
+    type (type_node_list), intent(in) :: node_list
+    type (type_element_list), intent(in) :: element_list
+    type(divertor_pos_t), intent(in) :: divpos
+    type(type_bnd_element), intent(in) :: bnd_elements(:)
+
+    real*8, intent(in) :: phi
+
+    real*8, intent(out)   :: rho, T, heatflux
+
+    real*8 sg, tg
+    integer i
+
+    call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos, sg, tg, i)
+    call quantities_local(node_list, element_list, sg, tg, i, phi,  heatflux, rho, T)
+  end subroutine quantities_divpos
+  
   subroutine divpos2s_t_elm_bnd(element_list, bnd_elements, divpos, s, t, e)
     type (type_element_list), intent(in) :: element_list
     type(divertor_pos_t), intent(in) :: divpos

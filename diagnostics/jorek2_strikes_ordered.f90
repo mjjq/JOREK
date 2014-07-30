@@ -351,7 +351,7 @@ allocate(n_turn_plus(nk, n_phi), n_turn_minus(nk, n_phi))
 
     call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
 
-    do m=1, n_phi
+    startphis: do m=1, n_phi
  
       phi_start = phis(m)
  
@@ -819,7 +819,7 @@ allocate(n_turn_plus(nk, n_phi), n_turn_minus(nk, n_phi))
         endif
       enddo
 
-    enddo  ! end over loop over starting points within one element ( ns)
+    enddo startphis
   enddo    ! end over loop over starting points within one element ( nt)
 
 

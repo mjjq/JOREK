@@ -70,6 +70,8 @@ integer f_heatflux, f_dens, f_temp
 type(divertor_pos_t), allocatable :: divpos(:)
 REAL*8, ALLOCATABLE :: div_start(:), phis(:)
 integer, allocatable :: k_list(:), local_k_list(:)
+CHARACTER*160 :: divfname = 'divertor_shape.dat'
+logical div_is_bnd
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -78,7 +80,7 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 write(*,*) 'my_id = ', my_id
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, div_is_bnd
 
 if (my_id .eq. 0 ) then
    write(*,*) '***************************************'
@@ -98,6 +100,7 @@ psi_theta = .false.
 ! step at constant delta_phi
 n_turns = 1000 !500             ! number of toroidal turns to follow a fieldline
 n_phi   = 1000 !1000            ! number of steps per toroidal turn
+div_is_bnd = .true.             ! import divertor shape from restart? if not, from file
 
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
 open(42, file='connecvtk.nml', action='read', status='old', iostat=ierr)
@@ -161,13 +164,22 @@ do i=1,element_list%n_elements
   enddo
 enddo
 
-call divertor_from_grid(node_list,element_list, bnd_elements, divertor)
+if (div_is_bnd) then
+   call divertor_from_grid(node_list,element_list, bnd_elements, divertor)
 
    if (my_id .eq. 0) then
       open(newunit=f_divshape, file='divertor_shape.dat', action='write', status='replace')
       call save_divertor(f_divshape, .false.)
       close(f_divshape)
    end if
+else
+   print *, 'reading divertor, file ', trim(divfname)
+   ! Open divertor shape specification file
+   open(newunit=f_divshape,file=trim(divfname),status='old',action='read')
+   call init_divertor(f_divshape)
+   close(f_divshape)
+end if
+
 
 !!$   n_div = count(node_list%node(1:node_list%n_nodes)%boundary == 1)
 !!$   print *, 'n_div =', n_div
@@ -289,7 +301,12 @@ allocate(RZkeep(2,1000000),scalars(1000000,n_scalars))
 if (my_id .eq. 0 ) then
    open(newunit=f_div, file='divpos_start.dat', action='write', status='replace')
   do k=1, n_r_start
-     call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
+    if (div_is_bnd) then
+       call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
+    else
+       call divpos2s_t_elm_divertor(element_list, node_list, divertor, &
+         &divpos(k), s_ini, t_ini, i)
+    end if
 
      call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
      write(f_div, '(2f12.8, i4)')  R_out, Z_out
@@ -319,9 +336,16 @@ write (*,*) 'calculating heat flux'
 allocate(heatflux_div(n_R_start, n_phi), dens_div(n_R_start, n_phi), &
      &temp_div(n_R_start, n_phi))
 do k=1, n_R_start
+   print *, 'k = ', k
+   if (div_is_bnd) then
+      call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
+   else
+      call divpos2s_t_elm_divertor(element_list, node_list, divertor, &
+           &divpos(k), s_ini, t_ini, i)
+   end if
    do m=1, n_phi
-      call quantities_divpos(node_list, element_list, &
-           &bnd_elements, divpos(k),  phis(m), heatflux_div(k, m), &
+      print *, 'm = ', m
+    call quantities_local(node_list, element_list, s_ini, t_ini, i, phis(m), heatflux_div(k, m), &
            &dens_div(k, m), temp_div(k, m))
    end do
 end do
@@ -349,8 +373,13 @@ allocate(n_turn_plus(nk, n_phi), n_turn_minus(nk, n_phi))
   do k_ind=1, nk
      k = k_list(k_ind)
 
-    call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
-
+    if (div_is_bnd) then
+       call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
+    else
+       call divpos2s_t_elm_divertor(element_list, node_list, divertor, &
+         &divpos(k), s_ini, t_ini, i)
+    end if
+ 
     startphis: do m=1, n_phi
  
       phi_start = phis(m)
@@ -1245,7 +1274,12 @@ contains
     real*8 sg, tg
     integer i
 
-    call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos, sg, tg, i)
+    if (div_is_bnd) then
+       call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos, sg, tg, i)
+    else
+       call divpos2s_t_elm_divertor(element_list, node_list, divertor, &
+         &divpos, sg, tg, i)
+    end if
     call quantities_local(node_list, element_list, sg, tg, i, phi,  heatflux, rho, T)
   end subroutine quantities_divpos
   
@@ -1264,7 +1298,27 @@ contains
 
     call bndelm2s_t_elm(element_list, bnd_elements(i_bnd), relpos, s, t, e)
   end subroutine divpos2s_t_elm_bnd
-  
+
+  subroutine divpos2s_t_elm_divertor(element_list, node_list, divertor, &
+         &divpos, s, t, e)
+    type (type_element_list), intent(in) :: element_list
+    type (type_node_list), intent(in) :: node_list
+    type (divertor_t), intent(in) :: divertor
+    type (divertor_pos_t), intent(in) :: divpos
+
+    real*8, intent(out) :: s, t
+    integer, intent(out) :: e
+
+    r = divpos_r(divpos)
+    z = divpos_z(divpos)
+
+    call find_RZ(node_list,element_list,r,z,R_out,Z_out,e,s,t,ifail)
+    if (ifail /= 0) then
+       print *, 'locating divertor point ', r, z, ' failed'
+       stop
+    end if
+  end subroutine divpos2s_t_elm_divertor
+
   subroutine bndelm2s_t_elm(element_list, bnd_el, r, s, t, e)
     type (type_element_list), intent(in) :: element_list
     type (type_bnd_element), intent(in) :: bnd_el

@@ -336,7 +336,6 @@ write (*,*) 'calculating heat flux'
 allocate(heatflux_div(n_R_start, n_phi), dens_div(n_R_start, n_phi), &
      &temp_div(n_R_start, n_phi))
 do k=1, n_R_start
-   print *, 'k = ', k
    if (div_is_bnd) then
       call divpos2s_t_elm_bnd(element_list, bnd_elements, divpos(k), s_ini, t_ini, i)
    else
@@ -344,7 +343,6 @@ do k=1, n_R_start
            &divpos(k), s_ini, t_ini, i)
    end if
    do m=1, n_phi
-      print *, 'm = ', m
     call quantities_local(node_list, element_list, s_ini, t_ini, i, phis(m), heatflux_div(k, m), &
            &dens_div(k, m), temp_div(k, m))
    end do

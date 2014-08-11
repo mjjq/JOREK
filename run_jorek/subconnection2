@@ -213,6 +213,63 @@ fi
 ;;
 
 # -----------------------------------------------------------------
+# curie (TGCC)
+# -----------------------------------------------------------------
+curie*)
+
+# batch control
+# -------------
+# mpi procs per nodes
+MPIPROCS=1
+NTHREAD=16
+NNODES=16
+WALLTIME=3600
+((NLIM=MPIPROCS*NTHREAD))
+if [ "${NLIM}" -gt "16" ]; then
+   echo "${NLIM} = ", ${NLIM}
+   echo " MPIPROCS*NTHREAD is greater than 16, you are trying to run more MPI processes and threads than reasonable"
+   echo " ===> try running MPIPROCS=1 (1 MPI process per node) and NTHREAD=16 ...."
+   exit
+fi
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(basename $(dirname $PWD))
+echo " DIR      = " $DIR
+HOMEDIR=$SCRATCHDIR/${DIR}
+echo " HOMEDIR = " $HOMEDIR
+SRCDIR=$HOMEDIR
+UTILDIR=${SRCDIR}/util
+echo " UTLDIR = " $UTILDIR
+WKDIR=$PWD
+echo " WKDIR   = " $WKDIR
+###RESDIR1=$SCRATCHDIR/${DIR}    
+RESDIR1=$WKDIR
+echo " RESDIR1  = " $RESDIR1
+RESDIR=${RESDIR1}/${CASE}
+echo " RESDIR = " $RESDIR
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+;;
+
+
+# -----------------------------------------------------------------
 # jade (cines)
 # -----------------------------------------------------------------
 jade*)
@@ -744,7 +801,7 @@ case ${ARCH} in
 nfs*)
 
 JOREKENV="source /data/JOREK/jorek_env/jorek_env.sh"
-CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${CONNEXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${CONNEXECNAMEOUT}___${out_increment}.out"
 CMD_SUB="qsub go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
@@ -854,6 +911,60 @@ export OMP_NUM_THREADS=${NTHREAD}
 
 EOF
 ;;
+
+# -----------------------------------------------------------------
+# curie (TGCC)
+# -----------------------------------------------------------------
+curie*)
+
+# Batch control
+((MPIPROCS=16/$NTHREAD))
+((NCPUS=NPES*NTHREAD))
+((NNODES=(NPES*NTHREAD)/16))
+if [ $NNODES -eq 0 ]; then
+   ((NNODES=1))
+fi
+echo " NPES " $NPES " NTHREADS " $NTHREAD "MPIPROCS " $MPIPROCS " NNODES " $NNODES
+
+PROJ_GENCI="-A ra1904 -q standard"
+CMD_MPIRUN="ccc_mprun ${RESDIR}/${CONNEXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${CONNEXECNAMEOUT}___${out_increment}.out"   
+CMD_SUB="ccc_msub $PROJ_GENCI ./go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#MSUB -r ${CASENAME}          # Nom du job                
+#MSUB -N ${NNODES}            # Nb nodes
+#MSUB -n ${NPES}              # Nb processus
+#MSUB -c ${NTHREAD}           # Nb thread
+###!!#MSUB -x
+#MSUB -T ${WALLTIME}          # Limite de temps elapsed
+#MSUB -e ${CASENAME}.%J        # Erreur standard
+#MSUB -o ${CASENAME}.%J        # Sortie standard
+###!!ulimit -d unlimited
+###!!ulimit -Sa
+###!!ulimit -Ha
+###!!#export OMPI_MCA_coll="^ghc"
+###!!export OMPI_MCA_coll="^ghc,tuned"
+###!!export KMP_AFFINITY="verbose,norespect"
+###!!
+###!!# environment
+###!!#------------
+###!!ulimit -l unlimited
+### with parameters from Guido
+#MSUB -A ra1904             # Project ID
+#MSUB -q standard
+#MSUB -Q normal
+
+set -X
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+;;
+
 
 # -----------------------------------------------------------------
 # jade (cines)

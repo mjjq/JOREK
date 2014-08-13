@@ -37,6 +37,7 @@ real*8,allocatable  :: connection_length_plus(:, :), connection_length_minus(:, 
 real*8,allocatable  :: connection_length_plus_tmp(:, :), connection_length_minus_tmp(:, :)
 real*8,allocatable  :: connection_length_plus_all(:, :), connection_length_minus_all(:, :)
 real*8,allocatable  :: heatflux_div(:, :), dens_div(:, :), temp_div(:, :)
+real*8,allocatable  :: heatflux_par(:, :), dens_norm(:, :)
 integer,allocatable :: n_turn_plus(:,:), n_turn_minus(:,:), n_turn_plus_all(:,:), n_turn_minus_all(:,:)
 integer,allocatable :: n_turn_plus_tmp(:,:), n_turn_minus_tmp(:,:)
 integer :: nk, nk_all, local_ks(1), k_ind
@@ -49,7 +50,8 @@ real*8  :: Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, zl1, zl2, partial(2)
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), value_out, psi_bnd
-real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, phi_start
+real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, phi_start, rho_norm, t_norm
+
 integer :: i_elm_xpoint, i_elm_axis, r_delta, n_div, n_r_start
 integer :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
 real*4,allocatable :: RZkeep(:,:),scalars(:,:)
@@ -66,7 +68,7 @@ logical :: psi_theta
 logical, external :: neighbours2
 
 integer f_div, f_testelem_nodes, f_testelem_interp, f_cl_plus, f_cl_minus, f_phistart, f_turns_plus, f_turns_minus, f_divstart, f_divshape
-integer f_heatflux, f_dens, f_temp
+integer f_heatflux, f_dens, f_temp, f_heatflux_par, f_dens_norm
 type(divertor_pos_t), allocatable :: divpos(:)
 REAL*8, ALLOCATABLE :: div_start(:), phis(:)
 integer, allocatable :: k_list(:), local_k_list(:)
@@ -134,6 +136,9 @@ if (my_id .eq. 0) then
 endif
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
+
+rho_norm = central_density*1.d20 * central_mass * 1.67d-27
+t_norm   = sqrt(MU_zero*rho_norm)
 
 if (my_id .eq. 0 ) then
    write(*,*) 'central_density = ', central_density
@@ -343,20 +348,25 @@ do k=1, n_R_start
            &divpos(k), s_ini, t_ini, i)
    end if
    do m=1, n_phi
-    call quantities_local(node_list, element_list, s_ini, t_ini, i, phis(m), heatflux_div(k, m), &
-           &dens_div(k, m), temp_div(k, m))
+    call quantities_local(node_list, element_list, s_ini, t_ini, i, phis(m), &
+         &heatflux_par=heatflux_par(k, m), heatflux_surf=heatflux_div(k, m), &
+         &density=dens_div(k, m), rho=dens_norm(k, m), T=temp_div(k, m))
    end do
 end do
 write (*,*) 'open heat_flux.dat'
 open(newunit=f_heatflux, file='heat_flux.dat', action='write', status='replace')
 open(newunit=f_temp, file='temperature.dat', action='write', status='replace')
 open(newunit=f_dens, file='density.dat', action='write', status='replace')
+open(newunit=f_heatflux_par, file='heat_flux_par.dat', action='write', status='replace')
+open(newunit=f_dens_norm, file='density_normalized.dat', action='write', status='replace')
 
 do k=1, n_R_start
    do m=1, n_phi
       write(f_heatflux,*) heatflux_div(k,m)
       write(f_temp,*) temp_div(k,m)
       write(f_dens,*) dens_div(k,m)
+      write(f_heatflux_par,*) heatflux_par(k,m)
+      write(f_dens_norm,*) dens_norm(k,m)
    end do
 end do
 
@@ -1198,16 +1208,16 @@ contains
     countlines = i-1
   end function countlines
 
-  subroutine quantities_local(node_list, element_list, sg, tg, i, phi, heatflux, rho, T)
+  subroutine quantities_local(node_list, element_list, sg, tg, i, phi, heatflux_par, heatflux_surf, density, rho, T)
     type (type_element_list), intent(in) :: element_list
     type (type_node_list), intent(in) :: node_list
 
     real*8, intent(in) :: phi, sg, tg
     integer, intent(in) :: i
 
-    real*8, intent(out)   :: rho, T, heatflux
+    real*8, intent(out)   :: rho, T, heatflux_par, heatflux_surf, density
 
-    real*8                :: vpar
+    real*8                :: vpar, heatflux_par_norm, heatflux_surf_norm
     real*8                :: psi, psi_s, psi_t, psi_x, psi_y, BB2
     real*8                :: BigR, xjac
     real*8                :: R,R_s,R_t,R_st,R_ss,R_tt, Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
@@ -1255,11 +1265,20 @@ contains
 
     BB2 = (F0**2 + (psi_x*psi_x+psi_y*psi_y)) / BigR**2
 
+    ! cf. jorek2_target2vtk.f90, scalars(... 2)
+    density = rho * central_density
 
-    heatflux = gamma_sheath * rho * T * abs(Vpar) * sqrt(BB2)
+    ! cf. jorek2_target2vtk.f90, scalars(... 11)
+    heatflux_par_norm = gamma_sheath * rho * T * abs(Vpar) * sqrt(BB2)
+    heatflux_par = heatflux_par_norm / MU_zero / t_norm
+
+    ! cf. jorek2_target2vtk.f90, scalars(... 6)
+    heatflux_surf_norm = - gamma_sheath*(rho * T * Vpar * psi_s * normal) / R / sqrt(R_s**2 + Z_s**2)
+    heatflux_surf = heatflux_surf_norm / MU_zero / t_norm * 1.5
+
   end subroutine quantities_local
 
-  subroutine quantities_divpos(node_list, element_list, bnd_elements, divpos,  phi, heatflux, rho, T)
+  subroutine quantities_divpos(node_list, element_list, bnd_elements, divpos,  phi, heatflux_par, heatflux_surf, density, rho, T)
     type (type_node_list), intent(in) :: node_list
     type (type_element_list), intent(in) :: element_list
     type(divertor_pos_t), intent(in) :: divpos
@@ -1267,7 +1286,7 @@ contains
 
     real*8, intent(in) :: phi
 
-    real*8, intent(out)   :: rho, T, heatflux
+    real*8, intent(out)   :: rho, T, heatflux_par, heatflux_surf, density
 
     real*8 sg, tg
     integer i
@@ -1278,7 +1297,9 @@ contains
        call divpos2s_t_elm_divertor(element_list, node_list, divertor, &
          &divpos, sg, tg, i)
     end if
-    call quantities_local(node_list, element_list, sg, tg, i, phi,  heatflux, rho, T)
+    call quantities_local(node_list, element_list, sg, tg, i, phi, &
+         &heatflux_par=heatflux_par, heatflux_surf=heatflux_surf, &
+         &density=density, rho=rho, T=T)
   end subroutine quantities_divpos
   
   subroutine divpos2s_t_elm_bnd(element_list, bnd_elements, divpos, s, t, e)

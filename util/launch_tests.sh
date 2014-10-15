@@ -114,6 +114,55 @@ for (( i = 0 ; i < ${#model[@]} ; i++ )); do
      cp ${EXE} ${WKDIR}/
    fi
 done
+# Jenkins small case: if simulation name contains jenkins199
+if [ "$SIMNAME" != "${SIMNAME/JENKINS199/}" ]; then
+  for c in $(seq 0 2); do
+    ((j=0))
+    i=${list_idx[$j]}
+    WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
+    cd $WKDIR
+    LASTNUM=$(ls  out_loop* | cut -c9- | sort -rn | head -1)
+    if [ -z "$LASTNUM" ]; then
+      ((LASTNUM=0))
+    else
+      ((LASTNUM++))
+    fi
+    cp macroscopic_vars.dat old_macros_vars.dat 2>/dev/null
+    rm -f macroscopic_vars.dat 2>/dev/null
+    INFILE=${list_inputs[$j]}
+    REFDIR=${TRKDIR}/../../benchmark/downloads/JENKINS199
+    if [ -d $REFDIR ]; then
+      rsync -av --progress ${REFDIR}/jorek00089_export.rst $WKDIR/jorek00089.rst
+    fi
+    if [ ! -f jorek_equil.rst -a  ! -f jorek00089.rst ]; then
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1 n_flux=35 n_tht=14 ${SET_MURGE}
+        EXE=j${model[$i]}_1
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
+        cp jorek_restart.rst jorek_equil.rst
+    else if [ ! -f jorek00089.rst ]; then
+        cp jorek_equil.rst jorek_restart.rst 
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=89 tstep_n=1000  n_flux=35 n_tht=14 ${SET_MURGE}
+        EXE=j${model[$i]}_3
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
+        
+        ${UTILDIR}/extract_live_data.sh energies energies.dat 
+    else 
+	cp jorek00089.rst jorek_restart.rst
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=1 tstep_n=1000  n_flux=35 n_tht=14 ${SET_MURGE}
+        EXE=j${model[$i]}_3
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
+        cp jorek00089.rst jorek00089_export.rst 2>/dev/null
+        cp jorek00090.h5 jorek00090_export.h5 2>/dev/null
+        ${UTILDIR}/extract_live_data.sh energies energies.dat 
+	exit 0
+    fi
+    fi
+  done
+  exit 0
+fi 
 
 # First Case: model199
 if [ "$MODNB" = "199" ]; then

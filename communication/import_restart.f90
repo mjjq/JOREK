@@ -164,7 +164,7 @@ close(21)
 write(*,*) '************* restart ******************'
 write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
 #ifdef USE_HDF5
-  write(*,'(A19,f14.6,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
+  write(*,'(A19,I4,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
 #endif
 write(*,*) '****************************************'
 

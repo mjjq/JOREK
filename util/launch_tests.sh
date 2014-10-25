@@ -363,6 +363,7 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS303/}" ]; then
     cp macroscopic_vars.dat old_macros_vars.dat
     rm -f macroscopic_vars.dat
     INFILE=${list_inputs[$j]}
+    sed -i "s/= *[^']none/= 'none'/" ${INFILE}
     COMMONOPT="n_flux=26 n_tht=28 n_open=8 n_leg=8 n_private=6"
     ((RESTARTNB=940))
     ((RESTARTP1=RESTARTNB+1))

@@ -102,7 +102,9 @@ for (( j = 0 ; j < ${#list_idx[@]} ; j++ )); do
       	       echo "Pb $NAMEDIR/${list_orig[$j]} not found"
       	       exit 1
       	   fi
-      	   sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;" ${NAMEDIR}/${list_orig[$j]} > ${WKDIR}/${list_inputs[$j]}
+      fi
+      if [ ! -f  ${WKDIR}/${list_inputs[$j]} ]; then
+ 	   sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;" ${NAMEDIR}/${list_orig[$j]} > ${WKDIR}/${list_inputs[$j]}
       fi
    fi
 done
@@ -130,10 +132,6 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS199/}" ]; then
     cp macroscopic_vars.dat old_macros_vars.dat 2>/dev/null
     rm -f macroscopic_vars.dat 2>/dev/null
     INFILE=${list_inputs[$j]}
-    REFDIR=${TRKDIR}/../../benchmark/downloads/JENKINS199
-    if [ -d $REFDIR ]; then
-      rsync -av --progress ${REFDIR}/jorek00089_export.rst $WKDIR/jorek00089.rst
-    fi
     if [ ! -f jorek_equil.rst -a  ! -f jorek00089.rst ]; then
         ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1 n_flux=35 n_tht=14 ${SET_MURGE}
         EXE=j${model[$i]}_1
@@ -199,10 +197,10 @@ if [ "$MODNB" = "199" ]; then
   exit 0
 fi 
 
-# Jenkins small case: if simulation name contains jenkins199                                                                                                                                            
+# Jenkins small case: if simulation name contains JENKINS302
 if [ "$SIMNAME" != "${SIMNAME/JENKINS302/}" ]; then
   echo "JENKINS302  MINI TEST CASE"
-  for c in $(seq 0 9); do
+  for c in $(seq 0 11); do
     ((j=1))
     i=${list_idx[$j]}
     WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
@@ -217,9 +215,15 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS302/}" ]; then
     cp macroscopic_vars.dat old_macros_vars.dat
     rm -f macroscopic_vars.dat
     INFILE=${list_inputs[$j]}
-#First try    COMMONOPT="n_flux=28 n_tht=36 n_open=10 n_leg=10 nout=10"
-    COMMONOPT="n_flux=22 n_tht=30 n_open=7 n_leg=7 n_private=7 nout=10"
-    if [ ! -f jorek_equil.rst ]; then
+    COMMONOPT="n_flux=22 n_tht=30 n_open=7 n_leg=7 n_private=7"
+    ((RESTARTNB=950))
+    ((RESTARTP1=RESTARTNB+1))
+    TGRST=jorek00${RESTARTNB}.rst
+    EXPRST=jorek00${RESTARTNB}_export.rst
+    if [ -f $EXPRST  ]; then
+      cp $EXPRST $TGRST
+    fi
+    if [ ! -f jorek_equil.rst ] && [ ! -f $TGRST ]; then
         ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 $COMMONOPT ${SET_MURGE}
         EXE=j${model[$i]}_1
         eval ${PRERUN}
@@ -228,9 +232,9 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS302/}" ]; then
           cp jorek_restart.rst jorek_equil.rst
         fi
     else
-        if [ ! -f jorek_rst1.rst ]; then
+        if [ ! -f jorek_rst1.rst ]  && [ ! -f $TGRST ]; then
           cp jorek_equil.rst jorek_restart.rst
-          ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' $COMMONOPT ${SET_MURGE}
+          ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' $COMMONOPT  nout=10 ${SET_MURGE}
           EXE=j${model[$i]}_1
         eval ${PRERUN}
           ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
@@ -238,21 +242,30 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS302/}" ]; then
               cp jorek_restart.rst jorek_rst1.rst;
           fi
         else
-          if [ ! -f jorek_rst2.rst ]; then
+          if [ ! -f jorek_rst2.rst ]  && [ ! -f $TGRST ]; then
               cp jorek_rst1.rst jorek_restart.rst
-              ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' $COMMONOPT ${SET_MURGE}
+              ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' $COMMONOPT  nout=10 ${SET_MURGE}
               EXE=j${model[$i]}_3
-        eval ${PRERUN}
+              eval ${PRERUN}
               ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
               status=$?; if [ $status -eq 0 ]; then
                   cp jorek_restart.rst jorek_rst2.rst
               fi
           else
-              if [ ! -f jorek_rst3.rst ]; then
-                  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 5' $COMMONOPT ${SET_MURGE}
+              if [ ! -f $TGRST ]; then
+                  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 5' $COMMONOPT  nout=10 ${SET_MURGE}
                   EXE=j${model[$i]}_3
-        eval ${PRERUN}
+		  eval ${PRERUN}
                   ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
+	      else
+		  cp $TGRST jorek_restart.rst
+                  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 1' 'tstep_n= 5' $COMMONOPT nout=1 ${SET_MURGE}
+                  EXE=j${model[$i]}_3
+		  eval ${PRERUN}
+                  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
+		  cp $TGRST $EXPRST 2>/dev/null
+		  cp jorek00${RESTARTP1}.h5  jorek00${RESTARTP1}_export.h5 2>/dev/null	
+		  exit 0
               fi
           fi
         fi
@@ -305,16 +318,16 @@ if [ "$MODNB" = "302" ]; then
   	      cp jorek_rst1.rst jorek_restart.rst 
   	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' nout=10 ${SET_MURGE}
   	      EXE=j${model[$i]}_3
-        eval ${PRERUN}
+              eval ${PRERUN}
   	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
   	      status=$?; if [ $status -eq 0 ]; then 
   		  cp jorek_restart.rst jorek_rst2.rst
   	      fi
   	  else
   	      if [ ! -f jorek_rst3.rst ]; then
-  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 50' 'tstep_n= 5' nout=10 ${SET_MURGE}
+  		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 5' nout=10 ${SET_MURGE}
   		  EXE=j${model[$i]}_3
-        eval ${PRERUN}
+                  eval ${PRERUN}
   		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
   	      fi
   	  fi
@@ -324,6 +337,86 @@ if [ "$MODNB" = "302" ]; then
   ${UTILDIR}/extract_live_data.sh energies energies.dat 
   exit 0
 fi
+
+# Jenkins small case: if simulation name contains JENKINS303
+if [ "$SIMNAME" != "${SIMNAME/JENKINS303/}" ]; then
+  echo "JENKINS303 MINI TEST CASE"
+  for c in $(seq 0 12); do
+    ((j=2))
+    i=${list_idx[$j]}
+    WKDIR=${BASEDIR}/${PREFIX}${model[$i]}
+    cd $WKDIR
+    LASTNUM=$(ls  out_loop* | cut -c9- | sort -rn | head -1)
+    if [ -z "$LASTNUM" ]; then
+      ((LASTNUM=0))
+    else
+      ((LASTNUM++))
+    fi
+  
+    cp macroscopic_vars.dat old_macros_vars.dat
+    rm -f macroscopic_vars.dat
+    INFILE=${list_inputs[$j]}
+    COMMONOPT="n_flux=26 n_tht=28 n_open=8 n_leg=8 n_private=6"
+    ((RESTARTNB=940))
+    ((RESTARTP1=RESTARTNB+1))
+    TGRST=jorek00${RESTARTNB}.rst
+    EXPRST=jorek00${RESTARTNB}_export.rst
+    if [ -f $EXPRST  ]; then
+      cp $EXPRST $TGRST
+    fi
+    if [ ! -f jorek_equil.rst ] && [ ! -f $TGRST ]; then
+        ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 $COMMONOPT ${SET_MURGE}
+        EXE=j${model[$i]}_1
+        eval ${PRERUN}
+        ${MPIRUN} ./${EXE} < ${INFILE} 2>err0 | tee out_equil
+        status=$?; if [ $status -eq 0 ]; then 
+  	  cp jorek_restart.rst jorek_equil.rst
+        fi
+    else
+        if [ ! -f jorek_rst1.rst ] && [ ! -f $TGRST ]; then
+  	  cp jorek_equil.rst jorek_restart.rst 
+  	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 10, 10, 10, 40, 40' 'tstep_n= 1e-3, 1e-2, 1e-1, 5e-1, 1, 2'  $COMMONOPT  nout=10 ${SET_MURGE}
+  	  EXE=j${model[$i]}_1
+          eval ${PRERUN}
+  	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
+  	  status=$?; if [ $status -eq 0 ]; then 
+  	      cp jorek_restart.rst jorek_rst1.rst; 
+  	  fi
+        else
+  	  if [ ! -f jorek_rst2.rst ] && [ ! -f $TGRST ]; then
+  	      cp jorek_rst1.rst jorek_restart.rst 
+  	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 20, 100' 'tstep_n= 2, 5'  $COMMONOPT  nout=10 ${SET_MURGE}
+  	      EXE=j${model[$i]}_3
+              eval ${PRERUN}
+  	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
+  	      status=$?; if [ $status -eq 0 ]; then 
+  		  cp jorek_restart.rst jorek_rst2.rst
+  	      fi
+  	  else
+              if [ ! -f $TGRST ]; then
+                  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' $COMMONOPT  nout=10 ${SET_MURGE}
+                  EXE=j${model[$i]}_3
+		  eval ${PRERUN}
+                  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
+	      else
+		  cp $TGRST jorek_restart.rst
+                  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 1' 'tstep_n= 10' $COMMONOPT  nout=1 ${SET_MURGE}
+                  EXE=j${model[$i]}_3
+		  eval ${PRERUN}
+                  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
+		  cp $TGRST $EXPRST 2>/dev/null
+		  cp jorek00${RESTARTP1}.h5  jorek00${RESTARTP1}_export.h5 2>/dev/null	
+		  exit 0
+             fi
+  	  fi
+        fi
+    fi
+  done
+  ${UTILDIR}/extract_live_data.sh energies energies.dat 
+  exit 0
+fi
+
+
 #Original serie
 #nstep_n= 0.001 0.01 0.05 0.5 1   5   10
 #tstep_n= 10    10   20   20  200 200 100

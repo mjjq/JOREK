@@ -132,13 +132,20 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS199/}" ]; then
     cp macroscopic_vars.dat old_macros_vars.dat 2>/dev/null
     rm -f macroscopic_vars.dat 2>/dev/null
     INFILE=${list_inputs[$j]}
-    if [ ! -f jorek_equil.rst -a  ! -f jorek00089.rst ]; then
+    ((RESTARTNB=89))
+    ((RESTARTP1=RESTARTNB+1))
+    TGRST=jorek000${RESTARTNB}.rst
+    EXPRST=jorek000${RESTARTNB}_export.rst
+    if [ -f $EXPRST  ]; then
+      cp $EXPRST $TGRST
+    fi
+    if [ ! -f jorek_equil.rst -a  ! -f ${TGRST} ]; then
         ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1 n_flux=35 n_tht=14 ${SET_MURGE}
         EXE=j${model[$i]}_1
         eval ${PRERUN}
         ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
         cp jorek_restart.rst jorek_equil.rst
-    else if [ ! -f jorek00089.rst ]; then
+    else if [ ! -f ${TGRST} ]; then
         cp jorek_equil.rst jorek_restart.rst 
         ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=89 tstep_n=1000  n_flux=35 n_tht=14 ${SET_MURGE}
         EXE=j${model[$i]}_3
@@ -147,13 +154,13 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS199/}" ]; then
         
         ${UTILDIR}/extract_live_data.sh energies energies.dat 
     else 
-	cp jorek00089.rst jorek_restart.rst
+	cp ${TGRST} jorek_restart.rst
         ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=1 tstep_n=1000  n_flux=35 n_tht=14 ${SET_MURGE}
         EXE=j${model[$i]}_3
         eval ${PRERUN}
         ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
-        cp jorek00089.rst jorek00089_export.rst 2>/dev/null
-        cp jorek00090.h5 jorek00090_export.h5 2>/dev/null
+        cp ${TGRST} $EXPRST 2>/dev/null
+        cp jorek000${RESTARTP1}.h5 jorek000${RESTARTP1}_export.h5 2>/dev/null
         ${UTILDIR}/extract_live_data.sh energies energies.dat 
 	exit 0
     fi

@@ -240,6 +240,7 @@ required = 0
     write(*,111) 'compile_includes    ', trim(adjustl(compile_includes))
     write(*,111) 'compile_defines     ', trim(adjustl(compile_defines))
     write(*,111) 'compile_libs        ', trim(adjustl(compile_libs))
+    write(*,111) 'compile_modules     ', trim(adjustl(compile_modules))
   end if
 
   ! --- Initialise memory tracing

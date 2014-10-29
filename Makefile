@@ -235,6 +235,7 @@ version:
 	-@echo "#define compile_time '`date \"+%F %T\"`'" >> version.h
 	-@echo "#define compile_user '`whoami`'" >> version.h
 	-@echo "#define compile_machine '`hostname`'" >> version.h
+	@echo "#define compile_modules '$(LOADEDMODULES)'" >> version.h
 
 %.dep:%.f90
 	@echo "Generating Dependencies for$(patsubst %.f90, %.o, $<)"

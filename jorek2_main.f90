@@ -934,7 +934,7 @@ required = 0
     endif
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
-      pellet_volume = 3.1415926 * pellet_radius**2 * 2.d0 * 3.1415926535 * pellet_R
+      pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
       call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
@@ -1029,12 +1029,14 @@ required = 0
          pellet_volume = total_pellet_volume
          call update_pellet(my_id,node_list,element_list)
 
-!         if (my_id == 0) then
-!           xtime_pellet_R(index_now)         = pellet_R
-!           xtime_pellet_Z(index_now)         = pellet_Z
-!           xtime_pellet_particles(index_now) = pellet_particles
-!           xtime_phys_ablation(index_now)    = phys_ablation
-!          endif
+           if (my_id == 0) then
+            xtime_pellet_R(index_now)         = pellet_R
+            xtime_pellet_Z(index_now)         = pellet_Z
+            xtime_pellet_psi(index_now)       = pellet_psi
+            xtime_pellet_particles(index_now) = pellet_particles
+            xtime_phys_ablation(index_now)    = phys_ablation
+           endif
+
        endif
 
 #if JOREK_MODEL == 500

@@ -4,6 +4,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, error)
 use tr_module 
 use data_structure
 use phys_module
+use pellet_module
 use vacuum, only: import_restart_vacuum
 
 implicit none
@@ -141,6 +142,19 @@ if (index_start .ge. 1) then
 #endif
 #endif
 
+  if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_UNKNOWN)
+  call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R",CAT_UNKNOWN)
+  if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_UNKNOWN)
+  call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z",CAT_UNKNOWN)
+  if (allocated(xtime_pellet_psi)) call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_UNKNOWN)
+  call tr_allocate(xtime_pellet_psi,1,index_start+nstep,"xtime_pellet_psi",CAT_UNKNOWN)
+  if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_UNKNOWN)
+  call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles",CAT_UNKNOWN)
+  if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_UNKNOWN)
+  call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation",CAT_UNKNOWN)
+
+
+
   read(21) xtime(1:index_start)
   read(21) energies(1:n_tor_tmp,:,1:index_start)
 
@@ -153,11 +167,21 @@ if (index_start .ge. 1) then
 #endif
 endif
 
-if (use_pellet) then
-  read(21)  pellet_particles, pellet_R, pellet_Z
-endif
 
 call import_restart_vacuum(21, freeboundary, resistive_wall)
+
+if (use_pellet) then
+      if (index_start .ge. 1) then
+          read(21,err=999, end=999)  xtime_pellet_R(1:index_start)
+          read(21)  xtime_pellet_Z(1:index_start)
+          read(21)  xtime_pellet_psi(1:index_start)
+          read(21)  xtime_pellet_particles(1:index_start)
+          read(21)  xtime_phys_ablation(1:index_start)
+      endif
+  read(21,err=999, end=999)  pellet_particles, pellet_R, pellet_Z
+  write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
+endif
+999 continue
 
 close(21)
 

@@ -182,6 +182,8 @@ if (my_id .eq. 0) then
   if (nstep .gt. 0)              call tr_allocate(xtime_pellet_R,1,nstep,"xtime_pellet_R")
   if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_GRID)
   if (nstep .gt. 0)              call tr_allocate(xtime_pellet_Z,1,nstep,"xtime_pellet_Z")
+  if (allocated(xtime_pellet_psi)) call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_GRID)
+  if (nstep .gt. 0)              call tr_allocate(xtime_pellet_psi,1,nstep,"xtime_pellet_psi")
   if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_GRID)
   if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_particles,1,nstep,"xtime_pellet_particles")
   if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_GRID)

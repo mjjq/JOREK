@@ -12,8 +12,11 @@ real*8 :: pellet_atomic            !< atomic number of pellet mass
 
 real*8 :: phys_ablation            !< physical ablation rate (non normalised)
 
+
+
 real*8, allocatable  :: xtime_pellet_R(:)
 real*8, allocatable  :: xtime_pellet_Z(:)
+real*8, allocatable  :: xtime_pellet_psi(:)
 real*8, allocatable  :: xtime_pellet_particles(:)
 real*8, allocatable  :: xtime_phys_ablation(:)
 
@@ -54,6 +57,8 @@ volume_source   = 0.d0
 
 if (pellet_amplitude .gt. 0.) then             ! use the fixed source pellet model 
 
+pellet_particles = 0.0
+
   if (phi .gt. PI) phi = 2*PI - phi
 
   radius = sqrt(  (cos(pellet_theta)**2 + 1./pellet_ellipse**2 * sin(pellet_theta)**2)*(R-pellet_R)**2  &
@@ -90,13 +95,22 @@ else if (pellet_particles .gt. 0.) then
 !----------------- model from Kuteev (see Polevoi, PPCF2008)
  ! ablation_rate = 1.62d5 * central_density**(-0.77) * T0**(1.72) * r0**(0.45) * phys_pellet_volume**(0.48) * pellet_atomic**0.217
 !----------------- NGS model Parks (see Gal NF2008)
-  ablation_rate = 2.01d4 * central_density**(-0.81) * T0**(1.64) * r0**(0.33) * phys_pellet_volume**(0.44) * pellet_atomic**0.5
+  ablation_rate = 2.01d4 * central_density**(-0.81) * max(T0,0.d0)**(1.64) * max(r0,0.d0)**(0.33) * phys_pellet_volume**(0.44) * pellet_atomic**0.5
 
 ! particle source in JOREK normalisation
 
   particle_source = ablation_rate / central_density  * atn * atn_phi / pellet_volume
 
   volume_source   = atn * atn_phi
+
+  if(volume_source .lt. 0.d0) then
+!    print*, 'volume_source is negative. volume_source=', volume_source
+  endif
+
+  if(ablation_rate .lt. 0.d0) then
+!    print*, 'ablation rate is negative. step.'
+  endif
+  
 
 end if
 
@@ -123,26 +137,34 @@ real*8  :: psi_axis, psi_bnd
 integer :: my_id, ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
+real*8 :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
+integer :: i_elm, ifail
+
 if (pellet_amplitude .gt. 0) return
 
 call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
-V_normalisation = 1.d0 / sqrt(central_density * 1.66d-7 * 2.d0 * MU_ZERO) ! assumes Deuterium!
+V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 
 pellet_R = pellet_R + pellet_velocity_R * tstep / V_normalisation
 pellet_Z = pellet_Z + pellet_velocity_Z * tstep / V_normalisation
 
+
+phys_ablation = total_pellet_particles * central_density / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
+
 total_pellet_particles = total_pellet_particles * central_density * tstep 
 total_plasma_particles = total_plasma_particles * central_density          ! undo normalisation
 
-phys_ablation = total_pellet_particles * central_density / sqrt(central_density * MU_ZERO)
+
+call find_RZ(node_list,element_list,pellet_R,pellet_Z,R_out,Z_out,i_elm,s_out,t_out,ifail)
+call interp(node_list,element_list,i_elm,1,1,s_out,t_out,pellet_psi,P0_s,P0_t,P0_st,P0_ss,P0_tt)
 
 if (my_id .eq. 0) then
 
     pellet_particles = max(pellet_particles - total_pellet_particles, 0.d0)
 
     write(*,'(A,4e14.6)') ' pellet (R,Z) =', pellet_R, pellet_Z,pellet_velocity_R/V_normalisation,pellet_velocity_Z/V_normalisation
-    write(*,'(A,3e14.6,A)') ' total particles added in this step : ', pellet_R, total_pellet_particles, total_plasma_particles,' [10^20]'
+    write(*,'(A,6e14.6,A)') ' total particles added in this step : ', pellet_R, pellet_Z,pellet_particles,total_pellet_particles, total_plasma_particles,phys_ablation,' [10^20]'
     write(*,'(A,4e14.6)') ' remaining particles in pellet      : ', pellet_particles
     write(*,'(A,4e14.6)') ' pellet volume (sim,phys)           : ', total_pellet_volume,pellet_particles/pellet_density
 

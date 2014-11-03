@@ -4,6 +4,7 @@ subroutine export_restart(node_list,element_list,filename)
 
    use data_structure
    use phys_module
+   use pellet_module
    use vacuum, only: export_restart_vacuum
 #ifdef USE_HDF5
    use hdf5
@@ -115,12 +116,20 @@ subroutine export_restart(node_list,element_list,filename)
 #endif
 #endif
    endif
+
+   call export_restart_vacuum(21, freeboundary, resistive_wall)
    
    if (use_pellet) then
+         if (index_now .gt. 0) then
+             write(21) xtime_pellet_R(1:index_now)
+             write(21) xtime_pellet_Z(1:index_now)
+             write(21) xtime_pellet_psi(1:index_now)
+             write(21) xtime_pellet_particles(1:index_now)
+             write(21) xtime_phys_ablation(1:index_now)
+         endif
       write(21) pellet_particles, pellet_R, pellet_Z
    endif
    
-   call export_restart_vacuum(21, freeboundary, resistive_wall)
    
    close(21)
    

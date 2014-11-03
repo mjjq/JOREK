@@ -316,6 +316,8 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'pellet_sig            ', pellet_sig
     write(*,REAL_FMT) 'pellet_length         ', pellet_length
     write(*,REAL_FMT) 'pellet_psi            ', pellet_psi
+    write(*,REAL_FMT) 'pellet_ellipse        ', pellet_ellipse
+    write(*,REAL_FMT) 'pellet_theta          ', pellet_theta
     write(*,REAL_FMT) 'pellet_delta_psi      ', pellet_delta_psi
     write(*,REAL_FMT) 'pellet_density        ', pellet_density
     write(*,REAL_FMT) 'pellet_particles      ', pellet_particles

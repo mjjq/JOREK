@@ -6,6 +6,8 @@ use data_structure
 use phys_module
 use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
+use pellet_module
+use mpi_mod
 
 implicit none
 
@@ -61,6 +63,8 @@ real*8                :: toroidal_angle
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
 real*8                :: amu_neo_node, aki_neo_node
 real*8                :: Vperp_e, Psi_tot
+
+real*8                :: angle, source_volume, local_density, local_temperature, local_pressure, local_psi, local_source
 
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
@@ -154,7 +158,7 @@ if (include_velocity_field) then
   n_vectors = n_vectors + n_vfield
 endif
 if (use_pellet) then
-  n_pellet  = 1 
+  n_pellet  = 2  ! pellet and pressuren
   n_scalars = n_scalars+ n_pellet
 endif
 #endif
@@ -697,13 +701,25 @@ do i=1,element_list%n_elements
           scalars(inode,n_var+n_fluxes+9) = psi_norm
         endif
 
-        if (use_pellet) then
+            if (use_pellet) then
 
-!              call pellet_source(pellet_amplitude, pellet_R, pellet_Z, pellet_psi, pellet_phi, &
-!       			  pellet_radius, pellet_delta_psi, pellet_sig, pellet_length,	&
-!       			  R,Z,ps0,0.d0,source_pellet)
-!              scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = source_pellet
-        endif ! pellet
+           local_density     = scalars(inode,5)
+           local_temperature = scalars(inode,6)/2.
+           local_psi         = scalars(inode,1)
+           local_pressure    = local_density * local_temperature
+           scalars(inode,n_var+n_fluxes+n_neo+n_pellet)  = local_pressure
+
+                angle = 0.0
+                call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+                            pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, &
+                            pellet_theta, R, Z, local_psi, angle, &
+                            local_density,local_temperature, &
+                            central_density, pellet_particles, pellet_density, &
+                            total_pellet_volume, local_source, source_volume)
+
+!                  scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
+                   scalars(inode,n_var+n_fluxes+n_neo+n_pellet+1) = local_source
+            endif ! pellet
 
         !	 vectors(inode,:,1) = (/ - R * u0_y ,	+ R * u0_x ,   0.d0 /)
         !	 vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot

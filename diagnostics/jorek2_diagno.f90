@@ -9,6 +9,8 @@ program jorek2_diagno
 use data_structure
 use phys_module
 use basis_at_gaussian
+use pellet_module
+use mpi_mod
 implicit none
 
 type (type_node_list)    :: node_list
@@ -56,8 +58,28 @@ do i=2,index_start
 enddo
 close(20)
 
+if (use_pellet) then
+
+  open(20,file="pellet.txt")
+
+  write(20,'(A,25(A11,i3.3))') '      i,      time,    pellet_R,    pellet_Z,   pellet_psi,  particles,   ablation'
+
+  do i=1,index_start
+    write(20,'(i7,f12.3,200e14.6)') i,xtime(i),xtime_pellet_R(i),xtime_pellet_Z(i),xtime_pellet_psi(i),xtime_pellet_particles(i), &
+                                    xtime_phys_ablation(i)
+  enddo
+  close(20)
+
+endif
+
+
+
 call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
+if (use_pellet) then
+   pellet_volume = total_pellet_volume
+   call update_pellet(my_id,node_list,element_list)
+end if
 !------------------lowshape3bis outside
 !Rplot(1) = 3.0
 !Rplot(2) = 3.676
@@ -89,7 +111,7 @@ Rplot(2) = 4.2
 Zplot(1) = Z_axis
 Zplot(2) = Z_axis 
 
-!call plot_profiles(node_list,element_list,Rplot,Zplot)
+call plot_profiles(node_list,element_list,Rplot,Zplot)
 
 
 !call export_helena(node_list,element_list)
@@ -102,5 +124,3 @@ Zplot(2) = Z_axis
 !call finplt
 
 end program jorek2_diagno
-
-

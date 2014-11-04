@@ -66,9 +66,10 @@ real*8                :: Vperp_e, Psi_tot
 
 real*8                :: angle, source_volume, local_density, local_temperature, local_pressure, local_psi, local_source
 
-
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field
+
+
 
 write(*,*) '***************************************'
 write(*,*) '*       jorek2vtk                     *'
@@ -211,6 +212,9 @@ else
       'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        ', 'psi_norm    ', 'Vperp_e     ', &
       'ki_neo      ', 'mu_neo      '/)
    endif
+  if (use_pellet) then
+     scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) = (/ 'Pressure', 'Pellet' /)
+  endif
    
 endif
 #endif
@@ -707,7 +711,7 @@ do i=1,element_list%n_elements
            local_temperature = scalars(inode,6)/2.
            local_psi         = scalars(inode,1)
            local_pressure    = local_density * local_temperature
-           scalars(inode,n_var+n_fluxes+n_neo+n_pellet)  = local_pressure
+           scalars(inode,n_var+n_fluxes+n_neo+n_pellet-1)  = local_pressure
 
                 angle = 0.0
                 call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
@@ -718,8 +722,8 @@ do i=1,element_list%n_elements
                             total_pellet_volume, local_source, source_volume)
 
 !                  scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
-                   scalars(inode,n_var+n_fluxes+n_neo+n_pellet+1) = local_source
-            endif ! pellet
+                   scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
+            endif ! use_pellet
 
         !	 vectors(inode,:,1) = (/ - R * u0_y ,	+ R * u0_x ,   0.d0 /)
         !	 vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot

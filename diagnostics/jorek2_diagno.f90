@@ -20,12 +20,22 @@ real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressu
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
 integer :: ifail, my_id, ierr, i_elm_axis
+integer :: required, provided, StatInfo
+
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
 write(*,*) '***************************************'
 
 my_id=0
+
+#ifdef FUNNELED
+  required = MPI_THREAD_FUNNELED
+#else
+  required = MPI_THREAD_MULTIPLE
+#endif
+call MPI_Init_thread(required, provided, StatInfo)
+
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
@@ -106,8 +116,8 @@ end if
 
 !call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-Rplot(1) = 2.
-Rplot(2) = 4.2
+Rplot(1) = 1.0
+Rplot(2) = 3.5
 Zplot(1) = Z_axis
 Zplot(2) = Z_axis 
 

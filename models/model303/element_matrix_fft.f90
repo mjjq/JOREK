@@ -1376,13 +1376,29 @@ do ms=1, n_gauss
                        + v * F0 / BigR * rho * T0_p                             * xjac * theta * tstep &
 
                        + 0.5d0 * rho * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)    * theta * tstep &
-                       + 0.5d0 * v   * vpar0**2 * BB2 * (ps0_s * rho_t - ps0_t * rho_s)* theta * tstep 
+                       + 0.5d0 * v   * vpar0**2 * BB2 * (ps0_s * rho_t - ps0_t * rho_s)* theta * tstep &
 
-             amat_75_k = - 0.5d0 * rho * vpar0**2 * BB2 * F0 / BigR * v_p       * xjac * theta * tstep
+                       + TG_NUM7 * 0.25d0 * rho * Vpar0**2 * BB2 &
+                                 * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
+                                 * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac          )  * xjac * theta * tstep*tstep &
+
+                       + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
+                                 * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
+                                 * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac           ) * xjac * theta * tstep*tstep
+
+             amat_75_k = - 0.5d0 * rho * vpar0**2 * BB2 * F0 / BigR * v_p       * xjac * theta * tstep &
+
+                         + TG_NUM7 * 0.25d0 * rho * Vpar0**2 * BB2 &
+                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
+                                   * (                                          + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
 
              amat_75_n = + v * F0 / BigR * rho_p * T0                           * xjac * theta * tstep &
-                       - 0.5d0 * v   * vpar0**2 * BB2 * F0 / BigR * rho_p       * xjac * theta * tstep
+                         - 0.5d0 * v   * vpar0**2 * BB2 * F0 / BigR * rho_p       * xjac * theta * tstep &
 
+                         + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
+                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
+                                   * (                                          + F0 / BigR * rho_p)* xjac * theta * tstep*tstep
+             
              amat_76 = + v * (T_s * R0 * ps0_t - T_t * R0 * ps0_s)                     * theta * tstep &
                        + v * (T * R0_s * ps0_t - T * R0_t * ps0_s)                     * theta * tstep &
                        + v * F0 / BigR * T * R0_p                               * xjac * theta * tstep
@@ -1513,6 +1529,7 @@ do ms=1, n_gauss
 
              ELM_p(mp,ij5,kl7)  =  ELM_p(mp,ij5,kl7)  + wst * amat_57
              ELM_n(mp,ij5,kl7)  =  ELM_n(mp,ij5,kl7)  + wst * amat_57_n
+             ELM_k(mp,ij5,kl7)  =  ELM_k(mp,ij5,kl7)  + wst * amat_57_k
              ELM_kn(mp,ij5,kl7) =  ELM_kn(mp,ij5,kl7) + wst * amat_57_kn
 
              ELM_p(mp,ij6,kl1)  =  ELM_p(mp,ij6,kl1)  + wst * amat_61

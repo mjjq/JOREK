@@ -1203,12 +1203,20 @@ do ms=1, n_gauss
                          + v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
 
                          + TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
-                                   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
+                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &
                                    * (-(psi_s * v_t     - psi_t * v_s)    /xjac)  * xjac * theta * tstep*tstep &
-             
+
+                         + TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
+                                   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
+                                   * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * theta * tstep*tstep &
+
+                         + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
+                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &
+                                   * (-(psi_s * r0_t    - psi_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep &
+
                          + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
                                    * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
-                                   * (-(psi_s * r0_t    - psi_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep &
+                                   * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep &
 
 	                 + v *(r0 * rn0 * S_ion) * vpar0 * BB2_psi * BigR         * xjac * theta * tstep
 			 

@@ -27,6 +27,8 @@ real*8     :: psi_n, psi_bnd,psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t, ps0_x, ps0_y, R_s, R_t, Z_s, Z_t, xjac, direction, Btot
 real*8     :: zV, dV_dpsi, dV_dpsi2, dV_dz, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi2_dz, dV_dpsi_dz2
 logical    :: xpoint2
+real*8     :: theta_bal, theta_pol, gauss_amp, perturbation, R_left, q95
+integer    :: mod_n
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -189,20 +191,42 @@ do in=2,n_tor
       node_list%node(i)%values(in,:,:) = 0.d0
 
       psi = node_list%node(i)%values(1,1,1)
+      R   = node_list%node(i)%x(1,1)
       Z   = node_list%node(i)%x(1,2)
       psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)
-
-      node_list%node(i)%values(in,1,4) = amplitude * psi_n * (1.d0 -psi_n)
-      node_list%node(i)%values(in,2,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,2,1)
-      node_list%node(i)%values(in,3,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,3,1)
-      node_list%node(i)%values(in,4,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,4,1)
-
-      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) ) ) then
-        node_list%node(i)%values(in,1:4,4) = 0.d0
+      if (xpoint2) then
+        if ((psi_n .lt. 1.d0) .and. (Z .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
+          psi_n = 2.d0 - psi_n
+        endif
+        if ((psi_n .lt. 1.d0) .and. (Z .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
+          psi_n = 2.d0 - psi_n
+        endif
       endif
-      if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) ) ) then
-        node_list%node(i)%values(in,1:4,4) = 0.d0
+
+      !node_list%node(i)%values(in,1,4) = amplitude * psi_n * (1.d0 -psi_n)
+      !node_list%node(i)%values(in,2,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,2,1)
+      !node_list%node(i)%values(in,3,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,3,1)
+      !node_list%node(i)%values(in,4,4) = amplitude * (1. - 2.d0 * psi_n)/(psi_bnd - psi_axis) * node_list%node(i)%values(1,4,1)
+
+      ! --- Trying a ballooning mode perturbation
+      q95 = 3.3 ! just estimate for now...
+      R_left = 1.95
+      if (mod(in,2) .eq. 0) then
+        mod_n = in/2 * n_period
+      else
+        mod_n = (in-1)/2 * n_period
       endif
+      gauss_amp = amplitude * exp( -(psi_n-0.90)**2/(2*0.07**2) ) 
+      theta_pol = atan2(Z-Z_axis,R-R_axis)
+      if (theta_pol .lt. 0.d0) theta_pol = theta_pol + 2*PI
+      if (theta_pol .gt. 2*PI) theta_pol = theta_pol - 2*PI
+      if (theta_pol .lt. PI) then 
+        theta_bal = q95*mod_n*theta_pol       *(R_axis/R**2)
+      else
+        theta_bal = q95*mod_n*(2*PI-theta_pol)*(R_axis/R**2)
+      endif
+      perturbation = gauss_amp * cos(theta_bal) * abs(R-R_left)
+      node_list%node(i)%values(in,1,4) = perturbation
 
       node_list%node(i)%deltas = 0.d0
 

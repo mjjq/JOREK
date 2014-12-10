@@ -460,6 +460,13 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
   real*8		      :: distance_xpoint
   logical, parameter	      :: avoid_xpoint = .true.
+  real*8		      :: slope, offset, Z_tmp
+  real*8		      :: Rline1, Zline1
+  real*8		      :: Rline2, Zline2
+  real*8		      :: Rline3, Zline3
+  real*8		      :: Rline4, Zline4
+  real*8                      :: target_buffer_width, tan_width
+  real*8                      :: drho_dpsi, grad_psi
       
   ! -------------------------------------
   ! --- Temperature dependent resistivity
@@ -589,20 +596,38 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------
   ! --- Hyper diffusivitities
   ! -------------------------
-  eta_numm	 = eta_num		! hyper-resistivity
-  visco_numm	 = visco_num		! hyper-viscosity
-  visco_par_numm = visco_par_num	! hyper-viscosity
-  D_perp_numm	 = D_perp_num		! hyper-diffusivity
-  Ki_perp_numm	 = ZK_perp_num		! hyper-conductivity
-  Ki_par_num	 = 0.d-10		! hyper-parallel-conductivity
-  Ke_perp_numm	 = ZK_perp_num		! hyper-conductivity
-  Ke_par_num	 = 0.d-10		! hyper-parallel-conductivity
+  call temperature_e(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
+  eta_numm	 = eta_num       * (zTe/Te_0)**(-1.5d0)
+  if (eta_numm .gt. 1.d-10) eta_numm = 1.d-10 
+  visco_numm	 = visco_num     * (zTe/Te_0)**(-1.5d0)
+  if (visco_numm .gt. 1.d-10) visco_numm = 1.d-10 
+  visco_par_numm = visco_par_num * (zTe/Te_0)**(-1.5d0)
+  if (visco_par_numm .gt. 1.d-10) visco_par_numm = 1.d-10 
+  D_perp_numm	 = D_perp_num    * (zTe/Te_0)**(-1.5d0)
+  if (D_perp_numm .gt. 1.d-10) D_perp_numm = 1.d-10 
+  Ki_perp_numm	 = ZK_perp_num   * (zTe/Te_0)**(-1.5d0)
+  if (Ki_perp_numm .gt. 1.d-10) Ki_perp_numm = 1.d-10 
+  Ke_perp_numm	 = ZK_perp_num   * (zTe/Te_0)**(-1.5d0)
+  if (Ke_perp_numm .gt. 1.d-10) Ke_perp_numm = 1.d-10 
+  Ki_par_num	 = 0.d-10
+  Ke_par_num	 = 0.d-10		
+
+  ! hyper-resistivity
+  eta_numm       = eta_num       
+  visco_numm     = visco_num     
+  visco_par_numm = visco_par_num 
+  D_perp_numm    = D_perp_num    
+  Ki_perp_numm   = ZK_perp_num   
+  Ke_perp_numm   = ZK_perp_num   
+  Ki_par_num     = 0.d-10
+  Ke_par_num     = 0.d-10               
+
   
   ! We need hyper diffusivities mostly at the grid axis
-  if (psi_norm .lt. 0.1d0) eta_numm    = eta_numm   * 1.d2
-  if (psi_norm .lt. 0.1d0) visco_numm  = visco_numm * 1.d2
-  if (psi_norm .lt. 0.05d0) visco_numm = visco_numm * 1.d4
-  if (psi_norm .lt. 0.05d0) eta_numm   = eta_numm   * 1.d4
+  !if (psi_norm .lt. 0.1d0) eta_numm    = eta_numm   * 1.d2
+  !if (psi_norm .lt. 0.1d0) visco_numm  = visco_numm * 1.d2
+  !if (psi_norm .lt. 0.05d0) visco_numm = visco_numm * 1.d4
+  !if (psi_norm .lt. 0.05d0) eta_numm   = eta_numm   * 1.d4
 
   ! ------------------------------------------------
   ! --- Taylor Galerkin (TG2) stabilisation switches
@@ -619,17 +644,96 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
+  Wdia   = 1.d0
   if (avoid_xpoint) then
     if (xpoint2 .and.  (xcase2 .ne. 2) ) then
       distance_xpoint = sqrt( (x_g - R_xpoint(1))**2 + (y_g - Z_xpoint(1))**2 )
-      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
+      !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
     endif
     if (xpoint2 .and.  (xcase2 .ne. 1) ) then
       distance_xpoint = sqrt( (x_g - R_xpoint(2))**2 + (y_g - Z_xpoint(2))**2 )
-      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.15d0)/0.01d0 ) )
+      !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.15d0)/0.01d0 ) )
     endif
   endif
-  
+  tau_IC = tau_IC * 3.d0 * (Te0/Te_0)**2.d0
+  grad_psi  = (ps0_x*ps0_x + ps0_y*ps0_y)**0.5d0
+  drho_dpsi = (r0_x *ps0_x + r0_y *ps0_y) / grad_psi**2.d0
+  !tau_IC    = tau_IC * (0.5d0 - 0.5d0 * tanh( (drho_dpsi - 0.d0)/0.01d0 ) )
+  !tau_IC    = tau_IC * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.d0)/0.01d0 ) )
+ 
+  !if ( (psi_norm .gt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) ) then
+  !  tau_IC  = 0.d0
+  !  Ki_prof = Ki_prof * 1.d2
+  !  Ke_prof = Ke_prof * 1.d2
+  !  visco_Te   = visco_Te * 1.d1
+  !  dvisco_dTe = 0.d0
+  !endif
+   
+  ! 82630
+  !distance_xpoint = sqrt( (x_g - 2.961)**2 + (y_g + 1.710)**2 )
+  !tau_IC   = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ))
+  ! 82896
+  !distance_xpoint = sqrt( (x_g - 2.941)**2 + (y_g + 1.715)**2 )
+  !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ))
+  ! 82900
+  !distance_xpoint = sqrt( (x_g - 2.927)**2 + (y_g + 1.712)**2 )
+  !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ))
+  ! 83438
+  !distance_xpoint = sqrt( (x_g - 2.908)**2 + (y_g + 1.692)**2 )
+  !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ))
+  ! 73569
+  !if (ps0 .gt. -0.155) tau_IC = 0.d0
+  !tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( (ps0 + 0.155d0)/0.001d0 ) )
+
+  ! 82896
+  !Rline1 = 2.47  ; Zline1 = -1.62
+  !Rline2 = 2.13  ; Zline2 = -1.46
+  !Rline3 = 2.94  ; Zline3 = -1.70
+  !Rline4 = 2.71  ; Zline4 = -1.67
+  ! 82630
+  !Rline1 = 2.06  ; Zline1 = -1.40
+  !Rline2 = 2.48  ; Zline2 = -1.62
+  !Rline3 = 2.72  ; Zline3 = -1.68
+  !Rline4 = 2.96  ; Zline4 = -1.71
+  !if (ps0 .gt. -0.19) tau_IC = 0.d0
+  ! 82630 -low_eta
+  !Rline1 = 2.07  ; Zline1 = -1.33
+  !Rline2 = 2.46  ; Zline2 = -1.61
+  !Rline3 = 2.69  ; Zline3 = -1.64
+  !Rline4 = 2.96  ; Zline4 = -1.71
+  ! 82897
+  !Rline1 = 2.04  ; Zline1 = -1.37
+  !Rline2 = 2.46  ; Zline2 = -1.62
+  !Rline3 = 2.69  ; Zline3 = -1.67
+  !Rline4 = 2.94  ; Zline4 = -1.70
+  !if (ps0 .gt. -0.15) tau_IC = 0.d0
+  ! 82898
+  !Rline1 = 2.03  ; Zline1 = -1.36
+  !Rline2 = 2.47  ; Zline2 = -1.62
+  !Rline3 = 2.74  ; Zline3 = -1.68
+  !Rline4 = 2.96  ; Zline4 = -1.71
+  ! 82900
+  !Rline1 = 2.01  ; Zline1 = -1.34
+  !Rline2 = 2.49  ; Zline2 = -1.63
+  !Rline3 = 2.76  ; Zline3 = -1.68
+  !Rline4 = 2.98  ; Zline4 = -1.71
+
+  if (R .lt. R_xpoint(1)) then
+    slope  = (Zline1 - Zline2) / (Rline1 - Rline2)
+    offset = (Rline1*Zline2 - Rline2*Zline1) / (Rline1 - Rline2)
+  else
+    slope  = (Zline3 - Zline4) / (Rline3 - Rline4)
+    offset = (Rline3*Zline4 - Rline4*Zline3) / (Rline3 - Rline4)
+  endif
+  Z_tmp  = offset + slope * R
+  target_buffer_width = 0.02d0
+  tan_width = target_buffer_width / 1.d0
+  !visco_Te   = visco_Te + 1.d3 * visco_Te * (0.5d0 - 0.5d0 * tanh(  (abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
+  !eta_Te     = eta_Te   + 1.d3 * eta_Te   * (0.5d0 - 0.5d0 * tanh(  (abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
+  !dvisco_dTe = dvisco_dTe                 * (0.5d0 - 0.5d0 * tanh( -(abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
+  !deta_dTe   = deta_dTe                   * (0.5d0 - 0.5d0 * tanh( -(abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
+  !tau_IC     = tau_IC                     * (0.5d0 - 0.5d0 * tanh( -(abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
+
   ! -------------------------
   ! --- Neoclassical rotation
   ! -------------------------
@@ -647,12 +751,39 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     aki_neo_prof   = 0.d0
   endif
   
+
+  ! -------------------------------------------------------------------
+  ! --- Bootstrap current variables -----------------------------------
+  ! -------------------------------------------------------------------
+
+  jb_switch = 0.d0  
+  small_r = sqrt((R-R_axis)**2 + (y_g-Z_axis)**2)
+  theta_pol = atan2((y_g-Z_axis),(R-R_axis))
+  if (theta_pol .lt. 0.d0) theta_pol = theta_pol +2.d0*Pi
+  B_theta = 1/R*sqrt((ps0_x)**2 + (ps0_y)**2)
+  
+  jb = -jb_switch*sqrt(small_r*R)*T0/B_theta*(r0_x*cos(theta_pol) + r0_y*sin(theta_pol))
+  
+  if (avoid_xpoint) then
+    if (xpoint2 .and.  (xcase2 .ne. 2) ) then
+      distance_xpoint = sqrt( (x_g - R_xpoint(1))**2 + (y_g - Z_xpoint(1))**2 )
+      jb_switch = jb_switch * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
+    endif
+    if (xpoint2 .and.  (xcase2 .ne. 1) ) then
+      distance_xpoint = sqrt( (x_g - R_xpoint(2))**2 + (y_g - Z_xpoint(2))**2 )
+      jb_switch = jb_switch * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
+    endif
+  endif
+  !if (y_g .lt. Z_xpoint(1)) jb_switch=0.d0
+
+
   ! -------------------------------------------------------------------
   ! --- Heating, current and particle source (the same for all i_plane)
   ! -------------------------------------------------------------------
   if (i_plane .eq. 1) then
     ! --- Current source
     call current(xpoint2, xcase2, x_g,y_g, Z_xpoint, ps0,psi_axis,psi_bnd,current_source)
+    if (jb_switch .eq. 1.d0) current_source = current_source * (0.5d0 - 0.5d0 * tanh((psi_norm-0.8)/0.005) )
 
     ! --- Density source and heating
     call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source_i,heat_source_e)
@@ -689,21 +820,21 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   endif
   
   ! --- Avoid negative density/temperature
-  if ( r0 .lt. rho_1 ) then
-    D_prof  = D_prof  !* 1.d2
-    !particle_source = 1.d-2
+  if ( r0 .lt. 1.d-1*rho_1 ) then
+    !D_prof  = D_prof  * 1.d2
+    !particle_source = 3.d-3
   endif       
-  if ( Ti0 .lt. 1.d-2*Ti_1 ) then
-    Ki_prof = Ki_prof !* 1.d2
-    Ki_par  = Ki_par  !* 1.d2
-    dKi_par = dKi_par !* 1.d2
-    heat_source_i = 1.d-4
+  if ( Ti0 .lt. 1.d-0*Ti_1 ) then
+    !Ki_prof = Ki_prof * 1.d2
+    !Ki_par  = Ki_par  * 1.d2
+    !dKi_par = 0.d0
+    !heat_source_i = 1.d-5
   endif
-  if ( Te0 .lt. 1.d-2*Te_1 ) then
-    Ke_prof = Ke_prof !* 1.d2
-    Ke_par  = Ke_par  !* 1.d2
-    dKe_par = dKe_par !* 1.d2
-    heat_source_e = 1.d-4
+  if ( Te0 .lt. 1.d-0*Te_1 ) then
+    !Ke_prof = Ke_prof * 1.d2
+    !Ke_par  = Ke_par  * 1.d2
+    !dKe_par = 0.d0
+    !heat_source_e = 1.d-5
   endif
     
   return

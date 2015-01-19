@@ -161,6 +161,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'visco_par             ', visco_par
   write(*,LOGI_FMT) 'restart               ', restart
   write(*,INTG_FMT) 'rst_format            ', rst_format
+  write(*,INTG_FMT) 'rst_hdf5              ', rst_hdf5
   write(*,LOGI_FMT) 'regrid                ', regrid
   write(*,INTG_FMT) 'n_R                   ', n_R
   write(*,INTG_FMT) 'n_Z                   ', n_Z

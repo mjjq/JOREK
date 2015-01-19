@@ -287,7 +287,7 @@ module exec_commands
     write(*,*)
     
     ! --- Load the restart file
-    call import_restart(node_list, element_list, trim(file_name), rst_format, error)
+    call import_binary_restart(node_list, element_list, trim(file_name), rst_format, error)
     if ( error /= 0 ) return
     step_imported = .true.
     

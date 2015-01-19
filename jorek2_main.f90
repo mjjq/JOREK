@@ -161,7 +161,9 @@ program JOREK2
   real*8                   :: Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
   real*8                   :: s_find(8), t_find(8)
   character*8              :: label, itlabel
-  character*14             :: fileout
+  character*14             :: fileout_bin
+  character*13             :: fileout_h5
+  character*50             :: version_control
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
@@ -229,7 +231,8 @@ required = 0
     write(*,*) '*************************************************'
     write(*,*) ' MPI processes       : ', n_cpu
     write(*,*) ' OpenMP threads      : ', nbthreads
-    write(*,*) ' SVN revision        : ', SVN_VERSION
+    write(*,*) ' RCS revision        : ', RCS_VERSION
+    write(version_control,'(A)') trim(RCS_VERSION)
     111 format(2x,a,': ',a)
     write(*,111) 'compile_time        ', trim(adjustl(compile_time))
     write(*,111) 'compile_user        ', trim(adjustl(compile_user))
@@ -373,8 +376,15 @@ required = 0
   
   if ( restart .and. (my_id == 0) ) then
     
-    ! --- Read the restart file (jorek_restart.rst)
-    call import_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
+    if ( rst_hdf5 == 0 ) then
+       ! --- Read the restart binary file (jorek_restart.rst)
+       write(*,*) " Restart from BINARY files jorek_restart.rst "
+       call import_binary_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
+    elseif ( rst_hdf5 == 1 ) then
+       ! --- Read the restart HDF5 file (jorek_restart.h5)
+       write(*,*) " Restart from HDF5 files jorek_restart.h5 "
+       call import_hdf5_restart(node_list, element_list, 'jorek_restart.h5', rst_format, ierr)
+    end if
     if ( ierr /= 0 ) stop
 
 #ifdef USE_HDF5
@@ -833,7 +843,17 @@ required = 0
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-    call export_restart(node_list,element_list,'jorek00000.rst')
+     if ( rst_hdf5 == 0 ) then
+        ! --- Write restart binary file
+        fileout_bin = "jorek00000.rst"
+        write (6,*) " =============>, jorek2, filename = ", fileout_bin
+        call export_binary_restart(node_list, element_list, fileout_bin)
+     elseif ( rst_hdf5 == 1 ) then
+        ! --- Write restart HDF5 file
+        fileout_h5 = "jorek00000.h5"
+        write (6,*) " =============>, jorek2, filename = ", fileout_h5
+        call export_hdf5_restart(node_list, element_list, fileout_h5)
+     end if
   end if
 
   !***********************************************************************
@@ -1196,8 +1216,17 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-      write(fileout,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
-      call export_restart(node_list,element_list,fileout)
+     if ( rst_hdf5 == 0 ) then
+        ! --- Write restart binary file
+        write(fileout_bin,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
+        write (6,*) " =============>, jorek2, BIN filename = ",fileout_bin
+        call export_binary_restart(node_list,element_list,fileout_bin)
+     elseif ( rst_hdf5 == 1 ) then
+        ! --- Write restart HDF5 file
+        write(fileout_h5,'(A5,i5.5,A3)') 'jorek',index_now,'.h5'
+        write (6,*) " =============>, jorek2, HDF5 filename = ",fileout_h5
+        call export_hdf5_restart(node_list,element_list,fileout_h5)
+     end if
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
@@ -1287,8 +1316,17 @@ required = 0
   !***********************************************************************
 
   if (my_id .eq. 0)  then
+     write (6,*) " =============>, jorek2, filename = jorek_restart"
 
-    call export_restart(node_list,element_list,'jorek_restart.rst')
+     if ( rst_hdf5 == 0 ) then
+        ! --- Write restart binary file
+        write (6,*) " =============>, jorek2, filename = jorek_restart.rst "
+        call export_binary_restart(node_list,element_list, 'jorek_restart.rst')
+     elseif ( rst_hdf5 == 1 ) then
+        ! --- Write restart HDF5 file
+        write (6,*) " =============>, jorek2, filename = jorek_restart.h5 "
+        call export_hdf5_restart(node_list,element_list, 'jorek_restart.h5')
+     end if
 
     if (.not. bench_without_plot) then
        

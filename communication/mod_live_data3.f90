@@ -51,7 +51,7 @@ module live_data3
     open(LIVE_DATA_HANDLE3, file=LIVE_DATA_FILE3, status='REPLACE', action='WRITE')
     
     ! --- Write some general information
-    write(LIVE_DATA_HANDLE3,*)  '@svn_version: ', SVN_VERSION
+    write(LIVE_DATA_HANDLE3,*)  '@rcs_version: ', RCS_VERSION
     write(LIVE_DATA_HANDLE3,'(A,I5)') '@jorek_model: ', jorek_model
     write(LIVE_DATA_HANDLE3,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE3,'(A,I5)') '@n_plane: ', n_plane

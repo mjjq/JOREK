@@ -53,7 +53,7 @@ call log_parameters(my_id)
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 
 call initialise_basis
 
@@ -576,7 +576,7 @@ real*8 :: s_in, t_in, p_in
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt
 real*8 :: value_out
-
+external interp
 
 !call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 !Zjac = (R_s * Z_t - R_t * Z_s)

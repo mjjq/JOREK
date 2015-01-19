@@ -1,159 +1,149 @@
 !> Imports a restart file written out by the routine export_restart.
-subroutine import_restart(node_list, element_list, filename, format_rst, error)
 
-use tr_module 
-use data_structure
-use phys_module
-use pellet_module
-use vacuum, only: import_restart_vacuum
+!
+! Import a binary restart file
+subroutine import_binary_restart(node_list, element_list, filename, format_rst, error)
 
-implicit none
+  use tr_module 
+  use data_structure
+  use phys_module
+  use pellet_module
+  use vacuum, only: import_restart_vacuum
+  
+  implicit none
+  
+  ! --- Routine parameters
+  type(type_node_list),    intent(inout) :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  character(len=*),        intent(in)    :: filename
+  integer,                 intent(out)   :: error
+  integer,                 intent(in)    :: format_rst  ! format of restart file
+  
+  ! --- Local variables
+  integer              :: i, j, m, k, n_tor_tmp
+  real*8               :: growth_mag, growth_kin, amplitude
+  integer, allocatable :: mode_tmp(:)
+  real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+ 
+  error = 0
 
-! --- Routine parameters
-type(type_node_list),    intent(inout) :: node_list
-type(type_element_list), intent(inout) :: element_list
-character(len=*),        intent(in)    :: filename
-integer,                 intent(out)   :: error
-integer,                 intent(in)    :: format_rst  ! format of restart file
+  write(*,*) 'Importing restart file "', trim(filename), '".'
+  write(*,*) '  Using format : ',rst_format
 
-! --- Local variables
-integer              :: i, j, m, k, n_tor_tmp
-real*8               :: growth_mag, growth_kin, eta_tmp, visco_tmp, visco_par_tmp, amplitude
-integer, allocatable :: mode_tmp(:)
-real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+  open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
+  if ( error /= 0 ) then
+     write(*,*) '...failed!'
+     return
+  end if
 
-error = 0
+  read(21) n_tor_tmp
 
-write(*,*) 'Importing restart file "', trim(filename), '".'
-write(*,*) '  Using format : ',rst_format
+  allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))
 
-open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
-if ( error /= 0 ) then
-  write(*,*) '...failed!'
-  return
-end if
+  if (format_rst == 1) then
+     read(21) mode_tmp
+     write(*,*) ' NEW format (1) : ',mode_tmp
+  elseif (format_rst == 0) then
+     write(*,*) ' mode : ',mode
+     if (n_tor .eq. n_tor_tmp) then 
+        mode_tmp = mode
+     else
+        mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
+     endif
+     write(*,*) ' OLD format (0) : '
+     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
+     write(*,'(A,999i4)') ' new mode numbers     : ',mode
+  else
+     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+  endif
 
-read(21) n_tor_tmp
+  if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &
+       ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
+       ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
 
-allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))
+  write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
 
-if (format_rst == 1) then
-  read(21) mode_tmp
-  write(*,*) ' NEW format (1) : ',mode_tmp
-elseif (format_rst == 0) then
-   write(*,*) ' mode : ',mode
-   if (n_tor .eq. n_tor_tmp) then 
-      mode_tmp = mode
-   else
-      mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
-   endif
-   write(*,*) ' OLD format (0) : '
-   write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
-   write(*,'(A,999i4)') ' new mode numbers     : ',mode
-else
-   write(*,'(A,i3)') ' restart file format not supported : ',format_rst
-endif
+  read(21) node_list%n_nodes,element_list%n_elements
+  read(21) node_list%n_dof
 
-if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
-if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
-
-write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
-
-read(21) node_list%n_nodes,element_list%n_elements
-read(21) node_list%n_dof
-
-do i=1,node_list%n_nodes
-
-  read(21) node_list%node(i)%x
-
-  read(21) values_tmp
-  read(21) deltas_tmp
+  do i=1,node_list%n_nodes
+     
+     read(21) node_list%node(i)%x
+     read(21) values_tmp
+     read(21) deltas_tmp
 
 #ifdef fullmhd
-  read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
-  read(21) node_list%node(i)%Fprof_eq             !< equilibrium profile R*B_phi at the nodes
+     read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
+     read(21) node_list%node(i)%Fprof_eq             !< equilibrium profile R*B_phi at the nodes
 #elif altcs
-  read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
+     read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
 #endif
-  read(21) node_list%node(i)%index
-  read(21) node_list%node(i)%boundary
-  read(21) node_list%node(i)%parents
-  read(21) node_list%node(i)%parent_elem
-  read(21) node_list%node(i)%ref_lambda
-  read(21) node_list%node(i)%ref_mu
-  read(21) node_list%node(i)%constrained
+     read(21) node_list%node(i)%index
+     read(21) node_list%node(i)%boundary
+     read(21) node_list%node(i)%parents
+     read(21) node_list%node(i)%parent_elem
+     read(21) node_list%node(i)%ref_lambda
+     read(21) node_list%node(i)%ref_mu
+     read(21) node_list%node(i)%constrained
 
-  node_list%node(i)%values = 0.d0
-  node_list%node(i)%deltas = 0.d0
+     node_list%node(i)%values = 0.d0
+     node_list%node(i)%deltas = 0.d0
 
-  do m=1,n_tor_tmp,2
-    do k=1, n_tor,2
-      if (mode_tmp(m) .eq. mode(k)) then
-        if ((m .eq. 1) .and. (k.eq.1)) then
-          node_list%node(i)%values(k,:,:) = values_tmp(m,:,:)
-          node_list%node(i)%deltas(k,:,:) = deltas_tmp(m,:,:)
-        else
-          node_list%node(i)%values(k-1,:,:) = values_tmp(m-1,:,:)
-          node_list%node(i)%deltas(k-1,:,:) = deltas_tmp(m-1,:,:)
-          node_list%node(i)%values(k,:,:)   = values_tmp(m,:,:)
-          node_list%node(i)%deltas(k,:,:)   = deltas_tmp(m,:,:)
-        endif
-      endif
-    enddo
+     do m=1,n_tor_tmp,2
+        do k=1, n_tor,2
+           if (mode_tmp(m) .eq. mode(k)) then
+              if ((m .eq. 1) .and. (k.eq.1)) then
+                 node_list%node(i)%values(k,:,:) = values_tmp(m,:,:)
+                 node_list%node(i)%deltas(k,:,:) = deltas_tmp(m,:,:)
+              else
+                 node_list%node(i)%values(k-1,:,:) = values_tmp(m-1,:,:)
+                 node_list%node(i)%deltas(k-1,:,:) = deltas_tmp(m-1,:,:)
+                 node_list%node(i)%values(k,:,:)   = values_tmp(m,:,:)
+                 node_list%node(i)%deltas(k,:,:)   = deltas_tmp(m,:,:)
+              endif
+           endif
+        enddo
+     enddo
   enddo
 
-enddo
-
-read(21) element_list%element(1:element_list%n_elements)
-read(21) tstep,eta_tmp,visco_tmp,visco_par_tmp
-read(21) index_start
-read(21) t_start
- 
+  read(21) element_list%element(1:element_list%n_elements)
+  read(21) tstep,eta_rst,visco_rst,visco_par_rst
+  read(21) index_start
+  read(21) t_start
+  
 #ifdef USE_HDF5
   read(21) h5_nbsave_all
 #endif
+  
+  if (index_start .ge. 1) then
 
-if (index_start .ge. 1) then
+     if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
+     call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
+     
+     if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_UNKNOWN)
+     call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies",CAT_UNKNOWN)
 
-  if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
-  call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
-
-  if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_UNKNOWN)
-  call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies",CAT_UNKNOWN)
-
-  energies = 0.d0
+     energies = 0.d0
 
 #ifdef JECCD
-  if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
-  call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep,"energies2",CAT_UNKNOWN)
+     if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
+     call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep,"energies2",CAT_UNKNOWN)
 
-  if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
-  call tr_allocate(energies3,1,n_tor,1,2,1,index_start+nstep,"energies3",CAT_UNKNOWN)
+     if (allocated(energies3)) call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
+     call tr_allocate(energies3,1,n_tor,1,2,1,index_start+nstep,"energies3",CAT_UNKNOWN)
 
 #ifdef JEC2DIAG
-  if (allocated(energies4)) call tr_deallocate(energies4,"energies4",CAT_UNKNOWN)
-  call tr_allocate(energies4,1,n_tor,1,2,1,index_start+nstep,"energies4",CAT_UNKNOWN)
+     if (allocated(energies4)) call tr_deallocate(energies4,"energies4",CAT_UNKNOWN)
+     call tr_allocate(energies4,1,n_tor,1,2,1,index_start+nstep,"energies4",CAT_UNKNOWN)
 #endif
 
-  energies2 = 0.d0
-  energies3 = 0.d0
+     energies2 = 0.d0
+     energies3 = 0.d0
 #ifdef JEC2DIAG
-  energies4 = 0.d0
+     energies4 = 0.d0
 #endif
 #endif
-
-  if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_UNKNOWN)
-  call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R",CAT_UNKNOWN)
-  if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_UNKNOWN)
-  call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z",CAT_UNKNOWN)
-  if (allocated(xtime_pellet_psi)) call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_UNKNOWN)
-  call tr_allocate(xtime_pellet_psi,1,index_start+nstep,"xtime_pellet_psi",CAT_UNKNOWN)
-  if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_UNKNOWN)
-  call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles",CAT_UNKNOWN)
-  if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_UNKNOWN)
-  call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation",CAT_UNKNOWN)
-
-
 
   read(21) xtime(1:index_start)
   read(21) energies(1:n_tor_tmp,:,1:index_start)
@@ -167,67 +157,444 @@ if (index_start .ge. 1) then
 #endif
 endif
 
+  call import_restart_vacuum(21, freeboundary, resistive_wall)
 
-call import_restart_vacuum(21, freeboundary, resistive_wall)
+  if (use_pellet) then
+     if (index_start .ge. 1) then
+        if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R",CAT_UNKNOWN)
+        if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z",CAT_UNKNOWN)
+        if (allocated(xtime_pellet_psi)) call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_psi,1,index_start+nstep,"xtime_pellet_psi",CAT_UNKNOWN)
+        if (allocated(xtime_pellet_particles)) &
+             call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles",CAT_UNKNOWN)
+        if (allocated(xtime_phys_ablation)) &
+             call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_UNKNOWN)
+        call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation",CAT_UNKNOWN)
 
-if (use_pellet) then
-      if (index_start .ge. 1) then
-          read(21,err=999, end=999)  xtime_pellet_R(1:index_start)
-          read(21)  xtime_pellet_Z(1:index_start)
-          read(21)  xtime_pellet_psi(1:index_start)
-          read(21)  xtime_pellet_particles(1:index_start)
-          read(21)  xtime_phys_ablation(1:index_start)
-      endif
-  read(21,err=999, end=999)  pellet_particles, pellet_R, pellet_Z
-  write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
-endif
+        read(21,err=999, end=999)  xtime_pellet_R(1:index_start)
+        read(21)  xtime_pellet_Z(1:index_start)
+        read(21)  xtime_pellet_psi(1:index_start)
+        read(21)  xtime_pellet_particles(1:index_start)
+        read(21)  xtime_phys_ablation(1:index_start)
+     endif
+     read(21,err=999, end=999)  pellet_particles, pellet_R, pellet_Z
+     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
+  endif
 999 continue
-
-close(21)
-
-write(*,*) '************* restart ******************'
-write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
+  
+  close(21)
+  
+  write(*,*) '************* restart ******************'
+  write(*,'(A,I6,F14.6,A)') ' *  restart time       : ',index_start,t_start,' *'
 #ifdef USE_HDF5
-  write(*,'(A19,I4,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
+  write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
 #endif
-write(*,*) '****************************************'
+  write(*,*) '****************************************'
 
-
-do i=2,index_start
-if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
-   Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
-        / (xtime(i)-xtime(i-1))
-else
-    Growth_mag  = 0.
-endif
-if ( (energies(n_tor,2,i).ne.0.) .and. (energies(n_tor,2,i-1).ne.0.)) then
- Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
+  do i=2,index_start
+     if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
+        Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
              / (xtime(i)-xtime(i-1))
-else
-    Growth_kin  = 0.
-endif
+     else
+        Growth_mag  = 0.
+     endif
+     if ( (energies(n_tor,2,i).ne.0.) .and. (energies(n_tor,2,i-1).ne.0.)) then
+        Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
+             / (xtime(i)-xtime(i-1))
+     else
+        Growth_kin  = 0.
+     endif
 
-! write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
-! write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i)
+!     write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
+!     write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i)
 
-enddo
-
-amplitude = 1.d-10
-
-if (n_tor_tmp .lt. n_tor) then ! initialise new harmonics (only density and temperature, to be improved)
-  do i=1,node_list%n_nodes
-    node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
-    do j=n_tor_tmp+1, n_tor
-      node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
-      node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
-    enddo
   enddo
-endif
 
-write(*,*) '********* end restart ******************'
+  amplitude = 1.d-10
 
-!call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
+  if (n_tor_tmp .lt. n_tor) then ! initialise new harmonics (only density and temperature, to be improved)
+     do i=1,node_list%n_nodes
+        node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
+        do j=n_tor_tmp+1, n_tor
+           node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
+           node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
+        enddo
+     enddo
+  endif
 
-return
-end subroutine import_restart
+  ! End reading binary restart file  
+  write(*,*) '********* end restart ******************'
+
+  !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
+
+  ! -> Deallocate temporary arrays 
+  if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
+  if (allocated(values_tmp)) call tr_deallocate(values_tmp,"values_tmp",CAT_UNKNOWN)
+  if (allocated(deltas_tmp)) call tr_deallocate(deltas_tmp,"deltas_tmp",CAT_UNKNOWN)
+
+  return
+end subroutine import_binary_restart
+
+!
+! Import an HDF5 restart file
+subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)
+
+#include "version.h"
+
+  use tr_module 
+  use data_structure
+  use phys_module
+  use vacuum, only: import_HDF5_restart_vacuum
+#ifdef USE_HDF5
+  use hdf5
+  use HDF5_io_module
+  !use tr_module
+  use parameters, ONLY : n_tor, n_var, n_order
+#endif
+  
+  implicit none
+  
+  ! --- Routine parameters
+  type(type_node_list),    intent(inout) :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  character(len=*),        intent(in)    :: filename
+  integer,                 intent(in)    :: format_rst  ! format of restart file
+  integer,                 intent(out)   :: error
+  
+  ! --- Local variables
+  integer              :: i, j, m, k, n_tor_tmp
+  real*8               :: growth_mag, growth_kin, amplitude
+  integer, allocatable :: mode_tmp(:)
+  real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+  
+#ifdef USE_HDF5
+  integer(HID_T)     :: file_id
+  integer            :: ind
+  
+  real(RKIND), allocatable :: t_x(:,:,:)
+  real(RKIND), allocatable :: t_values(:,:,:,:)
+  real(RKIND), allocatable :: t_deltas(:,:,:,:)
+
+  real(RKIND), allocatable :: t_psi_eq(:,:)
+  real(RKIND), allocatable :: t_Fprof_eq(:,:)
+
+  integer,     allocatable :: t_index(:,:)
+  integer,     allocatable :: t_boundary(:)
+  integer,     allocatable :: t_parents(:,:)
+  integer,     allocatable :: t_parent_elem(:)
+  real(RKIND), allocatable :: t_ref_lambda(:)
+  real(RKIND), allocatable :: t_ref_mu(:)
+  character,   allocatable :: t_constrained(:)     
+
+  integer,     allocatable :: t_vertex(:,:)
+  integer,     allocatable :: t_neighbours(:,:)
+  real(RKIND), allocatable :: t_size(:,:,:)
+  integer,     allocatable :: t_father(:)
+  integer,     allocatable :: t_n_sons(:)
+  integer,     allocatable :: t_n_gen(:)
+  integer,     allocatable :: t_sons(:,:)
+  integer,     allocatable :: t_contain_node(:,:)
+  integer,     allocatable :: t_nref(:)
+
+  !
+  error = 0
+
+  ! ->  Reading HDF5 file
+  write(*,*) 'Importing HDF5 restart file "', trim(filename), '".' 
+  
+  ! -> Open HDF5 file
+  call HDF5_open(trim(filename),file_id,error)
+  if ( error /= 0 ) then
+     write(*,*) '...failed!'
+     return
+  end if
+
+  call HDF5_integer_reading(file_id,n_tor_tmp,'n_tor')
+
+  if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
+  allocate(mode_tmp(n_tor_tmp))
+
+  if (format_rst == 1) then
+     call HDF5_array1D_reading_int(file_id,mode_tmp,"mode_tmp")
+     write(*,*) " import_restart, HDF5 file : n_var     = ",mode_tmp
+     write(*,*) ' NEW format (1) : ',mode_tmp
+  elseif (format_rst == 0) then
+     write(*,*) ' mode : ',mode
+     if (n_tor .eq. n_tor_tmp) then 
+        mode_tmp = mode
+     else
+        mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
+     endif
+     write(*,*) ' OLD format (0) : '
+     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
+     write(*,'(A,999i4)') ' new mode numbers     : ',mode
+  else
+     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+  endif
+
+  if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &
+       ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
+       ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+
+  write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
+
+  call HDF5_integer_reading(file_id,node_list%n_nodes,"n_nodes")
+  call HDF5_integer_reading(file_id,element_list%n_elements,"n_elements")
+  call HDF5_integer_reading(file_id,node_list%n_dof,"n_dof")
+
+  ! -> Allocate temporary arrays 
+  call tr_allocate(t_x,1,node_list%n_nodes,1,n_order+1,1,n_dim, &
+       "node_list%x",CAT_UNKNOWN)
+  call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var, &
+       "node_list%values",CAT_UNKNOWN)
+  call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var, &
+       "node_list%deltas",CAT_UNKNOWN)
+ 
+#ifdef fullmhd
+  call tr_allocate(t_psi_eq,1,node_list%n_nodes,1,n_order+1, &
+       "node_list%psi_eq",CAT_UNKNOWN)
+  call tr_allocate(t_Fprof_eq,1,node_list%n_nodes,1,n_order+1, &
+       "node_list%Fprof_eq",CAT_UNKNOWN)
+#elif altcs
+  call tr_allocate(t_psi_eq,1,node_list%n_nodes,1,n_order+1, &
+       "node_list%psi_eq",CAT_UNKNOWN)
+#endif
+ 
+  call tr_allocate(t_index,1,node_list%n_nodes,1,n_order+1,"index",CAT_UNKNOWN)
+  call tr_allocate(t_boundary,1,node_list%n_nodes,"boundary",CAT_UNKNOWN)
+  call tr_allocate(t_parents,1,node_list%n_nodes,1,2,"parent",CAT_UNKNOWN)
+  call tr_allocate(t_parent_elem,1,node_list%n_nodes,"parent_elem",CAT_UNKNOWN)
+  call tr_allocate(t_ref_lambda,1,node_list%n_nodes,"ref_lambade",CAT_UNKNOWN)
+  call tr_allocate(t_ref_mu,1,node_list%n_nodes,"ref_mu",CAT_UNKNOWN)
+  call tr_allocate(t_constrained,1,node_list%n_nodes,"constrained",CAT_UNKNOWN)
+
+  ! type_element, element_list%n_elements
+  call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max, &
+       "vertex",CAT_UNKNOWN)
+  call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max, &
+       "neighbours",CAT_UNKNOWN)
+  call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1, &
+       "size",CAT_UNKNOWN)
+  call tr_allocate(t_father,1,element_list%n_elements,"father",CAT_UNKNOWN)
+  call tr_allocate(t_n_sons,1,element_list%n_elements,"n_sons",CAT_UNKNOWN)
+  call tr_allocate(t_n_gen,1,element_list%n_elements,"n_gen",CAT_UNKNOWN)
+  call tr_allocate(t_sons,1,element_list%n_elements,1,4,"sons",CAT_UNKNOWN)
+  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5, &
+       "contain_node",CAT_UNKNOWN)
+  call tr_allocate(t_nref,1,element_list%n_elements,"nref",CAT_UNKNOWN)
+
+  call HDF5_array3D_reading(file_id,t_x,'x')
+  call HDF5_array4D_reading(file_id,t_values,'values')
+  call HDF5_array4D_reading(file_id,t_deltas,'deltas')
+
+#ifdef fullmhd
+  call HDF5_array2D_reading(file_id,t_psi_eq,'psi_eq')
+  call HDF5_array2D_reading(file_id,t_Fprof_eq,'Fprof_eq')
+#elif altcs
+  call HDF5_array2D_reading(file_id,t_psi_eq,'psi_eq')
+#endif
+
+  call HDF5_array2D_reading_int(file_id,t_index,'index')
+  call HDF5_array1D_reading_int(file_id,t_boundary,'boundary')
+  call HDF5_array2D_reading_int(file_id,t_parents,'parents')
+  call HDF5_array1D_reading_int(file_id,t_parent_elem,'parent_elem')
+  call HDF5_array1D_reading(file_id,t_ref_lambda,'ref_lambda')
+  call HDF5_array1D_reading(file_id,t_ref_mu,'ref_mu')
+  call HDF5_array1D_reading_char(file_id,t_constrained,'constrained')
+
+  do i=1,node_list%n_nodes
+     node_list%node(i)%x = t_x(i,:,:) 
+
+     node_list%node(i)%deltas = 0.d0 
+     node_list%node(i)%deltas = 0.d0 
+
+     do m=1,n_tor_tmp,2
+        do k=1, n_tor,2 
+           if (mode_tmp(m) .eq. mode(k)) then
+              if ((m .eq. 1) .and. (k.eq.1)) then
+                 node_list%node(i)%values(k,:,:) = t_values(i,m,:,:)
+                 node_list%node(i)%deltas(k,:,:) = t_deltas(i,m,:,:)
+              else
+                 node_list%node(i)%values(k-1,:,:) = t_values(i,m-1,:,:)
+                 node_list%node(i)%deltas(k-1,:,:) = t_deltas(i,m-1,:,:) 
+                 node_list%node(i)%values(k,:,:)   = t_values(i,m,:,:) 
+                 node_list%node(i)%deltas(k,:,:)   = t_deltas(i,m,:,:)
+              end if
+           end if
+        end do
+     end do
+
+#ifdef fullmhd
+     node_list%node(i)%psi_eq   = t_psi_eq(i,:)
+     node_list%node(i)%Fprof_eq = t_Fprof_eq(i,:)
+#elif altcs
+     node_list%node(i)%psi_eq   = t_psi_eq(i,:)
+#endif
+
+     node_list%node(i)%index = t_index(i,:)
+     node_list%node(i)%boundary = t_boundary(i)
+     node_list%node(i)%parents = t_parents(i,:)
+     node_list%node(i)%parent_elem = t_parent_elem(i)
+     node_list%node(i)%ref_lambda = t_ref_lambda(i)
+     node_list%node(i)%ref_mu = t_ref_mu(i)
+     if (t_constrained(i) == 'T') then
+        node_list%node(i)%constrained = .true.
+     else
+        node_list%node(i)%constrained = .false.
+     end if
+  end do
+
+   call HDF5_array2D_reading_int(file_id,t_vertex,'vertex')
+   call HDF5_array2D_reading_int(file_id,t_neighbours,'neighbours')
+   call HDF5_array3D_reading(file_id,t_size,'size')
+   call HDF5_array1D_reading_int(file_id,t_father,'father')
+   call HDF5_array1D_reading_int(file_id,t_n_sons,'n_sons')
+   call HDF5_array1D_reading_int(file_id,t_n_gen,'n_gen')
+   call HDF5_array2D_reading_int(file_id,t_sons,'sons')
+   call HDF5_array2D_reading_int(file_id,t_contain_node,'contain_node')
+   call HDF5_array1D_reading_int(file_id,t_nref,'nref')
+ 
+   do i=1,element_list%n_elements
+      element_list%element(i)%vertex       = t_vertex(i,:)
+      element_list%element(i)%neighbours   = t_neighbours(i,:)
+      element_list%element(i)%size         = t_size(i,:,:)
+      element_list%element(i)%father       = t_father(i)
+      element_list%element(i)%n_sons       = t_n_sons(i)
+      element_list%element(i)%n_gen        = t_n_gen(i)
+      element_list%element(i)%sons         = t_sons(i,:)
+      element_list%element(i)%contain_node = t_contain_node(i,:)
+      element_list%element(i)%nref         = t_nref(i)
+   end do
+ 
+   call HDF5_real_reading(file_id,tstep,'tstep')
+   call HDF5_real_reading(file_id,eta_rst,'eta')
+   call HDF5_real_reading(file_id,visco_rst,'visco')
+   call HDF5_real_reading(file_id,visco_par_rst,'visco_par')
+   call HDF5_integer_reading(file_id,index_start,'index_now')
+   call HDF5_real_reading(file_id,t_start,'t_now')
+   call HDF5_integer_reading(file_id,h5_nbsave_all,'h5_nbsave_all')
+   
+   if (index_start .ge. 1) then
+
+      if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
+      call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
+      call HDF5_array1D_reading(file_id,xtime,'xtime')
+
+      if (allocated(energies))   call tr_deallocate(energies,"energies",CAT_UNKNOWN)
+      call tr_allocate(energies,1,n_tor_tmp,1,2,1,index_start+nstep, &
+           "energies",CAT_UNKNOWN)
+      energies = 0.d0
+      call HDF5_array3D_reading(file_id,energies,'energies')
+
+#ifdef JECCD                   
+      if (allocated(energies2))   call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)     
+      call tr_allocate(energies2,1,n_tor_tmp,1,2,1,index_start+nstep, &
+           "energies2",CAT_UNKNOWN)
+      if (allocated(energies3))   call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
+      call tr_allocate(energies3,1,n_tor_tmp,1,2,1,index_start+nstep, &
+           "energies3",CAT_UNKNOWN)
+      energies2 = 0.d0
+      energies3 = 0.d0
+      call HDF5_array3D_reading(file_id,energies2,'energies2')
+      call HDF5_array3D_reading(file_id,energies3,'energies3')
+
+#ifdef JEC2DIAG
+      if (allocated(energies4))   call tr_deallocate(energies4,"energies4",CAT_UNKNOWN)
+      call tr_allocate(energies4,1,n_tor_tmp,1,2,1,index_start+nstep, &
+           "energies4",CAT_UNKNOWN)
+     energies4 = 0.d0
+     call HDF5_array3D_reading(file_id,energies4,'energies4')
+#endif
+#endif
+
+   end if
+   
+   if (use_pellet) then
+      call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
+      call HDF5_real_reading(file_id,pellet_R,"pellet_R")
+      call HDF5_real_reading(file_id,pellet_Z,"pellet_Z")
+   endif
+   
+   ! Import restart Vacuum 
+   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
+   
+   call HDF5_close(file_id)
+ 
+   write(*,*) '************* restart ******************'
+   write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
+   write(*,'(A19,I4,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
+   write(*,*) '****************************************'
+   
+   do i=2,index_start
+      if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
+         Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
+              / (xtime(i)-xtime(i-1))
+      else
+         Growth_mag  = 0.
+      endif
+      if ( (energies(n_tor,2,i).ne.0.) .and. (energies(n_tor,2,i-1).ne.0.)) then
+         Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
+              / (xtime(i)-xtime(i-1))
+      else
+         Growth_kin  = 0.
+      endif
+
+      ! write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
+      ! write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i)
+   enddo
+ 
+   amplitude = 1.d-10
+ 
+   if (n_tor_tmp .lt. n_tor) then ! initialise new harmonics (only density and temperature, to be improved)
+      do i=1,node_list%n_nodes
+         node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
+         do j=n_tor_tmp+1, n_tor
+            node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
+            node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
+         enddo
+      enddo
+   endif
+
+   !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
+   
+   ! -> Deallocate temporary arrays 
+   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
+   
+   call tr_deallocate(t_x,"t_x",CAT_UNKNOWN)
+   call tr_deallocate(t_values,"t_values",CAT_UNKNOWN)
+   call tr_deallocate(t_deltas,"t_deltas",CAT_UNKNOWN)
+ 
+#ifdef fullmhd
+   call tr_deallocate(t_psi_eq,"t_psi_eq",CAT_UNKNOWN)
+   call tr_deallocate(t_Fprof_eq,"t_Fprof",CAT_UNKNOWN) 
+#elif altcs
+   call tr_deallocate(t_psi_eq,"t_psi_eq",CAT_UNKNOWN)
+#endif
+ 
+   call tr_deallocate(t_index,"index",CAT_UNKNOWN)
+   call tr_deallocate(t_boundary,"boundary",CAT_UNKNOWN)
+   call tr_deallocate(t_parents,"parents",CAT_UNKNOWN)
+   call tr_deallocate(t_parent_elem,"parent_elem",CAT_UNKNOWN)
+   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)
+   call tr_deallocate(t_ref_mu,"ref_mu",CAT_UNKNOWN)
+   call tr_deallocate(t_constrained,"constrained",CAT_UNKNOWN)
+ 
+   call tr_deallocate(t_vertex,"t_vertex",CAT_UNKNOWN)
+   call tr_deallocate(t_neighbours,"t_neighbours",CAT_UNKNOWN)
+   call tr_deallocate(t_size,"t_size",CAT_UNKNOWN)
+   call tr_deallocate(t_father,"t_father",CAT_UNKNOWN)
+   call tr_deallocate(t_n_sons,"t_n_sons",CAT_UNKNOWN)
+   call tr_deallocate(t_n_gen,"t_n_gen",CAT_UNKNOWN)
+   call tr_deallocate(t_sons,"t_sons",CAT_UNKNOWN)
+   call tr_deallocate(t_contain_node,"t_contain_node",CAT_UNKNOWN)
+   call tr_deallocate(t_nref,"t_nref",CAT_UNKNOWN)
+
+#endif
+
+  return
+end subroutine import_hdf5_restart
 

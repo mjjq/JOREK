@@ -25,10 +25,12 @@ DIRS =  timing				\
 
 LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 
-NODEPS = clean cleanall cleandep forcheck forcheck_poincare			\
+NODEPS = clean cleanall cleandep forcheck forcheck_poincare \
+    forcheck_rst_bin2hdf5 forcheck_rst_hdf52bin\
     forcheck_four forcheck_postproc forcheck_connection2 forcheck_jorek2vtk	\
     forcheck_fieldlines_vtk forcheck_jorek2vtk_3d forcheck_diagno		\
-    forcheck_strikes forcheck_jorek_to_helena forcheck_import_eqdsk
+    forcheck_strikes forcheck_jorek_to_helena forcheck_import_eqdsk            
+
 # If we have neither HIPS or PASTIX_MURGE we need to
 # Use fake murge.
 
@@ -104,6 +106,8 @@ include $(patsubst %,%/module.mk,$(DIRS))
 
 JOREK2_MAIN_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC) jorek2_main.f90
 JOREK2_POINCARE_SRC     	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+RST_BIN2HDF5_SRC                += $(ALL_BINARIES_SRC) $(PPPSRC)
+RST_HDF52BIN_SRC                += $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_POSTPROC_SRC     	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_POVRAY_SRC     		+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_CONNECTION2_SRC  	+= $(ALL_BINARIES_SRC) $(PPPSRC)
@@ -116,83 +120,98 @@ JOREK2FLVTK_SRC	        	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2VTK3D_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_FOUR_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_DIAGNO_SRC       	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK_TO_HELENA_SRC		+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_TARGET2VTK_SRC   	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_POWERS_SRC           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_IMPORT_PERTURBATION_SRC	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 
-SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
-          $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(JOREK2_POSTPROC_SRC) $(JORDEL_SRC) $(JORPOL_SRC) $(ENBIGGEN_SRC)       \
+SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(RST_BIN2HDF5_SRC) $(RST_HDF52BIN_SRC) \
+	  $(JOREK2_POSTPROC_SRC) $(JOREK2_POVRAY_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) \
+	  $(JORDEL_SRC) $(JORPOL_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
+          $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(ENBIGGEN_SRC) \
 	  $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC) $(JOREK2_IMPORT_PERTURBATION_SRC))
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
-JOREK2_MAIN_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))		\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_MAIN_SRC)))
+JOREK2_MAIN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) 	\
+		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))		\
+		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_MAIN_SRC)))
 
-JOREK2_POINCARE_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POINCARE_SRC)))	\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POINCARE_SRC)))
+JOREK2_POINCARE_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SRC))) 	\
+		      $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POINCARE_SRC)))	\
+		      $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POINCARE_SRC)))
 
-JOREK2_CONNECTION2_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) 	\
-				$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_CONNECTION2_SRC)))		\
-				$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_CONNECTION2_SRC)))
+RST_BIN2HDF5_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(RST_BIN2HDF5_SRC))) 	\
+		   $(patsubst %.f,%.o,$(filter %.f, $(RST_BIN2HDF5_SRC)))	\
+		   $(patsubst %.c,%.o,$(filter %.c, $(RST_BIN2HDF5_SRC)))
 
-JOREK2_STRIKES_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_STRIKES_SRC))) 	\
-				$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_STRIKES_SRC)))		\
-				$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_STRIKES_SRC)))
+RST_HDF52BIN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(RST_HDF52BIN_SRC))) 	\
+		   $(patsubst %.f,%.o,$(filter %.f, $(RST_HDF52BIN_SRC)))	\
+		   $(patsubst %.c,%.o,$(filter %.c, $(RST_HDF52BIN_SRC)))
+
+JOREK2_CONNECTION2_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) 	\
+			 $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_CONNECTION2_SRC)))		\
+			 $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_CONNECTION2_SRC)))
+
+JOREK2_STRIKES_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_STRIKES_SRC))) 	\
+		     $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_STRIKES_SRC)))		\
+		     $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_STRIKES_SRC)))
 
 ENBIGGEN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(ENBIGGEN_SRC))) 	\
-		$(patsubst %.f,%.o,$(filter %.f, $(ENBIGGEN_SRC)))      \
-		$(patsubst %.c,%.o,$(filter %.c, $(ENBIGGEN_SRC)))
+	       $(patsubst %.f,%.o,$(filter %.f, $(ENBIGGEN_SRC)))      \
+	       $(patsubst %.c,%.o,$(filter %.c, $(ENBIGGEN_SRC)))
 
 JORDEL_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JORDEL_SRC))) 	\
-		$(patsubst %.f,%.o,$(filter %.f, $(JORDEL_SRC)))     	\
-		$(patsubst %.c,%.o,$(filter %.c, $(JORDEL_SRC)))
+	     $(patsubst %.f,%.o,$(filter %.f, $(JORDEL_SRC)))     	\
+	     $(patsubst %.c,%.o,$(filter %.c, $(JORDEL_SRC)))
 
 JORPOL_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JORPOL_SRC))) 	\
-		$(patsubst %.f,%.o,$(filter %.f, $(JORPOL_SRC)))     	\
-		$(patsubst %.c,%.o,$(filter %.c, $(JORPOL_SRC)))
+	     $(patsubst %.f,%.o,$(filter %.f, $(JORPOL_SRC)))     	\
+	     $(patsubst %.c,%.o,$(filter %.c, $(JORPOL_SRC)))
 
 JOREK2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK_SRC))) \
 		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK_SRC)))	\
 		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2VTK_SRC)))
 
-JOREK2FLVTK_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2FLVTK_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2FLVTK_SRC)))		\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2FLVTK_SRC)))
+JOREK2FLVTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2FLVTK_SRC))) 	\
+		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2FLVTK_SRC)))		\
+		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2FLVTK_SRC)))
 
-JOREK2VTK3D_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK3D_SRC)))		\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2VTK3D_SRC)))
+JOREK2VTK3D_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) 	\
+		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK3D_SRC)))		\
+		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2VTK3D_SRC)))
 
-JOREK2_DIAGNO_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_DIAGNO_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_DIAGNO_SRC)))		\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_DIAGNO_SRC)))
+JOREK2_DIAGNO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_DIAGNO_SRC))) 	\
+		    $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_DIAGNO_SRC)))		\
+		    $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_DIAGNO_SRC)))
 
-JOREK2_FOUR_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))		\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_FOUR_SRC)))
+JOREK_TO_HELENA_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK_TO_HELENA_SRC))) 	\
+		    $(patsubst %.f,%.o,$(filter %.f, $(JOREK_TO_HELENA_SRC)))		\
+		    $(patsubst %.c,%.o,$(filter %.c, $(JOREK_TO_HELENA_SRC)))
 
-JOREK2_POSTPROC_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
+JOREK2_FOUR_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) 	\
+		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))		\
+		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_FOUR_SRC)))
 
-JOREK2_POVRAY_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POVRAY_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POVRAY_SRC)))		\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POVRAY_SRC)))
+JOREK2_POSTPROC_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
+		      $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
+		      $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
+
+JOREK2_POVRAY_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POVRAY_SRC))) 	\
+		    $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POVRAY_SRC)))		\
+		    $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POVRAY_SRC)))
 
 JOREK2_TARGET2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_TARGET2VTK_SRC)))         \
                         $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_TARGET2VTK_SRC)))             \
                         $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_TARGET2VTK_SRC)))
 
-JOREK2_POWERS_OBJ =     $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POWERS_SRC)))     \
-                        $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POWERS_SRC)))         \
-                        $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POWERS_SRC)))
+JOREK2_POWERS_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POWERS_SRC)))     \
+                    $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POWERS_SRC)))         \
+                    $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POWERS_SRC)))
 
-JOREK2_IMPORT_PERTURBATION_OBJ =	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_IMPORT_PERTURBATION_SRC)))     \
-                        		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
-                        		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC)))
+JOREK2_IMPORT_PERTURBATION_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_IMPORT_PERTURBATION_SRC)))     \
+		                 $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
+			         $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC)))
 
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
@@ -200,6 +219,8 @@ MAIN = jorek_$(MODEL)
 all: version $(MAIN)
 
 cleanall : clean cleandep cleangenmod
+	@echo ">> Deleting some executables"
+	-@rm -f rst_bin2hdf5 rst_hdf52bin
 
 clean :	
 	@echo ">> Deleting Object Files <<"
@@ -216,16 +237,8 @@ cleangenmod:
 	-@rm -f *__genmod*
 
 version:
-	@echo "#define SVN_VERSION"                                               > version.h.tmp
-	@svn info > /dev/null 2>&1;                                                                \
-	if [ $$? -eq 0 ]; then                                                                     \
-	  export LANG=C; svn info | grep "Revision:" | sed -e 's/^Revision: *//' >> version.h.tmp; \
-	else                                                                                       \
-	  echo '"UNKNOWN"' >> version.h.tmp;                                                       \
-	fi
-	@cat version.h.tmp | tr '\n' ' ' > version.h
-	@rm version.h.tmp
-	@echo "" >> version.h
+	@rm -f version.h
+	@$(JOREK_DIR)/util/version.sh  2>/dev/null
 	@echo "#define compile_command '$(FC)'" >> version.h
 	@echo "#define compile_flags '$(FFLAGS)'" >> version.h
 	@echo "#define compile_includes '$(INCLUDES)'" >> version.h
@@ -275,127 +288,122 @@ version:
 	-@rm -f $@.tmp
 
 $(MAIN) : $(JOREK2_MAIN_OBJ)
-	$(FC) $(FFLAGS_OMP)	\
-	$(JOREK2_MAIN_OBJ) 	\
+	$(FC) $(FFLAGS_OMP) \
+	$(JOREK2_MAIN_OBJ) \
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
 
 jorek2_poincare : diagnostics/jorek2_poincare.f90 $(JOREK2_POINCARE_OBJ)
-	$(FC) $(FFLAGS)                 \
-	diagnostics/jorek2_poincare.f90 \
-	$(JOREK2_POINCARE_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_poincare $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_poincare.f90 -o diagnostics/jorek2_poincare.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_poincare.o $(JOREK2_POINCARE_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_poincare  $(LIBS)
+
+rst_bin2hdf5 : diagnostics/rst_bin2hdf5.f90 $(RST_BIN2HDF5_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/rst_bin2hdf5.f90 -o diagnostics/rst_bin2hdf5.o
+	$(FC) $(FFLAGS_OMP) diagnostics/rst_bin2hdf5.o $(RST_BIN2HDF5_OBJ) \
+	-o $(JOREK_DIR)/rst_bin2hdf5 $(LIBS)
+
+rst_hdf52bin : diagnostics/rst_hdf52bin.f90 $(RST_HDF52BIN_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/rst_hdf52bin.f90 -o diagnostics/rst_hdf52bin.o
+	$(FC) $(FFLAGS_OMP) diagnostics/rst_hdf52bin.o $(RST_HDF52BIN_OBJ) \
+	-o $(JOREK_DIR)/rst_hdf52bin $(LIBS)
 
 jorek2_four : diagnostics/jorek2_four.f90 $(JOREK2_FOUR_OBJ)
-	$(FC) $(FFLAGS)                 \
-	diagnostics/jorek2_four.f90 	\
-	$(JOREK2_FOUR_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_four $(INCLUDES) $(LIBS) $(LIBFFTW)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_four.f90 -o diagnostics/jorek2_four.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_four.o $(JOREK2_FOUR_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_four $(LIBS) $(LIBFFTW)
 
 jorek2_postproc : postproc/jorek2_postproc.f90 $(JOREK2_POSTPROC_OBJ)
-	$(FC) $(FFLAGS)                 \
-	postproc/jorek2_postproc.f90 	\
-	$(JOREK2_POSTPROC_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_postproc $(INCLUDES) $(LIBS) $(LIBFFTW)
+	$(FC) $(FFLAGS) $(INCLUDES) -c postproc/jorek2_postproc.f90 -o postproc/jorek2_postproc.o
+	$(FC) $(FFLAGS_OMP) postproc/jorek2_postproc.o $(JOREK2_POSTPROC_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_postproc $(LIBS) $(LIBFFTW)
 
 jorek2_povray : diagnostics/jorek2_povray.f90 $(JOREK2_POVRAY_OBJ)
-	$(FC) $(FFLAGS)                 \
-	diagnostics/jorek2_povray.f90 	\
-	$(JOREK2_POVRAY_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_povray $(INCLUDES) $(LIBS) $(LIBFFTW)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_povray.f90 -o diagnostics/jorek2_povray.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_povray.o $(JOREK2_POVRAY_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_povray $(LIBS) $(LIBFFTW)
 
-jorek2_connection2 : 	diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
-	$(FC) $(FFLAGS_OMP)                  	\
-	diagnostics/jorek2_connection2.f90   	\
-	$(JOREK2_CONNECTION2_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_connection2 $(INCLUDES) $(LIBS)
+jorek2_connection2 : diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_connection2.f90 -o diagnostics/jorek2_connection2.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_connection2.o $(JOREK2_CONNECTION2_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_connection2 $(LIBS)
 
-jorek2_connection_stan : 	diagnostics/jorek2_connection_stan.f90 $(JOREK2_CONNECTION2_OBJ)
-	$(FC) $(FFLAGS_OMP)                  	\
-	diagnostics/jorek2_connection_stan.f90   	\
-	$(JOREK2_CONNECTION2_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_connection_stan $(INCLUDES) $(LIBS)
+jorek2_connection_stan : diagnostics/jorek2_connection_stan.f90 $(JOREK2_CONNECTION2_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_connection_stan.f90 -o diagnostics/jorek2_connection_stan.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_connection_stan.o $(JOREK2_CONNECTION2_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_connection_stan $(LIBS)
 
-jorek2_strikes : 	diagnostics/jorek2_strikes_ordered.f90 $(JOREK2_STRIKES_OBJ)
-	$(FC) $(FFLAGS_OMP)                  \
-	diagnostics/jorek2_strikes_ordered.f90   	\
-	$(JOREK2_STRIKES_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_strikes $(INCLUDES) $(LIBS)
+jorek2_strikes : diagnostics/jorek2_strikes_ordered.f90 $(JOREK2_STRIKES_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_strikes_ordered.f90 -o diagnostics/jorek2_strikes_ordered.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_strikes_ordered.o $(JOREK2_STRIKES_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_strikes $(LIBS)
 
 enbiggen : diagnostics/enbiggen.f90 $(ENBIGGEN_OBJ)
-	$(FC) $(FFLAGS)                 \
-	diagnostics/enbiggen.f90        \
-	$(ENBIGGEN_OBJ)              	\
-	-o $(JOREK_DIR)/enbiggen $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/enbiggen.f90 -o diagnostics/enbiggen.o
+	$(FC) $(FFLAGS_OMP) diagnostics/enbiggen.o $(ENBIGGEN_OBJ) \
+	-o $(JOREK_DIR)/enbiggen $(LIBS)
 
 jordel : diagnostics/jordel.f90 $(JORDEL_OBJ)
-	$(FC) $(FFLAGS)  		\
-	diagnostics/jordel.f90          \
-	$(JORDEL_OBJ)    		\
-	-o $(JOREK_DIR)/jordel $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jordel.f90 -o diagnostics/jordel.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jordel.o $(JORDEL_OBJ) \
+	-o $(JOREK_DIR)/jordel $(LIBS)
 
 jorpol : diagnostics/jorpol.f90 $(JORPOL_OBJ)
-	$(FC) $(FFLAGS)  		\
-	diagnostics/jorpol.f90          \
-	$(JORPOL_OBJ)    		\
-	-o $(JOREK_DIR)/jorpol $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorpol.f90 -o diagnostics/jorpol.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorpol.o $(JORPOL_OBJ) \
+	-o $(JOREK_DIR)/jorpol $(LIBS)
 
 jorek2vtk : diagnostics/jorek2vtk.f90 $(JOREK2VTK_OBJ)
-	$(FC) $(FFLAGS)                 \
-	diagnostics/jorek2vtk.f90       \
-	$(JOREK2VTK_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2vtk $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk.f90 -o diagnostics/jorek2vtk.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk.o $(JOREK2VTK_OBJ) \
+	 -o $(JOREK_DIR)/jorek2vtk $(LIBS)
 
 jorek2_stan : diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
-	$(FC) $(FFLAGS)                 \
-	diagnostics/jorek2_stan.f90	\
-	$(JOREK2VTK_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_stan $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_stan.f90 -o diagnostics/jorek2_stan.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_stan.o $(JOREK2VTK_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_stan $(LIBS)
 
 jorek2_fieldlines_vtk : diagnostics/jorek2_fieldlines_vtk.f90 $(JOREK2FLVTK_OBJ)
-	$(FC) $(FFLAGS)                   		\
-	diagnostics/jorek2_fieldlines_vtk.f90         	\
-	$(JOREK2FLVTK_OBJ)				\
-	 -o $(JOREK_DIR)/jorek2_fieldlines_vtk $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_fieldlines_vtk.f90 -o diagnostics/jorek2_fieldlines_vtk.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_fieldlines_vtk.o $(JOREK2FLVTK_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_fieldlines_vtk $(LIBS)
 
 jorek2vtk_3d : diagnostics/jorek2vtk_3d.f90 $(JOREK2VTK3D_OBJ)
-	$(FC) $(FFLAGS)                 \
-	diagnostics/jorek2vtk_3d.f90    \
-	$(JOREK2VTK3D_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2vtk_3d $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk_3d.f90 -o diagnostics/jorek2vtk_3d.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk_3d.o $(JOREK2VTK3D_OBJ) \
+	 -o $(JOREK_DIR)/jorek2vtk_3d $(LIBS)
 
 jorek2_diagno : diagnostics/jorek2_diagno.f90 $(JOREK2_DIAGNO_OBJ)
-	$(FC) $(FFLAGS_NO_OMP)          \
-	diagnostics/jorek2_diagno.f90   \
-	$(JOREK2_DIAGNO_OBJ)		\
-	 -o $(JOREK_DIR)/jorek2_diagno $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_diagno.f90 -o diagnostics/jorek2_diagno.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_diagno.o $(JOREK2_DIAGNO_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_diagno $(LIBS)
 
-jorek_to_helena : diagnostics/jorek_to_helena.f90
-	$(FC) diagnostics/jorek_to_helena.f90 -o jorek_to_helena 
+jorek_to_helena : diagnostics/jorek_to_helena.f90 $(JOREK_TO_HELENA_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek_to_helena.f90 -o diagnostics/jorek_to_helena.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek_to_helena.o $(JOREK_TO_HELENA_OBJ) \
+	-o $(JOREK_DIR)/jorek_to_helena $(LIBS)
 
 import_eqdsk : util/import_eqdsk.f90
-	$(FC) util/import_eqdsk.f90 -o import_eqdsk $(LIBS)
+	$(FC) -c util/import_eqdsk.f90 -o util/import_eqdsk.o
+	$(FC)  util/import_eqdsk.o $(JOREK_DIR)/import_eqdsk $(LIBS)
 
 jorek2_target2vtk : diagnostics/jorek2_target2vtk.f90 $(JOREK2_TARGET2VTK_OBJ)
-	$(FC) $(FFLAGS)                         \
-        diagnostics/jorek2_target2vtk.f90       \
-        $(JOREK2_TARGET2VTK_OBJ)                \
-         -o $(JOREK_DIR)/jorek2_target2vtk $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_target2vtk.f90 -o diagnostics/jorek2_target2vtk.o
+	$(FC) $(FFLAGS) diagnostics/jorek2_target2vtk.o $(JOREK2_TARGET2VTK_OBJ) \
+	-o $(JOREK_DIR)/jorek2_target2vtk $(LIBS)
 
 jorek2_powers : diagnostics/jorek2_powers.f90 $(JOREK2_POWERS_OBJ)
-	$(FC) $(FFLAGS_NO_OMP)                  \
-        diagnostics/jorek2_powers.f90           \
-        $(JOREK2_POWERS_OBJ)      	        \
-         -o $(JOREK_DIR)/jorek2_powers $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_powers.f90 -o diagnostics/jorek2_powers.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_powers.o $(JOREK2_POWERS_OBJ) \
+	-o $(JOREK_DIR)/jorek2_powers $(LIBS)
 
 jorek2_import_perturbation : jorek2_import_perturbation_new_flags
 jorek2_import_perturbation_new_flags: FFLAGS += -DIMPORT_PERTURBATIONS
 jorek2_import_perturbation_new_flags: jorek2_import_perturbation_tmp
 
 jorek2_import_perturbation_tmp : diagnostics/jorek2_import_perturbation.f90 $(JOREK2_IMPORT_PERTURBATION_OBJ)
-	$(FC) $(FFLAGS) 				\
-        diagnostics/jorek2_import_perturbation.f90	\
-        $(JOREK2_IMPORT_PERTURBATION_OBJ)		\
-         -o $(JOREK_DIR)/jorek2_import_perturbation $(INCLUDES) $(LIBS)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_import_perturbation.f90 -o diagnostics/jorek2_import_perturbation.o
+	$(FC) $(FFLAGS) diagnostics/jorek2_import_perturbation.o $(JOREK2_IMPORT_PERTURBATION_OBJ) \
+	-o $(JOREK_DIR)/jorek2_import_perturbation $(LIBS)
 
 include all_rules.mk
 ifeq (0, $(words $(foreach word, ${NODEPS}, $(findstring ${word}, ${MAKECMDGOALS}))))
@@ -436,6 +444,8 @@ FCK_INCS = $(strip $(subst -I,,$(subst $(SPACE)-I,$(COMMA),$(INC_TMP))))
 FCK_DEFS = $(strip $(subst -D,,$(subst $(SPACE)-D,$(COMMA),$(strip $(DEFINES_FCK)))))
 FCK_SRC  = $(patsubst %.c,,$(JOREK2_MAIN_SRC))
 FCK_POINCARE_SRC  = $(patsubst %.c,,$(JOREK2_POINCARE_SRC))
+FCK_RST_BIN2HDF5_SRC = $(patsubst %.c,,$(RST_BIN2HDF5_SRC))
+FCK_RST_HDF52BIN_SRC = $(patsubst %.c,,$(RST_HDF52BIN_SRC))
 FCK_FOUR_SRC  = $(patsubst %.c,,$(JOREK2_FOUR_SRC))
 FCK_POSTPROC_SRC  = $(patsubst %.c,,$(JOREK2_POSTPROC_SRC))
 FCK_CONNECTION2_SRC  = $(patsubst %.c,,$(JOREK2_CONNECTION2_SRC))
@@ -453,6 +463,14 @@ forcheck :
 
 forcheck_poincare : 
 	$(FCK_CALL) diagnostics/jorek2_poincare.f90 $(FCK_POINCARE_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_rst_bin2hdf5 :
+	$(FCK_CALL) diagnostics/rst_bin2hdf5.f90 $(FCK_RST_BIN2HDF5_SRC) \
+	$(FCKDIR)/share/forcheck/MPI.flb
+
+forcheck_rst_hdf52bin :
+	$(FCK_CALL) diagnostics/rst_hdf52bin.f90 $(FCK_RST_HDF52BIN_SRC) \
 	$(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_four :

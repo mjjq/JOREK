@@ -13,20 +13,28 @@ module tr_module
 
   !*** surdefinition for allocation ***
   interface tr_allocate
-     module procedure tr_allocate1d_i, tr_allocate1d_d, &
-          tr_allocate1d_c, tr_allocate2d_i, &
-          tr_allocate2d_d, tr_allocate2d_c, &
-          tr_allocate3d_d, tr_allocate3d_c, &
-          tr_allocate3d_i
+     module procedure &
+          tr_allocate1d_ch,                 &
+          tr_allocate1d_i, tr_allocate1d_d, &
+          tr_allocate1d_c, &
+          tr_allocate2d_i, tr_allocate2d_d, &
+          tr_allocate2d_c,                  &
+          tr_allocate3d_i, tr_allocate3d_d, &
+          tr_allocate3d_c,                  &
+          tr_allocate4d_d
   end interface
 
   !*** surdefinition for deallocation ***
   interface tr_deallocate
-     module procedure tr_deallocate1d_i, &
-          tr_deallocate1d_d, tr_deallocate1d_c, &
+     module procedure &
+          tr_deallocate1d_ch,                   &
+          tr_deallocate1d_i, tr_deallocate1d_d, &
+          tr_deallocate1d_c,                    &
           tr_deallocate2d_i, tr_deallocate2d_d, &
-          tr_deallocate2d_c, tr_deallocate3d_d, &
-          tr_deallocate3d_i, tr_deallocate3d_c
+          tr_deallocate2d_c,                    &
+          tr_deallocate3d_i, tr_deallocate3d_d, &
+          tr_deallocate3d_c,                    &
+          tr_deallocate4d_d
   end interface
 
   !*** surdefinition for allocation ***
@@ -777,6 +785,39 @@ contains
   !---------------------------------------- 
   ! memory allocation for a 1D array
   !----------------------------------------
+  subroutine tr_allocate1d_ch(array1d,begin_dim1,end_dim1,var_name,ocategory)
+    character, dimension(:)    , allocatable :: array1d
+    integer                    , intent(in) :: begin_dim1
+    integer                    , intent(in) :: end_dim1
+    character*(*), intent(in)             :: var_name
+    integer  , optional, intent(in) :: ocategory
+
+    integer   :: err
+    integer   :: i1
+    integer*8 :: size_array 
+    integer category
+    if (.not. present(ocategory)) then
+      category = CAT_UNKNOWN
+    else
+      category = ocategory
+    end if
+
+    allocate(array1d(begin_dim1:end_dim1),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * sizeof(myint)
+    call tr_memwriteadd(size_array,'integer array1D',var_name,category)
+    if (err.eq.0) then
+       do i1 = begin_dim1,end_dim1
+          array1d(i1) = ''
+       end do
+    else
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
+       stop
+    end if
+    nb_allocate(category) = nb_allocate(category) + size_array
+    max_allocate = max(max_allocate,SUM(nb_allocate(MIN_CAT:MAX_CAT)))
+  end subroutine tr_allocate1d_ch
+
   subroutine tr_allocate1d_i(array1d,begin_dim1,end_dim1,var_name,ocategory)
     integer, dimension(:)    , allocatable :: array1d
     integer                  , intent(in) :: begin_dim1
@@ -1172,6 +1213,60 @@ contains
   end subroutine tr_allocate3d_d
 
   !---------------------------------------- 
+  ! memory allocation for a D array
+  !----------------------------------------
+  subroutine tr_allocate4d_d(array4d,begin_dim1,end_dim1, &
+       begin_dim2,end_dim2,begin_dim3,end_dim3,begin_dim4,end_dim4, &
+       var_name,ocategory)
+    real(RKIND), dimension(:,:,:,:), allocatable :: array4d
+    integer                        , intent(in) :: begin_dim1
+    integer                        , intent(in) :: end_dim1
+    integer                        , intent(in) :: begin_dim2
+    integer                        , intent(in) :: end_dim2
+    integer                        , intent(in) :: begin_dim3
+    integer                        , intent(in) :: end_dim3
+    integer                        , intent(in) :: begin_dim4
+    integer                        , intent(in) :: end_dim4
+    character*(*)    , intent(in)             :: var_name
+    integer  , optional, intent(in) :: ocategory
+
+    integer category
+    integer   :: err
+    integer   :: i1, i2, i3, i4
+    integer*8 :: size_array 
+
+    if (.not. present(ocategory)) then
+      category = CAT_UNKNOWN
+    else
+      category = ocategory
+    end if
+    allocate(array4d(begin_dim1:end_dim1,begin_dim2:end_dim2, &
+         begin_dim3:end_dim3,begin_dim4:end_dim4),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * &
+         (end_dim2-begin_dim2+1)* &
+         (end_dim3-begin_dim3+1)* &
+         (end_dim4-begin_dim4+1)* sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array4D',var_name,category)
+    if (err.eq.0) then
+       do i4 = begin_dim4,end_dim4
+          do i3 = begin_dim3,end_dim3
+             do i2 = begin_dim2,end_dim2
+                do i1 = begin_dim1,end_dim1
+                   array4d(i1,i2,i3,i4) = 0._RKIND
+                end do
+             end do
+          end do
+       end do
+    else
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
+       stop
+    end if
+    nb_allocate(category) = nb_allocate(category) + size_array
+    max_allocate = max(max_allocate,SUM(nb_allocate(MIN_CAT:MAX_CAT)))
+  end subroutine tr_allocate4d_d
+
+  !---------------------------------------- 
   ! memory deallocation of array 1D
   !----------------------------------------
   subroutine tr_deallocatep1d_i(array1d,var_name,ocategory)
@@ -1338,6 +1433,25 @@ contains
   !---------------------------------------- 
   ! memory deallocation of array 1D
   !----------------------------------------
+  subroutine tr_deallocate1d_ch(array1d,var_name,ocategory)
+    character, dimension(:), allocatable  :: array1d
+    character*(*)          , intent(in)  :: var_name
+    integer  , optional, intent(in) :: ocategory
+    integer category
+
+    if (.not. present(ocategory)) then
+      category = CAT_UNKNOWN
+    else
+      category = ocategory
+    end if
+
+    if (allocated(array1d)) then
+       nb_allocate(category) = nb_allocate(category) - sizeof(array1d)
+       call tr_memwritedel(var_name,category)
+       deallocate(array1d)
+    end if
+  end subroutine tr_deallocate1d_ch
+
   subroutine tr_deallocate1d_i(array1d,var_name,ocategory)
     integer, dimension(:), allocatable  :: array1d
     character*(*)        , intent(in)  :: var_name
@@ -1476,6 +1590,25 @@ contains
        deallocate(array3d)
     end if
   end subroutine tr_deallocate3d_d
+
+  subroutine tr_deallocate4d_d(array4d,var_name,ocategory)
+    real(RKIND), dimension(:,:,:,:) , allocatable :: array4d
+    character*(*)                   , intent(in) :: var_name
+    integer  , optional, intent(in) :: ocategory
+    integer category
+
+    if (.not. present(ocategory)) then
+      category = CAT_UNKNOWN
+    else
+      category = ocategory
+    end if
+
+    if (allocated(array4d)) then
+       nb_allocate(category) = nb_allocate(category) - sizeof(array4d)
+       call tr_memwritedel(var_name,category)
+       deallocate(array4d)
+    end if
+  end subroutine tr_deallocate4d_d
 
   subroutine tr_deallocate3d_c(array3d,var_name,ocategory)
     complex      , dimension(:,:,:), allocatable :: array3d

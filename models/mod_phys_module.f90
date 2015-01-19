@@ -11,6 +11,13 @@ module phys_module
   real*8  :: eta_T_0              !< Initial resistivity
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
   real*8  :: visco                !< Viscosity
+
+  ! varivale needed by rst_bin2hdf5 and rst_hdf52bin
+  real*8  :: visco_rst
+  real*8  :: visco_par_rst
+  real*8  :: eta_rst
+  !
+
   real*8  :: visco2               !< Second coefficient of viscosity
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity
@@ -47,7 +54,7 @@ module phys_module
 
 #ifdef USE_HDF5
   ! for HDF5 diagnostics
-  logical :: save_diagnostics_HDF5!< Export data in HDF5 format
+  logical :: save_diagnostics_HDF5  !< Export data in HDF5 format
 #endif
   ! Number of digits that ends the filenames of diagnostics
   integer             :: nbdigits   = 5
@@ -120,6 +127,9 @@ module phys_module
                                		!! used for time_evol_theta and time_evol_zeta.
   real*8  :: time_evol_theta   		!< Time evolution parameter theta (see documentation)
   real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see documentation)
+
+  integer :: rst_hdf5
+
 #ifdef USE_HDF5
   real*8  :: h5_diag_nbtime    		!< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
   integer :: h5_nbsave_all     		!< number of HDF5 files written [or # of times the HDF5 saving has been called]

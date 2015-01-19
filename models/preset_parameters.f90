@@ -206,6 +206,8 @@ subroutine preset_parameters
 
   nout = 9999999
 
+  rst_hdf5 = 0   ! =0,restart with binary files; =1, with HDF5 files
+
   tokamak_device = 'none'
 
   rho_file      = 'none'

@@ -85,7 +85,7 @@ tanth=(rpos/zpos)  ! tangent of an angle
 do ii=snum,fct
 Write(fname,"('jorek',i5.5,'.rst')") ii
 if(ii.eq.fct) Write(fname,"('jorek_restart.rst')")
-call import_restart(node_list,element_list, fname, rst_format, ierr)
+call import_binary_restart(node_list,element_list, fname, rst_format, ierr)
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period

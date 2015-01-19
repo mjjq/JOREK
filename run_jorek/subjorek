@@ -284,6 +284,9 @@ fi
 ;;
 
 *)
+echo " Architecture not defined !! ABORTING "
+exit 0
+
 esac
    
 RSTDIR=${RESDIR}/RST

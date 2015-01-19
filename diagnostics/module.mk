@@ -1,14 +1,15 @@
 DIR = diagnostics
 
-ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
-	$(DIR)/find_axis.f90				\
-	$(DIR)/find_limiter.f90				\
-	$(DIR)/find_strike.f90				\
-	$(DIR)/find_xpoint.f90				\
-	$(DIR)/integrals_3D.f90				\
-	$(DIR)/mod_diagnostics.f90			\
-	$(DIR)/psi_minmax.f90				\
-	$(DIR)/RZ_minmax.f90
+ALL_BINARIES_SRC := $(ALL_BINARIES_SRC) \
+	$(DIR)/find_axis.f90	        \
+	$(DIR)/find_limiter.f90	        \
+	$(DIR)/find_strike.f90	        \
+	$(DIR)/find_xpoint.f90	        \
+	$(DIR)/integrals_3D.f90	        \
+	$(DIR)/mod_diagnostics.f90      \
+	$(DIR)/psi_minmax.f90	        \
+	$(DIR)/RZ_minmax.f90            \
+	$(DIR)/hdf5_io.f90 
 
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/boundary_check.f90         \
@@ -24,8 +25,7 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/determine_q_profile.f90    \
 	$(DIR)/determine_PhiN.f90         \
 	$(DIR)/integrals.f90              \
-	$(DIR)/output_saving.f90          \
-	$(DIR)/hdf5_io.f90
+	$(DIR)/output_saving.f90        
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)	  \
 	$(DIR)/boundary_check.f90         \
@@ -76,4 +76,3 @@ JORPOL_SRC := $(JORPOL_SRC)                     \
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)   \
 	$(DIR)/q_profile.f90                \
 	$(DIR)/determine_q_profile.f90
-

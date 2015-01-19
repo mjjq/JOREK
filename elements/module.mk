@@ -33,6 +33,11 @@ JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)		\
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)		\
 	$(DIR)/hermite_1d.f90
 
+RST_BIN2HDF5_SRC := $(RST_BIN2HDF5_SRC)                 \
+	$(DIR)/hermite_1d.f90
+
+RST_HDF52BIN_SRC := $(RST_HDF52BIN_SRC)                 \
+	$(DIR)/hermite_1d.f90
 
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
 	$(DIR)/hermite_1d.f90

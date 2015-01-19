@@ -47,11 +47,23 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)		\
         $(DIR)/mod_pellet.f90				\
 
+JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)		\
+	$(DIR)/mod_pellet.f90 
+
+RST_BIN2HDF5_SRC := $(RST_BIN2HDF5_SRC)                 \
+	$(DIR)/mod_pellet.f90
+
+RST_HDF52BIN_SRC := $(RST_HDF52BIN_SRC)                 \
+	$(DIR)/mod_pellet.f90
+
 JOREK2_CONNECTION2_SRC := $(JOREK2_CONNECTION2_SRC)	\
         $(DIR)/mod_pellet.f90             		\
 
-JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)	\
-	$(DIR)/mod_pellet.f90             \
+JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)      	\
+	$(DIR)/mod_pellet.f90 
+
+ENBIGGEN_SRC := $(JENBIGGEN_SRC)                        \
+	$(DIR)/mod_pellet.f90
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
 	$(DIR)/bootstrap_current.f90  	                \

@@ -208,7 +208,82 @@ module vacuum
     end if
     
   end subroutine import_restart_vacuum
-  
+
+
+  !> Import some vacuum-related data from the HDF5 restart file  
+  !!
+  !! @todo Does not work currently if variable freeboundary is changed between export and import!
+  subroutine import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
+    
+#ifdef USE_HDF5
+    use hdf5
+    use HDF5_io_module
+
+    ! --- Routine parameters
+    integer(HID_T), intent(in) :: file_id
+    logical,        intent(in) :: freeboundary
+    logical,        intent(in) :: resistive_wall
+    
+    ! --- Local variables
+    logical   :: resistive_wall_rst
+    character :: t_resistive_wall
+    
+    if ( freeboundary ) then
+       call HDF5_char_reading(file_id,t_resistive_wall,"resistive_wall")
+       if (t_resistive_wall == "T") then
+          resistive_wall_rst = .TRUE.
+       else
+          resistive_wall_rst = .FALSE.
+       endif
+       if ( .not. resistive_wall_rst ) then
+          write(*,*) 'WARNING: Restarting a simulation with freeboundary=.t. which was run with'
+          write(*,*) '  freeboundary=.f. so far.'
+          return
+       else if ( resistive_wall .neqv. resistive_wall_rst ) then
+          write(*,*) 'ERROR: It is currently not possible to restart a JOREK simulation with a'
+          write(*,*) '  modified setting for resistive_wall.'
+          stop
+       end if
+       
+       if ( resistive_wall ) then
+          call HDF5_integer_saving(file_id,n_wall_curr,"n_wall_curr")
+          call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall")
+          
+          if ( allocated(wall_curr) ) deallocate(wall_curr)
+          allocate( wall_curr(n_wall_curr) )
+          call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
+          
+          if ( allocated(dwall_curr) ) deallocate(dwall_curr)
+          allocate( dwall_curr(n_wall_curr) )
+          call HDF5_array1D_reading(file_id,dwall_curr,"dwall_curr")
+          
+          if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
+          allocate( old_dpsibnd_vec(n_dof_starwall) )
+          old_dpsibnd_vec = 0.d0 !###
+          
+          if ( vacuum_debug .and. resistive_wall ) then
+             write(*,*) 'DEBUG: Checksums'
+             write(*,*) 'wall_curr', sum(abs(wall_curr))
+             write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+             write(*,*) 'END: Checksums'
+          end if
+          
+          wall_curr_initialized = .true.
+          
+       end if
+       
+    end if
+     
+    if ( vacuum_debug .and. resistive_wall ) then
+       write(*,*) 'DEBUG: Checksums'
+       if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
+       if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+       write(*,*) 'END: Checksums'
+    end if
+
+#endif    
+
+  end subroutine import_HDF5_restart_vacuum
   
   
   !> Export some vacuum-related data to the restart file  
@@ -249,6 +324,52 @@ module vacuum
     
   end subroutine export_restart_vacuum
   
+  
+  !> Export some vacuum-related data to the HDF5 restart file  
+  subroutine export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
+    
+#ifdef USE_HDF5
+    use hdf5
+    use HDF5_io_module
+
+    ! --- Routine parameters
+    integer(HID_T), intent(in) :: file_id
+    logical,        intent(in) :: freeboundary
+    logical,        intent(in) :: resistive_wall
+    
+    ! --- Local variables
+    character           :: t_resistive_wall
+
+    if ( freeboundary ) then
+       if (resistive_wall) then
+          t_resistive_wall = "T"
+       else
+          t_resistive_wall = "F"
+       end if
+       call HDF5_char_saving(file_id,t_resistive_wall,"resistive_wall"//char(0))
+
+       if ( resistive_wall ) then
+          if ( (.not. allocated(wall_curr)) .or. (.not. allocated(dwall_curr)) .or. &
+               (.not. allocated(old_dpsibnd_vec)) ) then
+             write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: Arrays not allocated.'
+             stop
+          end if
+          call HDF5_integer_saving(file_id,n_wall_curr,"n_wall_curr"//char(0))
+          call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall"//char(0))
+          call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
+          call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
+       end if
+    end if
+    
+    if ( vacuum_debug .and. resistive_wall ) then
+       write(*,*) 'DEBUG: Checksums'
+       if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
+       if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+       write(*,*) 'END: Checksums'
+    end if
+#endif
+
+  end subroutine export_HDF5_restart_vacuum
   
   
   !> Broadcast vacuum information between MPI processes

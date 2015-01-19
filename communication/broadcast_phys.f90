@@ -27,9 +27,11 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( (359+2*max_limiter+n_var) * IDBL_EXT + (37+n_tor) * INT_EXT + 45 * ILOG_EXT + (14*512+120) * CHAR_EXT )
+!CP!bufsize = ( (359+2*max_limiter+n_var) * IDBL_EXT + (37+n_tor) * INT_EXT + 45 * ILOG_EXT + (14*512+120) * CHAR_EXT )
+bufsize = ( (359+2*max_limiter+n_var) * IDBL_EXT + (38+n_tor) * INT_EXT + 45 * ILOG_EXT + (14*512+120) * CHAR_EXT )
+
 #ifdef USE_HDF5
-  bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
+   bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
 #endif
 
 allocate(buffer(bufsize))
@@ -195,6 +197,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 1
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 11
 
+  call MPI_PACK(rst_hdf5,               1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  !
+
 #ifdef USE_HDF5
   call MPI_PACK(save_diagnostics_HDF5,  1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! L+1
   call MPI_PACK(h5_diag_nbtime,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! 238+1+2*max_limiter
@@ -235,9 +239,6 @@ if (my_id .eq. 0) then
   call MPI_PACK(n_tor_fft_thresh,       1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 33
   call MPI_PACK(RMP_har_cos     ,       1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 34
   call MPI_PACK(RMP_har_sin     ,       1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 35
-
-  
-
 
   call MPI_PACK(eta_T_dependent,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 1+1
   call MPI_PACK(visco_T_dependent,      1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 2
@@ -484,6 +485,8 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,nstep,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 1
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,               10,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 11
+
+  call MPI_UNPACK(buffer,bufsize,position,rst_hdf5,               1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   !
   
 #ifdef USE_HDF5
   call MPI_UNPACK(buffer,bufsize,position,save_diagnostics_HDF5,  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! L+1

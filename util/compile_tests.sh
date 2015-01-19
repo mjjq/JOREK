@@ -5,7 +5,7 @@
 # ./compile_test.sh     # compile both models
 
 # Options when launching make (use, e.g., -j 4 to compile in parallel)
-MAKEOPT="-j 1"
+MAKEOPT="-j 2"
 # Location of 'util' directory that contains 'setconfig.sh'
 UTILDIR=$(readlink -f `dirname $0`)
 # Location of trunk of jorek to compile

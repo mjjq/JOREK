@@ -236,6 +236,8 @@ cleangenmod:
 	@echo ">> Deleting auto-generated interface files (*__genmod*) if any <<"
 	-@rm -f *__genmod*
 
+version.h: version
+
 version:
 	@rm -f version.h
 	@$(JOREK_DIR)/util/version.sh  2>/dev/null

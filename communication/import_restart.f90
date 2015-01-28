@@ -300,7 +300,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_nref(:)
 
   !
+#endif
   error = 0
+#ifdef USE_HDF5
 
   ! ->  Reading HDF5 file
   write(*,*) 'Importing HDF5 restart file "', trim(filename), '".' 

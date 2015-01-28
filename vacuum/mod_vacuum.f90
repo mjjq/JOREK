@@ -218,12 +218,16 @@ module vacuum
 #ifdef USE_HDF5
     use hdf5
     use HDF5_io_module
-
+    
     ! --- Routine parameters
     integer(HID_T), intent(in) :: file_id
+#else
+    integer,        intent(in) :: file_id
+#endif
     logical,        intent(in) :: freeboundary
     logical,        intent(in) :: resistive_wall
     
+#ifdef USE_HDF5
     ! --- Local variables
     logical   :: resistive_wall_rst
     character :: t_resistive_wall
@@ -334,9 +338,13 @@ module vacuum
 
     ! --- Routine parameters
     integer(HID_T), intent(in) :: file_id
+#else
+    integer,        intent(in) :: file_id
+#endif
     logical,        intent(in) :: freeboundary
     logical,        intent(in) :: resistive_wall
     
+#ifdef USE_HDF5
     ! --- Local variables
     character           :: t_resistive_wall
 

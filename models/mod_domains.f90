@@ -17,6 +17,12 @@ module domains
   
   
   
+  
+  logical, save :: axis_is_min
+  logical, save :: axis_is_min_initialized = .false.
+  
+  
+  
   contains
     
     
@@ -46,7 +52,12 @@ module domains
     
     real*8 :: sign_corr
     
-    if ( axis_is_psi_minimum(node_list, element_list, R_axis, Z_axis, psi_axis) ) then
+    if ( .not. axis_is_min_initialized ) then
+      axis_is_min = axis_is_psi_minimum(node_list, element_list, R_axis, Z_axis, psi_axis)
+      axis_is_min_initialized = .true.
+    end if
+    
+    if ( axis_is_min ) then
       sign_corr = 1.
     else
       sign_corr = -1.

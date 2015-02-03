@@ -1,10 +1,11 @@
 # Confiduration file for jorek
 # model directory
+# with modules gcc/4.6.3 and mpich2/gcc46/1.4.1  
 MODEL = model199
 
 # Fortran compiler 
 FC     = mpif90 -f90=gfortran
-CC     = mpicc
+CC     = mpicc -cc=gcc 
 
 FFLAGS_OMP       = -fopenmp 
 FFLAGS           = -g -O2 

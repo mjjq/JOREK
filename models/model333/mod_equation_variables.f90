@@ -14,7 +14,7 @@ module equation_variables
   real*8 	:: Vt0_x, Vt0_y, dV_dpsi_source, dV_dz_source
   
   ! --- Diffusivities
-  real*8 	:: T_corr
+  real*8 	:: rho_corr, T_corr
   real*8 	:: eta_T,    deta_dT, d2eta_d2T
   real*8 	:: visco_T,  dvisco_dT
   real*8 	:: D_prof
@@ -28,14 +28,17 @@ module equation_variables
   real*8	:: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8
   
   ! --- Neoclassical coefficients
-  real*8 	:: tau_IC
+  real*8 	:: tau_IC, W_dia
   real*8	:: epsil, Btheta2
   real*8	:: amu_neo_prof, aki_neo_prof
   
+  ! --- Bootstrap current terms
+  real*8        :: jb
+        
   ! --- R,Z-coords and jacobians
   real*8 	:: x_g, x_s, x_t, x_ss, x_st, x_tt
   real*8 	:: y_g, y_s, y_t, y_ss, y_st, y_tt
-  real*8 	:: BigR,  BigR_x
+  real*8 	:: R, R_x
   real*8 	:: xjac, xjac_x, xjac_y
   
   ! --- Various
@@ -94,7 +97,7 @@ module equation_variables
   !$omp 	current_source, particle_source, heat_source, total_rho_source,									&
   !$omp 	source_mgi, source_pellet, source_volume,											&
   !$omp 	Vt0_x, Vt0_y, dV_dpsi_source, dV_dz_source,											&
-  !$omp 	T_corr,																&
+  !$omp 	rho_corr, T_corr,														&
   !$omp 	eta_T,    deta_dT, d2eta_d2T,													&
   !$omp 	visco_T,  dvisco_dT,														&
   !$omp 	D_prof,																&
@@ -102,12 +105,13 @@ module equation_variables
   !$omp 	Dn0x, Dn0y, Dn0p, S_ion, S_ion_T, phi, ksiion,											&
   !$omp 	eta_numm, visco_numm, visco_par_numm, D_perp_numm, K_perp_numm,									&
   !$omp         TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8,										&
-  !$omp         tau_IC,																&
+  !$omp         tau_IC, W_dia,															&
   !$omp         epsil, Btheta2,															&
   !$omp         amu_neo_prof, aki_neo_prof,													&
+  !$omp 	jb,										   					   	&
   !$omp 	x_g, x_s, x_t, x_ss, x_st, x_tt,												&
   !$omp 	y_g, y_s, y_t, y_ss, y_st, y_tt,												&
-  !$omp 	BigR,  BigR_x,															&
+  !$omp 	R,  R_x,															&
   !$omp 	xjac, xjac_x, xjac_y,														&
   !$omp 	eps_cyl, theta, zeta,														&
   !$omp 	delta_g, delta_s, delta_t,													&

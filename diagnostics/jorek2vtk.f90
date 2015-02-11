@@ -13,7 +13,6 @@ implicit none
 
 type (type_node_list)   , pointer :: node_list
 type (type_element_list), pointer :: element_list
-type (type_surface_list)          :: flux_list
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -49,11 +48,7 @@ real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t
 real*8                :: psi_norm, psi_bnd, grad_psi
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-integer 	      :: i_find, i_elm_find(8)
 integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet
-real*8  	      :: Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8  	      :: Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
-real*8  	      :: s_find(8), t_find(8)
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
@@ -256,22 +251,9 @@ else
   psi_bnd = 0.d0
 endif
 
-if (jorek_model .eq. 000) then      
-  flux_list%n_psi = 1
-  call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-  flux_list%psi_values(1) = psi_bnd
-  call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
-  call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
-  call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-		 Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
-		 Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-  call tr_deallocate(flux_list%psi_values,"flux_list%psi_values",CAT_GRID)
-  minRad = Router - R_axis
-  write(*,*)'minor radius : ',minRad
-else
-  minRad = 0.0
-endif
-  
+minRad = 0.0
+if (bootstrap) call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+    
 ! --- You may choose to print your poloidal snapshot at a different toroidal angle
 toroidal_angle = 0.d0 ! 2*PI / 6
 if (toroidal_angle .ne. 0.d0) then
@@ -566,7 +548,10 @@ do i=1,element_list%n_elements
           if ( jorek_model .eq. 400 ) then
             Ti_sum  = Ti_sum + Ti * HZ(i_tor,i_plane)
             Te_sum  = Te_sum + Te * HZ(i_tor,i_plane)
-          end if
+          else
+            Ti_sum  = Ti_sum + 0.5d0*TT * HZ(i_tor,i_plane)
+            Te_sum  = Te_sum + 0.5d0*TT * HZ(i_tor,i_plane)
+	  end if
 
 #ifdef fullmhd
           ! Magnetic field components
@@ -654,10 +639,10 @@ do i=1,element_list%n_elements
            psi_norm = 2.d0 - psi_norm
         endif
 
-        if ( jorek_model .eq. 400 ) then
-          call bootstrap_current_rhs(BigR, minRad, R_axis, psi_axis, psi_bnd,  &
-        			     psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,     &
-        			     Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y,       Jb)
+        if (bootstrap) then
+          call bootstrap_current_rhs(minRad, R_axis, psi_axis, psi_bnd, psi_norm,&
+        			     psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,   &
+        			     Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb)
         else
           Jb = 0.d0
         endif

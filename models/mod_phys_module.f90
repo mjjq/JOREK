@@ -27,7 +27,8 @@ module phys_module
   real*8  :: gamma                !< ratio of specific heat (=5/3)
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
-  real*8  :: tauIC                !< (model302 and 701)
+  real*8  :: tauIC                !< (diamagnetic terms)
+  logical :: Wdia                 !< (diamagnetic vorticity)
   real*8  :: gamma_sheath         !< sheath boundary condition open fieldlines (model303)
   real*8  :: density_reflection   !< density reflection coeeficient open fieldlines (model303)
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8

@@ -166,7 +166,7 @@ subroutine ELM_build_neutral_variables(element, nodes, ms, mt, i_plane)
 	      - u0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - u0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- u0_s * x_t + u0_t * x_s )  / xjac**2
-  vv2	   = BigR**2 *  ( u0_x * u0_x + u0_y *u0_y  )
+  vv2	   = R**2 *  ( u0_x * u0_x + u0_y *u0_y  )
   
   ! --- Variable 3
   zj0_x    = (   y_t * zj0_s - y_s * zj0_t ) / xjac
@@ -218,9 +218,9 @@ subroutine ELM_build_neutral_variables(element, nodes, ms, mt, i_plane)
 	      - r0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - r0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- r0_s * x_t + r0_t * x_s )  / xjac**2
-  r0_hat   = BigR**2 * r0
-  r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
-  r0_y_hat = BigR**2 * r0_y
+  r0_hat   = R**2 * r0
+  r0_x_hat = 2.d0 * R * R_x  * r0 + R**2 * r0_x
+  r0_y_hat = R**2 * r0_y
   
   ! --- Variable 6
   T_corr    = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
@@ -294,7 +294,7 @@ subroutine ELM_build_neutral_variables(element, nodes, ms, mt, i_plane)
   P0_xy    = r0_xy * T0 + r0 * T0_xy + r0_x * T0_y + r0_y * T0_x
   
   ! --- Magnetic field amplitude (squared)
-  BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
+  BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/R**2
   
   return
 

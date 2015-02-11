@@ -110,7 +110,7 @@ contains
 
     	  call ELM_build_variables(element, nodes, ms, mt, i_plane)
           
-    	  call ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
+    	  call ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
 
     	  ! --- Now the equations, first the RHS
     	  do i_vertex =1,n_vertex_max
@@ -200,7 +200,7 @@ contains
 		      T_xx    = psi_xx; T_yy    = psi_yy; T_xy    = psi_xy; T_pp    = psi_pp
 		      Vpar_xx = psi_xx; Vpar_yy = psi_yy; Vpar_xy = psi_xy; Vpar_pp = psi_pp
                       
-		      BB2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+		      BB2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /R**2
    
     		      amat_tmp    = 0.d0
     		      amat_k_tmp  = 0.d0

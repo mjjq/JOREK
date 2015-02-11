@@ -139,7 +139,7 @@ program JOREK2
     end subroutine construct_matrix_murge
   end interface
   
-  type (type_surface_list) :: surface_list, flux_list
+  type (type_surface_list) :: surface_list
   type (t_equil_state)     :: equil_state
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
 #ifdef JECCD
@@ -156,10 +156,6 @@ program JOREK2
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
-  integer                  :: i_find, i_elm_find(8)
-  real*8                   :: Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-  real*8                   :: Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
-  real*8                   :: s_find(8), t_find(8)
   character*8              :: label, itlabel
   character*14             :: fileout_bin
   character*13             :: fileout_h5
@@ -917,20 +913,8 @@ required = 0
     if ( my_id == 0 ) call print_equil_state(equil_state, .false.)
     psi_bnd = equil_state%psi_bnd
     
-    if (bootstrap) then
-      flux_list%n_psi = 1
-      call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-      flux_list%psi_values(1) = psi_bnd
-      call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
-      call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
-      call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-        	     Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
-        	     Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-      call tr_deallocate(flux_list%psi_values,"flux_list%psi_values",CAT_GRID)
-      minRad = Router - R_axis
-    else
-      minRad = 0.0
-    endif
+    minRad = 0.0
+    if (bootstrap) call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
     
     call tr_debug_write("JMAIN:Find_axis_R",R_axis)
     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)

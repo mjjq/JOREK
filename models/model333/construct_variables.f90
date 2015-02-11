@@ -51,8 +51,8 @@ subroutine ELM_build_RZ_and_Jacobians(element, nodes, ms, mt)
     enddo
   enddo
   
-  BigR    = x_g
-  BigR_x  = 1.d0
+  R    = x_g
+  R_x  = 1.d0
   
   ! --- Jacobians
   xjac    = x_s*y_t - x_t*y_s
@@ -233,7 +233,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	      - u0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - u0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- u0_s * x_t + u0_t * x_s )  / xjac**2
-  vv2	   = BigR**2 *  ( u0_x * u0_x + u0_y *u0_y  )
+  vv2	   = R**2 *  ( u0_x * u0_x + u0_y *u0_y  )
   
   ! --- Variable 3
   zj0_x    = (   y_t * zj0_s - y_s * zj0_t ) / xjac
@@ -270,6 +270,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	    - xjac_x * (- w0_s * x_t + w0_t * x_s )  / xjac**2
   
   ! --- Variable 5
+  rho_corr = corr_neg_dens(r0)
   r0_x     = (   y_t * r0_s - y_s * r0_t ) / xjac
   r0_y     = ( - x_t * r0_s + x_s * r0_t ) / xjac
   r0_xx    = (r0_ss * y_t**2 - 2.d0*r0_st * y_s*y_t + r0_tt * y_s**2  & 	    
@@ -285,9 +286,9 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	      - r0_s  * (x_st*y_t - x_tt*y_s )  		      &    
 	      - r0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
 	    - xjac_x * (- r0_s * x_t + r0_t * x_s )  / xjac**2
-  r0_hat   = BigR**2 * r0
-  r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
-  r0_y_hat = BigR**2 * r0_y
+  r0_hat   = R**2 * r0
+  r0_x_hat = 2.d0 * R * R_x  * r0 + R**2 * r0_x
+  r0_y_hat = R**2 * r0_y
   
   ! --- Variable 6
   T_corr    = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
@@ -344,7 +345,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   P0_xy    = r0_xy * T0 + r0 * T0_xy + r0_x * T0_y + r0_y * T0_x
   
   ! --- Magnetic field amplitude (squared)
-  BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
+  BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/R**2
   
   return
 
@@ -363,7 +364,7 @@ end subroutine ELM_build_variables
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
-subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
+subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
@@ -383,11 +384,12 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   logical		      :: xpoint2
   integer		      :: xcase2
   integer		      :: i_plane
-  real*8		      :: R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2)
+  real*8		      :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2)
   
   ! --- Internal variables
   real*8		      :: psi_norm
   real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
+  real*8		      :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
       
   
   ! -------------------------------------
@@ -473,25 +475,40 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! ------------------------------------------------
   ! --- Taylor Galerkin (TG2) stabilisation switches
   ! ------------------------------------------------
-  TG_num1 = 0.d0;
-  TG_num2 = 2.d0;
-  TG_num5 = 0.d0;
-  TG_num6 = 0.d0;
-  TG_num7 = 0.d0;
-  TG_num8 = 0.d0;
+  TG_num1 = tgnum(1);
+  TG_num2 = tgnum(2);
+  TG_num5 = tgnum(5);
+  TG_num6 = tgnum(6);
+  TG_num7 = tgnum(7);
+  
+  
+  ! ---------------------
+  ! --- Bootstrap current
+  ! ---------------------
+  if (bootstrap) then
+    ! --- Full Sauter formula
+    Ti0   = T0   / 2.d0 ; Te0	= T0   / 2.d0
+    Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
+    Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
+    call bootstrap_current_rhs(minRad, R_axis, psi_axis, psi_bnd, psi_norm, ps0, ps0_x, ps0_y,     &
+                               r0,  r0_x,  r0_y, Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y, Jb)
+  else
+    Jb = 0.d0
+  endif
   
   
   ! ------------------------------------------------------
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
+  if (Wdia) W_dia = 1.d0
   
   
   ! -------------------------
   ! --- Neoclassical rotation
   ! -------------------------
   epsil   = 1.d-3
-  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / BigR**2
+  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / R**2
   if ( NEO ) then 
     if (num_neo_file) then
       call neo_coef(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, amu_neo_prof, aki_neo_prof)
@@ -511,6 +528,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if (i_plane .eq. 1) then
     ! --- Current source
     call current(xpoint2, xcase2, x_g,y_g, Z_xpoint, ps0,psi_axis,psi_bnd,current_source)
+    if (bootstrap) current_source = current_source * (0.5d0 - 0.5d0 * tanh((psi_norm-0.8)/0.005) )
 
     ! --- Density and Temperature source
     call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source)

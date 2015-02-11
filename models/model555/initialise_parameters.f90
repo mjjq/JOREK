@@ -52,7 +52,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Q_bar, sigma, gamma_sheath,                         &
                 V_0,V_1,V_coef,                			    &
                 particlesource, heatsource,                         &
-                heatsource_i, heatsource_e, tauIC,                  &
+                heatsource_i, heatsource_e, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num,                  &
                 D_perp_num, ZK_perp_num,                            &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
@@ -74,7 +74,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 produce_live_data, gmres, gmres_max_iter,           &
                 linear_run, export_for_nemec,                       &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                gmres_m, gmres_tol,                                 &
+                gmres_m, gmres_tol, tgnum,                          &
                 RMP_on, lambda, tset,                               &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
 #ifdef USE_HDF5

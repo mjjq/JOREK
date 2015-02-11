@@ -1,5 +1,6 @@
-subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
+subroutine bootstrap_current_rhs(minRad, R_axis,       &
                                  psi_axis, psi_bnd,    &
+                                 psi_norm,             &
                                  ps0, ps0_x, ps0_y,    &
 				 r0,  r0_x,  r0_y,     &
 				 Ti0, Ti0_x, Ti0_y,    &
@@ -15,8 +16,9 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
 
   implicit none
   ! --- Routine parameters
-  real*8, intent(in)  :: BigR, minRad, R_axis
+  real*8, intent(in)  :: minRad, R_axis
   real*8, intent(in)  :: psi_axis, psi_bnd
+  real*8, intent(in)  :: psi_norm
   real*8, intent(in)  :: ps0, ps0_x, ps0_y
   real*8, intent(in)  :: r0,  r0_x,  r0_y
   real*8              :: rho, rho_x, rho_y, drho
@@ -28,6 +30,8 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
   real*8              :: Nue, Nui
   real*8              :: DD, C1, C2, C3, C4, AC4, BC4
   real*8, intent(out) :: Jb
+  real*8              :: rho_norm
+  real*8              :: tanh_boot, position, width
 
   ! --- Need central_density
   if (central_density .lt. 1.d-6) then
@@ -40,27 +44,34 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
     return
   endif
   
+  ! --- Careful with convention of density (some people get scared when they see an exponent of 19-20 and prefer to just ignore it...)
+  if (central_density .lt. 1.d17) then
+    rho_norm = central_density*1.d20 ! (this is so clever... I hope they do it like this at NASA...)
+  else
+    rho_norm = central_density
+  endif
+  
   ! --- Renormalise temperature and density 
   ! --- Note for us density is n, not mi*n,
   ! --- but that's ok since formula is with p = n*T
   ! --- ie. rho*T for us...
   ! --- Temperature in Joules
   ! --- Density in 1/(cubic meters)
-  rho   = r0   * central_density
-  if (r0 .lt. rho_0*1.d-3) rho = rho_0*1.d-3 * central_density
-  rho_x = r0_x * central_density
-  rho_y = r0_y * central_density
-  Ti    = Ti0   / (MU_ZERO*central_density)
-  if (Ti0 .lt. Ti_0*1.d-3) Ti = Ti_0*1.d-3 / (MU_ZERO*central_density)
-  Ti_x  = Ti0_x / (MU_ZERO*central_density)
-  Ti_y  = Ti0_y / (MU_ZERO*central_density)
-  Te    = Te0   / (MU_ZERO*central_density)
-  if (Te0 .lt. Te_0*1.d-3) Te = Te_0*1.d-3 / (MU_ZERO*central_density)
-  Te_x  = Te0_x / (MU_ZERO*central_density)
-  Te_y  = Te0_y / (MU_ZERO*central_density)
+  rho   = r0   * rho_norm
+  if (r0 .lt. rho_1*1.d-1) rho = rho_1*1.d-1 * rho_norm
+  rho_x = r0_x * rho_norm
+  rho_y = r0_y * rho_norm
+  Ti    = Ti0   / (MU_ZERO*rho_norm)
+  if (Ti0 .lt. Ti_1*1.d-1) Ti = Ti_1*1.d-1 / (MU_ZERO*rho_norm)
+  Ti_x  = Ti0_x / (MU_ZERO*rho_norm)
+  Ti_y  = Ti0_y / (MU_ZERO*rho_norm)
+  Te    = Te0   / (MU_ZERO*rho_norm)
+  if (Te0 .lt. Te_1*1.d-1) Te = Te_1*1.d-1 / (MU_ZERO*rho_norm)
+  Te_x  = Te0_x / (MU_ZERO*rho_norm)
+  Te_y  = Te0_y / (MU_ZERO*rho_norm)
         
   ! --- Psi variables, including r~a*sqrt(psi) and X=sqrt(2*r/R0)
-  psi_n    = (ps0 - psi_axis) / (psi_bnd - psi_axis)
+  psi_n    = psi_norm
   if (psi_n .lt. 1.d-1)  psi_n = 1.d-1
   grad_psi = (ps0_x*ps0_x + ps0_y*ps0_y)**0.5d0
   if (grad_psi .lt. 1.d-1) grad_psi = 1.d-1
@@ -73,8 +84,8 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
         
   ! --- Nue* formula from Wesson : Nue* = R*q / ( eps**(3/2) * (Te/me)**(1/2) * Taue )
   ! --- where Taue is the electron collision time (formula for Nui* is very similar)
-  Nui = 5.4d-56 * F0 * rho / ( Ti**2.d0 * X**3.d0 * grad_psi )
-  Nue = 9.3d-56 * F0 * rho / ( Te**2.d0 * X**3.d0 * grad_psi )
+  Nui = 5.4d-56 * abs(F0) * rho / ( Ti**2.d0 * X**3.d0 * grad_psi )
+  Nue = 9.3d-56 * abs(F0) * rho / ( Te**2.d0 * X**3.d0 * grad_psi )
 
   ! --- Coefficients
   DD  = 2.4d0 + 5.4d0*X  + 2.6d0*X*X
@@ -90,15 +101,132 @@ subroutine bootstrap_current_rhs(BigR, minRad, R_axis, &
   C4  = AC4*C2 / BC4
 
   ! --- Bootstrap Current
-  Jb = BigR*X*rho*Te/DD * ( C1*(dTe/Te+drho/rho) + C2*(dTi/Ti+drho/rho) + C3*dTe/Te + C4*dTi/Ti)
+  Jb = R_axis**2.d0*X*rho*Te/DD * ( C1*(dTe/Te+drho/rho) + C2*(dTi/Ti+drho/rho) + C3*dTe/Te + C4*dTi/Ti)
 
   ! --- Current with denormalisation
-  Jb = Jb * MU_ZERO
+  Jb = -Jb * MU_ZERO
+  
+  ! --- There should not be any bootstrap outside plasma...
+  position  = max(rho_coef(5),1.d0) + 2.d0 * rho_coef(4)
+  width     = rho_coef(4) / 2.d0
+  tanh_boot = 0.5d0 - 0.5d0 * tanh( (psi_norm - position)/width ) 
+  Jb = Jb * tanh_boot
 
 
 return
 end subroutine bootstrap_current_rhs
 
+
+
+
+
+
+
+! --- Subroutine to find the minor radius
+subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+
+  use data_structure
+  use phys_module
+
+  implicit none
+  ! --- Routine parameters
+  type (type_node_list),        intent(inout) :: node_list
+  type (type_element_list),     intent(inout) :: element_list
+  real*8, 			intent(in)    :: R_axis, Z_axis
+  real*8, 			intent(in)    :: psi_axis, psi_bnd
+  real*8, 			intent(inout) :: minRad
+  
+  ! --- Internal parameters
+  type (type_surface_list) 	:: surface_list, flux_list
+  integer			:: n_iter, n_iter_max
+  real*8			:: step
+  real*8			:: R_find, Z_find
+  real*8			:: R_out,  Z_out
+  real*8			:: s_out,  t_out
+  integer			:: i_elm_out, ifail
+  real*8			:: s_find(8), t_find(8)
+  integer			:: i_elm_find(8),i_find
+  real*8			:: psi, psi_norm, psi_s,psi_t,psi_st,psi_ss,psi_tt
+  real*8			:: dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
+  real*8			:: dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+  logical			:: found
+
+  
+  ! --- Step along line with 2cm resolution
+  n_iter     = 0
+  step       = 0.02d0
+  n_iter_max = 500 ! 10m should be largely sufficient for any machine
+  found      = .false.
+  R_find     = R_axis
+  Z_find     = Z_axis
+  do while ( (n_iter .lt. n_iter_max) .and. (.not. found) )
+
+    n_iter = n_iter + 1
+    
+    R_find = R_find + step
+    call find_RZ(node_list,element_list, R_find,Z_find, R_out,Z_out, i_elm_out, s_out,t_out,ifail)
+    if (ifail .ne. 0) then
+      found = .false.
+      exit
+    else
+      call interp(node_list,element_list,i_elm_out,1,1,s_out,t_out, psi, psi_s,psi_t,psi_st,psi_ss,psi_tt)
+      psi_norm = (psi-psi_axis) / (psi_bnd-psi_axis)
+      if (psi_norm .gt. 1.d0) then
+        found = .true.
+	exit
+      endif
+    endif
+  
+  enddo
+  
+  ! --- Step along line with 1mm resolution from previous location
+  n_iter = 0
+  step = 1.d-3
+  if (found) then
+    R_find = R_find - 0.02d0 ! step back 2cm
+    n_iter_max = 30         ! so 3cm should be sufficient
+  else
+    R_find = R_axis
+    n_iter_max = 5000
+  endif
+  found  = .false.
+  do while ( (n_iter .lt. n_iter_max) .and. (.not. found) )
+
+    n_iter = n_iter + 1
+    
+    R_find = R_find + step
+    call find_RZ(node_list,element_list, R_find,Z_find, R_out,Z_out, i_elm_out, s_out,t_out,ifail)
+    if (ifail .ne. 0) then
+      found = .false.
+      exit
+    else
+      call interp(node_list,element_list,i_elm_out,1,1,s_out,t_out, psi, psi_s,psi_t,psi_st,psi_ss,psi_tt)
+      psi_norm = (psi-psi_axis) / (psi_bnd-psi_axis)
+      if (psi_norm .gt. 1.d0) then
+        found = .true.
+	exit
+      endif
+    endif
+  
+  enddo
+  
+  ! --- If we still haven't found it, try with surfaces
+  if (.not. found) then
+    flux_list%n_psi = 1
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+    flux_list%psi_values(1) = psi_bnd
+    call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+    call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
+    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+    		   R_find,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
+    		   Z_find,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call tr_deallocate(flux_list%psi_values,"flux_list%psi_values",CAT_GRID)
+    minRad = R_find - R_axis
+  else
+    minRad = R_find - R_axis
+  endif
+
+end subroutine bootstrap_find_minRad
 
 
 

@@ -28,7 +28,7 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 !CP!bufsize = ( (359+2*max_limiter+n_var) * IDBL_EXT + (37+n_tor) * INT_EXT + 45 * ILOG_EXT + (14*512+120) * CHAR_EXT )
-bufsize = ( (359+2*max_limiter+n_var) * IDBL_EXT + (38+n_tor) * INT_EXT + 45 * ILOG_EXT + (14*512+120) * CHAR_EXT )
+bufsize = ( (361+2*max_limiter+n_var) * IDBL_EXT + (38+n_tor) * INT_EXT + 46 * ILOG_EXT + (14*512+120) * CHAR_EXT )
 
 #ifdef USE_HDF5
    bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
@@ -102,6 +102,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(visco_par_num,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 146
   call MPI_PACK(D_perp_num,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 147
 
+  call MPI_PACK(Wdia,			1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! L+1
   call MPI_PACK(tauIC,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 148
   call MPI_PACK(gamma_sheath,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 149
   call MPI_PACK(density_reflection,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 150
@@ -320,6 +321,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(jw3,                    1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(R_geo,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)! ###
   call MPI_PACK(corr_neg_temp_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(corr_neg_dens_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 endif
 
@@ -390,6 +392,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,visco_par_num,          1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 146
   call MPI_UNPACK(buffer,bufsize,position,D_perp_num,             1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 147
 
+  call MPI_UNPACK(buffer,bufsize,position,Wdia,                   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! L+1
   call MPI_UNPACK(buffer,bufsize,position,tauIC,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 148
   call MPI_UNPACK(buffer,bufsize,position,gamma_sheath,           1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 149
   call MPI_UNPACK(buffer,bufsize,position,density_reflection,     1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 150
@@ -613,6 +616,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,R_geo,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
 
   call MPI_UNPACK(buffer,bufsize,position,corr_neg_temp_coef,     2,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,corr_neg_dens_coef,     2,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
 endif
 

@@ -157,7 +157,7 @@ subroutine ELM_main_rhs_2(rhs,rhs_k)
   ! --- The RHS term (diamagnetic and neoclassic part)	      
   rhs(2) = rhs(2)													&
            ! --- Diamagnetic terms
-           + tau_IC * R**3 * P0_y * (v_y*u0_y  - v_x*u0_x )                                 		* xjac * tstep  &
+           - tau_IC * R**3 * P0_y * (v_y*u0_y  - v_x*u0_x )                                 		* xjac * tstep  &
            - tau_IC * R**4 * P0_y * (v_y*u0_xy - v_x*u0_xy)                                 		* xjac * tstep  &
            - tau_IC * R**4 * P0_x * (v_y*u0_yy + v_x*u0_xy)                                 		* xjac * tstep  &
 	   ! --- Inverse diamagnetic terms (needed when including diamagnetic vorticity directly into W - equation4)
@@ -254,7 +254,7 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
 
   amat(2,2)   = amat(2,2)														&
                 ! --- Diamagnetic terms
-                - tau_IC * R**3 * P0_y * (v_y*u_y  - v_x*u_x )							* xjac * theta * tstep  &
+                + tau_IC * R**3 * P0_y * (v_y*u_y  - v_x*u_x )							* xjac * theta * tstep  &
                 + tau_IC * R**4 * P0_y * (v_y*u_xy - v_x*u_xy)							* xjac * theta * tstep  &
                 + tau_IC * R**4 * P0_x * (v_y*u_yy + v_x*u_xy)							* xjac * theta * tstep  &
 	        ! --- Inverse diamagnetic terms
@@ -266,7 +266,7 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
   
   amat(2,5)   = amat(2,5)														&
                 ! --- Diamagnetic terms
-                - tau_IC * R**3 * (rho*T0_y + rho_y*T0) * (v_y*u0_y  - v_x*u0_x )				* xjac * theta * tstep  &
+                + tau_IC * R**3 * (rho*T0_y + rho_y*T0) * (v_y*u0_y  - v_x*u0_x )				* xjac * theta * tstep  &
                 + tau_IC * R**4 * (rho*T0_y + rho_y*T0) * (v_y*u0_xy - v_x*u0_xy)				* xjac * theta * tstep  &
                 + tau_IC * R**4 * (rho*T0_x + rho_x*T0) * (v_y*u0_yy + v_x*u0_xy)				* xjac * theta * tstep  &
 	        ! --- Inverse diamagnetic terms
@@ -287,7 +287,7 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
 
   amat(2,6)   = amat(2,6)														&
                 ! --- Diamagnetic terms
-                - tau_IC * R**3 * (r0*T_y + r0_y*T) * (v_y*u0_y  - v_x*u0_x )					* xjac * theta * tstep  &
+                + tau_IC * R**3 * (r0*T_y + r0_y*T) * (v_y*u0_y  - v_x*u0_x )					* xjac * theta * tstep  &
                 + tau_IC * R**4 * (r0*T_y + r0_y*T) * (v_y*u0_xy - v_x*u0_xy)					* xjac * theta * tstep  &
                 + tau_IC * R**4 * (r0*T_x + r0_x*T) * (v_y*u0_yy + v_x*u0_xy)					* xjac * theta * tstep  &
 	        ! --- Inverse diamagnetic terms

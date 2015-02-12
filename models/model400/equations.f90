@@ -134,38 +134,41 @@ subroutine ELM_main_rhs_2(rhs,rhs_k)
   
   ! ----------------------------	      
   ! --- The RHS term (main part)	      
-  rhs(2) = 													&
+  rhs(2) = 															&
            ! --- Time derivative
-	   - zeta * R * r0_hat * (v_x * delta_u_x + v_y * delta_u_y)  				* xjac		&		  
+	   - zeta * R * r0_hat * (v_x * delta_u_x + v_y * delta_u_y)  						* xjac		&		  
            ! --- Convective terms
-	   - 0.5d0 * vv2 * (v_x * r0_y_hat - v_y * r0_x_hat)		 			* xjac * tstep	&
-	   - r0_hat * R**2 * w0 * (v_x * u0_y - v_y * u0_x)  	 				* xjac * tstep	&
+	   - 0.5d0 * vv2 * (v_x * r0_y_hat - v_y * r0_x_hat)		 					* xjac * tstep	&
+	   - r0_hat * R**2 * w0 * (v_x * u0_y - v_y * u0_x)  	 						* xjac * tstep	&
            ! --- [psi,j]
-	   + v * (ps0_x * zj0_y - ps0_y * zj0_x )			 			* xjac * tstep	&
-	   - v * eps_cyl * F0 / R * zj0_p				 			* xjac * tstep	&
+	   + v * (ps0_x * zj0_y - ps0_y * zj0_x )			 					* xjac * tstep	&
+	   - v * eps_cyl * F0 / R * zj0_p				 					* xjac * tstep	&
            ! --- Grad(p)
-	   + R**2 * (v_x * p0_y     - v_y * p0_x)			 			* xjac * tstep	&
+	   + R**2 * (v_x * p0_y     - v_y * p0_x)			 					* xjac * tstep	&
            ! --- Source interaction
-	   + R**3 * particle_source * (v_x * u0_x + v_y * u0_y)					* xjac * tstep	&
+	   + R**3 * particle_source * (v_x * u0_x + v_y * u0_y)							* xjac * tstep	&
            ! --- Viscosity
-	   - visco_Te * R * (v_x * w0_x + v_y * w0_y) 		 				* xjac * tstep	&
+	   - visco_Te * R * (v_x * w0_x + v_y * w0_y) 		 						* xjac * tstep	&
            ! --- Numerical iscosity
-           - visco_numm * (v_xx  + v_x /R + v_yy ) 								&
-	                * (w0_xx + w0_x/R + w0_yy)						* xjac * tstep 
+           - visco_numm * (v_xx  + v_x /R + v_yy ) 										&
+	                * (w0_xx + w0_x/R + w0_yy)								* xjac * tstep 
   
   ! --------------------------------------------------      
   ! --- The RHS term (diamagnetic and neoclassic part)	      
-  rhs(2) = rhs(2)												&
-           ! --- Diamagnetic terms
-           - tau_IC * R**3 * Pi0_y * (v_y*u0_y  - v_x*u0_x )                                    * xjac * tstep  &
-           - tau_IC * R**4 * Pi0_y * (v_y*u0_xy - v_x*u0_xy)                                    * xjac * tstep  &
-           - tau_IC * R**4 * Pi0_x * (v_y*u0_yy + v_x*u0_xy)                                    * xjac * tstep  &
+  rhs(2) = rhs(2)														&
+           ! --- Diamagnetic terms	
+           - tau_IC * R**3 * Pi0_y * (v_y*u0_y  - v_x*u0_x )                                    		* xjac * tstep  &
+           - tau_IC * R**4 * Pi0_y * (v_y*u0_xy - v_x*u0_xy)                                    		* xjac * tstep  &
+           - tau_IC * R**4 * Pi0_x * (v_y*u0_yy + v_x*u0_xy)                                    		* xjac * tstep  &
+           ! --- Inverse diamagnetic terms (needed when including diamagnetic vorticity directly into W - equation4)
+           + tau_IC * Wdia * R**4 *            (Pi0_xx + Pi0_x/R + Pi0_yy)    * (v_x * u0_y - v_y * u0_x)	* xjac * tstep  &
+           - tau_IC * Wdia * R**4 / rho_corr * (r0_x * Pi0_x + r0_y * Pi0_y)  * (v_x * u0_y - v_y * u0_x)	* xjac * tstep  &
 	   ! --- Neoclassic term
-           + amu_neo_prof * BB2 / (Btheta2+epsil)**2.d0 * (ps0_x*v_x + ps0_y*v_y) * R				&
-                    * (  r0                         * (ps0_x*u0_x  + ps0_y*u0_y)				&
-		       + tau_IC                     * (ps0_x*Pi0_x + ps0_y*Pi0_y)				&
-                       + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)				&
-                       - r0 * Vpar0 * Btheta2					     )		* xjac * tstep 
+           + amu_neo_prof * BB2 / (Btheta2+epsil)**2.d0 * (ps0_x*v_x + ps0_y*v_y) * R						&
+                    * (  r0                         * (ps0_x*u0_x  + ps0_y*u0_y)						&
+		       + tau_IC                     * (ps0_x*Pi0_x + ps0_y*Pi0_y)						&
+                       + aki_neo_prof * tau_IC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)						&
+                       - r0 * Vpar0 * Btheta2					     )				* xjac * tstep 
 
   
   return
@@ -257,6 +260,9 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
                 + tau_IC * R**3 * Pi0_y * (v_y*u_y  - v_x*u_x )                                                 * xjac * theta * tstep  &
                 + tau_IC * R**4 * Pi0_y * (v_y*u_xy - v_x*u_xy)                                                 * xjac * theta * tstep  &
                 + tau_IC * R**4 * Pi0_x * (v_y*u_yy + v_x*u_xy)                                                 * xjac * theta * tstep  &
+                ! --- Inverse diamagnetic terms
+                - tau_IC * Wdia * R**4            * (Pi0_xx + Pi0_x/R + Pi0_yy) * (v_x*u_y - v_y*u_x)		* xjac * theta * tstep  &
+                + tau_IC * Wdia * R**4 / rho_corr * (r0_x*Pi0_x + r0_y*Pi0_y )  * (v_x*u_y - v_y*u_x)		* xjac * theta * tstep  &
 	        ! --- Neoclassical term
                 - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x + ps0_y*v_y) * R							&
 		               * r0 * (ps0_x*u_x + ps0_y*u_y)							* xjac * theta * tstep
@@ -266,6 +272,14 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
                 + tau_IC * R**3 * (rho*Ti0_y + rho_y*Ti0) * (v_y*u0_y  - v_x*u0_x )                             * xjac * theta * tstep  &
                 + tau_IC * R**4 * (rho*Ti0_y + rho_y*Ti0) * (v_y*u0_xy - v_x*u0_xy)                             * xjac * theta * tstep  &
                 + tau_IC * R**4 * (rho*Ti0_x + rho_x*Ti0) * (v_y*u0_yy + v_x*u0_xy)                             * xjac * theta * tstep  &
+                ! --- Inverse diamagnetic terms
+                - tau_IC * Wdia * R**4 * ( rho_xx*Ti0 + rho*Ti0_xx + 2.d0*rho_x*Ti0_x                                                   &
+                                         + rho_x*Ti0/R + rho*Ti0_x/R                                                                    &
+                                         + rho_yy*Ti0 + rho*Ti0_yy + 2.d0*rho_y*Ti0_y ) * (v_x*u0_y - v_y*u0_x) * xjac * theta * tstep  &
+                + tau_IC * Wdia * R**4 / rho_corr * (rho_x*Pi0_x + rho_y*Pi0_y)         * (v_x*u0_y - v_y*u0_x) * xjac * theta * tstep  &
+                + tau_IC * Wdia * R**4 / rho_corr * ( r0_x * (rho_x*Ti0 + rho*Ti0_x)							&
+                                                    + r0_y * (rho_y*Ti0 + rho*Ti0_y) )  * (v_x*u0_y - v_y*u0_x) * xjac * theta * tstep  &
+                - tau_IC * Wdia * R**4 * rho/rho_corr**2.d0 * (r0_x*Pi0_x + r0_y*Pi0_y) * (v_x*u0_y - v_y*u0_x) * xjac * theta * tstep  &
 	        ! --- Neoclassical term
                 - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x + ps0_y*v_y) * R							&
                                * (  rho                         * (ps0_x*u0_x                  + ps0_y*u0_y)				&
@@ -279,6 +293,12 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
                 + tau_IC * R**3 * (r0*Ti_y + r0_y*Ti) * (v_y*u0_y  - v_x*u0_x )                                 * xjac * theta * tstep  &
                 + tau_IC * R**4 * (r0*Ti_y + r0_y*Ti) * (v_y*u0_xy - v_x*u0_xy)                                 * xjac * theta * tstep  &
                 + tau_IC * R**4 * (r0*Ti_x + r0_x*Ti) * (v_y*u0_yy + v_x*u0_xy)                                 * xjac * theta * tstep  &
+                ! --- Inverse diamagnetic terms
+                - tau_IC * Wdia * R**4 * ( r0_xx*Ti + r0*Ti_xx + 2.d0*r0_x*Ti_x                                                         &
+                                         + r0_x*Ti/R + r0*Ti_x/R                                                                        &
+                                         + r0_yy*Ti + r0*Ti_yy + 2.d0*r0_y*Ti_y  ) * (v_x*u0_y - v_y*u0_x)	* xjac * theta * tstep  &
+                + tau_IC * Wdia * R**4 / rho_corr * ( r0_x * (r0_x*Ti + r0*Ti_x)							&
+                                                    + r0_y * (r0_y*Ti + r0*Ti_y) ) * (v_x*u0_y - v_y*u0_x)	* xjac * theta * tstep  &
 	        ! --- Neoclassical term
                 - amu_neo_prof * BB2 / (Btheta2+epsil)**2 * (ps0_x*v_x + ps0_y*v_y) * R							&
                                * (  tau_IC                     * (ps0_x*r0_x*Ti   + ps0_y*r0_y*Ti  )					&

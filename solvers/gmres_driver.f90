@@ -7,7 +7,7 @@ use murge_module
 use global_distributed_matrix
 use mpi_mod
 use clock_module
-use phys_module,  only : gmres_4, gmres_tol, gmres_m
+use phys_module,  only : gmres_4, gmres_tol, gmres_m, index_now
 
 implicit none
 #include "r3_info.h"
@@ -30,6 +30,8 @@ type(clcktype)           :: t0, t1
 real*8                   :: tsecond
 REAL*8, ALLOCATABLE      :: rhs_tmp(:)
 real*8 ::ZERO, ONE
+CHARACTER(LEN=128) :: fname
+
 parameter (ZERO = 0.0d0, ONE = 1.0d0)
 parameter (matvec=1, precondLeft=2, precondRight=3, dotProd=4)
 
@@ -61,6 +63,7 @@ call tr_allocate(work,1,lwork,"work",CAT_GMRES)
 
 work(1:n_dof)         = deltas(1:n_dof)                     ! the initial guess
 work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
+
 call gmres_matrix_vector(work(1:n_dof),work(2*n_dof+1:3*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 if (my_id .eq. 0) then
   sum = 0.d0
@@ -76,6 +79,12 @@ if (my_id .eq. 0) then
 
   write(*,'(A,4e16.8)') ' residu test before : ',sqrt(sum),err,sqrt(Bnorm),sqrt(Xnorm)
 endif
+if (my_id .eq. 0) then
+   write(fname,'(A,I6.6,A1,I6.6)')"product_before",index_now
+   call tr_vdump(fname, work(2*n_dof+1:3*n_dof), n_dof)
+   write(fname,'(A,I6.6,A1,I6.6)')"X_before",index_now
+   call tr_vdump(fname, RHS_glob, n_dof)
+end if
 
 !*****************************************
 !** Reverse communication implementation

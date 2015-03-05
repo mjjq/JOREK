@@ -98,14 +98,29 @@ contains
   subroutine tr_vdump(filename,mat,nnz)
     REAL*8, dimension(:) :: mat
     character(len=*) :: filename
+    character(len=len(filename)+10) :: filename2
     INTEGER :: nnz
     
 #ifdef NORMTRACE
-    INTEGER i
+    INTEGER i, j
+    LOGICAL file_exists
+    INQUIRE(FILE=filename, EXIST=file_exists)
+    if (file_exists) then
+       j = 0
+       do while (file_exists)
+          write(filename2, '(A,A1,I6.6)') filename, "_", j
+          INQUIRE(FILE=filename2, EXIST=file_exists)
+          j = j + 1
+       end do
+       CALL RENAME(filename, filename2)
+    end if
     open(11, file = filename, status = 'REPLACE', form = 'FORMATTED')
+    print *, "mat(1)", mat(1)
+    write (*,"(A6,E20.12)") "mat(1)", mat(1)
     do i = 1, nnz
        write (11,"(I10,E20.12)") i, mat(i)
     end do
+    print *, "mat(1)", mat(1)
     close(11)
 #endif
   end subroutine tr_vdump

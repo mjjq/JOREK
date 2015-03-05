@@ -173,7 +173,9 @@ if (.not. pastix_initialised) then
   pastix_iparm(IPARM_FACTORIZATION)      = pastix_facto
   pastix_iparm(IPARM_THREAD_NBR)         = pastix_nthrd               ! number of threads
   pastix_iparm(IPARM_RHS_MAKING)         = pastix_rhs                 ! right hand side (0 : use RHS)
-  
+
+  pastix_iparm(IPARM_MATRIX_VERIFICATION) = API_NO
+
   pastix_iparm(IPARM_SYM)                = pastix_sym
   
   pastix_iparm(IPARM_INCOMPLETE)         = pastix_ricar

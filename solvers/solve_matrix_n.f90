@@ -8,13 +8,43 @@ contains
     use tr_module
     use parameters
     use mumps_module
-    use murge_module
+    use murge_module, only: API_NO, IPARM_MODIFY_PARAMETER, MURGE_EPSILON,     &
+         &                  MURGE_RPARAM_EPSILON_ERROR, MURGE_IPARAM_BASEVAL,  &
+         &                  MURGE_SYM, MURGE_IPARAM_SYM, MURGE_PIVOT,          &
+         &                  DPARM_EPSILON_MAGN_CTRL, IPARM_PID, MURGE_AMALG,   &
+         &                  IPARM_AMALGAMATION_LEVEL, MURGE_RICAR,             &
+         &                  IPARM_INCOMPLETE, MURGE_ILUK, IPARM_LEVEL_OF_FILL, &
+         &                  MURGE_ILUK, IPARM_LEVEL_OF_FILL, MURGE_NTHRD,      &
+         &                  IPARM_THREAD_NBR, MURGE_ITER, IPARM_ITERMAX,       &
+         &                  API_YES, IPARM_MATRIX_VERIFICATION,                &
+         &                  API_VERBOSE_NO, IPARM_VERBOSE,                     &
+         &                  MURGE_SOLVER_PASTIX, MURGE_SOLVER, murge_id,       &
+         &                  use_murge, MURGE_SUCCESS, DPARM_MEM_MAX,           &
+         &                  API_TASK_SOLVE, API_TASK_NUMFACT,                  &
+         &                  MURGE_ASSEMBLY_OVW, API_TASK_ANALYSE,              &
+         &                  API_TASK_ORDERING, IPARM_DOF_NBR,                  &
+         &                  DPARM_EPSILON_REFINEMENT, IPARM_SYM,               &
+         &                  IPARM_RHS_MAKING, IPARM_FACTORIZATION,             &
+         &                  API_THREAD_MULTIPLE, API_THREAD_FUNNELED,          &
+         &                  IPARM_THREAD_COMM_MODE,                            &
+         &                  IPARM_END_TASK, API_TASK_INIT, IPARM_START_TASK
+    use murge_module, only : MURGE_MatrixReset
+    USE murge_module, only : MURGE_Initialize
+    USE murge_module, only : MURGE_GetSolver
+    USE murge_module, only : MURGE_SetDefaultOptions
+    USE murge_module, only : MURGE_SetOptionINT
+    USE murge_module, only : MURGE_SetOptionREAL
+    USE murge_module, only : MURGE_SetCommunicator
+    USE murge_module, only : MURGE_GraphGlobalCSC
+    USE murge_module, only : MURGE_MatrixGlobalCSC
+    USE murge_module, only : MURGE_SetGlobalRhs
+    USE murge_module, only : MURGE_GetGlobalSolution
     use wsmp_module
     use pastix_module
     use global_distributed_matrix
     use mpi_mod 
     use clock_module
-
+    use phys_module, only : index_now
     implicit none
 
 #include "r3_info.h"
@@ -35,6 +65,7 @@ contains
     INTEGER :: increment
     real*8  :: DUMMY_REAL(1:1)
     integer :: DUMMY_INT (1:1)
+    CHARACTER(LEN=128) :: fname
 
     !+increment because of difference between murge.inc (0 based) and pastix_fortran.h (1 based)
     !in old version of PaStiX
@@ -78,6 +109,11 @@ contains
           j = mumps_par%jcn(k)
           column_scaling(j) = min(max(column_scaling(j),abs(mumps_par%A(k))),1d20)
         enddo
+        if (my_id .eq. 0) then
+           write(fname,'(A,I6.6)')"column_scaling",index_now
+           call tr_vdump(fname,column_scaling,mumps_par%N)
+        end if
+        !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)
         write(*,'(2i4,A,2e12.4)') my_id,my_id_n,' COLUMN SCALING : ',minval(column_scaling),maxval(column_scaling)
         do k=1,mumps_par%nz
           j = mumps_par%jcn(k)
@@ -266,13 +302,6 @@ contains
               pastix_iparm(IPARM_MODIFY_PARAMETER+increment) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+increment)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+increment)         = API_TASK_INIT
-#ifdef WORLDWAR2
-#ifdef FUNNELED
-              pastix_iparm(IPARM_THREAD_COMM_MODE+increment)  = API_THREAD_FUNNELED
-#else
-              pastix_iparm(IPARM_THREAD_COMM_MODE+increment)  = API_THREAD_MULTIPLE
-#endif
-#endif
               if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 
 #ifdef USE_BLOCK
@@ -491,12 +520,14 @@ contains
         call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
 
 #ifdef USE_BLOCK
-        call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+        call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
+             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+             ! DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+!          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
       else if (use_wsmp) then

@@ -6,7 +6,7 @@
 !> Variables and and routines related to the MURGE solver interface.
 MODULE murge_module
   USE tr_module
-  USE ISO_C_BINDING, ONLY : C_INT, C_PTR
+  USE ISO_C_BINDING, ONLY : C_INT32_T, C_INT, C_PTR
   IMPLICIT NONE
 
   INCLUDE "murge.inc"
@@ -60,6 +60,10 @@ MODULE murge_module
 
   ! Number of threads
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_nthrd =1
+  ! Number of CUDA devices
+  INTEGER(KIND=MURGE_INTS_KIND)               :: murge_cuda_nbr = 0
+  ! Activate StarPU
+  LOGICAL                                     :: murge_with_starpu
 
   ! Number of iteration in refinement
   INTEGER(KIND=MURGE_INTS_KIND)               :: murge_iter
@@ -246,6 +250,7 @@ CONTAINS
        IF (gmres) THEN
           murge_id_prod = 1
           CALL MURGE_Initialize(2, ierr)
+          ! Initialize Murge instance for product matrix
           IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
              CALL MURGE_SetDefaultOptions(murge_id_prod, 0, ierr)
              CALL MURGE_SetOptionINT(murge_id_prod, IPARM_VERBOSE,             &
@@ -280,17 +285,18 @@ CONTAINS
           END IF
        END IF
 
+       ! Initialize Harmonic instance
        IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
 
           CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,                     &
                &                  API_VERBOSE_YES, ierr)
           CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION,         &
-               &                  API_YES,         ierr)
+               &                  API_NO,         ierr)
           ! refinement : max number of iterations
           CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,                     &
                &                  murge_iter,      ierr)
-  !        CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINEMENT,            &
-  !             &                  API_NO,      ierr)
+          CALL MURGE_SetOptionINT(murge_id, IPARM_MURGE_REFINEMENT,            &
+               &                  API_NO,      ierr)
           ! degrees of freedom per node (not correct)
           IF (gmres) THEN
              IF ( i_tor(my_id+1) == 1 ) THEN
@@ -305,9 +311,15 @@ CONTAINS
           END IF
           CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF,                  &
                &                  murge_ndof,      ierr)
-          ! TODO : omp_num_thread
           CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,                  &
                &                  murge_nthrd,     ierr)
+          IF (murge_with_starpu) THEN
+             Call MURGE_SetOptionINT(murge_id, IPARM_STARPU,                   &
+                  &                  API_YES,     ierr)
+
+          END IF
+          CALL MURGE_SetOptionINT(murge_id, IPARM_CUDA_NBR,                    &
+               &                  murge_cuda_nbr,     ierr)
           CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,               &
                &                  murge_iluk,      ierr)
           CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,                  &
@@ -315,7 +327,7 @@ CONTAINS
           CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,          &
                &                  murge_amalg,     ierr)
           CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION,         &
-               &                  API_YES,         ierr)
+               &                  API_NO,         ierr)
 
           CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,          &
                &                   murge_pivot,     ierr)
@@ -441,34 +453,34 @@ CONTAINS
 #endif
 #ifdef MURGE_USE_GETLOCALELEMENTLIST
     type(MURGE_UserData_t) :: d
-    INTEGER(C_INT) :: c_ierr
+    INTEGER(C_INT32_T) :: c_ierr
     INTEGER(KIND=MURGE_INTS_KIND), PARAMETER :: MURGE_DUPLICATE_ELEMENTS = 0
     INTEGER(KIND=MURGE_INTS_KIND), PARAMETER :: MURGE_DISTRIBUTE_ELEMENTS = 1
 #  ifdef MURGE_USE_DUPLICATE_ELEMENT
-    INTEGER(C_INT) :: mode = MURGE_DUPLICATE_ELEMENTS
+    INTEGER(C_INT32_T) :: mode = MURGE_DUPLICATE_ELEMENTS
 #  else
-    INTEGER(C_INT) :: mode = MURGE_DISTRIBUTE_ELEMENTS
+    INTEGER(C_INT32_T) :: mode = MURGE_DISTRIBUTE_ELEMENTS
 #  endif
 #endif
 #ifdef USE_MURGE
     INTERFACE
-       INTEGER(C_INT) FUNCTION MURGE_GetLocalElementNbr(id, N, globalElementNbr,  &
-            &                                           localElementNbr, mode, d) &
+       INTEGER(C_INT32_T) FUNCTION MURGE_GetLocalElementNbr(id, N, globalElementNbr,  &
+            &                                               localElementNbr, mode, d) &
             BIND(C, name="MURGE_GetLocalElementNbr")
-         USE ISO_C_BINDING, ONLY : C_INT, C_PTR
+         USE ISO_C_BINDING, ONLY : C_INT32_T, C_INT, C_PTR
          USE data_structure, ONLY : MURGE_UserData_t
 
-         INTEGER(C_INT),  VALUE :: id, N, globalElementNbr
-         INTEGER(C_INT)         :: localElementNbr
-         INTEGER(C_INT),  VALUE :: mode
+         INTEGER(C_INT32_T),  VALUE :: id, N, globalElementNbr
+         INTEGER(C_INT32_T)         :: localElementNbr
+         INTEGER(C_INT32_T),  VALUE :: mode
          TYPE(MURGE_UserData_t) :: d
        END FUNCTION MURGE_GetLocalElementNbr
        
-       INTEGER(C_INT) FUNCTION MURGE_GetLocalElementList(id, element_list) &
+       INTEGER(C_INT32_T) FUNCTION MURGE_GetLocalElementList(id, element_list) &
             BIND(C, name="MURGE_GetLocalElementList")
-         USE ISO_C_BINDING, ONLY : C_INT
-         INTEGER(C_INT), VALUE :: id
-         INTEGER(C_INT)        :: element_list(*)
+         USE ISO_C_BINDING, ONLY : C_INT32_T
+         INTEGER(C_INT32_T), VALUE :: id
+         INTEGER(C_INT32_T)        :: element_list(*)
        END FUNCTION MURGE_GetLocalElementList
     END INTERFACE
 
@@ -759,6 +771,15 @@ CONTAINS
 
 #  ifdef MURGE_PROD_NO_COMM
     IF (gmres) THEN
+       ! loc2glob_prod will contain any column which has local 
+       ! contributions.
+       ! First we count the number of local columns,
+       ! one column can be counted several time if it belongs to several 
+       ! elements.
+       ! Then, we build a temporary oversized tmp_loc2glob_prod which will contain
+       ! the ordered list of columns without repetitions.
+       ! Finally, we copy it into loc2glob_prod, with the right size.
+       
        ! Counting maximum number of entries in tmp_loc2glob_prod
        tmp_local_n_prod = 0
        DO i_elem = 1, n_local_elms, murge_assembly_step
@@ -798,7 +819,9 @@ CONTAINS
                    CALL vertex_is_local(index_node1, is_local)
                    IF (is_local) THEN
                       DO j = 1, murge_local_n_prod
+                         ! If the column is already listed, loop to next one.
                          IF (index_node1 .EQ. tmp_loc2glob_prod(j)) CYCLE LOOP_ORDER
+                         ! If we found the place where to insert the column we do so.
                          IF (index_node1 .LT. tmp_loc2glob_prod(j)) THEN
                             tmp = tmp_loc2glob_prod(j)
                             tmp_loc2glob_prod(j) = index_node1
@@ -814,6 +837,7 @@ CONTAINS
           END DO
        END DO
 
+       ! copy temporary buffer into murge_loc2glob_prod
        CALL tr_allocate( murge_loc2glob_prod, 1, murge_local_n_prod,           &
             &            "murge_loc2glob_prod",CAT_DMATRIX)
 
@@ -920,13 +944,13 @@ CONTAINS
 #endif
   END SUBROUTINE murge_setGraph
 
-  INTEGER(C_INT) FUNCTION getVertices(e, idx) BIND(C, name="getVertices")
+  INTEGER(C_INT32_T) FUNCTION getVertices(e, idx) BIND(C, name="getVertices")
     USE parameters,                ONLY : n_order, n_vertex_max
     USE data_structure,            ONLY : type_element, type_element_list
     USE data_structure,            ONLY : type_node_list
     USE nodes_elements,            ONLY : element_list, node_list
-    INTEGER(C_INT), VALUE :: e
-    INTEGER(C_INT)        :: idx(*)
+    INTEGER(C_INT32_T), VALUE :: e
+    INTEGER(C_INT32_T)        :: idx(*)
     INTEGER :: i, j, i_order, inode1
     TYPE(type_element) :: element
     j = 1

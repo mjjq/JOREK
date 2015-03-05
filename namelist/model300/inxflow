@@ -107,4 +107,6 @@
 
  use_murge    = .f.
  use_murge_element = .f.
+ murge_with_starpu = .f.
+ murge_cuda_nbr = 0
 /

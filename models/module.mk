@@ -36,7 +36,8 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
         $(DIR)/mod_diffusivities.f90                    \
         $(DIR)/mod_pellet.f90				\
         $(DIR)/read_RMP_profiles.f90                    \
-        $(DIR)/neo_coef.f90
+        $(DIR)/neo_coef.f90				\
+	$(DIR)/mod_assembly.f90
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
         $(DIR)/mod_pellet.f90				\

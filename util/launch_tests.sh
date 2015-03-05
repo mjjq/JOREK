@@ -26,7 +26,7 @@ function setsuf () {
 	SUF="rst"
     fi
 }
-
+SUF="rst"
 # ---------- Following variables has to be changed by the user ----------
 
 # Trunk of jorek to be used
@@ -53,8 +53,8 @@ fi
 # List of executables used during following simulations
 # The n-th executable has two parameters : 
 #      model[n] ntor[n]
-declare -a model=( 199 199 199 302 302 303 303)
-declare -a ntor=(  1   3   7   1   3   1   3  )
+declare -a model=( 199 199 199 302 302 303 303 303)
+declare -a ntor=(  1   3   7   1   3   1   3   7  )
 
 declare -a list_idx=(     0                  3                  5               )
 declare -a list_inputs=(  "in199"            "xx302"            "xx303"         )
@@ -78,6 +78,25 @@ if [ "${FIRSTLETTERS}" = "MU" ]; then
     SET_MURGE="use_murge=.t. use_murge_element=.t."
 else
     SET_MURGE="use_murge=.f. use_murge_element=.f."
+fi
+
+UPPER_SIMNAME=$(echo "${SIMNAME}" | tr '[:lower:]' '[:upper:]')
+echo ${UPPER_SIMNAME} | grep STARPU >/dev/null 2>&1
+if [ $? -eq 0 ]
+then
+    SET_MURGE="${SET_MURGE} murge_with_starpu=.t."
+fi
+echo ${UPPER_SIMNAME} | grep NCUDA >/dev/null 2>&1
+if [ $? -eq 0 ]
+then
+    NCUDA=$(echo ${UPPER_SIMNAME} | sed -e 's/.*NCUDA\([0-9]*\).*/\1/g')
+    SET_MURGE="${SET_MURGE} murge_cuda_nbr=${NCUDA}"
+fi
+
+echo ${UPPER_SIMNAME} | grep NTOR >/dev/null 2>&1
+if [ $? -eq 0 ]
+then
+    NTOR=$(echo ${UPPER_SIMNAME} | sed -e 's/.*NTOR\([0-9]*\).*/\1/g')
 fi
 
 # Model number
@@ -208,13 +227,13 @@ if [ "$MODNB" = "199" ]; then
         ${UTILDIR}/setinput.sh ${INFILE} restart=.f. nstep_n=0 tstep_n=1 ${SET_MURGE}
         EXE=j${model[$i]}_1
         eval ${PRERUN}
-        ${MPIRUN} ./${EXE} < ${INFILE} | tee out_equil
+        ${MPIRUN} ./${EXE} < ${INFILE} 2>&1 | tee out_equil
         cp jorek_restart.${SUF} jorek_equil.${SUF}
     else
         ${UTILDIR}/setinput.sh ${INFILE} restart=.t. nstep_n=200 tstep_n=1000 ${SET_MURGE}
         EXE=j${model[$i]}_3
         eval ${PRERUN}
-        ${MPIRUN} ./${EXE} < ${INFILE} | tee out_loop${LASTNUM}
+        ${MPIRUN} ./${EXE} < ${INFILE} 2>&1 | tee out_loop${LASTNUM}
         
         ${UTILDIR}/extract_live_data.sh energies energies.dat 
     fi
@@ -483,10 +502,14 @@ if [ "$MODNB" = "303" ]; then
   	      cp jorek_restart.${SUF} jorek_rst1.${SUF}; 
   	  fi
         else
+	    if [ -z $NTOR ]
+	    then
+		NTOR=3
+	    fi
   	  if [ ! -f jorek_rst2.${SUF} ]; then
   	      cp jorek_rst1.${SUF} jorek_restart.${SUF} 
   	      ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 20, 100' 'tstep_n= 2, 5' nout=10 ${SET_MURGE}
-  	      EXE=j${model[$i]}_3
+  	      EXE=j${model[$i]}_$NTOR
         eval ${PRERUN}
   	      ${MPIRUN} ./${EXE} < ${INFILE} 2>err2 | tee out_loop2
   	      status=$?; if [ $status -eq 0 ]; then 
@@ -495,7 +518,7 @@ if [ "$MODNB" = "303" ]; then
   	  else
   	      if [ ! -f jorek_rst3.${SUF} ]; then
   		  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 100' 'tstep_n= 10' nout=10 ${SET_MURGE}
-  		  EXE=j${model[$i]}_3
+  		  EXE=j${model[$i]}_$NTOR
         eval ${PRERUN}
   		  ${MPIRUN} ./${EXE} < ${INFILE} 2>err3 | tee out_loop${LASTNUM}
   	      fi

@@ -32,11 +32,13 @@ contains
 
     use data_structure
     use global_distributed_matrix
+    use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_rhs
     use phys_module, only: F0, GAMMA, freeboundary
-    USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
+    USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
-         MURGE_SUCCESS, murge_add_one_entry
+         MURGE_SUCCESS, murge_add_one_entry, murge_harmonic
+    use murge_module, only : MURGE_ASSEMBLYEND
     use mpi_mod
 
     implicit none
@@ -153,6 +155,17 @@ contains
 
 
                             index_node = node_list%node(inode)%index(1)
+!XL:  don't know why it didn't worked...
+#ifdef FALSE_AND_NOT_DEFINED
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, k,  in,                &
+                                  index_node, k,  in,                &
+                                  zbig, solve_only, gmres,           &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+#else
+
                             if (use_murge .and. use_murge_element) then
                                call vertex_is_local(index_node, is_local)
                                if (is_local) then
@@ -178,8 +191,19 @@ contains
 
                                endif
                             end if
+#endif
 
                             index_node = node_list%node(inode)%index(2)
+#ifdef FALSE_AND_NOT_DEFINED
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, k,  in,                &
+                                  index_node, k,  in,                &
+                                  zbig, solve_only, gmres,           &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+#else
+
                             if (use_murge .and. use_murge_element) then
                                call vertex_is_local(index_node, is_local)
                                if (is_local) then
@@ -204,6 +228,7 @@ contains
 
                                endif
                             end if
+#endif
                          endif
 
                          if (k .eq. 7) then
@@ -254,14 +279,51 @@ contains
                             ku = 2
                             kv = 7
                             kT = 6
-                            if (loop_nbr == loop) then
+                            ! -- with murge, local_elms is replicated on each harmonic. we don't want to enter 
+                            ! -- boundary conditions twice
+                            if (loop_nbr == loop .and. (.not. use_murge .or. murge_harmonic .eq. 1)) then
                                if (in .eq. 1) then
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                       Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
+                                  CALL boundary_conditions_add_RHS(       &
+                                       &   index_node, kv, in,            &
+                                       &   use_murge, use_murge_element,  &
+                                       &   index_min, index_max,          &
+                                       &   RHS_loc,                       &
+                                       Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot))
                                else
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
+                                  CALL boundary_conditions_add_RHS(       &
+                                       &   index_node, kv, in,            &
+                                       &   use_murge, use_murge_element,  &
+                                       &   index_min, index_max,          &
+                                       &   RHS_loc,                       &
+                                       0.d0)
                                endif
                             endif
+#ifdef FALSE_AND_NOT_DEFINED
+                             !call boundary_conditions_add_one_entry( &
+                             !     index_node, kv, in,                &
+                             !     index_node, kv, in,                &
+                             !     zbig, solve_only, gmres,           &
+                             !     use_murge, use_murge_element,      &
+                             !     cnt, cnt_prod, only_count,         &
+                             !     index_max, index_max)
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kT, in,                &
+                                  - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction, &
+                                  solve_only, gmres,                 &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+                             !call boundary_conditions_add_one_entry( &
+                             !     index_node,  kv, in,               &
+                             !     index_node2, ku, in,               &
+                             !     - zbig * BigR**2 / ps0_s,          &
+                             !     solve_only, gmres,                 &
+                             !     use_murge, use_murge_element,      &
+                             !     cnt, cnt_prod, only_count,         &
+                             !     index_max, index_max)
+#else
+
                             if (use_murge .and. use_murge_element) then
                                call vertex_is_local(index_node, is_local)
                                if (is_local) then
@@ -310,20 +372,56 @@ contains
 
                                endif
                             end if
-
+#endif
                             index_node  = node_list%node(inode)%index(1)
                             index_node2 = node_list%node(inode)%index(2)
                             kv = 7
                             kT = 6
 
-                            if (loop_nbr == loop) then
+                            ! -- with murge, local_elms is replicated on each harmonic. we don't want to enter 
+                            ! -- boundary conditions twice
+                            if (loop_nbr == loop  .and. (.not. use_murge .or. murge_harmonic .eq. 1)) then
                                if (in .eq. 1) then
-                                  Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                       Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
+                                  CALL boundary_conditions_add_RHS(       &
+                                       &   index_node2, kv, in,           &
+                                       &   use_murge, use_murge_element,  &
+                                       &   index_min, index_max,          &
+                                       &   RHS_loc,                       &
+                                       Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction))
                                else
-                                  Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
+                                  CALL boundary_conditions_add_RHS(       &
+                                       &   index_node2, kv, in,           &
+                                       &   use_murge, use_murge_element,  &
+                                       &   index_min, index_max,          &
+                                       &   RHS_loc,                       &
+                                       &   0.d0)
                                endif
                             endif
+#ifdef FALSE_AND_NOT_DEFINED
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kv, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kT, in,               &
+                                   - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction, &
+                                  solve_only, gmres,                 &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node,  kT, in,               &
+                                  + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction, &
+                                  solve_only, gmres,                 &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+#else
                             if (use_murge .and. use_murge_element) then
                                call vertex_is_local(index_node2, is_local)
                                if (is_local) then
@@ -375,6 +473,7 @@ contains
 
                                endif
                             end if
+#endif
                          end if
 
                       end if
@@ -407,6 +506,17 @@ contains
                               ) then
 
                             index_node = node_list%node(inode)%index(1)
+
+#ifdef FALSE_AND_NOT_DEFINED
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, k,  in,                &
+                                  index_node, k,  in,                &
+                                  zbig, solve_only, gmres,           &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+#else
+
                             if (use_murge .and. use_murge_element) then
                                call vertex_is_local(index_node, is_local)
                                if (is_local) then
@@ -431,7 +541,18 @@ contains
 
                                endif
                             end if
+#endif
                             index_node = node_list%node(inode)%index(3)
+
+#ifdef FALSE_AND_NOT_DEFINED
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, k,  in,                &
+                                  index_node, k,  in,                &
+                                  zbig, solve_only, gmres,           &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_max, index_max)
+#else
 
                             if (use_murge .and. use_murge_element) then
                                call vertex_is_local(index_node, is_local)
@@ -457,6 +578,7 @@ contains
 
                                endif
                             end if
+#endif
                          endif
 
                       endif
@@ -472,9 +594,19 @@ contains
           if (.not. solve_only) then
              CALL MURGE_ASSEMBLYEND(murge_id, ierr)
           end if
+          IF (ierr /= MURGE_SUCCESS) THEN
+             WRITE (*,*) my_id, ":%# error in assemblyend harmonic"
+             CALL abort()
+          END IF
+
           if (gmres) then
              CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
           end if
+          IF (ierr /= MURGE_SUCCESS) THEN
+             WRITE (*,*) my_id, ":%# error in assemblyend product"
+             CALL abort()
+     END IF
+
        end if
 #endif
     end do

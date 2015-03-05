@@ -28,7 +28,27 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   USE parameters
   USE mumps_module
   USE pastix_module
-  USE murge_module
+  USE murge_module, only : murge_sym, murge_epsilon, murge_solver,             &
+       &                   MURGE_RPARAM_EPSILON_ERROR, MURGE_ASSEMBLY_OVW,     &
+       &                   MURGE_IPARAM_SYM, MURGE_PIVOT, MURGE_HARMONIC,      &
+       &                   MURGE_NDOF, MURGE_GLOBAL_N, MURGE_IPARAM_BASEVAL,   &
+       &                   DPARM_EPSILON_MAGN_CTRL, MURGE_RICAR,               &
+       &                   IPARM_INCOMPLETE, MURGE_ILUK, IPARM_LEVEL_OF_FILL,  &
+       &                   IPARM_THREAD_NBR, MURGE_NTHRD, MURGE_ITER,          &
+       &                   MURGE_AMALG, IPARM_AMALGAMATION_LEVEL,              &
+       &                   IPARM_ITERMAX, API_YES, IPARM_MATRIX_VERIFICATION,  &
+       &                   API_VERBOSE_YES, IPARM_VERBOSE,                     &
+       &                   MURGE_SOLVER_PASTIX, MURGE_ID, MURGE_INITIALISED,   &
+       &                   MURGE_LOCAL_N, USE_MURGE_ELEMENT
+  USE murge_module, only : MURGE_Initialize
+  USE murge_module, only : MURGE_GetSolver
+  USE murge_module, only : MURGE_SetDefaultOptions
+  USE murge_module, only : MURGE_SetOptionINT
+  USE murge_module, only : MURGE_SetOptionREAL
+  USE murge_module, only : MURGE_GraphGlobalCSC
+  USE murge_module, only : MURGE_MatrixGlobalCSC
+  USE murge_module, only : MURGE_SetGlobalRhs
+  USE murge_module, only : MURGE_GetGlobalSolution
   USE global_distributed_matrix
   USE mpi_mod
   IMPLICIT NONE

@@ -2,7 +2,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <mpi.h>
-#include <murge.h>
+#define INTSIZE32
+#  include <murge.h>
 #ifdef MURGE_INTERFACE_MAJOR_VERSION
 #  if MURGE_INTERFACE_MAJOR_VERSION >= 1
 #    ifdef MURGE_INTERFACE_MINOR_VERSION
@@ -37,5 +38,5 @@ int getVertices(int i, int * idx);
     getVertices(i+1, idx);	\
   } while (0)
 
-#include "MURGE_GetLocalElementList.c"
+#  include "MURGE_GetLocalElementList.c"
 #endif

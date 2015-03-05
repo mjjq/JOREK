@@ -4,7 +4,7 @@ subroutine log_parameters(my_id)
 
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
-use murge_module,  only: use_murge, use_murge_element
+use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use wsmp_module,   only: use_wsmp
 use vacuum,        only: wall_resistivity
@@ -387,6 +387,8 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
   write(*,LOGI_FMT) 'use_murge             ', use_murge
   write(*,LOGI_FMT) 'use_murge_element     ', use_murge_element
+  write(*,LOGI_FMT) 'murge_with_starpu     ', murge_with_starpu
+  write(*,INTG_FMT) 'murge_cuda_nbr        ', murge_cuda_nbr
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,LOGI_FMT) 'refinement            ', refinement

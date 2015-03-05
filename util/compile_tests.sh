@@ -15,10 +15,10 @@ TRKDIR="$(readlink -f $UTILDIR/..)"
 # The n-th executable has three parameters : 
 #      model[n] ntor[n] nplane[n] nperiod[n]
 if [ "$1" = "199" ]; then 
-   declare -a model=(  199 199 )
-   declare -a ntor=(    1   3  )
-   declare -a nplane=(  1   4  )
-   declare -a nperiod=( 1   1  ) 
+   declare -a model=(  199 199 199)
+   declare -a ntor=(    1   3  7)
+   declare -a nplane=(  1   4  8)
+   declare -a nperiod=( 1   1  1) 
 fi
 if [ "$1" = "302" ]; then 
    declare -a model=(  302 302 )
@@ -27,16 +27,16 @@ if [ "$1" = "302" ]; then
    declare -a nperiod=(  1  8  )
 fi
 if [ "$1" = "303" ]; then 
-   declare -a model=(  303 303 )
-   declare -a ntor=(    1   3  )
-   declare -a nplane=(  1   8  )
-   declare -a nperiod=( 1   2  )
+   declare -a model=(  303 303 303 )
+   declare -a ntor=(    1   3   7  )
+   declare -a nplane=(  1   8   16 )
+   declare -a nperiod=( 1   2   2  )
 fi
 if [ "$1" = "all" ] || [ "$1" = "" ]; then 
-   declare -a model=(  199 199 199 302 302 303 303 )
-   declare -a ntor=(   1   3   7   1   3    1   3  )
-   declare -a nplane=( 1   4   8   1   8    1   8  )
-   declare -a nperiod=(1   1   1   1   8    1   2  )
+   declare -a model=(  199 199 199 302 302 303 303 303 )
+   declare -a ntor=(   1   3   7   1   3    1   3   7  )
+   declare -a nplane=( 1   4   8   1   8    1   8   16 )
+   declare -a nperiod=(1   1   1   1   8    1   2   2  )
 fi
 
 #-------------------------------------------------------------------------

@@ -5,7 +5,9 @@ use tr_module
 use parameters
 use mumps_module
 use pastix_module
-use murge_module
+use murge_module, only : use_murge, murge_id, MURGE_ASSEMBLY_OVW, MURGE_SUCCESS
+use murge_module, only : MURGE_SetGlobalRHS
+use murge_module, only : MURGE_GetGlobalSolution
 use wsmp_module
 use global_distributed_matrix
 use mpi_mod
@@ -170,8 +172,9 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 #ifdef USE_BLOCK
       pastix_iparm(5) = block_size      ! block size
       
-      call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                                         &
-                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+      call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
+           mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                 !DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
       pastix_iparm(5) = 1      ! block size

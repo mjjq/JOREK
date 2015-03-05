@@ -1,3 +1,161 @@
+module construct_matrix_mod
+
+contains
+
+  !> subroutine that will construct elemeentary matrices
+  subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, minRad, R_axis, &
+       &                             Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
+       &                             ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
+       &                             n_local_elms, node_list)
+
+    ! --- Modules
+    use parameters,               only : n_tor, jorek_model, n_vertex_max
+    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
+    USE data_structure,           only : type_element, type_node, type_node_list
+    use mod_boundary_matrix_open, only : boundary_matrix_open
+    use mod_elt_matrix,           only : element_matrix
+    use mod_elt_matrix_fft,       only : element_matrix_fft
+
+    ! --- Routine parameters
+    type (type_element),              intent(in)     :: element
+    type (type_node),                 intent(inout)  :: nodes(n_vertex_max)
+    logical,                          intent(in)     :: xpoint2
+    integer,                          intent(in)     :: xcase2
+    real*8,                           intent(in)     :: minRad
+    real*8,                           intent(in)     :: R_axis
+    real*8,                           intent(in)     :: Z_axis
+    real*8,                           intent(in)     :: psi_axis
+    real*8,                           intent(in)     :: psi_bnd
+    real*8,                           intent(in)     :: R_xpoint(2)
+    real*8,                           intent(in)     :: Z_xpoint(2)
+    real*8, dimension (:,:), pointer, intent(inout)  :: ELM
+    real*8, dimension (:,:), pointer, intent(inout)  :: ELM2
+    real*8, dimension (:)  , pointer, intent(inout)  :: RHS
+    real*8, dimension (:)  , pointer, intent(inout)  :: RHS2
+    integer,                          intent(in)     :: omp_tid
+    integer,                          intent(in)     :: ife
+    integer,                          intent(in)     :: n_local_elms
+    TYPE (type_node_list),            intent(in)     :: node_list
+    
+    ! -- internal parameters
+    integer iv, iv2, inode1, inode2, i, j
+    integer vertex(2), direction(2)
+
+    ! --- Call element_matrix
+    if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use fft for toroidal integration
+    else
+      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use direct integration
+    endif
+
+    ! --- Apply sheath boundary conditions at the targets
+    if (bc_natural_open) then
+      ! --- Loop over the 4 nodes
+      do iv = 1, n_vertex_max
+
+        iv2  = mod(iv, n_vertex_max) + 1
+        inode1 = element%vertex(iv)
+        inode2 = element%vertex(iv2)
+
+        ! --- The target has boundary 1 or 3
+    	if (      ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+    	    .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+
+    	  nodes(1)  = node_list%node(inode1)
+    	  nodes(2)  = node_list%node(inode2)
+    	  
+    	  vertex    = (/ iv, iv2 /)
+    	  direction = (/  1, 2   /)
+
+          ! --- Build matrix elements for boundary
+    	  call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+    	endif
+       
+      enddo
+    endif
+    
+    ! --- Apply boundary conditions for flux surface boundaries (2 and 3)
+    if (bc_natural_flux) then
+      ! --- Loop over the 4 nodes
+      do iv = 1, n_vertex_max
+
+        iv2  = mod(iv, n_vertex_max) + 1
+        inode1 = element%vertex(iv)
+        inode2 = element%vertex(iv2)
+
+        ! --- The target has boundary 1 or 3
+    	if (      ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+    	    .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+
+    	  nodes(1)  = node_list%node(inode1)
+    	  nodes(2)  = node_list%node(inode2)
+    	  
+    	  vertex    = (/ iv, iv2 /)
+    	  direction = (/  1, 2   /)
+
+          ! --- Build matrix elements for boundary
+    	  !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+    	endif
+       
+      enddo
+    endif
+    
+    
+    
+    ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
+#ifdef COMPARE_ELEMENT_MATRIX
+    ! --- Comparison is performed only for one finite element
+    if (ife .eq. n_local_elms/2) then
+      
+      ! --- Call both routines
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM2, RHS2, omp_tid)
+      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,  RHS,  omp_tid)
+      
+      ! --- Compare right hand side
+      write(*,*)
+      write(*,*) 'Comparing rhs:'
+      write(*,*)
+      write(*,'(A)') '  #    my_id	 i ivertex  iorder    ivar    itor	       RHS    ' //&
+    	'	 RHS2	     RHS-RHS2'
+      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+    	
+    	if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
+    	  call decrypt_index(i, ivertex, iorder, ivar, itor)
+    	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, RHS(i), RHS2(i),	  &
+    	    RHS(i)-RHS2(i)
+    	  rhs_problem(ivar) = .true.
+    	  difference_found  = .true.
+    	endif
+    	
+      enddo
+      
+      ! --- Compare matrix entries
+      write(*,*)
+      write(*,*) 'Comparing elm:'
+      write(*,*)
+      write(*,'(A)') '  #    my_id	 i	 j ivertex  iorder    ivar    itor jvertex  ' //  &
+    	'jorder    jvar    jtor 	    ELM 	   ELM2        ELM-ELM2'
+      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+    	do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+    	  
+    	  if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
+    	    call decrypt_index(i, ivertex, iorder, ivar, itor)
+    	    call decrypt_index(j, jvertex, jorder, jvar, jtor)
+    	    write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,	  &
+    	      jorder, jvar, jtor, ELM(i,j), ELM2(i,j), ELM(i,j)-ELM2(i,j)
+    	    elm_problem(ivar,jvar) = .true.
+    	    difference_found	   = .true.
+    	  endif
+    	  
+        enddo
+      enddo
+      
+    endif
+#endif
+    ! --- End of element_matrix comparison
+    
+    
+  end subroutine elementary_matrix_build
 !> Construct the main matrix from the contributions of the Bezier elements.
 !!
 !! The element contributions are determined by element_matrix(_fft). Additional
@@ -61,6 +219,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer, external                 :: omp_get_num_threads, omp_get_thread_num
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
+  CHARACTER(LEN=128)                :: fname
 
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
@@ -181,120 +340,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif
 
-    ! --- Call element_matrix
-    if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model < 700 ) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use fft for toroidal integration
-    else
-      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use direct integration
-    endif
-
-    ! --- Apply sheath boundary conditions at the targets
-    if (bc_natural_open) then
-      ! --- Loop over the 4 nodes
-      do iv = 1, n_vertex_max
-
-        iv2  = mod(iv, n_vertex_max) + 1
-        inode1 = element%vertex(iv)
-        inode2 = element%vertex(iv2)
-
-        ! --- The target has boundary 1 or 3
-    	if (      ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-    	    .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
-
-    	  nodes(1)  = node_list%node(inode1)
-    	  nodes(2)  = node_list%node(inode2)
-    	  
-    	  vertex    = (/ iv, iv2 /)
-    	  direction = (/  1, 2   /)
-
-          ! --- Build matrix elements for boundary
-    	  call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
-    	endif
-       
-      enddo
-    endif
-    
-    ! --- Apply boundary conditions for flux surface boundaries (2 and 3)
-    if (bc_natural_flux) then
-      ! --- Loop over the 4 nodes
-      do iv = 1, n_vertex_max
-
-        iv2  = mod(iv, n_vertex_max) + 1
-        inode1 = element%vertex(iv)
-        inode2 = element%vertex(iv2)
-
-        ! --- The target has boundary 1 or 3
-    	if (      ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-    	    .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
-
-    	  nodes(1)  = node_list%node(inode1)
-    	  nodes(2)  = node_list%node(inode2)
-    	  
-    	  vertex    = (/ iv, iv2 /)
-    	  direction = (/  1, 2   /)
-
-          ! --- Build matrix elements for boundary
-    	  !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
-    	endif
-       
-      enddo
-    endif
-    
-    
-    
-! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
-#ifdef COMPARE_ELEMENT_MATRIX
-    ! --- Comparison is performed only for one finite element
-    if (ife .eq. n_local_elms/2) then
-      
-      ! --- Call both routines
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM2, RHS2, omp_tid)
-      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,  RHS,  omp_tid)
-      
-      ! --- Compare right hand side
-      write(*,*)
-      write(*,*) 'Comparing rhs:'
-      write(*,*)
-      write(*,'(A)') '  #    my_id	 i ivertex  iorder    ivar    itor	       RHS    ' //&
-    	'	 RHS2	     RHS-RHS2'
-      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-    	
-    	if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
-    	  call decrypt_index(i, ivertex, iorder, ivar, itor)
-    	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, RHS(i), RHS2(i),	  &
-    	    RHS(i)-RHS2(i)
-    	  rhs_problem(ivar) = .true.
-    	  difference_found  = .true.
-    	endif
-    	
-      enddo
-      
-      ! --- Compare matrix entries
-      write(*,*)
-      write(*,*) 'Comparing elm:'
-      write(*,*)
-      write(*,'(A)') '  #    my_id	 i	 j ivertex  iorder    ivar    itor jvertex  ' //  &
-    	'jorder    jvar    jtor 	    ELM 	   ELM2        ELM-ELM2'
-      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-    	do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-    	  
-    	  if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
-    	    call decrypt_index(i, ivertex, iorder, ivar, itor)
-    	    call decrypt_index(j, jvertex, jorder, jvar, jtor)
-    	    write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,	  &
-    	      jorder, jvar, jtor, ELM(i,j), ELM2(i,j), ELM(i,j)-ELM2(i,j)
-    	    elm_problem(ivar,jvar) = .true.
-    	    difference_found	   = .true.
-    	  endif
-    	  
-        enddo
-      enddo
-      
-    endif
-#endif
-! --- End of element_matrix comparison
-    
-    
+    call elementary_matrix_build(element, nodes, xpoint2, xcase2, minRad, R_axis, &
+         &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
+         &                       ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
+         &                       n_local_elms, node_list)
     
     ! --- Define element nodes (depends if it's refined)
     if (refinement) then   
@@ -382,14 +431,15 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   end if
 
 
-! --- For debugging purpose
-!  call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-!  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
-!  if (my_id .eq. 0) then
-!     write(fname,'(A,I6.6)')"rhs",index_now
-!     call tr_vdump(fname,RHS_glob,ndof_glob)
-!  end if
-
+#ifdef NORMTRACE
+  ! --- For debugging purpose
+  call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
+  if (my_id .eq. 0) then
+     write(fname,'(A,I6.6)')"rhs",index_now
+     call tr_vdump(fname,RHS_glob,ndof_glob)
+  end if
+#endif
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc",A_glob,nz_glob)
@@ -406,7 +456,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
-! --- For debugging purpose
+  ! --- For debugging purpose
 !  if (my_id .eq. 0) then
 !     write(fname,'(A,I6.6)')"rhsbc",index_now
 !     call tr_vdump(fname,RHS_glob,ndof_glob)
@@ -486,3 +536,4 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   end subroutine decrypt_index
 
 end subroutine construct_matrix
+end module construct_matrix_mod

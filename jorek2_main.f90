@@ -22,9 +22,12 @@ program JOREK2
   use constants
   use mumps_module
   use pastix_module
-  use murge_module,        only: murge_initialization, murge_setGraph, MURGE_Clean, use_murge,     &
-    use_murge_element, murge_initialised, murge_glob2loc, murge_loc2glob, murge_id,&
-    murge_termination
+  use murge_module,        only: murge_initialization, murge_setGraph,         &
+       &                         MURGE_Clean,                                  &
+       &                         use_murge,                                    &
+       &                         use_murge_element, murge_initialised,         &
+       &                         murge_glob2loc, murge_loc2glob, murge_id,     &
+       &                         murge_termination
   use wsmp_module
   use data_structure
   use phys_module
@@ -38,7 +41,8 @@ program JOREK2
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
-
+  use construct_matrix_mod, only : construct_matrix
+  use construct_matrix_murge_mod, only : construct_matrix_murge
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
   use live_data2,          only: init_live_data2, write_live_data2, finalize_live_data2
@@ -101,42 +105,6 @@ program JOREK2
       logical(kind=4),             intent(in)    :: xpoint2
       logical(kind=4),             intent(in)    :: nice_q
     end subroutine equilibrium
-     
-    SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
-         &                            bnd_node_list, local_elms,                   &
-         &                            n_local_elms, xpoint2, xcase2,               &
-         &                            minRad, R_axis, Z_axis, psi_axis,            &
-         &                            psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,     &
-         &                            gmres, i_tor, n_cpu,                         &
-         &                            mpi_comm_n, MPI_COMM_TRANS,                  &
-         &                            my_id_trans, n_cpu_trans, solve_only)
-      use data_structure, only : type_node,type_element,type_element_list,type_bnd_node_list,      &
-        type_node_list, thread_struct
-      integer(kind=4) :: n_cpu
-      integer(kind=4) ,target :: n_local_elms
-      integer(kind=4) ,target :: my_id
-      type (type_node_list) ,target :: node_list
-      type (type_element_list) ,target :: element_list
-      type (type_bnd_node_list) ,target :: bnd_node_list
-      integer(kind=4) ,target :: local_elms(n_local_elms)
-      logical(kind=4) ,target :: xpoint2
-      integer(kind=4) ,target :: xcase2
-      real(kind=8) ,target :: minrad
-      real(kind=8) ,target :: r_axis
-      real(kind=8) ,target :: z_axis
-      real(kind=8) ,target :: psi_axis
-      real(kind=8) ,target :: psi_bnd
-      real(kind=8) ,target :: r_xpoint(:)
-      real(kind=8) ,target :: z_xpoint(:)
-      real(kind=8) ,target :: psi_xpoint(:)
-      logical(kind=4) ,target :: gmres
-      integer(kind=4) :: i_tor(n_cpu)
-      integer(kind=4) :: mpi_comm_n
-      integer(kind=4) ,target :: mpi_comm_trans
-      integer(kind=4) ,target :: my_id_trans
-      integer(kind=4) ,target :: n_cpu_trans
-      logical(kind=4) ,target :: solve_only
-    end subroutine construct_matrix_murge
   end interface
   
   type (type_surface_list) :: surface_list
@@ -810,8 +778,10 @@ required = 0
     ! Build ijA_index, ijA_size and irn_jcn
 
     ! TODO : ne pas appeler avec MURGE si pas utile
-    call global_matrix_structure(my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
-    	 local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
+    if (.not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres )) then
+       call global_matrix_structure(my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
+            local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
+    end if
 
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
        
@@ -963,6 +933,8 @@ required = 0
        call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time construct_matrix :',tsecond
     endif     
+    ! Ici c'est OK
+    !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)
 
     ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
     call del_thread_buffers()
@@ -1269,8 +1241,8 @@ required = 0
     	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
             call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-                  DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
-                  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                 mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
    
        	  endif
           

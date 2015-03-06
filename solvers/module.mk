@@ -20,9 +20,12 @@ JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/solve_mumps_all.f90 			\
 	$(DIR)/solve_pastix_all.f90 			\
 	$(DIR)/solvP3.f90 				\
-	$(DIR)/solve_murge_all.f90			\
-	$(DIR)/MURGE_nodelist.c
+	$(DIR)/solve_murge_all.f90
 
+ifeq (1, $(USE_PASTIX_MURGE))
+JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)			\
+	$(DIR)/MURGE_nodelist.c
+endif
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/solve_M2.f90 				\
 	$(DIR)/solvP3.f90 				\

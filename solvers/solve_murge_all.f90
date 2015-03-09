@@ -40,6 +40,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
        &                   API_VERBOSE_YES, IPARM_VERBOSE,                     &
        &                   MURGE_SOLVER_PASTIX, MURGE_ID, MURGE_INITIALISED,   &
        &                   MURGE_LOCAL_N, USE_MURGE_ELEMENT
+#ifdef USE_MURGE
   USE murge_module, only : MURGE_Initialize
   USE murge_module, only : MURGE_GetSolver
   USE murge_module, only : MURGE_SetDefaultOptions
@@ -49,6 +50,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   USE murge_module, only : MURGE_MatrixGlobalCSC
   USE murge_module, only : MURGE_SetGlobalRhs
   USE murge_module, only : MURGE_GetGlobalSolution
+#endif
   USE global_distributed_matrix
   USE mpi_mod
   IMPLICIT NONE

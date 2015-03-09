@@ -8,8 +8,9 @@ subroutine gmres_matrix_vector(x,y,my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 use tr_module 
 use parameters
 use global_distributed_matrix
+use murge_module, only : use_murge, use_murge_element
 #ifdef USE_MURGE
-use murge_module, only : use_murge, use_murge_element, murge_id_prod, MURGE_ASSEMBLY_OVW
+use murge_module, only : murge_id_prod, MURGE_ASSEMBLY_OVW
 use murge_module, only : MURGE_SetGlobalRHS
 use murge_module, only : MURGE_GetGlobalProduct
 #endif

@@ -25,9 +25,12 @@ contains
          &                  API_TASK_ORDERING, IPARM_DOF_NBR,                  &
          &                  DPARM_EPSILON_REFINEMENT, IPARM_SYM,               &
          &                  IPARM_RHS_MAKING, IPARM_FACTORIZATION,             &
+#ifdef WORLDWAR2
          &                  API_THREAD_MULTIPLE, API_THREAD_FUNNELED,          &
+#endif
          &                  IPARM_THREAD_COMM_MODE,                            &
          &                  IPARM_END_TASK, API_TASK_INIT, IPARM_START_TASK
+#ifdef USE_MURGE
     use murge_module, only : MURGE_MatrixReset
     USE murge_module, only : MURGE_Initialize
     USE murge_module, only : MURGE_GetSolver
@@ -39,6 +42,7 @@ contains
     USE murge_module, only : MURGE_MatrixGlobalCSC
     USE murge_module, only : MURGE_SetGlobalRhs
     USE murge_module, only : MURGE_GetGlobalSolution
+#endif
     use wsmp_module
     use pastix_module
     use global_distributed_matrix

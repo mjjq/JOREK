@@ -195,18 +195,14 @@ subroutine bootstrap_current(minRad, R, Z,                   &
   ! --- Current with denormalisation
   ! --- (one R because the JOREK current is defined so, mu0 of course,
   ! --- and then B_average because Sauter's formula gives <jb*B>)
-  !Jb = R * Jb * MU_ZERO / B_average
+  Jb = R * Jb * MU_ZERO / B_average
   
   ! --- Project along phi (formula is for j_par, and we want j_phi)
-  !B_tot =  sqrt( (F0/R)**2 + (grad_psi/R)**2 )
-  !B_phi =  sqrt( (F0/R)**2 )
-  !Jb = Jb * B_phi / B_tot
+  B_tot =  sqrt( (F0/R)**2 + (grad_psi/R)**2 )
+  B_phi =  sqrt( (F0/R)**2 )
+  Jb = Jb * B_phi / B_tot
   
-  ! --- There should not be any bootstrap outside plasma...
-  !position  = max(rho_coef(5),1.d0) + 2.d0 * rho_coef(4)
-  !width     = rho_coef(4) / 2.d0
-  !tanh_boot = 0.5d0 - 0.5d0 * tanh( (psi_norm - position)/width ) 
-  !Jb = Jb * tanh_boot
+  ! --- There should not be any bootstrap outside plasma, the Xpoint can be noisy...
   if (xpoint .and.  (xcase .ne. 2) ) then
     distance_xpoint      = sqrt( (R      - R_xpoint(1))**2 + (Z      - Z_xpoint(1))**2 )
     distance_xpoint_axis = sqrt( (R_axis - R_xpoint(1))**2 + (Z_axis - Z_xpoint(1))**2 )
@@ -220,20 +216,6 @@ subroutine bootstrap_current(minRad, R, Z,                   &
     Jb = Jb * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - distance)/0.01d0 ) )
   endif
   
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! --- Careful, this is just for testing, don't forget to remove!
-  !jb = bootstrap_spline3_eval(n_spline_tmp-1, psi_knots_tmp, y_knots_tmp, y_spline_tmp, psi_n)
-  !jb = bootstrap_spline3_eval(n_spline_vtk-1, psi_knots_vtk, j_knots_vtk, j_spline_vtk, psi_n)
-  jb = -jb
-
 
 return
 end subroutine bootstrap_current

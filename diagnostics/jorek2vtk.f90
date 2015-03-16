@@ -8,6 +8,7 @@ use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
 use pellet_module
 use mpi_mod
+use bootstrap_functions
 
 implicit none
 
@@ -208,14 +209,14 @@ else
       'ki_neo      ', 'mu_neo      '/)
    endif
   if (use_pellet) then
-     scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) = (/ 'Pressure', 'Pellet' /)
+     scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) = (/ 'Pressure    ', 'Pellet      ' /)
   endif
    
 endif
 #endif
 
-if (include_magnetic_field)  vector_names(1:n_bfield)                   = (/ 'B_R  ','B_Z   ','B_phi   '/)
-if (include_velocity_field)  vector_names(n_bfield+1:n_bfield+n_vfield) = (/ 'V_R  ','V_Z   ','V_phi   '/)
+if (include_magnetic_field)  vector_names(1:n_bfield)                   = (/ 'B_R     ','B_Z     ','B_phi   '/)
+if (include_velocity_field)  vector_names(n_bfield+1:n_bfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
@@ -252,7 +253,10 @@ else
 endif
 
 minRad = 0.0
-if (bootstrap) call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+if (bootstrap) then
+  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+  call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+endif
     
 ! --- You may choose to print your poloidal snapshot at a different toroidal angle
 toroidal_angle = 0.d0 ! 2*PI / 6
@@ -640,9 +644,11 @@ do i=1,element_list%n_elements
         endif
 
         if (bootstrap) then
-          call bootstrap_current_rhs(minRad, R_axis, psi_axis, psi_bnd, psi_norm,&
-        			     psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,   &
-        			     Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb)
+          call bootstrap_current(minRad, R, Z,                 &
+	                         R_axis,   Z_axis,   psi_axis, &
+				 R_xpoint, Z_xpoint, psi_bnd,  &
+	                         psi_norm, psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,    &
+        			 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y,           Jb )
         else
           Jb = 0.d0
         endif

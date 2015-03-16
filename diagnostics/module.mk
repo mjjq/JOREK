@@ -50,6 +50,7 @@ JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC) 	\
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)		\
 	$(DIR)/find_flux_surfaces.f90  		\
 	$(DIR)/flux_surface_add_line.f90  	\
+	$(DIR)/determine_q_profile.f90    	\
 	$(DIR)/flux_surface_add_point.f90
 
 JOREK2VTK3D_SRC := $(JOREK2VTK3D_SRC)           \

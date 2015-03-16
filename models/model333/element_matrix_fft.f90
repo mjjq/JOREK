@@ -30,6 +30,7 @@ contains
     use corr_neg
     use pellet_module
     use mod_elm_apply_fft
+    use bootstrap_functions
 
     implicit none
     

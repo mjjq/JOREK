@@ -375,6 +375,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   use data_structure
   use diffusivities, only: get_dperp, get_zkperp
   use pellet_module
+  use bootstrap_functions
   
   implicit none
   
@@ -490,8 +491,13 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     Ti0   = T0   / 2.d0 ; Te0	= T0   / 2.d0
     Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
     Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
-    call bootstrap_current_rhs(minRad, R_axis, psi_axis, psi_bnd, psi_norm, ps0, ps0_x, ps0_y,     &
-                               r0,  r0_x,  r0_y, Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y, Jb)
+    call bootstrap_current(minRad, R, y_g,                       &
+                           R_axis,   Z_axis,   psi_axis,         &
+			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+			   ps0, ps0_x, ps0_y,                    &
+			   r0,  r0_x,  r0_y,                     &
+			   Ti0, Ti0_x, Ti0_y,                    &
+			   Te0, Te0_x, Te0_y,                  Jb)
   else
     Jb = 0.d0
   endif

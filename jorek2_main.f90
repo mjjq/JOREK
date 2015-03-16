@@ -41,8 +41,10 @@ program JOREK2
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
+  use bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
+
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
   use live_data2,          only: init_live_data2, write_live_data2, finalize_live_data2
@@ -883,8 +885,12 @@ required = 0
     if ( my_id == 0 ) call print_equil_state(equil_state, .false.)
     psi_bnd = equil_state%psi_bnd
     
+    ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
     minRad = 0.0
-    if (bootstrap) call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+    if (bootstrap) then
+      call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+      call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+    endif
     
     call tr_debug_write("JMAIN:Find_axis_R",R_axis)
     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)

@@ -1,7 +1,6 @@
 include ../config.in	
 
 all: modules \
-     bootstrap_current.o \
      current.o \
      density.o \
      element_matrix_GS.o \
@@ -12,7 +11,7 @@ all: modules \
      poisson.o \
      equilibrium.o \
      ffprime.o \
-     F_profile.o \  
+     F_profile.o \
      chgmt_node.o \
      temperature.o \
      temperature_i.o \
@@ -27,7 +26,7 @@ all: modules \
      read_RMP_profiles.o  \
      neo_coef.o
 
-modules : mod_parameters.o mod_phys_module.o mod_pellet.o mod_nodes_elements.o mod_avoid_neg_dens.o mod_domains.o
+modules : mod_parameters.o mod_phys_module.o mod_pellet.o mod_nodes_elements.o mod_avoid_neg_dens.o mod_domains.o mod_bootstrap_functions.o
 
 clean :
 	rm -f *.mod *.o

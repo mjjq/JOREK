@@ -443,6 +443,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   use phys_module
   use equation_variables
   use data_structure
+  use bootstrap_functions
   
   implicit none
   
@@ -648,8 +649,13 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! ---------------------
   if (bootstrap) then
     ! --- Full Sauter formula
-    call bootstrap_current_rhs(minRad, R_axis, psi_axis, psi_bnd, psi_norm, ps0, ps0_x, ps0_y,  &
-                               r0,  r0_x,  r0_y, Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y, Jb)
+    call bootstrap_current(minRad, R, y_g,                       &
+                           R_axis,   Z_axis,   psi_axis,         &
+			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+			   ps0, ps0_x, ps0_y,                    &
+			   r0,  r0_x,  r0_y,                     &
+			   Ti0, Ti0_x, Ti0_y,                    &
+			   Te0, Te0_x, Te0_y,                  Jb)
   else
     Jb = 0.d0
   endif

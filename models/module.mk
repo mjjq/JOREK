@@ -21,7 +21,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/update_time_evol_params.f90
 
 JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
-	$(DIR)/bootstrap_current.f90                    \
+        $(DIR)/mod_bootstrap_functions.f90 			\
 	$(DIR)/element_matrix_GS.f90 			\
 	$(DIR)/element_matrix_GS_inverse.f90 		\
 	$(DIR)/element_matrix_GS_perturbation.f90 	\
@@ -67,10 +67,11 @@ ENBIGGEN_SRC := $(JENBIGGEN_SRC)                        \
 	$(DIR)/mod_pellet.f90
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
-	$(DIR)/bootstrap_current.f90  	                \
+        $(DIR)/mod_corr_neg.f90                         \
+        $(DIR)/mod_bootstrap_functions.f90 		\
 	$(DIR)/mod_diffusivities.f90                    \
         $(DIR)/mod_pellet.f90                           \
-        $(DIR)/neo_coef.f90                             \
+        $(DIR)/neo_coef.f90                             
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)			\
         $(DIR)/mod_pellet.f90                           \

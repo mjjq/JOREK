@@ -364,7 +364,7 @@ end subroutine ELM_build_variables
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
-subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint, i_plane)
+subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
@@ -385,12 +385,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   logical		      :: xpoint2
   integer		      :: xcase2
   integer		      :: i_plane
-  real*8		      :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, Z_xpoint(2)
+  real*8		      :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
   
   ! --- Internal variables
   real*8		      :: psi_norm
   real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
   real*8		      :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
+  real*8		      :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
+  real*8		      :: Jb_0
       
   
   ! -------------------------------------
@@ -498,6 +500,28 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 			   r0,  r0_x,  r0_y,                     &
 			   Ti0, Ti0_x, Ti0_y,                    &
 			   Te0, Te0_x, Te0_y,                  Jb)
+    ! --- Full Sauter formula for initial profiles
+    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    zTi   = zT / 2.d0             
+    zTi_x = dT_dpsi * ps0_x / 2.d0
+    zTi_y = dT_dpsi * ps0_y / 2.d0
+    zTe   = zTi  
+    zTe_x = zTi_x
+    zTe_y = zTi_y
+    zn_x  = dn_dpsi * ps0_x
+    zn_y  = dn_dpsi * ps0_y
+    call bootstrap_current(minRad, R, y_g,                       &
+                           R_axis,   Z_axis,   psi_axis,         &
+			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+			   ps0, ps0_x, ps0_y,                    &
+			   zn,  zn_x,  zn_y,                     &
+			   zTi, zTi_x, zTi_y,                    &
+			   zTe, zTe_x, zTe_y,                  Jb_0)
+    ! --- Subtract the initial equilibrium part
+    Jb = Jb - Jb_0
   else
     Jb = 0.d0
   endif
@@ -534,7 +558,6 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if (i_plane .eq. 1) then
     ! --- Current source
     call current(xpoint2, xcase2, x_g,y_g, Z_xpoint, ps0,psi_axis,psi_bnd,current_source)
-    if (bootstrap) current_source = current_source * (0.5d0 - 0.5d0 * tanh((psi_norm-0.8)/0.005) )
 
     ! --- Density and Temperature source
     call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source)
@@ -544,10 +567,6 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     		     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
     call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
     		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
-    particle_source = particlesource * ( zn  - r0 )
-    heat_source     = heatsource     * ( zT  - T0 )
-    particle_source = particle_source * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
-    heat_source     = heat_source     * ( 0.5d0 - 0.5d0 * tanh((psi_norm-0.99)/0.005) )
     
     ! --- Toroidal momentum source (NBI)
     if ( abs(V_0) .ge. 1.e-12) then 

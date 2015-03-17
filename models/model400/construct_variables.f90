@@ -471,6 +471,10 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: Rline4, Zline4
   real*8                      :: target_buffer_width, tan_width
   real*8                      :: drho_dpsi, grad_psi
+  real*8		      :: zTi_x, zTi_y
+  real*8		      :: zTe_x, zTe_y
+  real*8		      :: zn_x,  zn_y
+  real*8		      :: Jb_0
       
   ! -------------------------------------
   ! --- Temperature dependent resistivity
@@ -656,6 +660,25 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 			   r0,  r0_x,  r0_y,                     &
 			   Ti0, Ti0_x, Ti0_y,                    &
 			   Te0, Te0_x, Te0_y,                  Jb)
+    ! --- Full Sauter formula for initial profiles
+    call density      (xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+    call temperature_i(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+    call temperature_e(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
+    zTi_x = dTi_dpsi * ps0_x
+    zTi_y = dTi_dpsi * ps0_y
+    zTe_x = dTe_dpsi * ps0_x
+    zTe_y = dTe_dpsi * ps0_y
+    zn_x  = dn_dpsi * ps0_x
+    zn_y  = dn_dpsi * ps0_y
+    call bootstrap_current(minRad, R, y_g,                       &
+                           R_axis,   Z_axis,   psi_axis,         &
+			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+			   ps0, ps0_x, ps0_y,                    &
+			   zn,  zn_x,  zn_y,                     &
+			   zTi, zTi_x, zTi_y,                    &
+			   zTe, zTe_x, zTe_y,                  Jb_0)
+    ! --- Subtract the initial equilibrium part
+    Jb = Jb - Jb_0
   else
     Jb = 0.d0
   endif
@@ -740,7 +763,6 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if (i_plane .eq. 1) then
     ! --- Current source
     call current(xpoint2, xcase2, x_g,y_g, Z_xpoint, ps0,psi_axis,psi_bnd,current_source)
-    if (bootstrap) current_source = current_source * (0.5d0 - 0.5d0 * tanh((psi_norm-0.8)/0.005) )
 
     ! --- Density source and heating
     call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source_i,heat_source_e)

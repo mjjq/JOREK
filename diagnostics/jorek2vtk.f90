@@ -53,7 +53,7 @@ integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
-logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
+logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field, include_bootstrap
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -61,6 +61,12 @@ real*8                :: amu_neo_node, aki_neo_node
 real*8                :: Vperp_e, Psi_tot
 
 real*8                :: angle, source_volume, local_density, local_temperature, local_pressure, local_psi, local_source
+
+integer, parameter :: nplot = 200
+integer :: iplot, i_elm
+real*8  :: stmp(200) 
+real*8  :: Rp_start, Zp_start, Rp_end, Zp_end
+real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field
@@ -85,15 +91,16 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub            = 2       ! Number of subdivisions of the cubic finite elements into linear pieces
-i_tor           = -1      ! If i_tor > 0, only this mode will be included in the vtk file...
-i_plane         = 1       ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
-without_n0_mode = .false. ! If true, do not include the n=0 mode (i_tor=1)
-SI_units        = .false. ! when true, write variables in SI units
-include_fluxes  = .false. ! include energy and density fluxes (or not)
-include_neo     = .false. ! include neoclassical and more terms (or not)
+nsub                   = 2	 ! Number of subdivisions of the cubic finite elements into linear pieces
+i_tor                  = -1	 ! If i_tor > 0, only this mode will be included in the vtk file...
+i_plane                = 1	 ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
+without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
+SI_units               = .false. ! when true, write variables in SI units
+include_fluxes         = .false. ! include energy and density fluxes (or not)
+include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
+include_bootstrap      = .true. ! include bootstrap current and averaged current
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -143,7 +150,7 @@ if (include_fluxes) then
   n_scalars = n_scalars + n_fluxes
 endif
 if (include_neo) then
-  n_neo = 12
+  n_neo = 11
   n_scalars = n_scalars + n_neo
 endif
 if (include_magnetic_field) then
@@ -156,8 +163,11 @@ if (include_velocity_field) then
 endif
 if (use_pellet) then
   n_pellet  = 2  ! pellet and pressuren
-  n_scalars = n_scalars+ n_pellet
+  n_scalars = n_scalars + n_pellet
 endif
+if (include_bootstrap) then  
+  n_scalars = n_scalars + 2
+endif	 
 #endif
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
@@ -185,14 +195,14 @@ if ( SI_units ) then
 
   if (include_fluxes) then
     scalar_names(n_var+1:n_var+n_fluxes) = (/ &
-     'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', &
-     'E_flux_Vperp', 'D_flux_Dperp', 'D_flux_Vpar ', 'D_flux_Vperp'/)
+      'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', &
+      'E_flux_Vperp', 'D_flux_Dperp', 'D_flux_Vpar ', 'D_flux_Vperp'/)
   endif     
   if (include_neo) then
     scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &          
-     'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
-     'Vsound_km/s ', 'Btot_T      ', 'J-bootstrap ', 'Vneo_km/s   ', 'psi_norm    ', 'Vperp_e_km/s', &
-     'ki_neo      ', 'mu_neo      '/)
+      'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
+      'Vsound_km/s ', 'Btot_T      ', 'Vneo_km/s   ', 'psi_norm    ', 'Vperp_e_km/s', &
+      'ki_neo      ', 'mu_neo      '/)
   endif
 
 else
@@ -205,7 +215,7 @@ else
   if (include_neo) then
     scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &              
       'Er          ', 'Vtheta      ', 'Mach_par    ', 'Mach_pol    ', &
-      'Vsound      ', 'Btot        ', 'J-bootstrap ', 'Vneo        ', 'psi_norm    ', 'Vperp_e     ', &
+      'Vsound      ', 'Btot        ', 'Vneo        ', 'psi_norm    ', 'Vperp_e     ', &
       'ki_neo      ', 'mu_neo      '/)
    endif
   if (use_pellet) then
@@ -213,6 +223,10 @@ else
   endif
    
 endif
+if (include_bootstrap) then  
+  if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'  
+  scalar_names(n_var+1:n_var+2) = (/ 'j_bootstrap ', 'j_averaged  ' /)
+endif	 
 #endif
 
 if (include_magnetic_field)  vector_names(1:n_bfield)                   = (/ 'B_R     ','B_Z     ','B_phi   '/)
@@ -256,6 +270,7 @@ minRad = 0.0
 if (bootstrap) then
   call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
   call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+  call bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
 endif
     
 ! --- You may choose to print your poloidal snapshot at a different toroidal angle
@@ -393,15 +408,15 @@ do i=1,element_list%n_elements
             scalars(inode,n_var+n_fluxes+4) = Mach_pol
             scalars(inode,n_var+n_fluxes+5) = Vsound
             scalars(inode,n_var+n_fluxes+6) = Btot
-            scalars(inode,n_var+n_fluxes+8) = Vneo    ! number n_var+n_fluxes+7 is jbootstrap, see below.
-            scalars(inode,n_var+n_fluxes+10)= Vperp_e ! number n_var+n_fluxes+9 is psi_norm, see below.
+            scalars(inode,n_var+n_fluxes+7) = Vneo    ! number n_var+n_fluxes+7 is jbootstrap, see below.
+            scalars(inode,n_var+n_fluxes+9) = Vperp_e ! number n_var+n_fluxes+9 is psi_norm, see below.
             if (NEO) then
                if (num_neo_file) then
-                  scalars(inode,n_var+n_fluxes+11) = aki_neo_node
-                  scalars(inode,n_var+n_fluxes+12) = amu_neo_node
+                  scalars(inode,n_var+n_fluxes+10) = aki_neo_node
+                  scalars(inode,n_var+n_fluxes+11) = amu_neo_node
                else
-                  scalars(inode,n_var+n_fluxes+11) = aki_neo_const
-                  scalars(inode,n_var+n_fluxes+12) = amu_neo_const
+                  scalars(inode,n_var+n_fluxes+10) = aki_neo_const
+                  scalars(inode,n_var+n_fluxes+11) = amu_neo_const
                endif
             endif   ! NEO
 
@@ -644,11 +659,11 @@ do i=1,element_list%n_elements
         endif
 
         if (bootstrap) then
-          call bootstrap_current(minRad, R, Z,                 &
-	                         R_axis,   Z_axis,   psi_axis, &
-				 R_xpoint, Z_xpoint, psi_bnd,  &
-	                         psi_norm, psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,    &
-        			 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y,           Jb )
+          call bootstrap_current(minRad, R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+        			 psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
+        			 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
+          scalars(inode,n_var+1) = Jb
+          scalars(inode,n_var+2) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
         else
           Jb = 0.d0
         endif
@@ -692,8 +707,7 @@ do i=1,element_list%n_elements
         endif	! include_fluxes
 
         if (include_neo)   then
-          scalars(inode,n_var+n_fluxes+7) = Jb
-          scalars(inode,n_var+n_fluxes+9) = psi_norm
+          scalars(inode,n_var+n_fluxes+8) = psi_norm
         endif
 
             if (use_pellet) then
@@ -769,11 +783,11 @@ if (SI_units) then
       !===================================Vsound in km/s
       scalars(i,n_var+n_fluxes+5) = scalars(i,n_var+n_fluxes+5) / t_norm/1.e3
       !===================================Vneo in km/s
-      scalars(i,n_var+n_fluxes+8) = scalars(i,n_var+n_fluxes+8) / t_norm/1.e3
+      scalars(i,n_var+n_fluxes+7) = scalars(i,n_var+n_fluxes+7) / t_norm/1.e3
       !===================================Vperp_e in km/s
-      scalars(i,n_var+n_fluxes+10) = scalars(i,n_var+n_fluxes+10) / t_norm/1.e3
+      scalars(i,n_var+n_fluxes+9) = scalars(i,n_var+n_fluxes+9) / t_norm/1.e3
       ! mu_neo in SI units
-      scalars(inode,n_var+n_fluxes+12) = scalars(inode,n_var+n_fluxes+12) / sqrt(rho_norm*MU_zero)
+      scalars(inode,n_var+n_fluxes+11) = scalars(inode,n_var+n_fluxes+11) / sqrt(rho_norm*MU_zero)
     endif
   enddo  ! nnos
 
@@ -787,8 +801,8 @@ lf = char(10) ! line feed character
 #ifdef IBM_MACHINE
 open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
 #else
-!open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
-open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+!open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)

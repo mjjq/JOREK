@@ -1,10 +1,5 @@
 module bootstrap_functions
 
-  !use data_structure
-  !use phys_module
-  !use grid_xpoint_data
-  !use constants
-  !use corr_neg
   implicit none
   integer, parameter :: n_spline = 30
   real*8             :: q_spline(n_spline), ft_spline(n_spline), B_spline(n_spline)
@@ -12,10 +7,6 @@ module bootstrap_functions
   
   integer, parameter :: n_spline_vtk = 100
   real*8             :: psi_knots_vtk(n_spline_vtk), j_knots_vtk(n_spline_vtk), j_spline_vtk(n_spline_vtk)
-  
-  integer, parameter :: n_spline_tmp_max = 1000
-  integer            :: n_spline_tmp
-  real*8             :: psi_knots_tmp(n_spline_tmp_max), y_knots_tmp(n_spline_tmp_max), y_spline_tmp(n_spline_tmp_max)
 
 contains
 
@@ -193,9 +184,9 @@ subroutine bootstrap_current(minRad, R, Z,                   &
   Jb = - II * Pe * ( L31*dP_dpsi/Pe + L32*dTe_dpsi/Te + L34*alpha*(1-Rpe)/Rpe*dTi_dpsi/Ti )
 
   ! --- Current with denormalisation
-  ! --- (one R because the JOREK current is defined so, mu0 of course,
+  ! --- (one -R because the JOREK current is defined so, mu0 of course,
   ! --- and then B_average because Sauter's formula gives <jb*B>)
-  Jb = R * Jb * MU_ZERO / B_average
+  Jb = - R * Jb * MU_ZERO / B_average
   
   ! --- Project along phi (formula is for j_par, and we want j_phi)
   B_tot =  sqrt( (F0/R)**2 + (grad_psi/R)**2 )

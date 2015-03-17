@@ -664,6 +664,10 @@ do i=1,element_list%n_elements
         			 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
           scalars(inode,n_var+1) = Jb
           scalars(inode,n_var+2) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
+          ! --- The JOREK bootstrap is not constant on flux surface
+	  ! --- Because J_jorek = R*J_physical, and the physical bootsrap is constant on a surface
+	  ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
+	  scalars(inode,n_var+2) = R* scalars(inode,n_var+2) / R_axis
         else
           Jb = 0.d0
         endif

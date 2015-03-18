@@ -200,15 +200,23 @@ module phys_module
   logical :: use_pellet
   
   !> @name Massive gas injection-related input parameters
-  real*8  :: mgi_amplitude     !< amplitude of neutral density source
+  real*8  :: mgi_amplitude      !< amplitude of neutral density source
   real*8  :: mgi_R             !< major radius position of neutral density source
   real*8  :: mgi_Z             !< Z position of neutral density source
-  real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction 
+  real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction
   real*8  :: mgi_radius        !< radius of the neutral density source in poloidal plane
   real*8  :: mgi_sig           !< width of smoothing of the neutral density source in poloidal plane
-  real*8  :: mgi_length        !< width of smoothing of the neutral density source in toroidal direction
+  real*8  :: mgi_deltaphi      !< width of smoothing of the neutral density source in toroidal direction
   real*8  :: ksi_ion           !< energy cost of each ionization
-  real*8  :: n_zero            !< central density (needed for ionization source term)
+  real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
+  real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice
+  real*8  :: L_tube            !< Pipe length
+  real*8  :: V_Dmv             !< Volume of the DMV reservoir
+  real*8  :: P_Dmv             !< Pressure in the DMV reservoir
+  real*8  :: t_mgi             !< Beginning of the MGI
+  real*8  :: delta_n_convection!< Switch to activate the convection term for neutrals (at the plasma velocity)
+  logical :: JET_MGI !< Switch to have a real time dependent MGI or a constant injection
+  logical :: ASDEX_MGI
   
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).

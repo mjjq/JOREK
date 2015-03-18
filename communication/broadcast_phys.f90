@@ -133,22 +133,30 @@ if (my_id .eq. 0) then
   call MPI_PACK(rhon_0,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 170
   call MPI_PACK(rhon_1,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 171
   call MPI_PACK(rhon_coef,             10,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 181
-  
+
   call MPI_PACK(D_neutral_x,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 182
   call MPI_PACK(D_neutral_y,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 183
   call MPI_PACK(D_neutral_p,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 184
-  
+
   call MPI_PACK(ksi_ion,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 185
-  
-  call MPI_PACK(mgi_amplitude,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 186
+
+  call MPI_PACK(JET_MGI,                1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
+  call MPI_PACK(ASDEX_MGI,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
+
+  call MPI_PACK(L_tube,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(K_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(A_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(V_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(P_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(t_mgi,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+
+  call MPI_PACK(mgi_amplitude ,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 186
   call MPI_PACK(mgi_R,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 187
   call MPI_PACK(mgi_Z,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 188
   call MPI_PACK(mgi_phi,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 189
   call MPI_PACK(mgi_radius,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 190
   call MPI_PACK(mgi_sig,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 191
-  call MPI_PACK(mgi_length,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 192
-  
-  call MPI_PACK(n_zero,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 193
+  call MPI_PACK(mgi_deltaphi,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 192
 
   call MPI_PACK(gmres_4,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 194 
   call MPI_PACK(gmres_tol,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 195 
@@ -431,15 +439,23 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,ksi_ion,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 185
 
-  call MPI_UNPACK(buffer,bufsize,position,mgi_amplitude,          1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 186
+  call MPI_UNPACK(buffer,bufsize,position,JET_MGI,                1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)    !
+  call MPI_UNPACK(buffer,bufsize,position,ASDEX_MGI,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)    !
+
+  call MPI_UNPACK(buffer,bufsize,position,L_tube,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)      !
+  call MPI_UNPACK(buffer,bufsize,position,K_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)      !
+  call MPI_UNPACK(buffer,bufsize,position,A_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)      !
+  call MPI_UNPACK(buffer,bufsize,position,V_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)      !
+  call MPI_UNPACK(buffer,bufsize,position,P_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)      !
+  call MPI_UNPACK(buffer,bufsize,position,t_mgi,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)      !
+
+  call MPI_UNPACK(buffer,bufsize,position,mgi_amplitude,           1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 186
   call MPI_UNPACK(buffer,bufsize,position,mgi_R,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 187
   call MPI_UNPACK(buffer,bufsize,position,mgi_Z,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 188
   call MPI_UNPACK(buffer,bufsize,position,mgi_phi,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 189
   call MPI_UNPACK(buffer,bufsize,position,mgi_radius,             1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 190
   call MPI_UNPACK(buffer,bufsize,position,mgi_sig,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 191
-  call MPI_UNPACK(buffer,bufsize,position,mgi_length,             1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 192
-
-  call MPI_UNPACK(buffer,bufsize,position,n_zero,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 193
+  call MPI_UNPACK(buffer,bufsize,position,mgi_deltaphi,           1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 192
 
   call MPI_UNPACK(buffer,bufsize,position,gmres_4,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 194
   call MPI_UNPACK(buffer,bufsize,position,gmres_tol,              1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 195

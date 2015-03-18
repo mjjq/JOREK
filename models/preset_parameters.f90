@@ -290,20 +290,27 @@ subroutine preset_parameters
 !======================MB
 
 !======================AF Massive Gas Injection Parameters
-  if (jorek_model .eq. 500) then
-     mgi_amplitude = 0.d0  ! 0.007d0
-     mgi_R      = 3.2d0
-     mgi_Z      =  1.5d0
-     mgi_phi    = 1.57d0
-     mgi_radius =   0.08d0
-     mgi_sig    =  0.05
-     mgi_length =  0.5
-     ksi_ion = 1.0d-23
-     n_zero = 1.0d19
-     D_neutral_x = 1.d-5
-     D_neutral_y = 1.d-5
-     D_neutral_p = 1.d-5   
-  endif
+#if (JOREK_MODEL == 500 .or. JOREK_MODEL == 555)
+    JET_MGI = .false.
+    ASDEX_MGI = .false.
+    mgi_amplitude = 0.d0  ! 0.007d0
+    mgi_R      = 3.2d0
+    mgi_Z      =  1.5d0
+    mgi_phi    = 1.57d0
+    mgi_radius =   0.08d0
+    mgi_sig    =  0.05
+    mgi_deltaphi =  0.5
+    ksi_ion = 1.84d-24
+    D_neutral_x = 1.d-5
+    D_neutral_y = 1.d-5
+    D_neutral_p = 1.d-5
+    !====== JET DMV-2 parameters
+     L_tube = 2.d0
+     K_Dmv = 4.d-2
+     A_Dmv = 1.77d-2
+     t_mgi = 2.d3
+     delta_n_convection = 0
+#endif
 !======================AF
 
 !======================JP ECCD injection parameters

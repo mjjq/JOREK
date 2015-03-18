@@ -82,10 +82,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
 
-                D_neutral_x, D_neutral_y, D_neutral_p,   &
-                mgi_sig, mgi_length, n_zero, ksi_ion, RMP_on, lambda, tset,    &  
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius, &
-                RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file 
+                D_neutral_x, D_neutral_y, D_neutral_p,              &
+                mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
+                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
+                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
+                delta_n_convection,                                 &
+                RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
 
  if (my_id .eq. 0) then
 

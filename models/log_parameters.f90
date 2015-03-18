@@ -437,18 +437,25 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
+#if (JOREK_MODEL == 500 .or. JOREK_MODEL == 555)
+     write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
+     write(*,REAL_FMT) 'mgi_R               ',  mgi_R
+     write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z
+     write(*,REAL_FMT) 'mgi_phi             ',  mgi_phi
+     write(*,REAL_FMT) 'mgi_radius          ',  mgi_radius
+     write(*,REAL_FMT) 'mgi_sig             ',  mgi_sig
+     write(*,REAL_FMT) 'mgi_deltaphi        ',  mgi_deltaphi
+     write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
+     write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
+     write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI
+     write(*,REAL_FMT) 'A_Dmv               ',  A_Dmv
+     write(*,REAL_FMT) 'K_Dmv               ',  K_Dmv
+     write(*,REAL_FMT) 'V_Dmv               ',  V_Dmv
+     write(*,REAL_FMT) 'L_tube              ',  L_tube
+     write(*,REAL_FMT) 't_mgi               ',  t_mgi
+     write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
 
-  if(jorek_model == 500 ) then
-     write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude  
-     write(*,REAL_FMT) 'mgi_R               ',  mgi_R         
-     write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z         
-     write(*,REAL_FMT) 'mgi_phi             ',  mgi_phi       
-     write(*,REAL_FMT) 'mgi_radius          ',  mgi_radius    
-     write(*,REAL_FMT) 'mgi_sig             ',  mgi_sig       
-     write(*,REAL_FMT) 'mgi_length          ',  mgi_length    
-     write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion       
-     write(*,REAL_FMT) 'n_zero              ',  n_zero        
-  endif
+#endif
 
   write(*,*)
   

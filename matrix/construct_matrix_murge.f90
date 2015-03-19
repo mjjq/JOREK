@@ -538,7 +538,7 @@ CONTAINS
                     DO iter = 1, (n_tor*n_var)**2
                        coefmtx(iter)= data%PROD_MATRICES(iter,j,thread)
                     END DO
-#ifdef USE _MURGE
+#ifdef USE_MURGE
                     CALL MURGE_ASSEMBLYSETNODEVALUES(murge_id,                  &
                          &                           index_node2,               &
                          &                           index_node1,               &

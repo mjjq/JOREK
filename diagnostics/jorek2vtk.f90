@@ -791,7 +791,7 @@ if (SI_units) then
       !===================================Vperp_e in km/s
       scalars(i,n_var+n_fluxes+9) = scalars(i,n_var+n_fluxes+9) / t_norm/1.e3
       ! mu_neo in SI units
-      scalars(inode,n_var+n_fluxes+11) = scalars(inode,n_var+n_fluxes+11) / sqrt(rho_norm*MU_zero)
+      scalars(i,n_var+n_fluxes+11) = scalars(i,n_var+n_fluxes+11) / sqrt(rho_norm*MU_zero)
     endif
   enddo  ! nnos
 

@@ -290,7 +290,7 @@ subroutine preset_parameters
 !======================MB
 
 !======================AF Massive Gas Injection Parameters
-#if (JOREK_MODEL == 500 .or. JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
     JET_MGI = .false.
     ASDEX_MGI = .false.
     mgi_amplitude = 0.d0  ! 0.007d0

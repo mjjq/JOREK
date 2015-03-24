@@ -32,7 +32,7 @@ program RST_convert_hdf52bin
 
   ! --- Read the restart HDF5 file
   write (6,*) " =============> rst_hdf52bin for filename = ",fileout_h5
-  call import_hdf5_restart(node_list, element_list, fileout_h5, rst_format)
+  call import_hdf5_restart(node_list, element_list, fileout_h5, rst_format, ierr)
 
   index_now = index_start
   t_now     = t_start

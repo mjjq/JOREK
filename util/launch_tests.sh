@@ -280,8 +280,8 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS302/}" ]; then
         if [ ! -f jorek_rst1.${SUF} ]  && [ ! -f $TGRST ]; then
           cp jorek_equil.${SUF} jorek_restart.${SUF}
           ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' $COMMONOPT  nout=10 ${SET_MURGE}
-          EXE=j${model[$i]}_1
-        eval ${PRERUN}
+          EXE=j${model[$i]}_3
+          eval ${PRERUN}
           ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
           status=$?; if [ $status -eq 0 ]; then
               cp jorek_restart.${SUF} jorek_rst1.${SUF};
@@ -421,7 +421,7 @@ if [ "$SIMNAME" != "${SIMNAME/JENKINS303/}" ]; then
         if [ ! -f jorek_rst1.${SUF} ] && [ ! -f $TGRST ]; then
   	  cp jorek_equil.${SUF} jorek_restart.${SUF} 
   	  ${UTILDIR}/setinput.sh ${INFILE} restart=.t. 'nstep_n= 10, 10, 10, 10, 40, 40' 'tstep_n= 1e-3, 1e-2, 1e-1, 5e-1, 1, 2'  $COMMONOPT  nout=10 ${SET_MURGE}
-  	  EXE=j${model[$i]}_1
+  	  EXE=j${model[$i]}_3
           eval ${PRERUN}
   	  ${MPIRUN} ./${EXE} < ${INFILE} 2>err1| tee out_loop1
   	  status=$?; if [ $status -eq 0 ]; then 

@@ -53,7 +53,8 @@ integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
-logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field, include_bootstrap
+logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
+logical               :: include_bootstrap
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -69,7 +70,8 @@ real*8  :: Rp_start, Zp_start, Rp_end, Zp_end
 real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
-                      include_fluxes, include_neo, include_magnetic_field, include_velocity_field
+                      include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
+                      include_bootstrap  
 
 
 
@@ -100,7 +102,7 @@ include_fluxes         = .false. ! include energy and density fluxes (or not)
 include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
-include_bootstrap      = .true. ! include bootstrap current and averaged current
+include_bootstrap      = .false. ! include bootstrap current and averaged current
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -122,6 +124,8 @@ write(*,*) 'include_fluxes  =', include_fluxes
 write(*,*) 'include_neo     =', include_neo
 write(*,*) 'include_magnetic_field =',include_magnetic_field
 write(*,*) 'include_velocity_field =',include_velocity_field
+write(*,*) 'include_bootsrap =',include_bootstrap
+
 
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor

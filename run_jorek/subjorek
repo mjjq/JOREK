@@ -211,6 +211,59 @@ if [ ! -d ${RESDIR} ]; then
 fi
 
 ;;
+# -----------------------------------------------------------------
+# occigen (CINES)
+# -----------------------------------------------------------------
+occigen*)
+
+# batch control
+# -------------
+# mpi procs per nodes
+MPIPROCS=2
+NTHREAD=24
+NNODES=2
+WALLTIME=03:00:00
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+dir=${DIR#$HOME}
+REP=`echo $dir | tr -s "/" " " | awk '{print $1}' `
+HOMEDIR=${DIR}
+SRCDIR=$HOMEDIR
+UTILDIR=${HOMEDIR}/util
+WKDIR=`pwd`
+echo " USER " $USER
+echo " SCRATCHDIR " $SCRATCHDIR
+RESDIR1=$SCRATCHDIR/${REP}
+echo " RESDIR1 " $RESDIR1
+RESDIR=${RESDIR1}/${CASE}
+echo " RESDIR " $RESDIR
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
 
 # -----------------------------------------------------------------
 # jade (cines)
@@ -334,7 +387,6 @@ fi
 EXECNAME=JOR${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 EXECNAMEOUT=${EXECNAME%.*}
 VTKEXECNAME=VTK${MODELNUMBER}_NTOR${NTOR}.exe
-VTKEXECNAME_REAL=VTKREAL${MODELNUMBER}_NTOR${NTOR}.exe
 TARGET_VTKEXECNAME=TARGET_VTK${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 POWERSEXECNAME=POWERS${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
 
@@ -379,26 +431,6 @@ if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
   make jorek2vtk
 
   if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
-fi
-
-if [ ! -e ${SRCDIR}/${VTKEXECNAME_REAL} ]; then
-  echo "==================================================================================="
-  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
-  echo " =============>> compiling the jorek2vtk executable" ${VTKEXECNAME_REAL}
-  echo "==================================================================================="
-  echo " "
-  cd ${SRCDIR}
-
-  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
-
-  if [ -e jorek2vtk ]; then rm -f jorek2vtk_real; fi
-  make cleanall
-  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
-  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
-  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make jorek2vtk_real
-
-  if [ -e jorek2vtk_real ]; then mv jorek2vtk_real ${VTKEXECNAME_REAL}; fi
 fi
 
 if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
@@ -455,12 +487,6 @@ if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
    exit
 else
     cp ${SRCDIR}/${VTKEXECNAME} ${RESDIR}/.
-fi
-if [ ! -e ${SRCDIR}/${VTKEXECNAME_REAL} ]; then
-   echo " Executable ${VTKEXECNAME_REAL} does not exist, so exit ";
-   exit
-else
-    cp ${SRCDIR}/${VTKEXECNAME_REAL} ${RESDIR}/.
 fi
 if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
    echo " Executable ${TARGET_VTKEXECNAME} does not exist, so exit ";
@@ -825,6 +851,44 @@ EOF
 ;;
 
 # -----------------------------------------------------------------
+# occigen (CINES)
+# -----------------------------------------------------------------
+occigen*)
+
+# Batch control
+CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 -m block:block -c 24 --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_SUB="sbatch ./go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#SBATCH --nodes=${NNODES}
+#SBATCH --ntasks-per-node=1
+#SBATCH --threads-per-core=1
+#SBATCH --cpus-per-task=24
+#SBATCH -J JOREK
+#SBATCH --time=${WALLTIME}
+
+module purge
+module load intel/15.0.0.090
+module load bullxmpi/1.2.8.3
+module load hdf5/1.8.14
+module load mkl/15.0.0.090
+
+export LANG=C
+export KMP_STACK_SIZE=16M
+#export KMP_AFFINITY="granularity=fine,compact,1,0,verbose"           
+export KMP_AFFINITY="norespect,verbose"
+export MKL_NUM_THREADS=1
+export SLURM_CPU_BIND_VERBOSE=yes
+export MKL_DYNAMIC=0
+
+EOF
+;;
+
+# -----------------------------------------------------------------
 # jade (cines)
 # -----------------------------------------------------------------
 jade*)
@@ -902,7 +966,8 @@ if [ ! -e "jorek_restart.rst" ]; then
    echo "==================================================================================="
    echo " "
    nb_restart=0
-   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep=20 tstep=0.001
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep_n=0 tstep_n=1
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep=0 tstep=1
 else
    echo "==================================================================================="
    echo " Restart file does exist, so LOOP"

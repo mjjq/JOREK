@@ -181,6 +181,7 @@ if (.not. pastix_initialised) then
   pastix_iparm(IPARM_INCOMPLETE)         = pastix_ricar
   pastix_iparm(IPARM_LEVEL_OF_FILL)      = pastix_iluk
   pastix_iparm(IPARM_AMALGAMATION_LEVEL) = pastix_amalg
+!  pastix_iparm(IPARM_BINDTHRD)           = API_NO
 
 #ifdef WORLDWAR2
 #ifdef FUNNELED

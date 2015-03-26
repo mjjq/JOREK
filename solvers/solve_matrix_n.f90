@@ -29,7 +29,8 @@ contains
          &                  API_THREAD_MULTIPLE, API_THREAD_FUNNELED,          &
 #endif
          &                  IPARM_THREAD_COMM_MODE,                            &
-         &                  IPARM_END_TASK, API_TASK_INIT, IPARM_START_TASK
+         &                  IPARM_END_TASK, API_TASK_INIT, IPARM_START_TASK,   &
+         &                  IPARM_BINDTHRD
 #ifdef USE_MURGE
     use murge_module, only : MURGE_MatrixReset
     USE murge_module, only : MURGE_Initialize
@@ -306,6 +307,7 @@ contains
               pastix_iparm(IPARM_MODIFY_PARAMETER+increment) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+increment)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+increment)         = API_TASK_INIT
+!              pastix_iparm(IPARM_BINDTHRD+increment)         = API_NO
               if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 
 #ifdef USE_BLOCK
@@ -387,7 +389,7 @@ contains
 
               pastix_iparm(IPARM_START_TASK+increment) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_ANALYSE
-
+!              pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO
 #ifdef USE_BLOCK
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
                 mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
@@ -451,6 +453,7 @@ contains
 
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
+!          pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO
 #ifdef USE_BLOCK
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
@@ -513,6 +516,7 @@ contains
 
         pastix_iparm(IPARM_START_TASK+increment) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK+increment)   = pastix_endsolve
+!        pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO
         if (.not. pastix_smp_only) then
            call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)

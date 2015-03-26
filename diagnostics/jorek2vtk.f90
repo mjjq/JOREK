@@ -49,7 +49,7 @@ real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t
 real*8                :: psi_norm, psi_bnd, grad_psi
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet
+integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet,n_bootstrap
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
@@ -148,13 +148,14 @@ n_neo     = 0
 n_bfield  = 0
 n_vfield  = 0
 n_pellet  = 0
+n_bootstrap=0
 
 if (include_fluxes) then
   n_fluxes = 8
   n_scalars = n_scalars + n_fluxes
 endif
 if (include_neo) then
-  n_neo = 11
+  n_neo = 10
   n_scalars = n_scalars + n_neo
 endif
 if (include_magnetic_field) then
@@ -169,8 +170,9 @@ if (use_pellet) then
   n_pellet  = 2  ! pellet and pressuren
   n_scalars = n_scalars + n_pellet
 endif
-if (include_bootstrap) then  
-  n_scalars = n_scalars + 2
+if (include_bootstrap) then 
+  n_bootstrap=2
+  n_scalars = n_scalars + n_bootstrap
 endif	 
 #endif
 
@@ -205,10 +207,12 @@ if ( SI_units ) then
   if (include_neo) then
     scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &          
       'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
-      'Vsound_km/s ', 'Btot_T      ', 'Vneo_km/s   ', 'psi_norm    ', 'Vperp_e_km/s', &
+      'Vsound_km/s ', 'Btot_T      ', 'Vneo_km/s   ', 'Vperp_e_km/s', &
       'ki_neo      ', 'mu_neo      '/)
   endif
-
+  if (include_bootstrap)then 
+  scalar_names(n_var+n_fluxes+n_pellet+n_neo+1:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/'j_b_MA/m2   ', 'j_av_MA/m2  '/)
+  endif
 else
 
   if (include_fluxes) then  
@@ -219,22 +223,24 @@ else
   if (include_neo) then
     scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &              
       'Er          ', 'Vtheta      ', 'Mach_par    ', 'Mach_pol    ', &
-      'Vsound      ', 'Btot        ', 'Vneo        ', 'psi_norm    ', 'Vperp_e     ', &
+      'Vsound      ', 'Btot        ', 'Vneo        ', 'Vperp_e     ', &
       'ki_neo      ', 'mu_neo      '/)
    endif
   if (use_pellet) then
-     scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) = (/ 'Pressure    ', 'Pellet      ' /)
+     scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) =          (/ 'Pressure    ', 'Pellet      ' /)
   endif
-   
-endif
+ 
 if (include_bootstrap) then  
   if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'  
-  scalar_names(n_var+1:n_var+2) = (/ 'j_bootstrap ', 'j_averaged  ' /)
+  scalar_names(n_var+1+n_fluxes+n_neo+n_pellet:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
 endif	 
-#endif
+
 
 if (include_magnetic_field)  vector_names(1:n_bfield)                   = (/ 'B_R     ','B_Z     ','B_phi   '/)
 if (include_velocity_field)  vector_names(n_bfield+1:n_bfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
+#endif
+!======================end SI units
+endif
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
@@ -413,14 +419,14 @@ do i=1,element_list%n_elements
             scalars(inode,n_var+n_fluxes+5) = Vsound
             scalars(inode,n_var+n_fluxes+6) = Btot
             scalars(inode,n_var+n_fluxes+7) = Vneo    ! number n_var+n_fluxes+7 is jbootstrap, see below.
-            scalars(inode,n_var+n_fluxes+9) = Vperp_e ! number n_var+n_fluxes+9 is psi_norm, see below.
+            scalars(inode,n_var+n_fluxes+8) = Vperp_e ! number n_var+n_fluxes+9 is psi_norm, see below.
             if (NEO) then
                if (num_neo_file) then
-                  scalars(inode,n_var+n_fluxes+10) = aki_neo_node
-                  scalars(inode,n_var+n_fluxes+11) = amu_neo_node
+                  scalars(inode,n_var+n_fluxes+9) = aki_neo_node
+                  scalars(inode,n_var+n_fluxes+10) = amu_neo_node
                else
-                  scalars(inode,n_var+n_fluxes+10) = aki_neo_const
-                  scalars(inode,n_var+n_fluxes+11) = amu_neo_const
+                  scalars(inode,n_var+n_fluxes+9) = aki_neo_const
+                  scalars(inode,n_var+n_fluxes+10) = amu_neo_const
                endif
             endif   ! NEO
 
@@ -662,16 +668,16 @@ do i=1,element_list%n_elements
            psi_norm = 2.d0 - psi_norm
         endif
 
-        if (bootstrap) then
+        if (include_bootstrap) then
           call bootstrap_current(minRad, R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
         			 psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
         			 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
-          scalars(inode,n_var+1) = Jb
-          scalars(inode,n_var+2) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
+          scalars(inode,n_var+1+n_fluxes+n_neo) = Jb
+          scalars(inode,n_var+2+n_fluxes+n_neo) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
           ! --- The JOREK bootstrap is not constant on flux surface
 	  ! --- Because J_jorek = R*J_physical, and the physical bootsrap is constant on a surface
 	  ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
-	  scalars(inode,n_var+2) = R* scalars(inode,n_var+2) / R_axis
+	  scalars(inode,n_var+2+n_fluxes+n_neo) = R* scalars(inode,n_var+2+n_fluxes+n_neo) / R_axis
         else
           Jb = 0.d0
         endif
@@ -793,10 +799,17 @@ if (SI_units) then
       !===================================Vneo in km/s
       scalars(i,n_var+n_fluxes+7) = scalars(i,n_var+n_fluxes+7) / t_norm/1.e3
       !===================================Vperp_e in km/s
-      scalars(i,n_var+n_fluxes+9) = scalars(i,n_var+n_fluxes+9) / t_norm/1.e3
-      ! mu_neo in SI units
-      scalars(i,n_var+n_fluxes+11) = scalars(i,n_var+n_fluxes+11) / sqrt(rho_norm*MU_zero)
-    endif
+      scalars(i,n_var+n_fluxes+8) = scalars(i,n_var+n_fluxes+8) / t_norm/1.e3
+      ! ===================================mu_neo in SI units
+      scalars(i,n_var+n_fluxes+10) = scalars(i,n_var+n_fluxes+10) / sqrt(rho_norm*MU_zero)
+      endif
+   !============================================j_bootstrap, javeraged in MA/m2
+
+     if (include_bootstrap) then 
+     scalars(i,n_var+1+n_fluxes+n_neo)=scalars(i,n_var+1+n_fluxes+n_neo)/MU_zero*1.e-6 
+     scalars(i,n_var+2+n_fluxes+n_neo)=scalars(i,n_var+2+n_fluxes+n_neo)/MU_zero*1.e-6 
+     endif
+!========================================================
   enddo  ! nnos
 
 endif ! SI_UNITS

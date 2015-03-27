@@ -192,8 +192,10 @@ subroutine bootstrap_current(minRad, R, Z,                   &
   B_tot =  sqrt( (F0/R)**2 + (grad_psi/R)**2 )
   B_phi =  sqrt( (F0/R)**2 )
   Jb = Jb * B_phi / B_tot
+  Jb = abs(Jb)
   
   ! --- There should not be any bootstrap outside plasma, the Xpoint can be noisy...
+  ! --- Cut off bootstrap source around the Xpoint with a radius of 5% the distance Xpoint-axis.
   if (xpoint .and.  (xcase .ne. 2) ) then
     distance_xpoint      = sqrt( (R      - R_xpoint(1))**2 + (Z      - Z_xpoint(1))**2 )
     distance_xpoint_axis = sqrt( (R_axis - R_xpoint(1))**2 + (Z_axis - Z_xpoint(1))**2 )

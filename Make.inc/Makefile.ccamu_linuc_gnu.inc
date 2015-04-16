@@ -1,14 +1,17 @@
 # Confiduration file for jorek
 # model directory
-# with modules gcc/4.6.3 and mpich2/gcc46/1.4.1  
-MODEL = model199
+
+# To get ready to compile or execute, please load the following modules :
+#       module load mpich2/gcc46/1.4.1 ATLAS/gcc46/3.8.4
+
+MODEL = model303
 
 # Fortran compiler 
 FC     = mpif90 -f90=gfortran
 CC     = mpicc -cc=gcc 
 
 FFLAGS_OMP       = -fopenmp 
-FFLAGS           = -g -O2 
+FFLAGS           = -g -O2 -DFUNNELED
 FFLAGS          := $(FFLAGS) -fdefault-real-8 -fdefault-double-8
 FFLAGS          := $(FFLAGS) -ffree-line-length-none
 FFLAGS          := $(FFLAGS) -x f95-cpp-input
@@ -25,46 +28,14 @@ FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE
 # Solvers dependencies
 USE_HIPS   = 0
 USE_PASTIX = 1
-USE_PASTIX_MURGE = 1
+USE_PASTIX_MURGE = 0
 USE_MUMPS = 0
 USE_WSMP   = 0
 
-#Scotch library
-SCOTCH_HOME ?= /home/passeron/jorek_tools/Others/gscotch_5.1
-LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lscotch -lscotcherr
-INC_SCOTCH   = -I$(SCOTCH_HOME)/include
-
-# MUMPS
-MUMPS_HOME = $(HOME)/intel/mumps/MUMPS_4.7.3
-LIB_MUMPS  = $(MUMPS_HOME)/lib/libdmumps.a
-LIB_ZMUMPS = $(MUMPS_HOME)/lib/libzmumps.a
-INC_MUMPS  = $(MUMPS_HOME)/include/
-ORDLIB     = $(MUMPS_HOME)/lib/libpord.a
-
 # PASTIX
-PASTIX_HOME     ?= /home/passeron/jorek_tools/Others/gpastix_r3521/install
+PASTIX_HOME     ?= /home/glatu/jorek_tools/gpastix_release_3184/install
 LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs` 
 LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS  = `$(PASTIX_HOME)/pastix-conf --blas`
 INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
 
-#HIPS
-LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
-INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
-
-#WSMP
-LIB_WSMP = -L$(WSMP_HOME) -lpwsmp64
-
-# LIBFFTW
-LIBFFTW   = -L/opt/cluster/fftw/3.2.2/intel-11.1-069/intel-4.0.0.025 -lfftw3
-
-#LIBLAPACK = $(HOME)/intel/lapack/LAPACK/lapack_LINUX.a -lblas
-#LIBLAPACK = -lmkl_lapack -lmkl_intel_lp64 -lmkl_sequential -lmkl_core 
-#SCALAP    = -L$(HOME)/intel/scalapack/SCALAPACK -lscalapack
-#SCALAP    = -lmkl_scalapack_lp64
-#BLACS_HOME = $(HOME)/intel/blacs/BLACS/LIB
-#BLACS      = $(BLACS_HOME)/blacs_MPI-LINUX-0.a		\
-#	     $(BLACS_HOME)/blacsF77init_MPI-LINUX-0.a 	\
-#	     $(BLACS_HOME)/blacsCinit_MPI-LINUX-0.a   	\
-#	     $(BLACS_HOME)/blacs_MPI-LINUX-0.a 
-#BLACS     = -lmkl_blacs_intelmpi20_lp64

@@ -239,7 +239,7 @@ contains
                                   zbig, solve_only, gmres,           &
                                   use_murge, use_murge_element,      &
                                   cnt, cnt_prod, only_count,         &
-                                  index_max, index_max)
+                                  index_min, index_max)
 
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(  &
@@ -257,7 +257,7 @@ contains
                                   zbig, solve_only, gmres,           &
                                   use_murge, use_murge_element,      &
                                   cnt, cnt_prod, only_count,         &
-                                  index_max, index_max)
+                                  index_min, index_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
@@ -731,25 +731,38 @@ contains
                                 endif
                              endif
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2, kv, in,               &
-                                 index_node2, kp, in,               &
-                                 zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
-                                 cnt, cnt_prod, only_count,         &
-                                 index_min, index_max)
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kp, in,                &
+                                  zbig, solve_only, gmres,           &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_min, index_max)
 
+                             if (.not. only_count) then
+                                call boundary_conditions_add_RHS(  &
+                                     index_node, kv, in,           &
+                                     use_murge, use_murge_element, &
+                                     index_min, index_max,         &
+                                     RHS_loc, ZBIG * delta_psi_rmp)
+                             endif
+                             
                              index_node2 = node_list%node(inode)%index(3)
 
-
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2, kv, in,               &
-                                 index_node2, kp, in,               &
-                                 zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
-                                 cnt, cnt_prod, only_count,         &
-                                 index_min, index_max)
-
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  use_murge, use_murge_element,      &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_min, index_max)
+                             if (.not. only_count) then
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     use_murge, use_murge_element,      &
+                                     index_min, index_max,              &
+                                     RHS_loc, ZBIG * delta_psi_rmp_dt)
+                             endif
                           endif
                        endif
                        

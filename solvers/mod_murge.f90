@@ -216,7 +216,9 @@ CONTAINS
     INTEGER, INTENT(IN) :: my_id
     INTEGER, INTENT(IN) :: i_tor(:)
 
+#ifdef _OPENMP
     INTEGER, EXTERNAL :: omp_get_num_threads
+#endif
     INTEGER(KIND=MURGE_INTS_KIND) :: ierr
     INTEGER(KIND=MURGE_INTS_KIND) :: ndof
 
@@ -242,9 +244,14 @@ CONTAINS
     CALL tr_debug_write("murge_initialised begin")
     IF (.NOT. murge_initialised) THEN
        murge_id = 0
+#ifdef _OPENMP
        !$omp PARALLEL shared(murge_nthrd)
        murge_nthrd = omp_get_num_threads()
        !$omp end PARALLEL
+#else
+       murge_nthrd = 1
+#endif
+
        CALL MURGE_GetSolver(murge_solver, ierr)
 
        IF (gmres) THEN

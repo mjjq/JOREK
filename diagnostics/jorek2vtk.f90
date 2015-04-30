@@ -54,7 +54,7 @@ real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
-logical               :: include_bootstrap
+logical               :: include_bootstrap, include_psi_norm
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -71,7 +71,7 @@ real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
-                      include_bootstrap  
+                      include_bootstrap, include_psi_norm  
 
 
 
@@ -80,7 +80,12 @@ write(*,*) '*       jorek2vtk                     *'
 write(*,*) '***************************************'
 write(*,*) ' if your VTK is smaller than expected,'
 write(*,*) ' please consider the new parameters:'
-write(*,*) '   include_fluxes, include_neo'
+write(*,*) '   -include_fluxes' 
+write(*,*) '   -include_neo'
+write(*,*) '   -include_magnetic_field'
+write(*,*) '   -include_velocity_field'
+write(*,*) '   -include_bootstrap'
+write(*,*) '   -include_psi_norm'
 write(*,*) '***************************************'
 
 call flush_it(6)
@@ -103,6 +108,7 @@ include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
+include_psi_norm       = .false.  ! include normalized flux
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -124,8 +130,8 @@ write(*,*) 'include_fluxes  =', include_fluxes
 write(*,*) 'include_neo     =', include_neo
 write(*,*) 'include_magnetic_field =',include_magnetic_field
 write(*,*) 'include_velocity_field =',include_velocity_field
-write(*,*) 'include_bootsrap =',include_bootstrap
-
+write(*,*) 'include_bootstrap =',include_bootstrap
+write(*,*) 'include_psi_norm =', include_psi_norm
 
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
@@ -174,6 +180,9 @@ if (include_bootstrap) then
   n_bootstrap=2
   n_scalars = n_scalars + n_bootstrap
 endif	 
+if (include_psi_norm) then
+   n_scalars = n_scalars + 1
+endif
 #endif
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
@@ -200,19 +209,20 @@ scalar_names(n_var+1:n_var+3) = (/  'B_phi       ', 'B_R         ', 'B_Z        
 if ( SI_units ) then
 
   if (include_fluxes) then
-    scalar_names(n_var+1:n_var+n_fluxes) = (/ &
+     scalar_names(n_var+1:n_var+n_fluxes) = (/ &
       'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', &
       'E_flux_Vperp', 'D_flux_Dperp', 'D_flux_Vpar ', 'D_flux_Vperp'/)
   endif     
   if (include_neo) then
-    scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &          
+     scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &          
       'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
       'Vsound_km/s ', 'Btot_T      ', 'Vneo_km/s   ', 'Vperp_e_km/s', &
       'ki_neo      ', 'mu_neo      '/)
   endif
   if (include_bootstrap)then 
-  scalar_names(n_var+n_fluxes+n_pellet+n_neo+1:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/'j_b_MA/m2   ', 'j_av_MA/m2  '/)
+     scalar_names(n_var+n_fluxes+n_pellet+n_neo+1:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/'j_b_MA/m2   ', 'j_av_MA/m2  '/)
   endif
+
 else
 
   if (include_fluxes) then  
@@ -226,21 +236,24 @@ else
       'Vsound      ', 'Btot        ', 'Vneo        ', 'Vperp_e     ', &
       'ki_neo      ', 'mu_neo      '/)
    endif
-  if (use_pellet) then
-     scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) =          (/ 'Pressure    ', 'Pellet      ' /)
-  endif
- 
 if (include_bootstrap) then  
   if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'  
   scalar_names(n_var+1+n_fluxes+n_neo+n_pellet:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
 endif	 
+!======================end SI units
+endif
 
+if (use_pellet) then
+   scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) =          (/ 'Pressure    ', 'Pellet      ' /)
+endif
+if (include_psi_norm) then
+   scalar_names(n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+1) = ('psi_norm    ')
+endif
+
+#endif
 
 if (include_magnetic_field)  vector_names(1:n_bfield)                   = (/ 'B_R     ','B_Z     ','B_phi   '/)
 if (include_velocity_field)  vector_names(n_bfield+1:n_bfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
-#endif
-!======================end SI units
-endif
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
@@ -418,8 +431,8 @@ do i=1,element_list%n_elements
             scalars(inode,n_var+n_fluxes+4) = Mach_pol
             scalars(inode,n_var+n_fluxes+5) = Vsound
             scalars(inode,n_var+n_fluxes+6) = Btot
-            scalars(inode,n_var+n_fluxes+7) = Vneo    ! number n_var+n_fluxes+7 is jbootstrap, see below.
-            scalars(inode,n_var+n_fluxes+8) = Vperp_e ! number n_var+n_fluxes+9 is psi_norm, see below.
+            scalars(inode,n_var+n_fluxes+7) = Vneo    
+            scalars(inode,n_var+n_fluxes+8) = Vperp_e 
             if (NEO) then
                if (num_neo_file) then
                   scalars(inode,n_var+n_fluxes+9) = aki_neo_node
@@ -672,12 +685,12 @@ do i=1,element_list%n_elements
           call bootstrap_current(minRad, R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
         			 psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
         			 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
-          scalars(inode,n_var+1+n_fluxes+n_neo) = Jb
-          scalars(inode,n_var+2+n_fluxes+n_neo) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
+          scalars(inode,n_var+1+n_fluxes+n_neo+n_pellet) = Jb
+          scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
           ! --- The JOREK bootstrap is not constant on flux surface
 	  ! --- Because J_jorek = R*J_physical, and the physical bootsrap is constant on a surface
 	  ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
-	  scalars(inode,n_var+2+n_fluxes+n_neo) = R* scalars(inode,n_var+2+n_fluxes+n_neo) / R_axis
+	  scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) = R* scalars(inode,n_var+2+n_fluxes+n_neo) / R_axis
         else
           Jb = 0.d0
         endif
@@ -720,9 +733,7 @@ do i=1,element_list%n_elements
           endif ! grad_psi
         endif	! include_fluxes
 
-        if (include_neo)   then
-          scalars(inode,n_var+n_fluxes+8) = psi_norm
-        endif
+          scalars(inode,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+1) = psi_norm
 
             if (use_pellet) then
 
@@ -806,8 +817,8 @@ if (SI_units) then
    !============================================j_bootstrap, javeraged in MA/m2
 
      if (include_bootstrap) then 
-     scalars(i,n_var+1+n_fluxes+n_neo)=scalars(i,n_var+1+n_fluxes+n_neo)/MU_zero*1.e-6 
-     scalars(i,n_var+2+n_fluxes+n_neo)=scalars(i,n_var+2+n_fluxes+n_neo)/MU_zero*1.e-6 
+     scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6 
+     scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6 
      endif
 !========================================================
   enddo  ! nnos

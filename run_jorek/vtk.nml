@@ -2,8 +2,14 @@
 nsub = 5
 i_plane = 1
 i_tor = -1 
-without_n0_mode = .f.
-SI_units = .f.
+without_n0_mode        = .f.
+SI_units               = .f.
+include_fluxes         = .f.
+include_neo            = .f.
+include_magnetic_field = .f.
+include_velocity_field = .f.
+include_bootstrap      = .f.
+include_psi_norm       = .t.
 
 /
 

@@ -55,9 +55,9 @@ call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
 
 zjz   = zFFprime - R*R * (zn * dT_dpsi + dn_dpsi * zT)
 
-if ((bootstrap) .and. (restart)) then
-  zjz   = zjz * (0.5d0 - 0.5d0* tanh( (psi_n - (FF_coef(7)-FF_coef(8)))/FF_coef(8) ) )
-endif
+!if ((bootstrap) .and. (restart)) then
+!  zjz   = zjz * (0.5d0 - 0.5d0* tanh( (psi_n - (FF_coef(7)-FF_coef(8)))/FF_coef(8) ) )
+!endif
 
 return
 end subroutine current

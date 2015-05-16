@@ -358,6 +358,11 @@ jorek2vtk : diagnostics/jorek2vtk.f90 $(JOREK2VTK_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk.f90 -o diagnostics/jorek2vtk.o
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk.o $(JOREK2VTK_OBJ) \
 	 -o $(JOREK_DIR)/jorek2vtk $(LIBS)
+	 
+jorek2vtk_GaussVortTerms : diagnostics/jorek2vtk_GaussVortTerms.f90 $(JOREK2VTK_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk_GaussVortTerms.f90 -o diagnostics/jorek2vtk_GaussVortTerms.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk_GaussVortTerms.o $(JOREK2VTK_OBJ) \
+	 -o $(JOREK_DIR)/jorek2vtk_GaussVortTerms $(LIBS)
 
 jorek2_stan : diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_stan.f90 -o diagnostics/jorek2_stan.o

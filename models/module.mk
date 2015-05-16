@@ -27,16 +27,16 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/element_matrix_GS_perturbation.f90 	\
 	$(DIR)/element_matrix_poisson.f90 		\
 	$(DIR)/element_matrix_poisson_inverse.f90 	\
-        $(DIR)/mod_corr_neg.f90                         \
+	$(DIR)/mod_corr_neg.f90                         \
 	$(DIR)/equilibrium.f90 				\
 	$(DIR)/F_profile.f90				\
 	$(DIR)/poisson.f90 				\
 	$(DIR)/chgmt_node.f90				\
 	$(DIR)/pellet_source.f90			\
-        $(DIR)/mod_diffusivities.f90                    \
-        $(DIR)/mod_pellet.f90				\
-        $(DIR)/read_RMP_profiles.f90                    \
-        $(DIR)/neo_coef.f90				\
+	$(DIR)/mod_diffusivities.f90                    \
+	$(DIR)/mod_pellet.f90				\
+	$(DIR)/read_RMP_profiles.f90                    \
+	$(DIR)/neo_coef.f90				\
 	$(DIR)/mod_assembly.f90
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
@@ -66,12 +66,14 @@ JOREK2_STRIKES_SRC := $(JOREK2_STRIKES_SRC)      	\
 ENBIGGEN_SRC := $(JENBIGGEN_SRC)                        \
 	$(DIR)/mod_pellet.f90
 
-JOREK2VTK_SRC := $(JOREK2VTK_SRC)			\
-        $(DIR)/mod_corr_neg.f90                         \
-        $(DIR)/mod_bootstrap_functions.f90 		\
-	$(DIR)/mod_diffusivities.f90                    \
-        $(DIR)/mod_pellet.f90                           \
-        $(DIR)/neo_coef.f90                             
+JOREK2VTK_SRC := $(JOREK2VTK_SRC)           \
+	$(DIR)/mod_corr_neg.f90                 \
+	$(DIR)/mod_bootstrap_functions.f90      \
+	$(DIR)/mod_diffusivities.f90            \
+	$(DIR)/mod_pellet.f90                   \
+	$(DIR)/neo_coef.f90                     \
+	$(DIR)/mod_corr_neg.f90
+
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)			\
         $(DIR)/mod_pellet.f90                           \

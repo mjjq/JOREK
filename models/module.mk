@@ -71,8 +71,7 @@ JOREK2VTK_SRC := $(JOREK2VTK_SRC)           \
 	$(DIR)/mod_bootstrap_functions.f90      \
 	$(DIR)/mod_diffusivities.f90            \
 	$(DIR)/mod_pellet.f90                   \
-	$(DIR)/neo_coef.f90                     \
-	$(DIR)/mod_corr_neg.f90
+	$(DIR)/neo_coef.f90
 
 
 JOREK2FLVTK_SRC := $(JOREK2FLVTK_SRC)			\

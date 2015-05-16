@@ -1,0 +1,3 @@
+&vtk_params
+  n_plane_local = 16  ! Maximum value for "n_plane_local" must be "n_plane" (from computation) and minimum is "1".
+/

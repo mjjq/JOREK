@@ -1,4 +1,52 @@
-!> Program to convert a JOREK2 restart file into volume averaged Vorticity terms
+!> Program to convert a JOREK2 restart file into volume/surface averaged Vorticity Terms and VTK file
+!---------------------------------------------------------------------------------------------------
+!
+! To compile:
+!   * make jorek2vtk_GaussVortTerms
+! 
+! The executable "jorek2vtk_GaussVortTerms" is created.
+!
+! INPUT:
+!
+! The executable needs the following files:
+!   * jorek_restart.rst (main jorek calculation data)
+!   * the INPUT file use for the main jorek calculation
+!   * (OPTIONAL) vtk_GaussVortTerms.nml (in this file: if n_plane_local = n_plane -> volume averaged 
+!      calculation, if n_plane_local = 1 -> surface averaged calculation)
+!
+! EXECUTE:
+!
+! To execute for a single time step (for the current jorek_restart.rst):
+!   * ./jorek2vtk_GaussVortTerms < INPUT_file
+!
+! To run for several time steps use the bash script: run_vtk_GaussTerms.sh
+! Example: if you want to execute from the iteration 1000 to 3000 by steps of 20, 
+!          first check the file run_vtk_GaussTerms.sh and change the INPUT file name on line 42,
+!          then run:
+!            * ./run_vtk_GaussTerms.sh 1000 3000 20
+! 
+! OUTPUT:
+!
+! Files created after the run (FOR A SINGLE TIME STEP):
+!   * Average_Terms_Voriticity_Gauss.dat (Volume/surface averaged terms of the vorticity equation)
+!   * jorek_tmp.vtk                      (vtk file, to be read with paraview or other)
+!   * Diff_Vort_Terms_in_Element.dat     (Value of the different vorticity terms for all the elements
+!                                         calculated in weak form with integration by parts and 
+!                                         noted with "_2" at the end if calculated WITHOUT integration
+!                                         by parts) 
+!
+! Files created after the run (FOR MULTIPLE TIME STEPS, using the script run_vtk_GaussTerms.sh):
+!
+!   * Average_Terms_Voriticity_Gauss.dat    (Volume/surface averaged terms of the vorticity equation)
+!   * Average_Terms_Voriticity_Gauss_IT.dat (Volume/surface averaged terms of the vorticity equation
+!                                            at the different times/ITERATIONS)
+!   * jorekGaussXXXXX.vtk                   (vtk files at ITERATION, to be read with paraview or other)
+!   * Diff_Vort_Terms_in_Element.dat        (Value of the different vorticity terms for all the elements
+!                                            calculated in weak form with integration by parts and 
+!                                            noted with "_2" at the end if calculated WITHOUT integration
+!                                            by parts, JUST FOR THE LAST ITERATION CONSIDERED)
+!
+!---------------------------------------------------------------------------------------------------
 
 ! --- Module used
 module elements_nodes_neighbours
@@ -13,7 +61,7 @@ end module
 
 
 ! --- PROGRAM
-program jorek2_GaussViscoTerms
+program jorek2vtk_GaussVortTerms
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
@@ -1326,7 +1374,7 @@ close(ivtk)
 
 write(*,*) 'Done.'
  
-end program jorek2_GaussViscoTerms
+end program jorek2vtk_GaussVortTerms
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -1011,10 +1011,8 @@ do ife = 1, element_list%n_elements
  ! --- Sum of the integrated values (of each vorticity term)
  ! --- for all the elements respecting the following conditions (if not commented)
   
-!  if ( ( abs(RHS_local(20,1,1)) .LT. (float(n_plane_local)*1E-20) ) .AND.  &
-!       ( abs(RHS_local(21,1,1)) .LT. (float(n_plane_local)*1E-20) ) .AND.  &
-!       ( RHS_local(23,1,1)      .LT.  psi_bnd                     ) .AND.  &
-!       ( RHS_local(2,1,1)       .GT. (Z_xpoint(1))                ) )  then
+!  if ( ( ife .GT. (n_tht + 2) )  .AND.            &
+!       ( ife .LT. (n_flux * n_tht - 4 * n_tht) ) )  then
 
             Sum_rot_delta_u  = Sum_rot_delta_u  + RHS_local(18,1,1)
             Sum_Poiss_Psi_j  = Sum_Poiss_Psi_j  + RHS_local(20,1,1)
@@ -1038,7 +1036,7 @@ do ife = 1, element_list%n_elements
             
             RHS_local(44,1,1) = 1.
 
- !endif
+!endif
  
  write(999992, '(1I7,29ES16.7)')  ife               &
                                 , RHS_local(1,1,1)  &

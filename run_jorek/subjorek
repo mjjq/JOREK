@@ -884,9 +884,6 @@ module load intel/14.0.4.211 intelmpi/5.0.1.035
 
 ulimit -Sa
 ulimit -Ha                                                                                                                                                                                                   
-env 1>pok1 2>pok2
-grep I_MPI pok1 pok2
- 
 export LANG=C
 export KMP_AFFINITY="granularity=fine,compact,1,0,verbose"
 export MKL_NUM_THREADS=1

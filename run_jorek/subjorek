@@ -222,7 +222,7 @@ occigen*)
 MPIPROCS=2
 NTHREAD=24
 NNODES=2
-WALLTIME=03:00:00
+WALLTIME=1:50:00
 ((NPES=NNODES*MPIPROCS))
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
@@ -856,7 +856,13 @@ EOF
 occigen*)
 
 # Batch control
-CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 -m block:block -c 24 --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+#--cpus-per-task=2 --cpu_bind=verbose,cores -c 24
+#CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 -m block:block --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+#CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+#-env DAPL_DBG_TYPE 0xfff -env I_MPI_DAPL_DIRECT_COPY_THRESHOLD 0 -genv I_MPI_FABRICS shm:ofa -genv I_MPI_DAPL_DIRECT_COPY_THRESHOLD 65536 
+#-genv I_MPI_DAPL_BUFFER_SIZE 131072 -genv I_MPI_RDMA_TRANSLATION_CACHE 1 -genv I_MPI_RDMA_RNDV_BUF_ALIGN 65536 -genv I_MPI_SPIN_COUNT 121
+#CMD_MPIRUN="mpirun  -np \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_MPIRUN="srun --mpi=pmi2 -K1  -m block:block --resv-ports --cpu_bind=verbose -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
 CMD_SUB="sbatch ./go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
@@ -866,25 +872,27 @@ cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
 #SBATCH --nodes=${NNODES}
 #SBATCH --ntasks-per-node=1
-#SBATCH --threads-per-core=1
 #SBATCH --cpus-per-task=24
+#SBATCH --threads-per-core=1
 #SBATCH -J JOREK
+#SBATCH -o ${CASENAME}%j.out      # strout filename (%j is jobid)
+#SBATCH -e ${CASENAME}%j.err      # stderr filename (%j is jobid)
 #SBATCH --time=${WALLTIME}
 
 module purge
-module load intel/15.0.0.090
-module load bullxmpi/1.2.8.3
-module load hdf5/1.8.14
-module load mkl/15.0.0.090
+module load intel/14.0.4.211 intelmpi/5.0.1.035
 
+ulimit -Sa
+ulimit -Ha                                                                                                                                                                                                   
+env 1>pok1 2>pok2
+grep I_MPI pok1 pok2
+ 
 export LANG=C
-export KMP_STACK_SIZE=16M
-#export KMP_AFFINITY="granularity=fine,compact,1,0,verbose"           
-export KMP_AFFINITY="norespect,verbose"
+export KMP_AFFINITY="granularity=fine,compact,1,0,verbose"
 export MKL_NUM_THREADS=1
-export SLURM_CPU_BIND_VERBOSE=yes
-export MKL_DYNAMIC=0
-
+export MKL_DYNAMIC=FALSE
+export OMP_DYNAMIC=FALSE
+export KMP_DYNAMIC=FALSE
 EOF
 ;;
 
@@ -1006,116 +1014,116 @@ ${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATA
 
 status=\$?
 
-if [ "\$status" -eq "0" ]; then
-   ((nb_restart=nb_restart+1))
-   echo "==================================================================================="
-   echo " nb_restart = " \$nb_restart
-   echo \$nb_restart > ${RESDIR}/NUM_RST
-   echo "==================================================================================="
-   echo " "
-   cat ${RESDIR}/NUM_RST
-
-   mv jorek_restart.rst jorek_restart.rst.cpy
-   rm -f machinefile
-
-   # now, let's run jorek2vtk on the restart files
-   # created during this execution only
-   # ----------------------------------
-   # first, let's test if there is the same # of "jorek_0000xxx.rst"
-   # and "jorek_0000xxx.vtk" files in both RST/ and VTK/
-   if  [ ${NBFILES} -eq "0" ]; then   
-      echo "==================================================================================="
-      echo " =============>> preparing to create the VTK files "
-      echo "==================================================================================="
-      echo " "
-   else
-      echo "==================================================================================="
-      echo " =============>> THERE MAY BE A SERIOUS PROBLEM, CHECK CONSISTENCY "
-      echo " =============>> BETWEEN THE NUMBER OF RST FILES AND VTK FILES     "
-      echo "==================================================================================="
-      echo " "
-   fi
-
-   # first, temporarilly erase "jorek_restart.rst" if it exists
-   if [ ! -e "jorek_restart.rst" ]; then
-     echo " jorek_restart.rst has already been removed..... "
-   else
-     mv jorek_restart.rst jorek_restart.rst.cpy
-   fi
-
-   # compute the number of restart and written files
-   # -----------------------------------------------
-   # compute how many restart files were written in this execution
-   NBFILERST_MAIN=\$(ls ${RESDIR}/*.rst | wc -l)
-   # the actual number of restart files written is thus
-   (( NBFILE_WRITTEN= \${NBFILERST_MAIN} - ${NBFILEVTK_INI} ))
-   echo " NBFILERST_MAIN = " \$NBFILERST_MAIN
-   echo " NBFILE_WRITTEN = " \$NBFILE_WRITTEN
-   echo " "
-
-   # create the list of all restart names --better to proceed this way because "nout" can be
-   # any number from one restart to the other
-   # ----------------------------------------
-   # thus, list only contains names as "jorek000xxx.rst"
-   list_tmp=\$(ls jorek*.rst  >TMP_FILE)
-   # create the array "array_GDP" of "000xxx" values whilst reading every line of file "TMP_FILE"
-   index="1"
-   while read line; do 
-     hoho=\${line:5:5}
-     array_GDP[\$index]=\$hoho
-     (( index = \$index + 1 ))
-   done < TMP_FILE
-   rm -rf TMP_FILE
-
-   # now create the VTK files
-   # ------------------------
-   if [ $NBFILEVTK_INI -eq 0 ]; then
-      vtkfile="jorek00000.vtk"
-      rstfile="jorek00000.rst"
-      echo "==================================================================================="
-      echo " =============>> creating vtk file = " \${vtkfile} ", in folder = " ${VTKDIR}
-      echo "==================================================================================="
-      echo " "
-      cp \$rstfile jorek_restart.rst
-      $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
-      mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
-      # the "jorek_restart.rst" file remains in the working directory
-      cp \${rstfile}   ${RSTDIR}/\${rstfile}
-      mv trace*.out ${TRACEDIR}
-   else
-      # values in "array_GDP" to be used are the ones from $NBFILEVTK_INI to the end, i.e. the
-      # size of the array, which corresponds to \${NBFILERST_MAIN}
-      ((vtkiniplusun=${NBFILEVTK_INI} + 1))
-      for (( ifile= \${vtkiniplusun} ; ifile <= \${NBFILERST_MAIN} ; ifile += 1 )); do
-        increment=\${array_GDP[\${ifile}]}
-        vtkfile='jorek'\${increment}'.vtk'
-        rstfile='jorek'\${increment}'.rst'
-        echo "==================================================================================="
-        echo " =============>> creating vtk file = " \${vtkfile}", in folder = " ${VTKDIR}
-        echo "==================================================================================="
-        echo " "
-        cp \$rstfile jorek_restart.rst
-        $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
-        mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
-        # all "jorek_****.rst" file remain in the working directory
-        cp \${rstfile}   ${RSTDIR}/\${rstfile}
-        mv trace*.out ${TRACEDIR}
-      done
-   fi
-
-   # create again the "jorek_restart.rst" file
-   cp jorek_restart.rst.cpy jorek_restart.rst
-
-   # new submission
-   # --------------
-   cd ${WKDIR}
-#   ${CMD_SUBRST}
-else
-   if [ "\${ARCH}" == "nfs" ]; then
-      source /data/JOREK/jorek_env/jorek_env.sh &> /dev/null
-      mpdallexit &> /dev/null
-   fi
-fi
+#TMP if [ "\$status" -eq "0" ]; then
+#TMP    ((nb_restart=nb_restart+1))
+#TMP    echo "==================================================================================="
+#TMP    echo " nb_restart = " \$nb_restart
+#TMP    echo \$nb_restart > ${RESDIR}/NUM_RST
+#TMP    echo "==================================================================================="
+#TMP    echo " "
+#TMP    cat ${RESDIR}/NUM_RST
+#TMP 
+#TMP    mv jorek_restart.rst jorek_restart.rst.cpy
+#TMP    rm -f machinefile
+#TMP 
+#TMP    # now, let's run jorek2vtk on the restart files
+#TMP    # created during this execution only
+#TMP    # ----------------------------------
+#TMP    # first, let's test if there is the same # of "jorek_0000xxx.rst"
+#TMP    # and "jorek_0000xxx.vtk" files in both RST/ and VTK/
+#TMP    if  [ ${NBFILES} -eq "0" ]; then   
+#TMP       echo "==================================================================================="
+#TMP       echo " =============>> preparing to create the VTK files "
+#TMP       echo "==================================================================================="
+#TMP       echo " "
+#TMP    else
+#TMP       echo "==================================================================================="
+#TMP       echo " =============>> THERE MAY BE A SERIOUS PROBLEM, CHECK CONSISTENCY "
+#TMP       echo " =============>> BETWEEN THE NUMBER OF RST FILES AND VTK FILES     "
+#TMP       echo "==================================================================================="
+#TMP       echo " "
+#TMP    fi
+#TMP 
+#TMP    # first, temporarilly erase "jorek_restart.rst" if it exists
+#TMP    if [ ! -e "jorek_restart.rst" ]; then
+#TMP      echo " jorek_restart.rst has already been removed..... "
+#TMP    else
+#TMP      mv jorek_restart.rst jorek_restart.rst.cpy
+#TMP    fi
+#TMP 
+#TMP    # compute the number of restart and written files
+#TMP    # -----------------------------------------------
+#TMP    # compute how many restart files were written in this execution
+#TMP    NBFILERST_MAIN=\$(ls ${RESDIR}/*.rst | wc -l)
+#TMP    # the actual number of restart files written is thus
+#TMP    (( NBFILE_WRITTEN= \${NBFILERST_MAIN} - ${NBFILEVTK_INI} ))
+#TMP    echo " NBFILERST_MAIN = " \$NBFILERST_MAIN
+#TMP    echo " NBFILE_WRITTEN = " \$NBFILE_WRITTEN
+#TMP    echo " "
+#TMP 
+#TMP    # create the list of all restart names --better to proceed this way because "nout" can be
+#TMP    # any number from one restart to the other
+#TMP    # ----------------------------------------
+#TMP    # thus, list only contains names as "jorek000xxx.rst"
+#TMP    list_tmp=\$(ls jorek*.rst  >TMP_FILE)
+#TMP    # create the array "array_GDP" of "000xxx" values whilst reading every line of file "TMP_FILE"
+#TMP    index="1"
+#TMP    while read line; do 
+#TMP      hoho=\${line:5:5}
+#TMP      array_GDP[\$index]=\$hoho
+#TMP      (( index = \$index + 1 ))
+#TMP    done < TMP_FILE
+#TMP    rm -rf TMP_FILE
+#TMP 
+#TMP    # now create the VTK files
+#TMP    # ------------------------
+#TMP    if [ $NBFILEVTK_INI -eq 0 ]; then
+#TMP       vtkfile="jorek00000.vtk"
+#TMP       rstfile="jorek00000.rst"
+#TMP       echo "==================================================================================="
+#TMP       echo " =============>> creating vtk file = " \${vtkfile} ", in folder = " ${VTKDIR}
+#TMP       echo "==================================================================================="
+#TMP       echo " "
+#TMP       cp \$rstfile jorek_restart.rst
+#TMP       $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
+#TMP       mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
+#TMP       # the "jorek_restart.rst" file remains in the working directory
+#TMP       cp \${rstfile}   ${RSTDIR}/\${rstfile}
+#TMP       mv trace*.out ${TRACEDIR}
+#TMP    else
+#TMP       # values in "array_GDP" to be used are the ones from $NBFILEVTK_INI to the end, i.e. the
+#TMP       # size of the array, which corresponds to \${NBFILERST_MAIN}
+#TMP       ((vtkiniplusun=${NBFILEVTK_INI} + 1))
+#TMP       for (( ifile= \${vtkiniplusun} ; ifile <= \${NBFILERST_MAIN} ; ifile += 1 )); do
+#TMP         increment=\${array_GDP[\${ifile}]}
+#TMP         vtkfile='jorek'\${increment}'.vtk'
+#TMP         rstfile='jorek'\${increment}'.rst'
+#TMP         echo "==================================================================================="
+#TMP         echo " =============>> creating vtk file = " \${vtkfile}", in folder = " ${VTKDIR}
+#TMP         echo "==================================================================================="
+#TMP         echo " "
+#TMP         cp \$rstfile jorek_restart.rst
+#TMP         $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
+#TMP         mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
+#TMP         # all "jorek_****.rst" file remain in the working directory
+#TMP         cp \${rstfile}   ${RSTDIR}/\${rstfile}
+#TMP         mv trace*.out ${TRACEDIR}
+#TMP       done
+#TMP    fi
+#TMP 
+#TMP    # create again the "jorek_restart.rst" file
+#TMP    cp jorek_restart.rst.cpy jorek_restart.rst
+#TMP 
+#TMP    # new submission
+#TMP    # --------------
+#TMP    cd ${WKDIR}
+#TMP #   ${CMD_SUBRST}
+#TMP else
+#TMP    if [ "\${ARCH}" == "nfs" ]; then
+#TMP       source /data/JOREK/jorek_env/jorek_env.sh &> /dev/null
+#TMP       mpdallexit &> /dev/null
+#TMP    fi
+#TMP fi
 EOF
 
 chmod +x go_$DATANAME.cmd

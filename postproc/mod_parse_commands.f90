@@ -1,5 +1,4 @@
-!> Module for reading and parsing a command
-!! (used by jorek2_postproc)
+!> Module for reading and parsing a command (used by jorek2_postproc)
 module parse_commands
 
   use convert_character,    only: lower_case
@@ -7,7 +6,7 @@ module parse_commands
   
   implicit none
   
-  integer, parameter :: MAX_OPTIONS = 100 !< Maximum number of options in a command
+  integer, parameter :: MAX_ARGS    = 100 !< Maximum number of arguments for a command
   integer, parameter :: FILE_HANDLE = 16  !< File handle
   
   integer, parameter :: STDIN_MODE  = 1   !< Commands are read from STDIN in this mode
@@ -15,11 +14,11 @@ module parse_commands
   integer            :: mode = STDIN_MODE !< Current mode (STDIN_MODE or SOURCE_MODE)
   
   !> Type declaration for a command entered by the user
-  !!   option(1) is the command itself
-  !!   option(2:n_options) are the command parameters
+  !!   arg(0) is the command itself
+  !!   arg(1:n_args) are the command parameters
   type :: type_command
-    integer            :: n_options           ! Number of options (command + parameters)
-    character(len=256) :: option(MAX_OPTIONS) ! Actual options (command + parameters)
+    integer            :: n_args           ! Number of arguments
+    character(len=256) :: args(0:MAX_ARGS) ! Actual arguments; args(0) is the command itself
   end type type_command
   
   
@@ -79,15 +78,15 @@ module parse_commands
     end if
     
     ! --- If a script file is sourced, open it and switch to SOURCE_MODE
-    if ( command%option(1) == 'source' ) then
-      if ( command%n_options /= 2 ) then
+    if ( command%args(0) == 'source' ) then
+      if ( command%n_args /= 1 ) then
         write(*,*) 'ERROR: "source" called with wrong number of arguments.'
         call read_command(command, error)
         return
       end if
-      open(FILE_HANDLE, file=trim(command%option(2)), action='read', status='old', iostat=ierr)
+      open(FILE_HANDLE, file=trim(command%args(1)), action='read', status='old', iostat=ierr)
       if ( ierr /= 0 ) then
-        write(*,*) 'ERROR: The script file "', trim(command%option(2)), '" could not be found.'
+        write(*,*) 'ERROR: The script file "', trim(command%args(1)), '" could not be found.'
         call read_command(command, error)
         return
       end if
@@ -111,20 +110,20 @@ module parse_commands
     ! --- Local variables
     character(len=LEN(line))        :: todo_string ! Copy of line
     character(len=1)                :: quote       ! Which quote (' or ")?
-    integer                         :: iend        ! End position of option in todo_string
+    integer                         :: iend        ! End position of argument in todo_string
 
     error = 0
-    todo_string = trim(lower_case(adjustl(line)))
-    command%n_options = 0
-    command%option(:) = ''
+    todo_string = trim(adjustl(line))
+    command%n_args  = -1
+    command%args(:) = ''
     iend = 0
     
-    ! --- Extract one option after the other from the command line
+    ! --- Extract one argument after the other from the command line
     do
         
       if (LEN_TRIM(todo_string) == 0) exit
       
-      ! --- Option in quotes
+      ! --- Argument in quotes
       if ( (todo_string(1:1) == '"') .or. (todo_string(1:1) == '''') ) then
         
         quote = todo_string(1:1)
@@ -135,18 +134,18 @@ module parse_commands
           error = 1
           return
         else
-          command%n_options = command%n_options + 1
-          command%option(command%n_options) = todo_string(1:iend)
+          command%n_args = command%n_args + 1
+          command%args(command%n_args) = todo_string(1:iend)
           todo_string =  adjustl(todo_string(iend+2:LEN(todo_string)))
         end if
       ! --- Comment
       else if (todo_string(1:1) == '#') then
         exit
-      ! --- Normal option
+      ! --- Normal argument
       else
         iend = INDEX(todo_string, ' ') - 1
-        command%n_options = command%n_options + 1
-        command%option(command%n_options) = todo_string(1:iend)
+        command%n_args = command%n_args + 1
+        command%args(command%n_args) = todo_string(1:iend)
         todo_string =  adjustl(todo_string(iend+2:LEN(todo_string)))
       end if
     end do
@@ -163,11 +162,11 @@ module parse_commands
     
     integer :: i
     
-    if ( command%n_options > 0 ) then
+    if ( command%n_args >= 0 ) then
       write(*,'(1x,a,i3,a)',advance='no') 'Command: "'
-      do i = 1, command%n_options
-        if ( i /= 1 ) write(*,'(a)',advance='no') ' '
-        write(*,'(a)',advance='no') trim(command%option(i))
+      do i = 0, command%n_args
+        if ( i /= 0 ) write(*,'(a)',advance='no') ' '
+        write(*,'(a)',advance='no') trim(command%args(i))
       end do
       write(*,*) '"'
     else
@@ -199,7 +198,7 @@ module parse_commands
       '"abra" "cadabra"                                            ',    &
       'line temperature 1.6 0.0 0.0 1.2 0.0 0.0                    ' /)
     
-    call set_setting('debut',   'true', error)
+    call set_setting('debug',   'true', error)
     call set_setting('verbose', 'true', error)
     do i = 1, size(test_string,1)
       write(*,*)

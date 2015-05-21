@@ -39,6 +39,14 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)	  \
 	$(DIR)/find_flux_surfaces.f90     \
 	$(DIR)/integrals.f90
 
+NEW_DIAG_DEMO_SRC := $(NEW_DIAG_DEMO_SRC)	  \
+	$(DIR)/boundary_check.f90         \
+	$(DIR)/flux_surface_add_line.f90  \
+	$(DIR)/flux_surface_add_point.f90 \
+	$(DIR)/determine_q_profile.f90    \
+	$(DIR)/find_flux_surfaces.f90     \
+	$(DIR)/integrals.f90
+
 JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)	  \
 	$(DIR)/find_flux_surfaces.f90     \
 	$(DIR)/flux_surface_add_line.f90  	\

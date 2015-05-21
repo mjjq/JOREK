@@ -18,6 +18,7 @@ DIRS =  timing				\
 	solvers 			\
 	plots				\
 	diagnostics			\
+	diagnostics/new_diag		\
 	vacuum				\
 	refinement			\
 	postproc			\
@@ -124,6 +125,7 @@ JOREK_TO_HELENA_SRC		+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_TARGET2VTK_SRC   	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_POWERS_SRC           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_IMPORT_PERTURBATION_SRC	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+NEW_DIAG_DEMO_SRC               += $(ALL_BINARIES_SRC) $(PPPSRC)
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(RST_BIN2HDF5_SRC) $(RST_HDF52BIN_SRC) \
 	  $(JOREK2_POSTPROC_SRC) $(JOREK2_POVRAY_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) \
@@ -209,9 +211,13 @@ JOREK2_POWERS_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POWERS_SRC))) 
                     $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POWERS_SRC)))         \
                     $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POWERS_SRC)))
 
-JOREK2_IMPORT_PERTURBATION_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_IMPORT_PERTURBATION_SRC)))     \
-		                 $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
-			         $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC)))
+JOREK2_IMPORT_PERTURBATION_OBJ =	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_IMPORT_PERTURBATION_SRC)))     \
+	 		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
+	 		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC))) 
+
+NEW_DIAG_DEMO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(NEW_DIAG_DEMO_SRC)))     \
+     $(patsubst %.f,%.o,$(filter %.f, $(NEW_DIAG_DEMO_SRC)))         \
+     $(patsubst %.c,%.o,$(filter %.c, $(NEW_DIAG_DEMO_SRC)))
 
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
@@ -411,6 +417,11 @@ jorek2_import_perturbation_tmp : diagnostics/jorek2_import_perturbation.f90 $(JO
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_import_perturbation.f90 -o diagnostics/jorek2_import_perturbation.o
 	$(FC) $(FFLAGS) diagnostics/jorek2_import_perturbation.o $(JOREK2_IMPORT_PERTURBATION_OBJ) \
 	-o $(JOREK_DIR)/jorek2_import_perturbation $(LIBS)
+
+new_diag_demo : diagnostics/new_diag_demo.f90 $(NEW_DIAG_DEMO_OBJ)
+	$(FC) $(FFLAGS) diagnostics/new_diag_demo.f90 -c -o diagnostics/new_diag_demo.o 
+	$(FC) $(FFLAGS_OMP) diagnostics/new_diag_demo.o $(NEW_DIAG_DEMO_OBJ)		\
+         -o $(JOREK_DIR)/new_diag_demo $(INCLUDES) $(LIBS)
 
 include all_rules.mk
 ifeq (0, $(words $(foreach word, ${NODEPS}, $(findstring ${word}, ${MAKECMDGOALS}))))

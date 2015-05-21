@@ -25,6 +25,11 @@ JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/hermite_1d.f90				\
 	$(DIR)/hermite_elements.f90
 
+NEW_DIAG_DEMO_SRC := $(NEW_DIAG_DEMO_SRC)		\
+	$(DIR)/bezier_1d.f90				\
+	$(DIR)/hermite_1d.f90				\
+	$(DIR)/hermite_elements.f90
+
 JOREK2_POVRAY_SRC := $(JOREK2_POVRAY_SRC)		\
 	$(DIR)/bezier_1d.f90				\
 	$(DIR)/hermite_1d.f90				\

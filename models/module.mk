@@ -1,7 +1,7 @@
 DIR = models
 
 ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
-        $(DIR)/current.f90 				\
+	$(DIR)/current.f90 				\
 	$(DIR)/density.f90 				\
 	$(DIR)/derive_num_profiles.f90			\
 	$(DIR)/det_modes.f90				\
@@ -10,24 +10,24 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/log_parameters.f90			\
 	$(DIR)/mod_constants.f90			\
 	$(DIR)/mod_domains.f90                          \
-        $(DIR)/mod_equil_info.f90			\
+	$(DIR)/mod_equil_info.f90			\
 	$(DIR)/mod_nodes_elements.f90			\
 	$(DIR)/mod_phys_module.f90			\
 	$(DIR)/preset_parameters.f90			\
 	$(DIR)/read_num_profiles.f90			\
-        $(DIR)/temperature.f90                          \
+	$(DIR)/temperature.f90                          \
 	$(DIR)/temperature_e.f90 			\
 	$(DIR)/temperature_i.f90 			\
+	$(DIR)/mod_corr_neg.f90                         \
 	$(DIR)/update_time_evol_params.f90
 
 JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
-        $(DIR)/mod_bootstrap_functions.f90 			\
+	$(DIR)/mod_bootstrap_functions.f90 			\
 	$(DIR)/element_matrix_GS.f90 			\
 	$(DIR)/element_matrix_GS_inverse.f90 		\
 	$(DIR)/element_matrix_GS_perturbation.f90 	\
 	$(DIR)/element_matrix_poisson.f90 		\
 	$(DIR)/element_matrix_poisson_inverse.f90 	\
-	$(DIR)/mod_corr_neg.f90                         \
 	$(DIR)/equilibrium.f90 				\
 	$(DIR)/F_profile.f90				\
 	$(DIR)/poisson.f90 				\
@@ -40,10 +40,17 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 	$(DIR)/mod_assembly.f90
 
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
-        $(DIR)/mod_pellet.f90				\
+	$(DIR)/mod_pellet.f90				\
 
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
-        $(DIR)/mod_pellet.f90				\
+	$(DIR)/mod_diffusivities.f90                    \
+	$(DIR)/mod_pellet.f90				\
+	$(DIR)/neo_coef.f90
+
+NEW_DIAG_DEMO_SRC := $(NEW_DIAG_DEMO_SRC)		\
+	$(DIR)/mod_diffusivities.f90                    \
+	$(DIR)/mod_pellet.f90				\
+	$(DIR)/neo_coef.f90
 
 JOREK2_POINCARE_SRC := $(JOREK2_POINCARE_SRC)		\
         $(DIR)/mod_pellet.f90				\
@@ -67,7 +74,6 @@ ENBIGGEN_SRC := $(JENBIGGEN_SRC)                        \
 	$(DIR)/mod_pellet.f90
 
 JOREK2VTK_SRC := $(JOREK2VTK_SRC)           \
-	$(DIR)/mod_corr_neg.f90                 \
 	$(DIR)/mod_bootstrap_functions.f90      \
 	$(DIR)/mod_diffusivities.f90            \
 	$(DIR)/mod_pellet.f90                   \

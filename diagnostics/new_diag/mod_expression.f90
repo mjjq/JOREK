@@ -1013,8 +1013,8 @@ module mod_expression
               case ( 'Er' )
                 res = Er * fact_Er
                 
-!              case ( 'Vtheta_i' )
-!                res = Vtheta_i / fact_time ### vtheta_i not yet defined
+              case ( 'Vtheta_i' )
+                res = Vtheta / fact_time
                 
               case ( 'Mach_par' )
                 res = Mach_par

@@ -27,6 +27,7 @@ real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t,R_s, R_t, ps0_x, ps0_y, Z_s, 
 logical    :: xpoint2
 !=============================MB:  parallel velocity profile
 real*8     :: zV, dV_dpsi, dV_dpsi2, dV_dz, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi2_dz, dV_dpsi_dz2
+real*8     :: Omega, dOmega_dpsi, dOmega_dz, dOmega_dpsi2, dOmega_dz2, dOmega_dpsi_dz
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '*      initial conditions  (303)      *'
@@ -82,8 +83,13 @@ if (my_id .eq. 0) then
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 !============================MB
     if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
-    call velocity(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
-                  dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+       if (normalized_velocity_profile) then
+          call velocity(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
+               dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+       else
+          call velocity(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,Omega,dOmega_dpsi,dOmega_dz,dOmega_dpsi2,dOmega_dz2, &
+               dOmega_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+       endif
     endif
 !============================MB
 							       
@@ -119,17 +125,44 @@ if (my_id .eq. 0) then
                                     + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
  
     node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
+
     node_list%node(i)%values(1,:,7) = 0.d0        ! parallel velocity
-!=================================MB:  parallel velocity profile
+!=================================================  Parallel velocity profile: 
+!                                                   if (normalized_velocity_profile) then
+!                                                      set Vpar,0 (JOREK normalized, ie without unit)= parallel velocity given as input profile 
+!                                                   else
+!                                                      set Vpar,0 = 2piR^2/F0 * Omega_tor,0
+!                                                      where Omega_tor,0 is the angular toroidal (~parallel) rotation given as input profile.
+
 if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
-    node_list%node(i)%values(1,1,7) = zV
-    node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,7) = dV_dpsi  * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(4,2) &
-                                    + dV_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                 + dV_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+   if (normalized_velocity_profile) then
+     node_list%node(i)%values(1,1,7) = zV
+     node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(2,2)
+     node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(3,2)
+     node_list%node(i)%values(1,4,7) = dV_dpsi  * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(4,2) &
+                                     + dV_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                     + dV_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+   else
+     node_list%node(i)%values(1,1,7) = 2.d0 * PI * R**2 / F0 * Omega
+     node_list%node(i)%values(1,2,7) = 2.d0 * PI / F0 * (  2.d0 * R * node_list%node(i)%x(2,1) * Omega               &
+                                                           + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,2,1)   &
+                                                           + R**2 * dOmega_dz * node_list%node(i)%x(2,2)           ) 
+     node_list%node(i)%values(1,3,7) = 2.d0 * PI / F0 * (  2.d0 * R * node_list%node(i)%x(3,1) * Omega               &
+                                                           + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,3,1)   &
+                                                           + R**2 * dOmega_dz * node_list%node(i)%x(3,2)           )
+     node_list%node(i)%values(1,4,7) = 2.d0 * PI / F0 * (  2.d0 * ( node_list%node(i)%x(2,1) * node_list%node(i)%x(3,1) + R * node_list%node(i)%x(4,1) ) * Omega &
+                                                        + 2.d0 * R * ( dOmega_dpsi * ( node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,1)         &
+                                                                                     + node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,1) )       &
+                                                                      + dOmega_dz  * ( node_list%node(i)%x(2,1) * node_list%node(i)%x(3,2)                &
+                                                                                     + node_list%node(i)%x(2,2) * node_list%node(i)%x(3,1)        )  )    &
+                                                        + R**2 * ( dOmega_dpsi * node_list%node(i)%values(1,4,1) + dOmega_dz * node_list%node(i)%x(4,2) ) &
+                                                        + R**2 * ( dOmega_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)       &
+                                                                 + dOmega_dz2 * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)                  )    &
+                                                        + R**2 * ( dOmega_dpsi_dz * ( node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)          &
+                                                                                    + node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)     )  ) )
    endif
-!=================================MB: parallel velocity
+endif
+!=================================parallel velocity
     
     node_list%node(i)%deltas = 0.d0
 

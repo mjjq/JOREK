@@ -423,6 +423,7 @@ module phys_module
   real*8, allocatable :: num_rot_y1(:)   !< First derivatives of toroidal rotation profile with respect to $\Psi_{N}$
   real*8, allocatable :: num_rot_y2(:)   !< Second derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
   real*8, allocatable :: num_rot_y3(:)   !< Third derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
+  logical             :: normalized_velocity_profile !< if true, reads the normalized velocity profile as flux function, else Omega_tor is read as flux function. 
 
   !> @name gmres parameters
   integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated

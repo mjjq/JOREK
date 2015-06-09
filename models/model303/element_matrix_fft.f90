@@ -67,7 +67,7 @@ real*8     :: amat_77, amat_77_k, amat_77_n, amat_77_kn
 real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 !==================MB: velocity profile is kept by a source which compensating diffusion
-real*8     :: Vt0,Vt0_x,Vt0_y
+real*8     :: Vt0,Omega_tor0_x,Omega_tor0_y,Vt0_x,Vt0_y
 real*8     :: V_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
@@ -309,10 +309,14 @@ do ms=1, n_gauss
 
 !=======================================:parallel velocity 
      Vt0   = V_source(ms,mt)
-     Vt0_x = dV_dpsi_source(ms,mt)*ps0_x
-     Vt0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
-
-!=======================================
+     if (normalized_velocity_profile) then
+       Vt0_x = dV_dpsi_source(ms,mt)*ps0_x
+       Vt0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
+     else
+       Omega_tor0_x = dV_dpsi_source(ms,mt)*ps0_x
+       Omega_tor0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
+     endif
+!=======================================MB
 
      w0    = eq_g(mp,4,ms,mt)
      w0_x  = (   y_t(ms,mt) * eq_s(mp,4,ms,mt) - y_s(ms,mt) * eq_t(mp,4,ms,mt) ) / xjac
@@ -755,9 +759,6 @@ do ms=1, n_gauss
 
            rhs_ij_7 = - v * F0 / BigR * P0_p                                              * xjac * tstep &
                       - v * (P0_s * ps0_t - P0_t * ps0_s)                                        * tstep &
-!====================================================parallel velocity source:
-                      - visco_par * (v_x * (vpar0_x-Vt0_x) + v_y * (vpar0_y-Vt0_y)) * BigR* xjac * tstep &
-!===========================================================================
 
                     - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR * xjac * tstep &
 
@@ -776,6 +777,15 @@ do ms=1, n_gauss
             - TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
                       * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
                       * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep 
+
+!====================================================parallel velocity source:
+           if (normalized_velocity_profile) then
+              rhs_ij_7 = rhs_ij_7  - visco_par * (v_x * (vpar0_x-Vt0_x) + v_y * (vpar0_y-Vt0_y)) * BigR* xjac * tstep 
+           else
+              rhs_ij_7 = rhs_ij_7 - visco_par * (  v_x * (vpar0_x * F0**2 / BigR**2 - 2 * vpar0 * F0**2 / BigR**3  - 2 * PI * F0 * Omega_tor0_x ) & 
+                                                 + v_y * (vpar0_y * F0**2 / BigR**2 -2 * PI * F0 * Omega_tor0_y) ) * BigR* xjac * tstep 
+           endif
+!=============================================================================
 
 ! ------------------------------------------------------ NEO
            if (NEO) then
@@ -1414,7 +1424,6 @@ do ms=1, n_gauss
              amat_76_n= + v * F0 / BigR * T_p * R0                              * xjac * theta * tstep
 
              amat_77 = v * Vpar * abs(R0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
-                     + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR           * xjac * theta * tstep &
 
                      + v*(particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR * xjac * theta * tstep &
 
@@ -1436,6 +1445,12 @@ do ms=1, n_gauss
             + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
                       * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac                   ) / BigR                           &
                       * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep 
+
+            if (normalized_velocity_profile) then
+               amat_77 = amat_77 + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR        * xjac  * theta * tstep 
+            else
+               amat_77 = amat_77 + visco_par * F0**2 / BigR**2 * (v_x * (Vpar_x - 2*vpar/BigR) + v_y * Vpar_y) * BigR * xjac  * theta * tstep 
+            endif
 
             amat_77_k = - r0 * vpar0 * vpar * BB2 * F0 / BigR * v_p               * xjac * theta * tstep             &
  

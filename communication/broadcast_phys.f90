@@ -28,7 +28,7 @@ call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
 !CP!bufsize = ( (359+2*max_limiter+n_var) * IDBL_EXT + (37+n_tor) * INT_EXT + 45 * ILOG_EXT + (14*512+120) * CHAR_EXT )
-bufsize = ( (368+2*max_limiter+n_var) * IDBL_EXT + (39+n_tor) * INT_EXT + 47 * ILOG_EXT + (14*512+120) * CHAR_EXT )
+bufsize = ( (368+2*max_limiter+n_var) * IDBL_EXT + (39+n_tor) * INT_EXT + 48 * ILOG_EXT + (14*512+120) * CHAR_EXT )
 
 #ifdef USE_HDF5
    bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
@@ -313,6 +313,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(num_neo_file,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 42 
   call MPI_PACK(num_rot,                1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 43
   call MPI_PACK(murge_with_starpu,      1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  ! 44
+  call MPI_PACK(normalized_velocity_profile,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr) !45
 
   call MPI_PACK(jecamp,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
   call MPI_PACK(jec_pos1,               1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    ! ###
@@ -617,6 +618,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,num_neo_file,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 42
   call MPI_UNPACK(buffer,bufsize,position,num_rot,                1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 43
   call MPI_UNPACK(buffer,bufsize,position,murge_with_starpu,      1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)   ! 44
+  call MPI_UNPACK(buffer,bufsize,position,normalized_velocity_profile,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr) !45
 
   call MPI_UNPACK(buffer,bufsize,position,jecamp,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###
   call MPI_UNPACK(buffer,bufsize,position,jec_pos1,               1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! ###

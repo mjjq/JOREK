@@ -167,26 +167,41 @@ fi
 # --- Create run directory and copy files there
 returncode=0
 if [ "$runit" == "yes" ]; then
-  # --- Copy files
   mkdir -p $tmpdir
-  cd $tmpdir || exit 1
-  echo " Copied files " $requiredfiles
-  cp $requiredfiles .
+  # --- Copy files
+  cd $testcasedir
+  echo " requiredfiles=" $requiredfiles
+  cp $requiredfiles $tmpdir
+  cd $tmpdir
   if [ $? -ne 0 ]; then
     printf "\n$ERROR_COL ERROR: Copying required files ($requiredfiles) failed.$NO_COL\n"
     exit 1
   fi
     
+  # --- Some preparations
+  export OMP_NUM_THREADS=$ompthreads
+  if [ -n "$PRERUN" ]; then
+    eval $PRERUN                                          || exit 1
+  fi
+  cd $tmpdir                                              || exit 1
+
   # --- Run the test case
-  cd $tmpdir || exit 1
   if [ "$initialrun" == "no" ]; then
-    restart_run || exit 1
+    cp ${testcasedir}/begin.h5 jorek_restart.h5           || exit 1
+    ./rst_hdf52bin                                        || exit 1
+    restart_run                                           || exit 1
   else
-    initial_run || exit 1
+    initial_run                                           || exit 1
+    ./rst_bin2hdf5                                        || exit 1
+    cp jorek_restart.h5 ${testcasedir}/begin.h5           || exit 1
+    
+    restart_run                                           || exit 1
+    ./rst_bin2hdf5                                        || exit 1
+    cp jorek_restart.h5 ${testcasedir}/end.h5             || exit 1
   fi
 
   # --- Extract data
-  cd $tmpdir || exit 1
+  cd $tmpdir                                              || exit 1
   compare_results
   returncode=$?
   if [ $returncode -eq 0 ]; then

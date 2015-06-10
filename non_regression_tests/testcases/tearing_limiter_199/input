@@ -7,7 +7,7 @@
  tstep_n = 1
  nstep_n = 0
 
- nout = 1
+ nout = 10
 
 ! rst_hdf5 = 1    ! = 0 ; restart from binary files
 !                 ! = 1 ; restart from HDF5 files

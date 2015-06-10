@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH -J tearing_limiter_199
-#SBATCH -N 1
+#SBATCH -N 2
 #SBATCH -n 2
 #SBATCH -t 00:50:00
-#SBATCH -o %J.%j.out
-#SBATCH -e %J.%j.err
+#SBATCH -o tearing_limiter_199.%j.out
+#SBATCH -e tearing_limiter_199.%j.err
 
 ########################################################################
-# Look to non-regression-tests/testcases/tearing_limiter_199
+# Look to non_regression_tests/testcases/tearing_limiter_199/settings.sh
 # to determine nb of nodes, MPI processes, and nb of threads
 ########################################################################
 
@@ -21,11 +21,11 @@ JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 echo " jorek_home = " ${JOREK_HOME}
 
 cd ${JOREK_HOME}
-source non-regression-tests/job_scripts/helios/env.sh
+source non_regression_tests/job_scripts/helios/env.sh
 ## Compile with:       
-# non-regression-tests/run_test.sh -p $CASE
+# non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 
-#non-regression-tests/run_test.sh -k -i -n $CASE 
+#non_regression_tests/run_test.sh -k -i -n $CASE 
 ## Restart run: 
-non-regression-tests/run_test.sh -k -n $CASE 
+non_regression_tests/run_test.sh -k -n $CASE 
 

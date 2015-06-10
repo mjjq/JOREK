@@ -1,5 +1,5 @@
 #!/bin/bash
-# @ job_name = tearing_xpoint_302
+# @ job_name = tearing_xpoint_303
 # @ class = clallmds+
 # @ as_limit = 24gb
 # @ error  = $(job_name).$(jobid).err
@@ -9,7 +9,7 @@
 # @ job_type = mpich
 # @ restart = no
 #######################################################################
-# Look to non-regression-tests/testcases/tearing_xpoint_302
+# Look to non_regression_tests/testcases/tearing_xpoint_303
 # to determine nb of nodes, MPI processes, and nb of threads
 #######################################################################
 # @ node = 2
@@ -23,14 +23,14 @@ ulimit -d unlimited
 ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
-CASE=tearing_xpoint_302
+CASE=tearing_xpoint_303
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 
 cd ${JOREK_HOME}
-source non-regression-tests/job_scripts/poincare/env.sh
+source non_regression_tests/job_scripts/poincare/env.sh
 ## Compile with:       
-# non-regression-tests/run_test.sh -p $CASE
+# non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 
-#non-regression-tests/run_test.sh -k -i -n $CASE 
+# non_regression_tests/run_test.sh -k -i -n $CASE 
 ## Restart run: 
-non-regression-tests/run_test.sh -k -n $CASE 
+non_regression_tests/run_test.sh -k -n $CASE 

@@ -1,3 +1,4 @@
+#!/bin/bash
 
 module purge
 module load intel/12.1.0 mvapich2/1.8.1 mkl/10.3

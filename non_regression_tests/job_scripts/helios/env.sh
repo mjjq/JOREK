@@ -1,3 +1,5 @@
+#!/bin/bash
+
 module purge
 module load intel/14.0.4.211
 module load bullxmpi/1.2.8.2

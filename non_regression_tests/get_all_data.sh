@@ -4,7 +4,7 @@ codedir=`readlink -f ${startdir}/..` # Assumption about source code location
 cd ${startdir}/testcases || exit 1
 for name in *; do
  if [ -d $name ]; then
-   ./get-testcase-data.sh $name
+   ./get_testcase_data.sh $name
  fi
 done
 exit 0

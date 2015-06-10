@@ -25,9 +25,9 @@ if [ -z "$MPIRUN" ]; then
     export MPIRUN="mpirun -n"
 fi
 
-# --- Test directory if 'non-regression-tests' exists
-if [ ! -d "non-regression-tests" ]; then
-    printf "$ERROR_COL Run the script from the trunk, non-regression-tests directory should exist !! \n $NO_COL"
+# --- Test directory if 'non_regression_tests' exists
+if [ ! -d "non_regression_tests" ]; then
+    printf "$ERROR_COL Run the script from the trunk, non_regression_tests directory should exist !! \n $NO_COL"
     exit 1
 fi
 

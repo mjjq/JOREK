@@ -18,6 +18,10 @@ program RST_convert_hdf52bin
   allocate(node_list)
   allocate(element_list)
 
+#ifndef USE_HDF5
+#error " Should be compiled with -DUSE_HDF5"
+#endif
+
   ! --- Initialize mode and mode_type arrays
   call det_modes()
   

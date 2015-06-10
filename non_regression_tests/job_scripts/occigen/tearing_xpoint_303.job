@@ -13,10 +13,10 @@ CASE=tearing_xpoint_303
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 
 cd ${JOREK_HOME}
-source non-regression-tests/job_scripts/occigen/env.sh
+source non_regression_tests/job_scripts/occigen/env.sh
 ## Compile with:       
-# non-regression-tests/run_test.sh -p $CASE
+# non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 
-#non-regression-tests/run_test.sh -k -i -n $CASE 
+#non_regression_tests/run_test.sh -k -i -n $CASE 
 ## Restart run: 
-non-regression-tests/run_test.sh -k -n $CASE 
+non_regression_tests/run_test.sh -k -n $CASE 

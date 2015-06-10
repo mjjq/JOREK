@@ -234,7 +234,7 @@ MAIN = jorek_$(MODEL)
 
 .PHONY: version
 
-all: $(MAIN) 
+all: $(MAIN) version
 
 cleanall : clean cleandep cleangenmod
 	@echo ">> Deleting some executables"

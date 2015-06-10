@@ -92,8 +92,10 @@ source $testcasedir/settings.sh
 
 
 # --- Set hard-coded parameters and compile
-#Remark(GL): TODO, we need several executables sometime for one single run (ntor=1, ntor=XX), 
-#Remark(GL): that's why util/compile_test.sh generete several ones
+#Remark(GL): We need several executables sometime for one single run (ntor=1, ntor=XX), 
+#Remark(GL): that's why util/compile_test.sh generete several executables.
+#Remark(GL): we need a loop here with several jorekparameters: perhaps a solution 
+#Remark(GL): would be an array (e.g. util/compile_test.sh) ?
 if [ "$compile" == "yes" ]; then
   cd $codedir
   ./util/config.sh model=$jorekmodel $jorekparameters
@@ -106,20 +108,27 @@ fi
 # --- Create run directory and copy files there
 mkdir -p $tmpdir
 cd $tmpdir || exit 1
-#Remark(GL): TODO, we need several executables sometime f
+#Remark(GL): TODO, we need several executables sometime, copy all of them with the regex "jorek_model$jorekmodel_*" ?
 cp $codedir/jorek_model$jorekmodel $codedir/jorek_extract_data $requiredfiles . || exit 1
 
 
 # --- Run test case
 cd $tmpdir || exit 1
-#Remark(GL): TODO, modify this to have a sequence of mpirun calls
+#Remark(GL): TODO, modify this to have a sequence of mpirun calls, we need
+#Remark(GL): a loop here (see util/launch_test.sh) to launch several mpirun with different
+#Remark(GL): parameters. 
+#Remark(GL): The command to launch job is not always mpirun, should be flexible (env. variable $MPIRUN)
+#Remark(GL): We may also want to launch several jobs to a job scheduler.
 export OMP_NUM_THREADS=$ompthreads
 mpirun -n $mpitasks ./jorek_model$jorekmodel < input > logfile || exit 1
 
 
+#Remark(GL): This way of extracting+comparing data is OK, but not the only one.
+#Remark(GL): The extraction+comparison should be more flexible even if this method is one possibility.
+#Remark(GL): I think about using h5diff to compare the results which is a good way to go in many cases.
+#Remark(GL): Proposal: the following lines (extraction+comparison) could be encapuslated into a bash function written in setting.sh
 # --- Extract data
 cd $tmpdir || exit 1
-
 echo "&extract" > extract_data.nml
 comparedata2=`echo "$comparedata" | sed -e 's/^ *//' -e 's/ *$//' -e 's/  */ /g' -e "s/^/'/" -e "s/$/'/" -e "s/ /', '/g"`
 echo "  extract_data = $comparedata2" >> extract_data.nml

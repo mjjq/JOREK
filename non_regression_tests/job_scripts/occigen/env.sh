@@ -1,3 +1,4 @@
+#!/bin/bash
 
 module purge
 module load intel/15.0.0.090 bullxmpi/1.2.8.3 hdf5/1.8.14

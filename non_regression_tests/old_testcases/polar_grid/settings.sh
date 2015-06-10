@@ -1,3 +1,5 @@
+#!/bin/bash
+
 description="Test case for polar bezier grid."
 
 # --- Model

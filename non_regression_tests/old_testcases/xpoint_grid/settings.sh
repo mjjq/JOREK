@@ -1,3 +1,5 @@
+#!/bin/bash
+
 description="Test case for flux surface aligned X-point grid."
 
 # --- Model

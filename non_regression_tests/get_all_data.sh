@@ -1,4 +1,5 @@
 #!/bin/bash
+
 startdir=`readlink -f $(dirname $0)`
 codedir=`readlink -f ${startdir}/..` # Assumption about source code location
 cd ${startdir}/testcases || exit 1

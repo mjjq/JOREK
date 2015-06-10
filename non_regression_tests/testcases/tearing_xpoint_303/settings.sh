@@ -5,9 +5,6 @@ description="Time evolution of model 303: Tearing mode in circular plasma at n_t
 # --- Model used
 jorekmodel="303"
 
-# --- Commons settings for input file
-COMMONOPT="n_flux=26 n_tht=28 n_open=8 n_leg=8 n_private=6"
-
 # --- Files required to run the code (executables copied automatically)
 requiredfiles="$testcasedir/jorek_model${jorekmodel}_1 $testcasedir/jorek_model${jorekmodel}_3 $testcasedir/rst_bin2hdf5 $testcasedir/rst_hdf52bin $testcasedir/input"
 

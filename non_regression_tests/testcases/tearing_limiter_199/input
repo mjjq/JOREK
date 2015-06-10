@@ -48,8 +48,8 @@
  n_radial = 51
  n_pol    = 16
 
- n_flux   = 41
- n_tht    = 16
+ n_flux   = 35
+ n_tht    = 14
  n_open   = 0
  n_leg    = 0
  n_private = 0

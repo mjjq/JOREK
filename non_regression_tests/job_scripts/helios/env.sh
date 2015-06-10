@@ -6,5 +6,6 @@ module load bullxmpi/1.2.8.2
 module load hdf5/1.8.14
 export LANG=C
 export JOREK_HOST=helios
+export compilethreads=8
 export MPIRUN="mpirun -np"
 export SUBCMD="sbatch -A JOREKIRQ"

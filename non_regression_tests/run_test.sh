@@ -76,12 +76,14 @@ if [ ! -f "Makefile.inc" ]; then
 fi
 
 # --- Process command line options
-testcase="NONE"    # (preset) 
-compile="yes"      # (preset)
-keep="no"          # (preset)
-runit="yes"        # (preset)
-initialrun="no"    # (preset)
-compilethreads="1" # (preset)
+testcase="NONE"         # (preset) 
+compile="yes"           # (preset)
+keep="no"               # (preset)
+runit="yes"             # (preset)
+initialrun="no"         # (preset)
+if [ -z "$compilethreads" ]; then
+    compilethreads="1"  # (preset)
+fi
 tmpdir="$startdir/tmp$$"
 
 while [ $# -gt 0 ]; do

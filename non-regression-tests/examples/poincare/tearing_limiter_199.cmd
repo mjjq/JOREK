@@ -28,4 +28,5 @@ JOREK_HOME=${HOME}/jorek
 
 cd ${JOREK_HOME}/non-regression-tests
 source examples/poincare/env.sh
-./run_test.sh -n tearing_limiter_199
+#./run_test.sh -r $CASE
+./run_test.sh -n $CASE

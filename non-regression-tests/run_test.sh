@@ -124,7 +124,6 @@ cd $tmpdir || exit 1
 #Remark(GL): "jorek_model${jorekmodel}_*" 
 cp $codedir/jorek_model${jorekmodel}* $codedir/jorek_extract_data $requiredfiles . || exit 1
 
-
 if [ "$runit" == "yes" ]; then
   # --- Run the test case
   cd $tmpdir || exit 1

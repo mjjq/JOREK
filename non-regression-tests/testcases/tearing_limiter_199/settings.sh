@@ -22,7 +22,8 @@ jorekmodel="199"
 function compile_jorek () {
   ./util/config.sh model=$jorekmodel "n_tor=3 n_plane=4 n_period=1"
   make clean
-  make -j 3 jorek_model${jorekmodel} jorek_extract_data || exit 1
+  make -j 2 jorek_model${jorekmodel} || exit 1
+  make -j 2 jorek_extract_data || exit 1
 }
 
 function run_jorek () {

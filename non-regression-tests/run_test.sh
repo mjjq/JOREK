@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # This script carries out a non regression test.
 # * run_test.sh -h prints usage information.
 # * It compiles the code.
@@ -109,9 +108,9 @@ source $testcasedir/settings.sh
 
 
 # --- Set hard-coded parameters and compile
-#Remark(GL): We need several executables sometime for one single run (ntor=1, ntor=XX), 
-#Remark(GL): we need a loop here with several jorek hard coded parameters: the solution 
-#Remark(GL): proposed is to fill the compile_jorek function into the setting.sh script
+#Remark(GL): We need several executables sometimes for one single run (ntor=1, ntor=XX).
+#Remark(GL): We need a loop here with several jorek hard coded parameters: the solution 
+#Remark(GL): proposed is to fill the compile_jorek function into the setting.sh script.
 if [ "$compile" == "yes" ]; then
   cd $codedir
   compile_jorek
@@ -133,12 +132,10 @@ if [ "$runit" == "yes" ]; then
   #Remark(GL): The run_jorek function is defined in setting.sh
   #Remark(GL): The command to launch job is not always mpirun, should be flexible enough, 
   #Remark(GL): so the env. variable $MPIRUN is used instead of mpirun.
-  echo "go1"
   run_jorek
-  echo "go2"
   
-  #Remark(GL): The (extraction+comparison) process is encapuslated into a bash function written in setting.sh
-  #Remark(GL): I think about using h5diff also to compare the results which is a good way to go in many cases.
+  #Remark(GL): The (extraction+comparison) process is encapuslated into a bash function "compar_jorek_res" written in setting.sh
+  #Remark(GL): I think about using h5diff also to compare the results which is a good solution in many cases.
   # --- Extract data
   cd $tmpdir || exit 1
   compare_jorek_res

@@ -26,4 +26,4 @@ BASEDIR=${SCRATCHDIR}
 cd ${JOREK_HOME}/non-regression-tests
 export PRERUN='export KMP_AFFINTY=verbose'
 export MPIRUN="mpiexec -launcher-exec /opt/ibmll/LoadL/scheduler/full/bin/llspawn.stdio -f $LOADL_HOSTFILE  -n "
-./run_test.sh -k -n tearing_limiter_199
+./run_test.sh -n tearing_limiter_199

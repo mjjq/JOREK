@@ -104,7 +104,7 @@ while [ $# -gt 0 ]; do
 	for i in $cases; do
 	    case=$(basename $i)
 	    source ${startdir}/testcases/$case/settings.sh
-	    echo " - $case: $description"
+	    printf " - %-25s: %s" $case $description
 	done
 	echo ""
 	exit 1
@@ -190,6 +190,15 @@ if [ "$runit" == "yes" ]; then
     cp ${testcasedir}/begin.h5 jorek_restart.h5           || exit 1
     ./rst_hdf52bin                                        || exit 1
     restart_run                                           || exit 1
+    
+    cd $tmpdir                                              || exit 1
+    compare_results
+    returncode=$?
+    if [ $returncode -eq 0 ]; then
+      echo "Test '$testcase' passed."
+    else
+      echo "Test '$testcase' failed."
+    fi
   else
     initial_run                                           || exit 1
     ./rst_bin2hdf5                                        || exit 1
@@ -198,16 +207,6 @@ if [ "$runit" == "yes" ]; then
     restart_run                                           || exit 1
     ./rst_bin2hdf5                                        || exit 1
     cp jorek_restart.h5 ${testcasedir}/end.h5             || exit 1
-  fi
-
-  # --- Extract data
-  cd $tmpdir                                              || exit 1
-  compare_results
-  returncode=$?
-  if [ $returncode -eq 0 ]; then
-    echo "Test '$testcase' passed."
-  else
-    echo "Test '$testcase' failed."
   fi
 
   # --- Remove the temporary directory

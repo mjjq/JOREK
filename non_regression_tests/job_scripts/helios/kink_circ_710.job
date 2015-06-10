@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH -J tearing_limiter_199
+#SBATCH -J kink_circ_710
 #SBATCH -N 2
 #SBATCH -n 2
 #SBATCH -t 00:50:00
-#SBATCH -o tearing_limiter_199.%j.out
-#SBATCH -e tearing_limiter_199.%j.err
+#SBATCH -o kink_circ_710.%j.out
+#SBATCH -e kink_circ_710.%j.err
 
 ########################################################################
-# Look to non_regression_tests/testcases/tearing_limiter_199/settings.sh
+# Look to non_regression_tests/testcases/kink_circ_710/settings.sh
 # to determine nb of nodes, MPI processes, and nb of threads
 ########################################################################
 
@@ -16,7 +16,7 @@ ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
 
-CASE=tearing_limiter_199
+CASE=kink_circ_710
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 echo " jorek_home = " ${JOREK_HOME}
 

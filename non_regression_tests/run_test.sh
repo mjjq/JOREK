@@ -102,9 +102,11 @@ while [ $# -gt 0 ]; do
 	echo "Available test cases:"
 	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
 	for i in $cases; do
-	    case=$(basename $i)
-	    source ${startdir}/testcases/$case/settings.sh
-	    printf " %-25s %s\n" "$case" "$description"
+	    if [ ! -f ${i}/BROKEN ]; then
+  	      case=$(basename $i)
+	      source ${startdir}/testcases/$case/settings.sh
+	      printf " %-25s %s\n" "$case" "$description"
+            fi
 	done
 	echo ""
 	exit 1

@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH -J tearing_xpoint_303
+#SBATCH -J tear_circ_199
 #SBATCH -N 2
 #SBATCH -n 2
 #SBATCH -t 00:50:00
-#SBATCH -o tearing_xpoint.303.%j.out
-#SBATCH -e tearing_xpoint.303.%j.err
+#SBATCH -o tear_circ_199.%j.out
+#SBATCH -e tear_circ_199.%j.err
 
 ########################################################################
-# Look to non_regression_tests/testcases/tearing_xpoint_303/settings.sh
+# Look to non_regression_tests/testcases/tear_circ_199/settings.sh
 # to determine nb of nodes, MPI processes, and nb of threads
 ########################################################################
 
@@ -16,8 +16,9 @@ ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
 
-CASE=tearing_xpoint_303
+CASE=tear_circ_199
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
+echo " jorek_home = " ${JOREK_HOME}
 
 cd ${JOREK_HOME}
 source non_regression_tests/job_scripts/helios/env.sh

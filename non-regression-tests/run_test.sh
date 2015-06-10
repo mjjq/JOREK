@@ -13,7 +13,15 @@
 startdir=`pwd`
 codedir=`readlink -f ..` # Assumption about source code location
 
+# --- Define default configuration for launching MPI runs
+if [ -z "$PRERUN" ]; then
+    export PRERUN='echo "MPI configuration"'
+fi
+if [ -z "$MPIRUN" ]; then
+    export MPIRUN="mpirun -n"
+fi
 
+# --- Usage printing function
 function printusage() {
   echo ""
   echo "Usage:"
@@ -29,11 +37,10 @@ function printusage() {
   echo ""
 }
 
-
 # --- Process command line options
-testcase="NONE"
-compile="yes"
-keep="no"
+testcase="NONE" # (preset) 
+compile="yes"   # (preset)
+keep="no"       # (preset)
 tmpdir="$startdir/$$"
 while [ $# -gt 0 ]; do
   option="$1"
@@ -74,6 +81,7 @@ while [ $# -gt 0 ]; do
   fi
 done
 
+# --- Check if the testcase really exists
 if [ ! -d  "testcases/$testcase" ]; then
   echo ""
   echo "ERROR: Test case '$testcase' does not exist. Valid test cases are:"
@@ -87,76 +95,48 @@ testcasedir=`readlink -f testcases/$testcase`
 
 
 # --- Read test case information
-relativeaccuracy="0.0"; absoluteaccuracy="0.0" # (presets)
+relativeaccuracy="0.0" # (preset)
+absoluteaccuracy="0.0" # (preset)
 source $testcasedir/settings.sh
 
 
 # --- Set hard-coded parameters and compile
 #Remark(GL): We need several executables sometime for one single run (ntor=1, ntor=XX), 
-#Remark(GL): that's why util/compile_test.sh generete several executables.
-#Remark(GL): we need a loop here with several jorekparameters: perhaps a solution 
-#Remark(GL): would be an array (e.g. util/compile_test.sh) ?
+#Remark(GL): we need a loop here with several jorek hard coded parameters: the solution 
+#Remark(GL): proposed is to fill the compile_jorek function into the setting.sh script
 if [ "$compile" == "yes" ]; then
   cd $codedir
-  ./util/config.sh model=$jorekmodel $jorekparameters
-  make clean
-  make -j 3 || exit 1
-  make -j 3 jorek_extract_data || exit 1
+  compile_jorek
 fi
 
 
 # --- Create run directory and copy files there
 mkdir -p $tmpdir
 cd $tmpdir || exit 1
-#Remark(GL): TODO, we need several executables sometime, copy all of them with the regex "jorek_model$jorekmodel_*" ?
-cp $codedir/jorek_model$jorekmodel $codedir/jorek_extract_data $requiredfiles . || exit 1
+#Remark(GL): TODO, we need several executables sometime, copy all of them with the regexp
+#Remark(GL): "jorek_model${jorekmodel}_*" 
+cp $codedir/jorek_model${jorekmodel}* $codedir/jorek_extract_data $requiredfiles . || exit 1
 
 
-# --- Run test case
+# --- Run the test case
 cd $tmpdir || exit 1
-#Remark(GL): TODO, modify this to have a sequence of mpirun calls, we need
-#Remark(GL): a loop here (see util/launch_test.sh) to launch several mpirun with different
-#Remark(GL): parameters. 
-#Remark(GL): The command to launch job is not always mpirun, should be flexible (env. variable $MPIRUN)
-#Remark(GL): We may also want to launch several jobs to a job scheduler.
-export OMP_NUM_THREADS=$ompthreads
-mpirun -n $mpitasks ./jorek_model$jorekmodel < input > logfile || exit 1
+#Remark(GL): Sequence of mpirun calls is now handled in the run_jorek function.
+#Remark(GL): The run_jorek function is defined in setting.sh
+#Remark(GL): The command to launch job is not always mpirun, should be flexible enough, 
+#Remark(GL): so the env. variable $MPIRUN is used instead of mpirun.
+run_jorek
 
-
-#Remark(GL): This way of extracting+comparing data is OK, but not the only one.
-#Remark(GL): The extraction+comparison should be more flexible even if this method is one possibility.
-#Remark(GL): I think about using h5diff to compare the results which is a good way to go in many cases.
-#Remark(GL): Proposal: the following lines (extraction+comparison) could be encapuslated into a bash function written in setting.sh
+#Remark(GL): The (extraction+comparison) process is encapuslated into a bash function written in setting.sh
+#Remark(GL): I think about using h5diff also to compare the results which is a good way to go in many cases.
 # --- Extract data
 cd $tmpdir || exit 1
-echo "&extract" > extract_data.nml
-comparedata2=`echo "$comparedata" | sed -e 's/^ *//' -e 's/ *$//' -e 's/  */ /g' -e "s/^/'/" -e "s/$/'/" -e "s/ /', '/g"`
-echo "  extract_data = $comparedata2" >> extract_data.nml
-echo "/" >> extract_data.nml
-./jorek_extract_data < input
-
-cp extracted_data.dat $testcasedir/extracted_data_`date "+%Y-%m-%d_%H-%M-%S"`.dat ### TODO: Remove later on
-
-
-# --- Compare the result to the reference data
-# ### TODO: This has to be implemented cleaner later on...
-echo "print \\" > comparison.dat
-paste $testcasedir/reference.dat extracted_data.dat | sed -e 's/\t/ /' -e                                                     \
-  "s|^ *\([^ ]*\) *\([^ ]*\)|( abs(\1-\2)/abs(\1+1e-99) <= $relativeaccuracy or abs(\1-\2) <= $absoluteaccuracy ) and \\\\|"  \
-  >> comparison.dat || exit 1
-echo "True" >> comparison.dat
-okay=`python comparison.dat`
-returncode=1
-if [ "$okay" == "True" ]; then
-  returncode=0
-fi
-
+compare_jorek_res
+returncode=$?
 
 # --- Remove the temporary directory
 if [ ! "$keep" == "yes" ]; then
   rm -rf $tmpdir
 fi
-
 
 # --- Output the return code
 if [ $returncode -eq 0 ]; then

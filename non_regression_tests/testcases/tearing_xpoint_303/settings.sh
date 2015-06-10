@@ -1,17 +1,13 @@
 #!/bin/bash
 
 description="Time evolution of model 303: Tearing mode in circular plasma at n_tor=3."
-
-# --- Model used
 jorekmodel="303"
-
-# --- Files required to run the code (executables copied automatically)
-requiredfiles="$testcasedir/jorek_model${jorekmodel}_1 $testcasedir/jorek_model${jorekmodel}_3 $testcasedir/rst_bin2hdf5 $testcasedir/rst_hdf52bin $testcasedir/input"
-
-# --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
 ompthreads=16
+requiredfiles="jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin input"
 
+
+# --- Compile the code for the test case
 function compile_jorek () {
     ./util/config.sh model=$jorekmodel n_tor=1 n_plane=1 n_period=1
     make cleanall                                             || exit 1
@@ -27,26 +23,8 @@ function compile_jorek () {
     cp jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_hdf52bin rst_bin2hdf5 $testcasedir/ || exit 1
 }
 
-function restart_run () {
-    if [ -n "$PRERUN" ]; then
-	eval $PRERUN
-    fi
-    export OMP_NUM_THREADS=$ompthreads
-    
-    # Import restart file 
-    cp ${testcasedir}/jorek00940_export.h5 jorek_restart.h5 || exit 1
-    ./rst_hdf52bin # generate jorek_restart.rst
-
-    ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=10
-    $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile   
-}
-
+# --- Re-run the whole case from scratch into the non-linear phase
 function initial_run () {
-    if [ -n "$PRERUN" ]; then
-	eval $PRERUN
-    fi
-    export OMP_NUM_THREADS=$ompthreads
-    
     # Equilibrium computation
     # => jorek_equil.rst
     ${codedir}/util/setinput.sh input restart=.f. nstep_n=0 tstep_n=1
@@ -65,31 +43,17 @@ function initial_run () {
     # => jorek00940.rst
     ${codedir}/util/setinput.sh input restart=.t. nstep_n=700 tstep_n=10 nout=10
     $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile_3 || exit 1
-
-    # Export  final restart file as HDF5 file
-    ./rst_bin2hdf5 # take the jorek_restart.rst as input 
-    cp jorek_restart.h5 ${testcasedir}/jorek00940_export.h5 || exit 1
-
-    # Restart run (1 time step)
-    restart_run
-
-    # Export final restart file as HDF5 file
-    ./rst_bin2hdf5 # take the jorek_restart.rst as input
-    cp jorek_restart.h5 ${testcasedir}/jorek00941_export.h5 || exit 1 
 }
 
+# --- Carry out the test case, i.e., run a single time step in the non-linear phase
+function restart_run () {
+    ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=10  || exit 1
+    $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile   || exit 1
+}
+
+# --- Compare the results of the test case to the reference solution
 function compare_results () {
-    # convert last binary restart file into hdf5 file
-    ./rst_bin2hdf5  # jorek00941.rst taken as input  
-
-    # compare with reference file and return the result
-    h5diff -p 1e-6 jorek_restart.h5 ${testcasedir}/jorek00941_export.h5 values; 
-    returncode=$?
-    return $returncode
+    ./rst_bin2hdf5                                                      || exit 1 
+    h5diff -p 1e-6 jorek_restart.h5 ${testcasedir}/end.h5 values        || exit 1 
 }
 
-function pack_restart_files () {
-    cd ${testcasedir} || exit 1  
-    testname=$(basename $testcasedir)
-    tar cvzf ${testname}.tgz jorek00941_export.h5 jorek00940_export.h5 || exit 1
-}

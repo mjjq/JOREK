@@ -1,6 +1,13 @@
 *.o
 *.mod
 *.dep
+*.h5
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tgz
+*.err
+*.out
 Makefile.inc
 j302_1
 j302_3
@@ -34,3 +41,6 @@ jorek2_import_perturbation_tmp
 jorek_extract_data
 forcheck*
 *__genmod*
+rst_bin2hdf5
+rst_hdf52bin
+tmp[1-9]*

@@ -37,7 +37,7 @@ function restart_run () {
   export OMP_NUM_THREADS=$ompthreads
   cp ${testcasedir}/jorek00089_export.rst jorek_restart.rst || exit 1
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=1000 n_flux=35 n_tht=14
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input > logfile   
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile   
 }
 
 function initial_run () {
@@ -52,7 +52,7 @@ function initial_run () {
     cp jorek_restart.rst jorek_equil.rst) || exit 1
   # Time evolution
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=89 tstep_n=1000 n_flux=35 n_tht=14
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input > logfile || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile || exit 1
   cp jorek00089.rst ${testcasedir}/jorek00089_export.rst || exit 1
   # Restart run (1 time step)
   restart_run
@@ -70,10 +70,8 @@ function compare_results () {
   printf "%5.5d \n" $tstep > ./file.out
   ./rst_bin2hdf5
   rm file.out
-  # copy reference file in the current directory
-  cp ${testcasedir}/jorek00090_export.h5 .
   # compare with reference file and return the result
-  h5diff -d 1e-15 jorek00090.h5 jorek00090_export.h5 values; 
+  h5diff -d 1e-15 jorek00090.h5 ${testcasedir}/jorek00090_export.h5 values; 
   returncode=$?
   return $returncode
 }

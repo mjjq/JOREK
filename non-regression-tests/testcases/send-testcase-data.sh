@@ -3,8 +3,8 @@
 # This script upload a jorek test case.
 TESTDIR="$1"
 TESTNAME=$(basename $TESTDIR)
-#URL="http://jorek.eu/dav_nrt/"
-URL="http://localhost:8034/dav_nrt/"
+URL="http://jorek.eu/dav_nrt/"
+#URL="http://localhost:8034/dav_nrt/"
 if [ ! -f ${TESTDIR}/settings.sh ]; then
   printf "This test name does not exist\n"
   exit 1

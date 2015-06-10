@@ -10,7 +10,7 @@ cd  || exit 1
 for dirname in ${startdir}/testcases/*; do
  if [ -d $dirname ]; then
    name=$(basename $dirname)
-   echo "== Launch job $name"
+   echo "== Launch job $name from directory job_scripts/${JOREK_HOST}"
    (cd ${startdir}/job_scripts/${JOREK_HOST}; llsubmit ${name}.job)
  fi
 done

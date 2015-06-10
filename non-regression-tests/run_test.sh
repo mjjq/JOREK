@@ -35,10 +35,10 @@ fi
 MPIRUN_cmd=`echo $MPIRUN | cut -d' ' -f1`
 stringarray=($MPIRUN)
 MPIRUN_cmd=${stringarray[0]}
-which $MPIRUN_cmd 1>/tmp/NRT_jorek || exit 1
+which $MPIRUN_cmd 1>/dev/null || exit 1
 
 # --- Verify that 'h5diff' can be executed
-which h5diff 1>/tmp/NRT_jorek || exit 1
+which h5diff 1>/dev/null || exit 1
 
 # --- Verify that 'Makefile.inc' exist
 if [ ! -f "Makefile.inc" ]; then

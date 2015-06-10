@@ -13,7 +13,7 @@ requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmo
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
-ompthreads=8
+ompthreads=16
 
 function compile_jorek () {
     returncode=0
@@ -105,5 +105,5 @@ function compare_results () {
 function pack_restart_files () {
   cd ${testcasedir} || exit 1  
   testname=$(basename $testcasedir)
-  tar cvzf ${testname}.tgz jorek00090_export.h5 jorek00089_export.h5 || exit 1
+  tar cvzf ${testname}.tgz jorek00951_export.h5 jorek00950_export.h5 || exit 1
 }

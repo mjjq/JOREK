@@ -27,13 +27,6 @@ program RST_convert_hdf52bin
   
   rst_format = 0
 
-!CP  ! --- Define the file name
-!CP  open (10, file = "file.out")
-!CP  read (10,*) index
-!CP
-!CP  write (fileout_h5,'(A5,A5,A3)') 'jorek',index,".h5"
-!CP  write (fileout_bin,'(A5,A5,A4)') 'jorek',index,'.rst'
-
   ! --- Read the restart HDF5 file
   fileout_h5 = "jorek_restart.h5"
   write (6,*) " =============> rst_hdf52bin for filename = ",fileout_h5

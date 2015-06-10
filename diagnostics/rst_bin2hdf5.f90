@@ -23,13 +23,6 @@ program RST_convert_bin2hdf5
   
   rst_format = 0
 
-!CP  ! --- Define the file name
-!CP  open (10, file = "file.out")
-!CP  read (10,*) index
-!CP
-!CP  write (fileout_bin,'(A5,A5,A4)') 'jorek',index,'.rst'
-!CP  write (fileout_h5,'(A5,A5,A3)') 'jorek',index,".h5"
-
   ! --- Read the restart binary file
   fileout_bin = "jorek_restart.rst"
   write (6,*) " =============> rst_bin2hdf5 for filename = ",fileout_bin

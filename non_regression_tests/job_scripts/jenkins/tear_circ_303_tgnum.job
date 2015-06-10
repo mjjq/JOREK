@@ -4,7 +4,7 @@ ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
 
-CASE=tearing_xpoint_303
+CASE=tear_circ_303_tgnum
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 
 cd ${JOREK_HOME}

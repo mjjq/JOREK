@@ -2,8 +2,8 @@
 jorekmodel="303"
 description="Tearing mode, circular plasma, model$jorekmodel, n_tor=3."
 mpitasks=2
-ompthreads=16
-requiredfiles="jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin input"
+binaries="jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin"
+requiredfiles="$binaries input"
 
 
 # --- Compile the code for the test case
@@ -16,7 +16,6 @@ function compile_jorek () {
   make cleanall                                                                      || exit 1
   make $compilopt jorek_model${jorekmodel} rst_bin2hdf5 rst_hdf52bin                 || exit 1
   mv jorek_model${jorekmodel} jorek_model${jorekmodel}_3                             || exit 1
-  cp jorek_model${jorekmodel}_[13] rst_hdf52bin rst_bin2hdf5 $testcasedir/           || exit 1
 }
 
 

@@ -1,4 +1,12 @@
 module purge
-module load intel/12.1.0 mvapich2/1.8.1 mkl/10.3 hwloc/1.6.2_intel
-export PRERUN='export KMP_AFFINTY=verbose'
-export MPIRUN="mpiexec -launcher-exec /opt/ibmll/LoadL/scheduler/full/bin/llspawn.stdio -f $LOADL_HOSTFILE  -n "
+module load intel/12.1.0 mvapich2/1.8.1 mkl/10.3
+ulimit -d unlimited
+ulimit -s unlimited
+ulimit -Sa
+ulimit -Ha
+export KMP_STACK_SIZE=16M
+export KMP_AFFINITY="verbose,norespect" # if this is not set, the OpenMP threads are confined on one core
+export MKL_NUM_THREADS=1
+export MKL_DYNAMIC=0
+export MV2_ENABLE_AFFINITY=0
+export MPIRUN="mpiexec -envlist LANG,OMP_NUM_THREADS,KMP_STACK_SIZE,KMP_AFFINITY,MKL_NUM_THREADS,MKL_DYNAMIC=,MV2_ENABLE_AFFINITY -launcher-exec /opt/ibmll/LoadL/scheduler/full/bin/llspawn.stdio -f $LOADL_HOSTFILE -n"

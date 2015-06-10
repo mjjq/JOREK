@@ -50,11 +50,11 @@ function initial_run () {
   export COMMONOPT="n_flux=22 n_tht=30 n_open=7 n_leg=7 n_private=7"
   # Equilibrium computation
   ${codedir}/util/setinput.sh input restart=.f. nstep_n=0 tstep_n=1 $COMMONOPT 
-  $MPIRUN 1 ./jorek_model${jorekmodel}_1 < input > logfile || exit 1
+  $MPIRUN 1 ${codedir}/jorek_model${jorekmodel}_1 < input > logfile || exit 1
   cp jorek_restart.rst jorek_equil.rst || exit 1
   # Time evolution
   ${codedir}/util/setinput.sh input restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' $COMMONOPT  nout=10
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input >> logfile || exit 1
+  $MPIRUN $mpitasks ${codedir}/jorek_model${jorekmodel}_3 < input >> logfile || exit 1
 
 #  ${codedir}/util/setinput.sh input restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' $COMMONOPT  nout=10
 #  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile || exit 1

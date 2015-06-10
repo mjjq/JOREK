@@ -31,7 +31,7 @@ FFLAGS_FIXEDFORM := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 FFLAGS_NOBOUNDS  := $(FFLAGS)               $(FFLAGS_OMP)
 FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 
-#FFLAGS_NO_OMP    = -fpp -r8 -i4 -O2 -xSSSE3 -align
+FFLAGS_NO_OMP    = -fpp -r8 -i4 -O2 -xAVX -align
 
 # Solvers dependencies
 USE_HIPS   = 0

@@ -12,7 +12,7 @@ requiredfiles="$testcasedir/jorek_model${jorekmodel}_1 $testcasedir/jorek_model$
 mpitasks=2
 ompthreads=16
 
-compilopt="-j 3"
+compilopt="-j 1"
 
 function compile_jorek () {
     returncode=0

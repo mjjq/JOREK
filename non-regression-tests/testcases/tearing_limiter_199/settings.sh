@@ -10,19 +10,21 @@ requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmo
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
-ompthreads=4
+ompthreads=16
+
+compilopt="-j 3"
 
 function compile_jorek () {
     returncode=0
     ./util/config.sh model=$jorekmodel "n_tor=1 n_plane=1 n_period=1"
-    make clean && make -j 3 jorek_model${jorekmodel} &&\
+    make clean && make $compilopt jorek_model${jorekmodel} &&\
     cp jorek_model${jorekmodel} jorek_model${jorekmodel}_1
     returncode=$?
     if [ $returncode -eq 0 ]; then
 	./util/config.sh model=$jorekmodel "n_tor=3 n_plane=4 n_period=1"
-	make clean &&  make -j 3 jorek_model${jorekmodel} &&\
+	make clean &&  make $compilopt jorek_model${jorekmodel} &&\
           make  rst_bin2hdf5 && make  rst_hdf52bin && \
-          cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3  
+          cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3 && \\
 	returncode=$?
     fi
     return $returncode
@@ -30,7 +32,8 @@ function compile_jorek () {
 
 
 function restart_run () {
-  sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;"  $codedir/namelist/model199/intear > input
+  sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;"  $testcasedir/input > input
+#  sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;"  $codedir/namelist/model199/intear > input
   if [ -n "$PRERUN" ]; then
     eval $PRERUN
   fi
@@ -47,7 +50,8 @@ function restart_run () {
 }
 
 function initial_run () {
-  sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;"  $codedir/namelist/model199/intear > input
+  sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;"  $testcasedir/input > input
+#  sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;"  $codedir/namelist/model199/intear > input
   if [ -n "$PRERUN" ]; then
     eval $PRERUN
   fi

@@ -15,15 +15,17 @@ requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmo
 mpitasks=2
 ompthreads=16
 
+compilopt="-j 3"
+
 function compile_jorek () {
     returncode=0
     ./util/config.sh model=$jorekmodel "n_tor=1 n_plane=1 n_period=1"
-    make clean && make -j 3 jorek_model${jorekmodel} &&\
+    make clean && make $compilopt jorek_model${jorekmodel} &&\
     cp jorek_model${jorekmodel} jorek_model${jorekmodel}_1
     returncode=$?
     if [ $returncode -eq 0 ]; then
 	./util/config.sh model=$jorekmodel "n_tor=3 n_plane=8 n_period=2"
-	make clean &&  make -j 3 jorek_model${jorekmodel} &&\
+	make clean &&  make $compilopt jorek_model${jorekmodel} &&\
           make rst_bin2hdf5 && make  rst_hdf52bin &&\
           cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3  
 	returncode=$?
@@ -109,5 +111,5 @@ function compare_results () {
 function pack_restart_files () {
   cd ${testcasedir} || exit 1  
   testname=$(basename $testcasedir)
-  tar cvzf ${testname}.tgz jorek00941_export.h5 jorek00940_export.rst || exit 1
+  tar cvzf ${testname}.tgz jorek00941_export.h5 jorek00940_export.h5 || exit 1
 }

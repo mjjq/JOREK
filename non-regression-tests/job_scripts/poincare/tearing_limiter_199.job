@@ -12,7 +12,7 @@
 # Look to non-regression-tests/testcases/tearing_limiter_199
 # to determine nb of nodes, MPI processes, and nb of threads
 #######################################################################
-# @ node = 1 
+# @ node = 2
 # @ total_tasks = 2
 # @ resources = ConsumableCpus(8)
 #####################################

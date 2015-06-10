@@ -8,4 +8,4 @@ $ non-regression-tests/run_test.sh -r tearing_limiter_199
 Run the simulation using a batch script that calls:
 $ non-regression-tests/run_test.sh -n tearing_limiter_199
 
-For example, you can look at examples/poincare/tearing199.cmd
+For example, you can look at job_scripts/poincare/tearing199.job

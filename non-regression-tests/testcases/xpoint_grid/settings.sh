@@ -29,7 +29,7 @@ function run_jorek () {
   $MPIRUN $mpitasks ./jorek_model$jorekmodel < input > logfile || exit 1
 }
 
-function compare_jorek_res () {
+function compare_results () {
   echo "&extract" > extract_data.nml
   comparedata2=`echo "$comparedata" | sed -e 's/^ *//' -e 's/ *$//' -e 's/  */ /g' -e "s/^/'/" -e "s/$/'/" -e "s/ /', '/g"`
   echo "  extract_data = $comparedata2" >> extract_data.nml

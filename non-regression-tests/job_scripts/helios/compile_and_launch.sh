@@ -4,7 +4,7 @@ LIST="h5_tearing_limiter_199 tearing_limiter_199 tearing_limiter_303 ballooning_
 ${SCRIPTDIR}/testcases/download_ref.sh
 for case in ${LIST}; do
   echo $case
-  if [ -f ${case}.cmd ]; then 
-    (${SCRIPTDIR}/run_test.sh -r $case 1>${case}_comp.out) && llsubmit ${case}.cmd
+  if [ -f ${case}.job ]; then 
+    (${SCRIPTDIR}/run_test.sh -r $case 1>${case}_comp.out) && llsubmit ${case}.job
   fi
 done

@@ -53,7 +53,7 @@ function run_jorek () {
     run_jorek_second;
 }
 
-function compare_jorek_res () {
+function compare_results () {
     # convert binary restart file into hdf5 file
     tstep=90;
     printf "%5.5d \n" $tstep > ./file.out

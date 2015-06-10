@@ -1,0 +1,30 @@
+#!/bin/bash
+#SBATCH -J jorek
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -t 00:01:00
+#SBATCH -o xpoint_grid.%j.out
+#SBATCH -e xpoint_grid.%j.err
+
+#######################################################################
+# Look to non-regression-tests/testcases/xpoint_grid/settings.sh
+# to determine nb of nodes, MPI processes, and nb of threads
+#######################################################################
+
+ulimit -d unlimited
+ulimit -s unlimited
+ulimit -Sa
+ulimit -Ha
+
+CASE=xpoint_grid
+startdir=`readlink -f $(dirname $PWD)`
+findstr="non-regression-tests"
+JOREK_HOME="${startdir%%${findstr}*}"
+
+#cd ${JOREK_HOME}/non-regression-tests
+cd ${JOREK_HOME}
+source ./non-regression-tests/job_scripts/helios/env.sh
+
+# We cna't compile on compute nodes, only on login nodes !!
+#/non-regression-tests/run_test.sh -p $CASE
+./non-regression-tests/run_test.sh -n $CASE

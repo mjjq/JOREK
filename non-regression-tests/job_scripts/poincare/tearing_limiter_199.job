@@ -25,7 +25,7 @@ ulimit -Sa
 ulimit -Ha
 
 CASE=tearing_limiter_199
-JOREK_HOME=${HOME}/jorek
+JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 
 cd ${JOREK_HOME}
 source non-regression-tests/job_scripts/poincare/env.sh

@@ -23,7 +23,6 @@ ulimit -d unlimited
 ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
-echo =0= $0
 CASE=tearing_xpoint_302
 JOREK_HOME=${HOME}/jorek
 

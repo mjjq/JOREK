@@ -1,9 +1,6 @@
+
 module purge
 module load intel/12.1.0 mvapich2/1.8.1 mkl/10.3
-ulimit -d unlimited
-ulimit -s unlimited
-ulimit -Sa
-ulimit -Ha
 export KMP_STACK_SIZE=16M
 export KMP_AFFINITY="verbose,norespect" # if this is not set, the OpenMP threads are confined on one core
 export MKL_NUM_THREADS=1

@@ -95,5 +95,5 @@ function compare_results () {
 function pack_restart_files () {
   cd ${testcasedir} || exit 1  
   testname=$(basename $testcasedir)
-  tar cvzf ${testname}.tgz jorek00090_export.h5 jorek00089_export.rst || exit 1
+  tar cvzf ${testname}.tgz jorek00090_export.h5 jorek00089_export.h5 || exit 1
 }

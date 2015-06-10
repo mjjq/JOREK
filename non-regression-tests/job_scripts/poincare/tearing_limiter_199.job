@@ -32,6 +32,6 @@ source non-regression-tests/job_scripts/poincare/env.sh
 ## Compile with:       
 # non-regression-tests/run_test.sh -p $CASE
 ## Initial Long run: 
-non-regression-tests/run_test.sh -k -i -n $CASE 
+#non-regression-tests/run_test.sh -k -i -n $CASE 
 ## Restart run: 
-#non-regression-tests/run_test.sh -k -n $CASE 
+non-regression-tests/run_test.sh -k -n $CASE 

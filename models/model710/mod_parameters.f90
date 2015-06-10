@@ -31,7 +31,7 @@ module parameters
   
   !> Names of the physical variables
   character(len=11) :: variable_names(n_var) =                       &
-    (/ 'A_3        ','A_R        ','A_Z      ','u_R        ',      &
-       'u_Z        ','u_phi        ','Density', 'Temperature' /)
+    (/ 'A_3        ','A_R        ','A_Z        ','u_R        ',      &
+       'u_Z        ','u_phi      ','Density    ','Temperature' /)
 
 end module parameters

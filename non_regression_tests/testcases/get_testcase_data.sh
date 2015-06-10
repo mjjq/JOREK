@@ -3,6 +3,7 @@
 # This script download a jorek test case.
 TESTNAME="$1"
 URL="http://jorek.eu/dav_nrt"
+URL="http://localhost:8054/dav_nrt"
 if [ ! -f ${TESTNAME}/settings.sh ]; then
   printf "This test name does not exist\n"
   exit 1
@@ -26,7 +27,14 @@ EOF
     exit 1
   fi
 else 
-  printf "No downloading performed because ${TESTNAME}.tgz already there\n"
+    cat <<EOF
+###################################################################################
+ No downloading performed because ${TESTNAME}.tgz already
+ exists, suppress it if you want to download:
+   rm testcases/${TESTNAME}/${TESTNAME}.tgz
+###################################################################################                             
+EOF
+    exit 1
 fi
 
 echo "Uncompress ${TESTNAME}.tgz"

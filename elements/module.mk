@@ -20,6 +20,11 @@ JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
 	$(DIR)/hermite_1d.f90				\
 	$(DIR)/hermite_elements.f90
 
+JOREK_EXTRACT_DATA_SRC := $(JOREK_EXTRACT_DATA_SRC)	\
+	$(DIR)/bezier_1d.f90				\
+	$(DIR)/hermite_1d.f90				\
+	$(DIR)/hermite_elements.f90
+
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/bezier_1d.f90				\
 	$(DIR)/hermite_1d.f90				\

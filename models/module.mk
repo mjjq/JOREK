@@ -42,6 +42,9 @@ JOREK2_MAIN_SRC  := $(JOREK2_MAIN_SRC)			\
 JOREK2_FOUR_SRC := $(JOREK2_FOUR_SRC)			\
 	$(DIR)/mod_pellet.f90				\
 
+JOREK_EXTRACT_DATA_SRC := $(JOREK_EXTRACT_DATA_SRC)	\
+        $(DIR)/mod_pellet.f90				\
+
 JOREK2_POSTPROC_SRC := $(JOREK2_POSTPROC_SRC)		\
 	$(DIR)/mod_diffusivities.f90                    \
 	$(DIR)/mod_pellet.f90				\

@@ -120,6 +120,7 @@ JOREK2VTK_SRC           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2FLVTK_SRC	        	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2VTK3D_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_FOUR_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
+JOREK_EXTRACT_DATA_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_DIAGNO_SRC       	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK_TO_HELENA_SRC		+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_TARGET2VTK_SRC   	+= $(ALL_BINARIES_SRC) $(PPPSRC)
@@ -131,7 +132,7 @@ SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(RST_BIN2HDF5_SRC) $
 	  $(JOREK2_POSTPROC_SRC) $(JOREK2_POVRAY_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) \
 	  $(JORDEL_SRC) $(JORPOL_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
           $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(ENBIGGEN_SRC) \
-	  $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC) $(JOREK2_IMPORT_PERTURBATION_SRC))
+	  $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC) $(JOREK2_IMPORT_PERTURBATION_SRC) $(JOREK_EXTRACT_DATA_SRC))
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
@@ -194,6 +195,14 @@ JOREK_TO_HELENA_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK_TO_HELENA_SRC
 JOREK2_FOUR_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) 	\
 		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))		\
 		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_FOUR_SRC)))
+
+JOREK_EXTRACT_DATA_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK_EXTRACT_DATA_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK_EXTRACT_DATA_SRC)))		\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK_EXTRACT_DATA_SRC)))
+
+JOREK2_POSTPROC_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
+			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
 
 JOREK2_POSTPROC_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
 		      $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
@@ -319,6 +328,12 @@ jorek2_four : diagnostics/jorek2_four.f90 $(JOREK2_FOUR_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_four.f90 -o diagnostics/jorek2_four.o
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_four.o $(JOREK2_FOUR_OBJ) \
 	 -o $(JOREK_DIR)/jorek2_four $(LIBS) $(LIBFFTW)
+
+jorek_extract_data : diagnostics/jorek_extract_data.f90 $(JOREK_EXTRACT_DATA_OBJ)
+	$(FC) $(FFLAGS)                 \
+	diagnostics/jorek_extract_data.f90 	\
+	$(JOREK_EXTRACT_DATA_OBJ)		\
+	 -o $(JOREK_DIR)/jorek_extract_data $(INCLUDES) $(LIBS) $(LIBFFTW)
 
 jorek2_postproc : postproc/jorek2_postproc.f90 $(JOREK2_POSTPROC_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c postproc/jorek2_postproc.f90 -o postproc/jorek2_postproc.o

@@ -12,8 +12,8 @@ program RST_convert_bin2hdf5
   integer :: ierr, i
 
   character*5 :: index
-  character*13 :: fileout_h5
-  character*14 :: fileout_bin
+  character*16 :: fileout_h5
+  character*17 :: fileout_bin
 
   allocate(node_list)
   allocate(element_list)
@@ -23,14 +23,15 @@ program RST_convert_bin2hdf5
   
   rst_format = 0
 
-  ! --- Define the file name
-  open (10, file = "file.out")
-  read (10,*) index
-
-  write (fileout_bin,'(A5,A5,A4)') 'jorek',index,'.rst'
-  write (fileout_h5,'(A5,A5,A3)') 'jorek',index,".h5"
+!CP  ! --- Define the file name
+!CP  open (10, file = "file.out")
+!CP  read (10,*) index
+!CP
+!CP  write (fileout_bin,'(A5,A5,A4)') 'jorek',index,'.rst'
+!CP  write (fileout_h5,'(A5,A5,A3)') 'jorek',index,".h5"
 
   ! --- Read the restart binary file
+  fileout_bin = "jorek_restart.rst"
   write (6,*) " =============> rst_bin2hdf5 for filename = ",fileout_bin
   call import_binary_restart(node_list, element_list, fileout_bin, rst_format, ierr)
 
@@ -43,6 +44,7 @@ program RST_convert_bin2hdf5
   eta       = eta_rst
 
   ! -- Write the HDF5 restart file
+  fileout_h5 = "jorek_restart.h5"
   write (6,*) " =============> rst_bin2hdf5, write HDF5 file = ",fileout_h5
   call export_hdf5_restart(node_list, element_list, fileout_h5)
 

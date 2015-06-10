@@ -6,6 +6,9 @@
  tstep   = 1000.
  nstep   = 0
 
+ tstep_n = 1
+ nstep_n = 0
+
  nout = 1
 
 ! rst_hdf5 = 1    ! = 0 ; restart from binary files

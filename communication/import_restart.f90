@@ -357,13 +357,6 @@ endif
 end subroutine import_binary_restart
 
 
-
-
-
-
-
-
-
 !
 ! Import an HDF5 restart file
 subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)

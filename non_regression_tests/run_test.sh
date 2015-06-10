@@ -38,6 +38,19 @@ function printusage() {
     echo ""
 }
 
+# --- Define function: use HDF5 restart_file as binary file
+function use_restartfile() {
+    cp ${testcasedir}/jorek$1_export.h5 jorek_restart.h5 || exit 1
+    ./rst_hdf52bin
+}
+
+# --- Define function: export final restart file as HDF5 file function
+function export_restartfile() {
+    cp jorek$1.rst jorek_restart.rst
+    ./rst_bin2hdf5
+    cp jorek_restart.h5 ${testcasedir}/jorek$1_export.h5 || exit 1
+}
+
 if [ -z "$PRERUN" ]; then
     export PRERUN=""
 fi
@@ -155,7 +168,7 @@ if [ "$compile" == "yes" ]; then
   cd $codedir
   compilopt="-j $compilethreads"
   compile_jorek
-  if [ $1 -ne 0 ]; then
+  if [ $? -ne 0 ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
   fi
@@ -170,7 +183,7 @@ if [ "$runit" == "yes" ]; then
   cd $tmpdir || exit 1
   echo " Copied files " $requiredfiles
   cp $requiredfiles .
-  if [ $1 -ne 0 ]; then
+  if [ $? -ne 0 ]; then
     printf "\n$ERROR_COL ERROR: Copying required files ($requiredfiles) failed.$NO_COL\n"
     exit 1
   fi

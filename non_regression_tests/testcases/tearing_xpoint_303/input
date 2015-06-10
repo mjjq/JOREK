@@ -5,7 +5,7 @@
  tstep_n   = 0 
  nstep_n   = 0 
 
- nout = 10
+ nout = 1
  rho_file      = none   ! none otherwise
  T_file        = none   ! none otherwise
  ffprime_file  = none   ! none otherwise
@@ -67,11 +67,11 @@
  n_radial = 101
  n_pol    = 128
 
- n_flux   = 81
- n_tht    = 48
- n_open   = 21
- n_leg    = 21
- n_private = 11
+ n_flux   = 26
+ n_tht    = 28
+ n_open   = 8
+ n_leg    = 8
+ n_private = 6
 
  FF_0 = 4.8
  FF_1 = 0.

@@ -161,7 +161,7 @@ if [ "$compile" == "yes" ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
   fi
-  cp $binaries $testcasedir/ || exit 1
+  mv $binaries $testcasedir/ || exit 1
 fi
 
 

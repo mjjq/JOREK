@@ -1,9 +1,9 @@
 #!/bin/bash
-
-cd testcases || exit 1
+startdir=`readlink -f $(dirname $0)`
+codedir=`readlink -f ${startdir}/..` # Assumption about source code location
+cd ${startdir}/testcases || exit 1
 for name in *; do
  if [ -d $name ]; then
-   echo $name
    ./get-testcase-data.sh $name
  fi
 done

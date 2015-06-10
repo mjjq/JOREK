@@ -23,10 +23,15 @@ ulimit -d unlimited
 ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
+echo =0= $0
 CASE=tearing_limiter_199
 JOREK_HOME=${HOME}/jorek
 
-cd ${JOREK_HOME}/non-regression-tests
-source job_scripts/poincare/env.sh
-#./run_test.sh -p $CASE
-./run_test.sh -n $CASE
+cd ${JOREK_HOME}
+source non-regression-tests/job_scripts/poincare/env.sh
+## Compile with:       
+# non-regression-tests/run_test.sh -p $CASE
+## Initial Long run: 
+# non-regression-tests/run_test.sh -k -i -n $CASE 
+## Restart run: 
+non-regression-tests/run_test.sh -k -n $CASE 

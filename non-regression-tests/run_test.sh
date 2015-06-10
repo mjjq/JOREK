@@ -55,11 +55,12 @@ function printusage() {
     echo " Options:"
     echo "   -h            Print this help information"
     echo "   -k            Keep temporary run directory"
+    echo "   -i            Launch the inital, full-length run (not a short run starting from a restart file)"
     echo "   -l            List available test cases."
     echo "   -n            Do not compile (assume executables already exist)"
     echo "   -p            Prepare the case but do not run it"
     echo "   -t tempdir    Specify a temp directory used for the test run"
-    echo "                 (default: current directory)"
+    echo "                 (default: name chosen randomly)"
     echo ""
 }
 
@@ -68,6 +69,7 @@ testcase="NONE" # (preset)
 compile="yes"   # (preset)
 keep="no"       # (preset)
 runit="yes"     # (preset)
+initialrun="no" # (preset)
 tmpdir="$startdir/tmp$$"
 
 while [ $# -gt 0 ]; do
@@ -91,6 +93,9 @@ while [ $# -gt 0 ]; do
 	done
 	echo ""
 	exit 1
+    elif [ "$option" == "-i" ]; then
+	initialrun="yes"
+	shift
     elif [ "$option" == "-p" ]; then
 	runit="no"
 	shift
@@ -98,7 +103,7 @@ while [ $# -gt 0 ]; do
 	compile="no"
 	shift
     elif [ "$option" == "-t" ]; then
-	tmpdir="$2/$$"
+	tmpdir="$2"
 	echo " tmpdir = " $tmpdir
 	shift 2
     elif [ "${option:0:1}" != "-" ]; then
@@ -155,7 +160,12 @@ if [ "$runit" == "yes" ]; then
     
   # --- Run the test case
   cd $tmpdir || exit 1
-  run_jorek || exit 1
+  if [ "$initialrun" == "no" ]; then
+    restart_run || exit 1
+  else
+    initial_run || exit 1
+  fi
+
   
   # --- Extract data
   cd $tmpdir || exit 1

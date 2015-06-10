@@ -23,6 +23,7 @@ ulimit -d unlimited
 ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
+echo =0= $0
 CASE=h5_tearing_limiter_199
 JOREK_HOME=${HOME}/jorek
 

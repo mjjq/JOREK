@@ -2,12 +2,17 @@
 
 startdir=`readlink -f $(dirname $0)`
 
-TARBALL="USER@scm.gforge.inria.fr:/home/groups/aster/nrt/jorek_rst_files.tgz"
+TARBALL="\$FORGEUSER@scm.gforge.inria.fr:/home/groups/aster/nrt/jorek_rst_files.tgz"
 FILE=`basename $TARBALL`
 DISTANTDIR=`dirname $TARBALL`
 
 printf "\n  Creating the archive $FILE with the files:\n\n"
-LIST="ballooning_xpoint_303/jorek_restart.rst  tearing_limiter_199/jorek_restart.rst  tearing_limiter_303/jorek_restart.rst"
+LIST="
+ballooning_xpoint_303/jorek_restart.rst 
+tearing_limiter_199/jorek_restart.rst 
+tearing_limiter_303/jorek_restart.rst
+h5_tearing_limiter_199/jorek00089_export.rst
+"
 tar cvzf new_$FILE $LIST
 returncode=$?
 

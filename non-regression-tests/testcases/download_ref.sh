@@ -3,6 +3,7 @@
 startdir=`readlink -f $(dirname $0)`
 
 TARBALL="latu@scm.gforge.inria.fr:/home/groups/aster/nrt/jorek_rst_files.tgz"
+FILE=`basename $TARBALL`
 rsync --progress -av --delete-after "${TARBALL}" ${startdir}/
 returncode=$?
 if [ $returncode -ne 0 ]; then
@@ -14,4 +15,6 @@ cat <<EOF
   and launch this script "$0" again to decompress the archive.
 ###################################################################################
 EOF
+else
+  tar xvzf  $FILE
 fi

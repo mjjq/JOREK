@@ -810,14 +810,22 @@ subroutine ELM_main_rhs_7(rhs,rhs_k)
 	     - v * (P0_x * ps0_y - P0_y * ps0_x)						* xjac * tstep	&
              ! --- Density source term
              - v * total_rho_source * vpar0 * BB2 * R	 					* xjac * tstep	&
-             ! --- Viscosity and toroidal source
-             + visco_par * (v_x * Vt0_x   + v_y * Vt0_y)   * R	 				* xjac * tstep	&
-	     - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * R					* xjac * tstep	&
              ! --- Numerical viscosity
              - visco_par_numm * (v_xx     + v_x    /R + v_yy    )						&
 	                      * (vpar0_xx + vpar0_x/R + vpar0_yy) * R	 			* xjac * tstep 
   
   rhs_k(7) = + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / R * v_p					* xjac * tstep 
+
+  ! --- The RHS term (Viscosity and source of parallel rotation)
+  if (normalized_velocity_profile) then
+    rhs(7)   = rhs(7)                                                                                              &
+      + visco_par * (v_x * Vt0_x   + v_y * Vt0_y)   * R                                            * xjac * tstep  &
+      - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * R                                            * xjac * tstep  
+  else
+    rhs(7)   = rhs(7)                                                                                                                &
+      - visco_par * v_x * ( vpar0_x * F0**2 / R**2 -2.d0 * vpar0 * F0**2 / R**3 - 2.d0 * PI * F0 * Omega_tor0_y ) * R * xjac * tstep &
+      - visco_par * v_y * ( vpar0_y * F0**2 / R**2 - 2.d0 * PI * F0 * Omega_tor0_y ) * R                              * xjac * tstep            
+  endif
 
   ! -----------------------------------    
   ! --- The RHS term (Neoclassical part)	      
@@ -891,7 +899,6 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
                 + v  * vpar0 * vpar * BB2 * (ps0_x * r0_y - ps0_y * r0_x)					* xjac * theta * tstep	&
                 - v  * vpar0 * vpar * BB2 * F0 / R * r0_p							* xjac * theta * tstep	&
                 + v * total_rho_source  * vpar * BB2 * R  							* xjac * theta * tstep	&
-                + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * R							* xjac * theta * tstep	&
                 + visco_par_numm * (v_xx    + v_x   /R + v_yy   )									&
 		                 * (vpar_xx + vpar_x/R + vpar_yy) * R	 					* xjac * theta * tstep 
   
@@ -903,6 +910,15 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
 
   amat_k(7,7) = - r0 * vpar0 * vpar * BB2 * F0 / R * v_p							* xjac * theta * tstep 
 
+  ! -----------------------------------    
+  ! --- The LHS term (Viscosity and source of parallel rotation)
+  if (normalized_velocity_profile) then
+    amat(7,7) = amat(7,7)                                                                          &
+      + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * R * xjac * theta * tstep
+  else
+    amat(7,7) = amat(7,7)                                                                          &
+      + visco_par * F0**2 / R**2 * (v_x * (Vpar_x -2.d0 * vpar / R) + v_y * Vpar_y) * R * xjac * theta * tstep
+  endif
   
   ! -----------------------------------
   ! --- The LHS terms (Neoclassic part)

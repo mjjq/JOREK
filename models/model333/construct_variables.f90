@@ -538,19 +538,18 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Neoclassical rotation
   ! -------------------------
   epsil   = 1.d-3
-  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / R**2
+  Btheta2 = (ps0_x**2 + ps0_y**2) / R**2
+    amu_neo_prof   = 0.d0
+    aki_neo_prof   = 0.d0
   if ( NEO ) then 
     if (num_neo_file) then
-      call neo_coef(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, amu_neo_prof, aki_neo_prof)
+      call neo_coef(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, amu_neo_prof,          &
+        aki_neo_prof)
     else
        amu_neo_prof = amu_neo_const
        aki_neo_prof = aki_neo_const
     endif
-  else 
-    amu_neo_prof   = 0.d0
-    aki_neo_prof   = 0.d0
   endif
-  
   
   ! -------------------------------------------------------------------
   ! --- Heating, current and particle source (the same for all i_plane)
@@ -569,12 +568,20 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     
     ! --- Toroidal momentum source (NBI)
-    if ( abs(V_0) .ge. 1.e-12) then 
-      call velocity(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, &
-                    V_source, dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+  dV_dpsi_source = 0.d0
+  dV_dz_source   = 0.d0
+  if ( abs(V_0) .ge. 1.d-12 ) then 
+    call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
+      dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
+      dV_dpsi2_dz)
+    if (normalized_velocity_profile) then
       Vt0_x = dV_dpsi_source * ps0_x
       Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
-    endif
+    else
+      Omega_tor0_x = dV_dpsi_source * ps0_x
+      Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
+    end if
+  end if
     
     ! --- Pellet Source
     source_pellet = 0.d0

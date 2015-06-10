@@ -222,6 +222,7 @@ subroutine preset_parameters
   R_Z_psi_bnd_file = 'none'
   wall_file     = 'none'
   rot_file      = 'none'
+  normalized_velocity_profile = .true.
 
   produce_live_data = .true.
   

@@ -11,7 +11,7 @@ module equation_variables
   real*8 	:: zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
   real*8 	:: current_source, particle_source, heat_source, total_rho_source
   real*8 	:: source_mgi, source_pellet, source_volume
-  real*8 	:: Vt0_x, Vt0_y, dV_dpsi_source, dV_dz_source
+  real*8 	:: Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source
   
   ! --- Diffusivities
   real*8 	:: rho_corr, T_corr
@@ -27,13 +27,16 @@ module equation_variables
   real*8 	:: eta_numm, visco_numm, visco_par_numm, D_perp_numm, K_perp_numm
   real*8	:: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8
   
+  ! --- Diamagnetic parameters
+  real*8   :: tau_IC
+  real*8   :: W_dia
+
   ! --- Neoclassical coefficients
-  real*8 	:: tau_IC, W_dia
-  real*8	:: epsil, Btheta2
-  real*8	:: amu_neo_prof, aki_neo_prof
+  real*8   :: epsil, Btheta2
+  real*8   :: amu_neo_prof, aki_neo_prof
   
   ! --- Bootstrap current terms
-  real*8        :: jb
+  real*8   :: jb
         
   ! --- R,Z-coords and jacobians
   real*8 	:: x_g, x_s, x_t, x_ss, x_st, x_tt
@@ -96,7 +99,7 @@ module equation_variables
   !$omp 	zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz,					&
   !$omp 	current_source, particle_source, heat_source, total_rho_source,									&
   !$omp 	source_mgi, source_pellet, source_volume,											&
-  !$omp 	Vt0_x, Vt0_y, dV_dpsi_source, dV_dz_source,											&
+  !$omp 	Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source,				                                &
   !$omp 	rho_corr, T_corr,														&
   !$omp 	eta_T,    deta_dT, d2eta_d2T,													&
   !$omp 	visco_T,  dvisco_dT,														&

@@ -9,9 +9,6 @@
 
  nout = 10
 
-! rst_hdf5 = 1    ! = 0 ; restart from binary files
-!                 ! = 1 ; restart from HDF5 files
-
  fbnd(1)   = 2.
  fbnd(2:4) = 0.
  mf        = 0

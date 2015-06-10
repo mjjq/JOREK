@@ -416,11 +416,9 @@ if ( primitive .and. visco /= 0.d0 ) then
                  - up0_Z * xjac_Z / xjac
 
 else
-     uR0_ss = 0.d0; uR0_tt = 0.d0; uR0_st = 0.d0; uR0_pp = 0.d0
-     uZ0_ss = 0.d0; uZ0_tt = 0.d0; uZ0_st = 0.d0; uZ0_pp = 0.d0
-     up0_ss = 0.d0; up0_tt = 0.d0; up0_st = 0.d0; up0_pp = 0.d0
-
-     uR0_RR =  0.d0 ; uR0_ZZ = 0.d0 ; uZ0_RR = 0.d0 ; uZ0_ZZ = 0.d0 ; up0_RR = 0.d0 ; up0_ZZ = 0.d0 
+     uR0_ss = 0.d0; uR0_tt = 0.d0; uR0_st = 0.d0; uR0_pp = 0.d0; uR0_RR = 0.d0; uR0_ZZ = 0.d0
+     uZ0_ss = 0.d0; uZ0_tt = 0.d0; uZ0_st = 0.d0; uZ0_pp = 0.d0; uZ0_RR = 0.d0; uZ0_ZZ = 0.d0
+     up0_ss = 0.d0; up0_tt = 0.d0; up0_st = 0.d0; up0_pp = 0.d0; up0_RR = 0.d0; up0_ZZ = 0.d0
 endif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

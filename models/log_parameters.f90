@@ -234,7 +234,11 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'V_1                   ', V_1
     write(*,REAL_FMT) 'V_coeff               ', V_coef(1:10)
   end if
-  
+
+  if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then  
+     write(*,LOGI_FMT) 'normalized_velocity_profile', normalized_velocity_profile
+  endif
+
   if ( .not. num_T ) then
     write(*,REAL_FMT) 'T_0                   ', T_0
     write(*,REAL_FMT) 'T_1                   ', T_1
@@ -408,16 +412,16 @@ if (my_id == 0) then
     write(*,REA3_FMT) 'current_pfc           ', current_pfc(1:min(9,n_pfc))
   end if
 
-  write(*,LOGI_FMT) 'RMP_on              ', RMP_on
+  write(*,LOGI_FMT) 'RMP_on                ', RMP_on
   if (RMP_on) then
-     write(*,CHAR_FMT) 'RMP_psi_cos_file    ', trim(RMP_psi_cos_file)
-     write(*,CHAR_FMT) 'RMP_psi_sin_file    ', trim(RMP_psi_sin_file)
-     write(*,REAL_FMT) 'lambda              ', lambda
-     write(*,REAL_FMT) 'tset                ', tset
+     write(*,CHAR_FMT) 'RMP_psi_cos_file      ', trim(RMP_psi_cos_file)
+     write(*,CHAR_FMT) 'RMP_psi_sin_file      ', trim(RMP_psi_sin_file)
+     write(*,REAL_FMT) 'lambda                ', lambda
+     write(*,REAL_FMT) 'tset                  ', tset
   endif
-  write(*,LOGI_FMT) 'output_bnd_elements    ', output_bnd_elements
-  write(*,LOGI_FMT) 'bootstrap              ', bootstrap
-  write(*,LOGI_FMT) 'NEO                    ', NEO
+  write(*,LOGI_FMT) 'output_bnd_elements   ', output_bnd_elements
+  write(*,LOGI_FMT) 'bootstrap             ', bootstrap
+  write(*,LOGI_FMT) 'NEO                   ', NEO
   if (NEO) then
     write(*,LOGI_FMT) 'num_neo_file          ', num_neo_file
     if (num_neo_file) then

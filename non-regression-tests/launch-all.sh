@@ -6,12 +6,16 @@ if [ -z "$JOREK_HOST" ]; then
     echo "JOREK_HOST environment variable is not defined, can not launch test cases"
     exit 1
 fi
+if [ -z "$BATCHCOMMAND" ]; then
+    echo "BATCHCOMMAND environment variable is not defined, can not launch test cases"
+    exit 1
+fi
 cd  || exit 1
 for dirname in ${startdir}/testcases/*; do
- if [ -d $dirname ]; then
-   name=$(basename $dirname)
+ name=$(basename $dirname)
+ if [ \( -d $dirname \) -a \( -f ${startdir}/job_scripts/${JOREK_HOST}/${name}.job \) ]; then
    echo "== Launch job $name from directory job_scripts/${JOREK_HOST}"
-   (cd ${startdir}/job_scripts/${JOREK_HOST}; llsubmit ${name}.job)
+   (cd ${startdir}/job_scripts/${JOREK_HOST}; ${BATCHCOMMAND} ${name}.job)
  fi
 done
 exit 0

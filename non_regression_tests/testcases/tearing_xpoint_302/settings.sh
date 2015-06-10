@@ -1,6 +1,6 @@
 #!/bin/bash
 
-description="Test case for time evolution of model 302: Tearing mode in x-point plasma at n_tor=3."
+description="Time evolution of model 302: Tearing mode in x-point plasma at n_tor=3."
 
 # --- Model used
 jorekmodel="302"
@@ -14,8 +14,6 @@ requiredfiles="$testcasedir/jorek_model${jorekmodel}_1 $testcasedir/jorek_model$
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
 ompthreads=16
-
-compilopt="-j 1"
 
 function compile_jorek () {
     returncode=0

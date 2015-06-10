@@ -86,7 +86,7 @@ non_regression_test/testcases directory:
 
  tearing_limiter_199   : encompasses what is needed for tearing_limiter_199  test
  tearing_xpoint_302    : encompasses what is needed for tearing_xpoint_302   test
- tearing_xpoint_303    : encompasses what is needed for tearing_xpoint_3303   test
+ tearing_xpoint_303    : encompasses what is needed for tearing_xpoint_303   test
  get_testcase_data.sh  : get restart files from jorek.eu
  send_testcase_data.sh : upload restart files to jorek.eu
 

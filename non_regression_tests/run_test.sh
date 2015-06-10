@@ -18,34 +18,6 @@ OK_COL="\x1b[32;02m"     # green#
 startdir=`readlink -f $(dirname $0)`
 codedir=`readlink -f ${startdir}/..` # Assumption about source code location
 
-if [ -z "$PRERUN" ]; then
-    export PRERUN=""
-fi
-if [ -z "$MPIRUN" ]; then
-    export MPIRUN="mpirun -n"
-fi
-
-# --- Test directory if 'non_regression_tests' exists
-if [ ! -d "non_regression_tests" ]; then
-    printf "$ERROR_COL Run the script from the trunk, non_regression_tests directory should exist !! \n $NO_COL"
-    exit 1
-fi
-
-# --- Verify that $MPIRUN can be executed
-MPIRUN_cmd=`echo $MPIRUN | cut -d' ' -f1`
-stringarray=($MPIRUN)
-MPIRUN_cmd=${stringarray[0]}
-which $MPIRUN_cmd 1>/dev/null || exit 1
-
-# --- Verify that 'h5diff' can be executed
-which h5diff 1>/dev/null || exit 1
-
-# --- Verify that 'Makefile.inc' exist
-if [ ! -f "Makefile.inc" ]; then
-    printf "$ERROR_COL Please provide a Makefile.inc file !! \n $NO_COL"
-    exit 1
-fi
-
 # --- Usage printing function
 function printusage() {
     echo ""
@@ -55,21 +27,61 @@ function printusage() {
     echo " Options:"
     echo "   -h            Print this help information"
     echo "   -k            Keep temporary run directory"
-    echo "   -i            Launch the inital, full-length run (not a short run starting from a restart file)"
+    echo "   -i            Launch the inital, full-length run"
+    echo "                 (not only the test starting from a restart file)"
+    echo "   -j nthreads   Set the number of compile threads (default 1)"
     echo "   -l            List available test cases."
     echo "   -n            Do not compile (assume executables already exist)"
     echo "   -p            Prepare the case but do not run it"
     echo "   -t tempdir    Specify a temp directory used for the test run"
-    echo "                 (default: name chosen randomly)"
+    echo "                 (default: random name in current directory)"
     echo ""
 }
 
+if [ -z "$PRERUN" ]; then
+    export PRERUN=""
+fi
+if [ -z "$MPIRUN" ]; then
+    export MPIRUN="mpirun -n"
+fi
+
+# --- Test if directory 'non_regression_tests' exists
+if [ ! -d "non_regression_tests" ]; then
+    printf "\n$ERROR_COL ERROR: Run the script from the trunk. \n $NO_COL"
+    printusage
+    exit 1
+fi
+
+# --- Verify that $MPIRUN can be executed
+MPIRUN_cmd=`echo $MPIRUN | cut -d' ' -f1`
+stringarray=($MPIRUN)
+MPIRUN_cmd=${stringarray[0]}
+which $MPIRUN_cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  printf "\nERROR: $MPIRUN_cmd not found\n"
+  exit 1
+fi
+
+# --- Verify that 'h5diff' can be executed
+which h5diff >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  printf "\nERROR: h5diff not found\n"
+  exit 1
+fi
+
+# --- Verify that 'Makefile.inc' exist
+if [ ! -f "Makefile.inc" ]; then
+    printf "\n$ERROR_COL Please provide a Makefile.inc file.\n $NO_COL"
+    exit 1
+fi
+
 # --- Process command line options
-testcase="NONE" # (preset) 
-compile="yes"   # (preset)
-keep="no"       # (preset)
-runit="yes"     # (preset)
-initialrun="no" # (preset)
+testcase="NONE"    # (preset) 
+compile="yes"      # (preset)
+keep="no"          # (preset)
+runit="yes"        # (preset)
+initialrun="no"    # (preset)
+compilethreads="1" # (preset)
 tmpdir="$startdir/tmp$$"
 
 while [ $# -gt 0 ]; do
@@ -77,19 +89,20 @@ while [ $# -gt 0 ]; do
     if [ "$option" == "-h" ]; then
 	printusage
 	exit 1
+    elif [ "$option" == "-j" ]; then
+	compilethreads="$2"
+	shift 2
     elif [ "$option" == "-k" ]; then
 	keep="yes"
 	shift
     elif [ "$option" == "-l" ]; then
 	echo ""
 	echo "Available test cases:"
-	cases=`ls -1 -d ${startdir}/testcases/*/`
+	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
 	for i in $cases; do
 	    case=$(basename $i)
-	    echo ""
-	    echo "*** $case ***"
 	    source ${startdir}/testcases/$case/settings.sh
-	    echo "$description"
+	    echo " - $case: $description"
 	done
 	echo ""
 	exit 1
@@ -124,14 +137,9 @@ while [ $# -gt 0 ]; do
 done
 echo " tmpdir = " $tmpdir
 
-# --- Check if the testcase really exists
+# --- Check if the testcase exists
 if [ ! -d  "${startdir}/testcases/$testcase" ]; then
-  echo ""
-  printf "$ERROR_COL ERROR: Test case '$testcase' does not exist.\n $NO_COL"
-  printf " Valid test cases are:\n"
-  cases="`ls -1 ${startdir}/testcases | tr '\n' ' ' | sed -e 's/  */ /g'`"
-  echo "  $cases"
-  echo ""
+  printf "\n$ERROR_COL ERROR: Testcase '$testcase' does not exist. Use command line option -l to list available test cases.$NO_COL\n"
   printusage
   exit 1
 fi
@@ -145,7 +153,12 @@ source $testcasedir/settings.sh
 # --- Set hard-coded parameters and compile
 if [ "$compile" == "yes" ]; then
   cd $codedir
-  compile_jorek || exit 1
+  compilopt="-j $compilethreads"
+  compile_jorek
+  if [ $1 -ne 0 ]; then
+    printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
+    exit 1
+  fi
 fi
 
 
@@ -156,7 +169,11 @@ if [ "$runit" == "yes" ]; then
   mkdir -p $tmpdir
   cd $tmpdir || exit 1
   echo " Copied files " $requiredfiles
-  cp $requiredfiles . || exit 1
+  cp $requiredfiles .
+  if [ $1 -ne 0 ]; then
+    printf "\n$ERROR_COL ERROR: Copying required files ($requiredfiles) failed.$NO_COL\n"
+    exit 1
+  fi
     
   # --- Run the test case
   cd $tmpdir || exit 1

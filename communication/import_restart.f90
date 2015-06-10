@@ -366,6 +366,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use tr_module 
   use data_structure
   use phys_module
+  use pellet_module
   use vacuum, only: import_HDF5_restart_vacuum
 #ifdef USE_HDF5
   use hdf5
@@ -383,6 +384,14 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,                 intent(in)    :: format_rst  ! format of restart file
   integer,                 intent(out)   :: error
   
+  ! --- Perturbation-Import variables
+  type (type_node_list)   , pointer	:: node_list_perturbation
+  type (type_element_list), pointer	:: element_list_perturbation
+  integer              			:: n_tor_tmp_perturbation
+  integer, allocatable 			:: mode_tmp_perturbation(:)
+  real*8,  allocatable 			:: values_tmp_perturbation(:,:,:), deltas_tmp_perturbation(:,:,:)
+  logical, parameter   			:: import_perturbation = .false.
+
   ! --- Local variables
   integer              :: i, j, m, k, n_tor_tmp
   real*8               :: growth_mag, growth_kin, amplitude
@@ -520,7 +529,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   do i=1,node_list%n_nodes
     node_list%node(i)%x = t_x(i,:,:) 
 
-    node_list%node(i)%deltas = 0.d0 
+    node_list%node(i)%values = 0.d0 
     node_list%node(i)%deltas = 0.d0 
 
     do m=1,n_tor_tmp,2
@@ -621,18 +630,37 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call HDF5_array3D_reading(file_id,energies4,'energies4')
 #endif
 #endif
-
    end if
-  
-  if (use_pellet) then
-    call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
-    call HDF5_real_reading(file_id,pellet_R,"pellet_R")
-    call HDF5_real_reading(file_id,pellet_Z,"pellet_Z")
-  endif
-  
+
   ! Import restart Vacuum 
   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
   
+  if (use_pellet) then
+     if (index_start .ge. 1) then
+        if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R",CAT_UNKNOWN)
+        if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z",CAT_UNKNOWN)
+        if (allocated(xtime_pellet_psi)) call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_psi,1,index_start+nstep,"xtime_pellet_psi",CAT_UNKNOWN)
+        if (allocated(xtime_pellet_particles)) &
+             call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_UNKNOWN)
+        call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles",CAT_UNKNOWN)
+        if (allocated(xtime_phys_ablation)) &
+             call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_UNKNOWN)
+        call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation",CAT_UNKNOWN)
+
+        call HDF5_array1D_reading(file_id,xtime_pellet_R,"xtime_pellet_R")
+        call HDF5_array1D_reading(file_id,xtime_pellet_Z,"xtime_pellet_Z")
+        call HDF5_array1D_reading(file_id,xtime_pellet_psi,"xtime_pellet_psi")
+        call HDF5_array1D_reading(file_id,xtime_pellet_particles,"xtime_pellet_particles")
+        call HDF5_array1D_reading(file_id,xtime_phys_ablation,"xtime_phys_ablation")
+     end if
+     call HDF5_real_reading(file_id,pellet_R,"pellet_R")
+     call HDF5_real_reading(file_id,pellet_Z,"pellet_Z")
+     call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
+  endif
+
   call HDF5_close(file_id)
  
   write(*,*) '************* restart ******************'
@@ -658,18 +686,26 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     ! write(*,'(i7,f10.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i)
   enddo
  
-  amplitude = 1.d-10
- 
-  if (n_tor_tmp .lt. n_tor) then ! initialise new harmonics (only density and temperature, to be improved)
-    do i=1,node_list%n_nodes
-      node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
-      do j=n_tor_tmp+1, n_tor
-        node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
-        node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
-      enddo
-    enddo
-  endif
-
+  ! --- initialise new harmonics (only density and temperature, to be improved)
+  if (n_tor_tmp .lt. n_tor) then
+     ! --- Using an already computated mode
+     if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
+        write(*,*)'Importing perturbation from jorek_perturbation.rst file...'
+        write(*,*) " Not yet implemeted !! "
+        
+     ! --- Using just noise
+     else
+        
+        amplitude = 1.d-10
+        do i=1,node_list%n_nodes
+           node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
+           do j=n_tor_tmp+1, n_tor
+              node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
+              node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
+           enddo
+        enddo
+     endif
+  end if
   !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
   
   ! -> Deallocate temporary arrays 

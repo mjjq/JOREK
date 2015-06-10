@@ -262,6 +262,7 @@ end if
 
 #ifdef fullmhd
      t_psi_eq(i,:)     = node_list%node(i)%psi_eq
+     t_Fprof_eq(i,:)   = node_list%node(i)%Fprof_eq
 #elif altcs
      t_psi_eq(i,:)     = node_list%node(i)%psi_eq
 #endif

@@ -2,7 +2,9 @@
 
 # This script download a jorek test case.
 TESTNAME="$1"
-URL="http://jorek.eu/dav_nrt"
+if [ -z "${DAV_URL}" ]; then
+    DAV_URL="http://jorek.eu/dav_nrt"
+fi
 if [ ! -f ${TESTNAME}/settings.sh ]; then
   printf "This test name does not exist\n"
   exit 1
@@ -11,7 +13,7 @@ fi
 cd  ${TESTNAME}
 if [ ! -f ${TESTNAME}.tgz ]; then 
   echo "Downloading ${TESTNAME}.tgz"
-  wget -q --user=nrt --password=nrt_21745XtL ${URL}/${TESTNAME}.tgz 
+  wget -q --user=nrt --password=nrt_21745XtL ${DAV_URL}/${TESTNAME}.tgz 
   returncode=$?
   if [ $returncode -ne 0 ]; then
     cat <<EOF

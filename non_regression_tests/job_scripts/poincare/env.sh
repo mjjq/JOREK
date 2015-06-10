@@ -2,6 +2,7 @@
 
 module purge
 module load intel/12.1.0 mvapich2/1.8.1 mkl/10.3
+export DAV_URL="http://localhost:8054/dav_nrt"
 export LANG=C
 export JOREK_HOST=poincare
 export compilethreads=8

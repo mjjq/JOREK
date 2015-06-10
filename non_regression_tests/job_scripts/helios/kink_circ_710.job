@@ -2,7 +2,7 @@
 #SBATCH -J kink_circ_710
 #SBATCH -N 2
 #SBATCH -n 2
-#SBATCH -t 00:50:00
+#SBATCH -t 00:20:00
 #SBATCH -o kink_circ_710.%j.out
 #SBATCH -e kink_circ_710.%j.err
 

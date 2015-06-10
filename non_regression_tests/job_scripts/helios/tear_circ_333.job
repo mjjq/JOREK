@@ -2,7 +2,7 @@
 #SBATCH -J tear_circ_333
 #SBATCH -N 2
 #SBATCH -n 2
-#SBATCH -t 00:50:00
+#SBATCH -t 00:20:00
 #SBATCH -o tear_circ_333.%j.out
 #SBATCH -e tear_circ_333.%j.err
 

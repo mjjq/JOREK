@@ -3,7 +3,7 @@
 startdir=`readlink -f $(dirname $0)`
 codedir=`readlink -f ${startdir}/..` # Assumption about source code location
 for dirname in ${startdir}/testcases/*; do
- if [ -d $dirname ]; then
+ if [ \( -d $dirname \)  -a \( ! -f $dirname/BROKEN \) ]; then
    name=$(basename $dirname)
    echo ""
    echo "===== Compile $name ====="

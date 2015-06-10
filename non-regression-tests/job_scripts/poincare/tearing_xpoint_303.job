@@ -1,5 +1,5 @@
 #!/bin/bash
-# @ job_name = jorek
+# @ job_name = tearing_xpoint_303
 # @ class = clallmds+
 # @ as_limit = 24gb
 # @ error  = $(job_name).$(jobid).err

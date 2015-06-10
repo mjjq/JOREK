@@ -6,7 +6,7 @@ description="Test case for time evolution of model 199: Tearing mode in circular
 jorekmodel="199"
 
 # --- Files required to run the code (executables copied automatically)
-requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmodel}_3 $codedir/rst_bin2hdf5"
+requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmodel}_3 $codedir/rst_bin2hdf5 $codedir/rst_hdf52bin"
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
@@ -21,7 +21,7 @@ function compile_jorek () {
     if [ $returncode -eq 0 ]; then
 	./util/config.sh model=$jorekmodel "n_tor=3 n_plane=4 n_period=1"
 	make clean &&  make -j 3 jorek_model${jorekmodel} &&\
-          make  rst_bin2hdf5 &&\
+          make  rst_bin2hdf5 && make  rst_hdf52bin && \
           cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3  
 	returncode=$?
     fi
@@ -35,7 +35,13 @@ function restart_run () {
     eval $PRERUN
   fi
   export OMP_NUM_THREADS=$ompthreads
-  cp ${testcasedir}/jorek00089_export.rst jorek_restart.rst || exit 1
+  cp ${testcasedir}/jorek00089_export.h5 jorek00089.h5 || exit 1
+  # Import restart file 
+  tstep=89
+  printf "%5.5d \n" $tstep > ./file.out
+  ./rst_hdf52bin
+  rm file.out
+  cp jorek00089.rst jorek_restart.rst
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=1000 n_flux=35 n_tht=14
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile   
 }
@@ -46,22 +52,32 @@ function initial_run () {
     eval $PRERUN
   fi
   export OMP_NUM_THREADS=$ompthreads
+
   # Equilibrium computation
   ${codedir}/util/setinput.sh input restart=.f. nstep_n=0 tstep_n=1 n_flux=35 n_tht=14
   ($MPIRUN 1 ./jorek_model${jorekmodel}_1 < input > logfile &&\
     cp jorek_restart.rst jorek_equil.rst) || exit 1
+
   # Time evolution
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=89 tstep_n=1000 n_flux=35 n_tht=14
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile || exit 1
-  cp jorek00089.rst ${testcasedir}/jorek00089_export.rst || exit 1
-  # Restart run (1 time step)
-  restart_run
-  # Export the final restart file as an HDF5 file
-  tstep=90;
+
+  # Export  final restart file as HDF5 file
+  tstep=89
   printf "%5.5d \n" $tstep > ./file.out
   ./rst_bin2hdf5
   rm file.out
-  cp jorek00090.h5 ${testcasedir}/jorek00090_export.h5 || exit 1
+  cp jorek000${tstep}.h5 ${testcasedir}/jorek000${tstep}_export.h5 || exit 1
+
+  # Restart run (1 time step)
+  restart_run
+
+  # Export  final restart file as HDF5 file
+  tstep=90
+  printf "%5.5d \n" $tstep > ./file.out
+  ./rst_bin2hdf5
+  rm file.out
+  cp jorek000${tstep}.h5 ${testcasedir}/jorek000${tstep}_export.h5 || exit 1
 }
 
 function compare_results () {

@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=1
+#SBATCH --threads-per-core=1
+#SBATCH -J Jorek
+#SBATCH --time=1:00:00
+
+#######################################################################
+# Look to non-regression-tests/testcases/tearing_limiter_199
+# to determine nb of nodes, MPI processes, and nb of threads
+#######################################################################
+
+
+ulimit -d unlimited
+ulimit -s unlimited
+ulimit -Sa
+ulimit -Ha
+
+CASE=tearing_limiter_199
+JOREK_HOME=${HOME}/jorek
+
+cd ${JOREK_HOME}
+source non-regression-tests/job_scripts/occigen/env.sh
+## Compile with:       
+# non-regression-tests/run_test.sh -p $CASE
+## Initial Long run: 
+#non-regression-tests/run_test.sh -k -i -n $CASE 
+## Restart run: 
+non-regression-tests/run_test.sh -k -n $CASE 

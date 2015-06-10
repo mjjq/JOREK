@@ -92,7 +92,7 @@ function compare_results () {
   ./rst_bin2hdf5
   rm file.out
   # compare with reference file and return the result
-  h5diff -d 1e-15 jorek00090.h5 ${testcasedir}/jorek00090_export.h5 values; 
+  h5diff -d 1e-14 jorek00090.h5 ${testcasedir}/jorek00090_export.h5 values; 
   returncode=$?
   return $returncode
 }

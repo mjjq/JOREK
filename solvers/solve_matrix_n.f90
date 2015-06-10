@@ -529,13 +529,13 @@ contains
 
 #ifdef USE_BLOCK
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
-             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-             ! DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+!             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+             DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-!          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+!             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
       else if (use_wsmp) then

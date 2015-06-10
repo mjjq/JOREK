@@ -1,6 +1,6 @@
 # --- General settings
-description="Internal kink, circular plasma, model710, n_tor=3."
 jorekmodel="710"
+description="Internal kink, circular plasma, model$jorekmodel, n_tor=3."
 mpitasks=2
 ompthreads=16
 requiredfiles="jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin input"

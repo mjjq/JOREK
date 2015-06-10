@@ -1,6 +1,6 @@
 # --- General settings
-description="Tearing mode, circular plasma, model303, n_tor=3 + neoclassics."
 jorekmodel="303"
+description="Tearing mode, circular plasma, model$jorekmodel, n_tor=3 + neoclassics."
 mpitasks=2
 ompthreads=16
 requiredfiles="jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin input"

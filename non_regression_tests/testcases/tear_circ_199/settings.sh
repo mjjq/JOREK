@@ -1,5 +1,5 @@
 # --- General settings
-description="Time evolution of model 199: Tearing mode in circular plasma at n_tor=3."
+description="Tearing mode, circular plasma, model199, n_tor=3."
 jorekmodel="199"
 mpitasks=2
 ompthreads=16

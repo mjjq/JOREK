@@ -104,7 +104,7 @@ while [ $# -gt 0 ]; do
 	for i in $cases; do
 	    case=$(basename $i)
 	    source ${startdir}/testcases/$case/settings.sh
-	    printf " - %-25s: %s" $case $description
+	    printf " %-25s %s\n" "$case" "$description"
 	done
 	echo ""
 	exit 1

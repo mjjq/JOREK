@@ -1,5 +1,5 @@
 # --- General settings
-description="Time evolution of model 303: Tearing mode in circular plasma at n_tor=3 with Gears scheme."
+description="Tearing mode, circular plasma, model303, n_tor=3 + Gears scheme."
 jorekmodel="303"
 mpitasks=2
 ompthreads=16

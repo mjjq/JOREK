@@ -38,19 +38,6 @@ function printusage() {
     echo ""
 }
 
-# --- Define function: use HDF5 restart_file as binary file
-function use_restartfile() {
-    cp ${testcasedir}/jorek$1_export.h5 jorek_restart.h5 || exit 1
-    ./rst_hdf52bin
-}
-
-# --- Define function: export final restart file as HDF5 file function
-function export_restartfile() {
-    cp jorek$1.rst jorek_restart.rst
-    ./rst_bin2hdf5
-    cp jorek_restart.h5 ${testcasedir}/jorek$1_export.h5 || exit 1
-}
-
 if [ -z "$PRERUN" ]; then
     export PRERUN=""
 fi
@@ -196,7 +183,6 @@ if [ "$runit" == "yes" ]; then
     initial_run || exit 1
   fi
 
-  
   # --- Extract data
   cd $tmpdir || exit 1
   compare_results
@@ -212,6 +198,5 @@ if [ "$runit" == "yes" ]; then
       rm -rf $tmpdir
   fi
 fi
-
 
 exit $returncode

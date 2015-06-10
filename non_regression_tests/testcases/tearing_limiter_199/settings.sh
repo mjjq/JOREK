@@ -33,18 +33,9 @@ function restart_run () {
     export OMP_NUM_THREADS=$ompthreads
     
     # Import restart file
-    use_restartfile "00089"
-#CP  ### REMARK MHOELZL: THIS PART SHOULD GO INTO A BASH FUNCTION IN run_test.sh
-#CP  ### SUCH THAT WE ONLY CALL THE FOLLOWING
-#CP  ### use_restartfile 00089
-#CP  cp ${testcasedir}/jorek00089_export.h5 jorek00089.h5 || exit 1
-#CP  tstep=89
-#CP  printf "%5.5d \n" $tstep > ./file.out
-#CP  ./rst_hdf52bin
-#CP  rm file.out
-#CP  cp jorek00089.rst jorek_restart.rst
-#CP  ### END SECTION
-  
+    cp ${testcasedir}/jorek00089_export.h5 jorek_restart.h5 || exit 1
+    ./rst_hdf52bin # generate jorek_restart.rst
+ 
     ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=1000
     $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile   
 }
@@ -65,41 +56,22 @@ function initial_run () {
     $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile || exit 1
     
     # Export final restart file as HDF5 file
-    export_restartfile "00089"
-#CP  ### REMARK MHOELZL: THE FOLLOWING SHOULD ALSO BE ENCAPSULATED IN A BASH FUNCTION SUCH
-#CP  ### THAT WE ONLY CALL SOMETHING LIKE:
-#CP  ### export_restart 00089
-#CP  # Export final restart file as HDF5 file
-#CP  tstep=89
-#CP  printf "%5.5d \n" $tstep > ./file.out
-#CP  ./rst_bin2hdf5
-#CP  rm file.out
-#CP  cp jorek000${tstep}.h5 ${testcasedir}/jorek000${tstep}_export.h5 || exit 1
+    ./rst_bin2hdf5 # take the jorek_restart.rst as input
+    cp jorek_restart.h5 ${testcasedir}/jorek00089_export.h5 || exit 1
 
     # Restart run (1 time step)
     restart_run
 
-    # Export final restart file as HDF5 file 
-    export_restartfile "00090"
-#CP  ### REMARK MHOELZL: AGAIN ENCAPSULATE IN BASH FUNCTION
-#CP  # Export  final restart file as HDF5 file
-#CP  tstep=90
-#CP  printf "%5.5d \n" $tstep > ./file.out
-#CP  ./rst_bin2hdf5
-#CP  rm file.out
-#CP  cp jorek000${tstep}.h5 ${testcasedir}/jorek000${tstep}_export.h5 || exit 1
+    # Export final restart file as HDF5 file
+    ./rst_bin2hdf5 # take the jorek_restart.rst as input
+    cp jorek_restart.h5 ${testcasedir}/jorek00090_export.h5 || exit 1
 }
 
 function compare_results () {
-    # convert binary restart file into hdf5 file    
-    export_restartfile "00090"
-#CP  tstep=90;
-#CP  printf "%5.5d \n" $tstep > ./file.out
-#CP  ./rst_bin2hdf5
-#CP  rm file.out
-  
-  # compare with reference file and return the result
-#CP  h5diff -d 1e-14 jorek00090.h5 ${testcasedir}/jorek00090_export.h5 values; 
+    # convert last binary restart file into hdf5 file    
+    ./rst_bin2hdf5  # jorek00090.rst taken as input
+
+    # compare with reference file and return the result
     h5diff -d 1e-14 jorek_restart.h5 ${testcasedir}/jorek00090_export.h5 values; 
     returncode=$?
     return $returncode

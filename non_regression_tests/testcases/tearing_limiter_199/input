@@ -3,8 +3,6 @@
  restart = .f.
  regrid  = .f.
  refinement=.false.
- tstep   = 1000.
- nstep   = 0
 
  tstep_n = 1
  nstep_n = 0

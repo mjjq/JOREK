@@ -25,7 +25,7 @@ function initial_run () {
 
 # --- Carry out the test case, i.e., run a single time step in the non-linear phase
 function restart_run () {
-  ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=3000.              || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=3000. nout=1       || exit 1
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input >> logfile                  || exit 1
 }
 

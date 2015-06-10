@@ -19,3 +19,10 @@ tar cvzf ${testname}.tgz begin.h5 end.h5                                        
 echo "Uploading ${TESTDIR}.tgz"
 TESTNAME=$(basename $TESTDIR)
 curl -s -u nrt:nrt_21745XtL -T ${TESTNAME}.tgz  ${URL}
+if [ $? -eq 0 ]; then
+  printf "Success\n"
+  exit 0
+else
+  printf "Failed\n"
+  exit 1
+fi

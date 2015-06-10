@@ -17,7 +17,7 @@ pack_restart_files || exit 1
 
 echo "Uploading ${TESTDIR}.tgz"
 TESTNAME=$(basename $TESTDIR)
-curl -s -u nrt:nrt_21745XtL -T ${TESTNAME}.tgz  ${URL} 
+http_proxy=http://proxy:3128 curl -s -u nrt:nrt_21745XtL -T ${TESTNAME}.tgz  ${URL} 
 if [ $? -eq 0 ]; then
   printf "Success\n"
   exit 0

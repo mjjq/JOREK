@@ -5,7 +5,6 @@
 #SBATCH -J Jorek
 #SBATCH --time=4:00:00
 
-ulimit -d unlimited
 ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha

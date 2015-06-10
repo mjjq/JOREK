@@ -10,8 +10,6 @@
 # to determine nb of nodes, MPI processes, and nb of threads
 #######################################################################
 
-
-ulimit -d unlimited
 ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha

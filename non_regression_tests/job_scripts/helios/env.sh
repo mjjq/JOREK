@@ -8,4 +8,5 @@ export LANG=C
 export JOREK_HOST=helios
 export compilethreads=8
 export MPIRUN="mpirun -np"
-export SUBCMD="sbatch -A JOREKIRQ"
+export BATCHCOMMAND="sbatch -A JOREKIRQ"
+export http_proxy=http://proxy:3128 

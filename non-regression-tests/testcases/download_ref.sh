@@ -16,5 +16,5 @@ cat <<EOF
 ###################################################################################
 EOF
 else
-  tar xvzf  $FILE
+  (cd $startdir; tar xvzf  $FILE)
 fi

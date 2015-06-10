@@ -92,7 +92,7 @@ source $testcasedir/settings.sh
 
 
 # --- Set hard-coded parameters and compile
-#Remark(GL): we need several executables sometime for one single run (ntor=1, ntor=XX), 
+#Remark(GL): TODO, we need several executables sometime for one single run (ntor=1, ntor=XX), 
 #Remark(GL): that's why util/compile_test.sh generete several ones
 if [ "$compile" == "yes" ]; then
   cd $codedir
@@ -106,11 +106,13 @@ fi
 # --- Create run directory and copy files there
 mkdir -p $tmpdir
 cd $tmpdir || exit 1
+#Remark(GL): TODO, we need several executables sometime f
 cp $codedir/jorek_model$jorekmodel $codedir/jorek_extract_data $requiredfiles . || exit 1
 
 
 # --- Run test case
 cd $tmpdir || exit 1
+#Remark(GL): TODO, modify this to have a sequence of mpirun calls
 export OMP_NUM_THREADS=$ompthreads
 mpirun -n $mpitasks ./jorek_model$jorekmodel < input > logfile || exit 1
 

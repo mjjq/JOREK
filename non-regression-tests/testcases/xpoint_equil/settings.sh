@@ -20,8 +20,7 @@ absoluteaccuracy="1.0e-08"
 function compile_jorek () {
   ./util/config.sh model=$jorekmodel "n_tor=1 n_plane=1 n_period=1"
   make clean
-  make -j 2 jorek_model${jorekmodel} || exit 1
-  make -j 2 jorek_extract_data || exit 1
+  make -j 2 jorek_model${jorekmodel} && make -j 2 jorek_extract_data 
 }
 
 function run_jorek () {

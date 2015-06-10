@@ -22,8 +22,7 @@ absoluteaccuracy="0.0e+00" # i.e., check only for relative differences
 function compile_jorek () {
   ./util/config.sh model=$jorekmodel "n_tor=3 n_plane=4 n_period=6"
   make clean
-  make -j 2 jorek_model${jorekmodel} || exit 1
-  make -j 2 jorek_extract_data || exit 1
+  make -j 2 jorek_model${jorekmodel} && make -j 2 jorek_extract_data 
 }
 
 function run_jorek () {

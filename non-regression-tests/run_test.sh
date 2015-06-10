@@ -114,6 +114,7 @@ source $testcasedir/settings.sh
 if [ "$compile" == "yes" ]; then
   cd $codedir
   compile_jorek
+  returncode=$?
 fi
 
 
@@ -139,6 +140,11 @@ if [ "$runit" == "yes" ]; then
   cd $tmpdir || exit 1
   compare_jorek_res
   returncode=$?
+  if [ $returncode -eq 0 ]; then
+    echo "Test '$testcase' passed."
+  else
+    echo "Test '$testcase' failed."
+  fi
 fi
 
 # --- Remove the temporary directory
@@ -146,11 +152,4 @@ if [ ! "$keep" == "yes" ]; then
   rm -rf $tmpdir
 fi
 
-# --- Output the return code
-if [ $returncode -eq 0 ]; then
-  echo "Test '$testcase' passed."
-else
-  echo "Test '$testcase' failed."
-fi
-echo ""
 exit $returncode

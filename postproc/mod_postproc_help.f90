@@ -29,6 +29,7 @@ module postproc_help
     write(*,*) '  gourdon           Export magnetic field for Gourdon'
     write(*,*) '  grid              Output the grid'
     write(*,*) '  help              Print interactive help information'
+    write(*,*) '  int2d             Calculate various 2D integrals'
     write(*,*) '  jorek-units       Switch to JOREK normalized units'
     write(*,*) '  mark_coords       Mark expressions as coordinates'
     write(*,*) '  midplane          Toroidally averaged expressions on the midplane'
@@ -211,6 +212,15 @@ module postproc_help
         write(*,*) 'Examples:'
         write(*,*) '  help'
         write(*,*) '  help point'
+      case ( 'int2d' ) 
+        write(*,*) 'Usage:'
+        write(*,*) '  int2d'
+        write(*,*) ''
+        write(*,*) '"int2d" calculates various 2d integrals (calls integrals.f90) and outputs'
+        write(*,*) 'the results to file the file int2d_...'
+        write(*,*) ''
+        write(*,*) 'Examples:'
+        write(*,*) '  int2d'
       case ( 'jorek-units' ) 
         write(*,*) 'Usage:'
         write(*,*) '  jorek-units'

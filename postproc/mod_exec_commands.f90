@@ -47,6 +47,7 @@ module exec_commands
   type(t_expr_list),   private, save :: expr_list
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
+  real*8,              private, save :: time_now !< Time of current restart file in selected units
   
   
   
@@ -116,8 +117,8 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'average' )
           call average(command, first_step, ierr)
-!        case ( 'global_params' )
-!          call global_params(command, first_step, ierr)
+        case ( 'int2d' )
+          call int2d(command, first_step, ierr)
         case ( 'equil_params' )
           call equil_params(command, first_step, ierr)
         case ( 'expressions' )
@@ -169,7 +170,7 @@ module exec_commands
     else if ( exec_mode == LOOP_MODE ) then
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'mark_coords', 'global_parameters', 'midplane', 'average', 'point',  &
+        case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
           'pol_line', 'tor_line', 'equil_params', 'qprofile', 'fluxsurfaces', 'separatrix', 'set', &
           'four2d', 'gourdon', 'jorek-units', 'si-units', 'grid' )
           call add_to_command_queue(command, ierr)
@@ -226,6 +227,11 @@ module exec_commands
     t_now         = t_start
     index_now     = index_start
     step_imported = .true.
+    
+    ! (not elegant, admittedly... but guarantees consistent time normalization:)
+    call eval_expr(eq, get_int_setting('units', ierr), exprs('t',1),                               &
+      pol_pos(node_list,element_list,eq,R=eq%R_axis,Z=eq%Z_axis), tor_pos(phi=0.d0), result, ierr)
+    time_now = result(1,1,1,1)
     
   end subroutine load_step
   
@@ -918,7 +924,6 @@ module exec_commands
     ! --- Local variables
     integer :: units, i_file
     character(len=1024) :: filename, status, access
-    real*8 :: time
     
     ierr = 0
     
@@ -948,18 +953,79 @@ module exec_commands
         'Z_lim               Psi_lim             Psi_bnd'
     end if
     
-    ! (not elegant, admittedly... but guarantees consistent time normalization:)
-    call eval_expr(eq, units, exprs('t',1),                                                        &
-      pol_pos(node_list,element_list,eq,R=eq%R_axis,Z=eq%Z_axis), tor_pos(phi=0.d0), result, ierr)
-    time = result(1,1,1,1)
-    
-    write(i_file,'(es20.13,33f20.16)') time, eq%R_axis, eq%Z_axis, eq%Psi_axis, eq%R_xpoint(1),    &
+    write(i_file,'(es20.13,33f20.16)') time_now, eq%R_axis, eq%Z_axis, eq%Psi_axis, eq%R_xpoint(1),&
       eq%Z_xpoint(1), eq%Psi_xpoint(1), eq%R_xpoint(2), eq%Z_xpoint(2), eq%Psi_xpoint(2), eq%R_lim,&
       eq%Z_lim, eq%Psi_lim, eq%Psi_bnd
     
     close(i_file)
     
   end subroutine equil_params
+  
+  
+  
+  
+  
+  !> Output 2d integrals.
+  subroutine int2d(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, i_file
+    character(len=1024) :: filename, status, access
+    real*8 :: aminor, Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out,     &
+      pressure, pressure_in, pressure_out
+    real*8 :: fact_mu_zero, fact_ne
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') DIR, 'int2d',                                                           &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '#               time            pressure         pressure_in        ' //&
+        'pressure_out             density          density_in         density_out              ' //&
+        'beta_n              beta_t              beta_p            current'
+    end if
+    
+    if ( units == SI_UNITS ) then
+      fact_mu_zero = MU_zero
+      fact_ne      = central_density * 1.d20
+    else
+      fact_mu_zero = 1.d0
+      fact_ne      = 1.d0
+    end if
+    
+    call integrals(node_list, element_list, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint,        &
+      eq%Z_xpoint, eq%psi_xpoint, eq%psi_lim, aminor, Bgeo, current, beta_p, beta_t, beta_n,       &
+      density, density_in, density_out, pressure, pressure_in, pressure_out)
+    
+    write(i_file,'(33es20.13)') time_now, pressure/fact_mu_zero, pressure_in/fact_mu_zero,         &
+      pressure_out/fact_mu_zero, density*fact_ne, density_in*fact_ne, density_out*fact_ne, beta_n, &
+      beta_t, beta_p, current
+    
+    close(i_file)
+    
+  end subroutine int2d
   
   
   

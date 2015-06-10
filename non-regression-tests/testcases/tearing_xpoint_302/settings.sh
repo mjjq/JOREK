@@ -65,10 +65,10 @@ function initial_run () {
   ${codedir}/util/setinput.sh input restart=.t. 'nstep_n= 10, 9, 9, 9, 4' 'tstep_n= 1e-3, 1e-2, 1e-1, 1, 2' $COMMONOPT  nout=10
   $MPIRUN $mpitasks ${codedir}/jorek_model${jorekmodel}_3 < input >> logfile || exit 1
 
-  ${UTILDIR}/setinput.sh input restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' $COMMONOPT  nout=10 
+  ${codedir}/util/setinput.sh input restart=.t. 'nstep_n= 5, 4' 'tstep_n= 2, 5' $COMMONOPT  nout=10 
   $MPIRUN $mpitasks ${codedir}/jorek_model${jorekmodel}_3 < input >> logfile || exit 1
 
-  ${UTILDIR}/setinput.sh input restart=.t. 'nstep_n= 900' 'tstep_n= 5' $COMMONOPT  nout=10 
+  ${codedir}/util/setinput.sh input restart=.t. 'nstep_n= 900' 'tstep_n= 5' $COMMONOPT  nout=10 
   $MPIRUN $mpitasks ${codedir}/jorek_model${jorekmodel}_3 < input >> logfile || exit 1
 
 
@@ -105,5 +105,5 @@ function compare_results () {
 function pack_restart_files () {
   cd ${testcasedir} || exit 1  
   testname=$(basename $testcasedir)
-  tar cvzf ${testname}.tgz jorek00950_export.h5 jorek00951_export.h5 || exit 1
+  tar cvzf ${testname}.tgz jorek00090_export.h5 jorek00089_export.h5 || exit 1
 }

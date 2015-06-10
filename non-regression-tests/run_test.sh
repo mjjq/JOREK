@@ -123,7 +123,7 @@ mkdir -p $tmpdir
 cd $tmpdir || exit 1
 #Remark(GL): TODO, we need several executables sometime, copy all of them with the regexp
 #Remark(GL): "jorek_model${jorekmodel}_*" 
-cp $codedir/jorek_model${jorekmodel}* $codedir/jorek_extract_data $requiredfiles . || exit 1
+cp $requiredfiles . || exit 1
 
 if [ "$runit" == "yes" ]; then
   # --- Run the test case

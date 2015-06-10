@@ -6,7 +6,7 @@ description="Test case for time evolution of model 303: Tearing mode in circular
 jorekmodel="303"
 
 # --- Files required to run the code (executables copied automatically)
-requiredfiles="$testcasedir/input $testcasedir/jorek_restart.rst"
+requiredfiles="$codedir/jorek_model${jorekmodel} $codedir/jorek_extract_data $testcasedir/input $testcasedir/jorek_restart.rst"
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2

@@ -6,51 +6,47 @@ description="Test case for time evolution of model 199: Tearing mode in circular
 jorekmodel="199"
 
 # --- Files required to run the code (executables copied automatically)
-requiredfiles="$testcasedir/input $testcasedir/jorek_restart.rst"
+requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmodel}_3"
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
 ompthreads=4
 
 # --- Compare which kind of data? (separate keywords with blanks)
-comparedata="energies"
+comparedata="???"
 
 # --- Tolerance for the comparison. A comparison fails if both thresholds are exceeded.
-relativeaccuracy="1.0e-10"
-absoluteaccuracy="0.0e+00" # i.e., check only for relative differences
+relativeaccuracy="???"
+absoluteaccuracy=""
 
 function compile_jorek () {
-  ./util/config.sh model=$jorekmodel "n_tor=3 n_plane=4 n_period=1"
-  make clean
-  make -j 2 jorek_model${jorekmodel} && make -j 2 jorek_extract_data 
+  ./util/config.sh model=$jorekmodel "n_tor=1 n_plane=1 n_period=1"
+  make clean && make -j 3 jorek_model${jorekmodel} &&\
+    cp jorek_model${jorekmodel} jorek_model${jorekmodel}_1
+  returncode=$?
+  if [ $returncode -eq 0 ]; then
+    ./util/config.sh model=$jorekmodel "n_tor=3 n_plane=4 n_period=1"
+    make clean &&  make -j 3 jorek_model${jorekmodel} &&\
+      cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3  
+    returncode=$?
+ fi
+ return $returncode
 }
 
 function run_jorek () {
-  $PRERUN
+  sed "s/nstep.*=/nstep_n =/;s/tstep.*=/tstep_n =/;"  $codedir/namelist/model199/intear > input
+  eval $PRERUN
   export OMP_NUM_THREADS=$ompthreads
-  $MPIRUN $mpitasks ./jorek_model$jorekmodel < input > logfile || exit 1
+  ${codedir}/util/setinput.sh input restart=.f. nstep_n=0 tstep_n=1 n_flux=35 n_tht=14
+  $MPIRUN 1 ./jorek_model${jorekmodel}_1 < input > logfile &&\
+    cp jorek_restart.rst jorek_equil.rst || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. nstep_n=89 tstep_n=1000 n_flux=35 n_tht=14
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input > logfile &&\
+    cp jorek_restart.rst jorek00089_export.rst || exit 1
+  
 }
 
 function compare_jorek_res () {
-  echo "&extract" > extract_data.nml
-  comparedata2=`echo "$comparedata" | sed -e 's/^ *//' -e 's/ *$//' -e 's/  */ /g' -e "s/^/'/" -e "s/$/'/" -e "s/ /', '/g"`
-  echo "  extract_data = $comparedata2" >> extract_data.nml
-  echo "/" >> extract_data.nml
-  ./jorek_extract_data < input
-  
-  cp extracted_data.dat $testcasedir/extracted_data_`date "+%Y-%m-%d_%H-%M-%S"`.dat ### TODO: Remove later on
-  
-  # --- Compare the result to the reference data
-  # ### TODO: This has to be implemented cleaner later on...
-  echo "print \\" > comparison.dat
-  paste $testcasedir/reference.dat extracted_data.dat | sed -e 's/\t/ /' -e                                                     \
-    "s|^ *\([^ ]*\) *\([^ ]*\)|( abs(\1-\2)/abs(\1+1e-99) <= $relativeaccuracy or abs(\1-\2) <= $absoluteaccuracy ) and \\\\|"  \
-    >> comparison.dat || exit 1
-  echo "True" >> comparison.dat
-  okay=`python comparison.dat`
-  returncode=1
-  if [ "$okay" == "True" ]; then
-    returncode=0
-  fi
+  returncode=0
   return $returncode
 }

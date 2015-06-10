@@ -4,7 +4,7 @@ description="Test case for flux surface aligned X-point grid."
 jorekmodel="199"
 
 # --- Files required to run the code (executables copied automatically)
-requiredfiles="$testcasedir/input"
+requiredfiles="$codedir/jorek_model${jorekmodel} $codedir/jorek_extract_data $testcasedir/input"
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=1

@@ -92,6 +92,8 @@ source $testcasedir/settings.sh
 
 
 # --- Set hard-coded parameters and compile
+#Remark(GL): we need several executables sometime for one single run (ntor=1, ntor=XX), 
+#Remark(GL): that's why util/compile_test.sh generete several ones
 if [ "$compile" == "yes" ]; then
   cd $codedir
   ./util/config.sh model=$jorekmodel $jorekparameters

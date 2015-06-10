@@ -10,8 +10,10 @@
 # * The return code will be zero for a passed test, otherwise non-zero.
 
 
-startdir=`pwd`
-codedir=`readlink -f ..` # Assumption about source code location
+startdir=`readlink -f $(dirname $0)`
+echo $startdir
+codedir=`readlink -f ${startdir}/..` # Assumption about source code location
+returncode=1
 
 # --- Define default configuration for launching MPI runs
 if [ -z "$PRERUN" ]; then
@@ -32,6 +34,7 @@ function printusage() {
   echo "  -k            Keep temporary run directory"
   echo "  -l            List available test cases."
   echo "  -n            Do not compile (assume executables already exist)"
+  echo "  -r            Do not run the test case nor compare to reference data"
   echo "  -t tempdir    Specify a temp directory used for the test run"
   echo "                (default: current directory)"
   echo ""
@@ -41,7 +44,9 @@ function printusage() {
 testcase="NONE" # (preset) 
 compile="yes"   # (preset)
 keep="no"       # (preset)
-tmpdir="$startdir/$$"
+runit="yes"     # (preset)
+tmpdir="$startdir/tmp$$"
+echo tmpdir $tmpdir
 while [ $# -gt 0 ]; do
   option="$1"
   if [ "$option" == "-h" ]; then
@@ -53,15 +58,18 @@ while [ $# -gt 0 ]; do
   elif [ "$option" == "-l" ]; then
     echo ""
     echo "Available test cases:"
-    cases=`ls -1 testcases`
+    cases=`ls -1 ${startdir}/testcases`
     for case in $cases; do
       echo ""
       echo "*** $case ***"
-      source testcases/$case/settings.sh
+      source ${startdir}/testcases/$case/settings.sh
       echo "$description"
     done
     echo ""
     exit 1
+  elif [ "$option" == "-r" ]; then
+    runit="no"
+    shift
   elif [ "$option" == "-n" ]; then
     compile="no"
     shift
@@ -82,16 +90,16 @@ while [ $# -gt 0 ]; do
 done
 
 # --- Check if the testcase really exists
-if [ ! -d  "testcases/$testcase" ]; then
+if [ ! -d  "${startdir}/testcases/$testcase" ]; then
   echo ""
   echo "ERROR: Test case '$testcase' does not exist. Valid test cases are:"
-  cases="`ls -1 testcases | tr '\n' ' ' | sed -e 's/  */ /g'`"
+  cases="`ls -1 ${startdir}/testcases | tr '\n' ' ' | sed -e 's/  */ /g'`"
   echo "  $cases"
   echo ""
   printusage
   exit 1
 fi
-testcasedir=`readlink -f testcases/$testcase`
+testcasedir=`readlink -f ${startdir}/testcases/$testcase`
 
 
 # --- Read test case information
@@ -118,20 +126,24 @@ cd $tmpdir || exit 1
 cp $codedir/jorek_model${jorekmodel}* $codedir/jorek_extract_data $requiredfiles . || exit 1
 
 
-# --- Run the test case
-cd $tmpdir || exit 1
-#Remark(GL): Sequence of mpirun calls is now handled in the run_jorek function.
-#Remark(GL): The run_jorek function is defined in setting.sh
-#Remark(GL): The command to launch job is not always mpirun, should be flexible enough, 
-#Remark(GL): so the env. variable $MPIRUN is used instead of mpirun.
-run_jorek
-
-#Remark(GL): The (extraction+comparison) process is encapuslated into a bash function written in setting.sh
-#Remark(GL): I think about using h5diff also to compare the results which is a good way to go in many cases.
-# --- Extract data
-cd $tmpdir || exit 1
-compare_jorek_res
-returncode=$?
+if [ "$runit" == "yes" ]; then
+  # --- Run the test case
+  cd $tmpdir || exit 1
+  #Remark(GL): Sequence of mpirun calls is now handled in the run_jorek function.
+  #Remark(GL): The run_jorek function is defined in setting.sh
+  #Remark(GL): The command to launch job is not always mpirun, should be flexible enough, 
+  #Remark(GL): so the env. variable $MPIRUN is used instead of mpirun.
+  echo "go1"
+  run_jorek
+  echo "go2"
+  
+  #Remark(GL): The (extraction+comparison) process is encapuslated into a bash function written in setting.sh
+  #Remark(GL): I think about using h5diff also to compare the results which is a good way to go in many cases.
+  # --- Extract data
+  cd $tmpdir || exit 1
+  compare_jorek_res
+  returncode=$?
+fi
 
 # --- Remove the temporary directory
 if [ ! "$keep" == "yes" ]; then

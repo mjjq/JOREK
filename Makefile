@@ -329,9 +329,9 @@ jorek2_four : diagnostics/jorek2_four.f90 $(JOREK2_FOUR_OBJ)
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_four.o $(JOREK2_FOUR_OBJ) \
 	 -o $(JOREK_DIR)/jorek2_four $(LIBS) $(LIBFFTW)
 
-jorek_extract_data : diagnostics/jorek_extract_data.f90 $(JOREK_EXTRACT_DATA_OBJ)
+jorek_extract_data : $(JOREK_EXTRACT_DATA_OBJ) diagnostics/jorek_extract_data.o
 	$(FC) $(FFLAGS)                 \
-	diagnostics/jorek_extract_data.f90 	\
+	diagnostics/jorek_extract_data.o \
 	$(JOREK_EXTRACT_DATA_OBJ)		\
 	 -o $(JOREK_DIR)/jorek_extract_data $(INCLUDES) $(LIBS) $(LIBFFTW)
 

@@ -384,16 +384,13 @@ jorek2vtk : version diagnostics/jorek2vtk.f90 $(JOREK2VTK_OBJ)
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk.o $(JOREK2VTK_OBJ) \
 	 -o $(JOREK_DIR)/jorek2vtk $(LIBS)
 
-<<<<<<< HEAD
 jorek2vtk_GaussVortTerms : diagnostics/jorek2vtk_GaussVortTerms.f90 $(JOREK2VTK_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk_GaussVortTerms.f90 -o diagnostics/jorek2vtk_GaussVortTerms.o
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk_GaussVortTerms.o $(JOREK2VTK_OBJ) \
 	 -o $(JOREK_DIR)/jorek2vtk_GaussVortTerms $(LIBS)
 
-jorek2_stan : diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
-=======
 jorek2_stan : version diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
->>>>>>> [NRT_unstable] Correct some problem for jorek_extract_data with new hdf5-bin adapter. There is a problem in using old restart files, espacially in balooning and tearing test cases in the non-regression-tests/testcases directory
+
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_stan.f90 -o diagnostics/jorek2_stan.o
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_stan.o $(JOREK2VTK_OBJ) \
 	 -o $(JOREK_DIR)/jorek2_stan $(LIBS)

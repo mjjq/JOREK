@@ -1,5 +1,5 @@
 startdir=`readlink -f $(dirname $0)`
 nonregdir=`readlink -f ${startdir}/../..` 
 cd $nonregdir || exit 1
-export JOREK_HOST=jenkins
+source job_scripts/jenkins/env.sh || exit 1
 ./launch_all.sh 

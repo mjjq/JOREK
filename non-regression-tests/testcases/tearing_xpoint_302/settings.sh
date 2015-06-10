@@ -9,7 +9,7 @@ jorekmodel="302"
 COMMONOPT="n_flux=22 n_tht=30 n_open=7 n_leg=7 n_private=7"
 
 # --- Files required to run the code (executables copied automatically)
-requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmodel}_3 $codedir/rst_bin2hdf5 $codedir/rst_hdf52bin"
+requiredfiles="$testcasedir/jorek_model${jorekmodel}_1 $testcasedir/jorek_model${jorekmodel}_3 $testcasedir/rst_bin2hdf5 $testcasedir/rst_hdf52bin $testcasedir/input"
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
@@ -30,6 +30,7 @@ function compile_jorek () {
           cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3  
 	returncode=$?
     fi
+    cp jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_hdf52bin rst_bin2hdf5 $testcasedir/ || exit 1
     return $returncode
 }
 

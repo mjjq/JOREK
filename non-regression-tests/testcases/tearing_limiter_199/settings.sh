@@ -6,7 +6,7 @@ description="Test case for time evolution of model 199: Tearing mode in circular
 jorekmodel="199"
 
 # --- Files required to run the code (executables copied automatically)
-requiredfiles="$codedir/jorek_model${jorekmodel}_1 $codedir/jorek_model${jorekmodel}_3 $codedir/rst_bin2hdf5 $codedir/rst_hdf52bin"
+requiredfiles="$testcasedir/jorek_model${jorekmodel}_1 $testcasedir/jorek_model${jorekmodel}_3 $testcasedir/rst_bin2hdf5 $testcasedir/rst_hdf52bin $testcasedir/input"
 
 # --- How many MPI tasks and OpenMP threads are required?
 mpitasks=2
@@ -24,9 +24,10 @@ function compile_jorek () {
 	./util/config.sh model=$jorekmodel "n_tor=3 n_plane=4 n_period=1"
 	make clean &&  make $compilopt jorek_model${jorekmodel} &&\
           make  rst_bin2hdf5 && make  rst_hdf52bin && \
-          cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3 && \\
+          cp jorek_model${jorekmodel} jorek_model${jorekmodel}_3 
 	returncode=$?
     fi
+    cp jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_hdf52bin rst_bin2hdf5 $testcasedir/ || exit 1
     return $returncode
 }
 

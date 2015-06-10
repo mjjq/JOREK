@@ -12,6 +12,7 @@ ballooning_xpoint_303/jorek_restart.rst
 tearing_limiter_199/jorek_restart.rst 
 tearing_limiter_303/jorek_restart.rst
 h5_tearing_limiter_199/jorek00089_export.rst
+h5_tearing_limiter_199/jorek00090_export.h5
 "
 tar cvzf new_$FILE $LIST
 returncode=$?

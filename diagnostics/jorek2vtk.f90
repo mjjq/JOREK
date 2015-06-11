@@ -236,10 +236,10 @@ else
       'Vsound      ', 'Btot        ', 'Vneo        ', 'Vperp_e     ', &
       'ki_neo      ', 'mu_neo      '/)
    endif
-if (include_bootstrap) then  
-  if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'  
-  scalar_names(n_var+1+n_fluxes+n_neo+n_pellet:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
-endif	 
+   if (include_bootstrap) then  
+      if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'  
+      scalar_names(n_var+1+n_fluxes+n_neo+n_pellet:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
+   endif
 !======================end SI units
 endif
 
@@ -688,9 +688,9 @@ do i=1,element_list%n_elements
           scalars(inode,n_var+1+n_fluxes+n_neo+n_pellet) = Jb
           scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
           ! --- The JOREK bootstrap is not constant on flux surface
-	  ! --- Because J_jorek = R*J_physical, and the physical bootsrap is constant on a surface
+	  ! --- Because J_jorek = R*J_physical, and the physical bootstrap is constant on a surface
 	  ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
-	  scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) = R* scalars(inode,n_var+2+n_fluxes+n_neo) / R_axis
+	  scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) = R* scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) / R_axis
         else
           Jb = 0.d0
         endif
@@ -733,9 +733,11 @@ do i=1,element_list%n_elements
           endif ! grad_psi
         endif	! include_fluxes
 
-          scalars(inode,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+1) = psi_norm
+        if (include_psi_norm) then
+           scalars(inode,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+1) = psi_norm
+        endif
 
-            if (use_pellet) then
+        if (use_pellet) then
 
            local_density     = scalars(inode,5)
            local_temperature = scalars(inode,6)/2.
@@ -743,36 +745,35 @@ do i=1,element_list%n_elements
            local_pressure    = local_density * local_temperature
            scalars(inode,n_var+n_fluxes+n_neo+n_pellet-1)  = local_pressure
 
-                angle = 0.0
-                call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-                            pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, &
-                            pellet_theta, R, Z, local_psi, angle, &
-                            local_density,local_temperature, &
-                            central_density, pellet_particles, pellet_density, &
-                            total_pellet_volume, local_source, source_volume)
-
-!                  scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
-                   scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
-            endif ! use_pellet
+           angle = 0.0
+           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+                pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, &
+                pellet_theta, R, Z, local_psi, angle, &
+                local_density,local_temperature, &
+                central_density, pellet_particles, pellet_density, &
+                total_pellet_volume, local_source, source_volume)
+           
+           scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
+        endif ! use_pellet
 
         !	 vectors(inode,:,1) = (/ - R * u0_y ,	+ R * u0_x ,   0.d0 /)
         !	 vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
         !	 vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
 
-      endif
+     endif ! i_tor from 1 to n_tor
 
-    enddo  ! nsub
-  enddo     ! nsub
+  enddo  ! nsub
+enddo     ! nsub
 
-  do j=1,nsub-1
-    do k=1,nsub-1
+do j=1,nsub-1
+   do k=1,nsub-1
       ielm	  = ielm+1
       ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
       ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
       ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
       ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
-    enddo
-  enddo
+   enddo
+enddo
 
 enddo  ! n_elements
 
@@ -813,14 +814,14 @@ if (SI_units) then
       scalars(i,n_var+n_fluxes+8) = scalars(i,n_var+n_fluxes+8) / t_norm/1.e3
       ! ===================================mu_neo in SI units
       scalars(i,n_var+n_fluxes+10) = scalars(i,n_var+n_fluxes+10) / sqrt(rho_norm*MU_zero)
-      endif
-   !============================================j_bootstrap, javeraged in MA/m2
+    endif
+    !============================================j_bootstrap, javeraged in MA/m2
 
-     if (include_bootstrap) then 
-     scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6 
-     scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6 
-     endif
-!========================================================
+    if (include_bootstrap) then 
+    scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6 
+    scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6 
+    endif
+  !========================================================
   enddo  ! nnos
 
 endif ! SI_UNITS

@@ -5,6 +5,8 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 
 JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    			\
 	$(DIR)/check_point_is_inside_wall.f90 	    		\
+	$(DIR)/check_element_boundary.f90	\
+	$(DIR)/update_neighbours.f90	\
 	$(DIR)/create_new_node.f90 	    			\
 	$(DIR)/create_x_node.f90 	    			\
 	$(DIR)/define_flux_values.f90 	    			\
@@ -55,3 +57,10 @@ JORPOL_SRC := $(JORPOL_SRC)               			\
 
 ENBIGGEN_SRC := $(ENBIGGEN_SRC)               			\
 	$(DIR)/find_theta_surface.f90
+
+JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)                 \
+	$(DIR)/update_neighbours.f90	                        \
+	$(DIR)/check_element_boundary.f90                       \
+	$(DIR)/fft.f90 			    			\
+	$(DIR)/fgauss.f90 		    			\
+

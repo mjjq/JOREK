@@ -72,7 +72,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
-                zkpar_T_dependent,                                  & 
+                zkpar_T_dependent,                                  &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
@@ -90,17 +90,18 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 first_target_point, last_target_point,		    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme,                                   &
-                D_prof_neg, ZK_prof_neg, T_min
+                D_prof_neg, ZK_prof_neg, T_min,                     &
+                t_step_particles, n_step_particles
 
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
-  
+
   ! --- Model-specific presets
   particlesource_psin = 100.d0
-  
+
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
      open(42, file=filename, status='old', action='read', iostat=ierr)
@@ -115,7 +116,7 @@ if (my_id .eq. 0) then
     read(5,in1)
 
  endif
-!    write(*,*) 'Input files: T_file = ',  trim(T_file), ',  rho_file = ', trim(rho_file) 
+!    write(*,*) 'Input files: T_file = ',  trim(T_file), ',  rho_file = ', trim(rho_file)
 !    write(*,*) 'ffprime_file = ', trim(ffprime_file),  ',  R_Z_psi_bnd_file = ', trim(R_Z_psi_bnd_file)
 !    if (NEO) then
 !       write(*,*) 'neo_file = ', trim(neo_file)
@@ -129,16 +130,16 @@ if (my_id .eq. 0) then
       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
-      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
+      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
       do i=1,n_boundary
         read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
-        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
+        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
       enddo
-    endif    
+    endif
     CLOSE(243)
   endif
  !=========================================
-  
+
  !==============================Limiter==========================
    if (n_limiter.ne.0) then
  ! --- Open the file.
@@ -147,16 +148,16 @@ if (my_id .eq. 0) then
       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
-      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
+      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall '
       do i=1,n_limiter
         read(244,*) R_limiter(i),Z_limiter(i)
         write(*,*)  R_limiter(i),Z_limiter(i)
       enddo
-    endif    
+    endif
     CLOSE(244)
   endif
  !=========================================
-  
+
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else
@@ -198,6 +199,6 @@ call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-  
+
 return
 end subroutine initialise_parameters

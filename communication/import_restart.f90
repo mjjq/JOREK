@@ -20,7 +20,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   integer,                 intent(in)    :: format_rst  ! format of restart file
   
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp
+  integer              :: i, j, m, k, n_tor_tmp, format_rst_file
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
@@ -44,11 +44,19 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     return
   end if
 
+if (format_rst .gt. 0) then
+  read(21) format_rst_file
+  if (format_rst .ne. format_rst_file) write(*,*) ' IMPORT WARNING : format_rst != format_rst_file :', format_rst, format_rst_file
+else
+  format_rst_file = 0
+endif
+write(*,*) '  Using format : ',format_rst_file
+
   read(21) n_tor_tmp
 
   allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))
 
-  if (format_rst == 1) then
+if (format_rst .gt. 0) then
     read(21) mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
@@ -69,6 +77,8 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
        ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
        ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
 
   write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
 
@@ -119,7 +129,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) tstep,eta_rst,visco_rst,visco_par_rst
   read(21) index_start
   read(21) t_start
-  
+ 
 #ifdef USE_HDF5
   read(21) h5_nbsave_all
 #endif
@@ -165,33 +175,33 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 #endif
 endif
 
-  call import_restart_vacuum(21, freeboundary, resistive_wall)
 
-  if (use_pellet) then
-    if (index_start .ge. 1) then
-      if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_UNKNOWN)
-      call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R",CAT_UNKNOWN)
-      if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_UNKNOWN)
-      call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z",CAT_UNKNOWN)
-      if (allocated(xtime_pellet_psi)) call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_UNKNOWN)
-      call tr_allocate(xtime_pellet_psi,1,index_start+nstep,"xtime_pellet_psi",CAT_UNKNOWN)
-      if (allocated(xtime_pellet_particles)) &
-           call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_UNKNOWN)
-      call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles",CAT_UNKNOWN)
-      if (allocated(xtime_phys_ablation)) &
-           call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_UNKNOWN)
-      call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation",CAT_UNKNOWN)
+if (format_rst_file .gt. 1) then
 
-      read(21,err=999, end=999)  xtime_pellet_R(1:index_start)
-      read(21)  xtime_pellet_Z(1:index_start)
+  if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R")
+  call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R")
+  if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z")
+  call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z")
+  if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles")
+  call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles")
+  if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation")
+  call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation")
+
+  read(21)  xtime_pellet_R(1:index_start)
+  read(21)  xtime_pellet_Z(1:index_start)
       read(21)  xtime_pellet_psi(1:index_start)
-      read(21)  xtime_pellet_particles(1:index_start)
-      read(21)  xtime_phys_ablation(1:index_start)
-    endif
+  read(21)  xtime_pellet_particles(1:index_start)
+  read(21)  xtime_phys_ablation(1:index_start)
+
+endif
+
+if (use_pellet) then
     read(21,err=999, end=999)  pellet_particles, pellet_R, pellet_Z
     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
   endif
 999 continue
+
+call import_restart_vacuum(21, freeboundary, resistive_wall)
   
   close(21)
   

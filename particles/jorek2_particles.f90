@@ -7,39 +7,37 @@ use nodes_elements
 use mod_particles
 use openadas
 use clock_module
-
 use mpi_mod
+
 implicit none
+
 
 type (type_particle_list):: particle_list
 
-integer    :: i, in, i_tor, my_id, n_cpu, ierr
+integer    :: i, in, i_tor, my_id, n_cpu, ierr, i_step
 integer*4  :: rank, comm_size
 integer    :: required, provided, StatInfo
 real*8     :: boxsize(3)
+character*17 :: particle_file
 
-write(*,*) '***************************************'
-write(*,*) '* JOREK2 : Particles                  *'
-write(*,*) '***************************************'
 
-call begplt('part.ps')
-call clck_init()
+!call begplt('part.ps')
 
-my_id=0
-
-#ifdef FUNNELED
-  required = MPI_THREAD_FUNNELED
-#else
-  required = MPI_THREAD_MULTIPLE
-#endif
+!required = MPI_THREAD_FUNNELED
+required = MPI_THREAD_MULTIPLE
 
 call MPI_Init_thread(required, provided, StatInfo)
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
 my_id = rank
-
 call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
 n_cpu = comm_size
+
+if (my_id .eq. 0) then
+  write(*,*) '***************************************'
+  write(*,*) '* JOREK2 : Particles                  *'
+  write(*,*) '***************************************'
+endif
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
@@ -48,7 +46,12 @@ do i_tor=1, n_tor
   write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+if (my_id .eq. 0) then
+  call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+endif
+call broadcast_elements(my_id, element_list)       ! elements
+call broadcast_nodes(my_id, node_list)             ! nodes
+call broadcast_phys(my_id)                         ! physics parameters
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -65,22 +68,45 @@ do i=1,node_list%n_nodes
 enddo
 boxsize(2) = boxsize(1)
 
-write(*,'(A,3e14.6)') ' boxsize : ',boxsize
-
 call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxsize)
 
-t_step_particles = 0.01
-n_step_particles = 10000
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-call export_particles(particle_list,'part000.rst')
-call particles_vtk(particle_list,'part000.vtk')
+i_step = 0
+
+write(particle_file,'(A4,i4.4,A1,i4.4,A4)') 'part',my_id,'_',i_step,'.rst'
+
+!call export_particles(particle_list,particle_file)
+
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+write(particle_file,'(A4,i4.4,A4)') 'part',i_step,'.vtk'
+
+!call particles_vtk(particle_list,particle_file)
+
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 call update_particles(my_id,particle_list,t_step_particles,n_step_particles)
 
-call export_particles(particle_list,'part100.rst')
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-call particles_vtk(particle_list,'part100.vtk')
+i_step = 1
 
-call finplt
+call project_particles(particle_list)
+
+write(particle_file,'(A4,i4.4,A1,i4.4,A4)') 'part',my_id,'_',i_step,'.rst'
+
+call export_particles(particle_list,particle_file)
+
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+write(particle_file,'(A4,i4.4,A4)') 'part',i_step,'.vtk'
+!call particles_vtk(particle_list,particle_file)
+
+call export_restart(node_list,element_list,'density.rst',rst_format)
+
+call MPI_FINALIZE(IERR)
+
+!call finplt
 
 end

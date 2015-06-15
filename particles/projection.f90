@@ -17,8 +17,8 @@ use gauss
 
 implicit none
 
-real*8, allocatable :: part_R(:), R(:), f(:), f4(:,:), fractions(:), g(:)
-real*8              :: H(2,2), H_s(2,2), H_ss(2,2), c(4), A(4,4), fg(4), d(4), width, s, R_width
+real*8, allocatable :: part_R(:), R(:), f(:), fractions(:), true_solution(:)
+real*8              :: H(2,2), H_s(2,2), H_ss(2,2), c(4), A(4,4), d(4), width, s, R_width, R_n, G_n
 real*8              :: W, W_s, W_ss, weight, error1, error2
 integer             :: i, j, k, n_particles, np, info, n_width, nk, n_in
 
@@ -32,13 +32,13 @@ call dpotrf('U',4,A,4,info)
 
 call random_seed()
 
-n_particles = 1000
-np = 5
+n_particles = 10000
+np = 11
 
 allocate(part_R(n_particles))
-allocate(R(np),f(np),f4(np,4),g(np),fractions(np-1))
+allocate(R(np-1),f(np-1),fractions(np-1),true_solution(np-1))
 
-n_width = 11
+n_width = 1
 width   = sqrt(1./float(n_particles))
 
 error1 = 0.
@@ -48,18 +48,31 @@ nk = 100
 
 do k=1,nk
 
-call random_number(part_R)
+  do i=1, n_particles
 
-c = 0.
-n_in = 0
+    do j=1, 10
 
-do i=1, n_particles
+      call random_number(G_n)
+      call random_number(R_n)
 
-  weight = 0.
-  do j=1,n_width
+      if (G_n .lt. 0.5*R_n + 0.5) then
+        part_R(i) = R_n
+        exit
+      endif
 
-    s = -1. + 2.*float(j-1)/float(n_width-1)
-    call basisfunctions1(abs(s),W,W_s,W_ss)
+    enddo
+  enddo
+
+  c = 0.
+  n_in = 0
+
+  do i=1, n_particles
+
+    weight = 0.
+    do j=1,n_width
+
+      s = -1. + 2.*float(j-1)/float(n_width-1)
+      call basisfunctions1(abs(s),W,W_s,W_ss)
 
 !    R_width  = min(1.,max(part_R(i) + s * width,0.))
     R_width  = part_R(i) + s * width
@@ -89,12 +102,7 @@ enddo
 
 c = c / float(n_in) / weight * float(n_width)
 
-!write(*,'(A,4e14.6)') ' c : ',c
-
 call dpotrs('U',4,1,A,4,c,4,info)
-
-!write(*,'(A,4e14.6)') ' c : ',c
-
 
 fractions = 0
 do i=1,n_particles
@@ -103,27 +111,38 @@ do i=1,n_particles
 enddo
 fractions = float(np-1) * fractions / float(n_particles)
 
-do i=1,np
+do i=1,np-1
 
-  R(i) = float(i-1)/float(np-1)
+  R(i) = (float(i)-0.5)/float(np-1)
 
   call basisfunctions1(R(i),H,H_s,H_ss)
 
   f(i) = c(1)*H(1,1) + c(2)*H(1,2) + c(3)*H(2,1) + c(4)*H(2,2)
 
+  true_solution(i) = (0.5 + 0.5*R(i))/0.75
+
+  error2 = error2 + abs(f(i) - true_solution(i))
+
+!  write(*,'(i4,3f16.8)') i,R(i),f(i),fractions(i)
+
 enddo
 
-error1 = error1 + abs((maxval(f)-minval(f))/2.)
-error2 = error2 + abs((maxval(fractions)-minval(fractions))/2.)
+error2 = error2
+error1 = error1 + maxval(abs(f - fractions))
 
 enddo
-write(*,'(4e12.4)') error1/float(nk), error2/float(nk),(maxval(f)-minval(f))/2.,(maxval(fractions)-minval(fractions))/2.
+
+error2 = error2 / float(nk*np)
+error1 = error1 / float(nk)
+write(*,'(4e12.4)') error1, error2
 
 call begplt('plot.ps')
 call nframe(11,11,1,0.0,1.0,0.0,2.0,'projection',10,'R',1,'density',7)
-call lplot6(1,1,R+0.5/float(np-1),fractions,-np+1,'particles')
+call lplot6(1,1,R,fractions,-np+1,'particles')
 call lincol(1)
-call lplot6(1,1,R,f,-np,'projection')
+call lplot6(1,1,R,f,-np+1,'projection')
+call lincol(2)
+call lplot6(1,1,R,true_solution,-np+1,'projection')
 call lincol(0)
 call finplt
 

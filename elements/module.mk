@@ -4,9 +4,12 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/basis_functions.f90			\
 	$(DIR)/basis_functions1.f90			\
 	$(DIR)/basis_functions2.f90			\
+	$(DIR)/basis_functions3.f90     \
 	$(DIR)/initialise_basis.f90			\
 	$(DIR)/interp.f90				\
 	$(DIR)/interp_RZ.f90				\
+	$(DIR)/interp_PRZ.f90       \
+	$(DIR)/interp3_RZ.f90	\
 	$(DIR)/mod_basis_at_gaussian.f90		\
 	$(DIR)/mod_gauss.f90
 
@@ -84,3 +87,6 @@ JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)               \
         $(DIR)/hermite_1d.f90
 
 JOREK2_IMPORT_PERTURBATION_SRC := $(JOREK2_IMPORT_PERTURBATION_SRC)
+
+JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)         \
+       $(DIR)/hermite_1d.f90

@@ -1,6 +1,5 @@
 !> Export the current simulation state as a restart file that can be read back into JOREK or into
 !! a diagnostic program by the routine import_restart.
-
 !
 ! Export in a binary restart file
 subroutine export_binary_restart(node_list,element_list,filename)
@@ -27,7 +26,16 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
 
+  if (format_rst .gt.0) then
+    write(21) format_rst
+  endif
+
   write(21) n_tor
+
+  if (format_rst .gt.0) then
+     write(21) mode(1:n_tor)
+  endif
+
   write(21) node_list%n_nodes,element_list%n_elements
   write(21) node_list%n_dof
 
@@ -68,6 +76,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
 #ifdef JEC2DIAG
      write(21) energies4(:,:,1:index_now)
 #endif
+
 #endif
   endif
 
@@ -84,14 +93,14 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) pellet_particles, pellet_R, pellet_Z
   endif
 
-   
+
   ! save Revision control
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   write(21) version_control
 
   ! save mod_parameters
   write(21) jorek_model
-  
+
   write(21) n_var
   write(21) n_order
   write(21) n_tor
@@ -111,26 +120,27 @@ subroutine export_binary_restart(node_list,element_list,filename)
   return
 end subroutine export_binary_restart
 
- ! 
+ !
  ! Export in a HDF5 binary restart file
 subroutine export_hdf5_restart(node_list,element_list,filename)
- 
+
   use data_structure
   use phys_module
   use pellet_module
   use vacuum, only : export_HDF5_restart_vacuum
-  
+
+
 #ifdef USE_HDF5
   use hdf5
   use HDF5_io_module
   use tr_module
   use parameters
 #endif
- 
+
   implicit none
- 
+
 #include "version.h"
- 
+
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
@@ -153,12 +163,12 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real(RKIND), allocatable :: t_Fprof_eq(:,:)              ! n_order+1
 
   integer,     allocatable :: t_index(:,:)                 ! n_order+1
-  integer,     allocatable :: t_boundary(:)                ! 
+  integer,     allocatable :: t_boundary(:)                !
   integer,     allocatable :: t_parents(:,:)               ! 2
-  integer,     allocatable :: t_parent_elem(:)             ! 
+  integer,     allocatable :: t_parent_elem(:)             !
   real(RKIND), allocatable :: t_ref_lambda(:)
   real(RKIND), allocatable :: t_ref_mu(:)
-  character,   allocatable :: t_constrained(:)     
+  character,   allocatable :: t_constrained(:)
 
   ! element, element_list%n_elements
   integer,     allocatable :: t_vertex(:,:)                ! n_vertex_max
@@ -174,10 +184,10 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
   real(RKIND), allocatable :: t_energies(:,:,:)            ! n_tor,2,index_start+nstep
-#ifdef JECCD                                          
+#ifdef JECCD
   real(RKIND), allocatable :: t_energies2(:,:,:)           ! n_tor,2,index_start+nstep
   real(RKIND), allocatable :: t_energies3(:,:,:)           ! n_tor,2,index_start+nstep
-#ifdef JEC2DIAG                                       
+#ifdef JEC2DIAG
   real(RKIND), allocatable :: t_energies4(:,:,:)           ! n_tor,2,index_start+nstep
 #endif
 #endif
@@ -209,18 +219,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_allocate(t_constrained,1,node_list%n_nodes,"constrained",CAT_UNKNOWN)
 
   ! element_list%n_elements
-  call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max, &
-       "vertex",CAT_UNKNOWN)
-  call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max, &
-       "neighbours",CAT_UNKNOWN)
-  call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1, &
-       "size",CAT_UNKNOWN)
+  call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max,"vertex",CAT_UNKNOWN)
+  call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max,"neighbours",CAT_UNKNOWN)
+  call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1,"size",CAT_UNKNOWN)
   call tr_allocate(t_father,1,element_list%n_elements,"father",CAT_UNKNOWN)
   call tr_allocate(t_n_sons,1,element_list%n_elements,"n_sons",CAT_UNKNOWN)
   call tr_allocate(t_n_gen,1,element_list%n_elements,"n_gen",CAT_UNKNOWN)
   call tr_allocate(t_sons,1,element_list%n_elements,1,4,"sons",CAT_UNKNOWN)
-  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5, &
-       "contain_node",CAT_UNKNOWN)
+  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5,"contain_node",CAT_UNKNOWN)
   call tr_allocate(t_nref,1,element_list%n_elements,"nref",CAT_UNKNOWN)
 
   ! index_now+nstep
@@ -230,29 +236,25 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      t_xtime(:) = xtime(1:index_now)
 
      if (allocated(t_energies)) call tr_deallocate(t_energies,"energies",CAT_UNKNOWN)
-     call tr_allocate(t_energies,1,n_tor,1,2,1,index_now, &
-          "energies",CAT_UNKNOWN)
+     call tr_allocate(t_energies,1,n_tor,1,2,1,index_now,"energies",CAT_UNKNOWN)
      t_energies(:,:,:) = energies(:,:,1:index_now)
-#ifdef JECCD                   
-     if (allocated(t_energies2)) call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)     
-     call tr_allocate(t_energies2,1,n_tor,1,2,1,index_now, &
-          "energies2",CAT_UNKNOWN)
+#ifdef JECCD
+     if (allocated(t_energies2)) call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)
+     call tr_allocate(t_energies2,1,n_tor,1,2,1,index_now,"energies2",CAT_UNKNOWN)
      t_energies2(:,:,:) = t_energies2(:,:,1:index_now)
 
      if (allocated(t_energies3)) call tr_deallocate(t_energies3,"energies3",CAT_UNKNOWN)
-     call tr_allocate(t_energies3,1,n_tor,1,2,1,index_now, &
-          "energies3",CAT_UNKNOWN)
+     call tr_allocate(t_energies3,1,n_tor,1,2,1,index_now, "energies3",CAT_UNKNOWN)
      t_energies3(:,:,:) = t_energies3(:,:,1:index_now)
 
 #ifdef JEC2DIAG
      if (allocated(t_energies4)) call tr_deallocate(t_energies4,"energies4",CAT_UNKNOWN)
-     call tr_allocate(t_energies4,1,n_tor,1,2,1,index_now, &
-          "energies4",CAT_UNKNOWN)
+     call tr_allocate(t_energies4,1,n_tor,1,2,1,index_now, "energies4",CAT_UNKNOWN)
      t_energies4(:,:,:) = t_energies4(:,:,1:index_now)
 #endif
 #endif
 
-end if
+  end if
 
   !
   do i=1,node_list%n_nodes
@@ -299,30 +301,30 @@ end if
      print*,'pglobal_id = ',pglobal_id, &
           ' ==> error for opening of HDF5 file',filename
   end if
-  
+
   ! -> Save version of revision control system
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   version_control = trim(adjustl(version_control))
   call HDF5_char_saving(file_id,version_control,"RCS_version"//char(0))
 
   ! -> Save mod_parameters
-  call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0)) 
-  call HDF5_integer_saving(file_id,n_var,'n_var'//char(0)) 
-  call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0)) 
-  call HDF5_integer_saving(file_id,n_order,'n_order'//char(0)) 
-  call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0)) 
-  call HDF5_integer_saving(file_id,n_period,'n_period'//char(0)) 
-  call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0)) 
-  call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_elements_max,'n_elements_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_boundary_max,'n_boundary_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_pieces_max,'n_pieces_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_degrees,'n_degrees'//char(0)) 
-  call HDF5_integer_saving(file_id,nref_max,'nref_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_ref_list,'n_ref_list'//char(0)) 
+  call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0))
+  call HDF5_integer_saving(file_id,n_var,'n_var'//char(0))
+  call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
+  call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
+  call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
+  call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
+  call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0))
+  call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))
+  call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0))
+  call HDF5_integer_saving(file_id,n_elements_max,'n_elements_max'//char(0))
+  call HDF5_integer_saving(file_id,n_boundary_max,'n_boundary_max'//char(0))
+  call HDF5_integer_saving(file_id,n_pieces_max,'n_pieces_max'//char(0))
+  call HDF5_integer_saving(file_id,n_degrees,'n_degrees'//char(0))
+  call HDF5_integer_saving(file_id,nref_max,'nref_max'//char(0))
+  call HDF5_integer_saving(file_id,n_ref_list,'n_ref_list'//char(0))
 
-  ! -> 
+  ! ->
   call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
   call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
   call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
@@ -381,7 +383,7 @@ end if
   call HDF5_real_saving(file_id,eta,'eta'//char(0))
   call HDF5_real_saving(file_id,visco,'visco'//char(0))
   call HDF5_real_saving(file_id,visco_par,'visco_par'//char(0))
-  call HDF5_integer_saving(file_id,index_now,'index_now'//char(0)) 
+  call HDF5_integer_saving(file_id,index_now,'index_now'//char(0))
   call HDF5_real_saving(file_id,t_now,'t_now'//char(0))
   call HDF5_integer_saving(file_id,h5_nbsave_all,'h5_nbsave_all'//char(0))
 
@@ -390,7 +392,7 @@ end if
      call HDF5_array3D_saving(file_id,t_energies, &
           n_tor,2,index_now,'energies'//char(0))
      !           n_tor,2,index_now,'energies'//char(0))
-#ifdef JECCD                   
+#ifdef JECCD
      call HDF5_array3D_saving(file_id,t_energies2, &
           n_tor,2,index_now,'energies2'//char(0))
      !           n_tor,2,index_now,'energies2'//char(0))
@@ -424,7 +426,7 @@ end if
   end if
 
 
-  ! Export restart vacuum 
+  ! Export restart vacuum
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
 
   ! -> clode file
@@ -457,20 +459,6 @@ end if
   call tr_deallocate(t_sons,"sons",CAT_UNKNOWN)
   call tr_deallocate(t_contain_node,"contain_node",CAT_UNKNOWN)
   call tr_deallocate(t_nref,"nref",CAT_UNKNOWN)
-
-  if (index_now .gt. 0) then
-     call tr_deallocate(t_xtime,"xtime",CAT_UNKNOWN)
-     call tr_deallocate(t_energies,"energies",CAT_UNKNOWN)
-#ifdef JECCD
-     call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)
-     call tr_deallocate(t_energies3,"energies3",CAT_UNKNOWN)
-#ifdef JEC2DIAG
-     call tr_deallocate(t_energies4,"energies4",CAT_UNKNOWN)
-#endif
-#endif
-  end if
-
-#endif
 
   return
 end subroutine export_hdf5_restart

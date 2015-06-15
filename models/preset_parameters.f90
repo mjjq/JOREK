@@ -1,31 +1,31 @@
 !> Presets input parameters to reasonable default values.
-!! 
+!!
 !! The model-specific routines initialise_parameters may overwrite
 !! these defaults according to the requirements of the respective
 !! model.
 subroutine preset_parameters
-  
+
   use phys_module
   use mumps_module,  only: use_mumps, no_zeros_mumps
   use murge_module,  only: use_murge, use_murge_element
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
-  
+
   implicit none
-  
+
   time_evol_scheme = 'Crank-Nicholson'
-  
+
   n_tor_fft_thresh = 5
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
-  
+
   ! --- DoubleNull flag
   xcase = LOWER_XPOINT
-  
+
   tstep    = 1.d0
   tstep_n  = 1.d0
   nstep    = 0
   nstep_n  = 0
-  
+
   eta_T_dependent   = .true.
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
@@ -34,7 +34,7 @@ subroutine preset_parameters
   visco = 1.d-5
   visco_par = 1.d-5
   visco2    = 0.d0
-  
+
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)
 
@@ -51,7 +51,7 @@ subroutine preset_parameters
   bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
-  
+
   n_R       = 0
   n_Z       = 0
 
@@ -68,7 +68,7 @@ subroutine preset_parameters
   n_private = 5
   n_up_leg  = 0
   n_up_priv = 0
-  
+
   n_ext = 0
 
   psi_axis_init = -0.1d0
@@ -88,13 +88,13 @@ subroutine preset_parameters
   SIG_leg_1   = 0.2d0
   SIG_up_leg_0= 0.05d0
   SIG_up_leg_1= 0.2d0
-  
+
   dPSI_open    = 0.11
   dPSI_outer   = 0.11
   dPSI_inner   = 0.11
   dPSI_private = 0.03
   dPSI_up_priv = 0.03
-  
+
   R_geo     = 10.d0
   Z_geo     = 0.d0
   amin      = 1.d0
@@ -144,7 +144,7 @@ subroutine preset_parameters
   R_end   =  0.1d0
   Z_begin = -0.1d0
   Z_end   = 0.1d0
-  
+
   ZK_perp(:) = 0.d0
   ZK_perp(1) = 1.d-5; ZK_perp(2) = 0.d0; ZK_perp(3)= 0.d0; ZK_perp(4)= 99.d0; ZK_perp(5) = 99.d0
   ZK_par     = 1.d0
@@ -152,11 +152,11 @@ subroutine preset_parameters
   D_perp(:)  = 0.d0
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
-  
+
   D_prof_neg  = 1.d-5
   ZK_prof_neg = 1.d-5
   T_min       = 0.0
-  
+
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
 
@@ -172,7 +172,7 @@ subroutine preset_parameters
   particlesource      = 1.e-5
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
-  
+
   tauIC = 0.d0
   Wdia  = .false.
 
@@ -197,10 +197,13 @@ subroutine preset_parameters
   pellet_delta_psi  = 999.d0
   pellet_velocity_R = 0.d0
   pellet_velocity_Z = 0.d0
-  pellet_particles  = 0.d0  
+  pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
- 
+
+  t_step_particles  = 0.01
+  n_step_particles  = 0
+
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0
@@ -225,15 +228,15 @@ subroutine preset_parameters
   normalized_velocity_profile = .true.
 
   produce_live_data = .true.
-  
+
   linear_run         = .false.
-  
+
   export_for_nemec      = .false.
 #ifdef USE_HDF5
   save_diagnostics_HDF5 = .false.
   h5_diag_nbtime        = 10.d0
 #endif
-  
+
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
   gmres_tol          = 1.d-8                ! converge tolerance GMRES
@@ -242,25 +245,25 @@ subroutine preset_parameters
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
-  
+
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
   use_murge          = .false.              ! Use MURGE interface to PASTIX solver
   use_murge_element  = .false.              ! Build the matrix through murge, not with a CSC.
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
-  
+
   refinement         = .false.              ! enable mesh refinement
-  
+
   grid_to_wall       = .false.              ! extend the grid to a physical wall
-  
+
   adaptive_time      = .false.              ! requires no_mpi for Pastix library
-  
+
   equil              = .true.               ! compute equilibrium
-  
-  bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
+
+  bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases)
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
-  
+
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
   RMP_psi_cos_file   = 'none'
@@ -275,19 +278,19 @@ subroutine preset_parameters
   neo_file ='none'
   amu_neo_const = 0.
   aki_neo_const = 0.
-  
+
 
   n_limiter = 0
   R_limiter = 0.d0
   Z_limiter = 0.d0
-  
+
  !======================MB rotation profile
-  V_0=0.d0   
-  V_1=0.d0    
+  V_0=0.d0
+  V_1=0.d0
   V_coef=0.d0
   V_coef(1)=0.d0
   V_coef(4)=0.1
-  V_coef(5)=1. 
+  V_coef(5)=1.
 !======================MB
 
 !======================AF Massive Gas Injection Parameters

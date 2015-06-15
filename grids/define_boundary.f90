@@ -7,7 +7,7 @@ subroutine Define_Boundary
 ! output is contained in the module boundary
 !---------------------------------------------------------------------
 use constants
-use tr_module 
+use tr_module
 use phys_module
 
 implicit none
@@ -65,12 +65,12 @@ if (mf .le. 0) then
 
       r_tmp(i)   = sqrt(rp**2+zp**2)
 
-      if (xpoint) then      
+      if (xpoint) then
         psi_tmp(i) =  - xshift * sin(tht_i) + xleft * cos(tht_i) &
                  + xampl*(-1.d0 + (xwidth*(tht_i-xtheta)/xsig)**2)* exp( - ((tht_i-xtheta)/xsig)**2)
       else
         psi_tmp(i) = 0.d0
-      endif	
+      endif
 
     enddo
 
@@ -99,31 +99,31 @@ if (mf .le. 0) then
 !      if (theta      .lt. 0.5d0*pi)   tht_i = tht_i + 2.d0*pi
 
       r_tmp(i)   = sqrt(rp**2+zp**2)
-      
-      if (xpoint) then      
+
+      if (xpoint) then
         psi_tmp(i) = psi_boundary(i) - xshift * sin(tht_i) + xleft * cos(tht_i) &
                    + xampl*(-1.d0 + (xwidth*(tht_i-xtheta)/xsig)**2)* exp( - ((tht_i-xtheta)/xsig)**2)
       else
         psi_tmp(i) = psi_boundary(i)
-      endif	
+      endif
 
       if (i .gt. 1) then
         if (tht_tmp(i) .lt. tht_tmp(i-1)) then
           tht_tmp(i) = tht_tmp(i) + 2.d0*pi
         endif
       endif
-      	 
+
     enddo
 
     r_tmp(n_bnd)   = r_tmp(1)
     psi_tmp(n_bnd) = psi_tmp(1)
     tht_tmp(n_bnd) = tht_tmp(1) + 2.d0 * PI
-    
-    ! --- Debugging output: 
+
+    ! --- Debugging output:
     !do i=1,n_bnd
     !  write(*,*) tht_tmp(i),r_tmp(i),psi_tmp(i)
     !enddo
-    
+
   endif
 
   call tr_allocate(work,1,3*n_bnd,"work",CAT_GRID)
@@ -135,10 +135,10 @@ if (mf .le. 0) then
   call lincol(1)
   call lplot6(1,1,tht_tmp,psi_boundary,-n_bnd,'psi at boundary')
   call lincol(0)
-  
+
   call tr_deallocate(work,"work",CAT_GRID)
 
-  mf = 256
+  mf = 2048
 
   do j=1, mf
 

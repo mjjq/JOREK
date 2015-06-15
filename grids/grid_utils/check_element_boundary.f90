@@ -1,42 +1,36 @@
-subroutine check_element_boundary(element_list,i_elm,x,x_prev,j_elm,y,delta_x,changed)
+subroutine check_element_boundary(element_list,i_elm,x,x_prev,j_elm,y,delta_x,changed,lost,search)
 use data_structure
 implicit none
 
 type (type_element_list) :: element_list
 integer                  :: i_elm, j_elm, i_side
 real*8                   :: x(2), x_prev(2), y(2), delta_x(2), x_in(2)
-logical                  :: changed
+logical                  :: changed, lost, search
 
 changed = .false.
-if (maxval(abs(x-0.5)) .le. 0.5) return
+lost    = .false.
+search  = .false.
+
+if (maxval(abs(x(1:2)-0.5)) .le. 0.5) return
 
 delta_x = 0.
 i_side  = 0.
 
 if (x(1) .gt. 1.0) then
   i_side = 2
-  delta_x(1) = 1. - x_prev(1)
-  delta_x(2) = (x(2) - x_prev(2)) / (x(1)-x_prev(1)) * (1.-x_prev(1))
-  x(1) = 1.0
-  x(2) = x_prev(2) + delta_x(2)
 elseif (x(1) .lt. 0.0) then
   i_side = 4
-  delta_x(1) = x(1)
-  delta_x(2) = (x(2)-x_prev(2))  /(x(1)-x_prev(1))*(0.-x_prev(1))
-  x(1) = 0.0
-  x(2) = x_prev(2) + delta_x(2)
 elseif (x(2) .gt. 1.0) then
   i_side = 3
-  delta_x(1) = (x(1)-x_prev(1))  /(x(2)-x_prev(2))*(1.-x_prev(2))
-  delta_x(2) = x(2) - 1.0
-  x(1) = x_prev(1) + delta_x(1)
-  x(2) = 1.0
 elseif (x(2) .lt. 0.0) then
   i_side = 1
-  delta_x(1) = (x(1)-x_prev(1))  /(x(2)-x_prev(2))*(0.-x_prev(2))
-  delta_x(2) = x(2)
-  x(1) = x_prev(1) + delta_x(1)
-  x(2) = 0.0
+else
+  return
+endif
+
+if (element_list%element(i_elm)%neighbours(i_side) .lt. 0) then
+  search = .true.
+  return
 endif
 
 if (i_side .gt. 0) then
@@ -52,9 +46,11 @@ if (i_side .gt. 0) then
     x     = y
 
     changed = .true.
+
   else
 
-    write(*,*) 'particle is lost!'
+    lost = .true.
+ !   write(*,*) 'particle is lost!'
 
   endif
 

@@ -2,7 +2,7 @@
 !! a diagnostic program by the routine import_restart.
 !
 ! Export in a binary restart file
-subroutine export_binary_restart(node_list,element_list,filename)
+subroutine export_binary_restart(node_list,element_list,filename,format_rst)
 
   use parameters
   use data_structure
@@ -18,6 +18,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
   character*(*),           intent(in) :: filename
+  integer,                 intent(in) :: format_rst
 
   ! --- Local variables
   integer :: i
@@ -76,7 +77,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
 #ifdef JEC2DIAG
      write(21) energies4(:,:,1:index_now)
 #endif
-
 #endif
   endif
 
@@ -128,7 +128,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use phys_module
   use pellet_module
   use vacuum, only : export_HDF5_restart_vacuum
-
 
 #ifdef USE_HDF5
   use hdf5
@@ -459,6 +458,20 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_deallocate(t_sons,"sons",CAT_UNKNOWN)
   call tr_deallocate(t_contain_node,"contain_node",CAT_UNKNOWN)
   call tr_deallocate(t_nref,"nref",CAT_UNKNOWN)
+
+  if (index_now .gt. 0) then
+     call tr_deallocate(t_xtime,"xtime",CAT_UNKNOWN)
+     call tr_deallocate(t_energies,"energies",CAT_UNKNOWN)
+#ifdef JECCD
+     call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)
+     call tr_deallocate(t_energies3,"energies3",CAT_UNKNOWN)
+#ifdef JEC2DIAG
+     call tr_deallocate(t_energies4,"energies4",CAT_UNKNOWN)
+#endif
+#endif
+  end if
+
+#endif
 
   return
 end subroutine export_hdf5_restart

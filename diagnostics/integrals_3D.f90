@@ -10,7 +10,7 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
-per#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500)
 use mgi_module
 #endif
 

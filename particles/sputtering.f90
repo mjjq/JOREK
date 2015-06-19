@@ -65,12 +65,12 @@ write(*,*) Y,Y_0
 return
 end
 
-program try
-real*8 :: E_in
+!program try
+!real*8 :: E_in
 
-E_in = 100.
-angle_in = 3.1415926 / 3.
+!E_in = 100.
+!angle_in = 3.1415926 / 3.
 
-call  sputtering(2,E_in,angle_in,Y,angle_out,E_out)
+!call  sputtering(2,E_in,angle_in,Y,angle_out,E_out)
 
-end
+!end

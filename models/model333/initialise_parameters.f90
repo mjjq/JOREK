@@ -89,6 +89,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 first_target_point, last_target_point,		    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme,                                   &
+                corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, T_min
 
 if (my_id .eq. 0) then

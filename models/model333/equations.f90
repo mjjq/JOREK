@@ -884,7 +884,7 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
                 - visco_par * (v_x * Vt_x_psi   + v_y * Vt_y_psi)   * R 					* xjac * theta * tstep
   else
     amat(7,1) = amat(7,1)                                                                                                               &
-                - visco_par * 2.d0 * PI * FO * (v_x * Omega_tor_x_psi   + v_y * Omega_tor_y_psi)   * R		* xjac * theta * tstep
+                - visco_par * 2.d0 * PI * F0 * (v_x * Omega_tor_x_psi   + v_y * Omega_tor_y_psi)   * R		* xjac * theta * tstep
   endif
   
   amat_k(7,1) = - 0.5d0 * r0 * vpar0**2 * BB2_psi * F0 / R * v_p						* xjac * theta * tstep 

@@ -44,8 +44,8 @@ real*8     :: zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t
 real*8     :: u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_st, u0_tt, u0_xx, u0_xy, u0_yy 
 real*8     :: w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_st, w0_tt, w0_xx, w0_xy, w0_yy
 real*8     :: Vpar0, Vpar0_x, Vpar0_y, Vpar0_p, Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt, vpar0_xx, vpar0_xy, vpar0_yy
-real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy, r0_hat, r0_x_hat, r0_y_hat
-real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy
+real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy, r0_hat, r0_x_hat, r0_y_hat, r0_corr
+real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T0_corr
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_yy, psi_xy
 real*8     :: zj, zj_x, zj_y, zj_p, zj_s, zj_t, zj_ss, zj_st, zj_tt
 real*8     :: vpar, vpar_x, vpar_y, vpar_s, vpar_t, vpar_p, vpar_ss, vpar_st, vpar_tt, vpar_xx, vpar_xy, vpar_yy
@@ -321,6 +321,7 @@ do ms=1, n_gauss
      w0_st = eq_st(mp,4,ms,mt)
 
      r0    = eq_g(mp,5,ms,mt)
+     r0_corr = corr_neg_dens(r0)
      r0_x  = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
      r0_y  = ( - x_t(ms,mt) * eq_s(mp,5,ms,mt) + x_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
      r0_p  = eq_p(mp,5,ms,mt)
@@ -335,6 +336,7 @@ do ms=1, n_gauss
      r0_y_hat = BigR**2 * r0_y
 
      T0    = eq_g(mp,6,ms,mt)
+     T0_corr = corr_neg_temp(T0)
      T0_x  = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
      T0_y  = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
      T0_p  = eq_p(mp,6,ms,mt)
@@ -479,9 +481,9 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+       eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
+       deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * (3.75d0) * TO_corr**(-3.5d0) * T_0**(1.5d0)
        if ( xpoint2 .and. (T0 .lt. T_min) ) then
          eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
          deta_dT   = 0.d0
@@ -495,8 +497,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+       visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
        if ( xpoint2 .and. (T0 .lt. T_min) ) then
          visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
          dvisco_dT = 0.d0
@@ -508,8 +510,8 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent parallel heat diffusivity
      if ( ZKpar_T_dependent ) then
-       ZKpar_T   = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-       dZKpar_dT = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
+       ZKpar_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+       dZKpar_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0)
        if (ZKpar_T .gt. ZK_par_max) then
          ZKpar_T   = Zk_par_max
          dZKpar_dT = 0.d0
@@ -619,8 +621,8 @@ do ms=1, n_gauss
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
 
-                      - v * tauIC/(corr_neg_dens(r0)*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &
-                      + v * tauIC/(corr_neg_dens(r0)*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
+                      - v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &
+                      + v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
 
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
                       + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
@@ -965,7 +967,7 @@ do ms=1, n_gauss
            endif
 ! ------------------------------------------------------ NEO
 
-                 amat_22 = - BigR**3 * corr_neg_dens(r0) * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                                 &
+                 amat_22 = - BigR**3 * r0_corr * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                                 &
                            + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                              * theta * tstep &
                            + BigR**2 * (u_x * u0_x + u_y * u0_y) * (v_x * r0_y_hat - v_y * r0_x_hat) * xjac * theta * tstep &
 			   
@@ -1233,7 +1235,7 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
 
-                 amat_66 =   v * corr_neg_dens(r0) * T   * BigR * xjac * (1.d0 + zeta)    &
+                 amat_66 =   v * r0_corr * T   * BigR * xjac * (1.d0 + zeta)    &
 
                            - v * r0 * BigR**2 * ( T_s  * u0_t - T_t  * u0_s)                       * theta * tstep &
                            - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                       * theta * tstep &
@@ -1372,7 +1374,7 @@ do ms=1, n_gauss
                            + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
                            + v * F0 / BigR * (T_p * r0 + T * r0_p)                  * xjac * theta * tstep
 
-                 amat_77 = v * Vpar * corr_neg_dens(r0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
+                 amat_77 = v * Vpar * r0_corr * F0**2 / BigR * xjac * (1.d0 + zeta) &
                          + v * (particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR  * xjac * theta * tstep &
 		      
                          + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)                * theta * tstep &

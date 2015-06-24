@@ -483,7 +483,7 @@ do ms=1, n_gauss
      if ( eta_T_dependent ) then
        eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * TO_corr**(-3.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
        if ( xpoint2 .and. (T0 .lt. T_min) ) then
          eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
          deta_dT   = 0.d0

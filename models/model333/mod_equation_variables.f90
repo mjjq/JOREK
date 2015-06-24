@@ -14,7 +14,7 @@ module equation_variables
   real*8 	:: Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source
   
   ! --- Diffusivities
-  real*8 	:: rho_corr, T_corr
+  real*8 	:: r0_corr, T0_corr
   real*8 	:: eta_T,    deta_dT, d2eta_d2T
   real*8 	:: visco_T,  dvisco_dT
   real*8 	:: D_prof
@@ -100,7 +100,7 @@ module equation_variables
   !$omp 	current_source, particle_source, heat_source, total_rho_source,									&
   !$omp 	source_mgi, source_pellet, source_volume,											&
   !$omp 	Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source,				                                &
-  !$omp 	rho_corr, T_corr,														&
+  !$omp 	r0_corr, T0_corr,														&
   !$omp 	eta_T,    deta_dT, d2eta_d2T,													&
   !$omp 	visco_T,  dvisco_dT,														&
   !$omp 	D_prof,																&

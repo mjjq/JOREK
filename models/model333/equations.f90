@@ -858,11 +858,16 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
   
   ! --- Internal variables
   real*8 :: Btheta2_psi
-  real*8 :: Vt_x_psi, Vt_y_psi
+  real*8 :: Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Omega_tor_y_psi
     
   Btheta2_psi = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) / R**2
-  Vt_x_psi    = dV_dpsi_source * psi_x
-  Vt_y_psi    = dV_dpsi_source * psi_y
+  if (normalized_velocity_profile) then
+    Vt_x_psi    = dV_dpsi_source * psi_x
+    Vt_y_psi    = dV_dpsi_source * psi_y
+  else
+    Omega_tor_x_psi    = dV_dpsi_source * psi_x
+    Omega_tor_y_psi    = dV_dpsi_source * psi_y
+  endif
   
   ! -----------------------------
   ! --- The LHS terms (main part)
@@ -873,8 +878,14 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
                 + 0.5d0 * v  * vpar0**2 * BB2_psi * (ps0_x * r0_y - ps0_y * r0_x)				* xjac * theta * tstep	&
                 - 0.5d0 * v  * vpar0**2 * BB2_psi * F0 / R * r0_p						* xjac * theta * tstep	&
                 + v * total_rho_source * vpar0 * BB2_psi * R	 						* xjac * theta * tstep	&
-                - visco_par * (v_x * Vt_x_psi   + v_y * Vt_y_psi)   * R 					* xjac * theta * tstep	&
                 + v * r0 * vpar0 / R * (ps0_x * psi_x + ps0_y * psi_y)						* xjac * (1.d0 + zeta) 
+  if (normalized_velocity_profile) then
+    amat(7,1) = amat(7,1)                                                                                                               &
+                - visco_par * (v_x * Vt_x_psi   + v_y * Vt_y_psi)   * R 					* xjac * theta * tstep
+  else
+    amat(7,1) = amat(7,1)                                                                                                               &
+                - visco_par * 2.d0 * PI * FO * (v_x * Omega_tor_x_psi   + v_y * Omega_tor_y_psi)   * R		* xjac * theta * tstep
+  endif
   
   amat_k(7,1) = - 0.5d0 * r0 * vpar0**2 * BB2_psi * F0 / R * v_p						* xjac * theta * tstep 
            

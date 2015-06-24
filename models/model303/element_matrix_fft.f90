@@ -61,14 +61,14 @@ real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_51_n, amat_52, amat_55, amat_56, amat_57, amat_57_k
 real*8     :: amat_61, amat_62, amat_65, amat_66, amat_67, amat_65_k, amat_65_kn, amat_67_k, amat_16, amat_13
-real*8     :: amat_71, amat_72, amat_75, amat_76, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
+real*8     :: amat_71_k, amat_71, amat_72, amat_75, amat_76, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
 real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n, amat_57_kn, amat_75_k
 real*8     :: amat_77, amat_77_k, amat_77_n, amat_77_kn
 real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 !==================MB: velocity profile is kept by a source which compensating diffusion
 real*8     :: Vt0,Omega_tor0_x,Omega_tor0_y,Vt0_x,Vt0_y
-real*8     :: V_source(n_gauss,n_gauss)
+real*8     :: V_source(n_gauss,n_gauss), Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Omega_tor_y_psi
 real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
 !=======================================
@@ -898,6 +898,19 @@ do ms=1, n_gauss
              rho_y_hat = BigR**2 * rho_y
 
              Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+             Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
+             Bgrad_rho_psi      = ( r0_x * psi_y - r0_y * psi_x ) / BigR
+             Bgrad_rho_rho      = ( rho_x * ps0_y - rho_y * ps0_x ) / BigR
+             Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
+             BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+
+             if (normalized_velocity_profile) then
+                Vt_x_psi    = dV_dpsi_source(ms,mt) * psi_x
+                Vt_y_psi    = dV_dpsi_source(ms,mt) * psi_y
+             else
+                Omega_tor_x_psi = dV_dpsi_source(ms,mt)*psi_x
+                Omega_tor_y_psi = dV_dpsi_source(ms,mt)*psi_y
+             endif
 
              index_kl = n_var*(n_order+1)*(k-1) + n_var * (l-1) + 1   ! index in the ELM matrix
 
@@ -907,7 +920,9 @@ do ms=1, n_gauss
 
              amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                              &
                      - v * (psi_s * u0_t - psi_t * u0_s)                                  * theta * tstep &
-                     + v * tauIC/(r0*BB2) * F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep 
+                     + v * tauIC/(r0*BB2) * F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep &
+                     - v * tauIC/(r0*BB2**2) * BB2_psi * F0**2/BigR**2 * (ps0_x*p0_y - ps0_y*p0_x)* xjac * theta * tstep &
+                     + v * tauIC/(r0*BB2**2) * BB2_psi * F0**3/BigR**3 * eps_cyl * p0_p		  * xjac * theta * tstep
 
              amat_12 = -  v * (ps0_s * u_t - ps0_t * u_s)                             * theta * tstep
 
@@ -1070,11 +1085,6 @@ do ms=1, n_gauss
 !###################################################################################################
 !#  equation 5   (density equation)                                                                #
 !###################################################################################################
-             Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
-             Bgrad_rho_psi      = ( r0_x * psi_y - r0_y * psi_x ) / BigR
-             Bgrad_rho_rho      = ( rho_x * ps0_y - rho_y * ps0_x ) / BigR
-             Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
-             BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
 
              amat_51 = - (D_par-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star     * Bgrad_rho     * xjac * theta * tstep &
@@ -1366,8 +1376,11 @@ do ms=1, n_gauss
 
 	               + v * (P0_s * psi_t - P0_t * psi_s)                                       * theta * tstep &
 
-                       + 0.5d0 * r0 * vpar0**2 * BB2 * (psi_s * v_t - psi_t * v_s)               * theta * tstep &
-                       + 0.5d0 * v  * vpar0**2 * BB2 * (psi_s * r0_t - psi_t * r0_s)             * theta * tstep &
+                       + 0.5d0 * r0 * vpar0**2 * BB2     * (psi_x * v_y  - psi_y * v_x)	  * xjac * theta * tstep &
+                       + 0.5d0 * r0 * vpar0**2 * BB2_psi * (ps0_x * v_y  - ps0_y * v_x)	  * xjac * theta * tstep &
+                       + 0.5d0 * v  * vpar0**2 * BB2     * (psi_x * r0_y - psi_y * r0_x)  * xjac * theta * tstep &
+                       + 0.5d0 * v  * vpar0**2 * BB2_psi * (ps0_x * r0_y - ps0_y * r0_x)  * xjac * theta * tstep &
+                       - 0.5d0 * v  * vpar0**2 * BB2_psi * F0 / BigR * r0_p		  * xjac * theta * tstep &
 
                        + v*(particle_source(ms,mt) + source_pellet)*vpar0* BB2_psi * BigR * xjac * theta * tstep &
  
@@ -1386,6 +1399,15 @@ do ms=1, n_gauss
                        + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
                                  * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
                                  * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep 
+
+             if (normalized_velocity_profile) then
+                amat_71 = amat_71  - visco_par * (v_x * Vt_x_psi   + v_y * Vt_y_psi) * BigR * xjac * theta * tstep	
+             else
+                amat_71 = amat_71  - visco_par * 2.d0 * PI * F0 * (v_x * Omega_tor_x_psi + v_y * Omega_tor_y_psi) * BigR * xjac * theta * tstep	
+             endif
+
+             amat_71_k = - 0.5d0 * r0 * vpar0**2 * BB2_psi * F0 / BigR * v_p    * xjac * theta * tstep 
+
 
              amat_72 = 0.d0 
 
@@ -1593,6 +1615,7 @@ do ms=1, n_gauss
              ELM_n(mp,ij6,kl7)  =  ELM_n(mp,ij6,kl7)  + wst * amat_67_n
 
              ELM_p(mp,ij7,kl1)  =  ELM_p(mp,ij7,kl1)  + wst * amat_71
+             ELM_k(mp,ij7,kl1)  =  ELM_k(mp,ij7,kl1)  + wst * amat_71_k
 
              ELM_p(mp,ij7,kl2)  =  ELM_p(mp,ij7,kl2)  + wst * amat_72
 

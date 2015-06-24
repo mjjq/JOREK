@@ -338,7 +338,7 @@ do ms=1, n_gauss
      r0_st = eq_st(mp,5,ms,mt)
      r0_tt = eq_tt(mp,5,ms,mt)
 
-     r0_hat   = BigR**2 * abs(r0)
+     r0_hat   = BigR**2 * r0
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
      r0_y_hat = BigR**2 * r0_y
 
@@ -362,7 +362,7 @@ do ms=1, n_gauss
      Vpar0_st = eq_st(mp,7,ms,mt)
      Vpar0_tt = eq_tt(mp,7,ms,mt)
 
-     P0    = abs(r0 * T0)
+     P0    = r0 * T0
      P0_x  = r0_x * T0 + r0 * T0_x
      P0_y  = r0_y * T0 + r0 * T0_y
      P0_s  = r0_s * T0 + r0 * T0_s
@@ -631,8 +631,8 @@ do ms=1, n_gauss
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
 
-                      - v * tauIC/(r0*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &
-                      + v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
+                      - v * tauIC/(corr_neg_dens(r0)*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &
+                      + v * tauIC/(corr_neg_dens(r0)*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
 
                       + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
 
@@ -963,19 +963,22 @@ do ms=1, n_gauss
            endif
 ! ------------------------------------------------------ NEO
 
-             amat_22 = - BigR * r0_hat * (v_x * u_x + v_y * u_y) * xjac  * (1.d0 + zeta)                                &
+             amat_22 = - BigR**3 * corr_neg_dens(r0) * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                                 &
                        + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                              * theta * tstep &
                        + BigR**2 * (u_x * u0_x + u_y * u0_y) * (v_x * r0_y_hat - v_y * r0_x_hat) * xjac * theta * tstep &
-
+                       
                        + tauIC * BigR**3 * p0_y * (v_x* u_x + v_y * u_y)                         * xjac * theta * tstep &
+                       
                        + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
-
+                       
                        - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
-
+                       
                        + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)       &
                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &
+                                 
                        + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)     &
                                  * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep
+             
 
 !---------------------------------------- NEO
                  if ( NEO ) then
@@ -1270,7 +1273,7 @@ do ms=1, n_gauss
                               * (     + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
 
-             amat_66 =   v * abs(r0) * T   * BigR * xjac * (1.d0 + zeta)     &
+             amat_66 =   v * corr_neg_dens(r0) * T   * BigR * xjac * (1.d0 + zeta)     &
                        - v * r0 * BigR**2 * ( T_s  * u0_t - T_t  * u0_s)                        * theta * tstep &
 		       - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * theta * tstep &
 
@@ -1439,7 +1442,7 @@ do ms=1, n_gauss
 
              amat_76_n= + v * F0 / BigR * T_p * R0                              * xjac * theta * tstep
 
-             amat_77 = v * Vpar * abs(R0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
+             amat_77 = v * Vpar * corr_neg_dens(R0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
 
                      + v*(particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR * xjac * theta * tstep &
 

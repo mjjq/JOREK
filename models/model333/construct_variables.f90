@@ -570,7 +570,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     ! --- Toroidal momentum source (NBI)
   dV_dpsi_source = 0.d0
   dV_dz_source   = 0.d0
-  if ( abs(V_0) .ge. 1.d-12 ) then 
+  if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
     call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
       dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
       dV_dpsi2_dz)

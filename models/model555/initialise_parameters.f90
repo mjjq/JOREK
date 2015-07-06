@@ -84,7 +84,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_length, n_zero, ksi_ion,               &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 output_bnd_elements,                                &
-                wall_file,                                          &
+                wall_file, rot_file,                                &
                 first_target_point, last_target_point,		    &
                 n_limiter, R_limiter, Z_limiter, bc_natural_open, bc_natural_flux
 

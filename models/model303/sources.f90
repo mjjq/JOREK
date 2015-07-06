@@ -146,7 +146,7 @@ if (xpoint2) then
     d2atn_z          = 0.d0
   endif
 
-  velocity_profile =   prof1        * atn_z * atn_z_u
+  velocity_profile=   prof1        * atn_z * atn_z_u
   dV_dpsi         =   dprof1_dpsi  * atn_z * atn_z_u
   dV_dpsi2        =   dprof1_dpsi2 * atn_z * atn_z_u
   dV_dpsi3        =   dprof1_dpsi3 * atn_z * atn_z_u
@@ -175,5 +175,6 @@ if ( .not. num_rot ) then
 end if
 
 return
-end
+end subroutine velocity
 !============================================Marina 14.02.2011================
+

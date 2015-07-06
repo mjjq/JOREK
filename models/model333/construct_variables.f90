@@ -270,7 +270,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 	    - xjac_x * (- w0_s * x_t + w0_t * x_s )  / xjac**2
   
   ! --- Variable 5
-  rho_corr = corr_neg_dens(r0)
+  r0_corr = corr_neg_dens(r0)
   r0_x     = (   y_t * r0_s - y_s * r0_t ) / xjac
   r0_y     = ( - x_t * r0_s + x_s * r0_t ) / xjac
   r0_xx    = (r0_ss * y_t**2 - 2.d0*r0_st * y_s*y_t + r0_tt * y_s**2  & 	    
@@ -291,7 +291,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   r0_y_hat = R**2 * r0_y
   
   ! --- Variable 6
-  T_corr    = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
+  T0_corr    = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
   T0_x      = (   y_t * T0_s  - y_s * T0_t ) / xjac
   T0_y      = ( - x_t * T0_s  + x_s * T0_t ) / xjac
   T0_xx     = (T0_ss * y_t**2 - 2.d0*T0_st * y_s*y_t + T0_tt * y_s**2	& 	    
@@ -399,9 +399,9 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Temperature dependent resistivity
   ! -------------------------------------
   if ( eta_T_dependent ) then
-    eta_T     =   eta   * (T_corr/T_0)**(-1.5d0)
-    deta_dT   = - eta	* (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
-    d2eta_d2T =   eta	* (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0)
+    eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
+    deta_dT   = - eta	* (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+    d2eta_d2T =   eta	* (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
   else
     eta_T     = eta
     deta_dT   = 0.d0
@@ -413,8 +413,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Temperature dependent viscosity
   ! -----------------------------------
   if ( visco_T_dependent ) then       
-    visco_T   =   visco * (T_corr/T_0)**(-1.5d0)
-    dvisco_dT = - visco * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
+    visco_T   =   visco * (T0_corr/T_0)**(-1.5d0)
+    dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
   else
     visco_T   = visco
     dvisco_dT = 0.d0
@@ -453,8 +453,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Parallel conductivity profiles (Braginskii model)
   ! -----------------------------------------------------
   if ( ZKpar_T_dependent ) then
-    K_par    = ZK_par * (T_corr/T_0)**(+2.5d0)
-    dK_par   = ZK_par * (2.5d0)  * T_corr**(+1.5d0) * T_0**(-2.5d0)
+    K_par    = ZK_par * (T0_corr/T_0)**(+2.5d0)
+    dK_par   = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0)
     if (K_par .gt. ZK_par_max) then
       K_par  = Zk_par_max
       dK_par = 0.d0
@@ -570,7 +570,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     ! --- Toroidal momentum source (NBI)
   dV_dpsi_source = 0.d0
   dV_dz_source   = 0.d0
-  if ( abs(V_0) .ge. 1.d-12 ) then 
+  if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
     call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
       dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
       dV_dpsi2_dz)

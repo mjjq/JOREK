@@ -81,6 +81,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
                 output_bnd_elements,                                &
+                corr_neg_temp_coef, corr_neg_dens_coef,             &
                 wall_file,                                          &
                 first_target_point, last_target_point,		    &
                 n_limiter, R_limiter, Z_limiter, bc_natural_open

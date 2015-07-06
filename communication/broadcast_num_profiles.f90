@@ -29,7 +29,7 @@ if ( num_rho ) then
   call MPI_BCAST(num_rho_y3,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
-if ( ((jorek_model == 303) .or. (jorek_model == 305)) .and. num_rot ) then
+if ( num_rot ) then
   call MPI_BCAST(num_rot_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
      call tr_allocate(num_rot_x,1,num_rot_len,"num_rot_x",CAT_UNKNOWN)

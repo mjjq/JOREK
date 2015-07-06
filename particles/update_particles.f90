@@ -30,7 +30,7 @@ real*8                    :: v_tmp(3), x_update, y_update ! Temporary values for
 real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U
 real*8                    :: psi, psi_s, psi_t, u_s, u_t, omega_norm
 real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
-real*8                    :: R_step, Z_step
+real*8                    :: R_step, Z_step, f
 real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, k, m, i_elm, j_elm, i_var(2), n_done, ifail, ielm_out, n_lost
 logical                   :: changed, lost, search
@@ -51,10 +51,10 @@ i_var = (/1, 2/)
 omega_norm = EL_CHG / (MASS_PROTON * central_mass) * SQRT(MU_ZERO * MASS_PROTON * central_mass * 1.D20)
 
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var, tp, rp, zp, pp, wp, mp, n_done) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var) &
 !$omp   private(i, j, k, particle, x, v, i_elm, j_elm, psi, psi_s, psi_t, psi_R, psi_Z, R, R_s, R_t, Z, Z_s, Z_t,st_jac,              &
-!$omp           qom, B0, B02, E0, v0, v_tmp, R_prev, Z_prev, delta_phi, f, R_step, Z_step, changed, lost, search,            &
-!$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, P, P_s, P_t, error_RZ, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
+!$omp           qom, B0, B02, E0, v_tmp, f, R_step, Z_step, changed, lost, search,            &
+!$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, P, P_s, P_t, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
 
 !$omp do
 do i = 1, particle_list%n_particles
@@ -109,7 +109,7 @@ do i = 1, particle_list%n_particles
     v       = v + E0
 
     ! Perform the full step rotation
-    v       = (v + 2.d0 * f / (1.d0 + f**2 * B02) * (+ cross_product(v,B0) &
+    v       = v + 2.d0 * f / (1.d0 + f**2 * B02) * (+ cross_product(v,B0) &
                                                      + f * B0 * dot_product(v,B0) &
                                                      - f * v * B02)
     
@@ -153,7 +153,7 @@ do i = 1, particle_list%n_particles
 
       if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
         exit ! Converged enough, we're done
-      else if (k == 3)
+      else if (k == 3) then
         write (*,*) "Newton iteration failed, change = ", (dot_product(x_prev-x,x_prev-x))
       endif
     enddo
@@ -190,7 +190,7 @@ do i = 1, particle_list%n_particles
 
           if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
             exit ! Converged enough, we're done
-          else if (k == 3)
+          else if (k == 3) then
             write (*,*) "Newton iteration after element change failed, change = ", (dot_product(x_prev-x,x_prev-x))
           endif
         enddo
@@ -203,7 +203,7 @@ do i = 1, particle_list%n_particles
       if (maxval(abs(x(1:2)-0.5)) .lt. 0.5) then
         ! We found the correct element, quit
         exit
-      else if (m == 4)
+      else if (m == 4) then
         write(*,*) "Error finding the right element"
         write(*,*) "Search for particle again, first routine did not work"
         call find_RZ(node_list,element_list,R_step,Z_step,R_out,Z_out,ielm_out,s_out,t_out,ifail)

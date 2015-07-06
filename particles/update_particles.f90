@@ -3,13 +3,13 @@
 !! The Boris method is adjusted for cylindrical coordinates.
 !! Some care must be taken when element boundaries are crossed.
 !! It is parallelized with OMP.
-subroutine update_particles(my_id,particle_list, t_step, n_step)
+!! See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
+subroutine update_particles(my_id, particle_list, t_step, n_step)
 
 use parameters
 use data_structure
 use nodes_elements
 use constants
-use clock_module
 use phys_module, only : F0, central_mass
 use mod_particles
 
@@ -23,21 +23,18 @@ integer, intent(in)       :: my_id              !< Id of the current process
 
 ! -- Local variables
 type (type_particle)      :: particle
-real*8                    :: B(3), B0(3), E0(3), x_prev(3), v_prev(3), P(2), P_s(2), P_t(2)
-real*8                    :: x(3), v(3), v0(3), v_up(3), delta_v(3), delta_phi, f
-real*8                    :: qom, B02, psi_R, psi_Z, psi_prev, U_R, U_Z, U_phi, U, U_prev
-real*8                    :: psi, psi_s, psi_t, u_s, u_t, tsecond, omega_norm
-real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac, delta_x(2)
-real*8                    :: R_prev, Z_prev, R_step, Z_step, error_RZ, R_axis, Z_axis, psi_axis, CR, CZ, r_crit2
-real*8                    :: R_out, Z_out, s_out, t_out, value_out
+real*8                    :: B0(3), E0(3) ! Local B and E field at particle position
+real*8                    :: x(3), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
+real*8                    :: P(2), P_s(2), P_t(2) ! Placeholder for evaluating variables and derivatives locally
+real*8                    :: v_tmp(3), x_update, y_update ! Temporary values for the coordinate system transformation
+real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U
+real*8                    :: psi, psi_s, psi_t, u_s, u_t, omega_norm
+real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
+real*8                    :: R_step, Z_step
+real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, k, m, i_elm, j_elm, i_var(2), n_done, ifail, ielm_out, n_lost
 logical                   :: changed, lost, search
 real*8                    :: t0, t1
-
-real*8, allocatable       :: rp(:,:), zp(:,:), tp(:), Wp(:,:), mp(:,:), pp(:,:)
-
-!allocate(rp(n_step,particle_list%n_particles),zp(n_step,particle_list%n_particles),pp(n_step,particle_list%n_particles))
-!allocate(Wp(n_step,particle_list%n_particles),tp(n_step),mp(n_step,particle_list%n_particles))
 
 write(*,'(A)') '*********************************************'
 write(*,'(A,i12,f12.8)') 'updating particles : ',n_step,t_step
@@ -53,24 +50,21 @@ i_var = (/1, 2/)
 ! It is Omega = qB/m sqrt(mu_0 rho) with q = e, m = m_p*central_mass and n = 10^20, divided by B
 omega_norm = EL_CHG / (MASS_PROTON * central_mass) * SQRT(MU_ZERO * MASS_PROTON * central_mass * 1.D20)
 
-! This is a measure for the size of the central element
-r_crit2 = 0.01 * (node_list%node(element_list%element(1)%vertex(1))%x(1,1) - node_list%node(element_list%element(1)%vertex(2))%x(1,1))**2
-
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var, tp, rp, zp, pp, wp, mp, n_done, r_crit2) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var, tp, rp, zp, pp, wp, mp, n_done) &
 !$omp   private(i, j, k, particle, x, v, i_elm, j_elm, psi, psi_s, psi_t, psi_R, psi_Z, R, R_s, R_t, Z, Z_s, Z_t,st_jac,              &
-!$omp           psi_prev, qom, B0, B02, E0, v0, delta_v, R_prev, Z_prev, delta_phi, R_step, Z_step, changed, lost, search,            &
-!$omp           R_axis, Z_axis, psi_axis, CR, CZ, U_prev,                                                                             &
-!$omp           U, U_s, U_t, U_R, U_Z, U_phi, delta_x, x_prev, v_prev, P, P_s, P_t, error_RZ, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
+!$omp           qom, B0, B02, E0, v0, v_tmp, R_prev, Z_prev, delta_phi, f, R_step, Z_step, changed, lost, search,            &
+!$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, P, P_s, P_t, error_RZ, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
 
 !$omp do
 do i = 1, particle_list%n_particles
 
   particle = particle_list%particle(i)
 
+  ! Skip this particle if it left the domain
   if (particle%lost) cycle
 
-  ! Get s,t,phi
+  ! Get s,t,phi,velocity and element index of the particle
   x(1:2) = particle%st
   x(3)   = particle%x(3)
   v      = particle%v
@@ -79,30 +73,22 @@ do i = 1, particle_list%n_particles
   ! Interpolate the fields to get psi and U at the current position
   call interp_PRZ(node_list,element_list,i_elm,i_var,2,x(1),x(2),x(3),P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
 
-  ! Save the curent values. This implies a zero previous step n-1/2 in the Boris method.
-  psi = P(1)
-  U   = P(2)
-
   ! Perform n_step Boris method steps here
   do j = 1, n_step
 
     ! This is the jacobian of the transformation from RZ to st
     st_jac = R_s * Z_t - R_t * Z_s
 
-    ! And these are the local derivatives
+    ! And these are the local derivatives to s and t
     psi_s = P_s(1); psi_t = P_t(1)
     u_s   = P_s(2); u_t   = P_t(2)
-
-    ! Save the previous values
-    psi_prev   = psi
-    U_prev     = U
 
     ! Calculate the derivatives to R and Z
     psi_R    = (  psi_s * Z_t - psi_t * Z_s ) / st_jac
     psi_Z    = (- psi_s * R_t + psi_t * R_s ) / st_jac
     U_R      = (  u_s   * Z_t - u_t   * Z_s ) / st_jac
     U_Z      = (- u_s   * R_t + u_t   * R_s ) / st_jac
-    ! And assume for now no change in the phi-direction
+    ! And assume for now no electric field in the phi-direction
     U_phi    = 0.d0
 
     ! Calculate the normalized fraction q/m
@@ -116,119 +102,126 @@ do i = 1, particle_list%n_particles
     E0     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi / R /) * qom * t_step / 2.
 
     ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
-    f = tan(qom * t_step / 2.d0 * sqrt(B02)) / sqrt(B02)
+    !f = tan(qom * t_step / 2.d0 * sqrt(B02)) / sqrt(B02)
+    f = qom * t_step / 2.d0
 
     ! Perform the first half step update (v0 = v^-)
-    v0       = v + E0
+    v       = v + E0
 
     ! Perform the full step rotation
-    v0       = (v0 + 2.d0 f / (1.d0 + f**2 * B02) * (+ cross_product(v0,B0) &
-                                                     + f * B0 * dot_product(v0,B0) &
-                                                     - f * v0 * B02)
+    v       = (v + 2.d0 * f / (1.d0 + f**2 * B02) * (+ cross_product(v,B0) &
+                                                     + f * B0 * dot_product(v,B0) &
+                                                     - f * v * B02)
     
     ! Perform the second half step update (calculate v^n+1/2 from v+)
-    v        = v0 + E0
+    v        = v + E0
 
-    ! Update the position
-    R_prev = R
-    Z_prev = Z
+    ! Calculate the position updates
+    x_update = R_prev + t_step * v(1)
+    y_update = t_step * v(3)
 
-    R_step = R_prev + t_step * v(1)
+    ! Calculate the new r and Z
+    R_step = sqrt(x_update**2 + y_update**2)
     Z_step = Z_prev + t_step * v(2)
 
-    delta_phi = t_step * v(3) / R_step
+    ! Check if the particle is motionless on axis
+    if (R_step .lt. 1.d-9) then
+      write(*,*) "Lost particle because it stopped on the axis"
+      particle%lost = .true.
+      cycle
+    end if
 
-    x(3) = x(3) + delta_phi
+    ! Calculate the new theta
+    x(3) = x(3) + asin(y_update / R_step)
 
+    ! Adjust velocities to the new reference frame
+    v_tmp = v
+    v(1) = x_update/R_step * v_tmp(1) + y_update/R_step * v_tmp(2)
+    v(2) = -y_update/R_step * v_tmp(1) + x_update/R_step * v_tmp(2)
+
+    ! Perform at most 3 newton iteration steps to find the new values of s and t in this element
     do k = 1, 3
-
+      x_prev = x
       x(1) = x(1) + ( Z_t * (R_step-R) - R_t * (Z_step-Z)) / st_jac
       x(2) = x(2) + (-Z_s * (R_step-R) + R_s * (Z_step-Z)) / st_jac
 
+      ! Get the local derivatives at x
       call interp3_RZ(node_list,element_list,i_elm,x(1),x(2),R,R_s,R_t,Z,Z_s,Z_t)
 
+      ! Update local jacobian
       st_jac = R_s * Z_t - R_t * Z_s
 
+      if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
+        exit ! Converged enough, we're done
+      else if (k == 3)
+        write (*,*) "Newton iteration failed, change = ", (dot_product(x_prev-x,x_prev-x))
+      endif
     enddo
 
-    v_prev = v
+    ! Check if the particle left this element in any of the coordinates. Keep going until we find it
+    do m = 1, 4
 
-    v(1) =   cos(delta_phi) * v_prev(1) + sin(delta_phi) * v_prev(3)
-    v(3) = - sin(delta_phi) * v_prev(1) + cos(delta_phi) * v_prev(3)
+      ! See if the particle is lost, in another element nearby or we need to search for it
+      call check_element_boundary(element_list,i_elm,x(1:2),j_elm,x(1:2),changed,lost,search)
 
-    R_step = 0.5d0 * ( R_step + R_prev + t_step * v(1) )
-    Z_step = 0.5d0 * ( Z_step + Z_prev + t_step * v(2) )
-
-    x(1) = x(1) + ( Z_t * (R_step-R) - R_t * (Z_step-Z)) / st_jac
-    x(2) = x(2) + (-Z_s * (R_step-R) + R_s * (Z_step-Z)) / st_jac
-
-    do m = 1, 2
-
-      call check_element_boundary(element_list,i_elm,x(1:2),x_prev(1:2),j_elm,x(1:2),delta_x(1:2),changed, lost, search)
-
+      ! If we cannot find the particle
       if (search) then
+        ! Use the nuclear option
         call find_RZ(node_list,element_list,R_step,Z_step,R_out,Z_out,ielm_out,s_out,t_out,ifail)
         x(1)  = s_out
         x(2)  = t_out
         i_elm = ielm_out
+        exit ! Stop this loop, we're done
+      endif
+
+      if (lost) then
+        particle%lost = .true.
         exit
       endif
 
-      if (lost) exit
-
       if (changed) then
-
+        ! Perform newton iteration to find the correct position in the new element i_elm
         do k = 1, 3
-
+          x_prev = x
           call interp3_RZ(node_list,element_list,i_elm,x(1),x(2),R,R_s,R_t,Z,Z_s,Z_t)
-
           st_jac = R_s * Z_t - R_t * Z_s
-
           x(1) = x(1) + ( Z_t * (R_step-R) - R_t * (Z_step-Z)) / st_jac
           x(2) = x(2) + (-Z_s * (R_step-R) + R_s * (Z_step-Z)) / st_jac
 
-!          error_RZ = sqrt((R-R_step)**2 + (Z - Z_step)**2)
-
+          if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
+            exit ! Converged enough, we're done
+          else if (k == 3)
+            write (*,*) "Newton iteration after element change failed, change = ", (dot_product(x_prev-x,x_prev-x))
+          endif
         enddo
-
       else
+        ! If we're here something went wrong
+        write(*,*) "Particle not lost, changed or search. bug?"
         exit
       endif
 
+      if (maxval(abs(x(1:2)-0.5)) .lt. 0.5) then
+        ! We found the correct element, quit
+        exit
+      else if (m == 4)
+        write(*,*) "Error finding the right element"
+        write(*,*) "Search for particle again, first routine did not work"
+        call find_RZ(node_list,element_list,R_step,Z_step,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+        x(1)  = s_out
+        x(2)  = t_out
+        i_elm = ielm_out
+      endif
     enddo
 
-    if (maxval(abs(x(1:2)-0.5)) .gt. 0.5) then
-      call find_RZ(node_list,element_list,R_step,Z_step,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-      x(1)  = s_out
-      x(2)  = t_out
-      i_elm = ielm_out
-    endif
-
-    if (lost) then
-      particle%lost = lost
-      exit
-    endif
-
+    ! Update variables for the next iteration
     call interp_PRZ(node_list,element_list,i_elm,i_var,2,x(1),x(2),x(3),P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
-
-    psi = P(1)
-    U   = P(2)
 
     R = R_step
     Z = Z_step
 
- !   mp(j,i) = R_step * v(3) + 0.5 * qom * (psi + psi_prev)
- !   Wp(j,i) = 0.5 * particle%mass * (v(1)*v(1) + v(2)*v(2) + v(3)*v(3)) + 0.5 * omega_norm * particle%q * F0 * (U + U_prev)
-
- !   rp(j,i) = R
- !   zp(j,i) = Z
- !   pp(j,i) = x(3)
- !   tp(j)   = j * t_step
-
-    n_done = j
-
   enddo
 
+  ! Save the new values for this particle
   particle_list%particle(i)%st    = x(1:2)
   particle_list%particle(i)%v     = v
   particle_list%particle(i)%x     = (/ R, Z, x(3) /)

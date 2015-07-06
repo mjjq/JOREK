@@ -54,7 +54,7 @@ omega_norm = EL_CHG / (MASS_PROTON * central_mass) * SQRT(MU_ZERO * MASS_PROTON 
 !$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var) &
 !$omp   private(i, j, k, particle, x, v, i_elm, j_elm, psi, psi_s, psi_t, psi_R, psi_Z, R, R_s, R_t, Z, Z_s, Z_t,st_jac,              &
 !$omp           qom, B0, B02, E0, v_tmp, f, R_step, Z_step, changed, lost, search,            &
-!$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, P, P_s, P_t, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
+!$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, x_update, y_update, P, P_s, P_t, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
 
 !$omp do
 do i = 1, particle_list%n_particles
@@ -117,12 +117,12 @@ do i = 1, particle_list%n_particles
     v        = v + E0
 
     ! Calculate the position updates
-    x_update = R_prev + t_step * v(1)
+    x_update = R + t_step * v(1)
     y_update = t_step * v(3)
 
     ! Calculate the new r and Z
     R_step = sqrt(x_update**2 + y_update**2)
-    Z_step = Z_prev + t_step * v(2)
+    Z_step = Z + t_step * v(2)
 
     ! Check if the particle is motionless on axis
     if (R_step .lt. 1.d-9) then

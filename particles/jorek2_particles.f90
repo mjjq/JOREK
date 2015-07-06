@@ -47,7 +47,7 @@ do i_tor=1, n_tor
 enddo
 
 if (my_id .eq. 0) then
-  call import_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 endif
 call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
@@ -103,7 +103,7 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr)
 write(particle_file,'(A4,i4.4,A4)') 'part',i_step,'.vtk'
 !call particles_vtk(particle_list,particle_file)
 
-call export_restart(node_list,element_list,'density.rst',rst_format)
+call export_binary_restart(node_list,element_list,'density.rst',rst_format)
 
 call MPI_FINALIZE(IERR)
 

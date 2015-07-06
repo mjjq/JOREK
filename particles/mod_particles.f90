@@ -2,7 +2,7 @@ module mod_particles
 
   use parameters
 
-  integer, parameter :: n_particles_max = 1000000
+  integer, parameter :: n_particles_max = 10000
 
   type type_particle
 

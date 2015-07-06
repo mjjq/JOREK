@@ -392,7 +392,7 @@ jorek2_import_perturbation_tmp : diagnostics/jorek2_import_perturbation.f90 $(JO
          -o $(JOREK_DIR)/jorek2_import_perturbation $(INCLUDES) $(LIBS)
          
 jorek2_particles : particles/jorek2_particles.f90 $(JOREK2_PARTICLES_OBJ)
-	$(FC) $(FFLAGS_OMP)                 \
+	$(FC) $(FFLAGS)                 \
 	particles/jorek2_particles.f90 	\
 	$(JOREK2_PARTICLES_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_particles $(INCLUDES) $(LIBS) $(LIBFFTW)

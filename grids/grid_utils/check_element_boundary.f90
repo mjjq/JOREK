@@ -1,7 +1,7 @@
 !> Check if a position is in or outside an element, and if so on which side
 !!
 !! Uses the entire list of elements and the current element, a new and old position
-!! to find the number of the new element j_elm, the distance delta_x or if it is 
+!! to find the number of the new element j_elm, if it is 
 !! lost (outside of the domain) or we need to search for it
 subroutine check_element_boundary(element_list,i_elm,x,j_elm,y,changed,lost,search)
 use data_structure
@@ -28,7 +28,6 @@ search  = .false.
 
 if (maxval(abs(x(1:2)-0.5)) .le. 0.5) return ! If s and t are in [0,1] the position is in this element
 
-delta_x = 0.
 i_side  = 0.
 
 ! Find the direction the position is in from here
@@ -57,9 +56,6 @@ if (i_side .gt. 0) then
     ! Transform the variable into the new basis functions of that element (first-order approximation)
     y(1)  = element_list%element(i_elm)%transform(i_side,1,1) + element_list%element(i_elm)%transform(i_side,1,2) * x(1) + element_list%element(i_elm)%transform(i_side,1,3) * x(2)
     y(2)  = element_list%element(i_elm)%transform(i_side,2,1) + element_list%element(i_elm)%transform(i_side,2,2) * x(1) + element_list%element(i_elm)%transform(i_side,2,3) * x(2)
-
-    i_elm = j_elm
-    x     = y
 
     changed = .true.
   else

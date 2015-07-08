@@ -231,8 +231,82 @@ module mod_new_diag
     end if
     
   end subroutine pol_lineout
-  
-  
+
+  !> Integrate expressions along a straight line in the poloidal plane.
+  subroutine int_along_pol_lineout(node_list, element_list, eq, units, expr_list, sum, phi, Rstart, &
+    Zstart, Rend, Zend, nPts, ierr, filename, append, comment)
+
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':lineout_profiles'
+
+    ! --- Routine parameters
+    type(type_node_list),           intent(in)    :: node_list    !< List of grid nodes
+    type(type_element_list),        intent(in)    :: element_list !< List of grid elements
+    type(t_equil_state),            intent(in)    :: eq           !< Plasma equilibrium information
+    integer,                        intent(in)    :: units        !< Output in which units?
+    type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
+    real*8, allocatable,            intent(inout) :: sum(:)       !< Result vector
+    real*8,                         intent(in)    :: phi          !< Toroidal position
+    real*8,                         intent(in)    :: Rstart       !< R-coordinate for start of line
+    real*8,                         intent(in)    :: Zstart       !< Z-coordinate for start of line
+    real*8,                         intent(in)    :: Rend         !< R-coordinate for end of line
+    real*8,                         intent(in)    :: Zend         !< Z-coordinate for end of line
+    integer,                        intent(in)    :: nPts         !< Number of points along line
+    integer,                        intent(out)   :: ierr         !< Error code
+    character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
+    character(len=*), optional,     intent(in)    :: comment      !< Comment for ascii file [opti.]
+
+    ! --- Local variables
+    real*8, allocatable             :: result(:,:,:,:), res1d(:,:)
+    real*8                          :: dl, line_length
+    integer                         :: i, n, iexpr
+    type(t_pol_pos), pointer        :: pos_i, pos_ip1
+    type(t_pol_pos_list), target    :: pol_pos_list
+    type(t_tor_pos_list)            :: tor_pos_list
+
+    ierr = 0
+
+    pol_pos_list = pol_pos(node_list, element_list, eq, Rstart=Rstart, Rend=Rend, Zstart=Zstart,   &
+      Zend=Zend, n=nPts)
+    tor_pos_list = tor_pos(phi=phi)
+
+    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
+
+    ! --- Integrate along the line
+    if ( .not. allocated(sum) ) allocate (sum(expr_list%n_expr))
+
+    do iexpr = 1, expr_list%n_expr
+
+    sum(iexpr) = 0
+    line_length = 0
+
+      do i = 1, nPts-1
+
+        pos_i   => pol_pos_list%pos(1,i)
+        pos_ip1 => pol_pos_list%pos(1,i+1)
+        dl =  ( (pos_ip1%R-pos_i%R)**2 + (pos_ip1%Z-pos_i%Z)**2 )**0.5
+        line_length = line_length + dl
+        sum(iexpr) = sum(iexpr) + dl*res1d(i,iexpr)
+
+      end do
+
+    ! We do not want to integrate the time along the line
+    if ( (expr_list%expr(iexpr)%name).eq.'t' ) sum(iexpr)=res1d(i,iexpr)
+
+    end do
+
+    if ( allocated(result) ) deallocate(result)
+    call cleanup_pol_pos(pol_pos_list)
+    call cleanup_tor_pos(tor_pos_list)
+
+    if ( present(filename) ) then
+      call write_ascii_0d(ierr, eq, expr_list, sum, FORM_TABLE, header=.true., &
+        filename=filename, append=append, blanks=.true., comment=comment)
+    end if
+
+  end subroutine int_along_pol_lineout
+   
   
   
   

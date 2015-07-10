@@ -64,7 +64,7 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if JOREK_MODEL == 500
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mgi_module
 #endif
 
@@ -1029,7 +1029,7 @@ required = 0
 
        endif
 
-#if JOREK_MODEL == 500
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
        call update_mgi(my_id,node_list,element_list)
 #endif
 

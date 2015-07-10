@@ -458,6 +458,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'L_tube              ',  L_tube
      write(*,REAL_FMT) 't_mgi               ',  t_mgi
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
+     write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
 #endif
 
   write(*,*)

@@ -313,7 +313,9 @@ subroutine preset_parameters
      K_Dmv = 4.d-2
      A_Dmv = 1.77d-2
      t_mgi = 2.d3
+    !=====
      delta_n_convection = 0
+     nimp_bg = 0.
 #endif
 !======================AF
 

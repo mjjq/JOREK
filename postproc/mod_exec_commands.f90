@@ -45,7 +45,7 @@ module exec_commands
   logical,             private, save :: debug
   type(t_equil_state), private, save :: eq !< Equilibrium state; updated when time step is loaded
   type(t_expr_list),   private, save :: expr_list
-  real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:)
+  real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
   
@@ -139,6 +139,8 @@ module exec_commands
           call select_jorek_units(command, ierr)
         case ( 'pol_line' )
           call pol_line(command, first_step, ierr)
+        case ( 'int_along_pol_line' )
+          call int_along_pol_line(command, first_step, ierr)
         case ( 'tor_line' )
           call tor_line(command, first_step, ierr)
         case ( 'mark_coords' )
@@ -171,8 +173,9 @@ module exec_commands
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
-          'pol_line', 'tor_line', 'equil_params', 'qprofile', 'fluxsurfaces', 'separatrix', 'set', &
-          'four2d', 'gourdon', 'jorek-units', 'si-units', 'grid' )
+          'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
+          'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
+          'si-units', 'grid' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -818,7 +821,46 @@ module exec_commands
     
   end subroutine pol_line
   
-  
+   !> Integrate expressions along a line in the poloidal plane.
+  subroutine int_along_pol_line(command, first_step, ierr)
+
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+
+    ! --- Local variables
+    real*8  :: Rstart, Zstart, Rend, Zend, phi
+    integer :: units, npts
+    character(len=1024) :: filename, comment
+
+    ierr = 0
+
+    ! --- Some checks
+    call check_args(command%n_args,ierr,5);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+
+    ! --- Preparation
+    Rstart = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Zstart = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    Rend   = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
+    Zend   = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    phi    = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    units  = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    npts   = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
+
+    write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(Rstart)), '..',             &
+      trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',                &
+      trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+
+    write(comment,'(a,i6.6)') 'time step #', index_now
+
+    call int_along_pol_lineout(node_list, element_list, eq, units, expr_list, sum, phi, Rstart, Zstart,    &
+      Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
+
+  end subroutine int_along_pol_line
+ 
   
   
   

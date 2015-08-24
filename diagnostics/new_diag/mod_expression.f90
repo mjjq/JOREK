@@ -147,6 +147,10 @@ module mod_expression
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
+#if JOREK_MODEL == 500
+    call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
+    call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
+#endif
     
   end subroutine init_expr
   
@@ -403,6 +407,12 @@ module mod_expression
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_T, fact_vpar, fact_resistiv, fact_Er
+#if JOREK_MODEL == 500
+    real*8  :: coef_rad_1
+    real*8  :: T_rad, LradDrays_T, LradDcont_T
+    real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp
+    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+#endif
     
     ierr = 0
     
@@ -510,6 +520,9 @@ module mod_expression
           Te0   = 0.d0; Te0_s   = 0.d0; Te0_t   = 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
           Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
+#if JOREK_MODEL == 500
+          rn0 = 0.d0
+#endif
           
           ! --- Reconstruct variables
           do i = 1, n_vertex_max
@@ -622,6 +635,17 @@ module mod_expression
                 Vpar0_p  = Vpar0_p  + vv(7) * sz * hh    * hhz_p
                 Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
 #endif
+#if JOREK_MODEL == 500
+                rn0       = rn0       + vv(8) * sz * hh    * hhz
+                rn0_s     = rn0_s     + vv(8) * sz * hh_s  * hhz
+                rn0_t     = rn0_t     + vv(8) * sz * hh_t  * hhz
+                rn0_ss    = rn0_ss    + vv(8) * sz * hh_ss * hhz
+                rn0_tt    = rn0_tt    + vv(8) * sz * hh_tt * hhz
+                rn0_st    = rn0_st    + vv(8) * sz * hh_st * hhz
+                rn0_p     = rn0_p     + vv(8) * sz * hh    * hhz_p
+                rn0_pp    = rn0_pp    + vv(8) * sz * hh    * hhz_pp
+#endif
+
                 ! --- Deltas
                 do k = 1, n_var
                   delta_g(k) = delta_g(k) + nodes(i)%deltas(i_tor,j,k) * sz * hh    * hhz
@@ -890,6 +914,52 @@ module mod_expression
 #else
           J_boot = 0.d0
 #endif
+
+#if JOREK_MODEL == 500
+
+   T_rad = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+  !write(*,*) 'T_rad = ', T_rad
+  if ( units == SI_UNITS ) then
+
+   coef_rad_1 = 1.d0
+
+  else if ( units == JOREK_UNITS ) then
+
+   coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
+
+  endif
+
+   LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+
+   LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+
+ !write(*,*) 'Lbrem = ', LradDcont_T
+ !write(*,*) 'Lrays = ', LradDrays_T
+
+  !--------------------------------------------------------
+  ! --- Radiation from background impurity
+  !--------------------------------------------------------
+
+    Arad_bg = 2.4d-31
+    Brad_bg = 20.
+    Crad_bg = 0.8
+
+  if ( units == SI_UNITS ) then
+
+    frad_bg = nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+  else if ( units == JOREK_UNITS ) then
+
+    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+  endif
+  !--------------------------------------------------------
+
+#endif
+
+
           ! --- Factors for switching between JOREK normalized and SI units.
           if ( units == SI_UNITS ) then
              rho_norm      = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
@@ -1058,6 +1128,23 @@ module mod_expression
               case ( 'J_bootstrap' )
                 res = J_boot ! ### check if no normalization needed
 #endif
+
+#if JOREK_MODEL == 500
+              case ( 'radiation' )
+
+                if (rn0 .lt. 0.d0) then
+                  res = r0 * fact_ne * r0 * fact_ne * LradDcont_T &
+                       + r0 * fact_ne * frad_bg
+                else
+                  res = r0 * fact_ne * rn0 * fact_ne * LradDrays_T &
+                       + r0 * fact_ne * r0 * fact_ne * LradDcont_T &
+                       + r0 * fact_ne * frad_bg
+                endif
+
+              case ( 'brem' )
+                res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
+#endif
+
               case default
                 write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Illegal expression ("' //      &
                   trim(expr_list%expr(iexpr)%name) // '")'

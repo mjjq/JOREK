@@ -40,7 +40,6 @@ real*8     :: D_prof, ZK_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delt
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7
 real*8     :: rhs_ij_5_k, rhs_ij_6_k, rhs_ij_7_k
 real*8     :: rhs_stab_1, rhs_stab_2, rhs_stab_3, rhs_stab_4, rhs_stab_5, rhs_stab_6
-
 real*8     :: v, v_x, v_y, v_s, v_t, v_p, v_ss, v_st, v_tt, v_xx, v_xy, v_yy
 real*8     :: ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, ps0_xx, ps0_yy, ps0_xy
 real*8     :: zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t
@@ -69,19 +68,6 @@ real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 logical    :: xpoint2
 
-!================== Neutrals (model500)
-real*8     :: amat_28, amat_58, amat_68, amat_88, amat_88_k, amat_85, amat_86, amat_88_kn  
-real*8     :: amat_81, amat_82, amat_87, amat_87_n, amat_88_n
-real*8     :: amat_78 
-real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, Sion_T, dSion_dT, S_ion_puiss = 3.9d-1
-real*8     :: Dn0x, Dn0y, Dn0p, ij8, kl8, source_mgi, ksiion, rhs_ij_8, rhs_ij_8_k
-real*8     :: rn0, rn0_x, rn0_y, rn0_p, rn0_s, rn0_t, rn0_ss, rn0_st, rn0_tt, rn0_hat, rn0_x_hat, rn0_y_hat
-real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rhon_tt, rhon_hat, rhon_x_hat, rhon_y_hat  
-real*8     :: T_neg, delta_neg, Tion
-real*8     :: T_rad, coef_rad_1, LradDrays_T, dLradDrays_dT, LradDcont_T, dLradDcont_dT
-real*8     :: Srec_T, dSrec_dT, coef_rec_1
-!===============================
-
 !==================MB: velocity profile is kept by a source which compensating diffusion
 real*8     :: Vt0,Vt0_x,Vt0_y
 real*8     :: V_source(n_gauss,n_gauss)
@@ -97,6 +83,42 @@ real*8     :: amat_27, Btheta2
 real*8     :: epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 !======================================= NEO
+
+!================== Parameters specific to model500
+! Matrix, RHS and neutrals-related variables
+real*8     :: amat_28, amat_58, amat_68, amat_78  
+real*8     :: amat_81, amat_82, amat_85, amat_86, amat_87, amat_87_n, amat_88, amat_88_k, amat_88_n, amat_88_kn
+real*8     :: rhs_ij_8, rhs_ij_8_k
+real*8     :: ij8, kl8
+real*8     :: rn0, rn0_x, rn0_y, rn0_p, rn0_s, rn0_t, rn0_ss, rn0_st, rn0_tt, rn0_hat, rn0_x_hat, rn0_y_hat
+real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rhon_tt, rhon_hat, rhon_x_hat, rhon_y_hat  
+
+! Neutral source
+real*8     :: source_mgi
+
+! Neutral diffusion coefficients
+real*8     :: Dn0x, Dn0y, Dn0p 
+
+! Atomic physics coefficients:
+!   -Ionisation
+real*8     :: Sion_T, dSion_dT                                ! Ionisation rate and its derivative wrt. temperature
+real*8     :: Tion                                            ! Temperature used in ionisation rate
+real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss ! Ionisation rate parameters 
+real*8     :: ksiion                                          ! Ionisation energy
+!   -Recombination
+real*8     :: Srec_T, dSrec_dT                                ! Recombination rate and its derivative wrt. temperature
+real*8     :: coef_rec_1                                      ! Recombination rate parameters
+!   -Radiation from injected gas/impurities
+real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
+real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
+real*8     :: T_rad                                           ! Temperature used in radiation rate
+real*8     :: coef_rad_1                                      ! Radiation rate parameters
+!   -Radiation from background impurities
+real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+
+! Parameters related to negative temperature handling
+real*8     :: T_neg, delta_neg
+!===============================
 
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
@@ -626,7 +648,7 @@ do ms=1, n_gauss
    endif
 
   !-------------------------------------------------
-  ! --- Recombinaison rate for ionized Deuterium
+  ! --- Recombination rate for ionized Deuterium
   !-------------------------------------------------
     
     coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)  
@@ -634,6 +656,7 @@ do ms=1, n_gauss
     Srec_T = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0) 
     
     dSrec_dt  = - coef_rec_1 * 0.7d-19 * 0.5d0 * (2.d0)**(-0.5d0) * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-1.5d0)
+
 
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)
@@ -647,6 +670,24 @@ do ms=1, n_gauss
      if (source_mgi .lt. 0.d0) then 
       source_mgi = 0.d0
      endif
+
+
+   !--------------------------------------------------------
+   ! --- Radiation from background impurity
+   !--------------------------------------------------------
+
+    Arad_bg = 2.4d-31
+    Brad_bg = 20.
+    Crad_bg = 0.8
+
+    frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))               &
+                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+    
+    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                  &
+                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+!--------------------------------------------------------
+
 
      do i=1,n_vertex_max
 
@@ -841,10 +882,10 @@ do ms=1, n_gauss
                     
                     - v * BigR * ksiion * r0 * rn0 * Sion_T                            * xjac * tstep &
 
-                    + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                            * xjac * tstep  &
-                    - v * BigR * r0 * rn0 * LradDrays_T                                        * xjac * tstep  &
-                    - v * BigR * r0 * r0  * LradDcont_T                                        * xjac * tstep
-  
+                    + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
+                    - v * BigR * r0 * rn0 * LradDrays_T                                * xjac * tstep  &
+                    - v * BigR * r0 * r0  * LradDcont_T                                * xjac * tstep  &
+                    - v * BigR * r0 * frad_bg                                          * xjac * tstep  
 
          rhs_ij_6_k =  - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T  * xjac * tstep &
                        - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )   * xjac * tstep  &
@@ -1330,8 +1371,9 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x ) * xjac * theta * tstep * tstep &
 	                + v * BigR * rho * rn0 * ksiion * Sion_T                             * xjac * theta * tstep &
 
-                    + v * BigR * rho * rn0 * LradDrays_T                                                   * xjac * theta * tstep  &
-                    + v * BigR * rho * 2d0 * r0 * LradDcont_T                                              * xjac * theta * tstep
+                    + v * BigR * rho * rn0 * LradDrays_T                                   * xjac * theta * tstep  &
+                    + v * BigR * rho * 2d0 * r0 * LradDcont_T                              * xjac * theta * tstep  &
+                    + v * BigR * rho * frad_bg                                             * xjac * theta * tstep 
 
 
              amat_65_n = + v * T0  * F0 / BigR * Vpar0 * rho_p                      * xjac * theta * tstep    &
@@ -1387,8 +1429,9 @@ do ms=1, n_gauss
 		        + v * BigR * r0 * rn0 * ksiion * dSion_dT * T                    * xjac * theta * tstep &
 
                            - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2                              * xjac * theta * tstep  &
-                           + v * BigR * T * r0 * rn0 * dLradDrays_dT                                              * xjac * theta * tstep  &
-                           + v * BigR * T * r0 * r0  * dLradDcont_dT                                              * xjac * theta * tstep
+                           + v * BigR * T * r0 * rn0 * dLradDrays_dT                                              * xjac * theta * tstep  & 
+                           + v * BigR * T * r0 * r0  * dLradDcont_dT                                              * xjac * theta * tstep  &
+                           + v * BigR * T * r0 * dfrad_bg_dT                                                      * xjac * theta * tstep
  
              amat_66_k = + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T    * xjac * theta * tstep &
 

@@ -9,6 +9,7 @@ use diffusivities, only: get_dperp, get_zkperp
 use pellet_module
 use mpi_mod
 use bootstrap_functions
+use corr_neg
 
 implicit none
 
@@ -49,7 +50,7 @@ real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t
 real*8                :: psi_norm, psi_bnd, grad_psi
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet,n_bootstrap
+integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet,n_bootstrap, n_psi_norm
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
@@ -62,6 +63,14 @@ real*8                :: amu_neo_node, aki_neo_node
 real*8                :: Vperp_e, Psi_tot
 
 real*8                :: angle, source_volume, local_density, local_temperature, local_pressure, local_psi, local_source
+
+!====================== --- Variables related to atomic physics terms (model 500 or 555)
+logical               :: include_radiation
+integer               :: n_radiation
+real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
+real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
+real*8                :: T_real8
 
 integer, parameter :: nplot = 200
 integer :: iplot, i_elm
@@ -110,6 +119,10 @@ include_velocity_field = .false. ! include vector of velocity field (or not)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .false.  ! include normalized flux
 
+#if (JOREK_MODEL == 500)
+include_radiation = .true.
+#endif
+
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
@@ -147,14 +160,15 @@ n_scalars = n_var + 3
 ! --- Number of vectors to write to the VTK output file
 n_vectors = 0
 #else
-n_scalars = n_var
-n_vectors = 0
-n_fluxes  = 0
-n_neo     = 0
-n_bfield  = 0
-n_vfield  = 0
-n_pellet  = 0
-n_bootstrap=0
+n_scalars   = n_var
+n_vectors   = 0
+n_fluxes    = 0
+n_neo       = 0
+n_bfield    = 0
+n_vfield    = 0
+n_pellet    = 0
+n_bootstrap = 0
+n_psi_norm  = 0
 
 if (include_fluxes) then
   n_fluxes = 8
@@ -181,8 +195,17 @@ if (include_bootstrap) then
   n_scalars = n_scalars + n_bootstrap
 endif	 
 if (include_psi_norm) then
-   n_scalars = n_scalars + 1
+   n_psi_norm = 1
+   n_scalars  = n_scalars + n_psi_norm
 endif
+#endif
+
+#if (JOREK_MODEL == 500)
+    n_radiation = 0
+ if (include_radiation) then
+    n_radiation = 5
+    n_scalars = n_scalars + n_radiation
+ endif
 #endif
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
@@ -200,6 +223,11 @@ if ( SI_units ) then
       scalar_names(6)='Te_keV      '
    endif
    scalar_names(7)='Vpar_km/s   '
+
+#if (JOREK_MODEL == 500)
+   scalar_names(8)='N_dens_1d20  '
+#endif
+
 endif
 
 #ifdef fullmhd
@@ -249,6 +277,15 @@ endif
 if (include_psi_norm) then
    scalar_names(n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+1) = ('psi_norm    ')
 endif
+
+#if (JOREK_MODEL == 500)
+ if (include_radiation) then
+     scalar_names(n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+1:                                             &
+                  n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+n_radiation)                                   & 
+                  = (/ 'Ionis_Wm-3     ', 'Lin_radWm-3     ', 'Brems_Wm-3     ', 'Joule_Wm-3    ', 'Imp_bg_Wm-3 '/)
+ endif
+#endif
+
 
 #endif
 
@@ -777,6 +814,66 @@ enddo
 
 enddo  ! n_elements
 
+#if (JOREK_MODEL == 500)
+
+ if (include_radiation) then
+
+   do i=1,nnos
+
+    coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
+    coef_ion_2 = 0.232d0
+    coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+    S_ion_puiss = 3.9d-1
+
+    ksiion = ksi_ion * central_density * 1.d20
+
+    T_real8 = scalars(i,6)
+
+    Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+
+    T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+
+    coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+
+    LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+
+    LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                     -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                     -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+
+    eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
+                            *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
+
+    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
+    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+2) = scalars(i,5) * scalars(i,8) * LradDrays_T
+    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+3) = LradDcont_T * scalars(i,5)**2.d0
+    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+
+ !--------------------------------------------------------
+   ! --- Radiation from background impurity
+   !--------------------------------------------------------
+
+    Arad_bg = 2.4d-31
+    Brad_bg = 20.
+    Crad_bg = 0.8
+
+    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
+               *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
+               *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
+                   *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
+                   *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+5) = scalars(i,5) * frad_bg
+
+   enddo
+  endif
+#endif
+
+
 if (SI_units) then
   
   !===========================================================real values=============
@@ -799,6 +896,10 @@ if (SI_units) then
     endif
     !=====================================Vparal in km/s *Btot!!!
     scalars(i,7) = scalars(i,7) /t_norm/1.e3
+#if (JOREK_MODEL == 500)
+    !===================================== Neutral density in 1e20m-3
+    scalars(i,8) = scalars(i,8) * central_density
+#endif
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,n_var+1) = scalars(i,n_var+1) / MU_zero/1.e3
     if (include_neo) then
@@ -822,6 +923,66 @@ if (SI_units) then
     scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6 
     endif
   !========================================================
+
+#if (JOREK_MODEL == 500)
+
+ if (include_radiation) then
+
+    coef_ion_3 = 27.2d0*EL_CHG*MU_zero*central_density*1.d20
+    coef_ion_2 = 0.232d0
+    coef_ion_1 = 0.2917d-13 !(MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+    S_ion_puiss = 3.9d-1
+
+    ksiion = ksi_ion * central_density * 1.d20
+
+    T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
+    ! ======= T_real8 in JOREK units
+
+    Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+
+    T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+
+    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+
+    coef_rad_1 = 1.d0 !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+
+    LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+
+    LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0))  &
+                                      -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                      -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+
+    eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
+
+       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
+                                           * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
+
+       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
+
+       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
+
+       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+
+ !--------------------------------------------------------
+   ! --- Radiation from background impurity
+   !--------------------------------------------------------
+
+    Arad_bg = 2.4d-31
+    Brad_bg = 20.
+    Crad_bg = 0.8
+
+    frad_bg = nimp_bg * Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
+                   *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
+                   *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+5) = scalars(i,5)*1.d20 * frad_bg
+
+ endif
+
+#endif
+
   enddo  ! nnos
 
 endif ! SI_UNITS

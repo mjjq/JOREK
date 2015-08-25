@@ -2,8 +2,6 @@ module mod_particles
 
   use parameters
 
-  integer, parameter :: n_particles_max = 10000
-
   type type_particle
 
     real*8  :: x(3)             !< particle position in real space (R,Z,phi)
@@ -19,8 +17,8 @@ module mod_particles
 
   type type_particle_list
 
-    integer              :: n_particles                 !< the number of particles in the list
-    type (type_particle) :: particle(n_particles_max)   !< an allocatable(?) list of particles
+    integer                                         :: n_particles                 !< the number of particles in the list
+    type (type_particle), dimension(:), allocatable :: particle   !< an allocatable list of particles
 
   end type type_particle_list
 

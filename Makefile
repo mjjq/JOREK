@@ -130,12 +130,14 @@ JOREK2_POWERS_SRC           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_IMPORT_PERTURBATION_SRC	+= $(ALL_BINARIES_SRC) $(PPPSRC)
 JOREK2_PARTICLES_SRC            += $(ALL_BINARIES_SRC)
 NEW_DIAG_DEMO_SRC               += $(ALL_BINARIES_SRC) $(PPPSRC)
+PENNING_TEST_SRC 		+= $(ALL_BINARIES_SRC)
 
 SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(RST_BIN2HDF5_SRC) $(RST_HDF52BIN_SRC) \
 	  $(JOREK2_POSTPROC_SRC) $(JOREK2_POVRAY_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) \
 	  $(JORDEL_SRC) $(JORPOL_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
           $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(ENBIGGEN_SRC) \
-	  $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC) $(JOREK2_IMPORT_PERTURBATION_SRC) $(JOREK_EXTRACT_DATA_SRC) $(JOREK2_PARTICLES_SRC))
+	  $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC) $(JOREK2_IMPORT_PERTURBATION_SRC) $(JOREK_EXTRACT_DATA_SRC) $(JOREK2_PARTICLES_SRC) \
+	  $(PENNING_TEST_SRC))
 
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
@@ -234,6 +236,11 @@ NEW_DIAG_DEMO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(NEW_DIAG_DEMO_SRC))) 
 JOREK2_PARTICLES_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_PARTICLES_SRC))) 	\
 			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_PARTICLES_SRC)))		\
 			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_PARTICLES_SRC)))
+
+PENNING_TEST_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(PENNING_TEST_SRC))) 	\
+			$(patsubst %.f,%.o,$(filter %.f, $(PENNING_TEST_SRC)))		\
+			$(patsubst %.c,%.o,$(filter %.c, $(PENNING_TEST_SRC)))
+
 
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
@@ -396,6 +403,12 @@ jorek2_particles : particles/jorek2_particles.f90 $(JOREK2_PARTICLES_OBJ)
 	particles/jorek2_particles.f90 	\
 	$(JOREK2_PARTICLES_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_particles $(INCLUDES) $(LIBS) $(LIBFFTW)
+
+
+penning_test : particles/testcases/penning.f90 $(PENNING_TEST_OBJ)
+	$(FC) $(FFLAGS) particles/testcases/penning.f90 \
+	$(PENNING_TEST_OBJ) -o $(JOREK_DIR)/penning_test \
+	$(INCLUDES) $(LIBS)
 
 include all_rules.mk
 ifeq (0, $(words $(foreach word, ${NODEPS}, $(findstring ${word}, ${MAKECMDGOALS}))))

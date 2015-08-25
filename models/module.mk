@@ -112,3 +112,6 @@ JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)               \
 
 JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)         \
         $(DIR)/mod_pellet.f90
+
+PENNING_TEST_SRC := $(PENNING_TEST_SRC) \
+	$(DIR)/mod_pellet.f90

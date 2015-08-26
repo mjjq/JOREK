@@ -234,8 +234,6 @@ PROGRAM_SOURCES = diagnostics/jorek2_poincare.f90       \
 		  diagnostics/jordel.f90                \
 		  diagnostics/jorpol.f90                \
 		  diagnostics/jorek2vtk.f90             \
-		  diagnostics/jorek2_fieldlines_vtk.f90 \
-		  diagnostics/jorek2vtk_3d.f90          \
 		  diagnostics/jorek2_diagno.f90         \
 		  diagnostics/jorek_to_helena.f90       \
 		  diagnostics/jorek2_target2vtk.f90     \
@@ -267,6 +265,16 @@ jorek2_strikes : version diagnostics/jorek2_strikes_ordered.f90 $(JOREK2_STRIKES
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_strikes_ordered.f90 -o diagnostics/jorek2_strikes_ordered.o
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_strikes_ordered.o $(JOREK2_STRIKES_OBJ) \
 	 -o $(JOREK_DIR)/jorek2_strikes $(LIBS)
+
+jorek2_fieldlines_vtk : version diagnostics/jorek2_fieldlines_vtk.f90 $(JOREK2FLVTK_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_fieldlines_vtk.f90 -o diagnostics/jorek2_fieldlines_vtk.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_fieldlines_vtk.o $(JOREK2FLVTK_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_fieldlines_vtk $(LIBS)
+
+jorek2vtk_3d : version diagnostics/jorek2vtk_3d.f90 $(JOREK2VTK3D_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk_3d.f90 -o diagnostics/jorek2vtk_3d.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk_3d.o $(JOREK2VTK3D_OBJ) \
+	 -o $(JOREK_DIR)/jorek2vtk_3d $(LIBS)
 
 jorek2vtk_GaussVortTerms : diagnostics/jorek2vtk_GaussVortTerms.f90 $(JOREK2VTK_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk_GaussVortTerms.f90 -o diagnostics/jorek2vtk_GaussVortTerms.o

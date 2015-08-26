@@ -106,128 +106,29 @@ endif
 # include the description for each module
 include $(patsubst %,%/module.mk,$(DIRS))
 
-JOREK2_MAIN_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC) jorek2_main.f90
-JOREK2_POINCARE_SRC     	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-RST_BIN2HDF5_SRC                += $(ALL_BINARIES_SRC) $(PPPSRC)
-RST_HDF52BIN_SRC                += $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_POSTPROC_SRC     	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_POVRAY_SRC     		+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_CONNECTION2_SRC  	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_STRIKES_SRC		+= $(ALL_BINARIES_SRC) $(PPPSRC)
-ENBIGGEN_SRC            	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JORDEL_SRC              	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JORPOL_SRC              	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2VTK_SRC           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2FLVTK_SRC	        	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2VTK3D_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_FOUR_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK_EXTRACT_DATA_SRC         	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_DIAGNO_SRC       	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK_TO_HELENA_SRC		+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_TARGET2VTK_SRC   	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_POWERS_SRC           	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-JOREK2_IMPORT_PERTURBATION_SRC	+= $(ALL_BINARIES_SRC) $(PPPSRC)
-NEW_DIAG_DEMO_SRC               += $(ALL_BINARIES_SRC) $(PPPSRC)
+PROGRAMS := JOREK2_MAIN JOREK2_POINCARE RST_BIN2HDF5 RST_HDF52BIN           \
+            JOREK2_POSTPROC JOREK2_POVRAY JOREK2_CONNECTION2 JOREK2_STRIKES \
+            ENBIGGEN JORDEL JORPOL JOREK2VTK JOREK2FLVTK JOREK2VTK3D        \
+            JOREK2_FOUR JOREK_EXTRACT_DATA JOREK2_DIAGNO JOREK_TO_HELENA    \
+            JOREK2_TARGET2VTK JOREK2_POWERS JOREK2_IMPORT_PERTURBATION      \
+            NEW_DIAG_DEMO
 
-SRC_DEP = $(sort $(JOREK2_MAIN_SRC) $(JOREK2_POINCARE_SRC) $(RST_BIN2HDF5_SRC) $(RST_HDF52BIN_SRC) \
-	  $(JOREK2_POSTPROC_SRC) $(JOREK2_POVRAY_SRC) $(JOREK2_CONNECTION2_SRC) $(JOREK2_STRIKES_SRC) \
-	  $(JORDEL_SRC) $(JORPOL_SRC) $(JOREK2VTK_SRC) $(JOREK2FLVTK_SRC) \
-          $(JOREK2VTK3D_SRC) $(JOREK2_FOUR_SRC) $(ENBIGGEN_SRC) \
-	  $(JOREK2_TARGET2VTK_SRC) $(JOREK2_POWERS_SRC) $(JOREK2_IMPORT_PERTURBATION_SRC) $(JOREK_EXTRACT_DATA_SRC))
+# Add the common sources to all these programs
+$(foreach prog,$(PROGRAMS),$(eval $(prog)_SRC += $(ALL_BINARIES_SRC) $(PPPSRC)))
 
+# Add extra source files
+JOREK2_MAIN_SRC += jorek2_main.f90
+
+# sort source dependencies
+SRC_DEP := $(sort $(foreach prog,$(PROGRAMS),$(call $(prog)_SRC)))
 SRC_DEP := $(filter %.f90, $(SRC_DEP)) $(filter %.f, $(SRC_DEP)) diagnostics/hdf5_library.important
 
-JOREK2_MAIN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) 	\
-		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_MAIN_SRC)))		\
-		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_MAIN_SRC)))
+# Create $(prog)_OBJ files by replacing $(SOURCE_SUFFIXES) -> .o
+SOURCE_SUFFIXES = .f90 .f .c
+all_src_to_obj = $(foreach SUFFIX,$(SOURCE_SUFFIXES), $(patsubst %$(SUFFIX),%.o,$(filter %$(SUFFIX),$(1))))
+$(foreach prog,$(PROGRAMS),$(eval $(prog)_OBJ := $(call all_src_to_obj,$(call $(prog)_SRC))))
+# equivalent to JOREK2_MAIN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_MAIN_SRC))) \ (and for .f and .c)
 
-JOREK2_POINCARE_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POINCARE_SRC))) 	\
-		      $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POINCARE_SRC)))	\
-		      $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POINCARE_SRC)))
-
-RST_BIN2HDF5_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(RST_BIN2HDF5_SRC))) 	\
-		   $(patsubst %.f,%.o,$(filter %.f, $(RST_BIN2HDF5_SRC)))	\
-		   $(patsubst %.c,%.o,$(filter %.c, $(RST_BIN2HDF5_SRC)))
-
-RST_HDF52BIN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(RST_HDF52BIN_SRC))) 	\
-		   $(patsubst %.f,%.o,$(filter %.f, $(RST_HDF52BIN_SRC)))	\
-		   $(patsubst %.c,%.o,$(filter %.c, $(RST_HDF52BIN_SRC)))
-
-JOREK2_CONNECTION2_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_CONNECTION2_SRC))) 	\
-			 $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_CONNECTION2_SRC)))		\
-			 $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_CONNECTION2_SRC)))
-
-JOREK2_STRIKES_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_STRIKES_SRC))) 	\
-		     $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_STRIKES_SRC)))		\
-		     $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_STRIKES_SRC)))
-
-ENBIGGEN_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(ENBIGGEN_SRC))) 	\
-	       $(patsubst %.f,%.o,$(filter %.f, $(ENBIGGEN_SRC)))      \
-	       $(patsubst %.c,%.o,$(filter %.c, $(ENBIGGEN_SRC)))
-
-JORDEL_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JORDEL_SRC))) 	\
-	     $(patsubst %.f,%.o,$(filter %.f, $(JORDEL_SRC)))     	\
-	     $(patsubst %.c,%.o,$(filter %.c, $(JORDEL_SRC)))
-
-JORPOL_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JORPOL_SRC))) 	\
-	     $(patsubst %.f,%.o,$(filter %.f, $(JORPOL_SRC)))     	\
-	     $(patsubst %.c,%.o,$(filter %.c, $(JORPOL_SRC)))
-
-JOREK2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK_SRC))) \
-		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK_SRC)))	\
-		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2VTK_SRC)))
-
-JOREK2FLVTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2FLVTK_SRC))) 	\
-		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2FLVTK_SRC)))		\
-		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2FLVTK_SRC)))
-
-JOREK2VTK3D_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2VTK3D_SRC))) 	\
-		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2VTK3D_SRC)))		\
-		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2VTK3D_SRC)))
-
-JOREK2_DIAGNO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_DIAGNO_SRC))) 	\
-		    $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_DIAGNO_SRC)))		\
-		    $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_DIAGNO_SRC)))
-
-JOREK_TO_HELENA_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK_TO_HELENA_SRC))) 	\
-		    $(patsubst %.f,%.o,$(filter %.f, $(JOREK_TO_HELENA_SRC)))		\
-		    $(patsubst %.c,%.o,$(filter %.c, $(JOREK_TO_HELENA_SRC)))
-
-JOREK2_FOUR_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_FOUR_SRC))) 	\
-		  $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_FOUR_SRC)))		\
-		  $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_FOUR_SRC)))
-
-JOREK_EXTRACT_DATA_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK_EXTRACT_DATA_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK_EXTRACT_DATA_SRC)))		\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK_EXTRACT_DATA_SRC)))
-
-JOREK2_POSTPROC_OBJ = 	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
-			$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
-			$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
-
-JOREK2_POSTPROC_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POSTPROC_SRC))) 	\
-		      $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POSTPROC_SRC)))	\
-		      $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POSTPROC_SRC)))
-
-JOREK2_POVRAY_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POVRAY_SRC))) 	\
-		    $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POVRAY_SRC)))		\
-		    $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POVRAY_SRC)))
-
-JOREK2_TARGET2VTK_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_TARGET2VTK_SRC)))         \
-                        $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_TARGET2VTK_SRC)))             \
-                        $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_TARGET2VTK_SRC)))
-
-JOREK2_POWERS_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_POWERS_SRC)))     \
-                    $(patsubst %.f,%.o,$(filter %.f, $(JOREK2_POWERS_SRC)))         \
-                    $(patsubst %.c,%.o,$(filter %.c, $(JOREK2_POWERS_SRC)))
-
-JOREK2_IMPORT_PERTURBATION_OBJ =	$(patsubst %.f90,%.o,$(filter %.f90, $(JOREK2_IMPORT_PERTURBATION_SRC)))     \
-	 		$(patsubst %.f,%.o,$(filter %.f, $(JOREK2_IMPORT_PERTURBATION_SRC)))         \
-	 		$(patsubst %.c,%.o,$(filter %.c, $(JOREK2_IMPORT_PERTURBATION_SRC))) 
-
-NEW_DIAG_DEMO_OBJ = $(patsubst %.f90,%.o,$(filter %.f90, $(NEW_DIAG_DEMO_SRC)))     \
-     $(patsubst %.f,%.o,$(filter %.f, $(NEW_DIAG_DEMO_SRC)))         \
-     $(patsubst %.c,%.o,$(filter %.c, $(NEW_DIAG_DEMO_SRC)))
 
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)

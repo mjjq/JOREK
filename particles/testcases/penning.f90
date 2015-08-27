@@ -28,9 +28,9 @@ real*8, parameter :: omega_b = 25.0
 real*8, parameter :: qom     = 1.0
 real*8, parameter :: epsilon = -1.0
 real*8, parameter :: x0(3)   = [10,0,0] ! in RZPhi
-real*8, parameter :: v0(3)   = [100,100,0] ! in RZPhi = [100,0,100] in xyz
+real*8, parameter :: v0(3)   = [100,20,0] ! in RZPhi = [100,0,100] in xyz
 real*8, parameter :: b_z     = omega_b*qom
-! The particle remains between +- 15 in Z and 5 and 17 in R for these parameters
+! The particle remains between +- 3 in Z and 8 and 13 in R for these parameters
 
 ! Local variables
 integer :: i
@@ -39,19 +39,28 @@ real*8  :: x_cart(3)
 real*8  :: t_begin, t_end
 real*8  :: dt
 
+! Fake MPI presence
+integer, parameter :: my_id = 0
+
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2 : Penning trap test          *'
 write(*,*) '***************************************'
 
-!call initialise_parameters(my_id, "__NO_FILENAME__")
+call initialise_parameters(my_id, "__NO_FILENAME__")
 
-!do i_tor=1, n_tor
-  !mode(i_tor) = + int(i_tor / 2) * n_period
-  !write(*,*) ' toroidal mode numbers : ', i_tor, mode(i_tor)
-!enddo
+! Only 1 toroidal mode (n=0)
+mode(1) = 0
 
 ! TODO replace this with a better grid
+call tr_resetfile()
+element_list%n_elements      = 0
+bnd_elm_list%n_bnd_elements  = 0
+node_list%n_nodes            = 0
+
+call define_boundary
+call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol, node_list, element_list)
+
 !call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
 
 !call initialise_basis                              ! define the basis functions at the Gaussian points

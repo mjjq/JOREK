@@ -19,7 +19,8 @@ DIRS =  timing				\
 	plots				\
 	diagnostics			\
 	diagnostics/new_diag		\
-	particles     \
+	particles                       \
+	particles/testcases             \
 	refinement			\
 	postproc			\
 	tools                           \

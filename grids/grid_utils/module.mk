@@ -64,3 +64,12 @@ JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)                 \
 	$(DIR)/fft.f90 			    			\
 	$(DIR)/fgauss.f90 		    			\
 
+PENNING_TEST_SRC += $(DIR)/update_neighbours.f90                \
+		    $(DIR)/check_element_boundary.f90           \
+		    $(DIR)/fft.f90                              \
+		    $(DIR)/fgauss.f90                           \
+	$(DIR)/meshac.f90 		    			\
+	$(DIR)/spline_spwert.f90	    			\
+	$(DIR)/spline_tb15a.f90 	    			\
+	$(DIR)/spline_tg02a.f90
+

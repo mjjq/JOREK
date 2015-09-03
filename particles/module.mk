@@ -20,4 +20,5 @@ JOREK2_PARTICLES_SRC :=$(JOREK2_PARTICLES_SRC) \
 
 PENNING_TEST_SRC := $(PENNING_TEST_SRC) \
   $(DIR)/mod_particles.f90 		\
+  $(DIR)/update_particles.f90 		\
   $(DIR)/coordinate_transforms.f90

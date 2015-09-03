@@ -85,3 +85,5 @@ JORPOL_SRC := $(JORPOL_SRC)                     \
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)   \
 	$(DIR)/q_profile.f90                \
 	$(DIR)/determine_q_profile.f90
+
+PENNING_TEST_SRC += $(DIR)/dlength.f90

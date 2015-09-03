@@ -4,7 +4,7 @@
 !! Some care must be taken when element boundaries are crossed.
 !! It is parallelized with OMP.
 !! See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
-subroutine update_particles(my_id, particle_list, t_step, n_step)
+subroutine update_particles(my_id, particle_list, t_step, n_step, toroidal_field_factor)
 
 use parameters
 use data_structure
@@ -20,6 +20,7 @@ type (type_particle_list) :: particle_list      !< The particles we will march f
 real*8,  intent(in)       :: t_step             !< The size of each timestep
 integer, intent(in)       :: n_step             !< The number of timesteps we will perform
 integer, intent(in)       :: my_id              !< Id of the current process
+real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
 
 ! -- Local variables
 type (type_particle)      :: particle
@@ -27,10 +28,10 @@ real*8                    :: B0(3), E0(3) ! Local B and E field at particle posi
 real*8                    :: x(3), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: P(2), P_s(2), P_t(2) ! Placeholder for evaluating variables and derivatives locally
 real*8                    :: v_tmp(3), x_update, y_update ! Temporary values for the coordinate system transformation
-real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U
+real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U, B_phi_factor
 real*8                    :: psi, psi_s, psi_t, u_s, u_t, omega_norm
 real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
-real*8                    :: R_step, Z_step, f
+real*8                    :: R_step, Z_step, fE, fB
 real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, k, m, i_elm, j_elm, i_var(2), n_done, ifail, ielm_out, n_lost
 logical                   :: changed, lost, search
@@ -40,6 +41,12 @@ write(*,'(A)') '*********************************************'
 write(*,'(A,i12,f12.8)') 'updating particles : ',n_step,t_step
 write(*,'(A)') '*********************************************'
 write(*,'(i5,A,i12)') my_id,'  number of particles : ',particle_list%n_particles
+if (present(toroidal_field_factor)) then
+  B_phi_factor = toroidal_field_factor
+  write(*,*) 'WARNING: disabling toroidal magnetic field'
+else
+  B_phi_factor = 1.d0
+endif
 
 call cpu_time(t0)
 
@@ -51,9 +58,9 @@ i_var = (/1, 2/)
 omega_norm = EL_CHG / (MASS_PROTON * central_mass) * SQRT(MU_ZERO * MASS_PROTON * central_mass * 1.D20)
 
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var, B_phi_factor) &
 !$omp   private(i, j, k, particle, x, v, i_elm, j_elm, psi, psi_s, psi_t, psi_R, psi_Z, R, R_s, R_t, Z, Z_s, Z_t,st_jac,              &
-!$omp           qom, B0, B02, E0, v_tmp, f, R_step, Z_step, changed, lost, search,            &
+!$omp           qom, B0, B02, E0, v_tmp, fE, fB, R_step, Z_step, changed, lost, search,            &
 !$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, x_update, y_update, P, P_s, P_t, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
 
 !$omp do
@@ -92,51 +99,42 @@ do i = 1, particle_list%n_particles
     U_phi    = 0.d0
 
     ! Calculate the normalized fraction q/m
-    qom = particle%q / particle%mass * omega_norm
+    qom = particle%q / particle%mass !* omega_norm TODO scale time back
 
     ! Calculate the magnetic field multiplied by q/m Delta_t / 2 and its magnitude
-    B0     = (/ + psi_Z, - psi_R, F0 /) / R * qom * t_step / 2.d0
+    B0     = (/ + psi_Z, - psi_R, F0*B_phi_factor /) / R
     B02    = dot_product(B0,B0)
 
     ! Calculate the local electric field, obtained from E=-Grad (u F0), multiplied by q/m Delta_t/2
-    E0     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi / R /) * qom * t_step / 2.
+    E0     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi / R /)
 
     ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
     !f = tan(qom * t_step / 2.d0 * sqrt(B02)) / sqrt(B02)
-    f = qom * t_step / 2.d0
+    fB = qom * t_step / 2.d0
+    fE = fB
 
-    ! Perform the first half step update (v0 = v^-)
-    v       = v + E0
+    ! Calculate the electric field update (v^n-1/2 -> v-)
+    v = v + fE * E0
+    ! Calculate the rotation
+    v = (v + 2.d0*fB/(1.d0+fB*fB*B02)*( cross_product(v,B0) &
+      - fB * v * B02 &
+      + fB * B0 * dot_product(v,B0)))
+    ! Calculate the next electric field update
+    v = v + fE * E0
 
-    ! Perform the full step rotation
-    v       = v + 2.d0 * f / (1.d0 + f**2 * B02) * (+ cross_product(v,B0) &
-                                                     + f * B0 * dot_product(v,B0) &
-                                                     - f * v * B02)
-    
-    ! Perform the second half step update (calculate v^n+1/2 from v+)
-    v        = v + E0
+    ! Calculate the correction step (x = change in R, y is change in phi)
+    x_update = R + v(1) * t_step
+    y_update = v(3) * t_step
 
-    ! Calculate the position updates
-    x_update = R + t_step * v(1)
-    y_update = t_step * v(3)
-
-    ! Calculate the new r and Z
+    ! Calculate the new R and Z
     R_step = sqrt(x_update**2 + y_update**2)
     Z_step = Z + t_step * v(2)
-
-    ! Check if the particle is motionless on axis
-    if (R_step .lt. 1.d-9) then
-      write(*,*) "Lost particle because it stopped on the axis"
-      particle%lost = .true.
-      cycle
-    end if
-
     ! Calculate the new theta
     x(3) = x(3) + asin(y_update / R_step)
 
     ! Adjust velocities to the new reference frame
     v_tmp = v
-    v(1) = x_update/R_step * v_tmp(1) + y_update/R_step * v_tmp(2)
+    v(1) =  x_update/R_step * v_tmp(1) + y_update/R_step * v_tmp(2)
     v(2) = -y_update/R_step * v_tmp(1) + x_update/R_step * v_tmp(2)
 
     ! Perform at most 3 newton iteration steps to find the new values of s and t in this element
@@ -195,9 +193,7 @@ do i = 1, particle_list%n_particles
           endif
         enddo
       else
-        ! If we're here something went wrong
-        write(*,*) "Particle not lost, changed or search. bug?"
-        exit
+        exit ! Particle did not move to another element
       endif
 
       if (maxval(abs(x(1:2)-0.5)) .lt. 0.5) then
@@ -210,11 +206,14 @@ do i = 1, particle_list%n_particles
         x(1)  = s_out
         x(2)  = t_out
         i_elm = ielm_out
+        if (ifail .ne. 0) write(*,*) "Particle not in grid, position:", R_step,Z_step ! TODO set lost
       endif
     enddo
 
     ! Update variables for the next iteration
     call interp_PRZ(node_list,element_list,i_elm,i_var,2,x(1),x(2),x(3),P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
+
+    write(*,*) R_step, Z_step, i_elm
 
     R = R_step
     Z = Z_step

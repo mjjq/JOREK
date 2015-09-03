@@ -5,9 +5,9 @@ module coordinate_transforms
   public :: RZPhiToXYZ
 contains
   !> This function converts a vector in xyz coordinates to RZPhi coordinates
-  pure subroutine XYZtoRZPhi(xyz, RZPhi, origin)
+  pure function XYZtoRZPhi(xyz, origin) result(RZPhi)
     real*8, intent(in)           :: xyz(3) !< The vector components in xyz coordinates
-    real*8, intent(out)          :: RZPhi(3) !< The vector components in RZPhi coordinates
+    real*8                       :: RZPhi(3) !< The vector components in RZPhi coordinates
     real*8, intent(in), optional :: origin(3) !< The xyz coordinates of the base of the vector, assumed 0 if omitted
 
     real*8 :: phi, dp(2,2) ! Angle and dot products
@@ -21,11 +21,11 @@ contains
     RZPhi(1) = xyz(1)*dp(1,1)+xyz(2)*dp(1,2)
     RZPhi(2) = xyz(3)
     RZPhi(3) = xyz(1)*dp(2,1)+xyz(2)*dp(2,2)
-  end subroutine XYZtoRZPhi
+  end function XYZtoRZPhi
   !> This function converts a position in RZPhi coordinates to xyz coordinates
-  pure subroutine RZPhiToXYZ(RZPhi, xyz, origin)
+  pure function RZPhiToXYZ(RZPhi, origin) result(xyz)
     real*8, intent(in)           :: RZPhi(3) !< The vector components in RZPhi coordinates
-    real*8, intent(out)          :: xyz(3) !< The vector components in xyz coordinates
+    real*8                       :: xyz(3) !< The vector components in xyz coordinates
     real*8, intent(in), optional :: origin(3) !< The RZPhi coordinates of the base of the vector, assumed 0 if omitted
 
     real*8 :: phi, dp(2,2) ! Angle and dot products
@@ -39,7 +39,7 @@ contains
     xyz(1) = RZPhi(1)*dp(1,1)+RZPhi(3)*dp(1,2)
     xyz(2) = RZPhi(1)*dp(2,1)+RZPhi(3)*dp(2,2)
     xyz(3) = RZPhi(2)
-  end subroutine RZPhiToXYZ
+  end function RZPhiToXYZ
   !> This function contains the dot products in the JOREK coordinate
   !! system between the basis vectors e_x,e_y and e_r,e_theta
   pure function dot_products(phi) result(dp)

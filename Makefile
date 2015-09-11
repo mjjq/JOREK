@@ -209,51 +209,52 @@ version:
 	-@$(SED) -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
 	-@rm -f $@.tmp
 
+
+# This line defines the default program template (after https://www.gnu.org/software/make/manual/html_node/Eval-Function.html)
+define PROGRAM_TEMPLATE =
+$(notdir $(basename $(1))): version $(1) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper]')_OBJ)
+	$(value FC) $(value FFLAGS) $(value INCLUDES) -c $(1) -o $(call all_src_to_obj,$(1))
+	$(value FC) $(value FFLAGS) $(call all_src_to_obj,$(1)) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper:]')_OBJ) \
+	-o $(JOREK_DIR)/$(notdir $(basename $(1))) $(value LIBS)
+endef
+# Below is an example:
+#jorek2_poincare : version diagnostics/jorek2_poincare.f90 $(JOREK2_POINCARE_OBJ) 
+#	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_poincare.f90 -o diagnostics/jorek2_poincare.o
+#	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_poincare.o $(JOREK2_POINCARE_OBJ) \
+#	 -o $(JOREK_DIR)/jorek2_poincare  $(LIBS)
+
+PROGRAM_SOURCES = diagnostics/jorek2_poincare.f90       \
+		  diagnostics/rst_bin2hdf5.f90          \
+		  diagnostics/rst_hdf52bin.f90          \
+		  diagnostics/jorek2_four.f90           \
+		  postproc/jorek2_postproc.f90          \
+		  diagnostics/jorek2_povray.f90         \
+		  diagnostics/jorek2_connection.f90     \
+		  diagnostics/enbiggen.f90              \
+		  diagnostics/jordel.f90                \
+		  diagnostics/jorpol.f90                \
+		  diagnostics/jorek2vtk.f90             \
+		  diagnostics/jorek2_diagno.f90         \
+		  diagnostics/jorek_to_helena.f90       \
+		  diagnostics/jorek2_target2vtk.f90     \
+		  diagnostics/jorek2_powers.f90         \
+		  diagnostics/new_diag_demo.f90
+
+# Create all standard make rules
+$(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
+
+
+# The below are non-standard make rules
 $(MAIN) : version $(JOREK2_MAIN_OBJ)
 	$(FC) $(FFLAGS_OMP) \
 	$(JOREK2_MAIN_OBJ) \
 	 -o $(MAIN) $(INCLUDES) $(LIBS)
-
-jorek2_poincare : version diagnostics/jorek2_poincare.f90 $(JOREK2_POINCARE_OBJ) 
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_poincare.f90 -o diagnostics/jorek2_poincare.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_poincare.o $(JOREK2_POINCARE_OBJ) \
-	 -o $(JOREK_DIR)/jorek2_poincare  $(LIBS)
-
-rst_bin2hdf5 : version diagnostics/rst_bin2hdf5.f90 $(RST_BIN2HDF5_OBJ) 
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/rst_bin2hdf5.f90 -o diagnostics/rst_bin2hdf5.o
-	$(FC) $(FFLAGS_OMP) diagnostics/rst_bin2hdf5.o $(RST_BIN2HDF5_OBJ) \
-	-o $(JOREK_DIR)/rst_bin2hdf5 $(LIBS)
-
-rst_hdf52bin : version diagnostics/rst_hdf52bin.f90 $(RST_HDF52BIN_OBJ) 
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/rst_hdf52bin.f90 -o diagnostics/rst_hdf52bin.o
-	$(FC) $(FFLAGS_OMP) diagnostics/rst_hdf52bin.o $(RST_HDF52BIN_OBJ) \
-	-o $(JOREK_DIR)/rst_hdf52bin $(LIBS)
-
-jorek2_four : version diagnostics/jorek2_four.f90 $(JOREK2_FOUR_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_four.f90 -o diagnostics/jorek2_four.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_four.o $(JOREK2_FOUR_OBJ) \
-	 -o $(JOREK_DIR)/jorek2_four $(LIBS) $(LIBFFTW)
 
 jorek_extract_data : version $(JOREK_EXTRACT_DATA_OBJ) diagnostics/jorek_extract_data.o
 	$(FC) $(FFLAGS)                 \
 	diagnostics/jorek_extract_data.o \
 	$(JOREK_EXTRACT_DATA_OBJ)		\
 	 -o $(JOREK_DIR)/jorek_extract_data $(INCLUDES) $(LIBS) $(LIBFFTW)
-
-jorek2_postproc : version postproc/jorek2_postproc.f90 $(JOREK2_POSTPROC_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c postproc/jorek2_postproc.f90 -o postproc/jorek2_postproc.o
-	$(FC) $(FFLAGS_OMP) postproc/jorek2_postproc.o $(JOREK2_POSTPROC_OBJ) \
-	 -o $(JOREK_DIR)/jorek2_postproc $(LIBS) $(LIBFFTW)
-
-jorek2_povray : version diagnostics/jorek2_povray.f90 $(JOREK2_POVRAY_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_povray.f90 -o diagnostics/jorek2_povray.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_povray.o $(JOREK2_POVRAY_OBJ) \
-	 -o $(JOREK_DIR)/jorek2_povray $(LIBS) $(LIBFFTW)
-
-jorek2_connection2 : version diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_connection2.f90 -o diagnostics/jorek2_connection2.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_connection2.o $(JOREK2_CONNECTION2_OBJ) \
-	 -o $(JOREK_DIR)/jorek2_connection2 $(LIBS)
 
 jorek2_connection_stan : version diagnostics/jorek2_connection_stan.f90 $(JOREK2_CONNECTION2_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_connection_stan.f90 -o diagnostics/jorek2_connection_stan.o
@@ -265,37 +266,6 @@ jorek2_strikes : version diagnostics/jorek2_strikes_ordered.f90 $(JOREK2_STRIKES
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_strikes_ordered.o $(JOREK2_STRIKES_OBJ) \
 	 -o $(JOREK_DIR)/jorek2_strikes $(LIBS)
 
-enbiggen : version diagnostics/enbiggen.f90 $(ENBIGGEN_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/enbiggen.f90 -o diagnostics/enbiggen.o
-	$(FC) $(FFLAGS_OMP) diagnostics/enbiggen.o $(ENBIGGEN_OBJ) \
-	-o $(JOREK_DIR)/enbiggen $(LIBS)
-
-jordel : version diagnostics/jordel.f90 $(JORDEL_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jordel.f90 -o diagnostics/jordel.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jordel.o $(JORDEL_OBJ) \
-	-o $(JOREK_DIR)/jordel $(LIBS)
-
-jorpol : version diagnostics/jorpol.f90 $(JORPOL_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorpol.f90 -o diagnostics/jorpol.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorpol.o $(JORPOL_OBJ) \
-	-o $(JOREK_DIR)/jorpol $(LIBS)
-
-jorek2vtk : version diagnostics/jorek2vtk.f90 $(JOREK2VTK_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk.f90 -o diagnostics/jorek2vtk.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk.o $(JOREK2VTK_OBJ) \
-	 -o $(JOREK_DIR)/jorek2vtk $(LIBS)
-
-jorek2vtk_GaussVortTerms : diagnostics/jorek2vtk_GaussVortTerms.f90 $(JOREK2VTK_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk_GaussVortTerms.f90 -o diagnostics/jorek2vtk_GaussVortTerms.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk_GaussVortTerms.o $(JOREK2VTK_OBJ) \
-	 -o $(JOREK_DIR)/jorek2vtk_GaussVortTerms $(LIBS)
-
-jorek2_stan : version diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
-
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_stan.f90 -o diagnostics/jorek2_stan.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_stan.o $(JOREK2VTK_OBJ) \
-	 -o $(JOREK_DIR)/jorek2_stan $(LIBS)
-
 jorek2_fieldlines_vtk : version diagnostics/jorek2_fieldlines_vtk.f90 $(JOREK2FLVTK_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_fieldlines_vtk.f90 -o diagnostics/jorek2_fieldlines_vtk.o
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_fieldlines_vtk.o $(JOREK2FLVTK_OBJ) \
@@ -306,29 +276,19 @@ jorek2vtk_3d : version diagnostics/jorek2vtk_3d.f90 $(JOREK2VTK3D_OBJ)
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk_3d.o $(JOREK2VTK3D_OBJ) \
 	 -o $(JOREK_DIR)/jorek2vtk_3d $(LIBS)
 
-jorek2_diagno : version diagnostics/jorek2_diagno.f90 $(JOREK2_DIAGNO_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_diagno.f90 -o diagnostics/jorek2_diagno.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_diagno.o $(JOREK2_DIAGNO_OBJ) \
-	 -o $(JOREK_DIR)/jorek2_diagno $(LIBS)
+jorek2vtk_GaussVortTerms : diagnostics/jorek2vtk_GaussVortTerms.f90 $(JOREK2VTK_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2vtk_GaussVortTerms.f90 -o diagnostics/jorek2vtk_GaussVortTerms.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2vtk_GaussVortTerms.o $(JOREK2VTK_OBJ) \
+	 -o $(JOREK_DIR)/jorek2vtk_GaussVortTerms $(LIBS)
 
-jorek_to_helena : version diagnostics/jorek_to_helena.f90 $(JOREK_TO_HELENA_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek_to_helena.f90 -o diagnostics/jorek_to_helena.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek_to_helena.o $(JOREK_TO_HELENA_OBJ) \
-	-o $(JOREK_DIR)/jorek_to_helena $(LIBS)
+jorek2_stan : version diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_stan.f90 -o diagnostics/jorek2_stan.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_stan.o $(JOREK2VTK_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_stan $(LIBS)
 
 import_eqdsk : version util/import_eqdsk.f90
 	$(FC) -c util/import_eqdsk.f90 -o util/import_eqdsk.o
 	$(FC)  util/import_eqdsk.o $(JOREK_DIR)/import_eqdsk $(LIBS)
-
-jorek2_target2vtk : version diagnostics/jorek2_target2vtk.f90 $(JOREK2_TARGET2VTK_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_target2vtk.f90 -o diagnostics/jorek2_target2vtk.o
-	$(FC) $(FFLAGS) diagnostics/jorek2_target2vtk.o $(JOREK2_TARGET2VTK_OBJ) \
-	-o $(JOREK_DIR)/jorek2_target2vtk $(LIBS)
-
-jorek2_powers : version diagnostics/jorek2_powers.f90 $(JOREK2_POWERS_OBJ)
-	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_powers.f90 -o diagnostics/jorek2_powers.o
-	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_powers.o $(JOREK2_POWERS_OBJ) \
-	-o $(JOREK_DIR)/jorek2_powers $(LIBS)
 
 jorek2_import_perturbation : version jorek2_import_perturbation_new_flags
 jorek2_import_perturbation_new_flags: version FFLAGS += -DIMPORT_PERTURBATIONS
@@ -339,10 +299,6 @@ jorek2_import_perturbation_tmp : version diagnostics/jorek2_import_perturbation.
 	$(FC) $(FFLAGS) diagnostics/jorek2_import_perturbation.o $(JOREK2_IMPORT_PERTURBATION_OBJ) \
 	-o $(JOREK_DIR)/jorek2_import_perturbation $(LIBS)
 
-new_diag_demo : diagnostics/new_diag_demo.f90 $(NEW_DIAG_DEMO_OBJ)
-	$(FC) $(FFLAGS) diagnostics/new_diag_demo.f90 -c -o diagnostics/new_diag_demo.o 
-	$(FC) $(FFLAGS_OMP) diagnostics/new_diag_demo.o $(NEW_DIAG_DEMO_OBJ)		\
-         -o $(JOREK_DIR)/new_diag_demo $(INCLUDES) $(LIBS)
 
 include all_rules.mk
 ifeq (0, $(words $(foreach word, ${NODEPS}, $(findstring ${word}, ${MAKECMDGOALS}))))

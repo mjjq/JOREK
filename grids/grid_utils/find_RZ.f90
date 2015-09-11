@@ -21,24 +21,63 @@ real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8  :: tolx, tolf, errx, errf, temp, dis
 real*8  :: x(2), FVEC(2), FJAC(2,2), p(2)
 
+logical              :: minmax_initialised
+real*8, allocatable  :: elements_minmax(:,:)
+
+save minmax_initialised, elements_minmax
+
 ielm_out = 0
 
-!write(*,'(A,2e16.8)') ' find_RZ : ',R_find,Z_find
+if (.not. allocated(elements_minmax)) then
+
+  allocate(elements_minmax(4,element_list%n_elements))
+  minmax_initialised = .false.
+!  write(*,*) ' *** FIND_RZ : initialising ***'
+
+elseif (size(elements_minmax,2) .ne. element_list%n_elements) then
+
+  deallocate(elements_minmax)
+  allocate(elements_minmax(4,element_list%n_elements))
+  minmax_initialised = .false.
+!  write(*,*) ' *** FIND_RZ : re-initialising ***'
+
+endif
+
+if (.not. minmax_initialised) then
+
+  do k=1,element_list%n_elements
+
+    call RZ_minmax(node_list,element_list,k,Rmin,Rmax,Zmin,Zmax)
+
+    elements_minmax(:,k) = (/ Rmin, Rmax, Zmin, Zmax /)
+
+  enddo
+
+  minmax_initialised = .true.
+!  write(*,*) ' *** FIND_RZ : initialised ***'
+
+endif
+
 
 do k=1,element_list%n_elements
 
-  call RZ_minmax(node_list,element_list,k,Rmin,Rmax,Zmin,Zmax)
+!  call RZ_minmax(node_list,element_list,k,Rmin,Rmax,Zmin,Zmax)
 
-  Rmin = Rmin - 0.05
-  Rmax = Rmax + 0.05
-  Zmin = Zmin - 0.05
-  Zmax = Zmax + 0.05
+  Rmin =  elements_minmax(1,k)
+  Rmax =  elements_minmax(2,k)
+  Zmin =  elements_minmax(3,k)
+  Zmax =  elements_minmax(4,k)
+
+!  Rmin = Rmin - 0.05
+!  Rmax = Rmax + 0.05
+!  Zmin = Zmin - 0.05
+!  Zmax = Zmax + 0.05
 
   if ((R_find .ge. Rmin) .and. (R_find .le. Rmax) .and. &
       (Z_find .ge. Zmin) .and. (Z_find .le. Zmax) ) then
 
     ntrial = 20
-    tolx = 1.d-6
+    tolx = 1.d-8
     tolf = 1.d-15
 
     do istart = 1,5
@@ -47,17 +86,17 @@ do k=1,element_list%n_elements
         x(1) = 0.5d0
         x(2) = 0.5d0
       elseif (istart .eq. 2) then
-        x(1) = -0.71d0
-        x(2) = -0.71d0
+        x(1) = 0.75d0
+        x(2) = 0.75d0
       elseif (istart .eq. 3) then
-        x(1) =  0.71d0
-        x(2) = -0.71d0
+        x(1) = 0.75d0
+        x(2) = 0.25d0
       elseif (istart .eq. 4) then
-        x(1) =  0.71d0
-        x(2) =  0.71d0
+        x(1) = 0.25d0
+        x(2) = 0.75d0
       elseif (istart .eq. 5) then
-        x(1) = -0.71d0
-        x(2) =  0.71d0
+        x(1) = 0.25d0
+        x(2) = 0.25d0
       endif
 
       ifail = 999
@@ -113,8 +152,8 @@ do k=1,element_list%n_elements
 
         x = x + p
 
-        x = max(x,-0.000d0)
-        x = min(x,+1.000d0)
+        x = max(x,+0.d0)
+        x = min(x,+1.d0)
 
         if (errx .le. tolx) then
 

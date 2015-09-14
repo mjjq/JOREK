@@ -16,7 +16,7 @@ type (type_node)      :: nodes(n_vertex_max)
 
 real*8, dimension (:,:), pointer  :: ELM
 real*8, dimension (:)  , pointer  :: RHS
-integer, intent(in) :: tid
+integer, intent(in) :: tid, xcase2
 
 real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 logical    :: xpoint2

@@ -294,8 +294,8 @@ jorek2_particles : particles/jorek2_particles.f90 $(JOREK2_PARTICLES_OBJ)
 	$(JOREK2_PARTICLES_OBJ)		\
 	 -o $(JOREK_DIR)/jorek2_particles $(INCLUDES) $(LIBS) $(LIBFFTW)
 
-penning_test : particles/testcases/penning.f90 $(PENNING_TEST_OBJ)
-	$(FC) $(FFLAGS) particles/testcases/penning.f90 \
+penning_test : non_regression_tests/standalone/penning_test/penning.f90 $(PENNING_TEST_OBJ)
+	$(FC) $(FFLAGS) non_regression_tests/standalone/penning_test/penning.f90 \
 	$(PENNING_TEST_OBJ) -o $(JOREK_DIR)/penning_test \
 	$(INCLUDES) $(LIBS)
 

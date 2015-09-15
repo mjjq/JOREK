@@ -12,6 +12,7 @@ module constants
   real*8,  parameter :: K_BOLTZ       = 1.3806488d-23            !< Boltzmann constant [J/K]
   real*8,  parameter :: MASS_PROTON   = 1.67262178d-27           !< proton mass [kg]
   real*8,  parameter :: MASS_ELECTRON = 9.10938291d-31           !< electron mass [kg]
+  real*8,  parameter :: ATOMIC_MASS_UNIT = 1.66053904d-27        !< 1 amu / dalton [kg]
 
   !> @name Constants which describe the domain of a certain position (used by function which_domain)
   integer, parameter :: DOMAIN_PLASMA         = 0    !< Plasma region

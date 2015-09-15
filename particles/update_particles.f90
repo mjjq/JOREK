@@ -135,7 +135,7 @@ do i = 1, particle_list%n_particles
     ! Adjust velocities to the new reference frame
     v_tmp = v
     v(1) =  x_update/R_step * v_tmp(1) + y_update/R_step * v_tmp(2)
-    v(2) = -y_update/R_step * v_tmp(1) + x_update/R_step * v_tmp(2)
+    v(3) = -y_update/R_step * v_tmp(1) + x_update/R_step * v_tmp(3)
 
     ! Perform at most 3 newton iteration steps to find the new values of s and t in this element
     do k = 1, 3
@@ -152,7 +152,7 @@ do i = 1, particle_list%n_particles
       if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
         exit ! Converged enough, we're done
       else if (k == 3) then
-        write (*,*) "Newton iteration failed, change = ", (dot_product(x_prev-x,x_prev-x))
+        write (*,*) "Newton iteration failed, change = ", (dot_product(x_prev-x,x_prev-x)), x
       endif
     enddo
 

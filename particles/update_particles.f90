@@ -27,7 +27,7 @@ type (type_particle)      :: particle
 real*8                    :: B0(3), E0(3) ! Local B and E field at particle position
 real*8                    :: x(3), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: P(2), P_s(2), P_t(2) ! Placeholder for evaluating variables and derivatives locally
-real*8                    :: v_tmp(3), x_update, y_update ! Temporary values for the coordinate system transformation
+real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U, B_phi_factor
 real*8                    :: psi, psi_s, psi_t, u_s, u_t, omega_norm
 real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
@@ -43,7 +43,7 @@ write(*,'(A)') '*********************************************'
 write(*,'(i5,A,i12)') my_id,'  number of particles : ',particle_list%n_particles
 if (present(toroidal_field_factor)) then
   B_phi_factor = toroidal_field_factor
-  write(*,*) 'WARNING: disabling toroidal magnetic field'
+  write(*,*) 'WARNING: disabling toroidal magnetic field for particle propagator'
 else
   B_phi_factor = 1.d0
 endif
@@ -53,15 +53,11 @@ call cpu_time(t0)
 ! Select the first and second physics variables
 i_var = (/1, 2/)
 
-! Omega_norm is the normalization to JOREK units of an angular frequency, per B
-! It is Omega = qB/m sqrt(mu_0 rho) with q = e, m = m_p*central_mass and n = 10^20, divided by B
-omega_norm = EL_CHG / (MASS_PROTON * central_mass) * SQRT(MU_ZERO * MASS_PROTON * central_mass * 1.D20)
-
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var, B_phi_factor) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var, B_phi_factor, central_mass) &
 !$omp   private(i, j, k, particle, x, v, i_elm, j_elm, psi, psi_s, psi_t, psi_R, psi_Z, R, R_s, R_t, Z, Z_s, Z_t,st_jac,              &
 !$omp           qom, B0, B02, E0, v_tmp, fE, fB, R_step, Z_step, changed, lost, search,            &
-!$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, x_update, y_update, P, P_s, P_t, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
+!$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, R_update, RPhi_update, P, P_s, P_t, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
 
 !$omp do
 do i = 1, particle_list%n_particles
@@ -98,8 +94,9 @@ do i = 1, particle_list%n_particles
     ! And assume for now no electric field in the phi-direction
     U_phi    = 0.d0
 
-    ! Calculate the normalized fraction q/m
-    qom = particle%q / particle%mass !* omega_norm TODO scale time back
+    ! Calculate the normalized fraction q/m in jorek units
+    qom = (real(particle%q) * EL_CHG * SQRT(MU_ZERO * MASS_PROTON * central_mass * 1.D20)) &
+        / (particle%mass * ATOMIC_MASS_UNIT)
 
     ! Calculate the magnetic field multiplied by q/m Delta_t / 2 and its magnitude
     B0     = (/ + psi_Z, - psi_R, F0*B_phi_factor /) / R
@@ -109,9 +106,9 @@ do i = 1, particle_list%n_particles
     E0     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi / R /)
 
     ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
-    !f = tan(qom * t_step / 2.d0 * sqrt(B02)) / sqrt(B02)
-    fB = qom * t_step / 2.d0
-    fE = fB
+    fB = tan(qom * t_step * 0.5d0 * sqrt(B02)) / sqrt(B02)
+    !fB = qom * t_step * 0.5d0
+    fE = qom * t_step * 0.5d0
 
     ! Calculate the electric field update (v^n-1/2 -> v-)
     v = v + fE * E0
@@ -123,19 +120,19 @@ do i = 1, particle_list%n_particles
     v = v + fE * E0
 
     ! Calculate the correction step (x = change in R, y is change in phi)
-    x_update = R + v(1) * t_step
-    y_update = v(3) * t_step
+    R_update = R + v(1) * t_step
+    RPhi_update = v(3) * t_step
 
     ! Calculate the new R and Z
-    R_step = sqrt(x_update**2 + y_update**2)
+    R_step = sqrt(R_update**2 + RPhi_update**2)
     Z_step = Z + t_step * v(2)
-    ! Calculate the new theta
-    x(3) = x(3) + asin(y_update / R_step)
+    ! Calculate the new phi
+    x(3) = x(3) + asin(RPhi_update / R_step)
 
-    ! Adjust velocities to the new reference frame
+    ! Adjust R and Phi velocities to the new reference frame (z stays the same)
     v_tmp = v
-    v(1) =  x_update/R_step * v_tmp(1) + y_update/R_step * v_tmp(2)
-    v(3) = -y_update/R_step * v_tmp(1) + x_update/R_step * v_tmp(3)
+    v(1) =  R_update/R_step    * v_tmp(1) + RPhi_update/R_step * v_tmp(3)
+    v(3) = -RPhi_update/R_step * v_tmp(1) + R_update/R_step    * v_tmp(3)
 
     ! Perform at most 3 newton iteration steps to find the new values of s and t in this element
     do k = 1, 3
@@ -213,7 +210,8 @@ do i = 1, particle_list%n_particles
     ! Update variables for the next iteration
     call interp_PRZ(node_list,element_list,i_elm,i_var,2,x(1),x(2),x(3),P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
 
-    write(*,*) R_step, Z_step, i_elm
+    ! Debug output
+    !write(*,*) real(j)*t_step, R_step, Z_step, x(3), v(1)**2+v(3)**2, i_elm
 
     R = R_step
     Z = Z_step

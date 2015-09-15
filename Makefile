@@ -211,8 +211,8 @@ version:
 
 
 # This line defines the default program template (after https://www.gnu.org/software/make/manual/html_node/Eval-Function.html)
-define PROGRAM_TEMPLATE =
-$(notdir $(basename $(1))): version $(1) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper]')_OBJ)
+define PROGRAM_TEMPLATE
+$(notdir $(basename $(1))): version $(1) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper:]')_OBJ)
 	$(value FC) $(value FFLAGS) $(value INCLUDES) -c $(1) -o $(call all_src_to_obj,$(1))
 	$(value FC) $(value FFLAGS) $(call all_src_to_obj,$(1)) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper:]')_OBJ) \
 	-o $(JOREK_DIR)/$(notdir $(basename $(1))) $(value LIBS)

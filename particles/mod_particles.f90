@@ -14,6 +14,7 @@ module mod_particles
     logical :: lost             !< particle is active or lost
 
   end type type_particle
+  integer :: n_particles_max = 100000
 
   type type_particle_list
 

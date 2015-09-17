@@ -1,4 +1,4 @@
-module coordinate_transforms
+module mod_coordinate_transforms
   private
 
   public :: XYZtoRZPhi
@@ -49,4 +49,4 @@ contains
     sp = sin(phi)
     dp = reshape((/cp,-sp,-sp,-cp/),(/2,2/)) ! Since this is symmetric row/column major does not matter
   end function dot_products
-end module coordinate_transforms
+end module mod_coordinate_transforms

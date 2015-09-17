@@ -13,7 +13,7 @@ use basis_at_gaussian
 use nodes_elements
 use mod_particles
 use clock_module
-use coordinate_transforms ! For solution of penning trap trajectory
+use mod_coordinate_transforms ! For solution of penning trap trajectory
 use parameters
 use constants
 

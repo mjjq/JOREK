@@ -5,6 +5,9 @@
 !! A single particle is released at position x0 with velocity v0
 !! and tracked until t_end. The output code signifies whether the
 !! tests passed the preset accuracy.
+!!
+!! The code reads a namelist input file to determine the grid used,
+!! the number of grid cells to use and the time step sizes to use.
 program penning
 
 use data_structure
@@ -51,7 +54,7 @@ integer, parameter :: my_id = 0
 
 
 write(*,*) '***************************************'
-write(*,*) '* JOREK2 : Penning trap test  2       *'
+write(*,*) '* JOREK2 : Penning trap test          *'
 write(*,*) '***************************************'
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
@@ -59,8 +62,20 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 ! Only 1 toroidal mode (n=0)
 mode(1) = 0
 
-! Create a simple grid (is good enough for these fields)
-call grid_bezier_square(n_R, n_Z, R_begin, R_end, Z_begin, Z_end, .false., node_list, element_list)
+! Create a grid according to the variables present in the input file
+if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+  call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo,   &
+    Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
+else if ((n_R > 0) .and. (n_Z > 0) ) then
+  call grid_bezier_square(n_R, n_Z, R_begin, R_end, Z_begin, Z_end, .true., node_list,       &
+    element_list)
+else if ((n_radial > 0) .and. (n_pol > 0) ) then
+  call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
+    node_list, element_list)
+else
+  write(*,*) 'FATAL : no valid combination of grid-sizes specified'
+  stop
+end if
 call update_neighbours(element_list,node_list)
 
 
@@ -110,7 +125,12 @@ do i=1,size(tstep_n)
 
   ! exit the test if the error is too large
   if (abs(dot_product(v,v)-dot_product(v0,v0)) .gt. 1.d-6) then
-    write(*,*) "UniformB test failed, error larger that 1.d-6"
+    write(*,*) "CRITICAL: UniformB test failed, error larger that 1.d-6"
+    stop 1
+  endif
+  ! Exit if there are nans anywhere
+  if (isnan(v(1))) then
+    write(*,*) "CRITICAL: NaN encountered, stopping"
     stop 1
   endif
 enddo
@@ -194,7 +214,10 @@ contains
   subroutine reset_particle() ! Uses the global variables
     write(*,*) "Initializing test particle"
     call find_RZ(node_list,element_list,x0(1),x0(2),R,Z,ielm_out,s,t,ifail)
-    if (ifail .ne. 0) write(*,*) "Error finding initial particle in grid"
+    if (ifail .ne. 0) then
+      write(*,*) "CRITICAL: could not find initial particle in grid"
+      stop 1
+    endif
     particle_list%particle(1)%st = [s,t]
     particle_list%particle(1)%i_elm = ielm_out
     particle_list%particle(1)%x = [R,Z,x0(3)]

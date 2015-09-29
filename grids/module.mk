@@ -15,4 +15,6 @@ JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    \
 	$(DIR)/mod_grid_xpoint_data.f90
 
 PENNING_TEST_SRC += $(DIR)/define_boundary.f90   \
-		    $(DIR)/grid_bezier_square.f90
+		    $(DIR)/grid_bezier_square.f90\
+		    $(DIR)/grid_polar_bezier.f90 \
+		    $(DIR)/grid_bezier_square_polar.f90

@@ -30,13 +30,15 @@ contains
        n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
        R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
 
+    use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use data_structure
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
-         MURGE_SUCCESS
+         MURGE_SUCCESS, murge_add_one_entry
+    use murge_module, only : MURGE_ASSEMBLYEND
     use mpi_mod
 
     implicit none
@@ -94,14 +96,14 @@ contains
           only_count = .false.
           write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
           if (.not. solve_only) then
-             CALL MURGE_ASSEMBLYBEGIN(murge_id, cnt,                          &
-                  &                   MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
-                  &                   MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+             CALL MURGE_ASSEMBLYBEGIN( murge_id, murge_global_n, cnt,              &
+                  &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,     &
+                  &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
           end if
           if (gmres) then
-             CALL MURGE_ASSEMBLYBEGIN(murge_id_prod, cnt_prod,                &
-                  &                   MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW, &
-                  &                   MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
+             CALL MURGE_ASSEMBLYBEGIN( murge_id_prod, murge_global_n_prod, cnt_prod,    &
+                  &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,          &
+                  &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
           end if
        end if
 
@@ -126,16 +128,15 @@ contains
 
                             index_node = node_list%node(inode)%index(1)
                             if (use_murge .and. use_murge_element) then
-                               call vertex_is_local(index_node, is_local)
-                               if (is_local) then
-                                  call murge_add_one_entry( index_node, k, in, &
-                                       &                    index_node, k, in, &
-                                       &                    zbig, solve_only,  &
-                                       &                    gmres,             &
-                                       &                    cnt, cnt_prod,     &
-                                       &                    only_count)
 
-                               end if
+                              call boundary_conditions_add_one_entry( &
+                                  index_node,  k,  in,                &
+                                  index_node,  k,  in,                &
+                                  zbig, solve_only, gmres,            &
+                                  use_murge, use_murge_element,       &
+                                  cnt, cnt_prod, only_count,          &
+                                  index_min, index_max)
+
                             else
                                if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
@@ -154,15 +155,15 @@ contains
 
                             index_node = node_list%node(inode)%index(2)
                             if (use_murge .and. use_murge_element) then
-                               call vertex_is_local(index_node, is_local)
-                               if (is_local) then
-                                  call murge_add_one_entry( index_node, k, in,  &
-                                       &                    index_node, k, in,  &
-                                       &                    zbig, solve_only,   &
-                                       &                    gmres,              &
-                                       &                    cnt, cnt_prod,      &
-                                       &                    only_count)
-                               end if
+
+                               call boundary_conditions_add_one_entry( &
+                                  index_node,  k,  in,                &
+                                  index_node,  k,  in,                &
+                                  zbig, solve_only, gmres,            &
+                                  use_murge, use_murge_element,       &
+                                  cnt, cnt_prod, only_count,          &
+                                  index_min, index_max)
+
                             else
                                if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
@@ -190,15 +191,15 @@ contains
 
                             index_node = node_list%node(inode)%index(1)
                             if (use_murge .and. use_murge_element) then
-                               call vertex_is_local(index_node, is_local)
-                               if (is_local) then
-                                  call murge_add_one_entry( index_node, k, in, &
-                                       &                    index_node, k, in, &
-                                       &                    zbig, solve_only,  &
-                                       &                    gmres,             &
-                                       &                    cnt, cnt_prod,     &
-                                       &                    only_count)
-                               end if
+
+                              call boundary_conditions_add_one_entry( &
+                                  index_node,  k,  in,                &
+                                  index_node,  k,  in,                &
+                                  zbig, solve_only, gmres,            &
+                                  use_murge, use_murge_element,       &
+                                  cnt, cnt_prod, only_count,          &
+                                  index_min, index_max)
+
                             else
                                if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
@@ -217,15 +218,15 @@ contains
                             index_node = node_list%node(inode)%index(3)
 
                             if (use_murge .and. use_murge_element) then
-                               call vertex_is_local(index_node, is_local)
-                               if (is_local) then
-                                  call murge_add_one_entry( index_node, k, in, &
-                                       &                    index_node, k, in, &
-                                       &                    zbig, solve_only,  &
-                                       &                    gmres,             &
-                                       &                    cnt, cnt_prod,     &
-                                       &                    only_count)
-                               end if
+
+                               call boundary_conditions_add_one_entry( &
+                                  index_node,  k,  in,                &
+                                  index_node,  k,  in,                &
+                                  zbig, solve_only, gmres,            &
+                                  use_murge, use_murge_element,       &
+                                  cnt, cnt_prod, only_count,          &
+                                  index_min, index_max)
+
                             else
                                if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 

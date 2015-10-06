@@ -18,7 +18,7 @@ module load ppplib/14.4.8
 module load fftw/3.3.4
 
 export LANG=C
-export JOREK_HOST=hpc-iter
+export JOREK_HOST=iter-hpc
 export compilethreads=8
 export PRERUN="export OMP_NUM_THREADS=2"
 export MPIRUN="mpirun -np "

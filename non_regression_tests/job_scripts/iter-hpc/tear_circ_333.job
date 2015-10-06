@@ -16,16 +16,16 @@ ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
 
-# !!!!!
-cd $HOME/JOREK_git_ci/non_regression_tests/job_scripts/hpc-iter
-# !!!!!
-
+## !!!!!
+#cd $HOME/JOREK_git_ci/non_regression_tests/job_scripts/iter-hpc
+## !!!!!
+#
 CASE=tear_circ_333
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 echo " jorek_home = " ${JOREK_HOME}
 
 cd ${JOREK_HOME}
-source non_regression_tests/job_scripts/hpc-iter/env.sh
+source non_regression_tests/job_scripts/iter-hpc/env.sh
 ## Compile with:       
 # non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 

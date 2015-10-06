@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH -J tear_circ_303_fft
+#SBATCH -J tear_circ_199
 #SBATCH -N 2
 #SBATCH -n 2
 #SBATCH -t 00:20:00
-#SBATCH -o tear_circ_303_fft.%j.out
-#SBATCH -e tear_circ_303_fft.%j.err
+#SBATCH -o tear_circ_199.%j.out
+#SBATCH -e tear_circ_199.%j.err
 
 ########################################################################
-# Look to non_regression_tests/testcases/tear_circ_303_fft/settings.sh
+# Look to non_regression_tests/testcases/tear_circ_199/settings.sh
 # to determine nb of nodes, MPI processes, and nb of threads
 ########################################################################
 
@@ -17,19 +17,18 @@ ulimit -Sa
 ulimit -Ha
 
 # !!!!!
-cd $HOME/JOREK_git_ci/non_regression_tests/job_scripts/hpc-iter
+cd $HOME/JOREK_git_ci/non_regression_tests/job_scripts/iter-hpc
 # !!!!!
 
-CASE=tear_circ_303_fft
+CASE=tear_circ_199
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
-echo " jorek_home = " ${JOREK_HOME}
+echo ${JOREK_HOME}
 
 cd ${JOREK_HOME}
-source non_regression_tests/job_scripts/hpc-iter/env.sh
+source non_regression_tests/job_scripts/iter-hpc/env.sh
 ## Compile with:       
 # non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 
 #non_regression_tests/run_test.sh -k -i -n $CASE 
 ## Restart run: 
 non_regression_tests/run_test.sh -k -n $CASE 
-

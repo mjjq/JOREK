@@ -7,7 +7,7 @@ module use /work/imas/opt/EasyBuild/modules/all
 module load cURL
 
 module use /work/imas/etc/modulefiles
-module load hdf5
+module load hdf5/1.8.13
 
 module load intel/12.0.2
 module load mpich2/3.1.3-intel

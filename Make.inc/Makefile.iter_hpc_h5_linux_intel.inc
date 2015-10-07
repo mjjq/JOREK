@@ -82,10 +82,10 @@ LIBDIERCKX = $(LIBDIR)/Dierckx/dierckx.a
 PPPLIB = -L$(PPPLIB_HOME/lib) -lppplib
 
 #HDF5
-HDF5_HOME=/work/imas/opt/hdf5/1.8.15
+HDF5_HOME=/work/imas/opt/hdf5/1.8.13
 HDF5INCLUDE=$(HDF5_HOME)/include
 HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
         $(HDF5_HOME)/lib/libhdf5_hl.a        \
         $(HDF5_HOME)/lib/libhdf5_fortran.a   \
         $(HDF5_HOME)/lib/libhdf5.a           \
-	/usr/lib/libz.a
+	$(HDF5_HOME)/lib/libz.so

@@ -19,7 +19,7 @@ module load fftw/3.3.4
 
 export LANG=C
 export JOREK_HOST=iter-hpc
-export compilethreads=2
+export compilethreads=1
 export PRERUN="export OMP_NUM_THREADS=2"
 export MPIRUN="mpirun -np "
 export BATCHCOMMAND="qsub"

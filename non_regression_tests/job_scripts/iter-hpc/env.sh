@@ -1,4 +1,5 @@
 #!/bin/bash
+eval `tclsh /work/imas/opt/modules-tcl/modulecmd.tcl $(basename $SHELL) autoinit`
 
 module purge  
 

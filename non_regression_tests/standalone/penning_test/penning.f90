@@ -78,7 +78,6 @@ else
 end if
 call update_neighbours(element_list,node_list)
 
-
 write(*,*) 'Initializing fields'
 ! Set the fields in the first two parameters
 do i=1,node_list%n_nodes
@@ -108,6 +107,10 @@ do i=1,node_list%n_nodes
 enddo
 ! The electric potential is F0*U, so set F0 to 1
 F0 = 1.d0
+
+! Write a restart file containing the grid
+write(*,*) "INFO: Exporting grid to grid.rst"
+call export_binary_restart(node_list,element_list,'grid.rst',0)
 
 ! Initialize the particle list
 particle_list%n_particles = 1
@@ -215,7 +218,8 @@ contains
     write(*,*) "Initializing test particle"
     call find_RZ(node_list,element_list,x0(1),x0(2),R,Z,ielm_out,s,t,ifail)
     if (ifail .ne. 0) then
-      write(*,*) "CRITICAL: could not find initial particle in grid"
+      write(*,*) "CRITICAL: could not find initial particle in grid", &
+          "Particle location: ", x0(1), x0(2), " R,z_out= ", R, Z
       stop 1
     endif
     particle_list%particle(1)%st = [s,t]

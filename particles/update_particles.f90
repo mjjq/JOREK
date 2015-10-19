@@ -149,7 +149,8 @@ do i = 1, particle_list%n_particles
       if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
         exit ! Converged enough, we're done
       else if (k == 3) then
-        write (*,*) "Newton iteration failed, change = ", (dot_product(x_prev-x,x_prev-x)), x
+        write (*,*) "WARNING: Newton iteration failed, change = ", (dot_product(x_prev-x,x_prev-x))
+        write (*,*) "         x_prev was ", x_prev
       endif
     enddo
 
@@ -184,6 +185,7 @@ do i = 1, particle_list%n_particles
           x(2) = x(2) + (-Z_s * (R_step-R) + R_s * (Z_step-Z)) / st_jac
 
           if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
+            write (*,*) "New element: ", i_elm
             exit ! Converged enough, we're done
           else if (k == 3) then
             write (*,*) "Newton iteration after element change failed, change = ", (dot_product(x_prev-x,x_prev-x))
@@ -203,6 +205,7 @@ do i = 1, particle_list%n_particles
         x(1)  = s_out
         x(2)  = t_out
         i_elm = ielm_out
+        write(*,*) "New position: ", R_out, Z_out, i_elm
         if (ifail .ne. 0) write(*,*) "Particle not in grid, position:", R_step,Z_step ! TODO set lost
       endif
     enddo
@@ -211,7 +214,7 @@ do i = 1, particle_list%n_particles
     call interp_PRZ(node_list,element_list,i_elm,i_var,2,x(1),x(2),x(3),P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
 
     ! Debug output
-    !write(*,*) real(j)*t_step, R_step, Z_step, x(3), v(1)**2+v(3)**2, i_elm
+    !write(*,*) real(j)*t_step, R_step, Z_step, x(3), i_elm
 
     R = R_step
     Z = Z_step

@@ -31,7 +31,7 @@ if (my_id .eq. 0) then
   write(*,*) '***********************************'
   write(*,*) ' number of particles : ',particle_list%n_particles
 
-  open(unit=ivtk,file=particle_file,form='binary',convert='BIG_ENDIAN')
+  open(unit=ivtk,file=particle_file,form='unformatted',convert='BIG_ENDIAN')
 
   lf = char(10)
 

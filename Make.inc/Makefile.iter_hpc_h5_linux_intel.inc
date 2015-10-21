@@ -78,9 +78,6 @@ SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64
 #Dierckx
 LIBDIERCKX = $(LIBDIR)/Dierckx/dierckx.a
 
-#PPPLIB
-PPPLIB = -L$(PPPLIB_HOME/lib) -lppplib
-
 #HDF5
 HDF5_HOME=/work/imas/opt/hdf5/1.8.15
 HDF5INCLUDE=$(HDF5_HOME)/include

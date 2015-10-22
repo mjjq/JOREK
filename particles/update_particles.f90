@@ -10,7 +10,7 @@ use parameters
 use data_structure
 use nodes_elements
 use constants
-use phys_module, only : F0, central_mass
+use phys_module, only : F0, central_mass, central_density
 use mod_particles
 
 implicit none
@@ -29,18 +29,16 @@ real*8                    :: x(3), v(3), x_prev(3), v_prev(3) ! (Previous) value
 real*8                    :: P(2), P_s(2), P_t(2) ! Placeholder for evaluating variables and derivatives locally
 real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U, B_phi_factor
-real*8                    :: psi, psi_s, psi_t, u_s, u_t, omega_norm
+real*8                    :: psi, psi_s, psi_t, u_s, u_t, psi_prev, U_prev
 real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
-real*8                    :: R_step, Z_step, fE, fB
+real*8                    :: R_step, Z_step, fE, fB, t_norm
 real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, k, m, i_elm, j_elm, i_var(2), n_done, ifail, ielm_out, n_lost
 logical                   :: changed, lost, search
 real*8                    :: t0, t1
 
-write(*,'(A)') '*********************************************'
-write(*,'(A,i12,f12.8)') 'updating particles : ',n_step,t_step
-write(*,'(A)') '*********************************************'
-write(*,'(i5,A,i12)') my_id,'  number of particles : ',particle_list%n_particles
+real*8, allocatable       :: rp(:,:), zp(:,:), tp(:), wp(:,:), mp(:,:), pp(:,:)
+
 if (present(toroidal_field_factor)) then
   B_phi_factor = toroidal_field_factor
   write(*,*) 'WARNING: disabling toroidal magnetic field for particle propagator'
@@ -48,14 +46,19 @@ else
   B_phi_factor = 1.d0
 endif
 
+allocate(rp(n_step,particle_list%n_particles),zp(n_step,particle_list%n_particles),pp(n_step,particle_list%n_particles))
+allocate(Wp(n_step,particle_list%n_particles),tp(n_step),mp(n_step,particle_list%n_particles))
+
 call cpu_time(t0)
 
 ! Select the first and second physics variables
 i_var = (/1, 2/)
 
+t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)    ! jorek time normalisation
+
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, omega_norm, i_var, B_phi_factor, central_mass) &
-!$omp   private(i, j, k, particle, x, v, i_elm, j_elm, psi, psi_s, psi_t, psi_R, psi_Z, R, R_s, R_t, Z, Z_s, Z_t,st_jac,              &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, i_var, B_phi_factor, central_mass, mp, wp) &
+!$omp   private(i, j, k, particle, x, v, i_elm, j_elm, psi, psi_s, psi_t, psi_R, psi_Z, psi_prev, U_prev, R, R_s, R_t, Z, Z_s, Z_t,st_jac,              &
 !$omp           qom, B0, B02, E0, v_tmp, fE, fB, R_step, Z_step, changed, lost, search,            &
 !$omp           U, U_s, U_t, U_R, U_Z, U_phi, x_prev, v_prev, R_update, RPhi_update, P, P_s, P_t, R_out ,Z_out, ielm_out, s_out, t_out, ifail)
 
@@ -76,8 +79,15 @@ do i = 1, particle_list%n_particles
   ! Interpolate the fields to get psi and U at the current position
   call interp_PRZ(node_list,element_list,i_elm,i_var,2,x(1),x(2),x(3),P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
 
+  !write(*,*) 'initial velocity : ',v
+  !write(*,*) 'initial position : ',R,Z,x(3)
+  psi = P(1)
+  U   = P(2)
+
   ! Perform n_step Boris method steps here
   do j = 1, n_step
+
+    ! write(*,'(A,2i5,3f12.8,A,3f12.8)') 'STEP : ',j,i_elm,x,' RZPhi: ',R,Z,x(3)
 
     ! This is the jacobian of the transformation from RZ to st
     st_jac = R_s * Z_t - R_t * Z_s
@@ -85,6 +95,9 @@ do i = 1, particle_list%n_particles
     ! And these are the local derivatives to s and t
     psi_s = P_s(1); psi_t = P_t(1)
     u_s   = P_s(2); u_t   = P_t(2)
+
+    psi_prev   = psi
+    U_prev     = U
 
     ! Calculate the derivatives to R and Z
     psi_R    = (  psi_s * Z_t - psi_t * Z_s ) / st_jac
@@ -94,9 +107,8 @@ do i = 1, particle_list%n_particles
     ! And assume for now no electric field in the phi-direction
     U_phi    = 0.d0
 
-    ! Calculate the normalized fraction q/m in jorek units
-    qom = (real(particle%q) * EL_CHG * SQRT(MU_ZERO * MASS_PROTON * central_mass * 1.D20)) &
-        / (particle%mass * ATOMIC_MASS_UNIT)
+    ! Calculate the normalized fraction q/m in JOREK units, including correction for E and B having semi-SI units
+    qom = real(particle%q) * EL_CHG / (particle%mass * ATOMIC_MASS_UNIT) * t_norm
 
     ! Calculate the magnetic field multiplied by q/m Delta_t / 2 and its magnitude
     B0     = (/ + psi_Z, - psi_R, F0*B_phi_factor /) / R
@@ -106,6 +118,7 @@ do i = 1, particle_list%n_particles
     E0     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi / R /)
 
     ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
+    ! The t_norm is to normalize for B being in SI units instead of time-nondimensionalized
     fB = tan(qom * t_step * 0.5d0 * sqrt(B02)) / sqrt(B02)
     !fB = qom * t_step * 0.5d0
     fE = qom * t_step * 0.5d0
@@ -134,6 +147,9 @@ do i = 1, particle_list%n_particles
     v(1) =  R_update/R_step    * v_tmp(1) + RPhi_update/R_step * v_tmp(3)
     v(3) = -RPhi_update/R_step * v_tmp(1) + R_update/R_step    * v_tmp(3)
 
+    !write(*,*) R_step, Z_step, x(3)
+
+
     ! Perform at most 3 newton iteration steps to find the new values of s and t in this element
     do k = 1, 3
       x_prev = x
@@ -146,11 +162,12 @@ do i = 1, particle_list%n_particles
       ! Update local jacobian
       st_jac = R_s * Z_t - R_t * Z_s
 
-      if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
+      !write(*,'(A,2i3,4f12.8,2e12.4)') 'first : ',j,k,x(1:2),R_step,Z_step,sqrt((R_step - R)**2 + (Z_step - Z)**2)
+
+      if ((R_step - R)**2 + (Z_step - Z)**2 < 1.d-16) then
         exit ! Converged enough, we're done
       else if (k == 3) then
-        write (*,*) "WARNING: Newton iteration failed, change = ", (dot_product(x_prev-x,x_prev-x))
-        write (*,*) "         x_prev was ", x_prev
+        write (*,*) "WARNING: Newton iteration failed, change = ", sqrt((R_step-R)**2 + (Z_step-Z)**2)
       endif
     enddo
 
@@ -159,6 +176,8 @@ do i = 1, particle_list%n_particles
 
       ! See if the particle is lost, in another element nearby or we need to search for it
       call check_element_boundary(element_list,i_elm,x(1:2),j_elm,x(1:2),changed,lost,search)
+
+      !write(*,*) 'changed,lost,search : ',m,i_elm,changed,lost,search
 
       ! If we cannot find the particle
       if (search) then
@@ -184,31 +203,28 @@ do i = 1, particle_list%n_particles
           x(1) = x(1) + ( Z_t * (R_step-R) - R_t * (Z_step-Z)) / st_jac
           x(2) = x(2) + (-Z_s * (R_step-R) + R_s * (Z_step-Z)) / st_jac
 
-          if ((x_prev(1) - x(1))**2 + (x_prev(2) - x(2))**2 < 1.d-9) then
-            write (*,*) "New element: ", i_elm
+          !write(*,'(A,2i3,24f12.8,2e12.4)') 'second : ',j,k,x(1:2),R_step,Z_step,sqrt((R_step - R)**2 + (Z_step - Z)**2)
+
+          if ((R_step - R)**2 + (Z_step - Z)**2 < 1.d-16) then
             exit ! Converged enough, we're done
           else if (k == 3) then
-            write (*,*) "Newton iteration after element change failed, change = ", (dot_product(x_prev-x,x_prev-x))
+            write (*,*) "Newton iteration after element change failed, change = ", sqrt((R_step-R)**2 + (Z_step-Z)**2)
           endif
         enddo
       else
-        exit ! Particle did not move to another element
+        exit
       endif
 
-      if (maxval(abs(x(1:2)-0.5)) .lt. 0.5) then
-        ! We found the correct element, quit
-        exit
-      else if (m == 4) then
-        write(*,*) "Error finding the right element"
-        write(*,*) "Search for particle again, first routine did not work"
-        call find_RZ(node_list,element_list,R_step,Z_step,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-        x(1)  = s_out
-        x(2)  = t_out
-        i_elm = ielm_out
-        write(*,*) "New position: ", R_out, Z_out, i_elm
-        if (ifail .ne. 0) write(*,*) "Particle not in grid, position:", R_step,Z_step ! TODO set lost
-      endif
     enddo
+
+    if (maxval(abs(x(1:2)-0.5)) .gt. 0.5) then
+      write(*,*) "Error finding the right element"
+      write(*,*) "Search for particle again, first routine did not work"
+      call find_RZ(node_list,element_list,R_step,Z_step,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+      x(1)  = s_out
+      x(2)  = t_out
+      i_elm = ielm_out
+    endif
 
     ! Update variables for the next iteration
     call interp_PRZ(node_list,element_list,i_elm,i_var,2,x(1),x(2),x(3),P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
@@ -218,6 +234,12 @@ do i = 1, particle_list%n_particles
 
     R = R_step
     Z = Z_step
+
+    psi = P(1)
+    U   = P(2)
+
+    mp(j,i) = R_step * v(3) + 0.5 * qom * (psi + psi_prev)
+    Wp(j,i) = 0.5 * particle%mass * (v(1)*v(1) + v(2)*v(2) + v(3)*v(3)) + 0.5 * EL_CHG / MASS_PROTON * t_norm * particle%q * F0 * (U + U_prev)
 
   enddo
 
@@ -236,6 +258,7 @@ call cpu_time(t1)
 
 write(*,'(i5,A,f12.4)') my_id, ' Elapsed time particle update :',t1-t0
 
+n_done = n_step
 !write(*,'(A,4e16.8)') 'mean: ',sum(abs(Wp(1:n_done,1)-Wp(1,1)))/wp(1,1)/n_done,sum(abs(mp(1:n_done,1)-mp(1,1)))/mp(1,1)/n_done
 !write(*,'(A,4e16.8)') 'max : ',maxval(abs(Wp(1:n_done,1)-Wp(1,1)))/wp(1,1),maxval(abs(mp(1:n_done,1)-mp(1,1)))/mp(1,1)
 
@@ -250,8 +273,6 @@ do j=1, particle_list%n_particles
   if (particle_list%particle(j)%lost) n_lost = n_lost + 1
 enddo
 write(*,*) my_id,'lost particles : ',n_lost
-
-write(*,*) 'Done particles update'
 
 !open(21,file='traject.txt')
 !write(21,*) '          X               Y               Z                R              Wp             Mp         time'

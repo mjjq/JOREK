@@ -48,7 +48,8 @@ real*8  :: R,R_s,R_t,R_st,Z,Z_s,Z_t,Z_st
 real*8  :: s,t
 real*8  :: x_a(3), x_e(3), v(3), err_norm, err_ref
 ! For the initial half-step
-real*8  :: E(3), B(3), B2, fE, fB
+real*8  :: E(3), B(3), B2, f
+integer :: u !< Unit of output file
 
 ! Fake MPI presence
 integer, parameter :: my_id = 0
@@ -117,14 +118,15 @@ enddo
 F0 = 1.d0
 
 ! Write a restart file containing the grid
-write(*,*) "INFO: Exporting grid to grid.rst"
-call export_binary_restart(node_list,element_list,'grid.rst',0)
+!write(*,*) "INFO: Exporting grid to grid.rst"
+!call export_binary_restart(node_list,element_list,'grid.rst',0)
 
 ! Initialize the particle list
 particle_list%n_particles = 1
 allocate(particle_list%particle(particle_list%n_particles))
 
-write(*,*) tstep_n
+! Open file to write results to
+open(newunit=u, file="penning_error.out", status="replace")
 do i=1,size(tstep_n)
   if (tstep_n(i) .le. 1.d-6) cycle
   nstep_n(i) = 1.6e8 / tstep_n(i)
@@ -134,12 +136,11 @@ do i=1,size(tstep_n)
   E = [-2.d0*Phi0*x0(1),0.d0,0.d0]
   B = [0.d0, B0, 0.d0]
   B2 = B0**2
-  fE = -qom*tstep_n(i)*0.25d0*t_norm
-  fB = -tan(qom * tstep_n(i) * 0.25d0 * sqrt(B2)) / sqrt(B2) * t_norm
+  f = -qom*tstep_n(i)*0.25d0*t_norm ! Perform the initial half-step without tan correction
 
-  v = v0 + fE*E
-  v = (v + 2.d0*fB/(1.d0+fB**2*B2) * (cross_product(v,B) - fB*v*B2 + fB*B*dot_product(v,B)))
-  v = v + fE*E
+  v = v0 + f*E
+  v = (v + 2.d0*f/(1.d0+f**2*B2) * (cross_product(v,B) - f*v*B2 + f*B*dot_product(v,B)))
+  v = v + f*E
 
   particle_list%particle(1)%v = v
   call update_particles(my_id, particle_list, tstep_n(i), nstep_n(i), 0.d0)
@@ -148,11 +149,11 @@ do i=1,size(tstep_n)
   x_e = particle_list%particle(1)%x
   x_a = analytical_trajectory(tstep_n(i)*real(nstep_n(i)))
   err_norm = sqrt(x_e(1)**2+x_a(1)**2 - 2.d0*x_e(1)*x_a(1)*(cos(x_e(3))*cos(x_a(3))+sin(x_e(3))*sin(x_a(3))))
-  write(*,*) "Penning test, tstep: ", tstep_n(i), " Position error: ", err_norm
+  write(u,*) tstep_n(i), err_norm
 
   ! Exit the test if the error is too large
-  ! Norm error: classical error in reference code, scales as
-  err_ref = 4.d2*(omega_b*tstep_n(i))**2*1.2d0
+  ! Norm error scales as dt^2
+  err_ref = 1.1*3.14084d-8*tstep_n(i)**2
   if (err_norm .gt. err_ref .and. .false.) then
     write(*,*) "Penning test failed, error larger than ", err_ref
     stop 1
@@ -219,4 +220,4 @@ contains
     particle_list%particle(1)%weight = 1.d0
     particle_list%particle(1)%lost = .false.
   end subroutine reset_particle
-end
+end program penning

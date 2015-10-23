@@ -1,4 +1,5 @@
 #!/bin/bash
+# See http://jorek.eu/wiki/doku.php?id=penning_test for details
 
 # Exit on error
 set -e

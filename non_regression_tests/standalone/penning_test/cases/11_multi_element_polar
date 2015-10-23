@@ -1,9 +1,8 @@
 
  &in1
 
-! omega_b = 25, so 0.01 is 1/4th rotation and very large
- tstep_n = 0.001, 0.001, 0.0001, 0.00001
- nstep_n = 1600, 16000, 160000, 1600000
+ tstep_n = 1.0d4, 2.0d3, 1.0d3, 2.0d2, 1.0d2
+ nstep_n = 1
 
  R_geo   = 11.
  Z_geo   = 0.

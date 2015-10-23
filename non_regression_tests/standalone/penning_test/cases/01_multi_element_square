@@ -1,14 +1,14 @@
 
  &in1
 
-! omega_b = 25, so 0.01 is 1/4th rotation and very large
- tstep_n = 0.0001
- nstep_n = 160000
+! omega_b_SI = 25, t ~= 10^7 t_SI
+ tstep_n = 1.0d4, 2.0d3, 1.0d3, 2.0d2, 1.0d2
+ nstep_n = 1
 
- R_begin =  8. 
- R_end   =  14. 
- Z_begin = -3. 
- Z_end   =  3. 
+ R_begin =  8.
+ R_end   =  14.
+ Z_begin = -3.
+ Z_end   =  3.
 
  n_R      = 3
  n_Z      = 3

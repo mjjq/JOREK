@@ -128,7 +128,7 @@ allocate(particle_list%particle(particle_list%n_particles))
 ! Open file to write results to
 open(newunit=u, file="penning_error.out", status="replace")
 do i=1,size(tstep_n)
-  if (tstep_n(i) .le. 1.d-6) cycle
+if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not entered)
   nstep_n(i) = 1.6e8 / tstep_n(i)
   write(*,*) tstep_n(i), nstep_n(i)
   call reset_particle
@@ -154,7 +154,7 @@ do i=1,size(tstep_n)
   ! Exit the test if the error is too large
   ! Norm error scales as dt^2
   err_ref = 1.1*3.14084d-8*tstep_n(i)**2
-  if (err_norm .gt. err_ref .and. .false.) then
+  if (err_norm .gt. err_ref) then
     write(*,*) "Penning test failed, error larger than ", err_ref
     stop 1
   endif

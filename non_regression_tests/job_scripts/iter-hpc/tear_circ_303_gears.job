@@ -1,28 +1,11 @@
 #!/bin/bash
-#SBATCH -J tear_circ_303_gears
-#SBATCH -N 2
-#SBATCH -n 2
-#SBATCH -t 00:20:00
-#SBATCH -o tear_circ_303_gears.%j.out
-#SBATCH -e tear_circ_303_gears.%j.err
-
-########################################################################
-# Look to non_regression_tests/testcases/tear_circ_303_gears/settings.sh
-# to determine nb of nodes, MPI processes, and nb of threads
-########################################################################
-
 ulimit -d unlimited
 ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
 
-# !!!!!
-cd $HOME/JOREK_git_ci/non_regression_tests/job_scripts/iter-hpc
-# !!!!!
-
 CASE=tear_circ_303_gears
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
-echo " jorek_home = " ${JOREK_HOME}
 
 cd ${JOREK_HOME}
 source non_regression_tests/job_scripts/iter-hpc/env.sh

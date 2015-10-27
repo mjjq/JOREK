@@ -41,7 +41,7 @@ real*8, allocatable       :: rp(:,:), zp(:,:), tp(:), wp(:,:), mp(:,:), pp(:,:)
 
 if (present(toroidal_field_factor)) then
   B_phi_factor = toroidal_field_factor
-  write(*,*) 'WARNING: disabling toroidal magnetic field for particle propagator'
+  write(*,*) 'INFO: disabling toroidal magnetic field for particle propagator testcase'
 else
   B_phi_factor = 1.d0
 endif

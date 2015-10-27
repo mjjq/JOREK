@@ -188,7 +188,6 @@ end subroutine find_RZ
 
 
 
-!> Optimized version of find_RZ.
 recursive subroutine find_RZ2(node_list, element_list, R_find, Z_find, R_out, Z_out, ielm_out,      &
   s_out, t_out, ifail)
 
@@ -303,7 +302,7 @@ real*8, parameter :: out_element_tolerance = 1.d-9
 integer :: newton_iter_max = 8
 integer :: element_try_max = 6 ! Try newton iterations in at most this many elements
 ! A loop can occur here!
-integer :: num_backtrack_steps = 4 ! Try 0.5**this times the step at a minimum
+integer :: num_backtrack_steps = 2 ! Try 0.5**this times the step at a minimum
 
 !> Internal variables
 integer :: newton_iter_number

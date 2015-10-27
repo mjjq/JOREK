@@ -299,7 +299,7 @@ integer,                  intent(out)   :: ifail !< if ifail = -1 the position c
 
 !> Accuracy defaults (tolerances are squared!)
 real*8, parameter ::  in_element_tolerance = 1.d-12
-real*8, parameter :: out_element_tolerance = 1.d-6
+real*8, parameter :: out_element_tolerance = 1.d-9
 integer :: newton_iter_max = 8
 integer :: element_try_max = 6 ! Try newton iterations in at most this many elements
 ! A loop can occur here!
@@ -361,7 +361,8 @@ do element_try_index = 1, element_try_max
     exit
   endif
   if (newton_iter_number .gt. newton_iter_max) then
-    write(*,"(A,i3,A,2g12.6)") " WARNING: iteration for st did not converge after", newton_iter_max, " tries, using find_RZ", x_new
+    write(*,"(A,i4,A,i3,A,2g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
+    " using find_RZ", x_new
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
     exit
   endif
@@ -372,7 +373,7 @@ do element_try_index = 1, element_try_max
   if (search) then
     ! Use the extremely slow option
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    write(*,"(A,4g12.6,i3)") " WARNING: check_element_boundary returned search, used find_RZ at position", x_new, st_new, i_elm_new
+    write(*,"(A,i4,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
     exit ! We have used the nuclear option, stop the loop now
   endif
 
@@ -387,7 +388,7 @@ do element_try_index = 1, element_try_max
     exit
   else
     if (element_try_index .eq. element_try_max) then
-      write(*,*) "WARNING: insufficient iterations for element change, trying brute force method"
+      write(*,"(A,i4)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
       call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
     else
       ! We have changed element, recalculate st_jac and err2
@@ -410,7 +411,7 @@ real*8,                   intent(in)    :: st(2)
 integer,                  intent(in)    :: i_elm
 real*8,                   intent(out)   :: x(2), R_s, R_t, Z_s, Z_t, st_jac_det
 
-real*8, parameter :: st_jac_det_min = 1.d-3
+real*8, parameter :: st_jac_det_min = 1.d-6
 
 call interp3_RZ(node_list,element_list,i_elm,st(1),st(2),x(1),R_s,R_t,x(2),Z_s,Z_t)
 st_jac_det = R_s * Z_t - R_t * Z_s

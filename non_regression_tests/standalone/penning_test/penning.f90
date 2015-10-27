@@ -153,11 +153,11 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
 
   ! Exit the test if the error is too large
   ! Norm error scales as dt^2
-  err_ref = 1.1*3.14084d-8*tstep_n(i)**2
-  write(*,*) "Error: ", err_norm, ", reference: ", err_ref
+  err_ref = 1.2*3.14084d-8*tstep_n(i)**2
+  write(*,*) "Error: ", err_norm, ", reference*1.2: ", err_ref
   if (isnan(err_norm) .or. err_norm .gt. err_ref) then
     write(*,*) "Penning test failed"
-    !stop 1
+    stop 1
   endif
 enddo
 write(*,*) "Tests successfull at all timestep sizes"

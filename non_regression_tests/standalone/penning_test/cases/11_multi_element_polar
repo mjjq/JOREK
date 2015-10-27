@@ -8,8 +8,8 @@
  Z_geo   = 0.
  amin    = 4.2426 ! 3*sqrt(2)
 
- n_radial = 20
- n_pol    = 10 
+ n_radial = 80
+ n_pol    = 80 
 
  mf = 0
  ellip = 1.

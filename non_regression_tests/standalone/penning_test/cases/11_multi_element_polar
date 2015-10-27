@@ -9,7 +9,7 @@
  amin    = 4.2426 ! 3*sqrt(2)
 
  n_radial = 20
- n_pol    = 20
+ n_pol    = 10 
 
  mf = 0
  ellip = 1.

@@ -26,7 +26,7 @@ implicit none
 type (type_particle_list) :: particle_list !< This contains all particles used in the simulations
 
 ! Penning trap parameters (in SI units)
-real*8, parameter :: omega_e = 4.9d0 
+real*8, parameter :: omega_e = 4.9d0
 real*8, parameter :: omega_b = 25.d0
 real*8, parameter :: epsilon = -1.d0
 real*8, parameter :: x0(3)   = [10.d0,0.d0,0.d0] ! in RZPhi
@@ -118,8 +118,8 @@ enddo
 F0 = 1.d0
 
 ! Write a restart file containing the grid
-!write(*,*) "INFO: Exporting grid to grid.rst"
-!call export_binary_restart(node_list,element_list,'grid.rst',0)
+write(*,*) "INFO: Exporting grid to jorek_restart.rst"
+call export_binary_restart(node_list,element_list,'jorek_restart.rst',0)
 
 ! Initialize the particle list
 particle_list%n_particles = 1
@@ -154,11 +154,13 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
   ! Exit the test if the error is too large
   ! Norm error scales as dt^2
   err_ref = 1.1*3.14084d-8*tstep_n(i)**2
-  if (err_norm .gt. err_ref) then
-    write(*,*) "Penning test failed, error larger than ", err_ref
+  write(*,*) "Error: ", err_norm, ", reference: ", err_ref
+  if (isnan(err_norm) .or. err_norm .gt. err_ref) then
+    write(*,*) "Penning test failed"
     stop 1
   endif
 enddo
+write(*,*) "Tests successfull at all timestep sizes"
 
 contains
   !> This function calculates the analytical trajectory of a particle in a penning trap

@@ -1,6 +1,4 @@
-!> This subroutine interpolates some variables at a specific position
-!!
-!! It finds out 
+!> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
 subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, R, R_s, R_t, Z, Z_s, Z_t)
 
 use data_structure

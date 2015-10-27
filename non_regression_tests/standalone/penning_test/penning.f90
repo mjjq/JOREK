@@ -206,7 +206,6 @@ contains
 
   !> Reset a particle to the initial conditions
   subroutine reset_particle() ! Uses the global variables
-    write(*,*) "Initializing test particle"
     call find_RZ(node_list,element_list,x0(1),x0(2),R,Z,ielm_out,s,t,ifail)
     if (ifail .ne. 0) then
       write(*,*) "CRITICAL: could not find initial particle in grid", &

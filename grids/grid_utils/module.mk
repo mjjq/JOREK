@@ -71,5 +71,6 @@ PENNING_TEST_SRC += $(DIR)/update_neighbours.f90                \
 	$(DIR)/meshac.f90 		    			\
 	$(DIR)/spline_spwert.f90	    			\
 	$(DIR)/spline_tb15a.f90 	    			\
-	$(DIR)/spline_tg02a.f90
+	$(DIR)/spline_tg02a.f90 				\
+	$(DIR)/find_RZ_nearby.f90
 

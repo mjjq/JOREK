@@ -1,28 +1,6 @@
 #!/bin/bash
 # See http://jorek.eu/wiki/doku.php?id=penning_test for details
 
-# Exit on error
-set -e
-
-# Make sure it is compiled first (in subshell so we stay in this dir)
-JOREK_DIR=../../..
-(cd $JOREK_DIR && make penning_test)
-
-if [ $# -eq 0 ]
-then
-   # Run all tests in the subdir cases
-   for testcase in cases/*; do
-      echo "-------------------------------------------------------------------------------"
-      echo "- " $testcase
-      echo "-------------------------------------------------------------------------------"
-      # Run the test, and quit on the error code (due to set -e above)
-      $JOREK_DIR/penning_test < $testcase
-   done
-else
-   for case in $@; do
-      echo "-------------------------------------------------------------------------------"
-      echo "- " $case
-      echo "-------------------------------------------------------------------------------"
-      $JOREK_DIR/penning_test < $case
-   done
-fi
+# Runs both types of cases
+./dt_run.sh
+./n_radial_run.sh

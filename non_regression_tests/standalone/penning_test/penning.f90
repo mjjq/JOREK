@@ -129,8 +129,8 @@ allocate(particle_list%particle(particle_list%n_particles))
 open(newunit=u, file="penning_error.out", status="replace")
 do i=1,size(tstep_n)
 if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not entered)
-  nstep_n(i) = 1.6e8 / tstep_n(i)
-  write(*,*) tstep_n(i), nstep_n(i)
+  write(*,*) "WARNING: overriding nstep_n specified"
+  nstep_n(i) = 1.6e8 / tstep_n(i) ! Override nstep_n
   call reset_particle
   ! Calculate the correct velocity for a half-step backwards to obtain second-order convergence
   E = [-2.d0*Phi0*x0(1),0.d0,0.d0]
@@ -153,9 +153,9 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
 
   ! Exit the test if the error is too large
   ! Norm error scales as dt^2
-  err_ref = 1.2*3.14084d-8*tstep_n(i)**2
-  write(*,*) "Error: ", err_norm, ", reference*1.2: ", err_ref
-  if (isnan(err_norm) .or. err_norm .gt. err_ref) then
+  err_ref = 3.14084d-8*tstep_n(i)**2
+  write(*,*) "RESULT: n_pol= ", n_radial, " dt= ", tstep_n(i), " error= ", err_norm, " reference= ", err_ref
+  if (isnan(err_norm) .or. err_norm .gt. err_ref*1.2d0) then
     write(*,*) "Penning test failed"
     stop 1
   endif

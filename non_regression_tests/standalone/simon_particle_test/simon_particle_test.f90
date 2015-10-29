@@ -62,10 +62,12 @@ if (my_id .eq. 0) then
   write(*,*) '***************************************'
 endif
 
+
 !! Read input parameters
 if (my_id .eq. 0) then
   call initialise_parameters(my_id, "__NO_FILENAME__")
 endif
+
 
 !! Initialize grid and solution
 call initialise_basis()
@@ -74,7 +76,6 @@ bnd_elm_list%n_bnd_elements  = 0
 node_list%n_nodes            = 0
 
 call define_boundary()
-
 if (n_radial <= 0 .or. n_pol <= 0) then
   write(*,*) "Not enough grid cells specified, exiting"
   call exit(1)
@@ -82,16 +83,24 @@ endif
 call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
   node_list, element_list)
 
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
+call update_neighbours(element_list,node_list)
+call broadcast_elements(my_id, element_list)       ! elements
+call broadcast_nodes(my_id, node_list)             ! nodes
+
+
 !! Calculate equilibrium field
 call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.)
+
 
 !! Initialize particles
 call initialise_particles_simon(node_list,element_list,particle_list)
 
+
 !! Perform time-stepping
 do i=1,nstep
   call update_particles(my_id, particle_list, tstep, 1, 0.d0)
-  !! Save particle position to file
+  ! Save particle position to file (or stdout in this case)
   do j=1,3
     write(*,*) j,particle_list%particle(j)%x
   enddo
@@ -166,7 +175,7 @@ do i_part=1,3
   particle%v(2) = 0.
   particle%v(3) = - v_phi * v_norm
 
-  particle%x       = (/ R_out, Z_out, 0. /)        !< particle position in real space
+  particle%x       = (/ R_out, Z_out, 0.d0 /)        !< particle position in real space
   particle%st      = (/ s_elm, t_elm /)            !< particle position in the finite element (i_elm)
   particle%i_elm   = i_elm
   particle%q       = 1                             !< charge

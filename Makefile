@@ -117,6 +117,10 @@ PROGRAMS := JOREK2_MAIN JOREK2_POINCARE RST_BIN2HDF5 RST_HDF52BIN           \
 # Add the common sources to all these programs
 $(foreach prog,$(PROGRAMS),$(eval $(prog)_SRC += $(ALL_BINARIES_SRC) $(PPPSRC)))
 
+# Add the jorek2_main sources to the simon particle test (needs to calculate equilibrium)
+SIMON_PARTICLE_TEST_SRC += $(JOREK2_MAIN_SRC)
+SIMON_PARTICLE_TEST_SRC := $(sort $(SIMON_PARTICLE_TEST_SRC))
+
 # Add extra source files
 JOREK2_MAIN_SRC += jorek2_main.f90
 

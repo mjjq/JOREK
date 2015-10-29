@@ -1,0 +1,93 @@
+!************************************************
+! synthetic equilibrium for particle benchmark
+!************************************************
+
+ &in1
+
+ restart = .t.
+ regrid  = .f.
+ refinement=.f.
+ tstep   = 1.d-3
+ nstep   = 100 
+
+ nout = 10
+
+ fbnd(1)   = 2.
+ fbnd(2:4) = 0.
+ mf        = 0
+
+ ellip  = 1.
+ tria_u = 0.
+ tria_l = 0.
+ quad_u = -0.
+ quad_l = -0.
+
+ freeboundary = .f.
+ xpoint = .f.
+
+ R_geo = 3. 
+ Z_geo = 0.0
+
+ F0    = 8.61 
+
+ amin     = 0.03 
+
+ n_R      = 0
+ n_Z      = 0
+ n_radial = 51 
+ n_pol    = 32 
+
+ n_flux   = 41 
+ n_tht    = 32 
+ n_open   = 0
+ n_leg    = 0
+ n_private = 0
+
+ eta       = 1.d-7
+ visco     = 1.d-5
+ visco_par = 1.d-4
+
+ eta_num = 0.d-10
+ visco_num = 0.d0
+
+ D_par  = 0.d0
+ D_perp = 1.d-6
+
+ ZK_par  = 1.d0
+ ZK_perp = 1.d-6
+ 
+ central_density   = 1.        ! [x10^20 m^-3]
+ central_mass      = 2.
+ 
+ FF_0 = 3.3 
+ FF_1 = 0.
+ FF_coef(1)  = 1.d0
+ FF_coef(2)  =-2.0d0
+ FF_coef(3)  = 0.d0
+ FF_coef(4)  = 0.1d0
+ FF_coef(5)  = 10.0d0
+ FF_coef(6)  = 0.d0
+ FF_coef(7)  = 10.d0
+ FF_coef(8)  = 1.d0
+      
+
+ heatsource     = 0.d0
+ particlesource = 0.d0
+
+ T_0 = 2.37e-4 
+ T_1 = 0.0
+ T_coef(1) = -2.0d0
+ T_coef(2) = +1.0d0
+ T_coef(3) = 0.d0
+ T_coef(4) = 0.1d0
+ T_coef(5) = 10.d0
+
+ rho_0 = 1.
+ rho_1 = 1.
+ rho_coef(1)  = -0.8
+ rho_coef(2)  =  0.0
+ rho_coef(3)  =  0.0
+ rho_coef(4)  =  0.1d0
+ rho_coef(5)  =  0.7d0
+
+ &end

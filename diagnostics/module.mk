@@ -88,4 +88,5 @@ JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)   \
 
 PENNING_TEST_SRC += $(DIR)/dlength.f90
 
-SIMON_PARTICLE_TEST_SRC += $(DIR)/dlength.f90
+SIMON_PARTICLE_TEST_SRC += $(DIR)/dlength.f90 \
+	$(DIR)/integral_current.f90       \

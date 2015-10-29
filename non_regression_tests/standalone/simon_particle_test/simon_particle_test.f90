@@ -14,14 +14,31 @@ use mod_particles
 use clock_module
 use parameters
 use constants
+use tr_module
 
 implicit none
 
-! Hard-coded parameters
-integer, parameter :: my_id=0
+interface
+  subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2, nice_q)
+    use data_structure
+    integer(kind=4),             intent(in)    :: my_id
+    integer(kind=4),             intent(in)    :: xcase2
+    type (type_node_list),       intent(inout) :: node_list
+    type (type_element_list),    intent(inout) :: element_list
+    type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list
+    type (type_bnd_element_list),intent(inout) :: bnd_elm_list
+    logical(kind=4),             intent(in)    :: xpoint2
+    logical(kind=4),             intent(in)    :: nice_q
+  end subroutine equilibrium
+end interface
 
-! Internal variables
-integer :: ierr,i,j
+! MPI parameters
+integer :: required, provided, StatInfo, my_id, n_cpu
+integer :: ierr
+integer*4  :: rank, comm_size
+
+! Private variables
+integer :: i,j
 
 type (type_particle_list) :: particle_list
 
@@ -29,20 +46,43 @@ write(*,*) '***************************************'
 write(*,*) '* JOREK2 : Simon Particle test        *'
 write(*,*) '***************************************'
 
+!! Initialize MPI
+required = MPI_THREAD_MULTIPLE
+
+call MPI_Init_thread(required, provided, StatInfo)
+
+call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+my_id = rank
+call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
+n_cpu = comm_size
+
+call tr_meminit(my_id, n_cpu)
+
 !! Read input parameters
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
-!! Read restart file
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+!! Initialize grid and solution
+call initialise_basis()
+element_list%n_elements      = 0
+bnd_elm_list%n_bnd_elements  = 0
+node_list%n_nodes            = 0
 
-!! Setup parameters and grid
-call initialise_basis                              ! define the basis functions at the Gaussian points
-call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
+call define_boundary()
+
+if (n_radial <= 0 .or. n_pol <= 0) then
+  write(*,*) "Not enough grid cells specified, exiting"
+  call exit(1)
+endif
+call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
+  node_list, element_list)
+
+!! Calculate equilibrium field
+call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.)
 
 !! Initialize particles
 call initialise_particles_simon(node_list,element_list,particle_list)
 
-!! Perform time-stepping manually
+!! Perform time-stepping
 do i=1,nstep
   call update_particles(my_id, particle_list, tstep, 1, 0.d0)
   !! Save particle position to file
@@ -77,7 +117,6 @@ integer :: i_var(1), i_elm, ifail, i_part
 
 
 particle_list%n_particles = 3
-allocate(particle_list%particle(particle_list%n_particles))
 
 ! Start position of all 3 particles
 R_in   = 3.025

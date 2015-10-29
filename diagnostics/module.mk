@@ -87,3 +87,5 @@ JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)   \
 	$(DIR)/determine_q_profile.f90
 
 PENNING_TEST_SRC += $(DIR)/dlength.f90
+
+SIMON_PARTICLE_TEST_SRC += $(DIR)/dlength.f90

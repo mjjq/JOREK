@@ -112,7 +112,7 @@ PROGRAMS := JOREK2_MAIN JOREK2_POINCARE RST_BIN2HDF5 RST_HDF52BIN           \
             ENBIGGEN JORDEL JORPOL JOREK2VTK JOREK2FLVTK JOREK2VTK3D        \
             JOREK2_FOUR JOREK_EXTRACT_DATA JOREK2_DIAGNO JOREK_TO_HELENA    \
             JOREK2_TARGET2VTK JOREK2_POWERS JOREK2_IMPORT_PERTURBATION      \
-            NEW_DIAG_DEMO PENNING_TEST JOREK2_PARTICLES
+            NEW_DIAG_DEMO PENNING_TEST JOREK2_PARTICLES SIMON_PARTICLE_TEST
 
 # Add the common sources to all these programs
 $(foreach prog,$(PROGRAMS),$(eval $(prog)_SRC += $(ALL_BINARIES_SRC) $(PPPSRC)))
@@ -303,6 +303,11 @@ jorek2_import_perturbation_tmp : version diagnostics/jorek2_import_perturbation.
 penning_test : non_regression_tests/standalone/penning_test/penning.f90 $(PENNING_TEST_OBJ)
 	$(FC) $(FFLAGS) non_regression_tests/standalone/penning_test/penning.f90 \
 	$(PENNING_TEST_OBJ) -o $(JOREK_DIR)/penning_test \
+	$(INCLUDES) $(LIBS)
+
+simon_particle_test : non_regression_tests/standalone/simon_particle_test/simon_particle_test.f90 $(SIMON_PARTICLE_TEST_OBJ)
+	$(FC) $(FFLAGS) non_regression_tests/standalone/simon_particle_test/simon_particle_test.f90 \
+	$(SIMON_PARTICLE_TEST_OBJ) -o $(JOREK_DIR)/simon_particle_test \
 	$(INCLUDES) $(LIBS)
 
 include all_rules.mk

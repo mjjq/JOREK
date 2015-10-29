@@ -125,8 +125,6 @@ call export_binary_restart(node_list,element_list,'jorek_restart.rst',0)
 particle_list%n_particles = 1
 allocate(particle_list%particle(particle_list%n_particles))
 
-! Open file to write results to
-open(newunit=u, file="penning_error.out", status="replace")
 do i=1,size(tstep_n)
 if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not entered)
   write(*,*) "WARNING: overriding nstep_n specified"
@@ -149,7 +147,6 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
   x_e = particle_list%particle(1)%x
   x_a = analytical_trajectory(tstep_n(i)*real(nstep_n(i)))
   err_norm = sqrt(x_e(1)**2+x_a(1)**2 - 2.d0*x_e(1)*x_a(1)*(cos(x_e(3))*cos(x_a(3))+sin(x_e(3))*sin(x_a(3))))
-  write(u,*) tstep_n(i), err_norm
 
   ! Exit the test if the error is too large
   ! Norm error scales as dt^2

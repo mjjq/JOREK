@@ -1,7 +1,8 @@
 DIR = grids/grid_utils
 
 ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
-	$(DIR)/find_RZ.f90
+	$(DIR)/find_RZ.f90 				\
+	$(DIR)/find_RZ_nearby.f90
 
 JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    			\
 	$(DIR)/check_point_is_inside_wall.f90 	    		\
@@ -62,7 +63,7 @@ JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)                 \
 	$(DIR)/update_neighbours.f90	                        \
 	$(DIR)/check_element_boundary.f90                       \
 	$(DIR)/fft.f90 			    			\
-	$(DIR)/fgauss.f90 		    			\
+	$(DIR)/fgauss.f90 		    			
 
 PENNING_TEST_SRC += $(DIR)/update_neighbours.f90                \
 		    $(DIR)/check_element_boundary.f90           \
@@ -71,6 +72,13 @@ PENNING_TEST_SRC += $(DIR)/update_neighbours.f90                \
 	$(DIR)/meshac.f90 		    			\
 	$(DIR)/spline_spwert.f90	    			\
 	$(DIR)/spline_tb15a.f90 	    			\
-	$(DIR)/spline_tg02a.f90 				\
-	$(DIR)/find_RZ_nearby.f90
+	$(DIR)/spline_tg02a.f90 				
 
+SIMON_PARTICLE_TEST_SRC += $(DIR)/update_neighbours.f90 	\
+		    $(DIR)/check_element_boundary.f90           \
+		    $(DIR)/fft.f90                              \
+		    $(DIR)/fgauss.f90                           \
+	$(DIR)/meshac.f90 		    			\
+	$(DIR)/spline_spwert.f90	    			\
+	$(DIR)/spline_tb15a.f90 	    			\
+	$(DIR)/spline_tg02a.f90 				

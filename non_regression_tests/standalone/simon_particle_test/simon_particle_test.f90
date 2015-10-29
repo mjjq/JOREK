@@ -42,9 +42,6 @@ integer :: i,j
 
 type (type_particle_list) :: particle_list
 
-write(*,*) '***************************************'
-write(*,*) '* JOREK2 : Simon Particle test        *'
-write(*,*) '***************************************'
 
 !! Initialize MPI
 required = MPI_THREAD_MULTIPLE
@@ -58,8 +55,17 @@ n_cpu = comm_size
 
 call tr_meminit(my_id, n_cpu)
 
+
+if (my_id .eq. 0) then
+  write(*,*) '***************************************'
+  write(*,*) '* JOREK2 : Simon Particle test        *'
+  write(*,*) '***************************************'
+endif
+
 !! Read input parameters
-call initialise_parameters(my_id, "__NO_FILENAME__")
+if (my_id .eq. 0) then
+  call initialise_parameters(my_id, "__NO_FILENAME__")
+endif
 
 !! Initialize grid and solution
 call initialise_basis()
@@ -91,6 +97,7 @@ do i=1,nstep
   enddo
 enddo
 
+call MPI_FINALIZE(ierr)
 
 contains
 

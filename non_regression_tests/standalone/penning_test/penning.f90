@@ -43,13 +43,12 @@ real*8 :: Phi0
 ! The particle remains between +- 3 in Z and 8 and 13 in R for these parameters. set this in an input file
 
 ! Local variables
-integer :: i,j,ielm_out,ifail
+integer :: i,ielm_out,ifail
 real*8  :: R,R_s,R_t,R_st,Z,Z_s,Z_t,Z_st
 real*8  :: s,t
 real*8  :: x_a(3), x_e(3), v(3), err_norm, err_ref
 ! For the initial half-step
 real*8  :: E(3), B(3), B2, f
-integer :: u !< Unit of output file
 
 ! Fake MPI presence
 integer, parameter :: my_id = 0
@@ -128,7 +127,7 @@ allocate(particle_list%particle(particle_list%n_particles))
 do i=1,size(tstep_n)
 if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not entered)
   write(*,*) "WARNING: overriding nstep_n specified"
-  nstep_n(i) = 1.6e8 / tstep_n(i) ! Override nstep_n
+  nstep_n(i) = floor(1.6e8 / tstep_n(i)) ! Override nstep_n
   call reset_particle
   ! Calculate the correct velocity for a half-step backwards to obtain second-order convergence
   E = [-2.d0*Phi0*x0(1),0.d0,0.d0]

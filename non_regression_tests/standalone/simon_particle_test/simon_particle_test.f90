@@ -39,8 +39,9 @@ integer :: ierr
 integer*4  :: rank, comm_size
 
 ! Private variables
-integer :: i,j
+integer :: i
 integer :: MPI_GROUP_WORLD
+character(len=18) :: filename
 
 type (type_particle_list) :: particle_list
 
@@ -90,21 +91,15 @@ call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial,
 
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-! --- Send boundary elements and nodes to other MPI procs
-call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
-
 call update_neighbours(element_list,node_list)
 call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 
 ! Initialize mumps solver
-! --- Initialize MUMPS solver (used for equilibrium)
 call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
 call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,0,MPI_GROUP_MUMPS_EQUIL,ierr)
 call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
 if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
-
-
 
 
 !! Calculate equilibrium field
@@ -120,12 +115,11 @@ call initialise_particles_simon(node_list,element_list,particle_list)
 
 
 !! Perform time-stepping
-do i=1,nstep
-  call update_particles(my_id, particle_list, tstep, 1, 0.d0)
+do i=1,nstep/nout
+  call update_particles(my_id, particle_list, tstep, nout, 1.d0) ! TODO fix bug with present
   ! Save particle position to file (or stdout in this case)
-  do j=1,3
-    write(*,*) j,particle_list%particle(j)%x
-  enddo
+  write(filename,"(A,I0.5,A)") "particles", i*nout, ".vtk"
+  call particles_vtk(particle_list,filename)
 enddo
 
 call MPI_FINALIZE(ierr)
@@ -155,6 +149,7 @@ integer :: i_var(1), i_elm, ifail, i_part
 
 
 particle_list%n_particles = 3
+allocate(particle_list%particle(particle_list%n_particles))
 
 ! Start position of all 3 particles
 R_in   = 3.025
@@ -203,6 +198,7 @@ do i_part=1,3
   particle%q       = 1                             !< charge
   particle%mass    = central_mass                  !< mass
   particle%weight  = 1.                            !< weight (i.e. number of particles)
+  particle%lost    = .false.
 
   particle_list%particle(i_part) = particle
 

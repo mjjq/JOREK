@@ -41,7 +41,7 @@ integer*4  :: rank, comm_size
 ! Private variables
 integer :: i
 integer :: MPI_GROUP_WORLD
-character(len=18) :: filename
+character(len=18) :: filename, fileout_bin
 
 type (type_particle_list) :: particle_list
 
@@ -108,6 +108,14 @@ call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,
 ! Clean up mumps
 mumps_par%JOB = -2
 if (my_id == 0) call DMUMPS(mumps_par)
+
+
+!! Write equilibrium to file
+if (my_id .eq. 0) then
+  fileout_bin = "jorek_restart.rst"
+  write (*,*) " =============>, jorek2, filename = ", fileout_bin
+  call export_binary_restart(node_list, element_list, fileout_bin, 1)
+endif
 
 
 !! Initialize particles

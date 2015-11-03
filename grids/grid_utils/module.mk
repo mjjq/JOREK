@@ -2,6 +2,7 @@ DIR = grids/grid_utils
 
 ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/find_RZ.f90 				\
+	$(DIR)/check_element_boundary.f90	\
 	$(DIR)/find_RZ_nearby.f90
 
 JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    			\

@@ -4,10 +4,11 @@
 
  &in1
 
- tstep   = 1.d-5
- nstep   = 10000
+ tstep   = 1.d-4
+ nstep   = 100000
 
  nout = 100
+ rst_format = 1
 
  mf        = 0
  ellip  = 1.

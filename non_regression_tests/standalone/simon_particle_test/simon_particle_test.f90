@@ -40,6 +40,7 @@ integer*4  :: rank, comm_size
 
 ! Private variables
 integer :: i,j
+integer :: MPI_GROUP_WORLD
 
 type (type_particle_list) :: particle_list
 
@@ -85,7 +86,7 @@ call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial,
   node_list, element_list)
 
 ! --- Determine boundary information from the grid
-call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+!call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 

@@ -15,6 +15,7 @@ use clock_module
 use parameters
 use constants
 use tr_module
+use mumps_module
 
 implicit none
 
@@ -83,14 +84,34 @@ endif
 call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
   node_list, element_list)
 
+! --- Determine boundary information from the grid
+call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+! --- Send boundary elements and nodes to other MPI procs
+call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+
 call update_neighbours(element_list,node_list)
 call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 
+! Initialize mumps solver
+! --- Initialize MUMPS solver (used for equilibrium)
+call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
+call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,0,MPI_GROUP_MUMPS_EQUIL,ierr)
+call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
+if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
+
+
+
 
 !! Calculate equilibrium field
 call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.)
+
+! Clean up mumps
+mumps_par%JOB = -2
+if (my_id == 0) call DMUMPS(mumps_par)
 
 
 !! Initialize particles

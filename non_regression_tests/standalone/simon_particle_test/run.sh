@@ -4,7 +4,9 @@
 
 # Make sure it is compiled first (in subshell so we stay in this dir)
 JOREK_DIR=../../..
-(cd $JOREK_DIR && make simon_particle_test)
+if ! compilation_ok=$(cd $JOREK_DIR && make simon_particle_test); then
+   exit $?
+fi
 
 if [ $# -eq 0 ]
 then

@@ -4,9 +4,9 @@ module mod_particles
 
   type type_particle
 
-    real*8  :: x(3)             !< particle position in real space (R,Z,phi) [m]
+    real*8  :: x(3)             !< particle position in real space (R,Z,phi) [m] at t
     real*8  :: st(n_dim)        !< particle position in the finite element (i_elm)
-    real*8  :: v(3)             !< particle velocity in (R,Z,phi) [m/s * sqrt(mu0 rho0)]
+    real*8  :: v(3)             !< particle velocity in (R,Z,phi) [m/s * sqrt(mu0 rho0)] at t-dt/2
     integer :: q                !< charge [e]
     real*8  :: mass             !< mass [atomic mass units]
     real*8  :: weight           !< weight (i.e. number of particles)

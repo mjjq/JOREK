@@ -31,6 +31,13 @@ interface
     logical(kind=4),             intent(in)    :: xpoint2
     logical(kind=4),             intent(in)    :: nice_q
   end subroutine equilibrium
+
+  function guiding_center_position(particle, dt) result(x_gc)
+    use mod_particles
+    type (type_particle), intent(in) :: particle
+    real*8, intent(in) :: dt
+    real*8 :: x_gc(3)
+  end function guiding_center_position
 end interface
 
 ! MPI parameters
@@ -39,7 +46,8 @@ integer :: ierr
 integer*4  :: rank, comm_size
 
 ! Private variables
-integer :: i
+logical, parameter :: save_vtk = .false.
+integer :: i,j
 integer :: MPI_GROUP_WORLD
 character(len=18) :: filename, fileout_bin
 
@@ -122,12 +130,27 @@ endif
 call initialise_particles_simon(node_list,element_list,particle_list)
 
 
+if (save_vtk) then
+  write(filename,"(A,I0.5,A)") "particles", 0, ".vtk"
+  call particles_vtk(particle_list,filename)
+endif
+
+!! Open output file
+open(file="positions_RZ.dat",status="replace",unit=21)
+write(21,"(A3,100A12)") "t  ", "R1", "Z1", "R2", "Z2", "R3", "Z3"
+open(file="gc_RZ.dat",status="replace",unit=22)
+write(22,"(A3,100A12)") "t  ", "R1", "Z1", "R2", "Z2", "R3", "Z3"
+
 !! Perform time-stepping
 do i=1,nstep/nout
-  call update_particles(my_id, particle_list, tstep, nout, 1.d0) ! TODO fix bug with present
+  call update_particles(my_id, particle_list, tstep, nout, 1.d0) ! TODO fix bug with present of toroidal field factor
+  write(21,"(100g16.10)") i*nout*tstep, (particle_list%particle(j)%x(1:2), j=1,particle_list%n_particles)
+  write(22,"(100g16.10)") i*nout*tstep, (guiding_center_position(particle_list%particle(j), tstep), j=1,particle_list%n_particles)
   ! Save particle position to file (or stdout in this case)
-  write(filename,"(A,I0.5,A)") "particles", i*nout, ".vtk"
-  call particles_vtk(particle_list,filename)
+  if (save_vtk) then
+    write(filename,"(A,I0.5,A)") "particles", i*nout, ".vtk"
+    call particles_vtk(particle_list,filename)
+  endif
 enddo
 
 call MPI_FINALIZE(ierr)

@@ -7,7 +7,6 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 
 JOREK2_MAIN_SRC:=$(JOREK2_MAIN_SRC)	    			\
 	$(DIR)/check_point_is_inside_wall.f90 	    		\
-	$(DIR)/check_element_boundary.f90	\
 	$(DIR)/update_neighbours.f90	\
 	$(DIR)/create_new_node.f90 	    			\
 	$(DIR)/create_x_node.f90 	    			\
@@ -62,12 +61,10 @@ ENBIGGEN_SRC := $(ENBIGGEN_SRC)               			\
 
 JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)                 \
 	$(DIR)/update_neighbours.f90	                        \
-	$(DIR)/check_element_boundary.f90                       \
 	$(DIR)/fft.f90 			    			\
 	$(DIR)/fgauss.f90 		    			
 
 PENNING_TEST_SRC += $(DIR)/update_neighbours.f90                \
-		    $(DIR)/check_element_boundary.f90           \
 		    $(DIR)/fft.f90                              \
 		    $(DIR)/fgauss.f90                           \
 	$(DIR)/meshac.f90 		    			\
@@ -76,7 +73,6 @@ PENNING_TEST_SRC += $(DIR)/update_neighbours.f90                \
 	$(DIR)/spline_tg02a.f90 				
 
 SIMON_PARTICLE_TEST_SRC += $(DIR)/update_neighbours.f90 	\
-		    $(DIR)/check_element_boundary.f90           \
 		    $(DIR)/fft.f90                              \
 		    $(DIR)/fgauss.f90                           \
 	$(DIR)/meshac.f90 		    			\

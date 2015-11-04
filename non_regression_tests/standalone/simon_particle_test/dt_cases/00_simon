@@ -4,10 +4,10 @@
 
  &in1
 
- tstep   = 1.d-4
- nstep   = 100000
+ tstep   = 1.d-3
+ nstep   = 10000
 
- nout = 100
+ nout = 1
  rst_format = 1
 
  mf        = 0

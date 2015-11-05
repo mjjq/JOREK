@@ -4,8 +4,10 @@
 
 # Make sure it is compiled first (in subshell so we stay in this dir)
 JOREK_DIR=../../..
-if ! compilation_ok=$(cd $JOREK_DIR && make simon_particle_test); then
-   exit $?
+(cd $JOREK_DIR && rm -f simon_particle_test && make simon_particle_test)
+code=$?
+if [ $code -ne 0 ]; then
+   exit $code
 fi
 
 if [ $# -eq 0 ]

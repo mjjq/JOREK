@@ -5,9 +5,9 @@
  &in1
 
  tstep   = 1.d-3
- nstep   = 10000
+ nstep   = 50000000
 
- nout = 1
+ nout = 10000
  rst_format = 1
 
  mf        = 0

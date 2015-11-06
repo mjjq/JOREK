@@ -128,7 +128,7 @@ endif
 
 
 !! Initialize particles
-call initialise_particles_simon(node_list,element_list,particle_list)
+call initialise_particles_simon(node_list,element_list,particle_list, tstep)
 
 
 if (save_vtk) then
@@ -165,8 +165,12 @@ call MPI_FINALIZE(ierr)
 
 contains
 
+
+
+
+
 !> Setup the 3 particles we will use and test some invariants
-subroutine initialise_particles_simon(node_list,element_list,particle_list)
+subroutine initialise_particles_simon(node_list,element_list,particle_list,dt)
 
 use mod_particles
 use constants
@@ -178,54 +182,51 @@ implicit none
 type (type_node_list), intent(in)        :: node_list
 type (type_element_list), intent(in)     :: element_list
 type (type_particle_list), intent(inout) :: particle_list
+real*8, intent(in) :: dt
 
 type (type_particle)      :: particle
 
 real*8  :: particle_energy(3), particle_energy_perp(3), R_in, Z_in, phi_in, R_out, Z_out
-real*8  :: P(1), P_s(1), P_t(1), R, R_s, R_t, Z, Z_s, Z_t, B_field(3), B_0, st_jac, v_norm, v_perp, v_par
-real*8  :: psi_s, psi_t, psi_R, psi_Z, s_elm, t_elm, mass_ion
+real*8  :: E(3), B(3), B_norm, psi, U, t_norm, v_perp, v_par
+real*8  :: s_elm, t_elm, mass_ion, v(3), f, qom
 integer :: i_var(1), i_elm, ifail, i_part
 
 
 particle_list%n_particles = 3
 allocate(particle_list%particle(particle_list%n_particles))
 
-! Start position of all 3 particles
+! Start position of GC of all 3 particles
+! TODO calculate guiding center position of particle with negative q to calculate particle position
 R_in   = 3.025
 Z_in   = 0.0
 phi_in = 0.0
 
 call find_RZ(node_list,element_list,R_in,Z_in,R_out,Z_out,i_elm,s_elm,t_elm,ifail)
 
+! These are probably fast alpha particles
 particle_energy      = (/ 170., 50.,    164.    /)      ! [eV]
 particle_energy_perp = (/  40., 49.585, 161.832 /)      ! [eV]
 
 mass_ion = 4.d0 * mass_proton
-v_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
+t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
-i_var = (/ 1 /)
-call interp_PRZ(node_list,element_list,i_elm,i_var,1,s_elm,t_elm,phi_in,P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
 
-st_jac = R_s * Z_t - R_t * Z_s
-psi_s  = P_s(1); psi_t = P_t(1);
-psi_R  = (  psi_s * Z_t - psi_t * Z_s ) / st_jac
-psi_Z  = (- psi_s * R_t + psi_t * R_s ) / st_jac
-
-B_field     = (/ + psi_Z, - psi_R, F0 /) / R
-B_0         = sqrt(dot_product(B_field,B_field))
+call calc_EB(i_elm,(/s_elm,t_elm/),phi_in,E,B,psi,U)
+B_norm         = norm2(B)
 
 do i_part=1,3
   ! Assumes B_field only in toroidal direction!
   v_par  = sqrt(2.d0*(particle_energy(i_part) - particle_energy_perp(i_part)) * el_chg / mass_ion)
   v_perp = sqrt(particle_energy_perp(i_part) * 2.d0 * el_chg / mass_ion)
 
-  write(*,'(A,3e16.8)') ' perpendicular velocity : ',v_perp,v_norm,v_perp * v_norm
-  write(*,'(A,3e16.8)') ' gyro radius            : ',mass_ion * v_perp / (el_chg * B_0)
-  write(*,'(A,3e16.8)') ' gyro frequency         : ',el_chg * B_0 / mass_ion, el_chg * B_0 / mass_ion * v_norm
+  write(*,'(A,3e16.8)') ' perpendicular velocity : ',v_perp,t_norm,v_perp * t_norm
+  write(*,'(A,3e16.8)') ' gyro radius            : ',mass_ion * v_perp / (el_chg * B_norm)
+  write(*,'(A,3e16.8)') ' gyro frequency         : ',el_chg * B_norm / mass_ion, el_chg * B_norm / mass_ion * t_norm
 
   write(*,'(A,4e16.8)') 'CHECK energy : ', v_par,v_perp,(v_par**2+v_perp**2) * 0.5 * mass_ion / el_chg, particle_energy(i_part)
 
-  particle%v = -v_norm/B_0 * (v_par * B_field + v_perp * cross_product((/1.d0,0.d0,0.d0/),B_field))
+  ! Velocity at t=0
+  particle%v = -t_norm/B_norm * (v_par * B + v_perp * cross_product((/1.d0,0.d0,0.d0/),B))
 
   particle%x       = (/ R_out, Z_out, 0.d0 /)        !< particle position in real space
   particle%st      = (/ s_elm, t_elm /)            !< particle position in the finite element (i_elm)
@@ -234,6 +235,16 @@ do i_part=1,3
   particle%mass    = 4.d0                          !< mass in amu
   particle%weight  = 1.                            !< weight (i.e. number of particles)
   particle%lost    = .false.
+  
+  qom     = real(particle%q) * el_chg / (particle%mass * atomic_mass_unit)
+  f = -qom*dt*0.25d0*t_norm ! Perform the initial half-step without tan correction
+
+  v = particle%v + f*E
+  v = (v + 2.d0*f/(1.d0+f**2*dot_product(B,B)) * (cross_product(v,B) - f*v*dot_product(B,B) + f*B*dot_product(v,B)))
+  v = v + f*E
+
+  ! particle velocity at t=-1/2 dt
+  particle%v = v
 
   particle_list%particle(i_part) = particle
 

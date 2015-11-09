@@ -243,7 +243,8 @@ PROGRAM_SOURCES = diagnostics/jorek2_poincare.f90       \
 		  diagnostics/jorek_to_helena.f90       \
 		  diagnostics/jorek2_target2vtk.f90     \
 		  diagnostics/jorek2_powers.f90         \
-		  diagnostics/new_diag_demo.f90
+		  diagnostics/new_diag_demo.f90 	\
+		  particles/jorek2_particles.f90
 
 # Create all standard make rules
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

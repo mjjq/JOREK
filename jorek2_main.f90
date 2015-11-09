@@ -825,7 +825,7 @@ required = 0
         ! --- Write restart binary file
         fileout_bin = "jorek00000.rst"
         write (6,*) " =============>, jorek2, filename = ", fileout_bin
-        call export_binary_restart(node_list, element_list, fileout_bin)
+        call export_binary_restart(node_list, element_list, fileout_bin, rst_format)
      elseif ( rst_hdf5 == 1 ) then
         ! --- Write restart HDF5 file
         fileout_h5 = "jorek00000.h5"
@@ -1202,7 +1202,7 @@ required = 0
         ! --- Write restart binary file
         write(fileout_bin,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
         write (6,*) " =============>, jorek2, BIN filename = ",fileout_bin
-        call export_binary_restart(node_list,element_list,fileout_bin)
+        call export_binary_restart(node_list,element_list,fileout_bin,rst_format)
      elseif ( rst_hdf5 == 1 ) then
         ! --- Write restart HDF5 file
         write(fileout_h5,'(A5,i5.5,A3)') 'jorek',index_now,'.h5'
@@ -1303,7 +1303,7 @@ required = 0
      if ( rst_hdf5 == 0 ) then
         ! --- Write restart binary file
         write (6,*) " =============>, jorek2, filename = jorek_restart.rst "
-        call export_binary_restart(node_list,element_list, 'jorek_restart.rst')
+        call export_binary_restart(node_list,element_list,'jorek_restart.rst',rst_format)
      elseif ( rst_hdf5 == 1 ) then
         ! --- Write restart HDF5 file
         write (6,*) " =============>, jorek2, filename = jorek_restart.h5 "

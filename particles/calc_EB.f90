@@ -13,7 +13,7 @@ real*8, intent(out) :: E(3), B(3)
 
 ! Internal parameters
 integer :: i_var(2)
-real*8                    :: P(2), P_s(2), P_t(2) ! Placeholder for evaluating variables and derivatives locally
+real*8                    :: P(2), P_s(2), P_t(2), P_phi(2) ! Placeholder for evaluating variables and derivatives locally
 real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U
 real*8                    :: psi, psi_s, psi_t, u_s, u_t, psi_prev, U_prev
 real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
@@ -22,7 +22,7 @@ real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
 i_var = (/1,2/)
 
 ! Interpolate the fields to get psi and U at the current position
-call interp_PRZ(node_list,element_list,i_elm,i_var,2,st(1),st(2),phi,P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
+call interp_PRZ(node_list,element_list,i_elm,i_var,2,st(1),st(2),phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
 psi = P(1)
 U   = P(2)
@@ -37,8 +37,9 @@ psi_R    = (  psi_s * Z_t - psi_t * Z_s ) / st_jac
 psi_Z    = (- psi_s * R_t + psi_t * R_s ) / st_jac
 U_R      = (  u_s   * Z_t - u_t   * Z_s ) / st_jac
 U_Z      = (- u_s   * R_t + u_t   * R_s ) / st_jac
-! And assume for now no electric field in the phi-direction
-U_phi    = 0.d0
+! And to phi
+psi_phi  = P_phi(1) ! Not used now, assumed 0?
+U_phi    = P_phi(2)
 
 B     = (/ + psi_Z, - psi_R, F0 /) / R
 

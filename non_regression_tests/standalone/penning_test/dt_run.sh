@@ -25,7 +25,7 @@ for testcase in $cases; do
    if ! grep -q "Tests successfull" ${outfile}.log; then
       err=1
    fi
-   gnuplot -e "name='${outfile}'" dt_plot.gp
+   #gnuplot -e "name='${outfile}'" dt_plot.gp
 done
 
 exit $err

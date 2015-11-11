@@ -83,7 +83,7 @@ real*8, intent(in) :: v_in(3)   ! (R,Z,phi) components of the particle velocity
 
 real*8, intent(out) :: v_out(3)  (R,Z,phi) components of the particle velocity after a collision
 
-real*8  :: P(5), P_s(5), P_t(5), R, R_s, R_t, Z, Z_s, Z_t
+real*8  :: P(5), P_s(5), P_t(5), R, R_s, R_t, Z, Z_s, Z_t, P_phi(5)
 real*8  :: B(3), V_fluid(3)
 integer :: i_var(5)
 
@@ -94,13 +94,13 @@ i_var = (/ 1, 2, 5, 6, 7 /)
 
 !call interp_PRZ(node_list,element_list,i_elm,i_var,2,R,Z,P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
 
-call interp_PRZ(node_list,element_list,i_elm,i_var,2,s_elm,t_elm,phi,P,P_s,P_t,R,R_s,R_t,Z,Z_s,Z_t)
+call interp_PRZ(node_list,element_list,i_elm,i_var,2,s_elm,t_elm,phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
 psi_R    = (  psi_s * Z_t - psi_t * Z_s ) / st_jac
 psi_Z    = (- psi_s * R_t + psi_t * R_s ) / st_jac
 U_R      = (  u_s   * Z_t - u_t   * Z_s ) / st_jac
 U_Z      = (- u_s   * R_t + u_t   * R_s ) / st_jac
-U_phi    = 0.d0
+U_phi    = 0.d0 ! TODO
 
 B        =  (/ psi_Z, - psi_R, F0 /) / R
 

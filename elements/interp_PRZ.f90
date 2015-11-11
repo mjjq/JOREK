@@ -14,7 +14,7 @@ integer,                  intent(in)  :: n_v, i_v(n_v)
 real*8,                   intent(in)  :: s, t, phi
 real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
 real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
-real*8, optional,         intent(out) :: P_phi(n_v)
+real*8,                   intent(out) :: P_phi(n_v)
 
 ! --- Local variables
 real*8  :: H(4,4), H_s(4,4), H_t(4,4), xx1, xx2, ss
@@ -25,7 +25,7 @@ call basisfunctions3(s,t,H,H_s,H_t)
 P = 0.d0; P_s = 0.d0; P_t = 0.d0;
 R = 0.d0; R_s = 0.d0; R_t = 0.d0;
 Z = 0.d0; Z_s = 0.d0; Z_t = 0.d0;
-if (present(P_phi)) P_phi = 0.d0
+P_phi = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
 
@@ -58,17 +58,14 @@ do kv = 1,n_vertex_max  ! 4 vertices
         P(i)    = P(i)   + node_list%node(iv)%values(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode(i_harm)*phi)
         P_s(i)  = P_s(i) + node_list%node(iv)%values(i_harm,kf,i_v(i))   * ss * H_s(kv,kf) * cos(mode(i_harm)*phi)
         P_t(i)  = P_t(i) + node_list%node(iv)%values(i_harm,kf,i_v(i))   * ss * H_t(kv,kf) * cos(mode(i_harm)*phi)
+        P_phi(i) = P_phi(i) + node_list%node(iv)%values(i_harm,kf,i_v(i)) &
+              * ss * H(kv,kf) * sin(mode(i_harm)*phi) * (-mode(i_harm))
 
 	P(i)    = P(i)   + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode(i_harm+1)*phi)
         P_s(i)  = P_s(i) + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) * ss * H_s(kv,kf) * sin(mode(i_harm+1)*phi)
         P_t(i)  = P_t(i) + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) * ss * H_t(kv,kf) * sin(mode(i_harm+1)*phi)
-
-        if (present(P_phi)) then
-          P_phi(i) = P_phi(i) + node_list%node(iv)%values(i_harm,kf,i_v(i)) &
-              * ss * H(kv,kf) * sin(mode(i_harm)*phi) * (-mode(i_harm))
-          P_phi(i) = P_phi(i) + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) &
-              * ss * H(kv,kf) * cos(mode(i_harm)*phi) * (mode(i_harm))
-        endif
+        P_phi(i) = P_phi(i) + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) &
+            * ss * H(kv,kf) * cos(mode(i_harm)*phi) * (mode(i_harm))
 
       enddo
 

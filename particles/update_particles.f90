@@ -44,10 +44,16 @@ else
   B_phi_factor = 1.d0
 endif
 
-allocate(rp(n_step,particle_list%n_particles),zp(n_step,particle_list%n_particles),pp(n_step,particle_list%n_particles))
-allocate(Wp(n_step,particle_list%n_particles),tp(n_step),mp(n_step,particle_list%n_particles))
+!allocate(rp(n_step,particle_list%n_particles),zp(n_step,particle_list%n_particles),pp(n_step,particle_list%n_particles))
+!allocate(Wp(n_step,particle_list%n_particles),tp(n_step),mp(n_step,particle_list%n_particles))
 
 call cpu_time(t0)
+
+if (my_id .eq. 0) then
+  write(*,*) '***************************************'
+  write(*,*) '* JOREK2 : update particles           *'
+  write(*,*) '***************************************'
+endif
 
 t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)    ! jorek time normalisation
 
@@ -125,9 +131,9 @@ do i = 1, particle_list%n_particles
     endif
 
     ! Save energy statistics
-    mp(j,i) = x(1) * v(3) + 0.5 * qom * (psi + psi_prev)
-    Wp(j,i) = 0.5 * particle%mass * (v(1)*v(1) + v(2)*v(2) + v(3)*v(3)) &
-        + 0.5 * EL_CHG / MASS_PROTON * t_norm * particle%q * F0 * (U + U_prev)
+    !mp(j,i) = x(1) * v(3) + 0.5 * qom * (psi + psi_prev)
+    !Wp(j,i) = 0.5 * particle%mass * (v(1)*v(1) + v(2)*v(2) + v(3)*v(3)) &
+    !    + 0.5 * EL_CHG / MASS_PROTON * t_norm * particle%q * F0 * (U + U_prev)
 
   enddo
 

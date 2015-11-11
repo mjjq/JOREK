@@ -20,6 +20,18 @@ integer    :: required, provided, StatInfo
 real*8     :: boxsize(3)
 character*17 :: particle_file
 
+interface
+  subroutine update_particles(my_id, particle_list, t_step, n_step, toroidal_field_factor)
+    use mod_particles
+    ! -- Routine parameters
+    type (type_particle_list) :: particle_list      !< The particles we will march forward in time
+    real*8,  intent(in)       :: t_step             !< The size of each timestep
+    integer, intent(in)       :: n_step             !< The number of timesteps we will perform
+    integer, intent(in)       :: my_id              !< Id of the current process
+    real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
+  end subroutine update_particles
+end interface
+
 
 !call begplt('part.ps')
 
@@ -74,7 +86,7 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 i_step = 0
 
-write(particle_file,'(A4,i4.4,A1,i4.4,A4)') 'part',my_id,'_',i_step,'.rst'
+!write(particle_file,'(A4,i4.4,A1,i4.4,A4)') 'part',my_id,'_',i_step,'.rst'
 
 !call export_particles(particle_list,particle_file)
 

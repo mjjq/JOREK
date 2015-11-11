@@ -5,6 +5,8 @@ use nodes_elements
 use constants
 use phys_module, only : F0, central_mass, central_density
 
+implicit none
+
 ! Routine parameters
 integer, intent(in) :: i_elm
 real*8, intent(in)  :: st(2), phi
@@ -14,7 +16,7 @@ real*8, intent(out) :: E(3), B(3)
 ! Internal parameters
 integer :: i_var(2)
 real*8                    :: P(2), P_s(2), P_t(2), P_phi(2) ! Placeholder for evaluating variables and derivatives locally
-real*8                    :: qom, B02, psi_R, psi_Z, U_R, U_Z, U_phi, U
+real*8                    :: qom, B02, psi_R, psi_Z, psi_phi, U_R, U_Z, U_phi, U
 real*8                    :: psi, psi_s, psi_t, u_s, u_t, psi_prev, U_prev
 real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
 

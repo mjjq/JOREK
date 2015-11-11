@@ -53,6 +53,18 @@ real*8  :: E(3), B(3), B2, f
 ! Fake MPI presence
 integer, parameter :: my_id = 0
 
+interface
+  subroutine update_particles(my_id, particle_list, t_step, n_step, toroidal_field_factor)
+    use mod_particles
+    ! -- Routine parameters
+    type (type_particle_list) :: particle_list      !< The particles we will march forward in time
+    real*8,  intent(in)       :: t_step             !< The size of each timestep
+    integer, intent(in)       :: n_step             !< The number of timesteps we will perform
+    integer, intent(in)       :: my_id              !< Id of the current process
+    real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
+  end subroutine update_particles
+end interface
+
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2 : Penning trap test          *'

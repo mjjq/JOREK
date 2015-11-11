@@ -34,6 +34,7 @@ real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, k, m, i_elm, n_done, ifail, ielm_out, n_lost
 logical                   :: changed, lost, search
 real*8                    :: t0, t1
+integer                   :: find_RZ_count
 
 real*8, allocatable       :: rp(:,:), zp(:,:), tp(:), wp(:,:), mp(:,:), pp(:,:)
 
@@ -58,7 +59,7 @@ endif
 t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)    ! jorek time normalisation
 
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, mp, wp) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, mp, wp, find_RZ_count) &
 !$omp   private(i, j, k, particle, x, v, st, i_elm, R, Z, &
 !$omp           qom, B0, B02, E0, v_tmp, fE, fB, changed, lost, search,            &
 !$omp           x_prev, v_prev, R_update, RPhi_update, R_out ,Z_out, ielm_out, s_out, &
@@ -124,6 +125,8 @@ do i = 1, particle_list%n_particles
 
     ! Find new st coordinates and new element
     call find_RZ_nearby(node_list,element_list,x(1:2),(/R,Z/),st,st,i_elm,i_elm,ifail)
+    ! If ifail in 2..5 we used find_RZ
+    if (ifail .ge. 2 .and. ifail .le. 5) find_RZ_count = find_RZ_count + 1 ! not threadsafe!
 
     if (ifail .eq. -1 .or. i_elm .eq. 0) then
       particle%lost = .true.
@@ -151,6 +154,9 @@ enddo
 call cpu_time(t1)
 
 write(*,'(i5,A,f12.4)') my_id, ' Elapsed time particle update :',t1-t0
+write(*,'(i5,A,i2,A)') my_id, '   Find_RZ used in ', &
+  find_RZ_count*100/(particle_list%n_particles*n_step), ' % of the runs'
+
 
 n_done = n_step
 !write(*,'(A,4e16.8)') 'mean: ',sum(abs(Wp(1:n_done,1)-Wp(1,1)))/wp(1,1)/n_done,sum(abs(mp(1:n_done,1)-mp(1,1)))/mp(1,1)/n_done

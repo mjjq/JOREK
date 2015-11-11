@@ -81,44 +81,19 @@ enddo
 boxsize(2) = boxsize(1)
 
 call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxsize)
-
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-i_step = 0
+write(particle_file,'(A4,i7.7,A4)') 'part',0,'.vtk'
+call particles_vtk(particle_list,particle_file)
 
-!write(particle_file,'(A4,i4.4,A1,i4.4,A4)') 'part',my_id,'_',i_step,'.rst'
+do i_step=1,n_step_particles/nout
+  call update_particles(my_id,particle_list,t_step_particles,nout)
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-!call export_particles(particle_list,particle_file)
-
-call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-write(particle_file,'(A4,i4.4,A4)') 'part',i_step,'.vtk'
-
-!call particles_vtk(particle_list,particle_file)
-
-call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-call update_particles(my_id,particle_list,t_step_particles,n_step_particles)
-
-call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-i_step = 1
-
-call project_particles(particle_list)
-
-write(particle_file,'(A4,i4.4,A1,i4.4,A4)') 'part',my_id,'_',i_step,'.rst'
-
-call export_particles(particle_list,particle_file)
-
-call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-write(particle_file,'(A4,i4.4,A4)') 'part',i_step,'.vtk'
-!call particles_vtk(particle_list,particle_file)
-
-call export_binary_restart(node_list,element_list,'density.rst',rst_format)
+  write(particle_file,'(A4,i7.7,A4)') 'part',i_step*nout,'.vtk'
+  call particles_vtk(particle_list,particle_file)
+enddo
 
 call MPI_FINALIZE(IERR)
-
-!call finplt
 
 end

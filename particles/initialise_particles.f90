@@ -26,7 +26,7 @@ integer :: i_var(4), i_elm, ifail, i, i_done, n_done, i_max, n_max, n_threads, o
 
 integer, external :: omp_get_num_threads, omp_get_thread_num
 
-particle_list%n_particles = 10000
+particle_list%n_particles = 100000
 
 if (particle_list%n_particles .gt. n_particles_max) then
   STOP 'particle_list%n_particles .gt. n_particles_max'

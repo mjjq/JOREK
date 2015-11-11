@@ -79,12 +79,14 @@ do element_try_index = 1, element_try_max
   if (isnan(err2)) then
     write(*,*) "DEBUG: NaN encountered after newton iteration, using find_RZ"
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+    ifail=2
     exit
   endif
   if (newton_iter_number .gt. newton_iter_max) then
-    write(*,"(A,i4,A,i3,A,2g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
-    " using find_RZ", x_new
+    !write(*,"(A,i4,A,i5,A,2g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
+    !" using find_RZ", x_new
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+    ifail=3
     exit
   endif
 
@@ -94,7 +96,8 @@ do element_try_index = 1, element_try_max
   if (search) then
     ! Use the extremely slow option
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    write(*,"(A,i4,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
+    !write(*,"(A,i5,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
+    ifail=4
     exit ! We have used the nuclear option, stop the loop now
   endif
 
@@ -109,8 +112,9 @@ do element_try_index = 1, element_try_max
     exit
   else
     if (element_try_index .eq. element_try_max) then
-      write(*,"(A,i4)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
+      !write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
       call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+      ifail = 5
     else
       ! We have changed element, recalculate st_jac and err2
       call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,st_jac_det)

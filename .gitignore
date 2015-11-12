@@ -45,3 +45,6 @@ forcheck*
 rst_bin2hdf5
 rst_hdf52bin
 tmp[1-9]*
+jorek2_particles
+penning_test
+simon_particle_test

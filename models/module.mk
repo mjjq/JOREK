@@ -109,3 +109,8 @@ JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC)       \
 JOREK2_POWERS_SRC := $(JOREK2_POWERS_SRC)               \
         $(DIR)/mod_diffusivities.f90                    \
         $(DIR)/mod_pellet.f90
+
+JOREK2_IMPORT_PERTURBATION_SRC := $(JOREK2_IMPORT_PERTURBATION_SRC)	\
+        $(DIR)/mod_pellet.f90
+
+

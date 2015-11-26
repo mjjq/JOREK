@@ -70,5 +70,5 @@ JOREK2_TARGET2VTK_SRC := $(JOREK2_TARGET2VTK_SRC) 	\
         $(DIR)/broadcast_nodes.f90                	\
         $(DIR)/broadcast_elements.f90
 
-JOREK2_IMPORT_PERTURBATION_SRC := $(JOREK2_IMPORT_PERTURBATION_SRC)	\
-        $(DIR)/export_restart.f90
+ 
+

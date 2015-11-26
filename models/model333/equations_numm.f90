@@ -265,7 +265,7 @@ subroutine ELM_main_lhs_6_numm(amat, amat_k, amat_n, amat_kn)
              		   * ( v_x * psi_y -  v_y * psi_x )						* xjac * theta * tstep	&
              	 + TG_num6 * tstep * 0.25d0 / R * vpar0**2 * r0									&
              		   * (T0_x * ps0_y - T0_y * ps0_x + F0 / R * T0_p)							&
-             		   * ( v_x * psi_y -  v_y * ps0_x )						* xjac * theta * tstep	&
+             		   * ( v_x * psi_y -  v_y * psi_x )						* xjac * theta * tstep	&
              	 + TG_num6 * tstep * 0.25d0 / R * vpar0**2 * T0									&
              		   * (r0_x * psi_y - r0_y * psi_x)									&
              		   * ( v_x * ps0_y -  v_y * ps0_x )						* xjac * theta * tstep	&
@@ -423,11 +423,17 @@ subroutine ELM_main_lhs_7_numm(amat, amat_k, amat_n, amat_kn)
   ! --- The RHS term (Taylor Galerkin (TG2) stabilisation)	      
   amat(7,1)    = amat(7,1)														&
                  + TG_NUM7 * tstep * 0.25d0 * r0 * Vpar0**2 * BB2									&
-                 	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
+                 	   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / R								&
                  	   * (-(psi_s * v_t	- psi_t * v_s)    /xjac)					* xjac * theta * tstep	&
                  + TG_NUM7 * tstep * 0.25d0 * v  * Vpar0**2 * BB2									&
+                 	   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / R								&
+                 	   * (-(psi_s * r0_t	- psi_t * r0_s)   /xjac)					* xjac * theta * tstep  & 
+                 + TG_NUM7 * tstep * 0.25d0 * r0 * Vpar0**2 * BB2									&
                  	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
-                 	   * (-(psi_s * r0_t	- psi_t * r0_s)   /xjac)					* xjac * theta * tstep 
+                 	   * (-(ps0_s * v_t	- ps0_t * v_s)    /xjac)					* xjac * theta * tstep	&
+                 + TG_NUM7 * tstep * 0.25d0 * v  * Vpar0**2 * BB2									&
+                 	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
+                 	   * (-(ps0_s * r0_t	- ps0_t * r0_s)   /xjac)					* xjac * theta * tstep 
 
   amat(7,5)    = amat(7,5)														&
                  + TG_NUM7 * tstep * 0.25d0 * rho * Vpar0**2 * BB2									&

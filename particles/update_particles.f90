@@ -28,7 +28,7 @@ real*8                    :: B0(3), E0(3) ! Local B and E field at particle posi
 real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, B_phi_factor
-real*8                    :: R, Z, psi, psi_prev, U, U_prev
+real*8                    :: R, Z, psi, psi_prev, U, U_prev, particle_energy
 real*8                    :: fE, fB, t_norm
 real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, k, m, i_elm, n_done, ifail, ielm_out, n_lost
@@ -36,7 +36,8 @@ logical                   :: changed, lost, search
 real*8                    :: t0, t1
 integer                   :: find_RZ_count
 
-real*8, allocatable       :: rp(:,:), zp(:,:), tp(:), wp(:,:), mp(:,:), pp(:,:)
+real*8, allocatable       :: rp(:,:), zp(:,:), tp(:), wp(:,:), mp(:,:), pp(:,:), E_particles(:), E_particles_lost(:)
+
 
 if (present(toroidal_field_factor)) then
   B_phi_factor = toroidal_field_factor
@@ -47,6 +48,9 @@ endif
 
 !allocate(rp(n_step,particle_list%n_particles),zp(n_step,particle_list%n_particles),pp(n_step,particle_list%n_particles))
 !allocate(Wp(n_step,particle_list%n_particles),tp(n_step),mp(n_step,particle_list%n_particles))
+allocate(E_particles(particle_list%n_particles),E_particles_lost(particle_list%n_particles))
+E_particles = 0.d0
+E_particles_lost = 0.d0 ! XXX too much storage
 
 call cpu_time(t0)
 
@@ -59,11 +63,11 @@ endif
 t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)    ! jorek time normalisation
 
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, mp, wp, find_RZ_count) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, mp, wp, find_RZ_count, E_particles, E_particles_lost) &
 !$omp   private(i, j, k, particle, x, v, st, i_elm, R, Z, &
 !$omp           qom, B0, B02, E0, v_tmp, fE, fB, changed, lost, search,            &
 !$omp           x_prev, v_prev, R_update, RPhi_update, R_out ,Z_out, ielm_out, s_out, &
-!$omp           t_out, ifail, psi, U, psi_prev, U_prev)
+!$omp           t_out, ifail, psi, U, psi_prev, U_prev, particle_energy)
 
 !$omp do
 do i = 1, particle_list%n_particles
@@ -79,7 +83,7 @@ do i = 1, particle_list%n_particles
   v     = particle%v
   i_elm = particle%i_elm
 
-  ! TODO better initialization here?
+  ! TODO better initialization here
   psi = 0
   U = 0
 
@@ -147,6 +151,23 @@ do i = 1, particle_list%n_particles
   particle_list%particle(i)%i_elm = i_elm
   particle_list%particle(i)%lost  = particle%lost
 
+  ! Calculate the fields (or at least U) at the new position
+  if (.not. particle%lost) then
+    U = U_prev
+    call calc_EB(i_elm,st,x(3),E0,B0,psi,U)
+  else
+    ! Do not calculate the fields at the new position as this is outside of the
+    ! domain
+  endif
+
+  particle_energy = 0.5 * particle%mass * ATOMIC_MASS_UNIT * dot_product(v,v) &
+                  + 0.5 * EL_CHG / MASS_PROTON * t_norm * particle%q * F0 * (U + U_prev)
+  if (.not. particle%lost) then
+    E_particles(i) = particle_energy
+  else ! Only happens if the particle is lost in this loop
+    E_particles_lost(i) = particle_energy
+  endif
+
 enddo
 !$omp end do
 !$omp end parallel
@@ -156,6 +177,10 @@ call cpu_time(t1)
 write(*,'(i5,A,f12.4)') my_id, ' Elapsed time particle update :',t1-t0
 write(*,'(i5,A,i2,A)') my_id, '   Find_RZ used in ', &
   find_RZ_count*100/(particle_list%n_particles*n_step), ' % of the runs'
+write(*,'(i5,A,g18.10)') my_id, ' Total active particle energy:',sum(E_particles)
+write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',sum(E_particles_lost)
+
+deallocate(E_particles)
 
 
 n_done = n_step

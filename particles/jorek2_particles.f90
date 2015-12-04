@@ -17,7 +17,7 @@ type (type_particle_list):: particle_list
 integer    :: i, in, i_tor, my_id, n_cpu, ierr, i_step
 integer*4  :: rank, comm_size
 integer    :: required, provided, StatInfo
-real*8     :: boxsize(3)
+real*8     :: boxwidth(3), boxcenter(3) !< size and center of box in RZphi space
 character*17 :: particle_file
 
 interface
@@ -73,14 +73,11 @@ call read_adas                                     ! read openadas data for ioni
 
 call coronal                                       ! calculate the coronal equilibria from the adas data
 
-boxsize = 0.
-do i=1,node_list%n_nodes
-  boxsize(1) = max(boxsize(1),node_list%node(i)%x(1,1))
-  boxsize(3) = max(boxsize(3),abs(node_list%node(i)%x(1,2)))
-enddo
-boxsize(2) = boxsize(1)
+! Boxsize is R,Z location and dPhi extent from phi=0
+boxcenter = (/2.83d0, 0.d0, 0.d0/)
+boxwidth = (/1.03d0, 1.9d0, TWOPI/)
 
-call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxsize)
+call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxcenter, boxwidth)
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 write(particle_file,'(A4,i7.7,A4)') 'part',0,'.vtk'

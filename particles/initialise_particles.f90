@@ -1,4 +1,4 @@
-subroutine initialise_particles(my_id,n_cpu,node_list,element_list,particle_list,boxsize)
+subroutine initialise_particles(my_id,n_cpu,node_list,element_list,particle_list,boxcenter,boxwidth)
 
 use constants
 use data_structure
@@ -15,7 +15,7 @@ type (type_particle)      :: particle
 
 integer :: my_id
 integer :: n_cpu
-real*8  :: boxsize(3)
+real*8 , intent(in) :: boxcenter(3), boxwidth(3)
 
 real*8  :: R_in, Z_in, R_out, Z_out, phi_in, vx, vy, vz
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t, B_field(3), B_0, st_jac
@@ -26,7 +26,7 @@ integer :: i_var(4), i_elm, ifail, i, i_done, n_done, i_max, n_max, n_threads, o
 
 integer, external :: omp_get_num_threads, omp_get_thread_num
 
-particle_list%n_particles = 100000
+particle_list%n_particles = 10000
 
 if (particle_list%n_particles .gt. n_particles_max) then
   STOP 'particle_list%n_particles .gt. n_particles_max'
@@ -40,7 +40,7 @@ write(*,*) '**********************************'
 write(*,*) ' number of particles : ',particle_list%n_particles
 
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, n_max, boxsize, i_var, mass_main_ion, atomic_mass_impurity, &
+!$omp   shared(particle_list, node_list, element_list, n_max, boxcenter, boxwidth, i_var, mass_main_ion, atomic_mass_impurity, &
 !$omp          mass_impurity, central_density, central_mass, n_threads)                                            &
 !$omp   private(i_max, ran3, ran4, XYZ_in, R_in, Z_in, phi_in, R_out, Z_out, i_elm, s_elm, t_elm, ifail,           &
 !$omp           P, P_s, P_t, R, R_s, R_t, Z, Z_s, Z_t, background_density, background_kbT, background_kelvin,      &
@@ -62,6 +62,10 @@ mass_main_ion        = mass_proton * central_mass
 atomic_mass_impurity = 183.84
 mass_impurity        = mass_proton * atomic_mass_impurity ! Tungsten
 
+v_norm = sqrt(mu_zero * mass_main_ion * central_density * 1.d20)      ! JOREK normalisation for velocity
+write(*,*) "sqrt(mu_0 rho_0) = ", v_norm
+
+
 !$omp do
 do i_max = 1, n_max
 
@@ -71,10 +75,9 @@ do i_max = 1, n_max
 
   call random_number(ran3)
 
-  XYZ_in = - boxsize + 2.* ran3 * boxsize
-  R_in   = sqrt(XYZ_in(1)**2 + XYZ_in(2)**2)
-  Z_in   = XYZ_in(3)
-  phi_in = atan2(XYZ_in(2),XYZ_in(1))
+  R_in   = boxcenter(1) + boxwidth(1)*(ran3(1)-0.5d0)
+  Z_in   = boxcenter(2) + boxwidth(2)*(ran3(2)-0.5d0)
+  phi_in = boxcenter(3) + boxwidth(3)*(ran3(3)-0.5d0)
 
   call find_RZ(node_list,element_list,R_in,Z_in,R_out,Z_out,i_elm,s_elm,t_elm,ifail)
 
@@ -90,8 +93,6 @@ do i_max = 1, n_max
     background_kelvin  = background_kbT / EL_CHG                 ! plasma temperature [K]
 
     V_thermal = sqrt(background_kbT / mass_impurity)      ! [m/s]
-
-    v_norm = sqrt(mu_zero * mass_main_ion * central_density * 1.d20)      ! JOREK normalisation for velocity
 
     call random_number(ran4)
 

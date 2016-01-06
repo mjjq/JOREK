@@ -85,7 +85,7 @@ module boundary
 
       index_bnd = index_bnd + bnd_node_list%bnd_node(i)%n_dof
 
-      write(*,*)  'bnd index : ',i, bnd_node_list%bnd_node(i)%index_starwall
+    !  write(*,*)  'bnd index : ',i, bnd_node_list%bnd_node(i)%index_starwall
 
     enddo
 

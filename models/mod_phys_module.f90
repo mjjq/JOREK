@@ -222,6 +222,7 @@ module phys_module
   real*8  :: t_step_particles !< the time step for the advance of the particles
   integer :: n_step_particles !< the number of time steps for the particles
   integer :: n_particles      !< the number of particles (to be initialised)
+  real*8  :: atomic_mass_impurity !< The atomic mass of the impurities
 
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
 

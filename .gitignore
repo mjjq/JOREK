@@ -9,6 +9,7 @@
 *.err
 *.out
 *.dat
+*.swp
 Makefile.inc
 j302_1
 j302_3

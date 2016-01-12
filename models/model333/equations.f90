@@ -203,16 +203,11 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
   ! --- The LHS terms (main part)
   amat(2,1)   = - v * (psi_x * zj0_y - psi_y * zj0_x )								* xjac * theta * tstep
 
-  amat(2,2)   = + r0_hat * R**2 * w0 * (v_x * u_y  - v_y  * u_x)						* xjac * theta * tstep	&
+  amat(2,2)   = - R**3 * r0_corr * (v_x * u_x + v_y * u_y)                                                      * xjac * (1.d0 + zeta)  &
+                + r0_hat * R**2 * w0 * (v_x * u_y  - v_y  * u_x)						* xjac * theta * tstep	&
 		+ R**2 * (u_x*u0_x + u_y*u0_y) * (v_x*r0_y_hat - v_y*r0_x_hat)					* xjac * theta * tstep	&
 		- R**3 * total_rho_source * (v_x * u_x + v_y * u_y)						* xjac * theta * tstep
   
-  if (r0 .lt. rho_1) then
-    amat(2,2) = amat(2,2) - R**3 * rho_1 * (v_x * u_x + v_y * u_y)						* xjac * (1.d0 + zeta) 
-  else
-    amat(2,2) = amat(2,2) - R**3 * r0    * (v_x * u_x + v_y * u_y)						* xjac * (1.d0 + zeta) 
-  endif
-
   amat(2,3)   = - v * (ps0_x * zj_y  - ps0_y * zj_x)								* xjac * theta * tstep
 
   amat_n(2,3) = + eps_cyl * F0 / R * v * zj_p									* xjac * theta * tstep
@@ -409,17 +404,17 @@ subroutine ELM_main_rhs_4(rhs,rhs_k)
   
   ! ----------------	      
   ! --- The RHS term	      
-  !rhs(4) = 0.d0
+  rhs(4) = 0.d0
   
   ! ----------------------------	      
   ! --- The RHS term (main part)	      
-  rhs(4) = rhs(4)											&
-           - ( v_x * u0_x   + v_y * u0_y  + v*w0)  				* R * xjac * tstep	
+  !rhs(4) = rhs(4)											&
+  !         - ( v_x * u0_x   + v_y * u0_y  + v*w0)  				* R * xjac * tstep	
   
   ! -----------------------------------    
   ! --- The RHS term (diamagnetic part)	      
-  rhs(4) = rhs(4)											&
-  	   - tau_IC * W_dia / r0_corr * ( v_x  * P0_x + v_y  * P0_y)		* R * xjac * tstep	
+  !rhs(4) = rhs(4)											&
+  !	   - tau_IC * W_dia / r0_corr * ( v_x  * P0_x + v_y  * P0_y)		* R * xjac * tstep	
 
   return
 
@@ -725,7 +720,8 @@ subroutine ELM_main_lhs_6(amat, amat_k, amat_n, amat_kn)
 
   amat_n(6,5)  = + v * T0 *                F0 / R * Vpar0 * rho_p					* xjac * theta * tstep
   
-  amat(6,6)    = - v * r0 * R**2    * (T_x  * u0_y - T_y  * u0_x)					* xjac * theta * tstep	&
+  amat(6,6)    = + v * r0_corr * T * R                                                                  * xjac * (1.d0 + zeta)  &
+                 - v * r0 * R**2    * (T_x  * u0_y - T_y  * u0_x)					* xjac * theta * tstep	&
 	         - v * T  * R**2    * (r0_x * u0_y - r0_y * u0_x)					* xjac * theta * tstep	&
 	         + v * T  *                F0 / R * Vpar0 * r0_p					* xjac * theta * tstep	&
 		 + v * r0 * Vpar0   * (T_x  * ps0_y - T_y  * ps0_x)					* xjac * theta * tstep	&
@@ -738,12 +734,6 @@ subroutine ELM_main_lhs_6(amat, amat_k, amat_n, amat_kn)
 		 + K_prof * R * (v_x*T_x + v_y*T_y )							* xjac * theta * tstep	& 
                  + K_perp_numm * (v_xx + v_x/R + v_yy)										&
 		               * (T_xx + T_x/R + T_yy) * R 						* xjac * theta * tstep
-  
-  if (r0 .lt. rho_1) then
-    amat(6,6)  = amat(6,6) + v * rho_1 * T * R								* xjac * (1.d0 + zeta)
-  else
-    amat(6,6)  = amat(6,6) + v * r0    * T * R								* xjac * (1.d0 + zeta)
-  endif
   
   amat_k(6,6)  = + (K_par-K_prof) * R / BB2 * Bgrad_T_k_star * Bgrad_T_T				* xjac * theta * tstep	&
 		 + dK_par * T     * R / BB2 * Bgrad_T_k_star * Bgrad_T					* xjac * theta * tstep 
@@ -906,19 +896,14 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
   
   amat_n(7,6) = + v * F0 / R * T_p * r0										* xjac * theta * tstep 
 
-  amat(7,7)   = + r0 * vpar0 * vpar * BB2 * (ps0_x * v_y  - ps0_y * v_x)					* xjac * theta * tstep	&
+  amat(7,7)   = + v * Vpar * r0_corr * F0**2 / R                                                                * xjac * (1.d0 + zeta)  &
+                + r0 * vpar0 * vpar * BB2 * (ps0_x * v_y  - ps0_y * v_x)					* xjac * theta * tstep	&
                 + v  * vpar0 * vpar * BB2 * (ps0_x * r0_y - ps0_y * r0_x)					* xjac * theta * tstep	&
                 - v  * vpar0 * vpar * BB2 * F0 / R * r0_p							* xjac * theta * tstep	&
                 + v * total_rho_source  * vpar * BB2 * R  							* xjac * theta * tstep	&
                 + visco_par_numm * (v_xx    + v_x   /R + v_yy   )									&
 		                 * (vpar_xx + vpar_x/R + vpar_yy) * R	 					* xjac * theta * tstep 
   
-  if (r0 .lt. rho_1) then
-    amat(7,7) = amat(7,7) + v * Vpar * rho_1 * F0**2 / R							* xjac * (1.d0 + zeta)
-  else
-    amat(7,7) = amat(7,7) + v * Vpar * r0    * F0**2 / R							* xjac * (1.d0 + zeta)
-  endif
-
   amat_k(7,7) = - r0 * vpar0 * vpar * BB2 * F0 / R * v_p							* xjac * theta * tstep 
 
   ! -----------------------------------    

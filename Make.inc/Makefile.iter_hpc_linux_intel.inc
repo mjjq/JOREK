@@ -4,7 +4,7 @@
 MODEL = model199
 
 # Fortran compiler 
-FC               = mpif90 -f90=ifort
+FC               = mpif90 #-f90=ifort
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp
@@ -78,4 +78,4 @@ SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64
 LIBDIERCKX = $(LIBDIR)/Dierckx/dierckx.a
 
 #PPPLIB
-PPPLIB = -L$(PPPLIB_HOME) -lppplib
+PPPLIB = -L$(PPPLIB_HOME)/lib -lppplib

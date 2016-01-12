@@ -219,9 +219,10 @@ version:
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): version $(1) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper:]')_OBJ)
 	$(value FC) $(value FFLAGS) $(value INCLUDES) -c $(1) -o $(call all_src_to_obj,$(1))
-	$(value FC) $(value FFLAGS) $(call all_src_to_obj,$(1)) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper:]')_OBJ) \
+	$(value FC) $(value FFLAGS_OMP) $(call all_src_to_obj,$(1)) $$($(shell echo $(notdir $(basename $(1))) | tr '[:lower:]' '[:upper:]')_OBJ) \
 	-o $(JOREK_DIR)/$(notdir $(basename $(1))) $(value LIBS)
 endef
+
 # Below is an example:
 #jorek2_poincare : version diagnostics/jorek2_poincare.f90 $(JOREK2_POINCARE_OBJ) 
 #	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_poincare.f90 -o diagnostics/jorek2_poincare.o

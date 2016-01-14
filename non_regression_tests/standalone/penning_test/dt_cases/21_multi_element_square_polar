@@ -14,4 +14,6 @@
  n_Z      = 20
  n_radial = 20
 
+ atomic_mass_impurity = 1.d0
+
  &end

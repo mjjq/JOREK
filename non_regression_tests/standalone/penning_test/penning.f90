@@ -162,7 +162,8 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
   ! Exit the test if the error is too large
   ! Norm error scales as dt^2
   err_ref = 3.14084d-8*tstep_n(i)**2
-  write(*,*) "RESULT: n_pol= ", n_radial, " dt= ", tstep_n(i), " error= ", err_norm, " reference= ", err_ref
+  if (n_pol .gt. 0) err_ref = max(err_ref, 2.d0*3.675d3*real(n_pol)**(-4)) ! only use this condition for polar grids, with huge margin (2x)
+  write(*,"(A,i3,A,g12.4,A,g16.8,a,g16.8)") "RESULT: n_radial= ", n_radial, " dt= ", tstep_n(i), " error= ", err_norm, " reference= ", err_ref
   if (isnan(err_norm) .or. err_norm .gt. err_ref*1.2d0) then
     write(*,*) "Penning test failed"
     stop 1

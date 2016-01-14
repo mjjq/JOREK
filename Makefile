@@ -307,7 +307,7 @@ jorek2_import_perturbation_tmp : version diagnostics/jorek2_import_perturbation.
 	-o $(JOREK_DIR)/jorek2_import_perturbation $(LIBS)
 
 penning_test : non_regression_tests/standalone/penning_test/penning.f90 $(PENNING_TEST_OBJ)
-	$(FC) $(FFLAGS) non_regression_tests/standalone/penning_test/penning.f90 \
+	$(FC) $(FFLAGS) $(INCLUDES) non_regression_tests/standalone/penning_test/penning.f90 \
 	$(PENNING_TEST_OBJ) -o $(JOREK_DIR)/penning_test \
 	$(INCLUDES) $(LIBS)
 

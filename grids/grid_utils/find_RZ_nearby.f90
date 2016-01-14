@@ -40,7 +40,7 @@ st_try = st_old
 ! Find the jacobian at the current s and t position
 call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,st_jac_det)
 err2_old = dot_product(x_step-x_new,x_step-x_new)
-
+ifail=0
 
 
 

@@ -51,6 +51,7 @@ endif
 allocate(E_particles(particle_list%n_particles),E_particles_lost(particle_list%n_particles))
 E_particles = 0.d0
 E_particles_lost = 0.d0 ! XXX too much storage
+find_RZ_count = 0
 
 call cpu_time(t0)
 
@@ -131,7 +132,7 @@ do i = 1, particle_list%n_particles
     ! Find new st coordinates and new element
     call find_RZ_nearby(node_list,element_list,x(1:2),(/R,Z/),st,st,i_elm,i_elm,ifail)
     ! If ifail in 2..5 we used find_RZ
-    if (ifail .ge. 2 .and. ifail .le. 5) find_RZ_count = find_RZ_count + 1 ! not threadsafe!
+    if (ifail .ge. 2 .and. ifail .le. 5) find_RZ_count = find_RZ_count + 1 ! XXX not threadsafe! works if find_RZ is not often used, which we want
 
     if (ifail .eq. -1 .or. i_elm .eq. 0) then
       particle%lost = .true.
@@ -176,7 +177,7 @@ enddo
 call cpu_time(t1)
 
 write(*,'(i5,A,f12.4)') my_id, ' Elapsed time particle update :',t1-t0
-write(*,'(i5,A,f6.3,A)') my_id, '   Find_RZ used in ', &
+write(*,'(i5,A,f7.3,A)') my_id, '   Find_RZ used in ', &
   real(find_RZ_count)*100.d0/real(particle_list%n_particles*n_step), ' % of the runs'
 write(*,'(i5,A,g18.10)') my_id, ' Total active particle energy:',sum(E_particles)
 write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',sum(E_particles_lost)

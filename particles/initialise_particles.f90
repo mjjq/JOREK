@@ -43,7 +43,6 @@ if (my_id .eq. 0) then
 endif
 
 mass_impurity        = mass_proton * atomic_mass_impurity ! Tungsten
-if (my_id .eq. 0) write(*,"(A)",advance="no") " progress (10000 per dot): "
 
 !$omp parallel default(none) &
 !$omp   shared(particle_list, node_list, element_list, boxcenter, boxwidth, &
@@ -66,7 +65,6 @@ call random_seed()
 !$omp do
 do i = 1, n_max
   if (n_done .ge. n_particles_thread) cycle
-  if (mod(n_done,10000) .eq. 9999) write(*,"(a)",advance="no") '.'
 
   ! Generate a random position to put this particle
   call random_number(ran3)
@@ -83,7 +81,6 @@ enddo
 !$omp end do
 !$omp end parallel
 
-write(*,*) ' number of particles : ',particle_list%n_particles
 if (my_id .eq. 0) then
   write(*,*) '* done initialising particles    *'
   write(*,*) '**********************************'
@@ -93,12 +90,15 @@ end
 
 !> Function to return a single particle at R_in, Z_in, phi_in at the coronal
 !! equilibrium ionization and at the local thermal velocity
-subroutine initialize_particle_coronal(node_list, element_list, R_in, Z_in, phi_in, particle, ifail)
+subroutine initialize_particle_coronal(node_list, element_list, R_in, Z_in, phi_in, particle_mass, particle, ifail)
+use constants
 use data_structure
 use mod_particles
+use phys_module, only : F0, central_density, central_mass, atomic_mass_impurity
 use openadas
+implicit none
 
-real*8, intent(in) :: R_in, Z_in, phi_in
+real*8, intent(in) :: R_in, Z_in, phi_in, particle_mass
 type (type_node_list)    , intent(in)  :: node_list
 type (type_element_list) , intent(in)  :: element_list
 type(type_particle), intent(out)       :: particle
@@ -109,8 +109,9 @@ integer :: i_var(4), i_elm
 real*8, dimension(4) :: P, P_s, P_t, P_phi, ran4
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: background_density, background_kbT, background_kelvin, V_thermal
-real*8 :: vx, vy, vz
+real*8 :: vx, vy, vz, v_norm
 real*8 :: Z_coronal, radiation_coronal
+real*8 :: mass_main_ion
 
 ! Find s and t at this position and ielm
 call find_RZ(node_list,element_list,R_in,Z_in,R_out,Z_out,i_elm,s_elm,t_elm,ifail)
@@ -124,7 +125,7 @@ if (ifail .eq. 0) then
   background_kbT     = P(3) /(MU_ZERO*central_density*1.d20)   ! plasma temperature [J]
   background_kelvin  = background_kbT / EL_CHG                 ! plasma temperature [K]
 
-  V_thermal = sqrt(background_kbT / mass_impurity)      ! [m/s]
+  V_thermal = sqrt(background_kbT / particle_mass)      ! [m/s]
 
   call random_number(ran4)
 

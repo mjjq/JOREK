@@ -84,11 +84,11 @@ write(particle_file,'(A4,i7.7,A4)') 'part',0,'.vtk'
 call particles_vtk(particle_list,particle_file)
 
 
-do i_step=1,n_step_particles/nout
-  call update_particles(my_id,particle_list,t_step_particles,nout)
+do i_step=1,n_step_particles/nout_particles
+  call update_particles(my_id,particle_list,t_step_particles,nout_particles)
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-  write(particle_file,'(A4,i7.7,A4)') 'part',i_step*nout,'.vtk'
+  write(particle_file,'(A4,i7.7,A4)') 'part',i_step*nout_particles,'.vtk'
   call particles_vtk(particle_list,particle_file)
 enddo
 

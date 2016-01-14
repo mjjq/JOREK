@@ -93,6 +93,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
                 t_step_particles, n_step_particles,                 &
                 n_particles, atomic_mass_impurity,                  &
+                nout_particles,                                     &
                 corr_neg_temp_coef, corr_neg_dens_coef
 
 if (my_id .eq. 0) then

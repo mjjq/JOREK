@@ -58,6 +58,7 @@ if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '* JOREK2 : update particles           *'
   write(*,*) '***************************************'
+  write(*,*) 'integrating trajectories for ', n_step, ' steps'
 endif
 
 t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)    ! jorek time normalisation
@@ -175,8 +176,8 @@ enddo
 call cpu_time(t1)
 
 write(*,'(i5,A,f12.4)') my_id, ' Elapsed time particle update :',t1-t0
-write(*,'(i5,A,i2,A)') my_id, '   Find_RZ used in ', &
-  find_RZ_count*100/(particle_list%n_particles*n_step), ' % of the runs'
+write(*,'(i5,A,f6.3,A)') my_id, '   Find_RZ used in ', &
+  real(find_RZ_count)*100.d0/real(particle_list%n_particles*n_step), ' % of the runs'
 write(*,'(i5,A,g18.10)') my_id, ' Total active particle energy:',sum(E_particles)
 write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',sum(E_particles_lost)
 

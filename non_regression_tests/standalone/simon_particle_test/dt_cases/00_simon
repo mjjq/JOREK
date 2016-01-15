@@ -4,10 +4,9 @@
 
  &in1
 
- tstep   = 1.d-3
- nstep   = 100000
-
- nout = 1
+ n_step_particles = 1000000000
+ nout_particles = 100000
+ t_step_particles = 1.d-4
  rst_format = 1
 
  mf        = 0

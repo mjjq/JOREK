@@ -128,7 +128,7 @@ endif
 
 
 !! Initialize particles
-call initialise_particles_simon(node_list,element_list,particle_list, tstep)
+call initialise_particles_simon(node_list,element_list,particle_list, t_step_particles)
 
 
 if (save_vtk) then
@@ -148,18 +148,19 @@ do j=1,particle_list%n_particles
 enddo
 
 !! Perform time-stepping
-do i=1,nstep/nout
-  call update_particles(my_id, particle_list, tstep, nout, 1.d0) ! TODO fix bug with present of toroidal field factor
-  write(21,"(100g16.8)") i*nout*tstep, (particle_list%particle(j)%x(1:2), j=1,particle_list%n_particles)
-  write(22,"(100g16.8)") i*nout*tstep, (guiding_center_position(particle_list%particle(j), tstep), j=1,particle_list%n_particles)
+do i=1,n_step_particles/nout_particles
+  call update_particles(my_id, particle_list, t_step_particles, nout_particles, 1.d0) ! TODO fix bug with present of toroidal field factor
+  write(21,"(100g16.8)") i*nout_particles*t_step_particles, (particle_list%particle(j)%x(1:2), j=1,particle_list%n_particles)
+  write(22,"(100g16.8)") i*nout_particles*t_step_particles, (guiding_center_position(particle_list%particle(j), t_step_particles), j=1,particle_list%n_particles)
   ! Save particle position to file (or stdout in this case)
   if (save_vtk) then
-    write(filename,"(A,I0.5,A)") "particles", i*nout, ".vtk"
+    write(filename,"(A,I0.5,A)") "particles", i*nout_particles, ".vtk"
     call particles_vtk(particle_list,filename)
   endif
+  write(*,*) "current iteration:", i*nout_particles
 enddo
 write(*,*) "Energy errors:"
-write(*,"(100g16.8)") tstep, (sum(particle_list%particle(j)%v**2)-particle_energies(j), j=1,particle_list%n_particles)
+write(*,"(100g16.8)") t_step_particles, (sum(particle_list%particle(j)%v**2)-particle_energies(j), j=1,particle_list%n_particles)
 
 call MPI_FINALIZE(ierr)
 
@@ -207,7 +208,7 @@ call find_RZ(node_list,element_list,R_in,Z_in,R_out,Z_out,i_elm,s_elm,t_elm,ifai
 particle_energy      = (/ 170., 50.,    164.    /)      ! [eV]
 particle_energy_perp = (/  40., 49.585, 161.832 /)      ! [eV]
 
-mass_ion = 4.d0 * mass_proton
+mass_ion = 4.d0 * mass_proton ! XXX impurity_atomic_mass not used
 t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
 

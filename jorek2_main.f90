@@ -162,10 +162,85 @@ program JOREK2
   complex*16 :: out_fft(1:n_plane)
 #endif
 
+  integer::narg,cptArg 	!> for commandline arguments
+  character(len=20)::ArgName 	!> Argument name
+
   real*8  :: DUMMY_REAL(1:1)
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
+  
+  !***********************************************************************
+  !*          Proces Command line arguments                              *
+  !***********************************************************************
+  narg = command_argument_count()
+  
+  !> when argument is give print info of first one and exit normally
+  if(narg>0)then    
+    do cptArg=1,narg
+      call get_command_argument(cptArg,ArgName)
+      select case(adjustl(ArgName))
+        case("--help","-h")
+          write(*,*) '**********************************************************************'
+		  write(*,*) '*                    3D Reduced MHD : JOREK_2.0                      *'
+		  write(*,*) '**********************************************************************'
+		  write(*,*) '* Solves the (reduced) MHD equations in 3D toroidal geometry         *' 
+		  write(*,*) '*                                                                    *' 
+		  write(*,*) '* - solvers implemented:                                             *' 
+		  write(*,*) '*   - MUMPS                                                          *' 
+		  write(*,*) '*   - PastiX                                                         *' 
+		  write(*,*) '*   - GMRES (+MUMPS or PastiX preconditioner)                        *' 
+		  write(*,*) '*                                                                    *' 
+		  write(*,*) '* - required libraries :                                             *' 
+		  write(*,*) '*   - MPI                                                            *' 
+		  write(*,*) '*   - MUMPS                                                          *' 
+		  write(*,*) '*   - PastiX                                                         *' 
+		  write(*,*) '*   - SCOTCH (metis)                                                 *' 
+		  write(*,*) '*   - FFTW                                                           *' 
+		  write(*,*) '*   - SCALAPACK (BLACS)                                              *' 
+		  write(*,*) '*   - LAPACK, BLAS                                                   *' 
+		  write(*,*) '*   - PPPLIB                                                         *' 
+		  write(*,*) '*                                                                    *' 
+		  write(*,*) '* Author: Guido Huysmans (Euratom / CEA Association)                 *' 
+		  write(*,*) '* start date: 18-7-2008                                              *' 
+		  write(*,*) '*                                                                    *' 
+		  write(*,*) '**********************************************************************'
+		  stop
+		case("--param","-p")
+		  write(*,*) '**********************************************************************'
+		  write(*,*) '*                    3D Reduced MHD : JOREK_2.0                      *'
+		  write(*,*) '**********************************************************************'
+		  write(*,*) '* Using following parameters:                                        *'
+		  write(*,*) '*      jorek_model    =  ', jorek_model       , '                               *'
+		  write(*,*) '*      n_var          =  ', n_var             , '                               *'
+		  write(*,*) '*      n_dim          =  ', n_dim             , '                               *'
+		  write(*,*) '*      n_order        =  ', n_order           , '                               *'
+		  write(*,*) '*      n_tor          =  ', n_tor             , '                               *'
+		  write(*,*) '*      n_period       =  ', n_period          , '                               *'
+		  write(*,*) '*      n_plane        =  ', n_plane           , '                               *'
+		  write(*,*) '*      n_vertex_max   =  ', n_vertex_max      , '                               *'
+		  write(*,*) '*      n_elements_max =  ', n_elements_max    , '                               *'
+		  write(*,*) '*      n_boundary_max =  ', n_boundary_max    , '                               *'
+		  write(*,*) '*      n_pieces_max   =  ', n_pieces_max      , '                               *'
+		  write(*,*) '*      n_degrees      =  ', n_degrees         , '                               *'
+		  write(*,*) '*      nref_max       =  ', nref_max          , '                               *'
+		  write(*,*) '*      n_ref_list     =  ', n_ref_list        , '                               *'
+		  write(*,*) '*                                                                    *' 
+		  write(*,*) '*      Implemented variables:                                        *' 
+		  write(*,*) '*                                                                    *' 
+		  write(*,*) '*                                                                    *' 
+		  write(*,*) '**********************************************************************'
+		  stop
+        case default
+          write(*,*)"Option ",adjustl(ArgName),"unknown try -h or -help for program info or "
+          write(*,*)" "
+		  stop
+        end select
+    end do
+  end if
+  
+  
+  
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************

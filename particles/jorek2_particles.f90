@@ -19,21 +19,25 @@ implicit none
 
 type (type_particle_list):: particle_list
 
-integer    :: i, in, i_tor, my_id, n_cpu, ierr, i_step
+integer    :: i, j, i_tor, my_id, n_cpu, ierr, i_step
 integer*4  :: rank, comm_size
 integer    :: required, provided, StatInfo
 real*8     :: boxwidth(3), boxcenter(3) !< size and center of box in RZphi space
-character*17 :: particle_file
+character*17 :: particle_file, filenum
+
+real*8, dimension(:), allocatable :: energy_list, momentum_list
 
 interface
-  subroutine update_particles(my_id, particle_list, t_step, n_step, toroidal_field_factor)
+  subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor)
     use mod_particles
     ! -- Routine parameters
     type (type_particle_list) :: particle_list      !< The particles we will march forward in time
     real*8,  intent(in)       :: t_step             !< The size of each timestep
     integer, intent(in)       :: n_step             !< The number of timesteps we will perform
     integer, intent(in)       :: my_id              !< Id of the current process
-    real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
+    real*8,  intent(out), dimension(:), optional :: energy_list !< Energy of the particles at the next-to(!) final timestep
+    real*8,  intent(out), dimension(:), optional :: momentum_list !< Generalized toroidal momentum of the particles at the next-to(!) final timestep
+    real*8,  intent(in),  optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
   end subroutine update_particles
 end interface
 
@@ -77,21 +81,47 @@ boxwidth = (/1.03d0, 1.9d0, TWOPI/)
 
 
 call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxcenter, boxwidth, n_particles)
+allocate(energy_list(particle_list%n_particles), momentum_list(particle_list%n_particles))
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 
 write(particle_file,'(A4,i7.7,A4)') 'part',0,'.vtk'
 call particles_vtk(particle_list,particle_file)
+call update_particles(my_id,particle_list,t_step_particles,2,energy_list,momentum_list)
+! Output by each processor
+call write_list("energy",0,my_id,energy_list)
+call write_list("momentum",0,my_id,momentum_list)
 
 
 do i_step=1,n_step_particles/nout_particles
-  call update_particles(my_id,particle_list,t_step_particles,nout_particles)
+  call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list)
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   write(particle_file,'(A4,i7.7,A4)') 'part',i_step*nout_particles,'.vtk'
   call particles_vtk(particle_list,particle_file)
+
+  ! Output by each processor
+  call write_list("energy",i_step*nout_particles,my_id,energy_list)
+  call write_list("momentum",i_step*nout_particles,my_id,momentum_list)
 enddo
 
 
 call MPI_FINALIZE(IERR)
+contains
+subroutine write_list(ftype,fnum,my_id,list)
+  ! Input parameters
+  integer, intent(in) :: fnum, my_id
+  character(len=*), intent(in) :: ftype
+  real*8, dimension(:) :: list
+
+  character*40 :: filename
+
+  write(filename,"(A,I0.8,A,I0.2,A)") trim(ftype), fnum, "_", my_id, ".dat"
+  open(file=filename,status="replace",unit=21)
+
+  do j=1,size(list)
+    write(21,"(100g16.8)") list(j)
+  enddo
+  close(21)
+end subroutine write_list
 end program jorek2_particles

@@ -157,6 +157,8 @@ if (ifail .eq. 0) then
 
   !if (i_max .eq. n_max) write(*,'(A,3i6)') 'WARNING : ',omp_tid,i_max,n_max
 
+else
+  write(*,*) R_in, Z_in
 endif
 ! if ifail != 0 particle is empty
 

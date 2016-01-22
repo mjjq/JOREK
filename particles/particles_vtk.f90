@@ -1,4 +1,8 @@
 !> This subroutine gathers and exports all particles to a VTK file
+!! The VTK file contains
+!! - XYZ coordinates
+!!   - charge (scalar)
+!!   - velocity (vector at t-dt/2 NB!)
 subroutine particles_vtk(particle_list,particle_file)
 use parameters
 use data_structure

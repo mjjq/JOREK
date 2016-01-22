@@ -87,11 +87,6 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 write(particle_file,'(A4,i7.7,A4)') 'part',0,'.vtk'
 call particles_vtk(particle_list,particle_file)
-call update_particles(my_id,particle_list,t_step_particles,2,energy_list,momentum_list)
-! Output by each processor
-call write_list("energy",0,my_id,energy_list)
-call write_list("momentum",0,my_id,momentum_list)
-
 
 do i_step=1,n_step_particles/nout_particles
   call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list)
@@ -100,28 +95,8 @@ do i_step=1,n_step_particles/nout_particles
   write(particle_file,'(A4,i7.7,A4)') 'part',i_step*nout_particles,'.vtk'
   call particles_vtk(particle_list,particle_file)
 
-  ! Output by each processor
-  call write_list("energy",i_step*nout_particles,my_id,energy_list)
-  call write_list("momentum",i_step*nout_particles,my_id,momentum_list)
 enddo
 
 
 call MPI_FINALIZE(IERR)
-contains
-subroutine write_list(ftype,fnum,my_id,list)
-  ! Input parameters
-  integer, intent(in) :: fnum, my_id
-  character(len=*), intent(in) :: ftype
-  real*8, dimension(:) :: list
-
-  character*40 :: filename
-
-  write(filename,"(A,I0.8,A,I0.2,A)") trim(ftype), fnum, "_", my_id, ".dat"
-  open(file=filename,status="replace",unit=21)
-
-  do j=1,size(list)
-    write(21,"(100g16.8)") list(j)
-  enddo
-  close(21)
-end subroutine write_list
 end program jorek2_particles

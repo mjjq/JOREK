@@ -1,2 +1,8 @@
 *.vtk
 dt_results
+*.dat
+*.rst
+*.dump
+jorek_log
+*.xml
+gnuplot_in

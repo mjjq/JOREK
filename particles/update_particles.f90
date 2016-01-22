@@ -37,6 +37,7 @@ integer                   :: i, j, i_elm, n_done, ifail, ielm_out, n_lost
 logical                   :: changed, lost, search
 real*8                    :: t0, t1
 integer                   :: find_RZ_count
+real*8                    :: minv, maxv, mean, total, stddev
 
 if (present(toroidal_field_factor)) then
   B_phi_factor = toroidal_field_factor
@@ -212,15 +213,43 @@ call cpu_time(t1)
 write(*,'(i5,A,f12.4)') my_id, ' Elapsed time particle update :',t1-t0
 write(*,'(i5,A,f7.3,A)') my_id, '   Find_RZ used in ', &
   real(find_RZ_count)*100.d0/real(particle_list%n_particles*n_step), ' % of the runs'
-if (present(energy_list)) write(*,'(i5,A,g18.10)') my_id, ' Total particle energy:',sum(energy_list)
 write(*,'(i5,A,g18.10)') my_id, '  number of lost particles in this iteration:',n_lost
 write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',energy_lost_particles
 
-
-n_lost = 0
-do j=1, particle_list%n_particles
-  if (particle_list%particle(j)%lost) n_lost = n_lost + 1
-enddo
+! Calculate statistics on energy_list and momentum list if they are present
+if (present(energy_list)) then
+  call statistics_no_zero(energy_list, mean, minv, maxv, stddev, total, n_lost)
+  write(*,'(i5,A,5g18.10)') my_id, '  energy min/mean/max/stddev/total :',&
+    minv,mean,maxv,stddev,total
+endif
+if (present(momentum_list)) then
+  call statistics_no_zero(momentum_list, mean, minv, maxv, stddev, total, n_lost)
+  write(*,'(i5,A,5g18.10)') my_id, '  momentum min/mean/max/stddev/total :',&
+    minv,mean,maxv,stddev,total
+endif
 write(*,*) my_id,'lost particles on this cpu: ',n_lost
 
+
+contains
+!> Calculate statistics on a set of numbers ignoring all zeroes in the set
+!! without copying to a new array
+subroutine statistics_no_zero(list,mean,minv,maxv,sd,total,num_zeros)
+  real*8, intent(in), dimension(:) :: list
+  real*8, intent(out) :: mean, minv, maxv, sd, total
+  integer, intent(out) :: num_zeros
+  integer :: i, num_values
+  logical, dimension(:), allocatable :: mask
+
+  allocate(mask(size(list)))
+  ! Everything > 0 is true and will be used
+  mask = abs(list) > 0.d0
+  num_values = count(mask)
+  num_zeros = size(list) - num_values
+
+  minv = minval(list,mask)
+  maxv = maxval(list,mask)
+  total = sum(list,mask)
+  mean = total/num_values ! automatically promote num_values to real
+  sd = sqrt(sum((list-mean)**2,mask)/num_values)
+end subroutine statistics_no_zero
 end

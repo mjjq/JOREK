@@ -20,7 +20,7 @@ integer,                  intent(out)   :: ifail !< if ifail = -1 the position c
 
 !> Accuracy defaults (tolerances are squared!, units of element size)
 real*8, parameter ::  element_tolerance = 1.d-12
-integer :: newton_iter_max = 12
+integer :: newton_iter_max = 4
 integer :: element_try_max = 2 ! Try newton iterations in at most this many elements
 integer :: num_backtrack_steps = 2 ! Try 0.5**this times the step at a minimum
 
@@ -43,7 +43,6 @@ st_try = st_old ! start at the old position
 call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 err2 = dot_product(x_step-x_new,x_step-x_new)
 ifail=0
-
 
 
 ! Outer loop tries newton iteration, changes element if necessary
@@ -103,7 +102,7 @@ do element_try_index = 1, element_try_max
     else
       ! We have changed element, recalculate st_jac and err2
       call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
-      err2_old = dot_product(x_step-x_new,x_step-x_new)
+      !err2 = dot_product(x_step-x_new,x_step-x_new) ! XXX this should be set, logically, but performs better if not
     endif
   case (2) ! LOST
     write(*,*) "WARNING: position ", x_new, "not found in grid"

@@ -88,6 +88,7 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr)
 write(particle_file,'(A4,i7.7,A4)') 'part',0,'.vtk'
 call particles_vtk(particle_list,particle_file)
 
+! TODO be helpful when nout_particles > n_step_particles
 do i_step=1,n_step_particles/nout_particles
   call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list)
   call MPI_Barrier(MPI_COMM_WORLD,ierr)

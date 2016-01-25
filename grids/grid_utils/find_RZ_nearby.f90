@@ -19,11 +19,10 @@ integer,                  intent(out)   :: i_elm_new
 integer,                  intent(out)   :: ifail !< if ifail = -1 the position could not be found in the grid
 
 !> Accuracy defaults (tolerances are squared!, units of element size)
-real*8, parameter ::  in_element_tolerance = 1.d-16
-real*8, parameter :: out_element_tolerance = 1.d-16
-integer :: newton_iter_max = 8 
-integer :: element_try_max = 4 ! Try newton iterations in at most this many elements
-integer :: num_backtrack_steps = 0 ! Try 0.5**this times the step at a minimum
+real*8, parameter ::  element_tolerance = 1.d-12
+integer :: newton_iter_max = 12
+integer :: element_try_max = 2 ! Try newton iterations in at most this many elements
+integer :: num_backtrack_steps = 2 ! Try 0.5**this times the step at a minimum
 
 !> Internal variables
 integer :: newton_iter_number
@@ -42,7 +41,7 @@ i_elm_new = i_elm_old ! start in the current element
 st_try = st_old ! start at the old position
 ! Find the jacobian at the current s and t position
 call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
-err2_old = dot_product(x_step-x_new,x_step-x_new)
+err2 = dot_product(x_step-x_new,x_step-x_new)
 ifail=0
 
 
@@ -51,11 +50,13 @@ ifail=0
 do element_try_index = 1, element_try_max
   ! Inner loop, newton iteration to find s and t in or out of this element
   do newton_iter_number = 1, newton_iter_max
-    ! Perform newton iteration by calculating the inverse of the jacobian matrix
+    ! Perform newton iteration by calculating the inverse of the jacobian matrix explicitly
+    err2_old = err2
 
     ! Calculate the trial newton step
     st_step(1) = ( Z_t * (x_new(1)-x_step(1)) - R_t * (x_new(2)-x_step(2))) * inv_st_jac_det
     st_step(2) = (-Z_s * (x_new(1)-x_step(1)) + R_s * (x_new(2)-x_step(2))) * inv_st_jac_det
+
 
     ! Test different step sizes (backtracking)
     do backtrack_step = 0, num_backtrack_steps
@@ -68,29 +69,24 @@ do element_try_index = 1, element_try_max
     enddo
     ! Save this trial value
     st_new = st_try
-    err2_old = err2
-    if (isnan(err2)) exit
 
-    if (maxval(abs(st_try(1:2)-0.5d0)) .gt. 0.5d0) then
-      if (err2 < out_element_tolerance) exit
-    else
-      if (err2 < in_element_tolerance) return ! we have converged!
-    endif
+    if (err2 < element_tolerance) exit
   enddo
 
-  ! Guards against errors above
+
   if (isnan(err2)) then
-    write(*,*) "DEBUG: NaN encountered after newton iteration, using find_RZ"
+    write(*,*) "WARNING: NaN encountered after newton iteration, using find_RZ"
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
     ifail=2
-    exit
+    return
   endif
   if (newton_iter_number .gt. newton_iter_max) then
-    write(*,"(A,i4,A,i5,A,2g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
-    " using find_RZ", x_new
+    write(*,"(A,i4,A,i5,A,2g14.6,A,3g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
+    " using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
+      write(*,"(A,2g16.8)") "Find_RZ at ", x_new
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
     ifail=3
-    exit
+    return
   endif
 
   ! Now check to see if we have left the current element
@@ -100,6 +96,7 @@ do element_try_index = 1, element_try_max
   case (1) ! CHANGED
     if (element_try_index .eq. element_try_max) then ! do not do this if it is the last round, we will try find_RZ below
       write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
+      write(*,"(A,2g16.8)") "Find_RZ at ", x_new
       call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
       ifail = 5
       return
@@ -118,8 +115,7 @@ do element_try_index = 1, element_try_max
     ifail=4
     return ! Stop because find_RZ works always
   case default ! SAME == 0
-    write(*,*) "ERROR: not expecting SAME in find_RZ_nearby"
-    return ! but we are converged anyhow, no problem
+    return ! we are converged anyhow, no problem
   end select
 
 enddo

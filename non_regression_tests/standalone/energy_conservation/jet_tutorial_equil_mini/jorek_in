@@ -14,10 +14,10 @@
   nstep   = 0
   nout    = 10 
 
-  n_particles = 100
-  n_step_particles = 20000
+  n_particles = 1
+  n_step_particles = 100
   t_step_particles = 0.0015
-  nout_particles = 10000
+  nout_particles = 100
   atomic_mass_impurity = 183.84
   
   time_evol_scheme= 'Gears'

@@ -10,35 +10,38 @@ implicit none
 !> Input parameters
 type (type_node_list),    intent(in)    :: node_list
 type (type_element_list), intent(in)    :: element_list
-real*8,                   intent(in)    :: x_new(2), x_old(2), st_old(2)
+real*8,                   intent(in)    :: x_new(2) !< The new R,Z location
+real*8,                   intent(in)    :: x_old(2) !< The old R,Z location
+real*8,                   intent(in)    :: st_old(2) !< The old st location (used to compute a guess)
 integer,                  intent(in)    :: i_elm_old
-real*8,                   intent(out)   :: st_new(2)
+real*8,                   intent(out)   :: st_new(2) !< The found new coordinates
 integer,                  intent(out)   :: i_elm_new
 integer,                  intent(out)   :: ifail !< if ifail = -1 the position could not be found in the grid
 
-!> Accuracy defaults (tolerances are squared!)
-real*8, parameter ::  in_element_tolerance = 1.d-12
-real*8, parameter :: out_element_tolerance = 1.d-9
-integer :: newton_iter_max = 8
-integer :: element_try_max = 6 ! Try newton iterations in at most this many elements
-! A loop can occur here!
-integer :: num_backtrack_steps = 2 ! Try 0.5**this times the step at a minimum
+!> Accuracy defaults (tolerances are squared!, units of element size)
+real*8, parameter ::  in_element_tolerance = 1.d-16
+real*8, parameter :: out_element_tolerance = 1.d-16
+integer :: newton_iter_max = 8 
+integer :: element_try_max = 4 ! Try newton iterations in at most this many elements
+integer :: num_backtrack_steps = 0 ! Try 0.5**this times the step at a minimum
 
 !> Internal variables
 integer :: newton_iter_number
 integer :: element_try_index
 integer :: backtrack_step
-real*8 :: st_jac_det, R_s, R_t, Z_s, Z_t
-real*8 :: st_step(2), st_try(2), x_step(2) ! x_step = (R,Z)
+real*8 :: inv_st_jac_det, R_s, R_t, Z_s, Z_t
+real*8 :: st_step(2), st_try(2), x_step(2) ! x_step = (R,Z) of trial position
 real*8 :: err2, err2_old
-logical :: changed, lost, search
+
+!> For output of check_element_boundary
+integer(1) :: stat
 
 ! Setup initial values
-x_step = x_old
-i_elm_new = i_elm_old
-st_try = st_old
+x_step = x_old ! start at the current position
+i_elm_new = i_elm_old ! start in the current element
+st_try = st_old ! start at the old position
 ! Find the jacobian at the current s and t position
-call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,st_jac_det)
+call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 err2_old = dot_product(x_step-x_new,x_step-x_new)
 ifail=0
 
@@ -51,27 +54,27 @@ do element_try_index = 1, element_try_max
     ! Perform newton iteration by calculating the inverse of the jacobian matrix
 
     ! Calculate the trial newton step
-    st_step(1) = ( Z_t * (x_new(1)-x_step(1)) - R_t * (x_new(2)-x_step(2))) / st_jac_det
-    st_step(2) = (-Z_s * (x_new(1)-x_step(1)) + R_s * (x_new(2)-x_step(2))) / st_jac_det
+    st_step(1) = ( Z_t * (x_new(1)-x_step(1)) - R_t * (x_new(2)-x_step(2))) * inv_st_jac_det
+    st_step(2) = (-Z_s * (x_new(1)-x_step(1)) + R_s * (x_new(2)-x_step(2))) * inv_st_jac_det
 
     ! Test different step sizes (backtracking)
     do backtrack_step = 0, num_backtrack_steps
       st_try = (st_new + 0.5**backtrack_step * st_step)
 
       ! Calculate the x_step corresponding to st_try with the coordinates of element i_elm_new
-      call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,st_jac_det)
+      call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
       err2 = dot_product(x_step-x_new,x_step-x_new)
       if (err2 .lt. err2_old) exit
     enddo
-    ! Save this step value
+    ! Save this trial value
     st_new = st_try
     err2_old = err2
     if (isnan(err2)) exit
 
-    if (st_try(1) > 1.d0 .or. st_try(1) < 0.d0 .or. st_try(2) > 1.d0 .or. st_try(2) < 0.d0) then
+    if (maxval(abs(st_try(1:2)-0.5d0)) .gt. 0.5d0) then
       if (err2 < out_element_tolerance) exit
     else
-      if (err2 < in_element_tolerance) exit
+      if (err2 < in_element_tolerance) return ! we have converged!
     endif
   enddo
 
@@ -83,50 +86,48 @@ do element_try_index = 1, element_try_max
     exit
   endif
   if (newton_iter_number .gt. newton_iter_max) then
-    !write(*,"(A,i4,A,i5,A,2g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
-    !" using find_RZ", x_new
+    write(*,"(A,i4,A,i5,A,2g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
+    " using find_RZ", x_new
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
     ifail=3
     exit
   endif
 
   ! Now check to see if we have left the current element
-  call check_element_boundary(element_list,i_elm_new,st_try,i_elm_new,st_try,changed,lost,search)
+  call check_element_boundary(element_list,i_elm_new,st_try,i_elm_new,st_try,stat)
 
-  if (search) then
-    ! Use the extremely slow option
-    call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    !write(*,"(A,i5,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
-    ifail=4
-    exit ! We have used the nuclear option, stop the loop now
-  endif
-
-  if (lost) then
-    write(*,*) "WARNING: position ", x_new, "not found in grid"
-    ifail = -1
-    exit
-  endif
-
-  if (.not. changed) then
-    ! We have converged!
-    exit
-  else
-    if (element_try_index .eq. element_try_max) then
-      !write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
+  select case (stat)
+  case (1) ! CHANGED
+    if (element_try_index .eq. element_try_max) then ! do not do this if it is the last round, we will try find_RZ below
+      write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
       call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
       ifail = 5
+      return
     else
       ! We have changed element, recalculate st_jac and err2
-      call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,st_jac_det)
+      call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
       err2_old = dot_product(x_step-x_new,x_step-x_new)
     endif
-  endif
+  case (2) ! LOST
+    write(*,*) "WARNING: position ", x_new, "not found in grid"
+    ifail = -1
+    return
+  case (3) ! SEARCH
+    call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+    write(*,"(A,i5,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
+    ifail=4
+    return ! Stop because find_RZ works always
+  case default ! SAME == 0
+    write(*,*) "ERROR: not expecting SAME in find_RZ_nearby"
+    return ! but we are converged anyhow, no problem
+  end select
+
 enddo
 end subroutine find_RZ_nearby
 
 
 !> Auxiliary subroutine for find_RZ_nearby
-subroutine try_interp(node_list,element_list,i_elm,st,x,R_s,R_t,Z_s,Z_t,st_jac_det)
+subroutine try_interp(node_list,element_list,i_elm,st,x,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 use data_structure
 implicit none
 !> Input parameters
@@ -134,11 +135,11 @@ type (type_node_list),    intent(in)    :: node_list
 type (type_element_list), intent(in)    :: element_list
 real*8,                   intent(in)    :: st(2)
 integer,                  intent(in)    :: i_elm
-real*8,                   intent(out)   :: x(2), R_s, R_t, Z_s, Z_t, st_jac_det
+real*8,                   intent(out)   :: x(2), R_s, R_t, Z_s, Z_t, inv_st_jac_det
 
-real*8, parameter :: st_jac_det_min = 1.d-6
+real*8, parameter :: inv_st_jac_det_max = 1.d6
 
 call interp3_RZ(node_list,element_list,i_elm,st(1),st(2),x(1),R_s,R_t,x(2),Z_s,Z_t)
-st_jac_det = R_s * Z_t - R_t * Z_s
-if (st_jac_det**2 .lt. st_jac_det_min**2) st_jac_det = sign(st_jac_det_min, st_jac_det)
+inv_st_jac_det = 1.d0/(R_s * Z_t - R_t * Z_s)
+if (inv_st_jac_det**2 .gt. inv_st_jac_det_max**2) inv_st_jac_det = sign(inv_st_jac_det_max, inv_st_jac_det)
 end subroutine try_interp

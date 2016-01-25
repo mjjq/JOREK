@@ -29,8 +29,8 @@ type (type_particle)      :: particle
 real*8                    :: B0(3), E0(3) ! Local B and E field at particle position
 real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
-real*8                    :: qom, B02, B_phi_factor, q, m
-real*8                    :: R, Z, psi, psi_prev, U, U_prev, energy_lost_particles
+real*8                    :: qom, B02, B_phi_factor, q, m, eom
+real*8                    :: R, Z, psi, psi_prev, U, U_prev, energy_lost_particles, R_inv
 real*8                    :: fE, fB, t_norm
 real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, i_elm, n_done, ifail, ielm_out, n_lost
@@ -66,7 +66,7 @@ t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)   
 !$omp   private(i, j, particle, x, v, st, i_elm, R, Z, &
 !$omp           qom, B0, B02, E0, v_tmp, fE, fB, changed, lost, search,            &
 !$omp           x_prev, v_prev, R_update, RPhi_update, R_out ,Z_out, ielm_out, s_out, &
-!$omp           t_out, ifail, psi, U, psi_prev, U_prev, q, m)
+!$omp           t_out, ifail, psi, U, psi_prev, U_prev, q, m, eom, R_inv)
 
 !$omp do
 do i = 1, particle_list%n_particles
@@ -85,19 +85,20 @@ do i = 1, particle_list%n_particles
   ! TODO better initialization here
   psi = 0
   U = 0
+  eom = EL_CHG / (particle%mass * ATOMIC_MASS_UNIT) * t_norm
 
   do j = 1, n_step
     R = x(1)
     Z = x(2)
 
     ! q/m in JOREK units, including correction for E and B having semi-SI units
-    qom = real(particle%q) * EL_CHG / (particle%mass * ATOMIC_MASS_UNIT) * t_norm
+    qom = particle%q * eom
 
     psi_prev = psi
     U_prev = U
     call calc_EB(i_elm,st,x(3),E0,B0,psi,U)
     B0(3) = B0(3)*B_phi_factor
-    B02    = dot_product(B0,B0)
+    B02   = dot_product(B0,B0)
 
     ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
     fB = tan(qom * t_step * 0.5d0 * sqrt(B02)) / sqrt(B02)
@@ -120,11 +121,12 @@ do i = 1, particle_list%n_particles
     x(2) = Z + t_step * v(2)
     ! Calculate the new phi
     x(3) = x(3) + asin(RPhi_update / x(1))
+    R_inv = 1.d0/x(1)
 
     ! Adjust R and Phi velocities to the new reference frame (z stays the same)
     v_tmp = v
-    v(1) =  R_update/x(1)    * v_tmp(1) + RPhi_update/x(1) * v_tmp(3)
-    v(3) = -RPhi_update/x(1) * v_tmp(1) + R_update/x(1)    * v_tmp(3)
+    v(1)  = (R_update     * v_tmp(1) + RPhi_update * v_tmp(3))*R_inv
+    v(3)  = (-RPhi_update * v_tmp(1) + R_update    * v_tmp(3))*R_inv
 
     ! Find new st coordinates and new element
     call find_RZ_nearby(node_list,element_list,x(1:2),(/R,Z/),st,st,i_elm,i_elm,ifail)
@@ -138,7 +140,8 @@ do i = 1, particle_list%n_particles
       particle%lost = .true.
       !$omp atomic
       n_lost = n_lost + 1
-      ! Save lost energy (using inaccurate velocity at t-dt/2)
+      ! Save lost energy (using inaccurate velocity at t-dt/2, use variables
+      ! because omp atomic does not work with particle%q)
       q = real(particle%q) * EL_CHG
       m = particle%mass * ATOMIC_MASS_UNIT
       !$omp atomic
@@ -211,7 +214,7 @@ enddo
 call cpu_time(t1)
 
 write(*,'(i5,A,f12.4)') my_id, ' Elapsed time particle update :',t1-t0
-write(*,'(i5,A,f7.3,A)') my_id, '   Find_RZ used in ', &
+write(*,'(i5,A,f9.5,A)') my_id, '   Find_RZ used in ', &
   real(find_RZ_count)*100.d0/real(particle_list%n_particles*n_step), ' % of the runs'
 write(*,'(i5,A,g18.10)') my_id, '  number of lost particles in this iteration:',n_lost
 write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',energy_lost_particles

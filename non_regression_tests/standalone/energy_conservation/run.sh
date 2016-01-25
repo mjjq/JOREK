@@ -120,8 +120,8 @@ fi
 if [ "$no_analysis" -eq 0 ]; then
    echo "Running analysis"
    # For now only 1-cpu support!
-   grep "Energy min" jorek_log | cut -d: -f2 > energy.dat
-   grep "Momentum min" jorek_log | cut -d: -f2 > momentum.dat
+   grep "energy min" jorek_log | cut -d: -f2 > energy.dat
+   grep "momentum min" jorek_log | cut -d: -f2 > momentum.dat
 
    # Plot results TODO shading
    cat <<EOF > gnuplot_in

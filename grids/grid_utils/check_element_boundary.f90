@@ -3,9 +3,15 @@
 !! Uses the entire list of elements and the current element, a new and old position
 !! to find the number of the new element j_elm, if it is 
 !! lost (outside of the domain) or we need to search for it
-subroutine check_element_boundary(element_list,i_elm,x,j_elm,y,changed,lost,search)
+subroutine check_element_boundary(element_list,i_elm,x,j_elm,y,stat)
 use data_structure
 implicit none
+
+integer, parameter :: status_kind = KIND(1)
+integer(status_kind), parameter :: SAME = 0 !< If it is still in the element
+integer(status_kind), parameter :: CHANGED = 1 !< Whether we changed element and need to recalculate the coordinates
+integer(status_kind), parameter :: LOST = 2 !< True if the particle is not in any element we know of
+integer(status_kind), parameter :: SEARCH = 3 !< True if there is no neighbour in the direction we found (e.g. at axis)
 
 ! -- Input arguments
 type (type_element_list), intent(in) :: element_list !< The list of all finite elements
@@ -15,21 +21,16 @@ real*8, intent(in)                   :: x(2) !< The coordinates s and t in the c
 ! -- Output arguments
 real*8, intent(out)                  :: y(2) !< The best guess 
 integer, intent(out)                 :: j_elm !< The index of our next best guess of the element containing x
-logical, intent(out)                 :: changed !< Whether we changed element and need to recalculate the coordinates
-logical, intent(out)                 :: lost !< True if the particle is not in any element we know of
-logical, intent(out)                 :: search !< True if there is no neighbour in the direction we found
+integer(status_kind), intent(out)    :: stat !< Result of the search
+
 
 ! -- local variables
 integer :: i_side
 
-changed = .false.
-lost    = .false.
-search  = .false.
-
+stat = SAME
 if (maxval(abs(x(1:2)-0.5)) .le. 0.5) return ! If s and t are in [0,1] the position is in this element
 
 i_side  = 0.
-
 ! Find the direction the position is in from here
 if (x(1) .gt. 1.0) then
   i_side = 2
@@ -45,7 +46,7 @@ endif
 
 ! If that does not exist we should search
 if (element_list%element(i_elm)%neighbours(i_side) .lt. 0) then
-  search = .true.
+  stat = SEARCH
   return
 endif
 
@@ -57,12 +58,10 @@ if (i_side .gt. 0) then
     y(1)  = element_list%element(i_elm)%transform(i_side,1,1) + element_list%element(i_elm)%transform(i_side,1,2) * x(1) + element_list%element(i_elm)%transform(i_side,1,3) * x(2)
     y(2)  = element_list%element(i_elm)%transform(i_side,2,1) + element_list%element(i_elm)%transform(i_side,2,2) * x(1) + element_list%element(i_elm)%transform(i_side,2,3) * x(2)
 
-    changed = .true.
+    stat = CHANGED
   else
-    lost = .true.
- !   write(*,*) 'particle is lost!'
+    stat = LOST
   endif
 endif
 
-return
 end

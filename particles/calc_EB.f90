@@ -11,14 +11,13 @@ implicit none
 integer, intent(in) :: i_elm
 real*8, intent(in)  :: st(2), phi
 
-real*8, intent(out) :: E(3), B(3)
+real*8, intent(out) :: E(3), B(3), psi, U
 
 ! Internal parameters
 integer :: i_var(2)
 real*8                    :: P(2), P_s(2), P_t(2), P_phi(2) ! Placeholder for evaluating variables and derivatives locally
-real*8                    :: qom, B02, psi_R, psi_Z, psi_phi, U_R, U_Z, U_phi, U
-real*8                    :: psi, psi_s, psi_t, u_s, u_t, psi_prev, U_prev
-real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, st_jac
+real*8                    :: psi_R, psi_Z, U_R, U_Z, U_phi
+real*8                    :: R, R_s, R_t, Z, Z_s, Z_t, inv_st_jac, R_inv
 
 ! Select psi and U
 i_var = (/1,2/)
@@ -28,23 +27,24 @@ call interp_PRZ(node_list,element_list,i_elm,i_var,2,st(1),st(2),phi,P,P_s,P_t,P
 
 psi = P(1)
 U   = P(2)
+R_inv = 1.d0/R
 
-st_jac = R_s * Z_t - R_t * Z_s
+inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
 ! these are the local derivatives to s and t of the flux and potential
-psi_s = P_s(1); psi_t = P_t(1)
-u_s   = P_s(2); u_t   = P_t(2)
+!psi_s = P_s(1); psi_t = P_t(1)
+!u_s   = P_s(2); u_t   = P_t(2)
 
 ! Calculate the derivatives to R and Z
-psi_R    = (  psi_s * Z_t - psi_t * Z_s ) / st_jac
-psi_Z    = (- psi_s * R_t + psi_t * R_s ) / st_jac
-U_R      = (  u_s   * Z_t - u_t   * Z_s ) / st_jac
-U_Z      = (- u_s   * R_t + u_t   * R_s ) / st_jac
+psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
+psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
+U_R      = (  P_s(2) * Z_t - P_t(2) * Z_s ) * inv_st_jac
+U_Z      = (- P_s(2) * R_t + P_t(2) * R_s ) * inv_st_jac
 ! And to phi
-psi_phi  = P_phi(1) ! Not used now, assumed 0?
+!psi_phi  = P_phi(1) ! Not used now, assumed 0!
 U_phi    = P_phi(2)
 
-B     = (/ + psi_Z, - psi_R, F0 /) / R
+B     = (/ + psi_Z, - psi_R, F0 /) * R_inv
 
 ! The local electric field, obtained from E=-Grad (u F0)
-E     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi / R /)
+E     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi * R_inv /)
 end subroutine calc_EB

@@ -1,4 +1,5 @@
 *.vtk
+*.png
 dt_results
 *.dat
 *.rst

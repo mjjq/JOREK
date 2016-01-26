@@ -119,9 +119,15 @@ fi
 
 if [ "$no_analysis" -eq 0 ]; then
    echo "Running analysis"
-   # For now only 1-cpu support!
+   # For now only 1-cpu support for the following part!
    grep "energy min" jorek_log | cut -d: -f2 > energy.dat
    grep "momentum min" jorek_log | cut -d: -f2 > momentum.dat
+
+   # Awk magic to divide everything by the first line
+   # See http://unix.stackexchange.com/questions/174371/calculate-and-divide-by-total-with-awk
+   awkscr='FNR==NR{min=$1;mean=$2;max=$3;sd=$4;tot=$5;nextfile}{printf "%f\t%f\t%f\t%f\t%f\n", $1/min, $2/mean, $3/max, $4/sd, $5/tot}'
+   awk "$awkscr" energy.dat energy.dat > energy_norm.dat
+   awk "$awkscr" momentum.dat momentum.dat > momentum_norm.dat
 
    # Plot results TODO shading
    cat <<EOF > gnuplot_in
@@ -138,8 +144,20 @@ if [ "$no_analysis" -eq 0 ]; then
       set out 'momentum.png'
       set ylabel 'Toroidal momentum'
       plot 'momentum.dat' u 1 t "Min", 'momentum.dat' u 2 t 'Mean', 'momentum.dat' u 3 t 'Max', 'momentum.dat' u (\$2+2*\$4) t 'Upper 95% interval', 'momentum.dat' u (\$2-2*\$4) t 'Lower 95% interval'
+
+      set out 'energy_norm.png'
+      set ylabel 'Change in energy'
+      plot 'energy_norm.dat' u 1 t "Min", 'energy_norm.dat' u 2 t 'Mean', 'energy_norm.dat' u 3 t 'Max', 'energy_norm.dat' u 4 t 'Sigma', 'energy_norm.dat' u 5 t 'Total'
+
+      set out 'momentum_norm.png'
+      set ylabel 'Change in momentum'
+      plot 'momentum_norm.dat' u 1 t "Min", 'momentum_norm.dat' u 2 t 'Mean', 'momentum_norm.dat' u 3 t 'Max', 'momentum_norm.dat' u 4 t 'Sigma', 'momentum_norm.dat' u 5 t 'Total'
 EOF
 
    # Create some simple graphs
    gnuplot gnuplot_in
+
+   cp ../particle_stats.py .
+   python particle_stats.py energy
+   python particle_stats.py momentum
 fi 

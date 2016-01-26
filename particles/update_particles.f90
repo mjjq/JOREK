@@ -38,6 +38,7 @@ logical                   :: changed, lost, search
 real*8                    :: t0, t1
 integer                   :: find_RZ_count
 real*8                    :: minv, maxv, mean, total, stddev
+real*8, save :: total_energy_lost_particles = 0.d0
 
 if (present(toroidal_field_factor)) then
   B_phi_factor = toroidal_field_factor
@@ -218,6 +219,8 @@ write(*,'(i5,A,f9.5,A)') my_id, '   Find_RZ used in ', &
   real(find_RZ_count)*100.d0/real(particle_list%n_particles*n_step), ' % of the runs'
 write(*,'(i5,A,g18.10)') my_id, '  number of lost particles in this iteration:',n_lost
 write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',energy_lost_particles
+total_energy_lost_particles = total_energy_lost_particles + energy_lost_particles
+write(*,'(i5,A,g18.10)') my_id, '  total lost particle energy:',total_energy_lost_particles
 
 ! Calculate statistics on energy_list and momentum list if they are present
 if (present(energy_list)) then

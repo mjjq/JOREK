@@ -28,10 +28,11 @@ real*8 :: mass_impurity, ran3(3)
 
 ! Divide the particles over all processors, give the first processor the remainder
 if (my_id .eq. 0) then
-  particle_list%n_particles = n_particles/n_cpu + mod(n_particles, n_cpu)
+  particle_list%n_particles = n_particles/n_cpu + modulo(n_particles, n_cpu)
 else
   particle_list%n_particles = n_particles/n_cpu
 endif
+write(*,*) my_id, particle_list%n_particles, n_particles, n_cpu
 allocate(particle_list%particle(particle_list%n_particles))
 
 
@@ -53,7 +54,7 @@ omp_tid   = omp_get_thread_num()
 
 ! The last thread does a bit more work
 if (omp_tid .eq. n_threads-1) then
-  n_particles_thread = particle_list%n_particles / n_threads + mod(particle_list%n_particles, n_threads)
+  n_particles_thread = particle_list%n_particles / n_threads + modulo(particle_list%n_particles, n_threads)
 else
   n_particles_thread = particle_list%n_particles / n_threads
 endif

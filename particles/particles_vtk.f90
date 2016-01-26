@@ -47,6 +47,7 @@ endif
 
 
 nnos_local = particle_list%n_particles
+write(*,*) my_id, " number of particles : ", nnos_local
 call MPI_AllReduce(nnos_local,nnos,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(nnos_local,nnos_max,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
 if (my_id .eq.0) write(*,*) ' total number of particles : ',nnos,nnos_max

@@ -80,9 +80,9 @@ do element_try_index = 1, element_try_max
     return
   endif
   if (newton_iter_number .gt. newton_iter_max) then
-    write(*,"(A,i4,A,i5,A,2g14.6,A,3g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
-    " using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
-      write(*,"(A,2g16.8)") "Find_RZ at ", x_new
+    !write(*,"(A,i4,A,i5,A,2g14.6,A,3g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
+    !" using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
+      !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
     ifail=3
     return
@@ -94,8 +94,8 @@ do element_try_index = 1, element_try_max
   select case (stat)
   case (1) ! CHANGED
     if (element_try_index .eq. element_try_max) then ! do not do this if it is the last round, we will try find_RZ below
-      write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
-      write(*,"(A,2g16.8)") "Find_RZ at ", x_new
+      !write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
+      !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
       call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
       ifail = 5
       return
@@ -105,7 +105,7 @@ do element_try_index = 1, element_try_max
       !err2 = dot_product(x_step-x_new,x_step-x_new) ! XXX this should be set, logically, but performs better if not
     endif
   case (2) ! LOST
-    write(*,*) "WARNING: position ", x_new, "not found in grid"
+    !write(*,*) "WARNING: position ", x_new, "not found in grid"
     ifail = -1
     return
   case (3) ! SEARCH

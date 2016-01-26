@@ -224,6 +224,8 @@ module phys_module
   integer :: n_particles      !< the number of particles (to be initialised)
   integer :: nout_particles   !< number of particle timestep between each output file
   real*8  :: atomic_mass_impurity !< The atomic mass of the impurities
+  logical :: write_energies !< Output energies of all the particles every nout
+  logical :: write_momenta  !< Output generalized toroidal momentum of all the particles every nout
 
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
 

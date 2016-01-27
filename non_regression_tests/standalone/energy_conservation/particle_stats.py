@@ -41,23 +41,26 @@ if __name__ == "__main__":
         # Read the type from cli arguments
         basename = sys.argv[1]
 
-        # Read all traces
-        traces, t = read_traces(basename)
+        # Read all t
+        t, time = read_traces(basename)
 
         # Mask all zeroes, these are lost particles
-        traces = ma.masked_values(traces,0.0,atol=1e-35)
+        t = ma.masked_values(t,0.0,atol=1e-35)
 
         # Write output files for meta-computations
-        np.savetxt("%s_stats.txt.gz"%basename, np.c_[ma.average(traces,axis=1),ma.std(traces,axis=1),traces.min(axis=1),traces.max(axis=1),traces[:,0],traces[:,-1]],
+        np.savetxt("%s_stats.txt.gz"%basename, np.c_[ma.average(t,axis=1),ma.std(t,axis=1),t.min(axis=1),t.max(axis=1),t[:,0],t[:,-1]],
                    header="mean, std, min, max, begin, end")
         print("Wrote %s_stats.txt.gz"%basename)
 
         # Write output files with gathered results
-        #np.savetxt("%s_result.txt"%basename, np.c_[ma.average(traces,axis=1)/
-                   #header="
+        # This does not work with mixed-sign results! (min/max)
+        gr = t[:,-1]/t[:,0]-1
+        np.savetxt("%s_results.txt"%basename, np.c_[ma.average(gr),ma.std(gr),gr.min(),gr.max(),ma.std(t),(1-np.fabs(t).min(axis=1)/np.fabs(t).max(axis=1)).max()],
+                   header="<end/begin-1>,sd(end/begin-1),min(end/begin-1),max(end/begin-1),sd(t)/mean(t),max(1-min(abs)/max(abs))")
+        print("Wrote %s_results.txt"%basename)
 
         # Plot histogram of min/max ratio
-        n, bins, patches = plt.hist(traces.min(axis=1)/traces.max(axis=1), bins=20, alpha=0.75)
+        n, bins, patches = plt.hist(t.min(axis=1)/t.max(axis=1), bins=20, alpha=0.75)
         plt.xlabel('%s min/max'%basename)
         plt.ylabel('fraction')
         plt.grid(True)
@@ -66,7 +69,7 @@ if __name__ == "__main__":
         plt.clf()
 
         # Plot histogram of growth rate
-        n, bins, patches = plt.hist((traces[:,-1]-traces[:,0])/ma.average(traces,axis=1), bins=20, alpha=0.75)
+        n, bins, patches = plt.hist((t[:,-1]-t[:,0])/ma.average(t,axis=1), bins=20, alpha=0.75)
         plt.xlabel('%s growth rate'%basename)
         plt.ylabel('fraction')
         plt.grid(True)
@@ -75,7 +78,7 @@ if __name__ == "__main__":
         plt.clf()
 
         # Plot histogram of variance
-        n, bins, patches = plt.hist(ma.std(traces,axis=1), bins=20, alpha=0.75)
+        n, bins, patches = plt.hist(ma.std(t,axis=1), bins=20, alpha=0.75)
         plt.xlabel('%s stddev'%basename)
         plt.ylabel('fraction')
         plt.grid(True)
@@ -83,8 +86,8 @@ if __name__ == "__main__":
         print("Wrote %s_std.png"%basename)
         plt.clf()
 
-        # Plot overlapping traces with transparency for a measure of the distribution
-        fig = plt.plot(t, traces.T/traces[:,0].T, lw=1, alpha=0.1)
+        # Plot overlapping t with transparency for a measure of the distribution
+        fig = plt.plot(time, t.T/t[:,0].T, lw=1, alpha=0.1)
         plt.xlabel("$t$")
         plt.ylabel("%s"%basename);
         plt.savefig('%s_trace.png'%basename)

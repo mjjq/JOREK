@@ -24,7 +24,7 @@ This boils down to the addition of a term with the local magnetic flux.
 In JOREK the fields are not normalized so we need not alter this equation.
 It is still necessary to obtain the time-centered velocities instead of the velocities at the half-steps.
 ``
-mp = x(1) * 0.5 * (v(3) + v_old(3)) + qom * psi
+mp = x(1) * v(3) + qom * psi
 ``
 where `qom` is the particle charge over particle mass.
 
@@ -34,11 +34,8 @@ Run the testcase with `run.sh` to locally run a particle job.
 See `run.sh -h` for help with the command.
 
 ### Running on a cluster
-Submit the testcase job as follows: (compile jorek2_particles beforehand) (omp only supported)
-qsub -q ib -v dir=jet_tutorial_equil run.sh
+Submit the testcase job as follows: (compile jorek2_particles beforehand) (omp only supported, so at most 1 node)
+qsub run.sh -q ib_gen8 -v file=jet_equil_short
 
 ### Dependencies
 Install numpy and matplotlib on your system (anaconda is the simplest way)
-Rscript is also required, as well as gnuplot >= 4.0.0
-
-

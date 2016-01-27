@@ -46,12 +46,12 @@ if __name__ == "__main__":
         traces = ma.masked_values(traces,0.0,atol=1e-35)
 
         # Write output files for meta-computations
-        np.savetxt("%s_stats.dat.gz"%basename, np.c_[ma.average(traces,axis=1),ma.std(traces,axis=1),np.nanmin(traces,axis=1),np.nanmax(traces,axis=1),traces[:,-1],traces[:,0]],
+        np.savetxt("%s_stats.dat.gz"%basename, np.c_[ma.average(traces,axis=1),ma.std(traces,axis=1),traces.min(axis=1),traces.max(axis=1),traces[:,-1],traces[:,0]],
                    header="mean, std, min, max, end, begin")
         print("Wrote %s_stats.dat.gz"%basename)
 
         # Plot histogram of min/max ratio
-        n, bins, patches = plt.hist(np.nanmin(traces,axis=1)/np.nanmax(traces,axis=1), bins=20, alpha=0.75)
+        n, bins, patches = plt.hist(traces.min(axis=1)/traces.max(axis=1), bins=20, alpha=0.75)
         plt.xlabel('%s min/max'%basename)
         plt.ylabel('fraction')
         plt.grid(True)

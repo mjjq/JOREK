@@ -45,42 +45,26 @@ endif
 
 mass_impurity        = mass_proton * atomic_mass_impurity ! Tungsten
 
-!$omp parallel default(none) &
+call random_seed()
+!$omp parallel do default(none) &
 !$omp   shared(particle_list, node_list, element_list, boxcenter, boxwidth, &
 !$omp          mass_impurity, central_density, central_mass, n_threads) &
-!$omp   private(i, R_in, Z_in, phi_in, ifail, particle, n_done, n_max, n_particles_thread, omp_tid, ran3)
-n_threads = omp_get_num_threads()
-omp_tid   = omp_get_thread_num()
+!$omp   private(i, R_in, Z_in, phi_in, ifail, particle, ran3)
+do i=1,particle_list%n_particles
+  ifail = 1
+  do while (ifail .ne. 0)
+    ! Generate a random position to put this particle
+    call random_number(ran3)
+    R_in   = boxcenter(1) + boxwidth(1)*(ran3(1)-0.5d0)
+    Z_in   = boxcenter(2) + boxwidth(2)*(ran3(2)-0.5d0)
+    phi_in = boxcenter(3) + boxwidth(3)*(ran3(3)-0.5d0)
 
-! The last thread does a bit more work
-if (omp_tid .eq. n_threads-1) then
-  n_particles_thread = particle_list%n_particles / n_threads + modulo(particle_list%n_particles, n_threads)
-else
-  n_particles_thread = particle_list%n_particles / n_threads
-endif
-
-n_done = 0 ! per OMP thread
-n_max  = 10 * n_particles_thread
-call random_seed()
-
-!$omp do
-do i = 1, n_max
-  if (n_done .ge. n_particles_thread) cycle
-
-  ! Generate a random position to put this particle
-  call random_number(ran3)
-  R_in   = boxcenter(1) + boxwidth(1)*(ran3(1)-0.5d0)
-  Z_in   = boxcenter(2) + boxwidth(2)*(ran3(2)-0.5d0)
-  phi_in = boxcenter(3) + boxwidth(3)*(ran3(3)-0.5d0)
-
-  call initialize_particle_coronal(node_list, element_list, R_in, Z_in, phi_in, mass_impurity, particle, ifail)
-  if (ifail .eq. 0) then
-    n_done = n_done + 1
-    particle_list%particle(omp_tid*(particle_list%n_particles/n_threads) + n_done) = particle
-  endif
+    call initialize_particle_coronal(node_list, element_list, R_in, Z_in, phi_in, mass_impurity, particle, ifail)
+  enddo
+  ! Save the result
+  particle_list%particle(i) = particle
 enddo
-!$omp end do
-!$omp end parallel
+!$omp end parallel do
 
 if (my_id .eq. 0) then
   write(*,*) '* done initialising particles    *'
@@ -157,9 +141,6 @@ if (ifail .eq. 0) then
   !n_done = n_done + 1
 
   !if (i_max .eq. n_max) write(*,'(A,3i6)') 'WARNING : ',omp_tid,i_max,n_max
-
-else
-  write(*,*) R_in, Z_in
 endif
 ! if ifail != 0 particle is empty
 

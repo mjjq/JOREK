@@ -5,6 +5,7 @@
 !! It is parallelized with OMP.
 subroutine initialise_particles(my_id,n_cpu,node_list,element_list,particle_list,boxcenter,boxwidth,n_particles)
 
+!$ use omp_lib
 use constants
 use data_structure
 use phys_module, only : F0, central_density, central_mass, atomic_mass_impurity
@@ -23,8 +24,7 @@ real*8 , intent(in) :: boxcenter(3), boxwidth(3)
 type (type_particle)      :: particle
 real*8  :: R_in, Z_in, phi_in
 integer :: i, ifail, n_threads, omp_tid, n_particles_thread, n_done, n_max
-integer, external :: omp_get_num_threads, omp_get_thread_num
-real*8 :: mass_impurity, ran3(3)
+real*8 :: mass_impurity, ran3(3), t0, t1, ostart, oend
 
 ! Divide the particles over all processors, give the first processor the remainder
 if (my_id .eq. 0) then
@@ -42,8 +42,10 @@ if (my_id .eq. 0) then
   write(*,*) '**********************************'
   write(*,*) ' number of particles : ',n_particles
 endif
+call cpu_time(t0)
+!$ ostart = omp_get_wtime()
 
-mass_impurity        = mass_proton * atomic_mass_impurity ! Tungsten
+mass_impurity = mass_proton * atomic_mass_impurity ! Tungsten
 
 call random_seed()
 !$omp parallel do default(none) &
@@ -66,6 +68,9 @@ do i=1,particle_list%n_particles
 enddo
 !$omp end parallel do
 
+call cpu_time(t1)
+!$ oend = omp_get_wtime()
+write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize cpu/wall :',t1-t0, oend-ostart
 if (my_id .eq. 0) then
   write(*,*) '* done initialising particles    *'
   write(*,*) '**********************************'

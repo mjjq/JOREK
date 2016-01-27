@@ -157,6 +157,7 @@ EOF
    # Create some simple graphs
    gnuplot gnuplot_in
 
+   # Create some fancy graphs from all the data points
    cp ../particle_stats.py .
    python particle_stats.py energy
    python particle_stats.py momentum

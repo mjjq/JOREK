@@ -167,14 +167,14 @@ do i = 1, particle_list%n_particles
     ! Calculate the fields at the new position
     call calc_EB(i_elm,st,x(3),E0,B0,psi,U)
 
-    ! Perform a final update to get the velocity at t+1/2 dt (TODO split out
-    ! code below into boris method function)
+    ! Perform a final update (half-step) to get the velocity at this time
+    ! (TODO split out code below into boris method function)
     B0(3) = B0(3)*B_phi_factor
     B02    = dot_product(B0,B0)
 
-    ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
-    fB = tan(qom * t_step * 0.5d0 * sqrt(B02)) / sqrt(B02)
-    fE = qom * t_step * 0.5d0
+    ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B| !half-step!
+    fB = 0.5d0 * tan(qom * t_step * 0.5d0 * sqrt(B02)) / sqrt(B02)
+    fE = 0.5d0 * qom * t_step * 0.5d0
 
     ! Calculate the electric field update (v^n-1/2 -> v-) with the Boris method
     v = v + fE * E0
@@ -199,15 +199,13 @@ do i = 1, particle_list%n_particles
     v(1) =  R_update/x(1)    * v_tmp(1) + RPhi_update/x(1) * v_tmp(3)
     v(3) = -RPhi_update/x(1) * v_tmp(1) + R_update/x(1)    * v_tmp(3)
 
-    ! Now particle_list%particle(i)%v is v at t-1/2 and v is v at t+1/2
-    v_tmp = 0.5d0*(particle_list%particle(i)%v + v)
-    ! v_tmp is the time-centered velocity now
-
     if (present(energy_list)) then
-      energy_list(i) = 0.5 * particle_list%particle(i)%mass * ATOMIC_MASS_UNIT * dot_product(v_tmp,v_tmp) &
+      energy_list(i) = 0.5 * particle_list%particle(i)%mass * ATOMIC_MASS_UNIT * dot_product(v,v) &
                      + EL_CHG * particle%q * F0 * U * t_norm
     endif
-    if (present(momentum_list)) momentum_list(i) = particle_list%particle(i)%x(1) * v_tmp(3) + qom * psi
+    if (present(momentum_list)) then
+      momentum_list(i) = particle_list%particle(i)%x(1) * v(3) + qom * psi
+    endif
   endif
 
 enddo

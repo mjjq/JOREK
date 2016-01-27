@@ -105,6 +105,7 @@ enddo
 call MPI_FINALIZE(IERR)
 contains
 subroutine write_list(ftype,fnum,my_id,list)
+  implicit none
   ! Input parameters
   integer, intent(in) :: fnum, my_id
   character(len=*), intent(in) :: ftype
@@ -113,11 +114,8 @@ subroutine write_list(ftype,fnum,my_id,list)
   character*40 :: filename
 
   write(filename,"(A,I0.9,A,I0.4,A)") trim(ftype), fnum, "_", my_id, ".dat"
-  open(file=filename,status="replace",unit=21)
-
-  do j=1,size(list)
-    write(21,"(g16.8)") list(j)
-  enddo
+  open(file=filename,status="replace",unit=21,access="stream",form='unformatted')
+  write(21) list
   close(21)
 end subroutine write_list
 end program jorek2_particles

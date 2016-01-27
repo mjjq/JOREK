@@ -3,6 +3,8 @@ from __future__ import print_function
 
 import numpy as np
 import numpy.ma as ma
+import matplotlib
+matplotlib.use("Agg") # Headless backend
 import matplotlib.pyplot as plt
 import glob
 import string
@@ -32,7 +34,7 @@ def read_traces(basename):
         # N (axis 0)
         # Load blocks of one timestep, n_particles/n_cpu and stack them above eachother.
         # Then, stack these side to side to create our matrix.
-        return (np.stack([np.concatenate([np.loadtxt(filenames[j]) for j in range(i,i+num_cpus)]) for i in range(0,num_steps)], axis=-1), timesteps)
+        return (np.stack([np.concatenate([np.fromfile(filenames[j],dtype='float64') for j in range(i,i+num_cpus)]) for i in range(0,num_steps)], axis=-1), timesteps)
 
 
 if __name__ == "__main__":
@@ -46,9 +48,13 @@ if __name__ == "__main__":
         traces = ma.masked_values(traces,0.0,atol=1e-35)
 
         # Write output files for meta-computations
-        np.savetxt("%s_stats.dat.gz"%basename, np.c_[ma.average(traces,axis=1),ma.std(traces,axis=1),traces.min(axis=1),traces.max(axis=1),traces[:,-1],traces[:,0]],
-                   header="mean, std, min, max, end, begin")
-        print("Wrote %s_stats.dat.gz"%basename)
+        np.savetxt("%s_stats.txt.gz"%basename, np.c_[ma.average(traces,axis=1),ma.std(traces,axis=1),traces.min(axis=1),traces.max(axis=1),traces[:,0],traces[:,-1]],
+                   header="mean, std, min, max, begin, end")
+        print("Wrote %s_stats.txt.gz"%basename)
+
+        # Write output files with gathered results
+        #np.savetxt("%s_result.txt"%basename, np.c_[ma.average(traces,axis=1)/
+                   #header="
 
         # Plot histogram of min/max ratio
         n, bins, patches = plt.hist(traces.min(axis=1)/traces.max(axis=1), bins=20, alpha=0.75)
@@ -57,6 +63,7 @@ if __name__ == "__main__":
         plt.grid(True)
         plt.savefig('%s_minmax.png'%basename)
         print("Wrote %s_minmax.png"%basename)
+        plt.clf()
 
         # Plot histogram of growth rate
         n, bins, patches = plt.hist((traces[:,-1]-traces[:,0])/ma.average(traces,axis=1), bins=20, alpha=0.75)
@@ -65,18 +72,21 @@ if __name__ == "__main__":
         plt.grid(True)
         plt.savefig('%s_growth.png'%basename)
         print("Wrote %s_growth.png"%basename)
+        plt.clf()
 
         # Plot histogram of variance
         n, bins, patches = plt.hist(ma.std(traces,axis=1), bins=20, alpha=0.75)
-        plt.xlabel('%s variance'%basename)
+        plt.xlabel('%s stddev'%basename)
         plt.ylabel('fraction')
         plt.grid(True)
-        plt.savefig('%s_variance.png'%basename)
-        print("Wrote %s_variance.png"%basename)
+        plt.savefig('%s_std.png'%basename)
+        print("Wrote %s_std.png"%basename)
+        plt.clf()
 
         # Plot overlapping traces with transparency for a measure of the distribution
-        plt.plot(traces.T, lw=4, alpha=0.05)
+        fig = plt.plot(t, traces.T/traces[:,0].T, lw=1, alpha=0.1)
         plt.xlabel("$t$")
         plt.ylabel("%s"%basename);
         plt.savefig('%s_trace.png'%basename)
         print("Wrote %s_trace.png"%basename)
+        plt.clf()

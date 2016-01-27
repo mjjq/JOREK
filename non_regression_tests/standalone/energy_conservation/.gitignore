@@ -7,3 +7,5 @@ dt_results
 jorek_log
 *.xml
 gnuplot_in
+*.o*
+*.e*

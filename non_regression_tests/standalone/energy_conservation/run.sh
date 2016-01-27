@@ -14,9 +14,10 @@ no_analysis=0
 # Help
 show_help()
 {
-   echo "./run.sh [-vnah] directory"
+   echo "./run.sh [-vnah] infile"
    echo "This file runs a testcase with the jorek2_particles program"
    echo "See README.md for details"
+   echo "A directory ${infile}_out is (re)created if the simulation will be run. Any existing files there will be removed"
    echo ""
    echo "Optional arguments"
    echo "  -v  Enable verbose mode (show compilation and program output)"
@@ -30,6 +31,18 @@ control_c() {
 }
 trap control_c SIGINT
 
+prepare_dir()
+{
+   echo "Preparing directory ${1}_out, removing old directory if present"
+   if [ -d ${1}_out ]; then
+      rm -f ${1}_out/*
+   else
+      mkdir ${1}_out
+   fi
+   cp template/* ${1}_out
+   awk -v r="$(cat $1)" '{gsub(/PASTE_HERE/,r)}1' template/jorek_in > ${1}_out/jorek_in
+}
+
 # Colors
 red=`tput setaf 1`
 green=`tput setaf 2`
@@ -42,21 +55,19 @@ if [ ! -z "${PBS_O_WORKDIR}" ]; then
    verbose=1
    no_recompile=1
 
-   if [ -d "$dir" ]; then
-      echo "Switching to directory $dir"
-      cd $dir
+   if [ -f "$file" ]; then
+      prepare_dir $file
+      echo "Switching to directory ${file}_out"
+      cd ${file}_out
    else
-      echo "Please give an existing directory as -v 'dir=DIRECTORY' parameter"
+      echo "Please give an existing input file as -v 'file=FILE' parameter"
       exit 1
    fi
-      
 else
    # Parse options
    while getopts "h?vna" opt; do
       case "$opt" in
-	 h|\?)
-	 show_help
-	 exit 0
+	 h|\?) show_help && exit 0
 	 ;;
 	 v)  verbose=1
 	 ;;
@@ -69,14 +80,13 @@ else
    # Remove options from $@
    shift $((OPTIND-1))
 
-   # Check if our target dir exists
+   # Check if our input file exists
    if [ "$#" -gt 0 ]; then
-      if [ -d $1 ]; then
-	 echo "Switching to directory $1"
-	 cd $1
+      if [ -f $1 ]; then
+	 prepare_dir $1 && echo "Switching to directory ${1}_out" && cd ${1}_out
       fi
    else
-      echo "Please give an existing directory as program parameter"
+      echo "Please give an existing input file as program parameter"
       show_help
       exit 1
    fi
@@ -100,18 +110,7 @@ if [ "$no_recompile" -eq 0 ]; then
 fi
 
 
-if [ ! -e jorek_in ]; then
-   echo "${red}Please include jorek_in in the directory or set the desired directory${reset}"
-   exit 2
-fi
-if [ ! -e jorek_restart.rst ]; then
-   echo "${red}Please include jorek_restart.rst in the directory or give this command the parameter of the desired directory${reset}"
-   exit 3
-fi
-
 if [ "$analysis_only" -eq 0 ]; then
-   echo "Cleaning old files"
-   rm *.dat *.png *.vtk
    echo "Running testcase jorek_restart.rst"
    # Run the testcase given as input parameter
    $JOREK_DIR/jorek2_particles < jorek_in | tee jorek_log
@@ -161,4 +160,4 @@ EOF
    cp ../particle_stats.py .
    python particle_stats.py energy
    python particle_stats.py momentum
-fi 
+fi

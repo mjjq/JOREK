@@ -4,6 +4,35 @@
 !! Once this is found it calls check_element_boundary to see if we have crossed an element boundary
 !! If this is the case, the search is restarted within the new element.
 !! This procedure continues until the required tolerance is reached, or element_try_max is reached.
+!!
+!! Example:
+!! (o is the starting point, T is the target, x is the guess)
+!! |^^^^^^|^^^^^^|  |^^^^^^|^^^^^^|  |^^^^^^|^^^^^^|
+!! |1     |2     |  |1     |2     |  |1     |2     |
+!! |      |  T   |  |      |  T   |  |      | xT   |
+!! |  o   |      |  |  o   |x     |  |  o   |      |
+!! |______|______|  |______|______|  |______|______|
+!! We start out knowing the old position (R,Z) x_old, the new position (R,Z) x_new,
+!! the old position and element number st_old, i_elm_old.
+!!
+!! We are now in element 1, and element_try_index=1. Using 2D newton iteration
+!! with backtracking we find the (s,t) position st_try corresponding to x_new, starting
+!! from x_old, in the basis functions of the current element. (Which are not
+!! guaranteed to be nice outside of the element)
+!! 
+!! When we have found the position st_try, we check whether it is outside of the
+!! current element. (middle figure) If so, we switch to this element (element 2), perform a linear transform
+!! of the coordinates and start the process again.
+!! If it is inside of the element and we have found a good st_try the routine is done.
+!! 
+!! There are some cases where this method does not work, notably near element
+!! boundaries and the magnetic axis. Here, overshoot of the newton's method near
+!! the element boundary causes errors. If too many elements are crossed, i.e.
+!! element_try_max is exceeded, or if too many iterations are needed, i.e.
+!! newton_iter_max is exceeded, we stop the routine and call find_RZ, which is
+!! extremely slow but works for all positions in the domain.
+!! In that case, ifail=2:5 is returned.
+!! If ifail=-1 the particle is lost
 subroutine find_RZ_nearby(node_list, element_list, x_new, x_old, st_old, st_new, i_elm_old, i_elm_new, ifail)
 use data_structure
 implicit none

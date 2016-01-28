@@ -1,5 +1,5 @@
 # Particle conservation laws test
-This testcase tracks particles in a grad-shafranov equilibrium as calculated by JOREK and checks conservation of
+This testcase tracks particles in a field as calculated by JOREK and checks conservation of
 - energy
 - generalized toroidal momentum
 of particles released at random positions in the domain.
@@ -13,7 +13,7 @@ In the JOREK formulation the positions and fields are known at the full timestep
 We must also convert the equation for the energy to JOREK units.
 This leads to the following expression to calculate the energy at timestep $n$, (where $v = 0.5 (v^n+v^{n+1})$ and the dot product distributes).
 ``
-E = 0.25 * particle%mass * ATOMIC_MASS_UNIT * ( dot_product(v,v) + dot_product(v_old, v_old)) 
+E = 0.5 * particle%mass * ATOMIC_MASS_UNIT * dot_product(v,v)
   + particle%q * EL_CHG * t_norm * F0 * U
 ``
 
@@ -41,3 +41,9 @@ for file in jet*; do qsub ./run.sh -q ib_gen8 -l nodes=1:ppn=16 -v file=$file; d
 
 ### Dependencies
 Install numpy and matplotlib on your system (anaconda is the simplest way)
+
+
+## Results
+Output will be many energies and momenta at all nout timesteps, plots of the distribution, traces of the output.
+Combine many of these (for a timestep scan) with the dt_analyze.sh script, which produces a graph of the error vs the timestep.
+It is important that the total simulation time is constant, because some effects scale as the number of steps and other with the square of the timestep size.

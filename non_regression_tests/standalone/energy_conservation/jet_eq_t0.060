@@ -1,0 +1,7 @@
+n_particles      = 10000
+n_step_particles = 2500
+t_step_particles = 0.060
+nout_particles   = 25
+atomic_mass_impurity = 183.84
+write_energies = .true.
+write_momenta = .true.

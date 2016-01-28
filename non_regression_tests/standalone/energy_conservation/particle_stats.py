@@ -54,8 +54,8 @@ if __name__ == "__main__":
 
         # Write output files with gathered results
         # This does not work with mixed-sign results! (min/max)
-        gr = t[:,-1]/t[:,0]-1
-        np.savetxt("%s_results.txt"%basename, np.c_[ma.average(gr),ma.std(gr),gr.min(),gr.max(),ma.std(t),(1-np.fabs(t).min(axis=1)/np.fabs(t).max(axis=1)).max()],
+        gr = np.fabs(t[:,-1]/t[:,0]-1)
+        np.savetxt("%s_results.txt"%basename, np.c_[ma.average(gr),ma.std(gr),gr.min(),gr.max(),np.fabs(ma.average(ma.std(t,axis=1)/ma.average(t,axis=1))),(1-np.fabs(t).min(axis=1)/np.fabs(t).max(axis=1)).max()],
                    header="<end/begin-1>,sd(end/begin-1),min(end/begin-1),max(end/begin-1),sd(t)/mean(t),max(1-min(abs)/max(abs))")
         print("Wrote %s_results.txt"%basename)
 

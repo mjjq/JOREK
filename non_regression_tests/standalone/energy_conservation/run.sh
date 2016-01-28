@@ -3,6 +3,7 @@
 #PBS -V
 #PBS -j oe
 #PBS -l nodes=1
+#PBS -l walltime=2:00:00
 # See README.md for details
 JOREK_DIR=~/jorek # absolute path required
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
@@ -14,6 +15,7 @@ no_analysis=0
 # Help
 show_help()
 {
+   echo ""
    echo "./run.sh [-vnah] infile"
    echo "This file runs a testcase with the jorek2_particles program"
    echo "See README.md for details"
@@ -81,10 +83,11 @@ else
    shift $((OPTIND-1))
 
    # Check if our input file exists
-   if [ "$#" -gt 0 ]; then
-      if [ -f $1 ]; then
-	 prepare_dir $1 && echo "Switching to directory ${1}_out" && cd ${1}_out
+   if [ "$#" -gt 0 ] && [ -f $1 ]; then
+      if [ "$analysis_only" -ne 1 ]; then
+	 prepare_dir $1
       fi
+      echo "Switching to directory ${1}_out" && cd ${1}_out
    else
       echo "Please give an existing input file as program parameter"
       show_help

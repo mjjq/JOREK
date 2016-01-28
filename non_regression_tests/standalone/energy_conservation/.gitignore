@@ -9,3 +9,6 @@ jorek_log
 gnuplot_in
 *.o*
 *.e*
+*_out/
+energy_dt
+momentum_dt

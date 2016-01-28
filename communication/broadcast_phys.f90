@@ -27,7 +27,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( (373+2*max_limiter+n_var) * IDBL_EXT + (42+n_tor) * INT_EXT + 48 * ILOG_EXT + (14*512+120) * CHAR_EXT )
+bufsize = ( (373+2*max_limiter+n_var) * IDBL_EXT + (42+n_tor) * INT_EXT + 50 * ILOG_EXT + (14*512+120) * CHAR_EXT )
 
 #ifdef USE_HDF5
    bufsize = bufsize + ( 1 * IDBL_EXT + 1 * INT_EXT + 1 * ILOG_EXT )
@@ -161,10 +161,12 @@ if (my_id .eq. 0) then
   call MPI_PACK(gmres_tol,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 195
 
   call MPI_PACK(t_step_particles,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
-  call MPI_PACK(t_step_particles,       1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
   call MPI_PACK(n_step_particles,       1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
+  call MPI_PACK(n_particles,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
   call MPI_PACK(nout_particles,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
   call MPI_PACK(atomic_mass_impurity,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(write_energies,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(write_momenta,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
 
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
 
@@ -210,9 +212,6 @@ if (my_id .eq. 0) then
   call MPI_PACK (amu_neo_const,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 237+2*max_limiter
 
   call MPI_PACK (wall_resistivity,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 238+2*max_limiter+n_var+1
-
-  call MPI_PACK(t_step_particles,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      ! 238+2*max_limiter+n_var+2
-  call MPI_PACK(n_step_particles,       1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 1
 
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 1
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr) ! 11
@@ -478,7 +477,9 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,n_step_particles,       1,MPI_INTEGER,MPI_COMM_WORLD,ierr) !
   call MPI_UNPACK(buffer,bufsize,position,n_particles,            1,MPI_INTEGER,MPI_COMM_WORLD,ierr) !
   call MPI_UNPACK(buffer,bufsize,position,nout_particles,         1,MPI_INTEGER,MPI_COMM_WORLD,ierr) !
-  call MPI_UNPACK(buffer,bufsize,position,nout_particles,         1,MPI_REAL8,MPI_COMM_WORLD,ierr) !
+  call MPI_UNPACK(buffer,bufsize,position,atomic_mass_impurity,   1,MPI_REAL8,MPI_COMM_WORLD,ierr) !
+  call MPI_UNPACK(buffer,bufsize,position,write_energies,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr) !
+  call MPI_UNPACK(buffer,bufsize,position,write_momenta,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr) !
 
   call MPI_UNPACK(buffer,bufsize,position,nimp_bg,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) !
 

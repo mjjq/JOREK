@@ -60,7 +60,7 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
-  write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
+  if (my_id .eq. 0) write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
 
 if (my_id .eq. 0) then
@@ -87,6 +87,7 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 write(particle_file,'(A4,i0.9,A4)') 'part',0,'.vtk'
 call particles_vtk(particle_list,particle_file)
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 ! TODO be helpful when nout_particles > n_step_particles
 do i_step=1,n_step_particles/nout_particles

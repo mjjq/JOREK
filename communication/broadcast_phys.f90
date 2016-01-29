@@ -527,10 +527,6 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,wall_resistivity,       1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 238
 
-  call MPI_UNPACK(buffer,bufsize,position,t_step_particles,       1,MPI_REAL8,MPI_COMM_WORLD,ierr) ! 238+1
-  call MPI_UNPACK(buffer,bufsize,position,n_step_particles,       1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 1 + 1
-
-
   call MPI_UNPACK(buffer,bufsize,position,nstep,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 1
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,               10,MPI_INTEGER,MPI_COMM_WORLD,ierr)   ! 11
 

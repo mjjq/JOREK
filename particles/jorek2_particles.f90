@@ -19,16 +19,17 @@ implicit none
 
 type (type_particle_list):: particle_list
 
-integer    :: i, j, i_tor, my_id, n_cpu, ierr, i_step
+integer    :: i, j, i_tor, my_id, n_cpu, ierr, i_step, i_begin, i_end
 integer*4  :: rank, comm_size
 integer    :: required, provided, StatInfo
 real*8     :: boxwidth(3), boxcenter(3) !< size and center of box in RZphi space
-character*17 :: particle_file, filenum
+real*8     :: substep
+character*17 :: particle_file, filenum, restart_file
 
 real*8, dimension(:), allocatable :: energy_list, momentum_list
 
 interface
-  subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor)
+  subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor, field_interp_time)
     use mod_particles
     ! -- Routine parameters
     type (type_particle_list) :: particle_list      !< The particles we will march forward in time
@@ -38,6 +39,7 @@ interface
     real*8,  intent(out), dimension(:), optional :: energy_list !< Energy of the particles at the next-to(!) final timestep
     real*8,  intent(out), dimension(:), optional :: momentum_list !< Generalized toroidal momentum of the particles at the next-to(!) final timestep
     real*8,  intent(in),  optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
+    logical, intent(in),  optional :: field_interp_time !< Interpolate the fields linearly in time as if the first step was in the previous fields (almost) and the last in the current
   end subroutine update_particles
 end interface
 
@@ -57,6 +59,9 @@ if (my_id .eq. 0) then
 endif
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
+call read_adas                                     ! read openadas data for ionisation, recombination and radiation rates
+call initialise_basis                              ! define the basis functions at the Gaussian points
+call coronal                                       ! calculate the coronal equilibria from the adas data
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -64,42 +69,72 @@ do i_tor=1, n_tor
 enddo
 
 if (my_id .eq. 0) then
-  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+  if (t_particles_begin .eq. -1) then ! special value for old behaviour, default
+    !value of t_particles_begin
+    restart_file = 'jorek_restart.rst'
+  else
+    write(restart_file,'(A,i5.5,A)') 'jorek', t_particles_begin, '.rst'
+  endif
+  call import_binary_restart(node_list,element_list, restart_file, rst_format, ierr)
+  if (ierr .ne. 0) call MPI_ABORT(MPI_COMM_WORLD,ierr)
 endif
-
 call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 call broadcast_phys(my_id)                         ! physics parameters
-call initialise_basis                              ! define the basis functions at the Gaussian points
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
-call read_adas                                     ! read openadas data for ionisation, recombination and radiation rates
-call coronal                                       ! calculate the coronal equilibria from the adas data
 
 ! Boxsize is R,Z location and dPhi extent from phi=0
 boxcenter = (/2.83d0, 0.d0, 0.d0/)
-boxwidth = (/1.03d0, 1.9d0, TWOPI/)
-
-
+boxwidth = (/2.06d0, 3.8d0, TWOPI/)
 call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxcenter, boxwidth, n_particles)
 allocate(energy_list(particle_list%n_particles), momentum_list(particle_list%n_particles))
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-
-write(particle_file,'(A4,i0.9,A4)') 'part',0,'.vtk'
+! Output particles at start
+write(particle_file,'(A4,i9.9,A4)') 'part',max(t_particles_begin,0),'.vtk'
 call particles_vtk(particle_list,particle_file)
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-! TODO be helpful when nout_particles > n_step_particles
-do i_step=1,n_step_particles/nout_particles
-  call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list)
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+! TODO add full support for tstep_n (also in calc_EB.f90)
+! If t_particles_begin is set ignore nout_particles and n_step_particles
+if (t_particles_begin .gt. -1) then
+  i_begin = t_particles_begin + 1 ! Nota bene! we will start at the second restart file as this contains the fields of the first too
+  i_end   = t_particles_end
+  ! Set nout_particles to the number of steps required to go t_step forward (floored)
+  nout_particles = tstep_n(1)/t_step_particles
+  ! Set t_step_particles to the closest integer divisor of t_step so we don't
+  ! miss a substep
+  t_step_particles = tstep_n(1)/nout_particles
 
-  write(particle_file,'(A4,i0.9,A4)') 'part',i_step*nout_particles,'.vtk'
+  if (tstep_n(2) .gt. 0) write(*,*) "WARNING: No full support for tstep_n"
+else
+  i_begin=1
+  i_end=n_step_particles/nout_particles
+endif
+
+! Loop n_step_particles/nout_particles in old mode, t_particles_end-t_particles_begin in new mode
+do i_step=i_begin,i_end
+  if (t_particles_begin .gt. -1) then
+    if (my_id .eq. 0) then
+      write(restart_file,'(A,i5.5,A)') 'jorek', i_step, '.rst'
+      call import_binary_restart(node_list,element_list, restart_file, rst_format, ierr)
+      if (ierr .ne. 0) call MPI_ABORT(MPI_COMM_WORLD,ierr)
+    endif
+    call broadcast_elements(my_id, element_list)
+    call broadcast_nodes(my_id, node_list)
+    call update_neighbours(element_list,node_list)
+  endif
+
+  ! Do substepping
+  call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list,field_interp_time=(t_particles_begin .gt. -1))
+
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  write(particle_file,'(A4,i0.9,A4)') 'part',i_step,'.vtk'
   call particles_vtk(particle_list,particle_file)
 
   ! Output by each processor
-  if (write_energies) call write_list("energy",i_step*nout_particles,my_id,energy_list)
-  if (write_momenta) call write_list("momentum",i_step*nout_particles,my_id,momentum_list)
+  if (write_energies) call write_list("energy",i_step,my_id,energy_list)
+  if (write_momenta) call write_list("momentum",i_step,my_id,momentum_list)
 enddo
 
 

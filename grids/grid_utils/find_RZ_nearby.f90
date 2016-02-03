@@ -62,7 +62,8 @@ real*8 :: st_step(2), st_try(2), x_step(2) ! x_step = (R,Z) of trial position
 real*8 :: err2, err2_old
 
 !> For output of check_element_boundary
-integer(1) :: stat
+integer, parameter :: status_kind = KIND(1)
+integer(status_kind) :: stat
 
 ! Setup initial values
 x_step = x_old ! start at the current position

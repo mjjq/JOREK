@@ -91,10 +91,13 @@ JOREK2_IMPORT_PERTURBATION_SRC := $(JOREK2_IMPORT_PERTURBATION_SRC)	\
         $(DIR)/hermite_1d.f90
 
 JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)         \
+	$(DIR)/interp_PRZ_delta.f90       \
        $(DIR)/hermite_1d.f90
 
 PENNING_TEST_SRC := $(PENNING_TEST_SRC) \
+	$(DIR)/interp_PRZ_delta.f90       \
        $(DIR)/hermite_1d.f90
 
 SIMON_PARTICLE_TEST_SRC := $(SIMON_PARTICLE_TEST_SRC) \
+	$(DIR)/interp_PRZ_delta.f90       \
        $(DIR)/hermite_1d.f90

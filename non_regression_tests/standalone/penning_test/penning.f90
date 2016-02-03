@@ -54,14 +54,17 @@ real*8  :: E(3), B(3), B2, f
 integer, parameter :: my_id = 0
 
 interface
-  subroutine update_particles(my_id, particle_list, t_step, n_step, toroidal_field_factor)
+  subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor, field_interp_time)
     use mod_particles
     ! -- Routine parameters
     type (type_particle_list) :: particle_list      !< The particles we will march forward in time
     real*8,  intent(in)       :: t_step             !< The size of each timestep
     integer, intent(in)       :: n_step             !< The number of timesteps we will perform
     integer, intent(in)       :: my_id              !< Id of the current process
-    real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
+    real*8,  intent(out), dimension(:), optional :: energy_list !< Energy of the particles at the next-to(!) final timestep
+    real*8,  intent(out), dimension(:), optional :: momentum_list !< Generalized toroidal momentum of the particles at the next-to(!) final timestep
+    real*8,  intent(in),  optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
+    logical, intent(in),  optional :: field_interp_time !< Interpolate the fields linearly in time as if the first step was in the previous fields (almost) and the last in the current
   end subroutine update_particles
 end interface
 
@@ -124,6 +127,7 @@ do i=1,node_list%n_nodes
   node_list%node(i)%values(1,4,2) = Phi0*(2.d0*R_s*R_t - 4.d0*Z_s*Z_t &
                                         + 2.d0*R*R_st  - 4.d0*Z*Z_st) ! U_RZ = 0
 
+  node_list%node(i)%deltas = 0.d0
 enddo
 ! The electric potential is F0*U, so set F0 to 1
 F0 = 1.d0
@@ -152,7 +156,7 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
   v = v + f*E
 
   particle_list%particle(1)%v = v
-  call update_particles(my_id, particle_list, tstep_n(i), nstep_n(i), 0.d0)
+  call update_particles(my_id, particle_list, tstep_n(i), nstep_n(i), toroidal_field_factor=0.d0)
 
   ! Check position against analytical result
   x_e = particle_list%particle(1)%x

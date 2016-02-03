@@ -4,7 +4,7 @@
 !! Some care must be taken when element boundaries are crossed.
 !! It is parallelized with OMP.
 !! See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
-subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor)
+subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor, field_interp_time)
 
 !$ use omp_lib
 use parameters
@@ -24,28 +24,44 @@ integer, intent(in)       :: my_id              !< Id of the current process
 real*8,  intent(out), dimension(:), optional :: energy_list !< Energy of the particles at the next-to(!) final timestep
 real*8,  intent(out), dimension(:), optional :: momentum_list !< Generalized toroidal momentum of the particles at the next-to(!) final timestep
 real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
+logical, intent(in),  optional :: field_interp_time !< Interpolate the fields linearly in time as if the first step was in the previous fields (almost) and the last in the current
 
 ! -- Local variables
 type (type_particle)      :: particle
-real*8                    :: B0(3), E0(3) ! Local B and E field at particle position
+real*8                    :: B0(3), E0(3), B0d(3), E0d(3) ! Local B and E field at particle position
 real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, B_phi_factor, q, m, eom
-real*8                    :: R, Z, psi, psi_prev, U, U_prev, energy_lost_particles, R_inv
+real*8                    :: R, Z, psi, psid, U, Ud, energy_lost_particles, R_inv
 real*8                    :: fE, fB, t_norm
 real*8                    :: R_out, Z_out, s_out, t_out
 integer                   :: i, j, i_elm, n_done, ifail, ielm_out, n_lost
-logical                   :: changed, lost, search
-real*8                    :: t0, t1, ostart, oend
+logical                   :: do_substep
+real*8                    :: t0, t1, ostart, oend, delta_fraction
 integer                   :: find_RZ_count
 real*8                    :: minv, maxv, mean, total, stddev
 real*8, save :: total_energy_lost_particles = 0.d0
+
+interface
+  subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
+    integer, intent(in) :: i_elm
+    real*8, intent(in)  :: st(2), phi
+    real*8, intent(in), optional :: delta_fraction
+
+    real*8, intent(out) :: E(3), B(3), psi, U
+  end subroutine calc_EB
+end interface
 
 if (present(toroidal_field_factor)) then
   B_phi_factor = toroidal_field_factor
   write(*,*) 'INFO: setting toroidal magnetic field factor for particle propagator testcase to', B_phi_factor
 else
   B_phi_factor = 1.d0
+endif
+
+do_substep = .false. ! Might need better name
+if (present(field_interp_time)) then
+  if (field_interp_time) do_substep = .true.
 endif
 
 if (present(energy_list))   energy_list   = 0.d0
@@ -65,11 +81,11 @@ endif
 t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)    ! jorek time normalisation
 
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, find_RZ_count, energy_list, momentum_list, energy_lost_particles, n_lost) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, find_RZ_count, energy_list, momentum_list, energy_lost_particles, n_lost, do_substep) &
 !$omp   private(i, j, particle, x, v, st, i_elm, R, Z, &
-!$omp           qom, B0, B02, E0, v_tmp, fE, fB, changed, lost, search,            &
+!$omp           qom, B0, B02, E0, v_tmp, fE, fB,             &
 !$omp           x_prev, v_prev, R_update, RPhi_update, R_out ,Z_out, ielm_out, s_out, &
-!$omp           t_out, ifail, psi, U, psi_prev, U_prev, q, m, eom, R_inv)
+!$omp           t_out, ifail, psi, U, psid, Ud, q, m, eom, R_inv, delta_fraction)
 
 !$omp do
 do i = 1, particle_list%n_particles
@@ -97,9 +113,12 @@ do i = 1, particle_list%n_particles
     ! q/m in JOREK units, including correction for E and B having semi-SI units
     qom = particle%q * eom
 
-    psi_prev = psi
-    U_prev = U
-    call calc_EB(i_elm,st,x(3),E0,B0,psi,U)
+    if (do_substep) then
+      delta_fraction = 1.d0 - real(j)/real(n_step)
+      call calc_EB(i_elm,st,x(3),E0,B0,psi,U,delta_fraction)
+    else
+      call calc_EB(i_elm,st,x(3),E0,B0,psi,U)
+    endif
     B0(3) = B0(3)*B_phi_factor
     B02   = dot_product(B0,B0)
 
@@ -163,7 +182,6 @@ do i = 1, particle_list%n_particles
   particle_list%particle(i)%lost  = particle%lost
 
   if (.not. particle%lost .and. (present(momentum_list) .or. present(energy_list))) then
-    U = U_prev
     ! Calculate the fields at the new position
     call calc_EB(i_elm,st,x(3),E0,B0,psi,U)
 

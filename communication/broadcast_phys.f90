@@ -167,6 +167,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(atomic_mass_impurity,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
   call MPI_PACK(write_energies,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
   call MPI_PACK(write_momenta,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
+  call MPI_PACK(t_particles_begin,      1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
+  call MPI_PACK(t_particles_end,        1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    !
 
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)      !
 
@@ -480,6 +482,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,atomic_mass_impurity,   1,MPI_REAL8,MPI_COMM_WORLD,ierr) !
   call MPI_UNPACK(buffer,bufsize,position,write_energies,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr) !
   call MPI_UNPACK(buffer,bufsize,position,write_momenta,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr) !
+  call MPI_UNPACK(buffer,bufsize,position,t_particles_begin,       1,MPI_INTEGER,MPI_COMM_WORLD,ierr) !
+  call MPI_UNPACK(buffer,bufsize,position,t_particles_end,       1,MPI_INTEGER,MPI_COMM_WORLD,ierr) !
 
   call MPI_UNPACK(buffer,bufsize,position,nimp_bg,                1,MPI_REAL8,MPI_COMM_WORLD,ierr) !
 

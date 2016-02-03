@@ -226,6 +226,8 @@ module phys_module
   real*8  :: atomic_mass_impurity !< The atomic mass of the impurities
   logical :: write_energies !< Output energies of all the particles every nout
   logical :: write_momenta  !< Output generalized toroidal momentum of all the particles every nout
+  integer :: t_particles_begin !< Start JOREK restart file postprocessing
+  integer :: t_particles_end !< end JOREK restart file postprocessing
 
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
 

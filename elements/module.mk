@@ -9,6 +9,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/interp.f90				\
 	$(DIR)/interp_RZ.f90				\
 	$(DIR)/interp_PRZ.f90       \
+	$(DIR)/interp_PRZ_delta.f90       \
 	$(DIR)/interp3_RZ.f90	\
 	$(DIR)/mod_basis_at_gaussian.f90		\
 	$(DIR)/mod_gauss.f90

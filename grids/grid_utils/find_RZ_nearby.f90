@@ -68,9 +68,9 @@ integer(status_kind) :: stat
 ! Setup initial values
 x_step = x_old ! start at the current position
 i_elm_new = i_elm_old ! start in the current element
-st_try = st_old ! start at the old position
+st_new = st_old ! start at the old position
 ! Find the jacobian at the current s and t position
-call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
+call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 err2 = dot_product(x_step-x_new,x_step-x_new)
 ifail=0
 

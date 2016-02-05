@@ -239,7 +239,7 @@ write(*,'(i5,A,f9.5,A)') my_id, '   Find_RZ used in ', &
 write(*,'(i5,A,g18.10)') my_id, '  number of lost particles in this iteration:',n_lost
 write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',energy_lost_particles
 total_energy_lost_particles = total_energy_lost_particles + energy_lost_particles
-write(*,'(i5,A,g18.10)') my_id, '  total lost particle energy:',total_energy_lost_particles
+if (.not. present(energy_list)) write(*,'(i5,A,g18.10)') my_id, '  total lost particle energy:',total_energy_lost_particles
 
 ! Calculate statistics on energy_list and momentum list if they are present
 if (present(energy_list)) then

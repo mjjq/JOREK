@@ -49,9 +49,9 @@ integer,                  intent(out)   :: ifail !< if ifail = -1 the position c
 
 !> Accuracy defaults (tolerances are squared!, units of element size)
 real*8, parameter ::  element_tolerance = 1.d-12
-integer :: newton_iter_max = 4
-integer :: element_try_max = 2 ! Try newton iterations in at most this many elements
-integer :: num_backtrack_steps = 2 ! Try 0.5**this times the step at a minimum
+integer, parameter :: newton_iter_max = 4
+integer, parameter :: element_try_max = 2 ! Try newton iterations in at most this many elements
+integer, parameter :: num_backtrack_steps = 2 ! Try 0.5**this times the step at a minimum
 
 !> Internal variables
 integer :: newton_iter_number
@@ -119,7 +119,7 @@ do element_try_index = 1, element_try_max
   endif
 
   ! Now check to see if we have left the current element
-  call check_element_boundary(element_list,i_elm_new,st_try,i_elm_new,st_try,stat)
+  call check_element_boundary(element_list,i_elm_new,st_new,i_elm_new,st_new,stat)
 
   select case (stat)
   case (1) ! CHANGED
@@ -131,7 +131,7 @@ do element_try_index = 1, element_try_max
       return
     else
       ! We have changed element, recalculate st_jac and err2
-      call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
+      call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
       !err2 = dot_product(x_step-x_new,x_step-x_new) ! XXX this should be set, logically, but performs better if not
     endif
   case (2) ! LOST

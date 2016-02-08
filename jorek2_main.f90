@@ -162,8 +162,8 @@ program JOREK2
   complex*16 :: out_fft(1:n_plane)
 #endif
 
-  integer::narg,cptArg 	!> for commandline arguments
-  character(len=20)::ArgName 	!> Argument name
+  integer::narg,cptArg  !> for commandline arguments
+  character(len=20)::ArgName  !> Argument name
 
   real*8  :: DUMMY_REAL(1:1)
   integer :: DUMMY_INT (1:1)
@@ -176,65 +176,77 @@ program JOREK2
   narg = command_argument_count()
   
   !> when argument is give print info of first one and exit normally
+  200 format(79('*'))
   if(narg>0)then    
     do cptArg=1,narg
       call get_command_argument(cptArg,ArgName)
       select case(adjustl(ArgName))
         case("--help","-h")
-          write(*,*) '**********************************************************************'
-		  write(*,*) '*                    3D Reduced MHD : JOREK_2.0                      *'
-		  write(*,*) '**********************************************************************'
-		  write(*,*) '* Solves the (reduced) MHD equations in 3D toroidal geometry         *' 
-		  write(*,*) '*                                                                    *' 
-		  write(*,*) '* - solvers implemented:                                             *' 
-		  write(*,*) '*   - MUMPS                                                          *' 
-		  write(*,*) '*   - PastiX                                                         *' 
-		  write(*,*) '*   - GMRES (+MUMPS or PastiX preconditioner)                        *' 
-		  write(*,*) '*                                                                    *' 
-		  write(*,*) '* - required libraries :                                             *' 
-		  write(*,*) '*   - MPI                                                            *' 
-		  write(*,*) '*   - MUMPS                                                          *' 
-		  write(*,*) '*   - PastiX                                                         *' 
-		  write(*,*) '*   - SCOTCH (metis)                                                 *' 
-		  write(*,*) '*   - FFTW                                                           *' 
-		  write(*,*) '*   - SCALAPACK (BLACS)                                              *' 
-		  write(*,*) '*   - LAPACK, BLAS                                                   *' 
-		  write(*,*) '*   - PPPLIB                                                         *' 
-		  write(*,*) '*                                                                    *' 
-		  write(*,*) '* Author: Guido Huysmans (Euratom / CEA Association)                 *' 
-		  write(*,*) '* start date: 18-7-2008                                              *' 
-		  write(*,*) '*                                                                    *' 
-		  write(*,*) '**********************************************************************'
-		  stop
-		case("--param","-p")
-		  write(*,*) '**********************************************************************'
-		  write(*,*) '*                    3D Reduced MHD : JOREK_2.0                      *'
-		  write(*,*) '**********************************************************************'
-		  write(*,*) '* Using following parameters:                                        *'
-		  write(*,*) '*      jorek_model    =  ', jorek_model       , '                               *'
-		  write(*,*) '*      n_var          =  ', n_var             , '                               *'
-		  write(*,*) '*      n_dim          =  ', n_dim             , '                               *'
-		  write(*,*) '*      n_order        =  ', n_order           , '                               *'
-		  write(*,*) '*      n_tor          =  ', n_tor             , '                               *'
-		  write(*,*) '*      n_period       =  ', n_period          , '                               *'
-		  write(*,*) '*      n_plane        =  ', n_plane           , '                               *'
-		  write(*,*) '*      n_vertex_max   =  ', n_vertex_max      , '                               *'
-		  write(*,*) '*      n_elements_max =  ', n_elements_max    , '                               *'
-		  write(*,*) '*      n_boundary_max =  ', n_boundary_max    , '                               *'
-		  write(*,*) '*      n_pieces_max   =  ', n_pieces_max      , '                               *'
-		  write(*,*) '*      n_degrees      =  ', n_degrees         , '                               *'
-		  write(*,*) '*      nref_max       =  ', nref_max          , '                               *'
-		  write(*,*) '*      n_ref_list     =  ', n_ref_list        , '                               *'
-		  write(*,*) '*                                                                    *' 
-		  write(*,*) '*      Implemented variables:                                        *' 
-		  write(*,*) '*                                                                    *' 
-		  write(*,*) '*                                                                    *' 
-		  write(*,*) '**********************************************************************'
-		  stop
+          write(*,200) 
+          write(*,'(A)') '*                    3D Reduced MHD : JOREK_2.0                               *'
+          write(*,200) 
+          write(*,'(A)') '* Solves the (reduced) MHD equations in 3D toroidal geometry                  *' 
+          write(*,'(A)') '*                                                                             *' 
+          write(*,'(A)') '* - solvers implemented:                                                      *' 
+          write(*,'(A)') '*   - MUMPS                                                                   *' 
+          write(*,'(A)') '*   - PastiX                                                                  *' 
+          write(*,'(A)') '*   - GMRES (+MUMPS or PastiX preconditioner)                                 *' 
+          write(*,'(A)') '*                                                                             *' 
+          write(*,'(A)') '* - required libraries :                                                      *' 
+          write(*,'(A)') '*   - MPI                                                                     *' 
+          write(*,'(A)') '*   - MUMPS                                                                   *' 
+          write(*,'(A)') '*   - PastiX                                                                  *' 
+          write(*,'(A)') '*   - SCOTCH (metis)                                                          *' 
+          write(*,'(A)') '*   - FFTW                                                                    *' 
+          write(*,'(A)') '*   - SCALAPACK (BLACS)                                                       *' 
+          write(*,'(A)') '*   - LAPACK, BLAS                                                            *' 
+          write(*,'(A)') '*   - PPPLIB                                                                  *' 
+          write(*,'(A)') '*                                                                             *' 
+          write(*,'(A)') '* Author: Guido Huysmans (Euratom / CEA Association)                          *' 
+          write(*,'(A)') '* start date: 18-7-2008                                                       *' 
+          write(*,'(A)') '*                                                                             *' 
+          write(*,200)
+      stop
+      case("--param","-p")
+        112 format(A, i12, 41X, A)
+        write(*,200)
+        write(*,'(A)') '*                    3D Reduced MHD : JOREK_2.0                               *'
+        write(*,200)
+        write(*,'(A)') '* Using following parameters:                                                 *'
+        write(*,  112) '*      jorek_model    =  ', jorek_model       , '*'
+        write(*,  112) '*      n_var          =  ', n_var             , '*'
+        write(*,  112) '*      n_dim          =  ', n_dim             , '*'
+        write(*,  112) '*      n_order        =  ', n_order           , '*'
+        write(*,  112) '*      n_tor          =  ', n_tor             , '*'
+        write(*,  112) '*      n_period       =  ', n_period          , '*'
+        write(*,  112) '*      n_plane        =  ', n_plane           , '*'
+        write(*,  112) '*      n_vertex_max   =  ', n_vertex_max      , '*'
+        write(*,  112) '*      n_elements_max =  ', n_elements_max    , '*'
+        write(*,  112) '*      n_boundary_max =  ', n_boundary_max    , '*'
+        write(*,  112) '*      n_pieces_max   =  ', n_pieces_max      , '*'
+        write(*,  112) '*      n_degrees      =  ', n_degrees         , '*'
+        write(*,  112) '*      nref_max       =  ', nref_max          , '*'
+        write(*,  112) '*      n_ref_list     =  ', n_ref_list        , '*'
+        write(*,'(A)') '*                                                                             *' 
+        write(*,'(A)') '*      Implemented variables:                                                 *' 
+
+        113 format(A, A11, A, A11, A, A11, A, A11, A)
+        write(*,113) '*      ', variable_names(1), '       ', variable_names(2), '       ', &
+                                variable_names(3), '       ', variable_names(4), '      *' 
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+        write(*,113) '*      ', variable_names(5), '       ', variable_names(6), '       ', &
+                                variable_names(7), '       ', variable_names(8), '      *' 
+#else
+        write(*,113) '*      ', variable_names(5), '       ', variable_names(6), '       ', &
+                                variable_names(7), '       ', ' ',               '      *' 
+#endif
+        write(*,'(A)') '*                                                                             *' 
+        write(*,200) 
+        stop
         case default
-          write(*,*)"Option ",adjustl(ArgName),"unknown try -h or -help for program info or "
-          write(*,*)" "
-		  stop
+          write(*,'(A)') 'Option ', adjustl(ArgName), 'unknown, try -h or -help for program info '
+          write(*,'(A)') 'or -p for parameters list'
+      stop
         end select
     end do
   end if
@@ -481,10 +493,10 @@ required = 0
     if (regrid) then
       if (xpoint)  then
         if (xcase .ge. 2) then
-	  call grid_double_xpoint(node_list, element_list)
+    call grid_double_xpoint(node_list, element_list)
         else
-	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-        		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+    call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+               SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
@@ -607,19 +619,19 @@ required = 0
 
 !          if (.not. grid_to_wall) then
           if (xcase .ge. 2) then
-	    call grid_double_xpoint(node_list, element_list)
+      call grid_double_xpoint(node_list, element_list)
           else
-	  
-	    if (.not. grid_to_wall) then
-	      call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+    
+      if (.not. grid_to_wall) then
+        call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
-	    else
+      else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
               call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
                                     SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-	    endif
-	           
+      endif
+             
           endif
                    
           call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
@@ -643,7 +655,7 @@ required = 0
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         
-	call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+  call export_boundary(node_list, bnd_elm_list, bnd_node_list)
         
         ! --- Compute the plasma equilibrium
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
@@ -778,38 +790,38 @@ required = 0
     !###
     
     !*******************************************************
-    !*      create groups /communicators		   *
-    !* MPI_COMM_N      : group for each harmonic	   *
-    !* MPI_COMM_TRANS  : Transversal communicator	   *
+    !*      create groups /communicators       *
+    !* MPI_COMM_N      : group for each harmonic     *
+    !* MPI_COMM_TRANS  : Transversal communicator    *
     !*   (ie : all first proc of MPI_COMM_N, all second,   *
-    !*         all third...)				   *
+    !*         all third...)           *
     !* MPI_COMM_MASTER : group of masters of each harmonic *
-    !*  		 (i.e id=0 from each MPI_COMM_N)   *
+    !*       (i.e id=0 from each MPI_COMM_N)   *
     !*******************************************************
     if (gmres) then
 
        N_masters = (n_tor+1)/2
        if (MOD(n_cpu, N_masters) == 0) then
-    	  M_cpu = n_cpu / (N_masters)
+        M_cpu = n_cpu / (N_masters)
        else
-    	  M_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
+        M_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
        end if
 
        call tr_allocate(i_tor,1,n_cpu,"i_tor",CAT_UNKNOWN)
        
        do i = 1, n_cpu 
-    	  i_tor(i) =  MOD(i-1, M_cpu)+1
+        i_tor(i) =  MOD(i-1, M_cpu)+1
        end do
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_TRANS,ierr)
 
        do i=1,n_cpu
-    	  i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
+        i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
        enddo
 
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
        
        do i=1,N_masters
-    	  i_rank(i) = (i-1) * M_cpu
+        i_rank(i) = (i-1) * M_cpu
        enddo
  
        call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -817,14 +829,14 @@ required = 0
 
        call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MASTER,MPI_COMM_MASTER,ierr)
 
-       call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)		     ! the id of each cpu
-       call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr)		     ! the number of cpus
-       call MPI_COMM_RANK(MPI_COMM_TRANS, my_id_trans, ierr)	     ! the id of each cpu
-       call MPI_COMM_SIZE(MPI_COMM_TRANS, n_cpu_trans, ierr)	     ! the number of cpus
+       call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)         ! the id of each cpu
+       call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr)         ! the number of cpus
+       call MPI_COMM_RANK(MPI_COMM_TRANS, my_id_trans, ierr)       ! the id of each cpu
+       call MPI_COMM_SIZE(MPI_COMM_TRANS, n_cpu_trans, ierr)       ! the number of cpus
        ! TODO : MPI_COMM_MASTER = MPI_COMM_TRANS
        if (my_id_n .eq. 0) then
-    	  call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
-    	  call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
+        call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
+        call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
        endif
     else
        my_id_n = my_id
@@ -832,7 +844,7 @@ required = 0
     endif
 
     !***********************************************************************
-    !*  	  distribute nodes and elements over cpu's		   *
+    !*      distribute nodes and elements over cpu's       *
     !***********************************************************************
     if ( use_pastix .and. use_murge .and. use_murge_element .and. gmres ) then
        index_size  = n_cpu_n
@@ -852,8 +864,8 @@ required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,index_size,node_list,element_list,local_elms,	  &
-    	 n_local_elms,ndof_glob,index_min,index_max)
+    call distribute_nodes_elements(id_elements,index_size,node_list,element_list,local_elms,    &
+       n_local_elms,ndof_glob,index_min,index_max)
 
     node_list%n_dof = ndof_glob
     if ( .not. (use_pastix .and. use_murge  .and. use_murge_element .and. gmres) ) then
@@ -884,9 +896,9 @@ required = 0
     END IF
     if (use_mumps) then
        if (.not. gmres) then
-    	  call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
+        call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
        else
-    	  call initialise_mumps(MPI_COMM_N)	   ! start MUMPS sparse matrix solver on local groups
+        call initialise_mumps(MPI_COMM_N)    ! start MUMPS sparse matrix solver on local groups
        endif
     endif
 
@@ -989,14 +1001,14 @@ required = 0
     if (gmres) then
        solve_only = .false.
        if ((gmres) .and. (istep .gt. 1)) then
-    	  solve_only = .true.
-    	  if (iter_gmres+iter_prev .gt. 2*iter_precon) then			   ! redo preconditioner
-    	     solve_only = .false.
-    	  endif
+        solve_only = .true.
+        if (iter_gmres+iter_prev .gt. 2*iter_precon) then        ! redo preconditioner
+           solve_only = .false.
+        endif
        endif
     endif
     
-    if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
+    if (use_pellet) then      ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
       call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
@@ -1006,7 +1018,7 @@ required = 0
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
        call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms,      &
-    	 n_local_ELms, xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,         &
+       n_local_ELms, xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,         &
          Z_xpoint, psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,       &
          n_cpu_trans, solve_only)
     else
@@ -1031,30 +1043,30 @@ required = 0
     if (.not. gmres) then
        if (use_mumps) then
 
-    	  call solve_mumps_all(my_id)
+        call solve_mumps_all(my_id)
 
        else
 
-    	  ! Recuperer la solution
-    	  if (use_murge) then
-    	     call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
-    	  else
-    	     call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
-    	  endif
+        ! Recuperer la solution
+        if (use_murge) then
+           call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
+        else
+           call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+        endif
 
        endif
 
     else
        call clck_time(t0)
        if (.not. solve_only) then
-    	  ! with murge elementary assembly harmonic distribution is already done.
-    	  IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
-    	     call distribute_harmonics(my_id,my_id_n,n_cpu)
-    	  ELSE
-    	     call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.false.)	       
-    	  END IF
+        ! with murge elementary assembly harmonic distribution is already done.
+        IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
+           call distribute_harmonics(my_id,my_id_n,n_cpu)
+        ELSE
+           call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.false.)        
+        END IF
        else
-          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
+          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)        
        endif
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
@@ -1064,9 +1076,9 @@ required = 0
 
        call clck_time(t0)
        if (use_murge .and. use_murge_element) then
-    	  call solve_murge_all(n_cpu,my_id,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
+        call solve_murge_all(n_cpu,my_id,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
        else
-    	  call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+        call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
        end if
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
@@ -1169,16 +1181,16 @@ required = 0
 
     if (gmres .and. adaptive_time) then        ! experimental
        if (iter_gmres .ge. iter_big) then
-    	  tstep = tstep /2.d0
-    	  write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+        tstep = tstep /2.d0
+        write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
        elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
-    	  !	 tstep = tstep /2.d0
-    	  !	 iter_gmres = 99999
-    	  !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+        !  tstep = tstep /2.d0
+        !  iter_gmres = 99999
+        !  write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
        elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
-    	  !	 tstep = tstep * 2.d0
-    	  !	 iter_gmres = 99999
-    	  !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
+        !  tstep = tstep * 2.d0
+        !  iter_gmres = 99999
+        !  write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
        endif
     endif
 
@@ -1225,11 +1237,11 @@ required = 0
        write(*,131) 'W_mag,_kin      =', W_mag(1), W_mag(n_tor), W_kin(1), W_kin(n_tor)
        Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
        if (index_now > index_start+1) then
-    	 Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
-    	 Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
-    	 Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
-    	 Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
-    	 write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
+       Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
+       Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+       Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
+       Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
+       write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
        endif
        write(*,132)
        write(*,*)
@@ -1252,7 +1264,7 @@ required = 0
     end if
     !---------------------------------------------------------timing
     if ( istep == 1 ) then
-       call r3_info_print (-3, -2, 'ITERATION	 1')
+       call r3_info_print (-3, -2, 'ITERATION  1')
     else
        call r3_info_print (istep, -2, 'ITERATION')
     endif
@@ -1278,9 +1290,9 @@ required = 0
     inquire(file='STOP_NOW', exist=file_exists)
     if ( file_exists ) then
       if ( my_id == 0 ) then
-    	write(*,*)
-    	write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
-    	write(*,*)
+      write(*,*)
+      write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
+      write(*,*)
       end if
       exit jstep_loop
     end if
@@ -1289,9 +1301,9 @@ required = 0
     if ( allocated(deltas) ) then
       sum_deltas = sum(deltas)
       if ( sum_deltas /= sum_deltas ) then
-    	write(*,*)
-    	write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'
-    	write(*,*)
+      write(*,*)
+      write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'
+      write(*,*)
         exit jstep_loop
       end if
     end if
@@ -1317,23 +1329,23 @@ required = 0
 #endif
     elseif (use_pastix) then
        if ( use_murge ) then 
-    	 call murge_termination(gmres)
+       call murge_termination(gmres)
        else
-    	  pastix_iparm(2)     = 7			! Clean-up
-    	  pastix_iparm(3)     = 7
+        pastix_iparm(2)     = 7     ! Clean-up
+        pastix_iparm(3)     = 7
 
-    	  if (.not. gmres) then
+        if (.not. gmres) then
 
-    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-    		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+           call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-    	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
+        elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
             call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
                  mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
    
-       	  endif
+          endif
           
        end if
 
@@ -1376,17 +1388,17 @@ required = 0
     if (.not. bench_without_plot) then
        
        do ivar=1,n_var
-    	  call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
+        call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
        enddo
 
        do i=1,n_tor,2
           write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
 
-    	  do ivar=1,n_var
+        do ivar=1,n_var
           if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
              call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
           endif
-    	  enddo
+        enddo
 
        enddo
     endif
@@ -1398,24 +1410,24 @@ required = 0
        E_max = max(E_max,maxval(energies(1,2,1:index_now)))
        E_min = min(E_min,minval(energies(1,2,1:index_now)))
        do i=2,n_tor
-    	  E_max = max(E_max,maxval(energies(i,1,1:index_now)))
-    	  E_min = min(E_min,minval(energies(i,1,1:index_now)))
-    	  E_max = max(E_max,maxval(energies(i,2,1:index_now)))
-    	  E_min = min(E_min,minval(energies(i,2,1:index_now)))
+        E_max = max(E_max,maxval(energies(i,1,1:index_now)))
+        E_min = min(E_min,minval(energies(i,1,1:index_now)))
+        E_max = max(E_max,maxval(energies(i,2,1:index_now)))
+        E_min = min(E_min,minval(energies(i,2,1:index_now)))
        enddo
 
        call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
 
        do i=1,n_tor
-	 if (mod(i,2) .eq. 0) then
-	   call lincol(mod(i/2,10))
-	 else
-	   call lincol(mod((i-1)/2,10))
-	 endif
-    	  call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
-    	  call lincol(4)
-    	  if (n_tor .eq. 3) call lincol(2)
-    	  call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
+   if (mod(i,2) .eq. 0) then
+     call lincol(mod(i/2,10))
+   else
+     call lincol(mod((i-1)/2,10))
+   endif
+        call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
+        call lincol(4)
+        if (n_tor .eq. 3) call lincol(2)
+        call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
        enddo
        call lincol(3)
        call lplot(1,1,2,xtime(1:index_now),energies(1,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
@@ -1442,7 +1454,7 @@ required = 0
     else
        psi_bnd = psi_xpoint(1)
        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    	 psi_bnd = psi_xpoint(2)
+       psi_bnd = psi_xpoint(2)
        endif
     endif
 
@@ -1459,23 +1471,23 @@ required = 0
 
        if (ifail .eq. 0) then
 
-    	  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
+        call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
-    	  call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
-    	       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if (jorek_model .eq. 400) then	     
-    	    call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
-    	    call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
+        call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,         &
+             zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+        if (jorek_model .eq. 400) then       
+          call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+               zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)        
+          call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+           zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)      
       zT = zTi + zTe
-    	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
-    	  else
+          dT_dpsi = dTi_dpsi + dTe_dpsi     
+        else
       call temperature(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
-    	  endif
-    	  call FFprime(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
-    	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+           zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+        endif
+        call FFprime(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,         &
+             zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
        if (NEO) then
           if (num_neo_file) then
@@ -1484,16 +1496,16 @@ required = 0
           endif
        endif
 
-    	  zjz	= (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
+        zjz = (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
 
-    	  iplot = iplot + 1
+        iplot = iplot + 1
 
-    	  xp(iplot)  = Rp
-    	  yp1(iplot) = zFFprime / Rp
-    	  yp2(iplot) = zjz
-    	  yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
+        xp(iplot)  = Rp
+        yp1(iplot) = zFFprime / Rp
+        yp2(iplot) = zjz
+        yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
 
-    	  !	 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
+        !  write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
            if (NEO) then
               if ( num_neo_file) then
                  mu_neo(iplot) = amu_neo_node
@@ -1520,9 +1532,9 @@ required = 0
           call lincol(0)
        end if
     endif
-    call finplt 					 ! close plot file
+    call finplt            ! close plot file
 
-!  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
+!  cll export_POV(node_list,element_list,3,1)        ! export to POVray native bezier patch format
 
     call export_helena(node_list,element_list,bnd_elm_list)
 

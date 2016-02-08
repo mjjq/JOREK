@@ -1,16 +1,20 @@
-! Command line function
-
+!> Command line function, print help info or hardcoded parameter values to screen.
+!!
+!! To remove this function a -DNO_HELP flag should be added to the compiler flags
+!! 
 subroutine jorek2help()
   use parameters
   
   implicit none
 
-  integer::narg,cptArg  !> for commandline arguments
-  character(len=20)::ArgName  !> Argument name
-
-  narg = command_argument_count()
+#ifndef NO_HELP
   
-  !> when argument is give print info of first one and exit normally
+  integer::narg,cptArg            !> for commandline arguments
+  character(len=20)::ArgName      !> Argument name
+  
+  narg = command_argument_count() !> get number of commandline agruments
+  
+  !> when argument is give print info
   200 format(79('*'))
   if(narg>0)then    
     do cptArg=1,narg
@@ -87,5 +91,7 @@ subroutine jorek2help()
     end do
   end if
 
+#endif
+  
 return  
 end subroutine jorek2help

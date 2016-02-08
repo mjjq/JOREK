@@ -9,7 +9,9 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC) \
 	$(DIR)/mod_diagnostics.f90      \
 	$(DIR)/psi_minmax.f90	        \
 	$(DIR)/RZ_minmax.f90            \
-	$(DIR)/hdf5_io.f90 
+	$(DIR)/hdf5_io.f90            \
+	$(DIR)/jorek2help.f90            
+  
 
 JOREK2_MAIN_SRC := $(JOREK2_MAIN_SRC)	  \
 	$(DIR)/boundary_check.f90         \

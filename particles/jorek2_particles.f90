@@ -82,6 +82,7 @@ call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 call broadcast_phys(my_id)                         ! physics parameters
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
+call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 
 ! Boxsize is R,Z location and dPhi extent from phi=0
 boxcenter = (/2.83d0, 0.d0, 0.d0/)
@@ -120,8 +121,8 @@ do i_step=i_begin,i_end
       call import_binary_restart(node_list,element_list, restart_file, rst_format, ierr)
       if (ierr .ne. 0) call MPI_ABORT(MPI_COMM_WORLD,ierr)
     endif
-    call broadcast_elements(my_id, element_list)
     call broadcast_nodes(my_id, node_list)
+    call broadcast_elements(my_id, element_list)
     call update_neighbours(element_list,node_list)
   endif
 

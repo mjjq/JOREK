@@ -26,6 +26,13 @@ real*8  :: R_in, Z_in, phi_in
 integer :: i, ifail, n_threads, omp_tid, n_particles_thread, n_done, n_max
 real*8 :: mass_impurity, ran3(3), t0, t1, ostart, oend
 
+if (my_id .eq. 0) then
+  write(*,*) '**********************************'
+  write(*,*) '*      initialising particles    *'
+  write(*,*) '**********************************'
+  write(*,*) ' number of particles : ',n_particles
+endif
+
 ! Divide the particles over all processors, give the first processor the remainder
 if (my_id .eq. 0) then
   particle_list%n_particles = n_particles/n_cpu + modulo(n_particles, n_cpu)
@@ -33,19 +40,17 @@ else
   particle_list%n_particles = n_particles/n_cpu
 endif
 write(*,*) my_id, particle_list%n_particles, n_particles, n_cpu
-allocate(particle_list%particle(particle_list%n_particles))
+allocate(particle_list%particle(particle_list%n_particles), stat=ifail)
+if (ifail .gt. 0) write(*,"(i3,a,i8,a)") my_id, "unable to allocate particle_list%particle(", particle_list%n_particles, ")"
 
 
-if (my_id .eq. 0) then
-  write(*,*) '**********************************'
-  write(*,*) '*      initialising particles    *'
-  write(*,*) '**********************************'
-  write(*,*) ' number of particles : ',n_particles
-endif
 call cpu_time(t0)
 !$ ostart = omp_get_wtime()
 
 mass_impurity = mass_proton * atomic_mass_impurity ! Tungsten
+
+! Call find_RZ once to initialise elements_minmax before going OMP (parameters are random-ish and irrelevant)
+call find_RZ(node_list,element_list,boxcenter(1),boxcenter(2),R_in,Z_in,i,ran3(1),ran3(2),ifail)
 
 call random_seed()
 !$omp parallel do default(none) &

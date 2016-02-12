@@ -13,6 +13,8 @@ logical, external        :: neighbours
 
 write(*,*) 'updating neighbours'
 
+!$omp parallel do default(private) &
+!$omp   shared(element_list,node_list)
 do i=1, element_list%n_elements
 
   do j=1, element_list%n_elements
@@ -74,6 +76,7 @@ do i=1, element_list%n_elements
 
   enddo
 enddo
+!$omp end parallel do
 
 do i=1, element_list%n_elements
 
@@ -97,8 +100,6 @@ enddo
 !    write(*,'(i5,6f12.4)') j,element_list%element(i)%transform(j,1,:),element_list%element(i)%transform(j,2,:)
 !  enddo
 !enddo
-
-write(*,*) 'updated neighbours'
 
 return
 end

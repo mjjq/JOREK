@@ -77,4 +77,6 @@ JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC)   \
         $(DIR)/broadcast_nodes.f90                  \
         $(DIR)/broadcast_elements.f90
 
-
+PROJECT_PARTICLES_VTK_SRC := $(PROJECT_PARTICLES_VTK_SRC) \
+        $(DIR)/broadcast_nodes.f90                  \
+        $(DIR)/broadcast_elements.f90

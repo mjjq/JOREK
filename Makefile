@@ -113,7 +113,7 @@ PROGRAMS := JOREK2_MAIN JOREK2_POINCARE RST_BIN2HDF5 RST_HDF52BIN           \
             JOREK2_FOUR JOREK_EXTRACT_DATA JOREK2_DIAGNO JOREK_TO_HELENA    \
             JOREK2_TARGET2VTK JOREK2_POWERS JOREK2_IMPORT_PERTURBATION      \
             NEW_DIAG_DEMO PENNING_TEST JOREK2_PARTICLES SIMON_PARTICLE_TEST \
-	    PARTICLE_TEST
+	    PARTICLE_TEST PROJECT_PARTICLES_VTK
 
 # Add the common sources to all these programs
 $(foreach prog,$(PROGRAMS),$(eval $(prog)_SRC += $(ALL_BINARIES_SRC) $(PPPSRC)))
@@ -246,7 +246,8 @@ PROGRAM_SOURCES = diagnostics/jorek2_poincare.f90       \
 		  diagnostics/jorek2_target2vtk.f90     \
 		  diagnostics/jorek2_powers.f90         \
 		  diagnostics/new_diag_demo.f90 	\
-		  particles/jorek2_particles.f90
+		  particles/jorek2_particles.f90 	\
+		  particles/project_particles_vtk.f90
 
 # Create all standard make rules
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

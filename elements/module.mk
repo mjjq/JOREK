@@ -102,3 +102,6 @@ PENNING_TEST_SRC := $(PENNING_TEST_SRC) \
 SIMON_PARTICLE_TEST_SRC := $(SIMON_PARTICLE_TEST_SRC) \
 	$(DIR)/interp_PRZ_delta.f90       \
        $(DIR)/hermite_1d.f90
+
+PROJECT_PARTICLES_VTK_SRC := $(PROJECT_PARTICLES_VTK_SRC) \
+       $(DIR)/hermite_1d.f90

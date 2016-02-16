@@ -20,12 +20,11 @@ implicit none
 
 type (type_particle_list) :: particle_list
 
-integer    :: i, j, i_tor, my_id, n_cpu, ierr, i_step, i_begin, i_end
+integer    :: i_tor, my_id, n_cpu, ierr, i_step, i_begin, i_end
 integer*4  :: rank, comm_size
 integer    :: required, provided, StatInfo
 real*8     :: boxwidth(3), boxcenter(3) !< size and center of box in RZphi space
-real*8     :: substep
-character*17 :: particle_file, filenum, restart_file
+character*17 :: particle_file, restart_file
 
 real*8, dimension(:), allocatable :: energy_list, momentum_list
 
@@ -135,7 +134,7 @@ do i_step=i_begin,i_end
   call export_particles(particle_list,particle_file)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  write(particle_file,'(A4,i0.9,A4)') 'part',i_step,'.vtk'
+  write(particle_file,'(A4,i0.9,A4)') 'pos',i_step,'.vtk'
   call particles_vtk(particle_list,particle_file)
 
   ! Output by each processor

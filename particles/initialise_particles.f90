@@ -23,7 +23,7 @@ real*8 , intent(in) :: boxcenter(3), boxwidth(3)
 ! Internal variables
 type (type_particle)      :: particle
 real*8  :: R_in, Z_in, phi_in
-integer :: i, ifail, n_threads, omp_tid, n_particles_thread, n_done, n_max
+integer :: i, ifail, n_threads
 real*8 :: mass_impurity, ran3(3), t0, t1, ostart, oend
 
 if (my_id .eq. 0) then

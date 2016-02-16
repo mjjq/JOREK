@@ -16,14 +16,14 @@ character*(*),             intent(in) :: particle_file
 
 type (type_particle)      :: particle
 
-integer               :: nnoel, nnos, nnos_local, nnos_max, nnos_zero, nel
-integer               :: nsub, inode, ielm, n_scalars, n_vectors, i, j, k, i_var, ierr
+integer               :: nnos, nnos_local, nnos_max, nnos_zero
+integer               :: n_scalars, n_vectors, i, j, k, i_var, ierr
 integer               :: nsend, nrecv
 integer*4             :: my_id, n_cpu
 real,allocatable      :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 character*12, allocatable :: scalar_names(:), vector_names(:)
 integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
-character             :: buffer*80, lf*1, str1*12, str2*12
+character             :: buffer*80, lf*1, str1*12
 integer               :: status(MPI_STATUS_SIZE)
 
 

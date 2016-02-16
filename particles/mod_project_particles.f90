@@ -1,13 +1,12 @@
 module mod_project_particles
 contains
-subroutine project_particles(particle_list)
+subroutine project_particles(particle_list, node_list, element_list)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
 use parameters
 use data_structure
 use basis_at_gaussian
-use nodes_elements
 use mod_particles
 use mpi_mod
 implicit none
@@ -16,6 +15,8 @@ type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 type (type_particle)     :: particle
 type (type_particle_list):: particle_list
+type (type_node_list), intent(inout) :: node_list !< A copy of the node list which will be used to save variables
+type (type_element_list), intent(in) :: element_list
 
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 
@@ -30,10 +31,9 @@ integer    :: i, j, k, l, m, i_harm, ilarge, index_large_i, index_large_k, inode
 integer    :: nz_AA, n_AA, n_border, i_elm, index, ivar_out, index_ij, index_kl
 integer    :: ms, mt, n_p, total_particles
 
-
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
 
-!n_border = 0
+n_border = 0
 !do i=1,node_list%n_nodes
 !  if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2  ! INCLUDE OTHER BOUNDARY OPTIONS!
 !  if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
@@ -60,6 +60,10 @@ call DMUMPS(projection_matrix)
 
 allocate(projection_matrix%A(nz_AA),projection_matrix%irn(nz_AA),projection_matrix%jcn(nz_AA))
 allocate(projection_matrix%rhs(n_AA))
+
+! Only n=0 for now
+
+
 
 projection_matrix%irn = 0
 projection_matrix%jcn = 0

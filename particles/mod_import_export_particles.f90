@@ -13,13 +13,12 @@ implicit none
 type (type_particle_list), intent(in) :: particle_list
 character*(*)            , intent(in) :: particle_file
 
-integer              :: i, my_id, n_cpu, ierr, ierr2
+integer              :: my_id, n_cpu, ierr, ierr2
 integer, allocatable, dimension(:) :: particles_per_proc
 
 ! For MPI writing
-integer                       :: fh, ftype, dtype, status(MPI_STATUS_SIZE)
+integer                       :: fh, dtype, status(MPI_STATUS_SIZE)
 character*(*), parameter      :: datarep = 'native'
-integer(kind=mpi_offset_kind) :: disp
 
 ! Debugging output
 integer :: resultlen
@@ -76,13 +75,12 @@ implicit none
 character*(*)            , intent(in)  :: particle_file
 type (type_particle_list), intent(out) :: particle_list
 
-integer              :: i, my_id, n_cpu, ierr, ierr2, n_particles
+integer              :: my_id, n_cpu, ierr, ierr2, n_particles
 integer, allocatable, dimension(:) :: particles_per_proc
 
 ! For MPI writing
-integer                       :: fh, ftype, dtype, status(MPI_STATUS_SIZE)
+integer                       :: fh, dtype, status(MPI_STATUS_SIZE)
 character*(*), parameter      :: datarep = 'native'
-integer(kind=mpi_offset_kind) :: disp
 
 ! Debugging output
 integer :: resultlen
@@ -114,10 +112,13 @@ if (my_id .eq. 0) then
   particles_per_proc(1:n_cpu-1) = n_particles/n_cpu
 endif
 ! Broadcast this array to all processors
-call MPI_Bcast(particles_per_proc, n_cpu, MPI_INTEGER, 0, MPI_COMM_WORLD)
+call MPI_Bcast(particles_per_proc, n_cpu, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
 ! Set n_particles for all cpus
 particle_list%n_particles = particles_per_proc(my_id)
+! And allocate the required space
+allocate(particle_list%particle(particle_list%n_particles), stat=ierr)
+if (ierr .gt. 0) write(*,"(i3,a,i8,a)") my_id, "unable to allocate particle_list%particle(", particle_list%n_particles, ")"
 
 dtype = get_particle_derived_type()
 

@@ -28,14 +28,14 @@ logical, intent(in),  optional :: field_interp_time !< Interpolate the fields li
 
 ! -- Local variables
 type (type_particle)      :: particle
-real*8                    :: B0(3), E0(3), B0d(3), E0d(3) ! Local B and E field at particle position
+real*8                    :: B0(3), E0(3) ! lOCAL B and E field at particle position
 real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, B_phi_factor, q, m, eom
 real*8                    :: R, Z, psi, psid, U, Ud, energy_lost_particles, R_inv
 real*8                    :: fE, fB, t_norm
 real*8                    :: R_out, Z_out, s_out, t_out
-integer                   :: i, j, i_elm, n_done, ifail, ielm_out, n_lost
+integer                   :: i, j, i_elm, ifail, ielm_out, n_lost
 logical                   :: do_substep
 real*8                    :: t0, t1, ostart, oend, delta_fraction
 integer                   :: find_RZ_count
@@ -262,7 +262,7 @@ subroutine statistics_no_zero(list,mean,minv,maxv,sd,total,num_zeros)
   real*8, intent(in), dimension(:) :: list
   real*8, intent(out) :: mean, minv, maxv, sd, total
   integer, intent(out) :: num_zeros
-  integer :: i, num_values
+  integer :: num_values
   logical, dimension(:), allocatable :: mask
 
   allocate(mask(size(list)))

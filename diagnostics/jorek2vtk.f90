@@ -10,6 +10,7 @@ use pellet_module
 use mpi_mod
 use bootstrap_functions
 use corr_neg
+use mod_vtk
 
 implicit none
 
@@ -19,9 +20,7 @@ type (type_element_list), pointer :: element_list
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 integer,allocatable   :: ien (:,:)
-integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
 integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node, my_id
-character             :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:), vector_names(:)
 real*8                :: s, t
 real*8                :: P,P_s,P_t,P_st,P_ss,P_tt
@@ -990,53 +989,7 @@ endif ! SI_UNITS
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad
 
-lf = char(10) ! line feed character
-
-#ifdef IBM_MACHINE
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
-#else
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
-!open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
-#endif
-
-buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)
-buffer = 'vtk output'//lf                    ; write(ivtk) trim(buffer)
-buffer = 'BINARY'//lf                        ; write(ivtk) trim(buffer)
-buffer = 'DATASET UNSTRUCTURED_GRID'//lf     ; write(ivtk) trim(buffer)
-
-! POINTS SECTION
-write(str1(1:12),'(i12)') nnos
-buffer = 'POINTS '//str1//'  float'//lf      ; write(ivtk) trim(buffer)
-write(ivtk) ((real(xyz(i,j),4),i=1,3),j=1,nnos)
-
-! CELLS SECTION
-write(str1(1:12),'(i12)') nel            ! number of elements (cells)
-write(str2(1:12),'(i12)') nel*(1+nnoel)  ! size of the following element list (nel*(nnoel+1))
-buffer = lf//'CELLS '//str1//' '//str2//lf  ; write(ivtk) trim(buffer)
-write(ivtk) (int(nnoel,4),(int(ien(i,j),4),i=1,nnoel),j=1,nel)
-
-! CELL_TYPES SECTION
-write(str1(1:12),'(i12)') nel   ! number of elements (cells)
-buffer = lf//'CELL_TYPES'//str1//lf         ; write(ivtk) trim(buffer)
-write(ivtk) (int(etype,4),i=1,nel)
-
-! POINT_DATA SECTION
-write(str1(1:12),'(i12)') nnos
-buffer = lf//'POINT_DATA '//str1            ; write(ivtk) trim(buffer)
-
-do i_var =1, n_scalars
-  buffer = lf//'SCALARS '//scalar_names(i_var)//' float'//lf ; write(ivtk) trim(buffer)
-  buffer = 'LOOKUP_TABLE default'//lf
-  write(ivtk) trim(buffer)
-  write(ivtk) (real(scalars(i,i_var),4),i=1,nnos)
-enddo
-
-do i_var =1, n_vectors
-  buffer = lf//lf//'VECTORS '//vector_names(i_var)//' float'//lf ; write(ivtk) trim(buffer)
-  write(ivtk) ((real(vectors(j,i,i_var),4),i=1,3),j=1,nnos)
-enddo
-
-close(ivtk)
+call write_vtk('jorek_tmp.vtk',nnos,xyz,nel,nnoel,ien,etype,n_scalars,scalar_names,scalars,n_vectors,vector_names,vectors)
 
 write(*,*) 'done.'
 

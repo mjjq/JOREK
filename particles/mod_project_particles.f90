@@ -1,3 +1,5 @@
+module mod_project_particles
+contains
 subroutine project_particles(particle_list)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
@@ -246,7 +248,7 @@ call DMUMPS(projection_matrix)
 
 write(*,*) 'MUMPS finished'
 
-ivar_out = 7
+ivar_out = 1
 i_harm   = 1
 
 write(*,*) maxval(projection_matrix%RHS),minval(projection_matrix%RHS)
@@ -267,4 +269,5 @@ projection_matrix%JOB      = -2
 call DMUMPS(projection_matrix)
 
 return
-end
+end subroutine project_particles
+end module mod_project_particles

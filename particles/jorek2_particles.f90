@@ -18,7 +18,7 @@ use mpi_mod
 implicit none
 
 
-type (type_particle_list):: particle_list
+type (type_particle_list) :: particle_list
 
 integer    :: i, j, i_tor, my_id, n_cpu, ierr, i_step, i_begin, i_end
 integer*4  :: rank, comm_size

@@ -4,12 +4,12 @@ module mod_particles
 
   type type_particle
 
-    real*8  :: x(3)             !< particle position in real space (R,Z,phi) [m] at t
     real*8  :: st(n_dim)        !< particle position in the finite element (i_elm)
+    real*8  :: x(3)             !< particle position in real space (R,Z,phi) [m] at t
     real*8  :: v(3)             !< particle velocity in (R,Z,phi) [m/s * sqrt(mu0 rho0)] at t-dt/2
-    integer :: q                !< charge [e]
     real*8  :: mass             !< mass [atomic mass units]
     real*8  :: weight           !< weight (i.e. number of particles)
+    integer :: q                !< charge [e]
     integer :: i_elm            !< the index of the element containing the particle in the element_list
     logical :: lost             !< particle is active or lost
 
@@ -40,59 +40,51 @@ cross_product(3) = a(1)*b(2) - a(2)*b(1)
 return
 end function cross_product
 
-subroutine export_particles(particle_list,particle_file)
+!> This function creates a derived MPI type for the particle and returns it
+!! If it already exists the old handle is returned
+function get_particle_derived_type result(dtype_out)
+  use mpi_mod
+  use parameters
 
-implicit none
+  implicit none
 
-type (type_particle_list) :: particle_list
-type (type_particle)      :: particle
-character*(*),intent(in)  :: particle_file
-integer                   :: i
+  integer, dimension(3) :: offsets, types, blockcounts
+  integer               :: ierr, dtype_out, extent
+  integer, save         :: dtype
+  logical, save         :: dtype_set = .false.
 
-write(*,*) '***********************************'
-write(*,*) '*       export particles          *'
+  integer :: len(8) = (/n_dim,3,3,1,1,1,1,1/), t(8) = (/ &
+    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
+    MPI_INTEGER,MPI_INTEGER,MPI_LOGICAL/)
 
-open(22,file=particle_file,form='unformatted', status='replace', action='write')
+  integer(kind=MPI_ADDRESS_KIND) :: base, disp(8)
+  type(type_particle) :: particle
 
-write(22) particle_list%n_particles
+  dtype_out = dtype
+  if (dtype_set) return
 
-do i=1, particle_list%n_particles
-  write(22) particle_list%particle(i)
-enddo
+  ! Get memory addresses in the type
+  call MPI_Get_address(particle,        base)
+  call MPI_Get_address(particle.st,     disp(1))
+  call MPI_Get_address(particle.x,      disp(2))
+  call MPI_Get_address(particle.v,      disp(3))
+  call MPI_Get_address(particle.mass,   disp(4))
+  call MPI_Get_address(particle.weight, disp(5))
+  call MPI_Get_address(particle.q,      disp(6))
+  call MPI_Get_address(particle.i_elm,  disp(7))
+  call MPI_Get_address(particle.lost,   disp(8))
 
-close(22)
+  ! Rebase to particle memory beginning
+  disp = disp - base
 
-write(*,*) '*       particles exported        *'
-write(*,*) '***********************************'
+  ! Commit the structured type
+  call MPI_Type_create_struct(8, len, disp, t, dtype, ierr)
+  call MPI_Type_commit(dtype, ierr)
 
-return
-endsubroutine export_particles
-
-subroutine import_particles(particle_list)
-
-implicit none
-
-type (type_particle_list) :: particle_list
-type (type_particle)      :: particle
-integer :: i
-
-write(*,*) '***********************************'
-write(*,*) '*       import particles          *'
-
-open(22,file='particles.rst')
-
-read(22) particle_list%n_particles
-
-do i=1, particle_list%n_particles
-  read(22) particle_list%particle(i)
-enddo
-
-close(22)
-
-write(*,*) '*       particles imported        *'
-write(*,*) '***********************************'
-
-return
-endsubroutine import_particles
+  ! Set the save bit
+  dtype_set = .true.
+  dtype_out = dtype
+  return
+end function get_particle_derived_type
 
 end module mod_particles

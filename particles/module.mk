@@ -12,6 +12,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC) \
 
 JOREK2_PARTICLES_SRC :=$(JOREK2_PARTICLES_SRC) \
   $(DIR)/mod_particles.f90           \
+  $(DIR)/mod_import_export_particles.f90 \
   $(DIR)/openadas.f90                \
   $(DIR)/update_particles.f90	       \
   $(DIR)/calc_EB.f90 		\

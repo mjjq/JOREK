@@ -10,6 +10,7 @@ use phys_module
 use basis_at_gaussian
 use nodes_elements
 use mod_particles
+use mod_import_export_particles
 use openadas
 use clock_module
 use mpi_mod
@@ -96,7 +97,8 @@ write(particle_file,'(A4,i9.9,A4)') 'part',max(t_particles_begin,0),'.vtk'
 call particles_vtk(particle_list,particle_file)
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-! TODO add full support for tstep_n (also in calc_EB.f90)
+! TODO add full support for tstep_n (also in calc_EB.f90) or get the time from
+! the jorek restart files
 ! If t_particles_begin is set ignore nout_particles and n_step_particles
 if (t_particles_begin .gt. -1) then
   i_begin = t_particles_begin + 1 ! Nota bene! we will start at the second restart file as this contains the fields of the first too
@@ -128,6 +130,9 @@ do i_step=i_begin,i_end
 
   ! Do substepping
   call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list,field_interp_time=(t_particles_begin .gt. -1))
+
+  write(particle_file,'(A4,i0.9,A4)') 'part',i_step,'.rst'
+  call export_particles(particle_list,particle_file)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   write(particle_file,'(A4,i0.9,A4)') 'part',i_step,'.vtk'

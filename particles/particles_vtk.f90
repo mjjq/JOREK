@@ -33,7 +33,6 @@ call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 if (my_id .eq. 0) then
   write(*,*) '***********************************'
   write(*,*) '*    export particles to VTK      *'
-  write(*,*) '***********************************'
 
   open(unit=ivtk,file=particle_file,access='stream',form='unformatted',convert='BIG_ENDIAN')
 

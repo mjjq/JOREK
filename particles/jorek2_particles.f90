@@ -92,7 +92,7 @@ allocate(energy_list(particle_list%n_particles), momentum_list(particle_list%n_p
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 ! Output particles at start
-write(particle_file,'(A4,i9.9,A4)') 'part',max(t_particles_begin,0),'.vtk'
+write(particle_file,'(A3,i9.9,A4)') 'pos',max(t_particles_begin,0),'.vtk'
 call particles_vtk(particle_list,particle_file)
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -130,11 +130,12 @@ do i_step=i_begin,i_end
   ! Do substepping
   call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list,field_interp_time=(t_particles_begin .gt. -1))
 
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
   write(particle_file,'(A4,i0.9,A4)') 'part',i_step,'.rst'
   call export_particles(particle_list,particle_file)
 
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  write(particle_file,'(A4,i0.9,A4)') 'pos',i_step,'.vtk'
+  write(particle_file,'(A3,i0.9,A4)') 'pos',i_step,'.vtk'
   call particles_vtk(particle_list,particle_file)
 
   ! Output by each processor

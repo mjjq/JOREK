@@ -13,7 +13,7 @@ implicit none
 type (type_particle_list), intent(in) :: particle_list
 character*(*)            , intent(in) :: particle_file
 
-integer              :: my_id, n_cpu, ierr, ierr2
+integer              :: my_id, n_cpu, ierr, ierr2, info
 integer, allocatable, dimension(:) :: particles_per_proc
 
 ! For MPI writing
@@ -34,10 +34,15 @@ if (my_id .eq. 0) then
   write(*,*) '*       export particles          *'
 endif
 
+! Set Lustre io params (avoids locking error)
+call mpi_info_create(info, ierr)
+call mpi_info_set(info, "romio_ds_write", "disable", ierr)
+call mpi_info_set(info, "romio_ds_read", "disable", ierr)
+
 ! Find the number of particles on each node
 call MPI_AllGather(particle_list%n_particles,1,MPI_INTEGER,particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
-call MPI_File_open(MPI_COMM_WORLD,particle_file,MPI_MODE_CREATE + MPI_MODE_WRONLY,MPI_INFO_NULL,fh,ierr)
+call MPI_File_open(MPI_COMM_WORLD,particle_file,MPI_MODE_CREATE + MPI_MODE_WRONLY,info,fh,ierr)
 if (ierr .gt. 0) then
   call MPI_ERROR_STRING(ierr, string, resultlen, ierr2)
   write(*,*) "file open failed:", ierr, trim(string)
@@ -52,15 +57,17 @@ endif
 dtype = get_particle_derived_type()
 
 ! Calculate the displacement after the header = one unit of size MPI_INTEGER
-call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, MPI_INFO_NULL, ierr)
+call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, info, ierr)
 
 ! write_at sets the displacement to the number of particles already written in units of dtype
-call MPI_File_write_at(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), particle_list%particle, particle_list%n_particles, dtype, status, ierr)
+call MPI_File_write_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), particle_list%particle, particle_list%n_particles, dtype, status, ierr)
 
 call MPI_File_close(fh,ierr)
 
-write(*,*) '*       particles exported        *'
-write(*,*) '***********************************'
+if (my_id .eq. 0) then
+  write(*,*) '*       particles exported        *'
+  write(*,*) '***********************************'
+endif
 end subroutine export_particles
 
 
@@ -75,7 +82,7 @@ implicit none
 character*(*)            , intent(in)  :: particle_file
 type (type_particle_list), intent(out) :: particle_list
 
-integer              :: my_id, n_cpu, ierr, ierr2, n_particles
+integer              :: my_id, n_cpu, ierr, ierr2, n_particles, info
 integer, allocatable, dimension(:) :: particles_per_proc
 
 ! For MPI writing
@@ -96,7 +103,12 @@ if (my_id .eq. 0) then
   write(*,*) '*       import particles          *'
 endif
 
-call MPI_File_open(MPI_COMM_WORLD,particle_file,MPI_MODE_RDONLY,MPI_INFO_NULL,fh,ierr)
+! Set Lustre io params
+call mpi_info_create(info, ierr)
+call mpi_info_set(info, "romio_ds_write", "disable", ierr)
+call mpi_info_set(info, "romio_ds_read", "disable", ierr)
+
+call MPI_File_open(MPI_COMM_WORLD,particle_file,MPI_MODE_RDONLY,info,fh,ierr)
 if (ierr .gt. 0) then
   call MPI_ERROR_STRING(ierr, string, resultlen, ierr2)
   write(*,*) "file open failed:", ierr, trim(string)
@@ -123,15 +135,17 @@ if (ierr .gt. 0) write(*,"(i3,a,i8,a)") my_id, "unable to allocate particle_list
 dtype = get_particle_derived_type()
 
 ! Calculate the displacement after the header = one unit of size MPI_INTEGER
-call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, MPI_INFO_NULL, ierr)
+call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, info, ierr)
 
 ! write_at sets the displacement to the number of particles already written in units of dtype
-call MPI_File_read_at(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), particle_list%particle, particle_list%n_particles, dtype, status, ierr)
+call MPI_File_read_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), particle_list%particle, particle_list%n_particles, dtype, status, ierr)
 
 call MPI_File_close(fh,ierr)
 
-write(*,*) '*       particles imported        *'
-write(*,*) '***********************************'
+if (my_id .eq. 0) then
+  write(*,*) '*       particles imported        *'
+  write(*,*) '***********************************'
+endif
 endsubroutine import_particles
 
 end module mod_import_export_particles

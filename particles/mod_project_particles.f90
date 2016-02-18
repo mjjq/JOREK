@@ -180,9 +180,9 @@ do i_elm  = 1, element_list%n_elements
               psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
               psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
 
-              ELM(index_ij,index_kl) = ELM(index_ij,index_kl) + psi * v  * xjac * x_g(ms,mt) * wst &
+              ELM(index_ij,index_kl) = ELM(index_ij,index_kl) + psi * v  * xjac * x_g(ms,mt) * wst! &
 
-                                     + 0.001 * (psi_x * v_x + psi_y * v_y) * xjac * x_g(ms,mt) * wst
+                                     !+ 0.001 * (psi_x * v_x + psi_y * v_y) * xjac * x_g(ms,mt) * wst
 
             enddo
           enddo

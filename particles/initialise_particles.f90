@@ -62,7 +62,8 @@ do i=1,particle_list%n_particles
   do while (ifail .ne. 0)
     ! Generate a random position to put this particle
     call random_number(ran3)
-    R_in   = boxcenter(1) + boxwidth(1)*(ran3(1)-0.5d0)
+    ! Use inversion sampling to correct for cylindrical coordinates
+    R_in   = boxcenter(1) + boxwidth(1)*(ran3(1)**2-0.5d0)
     Z_in   = boxcenter(2) + boxwidth(2)*(ran3(2)-0.5d0)
     phi_in = boxcenter(3) + boxwidth(3)*(ran3(3)-0.5d0)
 

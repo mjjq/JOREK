@@ -42,7 +42,7 @@ end function cross_product
 
 !> This function creates a derived MPI type for the particle and returns it
 !! If it already exists the old handle is returned
-function get_particle_derived_type result(dtype_out)
+function get_particle_derived_type() result(dtype_out)
   use mpi_mod
   use parameters
 
@@ -65,14 +65,14 @@ function get_particle_derived_type result(dtype_out)
 
   ! Get memory addresses in the type
   call MPI_Get_address(particle,        base)
-  call MPI_Get_address(particle.st,     disp(1))
-  call MPI_Get_address(particle.x,      disp(2))
-  call MPI_Get_address(particle.v,      disp(3))
-  call MPI_Get_address(particle.mass,   disp(4))
-  call MPI_Get_address(particle.weight, disp(5))
-  call MPI_Get_address(particle.q,      disp(6))
-  call MPI_Get_address(particle.i_elm,  disp(7))
-  call MPI_Get_address(particle.lost,   disp(8))
+  call MPI_Get_address(particle%st,     disp(1))
+  call MPI_Get_address(particle%x,      disp(2))
+  call MPI_Get_address(particle%v,      disp(3))
+  call MPI_Get_address(particle%mass,   disp(4))
+  call MPI_Get_address(particle%weight, disp(5))
+  call MPI_Get_address(particle%q,      disp(6))
+  call MPI_Get_address(particle%i_elm,  disp(7))
+  call MPI_Get_address(particle%lost,   disp(8))
 
   ! Rebase to particle memory beginning
   disp = disp - base

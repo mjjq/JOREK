@@ -12,3 +12,6 @@ gnuplot_in
 *_out/
 energy_dt
 momentum_dt
+fit.log
+*.pdf
+*.tex

@@ -989,7 +989,7 @@ endif ! SI_UNITS
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad
 
-call write_vtk('jorek_tmp.vtk',nnos,xyz,nel,nnoel,ien,etype,n_scalars,scalar_names,scalars,n_vectors,vector_names,vectors)
+call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors)
 
 write(*,*) 'done.'
 

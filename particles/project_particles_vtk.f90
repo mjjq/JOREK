@@ -168,10 +168,9 @@ do i=1,element_list%n_elements
 enddo  ! n_elements
 
 ! ------------- Write to VTK
-call write_vtk(filename,nnos,xyz,&
-  nel,nnoel,ien,&
-  etype,&
-  n_scalars,scalar_names,scalars,&
-  n_vectors,vector_names,vectors)
+call write_vtk(filename,xyz,&
+  ien, etype,&
+  scalar_names,scalars,&
+  vector_names,vectors)
 end subroutine write_particle_distribution_to_vtk
 end program project_particles_vtk

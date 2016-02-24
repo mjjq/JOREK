@@ -64,15 +64,15 @@ function get_particle_derived_type() result(dtype_out)
   if (dtype_set) return
 
   ! Get memory addresses in the type
-  call MPI_Get_address(particle,        base)
-  call MPI_Get_address(particle%st,     disp(1))
-  call MPI_Get_address(particle%x,      disp(2))
-  call MPI_Get_address(particle%v,      disp(3))
-  call MPI_Get_address(particle%mass,   disp(4))
-  call MPI_Get_address(particle%weight, disp(5))
-  call MPI_Get_address(particle%q,      disp(6))
-  call MPI_Get_address(particle%i_elm,  disp(7))
-  call MPI_Get_address(particle%lost,   disp(8))
+  call MPI_Get_address(particle,        base,    ierr)
+  call MPI_Get_address(particle%st,     disp(1), ierr)
+  call MPI_Get_address(particle%x,      disp(2), ierr)
+  call MPI_Get_address(particle%v,      disp(3), ierr)
+  call MPI_Get_address(particle%mass,   disp(4), ierr)
+  call MPI_Get_address(particle%weight, disp(5), ierr)
+  call MPI_Get_address(particle%q,      disp(6), ierr)
+  call MPI_Get_address(particle%i_elm,  disp(7), ierr)
+  call MPI_Get_address(particle%lost,   disp(8), ierr)
 
   ! Rebase to particle memory beginning
   disp = disp - base

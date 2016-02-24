@@ -119,7 +119,7 @@ do i_elm  = 1, element_list%n_elements
 !      v_R = (  Z_t * H_s(i,j) - Z_s * H_t(i,j) ) * element%size(i,j) / xjac
 !      v_Z = (- R_t * H_s(i,j) + R_s * H_t(i,j) ) * element%size(i,j) / xjac
 
-        RHS(index_ij) = RHS(index_ij) + v !* R_g  !* xjac
+        RHS(index_ij) = RHS(index_ij) + v * R_g  !* xjac
 
       enddo
     enddo

@@ -135,9 +135,6 @@ do i_step=i_begin,i_end
   write(particle_file,'(A4,i0.9,A4)') 'part',i_step,'.rst'
   call export_particles(particle_list,particle_file)
 
-  write(particle_file,'(A3,i0.9,A4)') 'pos',i_step,'.vtk'
-  call particles_vtk(particle_list,particle_file)
-
   ! Output by each processor
   if (write_energies) call write_list("energy",i_step,my_id,energy_list)
   if (write_momenta) call write_list("momentum",i_step,my_id,momentum_list)

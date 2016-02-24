@@ -117,6 +117,12 @@ if (ifail .eq. 0) then
   i_var = (/ 1, 5, 6, 7 /)
   call interp_PRZ(node_list,element_list,i_elm,i_var,size(i_var),s_elm,t_elm,phi_in,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
+  ! Select only particles with the right minimum flux (TODO move to separate initialization distribution routine)
+  if (P(1) > -0.26d0) then
+    ifail = 1
+    return
+  endif
+
   background_density = P(2) * 1d20                             ! plasma density [1/m^3]
   background_kbT     = P(3) /(MU_ZERO*central_density*1.d20)   ! plasma temperature [J]
   background_kelvin  = background_kbT / EL_CHG                 ! plasma temperature [K]

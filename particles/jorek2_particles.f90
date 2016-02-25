@@ -107,6 +107,7 @@ if (t_particles_begin .gt. -1) then
   ! Set t_step_particles to the closest integer divisor of t_step so we don't
   ! miss a substep
   t_step_particles = tstep_n(1)/nout_particles
+  write(*,*) "Using actual particle timestep", t_step_particles
 
   if (tstep_n(2) .gt. 0) write(*,*) "WARNING: No full support for tstep_n"
 else

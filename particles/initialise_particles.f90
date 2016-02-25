@@ -30,7 +30,7 @@ if (my_id .eq. 0) then
   write(*,*) '**********************************'
   write(*,*) '*      initialising particles    *'
   write(*,*) '**********************************'
-  write(*,*) ' number of particles : ',n_particles
+  write(*,*) ' number of particles : ',n_particles, ' number of procs: ', n_cpu
 endif
 
 ! Divide the particles over all processors, give the first processor the remainder
@@ -39,7 +39,6 @@ if (my_id .eq. 0) then
 else
   particle_list%n_particles = n_particles/n_cpu
 endif
-write(*,*) my_id, particle_list%n_particles, n_particles, n_cpu
 allocate(particle_list%particle(particle_list%n_particles), stat=ifail)
 if (ifail .gt. 0) write(*,"(i3,a,i8,a)") my_id, "unable to allocate particle_list%particle(", particle_list%n_particles, ")"
 
@@ -63,7 +62,8 @@ do i=1,particle_list%n_particles
     ! Generate a random position to put this particle
     call random_number(ran3)
     ! Use inversion sampling to correct for cylindrical coordinates
-    R_in   = boxcenter(1) + boxwidth(1)*(sqrt(ran3(1))-0.5d0)
+    ! r = sqrt(rand() (B^2 - A^2) + A^2) for min and max radius A and B
+    R_in   = sqrt(ran3(1) * 4 * boxcenter(1) * boxwidth(1) + (boxcenter(1) - boxwidth(1))**2)
     Z_in   = boxcenter(2) + boxwidth(2)*(ran3(2)-0.5d0)
     phi_in = boxcenter(3) + boxwidth(3)*(ran3(3)-0.5d0)
 
@@ -118,7 +118,7 @@ if (ifail .eq. 0) then
   call interp_PRZ(node_list,element_list,i_elm,i_var,size(i_var),s_elm,t_elm,phi_in,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
   ! Select only particles with the right minimum flux (TODO move to separate initialization distribution routine)
-  if (P(1) > -0.26d0) then
+  if (P(1) > -0.28d0) then
     ifail = 1
     return
   endif

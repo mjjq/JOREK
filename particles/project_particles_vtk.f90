@@ -32,13 +32,7 @@ namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
                       include_bootstrap, include_psi_norm
 
-! --- Preset parameters (only these are used!)
-nsub                   = 2	 ! Number of subdivisions of the cubic finite elements into linear pieces
-i_tor                  = -1	 ! If i_tor > 0, only this mode will be included in the vtk file...
-i_plane                = 1	 ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
-without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
-
-required = MPI_THREAD_MULTIPLE
+required = MPI_THREAD_SINGLE
 
 call MPI_Init_thread(required, provided, StatInfo)
 call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
@@ -54,6 +48,34 @@ endif
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 call initialise_basis                              ! define the basis functions at the Gaussian points
+
+
+
+! --- Preset parameters (only these are used!)
+nsub                   = 2	 ! Number of subdivisions of the cubic finite elements into linear pieces
+i_tor                  = -1	 ! If i_tor > 0, only this mode will be included in the vtk file...
+i_plane                = 1	 ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
+without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
+
+! --- Read parameters from namelist file 'vtk.nml' if it exists
+open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  read(42,vtk_params)
+  close(42)
+end if
+
+write(*,*)
+write(*,*) 'Parameters:'
+write(*,*) '-----------'
+write(*,*) 'nsub            =', nsub
+write(*,*) 'i_tor           =', i_tor
+write(*,*) 'i_plane         =', i_plane
+write(*,*) 'without_n0_mode =', without_n0_mode
+write(*,*) '-----------'
+write(*,*) 'n_tor           =', n_tor
+write(*,*) 'n_period        =', n_period
+write(*,*)
 
 do i_t=1, n_tor
   mode(i_t) = + int(i_t / 2) * n_period

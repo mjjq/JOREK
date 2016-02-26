@@ -1,6 +1,6 @@
 !> Count particles per element and export to VTK file
 !! It uses the elements of file jorek_restart.rst
-!! Run as count_particles_vtk < jorek_in
+!! Run as count_particles_vtk (filename)+ < jorek_in
 !! It reads some parameters from the vtk.nml namelist in the current directory
 !! The resutl is quite inaccurate, but good for quick tests
 program project_particles_vtk
@@ -14,8 +14,20 @@ implicit none
 
 type (type_particle_list) :: particle_list
 integer    :: ierr, provided
-character*17 :: particle_file, restart_file
-integer    :: i_t, i
+character*20 :: particle_file, restart_file, output_file
+integer    :: i_t, i, i_p, i_start, i_end
+character*2 :: str1
+
+!> Parameters
+! Not all of these are relevant, but they are here to prevent an error if using
+! the same namelist as for regular jorek2vtk
+integer :: nsub, i_tor, i_plane
+logical :: without_n0_mode, SI_units
+logical :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
+           include_bootstrap, include_psi_norm
+namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
+                      include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
+                      include_bootstrap, include_psi_norm
 
 
 
@@ -27,10 +39,34 @@ write(*,*) '***************************************'
 
 call initialise_parameters(0, "__NO_FILENAME__")
 
+! --- Preset parameters (only these are used!)
+i_plane                = 0	 ! if 0, count over the entire torus
+! if >= 1, count only in immediate surrounding of this plane, and produce output
+! in part[0-9]+_{i_plane}.vtk
+! if -1, do this for i_plane = 1,n_plane
+
+! --- Read parameters from namelist file 'vtk.nml' if it exists
+open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  read(42,vtk_params)
+  close(42)
+end if
+
+write(*,*)
+write(*,*) 'Parameters:'
+write(*,*) '-----------'
+write(*,*) 'i_plane         =', i_plane
+write(*,*) '-----------'
+write(*,*) 'n_tor           =', n_tor
+write(*,*) 'n_period        =', n_period
+write(*,*)
+
 do i_t=1, n_tor
   mode(i_t) = + int(i_t / 2) * n_period
   write(*,*) ' toroidal mode numbers : ',i_t,mode(i_t)
 enddo
+
 
 restart_file = 'jorek_restart.rst'
 call import_binary_restart(node_list,element_list, restart_file, rst_format, ierr)
@@ -47,14 +83,29 @@ do i=1,command_argument_count()
   call get_command_argument(i, particle_file)
   call import_particles(particle_file, particle_list)
 
-  ! Write the first value of node_list to a vtk file
-  particle_file = particle_file(1:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards
-  call write_particle_counts_to_vtk(node_list,element_list,particle_list,particle_file)
-  write(*,*) "Done counting, wrote output to ", particle_file
+  if (i_plane .eq. -1) then
+    i_start = 1
+    i_end = n_plane
+  else
+    i_start = i_plane
+    i_end = i_plane
+  endif
+  do i_p = i_start, i_end
+    if (i_p .eq. 0) then
+      output_file = particle_file(1:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards
+    else
+      write(str1,'(i0.2)') i_p
+     output_file = particle_file(1:(index(particle_file,'.rst',.true.)-1))//'_'//str1//'.vtk' !  .true. searches backwards
+    endif
+    call write_particle_counts_to_vtk(node_list,element_list,particle_list,output_file,i_p)
+    write(*,*) "Done counting, wrote output to ", output_file
+  enddo
 enddo
 
+call MPI_Finalize(ierr)
 contains
-subroutine write_particle_counts_to_vtk(node_list,element_list,particle_list,filename)
+subroutine write_particle_counts_to_vtk(node_list,element_list,particle_list,filename,i_plane)
+use phys_module
 use data_structure
 use basis_at_gaussian ! for HZ (initialise_basis must be called before use)
 use mod_vtk
@@ -68,6 +119,7 @@ type(type_node_list), intent(in)      :: node_list
 type(type_element_list), intent(in)   :: element_list
 type (type_particle_list), intent(in) :: particle_list
 character*(*), intent(in)             :: filename
+integer, intent(in)                   :: i_plane !< Sum up particles near this plane, or in all if 0
 
 integer :: nnos, nnoel, nel, i, j, ielm, inode, k
 real*4,allocatable    :: xyz (:,:), scalars(:,:)
@@ -79,7 +131,7 @@ integer :: i_elm, weight
 real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 
-real*8  :: total_volume, total_area, volume, area, xjac, wst
+real*8  :: total_volume, total_area, volume, area, xjac, wst, phif
 integer :: ms, mt
 
 type(type_node) :: node
@@ -98,17 +150,25 @@ total_area = 0.0
 total_volume = 0.0
 
 ! Count number of particles in each element
-!$omp parallel do default(none) shared(particle_list) private(i_elm,weight) &
+!$omp parallel do default(none) shared(particle_list,i_plane) private(i_elm,weight, phif) &
 !$omp   reduction(+:scalars)
 do i=1,particle_list%n_particles
   if (particle_list%particle(i)%lost) cycle ! skip this iteration
   i_elm  = particle_list%particle(i)%i_elm
   if (i_elm .lt. 1) cycle
+  if (i_plane .gt. 0) then
+    ! project phi onto [0,2pi/n_period)*n_period/TWOPI = [0,1)
+    phif = modulo(particle_list%particle(i)%x(3),TWOPI/n_period)*n_period/TWOPI
+    if (i_plane .eq. 1) then
+      if (phif .gt. 0.5d0/n_plane          .and. phif .lt. (1.d0-0.5d0/n_plane))    cycle
+    else
+      if (phif .lt. (i_plane-0.5d0)/n_plane .or. phif .gt. (i_plane+0.5d0)/n_plane) cycle
+    endif
+  endif
   weight = particle_list%particle(i)%weight
   scalars(i_elm,1) = scalars(i_elm,1) + real(weight,4)
 enddo
 !$omp end parallel do
-write(*,*) particle_list%n_particles, int(sum(scalars))
 
 ! Create points for each element
 !$omp parallel do default(none) shared(xyz,node_list,element_list, wgauss, &
@@ -166,6 +226,5 @@ write(*,*) "Volume: ", total_volume
 
 call write_vtk(filename,xyz,scalar_names=scalar_names,scalars=scalars)
 
-call MPI_FINALIZE(IERR)
 end subroutine write_particle_counts_to_vtk
 end program project_particles_vtk

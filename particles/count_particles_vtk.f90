@@ -110,7 +110,6 @@ use data_structure
 use basis_at_gaussian ! for HZ (initialise_basis must be called before use)
 use mod_vtk
 use mod_particles
-use basis_at_gaussian
 use constants
 implicit none
 
@@ -126,12 +125,12 @@ real*4,allocatable    :: xyz (:,:), scalars(:,:)
 real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 character*12, allocatable :: scalar_names(:)
-integer :: i_elm, weight
+integer :: i_elm
 
 real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 
-real*8  :: total_volume, total_area, volume, area, xjac, wst, phif
+real*8  :: total_volume, total_area, volume, area, xjac, wst, phif, weight
 integer :: ms, mt
 
 type(type_node) :: node
@@ -150,8 +149,6 @@ total_area = 0.0
 total_volume = 0.0
 
 ! Count number of particles in each element
-!$omp parallel do default(none) shared(particle_list,i_plane) private(i_elm,weight, phif) &
-!$omp   reduction(+:scalars)
 do i=1,particle_list%n_particles
   if (particle_list%particle(i)%lost) cycle ! skip this iteration
   i_elm  = particle_list%particle(i)%i_elm
@@ -168,17 +165,11 @@ do i=1,particle_list%n_particles
   weight = particle_list%particle(i)%weight
   scalars(i_elm,1) = scalars(i_elm,1) + real(weight,4)
 enddo
-!$omp end parallel do
 
 ! Create points for each element
-!$omp parallel do default(none) shared(xyz,node_list,element_list, wgauss, &
-!$omp                                  H, H_s, H_t, scalars) &
-!$omp   private(R, Z, area, volume, wst, ms, mt, xjac, i, j, R_s, R_t, Z_s, Z_t, node, element, &
-!$omp           x_g, x_s, x_t, y_g, y_s, y_t) &
-!$omp   reduction(+:total_area,total_volume)
 do i_elm=1,element_list%n_elements
   call interp_RZ2(node_list,element_list,i_elm,0.5d0,0.5d0,R,R_s,R_t,Z,Z_s,Z_t)
-  xyz(1:3,i_elm) = (/R, Z, 0.d0/)
+  xyz(1:3,i_elm) = (/real(R,4), real(Z,4), 0.0_4/)
 
   ! Calculate volume to calculate density
   volume = 0.
@@ -214,12 +205,11 @@ do i_elm=1,element_list%n_elements
   enddo
 
   ! Use volume to convert scalar counts to number density
-  scalars(i_elm,1) = scalars(i_elm,1) / volume
+  scalars(i_elm,1) = scalars(i_elm,1) / real(volume,4)
 
   total_area = total_area + area
   total_volume = total_volume + volume
 enddo  ! n_elements
-!$omp end parallel do
 
 write(*,*) "Area: ", total_area
 write(*,*) "Volume: ", total_volume

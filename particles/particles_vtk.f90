@@ -3,6 +3,7 @@
 !! - XYZ coordinates
 !!   - charge (scalar)
 !!   - velocity (vector at t-dt/2 NB!)
+!!   - lost (scalar 0 or 1)
 subroutine particles_vtk(particle_list,particle_file)
 use parameters
 use data_structure
@@ -52,12 +53,13 @@ call MPI_AllReduce(nnos_local,nnos_max,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr
 if (my_id .eq.0) write(*,*) ' total number of particles : ',nnos,nnos_max
 
 n_vectors = 1
-n_scalars = 1
+n_scalars = 2
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
 allocate(xyz(3,nnos_max),scalars(nnos_max,1:n_scalars),vectors(nnos_max,3,1:n_vectors))
 
 scalar_names(1)='charge      '
+scalar_names(2)='lost        '
 vector_names(1)='velocity    '
 
 xyz = 0.
@@ -72,6 +74,11 @@ do j=1, nnos_local
   xyz(3,j) = particle%x(2)
 
   scalars(j,1) = particle%q
+  if (particle%lost) then
+    scalars(j,2) = 1
+  else
+    scalars(j,2) = 0
+  endif
 
   vectors(j,1,1) = particle%v(1) * cos(particle%x(3)) -  particle%v(3) * sin(particle%x(3))
   vectors(j,2,1) = particle%v(1) * sin(particle%x(3)) +  particle%v(3) * cos(particle%x(3))

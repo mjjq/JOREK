@@ -15,7 +15,7 @@ implicit none
 type (type_particle_list) :: particle_list
 integer    :: ierr, provided
 character*17 :: particle_file, restart_file
-integer    :: i_t
+integer    :: i_t, i
 
 
 
@@ -42,14 +42,16 @@ if (command_argument_count() < 1) then
   call exit(1)
 endif
 
-! Get particle filename from commandline
-call get_command_argument(1, particle_file)
-call import_particles(particle_file, particle_list)
+do i=1,command_argument_count()
+  ! Get particle filename from commandline
+  call get_command_argument(i, particle_file)
+  call import_particles(particle_file, particle_list)
 
-! Write the first value of node_list to a vtk file
-particle_file = particle_file(1:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards
-call write_particle_counts_to_vtk(node_list,element_list,particle_list,particle_file)
-write(*,*) "Done counting, wrote output to ", particle_file
+  ! Write the first value of node_list to a vtk file
+  particle_file = particle_file(1:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards
+  call write_particle_counts_to_vtk(node_list,element_list,particle_list,particle_file)
+  write(*,*) "Done counting, wrote output to ", particle_file
+enddo
 
 contains
 subroutine write_particle_counts_to_vtk(node_list,element_list,particle_list,filename)
@@ -163,5 +165,7 @@ write(*,*) "Area: ", total_area
 write(*,*) "Volume: ", total_volume
 
 call write_vtk(filename,xyz,scalar_names=scalar_names,scalars=scalars)
+
+call MPI_FINALIZE(IERR)
 end subroutine write_particle_counts_to_vtk
 end program project_particles_vtk

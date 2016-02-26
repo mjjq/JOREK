@@ -51,3 +51,4 @@ penning_test
 simon_particle_test
 project_particles_vtk
 count_particles_vtk
+dump_particles_vtk

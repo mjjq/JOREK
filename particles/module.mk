@@ -39,3 +39,7 @@ PROJECT_PARTICLES_VTK_SRC := $(PROJECT_PARTICLES_VTK_SRC) \
 COUNT_PARTICLES_VTK_SRC := $(COUNT_PARTICLES_VTK_SRC) \
   $(DIR)/mod_particles.f90           \
   $(DIR)/mod_import_export_particles.f90
+
+DUMP_PARTICLES_VTK_SRC := $(DUMP_PARTICLES_VTK_SRC) \
+  $(DIR)/mod_particles.f90           \
+  $(DIR)/mod_import_export_particles.f90

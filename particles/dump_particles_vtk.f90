@@ -1,9 +1,6 @@
 !> Dump all particles into a vtk file
-!! Run as dump_particles_vtk part[0-9]*.rst < jorek_in
-!! It uses the elements of file jorek_restart.rst
+!! Run as dump_particles_vtk part[0-9]*.rst
 program dump_particles_vtk
-use phys_module
-use nodes_elements
 use mod_particles
 use mod_import_export_particles
 use mod_vtk
@@ -16,23 +13,11 @@ character*17 :: particle_file, restart_file
 integer    :: i_t, i
 
 
-
 call MPI_Init_thread(MPI_THREAD_SINGLE, provided, ierr)
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK dump particles '
 write(*,*) '***************************************'
-
-call initialise_parameters(0, "__NO_FILENAME__")
-
-do i_t=1, n_tor
-  mode(i_t) = + int(i_t / 2) * n_period
-  write(*,*) ' toroidal mode numbers : ',i_t,mode(i_t)
-enddo
-
-restart_file = 'jorek_restart.rst'
-call import_binary_restart(node_list,element_list, restart_file, rst_format, ierr)
-if (ierr .ne. 0) call exit(1)
 
 ! Get the filename as the first cli argument
 if (command_argument_count() < 1) then

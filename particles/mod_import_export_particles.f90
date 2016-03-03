@@ -71,7 +71,7 @@ endif
 end subroutine export_particles
 
 
-!> Export all particles using MPI File IO
+!> Import all particles using MPI File IO
 !! Reads the number of particles from a file, determines a 
 !! particle distribution over all processors and read this many
 !! particles per processor.
@@ -85,7 +85,7 @@ type (type_particle_list), intent(out) :: particle_list
 integer              :: my_id, n_cpu, ierr, ierr2, n_particles, info
 integer, allocatable, dimension(:) :: particles_per_proc
 
-! For MPI writing
+! For MPI reading
 integer                       :: fh, dtype, status(MPI_STATUS_SIZE)
 character*(*), parameter      :: datarep = 'native'
 

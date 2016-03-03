@@ -84,10 +84,14 @@ call broadcast_phys(my_id)                         ! physics parameters
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
 call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 
-! Boxsize is R,Z location and dPhi extent from phi=0
-boxcenter = (/2.83d0, 0.d0, 0.d0/)
-boxwidth = (/2.06d0, 3.8d0, TWOPI/)
-call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxcenter, boxwidth, n_particles)
+if (len_trim(particle_restart_file) .eq. 0) then
+  ! Boxsize is R,Z location and dPhi extent from phi=0
+  boxcenter = (/2.83d0, 0.d0, 0.d0/)
+  boxwidth = (/2.06d0, 3.8d0, TWOPI/)
+  call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxcenter, boxwidth, n_particles)
+else
+  call import_particles(particle_restart_file, particle_list)
+endif
 allocate(energy_list(particle_list%n_particles), momentum_list(particle_list%n_particles))
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 

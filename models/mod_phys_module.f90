@@ -228,6 +228,7 @@ module phys_module
   logical :: write_momenta  !< Output generalized toroidal momentum of all the particles every nout
   integer :: t_particles_begin !< Start JOREK restart file postprocessing
   integer :: t_particles_end !< end JOREK restart file postprocessing
+  character(len=80) :: particle_restart_file !< Particle restart file to read at the beginning of simulation
 
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
 

@@ -91,11 +91,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme,                                   &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
-                t_step_particles, n_step_particles,                 &
-                n_particles, atomic_mass_impurity,                  &
-                nout_particles, write_energies, write_momenta,      &
-                t_particles_begin, t_particles_end,                 &
-                particle_restart_file,                              &
                 corr_neg_temp_coef, corr_neg_dens_coef
 
 if (my_id .eq. 0) then

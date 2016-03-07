@@ -19,15 +19,49 @@ module mod_particles
   end type type_particle_list
 
   integer, parameter :: n_species      = 9         !< Maximum number of particle species
-  !> Input namelist parameters (initialisation)
-  integer :: species(N_species)
+  !> @name particle initialization parameters
+  integer :: species(N_species) = 0
   real*4  :: atomic_mass(N_species)
-  integer :: N_particles(N_species)
-  logical :: particle_GC(N_species)
-  character(len=80) :: location_accept_function(N_species)
-  real*4  :: location_accept_parameters(1:9,1:N_species)
-  !> Input namelist parameters (particle timestepping)
+  integer :: N_particles(N_species) = 0
+  logical :: particle_GC(N_species) = .false.
+  character(len=80) :: location_accept_function(N_species) = 'location_accept_any'
+  real*4  :: location_accept_parameters(1:9,1:N_species) = 0
+  !> @name particle timestepping input parameters
+  real*8  :: t_step_particles !< the time step for the advance of the particles
+  integer :: n_step_particles !< the number of time steps for the particles
+  integer :: nout_particles   !< number of particle timestep between each output file
+  logical :: write_energies !< Output energies of all the particles every nout
+  logical :: write_momenta  !< Output generalized toroidal momentum of all the particles every nout
+  integer :: t_particles_begin = -1 !< Start JOREK restart file postprocessing (with special value to use only jorek_restart here)
+  integer :: t_particles_end !< end JOREK restart file postprocessing
+  character(len=80) :: particle_restart_file !< Particle restart file to read at the beginning of simulation
 contains
+
+subroutine initialise_particle_parameters(filename)
+implicit none
+character(len=*), intent(in) :: filename
+integer :: ierr
+
+namelist /in2/ species, atomic_mass, N_particles, particle_GC, &
+    location_accept_function, location_accept_parameters, &
+    n_step_particles, t_step_particles, nout_particles, &
+    write_energies, write_momenta, t_particles_begin, t_particles_end
+
+! --- Read input parameters from namelist file or stdin.
+if (trim(filename) .ne. "__NO_FILENAME__" ) then
+   open(42, file=filename, status='old', action='read', iostat=ierr)
+  if ( ierr /= 0 ) then
+    write(*,*) 'ERROR: COULD NOT OPEN NAMELIST FILE "', trim(filename), '".'
+    stop
+  end if
+  read(42,in2)
+  close(42)
+else
+  read(5,in2)
+endif
+
+end subroutine initialise_particle_parameters
+
 
 function cross_product(a,b)
 !----------------------------------------

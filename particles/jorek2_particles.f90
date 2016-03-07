@@ -28,7 +28,7 @@ character*17 :: particle_file, restart_file
 real*8, dimension(:), allocatable :: energy_list, momentum_list
 
 interface
-  subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor, field_interp_time)
+  subroutine update_particles(my_id,particle_list,t_step,n_step,energy_list,momentum_list,toroidal_field_factor,field_interp_time)
     use mod_particles
     ! -- Routine parameters
     type (type_particle_list) :: particle_list      !< The particles we will march forward in time
@@ -58,6 +58,7 @@ if (my_id .eq. 0) then
 endif
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
+call initialise_particle_parameters("__NO_FILENAME__")
 call read_adas                                     ! read openadas data for ionisation, recombination and radiation rates
 call initialise_basis                              ! define the basis functions at the Gaussian points
 call coronal                                       ! calculate the coronal equilibria from the adas data
@@ -129,7 +130,8 @@ do i_step=i_begin,i_end
   endif
 
   ! Do substepping
-  call update_particles(my_id,particle_list,t_step_particles,nout_particles,energy_list,momentum_list,field_interp_time=(t_particles_begin .gt. -1))
+  call update_particles(my_id,particle_list,t_step_particles,nout_particles,&
+      energy_list,momentum_list,field_interp_time=(t_particles_begin .gt. -1))
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 

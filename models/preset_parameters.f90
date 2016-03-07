@@ -201,10 +201,6 @@ subroutine preset_parameters
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
 
-  t_step_particles  = 0.01
-  n_step_particles  = 0
-  t_particles_begin = -1 ! Special value to ignore other input files
-
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0

@@ -1,7 +1,11 @@
-n_particles      = 10000
+&in2
+species(1) = 74
+atomic_mass(1) = 183.84
+N_particles(1) = 10000
+
 n_step_particles = 250000
 t_step_particles = 0.00060
 nout_particles   = 2500
-atomic_mass_impurity = 183.84
 write_energies = .true.
 write_momenta = .true.
+&end

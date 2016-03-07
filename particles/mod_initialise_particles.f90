@@ -202,7 +202,7 @@ use nodes_elements
 implicit none
 
 real*8, intent(in)   :: R_in, Z_in, phi_in
-integer, intent(in)  :: i 
+integer, intent(in)  :: i
 type(type_particle), intent(out) :: particle
 integer, intent(out) :: ifail
 

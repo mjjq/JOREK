@@ -44,7 +44,7 @@ prepare_dir()
       mkdir ${1}_out
    fi
    cp template/* ${1}_out
-   awk -v r="$(cat $1)" '{gsub(/PASTE_HERE/,r)}1' template/jorek_in > ${1}_out/jorek_in
+   cat template/jorek_in $1 > ${1}_out/jorek_in
 }
 
 # Colors

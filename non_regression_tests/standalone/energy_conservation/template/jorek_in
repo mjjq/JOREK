@@ -14,8 +14,6 @@
   nstep   = 0
   nout    = 10 
 
-PASTE_HERE
-  
   time_evol_scheme= 'Gears'
 
   tgnum(2) = 1.,

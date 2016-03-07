@@ -219,17 +219,6 @@ module phys_module
   logical :: ASDEX_MGI
 
   !>  @name particle-related input parameters
-  real*8  :: t_step_particles !< the time step for the advance of the particles
-  integer :: n_step_particles !< the number of time steps for the particles
-  integer :: n_particles      !< the number of particles (to be initialised)
-  integer :: nout_particles   !< number of particle timestep between each output file
-  real*8  :: atomic_mass_impurity !< The atomic mass of the impurities
-  logical :: write_energies !< Output energies of all the particles every nout
-  logical :: write_momenta  !< Output generalized toroidal momentum of all the particles every nout
-  integer :: t_particles_begin !< Start JOREK restart file postprocessing
-  integer :: t_particles_end !< end JOREK restart file postprocessing
-  character(len=80) :: particle_restart_file !< Particle restart file to read at the beginning of simulation
-
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
 
   !> @name Free boundary extension

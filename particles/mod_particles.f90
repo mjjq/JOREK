@@ -34,7 +34,7 @@ module mod_particles
   logical :: write_momenta  !< Output generalized toroidal momentum of all the particles every nout
   integer :: t_particles_begin = -1 !< Start JOREK restart file postprocessing (with special value to use only jorek_restart here)
   integer :: t_particles_end !< end JOREK restart file postprocessing
-  character(len=80) :: particle_restart_file !< Particle restart file to read at the beginning of simulation
+  character(len=80) :: particle_restart_file = '' !< Particle restart file to read at the beginning of simulation
 contains
 
 subroutine initialise_particle_parameters(filename)

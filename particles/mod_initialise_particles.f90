@@ -112,7 +112,7 @@ if (my_id .eq. 0) then
   write(*,*) '**********************************'
 endif
 
-end
+end subroutine initialise_particles
 
 !> Returns whether or not a location is accepted according to location_accept_function(i)
 function accept_location(i,R,Z,phi)

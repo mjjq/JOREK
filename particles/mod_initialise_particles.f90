@@ -71,7 +71,7 @@ do i=1,N_species
 
   !$omp parallel do default(none) &
   !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
-  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i) &
+  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p) &
   !$omp   private(j, R, Z, phi, ifail, particle, ran3)
   do j=1,n_p(i)
     ifail = 1

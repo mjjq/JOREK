@@ -9,8 +9,8 @@ implicit none
 
 type (type_particle_list) :: particle_list
 integer    :: ierr, provided
-character*17 :: particle_file, restart_file
-integer    :: i_t, i
+character*17 :: particle_file
+integer    :: i
 
 
 call MPI_Init_thread(MPI_THREAD_SINGLE, provided, ierr)

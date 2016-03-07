@@ -1,8 +1,6 @@
 !> jorek2_particles is a post_processing tool for test particles
 !! It uses the fields in the file jorek_restart.rst
 !! Set t_step_particles and n_step_particles, and nout for output control
-!! Initialization of particles is set using the boxcenter and boxwidth variables
-!! (hardcoded now)
 program jorek2_particles
 
 use data_structure
@@ -11,6 +9,7 @@ use basis_at_gaussian
 use nodes_elements
 use mod_particles
 use mod_import_export_particles
+use mod_initialise_particles
 use openadas
 use clock_module
 use mpi_mod
@@ -19,11 +18,11 @@ implicit none
 
 
 type (type_particle_list) :: particle_list
+type (type_particle_list) :: particle_list_GC
 
 integer    :: i_tor, my_id, n_cpu, ierr, i_step, i_begin, i_end
 integer*4  :: rank, comm_size
 integer    :: required, provided, StatInfo
-real*8     :: boxwidth(3), boxcenter(3) !< size and center of box in RZphi space
 character*17 :: particle_file, restart_file
 
 real*8, dimension(:), allocatable :: energy_list, momentum_list
@@ -85,10 +84,7 @@ call update_neighbours(element_list,node_list)     ! update neighbour informatio
 call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 
 if (len_trim(particle_restart_file) .eq. 0) then
-  ! Boxsize is R,Z location and dPhi extent from phi=0
-  boxcenter = (/2.83d0, 0.d0, 0.d0/)
-  boxwidth = (/2.06d0, 3.8d0, TWOPI/)
-  call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list, boxcenter, boxwidth, n_particles)
+  call initialise_particles(my_id, n_cpu, particle_list, particle_list_GC)
 else
   call import_particles(particle_restart_file, particle_list)
 endif
@@ -107,7 +103,7 @@ if (t_particles_begin .gt. -1) then
   i_begin = t_particles_begin + 1 ! Nota bene! we will start at the second restart file as this contains the fields of the first too
   i_end   = t_particles_end
   ! Set nout_particles to the number of steps required to go t_step forward (floored)
-  nout_particles = tstep_n(1)/t_step_particles
+  nout_particles = int(tstep_n(1)/t_step_particles,4)
   ! Set t_step_particles to the closest integer divisor of t_step so we don't
   ! miss a substep
   t_step_particles = tstep_n(1)/nout_particles

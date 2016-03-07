@@ -40,7 +40,7 @@ write(*,*) '***************************************'
 call initialise_parameters(0, "__NO_FILENAME__")
 
 ! --- Preset parameters (only these are used!)
-i_plane                = 0	 ! if 0, count over the entire torus
+i_plane = 0 ! if 0, count over the entire torus
 ! if >= 1, count only in immediate surrounding of this plane, and produce output
 ! in part[0-9]+_{i_plane}.vtk
 ! if -1, do this for i_plane = 1,n_plane
@@ -120,10 +120,9 @@ type (type_particle_list), intent(in) :: particle_list
 character*(*), intent(in)             :: filename
 integer, intent(in)                   :: i_plane !< Sum up particles near this plane, or in all if 0
 
-integer :: nnos, nnoel, nel, i, j, ielm, inode, k
+integer :: nnos, i, j
 real*4,allocatable    :: xyz (:,:), scalars(:,:)
-real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
-real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
+real*8 :: R, R_s, R_t, Z, Z_s, Z_t
 character*12, allocatable :: scalar_names(:)
 integer :: i_elm
 

@@ -5,7 +5,9 @@
 #PBS -l nodes=1
 #PBS -l walltime=2:00:00
 # See README.md for details
-JOREK_DIR=~/jorek # absolute path required
+if [ -z "$JOREK_DIR" ]; then
+   JOREK_DIR=~/jorek # absolute path required
+fi
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 verbose=0 # Default verbosity
 analysis_only=0

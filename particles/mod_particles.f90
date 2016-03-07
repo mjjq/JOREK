@@ -1,27 +1,32 @@
 module mod_particles
-
   use parameters
 
   type type_particle
-
-    real*8  :: st(n_dim)        !< particle position in the finite element (i_elm)
-    real*8  :: x(3)             !< particle position in real space (R,Z,phi) [m] at t
-    real*8  :: v(3)             !< particle velocity in (R,Z,phi) [m/s * sqrt(mu0 rho0)] at t-dt/2
-    real*8  :: mass             !< mass [atomic mass units]
-    real*8  :: weight           !< weight (i.e. number of particles)
-    integer :: q                !< charge [e]
-    integer :: i_elm            !< the index of the element containing the particle in the element_list
-    logical :: lost             !< particle is active or lost
-
+    real*8    :: st(n_dim)        !< particle position in the finite element (i_elm)
+    real*8    :: x(3)             !< particle position in real space (R,Z,phi) [m] at t
+    real*8    :: v(3)             !< particle velocity in (R,Z,phi) [m/s * sqrt(mu0 rho0)] at t-dt/2
+    real*4    :: mass             !< mass [atomic mass units]
+    real*4    :: weight           !< weight (i.e. number of particles)
+    integer   :: i_elm            !< the index of the element containing the particle in the element_list
+    integer*1 :: q                !< charge [e]
+    integer*1 :: species          !< Atomic number
+    logical*1 :: lost             !< particle is active or lost
   end type type_particle
 
   type type_particle_list
-
-    integer                                         :: n_particles                 !< the number of particles in the list
-    type (type_particle), dimension(:), allocatable :: particle   !< an allocatable list of particles
-
+    integer                                         :: n_particles  !< the number of particles in the list
+    type (type_particle), dimension(:), allocatable :: particle     !< an allocatable list of particles
   end type type_particle_list
 
+  integer, parameter :: n_species      = 9         !< Maximum number of particle species
+  !> Input namelist parameters (initialisation)
+  integer :: species(N_species)
+  real*4  :: atomic_mass(N_species)
+  integer :: N_particles(N_species)
+  logical :: particle_GC(N_species)
+  character(len=80) :: location_accept_function(N_species)
+  real*4  :: location_accept_parameters(1:9,1:N_species)
+  !> Input namelist parameters (particle timestepping)
 contains
 
 function cross_product(a,b)
@@ -48,16 +53,15 @@ function get_particle_derived_type() result(dtype_out)
 
   implicit none
 
-  integer, dimension(3) :: offsets, types, blockcounts
-  integer               :: ierr, dtype_out, extent
+  integer               :: ierr, dtype_out
   integer, save         :: dtype
   logical, save         :: dtype_set = .false.
 
-  integer :: len(8) = (/n_dim,3,3,1,1,1,1,1/), t(8) = (/ &
-    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-    MPI_INTEGER,MPI_INTEGER,MPI_LOGICAL/)
+  integer :: len(9) = (/n_dim,3,3,1,1,1,1,1,1/), t(9) = (/ &
+    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL4,MPI_REAL4, &
+    MPI_INTEGER,MPI_INTEGER1,MPI_INTEGER1,MPI_LOGICAL/)
 
-  integer(kind=MPI_ADDRESS_KIND) :: base, disp(8)
+  integer(kind=MPI_ADDRESS_KIND) :: base, disp(9)
   type(type_particle) :: particle
 
   dtype_out = dtype
@@ -70,15 +74,16 @@ function get_particle_derived_type() result(dtype_out)
   call MPI_Get_address(particle%v,      disp(3), ierr)
   call MPI_Get_address(particle%mass,   disp(4), ierr)
   call MPI_Get_address(particle%weight, disp(5), ierr)
-  call MPI_Get_address(particle%q,      disp(6), ierr)
-  call MPI_Get_address(particle%i_elm,  disp(7), ierr)
-  call MPI_Get_address(particle%lost,   disp(8), ierr)
+  call MPI_Get_address(particle%i_elm,  disp(6), ierr)
+  call MPI_Get_address(particle%q,      disp(7), ierr)
+  call MPI_Get_address(particle%species,disp(8), ierr)
+  call MPI_Get_address(particle%lost,   disp(9), ierr)
 
   ! Rebase to particle memory beginning
   disp = disp - base
 
   ! Commit the structured type
-  call MPI_Type_create_struct(8, len, disp, t, dtype, ierr)
+  call MPI_Type_create_struct(9, len, disp, t, dtype, ierr)
   call MPI_Type_commit(dtype, ierr)
 
   ! Set the save bit

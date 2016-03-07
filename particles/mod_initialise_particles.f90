@@ -96,9 +96,9 @@ do i=1,N_species
     enddo
     ! Save the result
     if (particle_GC(i)) then
-      particle_list_GC%particle(i) = particle
+      particle_list_GC%particle(j) = particle
     else
-      particle_list%particle(i) = particle
+      particle_list%particle(j) = particle
     endif
   enddo
   !$omp end parallel do
@@ -218,7 +218,7 @@ if (ifail .eq. 0) then
   particle%st      = (/ s, t /)                    !< particle position in the finite element (i_elm)
   particle%i_elm   = i_elm                         !< element containing this particle
   particle%mass    = atomic_mass(i)                !< mass in AMU
-  particle%species = int(species(i),1)             !< Type of particle
+  particle%label   = int(i,1)                      !< Type of particle
   particle%weight  = 1       !< weight (i.e. number of particles) TODO calculate and set number density here
   particle%lost    = .false.                       !< active particle
 endif
@@ -237,7 +237,7 @@ implicit none
 type(type_particle), intent(inout) :: particle
 integer, intent(out) :: ifail
 
-integer :: i_var(4), i_elm
+integer :: i_var(4)
 real*8, dimension(4) :: P, P_s, P_t, P_phi, ran4
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: background_density, background_kbT, background_kelvin, V_thermal
@@ -246,14 +246,14 @@ real*8 :: Z_coronal, radiation_coronal
 real*8 :: mass_main_ion
 
 i_var = (/ 1, 5, 6, 7 /)
-call interp_PRZ(node_list,element_list,i_elm,i_var,size(i_var),particle%st(1),particle%st(2),particle%x(3),&
+call interp_PRZ(node_list,element_list,particle%i_elm,i_var,size(i_var),particle%st(1),particle%st(2),particle%x(3),&
     P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
 background_density = P(2) * 1d20                             ! plasma density [1/m^3]
-background_kbT     = P(3) /(MU_ZERO*central_density*1.d20)   ! plasma temperature [J]
+background_kbT     = P(3) /(MU_ZERO*central_density*1.d20)   ! plasma temperature [J] TODO check why no mass_proton
 background_kelvin  = background_kbT / EL_CHG                 ! plasma temperature [K]
 
-V_thermal = sqrt(background_kbT / (atomic_mass(particle%species)*ATOMIC_MASS_UNIT))      ! [m/s]
+V_thermal = sqrt(background_kbT / (particle%mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
 call random_number(ran4)
 

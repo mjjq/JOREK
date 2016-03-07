@@ -9,7 +9,7 @@ module mod_particles
     real*4    :: weight           !< weight (i.e. number of particles)
     integer   :: i_elm            !< the index of the element containing the particle in the element_list
     integer*1 :: q                !< charge [e]
-    integer*1 :: species          !< Atomic number
+    integer*1 :: label            !< Particle type number (i in species(i))
     logical*1 :: lost             !< particle is active or lost
   end type type_particle
 
@@ -110,7 +110,7 @@ function get_particle_derived_type() result(dtype_out)
   call MPI_Get_address(particle%weight, disp(5), ierr)
   call MPI_Get_address(particle%i_elm,  disp(6), ierr)
   call MPI_Get_address(particle%q,      disp(7), ierr)
-  call MPI_Get_address(particle%species,disp(8), ierr)
+  call MPI_Get_address(particle%label,  disp(8), ierr)
   call MPI_Get_address(particle%lost,   disp(9), ierr)
 
   ! Rebase to particle memory beginning

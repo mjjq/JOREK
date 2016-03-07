@@ -17,7 +17,7 @@ use mod_particles
 implicit none
 
 ! -- Routine parameters
-type (type_particle_list) :: particle_list      !< The particles we will march forward in time
+type (type_particle_list), intent(inout) :: particle_list      !< The particles we will march forward in time
 real*8,  intent(in)       :: t_step             !< The size of each timestep
 integer, intent(in)       :: n_step             !< The number of timesteps we will perform
 integer, intent(in)       :: my_id              !< Id of the current process

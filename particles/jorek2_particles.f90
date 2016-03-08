@@ -57,8 +57,10 @@ if (my_id .eq. 0) then
   write(*,*) '***************************************'
 endif
 
-call initialise_parameters(my_id, "__NO_FILENAME__")
-call initialise_particle_parameters("__NO_FILENAME__")
+! Filename hardcoded here because we can only read one file from stdin easily
+! (closing flushes)
+call initialise_parameters(my_id, "in_jorek")
+call initialise_particle_parameters(my_id, "__NO_FILENAME__")
 call read_adas                                     ! read openadas data for ionisation, recombination and radiation rates
 call initialise_basis                              ! define the basis functions at the Gaussian points
 call coronal                                       ! calculate the coronal equilibria from the adas data
@@ -81,6 +83,7 @@ endif
 call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 call broadcast_phys(my_id)                         ! physics parameters
+call broadcast_particle_parameters(my_id)          ! particle parameters
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
 call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 

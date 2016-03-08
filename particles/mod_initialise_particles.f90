@@ -148,7 +148,7 @@ real*4, intent(in) :: p(1:9)
 real*8 :: joined_gaussian
 
 real*8 :: R_out, Z_out, s, t
-integer :: i_elm, ifail
+integer :: i_elm, ifail, variable
 real*8 :: P_s, P_t, P_phi, R_s, R_t, Z_s, Z_t ! Useless variables
 real*8 :: x
 
@@ -162,8 +162,14 @@ select case(int(p(1)))
     x = phi
   case DEFAULT
     call find_RZ(node_list,element_list,R,Z,R_out,Z_out,i_elm,s,t,ifail)
+    ! Select the mhd variable
+    variable = int(p(1))
+    if (variable .le. 0 .or. variable .gt. n_var) then
+      write(*,*) "ERROR: invalid MHD variable selected: ", variable
+      call exit(1)
+    endif
     if (ifail .eq. 0) then
-      call interp_PRZ(node_list,element_list,i_elm,p(1),1,s,t,phi,x,P_s,P_t,P_phi,R_out,R_s,R_t,Z_out,Z_s,Z_t)
+      call interp_PRZ(node_list,element_list,i_elm,variable,1,s,t,phi,x,P_s,P_t,P_phi,R_out,R_s,R_t,Z_out,Z_s,Z_t)
     else
       ! Outside of domain
       joined_gaussian = 0.d0

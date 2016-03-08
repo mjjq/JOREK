@@ -37,9 +37,10 @@ module mod_particles
   character(len=80) :: particle_restart_file = '' !< Particle restart file to read at the beginning of simulation
 contains
 
-subroutine initialise_particle_parameters(filename)
+subroutine initialise_particle_parameters(my_id, filename)
 implicit none
 character(len=*), intent(in) :: filename
+integer, intent(in) :: my_id
 integer :: ierr
 
 namelist /in2/ species, atomic_mass, N_particles, particle_GC, &
@@ -47,20 +48,84 @@ namelist /in2/ species, atomic_mass, N_particles, particle_GC, &
     n_step_particles, t_step_particles, nout_particles, &
     write_energies, write_momenta, t_particles_begin, t_particles_end
 
-! --- Read input parameters from namelist file or stdin.
-if (trim(filename) .ne. "__NO_FILENAME__" ) then
-   open(42, file=filename, status='old', action='read', iostat=ierr)
-  if ( ierr /= 0 ) then
-    write(*,*) 'ERROR: COULD NOT OPEN NAMELIST FILE "', trim(filename), '".'
-    stop
-  end if
-  read(42,in2)
-  close(42)
-else
-  read(5,in2)
+if (my_id .eq. 0) then
+  ! --- Read input parameters from namelist file or stdin.
+  if (trim(filename) .ne. "__NO_FILENAME__" ) then
+     open(42, file=filename, status='old', action='read', iostat=ierr)
+    if ( ierr /= 0 ) then
+      write(*,*) 'ERROR: COULD NOT OPEN NAMELIST FILE "', trim(filename), '".'
+      stop
+    end if
+    read(42,in2)
+    close(42)
+  else
+    read(5,in2)
+  endif
+endif
+end subroutine initialise_particle_parameters
+
+subroutine broadcast_particle_parameters(my_id)
+use mpi_mod
+implicit none
+
+! --- Routine parameters
+integer, intent(in) :: my_id
+
+! --- internal variables
+integer                :: ierr, INT_EXT, IDBL_EXT, ISGL_EXT, ILOG_EXT, CHAR_EXT, position, bufsize
+character, allocatable :: buffer(:)
+
+!----------------------------------- one line would be enough if only MPI_TYPE_STRUCT would work on IXIA
+!call MPI_BCAST(phys_list,1,MPI_phys,0,MPI_COMM_WORLD,ierr)
+call MPI_PACK_SIZE(1,MPI_REAL8,MPI_COMM_WORLD,IDBL_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_REAL4,MPI_COMM_WORLD,ISGL_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
+call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
+
+bufsize = ( (N_species*2+4)*INT_EXT + (N_species*(9+1))*ISGL_EXT + 1*IDBL_EXT + (N_species+2)*ILOG_EXT + (80*(N_species+1))*CHAR_EXT)
+allocate(buffer(bufsize))
+
+if (my_id .eq. 0) then
+  position = 0
+  call MPI_PACK(species,                     N_species,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(atomic_mass,                 N_species,MPI_REAL4    ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(N_particles,                 N_species,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(particle_GC,                 N_species,MPI_LOGICAL  ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(location_accept_function, N_species*80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(location_accept_parameters,  N_species*9,  MPI_REAL4,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
+  call MPI_PACK(t_step_particles,                    1,MPI_REAL8    ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(n_step_particles,                    1,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(nout_particles,                      1,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(write_energies,                      1,MPI_LOGICAL  ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(write_momenta,                       1,MPI_LOGICAL  ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(t_particles_begin,                   1,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(t_particles_end,                     1,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(particle_restart_file,              80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+endif
+call MPI_BCAST(buffer,bufsize,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
+if (my_id .ne. 0) then
+  position = 0
+  call MPI_UNPACK(buffer,bufsize,position,species,                      N_species,MPI_INT      ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,atomic_mass,                  N_species,MPI_REAL4    ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,N_particles,                  N_species,MPI_INT      ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particle_GC,                  N_species,MPI_LOGICAL  ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,location_accept_function,  N_species*80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,location_accept_parameters, N_species*9,MPI_REAL4    ,MPI_COMM_WORLD,ierr)
+
+  call MPI_UNPACK(buffer,bufsize,position,t_step_particles,             1,MPI_REAL8    ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,n_step_particles,             1,MPI_INT      ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,nout_particles,               1,MPI_INT      ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,write_energies,               1,MPI_LOGICAL  ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,write_energies,               1,MPI_LOGICAL  ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,t_particles_begin,            1,MPI_INT      ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,t_particles_end,              1,MPI_INT      ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particle_restart_file,       80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
 endif
 
-end subroutine initialise_particle_parameters
+deallocate(buffer)
+end subroutine broadcast_particle_parameters
 
 
 function cross_product(a,b)
@@ -93,7 +158,7 @@ function get_particle_derived_type() result(dtype_out)
 
   integer :: len(9) = (/n_dim,3,3,1,1,1,1,1,1/), t(9) = (/ &
     MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL4,MPI_REAL4, &
-    MPI_INTEGER,MPI_INTEGER1,MPI_INTEGER1,MPI_LOGICAL/)
+    MPI_INTEGER,MPI_INTEGER1,MPI_INTEGER1,MPI_INTEGER1/) ! MPI_INTEGER1 == MPI_LOGICAL1
 
   integer(kind=MPI_ADDRESS_KIND) :: base, disp(9)
   type(type_particle) :: particle

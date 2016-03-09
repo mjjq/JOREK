@@ -734,13 +734,7 @@ do ms=1, n_gauss
 
                       + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
 
-                      - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac &
-
-                      + (1.d0 - delta_n_convection) * (   &
-
-                               + BigR**3*(r0*rn0*Sion_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep &
-                               - BigR**3*(r0*r0 *Srec_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep &
-                      )  
+                      - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
 
 
 !###################################################################################################
@@ -1040,15 +1034,8 @@ do ms=1, n_gauss
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &
 
                            + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)     &
-                                     * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   &
-
-                           + (1.d0 - delta_n_convection) * (  &
-                           - BigR**3 * (r0*rn0*Sion_T) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
-
-                           + BigR**3 * (r0* r0*Srec_T) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
-                           )
+                                     * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   
 			   
-
                  amat_23 = - v * (ps0_s * zj_t  - ps0_t * zj_s)                           * theta * tstep  &
                            + eps_cyl * F0 / BigR * v * zj_p  * xjac                       * theta * tstep
 
@@ -1078,15 +1065,7 @@ do ms=1, n_gauss
                                        * xjac * theta * tstep                                          &
 
                          + TG_num2 * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
-                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
-
-                                     + (1.d0 - delta_n_convection) * (  &
-
-			             - BigR**3 * (rho* rn0 * Sion_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-
-                                     + BigR**3 * (rho * 2.d0 * r0 * Srec_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                                     )
-
+                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
 
                  amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                            - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
@@ -1099,15 +1078,7 @@ do ms=1, n_gauss
 		            + v * tauIC * BigR**4 * ( (u0_xy * (T_xx * r0 + 2.d0 * T_x * r0_x + T * r0_xx         &
 			                                     - T_yy*r0 - 2.d0 * T_y * r0_y - T * r0_yy))       &			 
 			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
-						 * xjac * theta * tstep &
-
-                           + (1 - delta_n_convection) * (  &
- 
-                           - BigR**3 * (r0 * rn0 * dSion_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                           + BigR**3 * (r0 * r0 * dSrec_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep   &
-                           )
-
-                 amat_28 =  - (1.d0 - delta_n_convection) * BigR**3 * (r0 * rhon * Sion_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep 
+						 * xjac * theta * tstep 
 
 !###################################################################################################
 !#  equation 3                                                                                     #

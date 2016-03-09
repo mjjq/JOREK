@@ -873,8 +873,6 @@ do ms=1, n_gauss
                       - v * F0 / BigR * rn0 * vpar0_p                                                             * xjac * tstep &
                       )                                                                                                          &
 
-	              - BigR * v * r0 * rn0 * Sion_T                                                              * xjac * tstep &  
-		      + BigR * v * r0 * r0 * Srec_T                                                               * xjac * tstep &
                       + BigR * v * source_mgi                                                                     * xjac * tstep &
                       + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta
 
@@ -1415,14 +1413,8 @@ do ms=1, n_gauss
                                               + v * BigR**2 * ( rn0_s * u_t - rn0_t * u_s)                         * theta * tstep &
                                               + v * 2.d0 * BigR * rn0 * u_y                                 * xjac * theta * tstep )
 
-                amat_85 = + BigR * v * rn0 * Sion_T * rho                                              * xjac * theta * tstep &
-                          - BigR * v * 2d0 * r0 * rho * Srec_T                                         * xjac * theta * tstep 
-
                ! We do not include the term coming from div(rhon * v_star_i) because they are prop. to rho_n/rho, because they may cause problems
-               ! in areas where rho is small.                 
-		 
-		amat_86 = + BigR * v * r0 * rn0 * dSion_dT * T                                        * xjac * theta * tstep &
-                          - BigR * v * r0 * r0  * dSrec_dT * T                                        * xjac * theta * tstep       
+               ! in areas where rho is small.                   
                  
                 amat_87 = + delta_n_convection * ( v * F0 / BigR * Vpar * rn0_p                                             * xjac * theta * tstep &
                                                  + v * Vpar * (rn0_s * ps0_t - rn0_t * ps0_s)                                      * theta * tstep &
@@ -1439,8 +1431,7 @@ do ms=1, n_gauss
                                                  + v * F0 / BigR * Vpar0 * rhon_p                             * xjac * theta * tstep &
                                                  + v * F0 / BigR * rhon * vpar0_p                           * xjac * theta * tstep ) &
                                    
-		           + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y + Dn0p * rhon_p * v_p*eps_cyl**2/BigR**2) * xjac * theta * tstep &   
-		           + BigR * v * r0 * rhon* Sion_T                                                                * xjac * theta * tstep     
+		           + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y + Dn0p * rhon_p * v_p*eps_cyl**2/BigR**2) * xjac * theta * tstep   
 
 
                  kl1 = index_kl

@@ -855,13 +855,7 @@ do ms=1, n_gauss
 
                       - TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
                              * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                             * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep &
-
-                      + (1.d0 - delta_n_convection) * (     &
-                      - v *(r0 * rn0 * Sion_T) * vpar0 * BB2 * BigR                        * xjac * tstep &
-
-                      + v *(r0 * r0  * Srec_T) * vpar0 * BB2 * BigR                        * xjac * tstep &
-                      )  
+                             * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep 
 
 !################################################################################################### 
 !#  equation 8 (neutral density equation)                                                          # 
@@ -1354,14 +1348,7 @@ do ms=1, n_gauss
             
                          + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
                                    * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
-                                   * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep &
-
-                         + (1.d0 - delta_n_convection) * (  &
-
-	                 + v *(r0 * rn0 * Sion_T) * vpar0 * BB2_psi * BigR         * xjac * theta * tstep  &
-
-                         - v *(r0 * r0  * Srec_T) * vpar0 * BB2_psi * BigR         * xjac * theta * tstep  &
-                         )
+                                   * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep
 			 
 
                  amat_72 = 0.d0  
@@ -1381,24 +1368,12 @@ do ms=1, n_gauss
                
                            + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                                     * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac + F0 / BigR * rho_p)* xjac * theta * tstep*tstep &
-
-           		   + (1.d0 - delta_n_convection) * (  &
-
-			   + v *(rho * rn0 * Sion_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
-                           - v *(2.d0 * r0 * rho * Srec_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
-                           )
+                                     * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac + F0 / BigR * rho_p)* xjac * theta * tstep*tstep 
 			   
 
                  amat_76 = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                     * theta * tstep &
                            + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
-                           + v * F0 / BigR * (T_p * r0 + T * r0_p)                  * xjac * theta * tstep &
-
-			   + (1.d0 - delta_n_convection) * (  &
-
-			   + v *(r0 * rn0 * dSion_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep &
-                           - v *(r0 * r0  * dSrec_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep &
-                           )
+                           + v * F0 / BigR * (T_p * r0 + T * r0_p)                  * xjac * theta * tstep 
 
                  amat_77 = v * Vpar * abs(r0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
                          + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR        * xjac  * theta * tstep &
@@ -1426,17 +1401,7 @@ do ms=1, n_gauss
              
                          + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
                                    * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac + F0 / BigR * vpar_p) / BigR                        &
-                                   * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep   &
-
-                         + (1.d0 - delta_n_convection) * (  &
-
-                         + v *(r0 * rn0 * Sion_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
-                         - v *(r0 * r0  * Srec_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
-                         )
-
-
-                 amat_78 = + (1.d0 - delta_n_convection) * v *(r0 * rhon * Sion_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep
-
+                                   * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep   
 
 !################################################################################################### 
 !#  equation 8   neutral density equation                                                          # 

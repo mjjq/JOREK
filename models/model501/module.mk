@@ -1,4 +1,4 @@
-DIR = models/model500
+DIR = models/model501
 
 ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/initialise_parameters.f90		\

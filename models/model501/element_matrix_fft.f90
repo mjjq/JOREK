@@ -796,7 +796,7 @@ do ms=1, n_gauss
 !#  equation 5   (density equation)                                                                #
 !###################################################################################################
 
-         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet)                      * xjac * tstep &
+         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet + source_mgi)         * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &
                     + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep &
                     - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep &

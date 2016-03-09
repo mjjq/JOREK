@@ -816,9 +816,7 @@ do ms=1, n_gauss
                                                  * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep          &
                     - TG_num5 * 0.25d0 / BigR * vpar0**2                                                      &
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
-                              * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep       &
-                    + v * r0 * rn0 * BigR * Sion_T                                              * xjac * tstep&
-                    - v * r0 * r0  * BigR * Srec_T                                              * xjac * tstep
+                              * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep       
 		    
  
 
@@ -1208,10 +1206,7 @@ do ms=1, n_gauss
 
                      + TG_num5 * 0.25d0 / BigR * vpar0**2                                                        &
                                * (rho_x * ps0_y - rho_y * ps0_x )                             &
-                               * ( v_x * ps0_y -  v_y * ps0_x   ) * xjac * theta * tstep * tstep &
-     
-                     - v * rho * rn0 * BigR * Sion_T * xjac * theta * tstep &
-                     + v * rho * 2.d0 * r0 * BigR * Srec_T * xjac * theta * tstep
+                               * ( v_x * ps0_y -  v_y * ps0_x   ) * xjac * theta * tstep * tstep 
 
 
              amat_55_k = + (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rho          * xjac * theta * tstep &
@@ -1234,9 +1229,7 @@ do ms=1, n_gauss
                                * ( + F0 / BigR * rho_p)                                                          &
                                * ( + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-             amat_56   = - v * 2.d0 * tauIC * (T_y * r0 + T*r0_y) * BigR                           * xjac * theta * tstep &
-	                 - v * BigR * r0 * rn0 * dSion_dT * T                                       * xjac * theta * tstep   &
-                           + v * BigR * r0 * r0 *  dSrec_dT * T                                          * xjac * theta * tstep
+             amat_56   = - v * 2.d0 * tauIC * (T_y * r0 + T*r0_y) * BigR                           * xjac * theta * tstep 
 
              amat_57   = + v * F0 / BigR * Vpar * r0_p                                             * xjac * theta * tstep &
                          + v * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                                       * theta * tstep &
@@ -1252,7 +1245,6 @@ do ms=1, n_gauss
 
              amat_57_n = + v * r0 * F0 / BigR * vpar_p                                             * xjac * theta * tstep
 	     
-	         amat_58 = - BigR * v * r0 * Sion_T * rhon                                              * xjac * theta * tstep
 
 !###################################################################################################
 !#  equation 6   (energy equation)                                                                 #

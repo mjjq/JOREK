@@ -758,6 +758,10 @@ do ms=1, n_gauss
                     + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep &
                     - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep &
                     - D_prof * BigR  * (v_x*r0_x + v_y*r0_y + v_p*r0_p * eps_cyl**2 /BigR**2 ) * xjac * tstep &
+
+	            + BigR* (-Dn0x*rn0_x*v_x - Dn0y*rn0_y*v_y - Dn0p*rn0_p*v_p*eps_cyl**2/BigR**2)            &  
+                                                                                               * xjac * tstep &  
+
                     - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
                     - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
                     - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep &
@@ -1147,6 +1151,8 @@ do ms=1, n_gauss
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                       &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 
+                 amat_58 = + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y + Dn0p * rhon_p * v_p*eps_cyl**2/BigR**2)    &
+                                                                                                     * xjac * theta * tstep
 
 !###################################################################################################
 !#  equation 6   energy equation                                                                   #

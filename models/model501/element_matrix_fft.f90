@@ -62,8 +62,8 @@ real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, ama
 real*8     :: amat_51, amat_51_n, amat_52, amat_55, amat_56, amat_57, amat_57_k
 real*8     :: amat_61, amat_62, amat_63, amat_65, amat_66, amat_67, amat_65_k, amat_65_kn, amat_67_k, amat_16, amat_13
 real*8     :: amat_71, amat_72, amat_75, amat_76, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
-real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n, amat_57_kn, amat_75_k
-real*8     :: amat_77, amat_77_k, amat_77_n, amat_77_kn
+real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n, amat_57_kn, amat_58_kn
+real*8     :: amat_75_k, amat_77, amat_77_k, amat_77_n, amat_77_kn
 real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 logical    :: xpoint2
@@ -801,6 +801,7 @@ do ms=1, n_gauss
                     + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep &
                     - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep &
                     - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep &
+                    + BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                        * xjac * tstep &  
                     - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
                     - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
                     - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep &
@@ -822,6 +823,7 @@ do ms=1, n_gauss
 
          rhs_ij_5_k =  - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho            * xjac * tstep &
                        - D_prof * BigR  * (                  v_p*r0_p * eps_cyl**2 /BigR**2 )  * xjac * tstep &
+                        + BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                     * xjac * tstep & 
 
                     - TG_num5 * 0.25d0 / BigR * vpar0**2 &
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
@@ -1238,6 +1240,9 @@ do ms=1, n_gauss
 
              amat_57_n = + v * r0 * F0 / BigR * vpar_p                                             * xjac * theta * tstep
 	     
+             amat_58   = + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                      * xjac * theta * tstep
+
+             amat_58_kn = + Dn0p * rhon_p * v_p*eps_cyl**2/BigR * xjac * theta * tstep  
 
 !###################################################################################################
 !#  equation 6   (energy equation)                                                                 #

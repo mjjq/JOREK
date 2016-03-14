@@ -14,7 +14,7 @@ cd  ${TESTDIR}
 testcasedir=`readlink -f ${PWD}`
 source ./settings.sh
 
-VERSION="_`date "+%F;%T;%N" | md5sum | sed -e 's/^ *//' -e 's/ .*//'`"
+VERSION="_`md5sum end.h5 | sed -e 's/^ //' -e 's/ .*$//'`"
 echo ${VERSION} > .version
 
 testname=$(basename $testcasedir)

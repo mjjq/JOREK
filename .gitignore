@@ -44,3 +44,4 @@ forcheck*
 rst_bin2hdf5
 rst_hdf52bin
 tmp[1-9]*
+.version

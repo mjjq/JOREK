@@ -10,17 +10,22 @@ if [ ! -f ${TESTDIR}/settings.sh ]; then
   exit 1
 fi
 
-echo "Creating tarball ${TESTDIR}.tgz"
 cd  ${TESTDIR}
 testcasedir=`readlink -f ${PWD}`
 source ./settings.sh
 
-testname=$(basename $testcasedir)
-tar cvzf ${testname}.tgz begin.h5 end.h5                                           || exit 1
+VERSION="_`date "+%F;%T;%N" | md5sum | sed -e 's/^ *//' -e 's/ .*//'`"
+echo ${VERSION} > .version
 
-echo "Uploading ${TESTDIR}.tgz"
+testname=$(basename $testcasedir)
+TGZFILE=${testname}${VERSION}.tgz
+
+echo "Creating tarball ${TGZFILE}"
+tar cvzf ${TGZFILE} begin.h5 end.h5                                           || exit 1
+
+echo "Uploading ${TGZFILE}"
 TESTNAME=$(basename $TESTDIR)
-curl -s -u nrt:nrt_21745XtL -T ${TESTNAME}.tgz  ${DAV_URL}
+curl -s -u nrt:nrt_21745XtL -T ${TGZFILE} ${DAV_URL}
 if [ $? -eq 0 ]; then
   printf "Success\n"
   exit 0

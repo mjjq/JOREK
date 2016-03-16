@@ -130,7 +130,6 @@ program JOREK2
   character*8              :: label, itlabel
   character*14             :: fileout_bin
   character*13             :: fileout_h5
-  character*50             :: version_control
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
@@ -169,11 +168,6 @@ program JOREK2
   integer :: resultlength
   
   !***********************************************************************
-  !*          Proces Command line arguments                              *
-  !***********************************************************************
-  call jorek2help()  
-  
-  !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
   ! --- Initialize OpenMP threads before MPI_init
@@ -192,38 +186,20 @@ required = 0
 
   call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
   
-  ! --- Determine ID of each MPI proc
-  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
-  my_id = rank
-
-  CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
-  write(*,'(A,I4,A)') "#MPI id, ProcessorName ", rank, name
-    
   ! --- Determine number of MPI procs
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
   n_cpu = comm_size
-
-  if (my_id == 0) then
-    write(*,*) '*************************************************'
-    write(*,*) '*   3D Reduced MHD : JOREK_2.0                  *'
-    write(*,*) '*************************************************'
-    write(*,*) ' MPI processes       : ', n_cpu
-    write(*,*) ' OpenMP threads      : ', nbthreads
-    write(*,*) ' RCS revision        : ', RCS_VERSION
-    write(version_control,'(A)') trim(RCS_VERSION)
-    111 format(2x,a,': ',a)
-    write(*,111) 'compile_time        ', trim(adjustl(compile_time))
-    write(*,111) 'compile_user        ', trim(adjustl(compile_user))
-    write(*,111) 'compile_machine     ', trim(adjustl(compile_machine))
-    write(*,111) 'compile_dir         ', trim(adjustl(compile_dir))
-    write(*,111) 'compile_command     ', trim(adjustl(compile_command))
-    write(*,111) 'compile_flags       ', trim(adjustl(compile_flags))
-    write(*,111) 'compile_includes    ', trim(adjustl(compile_includes))
-    write(*,111) 'compile_defines     ', trim(adjustl(compile_defines))
-    write(*,111) 'compile_libs        ', trim(adjustl(compile_libs))
-    write(*,111) 'compile_modules     ', trim(adjustl(compile_modules))
-  end if
-
+  
+  ! --- Determine ID of each MPI proc
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+  my_id = rank
+  
+  ! --- Process command line arguments
+  if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)  
+  
+  CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
+  write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', rank, ': ', name
+    
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
 

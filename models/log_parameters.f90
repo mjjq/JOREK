@@ -38,9 +38,7 @@ character(len=10) :: mode_num
 logical           :: short2
 
 ! --- Text out format
-200 format(79('*'))
-201 format('* ',75('-'),' *')
-!202 format('* ',A,)
+200 format(' ',79('*'))
 112 format(A, i12)
   
 if (present(short)) then
@@ -53,11 +51,9 @@ if (my_id == 0) then
 
   write(*,*)
   write(*,200)
-  write(*,'(A)') '*          JOREK build Info                                                   *'
+  write(*,*) '* Preprocessor Options                                                        *'
   write(*,200)
 
-  write(*,201)
-  write(*,'(A)') '* --- Preprocessor Options                                                    *'
   write(*,'(1x,a)',advance='no') ' USE_MUMPS           : '
 #ifdef USE_MUMPS
   write(*,*) 'on'
@@ -135,8 +131,10 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-  write(*,201)
-  write(*,'(A)') '* --- Hard-Coded Parameters:                                                  *'
+  write(*,*)
+  write(*,200)
+  write(*,*) '* Hard-Coded Parameters:                                                      *'
+  write(*,200)
   write(*,  112) ' jorek_model    =  ', jorek_model       
   write(*,  112) ' n_var          =  ', n_var             
   write(*,  112) ' n_dim          =  ', n_dim             
@@ -151,8 +149,11 @@ if (my_id == 0) then
   write(*,  112) ' n_degrees      =  ', n_degrees         
   write(*,  112) ' nref_max       =  ', nref_max          
   write(*,  112) ' n_ref_list     =  ', n_ref_list        
-  write(*,201)
-  write(*,'(A)') '* --- Implemented variables:                                                  *'
+
+  write(*,*)
+  write(*,200)
+  write(*,*) '* Simulation variables:                                                       *'
+  write(*,200)
 
   ! determine number of rows needed to show all variable_names
   n_rows = ceiling(n_var/4.0)
@@ -162,7 +163,7 @@ if (my_id == 0) then
   ! depending on it this variable_name exist. The last write is the eastectics
   ! on the right.
   do i = 0,n_rows-1
-    write(*,'(A)',advance='no') '*      '
+    write(*,'(A)',advance='no') ' *      '
     do j = (i*4) + 1, (i*4) + 4
       if ( j .gt. n_var) then
         write(*,'(11x)',advance='no')
@@ -175,8 +176,6 @@ if (my_id == 0) then
     end do
     write(*,'(A)') '      *'
   end do
-
-  write(*,'(A)') '*                                                                             *'
   write(*,200)
 
   ! stop function when case this log function is called from command line function
@@ -184,7 +183,7 @@ if (my_id == 0) then
 
   write(*,*)
   write(*,200)
-  write(*,'(A)') '* NAMELIST INPUT PARAMETERS                                                   *'
+  write(*,*) '* NAMELIST INPUT PARAMETERS                                                   *'
   write(*,200)
   write(*,CHAR_FMT) 'time_evol_scheme      ', trim(time_evol_scheme)
   write(*,INTG_FMT) 'n_tor_fft_thresh      ', n_tor_fft_thresh

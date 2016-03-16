@@ -1,3 +1,9 @@
+module mod_log_params
+
+implicit none
+
+contains
+
 !> Write out all relevant parameters defined in mod_parameters
 !! and by the namelist input file.
 subroutine log_parameters(my_id, short)
@@ -497,3 +503,5 @@ if (my_id == 0) then
 end if
 
 end subroutine log_parameters
+
+end module mod_log_params

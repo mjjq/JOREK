@@ -18,6 +18,7 @@
 !! data  : 11-02-2016
 subroutine jorek2help()
   use parameters
+  use mod_log_params
 
 !#include "r3_info.h"
 #include "version.h"

@@ -32,6 +32,7 @@ program JOREK2
   use data_structure
   use phys_module
   use parameters
+  use mod_log_params
   use global_distributed_matrix
   use nodes_elements
   use pellet_module

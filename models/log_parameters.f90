@@ -1,3 +1,9 @@
+module mod_log_params
+
+implicit none
+
+contains
+
 !> Write out all relevant parameters defined in mod_parameters
 !! and by the namelist input file.
 subroutine log_parameters(my_id, short)
@@ -29,6 +35,7 @@ character(len=512), parameter :: CHAR_FMT = "(1X,A, ' = ""', A, '""')"
 integer           :: ivar, itor
 integer           :: i, j, n_rows !> do loop index 
 character(len=10) :: mode_num
+logical           :: short2
 
 ! --- Text out format
 200 format(79('*'))
@@ -36,7 +43,11 @@ character(len=10) :: mode_num
 !202 format('* ',A,)
 112 format(A, i12, 41X, A)
   
-if ( .not. present(short)) short = .false.
+if (present(short)) then
+  short2 = short
+else
+  short2 = .false.
+end if
 
 if (my_id == 0) then
 
@@ -169,7 +180,7 @@ if (my_id == 0) then
   write(*,200)
 
   ! stop function when case this log function is called from command line function
-  if ( short ) return
+  if ( short2 ) return
 
   write(*,*)
   write(*,*) 'NAMELIST INPUT PARAMETERS'
@@ -497,3 +508,5 @@ if (my_id == 0) then
 end if
 
 end subroutine log_parameters
+
+end module mod_log_params

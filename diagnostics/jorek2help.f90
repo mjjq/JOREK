@@ -71,7 +71,7 @@ subroutine jorek2help()
           write(*,'(A)') '* List of command line argument options                                       *'
           write(*,'(A)') '*   -a or --about for info about JOREK in general                             *'
           write(*,'(A)') '*   -p or --param for JOREK hardcoded parameters                              *'
-          write(*,'(A)') '*   -v or --version for JOREK compile veriosn                                 *'
+          write(*,'(A)') '*   -v or --version for JOREK compile version                                 *'
           write(*,200)
           stop
         case("--version","-v")

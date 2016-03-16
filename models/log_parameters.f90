@@ -41,7 +41,7 @@ logical           :: short2
 200 format(79('*'))
 201 format('* ',75('-'),' *')
 !202 format('* ',A,)
-112 format(A, i12, 41X, A)
+112 format(A, i12)
   
 if (present(short)) then
   short2 = short
@@ -137,22 +137,22 @@ if (my_id == 0) then
 
   write(*,201)
   write(*,'(A)') '* --- Hard-Coded Parameters:                                                  *'
-  write(*,  112) '*      jorek_model    =  ', jorek_model       , '*'
-  write(*,  112) '*      n_var          =  ', n_var             , '*'
-  write(*,  112) '*      n_dim          =  ', n_dim             , '*'
-  write(*,  112) '*      n_order        =  ', n_order           , '*'
-  write(*,  112) '*      n_tor          =  ', n_tor             , '*'
-  write(*,  112) '*      n_period       =  ', n_period          , '*'
-  write(*,  112) '*      n_plane        =  ', n_plane           , '*'
-  write(*,  112) '*      n_vertex_max   =  ', n_vertex_max      , '*'
-  write(*,  112) '*      n_elements_max =  ', n_elements_max    , '*'
-  write(*,  112) '*      n_boundary_max =  ', n_boundary_max    , '*'
-  write(*,  112) '*      n_pieces_max   =  ', n_pieces_max      , '*'
-  write(*,  112) '*      n_degrees      =  ', n_degrees         , '*'
-  write(*,  112) '*      nref_max       =  ', nref_max          , '*'
-  write(*,  112) '*      n_ref_list     =  ', n_ref_list        , '*'
-  write(*,'(A)') '*                                                                             *'
-  write(*,'(A)') '*      Implemented variables:                                                 *'
+  write(*,  112) ' jorek_model    =  ', jorek_model       
+  write(*,  112) ' n_var          =  ', n_var             
+  write(*,  112) ' n_dim          =  ', n_dim             
+  write(*,  112) ' n_order        =  ', n_order           
+  write(*,  112) ' n_tor          =  ', n_tor             
+  write(*,  112) ' n_period       =  ', n_period          
+  write(*,  112) ' n_plane        =  ', n_plane           
+  write(*,  112) ' n_vertex_max   =  ', n_vertex_max      
+  write(*,  112) ' n_elements_max =  ', n_elements_max    
+  write(*,  112) ' n_boundary_max =  ', n_boundary_max    
+  write(*,  112) ' n_pieces_max   =  ', n_pieces_max      
+  write(*,  112) ' n_degrees      =  ', n_degrees         
+  write(*,  112) ' nref_max       =  ', nref_max          
+  write(*,  112) ' n_ref_list     =  ', n_ref_list        
+  write(*,201)
+  write(*,'(A)') '* --- Implemented variables:                                                  *'
 
   ! determine number of rows needed to show all variable_names
   n_rows = ceiling(n_var/4.0)
@@ -183,8 +183,9 @@ if (my_id == 0) then
   if ( short2 ) return
 
   write(*,*)
-  write(*,*) 'NAMELIST INPUT PARAMETERS'
-  write(*,*) '-------------------------------------------------'
+  write(*,200)
+  write(*,'(A)') '* NAMELIST INPUT PARAMETERS                                                   *'
+  write(*,200)
   write(*,CHAR_FMT) 'time_evol_scheme      ', trim(time_evol_scheme)
   write(*,INTG_FMT) 'n_tor_fft_thresh      ', n_tor_fft_thresh
   if ( n_tor .ge. n_tor_fft_thresh ) then

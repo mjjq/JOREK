@@ -101,14 +101,6 @@ real*8     :: source_mgi
 real*8     :: Dn0x, Dn0y, Dn0p 
 
 ! Atomic physics coefficients:
-!   -Ionisation
-real*8     :: Sion_T, dSion_dT                                ! Ionisation rate and its derivative wrt. temperature
-real*8     :: Tion                                            ! Temperature used in ionisation rate
-real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss ! Ionisation rate parameters 
-real*8     :: ksiion                                          ! Ionisation energy
-!   -Recombination
-real*8     :: Srec_T, dSrec_dT                                ! Recombination rate and its derivative wrt. temperature
-real*8     :: coef_rec_1                                      ! Recombination rate parameters
 !   -Radiation from injected gas/impurities
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
@@ -582,27 +574,6 @@ do ms=1, n_gauss
      Dn0p = D_neutral_p      
 
   !-------------------------------------------
-  ! --- Ionization rate for neutral Deuterium
-  !------------------------------------------- 
-
-    coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
-    coef_ion_2 = 0.232d0
-    coef_ion_1 = sqrt(MU_ZERO*central_mass*MASS_PROTON)*0.2917d-13*(central_density*1.d20)**(1.5d0)
-    S_ion_puiss = 3.9d-1
-
-    ksiion = ksi_ion * central_density * 1.d20
-
-    Tion = corr_neg_temp(T0,(/1.d-5,0.3/))/(2.d0)
-
-    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
-
-    dSion_dT = Sion_T*(-S_ion_puiss/Tion+coef_ion_3/(Tion*(coef_ion_2*Tion+coef_ion_3)) &
-                          +coef_ion_3*Tion**(S_ion_puiss-2.d0))
-
-      !dSion_dT = coef_ion_1*exp(-coef_ion_3/Tion)*((coef_ion_3/Tion)**0.39d0)*1/(Tion*(coef_ion_2*Tion+coef_ion_3)**2.0d0) &
-      !       * (coef_ion_3*((coef_ion_2+1)*Tion+coef_ion_3)-0.39d0*(Tion*(coef_ion_2*Tion+coef_ion_3)))
-
-  !-------------------------------------------
   ! --- Radiative Power for neutral Deuterium
   ! ------------------------------------------
 
@@ -647,17 +618,6 @@ do ms=1, n_gauss
    dLradDrays_dT = 0.d0
 
    endif
-
-  !-------------------------------------------------
-  ! --- Recombination rate for ionized Deuterium
-  !-------------------------------------------------
-    
-    coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)  
- 
-    Srec_T = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0) 
-    
-    dSrec_dt  = - coef_rec_1 * 0.7d-19 * 0.5d0 * (2.d0)**(-0.5d0) * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-1.5d0)
-
 
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)
@@ -874,8 +834,6 @@ do ms=1, n_gauss
 
                     + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
                     + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac &
-                    
-                    - v * BigR * ksiion * r0 * rn0 * Sion_T                            * xjac * tstep &
 
                     + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
                     - v * BigR * r0 * rn0 * LradDrays_T                                * xjac * tstep  &
@@ -1358,7 +1316,6 @@ do ms=1, n_gauss
                     + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                               * rho * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                        &
                               * ( v_x * ps0_y -  v_y * ps0_x ) * xjac * theta * tstep * tstep &
-	                + v * BigR * rho * rn0 * ksiion * Sion_T                             * xjac * theta * tstep &
 
                     + v * BigR * rho * rn0 * LradDrays_T                                   * xjac * theta * tstep  &
                     + v * BigR * rho * 2d0 * r0 * LradDcont_T                              * xjac * theta * tstep  &
@@ -1414,8 +1371,6 @@ do ms=1, n_gauss
                    + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                              * r0 * (T_x * ps0_y - T_y * ps0_x               )                            &
                              * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
- 
-		        + v * BigR * r0 * rn0 * ksiion * dSion_dT * T                    * xjac * theta * tstep &
 
                            - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2                              * xjac * theta * tstep  &
                            + v * BigR * T * r0 * rn0 * dLradDrays_dT                                              * xjac * theta * tstep  & 
@@ -1474,8 +1429,7 @@ do ms=1, n_gauss
 
              amat_67_n = + v * r0 * GAMMA * T0 * F0 / BigR * vpar_p             * xjac * theta * tstep
 	     
-	     amat_68 = + v * BigR * r0 * rhon * ksiion * Sion_T                        * xjac * theta * tstep &
-                   + v * BigR * rhon * r0 * LradDrays_T                            * xjac * theta * tstep
+	     amat_68 = v * BigR * rhon * r0 * LradDrays_T                            * xjac * theta * tstep
 
 
 

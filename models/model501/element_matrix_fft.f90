@@ -581,7 +581,7 @@ do ms=1, n_gauss
 
    T_rad = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20) ! Formulae for radiative power is in SI units and for T = Te + Ti
 
-   coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
+   coef_rad_1 = 0. !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
 
 !   LradDcont_T = coef_rad_1*(1.d1)**(2.3964d0*exp(-(log10(T_rad)-7.2576d0)**2.d0/(2.d0*(3.0787d0)**2.d0)) &
 !                                 -34.763d0*exp(-(log10(T_rad)-0.3607d0)**2.d0/(2.d0*(4.0560d0)**2.d0)) &

@@ -64,7 +64,7 @@ real*8     :: amat_61, amat_62, amat_63, amat_65, amat_66, amat_67, amat_65_k, a
 real*8     :: amat_71, amat_72, amat_75, amat_76, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
 real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n, amat_57_kn, amat_58_kn
 real*8     :: amat_75_k, amat_77, amat_77_k, amat_77_n, amat_77_kn
-real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n
+real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n, amat_68_n
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8
 logical    :: xpoint2
 
@@ -101,7 +101,14 @@ real*8     :: source_mgi
 real*8     :: Dn0x, Dn0y, Dn0p 
 
 ! Atomic physics coefficients:
-!   -Radiation from injected gas/impurities
+!   -Mass ratio between main ions and impurites (m_i/m_imp)
+real*8     :: m_i_over_m_imp
+!   -Mean impurity ionization state
+real*8     :: Z_imp, dZ_imp_dT
+!   -Coefficients related to Z_imp
+real*8     :: alpha_imp, dalpha_imp_dT, alpha_imp_bis
+real*8     :: beta_imp, dbeta_imp_dT
+!   -Radiation from injected impurities
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
 real*8     :: T_rad                                           ! Temperature used in radiation rate
@@ -574,6 +581,22 @@ do ms=1, n_gauss
      Dn0p = D_neutral_p      
 
   !-------------------------------------------
+  ! Atomic physics parameters
+  !-------------------------------------------
+
+     m_i_over_m_imp = 1.
+
+     Z_imp     = 1.
+     dZ_imp_dT = 0.
+
+     alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+     dalpha_imp_dT = 0.5*m_i_over_m_imp*dZ_imp_dT
+     alpha_imp_bis = alpha_imp + dalpha_imp_dT*T0
+
+     beta_imp     = m_i_over_m_imp*Z_imp - 1.
+     dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
+
+  !-------------------------------------------
   ! --- Radiative Power for neutral Deuterium
   ! ------------------------------------------
 
@@ -797,19 +820,21 @@ do ms=1, n_gauss
 
          rhs_ij_6 =   v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
  
-                    + v * r0 * BigR**2 * ( T0_s * u0_t - T0_t * u0_s)                         * tstep &
+                    + v * (r0 + rn0*alpha_imp_bis) * BigR**2 * ( T0_s * u0_t - T0_t * u0_s)   * tstep &
                     + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep &
+                    + v * alpha_imp * T0 * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)            * tstep &
 
-                    + v * r0 * T0 * 2.d0* GAMMA * BigR * u0_y                          * xjac * tstep &
+                    + v * (r0 + rn0*alpha_imp) * T0 * 2.d0* GAMMA * BigR * u0_y                          * xjac * tstep &
 
-                    - v * r0 * F0 / BigR * Vpar0 * T0_p                                * xjac * tstep &
-                    - v * T0 * F0 / BigR * Vpar0 * r0_p                                * xjac * tstep &
+                    - v * (r0 + rn0*alpha_imp_bis) * F0 / BigR * Vpar0 * T0_p          * xjac * tstep &
+                    - v * T0 * F0 / BigR * Vpar0 * (r0_p + alpha_imp * rn0_p)          * xjac * tstep &
 
-                    - v * r0 * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)                          * tstep &
+                    - v * (r0 + rn0*alpha_imp_bis) * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)    * tstep &
                     - v * T0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                          * tstep &
+                    - v * T0 * Vpar0 * alpha_imp * (rn0_s * ps0_t - rn0_t * ps0_s)            * tstep &
 
-                    - v * r0 * T0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * tstep &
-                    - v * r0 * T0 * GAMMA * F0 / BigR * vpar0_p                        * xjac * tstep &
+                    - v * (r0 + rn0*alpha_imp) * T0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * tstep &
+                    - v * (r0 + rn0*alpha_imp) * T0 * GAMMA * F0 / BigR * vpar0_p                        * xjac * tstep &
 
                     - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T          * xjac * tstep &
                     - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y                     ) * xjac * tstep &
@@ -832,8 +857,9 @@ do ms=1, n_gauss
                               * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                         &
                               * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
-                    + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
-                    + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac &
+                    + zeta * v * (r0 + rn0 * alpha_imp_bis) * delta_g(mp,6,ms,mt) * BigR               * xjac &
+                    + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                                       * xjac &
+                    + zeta * v * alpha_imp * T0 * delta_g(mp,8,ms,mt) * BigR                           * xjac &   
 
                     + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
                     - v * BigR * r0 * rn0 * LradDrays_T                                * xjac * tstep  &
@@ -1340,19 +1366,21 @@ do ms=1, n_gauss
                               * (     + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
 
-             amat_66 =   v * abs(r0) * T   * BigR * xjac * (1.d0 + zeta)     &
-                       - v * r0 * BigR**2 * ( T_s  * u0_t - T_t  * u0_s)                        * theta * tstep &
-		       - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * theta * tstep &
+             amat_66 =   v * (r0 + rn0 * alpha_imp_bis) * T * BigR * xjac * (1.d0 + zeta)                        &
+                       - v * (r0 + rn0 * alpha_imp_bis) * BigR**2 * ( T_s  * u0_t - T_t  * u0_s) * theta * tstep &
+		       - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * theta * tstep &
+                       - v * alpha_imp_bis * T * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)         * theta * tstep &
 
-                       - v * r0 * 2.d0* GAMMA * BigR * T * u0_y                 * xjac * theta * tstep &
+                       - v * (r0 + rn0 * alpha_imp_bis) * 2.d0* GAMMA * BigR * T * u0_y                 * xjac * theta * tstep &
 
-                       + v * r0 * Vpar0 * (T_s  * ps0_t - T_t  * ps0_s)                         * theta * tstep &
+                       + v * (r0 + rn0 * alpha_imp_bis) * Vpar0 * (T_s  * ps0_t - T_t  * ps0_s) * theta * tstep &
                        + v * T  * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * theta * tstep & 
+                       + v * alpha_imp_bis * T * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)        * theta * tstep &
 
-                       + v * r0 * GAMMA * T * (vpar0_s * ps0_t - vpar0_t * ps0_s)      * theta * tstep &
-                       + v * r0 * GAMMA * T * F0 / BigR * vpar0_p               * xjac * theta * tstep &
+                       + v * (r0 + rn0 * alpha_imp_bis) * GAMMA * T * (vpar0_s * ps0_t - vpar0_t * ps0_s)      * theta * tstep &
+                       + v * (r0 + rn0 * alpha_imp_bis) * GAMMA * T * F0 / BigR * vpar0_p               * xjac * theta * tstep &
 
-                       + v * T * F0 / BigR * Vpar0 * r0_p                              * xjac * theta * tstep &
+                       + v * T * F0 / BigR * Vpar0 * (r0_p + rn0_p * alpha_imp_bis) * xjac * theta * tstep &
 
                        + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T_T * xjac * theta * tstep &
                        + ZK_prof * BigR * ( v_x*T_x + v_y*T_y )                    * xjac * theta * tstep &
@@ -1390,7 +1418,7 @@ do ms=1, n_gauss
 
              amat_66_n = + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_star   * Bgrad_T_T_n  * xjac * theta * tstep &
 
-                         + v * r0 * F0 / BigR * Vpar0 * T_p                               * xjac * theta * tstep &
+                         + v * (r0 + rn0 * alpha_imp_bis) * F0 / BigR * Vpar0 * T_p       * xjac * theta * tstep &
  
                    + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                              * r0 * ( + F0 / BigR * T_p)                            &
@@ -1429,9 +1457,20 @@ do ms=1, n_gauss
 
              amat_67_n = + v * r0 * GAMMA * T0 * F0 / BigR * vpar_p             * xjac * theta * tstep
 	     
-	     amat_68 = v * BigR * rhon * r0 * LradDrays_T                            * xjac * theta * tstep
+	     amat_68 =   v * rhon * alpha_imp * T0 * BigR * xjac * (1.d0 + zeta)                              &
+                       - v * rhon * BigR**2 * alpha_imp_bis * (T0_s * u0_t - T0_t * u0_s)     * theta * tstep &
+                       - v * alpha_imp * T0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)       * theta * tstep &
+                       + v * rhon * F0 / BigR * Vpar0 * alpha_imp_bis * T0_p           * xjac * theta * tstep &
+                       + v * rhon * Vpar0 * alpha_imp_bis * (T0_s * ps0_t - T0_t * ps0_s)     * theta * tstep &
+                       + v * alpha_imp * T0 * Vpar0 * (rhon_s * ps0_t - rhon_t * ps0_s)       * theta * tstep &
 
+                       - v * alpha_imp * rhon * 2.d0* GAMMA * BigR * T0 * u0_y                   * xjac * theta * tstep &
+                       + v * alpha_imp * rhon * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
+                       + v * alpha_imp * rhon * GAMMA * T0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
 
+                       + v * BigR * rhon * r0 * LradDrays_T                            * xjac * theta * tstep
+
+             amat_68_n = v * alpha_imp * T0 * F0 / BigR * Vpar0 * rhon_p               * xjac * theta * tstep
 
 !###################################################################################################
 !#  equation 7   (parallel velocity equation)                                                      #

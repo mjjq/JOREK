@@ -109,8 +109,7 @@ real*8     :: Z_imp, dZ_imp_dT
 real*8     :: alpha_imp, dalpha_imp_dT, alpha_imp_bis
 real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
-real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
-real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
+real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: T_rad                                           ! Temperature used in radiation rate
 real*8     :: coef_rad_1                                      ! Radiation rate parameters
 !   -Radiation from background impurities
@@ -606,27 +605,11 @@ do ms=1, n_gauss
 
    coef_rad_1 = 0. !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
 
-!   LradDcont_T = coef_rad_1*(1.d1)**(2.3964d0*exp(-(log10(T_rad)-7.2576d0)**2.d0/(2.d0*(3.0787d0)**2.d0)) &
-!                                 -34.763d0*exp(-(log10(T_rad)-0.3607d0)**2.d0/(2.d0*(4.0560d0)**2.d0)) &
-!                                 -18.875d0*exp(-(log10(T_rad)-6.0531d0)**2.d0/(2.d0*(2.5253d0)**2.d0)))
-
-  ! dLradDcont_dT = -coef_rad_1*(2.3964d0*(3.0787d0)**(-2.d0)*(log10(T_rad)-7.2576d0)/T_rad*exp(-(log10(T_rad)-7.2576d0)**2.d0/(2.d0*(3.0787d0)**2.d0)) &
-  !                             -34.763d0*(4.0560d0)**(-2.d0)*(log10(T_rad)-0.3607d0)/T_rad*exp(-(log10(T_rad)-0.3607d0)**2.d0/(2.d0*(4.0560d0)**2.d0)) &
-  !                             -18.875d0*(2.5253d0)**(-2.d0)*(log10(T_rad)-6.0531d0)/T_rad*exp(-(log10(T_rad)-6.0531d0)**2.d0/(2.d0*(2.5253d0)**2.d0)))&
-  !                             *(1.d1)**(2.3964d0*exp(-(log10(T_rad)-7.2576d0)**2.d0/(2.d0*(3.0787d0)**2.d0)) &
-  !                                   -34.763d0*exp(-(log10(T_rad)-0.3607d0)**2.d0/(2.d0*(4.0560d0)**2.d0)) &
-  !                                   -18.875d0*exp(-(log10(T_rad)-6.0531d0)**2.d0/(2.d0*(2.5253d0)**2.d0)))
-
-   LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
-
-   dLradDcont_dT = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*(8*EL_CHG*MU_ZERO*central_density*1.d20*sqrt(T_rad))**(-1.d0)
-
-
-   LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+   Lrad = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
                                     -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
                                     -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
 
-   dLradDrays_dT = -coef_rad_1*(-29.440d0*(2.8428d0)**(-2.d0)*(log10(T_rad)-4.4283d0)/T_corr*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+   dLrad_dT = -coef_rad_1*(-29.440d0*(2.8428d0)**(-2.d0)*(log10(T_rad)-4.4283d0)/T_corr*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
                                 -60.947d0*(0.9048d0)**(-2.d0)*(log10(T_rad)+2.0835d0)/T_corr*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
                                 -24.067d0*(2.1700d0)**(-2.d0)*(log10(T_rad)+0.7363d0)/T_corr*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))&
                                 *(1.d1)**(-29.440d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
@@ -635,10 +618,8 @@ do ms=1, n_gauss
 
    else
 
-   LradDcont_T = 0.d0
-   dLradDcont_dT = 0.d0
-   LradDrays_T = 0.d0
-   dLradDrays_dT = 0.d0
+   Lrad = 0.d0
+   dLrad_dT = 0.d0
 
    endif
 
@@ -862,8 +843,7 @@ do ms=1, n_gauss
                     + zeta * v * alpha_imp * T0 * delta_g(mp,8,ms,mt) * BigR                           * xjac &   
 
                     + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
-                    - v * BigR * r0 * rn0 * LradDrays_T                                * xjac * tstep  &
-                    - v * BigR * r0 * r0  * LradDcont_T                                * xjac * tstep  &
+                    - v * BigR * (r0+beta_imp*rn0) * rn0 * Lrad                        * xjac * tstep  &
                     - v * BigR * r0 * frad_bg                                          * xjac * tstep  
 
          rhs_ij_6_k =  - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T  * xjac * tstep &
@@ -1343,8 +1323,7 @@ do ms=1, n_gauss
                               * rho * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                        &
                               * ( v_x * ps0_y -  v_y * ps0_x ) * xjac * theta * tstep * tstep &
 
-                    + v * BigR * rho * rn0 * LradDrays_T                                   * xjac * theta * tstep  &
-                    + v * BigR * rho * 2d0 * r0 * LradDcont_T                              * xjac * theta * tstep  &
+                    + v * BigR * rho * rn0 * Lrad                                          * xjac * theta * tstep  &
                     + v * BigR * rho * frad_bg                                             * xjac * theta * tstep 
 
 
@@ -1401,8 +1380,8 @@ do ms=1, n_gauss
                              * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
 
                            - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2                              * xjac * theta * tstep  &
-                           + v * BigR * T * r0 * rn0 * dLradDrays_dT                                              * xjac * theta * tstep  & 
-                           + v * BigR * T * r0 * r0  * dLradDcont_dT                                              * xjac * theta * tstep  &
+                           + v * BigR * T * (r0 + beta_imp*rn0) * rn0 * dLrad_dT                                  * xjac * theta * tstep  &
+                           + v * BigR * T * dbeta_imp_dT * rn0**2 * Lrad                                          * xjac * theta * tstep  &
                            + v * BigR * T * r0 * dfrad_bg_dT                                                      * xjac * theta * tstep
  
              amat_66_k = + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T    * xjac * theta * tstep &
@@ -1468,7 +1447,7 @@ do ms=1, n_gauss
                        + v * alpha_imp * rhon * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
                        + v * alpha_imp * rhon * GAMMA * T0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
 
-                       + v * BigR * rhon * r0 * LradDrays_T                            * xjac * theta * tstep
+                       + v * BigR * rhon * (r0 + 2*beta_imp*rn0) * Lrad                          * xjac * theta * tstep
 
              amat_68_n = v * alpha_imp * T0 * F0 / BigR * Vpar0 * rhon_p               * xjac * theta * tstep
 

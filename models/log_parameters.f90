@@ -441,7 +441,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
      write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
      write(*,REAL_FMT) 'mgi_R               ',  mgi_R
      write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z
@@ -452,6 +452,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
      write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI
+     write(*,LOGI_FMT) 'gas_type            ',  gas_type
      write(*,REAL_FMT) 'A_Dmv               ',  A_Dmv
      write(*,REAL_FMT) 'K_Dmv               ',  K_Dmv
      write(*,REAL_FMT) 'V_Dmv               ',  V_Dmv

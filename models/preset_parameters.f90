@@ -290,10 +290,11 @@ subroutine preset_parameters
   V_coef(5)=1. 
 !======================MB
 
-!======================AF Massive Gas Injection Parameters
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+!====================== Massive Gas Injection Parameters
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
     JET_MGI = .false.
     ASDEX_MGI = .false.
+    gas_type = 'D2'
     mgi_amplitude = 0.d0  ! 0.007d0
     mgi_R      = 3.2d0
     mgi_Z      =  1.5d0
@@ -314,7 +315,7 @@ subroutine preset_parameters
      delta_n_convection = 0
      nimp_bg = 0.
 #endif
-!======================AF
+!======================
 
 !======================JP ECCD injection parameters
  nu_jec_fast=1.d1

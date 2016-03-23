@@ -217,6 +217,7 @@ module phys_module
   real*8  :: delta_n_convection!< Switch to activate the convection term for neutrals (at the plasma velocity)
   logical :: JET_MGI !< Switch to have a real time dependent MGI or a constant injection
   logical :: ASDEX_MGI
+  character(len=80) :: gas_type !< Type of gas used in MGI: Argon, D2, ...
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
   
   !> @name Free boundary extension

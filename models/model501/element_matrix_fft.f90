@@ -104,7 +104,7 @@ real*8     :: Dn0x, Dn0y, Dn0p
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
 !   -Mean impurity ionization state
-real*8     :: Z_imp, dZ_imp_dT
+real*8     :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp
 !   -Coefficients related to Z_imp
 real*8     :: alpha_imp, dalpha_imp_dT, alpha_imp_bis
 real*8     :: beta_imp, dbeta_imp_dT
@@ -585,8 +585,11 @@ do ms=1, n_gauss
 
      m_i_over_m_imp = 1.
 
-     Z_imp     = 1.
-     dZ_imp_dT = 0.
+     T0_Zimp        = 437./(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     alpha_Zimp     = 0.415
+
+     Z_imp     = 18.*tanh((T0/T0_Zimp)**alpha_Zimp)
+     dZ_imp_dT = (18./T0_Zimp)*alpha_Zimp*((T0/T0_Zimp)**(alpha_Zimp-1))*(1.-(tanh(T0/T0_Zimp))**2.)
 
      alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
      dalpha_imp_dT = 0.5*m_i_over_m_imp*dZ_imp_dT

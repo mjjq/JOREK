@@ -46,6 +46,8 @@ module mgi_module
 
     real*8 :: c0_gas                   ! Sound velocity of gas in reservoir
     integer:: n_gas                    ! = 2/(gamma-1) where gamma = heat capacity ratio of gas
+    real*8 :: A_gas                    ! Atomic number of gas particles
+    real*8 :: mass_gas                 ! Mass of a gas particles
     real*8 :: radius
     real*8 :: mgi_tor_shape
     real*8 :: mgi_pol_shape
@@ -95,16 +97,22 @@ module mgi_module
 
     select case ( trim(gas_type) )
       case('D2')
-        c0_gas = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))
         n_gas  = 5
+        A_gas  = 4.
+        mass_gas = A_gas*MASS_PROTON
+        c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(7.d0/5.d0))
       case('Ar')
-        c0_gas = sqrt(8.3145d0*293.d0/40.d-3*(5.d0/3.d0))
         n_gas  = 3
+        A_gas  = 40.
+        mass_gas = A_gas*MASS_PROTON
+        c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
       case default
         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
         write(*,*) '=> We assume the gas is D2.'
-        c0_gas = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))
         n_gas  = 5
+        A_gas  = 4.
+        mass_gas = A_gas*MASS_PROTON
+        c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(7.d0/5.d0))
     end select
 
     ! ===================================================================
@@ -170,14 +178,17 @@ module mgi_module
        !   f_dNbar_dt = 0.d0
        ! endif
 
-        ! Normalised number of injected particles per unit time:
+        ! Number of injected particles per unit time, normalized to reservoir content:
         mgi_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * f_dNbar_dt
 
-        ! Mass density injected per unit time:
-        mgi_drhon_dt = mgi_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * 2.d0 * central_mass * MASS_PROTON
+        ! Mass density injected per unit time (SI units):
+        mgi_drhon_dt = mgi_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * mass_gas
     
         ! Distribute gas source in space
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*mgi_drhon_dt * mgi_pol_shape * mgi_tor_shape / V_mgi
+        rhon_source = mgi_drhon_dt * mgi_pol_shape * mgi_tor_shape / V_mgi
+
+        ! Apply JOREK normalization
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * rhon_source
 
       elseif (ASDEX_MGI) then
 

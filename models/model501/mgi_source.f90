@@ -32,13 +32,13 @@ module mgi_module
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,    &
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
-!=================================================================================
-!  This subroutine computes the neutral density source for a realistic Deuterium
-!  MGI in JET (if mgi_timedependent is .t.).
-!  If mgi_timedependent is .f., this routine computes a constant source in time
-!  where the main parameter is mgi_amplitude
-!  More details in the JOREK wiki or by asking A.Fil or E.Nardon
-!=================================================================================
+  !=================================================================================
+  !  This subroutine computes the neutral density source for a realistic Deuterium
+  !  MGI in JET (if mgi_timedependent is .t.).
+  !  If mgi_timedependent is .f., this routine computes a constant source in time
+  !  where the main parameter is mgi_amplitude
+  !  More details in the JOREK wiki or by asking A.Fil or E.Nardon
+  !=================================================================================
 
     implicit none
 
@@ -90,84 +90,76 @@ module mgi_module
 
     PI = 3.14159265358979d0
 
-    radius = sqrt((R-mgi_R)**2 + (Z-mgi_Z)**2)
-
     c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed Deuterium
 
+    ! ===================================================================
+    ! Parameters related to the spatial distribution of the gas source:
+
     ! A gaussian shape is chosen poloidally
+    radius = sqrt((R-mgi_R)**2 + (Z-mgi_Z)**2)
     mgi_pol_shape = exp(-(radius/mgi_radius)**2.d0)  
 
-    dphi = abs(phi - mgi_phi)
-
-    if (dphi .gt. PI) dphi = 2*PI - dphi
-
     ! A gaussian shape is chosen toroidally
-  
+    dphi = abs(phi - mgi_phi)
+    if (dphi .gt. PI) dphi = 2*PI - dphi  
     mgi_tor_shape = exp(-(dphi/mgi_deltaphi)**2.d0)
 
+    ! Volume used for normalization, which corresponds to the integration in space 
+    ! of the product of the above shape functions
     V_mgi  = PI**1.5d0 * mgi_R * mgi_deltaphi * mgi_radius**2.d0
+    ! ===================================================================
 
+   !==================================================================================================
+   ! A shifted time is used in order to start injected gas as soon as t_now = t_mgi 
+   ! (note: L_tube/3c0 is the time needed for the gas to propagate in the injection tube).
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-
     t_loc = (t_now-t_mgi) * t_norm + L_tube/(3.d0 * c0_D)
+   !==================================================================================================
 
     if (t_loc .gt. 0.) then
 
       if (JET_MGI) then
 
-   !==================================================================================================
-   ! We use here the formulae derived from the eq(8) in the paper of S.A. Bozhenkov - NF 51 (2011) 
-   ! which gives the normalized number of particles injected at the exit of the DMV injection tube
-   ! as a function of time.
-   ! The parameter used are realistic:
-   ! A_Dmv: cross sectional area of the injection pipe
-   ! K_Dmv: Experimental correction factor to account for the gas expansion close to the tube orifice
-   ! L_tube: DMV vacuum injection tube length
-   ! V_Dmv: Volume of the DMV reservoir
-   ! P_Dmv: Initial pressure in the DMV reservoir, directly linked to the total number of particles
-   ! in the reservoir. Expressed in bar here as it is in all MGI experiments. 
-   !==================================================================================================
-
-   !==================================================================================================
-   ! a shifted time is used in order to get neutrals as soon as t_now = t_mgi (L_tube/3c0 is the time 
-   ! needed for the gas to propagate in the injection tube)
-   !==================================================================================================
+       !==================================================================================================
+       ! We use here the formulae derived from the eq(8) in the paper of S.A. Bozhenkov - NF 51 (2011) 
+       ! which gives the normalized number of particles injected at the exit of the DMV injection tube
+       ! as a function of time.
+       ! The parameters used are realistic:
+       ! A_Dmv: cross sectional area of the injection pipe
+       ! K_Dmv: Experimental correction factor to account for the gas expansion close to the tube orifice
+       ! L_tube: DMV vacuum injection tube length
+       ! V_Dmv: Volume of the DMV reservoir
+       ! P_Dmv: Initial pressure in the DMV reservoir, directly linked to the total number of particles
+       ! in the reservoir. Expressed in bar here as it is in all MGI experiments. 
+       !==================================================================================================
 
         f_Nbar = 0.d0
         f_dNbar_dt = 0.d0
 
-  !-------------------------------------------------------------------------------
-  !--- We calculate here the normalized number of particles injected per unit time
-  !-------------------------------------------------------------------------------
-
+       ! Calculation of the normalized number of particles injected per unit time, following Bozhenkov
         do k = 0,6
-
           f_Nbar = f_Nbar + (-1.d0)**(k-1)*factorial(6)/(factorial(5-k+1)*factorial(k))*(1-(5.d0*c0_D*t_loc/L_tube)**(1-k))
 
           f_dNbar_dt = f_dNbar_dt &
                         + (-1.d0)**(k-1)*factorial(6)/(factorial(5-k+1)*factorial(k))*(k-1)*(5.d0*c0_D*(L_tube)**(-1.d0))**(1-k) &
                           *t_loc**(-k)
-
         end do
 
         DMV_inj_frac = A_Dmv * L_tube * K_Dmv * f_Nbar/(V_Dmv)
 
-!        if (DMV_inj_frac .gt. 1.d0) then
-      
-!          f_dNbar_dt = 0.d0   ! The gas injection is stopped when the initial number of particles in the reservoir is reached 
-   
-!        endif
+       ! The gas injection is stopped when the initial number of particles in the reservoir is reached 
+       ! if (DMV_inj_frac .gt. 1.d0) then      
+       !   f_dNbar_dt = 0.d0
+       ! endif
 
-        mgi_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * (5.d0)**(5.d0) * (6.d0)**(-6.d0) * f_dNbar_dt   ! Normalised Number of injected particles per unit time
+        ! Normalised number of injected particles per unit time:
+        mgi_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * (5.d0)**(5.d0) * (6.d0)**(-6.d0) * f_dNbar_dt
 
-        mgi_drhon_dt = mgi_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * 2.d0 * central_mass * MASS_PROTON ! Mass density per unit time
+        ! Mass density injected per unit time:
+        mgi_drhon_dt = mgi_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * 2.d0 * central_mass * MASS_PROTON
     
-    !-------------------------------------------------------------------------------------------------
-    !--- We apply here a normalized gaussian shape (toroidally and poloidally) so the total number of 
-    !--- particles injected does not depend of the source shape
-    !-------------------------------------------------------------------------------------------------
-
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*mgi_drhon_dt * mgi_pol_shape  * mgi_tor_shape / V_mgi
+        ! Distribute gas source in space
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*mgi_drhon_dt * mgi_pol_shape * mgi_tor_shape / V_mgi
 
       elseif (ASDEX_MGI) then
 
@@ -220,11 +212,11 @@ module mgi_module
 
   subroutine update_mgi(my_id,node_list,element_list)
 
-!=================================================================================================
-! This routine is used to calculate the total number of neutral particles injected (in nb part/s)
-! from the start of the simulation and for each timestep.
-! It also calculate to total number of neutral particles in the plasma.
-!=================================================================================================
+  !=================================================================================================
+  ! This routine is used to calculate the total number of neutral particles injected (in nb part/s)
+  ! from the start of the simulation and for each timestep.
+  ! It also calculate to total number of neutral particles in the plasma.
+  !=================================================================================================
     use constants
     use data_structure
     use phys_module

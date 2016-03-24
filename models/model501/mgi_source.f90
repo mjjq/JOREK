@@ -40,9 +40,12 @@ module mgi_module
   !  More details in the JOREK wiki or by asking A.Fil or E.Nardon
   !=================================================================================
 
+    use phys_module, only: gas_type
+
     implicit none
 
-    real*8 :: c0_D
+    real*8 :: c0_gas                   ! Sound velocity of gas in reservoir
+    integer:: n_gas                    ! = 2/(gamma-1) where gamma = heat capacity ratio of gas
     real*8 :: radius
     real*8 :: mgi_tor_shape
     real*8 :: mgi_pol_shape
@@ -90,7 +93,19 @@ module mgi_module
 
     PI = 3.14159265358979d0
 
-    c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed Deuterium
+    select case ( trim(gas_type) )
+      case('D2')
+        c0_gas = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))
+        n_gas  = 5
+      case('Ar')
+        c0_gas = sqrt(8.3145d0*293.d0/40.d-3*(5.d0/3.d0))
+        n_gas  = 3
+      case default
+        write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+        write(*,*) '=> We assume the gas is D2.'
+        c0_gas = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))
+        n_gas  = 5
+    end select
 
     ! ===================================================================
     ! Parameters related to the spatial distribution of the gas source:
@@ -113,7 +128,7 @@ module mgi_module
    ! A shifted time is used in order to start injected gas as soon as t_now = t_mgi 
    ! (note: L_tube/3c0 is the time needed for the gas to propagate in the injection tube).
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-    t_loc = (t_now-t_mgi) * t_norm + L_tube/(3.d0 * c0_D)
+    t_loc = (t_now-t_mgi) * t_norm + L_tube/(3.d0 * c0_gas)
    !==================================================================================================
 
     if (t_loc .gt. 0.) then
@@ -137,13 +152,16 @@ module mgi_module
         f_dNbar_dt = 0.d0
 
        ! Calculation of the normalized number of particles injected per unit time, following Bozhenkov
-        do k = 0,6
-          f_Nbar = f_Nbar + (-1.d0)**(k-1)*factorial(6)/(factorial(5-k+1)*factorial(k))*(1-(5.d0*c0_D*t_loc/L_tube)**(1-k))
+        do k = 0,n_gas+1
+          f_Nbar     = f_Nbar + (-1.d0)**(k-1)*factorial(n_gas+1)/(factorial(n_gas+1-k)*factorial(k))*(1-(n_gas*c0_gas*t_loc/L_tube)**(1-k))
 
           f_dNbar_dt = f_dNbar_dt &
-                        + (-1.d0)**(k-1)*factorial(6)/(factorial(5-k+1)*factorial(k))*(k-1)*(5.d0*c0_D*(L_tube)**(-1.d0))**(1-k) &
+                        + (-1.d0)**(k-1)*factorial(n_gas+1)/(factorial(n_gas+1-k)*factorial(k))*(k-1)*(n_gas*c0_gas*(L_tube)**(-1.d0))**(1-k) &
                           *t_loc**(-k)
         end do
+
+        f_Nbar     = ((1.*n_gas)**n_gas) * ((1.*(n_gas+1.))**(-n_gas-1)) * f_Nbar
+        f_dNbar_dt = ((1.*n_gas)**n_gas) * ((1.*(n_gas+1.))**(-n_gas-1)) * f_dNbar_dt
 
         DMV_inj_frac = A_Dmv * L_tube * K_Dmv * f_Nbar/(V_Dmv)
 
@@ -153,7 +171,7 @@ module mgi_module
        ! endif
 
         ! Normalised number of injected particles per unit time:
-        mgi_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * (5.d0)**(5.d0) * (6.d0)**(-6.d0) * f_dNbar_dt
+        mgi_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * f_dNbar_dt
 
         ! Mass density injected per unit time:
         mgi_drhon_dt = mgi_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * 2.d0 * central_mass * MASS_PROTON

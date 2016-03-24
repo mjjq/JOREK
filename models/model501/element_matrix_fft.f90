@@ -111,7 +111,8 @@ real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: T_rad                                           ! Temperature used in radiation rate
-real*8     :: coef_rad_1                                      ! Radiation rate parameters
+real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
+real*8     :: A2_rad, T2_rad, sig2_rad
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 
@@ -606,31 +607,30 @@ do ms=1, n_gauss
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
   !-------------------------------------------
-  ! --- Radiative Power for neutral Deuterium
+  ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
   ! ------------------------------------------
-
    if (T0 .gt. 1.d-6) then
+     ! Te in SI units:
+     T_rad = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
-   T_rad = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20) ! Formulae for radiative power is in SI units and for T = Te + Ti
+     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-   coef_rad_1 = 0. !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
+     A0_rad   = 2.8*1.d-33    ! W.m^3
+     A1_rad   = 2.335*1.d-31  ! W.m^3
+     T1_rad   = 23.           ! eV
+     sig1_rad = 14.           ! eV
+     A2_rad   = 3.846*1.d-32  ! W.m^3
+     T2_rad   = 236.          ! eV
+     sig2_rad = 150.          ! eV
 
-   Lrad = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.) + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
 
-   dLrad_dT = -coef_rad_1*(-29.440d0*(2.8428d0)**(-2.d0)*(log10(T_rad)-4.4283d0)/T_corr*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                -60.947d0*(0.9048d0)**(-2.d0)*(log10(T_rad)+2.0835d0)/T_corr*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                -24.067d0*(2.1700d0)**(-2.d0)*(log10(T_rad)+0.7363d0)/T_corr*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))&
-                                *(1.d1)**(-29.440d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                       -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                       -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
-
+     dLrad_dT = -coef_rad_1*(A1_rad*4.*((T_rad-T1_rad)/sig1_rad)**3.*exp(-((T_rad-T1_rad)/sig1_rad)**4.)                      &
+                             + A2_rad*2*((T_rad-T2_rad)/sig2_rad)*exp(-((T_rad-T2_rad)/sig2_rad)**2))
    else
-
-   Lrad = 0.d0
-   dLrad_dT = 0.d0
-
+     Lrad = 0.d0
+     dLrad_dT = 0.d0
    endif
 
    !--------------------------------------------------------

@@ -86,7 +86,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
-                delta_n_convection, nimp_bg,                               &
+                gas_type, delta_n_convection, nimp_bg,                         &
                 RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
 
  if (my_id .eq. 0) then

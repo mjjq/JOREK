@@ -441,7 +441,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+  if (jorek_model == 500 .or. jorek_model == 501 .or. jorek_model == 555) then
      write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
      write(*,REAL_FMT) 'mgi_R               ',  mgi_R
      write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z
@@ -452,7 +452,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
      write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI
-     write(*,LOGI_FMT) 'gas_type            ',  gas_type
+     write(*,CHAR_FMT) 'gas_type            ',  gas_type
      write(*,REAL_FMT) 'A_Dmv               ',  A_Dmv
      write(*,REAL_FMT) 'K_Dmv               ',  K_Dmv
      write(*,REAL_FMT) 'V_Dmv               ',  V_Dmv
@@ -460,7 +460,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 't_mgi               ',  t_mgi
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
-#endif
+  endif
 
   write(*,*)
   

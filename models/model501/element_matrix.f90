@@ -581,13 +581,13 @@ do ms=1, n_gauss
      ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     A0_rad   = 2.8*1.d-33    ! W.m^3
-     A1_rad   = 2.335*1.d-31  ! W.m^3
-     T1_rad   = 23.           ! eV
-     sig1_rad = 14.           ! eV
-     A2_rad   = 3.846*1.d-32  ! W.m^3
-     T2_rad   = 236.          ! eV
-     sig2_rad = 150.          ! eV
+     A0_rad   = 2.8*1.d-33                                               ! W.m^3
+     A1_rad   = 2.335*1.d-31                                             ! W.m^3
+     T1_rad   = 23./(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)          ! JOREK units
+     sig1_rad = 14./(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)          ! JOREK units
+     A2_rad   = 3.846*1.d-32                                             ! W.m^3
+     T2_rad   = 236./(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)         ! JOREK units
+     sig2_rad = 150./(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)         ! JOREK units
 
      Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.) + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
 

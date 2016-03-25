@@ -549,7 +549,7 @@ do ms=1, n_gauss
   !-------------------------------------------
   ! Atomic physics parameters for Argon
   !-------------------------------------------
-     m_i_over_m_imp = 20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+     m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
 
      T0_Zimp        = 437./(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      alpha_Zimp     = 0.415

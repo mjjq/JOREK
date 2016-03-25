@@ -441,7 +441,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-  #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+# if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
      write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
      write(*,REAL_FMT) 'mgi_R               ',  mgi_R
      write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z
@@ -460,7 +460,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 't_mgi               ',  t_mgi
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
-  #endif
+# endif
 
   write(*,*)
   

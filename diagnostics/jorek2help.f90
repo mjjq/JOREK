@@ -25,9 +25,9 @@ subroutine jorek2help(n_cpu, nbthreads)
   
   implicit none
 
-#ifndef NO_HELP
-
   integer, intent(in) :: n_cpu, nbthreads
+
+#ifndef NO_HELP
   
   integer           :: narg, cptArg !< for commandline arguments
   character(len=20) :: ArgName      !< Argument name

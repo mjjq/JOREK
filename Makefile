@@ -192,7 +192,7 @@ version:
 	@grep -q -i "^[[:space:]]*module" $< ; 											\
 	if [ $$? -eq 0 ]; then 													\
 		grep -i "^[[:space:]]*module" $<										\
-		| $(AWK) -v file="$(patsubst %.f90, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
+		| sed 's/\r$$//' | $(AWK) -v file="$(patsubst %.f90, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
 	fi;
 	-@$(SED) -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
 	-@rm -f $@.tmp
@@ -211,7 +211,7 @@ version:
 	@grep -q -i "^[[:space:]]*module" $< ; 											\
 	if [ $$? -eq 0 ]; then 													\
 		grep -i "^[[:space:]]*module" $<										\
-		| $(AWK) -v file="$(patsubst %.f, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
+		| sed 's/\r$$//' | $(AWK) -v file="$(patsubst %.f, %.o, $<)" '{print tolower($$2)".mod : "file}' >> $@.tmp || touch $@.tmp;	\
 	fi;
 	-@$(SED) -e "s/murge.inc//g" -e "s/dmumps_struc.h//g" < $@.tmp > $@ || touch $@
 	-@rm -f $@.tmp

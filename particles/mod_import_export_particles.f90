@@ -60,7 +60,8 @@ dtype = get_particle_derived_type()
 call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, info, ierr)
 
 ! write_at sets the displacement to the number of particles already written in units of dtype
-call MPI_File_write_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), particle_list%particle, particle_list%n_particles, dtype, status, ierr)
+call MPI_File_write_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND),&
+    particle_list%particle, particle_list%n_particles, dtype, status, ierr)
 
 call MPI_File_close(fh,ierr)
 
@@ -130,7 +131,8 @@ call MPI_Bcast(particles_per_proc, n_cpu, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 particle_list%n_particles = particles_per_proc(my_id)
 ! And allocate the required space
 allocate(particle_list%particle(particle_list%n_particles), stat=ierr)
-if (ierr .gt. 0) write(*,"(i3,a,i8,a)") my_id, "unable to allocate particle_list%particle(", particle_list%n_particles, ")"
+if (ierr .gt. 0) write(*,"(i3,a,i8,a)") my_id, &
+    "unable to allocate particle_list%particle(", particle_list%n_particles, ")"
 
 dtype = get_particle_derived_type()
 
@@ -138,7 +140,8 @@ dtype = get_particle_derived_type()
 call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, info, ierr)
 
 ! write_at sets the displacement to the number of particles already written in units of dtype
-call MPI_File_read_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), particle_list%particle, particle_list%n_particles, dtype, status, ierr)
+call MPI_File_read_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), &
+    particle_list%particle, particle_list%n_particles, dtype, status, ierr)
 
 call MPI_File_close(fh,ierr)
 

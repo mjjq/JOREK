@@ -3,6 +3,8 @@ program RST_convert_hdf52bin
 
   use data_structure
   use phys_module
+  ! Argument parsing
+  use cla
 
   implicit none
 
@@ -11,9 +13,8 @@ program RST_convert_hdf52bin
 
   integer :: ierr, i
 
-  character*5 :: index
-  character*16 :: fileout_h5
-  character*17 :: fileout_bin
+  character(len=80) :: filein, fileout
+  logical :: verbose, file_exists
 
   allocate(node_list)
   allocate(element_list)
@@ -22,15 +23,33 @@ program RST_convert_hdf52bin
 #error " Should be compiled with -DUSE_HDF5"
 #endif
 
+  ! Parse command line arguments
+  call cla_init
+  call pcla_register('filename', 'name of the restart hdf5 file to convert',  cla_char, 'jorek_restart.h5')    
+  call cla_register('-v','--verbose','enable verbose output', cla_flag,'v')
+  call cla_validate("rst_hdf52bin")
+  call cla_get('filename',filein)
+  verbose = cla_key_present('--verbose')
+
+  ! Create output filename
+  fileout = filein(1:index(filein,'.h5',.true.)) // 'rst' ! .true. searches backwards
+
+  ! --- Check for presence of the restart file
+  inquire(file=filein, exist=file_exists)
+  if (.not. file_exists) then
+    write(*,*) "File " // trim(filein) // " not found", ""
+    call cla_help('rst_hdf52bin')
+    call exit(1)
+  endif
+
   ! --- Initialize mode and mode_type arrays
   call det_modes()
   
   rst_format = 0
 
   ! --- Read the restart HDF5 file
-  fileout_h5 = "jorek_restart.h5"
-  write (6,*) " =============> rst_hdf52bin for filename = ",fileout_h5
-  call import_hdf5_restart(node_list, element_list, fileout_h5, rst_format, ierr)
+  if (verbose) write (6,*) " =============> rst_hdf52bin for filename = ",filein
+  call import_hdf5_restart(node_list, element_list, filein, rst_format, ierr)
 
   index_now = index_start
   t_now     = t_start
@@ -41,8 +60,7 @@ program RST_convert_hdf52bin
   eta       = eta_rst
 
   ! -- Write the BINARY restart file
-  fileout_bin = "jorek_restart.rst"
-  write (6,*) " =============> rst_hdf52bin, write BIN file = ",fileout_bin
-  call export_binary_restart(node_list, element_list, fileout_bin)
+  if (verbose) write (6,*) " =============> rst_hdf52bin, write BIN file = ",fileout
+  call export_binary_restart(node_list, element_list, fileout)
 
 end program RST_convert_hdf52bin

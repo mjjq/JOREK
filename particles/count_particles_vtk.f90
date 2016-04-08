@@ -92,10 +92,10 @@ do i=1,command_argument_count()
   endif
   do i_p = i_start, i_end
     if (i_p .eq. 0) then
-      output_file = particle_file(1:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards
+      output_file = 'count'//particle_file(5:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards
     else
       write(str1,'(i0.2)') i_p
-     output_file = particle_file(1:(index(particle_file,'.rst',.true.)-1))//'_'//str1//'.vtk' !  .true. searches backwards
+      output_file = 'count'//particle_file(5:index(particle_file,'.rst',.true.)-1)//'_'//str1//'.vtk' !  .true. searches backwards
     endif
     call write_particle_counts_to_vtk(node_list,element_list,particle_list,output_file,i_p)
     write(*,*) "Done counting, wrote output to ", output_file

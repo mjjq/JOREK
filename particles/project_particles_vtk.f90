@@ -1,6 +1,6 @@
 !> Project particles onto the elements in JOREK and export to a vtk file
 !! It uses the elements of file jorek_restart.rst
-!! Run as project_particles_vtk < jorek_in
+!! Run as project_particles_vtk particle_file.rst < jorek_in
 !! It reads some parameters from the vtk.nml namelist in the current directory
 program project_particles_vtk
 use data_structure
@@ -101,7 +101,7 @@ call get_command_argument(1, particle_file)
 call import_particles(particle_file, particle_list)
 
 ! Project onto element_list (saves into the first value in node_list!)
-call project_particles(particle_list, node_list, element_list)
+call project_particles(node_list, element_list, particle_list)
 
 ! Write the first value of node_list to a vtk file
 particle_file = particle_file(1:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards

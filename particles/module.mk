@@ -11,6 +11,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC) \
 
 JOREK2_PARTICLES_SRC :=$(JOREK2_PARTICLES_SRC) \
   $(DIR)/mod_import_export_particles.f90 \
+  $(DIR)/mod_import_restart_linear.f90 \
   $(DIR)/mod_project_particles.f90  \
 
 PENNING_TEST_SRC := $(PENNING_TEST_SRC) \

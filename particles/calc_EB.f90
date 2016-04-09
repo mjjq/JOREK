@@ -3,7 +3,7 @@ subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
 use parameters
 use nodes_elements
 use constants
-use phys_module, only : F0, central_mass, central_density, tstep_n
+use phys_module, only : F0, central_mass, central_density, tstep
 
 implicit none
 
@@ -65,8 +65,8 @@ U_Z      = U_Z   + (- P_s(2) * R_t + P_t(2) * R_s ) * inv_st_jac
 psi = psi + P(1)
 U   = U   + P(2)
 
-! WARNING: only uses tstep_n(1), does not support variable timestep!
-psi_time = Pd(1)/tstep_n(1)
+! Use the current timestep size
+psi_time = Pd(1)/tstep
 
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
 B     = (/ + psi_Z, - psi_R, F0 /) * R_inv

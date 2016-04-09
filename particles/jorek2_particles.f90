@@ -44,7 +44,7 @@ interface
 end interface
 
 
-required = MPI_THREAD_FUNNELED
+required = MPI_THREAD_MULTIPLE
 
 call MPI_Init_thread(required, provided, StatInfo)
 call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
@@ -118,7 +118,7 @@ do i_step=i_begin,i_end
     if (my_id .eq. 0) then
       call import_next_restart(node_list,element_list, i_step, i_step_out, rst_format) !  returns i_step of new file
     endif
-    call MPI_Bcast(i_step_out, 1, MPI_INTEGER, 0, MPI_COMM_WORLD) ! broadcast this number to every node
+    call MPI_Bcast(i_step_out, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr) ! broadcast this number to every node
     call broadcast_nodes(my_id, node_list)
     call broadcast_elements(my_id, element_list)
     call update_neighbours(element_list,node_list)

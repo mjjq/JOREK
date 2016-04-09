@@ -23,6 +23,7 @@ character*(*), parameter      :: datarep = 'native'
 ! Debugging output
 integer :: resultlen
 character(len=MPI_MAX_ERROR_STRING) :: string
+real*8 :: t_start, t_end
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
@@ -32,6 +33,7 @@ allocate(particles_per_proc(0:n_cpu-1))
 if (my_id .eq. 0) then
   write(*,*) '***********************************'
   write(*,*) '*       export particles          *'
+  call cpu_time(t_start)
 endif
 
 ! Set Lustre io params (avoids locking error)
@@ -66,7 +68,8 @@ call MPI_File_write_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET
 call MPI_File_close(fh,ierr)
 
 if (my_id .eq. 0) then
-  write(*,*) '*       particles exported        *'
+  call cpu_time(t_end)
+  write(*,"(A,f8.4,A)") ' *       elapsed time: ',t_end-t_start, '*'
   write(*,*) '***********************************'
 endif
 end subroutine export_particles

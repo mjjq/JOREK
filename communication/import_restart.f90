@@ -20,7 +20,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   integer,                 intent(in)    :: format_rst  ! format of restart file
   
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp, format_rst_file
+  integer              :: i, j, m, k, n_tor_tmp, format_rst_file, ierr
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
@@ -32,6 +32,26 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   integer, allocatable 			:: mode_tmp_perturbation(:)
   real*8,  allocatable 			:: values_tmp_perturbation(:,:,:), deltas_tmp_perturbation(:,:,:)
   logical, parameter   			:: import_perturbation = .false.
+
+  ! --- Read in files created with versions of JOREK not having transform in elements
+  type type_element_OLD                               !< type definition for one elements
+    integer :: vertex(n_vertex_max)               !< nodes of the corners
+    integer :: neighbours(n_vertex_max)           !< neighbouring elements
+    real*8  :: size(n_vertex_max,n_order+1)       !< size of vectors at each vertex of the element
+    integer :: father                             !< index of father element (0 if no father)"refinement"
+    integer :: n_sons                             !< Number of sons elements"refinement"
+    integer :: n_gen                              !< Generation rank of the element"refinement"
+    integer :: sons(4)                            !< Sons of the element (=0 if no son)"refinement"
+    integer :: contain_node(5)                    !< nodes belonging to the element"refinement"
+    integer :: nref                               !< How the element has been refined (if so)"refinement"
+  end type type_element_OLD
+  type type_element_list_OLD                          !< type definition for a list of elements
+    integer :: n_elements                         !< number of elements in the list
+    type (type_element_OLD) :: element(n_elements_max)!< list of elements
+  end type type_element_list_OLD
+
+  type(type_element_list_OLD) :: element_list_OLD
+
 
   error = 0
 
@@ -125,7 +145,25 @@ if (format_rst .gt. 0) then
     enddo
   enddo
 
-  read(21) element_list%element(1:element_list%n_elements)
+  ! Try to read in the current type
+  read(21,iostat=ierr) element_list%element(1:element_list%n_elements)
+  if (ierr .ne. 0) then
+    backspace(21)
+    ! Try to read the old type
+    read(21) element_list_OLD%element(1:element_list%n_elements)
+    ! Convert into new element list type
+    do i=1,element_list%n_elements
+      element_list%element(i)%vertex = element_list_OLD%element(i)%vertex
+      element_list%element(i)%neighbours = element_list_OLD%element(i)%neighbours
+      element_list%element(i)%size = element_list_OLD%element(i)%size
+      element_list%element(i)%father = element_list_OLD%element(i)%father
+      element_list%element(i)%n_sons = element_list_OLD%element(i)%n_sons
+      element_list%element(i)%n_gen = element_list_OLD%element(i)%n_gen
+      element_list%element(i)%sons = element_list_OLD%element(i)%sons
+      element_list%element(i)%contain_node = element_list_OLD%element(i)%contain_node
+      element_list%element(i)%nref = element_list_OLD%element(i)%nref
+    enddo
+  endif
   read(21) tstep,eta_rst,visco_rst,visco_par_rst
   read(21) index_start
   read(21) t_start

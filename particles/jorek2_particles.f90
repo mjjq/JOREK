@@ -10,10 +10,12 @@ use nodes_elements
 use mod_particles
 use mod_import_export_particles
 use mod_initialise_particles
+use mod_redistribute_particles
 use mod_import_restart_linear
 use openadas
 use clock_module
 use mpi_mod
+!$ use omp_lib
 
 implicit none
 
@@ -27,6 +29,7 @@ integer    :: required, provided, StatInfo
 character*17 :: particle_file, restart_file
 
 real*8, dimension(:), allocatable :: energy_list, momentum_list
+real*8 :: wstart, wend, wtime ! wall time on this cpu
 
 interface
   subroutine update_particles(my_id,particle_list,t_step,n_step,energy_list,momentum_list,toroidal_field_factor,field_interp_time)
@@ -119,6 +122,7 @@ do i_step=i_begin,i_end
       call import_next_restart(node_list,element_list, i_step, i_step_out, rst_format) !  returns i_step of new file
     endif
     call MPI_Bcast(i_step_out, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr) ! broadcast this number to every node
+    call broadcast_phys(my_id)                         ! physics parameters, because tstep might have changed
     call broadcast_nodes(my_id, node_list)
     call broadcast_elements(my_id, element_list)
     call update_neighbours(element_list,node_list)
@@ -129,10 +133,24 @@ do i_step=i_begin,i_end
   endif
 
   ! Do substepping
+  call cpu_time(wstart) ! correct if no OMP
+  !$ wstart = omp_get_wtime()
   call update_particles(my_id,particle_list,t_step_particles,nout_particles,&
       energy_list,momentum_list,field_interp_time=(t_particles_begin .gt. -1))
-
+  call cpu_time(wend) ! correct if no OMP
+  !$ wend = omp_get_wtime()
+  wtime = wend - wstart
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+  call cpu_time(wstart) ! correct if no OMP
+  !$ wstart = omp_get_wtime()
+  ! Redistribute particles over processors based on the walltime for the updating
+  !call redistribute_particles(particle_list,wtime)
+  call cpu_time(wend) ! correct if no OMP
+  !$ wend = omp_get_wtime()
+  wtime = wend - wstart
+  !if (my_id .eq. 0) write(*,*) "Particle load-balancing took ", wtime, " seconds"
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
   write(particle_file,'(A4,i0.9,A4)') 'part',i_step_out,'.rst'
   call export_particles(particle_list,particle_file)

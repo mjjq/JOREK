@@ -37,6 +37,46 @@ module mod_particles
   character(len=80) :: particle_restart_file = '' !< Particle restart file to read at the beginning of simulation
 contains
 
+!> Append a single particle to the list and grow it if needed
+subroutine append_particle_to_list(particle_list, particle)
+  implicit none
+
+  type(type_particle_list), intent(inout) :: particle_list
+  type(type_particle), intent(in) :: particle
+
+  if (size(particle_list%particle,1) .lt. particle_list%n_particles+1) then
+    call grow_particle_list(particle_list)
+  endif
+  particle_list%n_particles = particle_list%n_particles + 1
+  particle_list%particle(particle_list%n_particles) = particle
+end subroutine append_particle_to_list
+
+!> Append a list of particles to the list and grow it if necessary
+subroutine append_particles_to_list(particle_list, particles)
+  implicit none
+
+  type(type_particle_list), intent(inout) :: particle_list
+  type(type_particle), dimension(:), intent(in) :: particles
+
+  ! Grow it until it fits
+  do while (size(particle_list%particle,1) .lt. particle_list%n_particles+size(particles,1))
+    call grow_particle_list(particle_list)
+  enddo
+  particle_list%particle(particle_list%n_particles+1:particle_list%n_particles+size(particles,1)) = particles
+  particle_list%n_particles = particle_list%n_particles + size(particles,1)
+end subroutine append_particles_to_list
+
+!> Grow the particle list by a factor of two
+subroutine grow_particle_list(particle_list)
+  implicit none
+  type(type_particle_list), intent(inout) :: particle_list
+  type(type_particle), dimension(:), allocatable :: temp
+
+  allocate(temp(lbound(particle_list%particle,1):ubound(particle_list%particle,1)+size(particle_list%particle,1)))
+  temp(lbound(particle_list%particle,1):ubound(particle_list%particle,1)) = particle_list%particle
+  call move_alloc(from=temp,to=particle_list%particle) ! deallocates temp as well
+end subroutine grow_particle_list
+
 subroutine initialise_particle_parameters(my_id, filename)
 implicit none
 character(len=*), intent(in) :: filename

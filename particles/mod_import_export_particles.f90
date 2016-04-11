@@ -69,7 +69,7 @@ call MPI_File_close(fh,ierr)
 
 if (my_id .eq. 0) then
   call cpu_time(t_end)
-  write(*,"(A,f8.4,A)") ' *       elapsed time: ',t_end-t_start, '*'
+  write(*,"(A,f8.4,A)") ' *       elapsed time: ',t_end-t_start, '    *'
   write(*,*) '***********************************'
 endif
 end subroutine export_particles

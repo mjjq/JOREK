@@ -236,20 +236,20 @@ call cpu_time(t1)
 write(*,'(i5,A,2f12.4)') my_id, ' Time particle update cpu/wall:',t1-t0, oend-ostart
 write(*,'(i5,A,f9.5,A)') my_id, '   Find_RZ used in ', &
   real(find_RZ_count)*100.d0/real(particle_list%n_particles*n_step), ' % of the runs'
-write(*,'(i5,A,g18.10)') my_id, '  number of lost particles in this iteration:',n_lost
-write(*,'(i5,A,g18.10)') my_id, '  particle energy left domain:',energy_lost_particles
+write(*,'(i5,A,g12.4)') my_id, '  number of lost particles in this iteration:',n_lost
+write(*,'(i5,A,g12.4)') my_id, '  particle energy left domain:',energy_lost_particles
 total_energy_lost_particles = total_energy_lost_particles + energy_lost_particles
 if (.not. present(energy_list)) write(*,'(i5,A,g18.10)') my_id, '  total lost particle energy:',total_energy_lost_particles
 
 ! Calculate statistics on energy_list and momentum list if they are present
 if (present(energy_list)) then
   call statistics_no_zero(energy_list, mean, minv, maxv, stddev, total, n_lost)
-  write(*,'(i5,A,6g18.10)') my_id, '  energy min/mean/max/stddev/total/lost :',&
+  write(*,'(i5,A,6g12.4)') my_id, '  energy min/mean/max/stddev/total/lost :',&
     minv,mean,maxv,stddev,total,total_energy_lost_particles
 endif
 if (present(momentum_list)) then
   call statistics_no_zero(momentum_list, mean, minv, maxv, stddev, total, n_lost)
-  write(*,'(i5,A,6g18.10)') my_id, '  momentum min/mean/max/stddev/total/lost :',&
+  write(*,'(i5,A,6g12.4)') my_id, '  momentum min/mean/max/stddev/total/lost :',&
     minv,mean,maxv,stddev,total,0.d0 ! total lost momentum hardcoded, not interesting now
 endif
 write(*,*) my_id,'lost particles on this cpu: ',n_lost

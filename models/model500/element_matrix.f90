@@ -573,9 +573,9 @@ do ms=1, n_gauss
   ! --- Radiative Power for neutral Deuterium
   ! ------------------------------------------
 
-   if (T0 .gt. 1.d-6) then
-
    T_rad = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+   if (T0 .gt. 1.d-6) then
 
 ! Formulae for radiative power is in SI units and for T = Te + Ti
 

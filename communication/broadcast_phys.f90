@@ -1,7 +1,6 @@
+!> Broadcast all namelist input parameters from MPI task 0 to the others
 subroutine Broadcast_phys(my_id)
-!----------------------------------------------------------
-! Broadcast all input parameters from MPI thread 0 to the others
-!----------------------------------------------------------
+
 use tr_module
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
@@ -18,15 +17,27 @@ integer, intent(in) :: my_id
 
 ! --- internal variables
 integer                :: ierr, position, bufsize
+logical                :: err_buff_too_small
 character, allocatable :: buffer(:)
+
+if ( my_id == 0 ) then
+  write(*,*) '*************************************'
+  write(*,*) '*        Broadcast_phys             *'
+  write(*,*) '*************************************'
+end if
 
 !----------------------------------- one line would be enough if only MPI_TYPE_STRUCT would work on IXIA
 !call MPI_BCAST(phys_list,1,MPI_phys,0,MPI_COMM_WORLD,ierr)
 
+err_buff_too_small = .false.
+
+! --- Allocate the buffer with a fixed size which needs to be increased only
+!     if many new input parameters are added.
 bufsize = 65536
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastp_buffer")
 
+! --- Pack the input parameters on the sending MPI task 0.
 if (my_id .eq. 0) then
   position = 0
 
@@ -323,11 +334,28 @@ if (my_id .eq. 0) then
   call MPI_PACK(R_geo,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(corr_neg_temp_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(corr_neg_dens_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-
+  
+  write(*,'(1x,a,i7,a,i7,a)') 'Buffer usage:', position, ' of', bufsize
+  if ( position > bufsize ) then
+    err_buff_too_small = .true.
+    write(*,*) ''
+    write(*,*) 'ERROR: BUFFER SIZE NOT SUFFICIENT in communication/broadcast_phys.f90'
+    write(*,*) ''
+  end if
+  
 endif
 
+! --- Error treatment in case buffer is too small
+call MPI_BCAST(err_buff_too_small,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+if ( err_buff_too_small ) then
+  call MPI_FINALIZE(IERR)
+  stop
+end if
+
+! --- Broadcast input parameters.
 call MPI_BCAST(buffer,bufsize,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
 
+! --- Unpack the input parameters from the buffer on all receiving MPI tasks.
 if (my_id .ne. 0) then
 
   position = 0

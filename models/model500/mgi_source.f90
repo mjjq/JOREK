@@ -1,6 +1,9 @@
 module mgi_module
 
 use constants
+use profiles
+
+implicit none
 
 real*8 :: total_n_particles_inj
 real*8 :: total_n_particles_plasma
@@ -9,8 +12,6 @@ real*8 :: total_n_particles_inj_all
 contains 
 
 integer function factorial(n)
-
-implicit none
 
 integer, intent(in) :: n 
 integer             :: i, Ans
@@ -26,7 +27,7 @@ factorial = Ans
 end function factorial
 
 
-subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi, &
+subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
 
 !=================================================================================
@@ -36,8 +37,6 @@ subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_d
 !  where the main parameter is mgi_amplitude
 !  More details in the JOREK wiki or by asking A.Fil or E.Nardon
 !=================================================================================
-
-implicit none
 
 real*8 :: c0_D
 real*8 :: radius
@@ -84,8 +83,7 @@ real*8              :: DMV_inj_frac
 logical, intent(in) :: JET_MGI
 logical, intent(in) :: ASDEX_MGI
 real*8, intent(out) :: rhon_source
-
-  PI = 3.14159265358979d0
+real*8, intent(in)  :: mgi_tor_norm
 
   radius = sqrt((R-mgi_R)**2 + (Z-mgi_Z)**2)
 
@@ -102,7 +100,7 @@ real*8, intent(out) :: rhon_source
   
    mgi_tor_shape = exp(-(dphi/mgi_deltaphi)**2.d0)
 
-   V_mgi  = PI**1.5d0 * mgi_R * mgi_deltaphi * mgi_radius**2.d0
+   V_mgi  = PI * mgi_R * mgi_tor_norm * mgi_radius**2.d0
 
    t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
@@ -221,12 +219,9 @@ subroutine update_mgi(my_id,node_list,element_list)
 ! from the start of the simulation and for each timestep.
 ! It also calculate to total number of neutral particles in the plasma.
 !=================================================================================================
-use constants
 use data_structure
 use phys_module
 use mpi_mod
-
-implicit none
 
 type (type_node_list), intent(in)    :: node_list
 type (type_element_list), intent(in) :: element_list

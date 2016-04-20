@@ -113,6 +113,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
     read(5,in1)
  endif
 
+  ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
+  mgi_tor_norm = mgi_deltaphi * PI**0.5 ! Temporary
+
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
   ! --- Open the file.

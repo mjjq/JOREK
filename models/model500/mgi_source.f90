@@ -38,11 +38,12 @@ subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_d
 !  More details in the JOREK wiki or by asking A.Fil or E.Nardon
 !=================================================================================
 
+implicit none
+
 real*8 :: c0_D
 real*8 :: radius
 real*8 :: mgi_tor_shape
 real*8 :: mgi_pol_shape
-real*8 :: PI
 real*8 :: dphi
 real*8 :: V_mgi
 real*8 :: f_Nbar
@@ -206,6 +207,10 @@ real*8, intent(in)  :: mgi_tor_norm
     rhon_source = mgi_amplitude * mgi_pol_shape * mgi_tor_shape   
  
   endif
+
+ else
+
+   rhon_source = 0.
 
  endif
 

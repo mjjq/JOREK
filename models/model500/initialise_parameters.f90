@@ -8,6 +8,7 @@ use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use vacuum,        only: vacuum_preset, wall_resistivity
 use wsmp_module,   only: use_wsmp
+use profiles,      only: interpolProf, readProf
 
 implicit none
 
@@ -114,7 +115,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
  endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
-  mgi_tor_norm = mgi_deltaphi * PI**0.5 ! Temporary
+  mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
+
+  write(*,*) ''
+  write(*,*) 'Initialization of mgi_tor_norm'
+  write(*,*) '  mgi_deltaphi = ', mgi_deltaphi
+  write(*,*) '  mgi_tor_norm = ', mgi_tor_norm
+  write(*,*) ''
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 

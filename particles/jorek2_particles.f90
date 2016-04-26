@@ -23,13 +23,16 @@ implicit none
 type (type_particle_list) :: particle_list
 type (type_particle_list) :: particle_list_GC
 
-integer    :: i_tor, my_id, n_cpu, ierr, i_step, i_step_out, i_begin, i_end
+integer    :: i_tor, my_id, n_cpu, ierr, i_step, i_step_out, i_begin, i_end, i, index_prev
 integer*4  :: rank, comm_size
 integer    :: required, provided, StatInfo
 character*17 :: particle_file, restart_file
 
 real*8, dimension(:), allocatable :: energy_list, momentum_list
 real*8 :: wstart, wend, wtime ! wall time on this cpu
+
+type(type_ADF11_all) :: adf11(1:N_species)
+type(type_coronal)   :: coronal(1:N_species)
 
 interface
   subroutine update_particles(my_id,particle_list,t_step,n_step,energy_list,momentum_list,toroidal_field_factor,field_interp_time)
@@ -62,12 +65,21 @@ if (my_id .eq. 0) then
 endif
 
 ! Filename hardcoded here because we can only read one file from stdin easily
-! (closing flushes)
 call initialise_parameters(my_id, "in_jorek")
 call initialise_particle_parameters(my_id, "__NO_FILENAME__")
-call read_adas                                     ! read openadas data for ionisation, recombination and radiation rates
 call initialise_basis                              ! define the basis functions at the Gaussian points
-call coronal                                       ! calculate the coronal equilibria from the adas data
+! For each particle read adas files, skip duplicate reads, and calculate coronal equilibrium
+do i=1,n_species
+   index_prev = maxloc(species(1:i-1)*0.d0, 1, mask=adas_suffix(1:i-1).eq.adas_suffix(i))
+   if (index_prev .eq. 0) then
+     adf11(i)   = read_adf11(adas_suffix(i))                                    ! read openadas data for ionisation, recombination and radiation rates
+     coronal(i) = coronal_equilibrium(adf11(i))                                 ! calculate the coronal equilibria from the adas data
+   else
+     adf11(i)   = adf11(index_prev)
+     coronal(i) = coronal(index_prev)
+   endif
+enddo
+
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -92,7 +104,7 @@ call update_neighbours(element_list,node_list)     ! update neighbour informatio
 call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 
 if (len_trim(particle_restart_file) .eq. 0) then
-  call initialise_particles(my_id, n_cpu, particle_list, particle_list_GC)
+  call initialise_particles(my_id, n_cpu, coronal, particle_list, particle_list_GC)
 else
   call import_particles(particle_restart_file, particle_list)
 endif

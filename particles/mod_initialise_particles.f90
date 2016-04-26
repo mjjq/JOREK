@@ -2,17 +2,19 @@ module mod_initialise_particles
 contains
 
 !> Initialize_particles creates n_particles*(species>0), divided over all processors
-subroutine initialise_particles(my_id,n_cpu,particle_list,particle_list_GC)
+subroutine initialise_particles(my_id,n_cpu, coronal, particle_list,particle_list_GC)
 
 !$ use omp_lib
 use constants
 use data_structure
 use mod_particles
 use nodes_elements
+use openadas
 
 implicit none
 
 ! Routine parameters
+type (type_coronal), intent(in) :: coronal(1:n_species) !< Coronal equilibrium data for all particles
 type (type_particle_list), intent(out) :: particle_list
 type (type_particle_list), intent(out) :: particle_list_GC
 integer, intent(in) :: my_id, n_cpu
@@ -71,7 +73,7 @@ do i=1,N_species
 
   !$omp parallel do default(none) &
   !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
-  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p) &
+  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal) &
   !$omp   private(j, R, Z, phi, ifail, particle, ran3)
   do j=1,n_p(i)
     ifail = 1
@@ -88,7 +90,7 @@ do i=1,N_species
       if (accept_location(i, R,Z,phi)) then
         call particle_init_default(i, R, Z, phi, particle, ifail)
         if (ifail .eq. 0) then
-          call particle_init(particle, ifail)
+          call particle_init(particle, coronal(i), ifail)
         endif
       else
         ifail = 1
@@ -231,7 +233,7 @@ endif
 end subroutine particle_init_default
 
 !> Set v and q of a particle for use with kinetic codes
-subroutine particle_init(particle, ifail)
+subroutine particle_init(particle, cor, ifail)
 use constants
 use data_structure
 use mod_particles
@@ -241,6 +243,7 @@ use openadas
 implicit none
 
 type(type_particle), intent(inout) :: particle
+type(type_coronal), intent(in)     :: cor !< Coronal equilibrium datatype for this particle
 integer, intent(out) :: ifail
 
 integer :: i_var(4)
@@ -268,7 +271,7 @@ vy = V_thermal * sqrt(-2*Log(ran4(1))) * sin(TWOPI*ran4(2))
 vz = V_thermal * sqrt(-2*Log(ran4(3))) * sin(TWOPI*ran4(4))
 
 ! TODO Why 1d-6?
-call interpolate_coronal(dlog10(background_density*1d-6),dlog10(background_kelvin),Z_coronal,radiation_coronal)
+call interpolate_coronal(cor, log10(background_density),log10(background_kelvin),Z_coronal,radiation_coronal)
 
 particle%v(1) =   vx * cos(particle%x(3)) + vy * sin(particle%x(3))   ! V_R
 particle%v(3) = - vx * sin(particle%x(3)) + vy * cos(particle%x(3))   ! V_phi [physical component]

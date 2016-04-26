@@ -1,439 +1,261 @@
 !------------------------------------------------------------------------------------------------------
 ! module takes the OPEN-ADAS data to calculate the steady state (or time evolution) charge distribution
 ! and average charge state as a function of temperature
-! to be done : radiation losses
-!
-!
-! Guido Huijsmans, ITER, 20/01/2015
 !------------------------------------------------------------------------------------------------------
 
 module openadas
 
-integer             :: n_z, n_states, n_d_ion, n_T_ion, n_d_rec, n_T_rec, n_d_rb, n_T_rb, n_d_lt, n_T_lt
-real*8, allocatable :: density_ion(:),    temperature_ion(:),    ionisation(:,:,:)
-real*8, allocatable :: density_rec(:),    temperature_rec(:),    recombination(:,:,:)
-real*8, allocatable :: density_rb(:),     temperature_rb(:),     rad_rb(:,:,:)
-real*8, allocatable :: density_lt(:),     temperature_lt(:),     rad_lt(:,:,:)
+type type_ADF11 !< Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
+  integer             :: n_Z !< Atomic number
+  integer             :: izmin, izmax !< minimum and maximum value of z for which data is available
+  real*8, allocatable :: density(:) !< log10 density (cm^-3)
+  real*8, allocatable :: temperature(:) !< log10 temperature (eV)
+  real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: z, d, T). Units:
+  ! ACD, SCD: cm3s-1 (for *CD ?)
+  ! PLT, PRB: Wcm3 (for P* ?)
+end type type_ADF11
 
-integer :: n_d_cor, n_T_cor
-real*8, allocatable :: density_cor(:), temperature_cor(:), Z_cor(:,:), rad_cor(:,:)
+type type_ADF11_all ! unresolved
+  integer          :: n_Z !< Atomic number
+  type(type_ADF11) :: ACD !< Effective recombination coefficients
+  type(type_ADF11) :: SCD !< Effective ionisation coefficients
+  type(type_ADF11) :: CCD !< Charge exchange effective recombination coefficients
+  type(type_ADF11) :: PLT !< Line power driven by excitation of dominant ions
+  type(type_ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
+  type(type_ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
+end type type_ADF11_all
+!! Recombination data is given as recombining FROM (Z=1 to Z=74)
+!! Ionisation data is given as ionising TO (Z=1 up to Z=74)
+
+type type_coronal
+  integer :: n_Z !< Atomic number
+  real*8, allocatable :: density(:) !< log10 density (m^-3)
+  real*8, allocatable :: temperature(:) !< log10 temperature (K)
+  real*8, allocatable :: Z(:,:) !< Charge state (electroncharges)
+  real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W)
+end type type_coronal
 
 contains
 
-subroutine read_adas
-
+!> Read ADF11 data files and import them into a type_ADF11
+!! Tries to read ACD, SCD, CCD, PLT, PRB, PRC coefficients
+!! if the files exist. Files of format acd$suffix.dat are read.
+!! Suffix is usually of the form 50_w, 96_li
+function read_adf11(suffix) result(ad)
 implicit none
 
-integer :: i, izmin, izmax
+character*6, intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li), give this in input file
+type(type_ADF11_all) :: ad !< OpenAdas data type
+
+type(type_ADF11) :: a
+integer :: i_ADF11
+character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
+character*13 :: filename
+
+integer :: i, ierr, n_d, n_T
+logical :: file_exists
 
 write(*,'(A)') '*********************************'
 write(*,'(A)') '* Importing OpenAdas data       *'
+write(*,'(A)') '* open files ending in:', suffix, ' *' 
 write(*,'(A)') '*********************************'
 
-open(10,file='ionisation.txt')
+do i_ADF11 = 1,size(ADF11_filenames,1)
+  write(filename,"(A,A,A)") ADF11_filenames(i_ADF11), trim(suffix), '.dat'
+  inquire(file=filename, exist=file_exists)
+  if (.not. file_exists) continue ! Skip this type of data
 
-read(10,*)  n_z, n_d_ion, n_T_ion, izmin, izmax
+  write(*,"(A,A,A)",advance="no") "Reading data from ", filename
+  open(10,file=filename,iostat=ierr)
+  if (ierr .ne. 0) then
+    write(*,*) "failed with code", ierr
+    continue
+  endif
 
-allocate(density_ion(n_d_ion), temperature_ion(n_T_ion), ionisation(n_Z+1,n_d_ion,n_T_ion))
+  read(10,*)  a%n_z, n_d, n_T, a%izmin, a%izmax
+  allocate(a%density(n_d), a%temperature(n_T), a%GRC(a%izmin:a%izmax,n_d,n_T))
 
-read(10,*)
-
-read(10,*) density_ion(:)
-read(10,*) temperature_ion(:)
-
-ionisation = -30.d0
-do i = 1, n_z
   read(10,*)
-  read(10,*) ionisation(i,:,:)
+  read(10,*) a%density(:)
+  read(10,*) a%temperature(:)
+
+  a%GRC = -30.d0
+  do i = a%izmin, a%izmax
+    read(10,*)
+    read(10,*) a%GRC(i,:,:)
+  enddo
+  close(10)
+
+  select case (i_ADF11)
+    case (1); ad%ACD = a
+    case (2); ad%SCD = a
+    case (3); ad%CCD = a; write(*,*) "Warning: CCD not implemented correctly yet"
+    case (4); ad%PLT = a
+    case (5); ad%PRB = a
+    case (6); ad%PRC = a; write(*,*) "Warning: PRC not implemented correctly yet" ! see coronal model
+  end select
+
+  write(*,*) "succeeded"
 enddo
 
-close(10)
-
-open(10,file='recombination.txt')
-
-read(10,*)  n_z, n_d_rec, n_T_rec, izmin, izmax
-
-allocate(density_rec(n_d_rec), temperature_rec(n_T_rec), recombination(n_Z+1,n_d_rec,n_T_rec))
-
-read(10,*)
-read(10,*) density_rec(:)
-read(10,*) temperature_rec(:)
-
-recombination = -30.d0
-do i = 1, n_z
-  read(10,*)
-  read(10,*) recombination(i+1,:,:)
-enddo
-
-open(10,file='rad_rb.txt')
-
-read(10,*)  n_z, n_d_rb, n_T_rb, izmin, izmax
-
-allocate(density_rb(n_d_rb), temperature_rb(n_T_rb), rad_rb(n_Z+1,n_d_rb,n_T_rb))
-
-read(10,*)
-
-read(10,*) density_rb(:)
-read(10,*) temperature_rb(:)
-
-rad_rb = -30.d0
-do i = 1, n_z
-  read(10,*)
-  read(10,*) rad_rb(i+1,:,:)
-enddo
-
-open(10,file='rad_lt.txt')
-
-read(10,*)  n_z, n_d_lt, n_T_lt, izmin, izmax
-
-allocate(density_lt(n_d_lt), temperature_lt(n_T_lt), rad_lt(n_Z+1,n_d_lt,n_T_lt))
-
-read(10,*)
-read(10,*) density_lt(:)
-read(10,*) temperature_lt(:)
-
-rad_lt = -30.d0
-do i = 1, n_z
-  read(10,*)
-  read(10,*) rad_lt(i+1,:,:)
-enddo
-
-n_states = n_Z + 1
-
-!density_ion     = 10**6 * 10**density_ion  ! [m^-3]
-!density_rec     = 10**6 * 10**density_rec  ! [m^-3]
-!density_rad     = 10**6 * 10**density_rad  ! [m^-3]
-!temperature_ion = 10**temperature_ion      ! [eV]
-!temperature_rec = 10**temperature_rec      ! [eV]
-!temperature_rad = 10**temperature_rad      ! [eV]
-!ionisation      = 10**ionisation           ! [s^-1]
-!recombination   = 10**recombination        ! [s^-1]
-!rad_db          = 10**rad_db               ! [s^-1]
-!rad_lt          = 10**rad_lt               ! [s^-1]
-
-close(10)
-
-write(*,*) 'Done reading adas data'
-
-end subroutine
+write(*,*) 'Done reading adas data for atomic number', ad%n_Z
+end function read_adf11
 
 
-subroutine ion_rec_rad(n_points,density,temperature,Z,ion_rate,rec_rate,rad_rate_rb,rad_rate_lt)
-! linear interpolation of density and temperature (assumes equidistant coordinates)
 
+!> (Zeroth order) interpolation of log10 values of GRC in density and temperature
+!! (Just return closest value for now, replace with splines in the future)
+function GRC(a, z, density, temperature)
 implicit none
 
-integer :: n_points
-real*8  :: density(n_points)         ! log10 of density
-real*8  :: temperature(n_points)     ! log10 of temperature
-integer :: Z(n_points)               ! charge state
-real*8  :: ion_rate(n_points)        ! ionisation rate [1/s]
-real*8  :: rec_rate(n_points)        ! recombination rate [1/s]
-real*8  :: rad_rate_rb(n_points)     ! radiated power recombombination and Brehmstrahlung
-real*8  :: rad_rate_lt(n_points)     ! radiated power line emmission
+type (type_ADF11), intent(in) :: a
+real*8, intent(in)            :: density, temperature
+integer, intent(in)           :: z ! index in a%GRC(z,:,:) (is ionisation level or ionisation level - 1, 1:n_z)
+real*8 :: GRC
 
-real*8  :: ion_low, ion_high, rec_low, rec_high, rad_rb_low, rad_rb_high,  rad_lt_low, rad_lt_high
-integer :: index_d_ion(n_points),    index_T_ion(n_points),    index_d_rec(n_points),    index_T_rec(n_points)
-integer :: index_d_rb(n_points),     index_T_rb(n_points),     index_d_lt(n_points),     index_T_lt(n_points), index_Z(n_points)
-integer :: i
+integer :: index_d, index_T
+
+index_d = minloc(abs(density-a%density),1)
+index_T = minloc(abs(temperature-a%temperature),1)
+
+if (allocated(a%GRC)) then
+  GRC = 10.d0**a%GRC(z,index_d,index_T)
+else
+  GRC = 0.d0
+endif
+end function GRC
 
 
-index_d_ion = floor((density     - density_ion(1))     / (density_ion(n_d_ion)       - density_ion(1))     * n_d_ion)  + 1
-index_T_ion = floor((temperature - temperature_ion(1)) / (temperature_ion(n_T_ion)   - temperature_ion(1)) * n_T_ion)  + 1
-index_d_rec = floor((density     - density_rec(1))     / (density_rec(n_d_rec)       - density_rec(1))     * n_d_rec)  + 1
-index_T_rec = floor((temperature - temperature_rec(1)) / (temperature_rec(n_T_rec)   - temperature_rec(1)) * n_T_rec)  + 1
-index_d_rb  = floor((density     - density_rb(1))      / (density_rb(n_d_rb)         - density_rb(1))      * n_d_rb)  + 1
-index_T_rb  = floor((temperature - temperature_rb(1))  / (temperature_rb(n_T_rb)     - temperature_rb(1))  * n_T_rb)  + 1
-index_d_lt  = floor((density     - density_lt(1))      / (density_lt(n_d_lt)         - density_lt(1))      * n_d_lt)  + 1
-index_T_lt  = floor((temperature - temperature_lt(1))  / (temperature_lt(n_T_lt)     - temperature_lt(1))  * n_T_lt)  + 1
-index_Z     = Z + 1
 
-do i=1, n_points
-
-  ion_low = ionisation(index_Z(i),index_d_ion(i),index_T_ion(i)) &
-          + (ionisation(index_Z(i),index_d_ion(i)+1,index_T_ion(i)) -  ionisation(index_Z(i),index_d_ion(i),index_T_ion(i))) &
-          * (density(i) - density_ion(index_d_ion(i))) / (density_ion(index_d_ion(i)+1) - density_ion(index_d_ion(i)))
-
-  ion_high = ionisation(index_Z(i),index_d_ion(i),index_T_ion(i)+1) &
-          + (ionisation(index_Z(i),index_d_ion(i)+1,index_T_ion(i)+1) -  ionisation(index_Z(i),index_d_ion(i),index_T_ion(i)+1)) &
-          * (density(i) - density_ion(index_d_ion(i))) / (density_ion(index_d_ion(i)+1) - density_ion(index_d_ion(i)))
-
-  ion_rate(i) = ion_low + (temperature(i) - temperature_ion(index_T_ion(i))) / (temperature_ion(index_T_ion(i)+1) - temperature_ion(index_T_ion(i))) &
-                        * (ion_high - ion_low)
-
-  rec_low = recombination(index_Z(i),index_d_rec(i),index_T_rec(i)) &
-          + (recombination(index_Z(i),index_d_rec(i)+1,index_T_rec(i)) -  recombination(index_Z(i),index_d_rec(i),index_T_rec(i))) &
-          * (density(i) - density_rec(index_d_rec(i))) / (density_rec(index_d_rec(i)+1) - density_rec(index_d_rec(i)))
-
-  rec_high = recombination(index_Z(i),index_d_rec(i),index_T_rec(i)+1) &
-          + (recombination(index_Z(i),index_d_rec(i)+1,index_T_rec(i)+1) -  recombination(index_Z(i),index_d_rec(i),index_T_rec(i)+1)) &
-          * (density(i) - density_rec(index_d_rec(i))) / (density_rec(index_d_rec(i)+1) - density_rec(index_d_rec(i)))
-
-  rec_rate(i) = rec_low + (temperature(i) - temperature_rec(index_T_rec(i))) / (temperature_rec(index_T_rec(i)+1) - temperature_rec(index_T_rec(i))) &
-                        * (rec_high - rec_low)
-
-  rad_rb_low = rad_rb(index_Z(i),index_d_rb(i),index_T_rb(i)) &
-             + (rad_rb(index_Z(i),index_d_rb(i)+1,index_T_rb(i)) -  rad_rb(index_Z(i),index_d_rb(i),index_T_rb(i))) &
-             * (density(i) - density_rb(index_d_rb(i))) / (density_rb(index_d_rb(i)+1) - density_rb(index_d_rb(i)))
-
-  rad_rb_high = rad_rb(index_Z(i),index_d_rb(i),index_T_rb(i)+1) &
-              + (rad_rb(index_Z(i),index_d_rb(i)+1,index_T_rb(i)+1) -  rad_rb(index_Z(i),index_d_rb(i),index_T_rb(i)+1)) &
-              * (density(i) - density_rb(index_d_rb(i))) / (density_rb(index_d_rb(i)+1) - density_rb(index_d_rb(i)))
-
-  rad_rate_rb(i) = rad_rb_low + (temperature(i) - temperature_rb(index_T_rb(i))) / (temperature_rb(index_T_rb(i)+1) - temperature_rb(index_T_rb(i))) &
-              * (rad_rb_high - rad_rb_low)
-
-  rad_lt_low = rad_lt(index_Z(i),index_d_lt(i),index_T_lt(i)) &
-             + (rad_lt(index_Z(i),index_d_lt(i)+1,index_T_lt(i)) -  rad_lt(index_Z(i),index_d_lt(i),index_T_lt(i))) &
-             * (density(i) - density_lt(index_d_lt(i))) / (density_lt(index_d_lt(i)+1) - density_lt(index_d_lt(i)))
-
-  rad_lt_high = rad_lt(index_Z(i),index_d_lt(i),index_T_lt(i)+1) &
-              + (rad_lt(index_Z(i),index_d_lt(i)+1,index_T_lt(i)+1) -  rad_lt(index_Z(i),index_d_lt(i),index_T_lt(i)+1)) &
-              * (density(i) - density_lt(index_d_lt(i))) / (density_lt(index_d_lt(i)+1) - density_lt(index_d_lt(i)))
-
-  rad_rate_lt(i) = rad_lt_low + (temperature(i) - temperature_lt(index_T_lt(i))) / (temperature_lt(index_T_lt(i)+1) - temperature_lt(index_T_lt(i))) &
-              * (rad_lt_high - rad_lt_low)
-
-enddo
-
-do i=1, n_points
-  ion_rate(i)    = 10**ion_rate(i)
-  rec_rate(i)    = 10**rec_rate(i)
-  rad_rate_rb(i) = 10**rad_rate_rb(i)
-  rad_rate_lt(i) = 10**rad_rate_lt(i)
-enddo
-
-return
-end subroutine
-
-subroutine interpolate_ion_rec_rad(density,temperature,ion_rate,rec_rate,rad_rate_rb,rad_rate_lt)
-! linear interpolation of density and temperature
-
+!> Calculate the coronal equilibrium values at specific values of density and temperature
+!! 
+function coronal_equilibrium(ad) result(cor)
 implicit none
 
-real*8, allocatable  :: ion_rate(:), rec_rate(:), rad_rate_rb(:), rad_rate_lt(:)
-real*8               :: density, temperature, ion_low, ion_high, rec_low, rec_high, rad_rb_low, rad_rb_high, rad_lt_low, rad_lt_high
-integer              :: i, index_d_ion, index_T_ion, index_d_rec, index_T_rec, index_d_rb, index_T_rb, index_d_lt, index_T_lt
+type (type_ADF11_all), intent(in) :: ad
+type (type_coronal)               :: cor
 
-index_d_ion = minloc(abs(density-density_ion),1)
-index_T_ion = minloc(abs(temperature-temperature_ion),1)
-index_d_rec = minloc(abs(density-density_rec),1)
-index_T_rec = minloc(abs(temperature-temperature_rec),1)
-index_d_rb  = minloc(abs(density-density_rb),1)
-index_T_rb  = minloc(abs(temperature-temperature_rb),1)
-index_d_lt  = minloc(abs(density-density_lt),1)
-index_T_lt  = minloc(abs(temperature-temperature_lt),1)
-
-if (density_ion(index_d_ion)     - density     .ge. 0.d0) index_d_ion = max(1,index_d_ion - 1)
-if (temperature_ion(index_T_ion) - temperature .ge. 0.d0) index_T_ion = max(1,index_T_ion - 1)
-if (density_rec(index_d_rec)     - density     .ge. 0.d0) index_d_rec = max(1,index_d_rec - 1)
-if (temperature_rec(index_T_rec) - temperature .ge. 0.d0) index_T_rec = max(1,index_T_rec - 1)
-if (density_rb(index_d_rb)       - density     .ge. 0.d0) index_d_rb  = max(1,index_d_rb  - 1)
-if (temperature_rb(index_T_rb)   - temperature .ge. 0.d0) index_T_rb  = max(1,index_T_rb  - 1)
-if (density_lt(index_d_lt)       - density     .ge. 0.d0) index_d_lt  = max(1,index_d_lt  - 1)
-if (temperature_lt(index_T_lt)   - temperature .ge. 0.d0) index_T_lt  = max(1,index_T_lt  - 1)
-
-if (.not. allocated(ion_rate))    allocate(ion_rate(n_states))
-if (.not. allocated(rec_rate))    allocate(rec_rate(n_states))
-if (.not. allocated(rad_rate_rb)) allocate(rad_rate_rb(n_states))
-if (.not. allocated(rad_rate_lt)) allocate(rad_rate_lt(n_states))
-
-do i = 1, n_states
-
-  ion_low = ionisation(i,index_d_ion,index_T_ion) &
-          + (ionisation(i,index_d_ion+1,index_T_ion) -  ionisation(i,index_d_ion,index_T_ion)) &
-          * (density - density_ion(index_d_ion)) / (density_ion(index_d_ion+1) - density_ion(index_d_ion))
-
-  ion_high = ionisation(i,index_d_ion,index_T_ion+1) &
-          + (ionisation(i,index_d_ion+1,index_T_ion+1) -  ionisation(i,index_d_ion,index_T_ion+1)) &
-          * (density - density_ion(index_d_ion)) / (density_ion(index_d_ion+1) - density_ion(index_d_ion))
-
-  ion_rate(i) = ion_low + (temperature - temperature_ion(index_T_ion)) / (temperature_ion(index_T_ion+1) -temperature_ion(index_T_ion)) &
-                        * (ion_high - ion_low)
-
-  rec_low = recombination(i,index_d_rec,index_T_rec) &
-          + (recombination(i,index_d_rec+1,index_T_rec) -  recombination(i,index_d_rec,index_T_rec)) &
-          * (density - density_rec(index_d_rec)) / (density_rec(index_d_rec+1) - density_rec(index_d_rec))
-
-  rec_high = recombination(i,index_d_rec,index_T_rec+1) &
-          + (recombination(i,index_d_rec+1,index_T_rec+1) -  recombination(i,index_d_rec,index_T_rec+1)) &
-          * (density - density_rec(index_d_rec)) / (density_rec(index_d_rec+1) - density_rec(index_d_rec))
-
-  rec_rate(i) = rec_low + (temperature - temperature_rec(index_T_rec)) / (temperature_rec(index_T_rec+1) -temperature_rec(index_T_rec)) &
-                        * (rec_high - rec_low)
-
-  rad_rb_low = rad_rb(i,index_d_rb,index_T_rb) &
-          + (rad_rb(i,index_d_rb+1,index_T_rb) -  rad_rb(i,index_d_rb,index_T_rb)) &
-          * (density - density_rb(index_d_rb)) / (density_rb(index_d_rb+1) - density_rb(index_d_rb))
-
-  rad_rb_high = rad_rb(i,index_d_rb,index_T_rb+1) &
-          + (rad_rb(i,index_d_rb+1,index_T_rb+1) - rad_rb(i,index_d_rb,index_T_rb+1)) &
-          * (density - density_rb(index_d_rb)) / (density_rb(index_d_rb+1) - density_rb(index_d_rb))
-
-  rad_rate_rb(i) = rad_rb_low + (temperature - temperature_rb(index_T_rb)) / (temperature_rb(index_T_rb+1) -temperature_rb(index_T_rb)) &
-                 * (rad_rb_high - rad_rb_low)
-
-  rad_lt_low = rad_lt(i,index_d_lt,index_T_lt) &
-          + (rad_lt(i,index_d_lt+1,index_T_lt) -  rad_lt(i,index_d_lt,index_T_lt)) &
-          * (density - density_lt(index_d_lt)) / (density_lt(index_d_lt+1) - density_lt(index_d_lt))
-
-  rad_lt_high = rad_lt(i,index_d_lt,index_T_lt+1) &
-          + (rad_lt(i,index_d_lt+1,index_T_lt+1) - rad_lt(i,index_d_lt,index_T_lt+1)) &
-          * (density - density_lt(index_d_lt)) / (density_lt(index_d_lt+1) - density_lt(index_d_lt))
-
-  rad_rate_lt(i) = rad_lt_low + (temperature - temperature_lt(index_T_lt)) / (temperature_lt(index_T_lt+1) -temperature_lt(index_T_lt)) &
-                 * (rad_lt_high - rad_lt_low)
-
-enddo
-
-ion_rate    = 10**ion_rate          ! [s^-1]
-rec_rate    = 10**rec_rate          ! [s^-1]
-rad_rate_rb = 10**rad_rate_rb       ! [s^-1]
-rad_rate_lt = 10**rad_rate_lt       ! [s^-1]
-
-end subroutine
-
-subroutine coronal
-
-implicit none
-
-real*8, allocatable :: coronal_Z(:),corona_matrix(:,:), zni(:), b(:), Z(:), fractions(:)
+real*8, allocatable :: coronal_Z(:), corona_matrix(:,:), zni(:), b(:), Z(:), fractions(:)
 real*8, allocatable :: A_l(:),A_d(:),A_u(:),T_bar(:),Z_bar(:), R_bar(:)
 real*8              :: density, temperature, log_density, log_temperature
 
-real*8, allocatable :: ion_rate(:), rec_rate(:), rad_rate_rb(:), rad_rate_lt(:), Z_states(:)
-real*8              :: t_step, theta, zc(30)
+real*8, allocatable :: ion_rate(:), rec_rate(:), rad_rate(:), Z_states(:)
+real*8              :: zc(30)
 integer             :: n_states, i, info, n_step, j, k, m
 integer             :: i_d_ion, i_T_ion, i_d_rec, i_T_rec
 
-n_states = n_Z + 1
+integer :: n_d, n_T, iz
+
+n_states = ad%n_Z + 1
 
 write(*,'(A)')      '*********************************'
 write(*,'(A,i3,A)') '* Coronal model : ',n_states,'           *'
 write(*,'(A)')      '*********************************'
 
-n_d_cor = 4
-n_T_cor = 200
+cor%n_Z = ad%n_Z
+n_d = 4
+n_T = 200
 
-allocate(density_cor(n_d_cor), temperature_cor(n_T_cor), Z_cor(n_d_cor,n_T_cor), rad_cor(n_d_cor,n_T_cor))
+allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T), cor%Prad(n_d,n_T))
 
 allocate(corona_matrix(3,n_states),zni(n_states),b(n_states), Z(n_states), fractions(n_states))
 
 allocate(A_l(n_states-1),A_d(n_states),A_u(n_states-1))
 
-t_step = 1.d6
-theta  = 1.
+cor%density = (/ 18., 19., 20., 21. /) ! log10 [m^-3]
 
-density_cor     = (/ 12., 13., 14., 15. /)                                                             ! [m^3]
+do m=1, n_d
 
-do m=1, n_d_cor
+  density = 10**cor%density(m) ! m^-3
 
-  density = 10**density_cor(m)
+  do k=1, n_T
 
-  do k=1, n_T_cor
+    cor%temperature(k) = log10( 1.d0 + exp(log(4.d4)*float(k-1)/(float(n_T-1))) - 1.d0 )  ! in [K]
 
-    temperature_cor(k) = alog10( 1.d0 + exp(alog(4.d4 - 1.d0 + 1.d0)*float(k-1)/(float(n_T_cor-1))) - 1.d0 )  ! in [K]
-
-    call interpolate_ion_rec_rad(density_cor(m),temperature_cor(k),ion_rate,rec_rate,rad_rate_rb,rad_rate_lt)
+    do iz=1,cor%n_Z
+      ion_rate(iz) = GRC(ad%SCD, iz, cor%density(m), cor%temperature(k)) ! ionizing to level iz
+      rec_rate(iz) = GRC(ad%ACD, iz, cor%density(m), cor%temperature(k)) + &
+                     GRC(ad%CCD, iz, cor%density(m), cor%temperature(k)) ! recombining from level iz
+      ! These should actually be multiplied by the electron and hydrogen ion densities
+      ! In the trace impurity limit these are the same and can be skipped (multiplication by constant does not change fractions)
+      rad_rate(iz) = GRC(ad%PRB, iz, cor%density(m), cor%temperature(k)) + &
+                     GRC(ad%PLT, iz, cor%density(m), cor%temperature(k)) + &
+                     GRC(ad%PRC, iz, cor%density(m), cor%temperature(k)) ! radiation emitted by atoms at level iz
+      ! PRB and PLT should also be multiplied by n_e, and PRC with neutral density
+    end do
 
     corona_matrix = 0.d0
 
-    do i=2, n_Z
+    ! Create diagonal elements of coronal model matrix
+    do i=2, cor%n_Z
       Z(i) = float(i-1)
-      corona_matrix(1,i) = + ion_rate(i-1)
-      corona_matrix(2,i) = - ion_rate(i)   - rec_rate(i)
-      corona_matrix(3,i) =                 + rec_rate(i+1)
+      corona_matrix(1,i) = + ion_rate(i-1) ! increase from ionisation
+      corona_matrix(2,i) = - ion_rate(i)   - rec_rate(i) ! Loss in this state
+      corona_matrix(3,i) =                 + rec_rate(i+1) ! increase from recombination of higher level atoms
     enddo
     Z(1)        = 0.
-    Z(n_states) = float(n_Z)
+    Z(cor%n_Z+1) = float(cor%n_Z)
 
     corona_matrix(1,1)     = 0.
     corona_matrix(2,1)     = - ion_rate(1)      ! ionisation losses from n=0 to 1
-    corona_matrix(3,1)     = + rec_rate(2)      ! recombination from n=1 to 0
+    corona_matrix(3,1)     = + rec_rate(1)      ! recombination from n=1 to 0
 
-    corona_matrix(1,n_Z+1) = + ion_rate(n_Z)
-    corona_matrix(2,n_Z+1) = - rec_rate(n_Z+1)
-    corona_matrix(3,n_Z+1) = 0.
+    corona_matrix(1,cor%n_Z+1) = + ion_rate(cor%n_Z)
+    corona_matrix(2,cor%n_Z+1) = - rec_rate(cor%n_Z)
+    corona_matrix(3,cor%n_Z+1) = 0.
 
     corona_matrix = corona_matrix * density
 
     zni = 1.e9
 
-    do i=2,n_Z
+    do i=2,cor%n_Z
       b(i) =  zni(i-1)*corona_matrix(1,i) + zni(i)*corona_matrix(2,i) + zni(i+1)*corona_matrix(3,i)
     enddo
     b(1)        = zni(1)*corona_matrix(2,1)                 + zni(2)*corona_matrix(3,1)
     b(n_states) = zni(n_states-1)*corona_matrix(1,n_states) + zni(n_states)*corona_matrix(2,n_states)
 
-    A_l  =    - theta*t_step*corona_matrix(1,2:n_states)
-    A_d  = 1. - theta*t_step*corona_matrix(2,:)
-    A_u  =    - theta*t_step*corona_matrix(3,1:n_states-1)
+    ! Lower, diagonal and upper components
+    A_l  =    - corona_matrix(1,2:n_states)
+    A_d  = 1. - corona_matrix(2,:)
+    A_u  =    - corona_matrix(3,1:n_states-1)
 
-    b = b * t_step
+    ! Right hand side
+    b = b
 
+    ! Solve AX=B for tridiagonal matrices. Result stored in b
     call dgtsv(n_states,1,A_l,A_d,A_u,b,n_states,info)
 
-    zni = zni + b
+    zni = zni + b ! minimum levels of 1e9?
 
     if (info .ne. 0) write(*,*) 'info : ',info
 
     fractions    = zni / sum(zni)
-
-    Z_cor(m,k)   = dot_product(fractions,Z)
-
-    rad_cor(m,k) = alog10( dot_product(fractions,rad_rate_rb+rad_rate_lt))
-
+    cor%Z(m,k)   = dot_product(fractions,Z)
+    cor%Prad(m,k) = log10( dot_product(fractions,rad_rate))
   enddo
-
 enddo
+end function coronal_equilibrium
 
-endsubroutine coronal
 
-subroutine interpolate_coronal(density,temperature,Z_coronal,radiation_coronal)
-! linear interpolation of density and temperature (assumes equidistant coordinates)
 
+!> (Zeroth order) interpolation of coronal model charge
+!! (Just return closest value for now, replace with splines in the future)
+subroutine interpolate_coronal(cor, density, temperature, z, rad)
 implicit none
 
-real*8  :: density            ! log10 of density       [cm^-3]
-real*8  :: temperature        ! log10 of temperature   [K]
-real*8  :: Z_coronal          ! charge state of coronal equilibrium
-real*8  :: radiation_coronal  ! radiated power of coronal equilibrium [Wcm^3] (CHECK!)
+type (type_coronal), intent(in) :: cor
+real*8, intent(in)              :: density ! log10 density (m^-3)
+real*8, intent(in)              :: temperature ! log10 temperature (K)
+real*8, intent(out)             :: z ! most probable charge state
+real*8, intent(out)             :: rad ! radiated power according to coronal equilibrium
 
-real*8  :: zcor_low, zcor_high, rad_low, rad_high
-integer :: index_d_cor,   index_T_cor
+integer :: index_d, index_T
 
-index_d_cor = floor((density     - density_cor(1))     / (density_cor(n_d_cor)       - density_cor(1))     * n_d_cor)  + 1
-index_T_cor = floor((temperature - temperature_cor(1)) / (temperature_cor(n_T_cor)   - temperature_cor(1)) * n_T_cor)  + 1
+index_d = minloc(abs(density-cor%density),1)
+index_T = minloc(abs(temperature-cor%temperature),1)
 
-index_d_cor = max(1,min(index_d_cor,n_d_cor-1))
-index_T_cor = max(1,min(index_T_cor,n_T_cor-1))
-
-Zcor_low =   Z_cor(index_d_cor,index_T_cor) &
-          + (Z_cor(index_d_cor+1,index_T_cor) -  Z_cor(index_d_cor,index_T_cor)) &
-          * (density - density_cor(index_d_cor)) / (density_cor(index_d_cor+1) - density_cor(index_d_cor))
-
-Zcor_high = Z_cor(index_d_cor,index_T_cor+1) &
-          + (Z_cor(index_d_cor+1,index_T_cor+1) -  Z_cor(index_d_cor,index_T_cor+1)) &
-          * (density - density_cor(index_d_cor)) / (density_cor(index_d_cor+1) - density_cor(index_d_cor))
-
-Z_coronal = Zcor_low + (temperature - temperature_cor(index_T_cor)) / (temperature_cor(index_T_cor+1) - temperature_cor(index_T_cor)) &
-                    * (Zcor_high - Zcor_low)
-
-rad_low =    rad_cor(index_d_cor,index_T_cor) &
-          + (rad_cor(index_d_cor+1,index_T_cor) -  rad_cor(index_d_cor,index_T_cor)) &
-          * (density - density_cor(index_d_cor)) / (density_cor(index_d_cor+1) - density_cor(index_d_cor))
-
-rad_high =   rad_cor(index_d_cor,index_T_cor+1) &
-          + (rad_cor(index_d_cor+1,index_T_cor+1) -  rad_cor(index_d_cor,index_T_cor+1)) &
-          * (density - density_cor(index_d_cor)) / (density_cor(index_d_cor+1) - density_cor(index_d_cor))
-
-radiation_coronal = rad_low + (temperature - temperature_cor(index_T_cor)) / (temperature_cor(index_T_cor+1) - temperature_cor(index_T_cor)) &
-                        * (rad_high - rad_low)
-
-radiation_coronal = 10**radiation_coronal
-
-return
-endsubroutine interpolate_coronal
+z   = cor%Z(index_d,index_T)
+rad = 10.d0**cor%Prad(index_d,index_T) ! Still needs to be multiplied by electron density! XXX
+end subroutine interpolate_coronal
 
 end module openadas
-

@@ -24,6 +24,7 @@ module mod_particles
   real*4  :: atomic_mass(N_species)
   integer :: N_particles(N_species) = 0
   logical :: particle_GC(N_species) = .false.
+  character(len=6)  :: adas_suffix(N_species) = '' !< Suffix for adas files to read in (ex: scd50_w.dat => 50_w)
   character(len=80) :: location_accept_function(N_species) = 'location_accept_any'
   real*4  :: location_accept_parameters(1:9,1:N_species) = 0
   !> @name particle timestepping input parameters
@@ -123,7 +124,11 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( (N_species*2+4)*INT_EXT + (N_species*(9+1))*ISGL_EXT + 1*IDBL_EXT + (N_species+2)*ILOG_EXT + (80*(N_species+1))*CHAR_EXT)
+bufsize = ( (N_species*2+4)*INT_EXT + &
+            (N_species*(9+1))*ISGL_EXT + &
+            1*IDBL_EXT + &
+            (N_species+2)*ILOG_EXT + &
+            (80*(N_species+1))*CHAR_EXT)
 allocate(buffer(bufsize))
 
 if (my_id .eq. 0) then

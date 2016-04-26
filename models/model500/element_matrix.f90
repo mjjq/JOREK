@@ -612,9 +612,9 @@ do ms=1, n_gauss
     
     coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)   
  
-    Srec_T = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0) 
-    
-    dSrec_dT  = - coef_rec_1 * 0.7d-19 * 0.5d0 * (2.d0)**(-0.5d0) * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * T_corr**(-1.5d0)
+    Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0) 
+     
+    dSrec_dT  = - 0.5d0 * (1.d0/2.d0) * coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-1.5d0)
 
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)

@@ -302,6 +302,7 @@ subroutine preset_parameters
     mgi_radius =   0.08d0
     mgi_sig    =  0.05
     mgi_deltaphi =  0.5
+    mgi_tor_norm = 1.
     ksi_ion = 1.84d-24
     D_neutral_x = 1.d-5
     D_neutral_y = 1.d-5

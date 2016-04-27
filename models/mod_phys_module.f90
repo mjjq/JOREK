@@ -207,6 +207,7 @@ module phys_module
   real*8  :: mgi_radius        !< radius of the neutral density source in poloidal plane
   real*8  :: mgi_sig           !< width of smoothing of the neutral density source in poloidal plane
   real*8  :: mgi_deltaphi      !< width of smoothing of the neutral density source in toroidal direction
+  real*8  :: mgi_tor_norm      !< MGI source normalization factor related to its toroidal shape
   real*8  :: ksi_ion           !< energy cost of each ionization
   real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
   real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice

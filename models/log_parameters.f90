@@ -449,6 +449,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'mgi_radius          ',  mgi_radius
      write(*,REAL_FMT) 'mgi_sig             ',  mgi_sig
      write(*,REAL_FMT) 'mgi_deltaphi        ',  mgi_deltaphi
+     write(*,REAL_FMT) 'mgi_tor_norm        ',  mgi_tor_norm
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
      write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI

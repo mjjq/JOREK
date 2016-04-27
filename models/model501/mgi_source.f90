@@ -28,8 +28,8 @@ module mgi_module
 
 
 
-  subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi, &
-                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,    &
+  subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
+                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
   !=================================================================================
@@ -51,7 +51,6 @@ module mgi_module
     real*8 :: radius
     real*8 :: mgi_tor_shape
     real*8 :: mgi_pol_shape
-    real*8 :: PI
     real*8 :: dphi
     real*8 :: V_mgi
     real*8 :: f_Nbar
@@ -92,8 +91,7 @@ module mgi_module
     logical, intent(in) :: JET_MGI
     logical, intent(in) :: ASDEX_MGI
     real*8, intent(out) :: rhon_source
-
-    PI = 3.14159265358979d0
+    real*8, intent(in)  :: mgi_tor_norm
 
     select case ( trim(gas_type) )
       case('D2')
@@ -129,7 +127,7 @@ module mgi_module
 
     ! Volume used for normalization, which corresponds to the integration in space 
     ! of the product of the above shape functions
-    V_mgi  = PI**1.5d0 * mgi_R * mgi_deltaphi * mgi_radius**2.d0
+    V_mgi  = PI * mgi_R * mgi_tor_norm * mgi_radius**2.d0
     ! ===================================================================
 
    !==================================================================================================
@@ -233,6 +231,10 @@ module mgi_module
  
       endif
 
+    else
+
+      rhon_source = 0.
+
     endif
 
   return
@@ -246,7 +248,6 @@ module mgi_module
   ! from the start of the simulation and for each timestep.
   ! It also calculate to total number of neutral particles in the plasma.
   !=================================================================================================
-    use constants
     use data_structure
     use phys_module
     use mpi_mod

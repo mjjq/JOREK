@@ -1,7 +1,6 @@
 module mgi_module
 
 use constants
-use profiles
 
 implicit none
 
@@ -227,6 +226,8 @@ subroutine update_mgi(my_id,node_list,element_list)
 use data_structure
 use phys_module
 use mpi_mod
+
+implicit none
 
 type (type_node_list), intent(in)    :: node_list
 type (type_element_list), intent(in) :: element_list

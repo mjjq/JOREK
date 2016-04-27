@@ -12,6 +12,8 @@ contains
 
 integer function factorial(n)
 
+implicit none
+
 integer, intent(in) :: n 
 integer             :: i, Ans
 

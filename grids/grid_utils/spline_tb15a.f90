@@ -1,4 +1,5 @@
 SUBROUTINE TB15A(N,X,F,D,W,LP)
+implicit none
 !------------------------------------------------------------------
 ! HSL routine for cubic spline with periodic boundary conditions
 ! first point must be the same as last : f(1)=f(n)

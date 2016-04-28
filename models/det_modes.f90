@@ -4,6 +4,8 @@ subroutine det_modes()
   use parameters,  only: n_tor, n_period
   use phys_module, only: mode, mode_type
   
+  implicit none
+  
   integer :: itor
   
   ! --- Fill the arrays mode (toroidal mode number n) and mode_type (cos or sin).

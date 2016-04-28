@@ -1,4 +1,5 @@
 module countlines_mod
+implicit none
 contains
 function countlines(fd)
   integer countlines

@@ -5,6 +5,8 @@ subroutine initialise_pastix
 use pastix_module
 use mumps_module
 
+implicit none
+
 if (.not. use_pastix) return
 
 write(*,*) '***********************************'

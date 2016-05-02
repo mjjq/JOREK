@@ -173,8 +173,8 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       pastix_iparm(5) = block_size      ! block size
       
       call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
-           mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                 !DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+           !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                 DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
       pastix_iparm(5) = 1      ! block size

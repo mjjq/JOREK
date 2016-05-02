@@ -1,6 +1,6 @@
 module corr_neg
 
-
+implicit none
 
 contains
 

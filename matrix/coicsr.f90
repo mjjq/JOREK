@@ -2,6 +2,7 @@
 ! routine from SPARSKIT2
 !------------------------------------------------------------------------
       subroutine coicsr (n,nnz,job,a,ja,ia,iwk)
+      implicit none
       integer :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1)
       real*8  :: a(*)
 !------------------------------------------------------------------------
@@ -103,6 +104,7 @@
 
 
       subroutine coicsr2 (n,nnz,a,ja,ia,ndof,iwk)
+      implicit none
       integer :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
       real*8  :: a(*)
 !------------------------------------------------------------------------

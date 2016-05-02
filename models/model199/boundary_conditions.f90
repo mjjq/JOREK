@@ -25,6 +25,7 @@
 !*                                                                             *
 !*******************************************************************************
 module mod_boundary_conditions
+implicit none
 contains
   subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,         &
        n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &

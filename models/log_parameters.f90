@@ -1,6 +1,12 @@
+module mod_log_params
+
+implicit none
+
+contains
+
 !> Write out all relevant parameters defined in mod_parameters
 !! and by the namelist input file.
-subroutine log_parameters(my_id)
+subroutine log_parameters(my_id, short)
 
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
@@ -12,7 +18,8 @@ use vacuum,        only: wall_resistivity
 implicit none
 
 ! --- Routine parameters
-integer, intent(in) :: my_id !< MPI proc id
+integer,           intent(in) :: my_id !< MPI proc id
+logical, optional             :: short !< commandline short version or run long version
 
 ! --- Constants
 character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 10ES12.4)"
@@ -26,17 +33,27 @@ character(len=512), parameter :: CHAR_FMT = "(1X,A, ' = ""', A, '""')"
 
 ! --- Local variables
 integer           :: ivar, itor
+integer           :: i, j, n_rows !> do loop index 
 character(len=10) :: mode_num
+logical           :: short2
+
+! --- Text out format
+200 format(' ',79('*'))
+112 format(A, i12)
+  
+if (present(short)) then
+  short2 = short
+else
+  short2 = .false.
+end if
 
 if (my_id == 0) then
-  
+
   write(*,*)
-  write(*,*) '*************************************************'
-  write(*,*) '*          PARAMETERS OF THE JOREK RUN          *'
-  write(*,*) '*************************************************'
-  write(*,*)
-  write(*,*) 'PREPROCESSOR OPTIONS'
-  write(*,*) '-------------------------------------------------'
+  write(*,200)
+  write(*,*) '* Preprocessor Options                                                        *'
+  write(*,200)
+
   write(*,'(1x,a)',advance='no') ' USE_MUMPS           : '
 #ifdef USE_MUMPS
   write(*,*) 'on'
@@ -44,59 +61,57 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-  write(*,*) ' JOREK_MODEL         : ', JOREK_MODEL
-
   write(*,'(1x,a)',advance='no') ' USE_FFTW            : '
 #ifdef USE_FFTW
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
-  
+
   write(*,'(1x,a)',advance='no') ' USE_PASTIX          : '
 #ifdef USE_PASTIX
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
-  
+
   write(*,'(1x,a)',advance='no') ' USE_WSMP            : '
 #ifdef USE_WSMP
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
-  
+
   write(*,'(1x,a)',advance='no') ' USE_MURGE           : '
 #ifdef USE_MURGE
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
-  
+
   write(*,'(1x,a)',advance='no') ' USE_HIPS            : '
 #ifdef USE_HIPS
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
-  
+
   write(*,'(1x,a)',advance='no') ' USE_BLOCK           : '
 #ifdef USE_BLOCK
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
-  
+
   write(*,'(1x,a)',advance='no') ' USE_HDF5            : '
-#ifdef USE_HDF5 
+#ifdef USE_HDF5
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
-  
+
   write(*,'(1x,a)',advance='no') ' MEMTRACE            : '
-#ifdef MEMTRACE 
+#ifdef MEMTRACE
   write(*,*) 'on'
 #else
   write(*,*) 'off'
@@ -117,32 +132,59 @@ if (my_id == 0) then
 #endif
 
   write(*,*)
-  write(*,*) 'HARD-CODED PARAMETERS'
-  write(*,*) '-------------------------------------------------'
-  write(*,INTG_FMT) 'jorek_model           ', jorek_model
-  write(*,INTG_FMT) 'n_var                 ', n_var
-  do ivar = 1, n_var
-    write(*,VARI_FMT) ivar, trim(variable_names(ivar))
-  end do
-  write(*,INTG_FMT) 'n_dim                 ', n_dim
-  write(*,INTG_FMT) 'n_order               ', n_order
-  write(*,INTG_FMT) 'n_tor                 ', n_tor
-  write(*,MODE_FMT) 1, 'cos', '0'
-  do itor = 2, n_tor
-    write(mode_num,'(I4)') mode(itor)
-    write(*,MODE_FMT) itor, mode_type(itor), trim(adjustl(mode_num))
-  end do
-  write(*,INTG_FMT) 'n_period              ', n_period
-  write(*,INTG_FMT) 'n_plane               ', n_plane
-  write(*,INTG_FMT) 'n_vertex_max          ', n_vertex_max
-  write(*,INTG_FMT) 'n_nodes_max           ', n_nodes_max
-  write(*,INTG_FMT) 'n_elements_max        ', n_elements_max
-  write(*,INTG_FMT) 'n_boundary_max        ', n_boundary_max
-  write(*,INTG_FMT) 'n_pieces_max          ', n_pieces_max
-  write(*,INTG_FMT) 'n_degrees             ', n_degrees
+  write(*,200)
+  write(*,*) '* Hard-Coded Parameters:                                                      *'
+  write(*,200)
+  write(*,  112) ' jorek_model    =  ', jorek_model       
+  write(*,  112) ' n_var          =  ', n_var             
+  write(*,  112) ' n_dim          =  ', n_dim             
+  write(*,  112) ' n_order        =  ', n_order           
+  write(*,  112) ' n_tor          =  ', n_tor             
+  write(*,  112) ' n_period       =  ', n_period          
+  write(*,  112) ' n_plane        =  ', n_plane           
+  write(*,  112) ' n_vertex_max   =  ', n_vertex_max      
+  write(*,  112) ' n_elements_max =  ', n_elements_max    
+  write(*,  112) ' n_boundary_max =  ', n_boundary_max    
+  write(*,  112) ' n_pieces_max   =  ', n_pieces_max      
+  write(*,  112) ' n_degrees      =  ', n_degrees         
+  write(*,  112) ' nref_max       =  ', nref_max          
+  write(*,  112) ' n_ref_list     =  ', n_ref_list        
+
   write(*,*)
-  write(*,*) 'NAMELIST INPUT PARAMETERS'
-  write(*,*) '-------------------------------------------------'
+  write(*,200)
+  write(*,*) '* Simulation variables:                                                       *'
+  write(*,200)
+
+  ! determine number of rows needed to show all variable_names
+  n_rows = ceiling(n_var/4.0)
+
+  ! The first loop loops through the row needed. The the left eastectics is
+  ! written followed by a loop that print out the variable_name of white space
+  ! depending on it this variable_name exist. The last write is the eastectics
+  ! on the right.
+  do i = 0,n_rows-1
+    write(*,'(A)',advance='no') ' *      '
+    do j = (i*4) + 1, (i*4) + 4
+      if ( j .gt. n_var) then
+        write(*,'(11x)',advance='no')
+      else
+        write(*,'(A11)',advance='no') variable_names(j)
+      end if
+      if ( j .lt. (i*4 + 4)) then
+        write(*,'(7x)',advance='no')
+      end if
+    end do
+    write(*,'(A)') '      *'
+  end do
+  write(*,200)
+
+  ! stop function when case this log function is called from command line function
+  if ( short2 ) return
+
+  write(*,*)
+  write(*,200)
+  write(*,*) '* NAMELIST INPUT PARAMETERS                                                   *'
+  write(*,200)
   write(*,CHAR_FMT) 'time_evol_scheme      ', trim(time_evol_scheme)
   write(*,INTG_FMT) 'n_tor_fft_thresh      ', n_tor_fft_thresh
   if ( n_tor .ge. n_tor_fft_thresh ) then
@@ -167,7 +209,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'n_Z                   ', n_Z
   write(*,INTG_FMT) 'n_radial              ', n_radial
   write(*,INTG_FMT) 'n_pol                 ', n_pol
-  
+
   if ( n_radial > 0 ) then
     write(*,REAL_FMT) 'psi_axis_init         ', psi_axis_init
     write(*,REAL_FMT) 'xr_r                  ', xr_r(:)
@@ -175,11 +217,11 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'xr_tht                ', xr_tht(:)
     write(*,REAL_FMT) 'sig_tht               ', sig_tht(:)
   end if
-  
+
   write(*,INTG_FMT) 'n_tht                 ', n_tht
   write(*,INTG_FMT) 'n_flux                ', n_flux
   write(*,LOGI_FMT) 'xpoint                ', xpoint
-  
+
   if ( xpoint ) then
     write(*,INTG_FMT) 'n_open                ', n_open
     write(*,INTG_FMT) 'n_private             ', n_private
@@ -194,7 +236,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'dPSI_private          ', dPSI_private
     write(*,INTG_FMT) 'xcase                 ', xcase
   end if
-  
+
   write(*,INTG_FMT) 'nout                  ', nout
   write(*,REAL_FMT) 'xr1                   ', xr1
   write(*,REAL_FMT) 'sig1                  ', sig1
@@ -208,17 +250,17 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'Z_geo                 ', Z_geo
   write(*,REAL_FMT) 'amin                  ', amin
   write(*,INTG_FMT) 'mf                    ', mf
-  
+
   if ( mf >= 0 ) then
     write(*,REA3_FMT) 'fbnd                  ', fbnd(1:MIN(9,mf))
     write(*,REA3_FMT) 'fpsi                  ', fpsi(1:MIN(9,mf))
   end if
-  
+
   write(*,REAL_FMT) 'F0                    ', F0
   write(*,REAL_FMT) 'zjz_0                 ', zjz_0
   write(*,REAL_FMT) 'zjz_1                 ', zjz_1
   write(*,REAL_FMT) 'zj_coef               ', zj_coef
-  
+
   if ( .not. num_rho ) then
     write(*,REAL_FMT) 'rho_0                 ', rho_0
     write(*,REAL_FMT) 'rho_1                 ', rho_1
@@ -226,7 +268,7 @@ if (my_id == 0) then
   else
     write(*,CHAR_FMT) 'rho_file              ', trim(rho_file)
   end if
-  
+
   if ( num_rot ) then
     write(*,CHAR_FMT) 'rot_file              ', trim(rot_file)
   else
@@ -235,7 +277,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'V_coeff               ', V_coef(1:10)
   end if
 
-  if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then  
+  if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
      write(*,LOGI_FMT) 'normalized_velocity_profile', normalized_velocity_profile
   endif
 
@@ -246,7 +288,7 @@ if (my_id == 0) then
   else
     write(*,CHAR_FMT) 'T_file                ', trim(T_file)
   end if
-  
+
   if ( jorek_model == 400 ) then
     write(*,REAL_FMT) 'Te_0                   ', Te_0
     write(*,REAL_FMT) 'Te_1                   ', Te_1
@@ -269,7 +311,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'K_e_par                ', K_e_par
     write(*,REAL_FMT) 'K_i_par                ', K_i_par
   end if
-  
+
   if ( .not. num_ffprime ) then
     write(*,REAL_FMT) 'FF_0                  ', FF_0
     write(*,REAL_FMT) 'FF_1                  ', FF_1
@@ -277,7 +319,7 @@ if (my_id == 0) then
   else
     write(*,CHAR_FMT) 'ffprime_file          ', trim(ffprime_file)
   end if
-  
+
   write(*,REAL_FMT) 'ZK_par                ', ZK_par
   write(*,REAL_FMT) 'ZK_par_max            ', ZK_par_max
   write(*,LOGI_FMT) 'ZKpar_T_dependent     ', ZKpar_T_dependent
@@ -311,7 +353,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)
   write(*,REAL_FMT) 'corr_neg_dens_coef    ', corr_neg_dens_coef(:)
-  
+
   if ( use_pellet ) then
     write(*,REAL_FMT) 'pellet_amplitude    ', pellet_amplitude
     write(*,REAL_FMT) 'pellet_R              ', pellet_R
@@ -329,7 +371,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'pellet_velocity_R     ', pellet_velocity_R
     write(*,REAL_FMT) 'pellet_velocity_Z     ', pellet_velocity_Z
   end if
-  
+
   write(*,*)
   write(*,REAL_FMT) 'ellip                 ', ellip
   write(*,REAL_FMT) 'tria_u                ', tria_u
@@ -355,7 +397,7 @@ if (my_id == 0) then
     write(*,REA3_FMT) 'r_limiter             ', r_limiter(1:min(9,n_limiter))
     write(*,REA3_FMT) 'z_limiter             ', z_limiter(1:min(9,n_limiter))
   end if
-  
+
   write(*,LOGI_FMT) 'freeboundary_equil    ', freeboundary_equil
   write(*,LOGI_FMT) 'freeboundary          ', freeboundary
   if ( freeboundary ) then
@@ -364,7 +406,7 @@ if (my_id == 0) then
       write(*,REAL_FMT) 'wall_resistivity      ', wall_resistivity
     end if
   end if
-  
+
   write(*,REAL_FMT) 'Q_bar                 ', Q_bar
   write(*,REAL_FMT) 'sigma                 ', sigma
   write(*,REAL_FMT) 'density_reflection    ', density_reflection
@@ -402,7 +444,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
-  
+
   write(*,INTG_FMT) 'n_pfc                 ', n_pfc
   if ( n_pfc > 0 ) then
     write(*,REA3_FMT) 'Rmin_pfc              ', Rmin_pfc(1:min(9,n_pfc))
@@ -428,7 +470,7 @@ if (my_id == 0) then
       write(*,CHAR_FMT) 'neo_file              ', trim(neo_file)
     else
       write(*,REAL_FMT) 'amu_neo_const         ', amu_neo_const
-      write(*,REAL_FMT) 'aki_neo_const         ', aki_neo_const        
+      write(*,REAL_FMT) 'aki_neo_const         ', aki_neo_const
     endif
   endif
 
@@ -449,6 +491,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'mgi_radius          ',  mgi_radius
      write(*,REAL_FMT) 'mgi_sig             ',  mgi_sig
      write(*,REAL_FMT) 'mgi_deltaphi        ',  mgi_deltaphi
+     write(*,REAL_FMT) 'mgi_tor_norm        ',  mgi_tor_norm
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
      write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI
@@ -462,7 +505,9 @@ if (my_id == 0) then
 #endif
 
   write(*,*)
-  
+
 end if
 
 end subroutine log_parameters
+
+end module mod_log_params

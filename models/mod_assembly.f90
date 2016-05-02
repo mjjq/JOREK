@@ -1,4 +1,5 @@
 module mod_assembly
+implicit none
 !> This module provides routines to factorize code in boundary conditions from each models
 
 contains
@@ -44,6 +45,7 @@ contains
     INTEGER, INTENT(IN)    :: index_min, index_max
 
     LOGICAL :: is_local
+    integer :: ijA_position, ilarge_vp
 
     if (use_murge .and. use_murge_element) then
        call vertex_is_local(index_node, is_local)

@@ -3,6 +3,7 @@ DIR = particles
 ALL_BINARIES_SRC := $(ALL_BINARIES_SRC) \
   $(DIR)/mod_particles.f90           \
   $(DIR)/openadas.f90                \
+  $(DIR)/mod_coronal.f90                \
   $(DIR)/update_particles.f90	       \
   $(DIR)/calc_EB.f90 		\
   $(DIR)/mod_initialise_particles.f90        \

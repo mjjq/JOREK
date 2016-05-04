@@ -1,4 +1,5 @@
 module mod_initialise_particles
+use mod_coronal
 contains
 
 !> Initialize_particles creates n_particles*(species>0), divided over all processors
@@ -9,7 +10,6 @@ use constants
 use data_structure
 use mod_particles
 use nodes_elements
-use openadas
 
 implicit none
 

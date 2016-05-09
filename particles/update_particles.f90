@@ -4,7 +4,8 @@
 !! Some care must be taken when element boundaries are crossed.
 !! It is parallelized with OMP.
 !! See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
-subroutine update_particles(my_id, particle_list, t_step, n_step, energy_list, momentum_list, toroidal_field_factor, field_interp_time)
+subroutine update_particles(my_id, particle_list, t_step, n_step, adf11, &
+        energy_list, momentum_list, toroidal_field_factor, field_interp_time)
 
 !$ use omp_lib
 use parameters
@@ -13,14 +14,17 @@ use nodes_elements
 use constants
 use phys_module, only : F0, central_mass, central_density
 use mod_particles
+use openadas
+use mod_ionisation_recombination
 
 implicit none
 
 ! -- Routine parameters
+integer, intent(in)       :: my_id              !< Id of the current process
 type (type_particle_list), intent(inout) :: particle_list      !< The particles we will march forward in time
 real*8,  intent(in)       :: t_step             !< The size of each timestep
 integer, intent(in)       :: n_step             !< The number of timesteps we will perform
-integer, intent(in)       :: my_id              !< Id of the current process
+type (type_adf11_all), intent(in) :: adf11
 real*8,  intent(out), dimension(:), optional :: energy_list !< Energy of the particles at the next-to(!) final timestep
 real*8,  intent(out), dimension(:), optional :: momentum_list !< Generalized toroidal momentum of the particles at the next-to(!) final timestep
 real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
@@ -81,7 +85,9 @@ endif
 t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)    ! jorek time normalisation
 
 !$omp parallel default(none) &
-!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, find_RZ_count, energy_list, momentum_list, energy_lost_particles, n_lost, do_substep) &
+!$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, energy_list, &
+!$omp   momentum_list, do_substep, adf11) &
+!$omp   reduction(+:find_RZ_count,energy_lost_particles,n_lost) &
 !$omp   private(i, j, particle, x, v, st, i_elm, R, Z, &
 !$omp           qom, B0, B02, E0, v_tmp, fE, fB,             &
 !$omp           x_prev, v_prev, R_update, RPhi_update, R_out ,Z_out, ielm_out, s_out, &
@@ -154,24 +160,24 @@ do i = 1, particle_list%n_particles
     call find_RZ_nearby(node_list,element_list,x(1:2),(/R,Z/),st,st,i_elm,i_elm,ifail)
     ! If ifail in 2..5 we used find_RZ
     if (ifail .ge. 2 .and. ifail .le. 5) then
-      !$omp atomic
       find_RZ_count = find_RZ_count + 1
     endif
 
     if (ifail .eq. -1 .or. i_elm .eq. 0) then
       particle%lost = .true.
-      !$omp atomic
       n_lost = n_lost + 1
       ! Save lost energy (using inaccurate velocity at t-dt/2, use variables
       ! because omp atomic does not work with particle%q)
       q = real(particle%q) * EL_CHG
       m = particle%mass * ATOMIC_MASS_UNIT
-      !$omp atomic
       energy_lost_particles = energy_lost_particles + 0.5 * m * dot_product(v,v) &
                             + q * F0 * U * t_norm
       exit
     endif
 
+    ! Calculate ionisation and recombination
+    ! Get density and temperature to find GRC coefficients
+    call update_particle_charge(node_list, element_list, particle, adf11, t_step)
   enddo
 
   ! Save the new values for this particle

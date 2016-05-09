@@ -4,6 +4,35 @@ module mod_ionisation_recombination
 use openadas
 
 contains
+
+!> Calculate the new charge of a particle after a specific timestep
+subroutine update_particle_charge(node_list, element_list, particle, ad, timestep)
+use mod_particles
+use data_structure
+use constants
+use phys_module
+implicit none
+
+type(type_node_list), intent(in)   :: node_list
+type(type_element_list), intent(in):: element_list
+type(type_particle), intent(inout) :: particle
+type(type_ADF11_all), intent(in)   :: ad
+real*8, intent(in)                 :: timestep
+
+real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8               :: R, R_s, R_t, Z, Z_s, Z_t
+
+! assume variables 5 and 6 are density and electron temperature
+call interp_PRZ(node_list,element_list,&
+    particle%i_elm,(/5,6/),2,particle%x(1),particle%x(2),particle%x(3),&
+    P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+
+particle%q = int(new_charge(int(particle%q,4), ad, &
+    log10(P(1)*central_density)+20.d0, timestep, & ! electron number density
+    log10(P(2)/(K_BOLTZ*MU_ZERO*central_density))),1) ! electron temperature
+end subroutine
+
+!> Calculate new charge state at a specific density, temperature and timestep
 function new_charge(z, ad, electron_density, electron_temperature, timestep) result(z_new)
 implicit none
 

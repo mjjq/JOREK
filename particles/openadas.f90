@@ -11,6 +11,9 @@ type type_ADF11 !< Custom data structure containing relevant fields from ADF11 f
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
   real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: z, d, T). Units:
+  real*8, allocatable :: c(:,:,:) !< coefficients of spline fit (x,y,i = charge state)
+  real*8, allocatable :: tx(:,:), ty(:,:) !< knots of spline fit (x,i) and (y,i)
+  integer,allocatable :: nx(:), ny(:) !< Number of knots in spline fit
   ! ACD, SCD: cm3s-1 (for *CD ?)
   ! PLT, PRB: Wcm3 (for P* ?)
 end type type_ADF11
@@ -44,8 +47,14 @@ integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*13 :: filename
 
-integer :: i, ierr, n_d, n_T
+integer :: i, ierr, n_d, n_T, k
 logical :: file_exists
+! Dierckx variables
+real*8           :: xb ,xe, yb, ye, smth, fp
+integer          :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt
+real,allocatable :: wrk(:)
+integer,allocatable :: iwrk(:)
+
 
 write(*,'(A)') '*********************************'
 write(*,'(A)') '* Importing OpenAdas data       *'
@@ -76,7 +85,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
 
   read(10,*)  a%n_z, n_d, n_T, a%izmin, a%izmax
   ad%n_z = a%n_z
-  allocate(a%density(n_d), a%temperature(n_T), a%GRC(a%izmin:a%izmax,n_d,n_T))
+  allocate(a%density(n_d), a%temperature(n_T), a%GRC(n_d,n_T,a%n_z))
 
   read(10,*)
   read(10,*) a%density(:)
@@ -88,9 +97,35 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   a%temperature = a%temperature - log10(K_BOLTZ) + log10(EL_CHG) ! EL_CHG * 1 Volt actually
 
   a%GRC = -30.d0
+  ! Spline params
+  nxest = n_d+4
+  nyest = n_T+4
+  allocate(a%c(nxest,nyest,a%n_z))
+  allocate(a%tx(nxest,a%n_z),a%ty(nyest,a%n_z))
+  allocate(a%nx(a%n_z),a%ny(a%n_z))
+
   do i = a%izmin, a%izmax
     read(10,*)
-    read(10,*) a%GRC(i,:,:)
+    read(10,*) a%GRC(:,:,i)
+    !--------------------------------- interpolate using Dierckx spline routine
+    iopt= 0 
+    mx = n_d
+    my = n_T
+    xb = a%density(1)
+    xe = a%density(n_d)
+    yb = a%temperature(1)
+    ye = a%temperature(n_T)
+    kx = 3
+    ky = 3
+    smth = 0.d0
+    lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
+    kwrk  = 3+mx+my+nxest+nyest
+
+    allocate(wrk(lwrk),iwrk(kwrk))
+    call regrid(iopt,mx,a%density,my,a%temperature,a%GRC(:,:,i), &
+        xb,xe,yb,ye,kx,ky,smth,nxest,nyest,a%nx(i),a%tx(:,i),a%ny(i),a%ty(:,i),a%c(:,:,i),fp,wrk,lwrk,iwrk,kwrk,ier)
+    if (ier .gt. 0) write(*,*) "Error in spline fit: ", ier, fp ! check whether you compiled dierckx with -fdefault-real-8 or -r8!
+    deallocate(wrk,iwrk)
   enddo
   close(10)
 
@@ -108,28 +143,36 @@ end function read_adf11
 
 
 
-!> (Zeroth order) interpolation of log10 values of GRC in density and temperature
-!! (Just return closest value for now, replace with splines in the future)
-pure function GRC(a, z, density, temperature)
+!> interpolation of log10 values of GRC in density and temperature
+function GRC(a, z, density, temperature)
 implicit none
 
 type (type_ADF11), intent(in) :: a
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
-integer, intent(in)           :: z !< index in a%GRC(z,:,:) (is ionisation level or ionisation level - 1, 1:n_z)
+integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
 real*8 :: GRC
 
-integer :: index_d, index_T
+real,allocatable :: wrk(:)
+integer,allocatable :: iwrk(:)
+real*8           :: fout
+integer          :: mx,my,kx,ky,lwrk,kwrk,ier
+
+kx = 3
+ky = 3
+mx = size(a%density,1)
+my = size(a%temperature,1)
+lwrk = mx*(kx+1)+my*(ky+1)
+kwrk = mx+my
+allocate(wrk(lwrk),iwrk(kwrk))
 
 if (allocated(a%GRC)) then
-  index_d = minloc(abs(density-a%density),1)
-  index_T = minloc(abs(temperature-a%temperature),1)
-
-  GRC = 10.d0**a%GRC(z,index_d,index_T)
+  call bispev(a%tx(:,z),a%nx(z),a%ty(:,z),a%ny(z),a%c(:,:,z),kx,ky,density,1,temperature,1,fout,wrk,lwrk,iwrk,kwrk,ier)
+  if (ier .ne. 0) write(*,*) "Error in GRC dierckx spline interp: ", ier
+  GRC = 10.d0**fout
 else
   GRC = 0.d0
 endif
+deallocate(wrk,iwrk)
 end function GRC
-
-
 end module openadas

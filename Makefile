@@ -26,7 +26,7 @@ DIRS =  timing				\
 	vacuum				
 
 
-LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
+LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB) $(LIBDIERCKX)
 
 NODEPS = clean cleanall cleandep forcheck forcheck_poincare \
     forcheck_rst_bin2hdf5 forcheck_rst_hdf52bin\

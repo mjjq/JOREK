@@ -11,6 +11,9 @@ type type_coronal
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
   real*8, allocatable :: Z(:,:) !< Charge state (e)
   real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W)
+  real*8, allocatable :: cZ(:,:), cP(:,:) !< coefficients of spline fit (x,y,i = charge state)
+  real*8, allocatable :: txZ(:), tyZ(:) , txP(:), tyP(:) !< knots of spline fit (x,i) and (y,i)
+  integer,allocatable :: nxZ, nyZ, nxP, nyP !< Number of knots in spline fit
 end type type_coronal
 
 contains
@@ -20,7 +23,7 @@ contains
 !! This matrix defines the time derivatives of population sizes
 !! As drho/dt = A rho where A is this matrix.
 !! See http://jorek.eu/wiki/doku.php?id=adf11 for more info
-pure function corona_matrix(ad, density, temperature)
+function corona_matrix(ad, density, temperature)
 implicit none
 
 type (type_ADF11_all), intent(in)    :: ad
@@ -55,7 +58,7 @@ end function corona_matrix
 
 
 !> Radiated power in a specific coronal equilibrium configuration and temperature
-pure function coronal_Prad(ad, density, temperature, fractions, neutral_density)
+function coronal_Prad(ad, density, temperature, fractions, neutral_density)
 implicit none
 
 type (type_ADF11_all), intent(in)       :: ad
@@ -98,6 +101,11 @@ type (type_coronal)               :: cor
 
 real*8, dimension(0:ad%n_Z) :: p, Z
 integer :: n_d, n_T, iz, k, m
+! Dierckx variables
+real*8           :: xb ,xe, yb, ye, smth, fp
+integer          :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt
+real,allocatable :: wrk(:)
+integer,allocatable :: iwrk(:)
 
 write(*,'(A)')      '*********************************'
 write(*,'(A,i3,A)') '* Coronal model : ', ad%n_Z,'           *'
@@ -111,7 +119,6 @@ do iz=0,ad%n_Z
 enddo
 
 allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T), cor%Prad(n_d,n_T))
-
 do m=1, n_d
   cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3]
   do k=1, n_T
@@ -122,10 +129,39 @@ do m=1, n_d
     call coronal_timestep(ad, p, 1.d0, cor%density(m), cor%temperature(k)) ! use a fixed large timestep of 1 to solve the
     ! equilibrium state
 
-    cor%Z(m,k)   = dot_product(p/sum(p),Z)
+    cor%Z(m,k)    = dot_product(p/sum(p),Z)
     cor%Prad(m,k) = coronal_Prad(ad, cor%density(m), cor%temperature(k), p/sum(p)) ! Do not set neutral density yet
   enddo
 enddo
+
+! Calculate interpolating spline
+nxest = n_d+4
+nyest = n_T+4
+allocate(cor%cZ(nxest,nyest),cor%cP(nxest,nyest))
+allocate(cor%txZ(nxest),cor%tyZ(nyest),cor%txP(nxest),cor%tyP(nxest))
+
+!--------------------------------- interpolate using Dierckx spline routine
+iopt= 0 
+mx = n_d
+my = n_T
+xb = cor%density(1)
+xe = cor%density(n_d)
+yb = cor%temperature(1)
+ye = cor%temperature(n_T)
+kx = 3
+ky = 3
+smth = 0 ! interpolate only, no smoothing
+lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
+kwrk  = 3+mx+my+nxest+nyest
+
+allocate(wrk(lwrk),iwrk(kwrk))
+call regrid(iopt,mx,cor%density,my,cor%temperature,cor%Z, &
+    xb,xe,yb,ye,kx,ky,smth,nxest,nyest,cor%nxZ,cor%txZ,cor%nyZ,cor%tyZ,cor%cZ(:,:),fp,wrk,lwrk,iwrk,kwrk,ier)
+if (ier .gt. 0) write(*,*) "Error in spline fit Z: ", ier, fp
+call regrid(iopt,mx,cor%density,my,cor%temperature,cor%Prad, &
+    xb,xe,yb,ye,kx,ky,smth,nxest,nyest,cor%nxP,cor%txP,cor%nyP,cor%tyP,cor%cP(:,:),fp,wrk,lwrk,iwrk,kwrk,ier)
+if (ier .gt. 0) write(*,*) "Error in spline fit P: ", ier, fp
+deallocate(wrk,iwrk)
 end function coronal_equilibrium
 
 
@@ -174,8 +210,7 @@ p = b
 end subroutine coronal_timestep
 
 
-!> (Zeroth order) interpolation of coronal model charge
-!! (Just return closest value for now, replace with splines in the future)
+!> Interpolation of coronal model charge
 subroutine interpolate_coronal(cor, density, temperature, z, rad)
 implicit none
 
@@ -185,14 +220,24 @@ real*8, intent(in)              :: temperature ! log10 temperature (K)
 real*8, intent(out)             :: z ! most probable charge state
 real*8, intent(out)             :: rad ! radiated power according to coronal equilibrium
 
-integer :: index_d, index_T
+real,allocatable :: wrk(:)
+integer,allocatable :: iwrk(:)
+real*8           :: fout
+integer          :: mx,my,kx,ky,lwrk,kwrk,ier
 
-if (allocated(cor%Z)) then
-  index_d = minloc(abs(density-cor%density),1)
-  index_T = minloc(abs(temperature-cor%temperature),1)
+kx = 3
+ky = 3
+mx = size(cor%density,1)
+my = size(cor%temperature,1)
+lwrk = mx*(kx+1)+my*(ky+1)
+kwrk = mx+my
+allocate(wrk(lwrk),iwrk(kwrk))
 
-  z   = cor%Z(index_d,index_T)
-  rad = 10.d0**cor%Prad(index_d,index_T) ! Still needs to be multiplied by electron density! XXX
+if (allocated(cor%cZ)) then
+  call bispev(cor%txZ(:),cor%nxZ,cor%tyZ,cor%nyZ,cor%cZ(:,:),kx,ky,density,1,temperature,1,z,wrk,lwrk,iwrk,kwrk,ier)
+  if (ier .ne. 0) write(*,*) "Error in cor%z dierckx spline interp: ", ier
+  call bispev(cor%txP(:),cor%nxP,cor%tyP,cor%nyP,cor%cP(:,:),kx,ky,density,1,temperature,1,rad,wrk,lwrk,iwrk,kwrk,ier)
+  if (ier .ne. 0) write(*,*) "Error in cor%P dierckx spline interp: ", ier
 else
   write(*,*) "Called interpolate_coronal with invalid type_coronal input cor"
   call exit(10)

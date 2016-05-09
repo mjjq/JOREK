@@ -27,11 +27,9 @@ p = 1.d0
 ! ROW2x COL1y VAL
 do i=1,nstep
   call coronal_timestep(adf11, p, tstep, density, temperature)
-  write(*,"(i4,g16.8)") i, maxloc(p)
   do it=lbound(p,1),ubound(p,1)
     write(10,"(3g16.8)") i, it, p(it)/sum(p)
   enddo
-  write(10,*)
 enddo
 close(unit=10)
 write(*,*) "Output written to coronal_time.txt"

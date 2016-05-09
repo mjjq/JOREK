@@ -14,7 +14,7 @@ type(type_ADF11_all) :: adf11
 real*8, dimension(:), allocatable :: p ! population in one equilibrium
 integer :: i, it
 
-adf11   = read_adf11(suffix)                                    ! read openadas data for ionisation, recombination and radiation rates
+adf11   = read_adf11(suffix)           ! read openadas data for ionisation, recombination and radiation rates
 
 allocate(p(0:adf11%n_Z))
 
@@ -23,6 +23,7 @@ p = 1.d0
 
 ! Write output in format:
 ! ROW1x COL1y VAL
+! ROW1x COL2y VAL
 ! (blank)
 ! ROW2x COL1y VAL
 do i=1,nstep

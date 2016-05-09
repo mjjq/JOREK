@@ -218,7 +218,7 @@ type (type_coronal), intent(in) :: cor
 real*8, intent(in)              :: density ! log10 density (m^-3)
 real*8, intent(in)              :: temperature ! log10 temperature (K)
 real*8, intent(out)             :: z ! most probable charge state
-real*8, intent(out)             :: rad ! radiated power according to coronal equilibrium
+real*8, intent(out), optional   :: rad ! radiated power according to coronal equilibrium
 
 real,allocatable :: wrk(:)
 integer,allocatable :: iwrk(:)
@@ -236,8 +236,10 @@ allocate(wrk(lwrk),iwrk(kwrk))
 if (allocated(cor%cZ)) then
   call bispev(cor%txZ(:),cor%nxZ,cor%tyZ,cor%nyZ,cor%cZ(:,:),kx,ky,density,1,temperature,1,z,wrk,lwrk,iwrk,kwrk,ier)
   if (ier .ne. 0) write(*,*) "Error in cor%z dierckx spline interp: ", ier
-  call bispev(cor%txP(:),cor%nxP,cor%tyP,cor%nyP,cor%cP(:,:),kx,ky,density,1,temperature,1,rad,wrk,lwrk,iwrk,kwrk,ier)
-  if (ier .ne. 0) write(*,*) "Error in cor%P dierckx spline interp: ", ier
+  if (present(rad)) then
+    call bispev(cor%txP(:),cor%nxP,cor%tyP,cor%nyP,cor%cP(:,:),kx,ky,density,1,temperature,1,rad,wrk,lwrk,iwrk,kwrk,ier)
+    if (ier .ne. 0) write(*,*) "Error in cor%P dierckx spline interp: ", ier
+  endif
 else
   write(*,*) "Called interpolate_coronal with invalid type_coronal input cor"
   call exit(10)

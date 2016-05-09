@@ -166,7 +166,8 @@ lwrk = mx*(kx+1)+my*(ky+1)
 kwrk = mx+my
 allocate(wrk(lwrk),iwrk(kwrk))
 
-if (allocated(a%GRC)) then
+! If GRC exists and we are looking for a Z that is nonzero
+if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
   call bispev(a%tx(:,z),a%nx(z),a%ty(:,z),a%ny(z),a%c(:,:,z),kx,ky,density,1,temperature,1,fout,wrk,lwrk,iwrk,kwrk,ier)
   if (ier .ne. 0) write(*,*) "Error in GRC dierckx spline interp: ", ier
   GRC = 10.d0**fout

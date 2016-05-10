@@ -21,15 +21,32 @@ real*8, intent(in)                 :: timestep
 
 real*8, dimension(2) :: P, P_s, P_t, P_phi
 real*8               :: R, R_s, R_t, Z, Z_s, Z_t
+integer :: i_var(2)
+real*8  :: temperature
 
-! assume variables 5 and 6 are density and electron temperature
+! Get the indices of temperature and density
+#ifdef FULLMHD
+i_var = (/8,7/) ! T, rho
+#else
+#ifdef MODEL400
+i_var = (/8,5/) ! Te, rho
+#else
+i_var = (/6,5/) ! T, rho
+#endif
+#endif
+
 call interp_PRZ(node_list,element_list,&
-    particle%i_elm,(/5,6/),2,particle%x(1),particle%x(2),particle%x(3),&
+    particle%i_elm,i_var,2,particle%x(1),particle%x(2),particle%x(3),&
     P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+#ifdef MODEL400
+temperature = P(1)
+#else
+temperature = P(1) * 0.5d0 ! temperature is sum of electron and ion temperatures (assumed equal), unless model400
+#endif
 
 particle%q = int(new_charge(int(particle%q,4), ad, &
-    log10(P(1)*central_density)+20.d0, timestep, & ! electron number density
-    log10(P(2)/(K_BOLTZ*MU_ZERO*central_density))),1) ! electron temperature
+    log10(P(2)*central_density)+20.d0, timestep, & ! electron number density
+    log10(temperature/(K_BOLTZ*MU_ZERO*central_density))),1) ! electron temperature
 end subroutine
 
 !> Calculate new charge state at a specific density, temperature and timestep

@@ -85,6 +85,7 @@ integer, intent(in) :: my_id
 integer :: ierr
 
 namelist /in2/ species, atomic_mass, N_particles, particle_GC, &
+    adas_suffix, &
     location_accept_function, location_accept_parameters, &
     n_step_particles, t_step_particles, nout_particles, &
     write_energies, write_momenta, t_particles_begin, t_particles_end

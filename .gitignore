@@ -53,3 +53,4 @@ project_particles_vtk
 count_particles_vtk
 dump_particles_vtk
 particle_flux_coordinates
+.info

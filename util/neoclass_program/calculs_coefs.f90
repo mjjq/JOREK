@@ -40,7 +40,8 @@ END MODULE prec_const
 
 MODULE neo_subroutines
 
-	contains  
+  implicit none
+  contains  
 
        subroutine neocoeffs(Npoints, eps, Rmaj, Te, Ti, Ne, Ni, qsf, rho, muneoe, muneoi)
 !-------------------------------------------------------------------

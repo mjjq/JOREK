@@ -32,6 +32,7 @@ program JOREK2
   use data_structure
   use phys_module
   use parameters
+  use mod_log_params
   use global_distributed_matrix
   use nodes_elements
   use pellet_module
@@ -70,16 +71,16 @@ program JOREK2
 #endif
 
   use, intrinsic :: iso_c_binding
-
+  
   implicit none
 
 #ifdef USE_FFTW
   include 'fftw3.f03'
 #endif
-
+  
 #include "r3_info.h"
 #include "version.h"
-
+  
   interface
 
     subroutine distribute_vector(my_id,rhs,rhs_dis,again)
@@ -96,21 +97,20 @@ program JOREK2
       integer :: i_tor(:), my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
       integer :: iter_gmres, n_tor
     end subroutine gmres_driver
-
+    
     subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2, nice_q)
       use data_structure
       integer(kind=4),             intent(in)    :: my_id
       integer(kind=4),             intent(in)    :: xcase2
       type (type_node_list),       intent(inout) :: node_list
       type (type_element_list),    intent(inout) :: element_list
-      type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list
-      type (type_bnd_element_list),intent(inout) :: bnd_elm_list
+      type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list    
+      type (type_bnd_element_list),intent(inout) :: bnd_elm_list    
       logical(kind=4),             intent(in)    :: xpoint2
       logical(kind=4),             intent(in)    :: nice_q
     end subroutine equilibrium
   end interface
-
-  type (type_particle_list):: particle_list
+  
   type (type_surface_list) :: surface_list
   type (t_equil_state)     :: equil_state
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
@@ -136,7 +136,7 @@ program JOREK2
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
   logical                  :: solve_only
-  integer*4                :: rank, comm_size
+  integer*4                :: rank, comm_size 
   real*8                   :: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
   real*8                   :: zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
   real*8                   :: zTi, dTi_dpsi, dTi_dz, dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz
@@ -150,7 +150,7 @@ program JOREK2
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
   integer                  :: index_size, id_elements
-  integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined
+  integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   REAL*8                   :: max_time, min_time, tsecond
   integer, allocatable     :: tab_n_local_elems(:)
   real*8                   :: t_this, sum_deltas
@@ -173,7 +173,7 @@ program JOREK2
   !***********************************************************************
   ! --- Initialize OpenMP threads before MPI_init
   !call init_threads()
-
+  
   ! --- Initialise MPI / threaded MPI
 #ifdef FUNNELED
   required = MPI_THREAD_FUNNELED
@@ -186,49 +186,31 @@ required = 0
   call MPI_Init_thread(required, provided, StatInfo)
 
   call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
-
-  ! --- Determine ID of each MPI proc
-  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
-  my_id = rank
-
-  CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
-  write(*,'(A,I4,A)') "#MPI id, ProcessorName ", rank, name
-    
+  
   ! --- Determine number of MPI procs
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
   n_cpu = comm_size
-
-  if (my_id == 0) then
-    write(*,*) '*************************************************'
-    write(*,*) '*   3D Reduced MHD : JOREK_2.0                  *'
-    write(*,*) '*************************************************'
-    write(*,*) ' MPI processes       : ', n_cpu
-    write(*,*) ' OpenMP threads      : ', nbthreads
-    write(*,*) ' RCS revision        : ', RCS_VERSION
-    write(version_control,'(A)') trim(RCS_VERSION)
-    111 format(2x,a,': ',a)
-    write(*,111) 'compile_time        ', trim(adjustl(compile_time))
-    write(*,111) 'compile_user        ', trim(adjustl(compile_user))
-    write(*,111) 'compile_machine     ', trim(adjustl(compile_machine))
-    write(*,111) 'compile_dir         ', trim(adjustl(compile_dir))
-    write(*,111) 'compile_command     ', trim(adjustl(compile_command))
-    write(*,111) 'compile_flags       ', trim(adjustl(compile_flags))
-    write(*,111) 'compile_includes    ', trim(adjustl(compile_includes))
-    write(*,111) 'compile_defines     ', trim(adjustl(compile_defines))
-    write(*,111) 'compile_libs        ', trim(adjustl(compile_libs))
-    write(*,111) 'compile_modules     ', trim(adjustl(compile_modules))
-  end if
-
+  
+  ! --- Determine ID of each MPI proc
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+  my_id = rank
+  
+  ! --- Process command line arguments
+  if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)  
+  
+  CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
+  write(*,'(A,I4,A)') "#MPI id, ProcessorName ", rank, name
+    
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
 
   ! --- Initialise timing
   call clck_init()
   call r3_info_init ()
-
+  
   ! --- Initialize mode and mode_type arrays
   call det_modes()
-
+  
   ! --- Remove file STOP_NOW if it exists
   if ( my_id == 0 ) then
     open(42, file='STOP_NOW', iostat=ierr)
@@ -239,24 +221,24 @@ required = 0
   pastix_initialised = .false.
   pastix_analysed    = .false.
   murge_initialised  = .false.
-
+  
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
-
+  
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
 
   ! --- MURGE with ntor=1 doesn't work up to now because i_tor is not allocated correctly
   if (n_tor == 1) then
     gmres     = .false.
-    use_murge = .false.
+    use_murge = .false. 
   end if
-
+  
   ! --- Write out all parameters defined in mod_parameters and the namelist input file.
   call log_parameters(my_id)
-
+  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
+  
   ! --- Some checks not to waste any cpu time
   if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
@@ -266,7 +248,7 @@ required = 0
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_Abort(MPI_COMM_WORLD,ierr)
     stop
-  else if ( n_plane < (n_tor-1) ) then
+  else if ( n_plane < 2*(n_tor-1) ) then
     write(*,*) ' FATAL: n_plane >= 2 * (n_tor-1) required to avoid aliasing.'
     call MPI_Abort(MPI_COMM_WORLD,ierr)
     stop
@@ -323,7 +305,7 @@ required = 0
       stop
     end if
   end if
-
+  
   ! --- Initialize live data file which will be filled during the code run
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data()
 #ifdef JECCD
@@ -334,21 +316,21 @@ required = 0
    if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data4()
 #endif
 #endif
-
+  
   ! --- Initialise ppplib plotting library
   if (my_id == 0)  call begplt('jorek2.ps')
-
+  
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
-
+  
   call tr_print_memsize("InitStep")
 
   !***********************************************************************
   !*                  read restart file                                  *
   !***********************************************************************
-
+  
   if ( restart .and. (my_id == 0) ) then
-
+    
     if ( rst_hdf5 == 0 ) then
        ! --- Read the restart binary file (jorek_restart.rst)
        write(*,*) " Restart from BINARY files jorek_restart.rst "
@@ -389,7 +371,7 @@ required = 0
        write(*,*) '*******************************************************************************'
     endif
 #endif
-
+    
     ! --- Write live data for previous time-steps
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
@@ -403,7 +385,7 @@ required = 0
 #endif
       end do
     end if
-
+    
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
@@ -418,20 +400,20 @@ required = 0
           sig1, xr2, sig2, refinement)
       end if
     end if
-
+    
   end if
   if ( restart .and. freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
-
+  
   !***********************************************************************
   !*                  define grid / equilibrium                          *
   !***********************************************************************
-
+  
   if_not_restart: if (.not. restart) then
     call tr_resetfile()
     element_list%n_elements      = 0
     bnd_elm_list%n_bnd_elements  = 0
     node_list%n_nodes            = 0
-
+    
 #ifdef USE_HDF5
     if (save_diagnostics_HDF5 .and. (my_id .eq. 0) ) then
        write(*,*) ' '
@@ -457,46 +439,46 @@ required = 0
 #endif
 
     if (my_id == 0) then
-
+      
       ! --- Define the boundary of the initial grid
       call define_boundary()
-
+      
       if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
-
+        
         call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo,   &
           Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
-
+        
       else if ((n_R > 0) .and. (n_Z > 0) ) then
-
+        
         call grid_bezier_square(n_R, n_Z, R_begin, R_end, Z_begin, Z_end, .true., node_list,       &
           element_list)
-
+        
       else if ((n_radial > 0) .and. (n_pol > 0) ) then
-
+        
         call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
           node_list, element_list)
-
+        
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'
         call MPI_Abort(MPI_COMM_WORLD,ierr)
         stop
-      end if
-
+      end if 
+      
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
       call tr_debug_write("JMAIN:Def_grid elt_list",element_list%n_elements)
       call tr_debug_write("JMAIN:Def_grid node_list",node_list%n_nodes)
       call tr_debug_write("JMAIN:Def_grid bnd_elt_list",bnd_elm_list%n_bnd_elements)
-
+      
     end if
-
+    
     ! --- Synchronizing MPI processes avoid deadlock issues on some machine
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     
     ! --- Send boundary elements and nodes to other MPI procs
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
-
+    
     ! --- Fill the vacuum response matrices for freeboundary computations
     if ( freeboundary ) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
@@ -505,12 +487,12 @@ required = 0
       call import_external_fields('coil_field.dat', my_id)
       if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
     end if
-
-    ! --- Plot the grid
+    
+    ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
-!      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
+      call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
     end if
-
+    
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -520,23 +502,23 @@ required = 0
 #endif
 
     if (my_id == 0) then
-
+      
       ! --- Compute the plasma equilibrium
       if (equil) then
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.)
+        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
         if (export_for_nemec) call export_nemec(node_list, element_list, xpoint, xcase)
       end if
 
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
-
+        
         if (xpoint)  then
 
 !          if (.not. grid_to_wall) then
           if (xcase .ge. 2) then
 	    call grid_double_xpoint(node_list, element_list)
           else
-
+	  
 	    if (.not. grid_to_wall) then
 	      call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
@@ -546,37 +528,37 @@ required = 0
               call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
                                     SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
 	    endif
-
+	           
           endif
-
+                   
           call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
-
+          
         else
-
+          
           call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
                                  xr1, sig1, xr2, sig2,refinement)
-
+          
           call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
-
+          
           ! --- Refine elements (equilibrum)
           if (refinement) then
             n_to_be_refined=0
             call Refine_Elem_List(node_list, element_list, list_to_be_refined, n_to_be_refined)
             call Ref_Update_Index(element_list, node_list)
           end if
-
+             
         end if
-
+        
         ! --- Determine boundary information from the grid
-        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-
+        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
+        
 	call export_boundary(node_list, bnd_elm_list, bnd_node_list)
-
+        
         ! --- Compute the plasma equilibrium
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
-
+        
       end if
-
+      
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
 
@@ -595,7 +577,7 @@ required = 0
 #endif
 #endif
     end if ! (my_id == 0)
-
+    
 #ifdef USE_MUMPS
     ! --- Clean up this instance of mumps (used for equilibrium)
     mumps_par%JOB = -2
@@ -603,15 +585,15 @@ required = 0
 #endif
     if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
-
+  
   end if if_not_restart
-
+  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
+  
   ! --- Determine boundary information from the grid
   if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
-
+  
   ! --- Fill the vacuum response matrices for freeboundary computations
 !   if ( freeboundary_equil ) call import_external_fields('coil_field.dat')
   if ( freeboundary ) then
@@ -621,7 +603,7 @@ required = 0
     call import_external_fields('coil_field.dat', my_id)
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
-
+  
   call tr_print_memsize("AfterEquilibrium")
 
   if (RMP_on) then
@@ -630,7 +612,7 @@ required = 0
      endif
 
   endif
-
+  
   ! --- Broadcast grid information and input parameters to other MPI procs
   call broadcast_elements(my_id, element_list)                ! elements
   if (RMP_on) then
@@ -640,9 +622,9 @@ required = 0
   call broadcast_nodes(my_id, node_list)                      ! nodes
 
   call broadcast_phys(my_id)                                  ! physics parameters
-  n_AA = 0
-  do inode = 1, node_list%n_nodes
-    n_AA = max(n_AA,node_list%node(inode)%index(4))
+  n_AA = 0  
+  do inode = 1, node_list%n_nodes  
+    n_AA = max(n_AA,node_list%node(inode)%index(4))  
   end do
   mumps_par%n = n_AA
 
@@ -666,14 +648,14 @@ required = 0
 !    !print*, 'dpsi_RMP_sin_dZ after broadcast RMP3, my_id', dpsi_RMP_sin_dZ(3), my_id
 !    print*, 'dpsi_RMP_sin_dZ after broadcast RMP3, my_id', dpsi_RMP_sin_dZ(bnd_node_list%n_bnd_nodes), my_id
 ! endif
-!
+! 
   call tr_debug_write("JMAIN:End_init elt_list",element_list%n_elements)
   call tr_debug_write("JMAIN:End_init bnd_elt_list",bnd_elm_list%n_bnd_elements)
   call tr_debug_write("JMAIN:End_init node_list",node_list%n_nodes)
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
+  
   call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
   if ( my_id == 0 ) then
     call print_equil_state(equil_state, .true.)
@@ -683,10 +665,10 @@ required = 0
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *
   !***********************************************************************
-
+  
   t_now     = t_start      ! t_now: current time in the simulation
   psi_bnd   = 0.d0
-
+  
   if (nstep > 0) then
 
     !### THINGS LIKE THIS SHOULD BE REPLACED BY update_equil_state in the future:
@@ -703,7 +685,7 @@ required = 0
       psi_bnd = psi_lim
     end if
     !###
-
+    
     !*******************************************************
     !*      create groups /communicators		   *
     !* MPI_COMM_N      : group for each harmonic	   *
@@ -723,8 +705,8 @@ required = 0
        end if
 
        call tr_allocate(i_tor,1,n_cpu,"i_tor",CAT_UNKNOWN)
-
-       do i = 1, n_cpu
+       
+       do i = 1, n_cpu 
     	  i_tor(i) =  MOD(i-1, M_cpu)+1
        end do
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_TRANS,ierr)
@@ -734,11 +716,11 @@ required = 0
        enddo
 
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
-
+       
        do i=1,N_masters
     	  i_rank(i) = (i-1) * M_cpu
        enddo
-
+ 
        call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
        call MPI_GROUP_INCL(MPI_GROUP_WORLD,N_masters,i_rank,MPI_GROUP_MASTER,ierr)
 
@@ -796,7 +778,7 @@ required = 0
     end if
 
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
-
+       
        write (*,*) "--- Murge initilisation ---"
 
        ! TODO : deplacer dans un subroutine, dans mod_murge.f90
@@ -818,14 +800,14 @@ required = 0
     endif
 
  endif ! (nstep >0)
-
+  
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
      if ( rst_hdf5 == 0 ) then
         ! --- Write restart binary file
         fileout_bin = "jorek00000.rst"
         write (6,*) " =============>, jorek2, filename = ", fileout_bin
-        call export_binary_restart(node_list, element_list, fileout_bin, rst_format)
+        call export_binary_restart(node_list, element_list, fileout_bin)
      elseif ( rst_hdf5 == 1 ) then
         ! --- Write restart HDF5 file
         fileout_h5 = "jorek00000.h5"
@@ -839,15 +821,7 @@ required = 0
   !*                          time stepping                              *
   !***********************************************************************
   !***********************************************************************
-
-!  call plot_solution(node_list,element_list,1,-1,1,'flux')
-
-!  call update_neighbours(element_list,node_list)
-
-!  call initialise_particles(my_id, n_cpu, node_list, element_list, particle_list)
-
-!  call update_particles(my_id,particle_list,t_step_particles,n_step_particles)
-
+  
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
   iter_gmres  = 999
@@ -856,7 +830,7 @@ required = 0
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
-
+  
   index_now = index_start  ! index_now: Index of current timestep
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
@@ -869,18 +843,18 @@ required = 0
     call tr_debug_write("JMAIN:Index_now",index_now)
 
     index_now = index_now + 1
-
+    
     tstep = tstep_n(jstep)
-
+    
     if ( freeboundary ) call update_response(tstep, freeboundary_equil, resistive_wall)
-
+    
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'
       write(*,'(A17,3i7,f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,'  *'
       write(*,*) '******************************************************'
     end if
 
-    ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor,
+    ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
     ! --- n_plane, n_var have to remain the same until the end of the program.
     call new_thread_buffers()
 
@@ -898,18 +872,18 @@ required = 0
       call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
-
+    
     call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
     if ( my_id == 0 ) call print_equil_state(equil_state, .false.)
     psi_bnd = equil_state%psi_bnd
-
+    
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
     minRad = 0.0
     if (bootstrap) then
       call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
       call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
     endif
-
+    
     call tr_debug_write("JMAIN:Find_axis_R",R_axis)
     call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
     call tr_debug_write("JMAIN:Find_axis_T",T_axis)
@@ -919,7 +893,7 @@ required = 0
 !       write(*,FMT_TIMING)  my_id, '# Elapsed time init_time_step :',tsecond
 !    end if
 
-    ! Build the matrix
+    ! Build the matrix 
     call clck_time(t0)
     if (gmres) then
        solve_only = .false.
@@ -930,14 +904,13 @@ required = 0
     	  endif
        endif
     endif
-
+    
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
+      call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
-    call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
-
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
-
+    
     ! --- construct the matrix from elemental matrices
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
@@ -950,15 +923,14 @@ required = 0
        call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
          index_max(my_id+1), xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
          Z_xpoint, psi_xpoint)
-
     endif
-
+    
 
     call clck_time_barrier(t1)
-!    if (my_id .eq. 0) then
+    if (my_id .eq. 0) then
        call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time construct_matrix :',tsecond
-!    endif
+    endif     
     ! Ici c'est OK
     !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)
 
@@ -988,10 +960,10 @@ required = 0
     	  IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
     	     call distribute_harmonics(my_id,my_id_n,n_cpu)
     	  ELSE
-    	     call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.false.)
+    	     call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.false.)	       
     	  END IF
        else
-          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)
+          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
        endif
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
@@ -1047,7 +1019,7 @@ required = 0
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)
-
+ 
        !***********************************************************************
        !*                          output saving for diagnostics              *
        !*                                                                     *
@@ -1148,7 +1120,7 @@ required = 0
 
        write(6,*) ' exiting current energies '
 #endif
-
+       
        ! --- Output some information about the current timestep
        130 format(1x,a,i5.5,a,es10.3,a)
        131 format(1x,a,2(2(es10.2,' ...',es10.2,',')))
@@ -1195,14 +1167,14 @@ required = 0
     endif
     write(itlabel,'(I8)') istep
     call tr_print_memsize("AfterIter"//itlabel)
-
+    
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
      if ( rst_hdf5 == 0 ) then
         ! --- Write restart binary file
         write(fileout_bin,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
         write (6,*) " =============>, jorek2, BIN filename = ",fileout_bin
-        call export_binary_restart(node_list,element_list,fileout_bin,rst_format)
+        call export_binary_restart(node_list,element_list,fileout_bin)
      elseif ( rst_hdf5 == 1 ) then
         ! --- Write restart HDF5 file
         write(fileout_h5,'(A5,i5.5,A3)') 'jorek',index_now,'.h5'
@@ -1210,7 +1182,7 @@ required = 0
         call export_hdf5_restart(node_list,element_list,fileout_h5)
      end if
     endif
-
+    
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
     inquire(file='STOP_NOW', exist=file_exists)
     if ( file_exists ) then
@@ -1221,7 +1193,7 @@ required = 0
       end if
       exit jstep_loop
     end if
-
+    
     ! --- Exit the code if NaNs are detected.
     if ( allocated(deltas) ) then
       sum_deltas = sum(deltas)
@@ -1232,7 +1204,7 @@ required = 0
         exit jstep_loop
       end if
     end if
-
+    
     call clck_time_barrier(t1)
     call clck_ldiff(t_itstart,t1,tsecond)
     if (my_id .eq. 0) then
@@ -1241,7 +1213,7 @@ required = 0
 
   enddo istep_loop
   enddo jstep_loop
-
+  
   !***********************************************************************
   !*                         cleanup  (solvers)                          *
   !***********************************************************************
@@ -1253,7 +1225,7 @@ required = 0
       call DMUMPS(mumps_par)
 #endif
     elseif (use_pastix) then
-       if ( use_murge ) then
+       if ( use_murge ) then 
     	 call murge_termination(gmres)
        else
     	  pastix_iparm(2)     = 7			! Clean-up
@@ -1269,9 +1241,9 @@ required = 0
             call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
                  mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
+   
        	  endif
-
+          
        end if
 
     elseif (use_wsmp) then
@@ -1282,7 +1254,7 @@ required = 0
 
     endif
   endif
-
+  
   ! --- Close open files
   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data()
 #ifdef JECCD
@@ -1303,7 +1275,7 @@ required = 0
      if ( rst_hdf5 == 0 ) then
         ! --- Write restart binary file
         write (6,*) " =============>, jorek2, filename = jorek_restart.rst "
-        call export_binary_restart(node_list,element_list,'jorek_restart.rst',rst_format)
+        call export_binary_restart(node_list,element_list, 'jorek_restart.rst')
      elseif ( rst_hdf5 == 1 ) then
         ! --- Write restart HDF5 file
         write (6,*) " =============>, jorek2, filename = jorek_restart.h5 "
@@ -1311,7 +1283,7 @@ required = 0
      end if
 
     if (.not. bench_without_plot) then
-
+       
        do ivar=1,n_var
     	  call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
        enddo
@@ -1400,13 +1372,13 @@ required = 0
 
     	  call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
     	       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if (jorek_model .eq. 400) then
+    	  if (jorek_model .eq. 400) then	     
     	    call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+    			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
+    	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
       zT = zTi + zTe
-    	    dT_dpsi = dTi_dpsi + dTe_dpsi
+    	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
     	  else
       call temperature(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
     		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
@@ -1459,7 +1431,7 @@ required = 0
     endif
     call finplt 					 ! close plot file
 
-!  call export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
+!  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
 
     call export_helena(node_list,element_list,bnd_elm_list)
 
@@ -1474,7 +1446,7 @@ required = 0
 #endif
 #endif
   endif
-
+  
 #ifdef USE_FFTW
   call dfftw_destroy_plan(fftw_plan)
 #endif
@@ -1514,9 +1486,9 @@ end program JOREK2
 !! - Bezier elements
 !! - Free boundary extension
 !! - ...
-!!
+!! 
 !! \section Repository Browse Subversion Repository online
-!!
+!! 
 !! The <a href="http://subversion.apache.org/">Subversion</a> repository of JOREK can
 !! be <a href="https://gforge.inria.fr/scm/viewvc.php?view=rev&root=aster">browsed online</a>
 !! after logging in if you already have an account for it. On the Server,

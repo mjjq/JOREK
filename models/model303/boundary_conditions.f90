@@ -407,7 +407,7 @@ contains
                             if (.not. only_count) then
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(       &
-                                       index_node2, kv, in,               &
+                                       index_node, kv, in,                &
                                        use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc,                           &
@@ -415,7 +415,7 @@ contains
                                        U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot))
                                else
                                   call boundary_conditions_add_RHS(       &
-                                       index_node2, kv, in,               &
+                                       index_node, kv, in,                &
                                        use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc, 0.d0)

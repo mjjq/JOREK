@@ -1,4 +1,5 @@
 SUBROUTINE TG02A(IX,N,U,S,D,X,V)
+implicit none
 !------------------------------------------------------------------
 ! HSL subroutine to calculate splined values
 !    N  : number of points

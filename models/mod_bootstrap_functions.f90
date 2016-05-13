@@ -209,7 +209,6 @@ subroutine bootstrap_current(minRad, R, Z,                   &
     Jb = Jb * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - distance)/0.01d0 ) )
   endif
   
-
 return
 end subroutine bootstrap_current
 
@@ -569,7 +568,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   real*8                   :: R,  dR_ds,  dR_dt,  dR_dst,  dR_dss,  dR_dtt, dR_dl
   real*8                   :: Z,  dZ_ds,  dZ_dt,  dZ_dst,  dZ_dss,  dZ_dtt, dZ_dl
   real*8                   :: psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt, psi_R, psi_Z
-  real*8                   :: grad_psi, B_tot
+  real*8                   :: grad_psi, B_tot, B_pol
   real*8                   :: hh2(n_spline), ft_int(n_spline)
   integer                  :: n_int
   real*8                   :: lambda_ft, dlambda_ft, OneMinusLh
@@ -686,14 +685,15 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   	grad_psi = sqrt(psi_R**2 + psi_Z**2)
 
   	B_tot =  sqrt( (F0/R)**2 + (grad_psi/R)**2 )
+  	B_pol =  sqrt(             (grad_psi/R)**2 )
 	
         dR_dl = dR_ds * ds + dR_dt * dt
         dZ_dl = dZ_ds * ds + dZ_dt * dt
         dl = sqrt(dR_dl**2 + dZ_dl**2)
   	
-        sum_dl = sum_dl +  wgs(ig) * dl
+        sum_dl = sum_dl +  wgs(ig) * dl / B_pol
 
-        B_knots(i) = B_knots(i) +  wgs(ig) * dl * B_tot
+        B_knots(i) = B_knots(i) +  wgs(ig) * dl * B_tot / B_pol
 
       enddo
     enddo
@@ -764,14 +764,15 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   	grad_psi = sqrt(psi_R**2 + psi_Z**2)
 
   	B_tot =  sqrt( (F0/R)**2 + (grad_psi/R)**2 )
+  	B_pol =  sqrt(             (grad_psi/R)**2 )
 	
         dR_dl = dR_ds * ds + dR_dt * dt
         dZ_dl = dZ_ds * ds + dZ_dt * dt
         dl = sqrt(dR_dl**2 + dZ_dl**2)
   	
-        sum_dl = sum_dl +  wgs(ig) * dl
+        sum_dl = sum_dl +  wgs(ig) * dl / B_pol
 
-        hh2(i) = hh2(i) +  wgs(ig) * dl * (B_tot/Bmax(i))**2.0
+        hh2(i) = hh2(i) +  wgs(ig) * dl * (B_tot/Bmax(i))**2.0 / B_pol
 
       enddo
     enddo
@@ -814,14 +815,15 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
     	  grad_psi = sqrt(psi_R**2 + psi_Z**2)
 
     	  B_tot =  sqrt( (F0/R)**2 + (grad_psi/R)**2 )
+  	  B_pol =  sqrt(             (grad_psi/R)**2 )
 
           dR_dl = dR_ds * ds + dR_dt * dt
           dZ_dl = dZ_ds * ds + dZ_dt * dt
           dl = sqrt(dR_dl**2 + dZ_dl**2)
   	
-          sum_dl = sum_dl +  wgs(ig) * dl
+          sum_dl = sum_dl +  wgs(ig) * dl / B_pol
 
-          OneMinusLh = OneMinusLh +  wgs(ig) * dl * sqrt(1.0 - lambda_ft*B_tot/Bmax(i))
+          OneMinusLh = OneMinusLh +  wgs(ig) * dl * sqrt(1.0 - lambda_ft*B_tot/Bmax(i)) / B_pol
     	enddo
       enddo
       OneMinusLh = OneMinusLh / sum_dl

@@ -680,7 +680,14 @@ do i=1,element_list%n_elements
                Te_x  = Te_x + (   Z_t * Te_s - Z_s * Te_t )   / xjac * HZ(i_tor,i_plane)
                Te_y  = Te_y + ( - R_t * Te_s + R_s * Te_t )   / xjac * HZ(i_tor,i_plane)
                Te_p  = Te_p + Te * HZ_p(i_tor,i_plane)
-             end if
+             else
+               Ti_x  = TT_x / 2.0
+               Ti_y  = TT_y / 2.0
+               Ti_p  = TT_p / 2.0
+               Te_x  = TT_x / 2.0
+               Te_y  = TT_y / 2.0
+               Te_p  = TT_p / 2.0
+	     end if
 
              zn_x = zn_x  + (	Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
              zn_y = zn_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)

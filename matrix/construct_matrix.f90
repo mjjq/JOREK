@@ -1,5 +1,7 @@
 module construct_matrix_mod
 
+implicit none
+
 contains
 
   !> subroutine that will construct elemeentary matrices

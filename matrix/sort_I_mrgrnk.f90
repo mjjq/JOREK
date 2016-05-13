@@ -1,4 +1,5 @@
 Subroutine I_mrgrnk (XDONT, IRNGT, NVAL)
+  implicit none
 ! __________________________________________________________
 !   MRGRNK = Merge-sort ranking of an array
 !   For performance reasons, the first 2 passes are taken

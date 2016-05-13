@@ -3,6 +3,8 @@ program RST_convert_bin2hdf5
 
   use data_structure
   use phys_module
+  ! Argument parsing
+  use cla
 
   implicit none
 
@@ -11,9 +13,23 @@ program RST_convert_bin2hdf5
 
   integer :: ierr, i
 
-  character*5 :: index
-  character*16 :: fileout_h5
-  character*17 :: fileout_bin
+  character(len=80) :: filein, fileout
+  logical :: verbose, file_exists
+
+#ifndef USE_HDF5
+#error " Should be compiled with -DUSE_HDF5"
+#endif
+
+  ! Parse command line arguments
+  call cla_init
+  call pcla_register('filename', 'name of the restart file to convert',  cla_char, 'jorek_restart.rst')    
+  call cla_register('-v','--verbose','enable verbose output', cla_flag,'v')
+  call cla_validate("rst_bin2hdf5")
+  call cla_get('filename',filein)
+  verbose = cla_key_present('--verbose')
+
+  ! Create output filename
+  fileout = filein(1:index(filein,'.rst',.true.)) // 'h5' ! .true. searches backwards
 
   allocate(node_list)
   allocate(element_list)
@@ -23,10 +39,17 @@ program RST_convert_bin2hdf5
   
   rst_format = 0
 
+  ! --- Check for presence of the restart file
+  inquire(file=filein, exist=file_exists)
+  if (.not. file_exists) then
+    write(*,*) "File " // trim(filein) // " not found", ""
+    call cla_help('rst_bin2hdf5')
+    call exit(1)
+  endif
+
   ! --- Read the restart binary file
-  fileout_bin = "jorek_restart.rst"
-  write (6,*) " =============> rst_bin2hdf5 for filename = ",fileout_bin
-  call import_binary_restart(node_list, element_list, fileout_bin, rst_format, ierr)
+  if (verbose) write (6,*) " =============> rst_bin2hdf5 for filename = ",filein
+  call import_binary_restart(node_list, element_list, filein, rst_format, ierr)
 
   index_now = index_start
   t_now     = t_start
@@ -37,8 +60,7 @@ program RST_convert_bin2hdf5
   eta       = eta_rst
 
   ! -- Write the HDF5 restart file
-  fileout_h5 = "jorek_restart.h5"
-  write (6,*) " =============> rst_bin2hdf5, write HDF5 file = ",fileout_h5
-  call export_hdf5_restart(node_list, element_list, fileout_h5)
+  if (verbose) write (6,*) " =============> rst_bin2hdf5, write HDF5 file = ",fileout
+  call export_hdf5_restart(node_list, element_list, fileout)
 
 end program RST_convert_bin2hdf5

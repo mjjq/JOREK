@@ -262,6 +262,11 @@ jorek2_connection_stan : version diagnostics/jorek2_connection_stan.f90 $(JOREK2
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_connection_stan.o $(JOREK2_CONNECTION2_OBJ) \
 	 -o $(JOREK_DIR)/jorek2_connection_stan $(LIBS)
 
+jorek2_connection2 : version diagnostics/jorek2_connection2.f90 $(JOREK2_CONNECTION2_OBJ)
+	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_connection2.f90 -o diagnostics/jorek2_connection2.o
+	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_connection2.o $(JOREK2_CONNECTION2_OBJ) \
+	 -o $(JOREK_DIR)/jorek2_connection2 $(LIBS)
+
 jorek2_strikes : version diagnostics/jorek2_strikes_ordered.f90 $(JOREK2_STRIKES_OBJ)
 	$(FC) $(FFLAGS) $(INCLUDES) -c diagnostics/jorek2_strikes_ordered.f90 -o diagnostics/jorek2_strikes_ordered.o
 	$(FC) $(FFLAGS_OMP) diagnostics/jorek2_strikes_ordered.o $(JOREK2_STRIKES_OBJ) \

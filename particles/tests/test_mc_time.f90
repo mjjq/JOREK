@@ -7,7 +7,7 @@ implicit none
 character(len=6), parameter :: suffix = "50_w"
 real*8, parameter  :: tstep = 1.d-12
 integer, parameter :: nstep = 10000
-integer, parameter :: n_particles = 10000
+integer, parameter :: n_particles = 1000
 real*8, parameter  :: density = 20.d0 ! log10 density in m^-3
 real*8, parameter  :: temperature = 7.677 ! log10 temperature in K: 7.677 = 4.1 keV
 

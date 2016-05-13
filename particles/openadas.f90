@@ -10,10 +10,7 @@ type type_ADF11 !< Custom data structure containing relevant fields from ADF11 f
   integer             :: izmin, izmax !< minimum and maximum value of z for which data is available
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
-  real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: z, d, T). Units:
-  real*8, allocatable :: c(:,:,:) !< coefficients of spline fit (x,y,i = charge state)
-  real*8, allocatable :: tx(:,:), ty(:,:) !< knots of spline fit (x,i) and (y,i)
-  integer,allocatable :: nx(:), ny(:) !< Number of knots in spline fit
+  real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: d, T, z). Units:
   ! ACD, SCD: cm3s-1 (for *CD ?)
   ! PLT, PRB: Wcm3 (for P* ?)
 end type type_ADF11
@@ -49,16 +46,10 @@ character*13 :: filename
 
 integer :: i, ierr, n_d, n_T, k
 logical :: file_exists
-! Dierckx variables
-real*8           :: xb ,xe, yb, ye, smth, fp
-integer          :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt
-real,allocatable :: wrk(:)
-integer,allocatable :: iwrk(:)
-
 
 write(*,'(A)') '*********************************'
 write(*,'(A)') '* Importing OpenAdas data       *'
-write(*,'(A,A,A)') '* open files ending in: ', suffix, '  *' 
+write(*,'(A,A,A)') '* open files ending in: ', suffix, '  *'
 write(*,'(A)') '*********************************'
 
 do i_ADF11 = 1,size(ADF11_filenames,1)
@@ -97,35 +88,9 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   a%temperature = a%temperature - log10(K_BOLTZ) + log10(EL_CHG) ! EL_CHG * 1 Volt actually
 
   a%GRC = -30.d0
-  ! Spline params
-  nxest = n_d+4
-  nyest = n_T+4
-  allocate(a%c(nxest,nyest,a%n_z))
-  allocate(a%tx(nxest,a%n_z),a%ty(nyest,a%n_z))
-  allocate(a%nx(a%n_z),a%ny(a%n_z))
-
   do i = a%izmin, a%izmax
     read(10,*)
     read(10,*) a%GRC(:,:,i)
-    !--------------------------------- interpolate using Dierckx spline routine
-    iopt= 0 
-    mx = n_d
-    my = n_T
-    xb = a%density(1)
-    xe = a%density(n_d)
-    yb = a%temperature(1)
-    ye = a%temperature(n_T)
-    kx = 3
-    ky = 3
-    smth = 0.d0
-    lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
-    kwrk  = 3+mx+my+nxest+nyest
-
-    allocate(wrk(lwrk),iwrk(kwrk))
-    call regrid(iopt,mx,a%density,my,a%temperature,a%GRC(:,:,i), &
-        xb,xe,yb,ye,kx,ky,smth,nxest,nyest,a%nx(i),a%tx(:,i),a%ny(i),a%ty(:,i),a%c(:,:,i),fp,wrk,lwrk,iwrk,kwrk,ier)
-    if (ier .gt. 0) write(*,*) "Error in spline fit: ", ier, fp ! check whether you compiled dierckx with -fdefault-real-8 or -r8!
-    deallocate(wrk,iwrk)
   enddo
   close(10)
 
@@ -153,27 +118,57 @@ real*8, intent(in)            :: temperature !< log10 temperature in K
 integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
 real*8 :: GRC
 
-real,allocatable :: wrk(:)
-integer,allocatable :: iwrk(:)
-real*8           :: fout
-integer          :: mx,my,kx,ky,lwrk,kwrk,ier
-
-kx = 3
-ky = 3
-mx = size(a%density,1)
-my = size(a%temperature,1)
-lwrk = mx*(kx+1)+my*(ky+1)
-kwrk = mx+my
-allocate(wrk(lwrk),iwrk(kwrk))
-
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
-  call bispev(a%tx(:,z),a%nx(z),a%ty(:,z),a%ny(z),a%c(:,:,z),kx,ky,density,1,temperature,1,fout,wrk,lwrk,iwrk,kwrk,ier)
-  if (ier .ne. 0) write(*,*) "Error in GRC dierckx spline interp: ", ier
-  GRC = 10.d0**fout
+  GRC = 10.d0**L2Dinterp(a%density,a%temperature,a%GRC(:,:,z),density,temperature)
 else
   GRC = 0.d0
 endif
-deallocate(wrk,iwrk)
 end function GRC
+
+!> Linear 2D interpolation on a rectangular grid
+!> x2y1       xy1    x1y1
+!>  *----------*------*
+!>             |
+!>             * xy
+!>             |
+!>             |
+!>  *----------*------*
+!> x2y2       xy2    x1y2
+!>
+!> Calculates the interpolation using two intermediate values
+!> fxy1 and fxy2.
+!> Equations used are:
+!> $fx1  = \frac{f_{11}-f_{21}}{x_1-x_2} (x-x_1) + f_{11}$
+!> $fx2  = \frac{f_{12}-f_{22}}{x_1-x_2} (x-x_1) + f_{12}$
+!> $fout = \frac{f_{x1}-f_{x2}}{y_1-y_2} (y-y_1) + f_{x1}$
+!> x1,2 and y1,2 are chosen in order of closeness
+!> This algorithm can also be used for extrapolation
+function L2Dinterp(tx,ty,f,x,y) result(fout)
+implicit none
+
+real*8, intent(in), dimension(:)                 :: tx !< Grid points in x
+real*8, intent(in), dimension(:)                 :: ty !< Grid points in y
+real*8, intent(in), dimension(size(tx),size(ty)) :: f !< Function values at these points
+real*8, intent(in)  :: x, y !< Points at which to interpolate
+real*8              :: fout
+
+integer :: ix1, iy1 !< Index of closest point
+integer :: ix2, iy2 !< Index of other (usually next closest) point
+real*8  :: fx1, fx2 ! Temporary variables
+ix1 = minloc(abs(tx - x), dim=1)
+if (x .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
+if (x .lt. tx(ix1)) ix2 = ix1 - 1
+if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
+if (ix2 .lt. 1       ) ix2 = 2
+iy1 = minloc(abs(ty - y), dim=1)
+if (y .ge. ty(iy1)) iy2 = iy1 + 1
+if (y .lt. ty(iy1)) iy2 = iy1 - 1
+if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
+if (iy2 .lt. 1       ) iy2 = 2
+
+fx1  = (f(ix1,iy1) - f(ix2,iy1))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1)
+fx2  = (f(ix1,iy2) - f(ix2,iy2))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2)
+fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
+end function L2Dinterp
 end module openadas

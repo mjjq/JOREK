@@ -71,18 +71,6 @@ endif
 call initialise_parameters(my_id, "in_jorek")
 call initialise_particle_parameters(my_id, "__NO_FILENAME__")
 call initialise_basis                              ! define the basis functions at the Gaussian points
-! For each particle read adas files, skip duplicate reads, and calculate coronal equilibrium
-do i=1,n_species
-   index_prev = maxloc(species(1:i-1)*0.d0, 1, mask=adas_suffix(1:i-1).eq.adas_suffix(i))
-   if (index_prev .eq. 0) then
-     adf11(i)   = read_adf11(adas_suffix(i))                                    ! read openadas data for ionisation, recombination and radiation rates
-     coronal(i) = coronal_equilibrium(adf11(i))                                 ! calculate the coronal equilibria from the adas data
-   else
-     adf11(i)   = adf11(index_prev)
-     coronal(i) = coronal(index_prev)
-   endif
-enddo
-
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -104,6 +92,13 @@ call broadcast_nodes(my_id, node_list)             ! nodes
 call broadcast_phys(my_id)                         ! physics parameters
 call broadcast_particle_parameters(my_id)          ! particle parameters
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
+do i=1,n_species ! For each particle read adas files and calculate coronal equilibrium)
+  if (len_trim(adas_suffix(i)) .ne. 0) then
+    adf11(i)   = read_adf11(adas_suffix(i))    ! read openadas data for ionisation, recombination and radiation rates
+    coronal(i) = coronal_equilibrium(adf11(i)) ! calculate the coronal equilibria from the adas data
+  endif
+enddo
+
 call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 
 if (len_trim(particle_restart_file) .eq. 0) then

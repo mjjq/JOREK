@@ -1,8 +1,35 @@
 !> Imports a restart file written out by the routine export_restart.
 
+subroutine import_restart(node_list, element_list, ierr)
+
+  use tr_module
+  use data_structure
+  use phys_module
+  use pellet_module
+
+  implicit none
+  
+  ! --- Routine parameters
+  type(type_node_list),    intent(inout) :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  integer,                 intent(out)   :: ierr
+
+  if ( rst_hdf5 == 0 ) then
+    ! --- Read the restart binary file (jorek_restart.rst)
+    write(*,*) " Restart from BINARY files jorek_restart.rst "
+    call import_binary_restart(node_list, element_list, 'jorek_restart.rst', ierr)
+  elseif ( rst_hdf5 == 1 ) then
+    ! --- Read the restart HDF5 file (jorek_restart.h5)
+    write(*,*) " Restart from HDF5 files jorek_restart.h5 "
+    call import_hdf5_restart(node_list, element_list, 'jorek_restart.h5', ierr)
+  end if
+
+end subroutine import_restart
+
+
 !
 ! Import a binary restart file
-subroutine import_binary_restart(node_list, element_list, filename, format_rst, error)
+subroutine import_binary_restart(node_list, element_list, filename, error)
 
   use tr_module 
   use data_structure
@@ -17,7 +44,6 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   type(type_element_list), intent(inout) :: element_list
   character(len=*),        intent(in)    :: filename
   integer,                 intent(out)   :: error
-  integer,                 intent(in)    :: format_rst  ! format of restart file
   
   ! --- Local variables
   integer              :: i, j, m, k, n_tor_tmp
@@ -48,10 +74,10 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 
   allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))
 
-  if (format_rst == 1) then
+  if (rst_format == 1) then
     read(21) mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
-  elseif (format_rst == 0) then
+  elseif (rst_format == 0) then
     write(*,*) ' mode : ',mode
     if (n_tor .eq. n_tor_tmp) then 
        mode_tmp = mode
@@ -62,7 +88,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
     write(*,'(A,999i4)') ' new mode numbers	: ',mode
   else
-    write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+    write(*,'(A,i3)') ' restart file format not supported : ',rst_format
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &
@@ -196,9 +222,11 @@ endif
   close(21)
   
   write(*,*) '************* restart ******************'
-  write(*,'(A,I6,F14.6,A)') ' *  restart time       : ',index_start,t_start,' *'
+  write(*,'(A,I6,F14.6,A)') " *  restart time       : ", &
+          index_start,t_start," *"
 #ifdef USE_HDF5
-  write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
+  write(*,'(A,I4,A)')       " *  HDF5 files written : ", &
+          h5_nbsave_all,      "   *"
 #endif
   write(*,*) '****************************************'
 
@@ -243,10 +271,10 @@ endif
       allocate( values_tmp_perturbation(n_tor_tmp_perturbation,n_order+1,n_var) )
       allocate( deltas_tmp_perturbation(n_tor_tmp_perturbation,n_order+1,n_var) )
 
-      if (format_rst == 1) then
+      if (rst_format == 1) then
    	read(21) mode_tmp_perturbation
    	write(*,*) ' NEW format (1) : ',mode_tmp_perturbation
-      elseif (format_rst == 0) then
+      elseif (rst_format == 0) then
    	write(*,*) ' mode : ',mode
    	if (n_tor .eq. n_tor_tmp) then 
    	  mode_tmp_perturbation = mode
@@ -257,7 +285,7 @@ endif
    	write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp_perturbation
    	write(*,'(A,999i4)') ' new mode numbers     : ',mode
       else
-   	write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+   	write(*,'(A,i3)') ' restart file format not supported : ',rst_format
       endif
 
       allocate(node_list_perturbation, element_list_perturbation)
@@ -359,7 +387,7 @@ end subroutine import_binary_restart
 
 !
 ! Import an HDF5 restart file
-subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)
+subroutine import_hdf5_restart(node_list, element_list, filename, error)
 
 #include "version.h"
 
@@ -381,7 +409,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   type(type_node_list),    intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
   character(len=*),        intent(in)    :: filename
-  integer,                 intent(in)    :: format_rst  ! format of restart file
   integer,                 intent(out)   :: error
   
   ! --- Perturbation-Import variables
@@ -447,11 +474,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
   allocate(mode_tmp(n_tor_tmp))
 
-  if (format_rst == 1) then
+  if (rst_format == 1) then
     call HDF5_array1D_reading_int(file_id,mode_tmp,"mode_tmp")
     write(*,*) " import_restart, HDF5 file : n_var     = ",mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
-  elseif (format_rst == 0) then
+  elseif (rst_format == 0) then
     write(*,*) ' mode : ',mode
     if (n_tor .eq. n_tor_tmp) then 
        mode_tmp = mode
@@ -462,7 +489,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
     write(*,'(A,999i4)') ' new mode numbers	: ',mode
   else
-    write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+    write(*,'(A,i3)') ' restart file format not supported : ',rst_format
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &

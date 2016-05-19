@@ -1,5 +1,34 @@
 !> Export the current simulation state as a restart file that can be read back into JOREK or into
 !! a diagnostic program by the routine import_restart.
+subroutine export_restart(node_list,element_list)
+
+  use parameters
+  use data_structure
+  use phys_module
+  use pellet_module
+
+  implicit none
+
+  ! --- Routine parameters
+  type(type_node_list),    intent(in) :: node_list
+  type(type_element_list), intent(in) :: element_list
+
+  character*14 :: fileout_bin
+  character*13 :: fileout_h5
+
+  if ( rst_hdf5 == 0 ) then
+    ! --- Write restart binary file
+    fileout_bin = "jorek00000.rst"
+    write (6,*) " =============>, jorek2, filename = ", fileout_bin
+    call export_binary_restart(node_list, element_list, fileout_bin)
+  elseif ( rst_hdf5 == 1 ) then
+    ! --- Write restart HDF5 file
+    fileout_h5 = "jorek00000.h5"
+    write (6,*) " =============>, jorek2, filename = ", fileout_h5
+    call export_hdf5_restart(node_list, element_list, fileout_h5)
+  end if
+
+end subroutine export_restart
 
 !
 ! Export in a binary restart file

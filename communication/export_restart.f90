@@ -17,7 +17,7 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
-  character*(*),           intent(in) :: filename
+  character*50,            intent(in) :: filename
   integer,                 intent(in) :: format_rst
 
   ! --- Local variables
@@ -25,7 +25,7 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
   character*50 :: version_control
 
   ! -> Write binary restart file
-  open(21, file=filename, form='unformatted', status='replace', action='write')
+  open(21, file=trim(filename), form='unformatted', status='replace', action='write')
 
   if (format_rst .gt.0) then
     write(21) format_rst

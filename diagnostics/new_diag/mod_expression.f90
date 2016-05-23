@@ -1078,7 +1078,7 @@ module mod_expression
                 res = Btheta
                 
               case ( 'currdens' )
-                res = zj0 * R / fact_mu_zero
+                res = zj0 / R / fact_mu_zero
                 
               case ( 'Er' )
                 res = Er * fact_Er

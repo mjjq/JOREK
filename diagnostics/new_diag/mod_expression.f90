@@ -113,7 +113,7 @@ module mod_expression
     call add(exprs_all, 'u           ', 'Velocity Stream Function                              ')
     call add(exprs_all, 'Phi         ', 'Electric Potential Phi                                ')
     call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
-    call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj*R)           ')
+    call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj/R)           ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')

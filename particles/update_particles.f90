@@ -177,7 +177,7 @@ do i = 1, particle_list%n_particles
 
     ! Calculate ionisation and recombination
     ! Get density and temperature to find GRC coefficients
-    call update_particle_charge(node_list, element_list, particle, adf11, t_step)
+    !call update_particle_charge(node_list, element_list, particle, adf11, t_step*t_norm)
   enddo
 
   ! Save the new values for this particle

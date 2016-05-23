@@ -258,11 +258,12 @@ i_var = (/ 1, 5, 6, 7 /)
 call interp_PRZ(node_list,element_list,particle%i_elm,i_var,size(i_var),particle%st(1),particle%st(2),particle%x(3),&
     P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
-background_density = P(2) * 1d20                             ! plasma density [1/m^3]
-background_kbT     = P(3) /(MU_ZERO*central_density*1.d20)   ! plasma temperature [J] TODO check why no mass_proton
-background_kelvin  = background_kbT / EL_CHG                 ! plasma temperature [K]
+background_density = P(2) * 1d20                                    ! plasma density [1/m^3]
+background_kbT     = P(3) /(MU_ZERO*central_density*1.d20)          ! Total plasma temperature in J/kB = T = Te + Ti
+background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron temperature [K]
+! This is not valid for model400 (for that, remove the factor 2 above and below)
 
-V_thermal = sqrt(background_kbT / (particle%mass*ATOMIC_MASS_UNIT))      ! [m/s]
+V_thermal = sqrt(background_kbT / (2.d0*particle%mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
 call random_number(ran4)
 
@@ -270,7 +271,6 @@ vx = V_thermal * sqrt(-2*Log(ran4(1))) * cos(TWOPI*ran4(2))  ! [m/s]  uses box-m
 vy = V_thermal * sqrt(-2*Log(ran4(1))) * sin(TWOPI*ran4(2))
 vz = V_thermal * sqrt(-2*Log(ran4(3))) * sin(TWOPI*ran4(4))
 
-! TODO Why 1d-6?
 call interpolate_coronal(cor, log10(background_density),log10(background_kelvin),Z_coronal,radiation_coronal)
 
 particle%v(1) =   vx * cos(particle%x(3)) + vy * sin(particle%x(3))   ! V_R
@@ -281,7 +281,7 @@ mass_main_ion        = mass_proton * central_mass
 v_norm = sqrt(mu_zero * mass_main_ion * central_density * 1.d20)      ! JOREK normalisation for velocity
 particle%v = particle%v * v_norm
 
-particle%q       = int(Z_coronal,1)                     !< charge (initialised with the coronal equilibrium value)
+particle%q       = nint(Z_coronal,1)                     !< charge (initialised with the coronal equilibrium value)
 
 ifail = 0
 

@@ -50,7 +50,9 @@ call write_particle_flux_coordinates(node_list,element_list,particle_list,output
 write(*,*) "Done counting, wrote output to ", output_file
 
 call MPI_Finalize(ierr)
+
 contains
+
 subroutine write_particle_flux_coordinates(node_list,element_list,particle_list,filename)
 use phys_module
 use data_structure
@@ -65,39 +67,18 @@ type(type_element_list), intent(in)   :: element_list
 type (type_particle_list), intent(in) :: particle_list
 character*(*), intent(in)             :: filename
 
-integer :: i, j
+integer :: i, i_elm
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
 real*8, dimension(1) :: P, P_s, P_t, P_phi
-integer :: i_elm
-real*8, allocatable :: flux(:)
 
-real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
-real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
-
-real*8  :: total_volume, total_area, volume, area, xjac, wst, phif, weight
-integer :: ms, mt
-
-type(type_node) :: node
-type(type_element) :: element
-
-
-allocate(flux(particle_list%n_particles))
 ! Count number of particles in each element
-do i=1,particle_list%n_particles
-  if (particle_list%particle(i)%lost) cycle ! skip this iteration
-  i_elm  = particle_list%particle(i)%i_elm
-  if (i_elm .lt. 1) cycle
-  call interp_PRZ(node_list, element_list, i_elm, (/1/), 1, particle_list%particle(i)%st(1),particle_list%particle(i)%st(2), particle_list%particle(i)%x(3), P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
-  write(*,"(7g16.8)") P
-enddo
-
-! Write output
 open(file=filename,status="replace",unit=21,access="stream",form='formatted')
 do i=1,particle_list%n_particles
   if (particle_list%particle(i)%lost) cycle ! skip this iteration
   i_elm  = particle_list%particle(i)%i_elm
   if (i_elm .lt. 1) cycle
-  write(21,'(g16.8)') flux(i)
+  call interp_PRZ(node_list, element_list, i_elm, (/1/), 1, particle_list%particle(i)%st(1),particle_list%particle(i)%st(2), particle_list%particle(i)%x(3), P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+  write(21,'(2g16.8)') P, particle_list%particle(i)%q
 enddo
 close(21)
 

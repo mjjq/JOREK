@@ -140,6 +140,8 @@ do i_step=i_begin,i_end
     nout_particles = int(tstep/t_step_particles,4)
     ! Set t_step_particles to the closest integer divisor of t_step so we don't miss a substep
     t_step_particles = tstep/nout_particles
+  else
+    i_step_out = i_step
   endif
 
   ! Do substepping

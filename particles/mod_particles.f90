@@ -129,7 +129,7 @@ bufsize = ( (N_species*2+4)*INT_EXT + &
             (N_species*(9+1))*ISGL_EXT + &
             1*IDBL_EXT + &
             (N_species+2)*ILOG_EXT + &
-            (80*(N_species+1))*CHAR_EXT)
+            (80*(N_species+1)+6*N_species)*CHAR_EXT)
 allocate(buffer(bufsize))
 
 if (my_id .eq. 0) then
@@ -138,6 +138,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(atomic_mass,                 N_species,MPI_REAL4    ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(N_particles,                 N_species,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particle_GC,                 N_species,MPI_LOGICAL  ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(adas_suffix,               N_species*6,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(location_accept_function, N_species*80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(location_accept_parameters,  N_species*9,  MPI_REAL4,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
@@ -157,6 +158,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,atomic_mass,                  N_species,MPI_REAL4    ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,N_particles,                  N_species,MPI_INT      ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particle_GC,                  N_species,MPI_LOGICAL  ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,adas_suffix,                N_species*6,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,location_accept_function,  N_species*80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,location_accept_parameters, N_species*9,MPI_REAL4    ,MPI_COMM_WORLD,ierr)
 
@@ -229,7 +231,9 @@ function get_particle_derived_type() result(dtype_out)
 
   ! Commit the structured type
   call MPI_Type_create_struct(9, len, disp, t, dtype, ierr)
+  if (ierr .ne. 0) write(*,*) "Error creating particle datatype: ", ierr
   call MPI_Type_commit(dtype, ierr)
+  if (ierr .ne. 0) write(*,*) "Error committing particle datatype: ", ierr
 
   ! Set the save bit
   dtype_set = .true.

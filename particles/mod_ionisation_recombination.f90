@@ -17,7 +17,7 @@ type(type_node_list), intent(in)   :: node_list
 type(type_element_list), intent(in):: element_list
 type(type_particle), intent(inout) :: particle
 type(type_ADF11_all), intent(in)   :: ad
-real*8, intent(in)                 :: timestep
+real*8, intent(in)                 :: timestep !< Timestep, in s
 
 real*8, dimension(2) :: P, P_s, P_t, P_phi
 real*8               :: R, R_s, R_t, Z, Z_s, Z_t
@@ -36,8 +36,8 @@ i_var = (/6,5/) ! T, rho
 #endif
 
 call interp_PRZ(node_list,element_list,&
-    particle%i_elm,i_var,2,particle%x(1),particle%x(2),particle%x(3),&
-    P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+  particle%i_elm,i_var,2,particle%x(1),particle%x(2),particle%x(3),&
+  P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
 #ifdef MODEL400
 temperature = P(1)
 #else
@@ -45,8 +45,9 @@ temperature = P(1) * 0.5d0 ! temperature is sum of electron and ion temperatures
 #endif
 
 particle%q = int(new_charge(int(particle%q,4), ad, &
-    log10(P(2)*central_density)+20.d0, timestep, & ! electron number density
-    log10(temperature/(K_BOLTZ*MU_ZERO*central_density))),1) ! electron temperature
+    log10(P(2)*central_density)+20.d0, & ! electron number density
+    log10(temperature/(K_BOLTZ*MU_ZERO*central_density))-20.d0, &
+  timestep),1) ! electron temperature
 end subroutine
 
 !> Calculate new charge state at a specific density, temperature and timestep
@@ -55,9 +56,9 @@ implicit none
 
 integer, intent(in)              :: z !< Old charge state
 type(type_ADF11_all), intent(in) :: ad !< ADF11 data
-real*8, intent(in)               :: electron_density
-real*8, intent(in)               :: electron_temperature
-real*8, intent(in)               :: timestep
+real*8, intent(in)               :: electron_density !< Electron density in m^-3
+real*8, intent(in)               :: electron_temperature !< Electron temperature in K
+real*8, intent(in)               :: timestep !< Timestep in s
 integer :: z_new
 
 real*8 :: prob(2)
@@ -66,11 +67,16 @@ real*8 :: rand(2)
 z_new = z
 call random_number(rand)
 ! probabilities of recombination and ionisation events
-prob = (/GRC(ad%ACD, z, electron_density, electron_temperature), & ! rec
-         GRC(ad%SCD, z+1,   electron_density, electron_temperature)/) * 10.d0**electron_density * timestep ! ion
+prob = (/GRC(ad%ACD, z,   electron_density, electron_temperature), & ! rec
+         GRC(ad%SCD, z+1, electron_density, electron_temperature)/) & ! ion
+         * 10.d0**electron_density * timestep
+if (prob(1) .gt. 1.d0 .and. prob(2) .gt. 1.d0) then
+  z_new = z_new + 2*maxloc(prob,1)-3
+  return
+endif
 if (prob(1) .gt. rand(1)) z_new = z_new - 1 ! recombination
 if (prob(2) .gt. rand(2)) z_new = z_new + 1 ! ionization
-if (prob(1) .gt. 1.d0 .and. prob(2) .gt. 1.d0) write(*,*) "WARNING: ion AND rec probabilities >1, lower timestep!", prob
+!if (prob(1) .gt. 1.d0 .and. prob(2) .gt. 1.d0) write(*,*) "WARNING: ion AND rec probabilities >1, lower timestep!", prob
 
 end function new_charge
 end module mod_ionisation_recombination

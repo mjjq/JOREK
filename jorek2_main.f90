@@ -128,8 +128,7 @@ program JOREK2
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
   character*8              :: label, itlabel
-  character*14             :: fileout_bin
-  character*13             :: fileout_h5
+  character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
@@ -790,13 +789,14 @@ required = 0
        endif
     endif
 
- endif ! (nstep >0)
+  endif ! (nstep >0)
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-     call export_restart(node_list, element_list)
+    fileout = 'jorek00000'
+    call export_restart(node_list, element_list, fileout)
   end if
-
+  
   !***********************************************************************
   !***********************************************************************
   !*                          time stepping                              *
@@ -1151,7 +1151,8 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-     call export_restart(node_list, element_list)
+      write(fileout,'(A5,i5.5)') 'jorek',index_now
+      call export_restart(node_list, element_list, fileout)
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
@@ -1241,7 +1242,8 @@ required = 0
   !***********************************************************************
 
   if (my_id .eq. 0)  then
-     call export_restart(node_list, element_list)
+    fileout = 'jorek_restart'
+    call export_restart(node_list, element_list, fileout)
 
     if (.not. bench_without_plot) then
        

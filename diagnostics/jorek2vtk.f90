@@ -553,6 +553,11 @@ do i=1,element_list%n_elements
           psi_J = (Ps_s * ZJ_t - PS_t * ZJ_s ) / xjac
           R_p	= (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
           error = psi_J - R_p  ! "error" in Grad_Shafranov equilibrium force balance
+#ifndef fullmhd
+          if (include_magnetic_field) then
+            vectors(inode,:,1) = (/ ps_y, -ps_x, F0 /) / BigR
+          endif
+#endif
 
         endif  ! xjac check
 

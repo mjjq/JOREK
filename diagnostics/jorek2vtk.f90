@@ -49,12 +49,12 @@ real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t
 real*8                :: psi_norm, psi_bnd, grad_psi
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet,n_bootstrap, n_psi_norm
+integer               :: n_fluxes, n_neo, i_vector, n_pellet,n_bootstrap, n_psi_norm
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
-logical               :: include_bootstrap, include_psi_norm
+logical               :: include_bootstrap, include_psi_norm, include_electric_field
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -79,7 +79,7 @@ real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
-                      include_bootstrap, include_psi_norm
+                      include_bootstrap, include_psi_norm, include_electric_field
 
 
 
@@ -91,6 +91,7 @@ write(*,*) ' please consider the new parameters:'
 write(*,*) '   -include_fluxes'
 write(*,*) '   -include_neo'
 write(*,*) '   -include_magnetic_field'
+write(*,*) '   -include_electric_field'
 write(*,*) '   -include_velocity_field'
 write(*,*) '   -include_bootstrap'
 write(*,*) '   -include_psi_norm'
@@ -114,6 +115,7 @@ SI_units               = .false. ! when true, write variables in SI units
 include_fluxes         = .false. ! include energy and density fluxes (or not)
 include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
+include_electric_field = .false. ! include vector of electric field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .false.  ! include normalized flux
@@ -141,6 +143,7 @@ write(*,*) 'si_units        =', si_units
 write(*,*) 'include_fluxes  =', include_fluxes
 write(*,*) 'include_neo     =', include_neo
 write(*,*) 'include_magnetic_field =',include_magnetic_field
+write(*,*) 'include_electric_field =',include_magnetic_field
 write(*,*) 'include_velocity_field =',include_velocity_field
 write(*,*) 'include_bootstrap =',include_bootstrap
 write(*,*) 'include_psi_norm =', include_psi_norm
@@ -163,8 +166,6 @@ n_scalars   = n_var
 n_vectors   = 0
 n_fluxes    = 0
 n_neo       = 0
-n_bfield    = 0
-n_vfield    = 0
 n_pellet    = 0
 n_bootstrap = 0
 n_psi_norm  = 0
@@ -178,12 +179,13 @@ if (include_neo) then
   n_scalars = n_scalars + n_neo
 endif
 if (include_magnetic_field) then
-  n_bfield  = 1
-  n_vectors = n_vectors + n_bfield
+  n_vectors = n_vectors + 1
 endif
 if (include_velocity_field) then
-  n_vfield  = 1
-  n_vectors = n_vectors + n_vfield
+  n_vectors = n_vectors + 1
+endif
+if (include_electric_field) then
+  n_vectors = n_vectors + 1
 endif
 if (use_pellet) then
   n_pellet  = 2  ! pellet and pressuren
@@ -288,8 +290,19 @@ endif
 
 #endif
 
-if (include_magnetic_field)  vector_names(1:n_bfield)                   = (/ 'B_R     ','B_Z     ','B_phi   '/)
-if (include_velocity_field)  vector_names(n_bfield+1:n_bfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
+i_vector = 1
+if (include_magnetic_field) then
+  vector_names(i_vector) = 'B'
+  i_vector = i_vector + 1
+endif
+if (include_electric_field) then
+  vector_names(i_vector) = 'E'
+  i_vector = i_vector + 1
+endif
+if (include_velocity_field) then
+  vector_names(i_vector) = 'V'
+  i_vector = i_vector + 1
+endif
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
@@ -554,8 +567,14 @@ do i=1,element_list%n_elements
           R_p	= (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
           error = psi_J - R_p  ! "error" in Grad_Shafranov equilibrium force balance
 #ifndef fullmhd
+          i_vector = 1
           if (include_magnetic_field) then
-            vectors(inode,:,1) = (/ ps_y, -ps_x, F0 /) / BigR
+            vectors(inode,:,i_vector) = vectors(inode,:,i_vector) + (/ ps_y, -ps_x, F0 /) / BigR
+            i_vector = i_vector+1
+          endif
+          if (include_electric_field) then
+            vectors(inode,:,i_vector) = vectors(inode,:,i_vector) - (/ F0 * u_x, F0* u_y, 0.d0 /) / BigR ! Missing phi component
+            i_vector = i_vector+1
           endif
 #endif
 
@@ -710,6 +729,18 @@ do i=1,element_list%n_elements
         	  + w_s * (R_st*R_t - R_tt*R_s )					&
         	  + w_t * (R_st*R_s - R_ss*R_t ) )	   / xjac**2			&
         	  - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
+
+#ifndef fullmhd
+            i_vector = 1
+            if (include_magnetic_field) then
+              vectors(inode,:,i_vector) = vectors(inode,:,i_vector) + (/ ps_y, -ps_x, F0 /) / BigR
+              i_vector = i_vector+1
+            endif
+            if (include_electric_field) then
+              vectors(inode,:,i_vector) = vectors(inode,:,i_vector) - (/ F0 * u_x, F0* u_y, 0.d0 /) / BigR ! Missing phi component
+              i_vector = i_vector+1
+            endif
+#endif
 
           endif ! xjac
 

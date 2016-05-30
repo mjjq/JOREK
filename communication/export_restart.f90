@@ -14,16 +14,16 @@ subroutine export_restart(node_list,element_list,filename)
   type(type_element_list), intent(in) :: element_list
   character*(*)          , intent(in) :: filename
 
-  character*14 :: fileout
+  character*17 :: fileout
 
   if ( rst_hdf5 == 0 ) then
     ! --- Write restart binary file
-    fileout = filename//".rst"
+    fileout = trim(filename)//".rst"
     write (6,*) " =============>, jorek2, filename = ", fileout
     call export_binary_restart(node_list, element_list, fileout)
   elseif ( rst_hdf5 == 1 ) then
     ! --- Write restart HDF5 file
-    fileout = filename//".h5"
+    fileout = trim(filename)//".h5"
     write (6,*) " =============>, jorek2, filename = ", fileout
     call export_hdf5_restart(node_list, element_list, fileout)
   end if

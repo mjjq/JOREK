@@ -1232,13 +1232,13 @@ required = 0
 
     	  if (.not. gmres) then
 
-    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
     		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
     	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
             call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-                 mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                 DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
                  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
    
        	  endif

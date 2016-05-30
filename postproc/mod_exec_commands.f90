@@ -15,6 +15,7 @@ module exec_commands
   use settings
   use convert_character
   use postproc_help
+  use mod_log_params
   
   
   
@@ -150,7 +151,7 @@ module exec_commands
         case ( 'namelist' )
           call load_namelist(command, ierr)
         case ( 'params' )
-          call log_parameters(0)
+          call log_parameters(0, .false.)
         case ( 'point' )
           call point(command, first_step, ierr)
         case ( 'qprofile' )

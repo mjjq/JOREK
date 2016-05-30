@@ -16,6 +16,7 @@ program JOREK_EXTRACT_DATA
   use phys_module
   use equil_info
   use boundary
+  use mod_log_params
   
   implicit none
   

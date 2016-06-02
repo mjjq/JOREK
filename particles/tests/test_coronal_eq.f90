@@ -10,6 +10,7 @@ type(type_ADF11_all) :: adf11
 type(type_coronal)   :: cor
 
 integer :: id, it
+real*8 :: Te(4), Z
 
 adf11   = read_adf11(suffix)                                    ! read openadas data for ionisation, recombination and radiation rates
 cor     = coronal_equilibrium(adf11)                            ! calculate the coronal equilibria from the adas data
@@ -27,4 +28,10 @@ do id=1,size(cor%density,1)
   write(10,*)
 enddo
 close(unit=10)
+
+Te = (/5.42635, 6.88417, 6.89714, 7.48787/)
+do id=1,4
+  call interpolate_coronal(cor, 19.d0, Te(id), Z)
+  write(*,*) Z
+end do
 end program test_coronal_eq

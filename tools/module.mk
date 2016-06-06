@@ -22,3 +22,9 @@ COUNT_PARTICLES_VTK_SRC := $(COUNT_PARTICLES_VTK_SRC) \
 
 DUMP_PARTICLES_VTK_SRC := $(DUMP_PARTICLES_VTK_SRC) \
 	$(DIR)/mod_vtk.f90
+
+JOREK2_PARTICLES_SRC := $(JOREK2_PARTICLES_SRC) \
+	$(DIR)/pcg_basic.c \
+	$(DIR)/mod_pcg_32.f90 \
+	$(DIR)/mod_random_seed.f90 \
+	$(DIR)/mod_sampling.f90

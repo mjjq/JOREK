@@ -18,7 +18,7 @@ module mod_particles
     type (type_particle), dimension(:), allocatable :: particle     !< an allocatable list of particles
   end type type_particle_list
 
-  integer, parameter :: n_species      = 9         !< Maximum number of particle species
+  integer, parameter :: N_species      = 9         !< Maximum number of particle species
   !> @name particle initialization parameters
   integer :: species(N_species) = 0
   real*4  :: atomic_mass(N_species)
@@ -27,6 +27,7 @@ module mod_particles
   character(len=6)  :: adas_suffix(N_species) = '' !< Suffix for adas files to read in (ex: scd50_w.dat => 50_w)
   character(len=80) :: location_accept_function(N_species) = 'location_accept_any'
   real*4  :: location_accept_parameters(1:9,1:N_species) = 0
+  integer :: particle_seed(N_species) = 0 !< Seed for PCG random sequence used for particle init
   !> @name particle timestepping input parameters
   real*8  :: t_step_particles !< the time step for the advance of the particles
   integer :: n_step_particles !< the number of time steps for the particles
@@ -36,6 +37,9 @@ module mod_particles
   integer :: t_particles_begin = -1 !< Start JOREK restart file postprocessing (with special value to use only jorek_restart here)
   integer :: t_particles_end !< end JOREK restart file postprocessing
   character(len=80) :: particle_restart_file = '' !< Particle restart file to read at the beginning of simulation
+
+  !> @name particle init rng seeding parameters
+  integer :: N_MPI_OMP_seq_skip = 1000000 !< number of rng sequences to skip per mpi rank, effectively equal to maximum number of omp threads
 contains
 
 !> Append a single particle to the list and grow it if needed
@@ -85,7 +89,7 @@ integer, intent(in) :: my_id
 integer :: ierr
 
 namelist /in2/ species, atomic_mass, N_particles, particle_GC, &
-    adas_suffix, &
+    adas_suffix, particle_seed, &
     location_accept_function, location_accept_parameters, &
     n_step_particles, t_step_particles, nout_particles, &
     write_energies, write_momenta, t_particles_begin, t_particles_end
@@ -125,7 +129,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 
-bufsize = ( (N_species*2+4)*INT_EXT + &
+bufsize = ( (N_species*3+4)*INT_EXT + &
             (N_species*(9+1))*ISGL_EXT + &
             1*IDBL_EXT + &
             (N_species+2)*ILOG_EXT + &
@@ -138,6 +142,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(atomic_mass,                 N_species,MPI_REAL4    ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(N_particles,                 N_species,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particle_GC,                 N_species,MPI_LOGICAL  ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(particle_seed,               N_species,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(adas_suffix,               N_species*6,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(location_accept_function, N_species*80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(location_accept_parameters,  N_species*9,  MPI_REAL4,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -158,6 +163,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,atomic_mass,                  N_species,MPI_REAL4    ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,N_particles,                  N_species,MPI_INT      ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particle_GC,                  N_species,MPI_LOGICAL  ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particle_seed,                N_species,MPI_INT      ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,adas_suffix,                N_species*6,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,location_accept_function,  N_species*80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,location_accept_parameters, N_species*9,MPI_REAL4    ,MPI_COMM_WORLD,ierr)

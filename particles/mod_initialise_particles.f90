@@ -10,6 +10,8 @@ use constants
 use data_structure
 use mod_particles
 use nodes_elements
+use mod_pcg_32
+use mod_sampling
 
 implicit none
 
@@ -25,7 +27,9 @@ type (type_particle)      :: particle
 real*8  :: R, Z, phi
 integer :: i, j, ifail
 real*8 :: ran3(3), t0, t1, ostart, oend
-real*8 :: Rbox(2), Zbox(2)
+real*8 :: Rbox(2), Zbox(2), Rmin, Rmax, Zmin, Zmax
+integer :: seq
+type(pcg_state_setseq_64) :: rng ! Rng state
 
 if (my_id .eq. 0) then
   write(*,*) '**********************************'
@@ -56,12 +60,17 @@ call find_RZ(node_list,element_list,0.d0,0.d0,R,Z,i,ran3(1),ran3(2),ifail)
 
 call cpu_time(t0)
 !$ ostart = omp_get_wtime()
-call random_seed()
 
+Rbox = (/1d9,-1d9/) ! Large and inversed bounds so that they are always updated
+Zbox = (/1d9,-1d9/) 
 ! Get domain size: min and max R and Z (phi is always between 0 and TWOPI)
-Rbox = (/0.77d0, 4.89d0/)
-Zbox = (/-3.8d0, 3.8d0/)
-! TODO get these from the elements instead of hardcoding
+do i=1,element_list%n_elements
+  call RZ_minmax(node_list, element_list, i, Rmin, Rmax, Zmin, Zmax)
+  Rbox(1) = min(Rbox(1), Rmin)
+  Rbox(2) = max(Rbox(2), Rmax)
+  Zbox(1) = min(Zbox(1), Zmin)
+  Zbox(2) = max(Zbox(2), Zmax)
+enddo
 
 ! Create particles of all kinds given in the input file
 do i=1,N_species
@@ -71,26 +80,27 @@ do i=1,N_species
     call exit(1)
   endif
 
-  !$omp parallel do default(none) &
+  !$omp parallel default(none) &
   !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
-  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal) &
-  !$omp   private(j, R, Z, phi, ifail, particle, ran3)
+  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal, my_id, n_mpi_omp_seq_skip, particle_seed) &
+  !$omp   private(j, R, Z, phi, ifail, particle, ran3, rng, seq)
+  seq = my_id
+  !$ seq = seq * N_MPI_OMP_seq_skip + omp_get_thread_num()
+  call pcg32_srandom_r(rng, int(particle_seed(i), 8), int(seq, 8))
+
+  !$omp do
   do j=1,n_p(i)
     ifail = 1
     do while (ifail .ne. 0)
       ! Generate a random position to put this particle
-      call random_number(ran3)
-      ! Use inversion sampling to correct for cylindrical coordinates
-      ! r = sqrt(rand() (B^2 - A^2) + A^2) for min and max radius A and B
-      R   = sqrt(ran3(1) * (Rbox(2)**2-Rbox(1)**2) + Rbox(1)**2)
-      Z   = (Zbox(2)-Zbox(1))*(ran3(2)-0.5d0)
-      phi = TWOPI*(ran3(3)-0.5d0)
+      call pcg32_random_doubles_r(rng, ran3)
+      call transform_uniform_cylindrical(ran3, Rbox, Zbox, (/0.d0, TWOPI/), R, Z, Phi)
 
       ! Deny or accept this location
-      if (accept_location(i, R,Z,phi)) then
+      if (pcg32_random_double_r(rng) .lt. accept_location(i, R, Z, phi)) then
         call particle_init_default(i, R, Z, phi, particle, ifail)
         if (ifail .eq. 0) then
-          call particle_init(particle, coronal(i), ifail)
+          call particle_init(particle, coronal(i), rng, ifail)
         endif
       else
         ifail = 1
@@ -103,7 +113,8 @@ do i=1,N_species
       particle_list%particle(j) = particle
     endif
   enddo
-  !$omp end parallel do
+  !$omp end do
+  !$omp end parallel
 enddo
 
 call cpu_time(t1)
@@ -116,6 +127,7 @@ endif
 
 end subroutine initialise_particles
 
+
 !> Returns whether or not a location is accepted according to location_accept_function(i)
 function accept_location(i,R,Z,phi)
 use mod_particles, only: location_accept_function, location_accept_parameters
@@ -123,22 +135,20 @@ implicit none
 
 integer, intent(in) :: i !< Species number
 real*8,  intent(in) :: R,Z,phi
-logical :: accept_location
+real*8 :: accept_location
 
-real*8 :: ran
-
-call random_number(ran)
 select case (location_accept_function(i))
   case ('joined_gaussian')
-    accept_location = (ran .le. joined_gaussian(R,Z,phi,location_accept_parameters(:,i)))
+    accept_location = joined_gaussian(R,Z,phi,location_accept_parameters(:,i))
   case ('location_accept_any')
-    accept_location = .true.
+    accept_location = 1.d0
   case DEFAULT
     write(*,*) "WARNING: invalid value for location_accept_function: ", location_accept_function(i)
-    accept_location = .false.
+    accept_location = -1.d0
     call exit(1)
 end select
 end function accept_location
+
 
 !> A joined gaussian function for accepting or rejecting locations
 !! See http://jorek.eu/wiki/doku.php?id=particle_init#joined_gaussian
@@ -232,25 +242,30 @@ if (ifail .eq. 0) then
 endif
 end subroutine particle_init_default
 
+
 !> Set v and q of a particle for use with kinetic codes
-subroutine particle_init(particle, cor, ifail)
+subroutine particle_init(particle, cor, rng, ifail)
 use constants
 use data_structure
 use mod_particles
 use nodes_elements
 use phys_module, only : central_density, central_mass
 use openadas
+use mod_pcg_32
+use mod_sampling
 implicit none
 
 type(type_particle), intent(inout) :: particle
 type(type_coronal), intent(in)     :: cor !< Coronal equilibrium datatype for this particle
+type(pcg_state_setseq_64), intent(inout) :: rng
 integer, intent(out) :: ifail
 
 integer :: i_var(4)
-real*8, dimension(4) :: P, P_s, P_t, P_phi, ran4
+real*8, dimension(4) :: P, P_s, P_t, P_phi
+real*8 :: ran4(4), v_out(4)
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: background_density, background_kbT, background_kelvin, V_thermal
-real*8 :: vx, vy, vz, v_norm
+real*8 :: v_norm
 real*8 :: Z_coronal, radiation_coronal
 real*8 :: mass_main_ion
 
@@ -265,25 +280,21 @@ background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron t
 
 V_thermal = sqrt(background_kbT / (2.d0*particle%mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
-call random_number(ran4)
+call pcg32_random_doubles_r(rng, ran4)
+v_out = boxmueller_transform(ran4) * V_thermal ! [m/s], vx, vy, vz, dummy
 
-vx = V_thermal * sqrt(-2*Log(ran4(1))) * cos(TWOPI*ran4(2))  ! [m/s]  uses box-mueller transform
-vy = V_thermal * sqrt(-2*Log(ran4(1))) * sin(TWOPI*ran4(2))
-vz = V_thermal * sqrt(-2*Log(ran4(3))) * sin(TWOPI*ran4(4))
-
-call interpolate_coronal(cor, log10(background_density),log10(background_kelvin),Z_coronal,radiation_coronal)
-
-particle%v(1) =   vx * cos(particle%x(3)) + vy * sin(particle%x(3))   ! V_R
-particle%v(3) = - vx * sin(particle%x(3)) + vy * cos(particle%x(3))   ! V_phi [physical component]
-particle%v(2) =   vz                                    ! V_Z
+particle%v(1) =   v_out(1) * cos(particle%x(3)) + v_out(2) * sin(particle%x(3))   ! V_R
+particle%v(3) = - v_out(1) * sin(particle%x(3)) + v_out(2) * cos(particle%x(3))   ! V_phi [physical component]
+particle%v(2) =   v_out(3)                                    ! V_Z
 
 mass_main_ion        = mass_proton * central_mass
+
 v_norm = sqrt(mu_zero * mass_main_ion * central_density * 1.d20)      ! JOREK normalisation for velocity
 particle%v = particle%v * v_norm
 
+call interpolate_coronal(cor, log10(background_density),log10(background_kelvin),Z_coronal,radiation_coronal)
 particle%q       = nint(Z_coronal,1)                     !< charge (initialised with the coronal equilibrium value)
 
 ifail = 0
-
 end subroutine particle_init
 end module mod_initialise_particles

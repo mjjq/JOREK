@@ -16,6 +16,7 @@ use openadas
 use mod_coronal
 use clock_module
 use mpi_mod
+use mod_random_seed
 !$ use omp_lib
 
 implicit none
@@ -70,7 +71,14 @@ endif
 ! Filename hardcoded here because we can only read one file from stdin easily
 call initialise_parameters(my_id, "in_jorek")
 call initialise_particle_parameters(my_id, "__NO_FILENAME__")
-call initialise_basis                              ! define the basis functions at the Gaussian points
+call initialise_basis
+
+! Seed random numbers for particle initialisation
+if (my_id .eq. 0) then
+  do i=1,n_species
+    if (particle_seed(i) .eq. 0) call gen_random_seed(particle_seed(i))
+  enddo
+endif
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period

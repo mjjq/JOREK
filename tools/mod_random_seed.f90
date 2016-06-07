@@ -38,6 +38,11 @@ contains
     integer(int64), save :: t = 0
     integer :: dt(8)
     integer :: xor_time_pid
+    interface
+      function fgetpid bind(C)
+        integer :: fgetpid
+      end function fgetpid
+    end interface
 
     ! Reuse the value of t so that subsequent calls at the same time
     ! produce different seeds. This is a bad RNG but it's only a seed
@@ -52,7 +57,7 @@ contains
             + dt(6) * 60 * 1000 + dt(7) * 1000 &
             + dt(8)
       end if
-      t = ieor(t, int(getpid(), kind(t)))
+      t = ieor(t, int(fgetpid(), int64))
     end if
     xor_time_pid = lcg(t)
   end function xor_time_pid

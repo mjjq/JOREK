@@ -12,6 +12,7 @@ use mod_import_export_particles
 use mod_initialise_particles
 use mod_redistribute_particles
 use mod_import_restart_linear
+use mod_update_particles
 use openadas
 use mod_coronal
 use clock_module
@@ -36,22 +37,6 @@ real*8 :: wstart, wend, wtime ! wall time on this cpu
 type(type_ADF11_all) :: adf11(1:N_species)
 type(type_coronal)   :: coronal(1:N_species)
 
-interface
-  subroutine update_particles(my_id,particle_list,t_step,n_step,adf11,energy_list,momentum_list,toroidal_field_factor,field_interp_time)
-    use mod_particles
-    use openadas
-    ! -- Routine parameters
-    integer, intent(in)       :: my_id              !< Id of the current process
-    type (type_particle_list) :: particle_list      !< The particles we will march forward in time
-    real*8,  intent(in)       :: t_step             !< The size of each timestep
-    integer, intent(in)       :: n_step             !< The number of timesteps we will perform
-    type (type_adf11_all), intent(in) :: adf11
-    real*8,  intent(out), dimension(:), optional :: energy_list !< Energy of the particles at the next-to(!) final timestep
-    real*8,  intent(out), dimension(:), optional :: momentum_list !< Generalized toroidal momentum of the particles at the next-to(!) final timestep
-    real*8,  intent(in),  optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
-    logical, intent(in),  optional :: field_interp_time !< Interpolate the fields linearly in time as if the first step was in the previous fields (almost) and the last in the current
-  end subroutine update_particles
-end interface
 
 
 required = MPI_THREAD_MULTIPLE
@@ -155,7 +140,7 @@ do i_step=i_begin,i_end
   ! Do substepping
   call cpu_time(wstart) ! correct if no OMP
   !$ wstart = omp_get_wtime()
-  call update_particles(my_id,particle_list,t_step_particles,nout_particles,adf11(1),& ! XXX hardcoded first adf11 index
+  call update_particles(my_id, 1, particle_list,t_step_particles,nout_particles,adf11(1),& ! XXX hardcoded first adf11 index
       energy_list,momentum_list,field_interp_time=(t_particles_begin .gt. -1))
   call cpu_time(wend) ! correct if no OMP
   !$ wend = omp_get_wtime()

@@ -24,6 +24,7 @@ module mod_particles
   real*4  :: atomic_mass(N_species)
   integer :: N_particles(N_species) = 0
   logical :: particle_GC(N_species) = .false.
+  logical :: particle_ion_rec(N_species) = .true. !< Calculate ionisation/recombination events
   character(len=6)  :: adas_suffix(N_species) = '' !< Suffix for adas files to read in (ex: scd50_w.dat => 50_w)
   character(len=80) :: location_accept_function(N_species) = 'location_accept_any'
   real*4  :: location_accept_parameters(1:9,1:N_species) = 0
@@ -92,7 +93,8 @@ namelist /in2/ species, atomic_mass, N_particles, particle_GC, &
     adas_suffix, particle_seed, &
     location_accept_function, location_accept_parameters, &
     n_step_particles, t_step_particles, nout_particles, &
-    write_energies, write_momenta, t_particles_begin, t_particles_end
+    write_energies, write_momenta, t_particles_begin, t_particles_end, &
+    particle_restart_file, particle_ion_rec
 
 if (my_id .eq. 0) then
   ! --- Read input parameters from namelist file or stdin.
@@ -132,7 +134,7 @@ call MPI_PACK_SIZE(1,MPI_CHARACTER,MPI_COMM_WORLD,CHAR_EXT,ierr)
 bufsize = ( (N_species*3+4)*INT_EXT + &
             (N_species*(9+1))*ISGL_EXT + &
             1*IDBL_EXT + &
-            (N_species+2)*ILOG_EXT + &
+            (N_species*2+2)*ILOG_EXT + &
             (80*(N_species+1)+6*N_species)*CHAR_EXT)
 allocate(buffer(bufsize))
 
@@ -142,6 +144,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(atomic_mass,                 N_species,MPI_REAL4    ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(N_particles,                 N_species,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particle_GC,                 N_species,MPI_LOGICAL  ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(particle_ion_rec,            N_species,MPI_LOGICAL  ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particle_seed,               N_species,MPI_INT      ,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(adas_suffix,               N_species*6,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(location_accept_function, N_species*80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -163,6 +166,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,atomic_mass,                  N_species,MPI_REAL4    ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,N_particles,                  N_species,MPI_INT      ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particle_GC,                  N_species,MPI_LOGICAL  ,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particle_ion_rec,             N_species,MPI_LOGICAL  ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particle_seed,                N_species,MPI_INT      ,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,adas_suffix,                N_species*6,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,location_accept_function,  N_species*80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)

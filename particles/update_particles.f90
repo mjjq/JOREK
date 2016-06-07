@@ -1,10 +1,12 @@
+module mod_update_particles
+contains
 !> Update_particles performs n_step steps of the Boris method with size t_step
 !!
 !! The Boris method is adjusted for cylindrical coordinates.
 !! Some care must be taken when element boundaries are crossed.
 !! It is parallelized with OMP.
 !! See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
-subroutine update_particles(my_id, particle_list, t_step, n_step, adf11, &
+subroutine update_particles(my_id, i_species, particle_list, t_step, n_step, adf11, &
         energy_list, momentum_list, toroidal_field_factor, field_interp_time)
 
 !$ use omp_lib
@@ -21,6 +23,7 @@ implicit none
 
 ! -- Routine parameters
 integer, intent(in)       :: my_id              !< Id of the current process
+integer, intent(in)       :: i_species          !< The number of the current particle species
 type (type_particle_list), intent(inout) :: particle_list      !< The particles we will march forward in time
 real*8,  intent(in)       :: t_step             !< The size of each timestep
 integer, intent(in)       :: n_step             !< The number of timesteps we will perform
@@ -32,7 +35,7 @@ logical, intent(in),  optional :: field_interp_time !< Interpolate the fields li
 
 ! -- Local variables
 type (type_particle)      :: particle
-real*8                    :: B0(3), E0(3) ! lOCAL B and E field at particle position
+real*8                    :: B0(3), E0(3) ! LOCAL B and E field at particle position
 real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, B_phi_factor, q, m, eom
@@ -86,7 +89,7 @@ t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20)   
 
 !$omp parallel default(none) &
 !$omp   shared(particle_list, node_list, element_list, t_step,n_step, F0, t_norm, B_phi_factor, central_mass, energy_list, &
-!$omp   momentum_list, do_substep, adf11) &
+!$omp   momentum_list, do_substep, adf11, particle_ion_rec, i_species) &
 !$omp   reduction(+:find_RZ_count,energy_lost_particles,n_lost) &
 !$omp   private(i, j, particle, x, v, st, i_elm, R, Z, &
 !$omp           qom, B0, B02, E0, v_tmp, fE, fB,             &
@@ -175,9 +178,10 @@ do i = 1, particle_list%n_particles
       exit
     endif
 
-    ! Calculate ionisation and recombination
-    ! Get density and temperature to find GRC coefficients
-    !call update_particle_charge(node_list, element_list, particle, adf11, t_step*t_norm)
+    ! Calculate ionisation and recombination odds to find new charge
+    if (particle_ion_rec(i_species)) then
+      call update_particle_charge(node_list, element_list, particle, adf11, t_step*t_norm)
+    endif
   enddo
 
   ! Save the new values for this particle
@@ -259,9 +263,9 @@ if (present(momentum_list)) then
     minv,mean,maxv,stddev,total,0.d0 ! total lost momentum hardcoded, not interesting now
 endif
 write(*,*) my_id,'lost particles on this cpu: ',n_lost
+end subroutine update_particles
 
 
-contains
 !> Calculate statistics on a set of numbers ignoring all zeroes in the set
 !! without copying to a new array
 subroutine statistics_no_zero(list,mean,minv,maxv,sd,total,num_zeros)
@@ -283,4 +287,4 @@ subroutine statistics_no_zero(list,mean,minv,maxv,sd,total,num_zeros)
   mean = total/num_values ! automatically promote num_values to real
   sd = sqrt(sum((list-mean)**2,mask)/num_values)
 end subroutine statistics_no_zero
-end
+end module mod_update_particles

@@ -39,7 +39,7 @@ contains
     integer :: dt(8)
     integer :: xor_time_pid
     interface
-      function fgetpid bind(C)
+      function fgetpid() bind(C)
         integer :: fgetpid
       end function fgetpid
     end interface

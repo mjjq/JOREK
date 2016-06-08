@@ -138,7 +138,7 @@ integer, parameter :: etype = 9 ! for vtk_quad
 nnos = nsub*nsub*node_list%n_nodes
 allocate(xyz(3,nnos),scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
 allocate(scalar_names(n_scalars),vector_names(n_vectors))
-scalar_names(1) = "density"
+scalar_names(1) = "num_density"
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements

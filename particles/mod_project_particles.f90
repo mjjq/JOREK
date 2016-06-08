@@ -3,12 +3,13 @@ contains
 !> Project particles by weight onto the elements
 !! Saves output in node_list%values(1)
 !! The projection is done by solving
-!! $$\int \sum \delta(x_i-x)\delta(y_i-y) w_i u(x,y) dxdy = 
-!! \int [p(x,y) u(x,y) + \lambda p'(x,y) u'(x,y)] dxdy$$
-!! where p(x,y) is in the bernstein representation, $u(x,y)$ are the test functions
+!! $$\int \sum \delta(x_i-x) w_i u(x) dV = 
+!! \int [p(x) u(x) + \lambda p'(x) u'(x)] dV$$
+!! where p(x) is in the bernstein representation, $u(x)$ are the test functions
 !! composed of two basis functions and $w_i$ is the particle weight.
 !! A smoothing factor lambda is included
-!! (equation is vaguely written!)
+!! x is a vector (R,Z,phi) and dV is 2pi r dr dphi
+!! Drop TWOPI on both sides of the equation
 subroutine project_particles(node_list, element_list, particle_list)
 use phys_module
 use data_structure
@@ -37,15 +38,9 @@ integer    :: i, j, k, l, m, i_harm, ilarge, index_large_i, index_large_k, inode
 integer    :: nz_AA, n_AA, n_border, i_elm, index, ivar_out, index_ij, index_kl
 integer    :: ms, mt, n_p, total_particles
 
-nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
+real*8, parameter :: smoothing = 1d-3
 
-n_border = 0
-!do i=1,node_list%n_nodes
-!  if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2  ! INCLUDE OTHER BOUNDARY OPTIONS!
-!  if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
-!  if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
-!enddo
-!nz_AA = nz_AA + n_border
+nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
 
 n_AA = 0
 do inode = 1, node_list%n_nodes
@@ -53,7 +48,6 @@ do inode = 1, node_list%n_nodes
 enddo
 
 write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
-write(*,*) ' number of boundary nodes: ',n_border
 write(*,*) ' nz_AA                   : ',nz_AA
 
 projection_matrix%COMM = MPI_COMM_WORLD
@@ -66,10 +60,6 @@ call DMUMPS(projection_matrix)
 
 allocate(projection_matrix%A(nz_AA),projection_matrix%irn(nz_AA),projection_matrix%jcn(nz_AA))
 allocate(projection_matrix%rhs(n_AA))
-
-! Only n=0 for now
-
-
 
 projection_matrix%irn = 0
 projection_matrix%jcn = 0
@@ -125,7 +115,7 @@ do i_elm  = 1, element_list%n_elements
 !      v_R = (  Z_t * H_s(i,j) - Z_s * H_t(i,j) ) * element%size(i,j) / xjac
 !      v_Z = (- R_t * H_s(i,j) + R_s * H_t(i,j) ) * element%size(i,j) / xjac
 
-        RHS(index_ij) = RHS(index_ij) + v * R_g  !* xjac
+        RHS(index_ij) = RHS(index_ij) + v * particle%weight
 
       enddo
     enddo
@@ -164,7 +154,7 @@ do i_elm  = 1, element_list%n_elements
       xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
 
       area   = area   + xjac * wst
-      volume = volume + x_g(ms,mt) * xjac * wst
+      volume = volume + TWOPI * x_g(ms,mt) * xjac * wst
 
       do i=1,n_vertex_max
 
@@ -186,9 +176,8 @@ do i_elm  = 1, element_list%n_elements
               psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
               psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
 
-              ELM(index_ij,index_kl) = ELM(index_ij,index_kl) + psi * v  * xjac * x_g(ms,mt) * wst! &
-
-                                     !+ 0.001 * (psi_x * v_x + psi_y * v_y) * xjac * x_g(ms,mt) * wst
+              ELM(index_ij,index_kl) = ELM(index_ij,index_kl) + psi * v * xjac * x_g(ms,mt) * wst &
+                                     + smoothing * (psi_x * v_x + psi_y * v_y) * xjac * x_g(ms,mt) * wst
 
             enddo
           enddo

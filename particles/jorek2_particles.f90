@@ -96,6 +96,8 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 
 if (len_trim(particle_restart_file) .eq. 0) then
   call initialise_particles(my_id, n_cpu, coronal, particle_list, particle_list_GC)
+  write(particle_file,'(A4,i0.9,A4)') 'part',0,'.rst'
+  call export_particles(particle_list,particle_file)
 else
   call import_particles(particle_restart_file, particle_list)
 endif

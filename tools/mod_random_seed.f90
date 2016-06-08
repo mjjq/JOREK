@@ -33,14 +33,15 @@ contains
   !! Does not work for openmp, but for that streams should be used
   !! with the PCG generator
   function xor_time_pid()
-    use, intrinsic :: iso_fortran_env, only: int64
+    use, intrinsic :: iso_c_binding, only: c_int64_t, c_int32_t
     implicit none
-    integer(int64), save :: t = 0
+    integer(c_int64_t), save :: t = 0
     integer :: dt(8)
     integer :: xor_time_pid
     interface
       function fgetpid() bind(C)
-        integer :: fgetpid
+        import c_int32_t
+        integer(c_int32_t) :: fgetpid
       end function fgetpid
     end interface
 
@@ -57,7 +58,7 @@ contains
             + dt(6) * 60 * 1000 + dt(7) * 1000 &
             + dt(8)
       end if
-      t = ieor(t, int(fgetpid(), int64))
+      t = ieor(t, int(fgetpid(), kind(t)))
     end if
     xor_time_pid = lcg(t)
   end function xor_time_pid

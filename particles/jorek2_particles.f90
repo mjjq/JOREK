@@ -28,7 +28,7 @@ type (type_particle_list) :: particle_list_GC
 
 integer    :: i_tor, my_id, n_cpu, ierr, i_step, i_step_out, i_begin, i_end, i, index_prev
 integer*4  :: rank, comm_size
-integer    :: required, provided, StatInfo
+integer    :: provided, StatInfo
 character*17 :: particle_file, restart_file
 
 real*8, dimension(:), allocatable :: energy_list, momentum_list
@@ -39,9 +39,7 @@ type(type_coronal)   :: coronal(1:N_species)
 
 
 
-required = MPI_THREAD_MULTIPLE
-
-call MPI_Init_thread(required, provided, StatInfo)
+call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, StatInfo)
 call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
 my_id = rank
 call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
@@ -84,6 +82,8 @@ call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 call broadcast_phys(my_id)                         ! physics parameters
 call broadcast_particle_parameters(my_id)          ! particle parameters
+! Call find_RZ once to initialise elements_minmax before going OMP (parameters are random-ish and irrelevant)
+call find_RZ(node_list,element_list,0.d0,0.d0,0.d0,0.d0,i,i,i,i)
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
 do i=1,n_species ! For each particle read adas files and calculate coronal equilibrium)
   if (len_trim(adas_suffix(i)) .ne. 0) then

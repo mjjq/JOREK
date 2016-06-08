@@ -55,8 +55,6 @@ particle_list_GC%n_particles = sum(n_p,particle_GC)
 allocate(particle_list_GC%particle(particle_list_GC%n_particles), stat=ifail)
 if (ifail .gt. 0) write(*,"(i3,a,i8,a)") my_id, "unable to allocate particle_list_GC%particle(", particle_list_GC%n_particles, ")"
 
-! Call find_RZ once to initialise elements_minmax before going OMP (parameters are random-ish and irrelevant)
-call find_RZ(node_list,element_list,0.d0,0.d0,R,Z,i,ran3(1),ran3(2),ifail)
 
 call cpu_time(t0)
 !$ ostart = omp_get_wtime()

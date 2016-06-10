@@ -89,7 +89,7 @@ do i=1,element_list%n_elements
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))  &
             .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) then
           grad_psi_min(1) = grad_psi
-	  Z_xpoint(1)     = Z
+          Z_xpoint(1)     = Z
           i_elm_xpoint(1) = i
           ij_xpoint(1,1) = ms;         ij_xpoint(1,2)  = mt
         endif

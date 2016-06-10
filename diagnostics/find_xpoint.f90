@@ -85,8 +85,9 @@ do i=1,element_list%n_elements
       
       ! --- Look for the lower Xpoint
       if ((grad_psi .lt. grad_psi_min(1)) .and. (xcase .ne. 2)) then
-        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (Z .lt. -0.4d0)) &
-            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0)) ) then
+        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (tokamak_device(1:7) .ne. 'COMPASS') .and. (Z .lt. -0.4d0)) &
+            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))  &
+            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) then
           grad_psi_min(1) = grad_psi
 	  Z_xpoint(1)     = Z
           i_elm_xpoint(1) = i

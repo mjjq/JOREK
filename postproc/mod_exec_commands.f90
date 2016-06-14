@@ -15,6 +15,7 @@ module exec_commands
   use settings
   use convert_character
   use postproc_help
+  use mod_log_params
   
   
   

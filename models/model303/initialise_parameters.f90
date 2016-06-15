@@ -91,7 +91,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme,                                   &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
-                D_prof_neg, ZK_prof_neg, T_min
+                D_prof_neg, ZK_prof_neg, T_min,                     &
+                Number_RMP_harmonics,RMP_har_cos_spectrum,          &
+                RMP_har_sin_spectrum
+
 
 if (my_id .eq. 0) then
 

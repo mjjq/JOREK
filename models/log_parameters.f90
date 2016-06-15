@@ -460,6 +460,11 @@ if (my_id == 0) then
      write(*,CHAR_FMT) 'RMP_psi_sin_file      ', trim(RMP_psi_sin_file)
      write(*,REAL_FMT) 'lambda                ', lambda
      write(*,REAL_FMT) 'tset                  ', tset
+     write(*,INTG_FMT) 'Number_RMP_harmonics  ', Number_RMP_harmonics 
+     write(*,REAL_FMT) ' RMP_har_cos_spectrum ',  RMP_har_cos_spectrum
+     write(*,REAL_FMT) ' RMP_har_sin_spectrum ',  RMP_har_sin_spectrum
+!    write(*,REAL_FMT) 'RMP_COEFF             ', RMP_COEFF(1:Number_RMP_harmonics)
+
   endif
   write(*,LOGI_FMT) 'output_bnd_elements   ', output_bnd_elements
   write(*,LOGI_FMT) 'bootstrap             ', bootstrap

@@ -15,7 +15,8 @@ JOREK2_PARTICLES_SRC :=$(JOREK2_PARTICLES_SRC) \
   $(DIR)/mod_project_particles.f90  \
   $(DIR)/update_particles.f90	       \
   $(DIR)/mod_ionisation_recombination.f90 \
-  $(DIR)/mod_redistribute_particles.f90
+  $(DIR)/mod_redistribute_particles.f90  \
+  $(DIR)/mod_particle_diagnostics.f90
 
 PENNING_TEST_SRC := $(PENNING_TEST_SRC) \
   $(DIR)/mod_coordinate_transforms.f90

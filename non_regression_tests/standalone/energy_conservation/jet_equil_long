@@ -2,6 +2,7 @@
 species(1) = 74
 atomic_mass(1) = 183.84
 N_particles(1) = 10000
+adas_suffix(1) = '50_w'
 
 n_step_particles = 10000000
 t_step_particles = 0.0015

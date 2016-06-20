@@ -44,7 +44,7 @@ prepare_dir()
       mkdir ${1}_out
    fi
    cp template/* ${1}_out
-   cat template/jorek_in $1 > ${1}_out/jorek_in
+   cp $1 ${1}_out/in_particles
 }
 
 # Colors
@@ -118,7 +118,7 @@ fi
 if [ "$analysis_only" -eq 0 ]; then
    echo "Running testcase jorek_restart.rst"
    # Run the testcase given as input parameter
-   $JOREK_DIR/jorek2_particles < jorek_in | tee jorek_log
+   $JOREK_DIR/jorek2_particles < in_particles | tee jorek_log
 fi
 
 if [ "$no_analysis" -eq 0 ]; then

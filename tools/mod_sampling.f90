@@ -31,9 +31,9 @@ contains
     real*8, dimension(size(ran,1)) :: out
     integer :: i
 
-    do i=1,size(ran,1)/2
-      out(i:i+1) = sqrt(-2*log(ran(2*i))) * &
-          (/cos(TWOPI*ran(2*i+1)), sin(TWOPI*ran(2*i+1))/)
+    do i=1,size(ran,1),2
+      out(i:i+1) = sqrt(-2*log(ran(i))) * &
+          (/cos(TWOPI*ran(i+1)), sin(TWOPI*ran(i+1))/)
     end do
   end function boxmueller_transform
 end module mod_sampling

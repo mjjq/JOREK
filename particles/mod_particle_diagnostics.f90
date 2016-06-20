@@ -19,8 +19,8 @@ function particles_in_regions(node_list, element_list, particle_list)
   type(type_element_list), intent(in)  :: element_list
   type(type_particle_list), intent(in) :: particle_list
 
-  integer, dimension(DOMAIN_PLASMA:DOMAIN_LOWER_PRIVATE) :: particles_in_regions
-  integer :: i, ifail
+  integer, dimension(DOMAIN_PLASMA:DOMAIN_LOWER_PRIVATE) :: particles_in_regions, tmp
+  integer :: i, ifail, my_id
   integer :: domain, i_elm_axis, i_elm_xpoint(2)
   real*8  :: psi, psi_s, psi_t, psi_st, psi_ss, psi_tt
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_limit
@@ -41,15 +41,21 @@ function particles_in_regions(node_list, element_list, particle_list)
     psi_limit = 0.d0
   endif
 
+  ! Call which_domain once to setup saved values
+  domain = which_domain(node_list, element_list, &
+      0.d0, 0.d0, &
+      0.d0, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
+      R_axis, Z_axis, psi_axis)
 
-  particles_in_regions = 0
+  tmp = 0
   !$omp parallel do default(none) &
   !$omp shared(node_list, element_list, particle_list, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
   !$omp     R_axis, Z_axis, psi_axis) &
   !$omp private(domain, psi, psi_s, psi_t, psi_st, psi_ss, psi_tt, p) &
-  !$omp reduction(+:particles_in_regions)
+  !$omp reduction(+:tmp)
   do i=1,particle_list%n_particles
     p = particle_list%particle(i)
+    if (p%i_elm .lt. 0 .or. p%i_elm .gt. element_list%n_elements) cycle
     call interp(node_list, element_list, p%i_elm, 1, 1, & ! force i_harm to 1
         p%st(1), p%st(2), psi, psi_s, psi_t, psi_st, psi_ss, psi_tt)
 
@@ -58,12 +64,15 @@ function particles_in_regions(node_list, element_list, particle_list)
         psi, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
         R_axis, Z_axis, psi_axis)
 
-    particles_in_regions(domain) = particles_in_regions(domain) + 1
+    tmp(domain) = tmp(domain) + 1
   end do
   !$omp end parallel do
 
-
-  !! Mpi communication to get the total answer to node 0
-  call MPI_Gather(particles_in_regions, 5, MPI_INTEGER, particles_in_regions, 5, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
+  ! Save values on nodes
+  particles_in_regions = tmp
+  ! Mpi communication to get the total answer on node 0
+  call MPI_Reduce(tmp, particles_in_regions, DOMAIN_LOWER_PRIVATE-DOMAIN_PLASMA, &
+    MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ifail)
+  call MPI_Comm_Rank(MPI_COMM_WORLD, my_id, ifail)
 end function particles_in_regions
 end module mod_particle_diagnostics

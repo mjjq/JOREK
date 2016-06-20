@@ -43,7 +43,7 @@ real*8                    :: qom, B02, B_phi_factor, q, m, eom
 real*8                    :: R, Z, psi, psid, U, Ud, energy_lost_particles, R_inv
 real*8                    :: fE, fB, t_norm
 real*8                    :: R_out, Z_out, s_out, t_out
-integer                   :: i, j, i_elm, ifail, ielm_out, n_lost
+integer                   :: i, j, i_elm, ifail, ielm_out, n_lost, pir(DOMAIN_PLASMA:DOMAIN_LOWER_PRIVATE)
 logical                   :: do_substep
 real*8                    :: t0, t1, ostart, oend, delta_fraction
 integer                   :: find_RZ_count
@@ -251,8 +251,8 @@ write(*,'(i5,A,g12.4)') my_id, '  number of lost particles in this iteration:',n
 write(*,'(i5,A,g12.4)') my_id, '  particle energy left domain:',energy_lost_particles
 total_energy_lost_particles = total_energy_lost_particles + energy_lost_particles
 if (.not. present(energy_list)) write(*,'(i5,A,g18.10)') my_id, '  total lost particle energy:',total_energy_lost_particles
-write(*,'(i5,A,5g12.4)') my_id, '  particle locations (plasma, sol, out, up, low): ', &
-    particles_in_regions(node_list, element_list, particle_list)
+pir = particles_in_regions(node_list, element_list, particle_list)
+if (my_id .eq. 0) write(*,'(i5,A,5i6)') my_id, '  particle locations (plasma, sol, out, up, low): ', pir
 
 ! Calculate statistics on energy_list and momentum list if they are present
 if (present(energy_list)) then

@@ -22,7 +22,7 @@ real*8, intent(in)                 :: timestep !< Timestep, in s
 real*8, dimension(2) :: P, P_s, P_t, P_phi
 real*8               :: R, R_s, R_t, Z, Z_s, Z_t
 integer :: i_var(2)
-real*8  :: temperature
+real*8  :: temperature, n_e, T_e
 
 ! Get the indices of temperature and density
 #ifdef FULLMHD
@@ -39,15 +39,17 @@ call interp_PRZ(node_list,element_list,&
   particle%i_elm,i_var,2,particle%x(1),particle%x(2),particle%x(3),&
   P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
 #ifdef MODEL400
-temperature = P(1)
+temperature = max(P(1), 1.d-6) ! fix for negative temperatures
 #else
-temperature = P(1) * 0.5d0 ! temperature is sum of electron and ion temperatures (assumed equal), unless model400
+temperature = max(P(1), 1.d-6) * 0.5d0 ! temperature is sum of electron and ion temperatures (assumed equal), unless model400
 #endif
+!if (P(2) .lt. 0) write(*,*) "WARNING: negative electron density ", P(2), "in update_particle_charge"
+P(2) = max(P(2),1.d-3) ! Correct for negative densities
 
-particle%q = int(new_charge(int(particle%q,4), ad, &
-    log10(P(2)*central_density)+20.d0, & ! electron number density
-    log10(temperature/(K_BOLTZ*MU_ZERO*central_density))-20.d0, &
-  timestep),1) ! electron temperature
+n_e = log10(P(2)*central_density)+20.d0 !log10 of electron number density in m^-3
+T_e = log10(temperature/(K_BOLTZ*MU_ZERO*central_density))-20.d0 !log10 of electron temperature in K
+
+particle%q = int(new_charge(int(particle%q,4), ad, n_e, T_e, timestep),1)
 end subroutine
 
 !> Calculate new charge state at a specific density, temperature and timestep
@@ -56,8 +58,8 @@ implicit none
 
 integer, intent(in)              :: z !< Old charge state
 type(type_ADF11_all), intent(in) :: ad !< ADF11 data
-real*8, intent(in)               :: electron_density !< Electron density in m^-3
-real*8, intent(in)               :: electron_temperature !< Electron temperature in K
+real*8, intent(in)               :: electron_density !< log10 Electron density in m^-3
+real*8, intent(in)               :: electron_temperature !< log10 Electron temperature in K
 real*8, intent(in)               :: timestep !< Timestep in s
 integer :: z_new
 

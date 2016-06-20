@@ -160,9 +160,11 @@ A_d = 1.d0 - theta * tstep * cmat(2,0:ad%n_Z)
 A_u =      - theta * tstep * cmat(3,0:ad%n_Z-1)
 
 ! We have to do this manually because cmat is not a regular matrix
-do i=0,ad%n_Z
+do i=1,ad%n_Z-1
   b(i)    = p(i) + (1.d0 - theta) * tstep * (p(i-1)*cmat(1,i) + p(i)*cmat(2,i) + p(i+1)*cmat(3,i))
 enddo
+b(0)      = p(0) + (1.d0 - theta) * tstep * (p(0)*cmat(2,i) + p(1)*cmat(3,i))
+b(ad%n_Z) = p(ad%n_Z) + (1.d0 - theta) * tstep * (p(ad%n_Z-1)*cmat(1,ad%n_Z) + p(ad%n_Z)*cmat(2,ad%n_Z))
 
 ! Solve Ax=b for tridiagonal matrices. Result stored in b
 call dgtsv(ad%n_Z+1,1,A_l,A_d,A_u,b,ad%n_Z+1,info)

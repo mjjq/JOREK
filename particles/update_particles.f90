@@ -36,19 +36,22 @@ logical, intent(in),  optional :: field_interp_time !< Interpolate the fields li
 
 ! -- Local variables
 type (type_particle)      :: particle
-real*8                    :: B0(3), E0(3) ! LOCAL B and E field at particle position
+real*8                    :: B0(3), E0(3) ! Local B and E field at particle position
 real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
 real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, B_phi_factor, q, m, eom
 real*8                    :: R, Z, psi, psid, U, Ud, energy_lost_particles, R_inv
 real*8                    :: fE, fB, t_norm
 real*8                    :: R_out, Z_out, s_out, t_out
-integer                   :: i, j, i_elm, ifail, ielm_out, n_lost, pir(DOMAIN_PLASMA:DOMAIN_LOWER_PRIVATE)
+integer                   :: i, j, i_elm, ifail, ielm_out
 logical                   :: do_substep
+
+! -- Output variables
+integer                   :: n_lost, pir(DOMAIN_PLASMA:DOMAIN_LOWER_PRIVATE)
 real*8                    :: t0, t1, ostart, oend, delta_fraction
 integer                   :: find_RZ_count
-real*8                    :: minv, maxv, mean, total, stddev
-real*8, save :: total_energy_lost_particles = 0.d0
+real*8                    :: stats(5), total_lost
+real*8, save              :: total_energy_lost_particles = 0.d0
 
 interface
   subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
@@ -79,7 +82,7 @@ n_lost = 0
 
 find_RZ_count = 0
 call cpu_time(t0)
-!$ ostart = omp_get_wtime()
+!$ t0 = omp_get_wtime()
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '* JOREK2 : update particles           *'
@@ -242,52 +245,89 @@ enddo
 !$omp end parallel
 
 call cpu_time(t1)
-!$ oend = omp_get_wtime()
+!$ t1 = omp_get_wtime()
 
-write(*,'(i5,A,2f12.4)') my_id, ' Time particle update cpu/wall:',t1-t0, oend-ostart
-write(*,'(i5,A,f9.5,A)') my_id, '   Find_RZ used in ', &
-  real(find_RZ_count)*100.d0/real(particle_list%n_particles*n_step), ' % of the runs'
-write(*,'(i5,A,g12.4)') my_id, '  number of lost particles in this iteration:',n_lost
-write(*,'(i5,A,g12.4)') my_id, '  particle energy left domain:',energy_lost_particles
-total_energy_lost_particles = total_energy_lost_particles + energy_lost_particles
-if (.not. present(energy_list)) write(*,'(i5,A,g18.10)') my_id, '  total lost particle energy:',total_energy_lost_particles
+!! Output timing and diagnostics values
+!! min, mean, max, stddev
+stats = mpi_stats(t1-t0)
+if (my_id .eq. 0) write(*,'(A,4f9.5)') 'Time particle update (min/mean/max/stddev/[total]): ', stats(1:4)
+stats = mpi_stats(real(find_RZ_count,8)*100.d0/real(particle_list%n_particles*n_step,8))
+if (my_id .eq. 0) write(*,'(A,4f9.5,A)') '   Find_RZ used in ', stats(1:4), ' % of the runs'
+stats = mpi_stats(real(n_lost,8))
+if (my_id .eq. 0) write(*,'(A,5f9.5)')   '   number of lost particles: ', stats
+stats = mpi_stats(energy_lost_particles)
+if (my_id .eq. 0) write(*,'(A,5g12.4)')  '   particle energy left domain: ', stats
 pir = particles_in_regions(node_list, element_list, particle_list)
-if (my_id .eq. 0) write(*,'(i5,A,5i6)') my_id, '  particle locations (plasma, sol, out, up, low): ', pir
+if (my_id .eq. 0) write(*,'(A,5i8)') '   particle locations (plasma, sol, out, up, low): ', pir
 
-! Calculate statistics on energy_list and momentum list if they are present
-if (present(energy_list)) then
-  call statistics_no_zero(energy_list, mean, minv, maxv, stddev, total, n_lost)
-  write(*,'(i5,A,6g12.4)') my_id, '  energy min/mean/max/stddev/total/lost :',&
-    minv,mean,maxv,stddev,total,total_energy_lost_particles
+
+total_energy_lost_particles = total_energy_lost_particles + energy_lost_particles
+stats = mpi_stats(total_energy_lost_particles)
+if (.not. present(energy_list)) then
+  if (my_id .eq. 0) write(*,'(A,5g18.10)') '   lost particle energy: ', stats
+else
+  total_lost = stats(5)
+  call statistics_no_zero_MPI(energy_list, stats, n_lost)
+  if (my_id .eq. 0) write(*,'(A,6g12.4)') '   energy min/mean/max/stddev/total/total_lost :',&
+    stats, total_lost 
 endif
 if (present(momentum_list)) then
-  call statistics_no_zero(momentum_list, mean, minv, maxv, stddev, total, n_lost)
-  write(*,'(i5,A,6g12.4)') my_id, '  momentum min/mean/max/stddev/total/lost :',&
-    minv,mean,maxv,stddev,total,0.d0 ! total lost momentum hardcoded, not interesting now
+  call statistics_no_zero_MPI(momentum_list, stats, n_lost)
+  if (my_id .eq. 0) write(*,'(A,6g12.4)') '   momentum min/mean/max/stddev/total/n_lost :',&
+    stats,n_lost
 endif
-write(*,*) my_id,'lost particles on this cpu: ',n_lost
 end subroutine update_particles
 
 
-!> Calculate statistics on a set of numbers ignoring all zeroes in the set
-!! without copying to a new array
-subroutine statistics_no_zero(list,mean,minv,maxv,sd,total,num_zeros)
+!> Calculate statistics over MPI
+!! Return stats(1) = min, stats(2) = mean, stats(3) = max, stats(4) = stddev
+function mpi_stats(var)
+  use mpi_mod
+  implicit none
+  real*8, intent(in) :: var
+  real*8, dimension(5) :: mpi_stats
+  integer :: n_cpu, ierr
+  real*8, allocatable, dimension(:) :: vars
+
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
+  allocate(vars(n_cpu))
+  vars = 0.d0
+
+  call MPI_Gather(var, 1, MPI_REAL8, vars, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+  mpi_stats(1) = minval(vars)
+  mpi_stats(2) = sum(vars)/size(vars, 1)
+  mpi_stats(3) = maxval(vars)
+  mpi_stats(4) = sqrt(sum((vars-mpi_stats(2))**2)/size(vars,1))
+  mpi_stats(5) = sum(vars)
+end function mpi_stats
+
+
+!> Calculate statistics on sets of numbers ignoring zeros
+!! Performs MPI comunication for the mean
+!! Only returns usable values on the root node
+subroutine statistics_no_zero_MPI(list,stats,num_zeros)
+  use mpi_mod
+  implicit none
   real*8, intent(in), dimension(:) :: list
-  real*8, intent(out) :: mean, minv, maxv, sd, total
+  real*8, intent(out), dimension(5) :: stats !=(/minv, mean, maxv, sd, total/)
   integer, intent(out) :: num_zeros
-  integer :: num_values
+  integer :: num_values, ierr
   logical, dimension(:), allocatable :: mask
 
   allocate(mask(size(list)))
   ! Everything > 0 is true and will be used
   mask = abs(list) > 0.d0
-  num_values = count(mask)
   num_zeros = size(list) - num_values
 
-  minv = minval(list,mask)
-  maxv = maxval(list,mask)
-  total = sum(list,mask)
-  mean = total/num_values ! automatically promote num_values to real
-  sd = sqrt(sum((list-mean)**2,mask)/num_values)
-end subroutine statistics_no_zero
+  stats = 0.d0
+  call MPI_Reduce(minval(list,mask), stats(1), 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Reduce(maxval(list,mask), stats(3), 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Reduce(sum(list,mask),    stats(5), 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Reduce(count(mask), num_values, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+
+  stats(2) = stats(5)/real(num_values,8)
+  call MPI_Bcast(stats(2), 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Reduce(sum((list-stats(2))**2,mask), stats(4), 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  stats(4) = sqrt(stats(4)/real(num_values,8))
+end subroutine statistics_no_zero_MPI
 end module mod_update_particles

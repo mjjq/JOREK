@@ -84,6 +84,7 @@ call broadcast_phys(my_id)                         ! physics parameters
 call broadcast_particle_parameters(my_id)          ! particle parameters
 ! Call find_RZ once to initialise elements_minmax before going OMP (parameters are random-ish and irrelevant)
 call find_RZ(node_list,element_list,0.d0,0.d0,0.d0,0.d0,i,i,i,i)
+if (my_id .eq. 0) write(*,*) "updating neighbours"
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
 do i=1,n_species ! For each particle read adas files and calculate coronal equilibrium)
   if (len_trim(adas_suffix(i)) .ne. 0) then
@@ -130,6 +131,7 @@ do i_step=i_begin,i_end
     call broadcast_phys(my_id)                         ! physics parameters, because tstep might have changed
     call broadcast_nodes(my_id, node_list)
     call broadcast_elements(my_id, element_list)
+    if (my_id .eq. 0) write(*,*) "updating neighbours"
     call update_neighbours(element_list,node_list)
     ! Set nout_particles to the number of steps required to go t_step forward (floored)
     nout_particles = int(tstep/t_step_particles,4)

@@ -11,8 +11,6 @@ real*8                   :: s_i, t_i, R_i, Rs_i, Rt_i, Rst_i, Rss_i, Rtt_i, Z_i,
 real*8                   :: s_j, t_j, R_j, Rs_j, Rt_j, Rst_j, Rss_j, Rtt_j, Z_j, Zs_j, Zt_j, Zst_j,Zss_j,Ztt_j
 logical, external        :: neighbours
 
-write(*,*) 'updating neighbours'
-
 !$omp parallel do default(private) &
 !$omp   shared(element_list,node_list)
 do i=1, element_list%n_elements

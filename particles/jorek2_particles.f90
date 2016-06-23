@@ -30,6 +30,8 @@ integer    :: i_tor, my_id, n_cpu, ierr, i_step, i_step_out, i_begin, i_end, i, 
 integer*4  :: rank, comm_size
 integer    :: provided, StatInfo
 character*17 :: particle_file, restart_file
+integer :: DUMMY_INT
+real*8  :: DUMMY_REAL
 
 real*8, dimension(:), allocatable :: energy_list, momentum_list
 real*8 :: wstart, wend, wtime ! wall time on this cpu
@@ -82,8 +84,8 @@ call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 call broadcast_phys(my_id)                         ! physics parameters
 call broadcast_particle_parameters(my_id)          ! particle parameters
-! Call find_RZ once to initialise elements_minmax before going OMP (parameters are random-ish and irrelevant)
-call find_RZ(node_list,element_list,0.d0,0.d0,0.d0,0.d0,i,i,i,i)
+! Call find_RZ once to initialise elements_minmax before going OMP
+call find_RZ(node_list,element_list,DUMMY_REAL,DUMMY_REAL,DUMMY_REAL,DUMMY_REAL,DUMMY_INT,DUMMY_REAL,DUMMY_REAL,DUMMY_INT)
 if (my_id .eq. 0) write(*,*) "updating neighbours"
 call update_neighbours(element_list,node_list)     ! update neighbour information in the element_list
 do i=1,n_species ! For each particle read adas files and calculate coronal equilibrium)

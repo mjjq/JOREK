@@ -60,7 +60,7 @@ call cpu_time(t0)
 !$ ostart = omp_get_wtime()
 
 Rbox = (/1d9,-1d9/) ! Large and inversed bounds so that they are always updated
-Zbox = (/1d9,-1d9/) 
+Zbox = (/1d9,-1d9/)
 ! Get domain size: min and max R and Z (phi is always between 0 and TWOPI)
 do i=1,element_list%n_elements
   call RZ_minmax(node_list, element_list, i, Rmin, Rmax, Zmin, Zmax)
@@ -158,8 +158,9 @@ real*4, intent(in) :: p(1:9)
 real*8 :: joined_gaussian
 
 real*8 :: R_out, Z_out, s, t
-integer :: i_elm, ifail, variable
-real*8 :: P_s, P_t, P_phi, R_s, R_t, Z_s, Z_t ! Useless variables
+integer :: i_elm, ifail, variable(1)
+real*8 :: R_s, R_t, Z_s, Z_t ! Useless variables
+real*8, dimension(1) :: P_s, P_t, P_phi, Px
 real*8 :: x
 
 ! Find our variable
@@ -173,13 +174,14 @@ select case(int(p(1)))
   case DEFAULT
     call find_RZ(node_list,element_list,R,Z,R_out,Z_out,i_elm,s,t,ifail)
     ! Select the mhd variable
-    variable = int(p(1))
-    if (variable .le. 0 .or. variable .gt. n_var) then
+    variable = (/int(p(1))/) ! Because the intel compiler is a nazi
+    if (variable(1) .le. 0 .or. variable(1) .gt. n_var) then
       write(*,*) "ERROR: invalid MHD variable selected: ", variable
       call exit(1)
     endif
     if (ifail .eq. 0) then
-      call interp_PRZ(node_list,element_list,i_elm,variable,1,s,t,phi,x,P_s,P_t,P_phi,R_out,R_s,R_t,Z_out,Z_s,Z_t)
+      call interp_PRZ(node_list,element_list,i_elm,variable,1,s,t,phi,Px,P_s,P_t,P_phi,R_out,R_s,R_t,Z_out,Z_s,Z_t)
+      x = Px(1)
     else
       ! Outside of domain
       joined_gaussian = 0.d0
@@ -290,9 +292,13 @@ mass_main_ion        = mass_proton * central_mass
 v_norm = sqrt(mu_zero * mass_main_ion * central_density * 1.d20)      ! JOREK normalisation for velocity
 particle%v = particle%v * v_norm
 
-call interpolate_coronal(cor, log10(background_density),log10(background_kelvin),Z_coronal,radiation_coronal)
-particle%q       = nint(Z_coronal,1)                     !< charge (initialised with the coronal equilibrium value)
+if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
+  ifail = 1
+else
+  ifail = 0
+  call interpolate_coronal(cor, log10(background_density),log10(background_kelvin),Z_coronal,radiation_coronal)
+  particle%q       = nint(Z_coronal,1)                     !< charge (initialised with the coronal equilibrium value)
+endif
 
-ifail = 0
 end subroutine particle_init
 end module mod_initialise_particles

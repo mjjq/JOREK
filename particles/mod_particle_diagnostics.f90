@@ -55,7 +55,7 @@ function particles_in_regions(node_list, element_list, particle_list)
   !$omp reduction(+:tmp)
   do i=1,particle_list%n_particles
     p = particle_list%particle(i)
-    if (p%i_elm .lt. 0 .or. p%i_elm .gt. element_list%n_elements) cycle
+    if (p%i_elm .le. 0 .or. p%i_elm .gt. element_list%n_elements) cycle
     call interp(node_list, element_list, p%i_elm, 1, 1, & ! force i_harm to 1
         p%st(1), p%st(2), psi, psi_s, psi_t, psi_st, psi_ss, psi_tt)
 
@@ -75,4 +75,36 @@ function particles_in_regions(node_list, element_list, particle_list)
     MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ifail)
   call MPI_Comm_Rank(MPI_COMM_WORLD, my_id, ifail)
 end function particles_in_regions
+
+
+!> Calculate flux coordinates of particles
+subroutine get_particle_flux_coordinates(node_list,element_list,particle_list,fluxcoord,mask)
+  use data_structure
+  use mod_particles
+  implicit none
+  type(type_node_list), intent(in) :: node_list
+  type(type_element_list), intent(in) :: element_list
+  type(type_particle_list), intent(in) :: particle_list
+  real*8, dimension(particle_list%n_particles), intent(out) :: fluxcoord
+  logical, dimension(particle_list%n_particles), intent(out) :: mask
+  real*8, dimension(1) :: P_s, P_t, P_phi
+  real*8               :: R, R_s, R_t, Z, Z_s, Z_t
+
+  integer :: i
+
+  mask = .true.
+  !$omp parallel do default(none) &
+  !$    shared(particle_list, node_list, element_list, fluxcoord, mask) &
+  !$    private(P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+  do i=1,particle_list%n_particles
+    if (particle_list%particle(i)%lost .or. (particle_list%particle(i)%i_elm .lt.  1)) then
+      mask(i) = .false.
+    else
+      call interp_PRZ(node_list, element_list, particle_list%particle(i)%i_elm, &
+                    (/1/), 1, particle_list%particle(i)%st(1),particle_list%particle(i)%st(2), &
+                    particle_list%particle(i)%x(3), fluxcoord(i), P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+    endif
+  enddo
+  !$omp end parallel do
+end subroutine get_particle_flux_coordinates
 end module mod_particle_diagnostics

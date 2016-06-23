@@ -36,4 +36,9 @@ DUMP_PARTICLES_VTK_SRC := $(DUMP_PARTICLES_VTK_SRC) \
   $(DIR)/mod_import_export_particles.f90
 
 PARTICLE_FLUX_COORDINATES_SRC := $(PARTICLE_FLUX_COORDINATES_SRC) \
-  $(DIR)/mod_import_export_particles.f90
+  $(DIR)/mod_import_export_particles.f90 \
+  $(DIR)/mod_particle_diagnostics.f90
+
+PARTICLE_FLUX_COORDINATE_DIFFUSION_SRC := $(PARTICLE_FLUX_COORDINATE_DIFFUSION_SRC) \
+  $(DIR)/mod_import_export_particles.f90 \
+  $(DIR)/mod_particle_diagnostics.f90

@@ -317,6 +317,7 @@ subroutine statistics_no_zero_MPI(list,stats,num_zeros)
   allocate(mask(size(list)))
   ! Everything > 0 is true and will be used
   mask = abs(list) > 0.d0
+  num_values = count(mask)
   num_zeros = size(list) - num_values
 
   stats = 0.d0

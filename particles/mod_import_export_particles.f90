@@ -19,6 +19,7 @@ integer, allocatable, dimension(:) :: particles_per_proc
 ! For MPI writing
 integer                       :: fh, dtype, status(MPI_STATUS_SIZE)
 character*(*), parameter      :: datarep = 'native'
+integer                       :: header_size, dtype_size
 
 ! Debugging output
 integer :: resultlen
@@ -53,17 +54,15 @@ call MPI_File_set_errhandler(fh, MPI_ERRORS_ARE_FATAL, ierr)
 
 ! Write header containing only the number of particles
 if (my_id .eq. 0) then
-  call MPI_File_write(fh, sum(particles_per_proc), 1, MPI_INTEGER, status, ierr)
+  call MPI_File_write(fh, sum(particles_per_proc), 1, MPI_INTEGER4, status, ierr)
 endif
 
 dtype = get_particle_derived_type()
 
-! Calculate the displacement after the header = one unit of size MPI_INTEGER
-call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, info, ierr)
-
-! write_at sets the displacement to the number of particles already written in units of dtype
-call MPI_File_write_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND),&
-    particle_list%particle, particle_list%n_particles, dtype, status, ierr)
+header_size = 4
+call MPI_Type_size(dtype, dtype_size, ierr)
+call MPI_File_set_view(fh, int(header_size + dtype_size*sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), dtype, dtype, datarep, info, ierr)
+call MPI_File_write(fh, particle_list%particle, particle_list%n_particles, dtype, status, ierr)
 
 call MPI_File_close(fh,ierr)
 
@@ -76,7 +75,7 @@ end subroutine export_particles
 
 
 !> Import all particles using MPI File IO
-!! Reads the number of particles from a file, determines a 
+!! Reads the number of particles from a file, determines a
 !! particle distribution over all processors and read this many
 !! particles per processor.
 subroutine import_particles(particle_file, particle_list)
@@ -92,6 +91,7 @@ integer, allocatable, dimension(:) :: particles_per_proc
 ! For MPI reading
 integer                       :: fh, dtype, status(MPI_STATUS_SIZE)
 character*(*), parameter      :: datarep = 'native'
+integer                       :: header_size, dtype_size
 
 ! Debugging output
 integer :: resultlen
@@ -121,7 +121,7 @@ call MPI_File_set_errhandler(fh, MPI_ERRORS_ARE_FATAL, ierr)
 
 ! Read number of particles from header
 if (my_id .eq. 0) then
-  call MPI_File_read(fh, n_particles, 1, MPI_INTEGER, status, ierr)
+  call MPI_File_read(fh, n_particles, 1, MPI_INTEGER4, status, ierr)
 
   ! Divide particles over processors
   particles_per_proc(0)         = n_particles/n_cpu + modulo(n_particles, n_cpu)
@@ -134,17 +134,15 @@ call MPI_Bcast(particles_per_proc, n_cpu, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 particle_list%n_particles = particles_per_proc(my_id)
 ! And allocate the required space
 allocate(particle_list%particle(particle_list%n_particles), stat=ierr)
-if (ierr .gt. 0) write(*,"(i3,a,i8,a)") my_id, &
+if (ierr .gt. 0) write(*,"(i3,a,i12,a)") my_id, &
     "unable to allocate particle_list%particle(", particle_list%n_particles, ")"
 
 dtype = get_particle_derived_type()
 
-! Calculate the displacement after the header = one unit of size MPI_INTEGER
-call MPI_File_set_view(fh, 1*MPI_INTEGER, dtype, dtype, datarep, info, ierr)
-
-! write_at sets the displacement to the number of particles already written in units of dtype
-call MPI_File_read_at_all(fh, int(sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), &
-    particle_list%particle, particle_list%n_particles, dtype, status, ierr)
+header_size = 4
+call MPI_Type_size(dtype, dtype_size, ierr)
+call MPI_File_set_view(fh, int(header_size + dtype_size*sum(particles_per_proc(0:my_id-1)),MPI_OFFSET_KIND), dtype, dtype, datarep, info, ierr)
+call MPI_File_read(fh, particle_list%particle, particle_list%n_particles, dtype, status, ierr)
 
 call MPI_File_close(fh,ierr)
 

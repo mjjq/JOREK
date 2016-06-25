@@ -99,8 +99,8 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr) ! for output niceness
 
 if (len_trim(particle_restart_file) .eq. 0) then
   call initialise_particles(my_id, n_cpu, coronal, particle_list, particle_list_GC)
-  write(particle_file,'(A4,i0.9,A4)') 'part',0,'.rst'
-  call export_particles(particle_list,particle_file)
+  write(particle_file,'(A4,i0.9,A3)') 'part',0,'.h5'
+  call export_particles(particle_file, particle_list)
 else
   call import_particles(particle_restart_file, particle_list)
 endif
@@ -163,8 +163,8 @@ do i_step=i_begin,i_end
   !if (my_id .eq. 0) write(*,*) "Particle load-balancing took ", wtime, " seconds"
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
-  write(particle_file,'(A4,i0.9,A4)') 'part',i_step_out,'.rst'
-  call export_particles(particle_list,particle_file)
+  write(particle_file,'(A4,i0.9,A3)') 'part',i_step_out,'.h5'
+  call export_particles(particle_file, particle_list)
 
   ! Output by each processor
   if (write_energies) call write_list("energy",i_step,my_id,energy_list)

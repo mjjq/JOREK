@@ -47,7 +47,6 @@ call initialise_basis                              ! define the basis functions 
 
 
 call import_particles(particle_file, particle_list)
-write(*,*) particle_list%particle(5)%st
 output_file = 'flux'//particle_file(5:index(particle_file,'.rst',.true.))//'txt' !  .true. searches backwards
 allocate(fluxcoords(particle_list%n_particles),mask(particle_list%n_particles))
 

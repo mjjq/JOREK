@@ -94,8 +94,8 @@ subroutine get_particle_flux_coordinates(node_list,element_list,particle_list,fl
 
   mask = .true.
   !$omp parallel do default(none) &
-  !$    shared(particle_list, node_list, element_list, fluxcoord, mask) &
-  !$    private(P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+  !$omp shared(particle_list, node_list, element_list, fluxcoord, mask) &
+  !$omp private(P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
   do i=1,particle_list%n_particles
     if (particle_list%particle(i)%lost .or. (particle_list%particle(i)%i_elm .lt.  1)) then
       mask(i) = .false.

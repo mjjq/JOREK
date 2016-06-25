@@ -7,7 +7,7 @@
  ***************************************
  
   &in1
-  restart = .t.
+  restart = .f.
   rst_format = 0
   regrid  = .f.
   tstep   = 5. 

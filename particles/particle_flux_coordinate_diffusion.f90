@@ -1,6 +1,6 @@
 !> Calculate change in flux coordinate bins between two particle files
-!! Run as particle_flux_coordinate_diffusion jorek_file.rst particles_reference.rst part$filenum.rst < in_jorek
-!! Output is written to diff_filenum.dat
+!! Run as particle_flux_coordinate_diffusion jorek_file.rst particles_reference.rst part$filenum.h5 < in_jorek
+!! Output is written to diff_filenum.txt
 program particle_flux_coordinate_diffusion
 use phys_module
 use data_structure
@@ -12,7 +12,7 @@ use mpi_mod
 implicit none
 
 integer, parameter :: n_bins = 100
-real*8, parameter  :: binstart = -1.d0, binend = 0.d0
+real*8, parameter  :: binstart = -0.95d0, binend = -0.15d0
 
 type (type_particle_list) :: particle_list_reference
 type (type_particle_list) :: particle_list
@@ -23,6 +23,7 @@ type (type_node_list)   , pointer :: node_list
 type (type_element_list), pointer :: element_list
 real*8, dimension(:), allocatable :: fluxcoord, fluxcoord_reference
 logical, allocatable, dimension(:) :: mask, mask_reference
+integer, allocatable, dimension(:) :: tmp
 
 real*8, dimension(n_bins) :: mean, stddev
 
@@ -33,7 +34,7 @@ write(*,*) '***************************************'
 
 ! Get the filename as the first cli argument
 if (command_argument_count() < 3) then
-  write(*,*) "Expected three filename arguments: restart_file.rst particles_reference.rst part$filenum.rst"
+  write(*,*) "Expected three filename arguments: restart_file.rst particles_reference.rst part$filenum.h5"
   call exit(1)
 endif
 call get_command_argument(1, restart_file)
@@ -54,7 +55,7 @@ call initialise_basis                              ! define the basis functions 
 
 call import_particles(particle_file, particle_list)
 call import_particles(particle_reference_file, particle_list_reference)
-output_file = 'diff'//particle_file(5:index(particle_file,'.rst',.true.))//'dat' !  .true. searches backwards
+output_file = 'diff'//particle_file(5:index(particle_file,'.h5',.true.))//'txt' !  .true. searches backwards
 allocate(fluxcoord(particle_list%n_particles),mask(particle_list%n_particles))
 allocate(fluxcoord_reference(particle_list_reference%n_particles),mask_reference(particle_list_reference%n_particles))
 
@@ -67,16 +68,19 @@ if (.not. any(mask_reference)) then
   call exit(-1)
 endif
 
+allocate(tmp(particle_list_reference%n_particles))
+! Calculate in which bin particles are
+tmp = nint((fluxcoord_reference - binstart)/(binend - binstart)*real(n_bins,8))
+
 mean = 0.d0
 ! Calculate mean per bin
 !$omp parallel do default(none) &
-!$    shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference) &
-!$    private(i, bin) &
+!$    shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference, tmp) &
+!$    private(i) &
 !$    reduction(+:mean)
 do i=1,particle_list_reference%n_particles
-  if (mask_reference(i)) then
-    bin = nint((fluxcoord_reference(i) - binstart)/(binend - binstart)*real(n_bins,8))
-    if (bin .ge. 1 .or. bin .le. n_bins) mean(bin) = mean(bin) + (fluxcoord_reference(i) - fluxcoord(i))
+  if (mask_reference(i) .and. tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) then
+    mean(tmp(i)) = mean(tmp(i)) + (fluxcoord_reference(i) - fluxcoord(i))
   endif
 enddo
 !$end omp parallel do
@@ -85,13 +89,12 @@ mean = mean/count(mask_reference)
 stddev = 0.d0
 ! Calculate stddev per bin
 !$omp parallel do default(none) &
-!$    shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference, mean) &
-!$    private(i, bin) &
+!$    shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference, mean, tmp) &
+!$    private(i) &
 !$    reduction(+:stddev)
 do i=1,particle_list_reference%n_particles
-  if (mask_reference(i)) then
-    bin = nint((fluxcoord_reference(i) - binstart)/(binend - binstart)*real(n_bins,8))
-    if (bin .ge. 1 .or. bin .le. n_bins) stddev(bin) = stddev(bin) + ((fluxcoord_reference(i) - fluxcoord(i))-mean(bin))**2
+  if (mask_reference(i) .and. tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) then
+    stddev(tmp(i)) = stddev(tmp(i)) + ((fluxcoord_reference(i) - fluxcoord(i))-mean(tmp(i)))**2
   endif
 enddo
 !$omp end parallel do

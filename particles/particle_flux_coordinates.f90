@@ -1,6 +1,6 @@
-!> Calculate flux (p(1)) at all particle positions
-!! Run as particle_flux_coordinates jorek_file.rst particle_file.rst < in_jorek
-!! Output is written to flux_filenum.dat
+!> Calculate a histogram of flux (p(1)) at all particle positions
+!! Run as particle_flux_coordinates jorek_file.rst particle_file.h5 < in_jorek
+!! Output is written to flux_filenum.txt
 program particle_flux_coordinates
 use phys_module
 use data_structure
@@ -11,6 +11,10 @@ use mod_particle_diagnostics
 use mpi_mod
 implicit none
 
+real*8, parameter :: binstart = -0.95, &
+                     binend   = -0.15
+integer, parameter :: n_bins = 100
+
 type (type_particle_list) :: particle_list
 integer    :: ierr, provided
 character*25 :: particle_file, restart_file, output_file
@@ -19,6 +23,8 @@ type (type_node_list)   , pointer :: node_list
 type (type_element_list), pointer :: element_list
 real*8, allocatable, dimension(:) :: fluxcoords
 logical, allocatable, dimension(:) :: mask
+integer, allocatable, dimension(:) :: tmp
+integer, allocatable, dimension(:) :: histogram
 
 call MPI_Init_thread(MPI_THREAD_SINGLE, provided, ierr)
 write(*,*) '***************************************'
@@ -47,15 +53,33 @@ call initialise_basis                              ! define the basis functions 
 
 
 call import_particles(particle_file, particle_list)
-output_file = 'flux'//particle_file(5:index(particle_file,'.rst',.true.))//'txt' !  .true. searches backwards
+output_file = 'flux'//particle_file(5:index(particle_file,'.h5',.true.))//'txt' !  .true. searches backwards
 allocate(fluxcoords(particle_list%n_particles),mask(particle_list%n_particles))
 
 ! Count number of particles in each element
 call get_particle_flux_coordinates(node_list,element_list,particle_list,fluxcoords, mask)
+
+allocate(tmp(count(mask,1)))
+
+! Find bins
+tmp = nint((pack(fluxcoords,mask) - binstart)/(binend - binstart)*real(n_bins,8))
+
+! Calculate histogram
+allocate(histogram(n_bins))
+histogram = 0
+!$omp parallel do default(none) &
+!$    shared(tmp) &
+!$    private(i) &
+!$    reduction(+:histogram)
+do i=1,size(tmp,1)
+  if (tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) histogram(tmp(i)) = histogram(tmp(i)) + 1
+enddo
+!$end omp parallel do
+
 open(file=output_file,status="replace",unit=21,access="stream",form='formatted')
-write(21,'(A)') "# Flux, q, in_plasma"
-do i=1,particle_list%n_particles
-  write(21,'(g16.8,i4,L3)') fluxcoords(i), particle_list%particle(i)%q, mask(i)
+write(21,'(A)') "# Flux, Count"
+do i=1,n_bins
+  write(21,'(g16.8,i6)') (binend-binstart)*((real(i,8)-0.5d0)/real(n_bins,8))+binstart, histogram(i)
 enddo
 close(21)
 write(*,*) "Done counting, wrote output to ", output_file

@@ -150,7 +150,7 @@ cleanall : clean cleandep cleangenmod
 
 clean :	
 	@echo ">> Deleting Object Files <<"
-	-@rm -f $(JOREK2_MAIN_OBJ) $(JOREK2_FOUR_OBJ) $(JOREK2_POSTPROC_OBJ)
+	-@rm -f $(JOREK2_MAIN_OBJ) $(JOREK2_FOUR_OBJ) $(JOREK2_POSTPROC_OBJ) $(JOREK2_PARTICLES_OBJ)
 	@echo ">> Deleting Module Files <<"
 	-@rm -f $(MOD_FILES)
 

@@ -9,7 +9,7 @@ use basis_at_gaussian
 use nodes_elements
 use mod_particles
 use mod_project_particles
-use mod_import_export_particles
+use mod_particle_io
 use mpi_mod
 use mod_vtk
 implicit none
@@ -52,10 +52,7 @@ call initialise_basis                              ! define the basis functions 
 
 
 ! --- Preset parameters (only these are used!)
-nsub                   = 2	 ! Number of subdivisions of the cubic finite elements into linear pieces
-i_tor                  = -1	 ! If i_tor > 0, only this mode will be included in the vtk file...
-i_plane                = 1	 ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
-without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
+nsub                   = 3	 ! Number of subdivisions of the cubic finite elements into linear pieces
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -69,9 +66,6 @@ write(*,*)
 write(*,*) 'Parameters:'
 write(*,*) '-----------'
 write(*,*) 'nsub            =', nsub
-write(*,*) 'i_tor           =', i_tor
-write(*,*) 'i_plane         =', i_plane
-write(*,*) 'without_n0_mode =', without_n0_mode
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
 write(*,*) 'n_period        =', n_period
@@ -96,22 +90,26 @@ if (command_argument_count() < 1) then
   call exit(1)
 endif
 
+if (n_tor > n_var) then
+  write(*,*) "Too few variables in node_list to save (n_tor > n_var)"
+  call exit(2)
+endif
+
 ! Get particle filename from commandline
 call get_command_argument(1, particle_file)
 call import_particles(particle_file, particle_list)
 
-! Project onto element_list (saves into the first value in node_list!)
+! Project onto element_list (saves into the first n_tor values in node_list!)
 call project_particles(node_list, element_list, particle_list)
 
-! Write the first value of node_list to a vtk file
-particle_file = particle_file(1:index(particle_file,'.rst',.true.))//'vtk' !  .true. searches backwards
+particle_file = particle_file(1:index(particle_file,'.h5',.true.))//'vtk' !  .true. searches backwards
 write(*,*) "Done projecting, writing output to ", particle_file
-call write_particle_distribution_to_vtk(node_list,element_list,particle_file,nsub,i_tor,i_plane,without_n0_mode)
+call write_particle_distribution_to_vtk(node_list,element_list,particle_file,nsub)
 
 
 call MPI_FINALIZE(IERR)
 contains
-subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub,i_tor,i_plane,without_n0_mode)
+subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub)
 use data_structure
 use basis_at_gaussian ! for HZ (initialise_basis must be called before)
 use mod_vtk
@@ -121,15 +119,14 @@ implicit none
 type(type_node_list), intent(in)    :: node_list
 type(type_element_list), intent(in) :: element_list
 character*(*), intent(in)           :: filename
-integer, intent(in) :: nsub, i_tor, i_plane
-logical, intent(in) :: without_n0_mode
+integer, intent(in) :: nsub
 
 integer :: nnos, nnoel, nel, i, j, ielm, inode, k
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 integer,allocatable   :: ien (:,:)
-integer, parameter :: n_scalars = 1, n_vectors = 0
+integer, parameter :: n_scalars = n_tor, n_vectors = 0
 character*12, allocatable :: vector_names(:), scalar_names(:)
 
 integer :: i_min, i_max, i_t
@@ -138,7 +135,11 @@ integer, parameter :: etype = 9 ! for vtk_quad
 nnos = nsub*nsub*node_list%n_nodes
 allocate(xyz(3,nnos),scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
 allocate(scalar_names(n_scalars),vector_names(n_vectors))
-scalar_names(1) = "num_density"
+scalar_names = "rho_1"
+do i=1,n_scalars/2
+  write(scalar_names(2*i),"(A8,i0.2)") "rho_cos_", mode(2*i)
+  write(scalar_names(2*i+1),"(A8,i0.2)") "rho_sin_", mode(2*i+1)
+enddo
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements
@@ -162,18 +163,10 @@ do i=1,element_list%n_elements
       inode = inode+1
       xyz(1:3,inode) = (/ R, Z, 0.d0/)
 
-      if (i_tor .gt. -1) then 
-        i_min = i_tor
-        i_max = i_tor
-      else
-        i_min = 1
-        i_max = n_tor
-      endif
-
-      do i_t = i_min, i_max
-        if ( ( i_t == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
+      do i_t=1,n_tor
         call interp(node_list,element_list,i,1,i_t,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-        scalars(inode,1) = scalars(inode,1) + P * HZ(i_t,i_plane)
+        scalars(inode,i_t) = real(P,4)
+        !do not give the value at a specific plane, but give the coefficient
       enddo
     enddo
   enddo
@@ -188,6 +181,8 @@ do i=1,element_list%n_elements
      enddo
   enddo
 enddo  ! n_elements
+
+write(*,*) scalar_names, minval(scalars), maxval(scalars)
 
 ! ------------- Write to VTK
 call write_vtk(filename,xyz,&

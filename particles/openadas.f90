@@ -34,6 +34,7 @@ contains
 !! Suffix is usually of the form 50_w, 96_li
 function read_adf11(suffix) result(ad)
 use constants
+use mpi_mod
 implicit none
 
 character*6, intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li), give this in input file
@@ -44,23 +45,27 @@ integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*13 :: filename
 
-integer :: i, ierr, n_d, n_T, k
+integer :: i, ierr, n_d, n_T, k, my_id
 logical :: file_exists
 
-write(*,'(A)') '*********************************'
-write(*,'(A)') '* Importing OpenAdas data       *'
-write(*,'(A,A,A)') '* open files ending in: ', suffix, '  *'
-write(*,'(A)') '*********************************'
+call MPI_COMM_RANK(my_id, MPI_COMM_WORLD, ierr)
+
+if (my_id .eq. 0) then
+  write(*,'(A)') '*********************************'
+  write(*,'(A)') '* Importing OpenAdas data       *'
+  write(*,'(A,A,A)') '* open files ending in: ', suffix, '  *'
+  write(*,'(A)') '*********************************'
+endif
 
 do i_ADF11 = 1,size(ADF11_filenames,1)
   write(filename,"(A,A,A)") ADF11_filenames(i_ADF11), trim(suffix), '.dat'
   inquire(file=filename, exist=file_exists)
   if (.not. file_exists) cycle ! Skip this type of data
 
-  write(*,"(A,A)",advance="no") "Reading data from ", filename
+  if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", filename
   open(10,file=filename,status="old",iostat=ierr)
   if (ierr .ne. 0) then
-    write(*,*) "failed with code", ierr
+    write(*,*) my_id, " failed with code ", ierr
     cycle
   endif
 
@@ -94,15 +99,15 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   enddo
   close(10)
 
-  write(*,"(A)") "succeeded"
+  if (my_id .eq. 0) write(*,"(A)") "succeeded"
 enddo
 
 ! Test if ACD and SCD were loaded at least
 if (.not. (allocated(ad%ACD%density) .and. allocated(ad%SCD%density))) then
-  write(*,*) "ACD and SCD not found, exiting"
+  write(*,*) my_id, "ACD and SCD not found, exiting"
   call exit(10)
 else
-  write(*,*) 'Done reading adas data for atomic number', ad%n_Z
+  if (my_id .eq. 0) write(*,*) 'Done reading adas data for atomic number', ad%n_Z
 endif
 end function read_adf11
 

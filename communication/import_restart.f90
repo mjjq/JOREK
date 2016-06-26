@@ -169,7 +169,7 @@ if (format_rst .gt. 0) then
   read(21) t_start
  
 #ifdef USE_HDF5
-  read(21) h5_nbsave_all
+  !read(21) h5_nbsave_all ! why is this needed?
 #endif
   
   if (index_start .ge. 1) then
@@ -246,7 +246,7 @@ call import_restart_vacuum(21, freeboundary, resistive_wall)
   write(*,*) '************* restart ******************'
   write(*,'(A,I6,F14.6,A)') ' *  restart time       : ',index_start,t_start,' *'
 #ifdef USE_HDF5
-  write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
+  !write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
 #endif
   write(*,*) '****************************************'
 

@@ -26,12 +26,14 @@ character*12, allocatable :: scalar_names(:), vector_names(:)
 integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
 character             :: buffer*80, lf*1, str1*12
 integer               :: status(MPI_STATUS_SIZE)
+real*8                :: t_start, t_end
 
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 
 if (my_id .eq. 0) then
+  call cpu_time(t_start)
   write(*,*) '***********************************'
   write(*,*) '*    export particles to VTK      *'
 
@@ -47,7 +49,6 @@ endif
 
 
 nnos_local = particle_list%n_particles
-write(*,*) my_id, " number of particles : ", nnos_local
 call MPI_AllReduce(nnos_local,nnos,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(nnos_local,nnos_max,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
 if (my_id .eq.0) write(*,*) ' total number of particles : ',nnos,nnos_max
@@ -173,7 +174,9 @@ enddo
 
 if (my_id .eq.0) then
   close(ivtk)
+  call cpu_time(t_end)
 
+  write(*,"(A,f8.4,A)") ' *       elapsed time: ',t_end-t_start, '    *'
   write(*,*) '* done export particles to VTK    *'
   write(*,*) '***********************************'
 endif

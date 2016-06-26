@@ -10,7 +10,7 @@ JOREK2_PARTICLES_SRC :=$(JOREK2_PARTICLES_SRC) \
   $(DIR)/calc_EB.f90 		\
   $(DIR)/mod_initialise_particles.f90        \
   $(DIR)/redistribute_particles.f90      \
-  $(DIR)/mod_import_export_particles.f90 \
+  $(DIR)/mod_particle_io.f90 \
   $(DIR)/mod_import_restart_linear.f90 \
   $(DIR)/mod_project_particles.f90  \
   $(DIR)/update_particles.f90	       \
@@ -27,18 +27,18 @@ SIMON_PARTICLE_TEST_SRC := $(SIMON_PARTICLE_TEST_SRC) \
 
 PROJECT_PARTICLES_VTK_SRC := $(PROJECT_PARTICLES_VTK_SRC) \
   $(DIR)/mod_project_particles.f90 \
-  $(DIR)/mod_import_export_particles.f90
+  $(DIR)/mod_particle_io.f90
 
 COUNT_PARTICLES_VTK_SRC := $(COUNT_PARTICLES_VTK_SRC) \
-  $(DIR)/mod_import_export_particles.f90
+  $(DIR)/mod_particle_io.f90
 
 DUMP_PARTICLES_VTK_SRC := $(DUMP_PARTICLES_VTK_SRC) \
-  $(DIR)/mod_import_export_particles.f90
+  $(DIR)/mod_particle_io.f90
 
 PARTICLE_FLUX_COORDINATES_SRC := $(PARTICLE_FLUX_COORDINATES_SRC) \
-  $(DIR)/mod_import_export_particles.f90 \
+  $(DIR)/mod_particle_io.f90 \
   $(DIR)/mod_particle_diagnostics.f90
 
 PARTICLE_FLUX_COORDINATE_DIFFUSION_SRC := $(PARTICLE_FLUX_COORDINATE_DIFFUSION_SRC) \
-  $(DIR)/mod_import_export_particles.f90 \
+  $(DIR)/mod_particle_io.f90 \
   $(DIR)/mod_particle_diagnostics.f90

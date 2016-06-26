@@ -7,7 +7,7 @@ program project_particles_vtk
 use phys_module
 use nodes_elements
 use mod_particles
-use mod_import_export_particles
+use mod_particle_io
 use mod_vtk
 use mpi_mod
 implicit none

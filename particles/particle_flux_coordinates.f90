@@ -6,7 +6,7 @@ use phys_module
 use data_structure
 use basis_at_gaussian
 use mod_particles
-use mod_import_export_particles
+use mod_particle_io
 use mod_particle_diagnostics
 use mpi_mod
 implicit none

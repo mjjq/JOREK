@@ -2,7 +2,7 @@
 !! Run as dump_particles_vtk part[0-9]*.rst
 program dump_particles_vtk
 use mod_particles
-use mod_import_export_particles
+use mod_particle_io
 use mod_vtk
 use mpi_mod
 implicit none

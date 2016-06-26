@@ -8,7 +8,7 @@ use phys_module
 use basis_at_gaussian
 use nodes_elements
 use mod_particles
-use mod_import_export_particles
+use mod_particle_io
 use mod_initialise_particles
 use mod_redistribute_particles
 use mod_import_restart_linear

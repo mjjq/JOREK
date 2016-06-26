@@ -1,4 +1,4 @@
-module mod_import_export_particles
+module mod_particle_io
   use mod_particles
 contains
 
@@ -12,7 +12,7 @@ function info_romio_locking_disabled() result(info)
 end function info_romio_locking_disabled
 
 
-subroutine get_particle_hdf5_datatypes(memtype, filetype)
+subroutine h5_dtypes(memtype, filetype)
 use iso_c_binding
 use hdf5
 integer(HID_T), intent(out) :: memtype, filetype
@@ -101,7 +101,7 @@ call h5tinsert_f(filetype, "lost", &
 
 ! Pack the filetype to make it more efficient (does not help much)
 !call h5tpack_f(filetype, hdferr)
-end subroutine get_particle_hdf5_datatypes
+end subroutine h5_dtypes
 
 
 !> Export all particles using HDF5 Parallel File IO
@@ -129,7 +129,7 @@ real*8 :: t_start, t_end
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 call h5open_f(hdferr)
-call get_particle_hdf5_datatypes(memtype, filetype)
+call h5_dtypes(memtype, filetype)
 
 allocate(particles_per_proc(0:n_cpu-1))
 
@@ -217,7 +217,7 @@ integer*8, dimension(1:1) :: tmp, maxdims
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 call h5open_f(hdferr)
-call get_particle_hdf5_datatypes(memtype, filetype)
+call h5_dtypes(memtype, filetype)
 
 allocate(particles_per_proc(0:n_cpu-1))
 
@@ -288,4 +288,4 @@ if (my_id .eq. 0) then
   write(*,*) '***********************************'
 endif
 end subroutine import_particles
-end module mod_import_export_particles
+end module mod_particle_io

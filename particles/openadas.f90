@@ -48,7 +48,7 @@ character*13 :: filename
 integer :: i, ierr, n_d, n_T, k, my_id
 logical :: file_exists
 
-call MPI_COMM_RANK(my_id, MPI_COMM_WORLD, ierr)
+call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 if (my_id .eq. 0) then
   write(*,'(A)') '*********************************'

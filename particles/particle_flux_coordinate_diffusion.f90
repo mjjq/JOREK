@@ -80,7 +80,7 @@ mean = 0.d0
 !$    reduction(+:mean)
 do i=1,particle_list_reference%n_particles
   if (mask_reference(i) .and. tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) then
-    mean(tmp(i)) = mean(tmp(i)) + (fluxcoord_reference(i) - fluxcoord(i))
+    mean(tmp(i)) = mean(tmp(i)) + (fluxcoord(i) - fluxcoord_reference(i))
   endif
 enddo
 !$end omp parallel do
@@ -94,7 +94,7 @@ stddev = 0.d0
 !$    reduction(+:stddev)
 do i=1,particle_list_reference%n_particles
   if (mask_reference(i) .and. tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) then
-    stddev(tmp(i)) = stddev(tmp(i)) + ((fluxcoord_reference(i) - fluxcoord(i))-mean(tmp(i)))**2
+    stddev(tmp(i)) = stddev(tmp(i)) + ((fluxcoord(i) - fluxcoord_reference(i))-mean(tmp(i)))**2
   endif
 enddo
 !$omp end parallel do

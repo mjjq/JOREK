@@ -10,8 +10,11 @@ use constants
 use data_structure
 use mod_particles
 use nodes_elements
-use mod_pcg_32
 use mod_sampling
+use mod_rng
+use mod_pcg32_rng
+use mod_sobseq_rng
+use mpi_mod
 
 implicit none
 
@@ -22,14 +25,17 @@ type (type_particle_list), intent(out) :: particle_list_GC
 integer, intent(in) :: my_id, n_cpu
 
 ! Internal variables
+integer, parameter :: N_d = 8 ! number of dimensions of the RNG
 integer :: n_p(N_species) ! Number of particles on this cpu
 type (type_particle)      :: particle
 real*8  :: R, Z, phi
 integer :: i, j, ifail
-real*8 :: ran3(3), t0, t1, ostart, oend
+real*8 :: ran(N_d), t0, t1, ostart, oend
 real*8 :: Rbox(2), Zbox(2), Rmin, Rmax, Zmin, Zmax
-integer :: seq
-type(pcg_state_setseq_64) :: rng ! Rng state
+integer :: seq, n_streams
+class(type_rng), pointer :: rng
+type(pcg32_rng), target  :: pcg32_rng_obj
+type(sobseq_rng),target  :: sobseq_rng_obj
 
 if (my_id .eq. 0) then
   write(*,*) '**********************************'
@@ -70,7 +76,6 @@ do i=1,element_list%n_elements
   Zbox(2) = max(Zbox(2), Zmax)
 enddo
 
-! Create particles of all kinds given in the input file
 do i=1,N_species
   if (n_p(i) .le. 0) cycle
   if (atomic_mass(i) .eq. 0) then
@@ -80,25 +85,41 @@ do i=1,N_species
 
   !$omp parallel default(none) &
   !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
-  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal, my_id, n_mpi_omp_seq_skip, particle_seed) &
-  !$omp   private(j, R, Z, phi, ifail, particle, ran3, rng, seq)
+  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal, my_id, particle_seed, particle_initializer, n_cpu) &
+  !$omp   private(j, R, Z, phi, ifail, particle, ran, rng, seq, sobseq_rng_obj, pcg32_rng_obj, n_streams)
+
+  ! Setup (Q)RNG
+  select case (particle_initializer(i))
+    case ("sobol")
+      rng => sobseq_rng_obj
+    case ("pcg32")
+      rng => pcg32_rng_obj
+    case default
+      rng => pcg32_rng_obj
+  end select
+  n_streams = n_cpu
+  !$ n_streams = n_cpu*omp_get_max_threads()
   seq = my_id
-  !$ seq = seq * N_MPI_OMP_seq_skip + omp_get_thread_num()
-  call pcg32_srandom_r(rng, int(particle_seed(i), 8), int(seq, 8))
+  !$ seq = seq * omp_get_max_threads() + omp_get_thread_num()
+  call rng%initialize(n_dims=N_d, seed=particle_seed(i), n_streams=n_streams, i_stream=seq, ifail=ifail)
+  if (ifail .ne. 0) then
+    write(*,*) "Error seeding rng: ", ifail
+    call MPI_ABORT(MPI_COMM_WORLD)
+  endif
 
   !$omp do
   do j=1,n_p(i)
     ifail = 1
     do while (ifail .ne. 0)
       ! Generate a random position to put this particle
-      call pcg32_random_doubles_r(rng, ran3)
-      call transform_uniform_cylindrical(ran3, Rbox, Zbox, (/0.d0, TWOPI/), R, Z, Phi)
+      call rng%next(ran)
+      call transform_uniform_cylindrical(ran(1:3), Rbox, Zbox, (/0.d0, TWOPI/), R, Z, Phi)
 
       ! Deny or accept this location
-      if (pcg32_random_double_r(rng) .lt. accept_location(i, R, Z, phi)) then
+      if (ran(4) .lt. accept_location(i, R, Z, phi)) then
         call particle_init_default(i, R, Z, phi, particle, ifail)
         if (ifail .eq. 0) then
-          call particle_init(particle, coronal(i), rng, ifail)
+          call particle_init(particle, coronal(i), ran(5:8), ifail)
         endif
       else
         ifail = 1
@@ -244,25 +265,24 @@ end subroutine particle_init_default
 
 
 !> Set v and q of a particle for use with kinetic codes
-subroutine particle_init(particle, cor, rng, ifail)
+subroutine particle_init(particle, cor, ran4, ifail)
 use constants
 use data_structure
 use mod_particles
 use nodes_elements
 use phys_module, only : central_density, central_mass
 use openadas
-use mod_pcg_32
 use mod_sampling
 implicit none
 
 type(type_particle), intent(inout) :: particle
 type(type_coronal), intent(in)     :: cor !< Coronal equilibrium datatype for this particle
-type(pcg_state_setseq_64), intent(inout) :: rng
+real*8, dimension(4), intent(in)   :: ran4
 integer, intent(out) :: ifail
 
 integer :: i_var(4)
 real*8, dimension(4) :: P, P_s, P_t, P_phi
-real*8 :: ran4(4), v_out(4)
+real*8 :: v_out(4)
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: background_density, background_kbT, background_kelvin, V_thermal
 real*8 :: v_norm
@@ -280,7 +300,6 @@ background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron t
 
 V_thermal = sqrt(background_kbT / (2.d0*particle%mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
-call pcg32_random_doubles_r(rng, ran4)
 v_out = boxmueller_transform(ran4) * V_thermal ! [m/s], vx, vy, vz, dummy
 
 particle%v(1) =   v_out(1) * cos(particle%x(3)) + v_out(2) * sin(particle%x(3))   ! V_R

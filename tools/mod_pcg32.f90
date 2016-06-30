@@ -1,4 +1,4 @@
-module mod_pcg_32
+module mod_pcg32
 use iso_c_binding, only: c_int32_t, c_int64_t
 implicit none
 
@@ -34,4 +34,4 @@ contains
       out(i) = pcg32_random_double_r(rng)
     end do
   end subroutine pcg32_random_doubles_r
-end module mod_pcg_32
+end module mod_pcg32

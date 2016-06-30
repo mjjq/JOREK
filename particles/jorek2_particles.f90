@@ -59,6 +59,7 @@ call initialise_particle_parameters(my_id, "__NO_FILENAME__")
 call initialise_basis
 
 ! Seed random numbers for particle initialisation
+! Has no effect if the QRNG is used
 if (my_id .eq. 0) then
   do i=1,n_species
     if (particle_seed(i) .eq. 0) call gen_random_seed(particle_seed(i))

@@ -33,9 +33,7 @@ integer :: i, j, ifail
 real*8 :: ran(N_d), t0, t1, ostart, oend
 real*8 :: Rbox(2), Zbox(2), Rmin, Rmax, Zmin, Zmax
 integer :: seq, n_streams
-class(type_rng), pointer :: rng
-type(pcg32_rng), target  :: pcg32_rng_obj
-type(sobseq_rng),target  :: sobseq_rng_obj
+class(type_rng), allocatable :: rng
 
 if (my_id .eq. 0) then
   write(*,*) '**********************************'
@@ -83,20 +81,21 @@ do i=1,N_species
     call exit(1)
   endif
 
-  !$omp parallel default(none) &
-  !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
-  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal, my_id, particle_seed, particle_initializer, n_cpu) &
-  !$omp   private(j, R, Z, phi, ifail, particle, ran, rng, seq, sobseq_rng_obj, pcg32_rng_obj, n_streams)
-
   ! Setup (Q)RNG
   select case (particle_initializer(i))
     case ("sobol")
-      rng => sobseq_rng_obj
+      allocate(sobseq_rng::rng)
     case ("pcg32")
-      rng => pcg32_rng_obj
+      allocate(pcg32_rng::rng)
     case default
-      rng => pcg32_rng_obj
+      allocate(pcg32_rng::rng)
   end select
+  !$omp parallel default(none) &
+  !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
+  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal, my_id, particle_seed, particle_initializer, n_cpu) &
+  !$omp   private(j, R, Z, phi, ifail, particle, seq, n_streams, ran) &
+  !$omp   firstprivate(rng)
+
   n_streams = n_cpu
   !$ n_streams = n_cpu*omp_get_max_threads()
   seq = my_id

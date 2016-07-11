@@ -233,7 +233,7 @@ end subroutine bootstrap_current
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, R_lim, minRad)
 
   use data_structure
   use phys_module
@@ -243,7 +243,7 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
   type (type_node_list),        intent(inout) :: node_list
   type (type_element_list),     intent(inout) :: element_list
   real*8, 			intent(in)    :: R_axis, Z_axis
-  real*8, 			intent(in)    :: psi_axis, psi_bnd
+  real*8, 			intent(in)    :: psi_axis, psi_bnd, R_lim
   real*8, 			intent(inout) :: minRad
   
   ! --- Internal parameters
@@ -261,6 +261,11 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
   real*8			:: dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
   logical			:: found
 
+  ! --- Simplest case when we have a limiter plasma
+  if (.not. xpoint) then
+    minRad = abs(R_lim - R_axis)
+    return
+  endif
   
   ! --- Step along line with 2cm resolution
   n_iter     = 0

@@ -78,6 +78,7 @@ do i=1,N_species
   if (n_p(i) .le. 0) cycle
   if (atomic_mass(i) .eq. 0) then
     write(*,*) "Error: atomic mass of species ", i, " is zero! exiting."
+    call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
     call exit(1)
   endif
 
@@ -88,7 +89,8 @@ do i=1,N_species
     case ("pcg32")
       allocate(pcg32_rng::rng)
     case default
-      allocate(pcg32_rng::rng)
+      write(*,*) "ERROR: Unrecognized value for particle_initializer(", i, "), exiting"
+      call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
   end select
   !$omp parallel default(none) &
   !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
@@ -103,7 +105,7 @@ do i=1,N_species
   call rng%initialize(n_dims=N_d, seed=particle_seed(i), n_streams=n_streams, i_stream=seq, ifail=ifail)
   if (ifail .ne. 0) then
     write(*,*) "Error seeding rng: ", ifail
-    call MPI_ABORT(MPI_COMM_WORLD)
+    call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
   endif
 
   !$omp do

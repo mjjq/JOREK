@@ -71,7 +71,7 @@ area = 0.
 volume = 0.
 
 write(*,*) 'constructing projection matrix'
-!$omp parallel do default(none) &
+!$omp parallel do default(shared) & ! instead of none, bugfix for gfortran: https://groups.google.com/forum/#!topic/comp.lang.fortran/VKhoAm8m9KE
 !$omp shared(element_list, node_list, H, H_s, H_t, projection_matrix) &
 !$omp private(ELM, i_elm, element, nodes, i, j, ms, mt, &
 !$omp         x_g, y_g, x_s, x_t, y_s, y_t, wst, xjac, &

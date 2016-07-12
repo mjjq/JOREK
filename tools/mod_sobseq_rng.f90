@@ -13,9 +13,9 @@ module mod_sobseq_rng
   end type
 
   ! Direction numbers taken from Joe and Kuo
-  integer, parameter, dimension(2:9)   :: s = (/1,2,3,3,4,4,5,5/)
-  integer, parameter, dimension(2:9)   :: a = (/0,1,1,2,1,4,2,4/)
-  integer, parameter, dimension(5,2:9) :: m = reshape((/1,0,0,0,0, &
+  integer, parameter, dimension(1:8)   :: s = (/1,2,3,3,4,4,5,5/)
+  integer, parameter, dimension(1:8)   :: a = (/0,1,1,2,1,4,2,4/)
+  integer, parameter, dimension(5,1:8) :: m = reshape((/1,0,0,0,0, &
                                                 1,3,0,0,0, &
                                                 1,3,1,0,0, &
                                                 1,1,1,0,0, &
@@ -50,7 +50,7 @@ contains
 
 
     ! Seed with default values
-    do i=2,n_dims+1 ! TODO where is 1? remove the +1 here
+    do i=1,n_dims
       call rng%state(i)%initialize(s(i), a(i), m(:,i), stride=ilog2_b(n_streams))
       DUMMY_REAL = rng%state(i)%skip_ahead(i_stream)
     enddo

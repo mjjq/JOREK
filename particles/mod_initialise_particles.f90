@@ -100,8 +100,8 @@ do i=1,N_species
 
   n_streams = n_cpu
   !$ n_streams = n_cpu*omp_get_max_threads()
-  seq = my_id
-  !$ seq = seq * omp_get_max_threads() + omp_get_thread_num()
+  seq = my_id + 1
+  !$ seq = my_id * omp_get_max_threads() + omp_get_thread_num() + 1
   call rng%initialize(n_dims=N_d, seed=particle_seed(i), n_streams=n_streams, i_stream=seq, ifail=ifail)
   if (ifail .ne. 0) then
     write(*,*) "Error seeding rng: ", ifail

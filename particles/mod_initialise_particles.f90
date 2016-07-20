@@ -87,9 +87,9 @@ do i=1,N_species
   !$ n_threads = omp_get_max_threads()
   select case (particle_initializer(i))
     case ("sobol")
-      allocate(sobseq_rng::rngs(1:n_threads))
+      allocate(sobseq_rng::rngs(0:n_threads-1)) ! C indexing
     case ("pcg32")
-      allocate(pcg32_rng::rngs(1:n_threads))
+      allocate(pcg32_rng::rngs(0:n_threads-1))
     case default
       write(*,*) "ERROR: Unrecognized value for particle_initializer(", i, "), exiting"
       call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
@@ -103,9 +103,9 @@ do i=1,N_species
 
   ! Seed RNGs
   n_streams = n_cpu*n_threads
-  i_thread = 1
-  !$ i_thread = omp_get_thread_num() + 1
-  seq = my_id*n_streams + i_thread
+  i_thread = 0
+  !$ i_thread = omp_get_thread_num()
+  seq = my_id*n_threads + i_thread + 1
   call rngs(i_thread)%initialize(n_dims=N_d, seed=particle_seed(i), n_streams=n_streams, i_stream=seq, ifail=ifail)
   if (ifail .ne. 0) then
     write(*,*) "Error seeding rng: ", ifail

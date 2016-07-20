@@ -32,8 +32,8 @@ real*8  :: R, Z, phi
 integer :: i, j, ifail
 real*8 :: ran(N_d), t0, t1, ostart, oend
 real*8 :: Rbox(2), Zbox(2), Rmin, Rmax, Zmin, Zmax
-integer :: seq, n_streams
-class(type_rng), allocatable :: rng
+integer :: seq, n_streams, n_threads, i_thread
+class(type_rng), allocatable, dimension(:) :: rngs ! The RNGs for all the threads
 
 if (my_id .eq. 0) then
   write(*,*) '**********************************'
@@ -82,27 +82,31 @@ do i=1,N_species
     call exit(1)
   endif
 
-  ! Setup (Q)RNG
+  ! Setup (Q)RNGs, one per thread
+  n_threads = 1
+  !$ n_threads = omp_get_max_threads()
   select case (particle_initializer(i))
     case ("sobol")
-      allocate(sobseq_rng::rng)
+      allocate(sobseq_rng::rngs(1:n_threads))
     case ("pcg32")
-      allocate(pcg32_rng::rng)
+      allocate(pcg32_rng::rngs(1:n_threads))
     case default
       write(*,*) "ERROR: Unrecognized value for particle_initializer(", i, "), exiting"
       call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
   end select
+
   !$omp parallel default(none) &
   !$omp   shared(particle_list, particle_list_GC, node_list, element_list, &
-  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal, my_id, particle_seed, particle_initializer, n_cpu) &
-  !$omp   private(j, R, Z, phi, ifail, particle, seq, n_streams, ran) &
-  !$omp   firstprivate(rng)
+  !$omp          species, atomic_mass, Rbox, Zbox, particle_GC, i, n_p, coronal, &
+  !$omp          my_id, particle_seed, particle_initializer, n_cpu, rngs, n_threads) &
+  !$omp   private(j, R, Z, phi, ifail, particle, seq, n_streams, ran, i_thread)
 
-  n_streams = n_cpu
-  !$ n_streams = n_cpu*omp_get_max_threads()
-  seq = my_id + 1
-  !$ seq = my_id * omp_get_max_threads() + omp_get_thread_num() + 1
-  call rng%initialize(n_dims=N_d, seed=particle_seed(i), n_streams=n_streams, i_stream=seq, ifail=ifail)
+  ! Seed RNGs
+  n_streams = n_cpu*n_threads
+  i_thread = 1
+  !$ i_thread = omp_get_thread_num() + 1
+  seq = my_id*n_streams + i_thread
+  call rngs(i_thread)%initialize(n_dims=N_d, seed=particle_seed(i), n_streams=n_streams, i_stream=seq, ifail=ifail)
   if (ifail .ne. 0) then
     write(*,*) "Error seeding rng: ", ifail
     call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
@@ -113,7 +117,7 @@ do i=1,N_species
     ifail = 1
     do while (ifail .ne. 0)
       ! Generate a random position to put this particle
-      call rng%next(ran)
+      call rngs(i_thread)%next(ran)
       call transform_uniform_cylindrical(ran(1:3), Rbox, Zbox, (/0.d0, TWOPI/), R, Z, Phi)
 
       ! Deny or accept this location

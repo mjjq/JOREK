@@ -140,7 +140,7 @@ $(foreach prog,$(PROGRAMS),$(eval $(prog)_OBJ := $(call all_src_to_obj,$(call $(
 MOD_FILES=`find . -name "*.mod"`
 MAIN = jorek_$(MODEL)
 
-.PHONY: version
+.PHONY: version docs
 
 all: $(MAIN) version
 
@@ -161,6 +161,9 @@ cleandep:
 cleangenmod:
 	@echo ">> Deleting auto-generated interface files (*__genmod*) if any <<"
 	-@rm -f *__genmod*
+
+docs:
+	ford jorek.md
 
 version.h: version
 

@@ -145,31 +145,26 @@ if (format_rst .gt. 0) then
     enddo
   enddo
 
-  ! Try to read in the current type
-  read(21,iostat=ierr) element_list%element(1:element_list%n_elements)
-  if (ierr .ne. 0) then
-    backspace(21)
-    ! Try to read the old type
-    read(21) element_list_OLD%element(1:element_list%n_elements)
-    ! Convert into new element list type
-    do i=1,element_list%n_elements
-      element_list%element(i)%vertex = element_list_OLD%element(i)%vertex
-      element_list%element(i)%neighbours = element_list_OLD%element(i)%neighbours
-      element_list%element(i)%size = element_list_OLD%element(i)%size
-      element_list%element(i)%father = element_list_OLD%element(i)%father
-      element_list%element(i)%n_sons = element_list_OLD%element(i)%n_sons
-      element_list%element(i)%n_gen = element_list_OLD%element(i)%n_gen
-      element_list%element(i)%sons = element_list_OLD%element(i)%sons
-      element_list%element(i)%contain_node = element_list_OLD%element(i)%contain_node
-      element_list%element(i)%nref = element_list_OLD%element(i)%nref
-    enddo
-  endif
+  ! Try to read the old type
+  read(21) element_list_OLD%element(1:element_list%n_elements)
+  ! Save all values explicitly, for compatibility with the new transform parameter
+  do i=1,element_list%n_elements
+    element_list%element(i)%vertex = element_list_OLD%element(i)%vertex
+    element_list%element(i)%neighbours = element_list_OLD%element(i)%neighbours
+    element_list%element(i)%size = element_list_OLD%element(i)%size
+    element_list%element(i)%father = element_list_OLD%element(i)%father
+    element_list%element(i)%n_sons = element_list_OLD%element(i)%n_sons
+    element_list%element(i)%n_gen = element_list_OLD%element(i)%n_gen
+    element_list%element(i)%sons = element_list_OLD%element(i)%sons
+    element_list%element(i)%contain_node = element_list_OLD%element(i)%contain_node
+    element_list%element(i)%nref = element_list_OLD%element(i)%nref
+  enddo
   read(21) tstep,eta_rst,visco_rst,visco_par_rst
   read(21) index_start
   read(21) t_start
  
 #ifdef USE_HDF5
-  !read(21) h5_nbsave_all ! why is this needed?
+  read(21) h5_nbsave_all
 #endif
   
   if (index_start .ge. 1) then

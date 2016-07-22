@@ -1,3 +1,6 @@
+!> Mod_particles contains the particle(_list) type,
+!> logic for reading particle input namelists and broadcasting parameters
+!> as well as a function to create an MPI derived particle type.
 module mod_particles
   use parameters
 
@@ -18,28 +21,29 @@ module mod_particles
     type (type_particle), dimension(:), allocatable :: particle     !< an allocatable list of particles
   end type type_particle_list
 
-  integer, parameter :: N_species      = 9         !< Maximum number of particle species
-  !> @name particle initialization parameters
-  integer :: species(N_species) = 0
-  real*4  :: atomic_mass(N_species)
-  integer :: N_particles(N_species) = 0
-  logical :: particle_GC(N_species) = .false.
+  ! Particle input file parameters
+  integer, parameter :: N_species = 9   !< Maximum number of particle species
+  integer :: species(N_species) = 0     !< Atomic numbers of each species (-1) for electrons
+  real*4  :: atomic_mass(N_species)     !< Atomic mass of each species, in a.m.u.
+  integer :: N_particles(N_species) = 0 !< Number of particles to initialize
+  logical :: particle_GC(N_species) = .false. !< Is this a guiding center species?
   logical :: particle_ion_rec(N_species) = .true. !< Calculate ionisation/recombination events
   character(len=6)  :: adas_suffix(N_species) = '' !< Suffix for adas files to read in (ex: scd50_w.dat => 50_w)
-  character(len=80) :: location_accept_function(N_species) = 'location_accept_any'
-  real*4  :: location_accept_parameters(1:9,1:N_species) = 0
+  character(len=80) :: location_accept_function(N_species) = 'location_accept_any' !< Which function to use for particle position rejection sampling
+  real*4  :: location_accept_parameters(1:9,1:N_species) = 0 !< Extra arguments for this function
   integer :: particle_seed(N_species) = 0 !< Seed for PCG random sequence used for particle init
   character(len=6) :: particle_initializer(N_species) = 'pcg32' !< Method to use for seeding particles (options: pcg32, sobol)
-  !> @name particle timestepping input parameters
+
   real*8  :: t_step_particles !< the time step for the advance of the particles
   integer :: n_step_particles !< the number of time steps for the particles
   integer :: nout_particles   !< number of particle timestep between each output file
-  logical :: write_energies !< Output energies of all the particles every nout
-  logical :: write_momenta  !< Output generalized toroidal momentum of all the particles every nout
-  integer :: t_particles_begin = -1 !< Start JOREK restart file postprocessing (with special value to use only jorek_restart here)
-  integer :: t_particles_end !< end JOREK restart file postprocessing
-  character(len=80) :: particle_restart_file = '' !< Particle restart file to read at the beginning of simulation
+  logical :: write_energies   !< Output energies of all the particles every nout
+  logical :: write_momenta    !< Output generalized toroidal momentum of all the particles every nout
+  integer :: t_particles_begin = -1 !< Number of first JOREK restart file (if -1 use only jorek_restart)
+  integer :: t_particles_end  !< Number of last JOREK restart file
+  character(len=80) :: particle_restart_file = '' !< Particle restart file to read from
 contains
+
 
 !> Append a single particle to the list and grow it if needed
 subroutine append_particle_to_list(particle_list, particle)
@@ -54,6 +58,7 @@ subroutine append_particle_to_list(particle_list, particle)
   particle_list%n_particles = particle_list%n_particles + 1
   particle_list%particle(particle_list%n_particles) = particle
 end subroutine append_particle_to_list
+
 
 !> Append a list of particles to the list and grow it if necessary
 subroutine append_particles_to_list(particle_list, particles)
@@ -70,6 +75,7 @@ subroutine append_particles_to_list(particle_list, particles)
   particle_list%n_particles = particle_list%n_particles + size(particles,1)
 end subroutine append_particles_to_list
 
+
 !> Grow the particle list by a factor of two
 subroutine grow_particle_list(particle_list)
   implicit none
@@ -81,6 +87,8 @@ subroutine grow_particle_list(particle_list)
   call move_alloc(from=temp,to=particle_list%particle) ! deallocates temp as well
 end subroutine grow_particle_list
 
+
+!> Read particle parameters from filename or stdin if my_id == 0
 subroutine initialise_particle_parameters(my_id, filename)
 implicit none
 character(len=*), intent(in) :: filename
@@ -187,20 +195,18 @@ deallocate(buffer)
 end subroutine broadcast_particle_parameters
 
 
-function cross_product(a,b)
-!----------------------------------------
-! input  :  (a_R,a_Z,A_phi), (b_R,b_Z,b_phi)
-! output :  (a x b)_(R,Z,phi)
-!----------------------------------------
+!#
+! Cross product in the JOREK coordinate system (which is left-handed)
+! input  :  (\(a_R,a_Z,a_\phi), (b_R,b_Z,b_\phi)\)
+! output :  (\(a \times b)_{(R,Z,\phi)}\)
+pure function cross_product(a,b)
 implicit none
 real*8 :: cross_product(3)
-real*8 :: a(3), b(3)
+real*8, intent(in) :: a(3), b(3)
 
 cross_product(1) = a(2)*b(3) - a(3)*b(2)
 cross_product(2) = a(3)*b(1) - a(1)*b(3)
 cross_product(3) = a(1)*b(2) - a(2)*b(1)
-
-return
 end function cross_product
 
 !> This function creates a derived MPI type for the particle and returns it

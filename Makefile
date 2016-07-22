@@ -163,7 +163,7 @@ cleangenmod:
 	-@rm -f *__genmod*
 
 docs:
-	ford jorek.md
+	ford jorek.md --no-search
 
 version.h: version
 

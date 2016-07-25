@@ -2,8 +2,8 @@
 !! It uses the elements of file jorek_restart.rst
 !! Run as count_particles_vtk (filename)+ < jorek_in
 !! It reads some parameters from the vtk.nml namelist in the current directory
-!! The resutl is quite inaccurate, but good for quick tests
-program project_particles_vtk
+!! The result is quite inaccurate, but good for quick tests
+program count_particles_vtk
 use phys_module
 use nodes_elements
 use mod_particles
@@ -104,6 +104,8 @@ enddo
 
 call MPI_Finalize(ierr)
 contains
+
+!> This routine counts particles in each element and writes the output to filename in VTK format
 subroutine write_particle_counts_to_vtk(node_list,element_list,particle_list,filename,i_plane)
 use phys_module
 use data_structure
@@ -216,4 +218,4 @@ write(*,*) "Volume: ", total_volume
 call write_vtk(filename,xyz,scalar_names=scalar_names,scalars=scalars)
 
 end subroutine write_particle_counts_to_vtk
-end program project_particles_vtk
+end program count_particles_vtk

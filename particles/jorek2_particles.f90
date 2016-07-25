@@ -1,6 +1,7 @@
 !> jorek2_particles is a post_processing tool for test particles
-!! It uses the fields in the file jorek_restart.rst
-!! Set t_step_particles and n_step_particles, and nout for output control
+!> It uses the fields in the file jorek_restart.rst or jorek[0-9]{5}.rst
+!> Run as `jorek2_particles < in_particles`. It also reads `in_jorek` for JOREK phys parameters.
+!> See [[mod_particles]] for info about variables in `in_particles`.
 program jorek2_particles
 
 use data_structure
@@ -175,12 +176,14 @@ enddo
 
 call MPI_FINALIZE(IERR)
 contains
+!> Write an ASCII list of values into $ftype$fnum_$my_id.dat
 subroutine write_list(ftype,fnum,my_id,list)
   implicit none
   ! Input parameters
-  integer, intent(in) :: fnum, my_id
-  character(len=*), intent(in) :: ftype
-  real*8, dimension(:) :: list
+  integer, intent(in) :: fnum !< Sequence number of this file (e.g. timestep)
+  integer, intent(in) :: my_id !< MPI ID of proc
+  character(len=*), intent(in) :: ftype !< Type of file, e.g. energy or momentum
+  real*8, intent(in), dimension(:) :: list !< List of values to write
 
   character*40 :: filename
 

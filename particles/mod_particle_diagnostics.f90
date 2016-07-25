@@ -2,10 +2,10 @@
 module mod_particle_diagnostics
 contains
 !> Calculate particles present in specific regions on all particles
-!! Performs MPI communications to sum values, returns the value
-!! corresponding to all particles on node 0, and the value for each node on this node
-!! Regions are: DOMAIN_PLASMA, DOMAIN_SOL, DOMAIN_OUTER_SOL,
-!! DOMAIN_UPPER_PRIVATE, DOMAIN_LOWER_PRIVATE
+!> Performs MPI communications to sum values, returns the value
+!> corresponding to all particles on node 0, and the value for each node on this node
+!> Regions are: DOMAIN_PLASMA, DOMAIN_SOL, DOMAIN_OUTER_SOL,
+!> DOMAIN_UPPER_PRIVATE, DOMAIN_LOWER_PRIVATE
 function particles_in_regions(node_list, element_list, particle_list)
   use data_structure
   use phys_module, only: DOMAIN_PLASMA, DOMAIN_SOL, DOMAIN_OUTER_SOL, DOMAIN_UPPER_PRIVATE,        &
@@ -85,8 +85,8 @@ subroutine get_particle_flux_coordinates(node_list,element_list,particle_list,fl
   type(type_node_list), intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
   type(type_particle_list), intent(in) :: particle_list
-  real*8, dimension(particle_list%n_particles), intent(out) :: fluxcoord
-  logical, dimension(particle_list%n_particles), intent(out) :: mask
+  real*8, dimension(particle_list%n_particles), intent(out) :: fluxcoord !< List of values of psi for each particle
+  logical, dimension(particle_list%n_particles), intent(out) :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P_s, P_t, P_phi
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
 

@@ -1,10 +1,9 @@
-!----------------------------------------------------------------
-! module takes the OPEN-ADAS data to calculate the coronal equil-
-! ibrium temperature and radiation, optionally in time.
-!----------------------------------------------------------------
+!> module takes the OPEN-ADAS data to calculate the coronal equil-
+!> ibrium temperature and radiation, optionally in time.
 module mod_coronal
 use openadas
 
+!> Coronal equilibrium datatype
 type type_coronal
   integer :: n_Z !< Atomic number
   real*8, allocatable :: density(:) !< log10 density (m^-3)
@@ -13,23 +12,23 @@ type type_coronal
   real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W)
 end type type_coronal
 
+
 contains
 
 
 !> Calculate the coronal matrix in tridiagonal form
-!! This matrix defines the time derivatives of population sizes
-!! As drho/dt = A rho where A is this matrix.
-!! See http://jorek.eu/wiki/doku.php?id=adf11 for more info
-function corona_matrix(ad, density, temperature)
+!> This matrix defines the time derivatives of population sizes
+!> As drho/dt = A rho where A is this matrix.
+!> See http://jorek.eu/wiki/doku.php?id=adf11 for more info
+pure function corona_matrix(ad, density, temperature)
 implicit none
 
-type (type_ADF11_all), intent(in)    :: ad
+type (type_ADF11_all), intent(in)    :: ad !< ADF11 datatype
 real*8, intent(in)                   :: density !< log10 density in m^-3
 real*8, intent(in)                   :: temperature !< log10 temperature in K
-real*8, dimension(1:3,0:ad%n_Z)      :: corona_matrix
+real*8, dimension(1:3,0:ad%n_Z)      :: corona_matrix !< Output the coronal matrix diagonals
 
 real*8, dimension(0:ad%n_Z+1) :: ion_rate, rec_rate
-
 integer :: iz, i
 
 ! Get the ionization and recombination
@@ -55,10 +54,10 @@ end function corona_matrix
 
 
 !> Radiated power in a specific coronal equilibrium configuration and temperature
-function coronal_Prad(ad, density, temperature, fractions, neutral_density)
+pure function coronal_Prad(ad, density, temperature, fractions, neutral_density)
 implicit none
 
-type (type_ADF11_all), intent(in)       :: ad
+type (type_ADF11_all), intent(in)       :: ad !< ADF11 datatype
 real*8, intent(in)                      :: density !< log10 density in cm^-3
 real*8, intent(in)                      :: temperature !< log10 electron temperature in K
 real*8, intent(in), dimension(0:ad%n_Z) :: fractions !< Fractional charge states. Should sum to 1 but we do not check it!
@@ -93,8 +92,8 @@ function coronal_equilibrium(ad) result(cor)
 use constants
 implicit none
 
-type (type_ADF11_all), intent(in) :: ad
-type (type_coronal)               :: cor
+type (type_ADF11_all), intent(in) :: ad !< ADF11 datatype
+type (type_coronal)               :: cor !< Coronal equilibrium datatype
 
 real*8, dimension(0:ad%n_Z) :: p, Z
 integer :: n_d, n_T, iz, k, m
@@ -129,15 +128,15 @@ end function coronal_equilibrium
 
 
 !> Perform one timestep with the coronal equilibrium matrix
-!!
-!! Equation to solve is: $$p' = A p$$
-!! Discretize as $$p^{n+1} - p^n = \Delta t \left((1-\theta)Ap^n + \theta A p^{n+1}\right)$$
-!! Leading to a matrix equation
-!! $$(1-\theta \Delta t A)p^{n+1}a = (1 + \Delta t (1-\theta) A) p^n
+!>
+!> Equation to solve is: \(p' = A p\)
+!> Discretize as \(p^{n+1} - p^n = \Delta t \left((1-\theta)Ap^n + \theta A p^{n+1}\right)\)
+!> Leading to a matrix equation
+!> \((1-\theta \Delta t A)p^{n+1}a = (1 + \Delta t (1-\theta) A) p^n \)
 subroutine coronal_timestep(ad, p, tstep, density, temperature)
 implicit none
 
-type (type_ADF11_all), intent(in)          :: ad
+type (type_ADF11_all), intent(in)          :: ad !< ADF11 datatype
 real*8, dimension(0:ad%n_Z), intent(inout) :: p !< Population in each level
 real*8, intent(in)                         :: tstep !< Timestep size in s
 real*8, intent(in)                         :: density !< log10 density in m^-3
@@ -175,24 +174,19 @@ p = b
 end subroutine coronal_timestep
 
 
-!> Interpolation of coronal model charge
-subroutine interpolate_coronal(cor, density, temperature, z, rad)
+!> Linear interpolation of coronal model charge at specific density and temperature
+pure subroutine interpolate_coronal(cor, density, temperature, z, rad)
 implicit none
 
-type (type_coronal), intent(in) :: cor
-real*8, intent(in)              :: density ! log10 density (m^-3)
-real*8, intent(in)              :: temperature ! log10 temperature (K)
-real*8, intent(out)             :: z ! most probable charge state
-real*8, intent(out), optional   :: rad ! radiated power according to coronal equilibrium
+type (type_coronal), intent(in) :: cor !< Coronal equilibrium type
+real*8, intent(in)              :: density !< log10 density (m^-3)
+real*8, intent(in)              :: temperature !< log10 temperature (K)
+real*8, intent(out)             :: z !< most probable charge state
+real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
 
-if (allocated(cor%Z)) then
-  z = L2Dinterp(cor%density,cor%temperature,cor%Z(:,:),density,temperature)
-  if (present(rad)) then
-    rad = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
-  endif
-else
-  write(*,*) "Called interpolate_coronal with invalid type_coronal input cor"
-  call exit(10)
+z = L2Dinterp(cor%density,cor%temperature,cor%Z(:,:),density,temperature)
+if (present(rad)) then
+  rad = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
 endif
 end subroutine interpolate_coronal
 end module mod_coronal

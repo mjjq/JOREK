@@ -1,3 +1,4 @@
+!> MOdule containing routines to project particles onto the JOREK finite elements
 module mod_project_particles
 contains
 !> Project particles by weight onto the elements

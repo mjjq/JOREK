@@ -1,11 +1,12 @@
+!> Particle pusher module
 module mod_update_particles
 contains
 !> Update_particles performs n_step steps of the Boris method with size t_step
-!!
-!! The Boris method is adjusted for cylindrical coordinates.
-!! Some care must be taken when element boundaries are crossed.
-!! It is parallelized with OMP.
-!! See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
+!>
+!> The Boris method is adjusted for cylindrical coordinates.
+!> Some care must be taken when element boundaries are crossed.
+!> It is parallelized with OMP.
+!> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
 subroutine update_particles(my_id, i_species, particle_list, t_step, n_step, adf11, &
         energy_list, momentum_list, toroidal_field_factor, field_interp_time)
 
@@ -28,7 +29,7 @@ integer, intent(in)       :: i_species          !< The number of the current par
 type (type_particle_list), intent(inout) :: particle_list      !< The particles we will march forward in time
 real*8,  intent(in)       :: t_step             !< The size of each timestep
 integer, intent(in)       :: n_step             !< The number of timesteps we will perform
-type (type_adf11_all), intent(in) :: adf11
+type (type_adf11_all), intent(in) :: adf11      !< ADF11 data type
 real*8,  intent(out), dimension(:), optional :: energy_list !< Energy of the particles at the next-to(!) final timestep
 real*8,  intent(out), dimension(:), optional :: momentum_list !< Generalized toroidal momentum of the particles at the next-to(!) final timestep
 real*8,  intent(in), optional :: toroidal_field_factor !< Multiply B_phi with this WARNING: use only for testing!
@@ -36,9 +37,9 @@ logical, intent(in),  optional :: field_interp_time !< Interpolate the fields li
 
 ! -- Local variables
 type (type_particle)      :: particle
-real*8                    :: B0(3), E0(3) ! Local B and E field at particle position
-real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) ! (Previous) values of position and velocity
-real*8                    :: v_tmp(3), R_update, RPhi_update ! Temporary values for the coordinate system transformation
+real*8                    :: B0(3), E0(3) !< Local B and E field at particle position
+real*8                    :: x(3), st(2), v(3), x_prev(3), v_prev(3) !< (Previous) values of position and velocity
+real*8                    :: v_tmp(3), R_update, RPhi_update !< Temporary values for the coordinate system transformation
 real*8                    :: qom, B02, B_phi_factor, q, m, eom
 real*8                    :: R, Z, psi, psid, U, Ud, energy_lost_particles, R_inv
 real*8                    :: fE, fB, t_norm
@@ -54,7 +55,7 @@ real*8                    :: stats(5), total_lost
 real*8, save              :: total_energy_lost_particles = 0.d0
 
 interface
-  subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
+  pure subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
     integer, intent(in) :: i_elm
     real*8, intent(in)  :: st(2), phi
     real*8, intent(in), optional :: delta_fraction
@@ -280,7 +281,7 @@ end subroutine update_particles
 
 
 !> Calculate statistics over MPI
-!! Return stats(1) = min, stats(2) = mean, stats(3) = max, stats(4) = stddev
+!> Return stats(1) = min, stats(2) = mean, stats(3) = max, stats(4) = stddev
 function mpi_stats(var)
   use mpi_mod
   implicit none
@@ -303,8 +304,8 @@ end function mpi_stats
 
 
 !> Calculate statistics on sets of numbers ignoring zeros
-!! Performs MPI comunication for the mean
-!! Only returns usable values on the root node
+!> Performs MPI communication for the mean
+!> Only returns usable values on the root node
 subroutine statistics_no_zero_MPI(list,stats,num_zeros)
   use mpi_mod
   implicit none

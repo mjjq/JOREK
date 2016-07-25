@@ -9,7 +9,7 @@ module mod_sampling
 contains
   !> Transform three uniform random numbers in [0,1] to 
   !! Uniform random numbers in cylindrical coordinates (R,Z,Phi)
-  subroutine transform_uniform_cylindrical(ran3, Rbox, Zbox, Phibox, R, Z, Phi)
+  pure subroutine transform_uniform_cylindrical(ran3, Rbox, Zbox, Phibox, R, Z, Phi)
     implicit none
     real*8, dimension(3), intent(in) :: ran3
     real*8, intent(in), dimension(2) :: Rbox, Zbox, Phibox
@@ -24,7 +24,7 @@ contains
   !> Transform 2N uniform random numbers in [0,1] to
   !! gaussian-distributed random numbers with mean 0 and sigma 1
   !! Using the box-muller method (very slow!)
-  function boxmueller_transform(ran) result(out)
+  pure function boxmueller_transform(ran) result(out)
     implicit none
     real*8, dimension(:), intent(in) :: ran
     real*8, parameter :: TWOPI = 6.2831853071795864769d0 

@@ -1,18 +1,48 @@
 !> Calculates the electric and magnetic fields at a specific position
-subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
+!> in the jorek element `i_elm` at `st`.
+!> Linear interpolation with element%deltas is performed according to
+!> `delta_fraction`, which starts at 1 and goes to 0 for no mixing.
+!> If it is 1 we get the fields of the previous timesteps.
+pure subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
 use parameters
-use nodes_elements
+use nodes_elements ! Get node_list, element_list from here
 use constants
-use phys_module, only : F0, central_mass, central_density, tstep
+use phys_module, only : F0, tstep
 
 implicit none
 
-! Routine parameters
-integer, intent(in) :: i_elm
-real*8, intent(in)  :: st(2), phi
-real*8, intent(in), optional :: delta_fraction
+interface
+  pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+    import :: type_node_list, type_element_list
+    type (type_node_list),    intent(in)  :: node_list
+    type (type_element_list), intent(in)  :: element_list
+    integer,                  intent(in)  :: i_elm
+    integer,                  intent(in)  :: n_v, i_v(n_v)
+    real*8,                   intent(in)  :: s, t, phi
+    real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
+    real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
+    real*8,                   intent(out) :: P_phi(n_v)
+  end subroutine interp_PRZ
+  pure subroutine interp_PRZ_delta(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+    import :: type_node_list, type_element_list
+    type (type_node_list),    intent(in)  :: node_list
+    type (type_element_list), intent(in)  :: element_list
+    integer,                  intent(in)  :: i_elm
+    integer,                  intent(in)  :: n_v, i_v(n_v)
+    real*8,                   intent(in)  :: s, t, phi
+    real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
+    real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
+    real*8,                   intent(out) :: P_phi(n_v)
+  end subroutine interp_PRZ_delta
+end interface
 
-real*8, intent(out) :: E(3), B(3), psi, U
+! Routine parameters
+integer, intent(in) :: i_elm !< JOREK element index
+real*8, intent(in)  :: st(2) !< element-local coordinates
+real*8, intent(in)  :: phi !< toroidal angle
+real*8, intent(in), optional :: delta_fraction !< linear interpolation factor. goes from 1 to 0 in time
+
+real*8, intent(out) :: E(3), B(3), psi, U !< Fields and potentials
 
 ! Internal parameters
 integer :: i_var(2)
@@ -65,7 +95,7 @@ U_Z      = U_Z   + (- P_s(2) * R_t + P_t(2) * R_s ) * inv_st_jac
 psi = psi + P(1)
 U   = U   + P(2)
 
-! Use the current timestep size
+! Use the current timestep size (very rough)
 psi_time = Pd(1)/tstep
 
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)

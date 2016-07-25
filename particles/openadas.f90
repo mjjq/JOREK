@@ -1,21 +1,20 @@
-!------------------------------------------------------------------------------------------------------
-! module takes the OPEN-ADAS data to calculate the steady state (or time evolution) charge distribution
-! and average charge state as a function of temperature
-!------------------------------------------------------------------------------------------------------
-
+!> module takes the OPEN-ADAS data to calculate the steady state (or time evolution) charge distribution
+!> and average charge state as a function of temperature
 module openadas
 
-type type_ADF11 !< Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
+!> Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
+type type_ADF11
   integer             :: n_Z !< Atomic number
   integer             :: izmin, izmax !< minimum and maximum value of z for which data is available
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
   real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: d, T, z). Units:
-  ! ACD, SCD: cm3s-1 (for *CD ?)
-  ! PLT, PRB: Wcm3 (for P* ?)
+  !< ACD, SCD: cm3s-1 (for *CD ?)
+  !< PLT, PRB: Wcm3 (for P* ?)
 end type type_ADF11
 
-type type_ADF11_all ! unresolved
+!> Compound datatype containing many type_ADF11
+type type_ADF11_all
   integer          :: n_Z !< Atomic number
   type(type_ADF11) :: ACD !< Effective recombination coefficients
   type(type_ADF11) :: SCD !< Effective ionisation coefficients
@@ -24,14 +23,14 @@ type type_ADF11_all ! unresolved
   type(type_ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
   type(type_ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
 end type type_ADF11_all
-!! Recombination data is given as recombining FROM (Z=1 to Z=74)
-!! Ionisation data is given as ionising TO (Z=1 up to Z=74)
+!< Recombination data is given as recombining FROM (Z=1 to Z=74)
+!< Ionisation data is given as ionising TO (Z=1 up to Z=74)
 contains
 
 !> Read ADF11 data files and import them into a type_ADF11
-!! Tries to read ACD, SCD, CCD, PLT, PRB, PRC coefficients
-!! if the files exist. Files of format acd$suffix.dat are read.
-!! Suffix is usually of the form 50_w, 96_li
+!> Tries to read ACD, SCD, CCD, PLT, PRB, PRC coefficients
+!> if the files exist. Files of format acd$suffix.dat are read.
+!> Suffix is usually of the form 50_w, 96_li
 function read_adf11(suffix) result(ad)
 use constants
 use mpi_mod
@@ -114,14 +113,14 @@ end function read_adf11
 
 
 !> interpolation of log10 values of GRC in density and temperature
-function GRC(a, z, density, temperature)
+pure function GRC(a, z, density, temperature)
 implicit none
 
-type (type_ADF11), intent(in) :: a
+type (type_ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
 integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
-real*8 :: GRC
+real*8 :: GRC !< Generalized Radiational Coefficient at this density and temperature
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
@@ -144,12 +143,12 @@ end function GRC
 !> Calculates the interpolation using two intermediate values
 !> fxy1 and fxy2.
 !> Equations used are:
-!> $fx1  = \frac{f_{11}-f_{21}}{x_1-x_2} (x-x_1) + f_{11}$
-!> $fx2  = \frac{f_{12}-f_{22}}{x_1-x_2} (x-x_1) + f_{12}$
-!> $fout = \frac{f_{x1}-f_{x2}}{y_1-y_2} (y-y_1) + f_{x1}$
+!> \[fx1  = \frac{f_{11}-f_{21}}{x_1-x_2} (x-x_1) + f_{11}\]
+!> \[fx2  = \frac{f_{12}-f_{22}}{x_1-x_2} (x-x_1) + f_{12}\]
+!> \[fout = \frac{f_{x1}-f_{x2}}{y_1-y_2} (y-y_1) + f_{x1}\]
 !> x1,2 and y1,2 are chosen in order of closeness
 !> This algorithm can also be used for extrapolation
-function L2Dinterp(tx,ty,f,x,y) result(fout)
+pure function L2Dinterp(tx,ty,f,x,y) result(fout)
 implicit none
 
 real*8, intent(in), dimension(:)                 :: tx !< Grid points in x

@@ -6,6 +6,16 @@ use phys_module, only : mode
 
 implicit none
 
+interface
+  pure subroutine basisfunctions3(s, t, H, H_s, H_t)
+    real*8, intent(in)  :: s          !< s-coordinate in the element
+    real*8, intent(in)  :: t          !< t-coordinate in the element
+    real*8, intent(out) :: H(4,4)     !< Basis functions
+    real*8, intent(out) :: H_s(4,4)   !< Basis functions derived with respect to s
+    real*8, intent(out) :: H_t(4,4)   !< Basis functions derived with respect to t
+  end subroutine basisfunctions3
+end interface
+
 ! --- Routine parameters
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list

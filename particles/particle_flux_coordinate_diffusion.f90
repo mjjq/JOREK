@@ -1,6 +1,6 @@
 !> Calculate change in flux coordinate bins between two particle files
-!! Run as particle_flux_coordinate_diffusion jorek_file.rst particles_reference.rst part$filenum.h5 < in_jorek
-!! Output is written to diff_filenum.txt
+!> Run as particle_flux_coordinate_diffusion jorek_file.rst particles_reference.rst part$filenum.h5 < in_jorek
+!> Output is written to diff_filenum.txt
 program particle_flux_coordinate_diffusion
 use phys_module
 use data_structure

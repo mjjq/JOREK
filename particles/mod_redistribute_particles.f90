@@ -1,3 +1,4 @@
+!> Redistribute particles over CPUs to do load-balancing
 module mod_redistribute_particles
   use mod_particles
 contains
@@ -6,13 +7,13 @@ contains
 !! And sends particles to try to get the calculations times equal
 !! NB. This sends lost particles as well, even though these do not contribute
 !! to the computation time. If there are many lost particles this could be
-!! inefficient.
+!! inefficient. Does not take into account different integrators for different species.
 subroutine redistribute_particles(particle_list, wtime)
   use mpi_mod
   implicit none
 
   type(type_particle_list), intent(inout) :: particle_list
-  real*8, intent(in) :: wtime
+  real*8, intent(in) :: wtime !< Particle pusher calculation time on this CPU
 
   type(type_particle), allocatable, dimension(:) :: particles_recv
   integer :: n_particles_recv

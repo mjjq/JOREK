@@ -1,7 +1,7 @@
 !> Project particles onto the elements in JOREK and export to a vtk file
-!! It uses the elements of file jorek_restart.rst
-!! Run as project_particles_vtk particle_file.rst < jorek_in
-!! It reads some parameters from the vtk.nml namelist in the current directory
+!> It uses the elements of file jorek_restart.rst
+!> Run as project_particles_vtk particle_file.rst < jorek_in
+!> It reads some parameters from the vtk.nml namelist in the current directory
 program project_particles_vtk
 use data_structure
 use phys_module
@@ -109,9 +109,12 @@ call write_particle_distribution_to_vtk(node_list,element_list,particle_file,nsu
 
 call MPI_FINALIZE(IERR)
 contains
+
+!> Helper subroutine to write a particle distribution, saved in variable 1,
+!> to `filename`. `nsub` is the number of subdivisions to make per element.
 subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub)
 use data_structure
-use basis_at_gaussian ! for HZ (initialise_basis must be called before)
+use basis_at_gaussian ! for HZ (initialise_basis must be called before use!)
 use mod_vtk
 implicit none
 
@@ -119,7 +122,7 @@ implicit none
 type(type_node_list), intent(in)    :: node_list
 type(type_element_list), intent(in) :: element_list
 character*(*), intent(in)           :: filename
-integer, intent(in) :: nsub
+integer, intent(in) :: nsub !< Number of subdivisions of each element
 
 integer :: nnos, nnoel, nel, i, j, ielm, inode, k
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)

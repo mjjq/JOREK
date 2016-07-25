@@ -1,3 +1,4 @@
+!> Module for the initialization of particles in configuration space (6D)
 module mod_initialise_particles
 use mod_coronal
 contains
@@ -19,10 +20,10 @@ use mpi_mod
 implicit none
 
 ! Routine parameters
-type (type_coronal), intent(in) :: coronal(1:n_species) !< Coronal equilibrium data for all particles
-type (type_particle_list), intent(out) :: particle_list
-type (type_particle_list), intent(out) :: particle_list_GC
-integer, intent(in) :: my_id, n_cpu
+type (type_coronal), intent(in) :: coronal(1:n_species) !< Coronal equilibrium data for all species
+type (type_particle_list), intent(out) :: particle_list !< Output particle list
+type (type_particle_list), intent(out) :: particle_list_GC !< Output guiding centre particle list
+integer, intent(in) :: my_id, n_cpu !< MPI ID of this proc (0..n_cpi-1)
 
 ! Internal variables
 integer, parameter :: N_d = 8 ! number of dimensions of the RNG
@@ -152,14 +153,14 @@ endif
 end subroutine initialise_particles
 
 
-!> Returns whether or not a location is accepted according to location_accept_function(i)
+!> Returns the probability of accepting a location with location_accept_function(i)
 function accept_location(i,R,Z,phi)
 use mod_particles, only: location_accept_function, location_accept_parameters
 implicit none
 
 integer, intent(in) :: i !< Species number
-real*8,  intent(in) :: R,Z,phi
-real*8 :: accept_location
+real*8,  intent(in) :: R,Z,phi !< Location coordinates
+real*8 :: accept_location !< Acceptance probability
 
 select case (location_accept_function(i))
   case ('joined_gaussian')
@@ -179,13 +180,13 @@ end function accept_location
 function joined_gaussian(R,Z,phi,p)
 use nodes_elements
 
-real*8, intent(in) :: R,Z,phi
-real*4, intent(in) :: p(1:9)
-real*8 :: joined_gaussian
+real*8, intent(in) :: R,Z,phi !< Coordinates
+real*4, intent(in) :: p(1:9) !< Location_accept_parameters
+real*8 :: joined_gaussian !< Acceptance probability
 
 real*8 :: R_out, Z_out, s, t
 integer :: i_elm, ifail, variable(1)
-real*8 :: R_s, R_t, Z_s, Z_t ! Useless variables
+real*8 :: R_s, R_t, Z_s, Z_t ! Dummy variables
 real*8, dimension(1) :: P_s, P_t, P_phi, Px
 real*8 :: x
 
@@ -238,6 +239,7 @@ endif
 end function joined_gaussian
 
 !> Initialize a single particle at R_in, Z_in, phi_in
+!> Does not initialize v and q, but only x, st, i_elm, mass, label
 subroutine particle_init_default(i, R_in, Z_in, phi_in, particle, ifail)
 use constants
 use data_structure
@@ -245,9 +247,9 @@ use mod_particles
 use nodes_elements
 implicit none
 
-real*8, intent(in)   :: R_in, Z_in, phi_in
-integer, intent(in)  :: i
-type(type_particle), intent(out) :: particle
+real*8, intent(in)   :: R_in, Z_in, phi_in !< Particle coordinates
+integer, intent(in)  :: i !< Particle species
+type(type_particle), intent(out) :: particle !< Output particle
 integer, intent(out) :: ifail
 
 real*8 :: R_out, Z_out, s, t
@@ -270,7 +272,7 @@ end subroutine particle_init_default
 
 
 !> Set v and q of a particle for use with kinetic codes
-subroutine particle_init(particle, cor, ran4, ifail)
+pure subroutine particle_init(particle, cor, ran4, ifail)
 use constants
 use data_structure
 use mod_particles
@@ -280,9 +282,23 @@ use openadas
 use mod_sampling
 implicit none
 
-type(type_particle), intent(inout) :: particle
+interface
+  pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+    import :: type_node_list, type_element_list
+    type (type_node_list),    intent(in)  :: node_list
+    type (type_element_list), intent(in)  :: element_list
+    integer,                  intent(in)  :: i_elm
+    integer,                  intent(in)  :: n_v, i_v(n_v)
+    real*8,                   intent(in)  :: s, t, phi
+    real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
+    real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
+    real*8,                   intent(out) :: P_phi(n_v)
+  end subroutine interp_PRZ
+end interface
+
+type(type_particle), intent(inout) :: particle !< Particle to initialize
 type(type_coronal), intent(in)     :: cor !< Coronal equilibrium datatype for this particle
-real*8, dimension(4), intent(in)   :: ran4
+real*8, dimension(4), intent(in)   :: ran4 !< Four uniform random numbers (or sobol subset)
 integer, intent(out) :: ifail
 
 integer :: i_var(4)

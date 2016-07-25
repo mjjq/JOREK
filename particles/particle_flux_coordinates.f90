@@ -1,6 +1,6 @@
 !> Calculate a histogram of flux (p(1)) at all particle positions
-!! Run as particle_flux_coordinates jorek_file.rst particle_file.h5 < in_jorek
-!! Output is written to flux_filenum.txt
+!> Run as particle_flux_coordinates jorek_file.rst particle_file.h5 < in_jorek
+!> Output is written to flux_filenum.txt
 program particle_flux_coordinates
 use phys_module
 use data_structure

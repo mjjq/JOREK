@@ -1,5 +1,6 @@
 !> Calculate an approximation to the guiding center position of a particle
-function guiding_center_position(particle, dt) result(x_gc)
+!> being time-stepped with the Boris method (or another leapfrog method)
+pure function guiding_center_position(particle, dt) result(x_gc)
 
 use mod_particles
 use constants

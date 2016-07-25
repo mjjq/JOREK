@@ -1,22 +1,35 @@
 !> This module contains routines to calculate ionisation
-!! and recombination probabilities of particles in a specific time
+!> and recombination probabilities of particles in a specific time
 module mod_ionisation_recombination
 use openadas
 
 contains
 
-!> Calculate the new charge of a particle after a specific timestep
+!> Calculate the new charge of a particle after a specific time
 subroutine update_particle_charge(node_list, element_list, particle, ad, timestep)
 use mod_particles
 use data_structure
 use constants
 use phys_module
 implicit none
+interface
+  pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+    import :: type_node_list, type_element_list
+    type (type_node_list),    intent(in)  :: node_list
+    type (type_element_list), intent(in)  :: element_list
+    integer,                  intent(in)  :: i_elm
+    integer,                  intent(in)  :: n_v, i_v(n_v)
+    real*8,                   intent(in)  :: s, t, phi
+    real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
+    real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
+    real*8,                   intent(out) :: P_phi(n_v)
+  end subroutine interp_PRZ
+end interface
 
 type(type_node_list), intent(in)   :: node_list
 type(type_element_list), intent(in):: element_list
 type(type_particle), intent(inout) :: particle
-type(type_ADF11_all), intent(in)   :: ad
+type(type_ADF11_all), intent(in)   :: ad !< ADF11 datatype
 real*8, intent(in)                 :: timestep !< Timestep, in s
 
 real*8, dimension(2) :: P, P_s, P_t, P_phi
@@ -69,6 +82,7 @@ real*8 :: rand(2)
 z_new = z
 call random_number(rand)
 ! probabilities of recombination and ionisation events
+! TODO use exponential formula
 prob = (/GRC(ad%ACD, z,   electron_density, electron_temperature), & ! rec
          GRC(ad%SCD, z+1, electron_density, electron_temperature)/) & ! ion
          * 10.d0**electron_density * timestep

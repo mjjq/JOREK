@@ -1,21 +1,14 @@
+!> Particle input-output module, containing hdf5 datatype and writing routines
 module mod_particle_io
   use mod_particles
 contains
 
-function info_romio_locking_disabled() result(info)
-  use mpi_mod
-  implicit none
-  integer :: info, ierr
-  call mpi_info_create(info, ierr)
-  call mpi_info_set(info, "romio_ds_write", "disable", ierr)
-  call mpi_info_set(info, "romio_ds_read", "disable", ierr)
-end function info_romio_locking_disabled
 
-
+!> Create hdf5 memory type and file type
 subroutine h5_dtypes(memtype, filetype)
 use iso_c_binding
 use hdf5
-integer(HID_T), intent(out) :: memtype, filetype
+integer(HID_T), intent(out) :: memtype, filetype !< HDF5 memory and file type
 
 integer                     :: hdferr
 integer(HID_T)              :: st_array_mem, x_array_mem, &
@@ -100,7 +93,7 @@ call h5tinsert_f(filetype, "lost", &
      int(n_dim*8 + 2*3*8 + 4 + 4 + 4 + 1 + 1, size_t), H5T_STD_I8LE, hdferr)
 
 ! Pack the filetype to make it more efficient (does not help much)
-!call h5tpack_f(filetype, hdferr)
+!call h5tpack_f(filetype, hdferr) do not do this as it causes an error with offsets
 end subroutine h5_dtypes
 
 
@@ -111,7 +104,7 @@ use hdf5
 use iso_c_binding
 implicit none
 
-character*(*)            , intent(in)         :: particle_file
+character*(*)            , intent(in)         :: particle_file !< File to dump particles in
 type (type_particle_list), intent(inout), target :: particle_list
 
 integer              :: my_id, n_cpu, info, ierr

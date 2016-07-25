@@ -1,19 +1,19 @@
 module mod_import_restart_linear
 contains
 !> At step i_step, look for next file and use the appropriate method to import
-!! The next file can be up to 10 istep away, and if it is more than 2 away
-!! deltas are recalculated to fix the import
+!> The next file can be up to 10 istep away, and if it is more than 2 away
+!> deltas are recalculated to fix the import
 subroutine import_next_restart(node_list,element_list, istep, istep_out, rst_format)
   use data_structure
   use mpi_mod
   implicit none
 
   ! --- Routine parameters
-  type(type_node_list),    intent(inout) :: node_list ! previously imported node list at istep
-  type(type_element_list), intent(inout) :: element_list
-  integer,                 intent(in) :: istep
-  integer,                 intent(out) :: istep_out
-  integer,                 intent(in)    :: rst_format
+  type(type_node_list),    intent(inout) :: node_list !< previously imported node list at istep
+  type(type_element_list), intent(inout) :: element_list !< Previously imported element list at istep
+  integer,                 intent(in)    :: istep !< Current timestep
+  integer,                 intent(out)   :: istep_out !< timestep of next restart file found
+  integer,                 intent(in)    :: rst_format !< Format of the restart file
 
   ! --- Internal variables
   character*17 :: restart_file
@@ -51,7 +51,7 @@ end subroutine import_next_restart
 
 
 !> Import a binary restart file and merges it with the values currently known
-!! This can then be used to interpolate linearly between any two restart files
+!> This can then be used to interpolate linearly between any two restart files
 subroutine import_merge_restart(node_list,element_list, restart_file, format_rst, ierr)
   use data_structure
   use phys_module
@@ -60,9 +60,9 @@ subroutine import_merge_restart(node_list,element_list, restart_file, format_rst
   ! --- Routine parameters
   type(type_node_list),    intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
-  character(len=*),        intent(in)    :: restart_file
+  character(len=*),        intent(in)    :: restart_file !< Filename of new restart file to import
   integer,                 intent(out)   :: ierr
-  integer,                 intent(in)    :: format_rst ! to not conflict with phys_module
+  integer,                 intent(in)    :: format_rst !< Restart file format
 
   ! --- Internal variables
   real*8, allocatable, dimension(:,:,:,:) :: values

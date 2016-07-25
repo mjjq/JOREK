@@ -1,3 +1,5 @@
+!> Module to calculate coordinate transforms between XYZ and RZPhi coordinate systems.
+!> Optional parameter origin is deprecated.
 module mod_coordinate_transforms
   private
 
@@ -43,7 +45,7 @@ contains
   !> This function contains the dot products in the JOREK coordinate
   !! system between the basis vectors e_x,e_y and e_r,e_theta
   pure function dot_products(phi) result(dp)
-    real*8, intent(in) :: phi
+    real*8, intent(in) :: phi !< Toroidal angle at which to evaluate the inner products
     real*8             :: dp(2,2), cp, sp
     cp = cos(phi)
     sp = sin(phi)

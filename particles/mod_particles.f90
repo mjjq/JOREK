@@ -46,7 +46,7 @@ contains
 
 
 !> Append a single particle to the list and grow it if needed
-subroutine append_particle_to_list(particle_list, particle)
+pure subroutine append_particle_to_list(particle_list, particle)
   implicit none
 
   type(type_particle_list), intent(inout) :: particle_list
@@ -61,7 +61,7 @@ end subroutine append_particle_to_list
 
 
 !> Append a list of particles to the list and grow it if necessary
-subroutine append_particles_to_list(particle_list, particles)
+pure subroutine append_particles_to_list(particle_list, particles)
   implicit none
 
   type(type_particle_list), intent(inout) :: particle_list
@@ -76,13 +76,16 @@ subroutine append_particles_to_list(particle_list, particles)
 end subroutine append_particles_to_list
 
 
-!> Grow the particle list by a factor of two
-subroutine grow_particle_list(particle_list)
+!> Grow the particle list by a specific factor
+pure subroutine grow_particle_list(particle_list)
   implicit none
   type(type_particle_list), intent(inout) :: particle_list
   type(type_particle), dimension(:), allocatable :: temp
 
-  allocate(temp(lbound(particle_list%particle,1):ubound(particle_list%particle,1)+size(particle_list%particle,1)))
+  real*8, parameter :: growth_factor = 1.2d0
+
+  allocate(temp(lbound(particle_list%particle,1):ubound(particle_list%particle,1)+ &
+      int((growth_factor - 1.d0) * real(size(particle_list%particle,1), 8))))
   temp(lbound(particle_list%particle,1):ubound(particle_list%particle,1)) = particle_list%particle
   call move_alloc(from=temp,to=particle_list%particle) ! deallocates temp as well
 end subroutine grow_particle_list
@@ -119,6 +122,7 @@ if (my_id .eq. 0) then
 endif
 end subroutine initialise_particle_parameters
 
+!> Broadcast all particle input parameters to all processes
 subroutine broadcast_particle_parameters(my_id)
 use mpi_mod
 implicit none
@@ -130,8 +134,6 @@ integer, intent(in) :: my_id
 integer                :: ierr, INT_EXT, IDBL_EXT, ISGL_EXT, ILOG_EXT, CHAR_EXT, position, bufsize
 character, allocatable :: buffer(:)
 
-!----------------------------------- one line would be enough if only MPI_TYPE_STRUCT would work on IXIA
-!call MPI_BCAST(phys_list,1,MPI_phys,0,MPI_COMM_WORLD,ierr)
 call MPI_PACK_SIZE(1,MPI_REAL8,MPI_COMM_WORLD,IDBL_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_REAL4,MPI_COMM_WORLD,ISGL_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
@@ -210,7 +212,7 @@ cross_product(3) = a(1)*b(2) - a(2)*b(1)
 end function cross_product
 
 !> This function creates a derived MPI type for the particle and returns it
-!! If it already exists the old handle is returned
+!> If it already exists the old handle is returned
 function get_particle_derived_type() result(dtype_out)
   use mpi_mod
   use parameters

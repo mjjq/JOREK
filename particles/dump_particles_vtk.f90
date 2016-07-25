@@ -1,5 +1,5 @@
-!> Dump all particles into a vtk file
-!! Run as dump_particles_vtk part[0-9]*.rst
+!> Dump all particle positions into a vtk file
+!> Run as `dump_particles_vtk part[0-9]*.rst`
 program dump_particles_vtk
 use mod_particles
 use mod_particle_io

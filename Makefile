@@ -251,11 +251,11 @@ PROGRAM_SOURCES = diagnostics/jorek2_poincare.f90       \
 		  diagnostics/jorek2_powers.f90         \
 		  diagnostics/new_diag_demo.f90 	\
 		  particles/jorek2_particles.f90 	\
-		  particles/count_particles_vtk.f90 	\
-		  particles/dump_particles_vtk.f90 	\
-		  particles/particle_flux_coordinates.f90 \
-		  particles/particle_flux_coordinate_diffusion.f90 \
-		  particles/project_particles_vtk.f90
+		  particles/diagnostics/count_particles_vtk.f90 	\
+		  particles/diagnostics/dump_particles_vtk.f90 	\
+		  particles/diagnostics/particle_flux_coordinates.f90 \
+		  particles/diagnostics/particle_flux_coordinate_diffusion.f90 \
+		  particles/diagnostics/project_particles_vtk.f90
 
 # Create all standard make rules
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

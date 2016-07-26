@@ -68,13 +68,13 @@ tmp = nint((pack(fluxcoords,mask) - binstart)/(binend - binstart)*real(n_bins,8)
 allocate(histogram(n_bins))
 histogram = 0
 !$omp parallel do default(none) &
-!$    shared(tmp) &
-!$    private(i) &
-!$    reduction(+:histogram)
+!$omp shared(tmp) &
+!$omp private(i) &
+!$omp reduction(+:histogram)
 do i=1,size(tmp,1)
   if (tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) histogram(tmp(i)) = histogram(tmp(i)) + 1
 enddo
-!$end omp parallel do
+!$omp end parallel do
 
 open(file=output_file,status="replace",unit=21,access="stream",form='formatted')
 write(21,'(A)') "# Flux, Count"

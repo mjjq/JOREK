@@ -278,7 +278,7 @@ use data_structure
 use mod_particles
 use nodes_elements
 use phys_module, only : central_density, central_mass
-use openadas
+use mod_openadas
 use mod_sampling
 implicit none
 

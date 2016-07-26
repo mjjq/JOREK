@@ -1,16 +1,16 @@
-!> MOdule containing routines to project particles onto the JOREK finite elements
+!> Module containing routines to project particles onto the JOREK finite elements
 module mod_project_particles
 contains
 !> Project particles by weight onto the elements
-!! Saves output in node_list%values(1)
-!! The projection is done by solving
-!! $$\int [p(x) u(x) + \lambda p'(x) u'(x)] dV =
-!! \int \sum \delta(x_i-x) w_i u(x) dV $$
-!! where p(x) is in the bernstein representation, $u(x)$ are the test functions
-!! composed of two basis functions and $w_i$ is the particle weight.
-!! A smoothing factor lambda is included
-!! x is a vector (R,Z,phi) and dV is r dr dphi
-!! divide by 1 or 2pi on both sides (LHS gets 2pi for n=0 mode, 1pi for other modes)
+!> Saves output in node_list%values(1)
+!> The projection is done by solving
+!> $$\int [p(x) u(x) + \lambda p'(x) u'(x)] dV =
+!> \int \sum \delta(x_i-x) w_i u(x) dV $$
+!> where p(x) is in the bernstein representation, $u(x)$ are the test functions
+!> composed of two basis functions and $w_i$ is the particle weight.
+!> A smoothing factor lambda is included
+!> x is a vector (R,Z,phi) and dV is r dr dphi
+!> divide by 1 or 2pi on both sides (LHS gets 2pi for n=0 mode, 1pi for other modes)
 subroutine project_particles(node_list, element_list, particle_list)
 use phys_module
 use data_structure

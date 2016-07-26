@@ -17,7 +17,7 @@ use nodes_elements
 use constants
 use phys_module, only : F0, central_mass, central_density
 use mod_particles
-use openadas
+use mod_openadas
 use mod_ionisation_recombination
 use mod_particle_diagnostics
 

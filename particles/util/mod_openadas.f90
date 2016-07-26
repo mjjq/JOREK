@@ -1,6 +1,6 @@
 !> module takes the OPEN-ADAS data to calculate the steady state (or time evolution) charge distribution
 !> and average charge state as a function of temperature
-module openadas
+module mod_openadas
 
 !> Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
 type type_ADF11
@@ -175,4 +175,4 @@ fx1  = (f(ix1,iy1) - f(ix2,iy1))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1
 fx2  = (f(ix1,iy2) - f(ix2,iy2))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2)
 fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
 end function L2Dinterp
-end module openadas
+end module mod_openadas

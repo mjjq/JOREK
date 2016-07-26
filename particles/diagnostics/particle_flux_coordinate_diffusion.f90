@@ -75,23 +75,23 @@ tmp = nint((fluxcoord_reference - binstart)/(binend - binstart)*real(n_bins,8))
 mean = 0.d0
 ! Calculate mean per bin
 !$omp parallel do default(none) &
-!$    shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference, tmp) &
-!$    private(i) &
-!$    reduction(+:mean)
+!$omp shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference, tmp) &
+!$omp private(i) &
+!$omp reduction(+:mean)
 do i=1,particle_list_reference%n_particles
   if (mask_reference(i) .and. tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) then
     mean(tmp(i)) = mean(tmp(i)) + (fluxcoord(i) - fluxcoord_reference(i))
   endif
 enddo
-!$end omp parallel do
+!$omp end parallel do
 mean = mean/count(mask_reference)
 
 stddev = 0.d0
 ! Calculate stddev per bin
 !$omp parallel do default(none) &
-!$    shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference, mean, tmp) &
-!$    private(i) &
-!$    reduction(+:stddev)
+!$omp shared(particle_list_reference, fluxcoord, fluxcoord_reference, mask_reference, mean, tmp) &
+!$omp private(i) &
+!$omp reduction(+:stddev)
 do i=1,particle_list_reference%n_particles
   if (mask_reference(i) .and. tmp(i) .ge. 1 .and. tmp(i) .le. n_bins) then
     stddev(tmp(i)) = stddev(tmp(i)) + ((fluxcoord(i) - fluxcoord_reference(i))-mean(tmp(i)))**2

@@ -1,7 +1,7 @@
 !> This module contains routines to calculate ionisation
 !> and recombination probabilities of particles in a specific time
 module mod_ionisation_recombination
-use openadas
+use mod_openadas
 
 contains
 

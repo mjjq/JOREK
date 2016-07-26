@@ -1,0 +1,15 @@
+This is the source directory for JOREK2_particles.
+Source files have been split into several directories, grouped by module.
+
+collisions/ contains different particle-background collisions models to be implemented
+diagnostics/ contains modules calculating some diagnostics, as well as simple programs executing these on output files
+extra/ contains other, non-critical files, such as the load-balancing code
+fields/ contains an interface for defining the field at a specific position, as well as implementations of this for JOREK and special fields
+initialisation/ contains code for the particle initialisation routines
+input_output/ contains HDF5 checkpoint saving code
+integration/ contains extra functions needed for integration with JOREK
+ion_rec/ contains code for calculating ionisation and recombination rates based on ADAS data
+libs/ contains external libraries used in this project as git submodules
+pushers/ contains an interface for a particle pusher, and a few implementations
+tests/ contains unit and functional tests of some of this code
+util/ contains several utility modules

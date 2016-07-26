@@ -14,7 +14,7 @@ use mod_initialise_particles
 use mod_redistribute_particles
 use mod_import_restart_linear
 use mod_update_particles
-use openadas
+use mod_openadas
 use mod_coronal
 use clock_module
 use mpi_mod

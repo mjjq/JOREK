@@ -1,7 +1,7 @@
 !> module takes the OPEN-ADAS data to calculate the coronal equil-
 !> ibrium temperature and radiation, optionally in time.
 module mod_coronal
-use openadas
+use mod_openadas
 
 !> Coronal equilibrium datatype
 type type_coronal

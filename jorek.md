@@ -12,7 +12,6 @@ docmark_alt: *
 predocmark: >
 predocmark_alt: #
 extra_filetypes: c //
-		 sh #
 graph: true
 coloured_edges: true
 

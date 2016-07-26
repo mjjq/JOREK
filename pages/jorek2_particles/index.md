@@ -20,11 +20,3 @@ title: JOREK2_particles
 * Ionization/recombination based on the ADAS ADF11 database
 * Impurity radiation diagnostic (in progress)
 * Particle-background collisions based on a binary collision method (in progress)
-
-
-### Tests
-There are several testcases available. Documentation for these can be found in the source:
-
-* [[particle_energy_conservation_test.sh]]
-* [[particle_penning_test.sh]]
-* [[particle_orbit_test.sh]]

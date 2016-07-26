@@ -5,7 +5,7 @@ set -e
 SAFETY_FACTOR=1.5 # this is large because of randomness in positions
 
 # Run testcase
-./particle_energy_conservation_test.sh -v jet_eq_autotest
+./run.sh -v jet_eq_autotest
 
 # Look for output of autotest case
 # Compare momentum

@@ -54,4 +54,9 @@ count_particles_vtk
 dump_particles_vtk
 particle_flux_coordinates
 particle_flux_coordinate_diffusion
+test_interp_speed
+doc/
+figures/
+latex/
+runs/
 .info

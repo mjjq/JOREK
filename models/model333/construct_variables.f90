@@ -393,6 +393,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
   real*8		      :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
   real*8		      :: Jb_0
+  real*8		      :: rho_norm
       
   
   ! -------------------------------------
@@ -419,6 +420,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     visco_T   = visco
     dvisco_dT = 0.d0
   end if
+  visco_parr  = visco_par  
   
   
   ! -------------------------------------------------------------
@@ -598,6 +600,25 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     total_rho_source = particle_source + source_pellet
   endif
   
+  ! --- Renormalise all MHD parameters (ie. if input values are given in physical units) Not done for sources yet...
+  if (renormalise) then
+    if (central_density .gt. 1.d10) then
+      rho_norm    = central_density         * central_mass * mass_proton
+    else
+      rho_norm    = central_density * 1.d20 * central_mass * mass_proton
+    endif
+    eta_T       = eta_T       * sqrt(rho_norm / mu_zero )
+    deta_dT     = deta_dT     * sqrt(rho_norm / mu_zero )
+    visco_T     = visco_T     * sqrt(mu_zero  / rho_norm)
+    dvisco_dT   = dvisco_dT   * sqrt(mu_zero  / rho_norm)
+    visco_parr  = visco_par   * sqrt(mu_zero  / rho_norm)
+    D_prof      = D_prof      * sqrt(mu_zero  * rho_norm)
+    K_prof      = K_prof      * sqrt(mu_zero  / rho_norm)
+    K_par       = K_par       * sqrt(mu_zero  / rho_norm)
+    dK_par      = dK_par      * sqrt(mu_zero  / rho_norm)
+    tau_IC      = tau_IC      / sqrt(mu_zero  * rho_norm)
+  endif
+
   return
 
 end subroutine ELM_build_diffusivities_and_sources

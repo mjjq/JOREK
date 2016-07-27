@@ -17,6 +17,7 @@ module equation_variables
   real*8 	:: r0_corr, T0_corr
   real*8 	:: eta_T,    deta_dT, d2eta_d2T
   real*8 	:: visco_T,  dvisco_dT
+  real*8 	:: visco_parr
   real*8 	:: D_prof
   real*8 	:: K_prof, K_par, dK_par
   
@@ -103,6 +104,7 @@ module equation_variables
   !$omp 	r0_corr, T0_corr,														&
   !$omp 	eta_T,    deta_dT, d2eta_d2T,													&
   !$omp 	visco_T,  dvisco_dT,														&
+  !$omp 	visco_parr,															&
   !$omp 	D_prof,																&
   !$omp 	K_prof, K_par, dK_par,														&
   !$omp 	Dn0x, Dn0y, Dn0p, S_ion, S_ion_T, phi, ksiion,											&

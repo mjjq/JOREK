@@ -303,7 +303,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   use phys_module
   use equation_variables
   use data_structure
-  use diffusivities, only: get_dperp, get_zkperp
+  use diffusivities, only: get_dperp_stan, get_zkperp_stan
   use pellet_module
   use bootstrap_functions
   
@@ -367,9 +367,11 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     endif
   endif
 
-  ! --- Call Diff functions
-  D_prof = get_dperp (psi_norm)
-  K_prof = get_zkperp(psi_norm)
+  ! --- Call Diff functions (same as before, but with additional profile if D_perp(10)=1.d0 or ZK_perp(10) = 1.d0)
+  D_prof = get_dperp_stan (ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
+  K_prof = get_zkperp_stan(ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
+  
+  ! --- Increase diffusivity if negative density/temperature
   if (xpoint2) then
     if (r0 .lt. 0.d0)  then
       D_prof = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3

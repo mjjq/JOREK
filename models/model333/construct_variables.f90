@@ -231,6 +231,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   
   ! --- Variable 5
   r0_corr  = corr_neg_dens(r0)
+  r0_corr2 = corr_neg_dens(r0, (/0.5,0.5/) ) ! A second one specially for the diamagnetic terms
   r0_x	   = get_deriv_x (r0_s, r0_t)
   r0_y	   = get_deriv_y (r0_s, r0_t)
   r0_xx    = get_deriv_xx(r0_s, r0_t, r0_ss, r0_st, r0_tt)

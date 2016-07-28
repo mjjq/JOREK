@@ -136,10 +136,10 @@ subroutine ELM_main_rhs_2(rhs,rhs_k)
   ! --- The RHS term (main part)	      
   rhs(2) = 														&
            ! --- Time derivative
-	   - zeta * R * r0_hat * (v_x * delta_u_x + v_y * delta_u_y)  					* xjac		&		  
+	   - zeta * R**3 * r0_corr * (v_x * delta_u_x + v_y * delta_u_y)  				* xjac		&		  
            ! --- Convective terms
 	   - 0.5d0 * vv2 * (v_x * r0_y_hat - v_y * r0_x_hat)		 				* xjac * tstep	&
-	   - r0_hat * R**2 * w0 * (v_x * u0_y - v_y * u0_x)  	 					* xjac * tstep	&
+	   - r0_corr * R**4 * w0 * (v_x * u0_y - v_y * u0_x)  	 					* xjac * tstep	&
            ! --- [psi,j]
 	   + v * (ps0_x * zj0_y - ps0_y * zj0_x )			 				* xjac * tstep	&
 	   - v * eps_cyl * F0 / R * zj0_p				 				* xjac * tstep	&
@@ -213,7 +213,7 @@ subroutine ELM_main_lhs_2(amat, amat_k, amat_n, amat_kn)
 
   amat_n(2,3) = + eps_cyl * F0 / R * v * zj_p									* xjac * theta * tstep
 
-  amat(2,4)   = r0_hat * R**2 * w  * ( v_x * u0_y - v_y * u0_x)							* xjac * theta * tstep	&
+  amat(2,4)   = r0_corr * R**4 * w  * ( v_x * u0_y - v_y * u0_x)						* xjac * theta * tstep	&
 		+ visco_T * R * ( v_x * w_x + v_y * w_y)							* xjac * theta * tstep	&
                 + visco_numm * (v_xx + v_x/R + v_yy) 											&
 		             * (w_xx + w_x/R + w_yy) 								* xjac * theta * tstep    
@@ -640,8 +640,8 @@ subroutine ELM_main_rhs_6(rhs,rhs_k)
   ! --- The RHS terms (main part)
   rhs(6) =   												&
              ! --- Time derivative
-	     + zeta * v * r0 * R							* xjac *delta_g(6)&
-             + zeta * v * T0 * R 							* xjac *delta_g(5)&
+	     + zeta * v * r0_corr * R							* xjac *delta_g(6)&
+             + zeta * v * T0_corr * R 							* xjac *delta_g(5)&
              ! --- Convective terms
 	     + v * r0 * R**2 * ( T0_x * u0_y - T0_y * u0_x)				* xjac * tstep	&
 	     + v * T0 * R**2 * ( r0_x * u0_y - r0_y * u0_x)				* xjac * tstep	&
@@ -710,7 +710,7 @@ subroutine ELM_main_lhs_6(amat, amat_k, amat_n, amat_kn)
 	         - v * T0 * R**2 * ( r0_x * u_y - r0_y * u_x)						* xjac * theta * tstep	&
 		 - v * 2.d0 * GAMMA * r0 * R * T0 * u_y							* xjac * theta * tstep 
 
-  amat(6,5)    = + v * rho * T0 * R 									* xjac * (1.d0 + zeta)  &
+  amat(6,5)    = + v * rho * T0_corr * R 								* xjac * (1.d0 + zeta)  &
                  - v * rho * R**2    * (T0_x  * u0_y  - T0_y  * u0_x )					* xjac * theta * tstep	&
 	         - v * T0  * R**2    * (rho_x * u0_y  - rho_y * u0_x )					* xjac * theta * tstep	&
 		 + v * rho * Vpar0   * (T0_x  * ps0_y - T0_y  * ps0_x)					* xjac * theta * tstep	&
@@ -791,8 +791,8 @@ subroutine ELM_main_rhs_7(rhs,rhs_k)
   ! --- The RHS terms (main part)
   rhs(7) = 													&
              ! --- Time derivative terms (including dB/dt)
-	     + zeta * v * r0 * F0**2 / R							* xjac *delta_g(7)&  
-             + zeta * v * r0 * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / R	 	* xjac		&
+	     + zeta * v * r0_corr * F0**2 / R							* xjac *delta_g(7)&  
+             + zeta * v * r0_corr * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / R	* xjac		&
              ! --- Convection terms
 	     - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_x * v_y  - ps0_y * v_x)			* xjac * tstep	&
              - 0.5d0 * v  * vpar0**2 * BB2 * (ps0_x * r0_y - ps0_y * r0_x)			* xjac * tstep	&

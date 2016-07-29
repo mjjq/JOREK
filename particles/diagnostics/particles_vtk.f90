@@ -8,7 +8,7 @@ subroutine particles_vtk(particle_list,particle_file)
 use parameters
 use data_structure
 use mod_particles
-use mpi_mod
+use_mpi
 
 implicit none
 

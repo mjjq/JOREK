@@ -1,6 +1,7 @@
 DIR = particles
 
 JOREK2_PARTICLES_SRC :=$(JOREK2_PARTICLES_SRC) \
+  $(DIR)/core/mod_particle_type.f90           \
   $(DIR)/mod_particles.f90 		      \
   $(DIR)/util/mod_openadas.f90                \
   $(DIR)/util/mod_coronal.f90                \
@@ -11,7 +12,6 @@ JOREK2_PARTICLES_SRC :=$(JOREK2_PARTICLES_SRC) \
   $(DIR)/integration/jorek/mod_import_restart_linear.f90 \
   $(DIR)/diagnostics/mod_project_particles.f90  \
   $(DIR)/diagnostics/particles_vtk.f90  \
-  $(DIR)/pushers/mod_pusher.f90 \
   $(DIR)/pushers/boris/mod_boris.f90 \
   $(DIR)/ion_rec/mod_ionisation_recombination.f90 \
   $(DIR)/extra/mod_redistribute_particles.f90  \

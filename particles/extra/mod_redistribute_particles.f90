@@ -9,7 +9,7 @@ contains
 !! to the computation time. If there are many lost particles this could be
 !! inefficient. Does not take into account different integrators for different species.
 subroutine redistribute_particles(particle_list, wtime)
-  use mpi_mod
+  use_mpi
   implicit none
 
   type(type_particle_list), intent(inout) :: particle_list

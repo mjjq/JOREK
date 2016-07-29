@@ -16,7 +16,7 @@ use phys_module
 use data_structure
 use basis_at_gaussian
 use mod_particles
-use mpi_mod
+use_mpi
 implicit none
 
 type (type_particle_list), intent(in):: particle_list

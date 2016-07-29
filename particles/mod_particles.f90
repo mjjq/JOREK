@@ -124,7 +124,7 @@ end subroutine initialise_particle_parameters
 
 !> Broadcast all particle input parameters to all processes
 subroutine broadcast_particle_parameters(my_id)
-use mpi_mod
+use_mpi
 implicit none
 
 ! --- Routine parameters
@@ -214,7 +214,7 @@ end function cross_product
 !> This function creates a derived MPI type for the particle and returns it
 !> If it already exists the old handle is returned
 function get_particle_derived_type() result(dtype_out)
-  use mpi_mod
+  use_mpi
   use parameters
 
   implicit none

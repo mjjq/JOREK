@@ -8,7 +8,7 @@ use basis_at_gaussian
 use mod_particles
 use mod_particle_io
 use mod_particle_diagnostics
-use mpi_mod
+use_mpi
 implicit none
 
 integer, parameter :: n_bins = 100

@@ -12,7 +12,7 @@ function particles_in_regions(node_list, element_list, particle_list)
       DOMAIN_LOWER_PRIVATE, xpoint, xcase
   use mod_particles
   use domains
-  use mpi_mod
+  use_mpi
   implicit none
 
   type(type_node_list), intent(in)     :: node_list

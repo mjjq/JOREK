@@ -5,7 +5,7 @@ contains
 !> deltas are recalculated to fix the import
 subroutine import_next_restart(node_list,element_list, istep, istep_out, rst_format)
   use data_structure
-  use mpi_mod
+  use_mpi
   implicit none
 
   ! --- Routine parameters

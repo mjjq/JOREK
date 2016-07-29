@@ -4,7 +4,7 @@ program dump_particles_vtk
 use mod_particles
 use mod_particle_io
 use mod_vtk
-use mpi_mod
+use_mpi
 implicit none
 
 type (type_particle_list) :: particle_list

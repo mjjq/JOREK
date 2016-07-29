@@ -7,7 +7,7 @@ title: JOREK2_particles
     - Boris method (kinetic)
     - Guiding-center
     - More planned
-* Integration with JOREK
+* [Integration with JOREK](jorek_integration.html)
     - Feedforward integration for EM fields during MHD (in)stabilities
     - Feedback to JOREK planned
 * Written in modern fortran 2003
@@ -20,3 +20,4 @@ title: JOREK2_particles
 * Ionization/recombination based on the ADAS ADF11 database
 * Impurity radiation diagnostic (in progress)
 * Particle-background collisions based on a binary collision method (in progress)
+

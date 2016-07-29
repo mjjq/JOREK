@@ -437,7 +437,7 @@ forcheck_diagno : version
 
 forcheck_jorek_to_helena : version 
 	$(FCK_CALL) diagnostics/jorek_to_helena.f90 models/mod_constants.f90 \
-	timing/trace.f90 communication/mpi_mod.f90 $(FCKDIR)/share/forcheck/MPI.flb
+	timing/trace.f90 communication/mpi.f90 $(FCKDIR)/share/forcheck/MPI.flb
 
 forcheck_jorek2_powers : version
 	$(FCK_CALL) diagnostics/jorek2_powers.f90  $(FCK_JOREK2_POWERS_SRC) \

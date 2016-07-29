@@ -1,3 +1,24 @@
+module mod_jorek_fields_interp_linear
+  use mod_fields
+  type, extends(type_fields) :: type_jorek_fields
+    contains
+      procedure :: at_particle => at_particle_impl
+  end type type_jorek_fields
+  private
+
+contains
+
+pure subroutine at_particle_impl(this, particle, E, B, psi, U)
+  use mod_particle_type
+  implicit none
+  class(type_jorek_fields), intent(in)  :: this
+  class(type_particle), intent(in)      :: particle
+  real*8, dimension(3), intent(out)     :: E, B
+  real*8, intent(out)                   :: psi, U
+
+  call calc_EB(particle%i_elm, particle%st, particle%x(3), E, B, psi, U, 0.d0)
+end subroutine at_particle_impl
+
 !> Calculates the electric and magnetic fields at a specific position
 !> in the jorek element `i_elm` at `st`.
 !> Linear interpolation with element%deltas is performed according to
@@ -12,7 +33,8 @@ use phys_module, only : F0, tstep
 implicit none
 
 interface
-  pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+  pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, &
+          s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
     import :: type_node_list, type_element_list
     type (type_node_list),    intent(in)  :: node_list
     type (type_element_list), intent(in)  :: element_list
@@ -23,7 +45,8 @@ interface
     real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
     real*8,                   intent(out) :: P_phi(n_v)
   end subroutine interp_PRZ
-  pure subroutine interp_PRZ_delta(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+  pure subroutine interp_PRZ_delta(node_list, element_list, i_elm, i_v, n_v, &
+          s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
     import :: type_node_list, type_element_list
     type (type_node_list),    intent(in)  :: node_list
     type (type_element_list), intent(in)  :: element_list
@@ -104,3 +127,4 @@ B     = (/ + psi_Z, - psi_R, F0 /) * R_inv
 ! See http://jorek.eu/wiki/doku.php?id=u_phi
 E     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi * R_inv - R * psi_time /)
 end subroutine calc_EB
+end module mod_jorek_fields_interp_linear

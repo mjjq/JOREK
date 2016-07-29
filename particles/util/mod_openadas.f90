@@ -33,7 +33,7 @@ contains
 !> Suffix is usually of the form 50_w, 96_li
 function read_adf11(suffix) result(ad)
 use constants
-use mpi_mod
+use_mpi
 implicit none
 
 character*6, intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li), give this in input file

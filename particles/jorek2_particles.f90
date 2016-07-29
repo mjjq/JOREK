@@ -17,7 +17,7 @@ use mod_update_particles
 use mod_openadas
 use mod_coronal
 use clock_module
-use mpi_mod
+use_mpi
 use mod_random_seed
 !$ use omp_lib
 

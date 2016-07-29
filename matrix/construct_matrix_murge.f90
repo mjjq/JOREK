@@ -153,7 +153,7 @@ CONTAINS
          &                      murge_ndof_prod
     USE phys_module,     ONLY : refinement
     USE murge_module,    ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER
-    USE mpi
+    USE mpi_mod
     use construct_matrix_mod, only : elementary_matrix_build
     use data_structure,   only : thread_struct
     use mod_ch_nod_rhs_elm, only : ch_nod_rhs_elm
@@ -849,7 +849,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE mumps_module, ONLY : mumps_par
   USE thread_data,  ONLY : thread_data_type, LOOP
   USE phys_module,  ONLY : index_now, freeboundary, freeboundary_equil, resistive_wall
-  USE mpi
+  USE mpi_mod
   USE murge_module, ONLY : murge_assembly_step, murge_elem_block_size, &
        murge_global_n, murge_global_n_prod
   use mod_boundary_conditions, only : boundary_conditions

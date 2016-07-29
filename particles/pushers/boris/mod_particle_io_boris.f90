@@ -4,7 +4,7 @@ module mod_particle_io_boris
   use mod_particle_io
 
   !> HDF5 IO type for boris method particles.
-  !> Usage example: 
+  !> Usage example:
   !>```fortran
   !> class(particle_hdf5_io), allocatable :: io
   !> allocate(particle_hdf5_io_boris::io); allocate(particle_boris::io%particle_type)
@@ -22,14 +22,21 @@ contains
 subroutine set_data_type_boris(this)
 use hdf5
 implicit none
+class(particle_hdf5_io_boris), intent(inout) :: this
 integer        :: hdferr
 integer(HID_T) :: v_array
 
-call this%parent%set_data_type
+call this%particle_hdf5_io%set_data_type
 
 call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, (/3_HSIZE_T/), v_array, hdferr)
 
-call h5tinsert_f(this%data_type, "v [m/s] at time t-1/2dt", &
-     H5OFFSETOF(C_LOC(this%particle),C_LOC(this%particle%v)), v_array, hdferr)
+select type (pt => this%particle_type)
+type is (particle_boris)
+  call h5tinsert_f(this%data_type, "v [m/s] at time t-1/2dt", &
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(pt(1)%v)), &
+     v_array, hdferr)
+class default
+  write(*,*) "Error setting data type, not a particle_boris type"
+end select
 end subroutine set_data_type_boris
 end module mod_particle_io_boris

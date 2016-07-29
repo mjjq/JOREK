@@ -5,7 +5,7 @@ module mod_particle_io
 
   type :: particle_hdf5_io
     class(particle_base), public, allocatable, dimension(:) :: particle_type !< Example of this particle
-    integer(HID_T), private                                 :: data_type !< HDF5 data_type
+    integer(HID_T), public                                  :: data_type !< HDF5 data_type
   contains
     procedure, pass, public :: set_data_type
     procedure, pass, non_overridable, public :: write => export_particles

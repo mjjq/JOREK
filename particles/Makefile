@@ -1,5 +1,5 @@
 # Include jorek-specific things and settings
-include ../Makefile.inc
+include Makefile.inc
 ifeq (1, $(USE_MUMPS))
   LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
   INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
@@ -85,12 +85,16 @@ $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
 
 
 
+object_dependencies=`make --dry-run --always-make --debug=b $(OBJDIR)/$(notdir $(basename $(1))).o | grep 'Must remake target'| grep -o "'.*'" | sed -e "s/^'.mod/.obj/" -e "s/mod'/o'/" | grep '[.]' | tr -d "'" `
+
+#$(info $(call all_object_dependencies,test_base_hdf5_io))
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(DEPDIR)/$(file_stem).d
 	$(value FC) $(value FFLAGS) $(value INCLUDES) -c $(1) -o $(OBJDIR)/$(file_stem).o
-	$(value FC) $(value FFLAGS) -o $(file_stem) $(value LIBS)
+	$(value FC) $(value FFLAGS) -o $(file_stem) $(value LIBS) $(object_dependencies)
 endef
+
 
 PROGRAM_SOURCES = tests/input_output/test_base_hdf5_io.f90
 

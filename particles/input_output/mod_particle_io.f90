@@ -18,22 +18,14 @@ subroutine set_data_type(this)
 use iso_c_binding
 use hdf5
 implicit none
-
-class(particle_hdf5_io), intent(in) :: this !< Object-bound argument
-
-class(particle_base), allocatable, target :: particles(2)
-
+class(particle_hdf5_io), intent(inout) :: this !< Object-bound argument
 integer                     :: hdferr
 integer(HID_T)              :: st_array, x_array
-
 integer, parameter :: n_dim = 2 !< JOREK integration
 
-! Allocate some particles. We need two to find the offset between two particles
-allocate(particles, source=this%particle_type)
-
 ! Create the compound this%data_type
-call h5tcreate_f(H5T_COMPOUND_F, H5OFFSETOF(C_LOC(particles(1)), &
-                                            C_LOC(particles(2))), &
+call h5tcreate_f(H5T_COMPOUND_F, H5OFFSETOF(C_LOC(this%particle_type(1)), &
+                                            C_LOC(this%particle_type(2))), &
                                  this%data_type, hdferr)
 
 call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, (/int(n_dim,HSIZE_T)/), st_array, hdferr)
@@ -42,38 +34,36 @@ call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, (/3_HSIZE_T/), x_array, hdferr)
 
 ! Fill type
 call h5tinsert_f(this%data_type, "x [m] at time t", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%x)), x_array, hdferr)
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%x)), x_array, hdferr)
 
 call h5tinsert_f(this%data_type, "mass [atomic mass units]", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%mass)), &
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%mass)), &
      H5T_NATIVE_REAL, hdferr)
 
 call h5tinsert_f(this%data_type, "weight (number of particles)", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%weight)), &
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%weight)), &
      H5T_NATIVE_REAL, hdferr)
 
 
 call h5tinsert_f(this%data_type, "st", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%st)), st_array, hdferr)
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%st)), st_array, hdferr)
 
 call h5tinsert_f(this%data_type, "i_elm", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%i_elm)), &
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%i_elm)), &
      H5T_NATIVE_INTEGER, hdferr)
 
 
 call h5tinsert_f(this%data_type, "q [electron charges]", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%q)), &
-     h5kind_to_type(kind(particles(1)%q),H5_INTEGER_KIND), hdferr)
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%q)), &
+     h5kind_to_type(kind(this%particle_type(1)%q),H5_INTEGER_KIND), hdferr)
 
 call h5tinsert_f(this%data_type, "label", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%label)), &
-     h5kind_to_type(kind(particles(1)%label),H5_INTEGER_KIND), hdferr)
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%label)), &
+     h5kind_to_type(kind(this%particle_type(1)%label),H5_INTEGER_KIND), hdferr)
 
 call h5tinsert_f(this%data_type, "lost", &
-     H5OFFSETOF(C_LOC(particles(1)),C_LOC(particles(1)%lost)), &
-     h5kind_to_type(kind(particles(1)%lost),H5_INTEGER_KIND), hdferr)
-
-deallocate(particles)
+     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%lost)), &
+     h5kind_to_type(kind(this%particle_type(1)%lost),H5_INTEGER_KIND), hdferr)
 end subroutine set_data_type
 
 

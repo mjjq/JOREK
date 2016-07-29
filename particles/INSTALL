@@ -1,0 +1,10 @@
+Prerequisites:
+
+GNU Make >= 3.82
+Perl >= 5.000
+recent ifort compiler
+HDF5 compiled with fortran and parallel support,
+  i.e. with --enable-parallel --enable-fortran --enable-fortran2003
+  Example:
+  CC=mpiicc FC=mpiifort ./configure --prefix=/csc/home0/dvanvugt/usr --enable-parallel --enable-fortran --enable-fortran2003
+

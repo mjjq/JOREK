@@ -20,8 +20,8 @@ OBJDIR := .obj
 DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 
-#FFLAGS += -I$(MODDIR) -J$(MODDIR) #gfortran
-FFLAGS += -I$(MODDIR) -module $(MODDIR) #ifort
+FFLAGS += -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
+# OUTPUT_MODULE_COMMAND is -J for gfortran and -module for ifort
 
 # path of outfile of a specific source file
 df = $(DEPDIR)/$(*F)

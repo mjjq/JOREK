@@ -85,7 +85,7 @@ $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
 
 
 
-object_dependencies=`make --dry-run --always-make --debug=b $(OBJDIR)/$(notdir $(basename $(1))).o | grep 'Must remake target'| grep -o "'.*'" | sed -e "s/^'.mod/.obj/" -e "s/mod'/o'/" | grep '[.]' | tr -d "'" `
+object_dependencies=`./util/obj_deps.sh $(OBJDIR)/$(notdir $(basename $(1))).o`
 
 #$(info $(call all_object_dependencies,test_base_hdf5_io))
 file_stem=$(notdir $(basename $(1)))

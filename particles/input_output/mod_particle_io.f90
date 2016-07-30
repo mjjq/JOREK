@@ -21,16 +21,16 @@ implicit none
 class(particle_hdf5_io), intent(inout) :: this !< Object-bound argument
 integer                     :: hdferr
 integer(HID_T)              :: st_array, x_array
-integer, parameter :: n_dim = 2 !< JOREK integration
+integer(HSIZE_T), parameter :: st_dim(1) = (/2/) !< JOREK integration
+integer(HSIZE_T), parameter :: x_dim(1) = (/3/) !< JOREK integration
 
 ! Create the compound this%data_type
 call h5tcreate_f(H5T_COMPOUND_F, H5OFFSETOF(C_LOC(this%particle_type(1)), &
                                             C_LOC(this%particle_type(2))), &
                                  this%data_type, hdferr)
 
-call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, (/int(n_dim,HSIZE_T)/), st_array, hdferr)
-call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, (/3_HSIZE_T/), x_array, hdferr)
-
+call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, st_dim, st_array, hdferr)
+call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, x_dim, x_array, hdferr)
 
 ! Fill type
 call h5tinsert_f(this%data_type, "x [m] at time t", &
@@ -100,7 +100,7 @@ call MPI_AllGather(size(particles,1),1,MPI_INTEGER,&
 
 ! Create file property list for parallel access
 call h5pcreate_f(H5P_FILE_ACCESS_F, plist, hdferr)
-call h5pset_fapl_mpthis_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, hdferr)
+call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, hdferr)
 
 ! Create file
 call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file, hdferr, access_prp=plist)
@@ -171,7 +171,7 @@ allocate(particles_per_proc(0:n_cpu-1))
 
 ! Create access property list for parallel access
 call h5pcreate_f(H5P_FILE_ACCESS_F, plist, hdferr)
-call h5pset_fapl_mpthis_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, hdferr)
+call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, hdferr)
 
 ! Open the file
 call h5fopen_f(filename, H5F_ACC_RDONLY_F, file, hdferr, access_prp=plist)

@@ -1,11 +1,14 @@
 program test_boris_hdf5_io
 use mod_particle_io_boris
+use mpi
 implicit none
 
 class(particle_base), allocatable, dimension(:) :: particles
 class(particle_base), allocatable, dimension(:) :: particles_read
 class(particle_hdf5_io), allocatable :: io
-integer :: i
+integer :: i, ierr, provided
+
+call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, ierr)
 
 ! Prepare HDF5 IO
 allocate(particle_hdf5_io_boris::io)
@@ -30,11 +33,15 @@ type is (particle_boris)
 end select
 
 ! Test write
+write(*,*) "Start writing"
 call io%write('test_base_hdf5_io.h5', particles)
+write(*,*) "End writing"
 
 
 ! Test read
+write(*,*) "Start reading"
 call io%read('test_base_hdf5_io.h5', particles_read)
+write(*,*) "End reading"
 
 select type (p1 => particles)
 type is (particle_boris)
@@ -55,4 +62,6 @@ type is (particle_boris)
     end do
   end select
 end select
+
+call MPI_Finalize(ierr)
 end program test_boris_hdf5_io

@@ -30,10 +30,10 @@ call this%particle_hdf5_io%set_data_type
 
 call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, (/3_HSIZE_T/), v_array, hdferr)
 
-select type (pt => this%particle_type)
+select type (p => this%particle_type)
 type is (particle_boris)
   call h5tinsert_f(this%data_type, "v [m/s] at time t-1/2dt", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(pt(1)%v)), &
+     H5OFFSETOF(C_LOC(p(1)),C_LOC(p(1)%v)), &
      v_array, hdferr)
 class default
   write(*,*) "Error setting data type, not a particle_boris type"

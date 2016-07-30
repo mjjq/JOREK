@@ -17,16 +17,34 @@ contains
 subroutine set_data_type(this)
 use iso_c_binding
 use hdf5
+use mod_particle_boris !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 class(particle_hdf5_io), intent(inout) :: this !< Object-bound argument
 integer                     :: hdferr
 integer(HID_T)              :: st_array, x_array
 integer(HSIZE_T), parameter :: st_dim(1) = (/2/) !< JOREK integration
 integer(HSIZE_T), parameter :: x_dim(1) = (/3/) !< JOREK integration
+!class(particle), pointer, dimension(:) :: p
+integer(HSIZE_T), dimension(0:8) :: offsets
+
+! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
+! for now, copy this code for each particle type expected
+select type(p => this%particle_type)
+type is (particle_boris)
+  offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
+  offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
+  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%mass))
+  offsets(3) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%weight))
+  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
+  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
+  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
+  offsets(7) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%label))
+  offsets(8) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%lost))
+end select
+
 
 ! Create the compound this%data_type
-call h5tcreate_f(H5T_COMPOUND_F, H5OFFSETOF(C_LOC(this%particle_type(1)), &
-                                            C_LOC(this%particle_type(2))), &
+call h5tcreate_f(H5T_COMPOUND_F, offsets(0), &
                                  this%data_type, hdferr)
 
 call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, st_dim, st_array, hdferr)
@@ -34,35 +52,24 @@ call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, x_dim, x_array, hdferr)
 
 ! Fill type
 call h5tinsert_f(this%data_type, "x [m] at time t", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%x)), x_array, hdferr)
-
+     offsets(1), x_array, hdferr)
 call h5tinsert_f(this%data_type, "mass [atomic mass units]", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%mass)), &
-     H5T_NATIVE_REAL, hdferr)
-
+     offsets(2), H5T_NATIVE_REAL, hdferr)
 call h5tinsert_f(this%data_type, "weight (number of particles)", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%weight)), &
-     H5T_NATIVE_REAL, hdferr)
+     offsets(3), H5T_NATIVE_REAL, hdferr)
 
 
-call h5tinsert_f(this%data_type, "st", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%st)), st_array, hdferr)
-
-call h5tinsert_f(this%data_type, "i_elm", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%i_elm)), &
-     H5T_NATIVE_INTEGER, hdferr)
+call h5tinsert_f(this%data_type, "st", offsets(4), st_array, hdferr)
+call h5tinsert_f(this%data_type, "i_elm", offsets(5), H5T_NATIVE_INTEGER, hdferr)
 
 
-call h5tinsert_f(this%data_type, "q [electron charges]", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%q)), &
+call h5tinsert_f(this%data_type, "q [electron charges]", offsets(6), &
      h5kind_to_type(kind(this%particle_type(1)%q),H5_INTEGER_KIND), hdferr)
 
-call h5tinsert_f(this%data_type, "label", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%label)), &
+call h5tinsert_f(this%data_type, "label", offsets(7), &
      h5kind_to_type(kind(this%particle_type(1)%label),H5_INTEGER_KIND), hdferr)
 
-call h5tinsert_f(this%data_type, "lost", &
-     H5OFFSETOF(C_LOC(this%particle_type(1)),C_LOC(this%particle_type(1)%lost)), &
+call h5tinsert_f(this%data_type, "lost", offsets(8), &
      h5kind_to_type(kind(this%particle_type(1)%lost),H5_INTEGER_KIND), hdferr)
 end subroutine set_data_type
 
@@ -73,21 +80,23 @@ end subroutine set_data_type
 subroutine export_particles(this, filename, particles)
 use mpi
 use hdf5
+use mod_particle_boris !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 
 class(particle_hdf5_io), intent(in)                          :: this
 character*(*)          , intent(in)                          :: filename !< File to dump particles in
 class(particle_base)   , intent(inout), target, dimension(:) :: particles
 
-integer :: my_id, n_cpu, info, ierr
+integer :: my_id, n_cpu, ierr
 integer, allocatable, dimension(:) :: particles_per_proc
 
 ! For HDF5 writing
 integer(HID_T)                :: file, file_space, mem_space, dset, plist ! handles
 character*(*), parameter      :: dataset_name = 'particles' ! maybe make this an argument?
 integer                       :: hdferr
+type(c_ptr) :: p_ptr
 
-! Preparatthisn
+! Preparation
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 call h5open_f(hdferr)
@@ -125,8 +134,14 @@ call h5sselect_hyperslab_f(file_space, H5S_SELECT_SET_F, &
     count=(/size(particles,dim=1,kind=HSIZE_T)/), &
     hdferr=hdferr, stride=(/1_HSIZE_T/), block=(/1_HSIZE_T/))
 
+! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
+! for now, copy this code for each particle type expected
+select type (p => particles)
+type is (particle_boris)
+  p_ptr = C_LOC(p(1))
+end select
 ! Write the dataset independently
-call h5dwrite_f(dset, this%data_type, C_LOC(particles(1)), &
+call h5dwrite_f(dset, this%data_type, p_ptr, &
      hdferr, file_space_id = file_space, mem_space_id = mem_space)
 
 ! Close everything
@@ -140,18 +155,19 @@ end subroutine export_particles
 
 !> Import all particles using MPI File this
 !> Reads the number of particles from a file, determines a
-!> particle distributthisn over all processors and read this many
+!> particle distribution over all processors and read this many
 !> particles per processor.
 subroutine import_particles(this, filename, particles)
 use mpi
 use hdf5
+use mod_particle_boris !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 
 class(particle_hdf5_io), intent(in)                                     :: this
 character*(*)          , intent(in)                                     :: filename
 class(particle_base)   , intent(out), dimension(:), allocatable, target :: particles
 
-integer                            :: my_id, n_cpu, ierr, rank, n_particles, info
+integer                            :: my_id, n_cpu, ierr, rank, n_particles
 integer, allocatable, dimension(:) :: particles_per_proc
 
 ! For HDF5 reading
@@ -159,10 +175,10 @@ integer(HID_T)                :: file, file_space, mem_space, dset, plist ! hand
 character*(*), parameter      :: dataset_name = 'particles' ! maybe make this an argument?
 integer                       :: hdferr
 
-type(c_ptr) :: f_ptr
+type(c_ptr) :: p_ptr
 integer*8, dimension(1:1) :: tmp, maxdims
 
-! Preparatthisn
+! Preparation
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 call h5open_f(hdferr)
@@ -183,7 +199,7 @@ call h5dopen_f(file, dataset_name, dset, hdferr)
 ! Open the file dataspace
 call h5dget_space_f(dset, file_space, hdferr)
 
-! Get the number of particles (fails if dataset is not 1-dimensthisnal!)
+! Get the number of particles (fails if dataset is not 1-dimensional!)
 call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
 if (rank .gt. 1) then
   write(*,*) "Reading >1-dimensional data not supported yet!"
@@ -197,7 +213,12 @@ particles_per_proc(0)         = n_particles/n_cpu + modulo(n_particles, n_cpu)
 particles_per_proc(1:n_cpu-1) = n_particles/n_cpu
 
 ! And allocate the required space
-allocate(particles(particles_per_proc(my_id)), source=this%particle_type, stat=ierr)
+! the below fails in gfortran, workaround
+!  allocate(particles(particles_per_proc(my_id)), source=this%particle_type, stat=ierr)
+select type(p => this%particle_type)
+type is (particle_boris)
+  allocate(particle_boris::particles(particles_per_proc(my_id)), stat=ierr)
+end select
 if (ierr .gt. 0) write(*,"(i3,a,i12,a)") my_id, &
     "unable to allocate particles(", particles_per_proc(my_id), ")"
 call h5screate_simple_f(1, (/size(particles,dim=1,kind=HSIZE_T)/), mem_space, hdferr)
@@ -209,8 +230,13 @@ call h5sselect_hyperslab_f(file_space, H5S_SELECT_SET_F, &
     hdferr=hdferr, stride=(/1_HSIZE_T/), block=(/1_HSIZE_T/))
 
 ! Read the dataset independently
-f_ptr = C_LOC(particles(1))
-call h5dread_f(dset, this%data_type, f_ptr, &
+! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
+! for now, copy this code for each particle type expected
+select type (p => particles)
+type is (particle_boris)
+  p_ptr = C_LOC(p(1))
+end select
+call h5dread_f(dset, this%data_type, p_ptr, &
     hdferr, mem_space_id=mem_space, file_space_id=file_space)
 
 ! Close everything

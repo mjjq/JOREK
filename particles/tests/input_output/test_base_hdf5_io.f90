@@ -1,6 +1,7 @@
 program test_boris_hdf5_io
 use mod_particle_io_boris
 use mpi
+use hdf5
 implicit none
 
 class(particle_base), allocatable, dimension(:) :: particles
@@ -9,6 +10,7 @@ class(particle_hdf5_io), allocatable :: io
 integer :: i, ierr, provided
 
 call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, ierr)
+call h5open_f(ierr)
 
 ! Prepare HDF5 IO
 allocate(particle_hdf5_io_boris::io)
@@ -25,31 +27,27 @@ type is (particle_boris)
     p(i)%weight = real(i+1,4)/4
     p(i)%st = real((/i,i+1/),8)/(2.d0*size(p,1))
     p(i)%i_elm = 100*i
-    p(i)%q = 3*i
-    p(i)%label = 4*i
+    p(i)%q = int(3*i,1)
+    p(i)%label = int(4*i,1)
     p(i)%lost = .true.
     p(i)%v = real((/2*i,2*i+1,2*i+2/),8)
   end do
 end select
 
 ! Test write
-write(*,*) "Start writing"
 call io%write('test_base_hdf5_io.h5', particles)
-write(*,*) "End writing"
 
 
 ! Test read
-write(*,*) "Start reading"
 call io%read('test_base_hdf5_io.h5', particles_read)
-write(*,*) "End reading"
 
 select type (p1 => particles)
 type is (particle_boris)
   select type (p2 => particles_read)
   type is (particle_boris)
-    if (size(p1,1) .ne. size(p2,1)) write(*,*) "lengths wrong"
+    if (size(p1,1) .ne. size(p2,1)) write(*,*) "lengths wrong", size(p2,1)
 
-    do i=1,size(p1,1)
+    do i=1,size(p2,1)
       if (norm2(p1(i)%x-p2(i)%x) .gt. 1d-30) write(*,*) "error in x"
       if (abs(p1(i)%mass-p2(i)%mass) .gt. 1d-30) write(*,*) "error in mass"
       if (abs(p1(i)%weight-p2(i)%weight) .gt. 1d-30) write(*,*) "error in weight"
@@ -57,7 +55,7 @@ type is (particle_boris)
       if (p1(i)%i_elm .ne. p2(i)%i_elm) write(*,*) "error in i_elm"
       if (p1(i)%q .ne. p2(i)%q) write(*,*) "error in q"
       if (p1(i)%label .ne. p2(i)%label) write(*,*) "error in label"
-      if (p1(i)%lost .ne. p2(i)%lost) write(*,*) "error in lost"
+      if (p1(i)%lost .neqv. p2(i)%lost) write(*,*) "error in lost"
       if (norm2(p1(i)%v-p2(i)%v) .gt. 1d-30) write(*,*) "error in v"
     end do
   end select

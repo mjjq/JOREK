@@ -1,9 +1,9 @@
 # Include jorek-specific things and settings
 include Makefile.inc
 ifeq (1, $(USE_MUMPS))
-  LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
+  LIBS     := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
   INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
-  DEFINES := $(DEFINES) -DUSE_MUMPS
+  DEFINES  := $(DEFINES) -DUSE_MUMPS
 endif
 ifeq (1, $(USE_HDF5))
   LIBS     := $(LIBS) $(HDF5LIB)
@@ -20,33 +20,17 @@ OBJDIR := .obj
 DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 
+
 FFLAGS += -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 # OUTPUT_MODULE_COMMAND is -J for gfortran and -module for ifort
 
-# path of outfile of a specific source file
-df = $(DEPDIR)/$(*F)
-of = $(OBJDIR)/$(*F)
-mf = $(MODDIR)/$(*F)
 
-
-# Make dependency information
-#MAKEDEPEND = gfortran -cpp -MM -MG -MT '$(patsubst %.f90,%.o,$<)' $< > $(df).Td
-# This transform takes the files outputted by sfmakedepend
-# and for every .mod it adds $(MODDIR)/
-define MAKEDEPEND_TRANSFORM
-cp $(df).Td $(df).d; \
-sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
--e '/^$$/ d' -e 's/$$/ :/' < $(df).Td >> $(df).d; \
-rm -f $(df).Td
-endef
-
-
+# default command
 all: test_base_hdf5_io
 clean:
 	rm -rf $(OBJDIR)
 cleanall:
 	rm -rf $(DEPDIR) $(MODDIR) $(OBJDIR)
-
 .PHONY: clean cleanall
 
 
@@ -61,6 +45,7 @@ define F90_O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod: $(1)%.f90 $(DEPDIR)/%.d
 	$(FC) $(FFLAGS) $(DEFINES) $(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 endef
+# Template for generating dependencies from source file
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90
 	@echo "Generating dependencies for $$<"
@@ -75,28 +60,23 @@ $(DEPDIR)/%.d: $(1)%.f90
 	  -e 's/^/$(OBJDIR)\//g' \
 	  -e 's/ \([^ ][^ ]*\)/ $(MODDIR)\/\1/g'
 endef
+# For each directory containing source files add the templates above
 $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_O_TEMPLATE,$(dir))))
 $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
 
-
+# what does this do again?
 %.d: ;
 -include $(depends)
+# TODO remove duplicate make rules
 
 
-
-
-object_dependencies=`./util/obj_deps.sh $(OBJDIR)/$(notdir $(basename $(1))).o`
-
-#$(info $(call all_object_dependencies,test_base_hdf5_io))
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(DEPDIR)/$(file_stem).d
-	$(value FC) $(value FFLAGS) $(value INCLUDES) -c $(1) -o $(OBJDIR)/$(file_stem).o
-	$(value FC) $(value FFLAGS) -o $(file_stem) $(value LIBS) $(object_dependencies)
+	$(value FC) $(value FFLAGS) -o $(file_stem) $(value LIBS) `./util/obj_deps.sh $$< | sort | uniq` $$<
 endef
 
-
+# TODO find the program keyword in all source files and add them below
 PROGRAM_SOURCES = tests/input_output/test_base_hdf5_io.f90
-
-# Create all standard make rules
+# Create all program make rules
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

@@ -16,8 +16,48 @@ ifeq (1, $(USE_HDF5))
   DEFINES  := $(DEFINES) -DUSE_HDF5
 endif
 
-# TODO clean up FFLAGS from JOREK
-#FFLAGS += -std=f2008ts #TODO set standard and remove old style code
+# Build in release mode by default
+DEBUG ?= 0
+FLAGS :=
+# Default flags for gfortran
+ifeq ($(COMPILER), gnu)
+  FLAGS += -O3 -cpp
+  FLAGS += -cpp -fopenmp
+  FLAGS += -Wall -Wextra -pedantic -std=f2008ts
+  FLAGS += -Warray-temporaries -Wcharacter-truncation
+  FLAGS += -Wconversion-extra
+  FLAGS += -Wimplicit-interface -Wimplicit-procedure
+  FLAGS += -Winteger-division
+  FLAGS += -Wintrinsics-std
+  FLAGS += -Wsurprising
+  FLAGS += -Wrealloc-lhs-all
+  FLAGS += -fmodule-private
+  FLAGS += -fimplicit-none
+  FLAGS += -flto=4 # link-time optimization with 4 jobs
+  # options still to be tested
+  #FFLAGS += -fexternal-blas
+  #FFLAGS += -ffast-math
+  #more optimization options
+  ifeq ($(DEBUG), 1)
+    # Debug flags for gfortran, in ascending order of severity
+    FLAGS += -g -Og -ggdb -fno-lto
+    FLAGS += -fcheck=all
+    FLAGS += -ffpe-trap=all -ftrapv -pedantic \
+#	      -finit-real=nan -finit-int=nan -finit-logical=false
+  endif
+
+  OUTPUT_MODULE_COMMAND=-J
+endif
+
+# Default flags for intel
+ifeq ($(COMPILER), intel)
+  ifeq ($(DEBUG), 1)
+    # Debug flags for ifort
+    FLAGS += 
+  endif
+
+  OUTPUT_MODULE_COMMAND=-module
+endif
 
 
 # build-private directories
@@ -27,7 +67,8 @@ DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 
 
-FFLAGS += -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
+# Prepend the default flags so FFLAGS can override it
+FFLAGS := $(FLAGS) $(FFLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 # OUTPUT_MODULE_COMMAND is -J for gfortran and -module for ifort
 
 

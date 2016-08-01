@@ -54,20 +54,15 @@ $(OBJDIR)/%.o $(MODDIR)/%.mod: $(1)%.f90
 	$(FC) $(FFLAGS) $(DEFINES) $(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
-# TODO remove duplicate make rules
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90
 	@echo "Generating dependencies for $$<"
-	@libs/sfmakedepend/sfmakedepend -f $(DEPDIR)/$$(*F).d $$<; \
-	  sed -i $(DEPDIR)/$$(*F).d -e '/^#.*/d' \
-	  -e '/.mod:/d' \
-	  -e 's/hdf5.mod//g' \
-	  -e 's/mpi.mod//g' \
-	  -e 's/omp_lib.mod//g' \
-	  -e 's/iso_c_binding.mod//g' \
-	  -e 's/iso_fortran_env.mod//g' \
-	  -e 's/^/$(OBJDIR)\//g' \
-	  -e 's/ \([^ ][^ ]*\)/ $(MODDIR)\/\1/g'
+	@libs/sfmakedepend/sfmakedepend -f $(DEPDIR)/$$(*F).Td $$<; \
+	  grep -F "$$(*F).o: " $(DEPDIR)/$$(*F).Td |\
+	  sed -e 's/hdf5.mod//g' -e 's/mpi.mod//g' -e 's/omp_lib.mod//g' \
+	  -e 's/iso_c_binding.mod//g' -e 's/iso_fortran_env.mod//g' \
+	  -e 's/^/$(OBJDIR)\//g' -e 's/ \([^ ][^ ]*\)/ $(MODDIR)\/\1/g' \
+	  > $(DEPDIR)/$$(*F).d; rm $(DEPDIR)/$$(*F).Td
 endef
 # For each directory containing source files add the templates above
 $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_O_TEMPLATE,$(dir))))
@@ -88,7 +83,7 @@ $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh 
 	$(value FC) $(value FFLAGS) -o $(file_stem) $(value LIBS) $$^
 endef
 
-# find the program keyword in all source files and add them below
-# TODO: maybe not do this on every run, it is quite slow
-PROGRAM_SOURCES = $(shell grep -rl --include=\*.f90 . -e '^program [a-Z][a-Z0-9_]*$$') 
+# All programs to compile
+PROGRAM_SOURCES = tests/input_output/test_base_hdf5_io
+
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

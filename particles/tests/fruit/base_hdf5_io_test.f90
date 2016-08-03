@@ -5,6 +5,60 @@ implicit none
 
 contains
 
+
+
+subroutine test_write_single_particle_new_file
+  class(particle_base), allocatable, dimension(:) :: particles
+  character(len=*), parameter :: filename = '/tmp/base_hdf5_io_test.h5'
+  integer :: u, stat
+
+  call allocate_particles(particles, 1)
+  ! Delete file if it exists
+  open(newunit=u, iostat=stat, file=filename, status='old')
+  if (stat == 0) close(u, status='delete')
+
+  call write_read_particles_test(particles, filename)
+
+  ! Delete the file again
+  open(newunit=u, iostat=stat, file=filename, status='old')
+  if (stat == 0) close(u, status='delete')
+end subroutine test_write_single_particle_new_file
+
+
+subroutine test_write_single_particle_existing_file
+  class(particle_base), allocatable, dimension(:) :: particles
+  character(len=*), parameter :: filename = '/tmp/base_hdf5_io_test.h5'
+  integer :: u, stat
+
+  call allocate_particles(particles, 1)
+  ! Create file
+  open(newunit=u, iostat=stat, file=filename, status='replace')
+  write(u, "(A)") "garbage"
+  close(u)
+
+  call write_read_particles_test(particles, filename)
+  
+  ! Delete the file again
+  open(newunit=u, iostat=stat, file=filename, status='old')
+  if (stat == 0) close(u, status='delete')
+end subroutine test_write_single_particle_existing_file
+
+
+subroutine test_write_many_particles_new_file
+  class(particle_base), allocatable, dimension(:) :: particles
+  character(len=*), parameter :: filename = '/tmp/base_hdf5_io_test.h5'
+  integer :: u, stat
+
+  call allocate_particles(particles, 100000)
+  call write_read_particles_test(particles, filename)
+
+  ! Delete the file again
+  open(newunit=u, iostat=stat, file=filename, status='old')
+  if (stat == 0) close(u, status='delete')
+end subroutine test_write_many_particles_new_file
+
+
+
 !> Helper function for testing
 subroutine write_read_particles_test(particles, filename)
   class(particle_base), allocatable, dimension(:), intent(in) :: particles
@@ -84,25 +138,4 @@ function particles_same(p1, p2) result(same)
       end select
   end select
 end function particles_same
-
-
-
-
-
-
-
-subroutine test_write_single_particle
-  class(particle_base), allocatable, dimension(:) :: particles
-  call allocate_particles(particles, 1)
-  call write_read_particles_test(particles, '/tmp/base_hdf5_io_test_single.h5')
-end subroutine test_write_single_particle
-
-
-subroutine test_write_many_particles
-  class(particle_base), allocatable, dimension(:) :: particles
-  call allocate_particles(particles, 100000)
-  call write_read_particles_test(particles, '/tmp/base_hdf5_io_test_many.h5')
-end subroutine test_write_many_particles
-
-
 end module base_hdf5_io_test

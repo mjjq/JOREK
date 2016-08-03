@@ -35,28 +35,44 @@ ifeq ($(COMPILER), gnu)
   FLAGS += -flto=4 # link-time optimization with 4 jobs
   # options still to be tested
   #FFLAGS += -fexternal-blas
-  #FFLAGS += -ffast-math
+  #FFLAGS += -ffast-math # or -Ofast
   #more optimization options
   ifeq ($(DEBUG), 1)
     # Debug flags for gfortran, in ascending order of severity
     FLAGS += -g -Og -ggdb -fno-lto
     FLAGS += -fcheck=all
-    FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv -pedantic \
+    FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv \
 #	      -finit-real=nan -finit-int=nan -finit-logical=false
 #   FLAGS += -Warray-temporaries -Wconversion-extra
   endif
 
-  OUTPUT_MODULE_COMMAND=-J
+  OUTPUT_MODULE_COMMAND=-J#no space
 endif
 
 # Default flags for intel
 ifeq ($(COMPILER), intel)
+  FLAGS += -openmp
+  FLAGS += -implicitnone
+  FLAGS += -cpp 
+  FLAGS += -warn all
+  FLAGS += -xAVX -align
   ifeq ($(DEBUG), 1)
-    # Debug flags for ifort
-    FLAGS += 
+    # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
+    FLAGS += -O0 -g -traceback
+    FLAGS += -check all,noarg_temp_created
+    FLAGS += -check bounds
+    FLAGS += -check uninit
+    FLAGS += -ftrapuv
+    FLAGS += -debug all -debug-parameters
+    FLAGS += -gen-interfaces -warn-interfaces
+    FLAGS += -fstack-security-check
+    FLAGS += -fpe0
+    FLAGS += -assume ieee_fpe_flags # not sure about this one
+  else
+    FLAGS += -O3
   endif
 
-  OUTPUT_MODULE_COMMAND=-module
+  OUTPUT_MODULE_COMMAND=-module #space is important
 endif
 
 
@@ -69,7 +85,6 @@ $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 
 # Prepend the default flags so FFLAGS can override it
 FFLAGS := $(FLAGS) $(FFLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
-# OUTPUT_MODULE_COMMAND is -J for gfortran and -module for ifort
 
 
 # default action

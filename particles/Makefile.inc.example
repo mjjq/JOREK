@@ -1,0 +1,26 @@
+# Fortran compiler
+FC     = mpif90
+CC     = mpicc
+
+# Set the compiler family. This should be gnu or intel for now
+COMPILER=gnu
+DEBUG=1
+
+USE_MUMPS = 1
+USE_HDF5  = 1
+
+# MUMPS
+MUMPS_HOME = 
+LIB_MUMPS  = $(MUMPS_HOME)/lib/libdmumps.a $(MUMPS_HOME)/lib/libmumps_common.a
+LIB_ZMUMPS = $(MUMPS_HOME)/lib/libzmumps.a
+INC_MUMPS  = $(MUMPS_HOME)/include/
+ORDLIB     = $(MUMPS_HOME)/lib/libpord.a
+
+#HDF5
+HDF5LIB     = -L/usr/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5
+HDF5INCLUDE = /usr/include
+
+# FRUIT
+FRUITPYDIR  =
+LIB_FRUIT   =
+INC_FRUIT   =

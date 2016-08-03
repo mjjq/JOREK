@@ -32,8 +32,8 @@ contains
 !> if the files exist. Files of format acd$suffix.dat are read.
 !> Suffix is usually of the form 50_w, 96_li
 function read_adf11(suffix) result(ad)
-use constants
-use_mpi
+use mod_constants
+use mpi
 implicit none
 
 character*6, intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li), give this in input file
@@ -129,6 +129,8 @@ else
   GRC = 0.d0
 endif
 end function GRC
+
+
 
 !> Linear 2D interpolation on a rectangular grid
 !> x2y1       xy1    x1y1

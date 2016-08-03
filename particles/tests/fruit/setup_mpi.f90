@@ -1,4 +1,4 @@
-module setup_mpi_test
+module setup_mpi
 contains
 subroutine setup
   use mpi
@@ -11,4 +11,4 @@ subroutine teardown
   integer :: ierr
   call MPI_finalize(ierr)
 end subroutine teardown
-end module setup_mpi_test
+end module setup_mpi

@@ -76,8 +76,9 @@ FFLAGS := $(FLAGS) $(FFLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 all: particles
 clean:
 	rm -rf $(OBJDIR)
-cleanall:
-	rm -rf $(DEPDIR) $(MODDIR) $(OBJDIR)
+	rm tests/fruit_test_driver.f90
+cleanall: clean
+	rm -rf $(DEPDIR) $(MODDIR)
 .PHONY: clean cleanall test fruit
 test: fruit
 fruit:
@@ -104,9 +105,9 @@ $(DEPDIR)/%.d: $(1)%.f90
 	@echo "Generating dependencies for $$<"
 	@libs/sfmakedepend/sfmakedepend -f $(DEPDIR)/$$(*F).Td $$<; \
 	  grep -F "$$(*F).o: " $(DEPDIR)/$$(*F).Td |\
-	  sed -e 's/hdf5[.]mod//g' -e 's/mpi[.]mod//g' -e 's/omp_lib[.]mod//g' \
-	  -e 's/iso_c_binding[.]mod//g' -e 's/iso_fortran_env[.]mod//g' \
-	  -e 's/fruit[.]mod//g' \
+	  sed -e 's/ hdf5[.]mod//g' -e 's/ mpi[.]mod//g' -e 's/ omp_lib[.]mod//g' \
+	  -e 's/ iso_c_binding[.]mod//g' -e 's/ iso_fortran_env[.]mod//g' \
+	  -e 's/ fruit[.]mod//g' \
 	  -e 's/^/$(OBJDIR)\//g' -e 's/ \([^ ][^ ]*\)/ $(MODDIR)\/\1/g' \
 	  > $(DEPDIR)/$$(*F).d; rm $(DEPDIR)/$$(*F).Td
 endef

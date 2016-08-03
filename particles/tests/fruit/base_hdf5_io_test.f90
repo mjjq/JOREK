@@ -1,50 +1,38 @@
 module base_hdf5_io_test
 use mod_particle_io_boris
-use hdf5
+use fruit
 implicit none
 
 contains
 
 !> Helper function for testing
-subroutine write_read_test(particles, filename)
+subroutine write_read_particles_test(particles, filename)
   class(particle_base), allocatable, dimension(:), intent(in) :: particles
   character(len=*) :: filename
 
   class(particle_hdf5_io), allocatable :: io
   class(particle_base), allocatable, dimension(:) :: particles_read
-  integer :: i
 
   allocate(particle_hdf5_io_boris::io)
   ! Prepare HDF5 IO
   allocate(particle_boris::io%particle_type(2))
   call io%set_data_type
 
-  ! Test write
-  call io%read(filename, particles_read)
-
-  ! Test read
+  call io%write(filename, particles)
   call io%read(filename, particles_read)
 
   select type (p1 => particles)
   type is (particle_boris)
     select type (p2 => particles_read)
     type is (particle_boris)
-      if (size(p1,1) .ne. size(p2,1)) write(*,*) "lengths wrong", size(p2,1)
+      call assert_equals(size(p1,1), size(p2,1), "read particle file length")
 
-      do i=1,size(p2,1)
-        if (norm2(p1(i)%x-p2(i)%x) .gt. 1d-30) write(*,*) "error in x"
-        if (abs(p1(i)%mass-p2(i)%mass) .gt. 1d-30) write(*,*) "error in mass"
-        if (abs(p1(i)%weight-p2(i)%weight) .gt. 1d-30) write(*,*) "error in weight"
-        if (norm2(p1(i)%st-p2(i)%st) .gt. 1d-30) write(*,*) "error in st"
-        if (p1(i)%i_elm .ne. p2(i)%i_elm) write(*,*) "error in i_elm"
-        if (p1(i)%q .ne. p2(i)%q) write(*,*) "error in q"
-        if (p1(i)%label .ne. p2(i)%label) write(*,*) "error in label"
-        if (p1(i)%lost .neqv. p2(i)%lost) write(*,*) "error in lost"
-        if (norm2(p1(i)%v-p2(i)%v) .gt. 1d-30) write(*,*) "error in v"
-      end do
+      ! Test the first and last particle
+      call assert_true(particles_same(p1(lbound(p1,1)), p2(lbound(p2,1))), "First particle comparison")
+      call assert_true(particles_same(p1(ubound(p1,1)), p2(ubound(p2,1))), "Last particle comparison")
     end select
   end select
-end subroutine
+end subroutine write_read_particles_test
 
 !> Helper function for allocating particles
 subroutine allocate_particles(particles, n)
@@ -59,7 +47,7 @@ subroutine allocate_particles(particles, n)
       p(i)%x = real((/i,i+1,i+2/),8)
       p(i)%mass = real(i,4)/3
       p(i)%weight = real(i+1,4)/4
-      p(i)%st = real((/i,i+1/),8)/(2.d0*size(p,1))
+      call random_number(p(i)%st)
       p(i)%i_elm = 100*i
       p(i)%q = int(3*i,1)
       p(i)%label = int(4*i,1)
@@ -67,32 +55,54 @@ subroutine allocate_particles(particles, n)
       p(i)%v = real((/2*i,2*i+1,2*i+2/),8)
     end do
   end select
-end subroutine
+end subroutine allocate_particles
 
-!> Setup routine for testing
-subroutine base_hdf5_io_test_setup
-  integer :: ierr
-  call h5open_f(ierr)
-end subroutine base_hdf5_io_test_setup
+!> Helper function for comparing particles
+function particles_same(p1, p2) result(same)
+  class(particle_base), intent(in) :: p1, p2
+  real*8, parameter :: tolerance = 1d-30
+  logical :: same
+  same = .true.
+
+  ! Base attributes testing
+  if (norm2(p1%x-p2%x)         .gt. tolerance) same = .false.
+  if (abs(p1%mass-p2%mass)     .gt. tolerance) same = .false.
+  if (abs(p1%weight-p2%weight) .gt. tolerance) same = .false.
+  if (norm2(p1%st-p2%st)       .gt. tolerance) same = .false.
+  if (p1%i_elm .ne. p2%i_elm)  same = .false.
+  if (p1%q     .ne. p2%q)      same = .false.
+  if (p1%label .ne. p2%label)  same = .false.
+  if (p1%lost  .neqv. p2%lost) same = .false.
+
+  select type(p1 => p1)
+    type is (particle_boris)
+      select type (p2 => p2)
+        type is (particle_boris)
+          if (norm2(p1%v-p2%v) .gt. tolerance) same = .false.
+        class default
+          same = .false.
+      end select
+  end select
+end function particles_same
 
 
 
 
 
-!> Test writing a single particle
-subroutine test_write_single
+
+
+subroutine test_write_single_particle
   class(particle_base), allocatable, dimension(:) :: particles
   call allocate_particles(particles, 1)
-  call write_read_test(particles, 'test_base_hdf5_io.h5')
-end subroutine test_write_single
+  call write_read_particles_test(particles, '/tmp/base_hdf5_io_test_single.h5')
+end subroutine test_write_single_particle
 
 
-!> Test writing many particles
-subroutine test_write_many
+subroutine test_write_many_particles
   class(particle_base), allocatable, dimension(:) :: particles
   call allocate_particles(particles, 100000)
-  call write_read_test(particles, 'test_base_hdf5_io.h5')
-end subroutine test_write_many
+  call write_read_particles_test(particles, '/tmp/base_hdf5_io_test_many.h5')
+end subroutine test_write_many_particles
 
 
 end module base_hdf5_io_test

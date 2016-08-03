@@ -42,6 +42,8 @@ type is (particle_boris)
   offsets(8) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%lost))
 end select
 
+! Reinitialize the library
+call h5open_f(hdferr)
 
 ! Create the compound this%data_type
 call h5tcreate_f(H5T_COMPOUND_F, offsets(0), &
@@ -83,9 +85,9 @@ use hdf5
 use mod_particle_boris !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 
-class(particle_hdf5_io), intent(in)                          :: this
-character*(*)          , intent(in)                          :: filename !< File to dump particles in
-class(particle_base)   , intent(inout), target, dimension(:) :: particles
+class(particle_hdf5_io), intent(in)                       :: this
+character*(*)          , intent(in)                       :: filename !< File to dump particles in
+class(particle_base)   , intent(in), target, dimension(:) :: particles
 
 integer :: my_id, n_cpu, ierr
 integer, allocatable, dimension(:) :: particles_per_proc

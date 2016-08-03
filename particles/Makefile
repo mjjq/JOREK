@@ -41,7 +41,7 @@ ifeq ($(COMPILER), gnu)
     # Debug flags for gfortran, in ascending order of severity
     FLAGS += -g -Og -ggdb -fno-lto
     FLAGS += -fcheck=all
-    FLAGS += -ffpe-trap=all -ftrapv -pedantic \
+    FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv -pedantic \
 #	      -finit-real=nan -finit-int=nan -finit-logical=false
 #   FLAGS += -Warray-temporaries -Wconversion-extra
   endif
@@ -95,9 +95,10 @@ depends:=$(patsubst %.f90,$(DEPDIR)/%.d,$(notdir $(sources)))
 # Template for generating object files from source files
 define F90_O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod: $(1)%.f90
-	$(FC) $(FFLAGS) $(DEFINES) $(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
+# TODO: fork sfmakedepend to do all of this automatically
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90
 	@echo "Generating dependencies for $$<"
@@ -119,24 +120,21 @@ $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
 
 
 # This template defines a program $(file_stem)
-# which has prerequisites $(OBJDIR)/$(file_stem).o and as determined by the output of the obj_deps.sh script
+# which has prerequisites $(OBJDIR)/$(file_stem).o and as determined by the output of obj_deps.sh
 # Since make will try to build the .d files first and re-exec every time
 # these will be up-to-date
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh $(OBJDIR)/$(file_stem).o | sort | uniq)
-	$(value FC) $(value FFLAGS) $(2) -o $(file_stem) $$^ $(value LIBS)
+	$$(FC) $$(FFLAGS) -o $(file_stem) $$^ $$(LIBS)
 endef
 
 # All programs to compile
-PROGRAM_SOURCES = tests/input_output/test_base_hdf5_io
+PROGRAM_SOURCES = tests/input_output/test_base_hdf5_io \
+		  tests/fruit_test_driver.f90
 
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 
-# non-standard programs (extra linking options)
-FRUIT_LINK_OPTIONS=-L$(LIB_FRUIT) -lfruit -Wl,-rpath=$(LIB_FRUIT)
-$(eval $(call PROGRAM_TEMPLATE,fruit_test_driver,$(FRUIT_LINK_OPTIONS)))
-
-# non-standard object files (extra include options)
-$(OBJDIR)/fruit_test_driver.o $(MODDIR)/fruit_test_driver.mod: tests/fruit_test_driver.f90
-	$(FC) $(FFLAGS) $(DEFINES) $(INCLUDES) -I$(INC_FRUIT) -c $< -o $*.o
+# non-standard object files (extra include options, target-specific variable)
+fruit_test_driver: INCLUDES += -I$(INC_FRUIT)
+fruit_test_driver: LIBS += -L$(LIB_FRUIT) -lfruit -Wl,-rpath=$(LIB_FRUIT)

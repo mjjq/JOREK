@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-set -euf -o pipefail
+set -euf
 
 # Check all of the .dep/*.d files for dependencies of $1
-MAX_ITERATIONS=20 # mostly here to catch loops
 
 # to_check contains names of .d files that still need to be checked
 to_check=`echo "$1" | sed -e 's/^[.]obj/.dep/' -e 's/[.]o$/.d/'`

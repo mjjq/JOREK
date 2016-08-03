@@ -6,14 +6,16 @@
 # Include jorek-specific things and settings
 include Makefile.inc
 ifeq (1, $(USE_MUMPS))
-  LIBS     := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
+  LIBS     := $(LIBS) $(LIB_MUMPS) $(ORDLIB)
   INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
-  DEFINES  := $(DEFINES) -DUSE_MUMPS
+else
+  $(warning "USE_MUMPS=1 is mandatory")
 endif
 ifeq (1, $(USE_HDF5))
   LIBS     := $(LIBS) $(HDF5LIB)
   INCLUDES := $(INCLUDES) -I$(HDF5INCLUDE)
-  DEFINES  := $(DEFINES) -DUSE_HDF5
+else
+  $(warning "USE_HDF5=1 is mandatory")
 endif
 
 # Build in release mode by default
@@ -21,17 +23,14 @@ DEBUG ?= 0
 FLAGS :=
 # Default flags for gfortran
 ifeq ($(COMPILER), gnu)
-  FLAGS += -O3 -cpp
-  FLAGS += -cpp -fopenmp
-  FLAGS += -Wall -Wextra -pedantic -std=f2008ts
-  FLAGS += -Warray-temporaries -Wcharacter-truncation
-  FLAGS += -Wconversion-extra
+  FLAGS += -O3 -cpp -fopenmp
+  FLAGS += -Wall -Wextra
+  FLAGS += -Wcharacter-truncation
   FLAGS += -Wimplicit-interface -Wimplicit-procedure
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
   FLAGS += -Wsurprising
   FLAGS += -Wrealloc-lhs-all
-  FLAGS += -fmodule-private
   FLAGS += -fimplicit-none
   FLAGS += -flto=4 # link-time optimization with 4 jobs
   # options still to be tested
@@ -44,6 +43,7 @@ ifeq ($(COMPILER), gnu)
     FLAGS += -fcheck=all
     FLAGS += -ffpe-trap=all -ftrapv -pedantic \
 #	      -finit-real=nan -finit-int=nan -finit-logical=false
+#   FLAGS += -Warray-temporaries -Wconversion-extra
   endif
 
   OUTPUT_MODULE_COMMAND=-J
@@ -78,7 +78,10 @@ clean:
 	rm -rf $(OBJDIR)
 cleanall:
 	rm -rf $(DEPDIR) $(MODDIR) $(OBJDIR)
-.PHONY: clean cleanall
+.PHONY: clean cleanall test fruit
+test: fruit
+fruit:
+	PYTHONPATH=$(FRUITPYDIR) python fruit.py
 
 
 
@@ -100,8 +103,9 @@ $(DEPDIR)/%.d: $(1)%.f90
 	@echo "Generating dependencies for $$<"
 	@libs/sfmakedepend/sfmakedepend -f $(DEPDIR)/$$(*F).Td $$<; \
 	  grep -F "$$(*F).o: " $(DEPDIR)/$$(*F).Td |\
-	  sed -e 's/hdf5.mod//g' -e 's/mpi.mod//g' -e 's/omp_lib.mod//g' \
-	  -e 's/iso_c_binding.mod//g' -e 's/iso_fortran_env.mod//g' \
+	  sed -e 's/hdf5[.]mod//g' -e 's/mpi[.]mod//g' -e 's/omp_lib[.]mod//g' \
+	  -e 's/iso_c_binding[.]mod//g' -e 's/iso_fortran_env[.]mod//g' \
+	  -e 's/fruit[.]mod//g' \
 	  -e 's/^/$(OBJDIR)\//g' -e 's/ \([^ ][^ ]*\)/ $(MODDIR)\/\1/g' \
 	  > $(DEPDIR)/$$(*F).d; rm $(DEPDIR)/$$(*F).Td
 endef
@@ -121,10 +125,18 @@ $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh $(OBJDIR)/$(file_stem).o | sort | uniq)
-	$(value FC) $(value FFLAGS) -o $(file_stem) $(value LIBS) $$^
+	$(value FC) $(value FFLAGS) $(2) -o $(file_stem) $$^ $(value LIBS)
 endef
 
 # All programs to compile
 PROGRAM_SOURCES = tests/input_output/test_base_hdf5_io
 
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
+
+# non-standard programs (extra linking options)
+FRUIT_LINK_OPTIONS=-L$(LIB_FRUIT) -lfruit -Wl,-rpath=$(LIB_FRUIT)
+$(eval $(call PROGRAM_TEMPLATE,fruit_test_driver,$(FRUIT_LINK_OPTIONS)))
+
+# non-standard object files (extra include options)
+$(OBJDIR)/fruit_test_driver.o $(MODDIR)/fruit_test_driver.mod: tests/fruit_test_driver.f90
+	$(FC) $(FFLAGS) $(DEFINES) $(INCLUDES) -I$(INC_FRUIT) -c $< -o $*.o

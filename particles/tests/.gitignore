@@ -4,3 +4,4 @@ test_mc_time
 test_coronal_eq
 test_coronal_time
 *.txt
+fruit_test_driver.f90

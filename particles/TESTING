@@ -1,0 +1,15 @@
+Testing is done with FRUITPy (https://github.com/acroucher/FRUITPy)
+
+First download FRUIT https://sourceforge.net/projects/fortranxunit/
+and FRUITPy.
+Copy the `fruit_makefile` included in FRUITPy to fruit_3.4.1/makefile and edit the paths.
+Then type
+```bash
+make
+make install
+```
+You might need to copy the .mod files to your include dir yourself
+(for gfortran, this places them in the cwd while ifort places them next to the source file)
+
+Finally you need to set FRUITPYDIR to the directory containing FRUITPy.
+To run the test suite, use `make test` or `make fruit`

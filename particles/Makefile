@@ -73,7 +73,7 @@ FFLAGS := $(FLAGS) $(FFLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 
 
 # default action
-all: test_base_hdf5_io
+all: particles
 clean:
 	rm -rf $(OBJDIR)
 cleanall:
@@ -130,7 +130,7 @@ $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh 
 endef
 
 # All programs to compile
-PROGRAM_SOURCES = tests/input_output/test_base_hdf5_io \
+PROGRAM_SOURCES = particles.f90 \
 		  tests/fruit_test_driver.f90
 
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

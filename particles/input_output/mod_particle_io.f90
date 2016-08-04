@@ -13,7 +13,13 @@ module mod_particle_io
   end type
 contains
 
-!> Create hdf5 data type
+!> Create hdf5 data type.
+!> The code below ([[import_particles]] and [[export_particles]]) is slightly 
+!> illegal according to the standard.
+!> - interoperability between C and fortran is not supported for polymorphism
+!> - we don't know if all of the particles will follow eachother in memory
+!> but it seems to work in ifort and in gfortran with a workaround for C_LOC.
+!> This can be removed as soon as gfortran relaxes the restrictions on C_LOC.
 subroutine set_data_type(this)
 use iso_c_binding
 use hdf5
@@ -215,8 +221,8 @@ particles_per_proc(0)         = n_particles/n_cpu + modulo(n_particles, n_cpu)
 particles_per_proc(1:n_cpu-1) = n_particles/n_cpu
 
 ! And allocate the required space
-! the below fails in gfortran, workaround
-!  allocate(particles(particles_per_proc(my_id)), source=this%particle_type, stat=ierr)
+! allocate(particles(particles_per_proc(my_id)), source=this%particle_type, stat=ierr)
+! the above fails in gfortran (allocates to size of this%particle_type), workaround below
 select type(p => this%particle_type)
 type is (particle_boris)
   allocate(particle_boris::particles(particles_per_proc(my_id)), stat=ierr)

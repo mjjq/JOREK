@@ -9,13 +9,13 @@ ifeq (1, $(USE_MUMPS))
   LIBS     := $(LIBS) $(LIB_MUMPS) $(ORDLIB)
   INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
 else
-  $(warning "USE_MUMPS=1 is mandatory")
+  $(warning "USE_MUMPS=1 is required for ADAS support")
 endif
 ifeq (1, $(USE_HDF5))
   LIBS     := $(LIBS) $(HDF5LIB)
   INCLUDES := $(INCLUDES) -I$(HDF5INCLUDE)
 else
-  $(warning "USE_HDF5=1 is mandatory")
+  $(warning "USE_HDF5=1 is required for input/output")
 endif
 
 # Build in release mode by default
@@ -91,14 +91,15 @@ FFLAGS := $(FLAGS) $(FFLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 all: particles
 clean:
 	rm -rf $(OBJDIR)
-	rm tests/fruit_test_driver.f90
+	rm -f tests/fruit_test_driver.f90
 cleanall: clean
 	rm -rf $(DEPDIR) $(MODDIR)
-.PHONY: clean cleanall test fruit
+.PHONY: clean cleanall test fruit docs
 test: fruit
 fruit:
 	PYTHONPATH=$(FRUITPYDIR) python fruit.py
-
+docs:
+	ford particles.md --no-search
 
 
 # Most of the sources are actually fortran 2003/8 but use the .f90 suffix

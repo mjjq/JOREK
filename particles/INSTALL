@@ -12,8 +12,6 @@ HDF5 compiled with fortran and parallel support,
 
 For documentation:
 FORD (pip install FORD)
-sphinx?
-sphinxfortran?
 
 For tests
-pFUnit
+FRUIT (see TESTING)

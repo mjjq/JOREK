@@ -97,7 +97,7 @@ cleanall: clean
 .PHONY: clean cleanall test fruit docs
 test: fruit
 fruit:
-	PYTHONPATH=$(FRUITPYDIR) python fruit.py
+	PYTHONPATH=$(FRUITPYDIR) python tests/fruit.py
 docs:
 	ford particles.md --no-search
 

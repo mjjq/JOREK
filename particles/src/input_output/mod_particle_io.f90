@@ -1,4 +1,5 @@
 !> Particle input-output module, containing hdf5 data_type and writing routines
+!> TODO: add metadata and/or use H5MD format (http://nongnu.org/h5md/h5md.html)
 module mod_particle_io
   use mod_particle_base
   use hdf5, only: HID_T
@@ -18,8 +19,9 @@ contains
 !> illegal according to the standard.
 !> - interoperability between C and fortran is not supported for polymorphism
 !> - we don't know if all of the particles will follow eachother in memory
+!> From "15.2.3.6 C_LOC(X)": (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56305)
+!> > Argument. X shall have either the POINTER or TARGET attribute. It shall not be a coindexed object. It shall either be a variable with interoperable type and kind type parameters, or be a scalar, nonpolymorphic variable with no length type parameters. If it is allocatable, it shall be allocated. If it is a pointer, it shall be associated. If it is an array, it shall be contiguous and have nonzero size. It shall not be a zero-length string.
 !> but it seems to work in ifort and in gfortran with a workaround for C_LOC.
-!> This can be removed as soon as gfortran relaxes the restrictions on C_LOC.
 subroutine set_data_type(this)
 use iso_c_binding
 use hdf5

@@ -2,11 +2,19 @@
 !> and recombination probabilities of particles in a specific time
 module mod_ionisation_recombination
 use mod_openadas
+use mod_particle_action
 
+type, extends(particle_action), public :: particle_ion_rec
+  type(type_ADF11_all) :: adf11
+contains
+  do => update_particle_charge
+end type particle_ion_rec
+
+type(type_coronal)   :: coronal
 contains
 
 !> Calculate the new charge of a particle after a specific time
-subroutine update_particle_charge(node_list, element_list, particle, ad, timestep)
+subroutine update_particle_charge(this, sim, particle)
 use mod_particles
 use data_structure
 use constants
@@ -66,7 +74,7 @@ particle%q = int(new_charge(int(particle%q,4), ad, n_e, T_e, timestep),1)
 end subroutine
 
 !> Calculate new charge state at a specific density, temperature and timestep
-function new_charge(z, ad, electron_density, electron_temperature, timestep) result(z_new)
+pure function new_charge(z, ad, electron_density, electron_temperature, timestep) result(z_new)
 implicit none
 
 integer, intent(in)              :: z !< Old charge state

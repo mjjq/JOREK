@@ -1,44 +1,30 @@
 program particles
 
-use mod_boris ! or mod_gc_NAME or something similar
+use mod_particle_sim
+use mod_event
+use mod_action
+use mod_jorek_fields
 implicit none
 
-type(particle_boris), allocatable, dimension(:) :: particles
 type(particle_sim) :: sim
-class(fields), allocatable :: fields
-class(particle_hdf5_io), allocatable :: io
+type(event), dimension(:), allocatable :: events
 
 integer :: i
 
+! events
+!call read_parameters(sim)
+!call allocate(particle_boris::particles(sim%n_particles))
+!call read_adas
+!call initialize_rng(rng)
+!call initialize_particles(sim)
 
-call setup
+events = [ &
+  event(stop_action(), start=1.d0) & ! Stop the sim after 1 second
+!, event(read_all()) & ! Read an existing state at t=0
+!, event(write_state, step=1.d-1) & ! Write output every 0.1 second
+, event(read_jorek_fields(), step=1.d-2) & ! Read new fields every 0.01 second
+]
 
-! Prepare HDF5 IO
-allocate(particle_hdf5_io_boris::io)
-allocate(particle_boris::io%particle_type)
-call io%set_data_type
 
-call read_parameters(sim)
-call allocate(particle_boris::particles(sim%n_particles))
-call read_adas
-call initialize_rng(rng)
-call initialize_particles(sim)
-
-!$omp parallel
-do sim%i=1,iend
-  !$omp do
-  do i=1,size(particles,1)
-    call push_boris(fields, particles(i), sim)
-  enddo
-  !$end omp do
-
-  !$omp single
-  call diagnostics
-  !$end omp single
-  sim%t = sim%t + sim%dt
-enddo
-!$end omp parallel
-
-call teardown
 
 end program particles

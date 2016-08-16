@@ -21,6 +21,8 @@ endif
 # Build in release mode by default
 DEBUG ?= 0
 FLAGS :=
+FLAGS += -DUSE_MPI -Ilibs/flogging/include # For flogging
+
 # Default flags for gfortran
 ifeq ($(COMPILER), gnu)
   FLAGS += -O3 -cpp -fopenmp
@@ -103,7 +105,7 @@ docs:
 
 
 # Most of the sources are actually fortran 2003/8 but use the .f90 suffix
-sources:=$(shell find . -iname '*.f90')
+sources:=$(shell find libs src tests -iname '*.f90')
 depends:=$(patsubst %.f90,$(DEPDIR)/%.d,$(notdir $(sources)))
 
 # Make rules for all directories that we have found sources in
@@ -147,7 +149,8 @@ $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh 
 endef
 
 # All programs to compile
-PROGRAM_SOURCES = particles.f90 \
+PROGRAM_SOURCES = src/particles.f90 \
+		  src/static_field_example.f90 \
 		  tests/fruit_test_driver.f90
 
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

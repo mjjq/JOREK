@@ -1,9 +1,9 @@
+!> This module contains some testcases for hdf5 io
+!> Cases that should be added:
+!> - Read with different type as written
+!> - Write different type from io%particle_type
+!> - How to read from unknown type?
 module base_hdf5_io_spec
-!< This module contains some testcases for hdf5 io
-!< Cases that should be added:
-!< - Read with different type as written
-!< - Write different type from io%particle_type
-!< - How to read from unknown type?
 use mod_particle_io_boris
 use fruit
 implicit none

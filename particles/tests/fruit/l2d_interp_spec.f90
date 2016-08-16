@@ -1,5 +1,5 @@
+!> This module contains some testcases for the linear 2d interpolation
 module l2d_interp_spec
-!< This module contains some testcases for the linear 2d interpolation
 use mod_openadas
 use fruit
 implicit none

@@ -1,20 +1,45 @@
 module mod_jorek_fields_interp_linear
-  use mod_fields
-  type, extends(type_fields) :: type_jorek_fields
-    contains
-      procedure :: at_particle => at_particle_impl
-  end type type_jorek_fields
-  private
+use mod_fields
+use data_structure
+use mod_action
+use mod_particle_sim
+implicit none
+
+type, extends(fields) :: jorek_fields
+  type(type_node_list), pointer    :: node_list
+  type(type_element_list), pointer :: element_list
+  real*8 :: F0
+  real*8 :: tstep
+  ! parameters?
+  logical :: static = .false.
+  contains
+    procedure :: at_particle => at_particle_impl
+end type jorek_fields
+
+type, extends(action) :: read_jorek_fields
+  contains
+    procedure :: do => read_jorek_fields_impl
+end type read_jorek_fields
+
+private
 
 contains
 
-pure subroutine at_particle_impl(this, particle, E, B, psi, U)
-  use mod_particle_type
-  implicit none
-  class(type_jorek_fields), intent(in)  :: this
-  class(type_particle), intent(in)      :: particle
-  real*8, dimension(3), intent(out)     :: E, B
-  real*8, intent(out)                   :: psi, U
+!> Read jorek fields from a restart file
+subroutine read_jorek_fields_impl(this, sim)
+  !use mod_import_export_restart
+  class(read_jorek_fields), intent(inout) :: this
+  type(particle_sim), intent(inout) :: sim
+  write(*,*) "TODO: read JOREK fields"
+end subroutine read_jorek_fields_impl
+
+pure subroutine at_particle_impl(this, particle, t, E, B, psi, U)
+  use mod_particle_base
+  class(jorek_fields),  intent(in)  :: this
+  class(particle_base), intent(in)  :: particle
+  real*8, intent(in)                :: t
+  real*8, dimension(3), intent(out) :: E, B
+  real*8, intent(out)               :: psi, U
 
   call calc_EB(particle%i_elm, particle%st, particle%x(3), E, B, psi, U, 0.d0)
 end subroutine at_particle_impl
@@ -30,7 +55,6 @@ use nodes_elements ! Get node_list, element_list from here
 use constants
 use phys_module, only : F0, tstep
 
-implicit none
 
 interface
   pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, &

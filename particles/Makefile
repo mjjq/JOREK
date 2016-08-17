@@ -96,6 +96,7 @@ clean:
 	rm -f tests/fruit_test_driver.f90
 cleanall: clean
 	rm -rf $(DEPDIR) $(MODDIR)
+	find . -name '*.mod' -delete
 .PHONY: clean cleanall test fruit docs
 test: fruit
 fruit:

@@ -24,7 +24,6 @@ contains
 !> Constructor for an event
 !> This is so extensive to allow default values and overloading
 function new_event(act, start, step, end, sync)
-  use mod_action
   type(event) :: new_event
   class(action), intent(in)     :: act
   real*8, intent(in), optional  :: start, step, end

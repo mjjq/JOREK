@@ -1,6 +1,15 @@
 !> Particle pusher module with the Boris scheme
 module mod_pusher_boris
-  use mod_particle_boris
+use mod_particle_boris
+use mod_pusher
+implicit none
+
+type, extends(pusher_base) :: pusher_boris
+contains
+  procedure :: push_single => boris_push_single_particle
+end type pusher_boris
+
+private
 contains
 
 

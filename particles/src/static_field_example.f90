@@ -1,25 +1,30 @@
 program static_field_example
-
+use mod_constants, only: CARTESIAN
 use mod_particle_sim, only: particle_sim
 use mod_event, only: event
 use mod_action, only: stop_action
 use mod_prescribed_fields, only: prescribed_fields
+use mod_main_loop, only: main_loop
+!use mod_boris, only: boris_pusher
+use mod_pusher, only: pusher_container
 implicit none
 
 type(particle_sim) :: sim
+type(pusher_container), dimension(:), allocatable :: pushers
 type(event), dimension(:), allocatable :: events
 
-integer :: i
+allocate(sim%fields, source=prescribed_fields(CARTESIAN, E, B))
 
-allocate(prescribed_fields::sim%fields)
-sim%fields%electric_field => E
-sim%fields%magnetic_field => B
+!pushers = [ &
+!  boris_pusher(groups=[1,2,3], fixed_timestep=0.1) &
+!]
 
 events = [ &
+!  event(seed_particles()), &
   event(stop_action(), start=1.d0) & ! Stop the sim after 1 second
 ]
 
-write(*,*) "not implemented yet"
+call main_loop(sim, pushers, events)
 
 contains
 pure function E(x, t)

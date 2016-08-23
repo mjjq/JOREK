@@ -9,7 +9,7 @@ implicit none
 !> Hook type
 type, public :: hook
   integer :: istep !< Every how many steps should this hook run? (takes precedence over step)
-  real*8  :: step  !< Every how often should this hook run?
+  real*8  :: step  !< Every how often should this hook run? (rounded to the nearest istep > 1)
 
   !> Action to execute
   class(particle_action), allocatable :: action

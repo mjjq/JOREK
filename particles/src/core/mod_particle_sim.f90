@@ -10,6 +10,6 @@ implicit none
 type particle_sim
   type(particle_hdf5_io)                          :: io
   type(particle_group), dimension(:), allocatable :: group
-  class(fields), allocatable                      :: fields
+  class(fields_base), allocatable                 :: fields
 end type particle_sim
 end module mod_particle_sim

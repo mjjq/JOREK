@@ -1,10 +1,21 @@
 !> Module for the initialization of particles in configuration space (6D)
+!> by rejection sampling
 module mod_initialise_particles
 use mod_coronal
+type particle_init_params
+  integer*1 :: species = 0     !< Atomic number Z of the particles (-1) for electrons
+  real*4    :: atomic_mass     !< Atomic mass in a.m.u.
+
+  !> TODO make the below object-oriented
+  character(len=80) :: location_accept_function = 'location_accept_any' !< Which function to use for particle position rejection sampling
+  real*4  :: location_accept_parameters(1:9) = 0 !< Extra arguments for this function
+  integer :: particle_seed = 0 !< Seed for PCG random sequence used for particle init
+  character(len=6) :: particle_initializer = 'pcg32' !< Method to use for seeding particles (options: pcg32, sobol)
+end type particle_init_params
 contains
 
 !> Initialize_particles creates n_particles*(species>0), divided over all processors
-subroutine initialise_particles(my_id,n_cpu, coronal, particle_list,particle_list_GC)
+subroutine initialise_particles(my_id,n_cpu,coronal,particle_list,particle_list_GC)
 
 !$ use omp_lib
 use constants

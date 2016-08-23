@@ -32,7 +32,7 @@ ifeq ($(COMPILER), gnu)
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
   FLAGS += -Wsurprising
-  FLAGS += -Wrealloc-lhs-all
+  #FLAGS += -Wrealloc-lhs-all
   FLAGS += -fimplicit-none
   FLAGS += -flto=4 # link-time optimization with 4 jobs
   # options still to be tested

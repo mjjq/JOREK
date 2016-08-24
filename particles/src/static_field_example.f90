@@ -14,7 +14,6 @@ implicit none
 type(particle_sim) :: sim
 type(pusher_container), dimension(:), allocatable :: pushers
 type(event), dimension(:), allocatable :: events
-integer :: provided, ierr
 
 allocate(sim%fields, source=prescribed_fields(CARTESIAN, E, B))
 allocate(sim%groups(1:0))

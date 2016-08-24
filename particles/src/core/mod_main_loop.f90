@@ -6,6 +6,8 @@ use mod_event, only: event
 use mod_pusher, only: pusher_container
 implicit none
 
+real*8, parameter :: tick = 1d-14 !< Precision to which times need to match
+
 public :: main_loop
 private
 contains
@@ -15,7 +17,8 @@ subroutine main_loop(sim, pushers, events)
   type(event), intent(inout), dimension(:)  :: events
   integer :: ierr, i
   integer, dimension(:), allocatable :: next_events
-  real*8 :: time, next_event_time
+  real*8 :: next_event_time
+
   
   ! Check if pushers contain enough for all groups
   call check_pusher_groups(pushers, size(sim%groups), ierr)
@@ -25,10 +28,17 @@ subroutine main_loop(sim, pushers, events)
   call calculate_timesteps(pushers, events, ierr)
   if (ierr .ne. 0) return
 
-  time = 0.d0
+  ! if we are at 0.d0 (to within one tick)
+  if (abs(sim%time) .lt. tick) then
+    call next_event_index(events, sim%time, next_events, next_event_time, include_now=.true.)
+    do i=1,size(next_events)
+      call events(next_events(i))%action%run(sim)
+    end do
+  end if
+
   do
     ! Calculate which of the events is next, or stop if there are no more
-    call next_event_index(events, time, next_events, next_event_time)
+    call next_event_index(events, sim%time, next_events, next_event_time)
     if (size(next_events) .eq. 0) then
       write(*,*) "INFO: end of events, exiting"
       exit ! stop this loop
@@ -37,11 +47,11 @@ subroutine main_loop(sim, pushers, events)
     ! push particles until that time
     !$omp parallel default(none) &
     !$omp shared(sim, pushers, events) &
-    !$omp private(ierr, next_event_time, next_events, time)
+    !$omp private(ierr, next_event_time, next_events)
     ! TODO
     !$omp end parallel
 
-    time = next_event_time
+    sim%time = next_event_time
     ! run event(s) on the master thread
     do i=1,size(next_events)
       call events(next_events(i))%action%run(sim)
@@ -52,18 +62,22 @@ end subroutine
 !> Return the number of the next event(s) to run
 !> If the time is > event_start, calculate the time from
 !> ```
-!> |--DT--|              dt
+!>  <-DT->               dt
 !> |------|------|------|--|---|
 !> |T0                     t   te
 !> ```
 !> where DT is the event%step, T0=event%start,
 !> dt = mod(t-T0, DT) and te = t + DT - dt
-subroutine next_event_index(events, current_time, next_events, event_time)
+!>
+!> Any events that are within 1d-14 of the current time will not run
+!> (to prevent double events due to floating-point issues)
+subroutine next_event_index(events, current_time, next_events, event_time, include_now)
   type(event), intent(inout), dimension(:) :: events
   real*8, intent(in) :: current_time
   integer, dimension(:), allocatable, intent(out) :: next_events
   real*8, intent(out) :: event_time
-  real*8 :: event_run
+  logical, optional :: include_now !< if set to .true., do not remove events occurring at current_time (+- tolerance)
+  real*8 :: event_run !< when events(i) is to run (at the soonest)
   logical, dimension(size(events)) :: event_first
   integer :: i
 
@@ -75,14 +89,24 @@ subroutine next_event_index(events, current_time, next_events, event_time)
     else
       event_run = current_time + events(i)%step - mod(current_time - events(i)%start, events(i)%step)
       ! Do not run any events that are really close to now (to fix floating-point issues)
-      if (event_run - current_time .le. 1d-14) cycle
+      if (.not. (present(include_now) .and. include_now) &
+          .and. abs(event_run - current_time) .le. tick) event_run = current_time + events(i)%step
     end if
-    if (event_run .le. event_time .and. event_run .le. events(i)%end) then
+
+    ! If this event has ended already
+    if (event_run .gt. events(i)%end + tick) cycle
+
+    ! if this event occurs faster than the previously fastest (event_time)
+    if (event_run .lt. event_time - tick) then
+      event_first(:) = .false.
       event_first(i) = .true.
       event_time = event_run
+    else if (event_run .le. event_time + tick) then
+      event_first(i) = .true.
     end if
   end do
 
+  ! Select all indices which have true in event_first
   next_events = pack([(i, i=1, size(events))], event_first)
 end subroutine next_event_index
 

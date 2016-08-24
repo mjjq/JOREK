@@ -9,9 +9,7 @@ implicit none
 type, public :: event
   real*8  :: start    = 0.d0       !< Physical starting time
   real*8  :: step     = huge(0.d0) !< Step every how long?
-  real*8  :: end      = huge(0.d0) !< Stop at time end
-  logical :: sync     = .false.    !< Should all groups be at a full-timestep? (if not, they may be slightly before or after this time
-  logical :: mpi_sync = .false.    !< Should all processes do this event simultaneously?
+  real*8  :: end      = huge(0.d0) !< Stop after time end
 
   !> Action
   class(action), allocatable :: action
@@ -23,16 +21,13 @@ end interface
 contains
 !> Constructor for an event
 !> This is needed to allow changing default values
-function new_event(act, start, step, end, sync, mpi_sync)
+function new_event(act, start, step, end)
   type(event) :: new_event
   class(action), intent(in)     :: act
   real*8, intent(in), optional  :: start, step, end
-  logical, intent(in), optional :: sync, mpi_sync
   if (present(start))    new_event%start    = start
   if (present(step))     new_event%step     = step
   if (present(end))      new_event%end      = end
-  if (present(sync))     new_event%sync     = sync
-  if (present(mpi_sync)) new_event%mpi_sync = mpi_sync
   allocate(new_event%action, source=act) ! because assignment is not yet supported in gfortran 6.1.1
 end function new_event
 end module mod_event

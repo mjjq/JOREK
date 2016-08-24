@@ -6,11 +6,11 @@ implicit none
 !> Action abstract type, representing anything that can be done to a simulation
 type, abstract, public :: action
   !> Logging variable, set this in an initializer
-  character(len=30) :: name !< Event name for logging
-  logical :: log = .true. !< Output event duration
+  character(len=30) :: name = "unset action" !< Event name for logging
+  logical :: log = .false. !< Output event duration
 
   !> Timing variables
-  real*8, private :: t0
+  real*8, private :: t0 = 0.0
 contains
   procedure, pass, public :: run
   procedure(do), deferred, pass, private :: do
@@ -48,7 +48,7 @@ subroutine do_stop_action(this, sim)
   class(stop_action), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   integer :: ierr
-  call MPI_ABORT(MPI_COMM_WORLD, 0, ierr)
+  call exit(0)
 end subroutine do_stop_action
 
 

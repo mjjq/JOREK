@@ -7,17 +7,22 @@ use mod_prescribed_fields, only: prescribed_fields
 use mod_main_loop, only: main_loop
 !use mod_boris, only: boris_pusher
 use mod_pusher, only: pusher_container
+use mod_pusher_no_action, only: pusher_no_action
+use mpi
 implicit none
 
 type(particle_sim) :: sim
 type(pusher_container), dimension(:), allocatable :: pushers
 type(event), dimension(:), allocatable :: events
+integer :: provided, ierr
 
 allocate(sim%fields, source=prescribed_fields(CARTESIAN, E, B))
+allocate(sim%groups(1:0))
 
 !pushers = [ &
 !  boris_pusher(groups=[1,2,3], fixed_timestep=0.1) &
 !]
+pushers = [pusher_container(pusher_no_action())]
 
 events = [ &
 !  event(seed_particles()), &

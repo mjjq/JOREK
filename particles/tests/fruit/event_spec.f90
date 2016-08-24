@@ -23,34 +23,31 @@ subroutine test_create_event_with_stop_action
   call assert_equals(events(1)%start, 1.d0)
 end subroutine test_create_event_with_stop_action
 
-
 subroutine test_main_loop_with_three_increments
   type(event), dimension(:), allocatable :: events
   type(pusher_container), dimension(:), allocatable :: pushers
   type(particle_sim) :: sim
-  type(increment_action) :: inc
   pushers = [pusher_container(pusher_no_action())]
-  events = [ &
-    event(inc, step=0.33d0), &
-    event(stop_action(), start=1.d0) &
-  ]
+  events = [event(increment_action(), step=0.33d0, end=1.d0)]
   call main_loop(sim, pushers, events)
-  call assert_equals(3, inc%counter, "increment_action should run three times")
+  select type (a => events(1)%action)
+  type is (increment_action)
+    call assert_equals(3, a%counter, "increment_action should run three times")
+  end select
 end subroutine test_main_loop_with_three_increments
 
 subroutine test_main_loop_with_no_increments
   type(event), dimension(:), allocatable :: events
   type(pusher_container), dimension(:), allocatable :: pushers
   type(particle_sim) :: sim
-  type(increment_action) :: inc
 
   pushers = [pusher_container(pusher_no_action())]
-  events = [ &
-    event(inc, step=1.33d0), &
-    event(stop_action(), start=1.d0) &
-  ]
+  events = [event(increment_action(), step=1.33d0, end=1.d0)]
   call main_loop(sim, pushers, events)
-  call assert_equals(0, inc%counter, "increment_action should run zero times")
+  select type (a => events(1)%action)
+  type is (increment_action)
+    call assert_equals(0, a%counter, "increment_action should run zero times")
+  end select
 end subroutine test_main_loop_with_no_increments
 
 subroutine do_increment_action(this, sim)

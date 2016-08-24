@@ -9,7 +9,7 @@ implicit none
 !> Particle simulation type, containing all variables pertaining to a simulation.
 type particle_sim
   type(particle_hdf5_io)                          :: io
-  type(particle_group), dimension(:), allocatable :: group
+  type(particle_group), dimension(:), allocatable :: groups
   class(fields_base), allocatable                 :: fields
 end type particle_sim
 end module mod_particle_sim

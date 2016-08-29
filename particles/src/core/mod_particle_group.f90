@@ -10,6 +10,7 @@ module mod_particle_group
   end type ion_rec_params
 
   type :: particle_group
+    integer :: pusher !< which pusher is responsible for this group
     class(particle_base), dimension(:), allocatable :: particles
   end type particle_group
 

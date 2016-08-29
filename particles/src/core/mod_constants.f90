@@ -5,6 +5,7 @@ implicit none
 integer*1, parameter :: CARTESIAN = 1 !< Constant for selecting cartesian geometry
 integer*1, parameter :: CYLINDRICAL = 2 !< Constant for selecting cylindrical geometry
 
+real*8,  parameter :: TICK             = 1d-12                    !< Time precision for events [s]
 real*8,  parameter :: PI               = 3.1415926535897932385d0  !< Half-circle constant
 real*8,  parameter :: TWOPI            = 6.2831853071795864769d0  !< Circle constant
 real*8,  parameter :: MU_ZERO          = 4.d-7*PI                 !< Magnetic constant  [Vs/Am]

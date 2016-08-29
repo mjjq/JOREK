@@ -3,6 +3,7 @@
 !> about when to run, and an action they should run.
 module mod_event
 use mod_action
+use mod_constants
 implicit none
 
 !> Event type
@@ -11,7 +12,9 @@ type, public :: event
   real*8  :: step     = huge(0.d0) !< Step every how long?
   real*8  :: end      = huge(0.d0) !< Stop after time end
 
-  !> Action
+  integer, dimension(:), allocatable :: sync_groups !< which groups to require at a full-timestep (default = all, empty array = none)
+
+  !> Action to perform when this event runs
   class(action), allocatable :: action
 end type event
 interface event

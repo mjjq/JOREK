@@ -4,9 +4,8 @@ module mod_main_loop
 use mod_particle_sim, only: particle_sim
 use mod_event, only: event
 use mod_pusher, only: pusher_container
+use mod_constants, only: tick
 implicit none
-
-real*8, parameter :: tick = 1d-14 !< Precision to which times need to match
 
 public :: main_loop
 private
@@ -21,11 +20,11 @@ subroutine main_loop(sim, pushers, events)
 
   
   ! Check if pushers contain enough for all groups
-  call check_pusher_groups(pushers, size(sim%groups), ierr)
+  call check_set_pusher_groups(sim, pushers, ierr)
   if (ierr .ne. 0) return
 
-  ! Calculate required timesteps
-  call calculate_timesteps(pushers, events, ierr)
+  ! Check if we have any fixed_timestep pushers and reschedule events to fit
+  call check_and_fix_timesteps(sim, pushers, events, ierr)
   if (ierr .ne. 0) return
 
   ! if we are at 0.d0 (to within one tick)
@@ -58,6 +57,7 @@ subroutine main_loop(sim, pushers, events)
     end do
   end do
 end subroutine
+
 
 !> Return the number of the next event(s) to run
 !> If the time is > event_start, calculate the time from
@@ -110,17 +110,21 @@ subroutine next_event_index(events, current_time, next_events, event_time, inclu
   next_events = pack([(i, i=1, size(events))], event_first)
 end subroutine next_event_index
 
+
 !> Check whether there is exactly one pusher for each group
 !> At most 1 pusher can have the groups array unallocated, and it will be used for all
 !> unlisted groups
-subroutine check_pusher_groups(pushers, num_groups, ierr)
-  use mpi
+subroutine check_set_pusher_groups(sim, pushers, ierr)
+  type(particle_sim), intent(inout)                   :: sim
   type(pusher_container), intent(inout), dimension(:) :: pushers !< all the requested pushers
-  integer, intent(in) :: num_groups !< number of groups in total (1..num_groups)
   integer, intent(out) :: ierr !< if nonzero we cannot run the simulation with this config
   integer :: num_unallocated, index_unallocated, i, j
-  logical, dimension(num_groups) :: group_pushed
+  logical, dimension(size(sim%groups)) :: group_pushed
 
+  if (.not. allocated(sim%groups)) then
+    write(*,*) "WARNING: no groups allocated"
+    allocate(sim%groups(1:0)) ! if we have no groups, allow this for testing purposes
+  end if
   ierr = 0
   num_unallocated = 0
   index_unallocated = 0
@@ -142,6 +146,7 @@ subroutine check_pusher_groups(pushers, num_groups, ierr)
             return
           else
             group_pushed(j) = .true.
+            sim%groups%pusher = i
           end if
         end do
       end if
@@ -155,24 +160,103 @@ subroutine check_pusher_groups(pushers, num_groups, ierr)
 
   ! set the unallocated pusher to do all missing groups (select from implied do-loop from 1..num_groups)
   if (index_unallocated .gt. 0) then
-    pushers(index_unallocated)%pusher%groups = pack([(i, i=1, num_groups)], .not. group_pushed)
+    pushers(index_unallocated)%pusher%groups = pack([(i, i=1, size(sim%groups))], .not. group_pushed)
+    do i=1,size(sim%groups)
+      if (.not. group_pushed(i)) then
+        sim%groups(i)%pusher = index_unallocated
+      end if
+    end do
   else
     if (.not. all(group_pushed)) then
-      write(*,*) "ERROR: not all groups have pushers. Missing: ", pack([(i, i=1, num_groups)], .not. group_pushed)
+      write(*,*) "ERROR: not all groups have pushers. Missing: ", pack([(i, i=1, size(sim%groups))], .not. group_pushed)
       ierr = 4
       return
     end if
   end if
-end subroutine check_pusher_groups
-
+end subroutine check_set_pusher_groups
 
 
 !> Calculate whether we need to change any of the fixed timesteps or events to match
-subroutine calculate_timesteps(pushers, events, ierr)
+!> For each of the pushers with a fixed timestep 
+subroutine check_and_fix_timesteps(sim, pushers, events, ierr)
+  use mod_event_timestep
+  type(particle_sim),     intent(in)                  :: sim
   type(pusher_container), intent(inout), dimension(:) :: pushers !< all the requested pushers
-  type(event), intent(inout), dimension(:)  :: events
+  type(event),            intent(inout), dimension(:) :: events
   integer, intent(out) :: ierr !< if nonzero we cannot run the simulation with this config
 
-  ! Test whether step > 0
-end subroutine calculate_timesteps
+  logical, dimension(size(pushers))    :: pusher_timestep_fixed
+  real*8, dimension(:), allocatable    :: pusher_timestep
+  real*8, dimension(:), allocatable    :: event_start, event_step
+  logical, dimension(:,:), allocatable :: constraints
+  integer :: i, j, pusher
+
+  ierr = 0
+
+  ! check if we have any pushers with a fixed timestep
+  pusher_timestep_fixed = .false.
+  do i=1,size(pushers)
+    ! whether pushers(i)%pusher is allocated was tested before, in [[check_pusher_groups]]
+    if (allocated(pushers(i)%pusher%fixed_timestep)) pusher_timestep_fixed(i) = .true.
+  end do
+
+  ! if so, create constraints and call fix_event_timestep
+  if (any(pusher_timestep_fixed)) then
+    ! select fixed_timesteps of all pushers
+    pusher_timestep = pack([(pushers(i)%pusher%fixed_timestep, i=1, size(pushers))], pusher_timestep_fixed)
+    ! select start and step times of all events
+    event_start = [(events(i)%start, i=1, size(events))]
+    event_step  = [(events(i)%step,  i=1, size(events))]
+
+    ! find constraints
+    allocate(constraints(size(events),size(pusher_timestep)))
+    constraints = .false.
+    do i=1,size(events)
+      if (allocated(events(i)%sync_groups)) then ! if we have specified specific groups to sync only
+        ! for each of the groups, check if it needs to sync to this event, and set it for that pusher
+        do j=1,size(events(i)%sync_groups)
+          if ((events(i)%sync_groups(j) .lt. lbound(sim%groups,1)) .or. &
+              (events(i)%sync_groups(j) .gt. ubound(sim%groups,1))) then
+            write(*,*) "ERROR: invalid sync group"
+          else
+            ! get the index of this pusher in pusher_timestep
+            pusher = count(pusher_timestep_fixed(1:sim%groups(events(i)%sync_groups(j))%pusher))
+            constraints(i,pusher) = .true.
+          end if
+        end do
+      else ! sync all groups
+        constraints(i,:) = .true. ! add all the pushers for this event
+      end if
+    end do
+
+    call fix_event_timestep(pusher_timestep, event_start, event_step, constraints, ierr)
+    if (ierr .ne. 0) return
+
+    ! show changes in timesteps and set them
+    j = 0
+    do i=1,size(pushers)
+      if (pusher_timestep_fixed(i)) then
+        j = j + 1
+        if (abs(pusher_timestep(j) - pushers(i)%pusher%fixed_timestep) .gt. TICK) then
+          write(*,*) "INFO: changing timestep of pusher", i, " from ", pushers(i)%pusher%fixed_timestep, " to ", pusher_timestep(j)
+        end if
+        ! always update, but notify only for significant changes
+        pushers(i)%pusher%fixed_timestep = pusher_timestep(j)
+      end if
+    end do
+    do i=1,size(events)
+      if (abs(event_start(i) - events(i)%start) .gt. TICK) then
+        write(*,"(A,i3,A,A,A,g14.8,A,g14.8)") "INFO: changing start time of event ", i, &
+            "(", trim(events(i)%action%name), ") from ", events(i)%start, " to ", event_start(i)
+      end if
+      if (abs(event_step(i) - events(i)%step) .gt. TICK) then
+        write(*,"(A,i3,A,A,A,g14.8,A,g14.8)") "INFO: changing timestep of event ", i, &
+            "(", trim(events(i)%action%name), ") from ", events(i)%step, " to ", event_step(i)
+      end if
+      ! always update, notify only for significant changes
+      events(i)%start = event_start(i)
+      events(i)%step = event_step(i)
+    end do
+  end if
+end subroutine check_and_fix_timesteps
 end module mod_main_loop

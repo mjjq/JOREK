@@ -11,7 +11,7 @@ contains
 pure subroutine push_no_action(this, fields, particle, time_start, time_end)
   use mod_fields
   use mod_particle_base
-  class(pusher_no_action), intent(inout)   :: this
+  class(pusher_no_action), intent(in) :: this
   class(fields_base), intent(in)      :: fields
   class(particle_base), intent(inout) :: particle
   real*8, intent(in) :: time_start, time_end

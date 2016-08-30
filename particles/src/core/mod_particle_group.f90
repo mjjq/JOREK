@@ -12,6 +12,7 @@ module mod_particle_group
   type :: particle_group
     integer :: pusher !< which pusher is responsible for this group
     class(particle_base), dimension(:), allocatable :: particles
+    real*8 :: time !< time at which this group is currently
   end type particle_group
 
 end module mod_particle_group

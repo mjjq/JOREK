@@ -1,6 +1,6 @@
 !> Fields as used in the simulation
 module mod_fields
-use mod_constants
+use mod_constants, only: CARTESIAN, CYLINDRICAL
 implicit none
 
 !> Base type for different field

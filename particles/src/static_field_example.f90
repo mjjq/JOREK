@@ -5,9 +5,8 @@ use mod_event, only: event
 use mod_action, only: stop_action
 use mod_prescribed_fields, only: prescribed_fields
 use mod_main_loop, only: main_loop
-!use mod_boris, only: boris_pusher
+use mod_boris, only: pusher_boris, new_pusher_boris
 use mod_pusher, only: pusher_container
-use mod_pusher_no_action, only: pusher_no_action
 use mpi
 implicit none
 
@@ -16,12 +15,11 @@ type(pusher_container), dimension(:), allocatable :: pushers
 type(event), dimension(:), allocatable :: events
 
 allocate(sim%fields, source=prescribed_fields(CARTESIAN, E, B))
-allocate(sim%groups(1:0))
+allocate(sim%groups(1))
 
-!pushers = [ &
-!  boris_pusher(groups=[1,2,3], fixed_timestep=0.1) &
-!]
-pushers = [pusher_container(pusher_no_action())]
+pushers = [ &
+  pusher_container(pusher_boris(fixed_timestep=0.1d0)) &
+]
 
 events = [ &
 !  event(seed_particles()), &

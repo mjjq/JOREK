@@ -3,6 +3,30 @@ module mod_event_timestep
 implicit none
 contains
 
+!> Calculate the optimum times for pushers, event start and event steps to fit constraints
+!> while staying as close as possible to the original values.
+!>
+!> Each of the constraints represents two equations:
+!> \( k*t_i = T_{start,j} \) and \( l*t_i = T_{step,j} \) where pushers are numbered with $i$
+!> and events with $j$. $k$ and $l$ must be some integer value, determined by dividing the 
+!> requested timesteps and rounding.
+!>
+!> We gather the timesteps into a vector $x = [pusher_timesteps, event_start, event_step]$ of
+!> size $n$. The resulting system of constraints we can write as $Bx=d$ where $B$ is a full-rank
+!> matrix of size $p$ by $n$ and $d = 0$ (and has size $p$). To calculate $B$ the LAPACK
+!> routine DGETRF is used on the full constraints matrix $B_{tmp}$ (which has size $k$ by $n$).
+!> The upper triangular part returned is in the row-reduced echelon form.
+!> From this, rows having a nonzero diagonal element are selected into $B$.
+!> 
+!> The problem reduces to a constrained linear least-squares optimization problem
+!> which can be solved by the LAPACK routine DGGLSE. This minimizes ||c-A*x||_2 subject to Bx=d
+!> The weight matrix $A$ is given by $diag(1/x)$, i.e. 1/x put on the diagonal of $A$.
+!> This ensures the minimization of the relative change. There are two special cases to consider
+!> here, the one where an initial value is 0 and where it is huge.
+!>
+!> For the first case, which should only occur for the event_start time, we take event_step
+!> as normalization. In the second case the weight factor is close to zero, and the result for
+!> this event_step is ignored.
 subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constraints, ierr)
   use mod_constants, only: TICK
   real*8, intent(inout), dimension(:)                                      :: pusher_timesteps !< steps of each of the used pushers
@@ -28,10 +52,11 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   num_events  = size(event_start)
 
   ! Set the number of variables, the weighting matrix A and the target vector c
+  ! count the number of non-huge event_steps
   n = num_pushers + 2*num_events
   allocate(x(n), c(n), A(n,n))
-  ! Set optimization parameters
-  x = [pusher_timesteps, event_start, event_step] ! concatenate for initial guess
+  x = [pusher_timesteps, event_start, event_step]
+
   c(:) = 1.d0 ! reference value = A x0 = 1
   A(:,:) = 0.d0 ! A contains a normalization by the current timestep size
   do i=1,n
@@ -46,20 +71,23 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
 
 
   ! convert the constraints into B_real
-  p = 2*count(constraints)
-  k = 0
-  allocate(B_real(p,n))
+  k = 2*count(constraints) ! maximum number of constraints
+  p = 0
+  allocate(B_real(k,n))
   B_real(:,:) = 0.d0
   do i=1,size(constraints,1) ! i numbers the event
     do j=1,size(constraints,2) ! j numbers the pusher
       if (constraints(i,j)) then
-        k = k+2
-        ! equation: m * t_j = T_step,i (where m is the number of steps to fit)
-        B_real(k-1,j) = event_step(i)/pusher_timesteps(j)
-        B_real(k-1,num_pushers+num_events+i) = -1.d0
+        p = p+1
+        if (event_step(i) .lt. huge(event_step(i))*(1.d0-tolerance)) then ! if it is not huge
+          ! equation: m * t_j = T_step,i (where m is the number of steps to fit)
+          B_real(p,j) = event_step(i)/pusher_timesteps(j)
+          B_real(p,num_pushers+num_events+i) = -1.d0
+          p = p+1
+        end if
         ! equation: l * t_j = T_start,i (where l is the number of steps to fit)
-        B_real(k,j) = event_start(i)/pusher_timesteps(j)
-        B_real(k,num_pushers+i) = -1.d0
+        B_real(p,j) = event_start(i)/pusher_timesteps(j)
+        B_real(p,num_pushers+i) = -1.d0
       end if
     end do
   end do
@@ -67,27 +95,29 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   ! TODO: heuristic algorithm to match timesteps (rows in the matrix) if needed (if p > n)
   ! so we can find a matrix B with rank p <= n so it has a solution
 
-  allocate(B_tmp(p, n), ipiv(min(p,n)))
+
+  allocate(B_tmp(k, n), ipiv(min(k,n)))
   B_tmp = real(nint(B_real),8) ! round all values
-  call dgetrf(p, n, B_tmp, p, ipiv, info)
+  call dgetrf(k, n, B_tmp, k, ipiv, info)
   if (info .lt. 0) then
     write(*,*) "ERROR: dgetrf info: ", info
   end if
   ! B_tmp now contains the LU factorisation of nint(B_real)
   ! copy these rows to B to get the row-reduced echelon form (i.e. a full-rank constraint matrix)
 
-  if (info .gt. 0) then
-    p = info - 1
-  else
-    p = min(p,n)
-  end if
-  ! test for the last zero (workaround)
-  if (abs(B_tmp(p,p) - 0.d0) .le. tolerance) p = p-1
+  ! count the number of non-zero diagonal elements in k
+  p = 0
+  do i=1,min(k,n)
+    if (abs(B_tmp(i,i)) .gt. tolerance) p = p+1
+  end do
 
   allocate(B(p,n))
-  B = 0.d0
-  do i=1,p
-    B(i,i:n) = B_tmp(i,i:n)
+  B = 0.d0; p = 0
+  do i=1,min(k,n)
+    if (abs(B_tmp(i,i)) .gt. tolerance) then ! do not copy rows that have a zero on the diagonal
+      p = p+1
+      B(p,i:n) = B_tmp(i,i:n)
+    end if
   end do
   allocate(d(p))
   d(:) = 0.d0
@@ -133,7 +163,10 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
       else if (i .le. num_pushers + num_events) then
         event_start(i-num_pushers) = x(i)
       else
-        event_step(i-num_pushers-num_events) = x(i)
+        ! if the event_step was not huge
+        if (event_step(i-num_pushers-num_events) .lt. huge(event_step(i))*(1.d0-tolerance)) then
+          event_step(i-num_pushers-num_events) = x(i)
+        end if
       end if
     end do
 

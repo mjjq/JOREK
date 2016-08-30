@@ -77,6 +77,33 @@ subroutine test_two_pushers_two_events
   call assert_equals(2*1111d0, event_step(2)/pusher_timestep(2), division_tol, "timestep 2 should divide event 2")
 end subroutine test_two_pushers_two_events
 
+subroutine test_two_pushers_two_events_some_constraints
+  real*8, dimension(2) :: pusher_timestep = [1.1d-3, 0.9d-3]
+  real*8, dimension(2) :: event_start = [0.d0, 0.d0]
+  real*8, dimension(2) :: event_step  = [1.0d0, 2.0d0]
+  logical, dimension(2,2) :: constraints = .true.
+  integer :: ierr
+  constraints(1,2) = .false.
+  call fix_event_timestep(pusher_timestep, event_start, event_step, constraints, ierr)
+  call assert_equals(0, ierr, "must run without error")
+  call assert_equals(909d0, event_step(1)/pusher_timestep(1), division_tol, "timestep 1 should divide event 1")
+  call assert_equals(2*909d0, event_step(2)/pusher_timestep(1), division_tol, "timestep 1 should divide event 2")
+  call assert_equals(2*1111d0, event_step(2)/pusher_timestep(2), division_tol, "timestep 2 should divide event 2")
+end subroutine test_two_pushers_two_events_some_constraints
+
+subroutine test_two_pushers_two_events_of_which_one_constrained
+  real*8, dimension(2) :: pusher_timestep = [1.1d-3, 0.9d-3]
+  real*8, dimension(2) :: event_start = [0.d0, 0.d0]
+  real*8, dimension(2) :: event_step  = [1.0d0, 2.0d0]
+  logical, dimension(2,2) :: constraints = .true.
+  integer :: ierr
+  constraints(1,:) = .false.
+  call fix_event_timestep(pusher_timestep, event_start, event_step, constraints, ierr)
+  call assert_equals(0, ierr, "must run without error")
+  call assert_equals(2*909d0, event_step(2)/pusher_timestep(1), division_tol, "timestep 1 should divide event 2")
+  call assert_equals(2*1111d0, event_step(2)/pusher_timestep(2), division_tol, "timestep 2 should divide event 2")
+end subroutine test_two_pushers_two_events_of_which_one_constrained
+
 !> Test when there are many many events at the same time
 subroutine test_one_pusher_six_events
   real*8, dimension(1) :: pusher_timestep = [1.0d0]
@@ -133,7 +160,16 @@ subroutine test_three_pushers_six_events_with_start
   call assert_equals(1.2d1, event_step(6)/pusher_timestep(2), division_tol, "timestep 2 should divide event 6")
 end subroutine test_three_pushers_six_events_with_start
 
-!> TODO: reduce the system of constraints somehow
-!> ideas: remove constraints that are already met (i.e. the user calculated something nice)
-!>        remove option to have start-time different from step time
+subroutine test_single_event_start
+  real*8, dimension(1) :: pusher_timestep = [0.1d0]
+  real*8, dimension(1) :: event_start = [1.d0]
+  real*8, dimension(1) :: event_step = [huge(1.d0)]
+  logical, dimension(1,1) :: constraints = .true.
+  integer :: ierr
+  call fix_event_timestep(pusher_timestep, event_start, event_step, constraints, ierr)
+  call assert_equals(0, ierr, "must run without error")
+  call assert_equals(1d1, event_start(1)/pusher_timestep(1), division_tol, "timestep 1 should divide event start 1")
+  call assert_equals(huge(1.d0), event_step(1), TICK, "event huge step should not change")
+end subroutine test_single_event_start
+
 end module event_timestep_spec

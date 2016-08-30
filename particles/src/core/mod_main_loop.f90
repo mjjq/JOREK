@@ -14,7 +14,7 @@ subroutine main_loop(sim, pushers, events)
   type(particle_sim), intent(inout)         :: sim
   type(pusher_container), intent(inout), dimension(:) :: pushers
   type(event), intent(inout), dimension(:)  :: events
-  integer :: ierr, i
+  integer :: ierr, i, j
   integer, dimension(:), allocatable :: next_events
   real*8 :: next_event_time
 
@@ -27,7 +27,7 @@ subroutine main_loop(sim, pushers, events)
   call check_and_fix_timesteps(sim, pushers, events, ierr)
   if (ierr .ne. 0) return
 
-  ! if we are at 0.d0 (to within one tick)
+  ! if we are at 0.d0 (to within one tick) run all of the start-events
   if (abs(sim%time) .lt. tick) then
     call next_event_index(events, sim%time, next_events, next_event_time, include_now=.true.)
     do i=1,size(next_events)
@@ -43,11 +43,20 @@ subroutine main_loop(sim, pushers, events)
       exit ! stop this loop
     end if
 
-    ! push particles until that time
     !$omp parallel default(none) &
-    !$omp shared(sim, pushers, events) &
-    !$omp private(ierr, next_event_time, next_events)
-    ! TODO
+    !$omp shared(sim, pushers, events, next_event_time) &
+    !$omp private(ierr, i, j)
+    ! note that this is not a parallel do loop, just the start of this parallel region
+    do i=1,size(sim%groups)
+      !$omp do
+      do j=1,size(sim%groups(i)%particles)
+        ! pusher guarantees to push the particle until at least next_event_time (or a little bit further)
+        call pushers(sim%groups(i)%pusher)%pusher%push_single(sim%fields, sim%groups(i)%particles(j), &
+            sim%groups(i)%time, next_event_time)
+      end do
+      !$omp end do
+      sim%groups%time = next_event_time
+    end do
     !$omp end parallel
 
     sim%time = next_event_time

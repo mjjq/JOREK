@@ -13,6 +13,7 @@ contains
   procedure(push_single), deferred :: push_single
 end type pusher_base
 
+
 !> Container to allow having an array of pushers
 type :: pusher_container
   class(pusher_base), allocatable :: pusher
@@ -22,12 +23,12 @@ interface pusher_container
 end interface pusher_container
 
 interface
-  !> Push a single particle from time_start to time_end
+  !> Push a single particle from time_start to time_end (or a bit further if the timestep is fixed)
   pure subroutine push_single(this, fields, particle, time_start, time_end) ! TODO test speed implications of purity
     use mod_particle_base
     use mod_fields
     import :: pusher_base
-    class(pusher_base), intent(inout)   :: this
+    class(pusher_base), intent(in)      :: this
     class(fields_base), intent(in)      :: fields
     class(particle_base), intent(inout) :: particle
     real*8, intent(in) :: time_start, time_end

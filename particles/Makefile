@@ -152,7 +152,8 @@ endef
 # All programs to compile
 PROGRAM_SOURCES = src/particles.f90 \
 		  src/static_field_example.f90 \
-		  tests/fruit_test_driver.f90
+		  tests/fruit_test_driver.f90 \
+		  tests/pusher_test.f90
 
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 

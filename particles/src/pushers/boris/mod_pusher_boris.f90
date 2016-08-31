@@ -26,7 +26,7 @@ pure function new_pusher_boris(groups, fixed_timestep)
   if (present(fixed_timestep)) allocate(new_pusher_boris%fixed_timestep, source=fixed_timestep)
 end function new_pusher_boris
 
-!> Push a single particle for some timesteps with the boris method
+!> Push a single particle for some timesteps with the boris method (TODO: test speed improvement of purity)
 pure subroutine boris_push_single_particle(this, fields, particle, time_start, time_end)
   use mod_fields
   use mod_constants, only: TICK, EL_CHG, ATOMIC_MASS_UNIT
@@ -45,7 +45,9 @@ pure subroutine boris_push_single_particle(this, fields, particle, time_start, t
   select type(particle)
     type is (particle_boris)
       do j=1,n_step
+        ! update the velocity from v^(n-1/2) to v^(n+1/2)
         call this%boris_method_v_only(fields, particle, eom, time_start + (j-1)*this%fixed_timestep)
+        ! update the position from v^n to v^(n+1)
         select case (fields%geometry) ! TODO: test speed difference if this is a compile-time constant
           case (CARTESIAN)
             particle%x = particle%x + particle%v * this%fixed_timestep

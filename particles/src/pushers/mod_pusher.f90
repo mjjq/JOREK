@@ -24,7 +24,7 @@ end interface pusher_container
 
 interface
   !> Push a single particle from time_start to time_end (or a bit further if the timestep is fixed)
-  pure subroutine push_single(this, fields, particle, time_start, time_end) ! TODO test speed implications of purity
+  subroutine push_single(this, fields, particle, time_start, time_end)
     use mod_particle_base
     use mod_fields
     import :: pusher_base

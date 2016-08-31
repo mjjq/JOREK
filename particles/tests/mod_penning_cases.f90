@@ -55,31 +55,51 @@ end function new_case_penning_cylindrical
 
 !> Initialize a particle for the cartesian-coordinate penning trap for different particle types
 subroutine initialize_particle_penning_cartesian(this, particle, fixed_timestep)
+  use mod_cross_product
   class(case_penning_cartesian), intent(in) :: this
   class(particle_base), intent(inout)       :: particle
   real*8, intent(in), optional              :: fixed_timestep
+  real*8, dimension(3) :: v, B !< for calculating the initial half-step
+  real*8 :: f, B2
   particle%x = x0
   particle%q = charge
   particle%mass = mass
   particle%lost = .false.
   select type (particle)
   type is (particle_boris)
-    particle%v = v0 - EL_CHG * charge / (ATOMIC_MASS_UNIT * mass) * E_cartesian(x0, 0.d0) * fixed_timestep * 0.5d0
+    ! perform a half-step of the boris-method backwards)
+    f = -EL_CHG * charge / (ATOMIC_MASS_UNIT * mass) * fixed_timestep * 0.25d0
+    B = B_z(x0, 0.d0)
+    B2 = dot_product(B, B)
+    v = v0 + f*E_cartesian(x0, 0.d0)
+    v = (v + 2.d0*f/(1.d0+f**2*B2) &
+        * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
+    v = v + f*E_cartesian(x0, 0.d0)
+    particle%v = v
   end select
 end subroutine initialize_particle_penning_cartesian
 subroutine initialize_particle_penning_cylindrical(this, particle, fixed_timestep)
+  use mod_cross_product
   class(case_penning_cylindrical), intent(in) :: this
   class(particle_base), intent(inout)         :: particle
   real*8, intent(in), optional                :: fixed_timestep
+  real*8, dimension(3) :: v, B !< for calculating the initial half-step
+  real*8 :: f, B2
   particle%x = cartesian_to_cylindrical(x0)
   particle%q = charge
   particle%mass = mass
   particle%lost = .false.
   select type (particle)
   type is (particle_boris)
-    particle%v = vector_rotation( &
-                 v0 - EL_CHG * charge / (ATOMIC_MASS_UNIT * mass) * E_cartesian(x0, 0.d0) * fixed_timestep * 0.5d0 &
-    , particle%x(2))
+    ! perform a half-step of the boris-method backwards)
+    f = -EL_CHG * charge / (ATOMIC_MASS_UNIT * mass) * fixed_timestep * 0.25d0
+    B = B_z(x0, 0.d0)
+    B2 = dot_product(B, B)
+    v = v0 + f*E_cartesian(x0, 0.d0)
+    v = (v + 2.d0*f/(1.d0+f**2*B2) &
+        * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
+    v = v + f*E_cartesian(x0, 0.d0)
+    particle%v = vector_rotation(v, particle%x(2))
   end select
 end subroutine initialize_particle_penning_cylindrical
 

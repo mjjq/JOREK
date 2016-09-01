@@ -7,20 +7,25 @@ contains
 !> while staying as close as possible to the original values.
 !>
 !> Each of the constraints represents two equations:
-!> \( k*t_i = T_{start,j} \) and \( l*t_i = T_{step,j} \) where pushers are numbered with $i$
-!> and events with $j$. $k$ and $l$ must be some integer value, determined by dividing the 
+!> \[ k*t_i = T_{start,j} \] i.e. the pusher timestep \(t_i\) must fit an integer
+!> \(k\) number of times between \(0\) and \(T_{start,j}\)
+!> and \[ l*t_i = T_{step,j} \]
+!> i.e. the pusher timestep \(t_i\) must fit an integer $l$ number of times
+!> between \(0\) and \(T_{step,j}\) where pushers are numbered with \(i\)
+!> and events with \(j\). \(k\) and \(l\) must be some integer value, determined by dividing the 
 !> requested timesteps and rounding.
 !>
-!> We gather the timesteps into a vector $x = [pusher_timesteps, event_start, event_step]$ of
-!> size $n$. The resulting system of constraints we can write as $Bx=d$ where $B$ is a full-rank
-!> matrix of size $p$ by $n$ and $d = 0$ (and has size $p$). To calculate $B$ the LAPACK
-!> routine DGETRF is used on the full constraints matrix $B_{tmp}$ (which has size $k$ by $n$).
+!> We gather the timesteps into a vector \(x = \) [pusher_timesteps, event_start, event_step] of
+!> size \(n\). The resulting system of constraints we can write as \(Bx=d\) where \(B\) is a full-rank
+!> matrix of size \(p\) by \(n\) and \(d = 0\) (and has size \(p\)).
+!> To calculate \(B\) the LAPACK routine DGETRF is used on the full constraints
+!> matrix \(B_{tmp}\) (which has size \(k\) by \(n\)).
 !> The upper triangular part returned is in the row-reduced echelon form.
-!> From this, rows having a nonzero diagonal element are selected into $B$.
+!> From this, rows having a nonzero diagonal element are selected into \(B\).
 !> 
 !> The problem reduces to a constrained linear least-squares optimization problem
-!> which can be solved by the LAPACK routine DGGLSE. This minimizes ||c-A*x||_2 subject to Bx=d
-!> The weight matrix $A$ is given by $diag(1/x)$, i.e. 1/x put on the diagonal of $A$.
+!> which can be solved by the LAPACK routine DGGLSE. This minimizes \(|c-Ax|_2\) subject to \(Bx=d\).
+!> The weight matrix \(A\) is given by \(diag(1/x)\), i.e. 1/x put on the diagonal of \(A\).
 !> This ensures the minimization of the relative change. There are two special cases to consider
 !> here, the one where an initial value is 0 and where it is huge.
 !>

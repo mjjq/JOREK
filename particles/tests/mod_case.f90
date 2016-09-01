@@ -58,6 +58,7 @@ subroutine run(this, pusher, particle, err, runtime, output_file)
       end do
     end if
     runtime = 0.d0
+    close(u)
   else
     call cpu_time(time_start)
     call pusher%push_single(this%fields, particle, 0.d0, this%time_end)

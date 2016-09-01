@@ -19,7 +19,7 @@ interface
     class(particle_base), intent(in)  :: particle
     real*8, intent(in)                :: t !< The current time
     real*8, dimension(3), intent(out) :: E, B
-    real*8, intent(out)               :: psi, U
+    real*8, intent(out), optional     :: psi, U !< optional parameters for JOREK field variables
   end subroutine at_particle
 end interface
 end module mod_fields

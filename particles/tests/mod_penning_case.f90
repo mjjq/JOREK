@@ -1,14 +1,14 @@
 !> Cases for testing the penning trap trajectory with different particle pushers
-module mod_penning_cases
+module mod_penning_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_coordinate_transforms
   use mod_case
-  use mod_particle_boris
+  use mod_pusher
+  use mod_boris
   implicit none
 
   !> Case for a penning trap in cartesian coordinates
   type, extends(case), public :: case_penning
-    integer*1, private :: geometry
     contains
       procedure :: initialize_particle => initialize_particle_penning
       procedure :: calculate_error => calculate_error_norm
@@ -25,8 +25,8 @@ module mod_penning_cases
   real*8, parameter :: epsilon = -1.d0
   real*8, parameter :: x0(3)   = [10.d0,0.d0,0.d0] ! cartesian
   real*8, parameter :: v0(3)   = [50.d0,0.d0,20.d0] ! cartesian
-  real*8, parameter :: mass    = 1.d0 ! in atomic mass units
-  integer, parameter :: charge = 1 ! in electron charges
+  real*4, parameter :: mass    = 1.d0 ! in atomic mass units
+  integer*1, parameter :: charge = 1 ! in electron charges
   real*8, parameter :: time_end = 16.d0
 contains
 
@@ -35,38 +35,17 @@ contains
 pure function new_case_penning(geometry) result(new)
   type(case_penning) :: new
   integer*1, intent(in) :: geometry
-  new%geometry = geometry
   new%time_end = time_end
-  if (new%geometry .eq. CARTESIAN)   new%fields = prescribed_fields(new%geometry, E_cartesian, B_z)
-  if (new%geometry .eq. CYLINDRICAL) new%fields = prescribed_fields(new%geometry, E_cylindrical, B_z)
+  if (geometry .eq. CARTESIAN)   new%fields = prescribed_fields(geometry, E_cartesian, B_z)
+  if (geometry .eq. CYLINDRICAL) new%fields = prescribed_fields(geometry, E_cylindrical, B_z)
 end function new_case_penning
 
 !> Initialize a particle for the cartesian-coordinate penning trap for different particle types
-subroutine initialize_particle_penning(this, particle, fixed_timestep)
-  use mod_cross_product
+subroutine initialize_particle_penning(this, particle, pusher)
   class(case_penning), intent(in)     :: this
   class(particle_base), intent(inout) :: particle
-  real*8, intent(in), optional        :: fixed_timestep
-  real*8, dimension(3) :: v, B !< for calculating the initial half-step
-  real*8 :: f, B2
-  if (this%geometry .eq. CARTESIAN)   particle%x = x0
-  if (this%geometry .eq. CYLINDRICAL) particle%x = cartesian_to_cylindrical(x0)
-  particle%q = charge
-  particle%mass = mass
-  particle%lost = .false.
-  select type (particle)
-  type is (particle_boris)
-    ! perform a half-step of the boris-method backwards)
-    f = -EL_CHG * charge / (ATOMIC_MASS_UNIT * mass) * fixed_timestep * 0.25d0
-    B = B_z(x0, 0.d0)
-    B2 = dot_product(B, B)
-    v = v0 + f*E_cartesian(x0, 0.d0)
-    v = (v + 2.d0*f/(1.d0+f**2*B2) &
-        * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
-    v = v + f*E_cartesian(x0, 0.d0)
-    if (this%geometry .eq. CARTESIAN)   particle%v = v
-    if (this%geometry .eq. CYLINDRICAL) particle%v = vector_rotation(v, particle%x(2))
-  end select
+  class(pusher_base), intent(in)      :: pusher
+  call this%initialize_particle_all(particle, pusher, x0, v0, charge, mass)
 end subroutine initialize_particle_penning
 
 
@@ -75,8 +54,8 @@ pure function calculate_error_norm(this, particle) result(err)
   class(case_penning), intent(in)  :: this
   class(particle_base), intent(in) :: particle
   real*8 :: err
-  if (this%geometry .eq. CARTESIAN)   err = norm2(penning_trajectory(this%time_end) - particle%x)
-  if (this%geometry .eq. CYLINDRICAL) err = norm2(penning_trajectory(this%time_end) - cylindrical_to_cartesian(particle%x))
+  if (this%fields%geometry .eq. CARTESIAN)   err = norm2(penning_trajectory(this%time_end) - particle%x)
+  if (this%fields%geometry .eq. CYLINDRICAL) err = norm2(penning_trajectory(this%time_end) - cylindrical_to_cartesian(particle%x))
 end function calculate_error_norm
 
 
@@ -134,4 +113,4 @@ pure function penning_trajectory(t) result(x)
   x(2) = real(aimag(w),8)
   x(3) = x0(3)*cos(omega*t)+v0(3)*sin(omega*t)/omega
 end function penning_trajectory
-end module mod_penning_cases
+end module mod_penning_case

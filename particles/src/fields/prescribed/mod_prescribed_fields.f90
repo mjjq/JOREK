@@ -27,10 +27,10 @@ pure subroutine at_particle_impl(this, particle, t, E, B, psi, U)
   class(particle_base), intent(in)     :: particle
   real*8, intent(in)                   :: t !< The current time
   real*8, dimension(3), intent(out)    :: E, B
-  real*8, intent(out)                  :: psi, U
+  real*8, intent(out), optional        :: psi, U
 
-  psi = 0.d0
-  U = 0.d0 ! artefact of JOREK integration
+  if (present(psi)) psi = 0.d0
+  if (present(U))   U   = 0.d0 ! artefact of JOREK integration
 
   E = this%electric_field(particle%x, t)
   B = this%magnetic_field(particle%x, t)

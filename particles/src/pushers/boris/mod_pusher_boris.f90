@@ -9,6 +9,7 @@ contains
   procedure :: push_single => boris_push_single_particle
   procedure, private :: boris_method_v_only => boris_method_v_only
   procedure, private :: boris_method_cylindrical_correction => boris_method_cylindrical_correction
+  procedure :: initial_half_step_backwards
 end type pusher_boris
 interface pusher_boris !< interface is workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77412
   module procedure new_pusher_boris
@@ -113,4 +114,26 @@ pure subroutine boris_method_v_only(this, fields, particle, eom, t)
   particle%v = particle%v + fE * E
   ! above steps are the same for any left-handed coordinate system
 end subroutine boris_method_v_only
+
+!> Given a particle with position x and velocity v at time t=0 (t^0), calculate v^-1/2
+!> in cylindrical coordinates this is the same as in cartesian coordinates
+!> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
+pure subroutine initial_half_step_backwards(this, fields, particle)
+  use mod_fields
+  use mod_cross_product
+  use mod_constants, only: EL_CHG, ATOMIC_MASS_UNIT
+  class(pusher_boris), intent(in)      :: this
+  class(fields_base), intent(in)       :: fields
+  class(particle_boris), intent(inout) :: particle
+  real*8, dimension(3) :: v, E, B !< for calculating the initial half-step
+  real*8 :: f, B2
+  f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * particle%mass) * this%fixed_timestep * 0.25d0
+  call fields%at_particle(particle, 0.d0, E, B)
+  B2 = dot_product(B, B)
+  v = particle%v + f*E
+  v = (v + 2.d0*f/(1.d0+f**2*B2) &
+      * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
+  v = v + f*E
+  particle%v = v
+end subroutine initial_half_step_backwards
 end module mod_pusher_boris

@@ -1,5 +1,18 @@
-!> Cases for testing the trajectory of a particle in a strongly inhomogeneous
-!> magnetic field (TODO: cite)
+!# Cases for testing the trajectory of a particle in a strongly inhomogeneous
+! magnetic field of the form \[ \mathbf{B} = \left(0, 0, B_0 \exp(\lambda x)\right)\]
+! 
+! The general solution of the particle trajectory is calculated in [[gradB_solution]]
+! 
+!## Results
+! 
+! The trajectory of a particle is followed from \(\mathbf{x}_0\) at \(t=0 s\) to \(t=10 s\).
+! An example trajectory, calculated with the [[mod_boris]] method and relatively large timesteps (\(\delta t = 0.01\)) is shown below.
+! 
+! ![xy-trajectory-boris](|media|/tests/gradB/gradB_xy_boris.png)
+!
+!### Comparing pushers
+! The different pushers in the [[pusher_test]] perform as follows on this case
+! ![pusher-test-gradB](|media|/tests/all_pushers/gradB.png)
 module mod_gradB_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_case
@@ -18,21 +31,22 @@ module mod_gradB_case
     module procedure new_case_gradB
   end interface case_gradB
 
-  private
   ! gradB parameters
-  real*8, parameter :: B0 = 1d0 ! Tesla
-  real*8, parameter :: lambda = 1d-1 ! 1/m
-  real*8, parameter :: theta_zero = 0.d0 ! radians
-  real*8, parameter :: v_perp = 1d0 ! m/s
-  real*8, parameter :: x0(3)   = [0d0,0d0,0d0] ! cartesian, meters
-  real*8, parameter :: v0(3)   = v_perp*[cos(theta_zero),sin(theta_zero),0.d0] ! cartesian, meters
-  real*4, parameter :: mass    = 1.d7 ! in atomic mass units
-  integer*1, parameter :: charge = 1 ! in electron charges
-  real*8, parameter :: time_end = 1d1 ! s
+  real*8, parameter :: B0 = 1d0 !< Tesla
+  real*8, parameter :: lambda = 1d-1 !< 1/m
+  real*8, parameter :: theta_zero = 0.d0 !< radians
+  real*8, parameter :: v_perp = 1d0 !< m/s
+  real*8, parameter :: x0(3)   = [0d0,0d0,0d0] !< cartesian, meters
+  real*8, parameter :: v0(3)   = v_perp*[cos(theta_zero),sin(theta_zero),0.d0] !< cartesian, meters
+  real*4, parameter :: mass    = 1.d7 !< atomic mass units
+  integer*1, parameter :: charge = 1 !< electron charges
+  real*8, parameter :: time_end = 10 !< s
+  public :: gradB_solution
+  private
 contains
 
-!> Interface exists because we need to set prescribed_fields to the right value
-!> it is important to use this! otherwise you need to set the fields manually
+!> Interface exists because we need to set prescribed_fields to the right value.
+!> it is important to use this! otherwise you need to set the fields manually.
 pure function new_case_gradB(geometry) result(new)
   integer*1, intent(in) :: geometry
   type(case_gradB) :: new
@@ -78,10 +92,11 @@ pure function E_zero(x, t) result(E)
 end function E_zero
 
 
+!> Particle position at time \(t\) for motion with the parameters defined in [[mod_gradb_case]]
 pure function gradB_solution(t) result(x)
   use mod_constants, only: PI, TWOPI
-  real*8, intent(in)   :: t
-  real*8, dimension(3) :: x
+  real*8, intent(in)   :: t !< time [s]
+  real*8, dimension(3) :: x !< position vector [m]
 
   real*8 :: B_at_zero(3)
   real*8 :: alpha, big_gamma, phi_zero, theta, g ! g=small_gamma

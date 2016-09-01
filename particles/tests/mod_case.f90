@@ -1,12 +1,12 @@
-!> Base module for a testcase, such as the penning trap, a tokamak equilibrium
-!> or the grad-B drift
+!> Base module for a testcase, such as [[mod_penning_case]], [[mod_gradb_case]]
 module mod_case
-  use mod_particle_base
-  use mod_pusher
-  use mod_prescribed_fields
+  use mod_particle_base, only: particle_base
+  use mod_pusher, only: pusher_base
+  use mod_prescribed_fields, only: prescribed_fields
   implicit none
 
-  !> 
+  !> A case, defining an end time, a run function and requiring an 
+  !> initialization routine and error calculation routine
   type, abstract :: case
     real*8                  :: time_end !< How long to simulate for
     type(prescribed_fields) :: fields !< The fields used in this case
@@ -35,10 +35,10 @@ contains
 !> Run a single testcase with the given particle and pusher and report the results
 subroutine run(this, pusher, particle, err, runtime, output_file)
   class(case), intent(in)        :: this
-  class(pusher_base), intent(in) :: pusher
-  class(particle_base), intent(inout) :: particle
-  real*8, intent(out) :: err
-  real*8, intent(out) :: runtime
+  class(pusher_base), intent(in) :: pusher !< the particle pusher to use
+  class(particle_base), intent(inout) :: particle !< the particle to push
+  real*8, intent(out) :: err !< The error as defined by [[calculate_error]]
+  real*8, intent(out) :: runtime !< the runtime as reported by the cpu_time intrinsic
   character(len=*), optional :: output_file
   real*8 :: time_start
   integer :: u, i

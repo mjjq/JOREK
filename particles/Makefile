@@ -101,7 +101,8 @@ cleanall: clean
 test: fruit
 fruit:
 	PYTHONPATH=$(FRUITPYDIR) python tests/fruit.py
-docs:
+docs: pusher_test
+	./pusher_test
 	ford particles.md --no-search
 
 

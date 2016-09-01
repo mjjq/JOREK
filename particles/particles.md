@@ -3,7 +3,10 @@ project_website: http://jorek.eu
 summary: 
 author: 
 project_dir: .
-page_dir: pages
+src_dir: ./src
+src_dir: ./tests
+page_dir: ./pages
+media_dir: ./media
 output_dir: ./doc
 exclude_dir: ./doc
 docmark: <

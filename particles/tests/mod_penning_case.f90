@@ -1,4 +1,4 @@
-!> Cases for testing the penning trap trajectory with different particle pushers
+!> {!tests/mod_penning_case.md!}
 module mod_penning_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_coordinate_transforms
@@ -7,7 +7,6 @@ module mod_penning_case
   use mod_boris
   implicit none
 
-  !> Case for a penning trap in cartesian coordinates
   type, extends(case), public :: case_penning
     contains
       procedure :: initialize_particle => initialize_particle_penning
@@ -18,29 +17,29 @@ module mod_penning_case
   end interface case_penning
 
   public :: penning_trajectory
-  private
   ! Penning trap parameters (in SI units)
-  real*8, parameter :: omega_e = 4.9d0
-  real*8, parameter :: omega_b = 25.d0
+  real*8, parameter :: omega_e = 4.9d0 !< rad/s
+  real*8, parameter :: omega_b = 25.d0 !< rad/s
   real*8, parameter :: epsilon = -1.d0
-  real*8, parameter :: x0(3)   = [10.d0,0.d0,0.d0] ! cartesian
-  real*8, parameter :: v0(3)   = [50.d0,0.d0,20.d0] ! cartesian
-  real*4, parameter :: mass    = 1.d0 ! in atomic mass units
-  integer*1, parameter :: charge = 1 ! in electron charges
-  real*8, parameter :: time_end = 16.d0
+  real*8, parameter :: x0(3)   = [10.d0,0.d0,0.d0] !< m (xyz)
+  real*8, parameter :: v0(3)   = [50.d0,0.d0,20.d0] !< m (xyz)
+  real*4, parameter :: mass    = 1.d0 !< atomic mass units
+  integer*1, parameter :: charge = 1 !< electron charges
+  real*8, parameter :: time_end = 16.d0 !< s
+  private
 contains
 
-!> Interface exists because we need to set prescribed_fields to the right value
-!> it is important to use this! otherwise you need to set the fields manually
+!> Interface exists because we need to set prescribed_fields to the right value.
+!> it is important to use this! otherwise you need to set the fields manually.
 pure function new_case_penning(geometry) result(new)
   type(case_penning) :: new
-  integer*1, intent(in) :: geometry
+  integer*1, intent(in) :: geometry !< one of [[mod_constants:CARTESIAN]] or [[mod_constants:CYLINDRICAL]]
   new%time_end = time_end
   if (geometry .eq. CARTESIAN)   new%fields = prescribed_fields(geometry, E_cartesian, B_z)
   if (geometry .eq. CYLINDRICAL) new%fields = prescribed_fields(geometry, E_cylindrical, B_z)
 end function new_case_penning
 
-!> Initialize a particle for the cartesian-coordinate penning trap for different particle types
+!> Wrapper to the global initialization routine with the parameters for this case.
 subroutine initialize_particle_penning(this, particle, pusher)
   class(case_penning), intent(in)     :: this
   class(particle_base), intent(inout) :: particle
@@ -84,10 +83,10 @@ pure function E_cylindrical(x, t) result(E)
 end function E_cylindrical
 
 !> Calculate the position of a particle in the penning trap, released at 
-!> $x_0$ with speed $v_0$, at time $t$
+!> \(x_0\) with speed \(v_0\), at time \(t\)
 pure function penning_trajectory(t) result(x)
   real*8, intent(in) :: t !< The time at which to calculate the solution value
-  real*8             :: x(3) !< The position of the particle at time t
+  real*8             :: x(3) !< The position of the particle at time \(t\) in cartesian coordinates
 
   ! Internal variables
   real*8 :: omega_plus, omega_minus

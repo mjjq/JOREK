@@ -7,23 +7,15 @@ module mod_penning_cases
   implicit none
 
   !> Case for a penning trap in cartesian coordinates
-  type, extends(case), public :: case_penning_cartesian
+  type, extends(case), public :: case_penning
+    integer*1, private :: geometry
     contains
-      procedure :: initialize_particle => initialize_particle_penning_cartesian
-      procedure :: calculate_error => calculate_error_normx_cartesian
+      procedure :: initialize_particle => initialize_particle_penning
+      procedure :: calculate_error => calculate_error_norm
   end type
-  interface case_penning_cartesian
-    module procedure new_case_penning_cartesian
-  end interface case_penning_cartesian
-
-  type, extends(case), public :: case_penning_cylindrical
-    contains
-      procedure :: initialize_particle => initialize_particle_penning_cylindrical
-      procedure :: calculate_error => calculate_error_normx_cylindrical
-  end type
-  interface case_penning_cylindrical
-    module procedure new_case_penning_cylindrical
-  end interface case_penning_cylindrical
+  interface case_penning
+    module procedure new_case_penning
+  end interface case_penning
 
   public :: penning_trajectory
   private
@@ -40,28 +32,25 @@ contains
 
 !> Interface exists because we need to set prescribed_fields to the right value
 !> it is important to use this! otherwise you need to set the fields manually
-pure function new_case_penning_cartesian() result(new)
-  type(case_penning_cartesian) :: new
+pure function new_case_penning(geometry) result(new)
+  type(case_penning) :: new
+  integer*1, intent(in) :: geometry
+  new%geometry = geometry
   new%time_end = time_end
-  new%fields = prescribed_fields(CARTESIAN, E_cartesian, B_z)
-end function new_case_penning_cartesian
-!> Interface exists because we need to set prescribed_fields to the right value
-!> it is important to use this! otherwise you need to set the fields manually
-pure function new_case_penning_cylindrical() result(new)
-  type(case_penning_cylindrical) :: new
-  new%time_end = time_end
-  new%fields = prescribed_fields(CYLINDRICAL, E_cylindrical, B_z)
-end function new_case_penning_cylindrical
+  if (new%geometry .eq. CARTESIAN)   new%fields = prescribed_fields(new%geometry, E_cartesian, B_z)
+  if (new%geometry .eq. CYLINDRICAL) new%fields = prescribed_fields(new%geometry, E_cylindrical, B_z)
+end function new_case_penning
 
 !> Initialize a particle for the cartesian-coordinate penning trap for different particle types
-subroutine initialize_particle_penning_cartesian(this, particle, fixed_timestep)
+subroutine initialize_particle_penning(this, particle, fixed_timestep)
   use mod_cross_product
-  class(case_penning_cartesian), intent(in) :: this
-  class(particle_base), intent(inout)       :: particle
-  real*8, intent(in), optional              :: fixed_timestep
+  class(case_penning), intent(in)     :: this
+  class(particle_base), intent(inout) :: particle
+  real*8, intent(in), optional        :: fixed_timestep
   real*8, dimension(3) :: v, B !< for calculating the initial half-step
   real*8 :: f, B2
-  particle%x = x0
+  if (this%geometry .eq. CARTESIAN)   particle%x = x0
+  if (this%geometry .eq. CYLINDRICAL) particle%x = cartesian_to_cylindrical(x0)
   particle%q = charge
   particle%mass = mass
   particle%lost = .false.
@@ -75,48 +64,20 @@ subroutine initialize_particle_penning_cartesian(this, particle, fixed_timestep)
     v = (v + 2.d0*f/(1.d0+f**2*B2) &
         * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
     v = v + f*E_cartesian(x0, 0.d0)
-    particle%v = v
+    if (this%geometry .eq. CARTESIAN)   particle%v = v
+    if (this%geometry .eq. CYLINDRICAL) particle%v = vector_rotation(v, particle%x(2))
   end select
-end subroutine initialize_particle_penning_cartesian
-subroutine initialize_particle_penning_cylindrical(this, particle, fixed_timestep)
-  use mod_cross_product
-  class(case_penning_cylindrical), intent(in) :: this
-  class(particle_base), intent(inout)         :: particle
-  real*8, intent(in), optional                :: fixed_timestep
-  real*8, dimension(3) :: v, B !< for calculating the initial half-step
-  real*8 :: f, B2
-  particle%x = cartesian_to_cylindrical(x0)
-  particle%q = charge
-  particle%mass = mass
-  particle%lost = .false.
-  select type (particle)
-  type is (particle_boris)
-    ! perform a half-step of the boris-method backwards)
-    f = -EL_CHG * charge / (ATOMIC_MASS_UNIT * mass) * fixed_timestep * 0.25d0
-    B = B_z(x0, 0.d0)
-    B2 = dot_product(B, B)
-    v = v0 + f*E_cartesian(x0, 0.d0)
-    v = (v + 2.d0*f/(1.d0+f**2*B2) &
-        * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
-    v = v + f*E_cartesian(x0, 0.d0)
-    particle%v = vector_rotation(v, particle%x(2))
-  end select
-end subroutine initialize_particle_penning_cylindrical
+end subroutine initialize_particle_penning
 
 
-!> Calculate the error as the difference between particle posiition vectors
-pure function calculate_error_normx_cartesian(this, particle) result(err)
-  class(case_penning_cartesian), intent(in) :: this
-  class(particle_base), intent(in)         :: particle
+!> Calculate the error as the difference between particle position vectors
+pure function calculate_error_norm(this, particle) result(err)
+  class(case_penning), intent(in)  :: this
+  class(particle_base), intent(in) :: particle
   real*8 :: err
-  err = norm2(penning_trajectory(this%time_end) - particle%x)
-end function calculate_error_normx_cartesian
-pure function calculate_error_normx_cylindrical(this, particle) result(err)
-  class(case_penning_cylindrical), intent(in) :: this
-  class(particle_base), intent(in)           :: particle
-  real*8 :: err
-  err = norm2(penning_trajectory(this%time_end) - cylindrical_to_cartesian(particle%x))
-end function calculate_error_normx_cylindrical
+  if (this%geometry .eq. CARTESIAN)   err = norm2(penning_trajectory(this%time_end) - particle%x)
+  if (this%geometry .eq. CYLINDRICAL) err = norm2(penning_trajectory(this%time_end) - cylindrical_to_cartesian(particle%x))
+end function calculate_error_norm
 
 
 !> Magnetic field in the penning trap (valid for both cylindrical and cartesian

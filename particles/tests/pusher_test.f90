@@ -5,9 +5,9 @@
 !> Requires gnuplot to generate figures
 program pusher_test
   use mod_penning_cases
+  use mod_constants, only: CARTESIAN, CYLINDRICAL
   implicit none
   real*8, dimension(5), parameter :: penning_timesteps = [1d-2, 1d-3, 1d-4, 1d-5, 1d-6]
-  real*8, parameter :: penning_time_end = 1d1
 
   call boris_cases
 
@@ -18,18 +18,16 @@ contains
 
 subroutine boris_cases
   use mod_boris
-  type(case_penning_cartesian)   :: penning_cartesian
-  type(case_penning_cylindrical) :: penning_cylindrical
+  type(case_penning)   :: penning_cartesian
+  type(case_penning)   :: penning_cylindrical
   type(particle_boris) :: particle
   type(pusher_boris)   :: pusher
   integer :: i
   real*8 :: err, runtime
   
   ! Setup the cases (sets the fields)
-  penning_cartesian = case_penning_cartesian()
-  penning_cylindrical = case_penning_cylindrical()
-  penning_cartesian%time_end = penning_time_end
-  penning_cylindrical%time_end = penning_time_end
+  penning_cartesian   = case_penning(geometry=CARTESIAN)
+  penning_cylindrical = case_penning(geometry=CYLINDRICAL)
 
   !$omp parallel default(shared) &
   !$omp private(i, err, runtime, pusher, particle)

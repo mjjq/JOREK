@@ -12,6 +12,7 @@ module mod_penning_case
       procedure :: initialize_particle => initialize_particle_penning
       procedure :: calculate_error => calculate_error_norm
   end type
+  !> See [[mod_penning_case]] for a description of the testcase.
   interface case_penning
     module procedure new_case_penning
   end interface case_penning

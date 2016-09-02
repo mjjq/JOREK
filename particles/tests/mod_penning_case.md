@@ -37,3 +37,4 @@ An example trajectory, calculated with the [[mod_boris]] method and relatively l
 The different pushers in the [[pusher_test]] perform as follows on this case
 
 ![pusher-test-penning](|media|/tests/all_pushers/penning.png)
+![pusher-test-penning](|media|/tests/all_pushers/penning_time.png)

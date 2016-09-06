@@ -40,8 +40,8 @@ subroutine initialize(state, s, a, m_in, stride)
 
   do k=s+1, N_M
     tmp=ieor(2**s * m(k-s), m(k-s))
-    do i = k-s+1, k-1
-      tmp = ieor(m(i) * 2**(k-i) * ai(a, k-i), &
+    do i=1,s-1
+      tmp = ieor(m(k-i) * 2**i * ai(a, s-i), &
                  tmp)
     end do
     m(k) = tmp

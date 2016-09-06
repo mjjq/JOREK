@@ -23,7 +23,7 @@ module mod_sobseq_rng
                                                 1,3,5,13,0,&
                                                 1,1,5,5,17,&
                                                 1,1,5,5,5/), (/5,8/))
-  ! TODO why is there no 1?
+  public :: ilog2_b_ceil
 contains
   subroutine initialize_sobseq_rng(rng, n_dims, seed, n_streams, i_stream, ifail)
     implicit none
@@ -38,11 +38,17 @@ contains
     real*8 :: DUMMY_REAL
 
     ifail = 0
-    if (n_dims .le. 0) ifail = 1
-    if (seed .eq. 0) ifail = 2
-    if (n_streams .le. 0) ifail = 3
-    if (i_stream .le. 0) ifail = 4
-    if (i_stream .gt. n_streams) ifail = 5
+    if (n_dims .le. 0) then
+      ifail = 1
+    else if (n_dims .gt. 8) then
+      ifail = 6
+    else if (n_streams .le. 0) then
+      ifail = 3
+    else if (i_stream .le. 0) then
+      ifail = 4
+    else if (i_stream .gt. n_streams) then
+      ifail = 5
+    endif
     if (ifail .ne. 0) return
 
     if (allocated(rng%state)) deallocate(rng%state)
@@ -51,7 +57,7 @@ contains
 
     ! Seed with default values
     do i=1,n_dims
-      call rng%state(i)%initialize(s(i), a(i), m(:,i), stride=ilog2_b(n_streams))
+      call rng%state(i)%initialize(s(i), a(i), m(:,i), stride=ilog2_b_ceil(n_streams))
       DUMMY_REAL = rng%state(i)%skip_ahead(i_stream)
     enddo
   end subroutine initialize_sobseq_rng
@@ -70,8 +76,8 @@ contains
 
 
 
-  !> Integer logarithm in base 2
-  function ilog2_b(val) result(res)
+  !> Integer logarithm base 2 rounded up (i.e. the smallest n in 2^n >= val)
+  function ilog2_b_ceil(val) result(res)
     integer, intent(in) :: val
     integer             :: res
     integer             :: tmp
@@ -85,5 +91,7 @@ contains
       res = res + 1
       tmp = shiftr(tmp, 1)
     enddo
-  end function ilog2_b
+    ! round up if not an exact fit
+    if (val .gt. 2**res) res = res + 1
+  end function ilog2_b_ceil
 end module mod_sobseq_rng

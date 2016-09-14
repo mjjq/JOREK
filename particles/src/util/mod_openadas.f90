@@ -31,18 +31,19 @@ contains
 !> Tries to read ACD, SCD, CCD, PLT, PRB, PRC coefficients
 !> if the files exist. Files of format acd$suffix.dat are read.
 !> Suffix is usually of the form 50_w, 96_li
-function read_adf11(suffix) result(ad)
+function read_adf11(suffix, directory) result(ad)
 use mod_constants
 use mpi
 implicit none
 
 character*6, intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li), give this in input file
+character(len=*), intent(in), optional :: directory
 type(type_ADF11_all), target :: ad !< OpenAdas data type
 
 type(type_ADF11), pointer :: a
 integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
-character*13 :: filename
+character*120 :: filename
 
 integer :: i, ierr, n_d, n_T, k, my_id
 logical :: file_exists
@@ -53,15 +54,17 @@ if (my_id .eq. 0) then
   write(*,'(A)') '*********************************'
   write(*,'(A)') '* Importing OpenAdas data       *'
   write(*,'(A,A,A)') '* open files ending in: ', suffix, '  *'
+  if (present(directory)) write(*,'(A,A)') '* present in directory ', directory
   write(*,'(A)') '*********************************'
 endif
 
 do i_ADF11 = 1,size(ADF11_filenames,1)
   write(filename,"(A,A,A)") ADF11_filenames(i_ADF11), trim(suffix), '.dat'
+  if (present(directory)) filename = trim(directory) // trim(filename)
   inquire(file=filename, exist=file_exists)
   if (.not. file_exists) cycle ! Skip this type of data
 
-  if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", filename
+  if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
   open(10,file=filename,status="old",iostat=ierr)
   if (ierr .ne. 0) then
     write(*,*) my_id, " failed with code ", ierr
@@ -98,7 +101,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   enddo
   close(10)
 
-  if (my_id .eq. 0) write(*,"(A)") "succeeded"
+  if (my_id .eq. 0) write(*,"(A)") " succeeded"
 enddo
 
 ! Test if ACD and SCD were loaded at least

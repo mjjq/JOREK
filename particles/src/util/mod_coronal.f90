@@ -89,7 +89,7 @@ end function coronal_Prad
 
 !> Calculate the coronal equilibrium values at specific values of density and temperature
 function coronal_equilibrium(ad) result(cor)
-use constants
+use mod_constants
 implicit none
 
 type (type_ADF11_all), intent(in) :: ad !< ADF11 datatype
@@ -97,10 +97,6 @@ type (type_coronal)               :: cor !< Coronal equilibrium datatype
 
 real*8, dimension(0:ad%n_Z) :: p, Z
 integer :: n_d, n_T, iz, k, m
-
-write(*,'(A)')      '*********************************'
-write(*,'(A,i3,A)') '* Coronal model : ', ad%n_Z,'           *'
-write(*,'(A)')      '*********************************'
 
 cor%n_Z = ad%n_Z
 n_d = 10

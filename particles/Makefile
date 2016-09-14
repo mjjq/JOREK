@@ -102,8 +102,9 @@ cleanall: clean
 test: fruit
 fruit:
 	PYTHONPATH=$(FRUITPYDIR) python tests/fruit.py
-docs: pusher_test
+docs: pusher_test compare_mc_coronal
 	./pusher_test
+	./compare_mc_coronal
 	ford particles.md --no-search
 
 
@@ -156,7 +157,8 @@ PROGRAM_SOURCES = src/particles.f90 \
 		  src/static_field_example.f90 \
 		  src/jorek_static_fields_boris.f90 \
 		  tests/fruit_test_driver.f90 \
-		  tests/pusher_test.f90
+		  tests/pushers/pusher_test.f90 \
+		  tests/openadas/compare_mc_coronal.f90
 
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 

@@ -91,6 +91,7 @@ subroutine boris_cases
       plot "< grep Penning boris.txt | grep Cartesian" u 5:4 w l t "Boris Cartesian", &
            "< grep Penning boris.txt | grep Cylindrical" u 5:4 w l t "Boris Cylindrical"; &
       set title "gradB test"; &
+      set xlabel "timestep size"; &
       set output "media/tests/all_pushers/gradB.png"; &
       plot "< grep gradB boris.txt | grep Cartesian" u 3:4 w l t "Boris Cartesian", &
            "< grep gradB boris.txt | grep Cylindrical" u 3:4 w l t "Boris Cylindrical"; &

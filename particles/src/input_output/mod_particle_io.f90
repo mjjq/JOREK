@@ -41,7 +41,7 @@ select type(p => this%particle_type)
 type is (particle_boris)
   offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
   offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
-  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%mass))
+  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%m))
   offsets(3) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%weight))
   offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
   offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))

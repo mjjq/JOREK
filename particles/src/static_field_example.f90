@@ -1,12 +1,5 @@
 program static_field_example
-use mod_constants, only: CARTESIAN
-use mod_particle_sim, only: particle_sim
-use mod_event, only: event
-use mod_action, only: stop_action
-use mod_prescribed_fields, only: prescribed_fields
-use mod_main_loop, only: main_loop
-use mod_boris, only: pusher_boris, new_pusher_boris
-use mod_pusher, only: pusher_container
+use particle_tracer
 use mpi
 implicit none
 
@@ -16,29 +9,36 @@ type(event), dimension(:), allocatable :: events
 
 allocate(sim%fields, source=prescribed_fields(CARTESIAN, E, B))
 allocate(sim%groups(1))
+allocate(particle_boris::sim%groups(1)%particles(1))
 
 pushers = [ &
   pusher_container(pusher_boris(fixed_timestep=0.1d0)) &
 ]
 
 events = [ &
-!  event(seed_particles()), &
   event(stop_action(), start=1.d0) & ! Stop the sim after 1 second
 ]
 
 call main_loop(sim, pushers, events)
+write(*,*) sim%groups(1)%particles(1)%x
 
 contains
 pure function E(x, t)
-  real*8, dimension(3), intent(in) :: x
-  real*8, intent(in) :: t
-  real*8, dimension(3) :: E
-  E = (/0.d0, 0.d0, 0.d0/)
+  real*8, intent(in) :: x(3), t
+  real*8 :: E(3)
+  E = [0,0,0]
 end function E
 pure function B(x, t)
-  real*8, dimension(3), intent(in) :: x
-  real*8, intent(in) :: t
-  real*8, dimension(3) :: B
-  B = (/0.d0, 0.d0, 1.d0/)
+  real*8, intent(in) :: x(3), t
+  real*8 :: B(3)
+  B = [0,0,1]
 end function B
+subroutine init_particle(p)
+  type(particle_boris), intent(inout) :: p
+  p%x = [0,0,0]
+  p%v = [1,0,0]
+  p%q = 2
+  p%m = 4.d0
+  p%lost = .false.
+end subroutine init_particle
 end program static_field_example

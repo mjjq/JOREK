@@ -40,7 +40,7 @@ pure subroutine boris_push_single_particle(this, fields, particle, time_start, t
 
   ! Skip this particle if it left the domain
   if (particle%lost) return
-  eom = EL_CHG / (particle%mass * ATOMIC_MASS_UNIT)
+  eom = EL_CHG / (particle%m * ATOMIC_MASS_UNIT)
   n_step = ceiling((time_end - time_start - TICK)/this%fixed_timestep)
 
   select type(particle)
@@ -127,7 +127,7 @@ pure subroutine initial_half_step_backwards(this, fields, particle)
   class(particle_boris), intent(inout) :: particle
   real*8, dimension(3) :: v, E, B !< for calculating the initial half-step
   real*8 :: f, B2
-  f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * particle%mass) * this%fixed_timestep * 0.25d0
+  f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * particle%m) * this%fixed_timestep * 0.25d0
   call fields%at_particle(particle, 0.d0, E, B)
   B2 = dot_product(B, B)
   v = particle%v + f*E

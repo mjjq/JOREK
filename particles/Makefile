@@ -107,7 +107,6 @@ docs: pusher_test compare_mc_coronal
 	./compare_mc_coronal
 	ford particles.md --no-search
 
-
 # Most of the sources are actually fortran 2003/8 but use the .f90 suffix
 sources:=$(shell find libs src tests -iname '*.f90')
 depends:=$(patsubst %.f90,$(DEPDIR)/%.d,$(notdir $(sources)))

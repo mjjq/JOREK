@@ -19,7 +19,8 @@ module mod_sobseq
   contains
       procedure, public :: initialize !< Initialize direction numbers
       procedure, public :: skip_ahead !< Skip ahead to a specific position and return this value
-      procedure, public :: next       !< Generate the next value in the sequence
+      procedure, public :: next         !< Generate the next value in the sequence
+      procedure, public :: next_strided !< Generate the next value in the sequence (strided version)
   end type sobol_state
 contains
 
@@ -81,25 +82,28 @@ function skip_ahead(state, i) result(output)
 end function skip_ahead
 
 
-!> Generate the next (strided) value in a series
+!> Generate the next value in a series
 !> And update the state function
 function next(state)
   implicit none
   class (sobol_state), intent(inout) :: state
   real :: next
-
-  ! If statement costs roughly 10% in performance
-  if (state%stride .eq. 0) then
-    state%x = ieor(state%x, state%v(i4_bit_lo0(state%i)))
-  else
-    state%x = ieor(state%x, ieor(state%v(state%stride), state%v(&
-        i4_bit_lo0(ior(state%i, 2**state%stride - 1)))))
-  endif
-
-  state%i = state%i + 2**state%stride
-
+  state%x = ieor(state%x, state%v(i4_bit_lo0(state%i)))
+  state%i = state%i + 1
   next = real(state%x) * 2.d0**(-N_M)
 end function next
+
+!> Generate the next value in a series
+!> And update the state function
+function next_strided(state)
+  implicit none
+  class (sobol_state), intent(inout) :: state
+  real :: next_strided
+  state%x = ieor(state%x, ieor(state%v(state%stride), state%v(&
+            i4_bit_lo0(ior(state%i, 2**state%stride - 1)))))
+  state%i = state%i + 2**state%stride
+  next_strided = real(state%x) * 2.d0**(-N_M)
+end function next_strided
 
 
 !> Returns the value of the bit at position i (1-based index)
@@ -115,17 +119,7 @@ else
 end if
 end function ai
 
-function i4_bit_hi1(num)
-  implicit none
-
-  integer(kind=4), intent(in) :: num
-  integer :: i4_bit_hi1
-
-  do i4_bit_hi1=bit_size(num),1,-1
-    if (btest(num,i4_bit_hi1-1)) return
-  enddo
-end function i4_bit_hi1
-
+!> Return the position of the lowest (rightmost) 0 bit in a int(4)
 function i4_bit_lo0(num)
   implicit none
 
@@ -136,5 +130,4 @@ function i4_bit_lo0(num)
     if (.not. btest(num,i4_bit_lo0-1)) return
   enddo
 end function i4_bit_lo0
-
 end module mod_sobseq

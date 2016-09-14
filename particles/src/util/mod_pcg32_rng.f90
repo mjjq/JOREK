@@ -15,19 +15,30 @@ type, public, extends(type_rng) :: pcg32_rng
 end type
 
 contains
-  subroutine initialize_pcg32_rng(rng, n_dims, seed, n_streams, i_stream, ifail)
+  subroutine initialize_pcg32_rng(rng, n_dims, seed, n_streams, i_stream, ierr)
+    use mpi
     implicit none
     class(pcg32_rng), intent(inout) :: rng
     integer, intent(in)  :: n_dims !< Dimension of the generated output vector (not used)
     integer, intent(in)  :: seed !< Seed for the RNG if required
     integer, intent(in)  :: n_streams !< Number of output streams needed (not used)
     integer, intent(in)  :: i_stream !< Index of this output stream (sequence number)
-    integer, intent(out) :: ifail !< Error code
+    integer, intent(out), optional :: ierr !< Error code. Exit on error if not present
+    integer :: ifail, mpi_err
 
     ifail = 0
     if (n_dims .le. 0) ifail = 1
     if (seed .eq. 0) ifail = 2
-    if (ifail .ne. 0) return
+
+    if (present(ierr)) ierr = ifail
+
+    if (ifail .gt. 0) then
+      if (present(ierr)) then
+        return
+      else
+        call MPI_ABORT(MPI_COMM_WORLD, ierr, mpi_err)
+      end if
+    end if
 
     ! n_streams and i_stream are not used
     if (allocated(rng%state)) deallocate(rng%state)

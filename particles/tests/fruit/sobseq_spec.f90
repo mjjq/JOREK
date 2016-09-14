@@ -12,7 +12,7 @@ subroutine test_sobseq_minmax
   integer :: ifail, i
   integer, parameter :: n_tries = 1000
   real*8 :: x(n_tries)
-  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=1, ifail=ifail)
+  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(0, ifail)
   do i=1,n_tries
     call rng%next(x(i:i))
@@ -24,15 +24,15 @@ end subroutine test_sobseq_minmax
 subroutine test_sobseq_errors
   type(sobseq_rng) :: rng
   integer :: ifail
-  call rng%initialize(n_dims=0, seed=0, n_streams=1, i_stream=1, ifail=ifail)
+  call rng%initialize(n_dims=0, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(1, ifail, "no dims produces error 1")
-  call rng%initialize(n_dims=1000, seed=0, n_streams=1, i_stream=1, ifail=ifail)
+  call rng%initialize(n_dims=1000, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(6, ifail, "too many dims produces error 6")
-  call rng%initialize(n_dims=1, seed=0, n_streams=0, i_stream=0, ifail=ifail)
+  call rng%initialize(n_dims=1, seed=0, n_streams=0, i_stream=0, ierr=ifail)
   call assert_equals(3, ifail, "too few streams")
-  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=0, ifail=ifail)
+  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=0, ierr=ifail)
   call assert_equals(4, ifail, "i_stream < 1")
-  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=2, ifail=ifail)
+  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=2, ierr=ifail)
   call assert_equals(5, ifail, "i_stream > n_streams")
 end subroutine test_sobseq_errors
 
@@ -48,7 +48,7 @@ subroutine test_sobseq_known_values
   known_values(4,:) = real([3,5,7,3,1,3,7,7,5,7,3,3],8)/8.d0
   known_values(5,:) = real([7,1,3,7,5,7,3,3,1,3,7,7],8)/8.d0
   known_values(6,:) = real([1,7,5,5,7,1,1,1,3,1,5,1],8)/8.d0
-  call rng%initialize(n_dims=8, seed=0, n_streams=1, i_stream=1, ifail=ifail)
+  call rng%initialize(n_dims=8, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(0, ifail, "must run without error")
   ! rng actually starts at position 1 but we do not get the point
   do i=2,6
@@ -70,11 +70,11 @@ subroutine test_sobseq_1D_stride_4
   call sobseq_1D_integral_strided(100, 4)
   call sobseq_1D_integral_strided(1000, 4)
 end subroutine test_sobseq_1D_stride_4
-subroutine test_sobseq_1D_stride_3
-  call sobseq_1D_integral_strided(10, 3)
-  call sobseq_1D_integral_strided(100, 3)
-  call sobseq_1D_integral_strided(1000, 3)
-end subroutine test_sobseq_1D_stride_3
+subroutine test_sobseq_1D_stride_8
+  call sobseq_1D_integral_strided(10, 8)
+  call sobseq_1D_integral_strided(100, 8)
+  call sobseq_1D_integral_strided(1000, 8)
+end subroutine test_sobseq_1D_stride_8
 subroutine test_sobseq_1D_stride_16
   call sobseq_1D_integral_strided(100, 16)
   call sobseq_1D_integral_strided(1000, 16)
@@ -85,6 +85,12 @@ subroutine test_sobseq_2D
   call sobseq_2D_integral(100)
   call sobseq_2D_integral(1000)
 end subroutine test_sobseq_2D
+subroutine test_sobseq_1D_stride_3_error
+  type(sobseq_rng) :: rng
+  integer :: ifail
+  call rng%initialize(n_dims=1, seed=0, n_streams=3, i_stream=1, ierr=ifail)
+  call assert_true(ifail .gt. 0, "using n_streams .ne. 2^n is an error")
+end subroutine test_sobseq_1D_stride_3_error
 
 
 subroutine test_sobseq_1D_strided_equivalence
@@ -92,11 +98,11 @@ subroutine test_sobseq_1D_strided_equivalence
   integer :: ifail
   real*8, dimension(1) :: x, x_strided
 
-  call            rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=1, ifail=ifail)
+  call            rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(0, ifail)
-  call rng_strided(1)%initialize(n_dims=1, seed=0, n_streams=2, i_stream=1, ifail=ifail)
+  call rng_strided(1)%initialize(n_dims=1, seed=0, n_streams=2, i_stream=1, ierr=ifail)
   call assert_equals(0, ifail)
-  call rng_strided(2)%initialize(n_dims=1, seed=0, n_streams=2, i_stream=2, ifail=ifail)
+  call rng_strided(2)%initialize(n_dims=1, seed=0, n_streams=2, i_stream=2, ierr=ifail)
   call assert_equals(0, ifail)
 
   ! one skip to get synced
@@ -121,45 +127,6 @@ subroutine test_sobseq_1D_strided_equivalence
   call rng_strided(2)%next(x_strided)
   call assert_equals(x(1), x_strided(1), "element 6 should be same")
 end subroutine test_sobseq_1D_strided_equivalence
-subroutine test_sobseq_1D_strided_equivalence_with_skip
-  type(sobseq_rng) :: rng, rng_strided(3)
-  integer :: ifail, i
-  real*8, dimension(1) :: x, x_strided
-
-  call            rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=1, ifail=ifail)
-  call assert_equals(0, ifail)
-  call rng_strided(1)%initialize(n_dims=1, seed=0, n_streams=3, i_stream=1, ifail=ifail)
-  call assert_equals(0, ifail)
-  call rng_strided(2)%initialize(n_dims=1, seed=0, n_streams=3, i_stream=2, ifail=ifail)
-  call assert_equals(0, ifail)
-  call rng_strided(3)%initialize(n_dims=1, seed=0, n_streams=3, i_stream=3, ifail=ifail)
-  call assert_equals(0, ifail)
-
-  ! some skips to get synced
-  do i=1,3
-    call rng%next(x(1:1))
-  end do
-
-  call rng%next(x)
-  call rng_strided(1)%next(x_strided)
-  call assert_equals(x(1), x_strided(1), "2^n element should be same")
-  call rng%next(x)
-  call rng_strided(2)%next(x_strided)
-  call assert_equals(x(1), x_strided(1), "2^n+1 element should be same")
-  call rng%next(x)
-  call rng_strided(3)%next(x_strided)
-  call assert_equals(x(1), x_strided(1), "2^n+2 element should be same")
-  call rng%next(x) ! skip one value
-  call rng%next(x)
-  call rng_strided(1)%next(x_strided)
-  call assert_equals(x(1), x_strided(1), "2^n+4 element should be same")
-  call rng%next(x)
-  call rng_strided(2)%next(x_strided)
-  call assert_equals(x(1), x_strided(1), "2^n+5 element should be same")
-  call rng%next(x)
-  call rng_strided(3)%next(x_strided)
-  call assert_equals(x(1), x_strided(1), "2^n+6 element should be same")
-end subroutine test_sobseq_1D_strided_equivalence_with_skip
 
 subroutine test_ilog2_b_ceil
   call assert_equals(-1, ilog2_b_ceil(-1), "negative values not allowed, return -1")
@@ -183,8 +150,9 @@ subroutine sobseq_1D_integral(n)
   real*8 :: x(1), integral(1), tolerance
   character(len=6) :: n_s
 
-  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=1, ifail=ifail)
+  call rng%initialize(n_dims=1, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(0, ifail)
+  if (ifail .gt. 0) return
 
   integral = 0.d0
   do i=1,n
@@ -207,8 +175,9 @@ subroutine sobseq_1D_integral_strided(n, num_streams)
   character(len=6) :: n_s
 
   do i=1,num_streams
-    call rng(i)%initialize(n_dims=1, seed=0, n_streams=num_streams, i_stream=i, ifail=ifail)
+    call rng(i)%initialize(n_dims=1, seed=0, n_streams=num_streams, i_stream=i, ierr=ifail)
     call assert_equals(0, ifail)
+    if (ifail .gt. 0) return
   end do
 
   integral = 0.d0
@@ -233,7 +202,7 @@ subroutine sobseq_2D_integral(n)
   real*8 :: x(2), integral(2), tolerance
   character(len=6) :: n_s
 
-  call rng%initialize(n_dims=2, seed=0, n_streams=1, i_stream=1, ifail=ifail)
+  call rng%initialize(n_dims=2, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(0, ifail)
 
   integral = 0.d0

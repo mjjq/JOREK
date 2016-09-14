@@ -58,6 +58,7 @@ ifeq ($(COMPILER), intel)
   FLAGS += -cpp 
   FLAGS += -warn all
   FLAGS += -xAVX -align
+  FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
   ifeq ($(DEBUG), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback
@@ -153,6 +154,7 @@ endef
 # All programs to compile
 PROGRAM_SOURCES = src/particles.f90 \
 		  src/static_field_example.f90 \
+		  src/jorek_static_fields_boris.f90 \
 		  tests/fruit_test_driver.f90 \
 		  tests/pusher_test.f90
 

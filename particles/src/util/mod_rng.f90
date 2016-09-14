@@ -10,7 +10,7 @@ module mod_rng
   end type
 
   interface
-    subroutine initialize(rng, n_dims, seed, n_streams, i_stream, ifail)
+    subroutine initialize(rng, n_dims, seed, n_streams, i_stream, ierr)
       import :: type_rng
       implicit none
       class(type_rng), intent(inout) :: rng
@@ -18,7 +18,7 @@ module mod_rng
       integer, intent(in)  :: seed !< Seed for the RNG if required
       integer, intent(in)  :: n_streams !< Number of output streams needed
       integer, intent(in)  :: i_stream !< Index of this output stream
-      integer, intent(out) :: ifail !< Error code
+      integer, intent(out), optional :: ierr !< Error code. If present, return on error, otherwise call mpi_abort
     end subroutine initialize
 
     subroutine next(rng, out)

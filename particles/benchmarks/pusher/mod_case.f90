@@ -83,7 +83,7 @@ subroutine initialize_particle_all(this, particle, pusher, x0, v0, charge, mass)
   if (this%fields%geometry .eq. CARTESIAN)   particle%x = x0
   if (this%fields%geometry .eq. CYLINDRICAL) particle%x = cartesian_to_cylindrical(x0)
   particle%q = charge
-  particle%mass = mass
+  particle%m = mass
   particle%lost = .false.
   select type (particle)
   type is (particle_boris)

@@ -4,7 +4,8 @@ summary:
 author: 
 project_dir: .
 src_dir: ./src
-src_dir: ./tests
+src_dir: ./examples
+src_dir: ./benchmarks
 page_dir: ./pages
 media_dir: ./media
 output_dir: ./doc

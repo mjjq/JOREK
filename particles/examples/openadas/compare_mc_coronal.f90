@@ -19,7 +19,7 @@ use mpi
 implicit none
 
 character(len=6), parameter :: suffix = "50_w"
-character(len=80), parameter :: dir = "tests/openadas/"
+character(len=80), parameter :: dir = "examples/openadas/"
 type(type_ADF11_all) :: adf11
 integer :: ierr, provided
 call MPI_INIT_Thread(MPI_THREAD_SINGLE, provided, ierr)

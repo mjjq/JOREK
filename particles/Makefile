@@ -5,12 +5,6 @@
 
 # Include jorek-specific things and settings
 include Makefile.inc
-ifeq (1, $(USE_MUMPS))
-  LIBS     := $(LIBS) $(LIB_MUMPS) $(ORDLIB)
-  INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
-else
-  $(warning "USE_MUMPS=1 is required for ADAS support")
-endif
 ifeq (1, $(USE_HDF5))
   LIBS     := $(LIBS) $(HDF5LIB)
   INCLUDES := $(INCLUDES) -I$(HDF5INCLUDE)
@@ -108,7 +102,7 @@ docs: pusher_test compare_mc_coronal
 	ford particles.md --no-search
 
 # Most of the sources are actually fortran 2003/8 but use the .f90 suffix
-sources:=$(shell find libs src tests -iname '*.f90')
+sources:=$(shell find libs src tests examples benchmarks -iname '*.f90')
 depends:=$(patsubst %.f90,$(DEPDIR)/%.d,$(notdir $(sources)))
 
 # Make rules for all directories that we have found sources in
@@ -156,8 +150,8 @@ PROGRAM_SOURCES = src/particles.f90 \
 		  src/static_field_example.f90 \
 		  src/jorek_static_fields_boris.f90 \
 		  tests/fruit_test_driver.f90 \
-		  tests/pushers/pusher_test.f90 \
-		  tests/openadas/compare_mc_coronal.f90
+		  benchmarks/pusher/pusher_test.f90 \
+		  examples/openadas/compare_mc_coronal.f90
 
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 

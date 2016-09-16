@@ -1,13 +1,8 @@
 !> Calculate the particle trajectories with the Boris method in
 !> static JOREK fields, taking from the first input file argument
 program jorek_static_fields_boris
-use mod_particle_sim
-use mod_event
-use mod_action
-use mod_main_loop
-use mod_boris
-use mod_pusher, only: pusher_container
-use mod_jorek_fields
+use particle_tracer
+use jorek_integration
 use mpi
 implicit none
 

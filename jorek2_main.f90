@@ -43,7 +43,6 @@ program JOREK2
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
   use bootstrap_functions
-  use mod_particles
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
 

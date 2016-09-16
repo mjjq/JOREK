@@ -19,7 +19,6 @@ DIRS =  timing				\
 	plots				\
 	diagnostics			\
 	diagnostics/new_diag		\
-	particles                       \
 	refinement			\
 	postproc			\
 	tools                           \
@@ -112,16 +111,10 @@ PROGRAMS := JOREK2_MAIN JOREK2_POINCARE RST_BIN2HDF5 RST_HDF52BIN           \
             ENBIGGEN JORDEL JORPOL JOREK2VTK JOREK2FLVTK JOREK2VTK3D        \
             JOREK2_FOUR JOREK_EXTRACT_DATA JOREK2_DIAGNO JOREK_TO_HELENA    \
             JOREK2_TARGET2VTK JOREK2_POWERS JOREK2_IMPORT_PERTURBATION      \
-            NEW_DIAG_DEMO PENNING_TEST JOREK2_PARTICLES SIMON_PARTICLE_TEST \
-	    PARTICLE_TEST PROJECT_PARTICLES_VTK COUNT_PARTICLES_VTK 	    \
-	    DUMP_PARTICLES_VTK PARTICLE_FLUX_COORDINATES PARTICLE_FLUX_COORDINATE_DIFFUSION
+            NEW_DIAG_DEMO
 
 # Add the common sources to all these programs
 $(foreach prog,$(PROGRAMS),$(eval $(prog)_SRC += $(ALL_BINARIES_SRC) $(PPPSRC)))
-
-# Add the jorek2_main sources to the simon particle test (needs to calculate equilibrium)
-SIMON_PARTICLE_TEST_SRC += $(JOREK2_MAIN_SRC)
-SIMON_PARTICLE_TEST_SRC := $(sort $(SIMON_PARTICLE_TEST_SRC))
 
 # Add extra source files
 JOREK2_MAIN_SRC += jorek2_main.f90
@@ -250,12 +243,6 @@ PROGRAM_SOURCES = diagnostics/jorek2_poincare.f90       \
 		  diagnostics/jorek2_target2vtk.f90     \
 		  diagnostics/jorek2_powers.f90         \
 		  diagnostics/new_diag_demo.f90 	\
-		  particles/jorek2_particles.f90 	\
-		  particles/diagnostics/count_particles_vtk.f90 	\
-		  particles/diagnostics/dump_particles_vtk.f90 	\
-		  particles/diagnostics/particle_flux_coordinates.f90 \
-		  particles/diagnostics/particle_flux_coordinate_diffusion.f90 \
-		  particles/diagnostics/project_particles_vtk.f90
 
 # Create all standard make rules
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))

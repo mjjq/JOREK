@@ -44,11 +44,9 @@ end function new_stop_action
 
 !> Perform the stop action
 subroutine do_stop_action(this, sim)
-  use mpi
   class(stop_action), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
-  integer :: ierr
-  call exit(0)
+  sim%stop_now = .true.
 end subroutine do_stop_action
 
 

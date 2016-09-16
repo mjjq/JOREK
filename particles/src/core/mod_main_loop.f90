@@ -11,12 +11,14 @@ public :: main_loop
 private
 contains
 subroutine main_loop(sim, pushers, events)
+  !$ use omp_lib
   type(particle_sim), intent(inout)         :: sim
   type(pusher_container), intent(inout), dimension(:) :: pushers
   type(event), intent(inout), dimension(:)  :: events
   integer :: ierr, i, j
   integer, dimension(:), allocatable :: next_events
   real*8 :: next_event_time
+  real*8 :: t0, t1
 
   
   ! Check if pushers contain enough for all groups
@@ -30,24 +32,33 @@ subroutine main_loop(sim, pushers, events)
   ! if we are at 0.d0 (to within one tick) run all of the start-events
   if (abs(sim%time) .lt. tick) then
     call next_event_index(events, sim%time, next_events, next_event_time, include_now=.true.)
-    do i=1,size(next_events)
-      call events(next_events(i))%action%run(sim)
-    end do
+    ! only events that will run within the first tick
+    if (abs(next_event_time - sim%time) .lt. tick) then
+      do i=1,size(next_events)
+        call events(next_events(i))%action%run(sim)
+      end do
+    end if
   end if
 
   do
     ! Calculate which of the events is next, or stop if there are no more
     call next_event_index(events, sim%time, next_events, next_event_time)
     if (size(next_events) .eq. 0) then
-      write(*,*) "INFO: end of events, exiting"
-      exit ! stop this loop
+      write(*,"(A,g12.6,A)") "INFO: End of events at ", sim%time, " , exiting"
+      exit
+    end if
+    if (sim%stop_now) then
+      write(*,"(A,g12.6,A)") "INFO: Stop requested at ", sim%time, " , exiting"
+      exit
     end if
 
     !$omp parallel default(none) &
-    !$omp shared(sim, pushers, events, next_event_time) &
+    !$omp shared(sim, pushers, events, next_event_time, t0, t1) &
     !$omp private(ierr, i, j)
     ! note that this is not a parallel do loop, just the start of this parallel region
     do i=1,size(sim%groups)
+      call cpu_time(t0)
+      !$ t0 = omp_get_wtime()
       !$omp do
       do j=1,size(sim%groups(i)%particles)
         ! pusher guarantees to push the particle until at least next_event_time (or a little bit further)
@@ -55,7 +66,13 @@ subroutine main_loop(sim, pushers, events)
             sim%groups(i)%time, next_event_time)
       end do
       !$omp end do
-      sim%groups%time = next_event_time
+      call cpu_time(t1)
+      !$ t1 = omp_get_wtime()
+      !$omp single
+      write(*,"(A,i3,A,g12.6,A,g12.6,A,g12.6,A)") "INFO: Group ", i, " pushed from ", sim%groups(i)%time, " to ", next_event_time, &
+          " in ", t1-t0, " s"
+      !$omp end single
+      sim%groups(i)%time = next_event_time
     end do
     !$omp end parallel
 

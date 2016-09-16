@@ -9,6 +9,7 @@ implicit none
 type particle_sim
   real*8                                          :: time = 0.d0 !< time of the simulation. Only accurate when in events with sync or at
   !< the start of the simulation
+  logical                                         :: stop_now = .false.
   type(particle_hdf5_io)                          :: io
   type(particle_group), dimension(:), allocatable :: groups
   class(fields_base), allocatable                 :: fields

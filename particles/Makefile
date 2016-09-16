@@ -145,15 +145,13 @@ $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh 
 	$$(FC) $$(FFLAGS) -o $(file_stem) $$^ $$(LIBS)
 endef
 
-# All programs to compile
-PROGRAM_SOURCES = src/particles.f90 \
-		  src/static_field_example.f90 \
-		  src/jorek_static_fields_boris.f90 \
-		  tests/fruit_test_driver.f90 \
-		  benchmarks/pusher/pusher_test.f90 \
-		  examples/openadas/compare_mc_coronal.f90
+# All examples
+EXAMPLES := $(shell find examples -iname '*.f90')
+examples: $(patsubst %.f90,%,$(notdir $(EXAMPLES)))
 
-$(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
+PROGRAM_SOURCES := tests/fruit_test_driver.f90 \
+		   benchmarks/pusher/pusher_test.f90
+$(foreach prog,$(PROGRAM_SOURCES) $(EXAMPLES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 
 # non-standard object files (extra include options, target-specific variable)
 fruit_test_driver: INCLUDES += -I$(INC_FRUIT)

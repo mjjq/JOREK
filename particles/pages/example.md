@@ -5,7 +5,7 @@ This page contains instructions on how to run a simple particle case.
 * A [compiled `JOREK2_particles` binary](installation.html)
 * One or more JOREK restart files
 * A JOREK input file named `in_jorek`, used to generate the above restart files
-* A JOREK2_particles input file. See the variable list here: [[mod_particles:species]]
+* A JOREK2_particles input file.
 * ADAS ADF11-coefficients. Get them [here](http://open.adas.ac.uk/adf11?element=w&metastable_unresolved=1&acd=1&scd=1&plt=1&prb=1&year=&searching=2#searchbutton)
 
 ### Preparing the simulation

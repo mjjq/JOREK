@@ -19,6 +19,8 @@ subroutine test_get_filename
 
   call assert_equals('part000.00000000.h5', trim(writer%get_filename(0.d0)), 'test default settings')
   call assert_equals('part001.10000000.h5', trim(writer%get_filename(1.1d0)), 'test default settings 2')
+  writer%decimal_digits = 2; writer%fractional_digits = 0
+  call assert_equals('part21.h5', trim(writer%get_filename(21d0)), 'decimal point should be removed if fractional_digits = 0')
   writer%decimal_digits = 0; writer%fractional_digits = 0
   call assert_equals('part.h5', trim(writer%get_filename(12.d0)), 'test without numbers')
   writer%decimal_digits = 1; writer%fractional_digits = 3
@@ -28,6 +30,32 @@ subroutine test_get_filename
   call assert_equals('testing2.123.rst', trim(writer%get_filename(2.123d0)), 'test manual format with extension and basename')
 end subroutine test_get_filename
 
+
+subroutine test_write_read_sim_time
+  type(particle_sim) :: sim_to_write, sim_to_read
+  class(write_action), allocatable :: writer
+  class(read_action), allocatable  :: reader
+  logical :: file_exists
+  integer :: i, u, stat
+  allocate(writer, reader)
+
+  sim_to_write%time = 21.19d0
+  writer%decimal_digits = 2; writer%fractional_digits = 0
+
+  call writer%run(sim_to_write)
+  ! test if a file with the right name was created
+  inquire(file='part21.h5', exist=file_exists)
+  call assert_true(file_exists, 'file with the right name should be created')
+
+  reader%filename = 'part21.h5'
+  call reader%run(sim_to_read)
+
+  ! Test that the right time was read
+  call assert_equals(sim_to_write%time, sim_to_read%time, "time should be read from the file")
+  ! Delete the file
+  open(newunit=u, iostat=stat, file='part21.h5', status='old')
+  if (stat .eq. 0) close(u, status='delete')
+end subroutine test_write_read_sim_time
 
 subroutine test_write_sim_one_particle_boris
   type(particle_sim) :: sim_to_write, sim_to_read

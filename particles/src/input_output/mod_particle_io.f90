@@ -261,6 +261,7 @@ integer(HID_T)    :: file, file_space, mem_space, dset, plist ! handles
 integer(HID_T)    :: data_type
 integer(HID_T)    :: group_id
 integer(HID_T)    :: attr_id, atype_id
+integer(HID_T)    :: time_set_id, time_space_id
 integer           :: storage_type, max_corder
 character(len=80) :: dataset_name
 character(len=particle_type_name_length) :: particle_type_name
@@ -283,8 +284,16 @@ call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, hdferr)
 call h5fopen_f(filename, H5F_ACC_RDONLY_F, file, hdferr, access_prp=plist)
 call h5pclose_f(plist, hdferr)
 
-! TODO read time and type of geometry, give an error if geometry differs
+! TODO read type of geometry, give an error if geometry differs
 
+! read the time
+call h5dopen_f(file, '/time', time_set_id, hdferr)
+call h5dget_space_f(time_set_id, time_space_id, hdferr)
+call h5dread_f(time_set_id, H5T_NATIVE_DOUBLE, sim%time, [1_HSIZE_T], hdferr)
+call h5sclose_f(time_space_id, hdferr)
+call h5dclose_f(time_set_id, hdferr)
+
+! Get the number of groups
 call h5gopen_f(file, '/groups/', group_id, hdferr)
 call h5gget_info_f(group_id, storage_type, n, max_corder, hdferr)
 call h5gclose_f(group_id, hdferr)

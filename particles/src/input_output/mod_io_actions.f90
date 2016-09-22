@@ -15,7 +15,8 @@ type, private, extends(action), abstract :: io_action
 end type io_action
 
 type, public, extends(io_action) :: read_action
-  real*8 :: time
+  character(len=80) :: filename = '' !< optional filename
+  real*8 :: time !< used with the formats from io_action if filename is unset
 contains
   procedure :: do => do_read_action
 end type read_action
@@ -43,6 +44,9 @@ function get_filename(this, time) result(filename)
   character(len=20)            :: format
   if (this%decimal_digits .eq. 0 .and. this%fractional_digits .eq. 0) then
     write(filename,'(A,A)') trim(this%basename), this%extension
+  else if (this%fractional_digits .eq. 0) then
+    write(format,'(A,I0,A)') '(a,i', this%decimal_digits, 'a)'
+    write(filename,trim(format)) trim(this%basename), int(time), this%extension
   else
     write(format,'(A,I0,A,I0,A,I0,A)') '(a,i', this%decimal_digits, '.', this%decimal_digits, &
         ',f0.', this%fractional_digits, ',a)'
@@ -64,7 +68,11 @@ end function new_read_action
 subroutine do_read_action(this, sim)
   class(read_action), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
-  call read_simulation_hdf5(sim, this%get_filename(this%time))
+  if (len_trim(this%filename) .eq. 0) then
+    call read_simulation_hdf5(sim, this%get_filename(this%time))
+  else
+    call read_simulation_hdf5(sim, trim(this%filename))
+  end if
 end subroutine do_read_action
 
 

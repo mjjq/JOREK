@@ -55,7 +55,7 @@ subroutine test_main_loop_without_increments
   type(particle_sim) :: sim
 
   pushers = [pusher_container(pusher_no_action())]
-  events = [event(increment_action(), step=1.33d0, end=1.d0)]
+  events = [event(increment_action(), start=1.33d0, end=1.d0)]
   call main_loop(sim, pushers, events)
   select type (a => events(1)%action)
   type is (increment_action)
@@ -68,5 +68,6 @@ subroutine do_increment_action(this, sim)
   class(increment_action), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   this%counter = this%counter + 1
+  write(*,*) "incrementing counter to ", this%counter, ' at t=', sim%time
 end subroutine do_increment_action
 end module event_spec

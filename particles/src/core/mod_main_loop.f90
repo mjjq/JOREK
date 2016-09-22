@@ -31,7 +31,7 @@ subroutine main_loop(sim, pushers, events)
 
   ! if we are at 0.d0 (to within one tick) run all of the start-events
   if (abs(sim%time) .lt. tick) then
-    call next_event_index(events, sim%time, next_events, next_event_time, include_now=.true.)
+    call next_event_index(events, sim%time - 2*tick, next_events, next_event_time)
     ! only events that will run within the first tick
     if (abs(next_event_time - sim%time) .lt. tick) then
       do i=1,size(next_events)
@@ -97,12 +97,11 @@ end subroutine
 !>
 !> Any events that are within 1d-14 of the current time will not run
 !> (to prevent double events due to floating-point issues)
-subroutine next_event_index(events, current_time, next_events, event_time, include_now)
+subroutine next_event_index(events, current_time, next_events, event_time)
   type(event), intent(inout), dimension(:) :: events
   real*8, intent(in) :: current_time
   integer, dimension(:), allocatable, intent(out) :: next_events
   real*8, intent(out) :: event_time
-  logical, optional :: include_now !< if set to .true., do not remove events occurring at current_time (+- tolerance)
   real*8 :: event_run !< when events(i) is to run (at the soonest)
   logical, dimension(size(events)) :: event_first
   integer :: i
@@ -110,13 +109,12 @@ subroutine next_event_index(events, current_time, next_events, event_time, inclu
   event_time = huge(0.d0)
   event_first(:) = .false.
   do i=1,size(events)
-    if (events(i)%start .gt. current_time) then
+    ! next event needs to be at least tick in the future
+    if (events(i)%start .gt. current_time + tick) then
       event_run = events(i)%start
     else
       event_run = current_time + events(i)%step - mod(current_time - events(i)%start, events(i)%step)
-      ! Do not run any events that are really close to now (to fix floating-point issues)
-      if (.not. (present(include_now) .and. include_now) &
-          .and. abs(event_run - current_time) .le. tick) event_run = current_time + events(i)%step
+      if (abs(event_run - current_time) .le. tick) event_run = current_time + events(i)%step
     end if
 
     ! If this event has ended already

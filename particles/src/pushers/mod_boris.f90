@@ -1,23 +1,28 @@
 !> Particle pusher module with the Boris scheme
-module mod_pusher_boris
-use mod_particle_boris
-use mod_pusher
-implicit none
+module mod_boris
+  use mod_pusher
+  use mod_particle_base
 
-type, public, extends(pusher_base) :: pusher_boris
-contains
-  procedure :: push_single => boris_push_single_particle
-  procedure, private :: boris_method_v_only => boris_method_v_only
-  procedure, private :: boris_method_cylindrical_correction => boris_method_cylindrical_correction
-  procedure :: initial_half_step_backwards
-end type pusher_boris
-interface pusher_boris !< interface is workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77412
-  module procedure new_pusher_boris
-end interface pusher_boris
+  type, extends(particle_base) :: particle_boris
+    real*8, dimension(3) :: v !< Velocity in real space at t=t^(n-1/2) (where the position is known at t^n)
+  end type particle_boris
 
-public :: new_pusher_boris
-private
+  type, extends(pusher_base) :: pusher_boris
+  contains
+    procedure :: push_single => boris_push_single_particle
+    procedure, private :: boris_method_v_only => boris_method_v_only
+    procedure, private :: boris_method_cylindrical_correction => boris_method_cylindrical_correction
+    procedure :: initial_half_step_backwards
+  end type pusher_boris
+  interface pusher_boris !< interface is workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77412
+    module procedure new_pusher_boris
+  end interface pusher_boris
+
+  public :: pusher_boris
+  public :: particle_boris
+  private
 contains
+
 !> Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77412
 pure function new_pusher_boris(groups, fixed_timestep)
   type(pusher_boris) :: new_pusher_boris
@@ -136,4 +141,4 @@ pure subroutine initial_half_step_backwards(this, fields, particle)
   v = v + f*E
   particle%v = v
 end subroutine initial_half_step_backwards
-end module mod_pusher_boris
+end module mod_boris

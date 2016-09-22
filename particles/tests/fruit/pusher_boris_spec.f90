@@ -57,7 +57,7 @@ function x_orbit(timestep, time) result(x)
   particle%x(:)  = [1.d0, 0.d0, 0.d0]
   particle%v(:)  = [0.d0, TWOPI, 0.d0] ! v^(-1/2), see Delzanno, JCP (2013)
   particle%q     = 1 ! +1 e
-  particle%mass  = EL_CHG/TWOPI/ATOMIC_MASS_UNIT ! mass in unified atomic mass units to have f=1Hz in a field of 1 Tesla
+  particle%m     = EL_CHG/TWOPI/ATOMIC_MASS_UNIT ! mass in unified atomic mass units to have f=1Hz in a field of 1 Tesla
   particle%lost = .false.
 
   call pusher%push_single(fields, particle, 0.d0, time)

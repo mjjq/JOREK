@@ -20,6 +20,7 @@ module mod_boris
 
   public :: pusher_boris
   public :: particle_boris
+  public :: particle_base
   private
 contains
 

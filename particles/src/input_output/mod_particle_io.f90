@@ -26,20 +26,28 @@ contains
 function get_hdf5_particle_data_type(particles) result(data_type)
 use iso_c_binding
 use hdf5
-use mod_particle_boris !< Gfortran workaround for C_LOC not allowing polymorphism
+use mod_boris !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 integer(HID_T)              :: data_type
 
 class(particle_base), dimension(:), intent(in) :: particles
+class(particle_base), dimension(:), allocatable :: particles_2
 integer                     :: hdferr
 integer(HID_T)              :: st_array, x_array
 integer(HSIZE_T), parameter :: st_dim(1) = (/2/) !< JOREK integration
 integer(HSIZE_T), parameter :: x_dim(1) = (/3/) !< JOREK integration
 integer(HSIZE_T), dimension(0:9) :: offsets
 
+! Reallocate to a fixed-size list to allow for single-particle lists
+if (size(particles,1) .eq. 0) then
+  write(*,*) "ERROR: no particles given"
+  call exit(1)
+end if
+allocate(particles_2(1:2), source=particles(1)) 
+
 ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
 ! for now, copy this code for each particle type expected
-select type(p => particles)
+select type(p => particles_2)
 type is (particle_boris)
   offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
   offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
@@ -50,6 +58,9 @@ type is (particle_boris)
   offsets(7) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%label))
   offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
   offsets(8) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%lost))
+class default
+  write(*,*) "ERROR: unknown particle type for creating hdf5 type"
+  call exit(1)
 end select
 
 ! Reinitialize the library
@@ -103,7 +114,7 @@ subroutine write_simulation_hdf5(sim, filename)
 use mpi
 use hdf5
 use mod_particle_sim
-use mod_particle_boris !< Gfortran workaround for C_LOC not allowing polymorphism
+use mod_boris !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 
 type(particle_sim)   , intent(in) :: sim
@@ -117,7 +128,7 @@ integer(HID_T)                :: file, file_space, mem_space, dset, plist ! hand
 integer(HID_T)                :: group_id, attr_id, aspace_id, atype_id
 integer(HID_T)                :: data_type
 integer(HID_T)                :: time_space_id, time_set_id
-integer(HID_T)                :: geometry_space_id, geometry_set_id, geometry_type_id
+integer(HID_T)                :: geometry_space_id, geometry_set_id
 character(len=80)             :: dataset_name
 character(len=particle_type_name_length) :: particle_type_name
 integer                       :: i, hdferr
@@ -166,17 +177,9 @@ call h5sclose_f(time_space_id, hdferr)
 ! Write the geometry used
 ! Create a character type of length geometry_name_length
 if (allocated(sim%fields)) then
-  call h5tcopy_f(H5T_NATIVE_CHARACTER, geometry_type_id, hdferr)
-  call h5tset_size_f(geometry_type_id, geometry_name_length, hdferr)
   call h5screate_simple_f(1, [1_HSIZE_T], geometry_space_id, hdferr)
-  call h5dcreate_f(file, '/geometry', geometry_type_id, geometry_space_id, geometry_set_id, hdferr)
-  select case (sim%fields%geometry)
-  case (CARTESIAN)
-    call h5dwrite_f(geometry_set_id, geometry_type_id, "cartesian", [1_HSIZE_T], hdferr)
-  case (CYLINDRICAL)
-    call h5dwrite_f(geometry_set_id, geometry_type_id, "cylindrical", [1_HSIZE_T], hdferr)
-  end select
-  call h5tclose_f(geometry_type_id, hdferr)
+  call h5dcreate_f(file, '/geometry', H5T_NATIVE_INTEGER, geometry_space_id, geometry_set_id, hdferr)
+  call h5dwrite_f(geometry_set_id, H5T_NATIVE_INTEGER, sim%fields%geometry, [1_HSIZE_T], hdferr)
   call h5sclose_f(geometry_space_id, hdferr)
   call h5dclose_f(geometry_set_id, hdferr)
 end if
@@ -199,7 +202,7 @@ do i=1,size(sim%groups,1)
 
   ! Create an attribute for this set with the particle type
   call h5acreate_f(dset, particle_type_name_field_name, atype_id, aspace_id, attr_id, hdferr)
-  select type (p => sim%groups(I)%particles)
+  select type (p => sim%groups(i)%particles)
   type is (particle_boris)
     particle_type_name = 'particle_boris'
   class default
@@ -244,7 +247,7 @@ subroutine read_simulation_hdf5(sim, filename)
 use mod_particle_sim
 use mpi
 use hdf5
-use mod_particle_boris !< Gfortran workaround for C_LOC not allowing polymorphism
+use mod_boris !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 
 type(particle_sim) , intent(out) :: sim

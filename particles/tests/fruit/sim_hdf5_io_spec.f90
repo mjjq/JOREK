@@ -6,7 +6,7 @@
 module sim_hdf5_io_spec
 use mod_io_actions
 use mod_particle_sim
-use mod_particle_boris
+use mod_boris
 use fruit
 implicit none
 
@@ -28,6 +28,42 @@ subroutine test_get_filename
   call assert_equals('testing2.123.rst', trim(writer%get_filename(2.123d0)), 'test manual format with extension and basename')
 end subroutine test_get_filename
 
+
+subroutine test_write_sim_one_particle_boris
+  type(particle_sim) :: sim_to_write, sim_to_read
+  class(write_action), allocatable :: writer
+  class(read_action), allocatable  :: reader
+  logical :: file_exists
+  integer :: i, u, stat, n_groups, n_particles
+  allocate(writer, reader)
+
+  allocate(sim_to_write%groups(1))
+  call allocate_particles(sim_to_write%groups(1)%particles, 1)
+  sim_to_write%time = 21.d0
+
+  call writer%run(sim_to_write)
+  ! test if a file with the right name was created
+  inquire(file='part021.00000000.h5', exist=file_exists)
+  call assert_true(file_exists, 'file with the right name should be created')
+
+  reader%time = sim_to_write%time
+  call reader%run(sim_to_read)
+  ! Test that we have the right stuff in sim_to_read now
+  n_groups = size(sim_to_read%groups, 1)
+  call assert_equals(1, n_groups, 'should have one group exactly')
+  if (n_groups .eq. 1 .and. lbound(sim_to_read%groups,1) .eq. 1) then
+    n_particles = size(sim_to_read%groups(1)%particles, 1)
+    call assert_equals(1, n_particles, 'should have one particle exactly')
+    if (n_particles .eq. 1 .and. lbound(sim_to_read%groups(1)%particles,1) .eq. 1) then
+      call assert_true(particles_same(sim_to_write%groups(1)%particles(1), sim_to_read%groups(1)%particles(1)), &
+          'particle i must be as written')
+    end if
+  end if
+
+  ! Delete the file
+  open(newunit=u, iostat=stat, file='part021.00000000.h5', status='old')
+  if (stat .eq. 0) close(u, status='delete')
+end subroutine test_write_sim_one_particle_boris
 
 subroutine test_write_sim_one_group_boris
   type(particle_sim) :: sim_to_write, sim_to_read

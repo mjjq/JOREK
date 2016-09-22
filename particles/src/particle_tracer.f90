@@ -7,6 +7,9 @@ module particle_tracer
   use mod_main_loop
   use mod_pusher
 
+  ! IO
+  use mod_io_actions
+
   ! Fields section
   use mod_prescribed_fields
 

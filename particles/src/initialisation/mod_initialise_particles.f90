@@ -26,7 +26,7 @@ use mod_sampling
 use mod_rng
 use mod_pcg32_rng
 use mod_sobseq_rng
-use_mpi
+use mpi
 
 implicit none
 

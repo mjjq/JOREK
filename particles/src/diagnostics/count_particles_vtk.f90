@@ -4,12 +4,7 @@
 !! It reads some parameters from the vtk.nml namelist in the current directory
 !! The result is quite inaccurate, but good for quick tests
 program count_particles_vtk
-use phys_module
-use nodes_elements
-use mod_particles
-use mod_particle_io
-use mod_vtk
-use_mpi
+use mpi
 implicit none
 
 type (type_particle_list) :: particle_list

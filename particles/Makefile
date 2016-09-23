@@ -101,8 +101,13 @@ docs: pusher_test compare_mc_coronal
 	ford particles.md --no-search
 
 # Most of the sources are actually fortran 2003/8 but use the .f90 suffix
-sources:=$(shell find libs src tests examples benchmarks -iname '*.f90')
+sources:=$(shell find libs src tests examples benchmarks -iname '*.f90' -not -path "*/doc/*")
 depends:=$(patsubst %.f90,$(DEPDIR)/%.d,$(notdir $(sources)))
+# check if there are any duplicate files
+duplicates:=$(shell echo $(notdir $(sources)) | tr ' ' "\n" | sort | uniq -d)
+ifneq ($(strip $(duplicates)),)
+  $(error Duplicate filenames found: $(duplicates))
+endif
 
 # Make rules for all directories that we have found sources in
 # This is needed because the file stems must match and we do not really want to recreate the directory structure in $(OBJDIR) and $(DEPDIR)

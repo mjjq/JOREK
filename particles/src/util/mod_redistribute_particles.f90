@@ -1,18 +1,114 @@
 !> Redistribute particles over CPUs to do load-balancing
 module mod_redistribute_particles
-  use mod_particles
+  use mod_particle_base
 contains
-!> Redistribute particles over all participating processes
-!! Calculates the speed of calculation on this processor
-!! And sends particles to try to get the calculations times equal
-!! NB. This sends lost particles as well, even though these do not contribute
-!! to the computation time. If there are many lost particles this could be
-!! inefficient. Does not take into account different integrators for different species.
-subroutine redistribute_particles(particle_list, wtime)
-  use_mpi
+
+!> This function creates a derived MPI type for the particle and returns it
+!> If it already exists the old handle is returned
+!> TODO: alter for polymorphic particles
+function get_particle_derived_type() result(dtype_out)
+  use mpi
+  use parameters
+
+  implicit none
+
+  integer               :: ierr, dtype_out
+  integer, save         :: dtype
+  logical, save         :: dtype_set = .false.
+
+  integer :: len(9) = (/n_dim,3,3,1,1,1,1,1,1/), t(9) = (/ &
+    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL4,MPI_REAL4, &
+    MPI_INTEGER,MPI_INTEGER1,MPI_INTEGER1,MPI_INTEGER1/) ! MPI_INTEGER1 == MPI_LOGICAL1
+
+  integer(kind=MPI_ADDRESS_KIND) :: base, disp(9)
+  type(type_particle) :: particle
+
+  dtype_out = dtype
+  if (dtype_set) return
+
+  ! Get memory addresses in the type
+  call MPI_Get_address(particle,        base,    ierr)
+  call MPI_Get_address(particle%st,     disp(1), ierr)
+  call MPI_Get_address(particle%x,      disp(2), ierr)
+  call MPI_Get_address(particle%v,      disp(3), ierr)
+  call MPI_Get_address(particle%mass,   disp(4), ierr)
+  call MPI_Get_address(particle%weight, disp(5), ierr)
+  call MPI_Get_address(particle%i_elm,  disp(6), ierr)
+  call MPI_Get_address(particle%q,      disp(7), ierr)
+  call MPI_Get_address(particle%label,  disp(8), ierr)
+  call MPI_Get_address(particle%lost,   disp(9), ierr)
+
+  ! Rebase to particle memory beginning
+  disp = disp - base
+
+  ! Commit the structured type
+  call MPI_Type_create_struct(9, len, disp, t, dtype, ierr)
+  if (ierr .ne. 0) write(*,*) "Error creating particle datatype: ", ierr
+  call MPI_Type_commit(dtype, ierr)
+  if (ierr .ne. 0) write(*,*) "Error committing particle datatype: ", ierr
+
+  ! Set the save bit
+  dtype_set = .true.
+  dtype_out = dtype
+  return
+end function get_particle_derived_type
+
+!> Append a single particle to the list and grow it if needed
+pure subroutine append_particle_to_list(particle_list, particle)
   implicit none
 
   type(type_particle_list), intent(inout) :: particle_list
+  type(type_particle), intent(in) :: particle
+
+  if (size(particle_list%particle,1) .lt. particle_list%n_particles+1) then
+    call grow_particle_list(particle_list)
+  endif
+  particle_list%n_particles = particle_list%n_particles + 1
+  particle_list%particle(particle_list%n_particles) = particle
+end subroutine append_particle_to_list
+
+
+!> Append a list of particles to the list and grow it if necessary
+pure subroutine append_particles_to_list(particle_list, particles)
+  implicit none
+
+  type(type_particle_list), intent(inout) :: particle_list
+  type(type_particle), dimension(:), intent(in) :: particles
+
+  ! Grow it until it fits
+  do while (size(particle_list%particle,1) .lt. particle_list%n_particles+size(particles,1))
+    call grow_particle_list(particle_list)
+  enddo
+  particle_list%particle(particle_list%n_particles+1:particle_list%n_particles+size(particles,1)) = particles
+  particle_list%n_particles = particle_list%n_particles + size(particles,1)
+end subroutine append_particles_to_list
+
+
+!> Grow the particle list by a specific factor
+pure subroutine grow_particle_list(particle_list)
+  implicit none
+  type(type_particle_list), intent(inout) :: particle_list
+  type(type_particle), dimension(:), allocatable :: temp
+
+  real*8, parameter :: growth_factor = 1.2d0
+
+  allocate(temp(lbound(particle_list%particle,1):ubound(particle_list%particle,1)+ &
+      int((growth_factor - 1.d0) * real(size(particle_list%particle,1), 8))))
+  temp(lbound(particle_list%particle,1):ubound(particle_list%particle,1)) = particle_list%particle
+  call move_alloc(from=temp,to=particle_list%particle) ! deallocates temp as well
+end subroutine grow_particle_list
+
+!> Redistribute particles over all participating processes
+!> Calculates the speed of calculation on this processor
+!> And sends particles to try to get the calculations times equal
+!> NB. This sends lost particles as well, even though these do not contribute
+!> to the computation time. If there are many lost particles this could be
+!> inefficient. Does not take into account different integrators for different species.
+subroutine redistribute_particles(particles, wtime)
+  use mpi
+  implicit none
+
+  type(type_particle_list), intent(inout) :: particles
   real*8, intent(in) :: wtime !< Particle pusher calculation time on this CPU
 
   type(type_particle), allocatable, dimension(:) :: particles_recv

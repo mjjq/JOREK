@@ -10,7 +10,7 @@ use nodes_elements
 use mod_particles
 use mod_project_particles
 use mod_particle_io
-use_mpi
+use mpi
 use mod_vtk
 implicit none
 

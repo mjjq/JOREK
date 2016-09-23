@@ -68,6 +68,7 @@ pure function calculate_error_gradB(this, particle) result(err)
   class(case_gradB), intent(in) :: this
   class(particle_base), intent(in)         :: particle
   real*8 :: err
+  err = 0.d0
   if (this%fields%geometry .eq. CARTESIAN)   err = norm2(gradB_solution(this%time_end) - particle%x)
   if (this%fields%geometry .eq. CYLINDRICAL) err = norm2(gradB_solution(this%time_end) - cylindrical_to_cartesian(particle%x))
 end function calculate_error_gradB

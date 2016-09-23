@@ -54,6 +54,7 @@ pure function calculate_error_norm(this, particle) result(err)
   class(case_penning), intent(in)  :: this
   class(particle_base), intent(in) :: particle
   real*8 :: err
+  err = 0.d0
   if (this%fields%geometry .eq. CARTESIAN)   err = norm2(penning_trajectory(this%time_end) - particle%x)
   if (this%fields%geometry .eq. CYLINDRICAL) err = norm2(penning_trajectory(this%time_end) - cylindrical_to_cartesian(particle%x))
 end function calculate_error_norm

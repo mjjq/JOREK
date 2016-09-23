@@ -14,7 +14,6 @@ endif
 
 # Build in release mode by default
 DEBUG ?= 0
-FLAGS :=
 FLAGS += -DUSE_MPI -Ilibs/flogging/include # For flogging
 
 # Default flags for gfortran
@@ -81,7 +80,7 @@ $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 
 
 # Prepend the default flags so FFLAGS can override it
-FFLAGS := $(FLAGS) $(FFLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
+FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 
 
 # default action
@@ -111,7 +110,7 @@ depends:=$(patsubst %.f90,$(DEPDIR)/%.d,$(notdir $(sources)))
 # Template for generating object files from source files
 define F90_O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod: $(1)%.f90
-	$$(FC) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FFLAGS) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 # TODO: fork sfmakedepend to do all of this automatically
@@ -142,7 +141,7 @@ $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh $(OBJDIR)/$(file_stem).o | sort | uniq)
-	$$(FC) $$(FFLAGS) -o $(file_stem) $$^ $$(LIBS)
+	$$(FC) $$(FFLAGS) $$(FLAGS) -o $(file_stem) $$^ $$(LIBS)
 endef
 
 # All examples

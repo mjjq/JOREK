@@ -90,7 +90,6 @@ end subroutine boris_method_cylindrical_correction
 
 pure subroutine boris_method_v_only(this, fields, particle, eom, t)
   use mod_fields
-  use mod_cross_product
   class(pusher_boris), intent(in)      :: this
   class(fields_base), intent(in)       :: fields
   class(particle_boris), intent(inout) :: particle
@@ -106,8 +105,8 @@ pure subroutine boris_method_v_only(this, fields, particle, eom, t)
   Bnorm = sqrt(B2)
 
   ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
-  fB = tan(particle%q*eom * this%fixed_timestep * 0.5d0 * Bnorm) / Bnorm 
   fE = particle%q*eom * this%fixed_timestep * 0.5d0
+  fB = tan(particle%q*eom * this%fixed_timestep * 0.5d0 * Bnorm) / Bnorm 
 
   ! Calculate the electric field update (v^n-1/2 -> v-) with the Boris method
   particle%v = particle%v + fE * E
@@ -126,7 +125,6 @@ end subroutine boris_method_v_only
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine initial_half_step_backwards(this, fields, particle)
   use mod_fields
-  use mod_cross_product
   use mod_constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(pusher_boris), intent(in)      :: this
   class(fields_base), intent(in)       :: fields
@@ -142,4 +140,14 @@ pure subroutine initial_half_step_backwards(this, fields, particle)
   v = v + f*E
   particle%v = v
 end subroutine initial_half_step_backwards
+
+
+pure function cross_product(a, b)
+  real*8, dimension(3) :: cross_product
+  real*8, dimension(3), intent(in) :: a, b
+
+  cross_product(1) = a(2) * b(3) - a(3) * b(2)
+  cross_product(2) = a(3) * b(1) - a(1) * b(3)
+  cross_product(3) = a(1) * b(2) - a(2) * b(1)
+end function cross_product
 end module mod_boris

@@ -185,52 +185,54 @@ if (allocated(sim%fields)) then
 end if
 
 
-do i=1,size(sim%groups,1)
-  ! Find the number of particles on each node
-  call MPI_AllGather(size(sim%groups(i)%particles,1),1,MPI_INTEGER,&
-      particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+if (allocated(sim%groups)) then
+  do i=1,size(sim%groups,1)
+    ! Find the number of particles on each node
+    call MPI_AllGather(size(sim%groups(i)%particles,1),1,MPI_INTEGER,&
+        particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
-  ! Create dataspace for file and memory separately
-  call h5screate_simple_f(1, (/int(sum(particles_per_proc),HSIZE_T)/), file_space, hdferr)
-  call h5screate_simple_f(1, (/size(sim%groups(i)%particles,dim=1,kind=HSIZE_T)/), mem_space, hdferr)
+    ! Create dataspace for file and memory separately
+    call h5screate_simple_f(1, (/int(sum(particles_per_proc),HSIZE_T)/), file_space, hdferr)
+    call h5screate_simple_f(1, (/size(sim%groups(i)%particles,dim=1,kind=HSIZE_T)/), mem_space, hdferr)
 
-  ! Create dataset for file
-  write(dataset_name,"(A,i0.3)") "/groups/", i
-  data_type = get_hdf5_particle_data_type(sim%groups(i)%particles)
-  call h5dcreate_f(file, trim(dataset_name), data_type, file_space, dset, hdferr)
-  call h5sclose_f(file_space, hdferr)
+    ! Create dataset for file
+    write(dataset_name,"(A,i0.3)") "/groups/", i
+    data_type = get_hdf5_particle_data_type(sim%groups(i)%particles)
+    call h5dcreate_f(file, trim(dataset_name), data_type, file_space, dset, hdferr)
+    call h5sclose_f(file_space, hdferr)
 
-  ! Create an attribute for this set with the particle type
-  call h5acreate_f(dset, particle_type_name_field_name, atype_id, aspace_id, attr_id, hdferr)
-  select type (p => sim%groups(i)%particles)
-  type is (particle_boris)
-    particle_type_name = 'particle_boris'
-  class default
-    write(*,*) "error: missing type name declaration for write"
-    call exit(1)
-  end select
-  call h5awrite_f(attr_id, atype_id, particle_type_name, [1_HSIZE_T], hdferr)
-  call h5aclose_f(attr_id, hdferr)
+    ! Create an attribute for this set with the particle type
+    call h5acreate_f(dset, particle_type_name_field_name, atype_id, aspace_id, attr_id, hdferr)
+    select type (p => sim%groups(i)%particles)
+    type is (particle_boris)
+      particle_type_name = 'particle_boris'
+    class default
+      write(*,*) "error: missing type name declaration for write"
+      call exit(1)
+    end select
+    call h5awrite_f(attr_id, atype_id, particle_type_name, [1_HSIZE_T], hdferr)
+    call h5aclose_f(attr_id, hdferr)
 
-  ! Select hyperslab in the file (offset only, no stride)
-  call h5dget_space_f(dset, file_space, hdferr)
-  call h5sselect_hyperslab_f(file_space, H5S_SELECT_SET_F, &
-      start=(/int(sum(particles_per_proc(0:my_id-1)),HSIZE_T)/), &
-      count=(/size(sim%groups(i)%particles,dim=1,kind=HSIZE_T)/), &
-      hdferr=hdferr, stride=(/1_HSIZE_T/), block=(/1_HSIZE_T/))
+    ! Select hyperslab in the file (offset only, no stride)
+    call h5dget_space_f(dset, file_space, hdferr)
+    call h5sselect_hyperslab_f(file_space, H5S_SELECT_SET_F, &
+        start=(/int(sum(particles_per_proc(0:my_id-1)),HSIZE_T)/), &
+        count=(/size(sim%groups(i)%particles,dim=1,kind=HSIZE_T)/), &
+        hdferr=hdferr, stride=(/1_HSIZE_T/), block=(/1_HSIZE_T/))
 
-  ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
-  ! for now, copy this code for each particle type expected
-  select type (p => sim%groups(i)%particles)
-  type is (particle_boris)
-    p_ptr = C_LOC(p(1))
-  end select
-  ! Write the dataset independently
-  call h5dwrite_f(dset, data_type, p_ptr, &
-       hdferr, file_space_id = file_space, mem_space_id = mem_space)
-  call h5sclose_f(mem_space, hdferr)
-  call h5dclose_f(dset, hdferr)
-end do
+    ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
+    ! for now, copy this code for each particle type expected
+    select type (p => sim%groups(i)%particles)
+    type is (particle_boris)
+      p_ptr = C_LOC(p(1))
+    end select
+    ! Write the dataset independently
+    call h5dwrite_f(dset, data_type, p_ptr, &
+         hdferr, file_space_id = file_space, mem_space_id = mem_space)
+    call h5sclose_f(mem_space, hdferr)
+    call h5dclose_f(dset, hdferr)
+  end do
+end if
 
 ! Close everything
 call h5sclose_f(aspace_id, hdferr)

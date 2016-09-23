@@ -131,6 +131,7 @@ subroutine next_event_index(events, current_time, next_events, event_time)
   end do
 
   ! Select all indices which have true in event_first
+  allocate(next_events(count(event_first)))
   next_events = pack([(i, i=1, size(events))], event_first)
 end subroutine next_event_index
 
@@ -143,12 +144,16 @@ subroutine check_set_pusher_groups(sim, pushers, ierr)
   type(pusher_container), intent(inout), dimension(:) :: pushers !< all the requested pushers
   integer, intent(out) :: ierr !< if nonzero we cannot run the simulation with this config
   integer :: num_unallocated, index_unallocated, i, j
-  logical, dimension(size(sim%groups)) :: group_pushed
+  logical, dimension(:), allocatable :: group_pushed
 
   if (.not. allocated(sim%groups)) then
     write(*,*) "WARNING: no groups allocated"
     allocate(sim%groups(1:0)) ! if we have no groups, allow this for testing purposes
+    allocate(group_pushed(1:0))
+  else
+    allocate(group_pushed(size(sim%groups,1)))
   end if
+
   ierr = 0
   num_unallocated = 0
   index_unallocated = 0

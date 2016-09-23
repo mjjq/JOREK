@@ -13,8 +13,8 @@ program pusher_test
   use mod_gradB_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL
   implicit none
-  real*8, dimension(5), parameter :: penning_timesteps = [1d-2, 1d-3, 1d-4, 1d-5, 1d-6]
-  real*8, dimension(5), parameter :: gradB_timesteps = [1d-2, 1d-3, 1d-4, 1d-5, 1d-6]
+  real*8, dimension(4), parameter :: penning_timesteps = [1d-2, 1d-3, 1d-4, 1d-5]
+  real*8, dimension(4), parameter :: gradB_timesteps = [1d-2, 1d-3, 1d-4, 1d-5]
 
   call boris_cases
 

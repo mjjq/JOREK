@@ -4,3 +4,5 @@ static_field_example
 pusher_test
 compare_mc_coronal
 ex[0-9]*
+*.png
+*.h5

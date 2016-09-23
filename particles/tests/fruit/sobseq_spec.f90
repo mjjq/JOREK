@@ -154,6 +154,7 @@ subroutine sobseq_1D_integral(n)
   call assert_equals(0, ifail)
   if (ifail .gt. 0) return
 
+  x(1) = 0.d0
   integral = 0.d0
   do i=1,n
     call rng%next(x)
@@ -180,6 +181,7 @@ subroutine sobseq_1D_integral_strided(n, num_streams)
     if (ifail .gt. 0) return
   end do
 
+  x(1) = 0.d0
   integral = 0.d0
   do i=1,n/num_streams
     do j=1,num_streams

@@ -1,11 +1,10 @@
 !> This module contains testcases for the event system
 module event_spec
-use mod_event, only: event
-use mod_action, only: action, stop_action
-use mod_particle_sim, only: particle_sim
-use mod_main_loop, only: main_loop
-use mod_pusher, only: pusher_base, pusher_container
-use mod_pusher_no_action, only: pusher_no_action
+use mod_event
+use mod_particle_sim
+use mod_main_loop
+use mod_pusher
+use mod_pusher_no_action
 use fruit
 implicit none
 

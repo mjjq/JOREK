@@ -3,9 +3,9 @@ module particle_tracer
   use mod_constants
   use mod_particle_sim
   use mod_event
-  use mod_action
   use mod_main_loop
   use mod_pusher
+  use mod_hook
 
   ! IO
   use mod_io_actions

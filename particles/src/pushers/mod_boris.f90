@@ -1,4 +1,5 @@
 !> Particle pusher module with the Boris scheme
+!> See [[mod_pusher_no_action]] for an annotated example of the components below.
 module mod_boris
   use mod_pusher
   use mod_particle_base
@@ -14,7 +15,7 @@ module mod_boris
     procedure, private :: boris_method_cylindrical_correction => boris_method_cylindrical_correction
     procedure :: initial_half_step_backwards
   end type pusher_boris
-  interface pusher_boris !< interface is workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77412
+  interface pusher_boris
     module procedure new_pusher_boris
   end interface pusher_boris
 
@@ -25,15 +26,17 @@ module mod_boris
 contains
 
 !> Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77412
-pure function new_pusher_boris(groups, fixed_timestep)
+pure function new_pusher_boris(groups, fixed_timestep, hooks)
   type(pusher_boris) :: new_pusher_boris
-  integer, dimension(:), intent(in), optional :: groups
-  real*8, intent(in), optional :: fixed_timestep
+  integer, dimension(:), intent(in), optional         :: groups
+  real*8, intent(in), optional                        :: fixed_timestep
+  type(hook_base), intent(in), optional, dimension(:) :: hooks
   if (present(groups)) allocate(new_pusher_boris%groups, source=groups)
   if (present(fixed_timestep)) allocate(new_pusher_boris%fixed_timestep, source=fixed_timestep)
+  if (present(hooks)) allocate(new_pusher_boris%hooks, source=hooks)
 end function new_pusher_boris
 
-!> Push a single particle for some timesteps with the boris method (TODO: test speed improvement of purity)
+!> Push a single particle for some timesteps with the boris method
 pure subroutine boris_push_single_particle(this, fields, particle, time_start, time_end)
   use mod_fields
   use mod_constants, only: TICK, EL_CHG, ATOMIC_MASS_UNIT
@@ -42,7 +45,7 @@ pure subroutine boris_push_single_particle(this, fields, particle, time_start, t
   class(particle_base), intent(inout)  :: particle
   real*8, intent(in) :: time_start, time_end
   real*8 :: eom
-  integer :: j, n_step
+  integer :: j, k, n_step
 
   ! Skip this particle if it left the domain
   if (particle%lost) return
@@ -55,12 +58,18 @@ pure subroutine boris_push_single_particle(this, fields, particle, time_start, t
         ! update the velocity from v^(n-1/2) to v^(n+1/2)
         call this%boris_method_v_only(fields, particle, eom, time_start + (j-1)*this%fixed_timestep)
         ! update the position from v^n to v^(n+1)
-        select case (fields%geometry) ! TODO: test speed difference if this is a compile-time constant
+        select case (fields%geometry)
           case (CARTESIAN)
             particle%x = particle%x + particle%v * this%fixed_timestep
           case (CYLINDRICAL)
             call this%boris_method_cylindrical_correction(particle)
         end select
+        ! Run hooks if there are any
+        if (allocated(this%hooks)) then
+          do k=1,size(this%hooks,1)
+            call this%hooks(k)%action%do(particle)
+          end do
+        end if
       end do
   end select
 end subroutine boris_push_single_particle
@@ -106,7 +115,7 @@ pure subroutine boris_method_v_only(this, fields, particle, eom, t)
 
   ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
   fE = particle%q*eom * this%fixed_timestep * 0.5d0
-  fB = tan(particle%q*eom * this%fixed_timestep * 0.5d0 * Bnorm) / Bnorm 
+  fB = tan(particle%q*eom * this%fixed_timestep * 0.5d0 * Bnorm) / Bnorm
 
   ! Calculate the electric field update (v^n-1/2 -> v-) with the Boris method
   particle%v = particle%v + fE * E
@@ -141,7 +150,7 @@ pure subroutine initial_half_step_backwards(this, fields, particle)
   particle%v = v
 end subroutine initial_half_step_backwards
 
-
+!> The cross product in a left-handed coordinate system (e.g. XYZ or RPhiZ)
 pure function cross_product(a, b)
   real*8, dimension(3) :: cross_product
   real*8, dimension(3), intent(in) :: a, b

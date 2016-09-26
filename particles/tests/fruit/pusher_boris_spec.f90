@@ -55,7 +55,7 @@ function x_orbit(timestep, time) result(x)
   pusher = pusher_boris(fixed_timestep=timestep)
 
   particle%x(:)  = [1.d0, 0.d0, 0.d0]
-  particle%v(:)  = [0.d0, TWOPI, 0.d0] ! v^(-1/2), see Delzanno, JCP (2013)
+  particle%v(:)  = [0.d0, TWOPI, 0.d0] ! TODO get accurate v^(-1/2), see Delzanno, JCP (2013) and pusher_test
   particle%q     = 1 ! +1 e
   particle%m     = EL_CHG/TWOPI/ATOMIC_MASS_UNIT ! mass in unified atomic mass units to have f=1Hz in a field of 1 Tesla
   particle%lost = .false.

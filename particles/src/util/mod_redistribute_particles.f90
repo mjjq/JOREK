@@ -1,6 +1,6 @@
 !> Redistribute particles over CPUs to do load-balancing
 module mod_redistribute_particles
-  use mod_particle_base
+  use mod_particle_types
 contains
 
 !> This function creates a derived MPI type for the particle and returns it

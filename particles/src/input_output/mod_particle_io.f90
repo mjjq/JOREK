@@ -26,7 +26,7 @@ contains
 function get_hdf5_particle_data_type(particles) result(data_type)
 use iso_c_binding
 use hdf5
-use mod_boris !< Gfortran workaround for C_LOC not allowing polymorphism
+use mod_particle_types !< Gfortran workaround for C_LOC not allowing polymorphism
 implicit none
 integer(HID_T)              :: data_type
 
@@ -47,8 +47,19 @@ allocate(particles_2(1:2), source=particles(1))
 
 ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
 ! for now, copy this code for each particle type expected
+! (C_LOC does not work on a polymorphic entity yet)
 select type(p => particles_2)
-type is (particle_boris)
+type is (particle_kinetic)
+  offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
+  offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
+  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%m))
+  offsets(3) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%weight))
+  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
+  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
+  offsets(7) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%label))
+  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
+  offsets(8) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%lost))
+type is (particle_kinetic_leapfrog)
   offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
   offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
   offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%m))
@@ -98,7 +109,11 @@ call h5tinsert_f(data_type, "lost", offsets(8), &
 
 ! type-specific fields
 select type(p => particles)
-type is (particle_boris)
+type is (particle_kinetic)
+  offsets(9) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
+  call h5tinsert_f(data_type, "v [m/s]", &
+     offsets(9), x_array, hdferr)
+type is (particle_kinetic_leapfrog)
   offsets(9) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
   call h5tinsert_f(data_type, "v [m/s] at time t-1/2 dt", &
      offsets(9), x_array, hdferr)
@@ -204,8 +219,10 @@ if (allocated(sim%groups)) then
     ! Create an attribute for this set with the particle type
     call h5acreate_f(dset, particle_type_name_field_name, atype_id, aspace_id, attr_id, hdferr)
     select type (p => sim%groups(i)%particles)
-    type is (particle_boris)
-      particle_type_name = 'particle_boris'
+    type is (particle_kinetic)
+      particle_type_name = 'particle_kinetic'
+    type is (particle_kinetic_leapfrog)
+      particle_type_name = 'particle_kinetic_leapfrog'
     class default
       write(*,*) "error: missing type name declaration for write"
       call exit(1)
@@ -223,7 +240,9 @@ if (allocated(sim%groups)) then
     ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
     ! for now, copy this code for each particle type expected
     select type (p => sim%groups(i)%particles)
-    type is (particle_boris)
+    type is (particle_kinetic)
+      p_ptr = C_LOC(p(1))
+    type is (particle_kinetic_leapfrog)
       p_ptr = C_LOC(p(1))
     end select
     ! Write the dataset independently
@@ -332,8 +351,10 @@ do i=1,n
 
   ierr = 0
   select case (particle_type_name)
-  case ('particle_boris')
-    allocate(particle_boris::sim%groups(i)%particles(particles_per_proc(my_id)), stat=ierr)
+  case ('particle_kinetic')
+    allocate(particle_kinetic::sim%groups(i)%particles(particles_per_proc(my_id)), stat=ierr)
+  case ('particle_kinetic_leapfrog')
+    allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(particles_per_proc(my_id)), stat=ierr)
   case default
     write(*,*) "error: missing type name declaration for read"
     call exit(1)
@@ -353,7 +374,9 @@ do i=1,n
   ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
   ! for now, copy this code for each particle type expected
   select type (p => sim%groups(i)%particles)
-  type is (particle_boris)
+  type is (particle_kinetic)
+    p_ptr = C_LOC(p(1))
+  type is (particle_kinetic_leapfrog)
     p_ptr = C_LOC(p(1))
   class default
     write(*,*) "ERROR: missing type declaration for read"

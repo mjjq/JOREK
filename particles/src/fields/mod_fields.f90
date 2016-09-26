@@ -12,7 +12,7 @@ end type fields_base
 
 interface
   pure subroutine at_particle(this, particle, t, E, B, psi, U)
-    use mod_particle_base
+    use mod_particle_types
     import :: fields_base
     implicit none
     class(fields_base), intent(in)    :: this

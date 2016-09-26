@@ -33,7 +33,7 @@ contains
 !> in the case of fixed_timesteps), and will be called from within an openmp block.
 pure subroutine push_no_action(this, fields, particle, time_start, time_end)
   use mod_fields
-  use mod_particle_base
+  use mod_particle_types
   class(pusher_no_action), intent(in) :: this !< The current pusher
   class(fields_base), intent(in)      :: fields !< Fields used in the simulation, such as [[mod_prescribed_fields]]
   class(particle_base), intent(inout) :: particle !< The particle to push now

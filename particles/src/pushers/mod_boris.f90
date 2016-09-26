@@ -2,11 +2,7 @@
 !> See [[mod_pusher_no_action]] for an annotated example of the components below.
 module mod_boris
   use mod_pusher
-  use mod_particle_base
-
-  type, extends(particle_base) :: particle_boris
-    real*8, dimension(3) :: v !< Velocity in real space at t=t^(n-1/2) (where the position is known at t^n)
-  end type particle_boris
+  use mod_particle_types
 
   type, extends(pusher_base) :: pusher_boris
   contains
@@ -20,7 +16,6 @@ module mod_boris
   end interface pusher_boris
 
   public :: pusher_boris
-  public :: particle_boris
   public :: particle_base
   private
 contains
@@ -53,7 +48,7 @@ pure subroutine boris_push_single_particle(this, fields, particle, time_start, t
   n_step = ceiling((time_end - time_start - TICK)/this%fixed_timestep)
 
   select type(particle)
-    type is (particle_boris)
+    type is (particle_kinetic_leapfrog)
       do j=1,n_step
         ! update the velocity from v^(n-1/2) to v^(n+1/2)
         call this%boris_method_v_only(fields, particle, eom, time_start + (j-1)*this%fixed_timestep)
@@ -79,7 +74,7 @@ end subroutine boris_push_single_particle
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
 pure subroutine boris_method_cylindrical_correction(this, particle)
   class(pusher_boris), intent(in)      :: this
-  class(particle_boris), intent(inout) :: particle
+  class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8 :: R, Rphi
 
   ! Calculate the new R and RPhi
@@ -101,7 +96,7 @@ pure subroutine boris_method_v_only(this, fields, particle, eom, t)
   use mod_fields
   class(pusher_boris), intent(in)      :: this
   class(fields_base), intent(in)       :: fields
-  class(particle_boris), intent(inout) :: particle
+  class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: eom
   real*8, intent(in) :: t
 
@@ -137,7 +132,7 @@ pure subroutine initial_half_step_backwards(this, fields, particle)
   use mod_constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(pusher_boris), intent(in)      :: this
   class(fields_base), intent(in)       :: fields
-  class(particle_boris), intent(inout) :: particle
+  class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, dimension(3) :: v, E, B !< for calculating the initial half-step
   real*8 :: f, B2
   f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * particle%m) * this%fixed_timestep * 0.25d0

@@ -34,7 +34,7 @@ subroutine read_jorek_fields_impl(this, sim)
 end subroutine read_jorek_fields_impl
 
 pure subroutine at_particle_impl(this, particle, t, E, B, psi, U)
-  use mod_particle_base
+  use mod_particle_types
   class(jorek_fields),  intent(in)  :: this
   class(particle_base), intent(in)  :: particle
   real*8, intent(in)                :: t

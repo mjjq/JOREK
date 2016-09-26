@@ -1,6 +1,6 @@
 !> Base module for a testcase, such as [[mod_penning_case]], [[mod_gradb_case]]
 module mod_case
-  use mod_particle_base, only: particle_base
+  use mod_particle_types, only: particle_base
   use mod_pusher, only: pusher_base
   use mod_prescribed_fields, only: prescribed_fields
   implicit none
@@ -86,7 +86,7 @@ subroutine initialize_particle_all(this, particle, pusher, x0, v0, charge, mass)
   particle%m = mass
   particle%lost = .false.
   select type (particle)
-  type is (particle_boris)
+  type is (particle_kinetic_leapfrog)
     ! set up the velocity
     if (this%fields%geometry .eq. CARTESIAN)   particle%v = v0
     if (this%fields%geometry .eq. CYLINDRICAL) particle%v = vector_rotation(v0, particle%x(2))

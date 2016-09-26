@@ -57,7 +57,7 @@ subroutine test_write_read_sim_time
   if (stat .eq. 0) close(u, status='delete')
 end subroutine test_write_read_sim_time
 
-subroutine test_write_sim_one_particle_boris
+subroutine test_write_sim_one_particle_kinetic_leapfrog
   type(particle_sim) :: sim_to_write, sim_to_read
   class(write_action), allocatable :: writer
   class(read_action), allocatable  :: reader
@@ -91,7 +91,7 @@ subroutine test_write_sim_one_particle_boris
   ! Delete the file
   open(newunit=u, iostat=stat, file='part021.00000000.h5', status='old')
   if (stat .eq. 0) close(u, status='delete')
-end subroutine test_write_sim_one_particle_boris
+end subroutine test_write_sim_one_particle_kinetic_leapfrog
 
 subroutine test_write_sim_one_group_boris
   type(particle_sim) :: sim_to_write, sim_to_read
@@ -179,9 +179,9 @@ subroutine allocate_particles(particles, n)
   integer, intent(in) :: n
   integer :: i
   ! Prepare some particles
-  allocate(particle_boris::particles(n))
+  allocate(particle_kinetic_leapfrog::particles(n))
   select type (p => particles)
-  type is (particle_boris)
+  type is (particle_kinetic_leapfrog)
     do i=1,size(p,1)
       p(i)%x = real((/i,i+1,i+2/),8)
       p(i)%m = real(i,4)/3
@@ -214,9 +214,9 @@ function particles_same(p1, p2) result(same)
   if (p1%lost  .neqv. p2%lost) same = .false.
 
   select type(p1 => p1)
-    type is (particle_boris)
+    type is (particle_kinetic_leapfrog)
       select type (p2 => p2)
-        type is (particle_boris)
+        type is (particle_kinetic_leapfrog)
           if (norm2(p1%v-p2%v) .gt. tolerance) same = .false.
         class default
           same = .false.

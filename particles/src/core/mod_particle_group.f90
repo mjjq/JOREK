@@ -2,7 +2,7 @@
 !> This could be improved in the future by using a different data structure for storage
 !> A group has parameters for initialisation and a variable number of pusher hooks
 module mod_particle_group
-  use mod_particle_base
+  use mod_particle_types
   implicit none
 
   type ion_rec_params

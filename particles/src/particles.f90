@@ -13,7 +13,7 @@ integer :: i
 
 ! events
 !call read_parameters(sim)
-!call allocate(particle_boris::particles(sim%n_particles))
+!call allocate(particle_kinetic_leapfrog::particles(sim%n_particles))
 !call read_adas
 !call initialize_rng(rng)
 !call initialize_particles(sim)

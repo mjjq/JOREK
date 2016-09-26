@@ -3,7 +3,7 @@ module hook_spec
 use mod_constants, only: CARTESIAN
 use mod_prescribed_fields
 use mod_pusher_no_action
-use mod_boris, only: particle_boris
+use mod_particle_types
 use mod_hook
 use fruit
 implicit none
@@ -18,14 +18,14 @@ pure subroutine half_particle_velocity(this, particle)
   class(particle_action_half_velocity), intent(in) :: this
   class(particle_base), intent(inout) :: particle
   select type (particle)
-    type is (particle_boris)
+    type is (particle_kinetic_leapfrog)
       particle%v = particle%v / 2.d0
   end select
 end subroutine half_particle_velocity
 
 !> Create a hook to half the velocity of the particle every time it runs.
 subroutine test_hook_half_velocity
-  type(particle_boris)    :: particle
+  type(particle_kinetic_leapfrog)    :: particle
   type(pusher_no_action)  :: pusher
   type(prescribed_fields) :: fields
   real*8, parameter    :: timestep = 1d-1, time = 1d0

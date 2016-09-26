@@ -27,15 +27,15 @@ type(event), dimension(:), allocatable :: events
 ! 2. Set up the fields to be used in the simulation. (E and B defined below)
 allocate(sim%fields, source=prescribed_fields(CARTESIAN, E_zero, B_z))
 
-! 3. Allocate a group and a particle of type particle_boris.
+! 3. Allocate a group and a particle of type particle_kinetic_leapfrog.
 allocate(sim%groups(1))
-allocate(particle_boris::sim%groups(1)%particles(1))
+allocate(particle_kinetic_leapfrog::sim%groups(1)%particles(1))
 
 ! 4. Initialize the particle.
 !    This should usually be done by a dedicated initialization routine
 !    or by reading existing files.
 select type (p => sim%groups(1)%particles(1))
-type is (particle_boris)
+type is (particle_kinetic_leapfrog)
   p%x = [0.d0,0.d0,0.d0]
   p%v = [1.d0,0.d0,0.d0]
   p%q = 2

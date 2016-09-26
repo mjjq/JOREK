@@ -2,7 +2,8 @@
 module pusher_boris_spec
 use mod_constants, only: CARTESIAN, TWOPI, EL_CHG, ATOMIC_MASS_UNIT
 use mod_prescribed_fields, only: prescribed_fields
-use mod_boris, only: pusher_boris, particle_boris
+use mod_particle_types
+use mod_boris
 use fruit
 implicit none
 contains
@@ -45,7 +46,7 @@ subroutine test_half_gyro_orbit_convergence
 end subroutine test_half_gyro_orbit_convergence
 
 function x_orbit(timestep, time) result(x)
-  type(particle_boris) :: particle
+  type(particle_kinetic_leapfrog) :: particle
   type(pusher_boris)   :: pusher
   type(prescribed_fields) :: fields
   real*8, intent(in)   :: timestep, time

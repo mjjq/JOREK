@@ -25,7 +25,7 @@ subroutine do_print_kinetic_energy(this, sim)
   ! appropriate method
   do i=1,size(sim%groups)
     select type (p => sim%groups(i)%particles)
-    type is (particle_boris) ! no difference between norms for cartesian
+    type is (particle_kinetic_leapfrog) ! no difference between norms for cartesian
                              ! and cylindrical
       tmp = boris_kinetic_energy(p)
     class default
@@ -45,7 +45,7 @@ end subroutine do_print_kinetic_energy
 impure elemental function boris_kinetic_energy(particle) result(energy)
   !$omp declare simd(boris_kinetic_energy)
   use mod_boris
-  class(particle_boris), intent(in) :: particle
+  class(particle_kinetic_leapfrog), intent(in) :: particle
   real*8 :: energy
   energy = dot_product(particle%v, particle%v)
 end function boris_kinetic_energy

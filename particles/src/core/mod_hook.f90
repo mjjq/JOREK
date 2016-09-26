@@ -3,7 +3,7 @@
 !> about when to run. These are subclassed for the different particle pushers, with hooks
 !> that are aware of the particle type.
 module mod_hook
-use mod_particle_base
+use mod_particle_types
 implicit none
 
 !> Particle action abstract type, representing anything that can be done to a single particle

@@ -29,7 +29,7 @@ subroutine boris_cases
   type(case_penning)   :: penning_cylindrical
   type(case_gradB)     :: gradB_cartesian
   type(case_gradB)     :: gradB_cylindrical
-  type(particle_boris) :: particle
+  type(particle_kinetic_leapfrog) :: particle
   type(pusher_boris)   :: pusher
   integer :: i, u, stat
   real*8 :: err, runtime

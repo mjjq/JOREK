@@ -2,7 +2,7 @@
 !>
 !>## How to create new pushers
 !> The best starting point is an existing pusher. Copy the file and decide which
-!> base particle to use (or create a new one, see [[mod_particle_base]] for this).
+!> base particle to use (or create a new one, see [[mod_particle_types]] for this).
 !>
 !> Modifications then need to be made in the following files
 !>* pushers/mod_pusher_NAME.f90 (see [[mod_pusher_no_action]] for an annotated example)
@@ -33,7 +33,7 @@ end interface pusher_container
 interface
   !> Push a single particle from time_start to time_end (or a bit further if the timestep is fixed)
   subroutine push_single(this, fields, particle, time_start, time_end)
-    use mod_particle_base
+    use mod_particle_types
     use mod_fields
     import :: pusher_base
     class(pusher_base), intent(in)      :: this

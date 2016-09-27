@@ -1,6 +1,6 @@
 !> Base module for a testcase, such as [[mod_penning_case]], [[mod_gradb_case]]
 module mod_case
-  use mod_particle_types, only: particle_base
+  use mod_particle_types
   use mod_pusher, only: pusher_base
   use mod_prescribed_fields, only: prescribed_fields
   implicit none

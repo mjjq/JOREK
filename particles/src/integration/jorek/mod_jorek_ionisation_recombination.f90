@@ -1,18 +1,18 @@
 module mod_jorek_ionisation_recombination
 use mod_ionisation_recombination
-use mod_particle_action
+use mod_hook
+implicit none
 
 type, extends(particle_action), public :: particle_ion_rec
   type(type_ADF11_all) :: adf11
 contains
-  do => update_particle_charge
+  procedure :: do => update_particle_charge
 end type particle_ion_rec
 
-implicit none
 contains
 !> Calculate the new charge of a particle after a specific time
 subroutine update_particle_charge(this, sim, particle)
-use mod_particles
+use mod_particle_types
 use data_structure
 use mod_constants
 use phys_module

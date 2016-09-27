@@ -1,4 +1,6 @@
-!> Redistribute particles over CPUs to do load-balancing
+!> Redistribute particles over CPUs to do load-balancing.
+!> 
+!> WARNING: this code is not ready for polymorphic particles yet
 module mod_redistribute_particles
   use mod_particle_types
 contains
@@ -8,20 +10,20 @@ contains
 !> TODO: alter for polymorphic particles
 function get_particle_derived_type() result(dtype_out)
   use mpi
-  use parameters
 
   implicit none
 
   integer               :: ierr, dtype_out
   integer, save         :: dtype
   logical, save         :: dtype_set = .false.
+  integer, parameter    :: n_dim = 2 !< dimension of space covered with finite elements
 
   integer :: len(9) = (/n_dim,3,3,1,1,1,1,1,1/), t(9) = (/ &
     MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL4,MPI_REAL4, &
     MPI_INTEGER,MPI_INTEGER1,MPI_INTEGER1,MPI_INTEGER1/) ! MPI_INTEGER1 == MPI_LOGICAL1
 
   integer(kind=MPI_ADDRESS_KIND) :: base, disp(9)
-  type(type_particle) :: particle
+  class(particle_base) :: particle
 
   dtype_out = dtype
   if (dtype_set) return
@@ -31,7 +33,7 @@ function get_particle_derived_type() result(dtype_out)
   call MPI_Get_address(particle%st,     disp(1), ierr)
   call MPI_Get_address(particle%x,      disp(2), ierr)
   call MPI_Get_address(particle%v,      disp(3), ierr)
-  call MPI_Get_address(particle%mass,   disp(4), ierr)
+  call MPI_Get_address(particle%m,      disp(4), ierr)
   call MPI_Get_address(particle%weight, disp(5), ierr)
   call MPI_Get_address(particle%i_elm,  disp(6), ierr)
   call MPI_Get_address(particle%q,      disp(7), ierr)

@@ -53,7 +53,6 @@ real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, 
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
 integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet,n_bootstrap, n_psi_norm
 real*8                :: Jb, minRad,rho_norm,t_norm
-real*8                :: psi_lim, R_lim, Z_lim
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
@@ -331,10 +330,7 @@ endif
 
 minRad = 0.0
 if (bootstrap) then
-  if (.not. xpoint) then
-    call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)  
-  endif
-  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, R_lim, minRad)
+  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
   call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
   call bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
 endif

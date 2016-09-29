@@ -1,6 +1,7 @@
 !> Module containing mathematical and physical constants which are used in the code
 module mod_constants
 implicit none
+public
 
 integer*1, parameter :: CARTESIAN = 1 !< Constant for selecting cartesian geometry
 integer*1, parameter :: CYLINDRICAL = 2 !< Constant for selecting cylindrical geometry

@@ -3,6 +3,11 @@
 module mod_boris
   use mod_pusher
   use mod_particle_types
+  use mod_fields
+  use mod_hook
+  implicit none
+  private
+  public pusher_boris
 
   type, extends(pusher_base) :: pusher_boris
   contains
@@ -14,10 +19,6 @@ module mod_boris
   interface pusher_boris
     module procedure new_pusher_boris
   end interface pusher_boris
-
-  public :: pusher_boris
-  public :: particle_base
-  private
 contains
 
 !> Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77412
@@ -33,8 +34,7 @@ end function new_pusher_boris
 
 !> Push a single particle for some timesteps with the boris method
 pure subroutine boris_push_single_particle(this, fields, particle, time_start, time_end)
-  use mod_fields
-  use mod_constants, only: TICK, EL_CHG, ATOMIC_MASS_UNIT
+  use mod_constants, only: TICK, CARTESIAN, CYLINDRICAL, EL_CHG, ATOMIC_MASS_UNIT
   class(pusher_boris), intent(in)      :: this
   class(fields_base), intent(in)       :: fields
   class(particle_base), intent(inout)  :: particle
@@ -93,7 +93,6 @@ end subroutine boris_method_cylindrical_correction
 
 
 pure subroutine boris_method_v_only(this, fields, particle, eom, t)
-  use mod_fields
   class(pusher_boris), intent(in)      :: this
   class(fields_base), intent(in)       :: fields
   class(particle_kinetic_leapfrog), intent(inout) :: particle
@@ -128,7 +127,6 @@ end subroutine boris_method_v_only
 !> in cylindrical coordinates this is the same as in cartesian coordinates
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine initial_half_step_backwards(this, fields, particle)
-  use mod_fields
   use mod_constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(pusher_boris), intent(in)      :: this
   class(fields_base), intent(in)       :: fields

@@ -5,9 +5,11 @@ module mod_event
 use mod_action
 use mod_constants
 implicit none
+private
+public event
 
 !> Event type
-type, public :: event
+type :: event
   real*8  :: start    = 0.d0       !< Physical starting time
   real*8  :: step     = huge(0.d0) !< Step every how long?
   real*8  :: end      = huge(0.d0) !< Stop after time end

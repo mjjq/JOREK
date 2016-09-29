@@ -2,6 +2,8 @@
 module mod_fields
 use mod_constants, only: CARTESIAN, CYLINDRICAL
 implicit none
+private
+public fields_base
 
 !> Base type for different field
 type, abstract :: fields_base

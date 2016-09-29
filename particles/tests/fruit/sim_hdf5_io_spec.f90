@@ -6,7 +6,7 @@
 module sim_hdf5_io_spec
 use mod_io_actions
 use mod_particle_sim
-use mod_boris
+use mod_particle_types
 use fruit
 implicit none
 

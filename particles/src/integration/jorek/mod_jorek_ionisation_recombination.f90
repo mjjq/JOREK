@@ -2,8 +2,10 @@ module mod_jorek_ionisation_recombination
 use mod_ionisation_recombination
 use mod_hook
 implicit none
+private
+public particle_ion_rec
 
-type, extends(particle_action), public :: particle_ion_rec
+type, extends(particle_action) :: particle_ion_rec
   type(type_ADF11_all) :: adf11
 contains
   procedure :: do => update_particle_charge

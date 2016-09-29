@@ -1,6 +1,8 @@
 !> calculate timesteps and event times to match fixed timestep pushers
 module mod_event_timestep
 implicit none
+private
+public fix_event_timestep
 contains
 
 !> Calculate the optimum times for pushers, event start and event steps to fit constraints

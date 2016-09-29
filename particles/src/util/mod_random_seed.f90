@@ -1,7 +1,9 @@
+!> Module containing routines to generate a random seed based on urandom or
+!> some pid and time xor magic.
 module mod_random_seed
   implicit none
+  private
   public :: gen_random_seed
-  private ! all other methods are private
 contains
   !> Try some methods to get a nice random seed
   subroutine gen_random_seed(seed)
@@ -29,9 +31,9 @@ contains
   end subroutine read_urandom_int
 
   !> Fallback method to generate a random seed
-  !! xor the time and PID together, and run that through a lcg
-  !! Does not work for openmp, but for that streams should be used
-  !! with the PCG generator
+  !> xor the time and PID together, and run that through a lcg
+  !> Does not work for openmp, but for that streams should be used
+  !> with the PCG generator
   function xor_time_pid()
     use, intrinsic :: iso_c_binding, only: c_int64_t, c_int32_t
     implicit none
@@ -63,7 +65,7 @@ contains
     xor_time_pid = lcg(t)
   end function xor_time_pid
 
-  !! Linear congruential generator for seeding
+  !> Linear congruential generator for seeding
   function lcg(s)
     use, intrinsic :: iso_fortran_env, only: int64
     integer :: lcg

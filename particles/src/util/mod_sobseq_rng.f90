@@ -1,10 +1,12 @@
+!> Wrapper in the mod_rng type for [[mod_sobseq]]
 module mod_sobseq_rng
   use mod_sobseq
   use mod_rng
   implicit none
   private
+  public sobseq_rng
 
-  type, public, extends(type_rng) :: sobseq_rng
+  type, extends(type_rng) :: sobseq_rng
     private
     integer :: n_streams
     integer :: i_stream

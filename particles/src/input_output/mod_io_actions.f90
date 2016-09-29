@@ -4,8 +4,11 @@ use mod_particle_io
 use mod_action
 use mod_particle_sim
 implicit none
+private
+public read_action, write_action, &
+    get_filename ! public because we test it externally
 
-type, private, extends(action), abstract :: io_action
+type, extends(action), abstract :: io_action
   character(len=80) :: basename = 'part'
   integer           :: decimal_digits = 3
   integer           :: fractional_digits = 8
@@ -14,7 +17,7 @@ type, private, extends(action), abstract :: io_action
     procedure :: get_filename
 end type io_action
 
-type, public, extends(io_action) :: read_action
+type, extends(io_action) :: read_action
   character(len=80) :: filename = '' !< optional filename
   real*8 :: time !< used with the formats from io_action if filename is unset
 contains
@@ -24,7 +27,7 @@ interface read_action
   module procedure new_read_action
 end interface read_action
 
-type, public, extends(io_action) :: write_action
+type, extends(io_action) :: write_action
 contains
   procedure :: do => do_write_action
 end type write_action
@@ -32,7 +35,6 @@ interface write_action
   module procedure new_write_action
 end interface write_action
 
-private
 contains
 !> Write a filename consisting of this%basename and time as floating-point
 !> number, without spaces (tricky), with this%decimal_digits before the `.` and
@@ -53,10 +55,6 @@ function get_filename(this, time) result(filename)
     write(filename,trim(format)) trim(this%basename), int(time), time-int(time), this%extension
   end if
 end function get_filename
-
-  
-
-
 
 !> Constructor for read_action
 function new_read_action()

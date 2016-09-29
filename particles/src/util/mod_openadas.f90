@@ -1,6 +1,9 @@
 !> module takes the OPEN-ADAS data to calculate the steady state (or time evolution) charge distribution
 !> and average charge state as a function of temperature
 module mod_openadas
+implicit none
+private
+public type_ADF11, type_ADF11_all, read_adf11, GRC, L2Dinterp
 
 !> Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
 type type_ADF11

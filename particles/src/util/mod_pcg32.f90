@@ -1,6 +1,8 @@
 module mod_pcg32
 use iso_c_binding, only: c_int32_t, c_int64_t
 implicit none
+private
+public pcg_state_setseq_64, pcg32_random_doubles_r
 
 type, bind(c) :: pcg_state_setseq_64
   integer(c_int64_t) :: state

@@ -2,6 +2,11 @@
 !> by rejection sampling
 module mod_initialise_particles
 use mod_coronal
+implicit none
+private
+public particle_init_params
+
+!> TODO update to libparticletracer situation
 type particle_init_params
   integer*1 :: species = 0     !< Atomic number Z of the particles (-1) for electrons
   real*4    :: atomic_mass     !< Atomic mass in a.m.u.

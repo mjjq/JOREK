@@ -2,9 +2,11 @@
 module mod_action
 use mod_particle_sim
 implicit none
+private
+public action, stop_action
 
 !> Action abstract type, representing anything that can be done to a simulation
-type, abstract, public :: action
+type, abstract :: action
   !> Logging variable, set this in an initializer
   character(len=30) :: name = "unset action" !< Event name for logging
   logical :: log = .false. !< Output event duration
@@ -25,7 +27,7 @@ end interface
 
 
 !> Example action (stops the simulation using MPI_ABORT)
-type, extends(action), public :: stop_action
+type, extends(action) :: stop_action
 contains
   procedure :: do => do_stop_action
 end type stop_action
@@ -33,7 +35,6 @@ interface stop_action
   module procedure new_stop_action
 end interface
 
-private
 contains
 !> Constructor for stop_action
 function new_stop_action()

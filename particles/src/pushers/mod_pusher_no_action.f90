@@ -2,14 +2,18 @@
 !> This module consists of a single type, [[pusher_no_action]], extending
 !> [[pusher_base]]. Required elements to implement are the type, along with
 !> any time-step control fields you would like to have (in addition to the
-!> fixed_timestep field in pusher_base), and a subroutine implementing [[push_single]]
-!> (in this case [[push_no_action]].)
+!> fixed_timestep field in pusher_base), and a subroutine implementing the
+!> push_single interface from [[mod_pusher]]
+!> (in this case push_no_action.)
 !>
 !> You also need to create an interface for the object, allocating groups
-!> and hooks if present (and your custom fields). This is [[new_pusher_no_action]].
+!> and hooks if present (and your custom fields). This is new_pusher_no_action.
 module mod_pusher_no_action
 use mod_pusher
+use mod_hook
 implicit none
+private
+public pusher_no_action
 
 !> Example pusher doing nothing. Must implement push_single according to the
 !> interface in [[mod_pusher]].

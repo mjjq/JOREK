@@ -10,13 +10,15 @@
 module mod_pusher
 use mod_hook
 implicit none
+private
+public pusher_base, pusher_container
 
 !> Abstract type to be extended by new pushers
 type, abstract :: pusher_base
-  integer, dimension(:), allocatable, public :: groups !< groups from which to push particles, or all groups if unallocated
-  real*8, allocatable, public :: fixed_timestep !< Fixed timestep, if changing the timestep is not supported
+  integer, dimension(:), allocatable :: groups !< groups from which to push particles, or all groups if unallocated
+  real*8, allocatable :: fixed_timestep !< Fixed timestep, if changing the timestep is not supported
 
-  type(hook_base), dimension(:), allocatable, public :: hooks
+  type(hook_base), dimension(:), allocatable :: hooks
 contains
   procedure(push_single), deferred :: push_single
 end type pusher_base

@@ -6,7 +6,6 @@ contains
 
 subroutine random_velocity(m_b, density_b, T_b, Grad_Tb, f_w, f_tht, f_phi)
 
-use constants
 use phys_module, only : central_density, central_mass
 
 ! density_b is background number density (not mass density)

@@ -5,9 +5,11 @@
 module mod_hook
 use mod_particle_types
 implicit none
+private
+public particle_action, particle_action_noop, hook_base
 
 !> Particle action abstract type, representing anything that can be done to a single particle
-type, abstract, public :: particle_action
+type, abstract :: particle_action
 contains
   procedure(do), deferred, pass :: do
 end type particle_action
@@ -18,13 +20,13 @@ interface
     class(particle_base), intent(inout) :: particle
   end subroutine do
 end interface
-type, public, extends(particle_action) :: particle_action_noop
+type, extends(particle_action) :: particle_action_noop
   contains
     procedure :: do => do_nothing
 end type
 
 !> Hook type
-type, public :: hook_base
+type :: hook_base
   !not implemented yet: integer :: istep = 1 !< Every how many steps should this hook run? (takes precedence over step if > 0)
   !not implemented yet: real*8  :: step  = 0.d0 !< Every how often should this hook run? (rounded to the nearest istep > 1)
 

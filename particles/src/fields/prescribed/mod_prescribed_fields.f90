@@ -2,9 +2,11 @@
 module mod_prescribed_fields
 use mod_fields
 implicit none
+private
+public prescribed_fields
 
 !> Use a function of x and t for the electric and magnetic field
-type, extends(fields_base), public :: prescribed_fields
+type, extends(fields_base) :: prescribed_fields
   procedure(position_dependent_field), pointer, public, nopass :: electric_field
   procedure(position_dependent_field), pointer, public, nopass :: magnetic_field
 contains
@@ -19,7 +21,6 @@ interface
   end function position_dependent_field
 end interface
 
-private
 contains
 pure subroutine at_particle_impl(this, particle, t, E, B, psi, U)
   use mod_particle_types

@@ -2,6 +2,10 @@
 !> and recombination probabilities of particles in a specific time
 module mod_ionisation_recombination
 use mod_openadas
+implicit none
+private
+public new_charge
+
 contains
 
 !> Calculate new charge state at a specific density, temperature and timestep

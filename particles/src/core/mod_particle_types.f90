@@ -3,6 +3,10 @@
 !> [[particle_base]], and update [[mod_particle_io]] (search for `particle_kinetic`
 !> and add your particle at each spot)
 module mod_particle_types
+  implicit none
+  private
+  public particle_base, particle_kinetic, particle_kinetic_leapfrog
+
   !> The base type for all other particles. Includes everything but velocity
   !> as this is different in different pushers.
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -10,8 +14,8 @@ module mod_particle_types
   type, abstract :: particle_base
     real*8    :: x(3)             !< particle position in real space
     real*4    :: m                !< mass [atomic mass units]
-    real*4    :: weight = 1.d0    !< weight (i.e. number of particles)
-    real*8    :: st(2)            !< JOREK integration: particle position in the element (perhaps ifdef these?)
+    real*4    :: weight = 1.0     !< weight (i.e. number of particles)
+    real*8    :: st(2)            !< JOREK integration: particle position in the element
     integer*4 :: i_elm            !< JOREK integration: index in element_list
     integer*2 :: label            !< Particle type number (i in species(i))
     integer*1 :: q                !< charge [e]

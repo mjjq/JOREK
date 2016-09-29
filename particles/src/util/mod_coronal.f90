@@ -1,7 +1,12 @@
 !> module takes the OPEN-ADAS data to calculate the coronal equil-
 !> ibrium temperature and radiation, optionally in time.
+!> TODO: alter subroutines to be type-bound procedures
 module mod_coronal
 use mod_openadas
+implicit none
+private
+public type_coronal, corona_matrix, coronal_equilibrium, coronal_timestep, &
+    coronal_Prad, interpolate_coronal
 
 !> Coronal equilibrium datatype
 type type_coronal
@@ -11,11 +16,7 @@ type type_coronal
   real*8, allocatable :: Z(:,:) !< Charge state (e)
   real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W)
 end type type_coronal
-
-
 contains
-
-
 !> Calculate the coronal matrix in tridiagonal form
 !> This matrix defines the time derivatives of population sizes
 !> As drho/dt = A rho where A is this matrix.

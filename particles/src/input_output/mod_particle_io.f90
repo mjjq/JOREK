@@ -1,11 +1,14 @@
 !> Particle input-output module, containing hdf5 data_type and writing routines
 !> TODO: add metadata and/or use H5MD format (http://nongnu.org/h5md/h5md.html)
 module mod_particle_io
-use hdf5, only: HSIZE_T
+use hdf5
+use mpi
+use mod_particle_types
 use mod_constants, only: CARTESIAN, CYLINDRICAL
-public :: write_simulation_hdf5
-public :: read_simulation_hdf5
+use mod_particle_sim
+implicit none
 private
+public write_simulation_hdf5, read_simulation_hdf5
 
 integer(HSIZE_T), parameter :: geometry_name_length = 20 !< length of the string used to write geometries (cartesian or cylindrical)
 integer(HSIZE_T), parameter :: particle_type_name_length = 40 !< length of the string used to identify a specific type of particle
@@ -20,14 +23,12 @@ contains
 !> From "15.2.3.6 C_LOC(X)": (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56305)
 !> > Argument. X shall have either the POINTER or TARGET attribute. It shall not be a coindexed object. It shall either be a variable with interoperable type and kind type parameters, or be a scalar, nonpolymorphic variable with no length type parameters. If it is allocatable, it shall be allocated. If it is a pointer, it shall be associated. If it is an array, it shall be contiguous and have nonzero size. It shall not be a zero-length string.
 !> but it seems to work in ifort and in gfortran with a workaround for C_LOC.
-!> TODO:
+!>
+!>###TODO
 !> 
 !>* Check portability when using only a single datatype instead of a filetype and memtype
 function get_hdf5_particle_data_type(particles) result(data_type)
 use iso_c_binding
-use hdf5
-use mod_particle_types !< Gfortran workaround for C_LOC not allowing polymorphism
-implicit none
 integer(HID_T)              :: data_type
 
 class(particle_base), dimension(:), intent(in) :: particles
@@ -126,12 +127,6 @@ end function get_hdf5_particle_data_type
 
 !> Export all particles using HDF5 Parallel File IO
 subroutine write_simulation_hdf5(sim, filename)
-use mpi
-use hdf5
-use mod_particle_sim
-use mod_boris !< Gfortran workaround for C_LOC not allowing polymorphism
-implicit none
-
 type(particle_sim)   , intent(in) :: sim
 character*(*)        , intent(in) :: filename
 
@@ -265,12 +260,6 @@ end subroutine write_simulation_hdf5
 !> particle distribution over all processors and read this many
 !> particles per processor.
 subroutine read_simulation_hdf5(sim, filename)
-use mod_particle_sim
-use mpi
-use hdf5
-use mod_boris !< Gfortran workaround for C_LOC not allowing polymorphism
-implicit none
-
 type(particle_sim) , intent(out) :: sim
 character*(*)      , intent(in)  :: filename
 

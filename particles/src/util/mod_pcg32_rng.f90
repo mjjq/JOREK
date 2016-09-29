@@ -3,15 +3,15 @@ module mod_pcg32_rng
 use mod_pcg32
 use mod_rng
 implicit none
-
 private
+public pcg32_rng
 
-type, public, extends(type_rng) :: pcg32_rng
+type, extends(type_rng) :: pcg32_rng
   private
     type(pcg_state_setseq_64), dimension(:), allocatable :: state
   contains
-    procedure, public :: initialize => initialize_pcg32_rng
-    procedure, public :: next => next_pcg32_rng
+    procedure :: initialize => initialize_pcg32_rng
+    procedure :: next => next_pcg32_rng
 end type
 
 contains

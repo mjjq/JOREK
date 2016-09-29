@@ -95,10 +95,9 @@ cleanall: clean
 test: fruit
 fruit:
 	PYTHONPATH=$(FRUITPYDIR) python tests/fruit.py
-docs: pusher_test compare_mc_coronal
-	./pusher_test
-	./compare_mc_coronal
+docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
 	ford particles.md --no-search
+# above we have one output per subprogram to run for docs
 
 # Most of the sources are actually fortran 2003/8 but use the .f90 suffix
 sources:=$(shell find libs src tests examples benchmarks -iname '*.f90' -not -path "*/doc/*")
@@ -160,3 +159,9 @@ $(foreach prog,$(PROGRAM_SOURCES) $(EXAMPLES),$(eval $(call PROGRAM_TEMPLATE,$(p
 # non-standard object files (extra include options, target-specific variable)
 fruit_test_driver: INCLUDES += -I$(INC_FRUIT)
 fruit_test_driver: LIBS += -L$(LIB_FRUIT) -lfruit -Wl,-rpath=$(LIB_FRUIT)
+
+# Benchmarks and other output used in the documentation
+media/tests/all_pushers/penning.png: pusher_test # do not name other outputs
+	./pusher_test
+media/tests/openadas/charge_state_time.png: compare_mc_coronal # do not name other output
+	./compare_mc_coronal

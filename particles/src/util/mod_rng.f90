@@ -1,12 +1,14 @@
 !> Module containing abstract type for multi-dimensional (Q)RNGs
-!! subclass type_rng to implement other generators
+!> subclass type_rng to implement other generators
 module mod_rng
   implicit none
+  private
+  public type_rng
 
   type, abstract :: type_rng
     contains
-      procedure (initialize), public, deferred :: initialize
-      procedure (next),       public, deferred :: next
+      procedure (initialize), deferred :: initialize
+      procedure (next),       deferred :: next
   end type
 
   interface

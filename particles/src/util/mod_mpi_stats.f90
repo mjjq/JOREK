@@ -1,11 +1,12 @@
 module mod_mpi_stats
+use mpi
 implicit none
+private
+public mpi_stats, mpi_stats_list
 contains
 !> Calculate statistics over MPI
 !> Return stats(1) = min, stats(2) = mean, stats(3) = max, stats(4) = stddev
 function mpi_stats(var)
-  use mpi
-  implicit none
   real*8, intent(in) :: var
   real*8, dimension(5) :: mpi_stats
   integer :: n_cpu, ierr
@@ -28,8 +29,6 @@ end function mpi_stats
 !> Only returns usable values on the root node
 !> Return stats(1) = min, stats(2) = mean, stats(3) = max, stats(4) = stddev
 function mpi_stats_list(list) result(stats)
-  use mpi
-  implicit none
   real*8, intent(in), dimension(:) :: list
   real*8, dimension(5) :: stats !=(/minv, mean, maxv, sd, total/)
   integer :: num_values, ierr

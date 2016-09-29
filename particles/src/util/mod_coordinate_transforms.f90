@@ -1,10 +1,10 @@
 !> Module to calculate coordinate transforms between XYZ and cyl coordinate systems.
 module mod_coordinate_transforms
+  implicit none
   private
-
-  public :: cartesian_to_cylindrical
-  public :: cylindrical_to_cartesian
-  public :: vector_rotation
+  public cartesian_to_cylindrical
+  public cylindrical_to_cartesian
+  public vector_rotation
 contains
   !> convert a position in xyz coordinates to RPhiZ coordinates
   pure function cartesian_to_cylindrical(xyz) result(cyl)

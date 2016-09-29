@@ -5,12 +5,13 @@
 module mod_sobseq
   implicit none
   private
+  public sobol_state
 
   integer, parameter :: N_M = 31 ! Generate at most 2^31 points
   ! Problems with sign bit when generating N_M = 32
 
   !> Type containing the state of a sobol sequence
-  type, public :: sobol_state
+  type :: sobol_state
     private
       integer :: v(N_M)   !< Direction numbers
       integer :: i = 1    !< Current number
@@ -27,7 +28,6 @@ contains
 
 !> Initialize the direction numbers using a primitive polynomial
 subroutine initialize(state, s, a, m_in, stride)
-  implicit none
   class (sobol_state), intent(inout) :: state
   integer, intent(in) :: s !< Number of direction numbers / Mathematical polynomial basis of degree s
   integer, intent(in) :: a !< Coefficients of primitive polynomial

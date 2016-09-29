@@ -1,6 +1,7 @@
 !> This module contains testcases for the event system
 module event_spec
 use mod_event
+use mod_action
 use mod_particle_sim
 use mod_main_loop
 use mod_pusher

@@ -87,7 +87,7 @@ subroutine boris_cases
       set title "Penning trap test"; &
       plot "< grep Penning boris.txt | grep Cartesian" u 3:4 w l t "Boris Cartesian", &
            "< grep Penning boris.txt | grep Cylindrical" u 3:4 w l t "Boris Cylindrical"; &
-      set xlabel "calculation time [s]"; &
+      set ylabel "calculation time [s]"; &
       set output "media/tests/all_pushers/penning_time.png"; &
       plot "< grep Penning boris.txt | grep Cartesian" u 5:4 w l t "Boris Cartesian", &
            "< grep Penning boris.txt | grep Cylindrical" u 5:4 w l t "Boris Cylindrical"; &

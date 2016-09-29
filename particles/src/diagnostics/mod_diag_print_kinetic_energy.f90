@@ -1,5 +1,8 @@
+!> Module containing action to print diagnostics on the kinetic energy
+!> of all particles in the simulation.
 module mod_diag_print_kinetic_energy
 use mod_particle_sim
+use mod_particle_types
 use mod_action
 implicit none
 
@@ -13,8 +16,6 @@ contains
 !> Print some statistics on the kinetic energy of all particles in the simulation (with MPI and openmp support).
 !> Writing analysis scripts in this way aids reusability, as they can also be called inline in a simulation then.
 subroutine do_print_kinetic_energy(this, sim)
-  use mod_constants, only: CARTESIAN, CYLINDRICAL
-  use mod_boris
   use mod_mpi_stats
   class(diag_print_kinetic_energy), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
@@ -39,12 +40,13 @@ end subroutine do_print_kinetic_energy
 
 
 !> The impure keyword is used for openmp support in fortran 2008.
-!> It requires 16.0 or up. Remove the simd declaration if needed
+!> It requires ifort 16.0 or up. Remove the simd declaration if needed
 !> The impure keyword should be [unnecessary](https://software.intel.com/en-us/forums/intel-visual-fortran-compiler-for-windows/topic/591902)
-!> starting with the openmp 4.1 specs
+!> starting with implementation of the openmp 4.1 spec
+!>
+!> if there are any problems, it can be removed along with the simd instruction
 impure elemental function boris_kinetic_energy(particle) result(energy)
   !$omp declare simd(boris_kinetic_energy)
-  use mod_boris
   class(particle_kinetic_leapfrog), intent(in) :: particle
   real*8 :: energy
   energy = dot_product(particle%v, particle%v)

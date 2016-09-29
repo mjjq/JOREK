@@ -1,14 +1,17 @@
 !> Module to perform different kinds of sampling tricks
-!! including sampling from gaussian distributions and 
-!! sampling in cylindrical coordinates.
+!> including sampling from gaussian distributions and 
+!> sampling in cylindrical coordinates.
+!>
+!>###TODO
+!>* Replace boxmueller transform with ziggurat or marsaglia polar
 module mod_sampling
   implicit none
+  private
   public :: transform_uniform_cylindrical
   public :: boxmueller_transform
-  private ! all other methods are private
 contains
   !> Transform three uniform random numbers in [0,1] to 
-  !! Uniform random numbers in cylindrical coordinates (R,Z,Phi)
+  !> Uniform random numbers in cylindrical coordinates (R,Z,Phi)
   pure subroutine transform_uniform_cylindrical(ran3, Rbox, Zbox, Phibox, R, Z, Phi)
     implicit none
     real*8, dimension(3), intent(in) :: ran3
@@ -22,8 +25,8 @@ contains
   end subroutine transform_uniform_cylindrical
 
   !> Transform 2N uniform random numbers in [0,1] to
-  !! gaussian-distributed random numbers with mean 0 and sigma 1
-  !! Using the box-muller method (very slow!)
+  !> gaussian-distributed random numbers with mean 0 and sigma 1
+  !> Using the box-muller method (very slow!)
   pure function boxmueller_transform(ran) result(out)
     implicit none
     real*8, dimension(:), intent(in) :: ran

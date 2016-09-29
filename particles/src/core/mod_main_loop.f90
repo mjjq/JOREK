@@ -6,9 +6,9 @@ use mod_event, only: event
 use mod_pusher, only: pusher_container
 use mod_constants, only: tick
 implicit none
-
-public :: main_loop
 private
+public main_loop
+
 contains
 subroutine main_loop(sim, pushers, events)
   !$ use omp_lib

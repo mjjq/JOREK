@@ -28,9 +28,10 @@ ifeq ($(COMPILER), gnu)
   #FLAGS += -Wrealloc-lhs-all
   FLAGS += -fimplicit-none
   FLAGS += -flto=4 # link-time optimization with 4 jobs
+  #FFLAGS += -fwhole-program
   # options still to be tested
   #FFLAGS += -fexternal-blas
-  #FFLAGS += -ffast-math # or -Ofast
+  #FFLAGS += -ffast-math # better -Ofast
   #more optimization options
   ifeq ($(DEBUG), 1)
     # Debug flags for gfortran, in ascending order of severity
@@ -48,7 +49,7 @@ endif
 ifeq ($(COMPILER), intel)
   FLAGS += -openmp
   FLAGS += -implicitnone
-  FLAGS += -cpp 
+  FLAGS += -cpp
   FLAGS += -warn all
   FLAGS += -xAVX -align
   FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
@@ -112,14 +113,17 @@ endif
 # This is needed because the file stems must match and we do not really want to recreate the directory structure in $(OBJDIR) and $(DEPDIR)
 # Also, it will make everything slightly nicer later
 # Template for generating object files from source files
+# Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
 define F90_O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod: $(1)%.f90
 	$$(FC) $$(FFLAGS) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 endef
 # Template for generating dependencies from source file
-# TODO: fork sfmakedepend to do all of this automatically
+# TODO: alter sfmakedepend to do all of this automatically
+# rule defined with double colon so that we will not look for %.f90.c etc (terminal rule)
 define F90_D_TEMPLATE
-$(DEPDIR)/%.d: $(1)%.f90
+$(DEPDIR)/%.d:: $(1)%.f90
 	@echo "Generating dependencies for $$<"
 	@libs/sfmakedepend/sfmakedepend -f $(DEPDIR)/$$(*F).Td $$<; \
 	  grep -F "$$(*F).o: " $(DEPDIR)/$$(*F).Td |\
@@ -132,6 +136,11 @@ endef
 # For each directory containing source files add the templates above
 $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_O_TEMPLATE,$(dir))))
 $(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
+
+# Cancel all rules that make a .f90 file, Makefile or Makefile.inc
+%.f90: ;
+Makefile: ;
+Makefile.inc: ;
 
 # what does this do again?
 %.d: ;

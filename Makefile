@@ -236,7 +236,6 @@ PROGRAM_SOURCES = diagnostics/jorek2_poincare.f90       \
 		  diagnostics/jorpol.f90                \
 		  diagnostics/jorek2vtk.f90             \
 		  diagnostics/jorek2_diagno.f90         \
-		  diagnostics/jorek_to_helena.f90       \
 		  diagnostics/jorek2_target2vtk.f90     \
 		  diagnostics/jorek2_powers.f90         \
 		  diagnostics/new_diag_demo.f90
@@ -295,6 +294,9 @@ jorek2_stan : version diagnostics/jorek2_stan.f90 $(JOREK2VTK_OBJ)
 import_eqdsk : version util/import_eqdsk.f90
 	$(FC) -c util/import_eqdsk.f90 -o util/import_eqdsk.o
 	$(FC)  util/import_eqdsk.o $(JOREK_DIR)/import_eqdsk $(LIBS)
+
+jorek_to_helena : diagnostics/jorek_to_helena.f90
+	$(FC) -r8 -O0 diagnostics/jorek_to_helena.f90 -o diagnostics/jorek_to_helena
 
 jorek2_import_perturbation : version jorek2_import_perturbation_new_flags
 jorek2_import_perturbation_new_flags: version FFLAGS += -DIMPORT_PERTURBATIONS

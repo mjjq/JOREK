@@ -12,7 +12,7 @@ implicit none
 
 type (type_element) :: elm1, elm2
 type (type_node_list) ::  node_list
-integer             :: inb1, inb2, iv(6,2), i, j, nb
+integer             :: inb1, inb2, iv(5,2), i, j, nb
 real*8,parameter :: toll=1.d-12
 real*8 :: dist
 

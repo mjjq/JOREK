@@ -67,10 +67,8 @@ do i=1, element_list%n_elements
         write(*,'(A,2i5,8f16.10)') 'PROBLEM : ',i_elm,j_elm,R_i,R_j,Z_i,Z_j
       endif
 
-      elseif(abs(inb_i-inb_j) .eq. 3) then
-         ! just avoiding the write for the magnetic axis elements 
       else
-        write(*,*) 'not yet implemented '
+        !write(*,*) 'not yet implemented '
       endif
 
     endif

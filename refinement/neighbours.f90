@@ -12,7 +12,7 @@ implicit none
 
 type (type_element) :: elm1, elm2
 type (type_node_list) ::  node_list
-integer             :: inb1, inb2, iv(5,2), i, j, nb
+integer             :: inb1, inb2, iv(4,2), i, j, nb
 real*8,parameter :: toll=1.d-12
 real*8 :: dist
 
@@ -24,7 +24,7 @@ do i=1,4
     dist = (node_list%node(elm1%vertex(i))%x(1,1)-node_list%node(elm2%vertex(j))%x(1,1))*(node_list%node(elm1%vertex(i))%x(1,1)-node_list%node(elm2%vertex(j))%x(1,1)) + &
 	(node_list%node(elm1%vertex(i))%x(1,2)-node_list%node(elm2%vertex(j))%x(1,2))*(node_list%node(elm1%vertex(i))%x(1,2)-node_list%node(elm2%vertex(j))%x(1,2))
     !if (elm1%vertex(i)==elm2%vertex(j)) then
-    if(dist.lt.toll) then
+    if((dist.lt.toll).and.(nb.lt.4)) then
       nb = nb + 1
       iv(nb,1) = i
       iv(nb,2) = j

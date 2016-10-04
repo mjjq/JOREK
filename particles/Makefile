@@ -2,6 +2,7 @@
 # Known limitations:
 # - All dependencies must be in modules
 # - Module name must be equal to file name
+# - Dependencies do not work correctly on make < 3.81
 
 # Include jorek-specific things and settings
 include Makefile.inc
@@ -51,7 +52,7 @@ ifeq ($(COMPILER), intel)
   FLAGS += -implicitnone
   FLAGS += -cpp
   FLAGS += -warn all
-  FLAGS += -xAVX -align
+  FLAGS += -align
   FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
   ifeq ($(DEBUG), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html

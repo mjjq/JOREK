@@ -85,7 +85,7 @@ do i=1, element_list%n_elements
     i_node1 = element_list%element(i)%vertex(j)
     i_node2 = element_list%element(i)%vertex(mod(j,4)+1)
 
-    if (sqrt((node_list%node(i_node1)%x(1,1)-node_list%node(i_node2)%x(1,1))**2 + (node_list%node(i_node1)%x(1,2)-node_list%node(i_node2)%x(1,2))**2) .lt. 1d-8) then
+    if (norm2(node_list%node(i_node1)%x(1,1:2) - node_list%node(i_node2)%x(1,1:2)) .lt. 1d-8) then
       element_list%element(i)%neighbours(j) = -1
     endif
 

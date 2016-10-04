@@ -1,13 +1,13 @@
 !# Cases for testing the trajectory of a particle in a strongly inhomogeneous
 ! magnetic field of the form \[ \mathbf{B} = \left(0, 0, B_0 \exp(\lambda x)\right)\]
-! 
+!
 ! The general solution of the particle trajectory is calculated in [[gradB_solution]]
-! 
+!
 !## Results
-! 
+!
 ! The trajectory of a particle is followed from \(\mathbf{x}_0\) at \(t=0 s\) to \(t=10 s\).
 ! An example trajectory, calculated with the [[mod_boris]] method and relatively large timesteps (\(\delta t = 0.01\)) is shown below.
-! 
+!
 ! ![xy-trajectory-boris](|media|/tests/gradB/gradB_xy_boris.png)
 !
 !### Comparing pushers
@@ -16,19 +16,8 @@
 module mod_gradB_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_case
-  use mod_boris
   use mod_coordinate_transforms
   implicit none
-
-  !> Case for a penning trap in cartesian coordinates
-  type, extends(case), public :: case_gradB
-    contains
-      procedure :: initialize_particle => initialize_particle_gradB
-      procedure :: calculate_error => calculate_error_gradB
-  end type
-  interface case_gradB
-    module procedure new_case_gradB
-  end interface case_gradB
 
   ! gradB parameters
   real*8, parameter :: B0 = 1d0 !< Tesla
@@ -40,36 +29,64 @@ module mod_gradB_case
   real*4, parameter :: mass    = 1.d7 !< atomic mass units
   integer*1, parameter :: charge = 1 !< electron charges
   real*8, parameter :: time_end = 10 !< s
-  public :: gradB_solution
+
+  !> Case for a penning trap in cartesian coordinates
+  type, extends(case), abstract :: case_gradB
+    real*8 :: time_end = time_end
+    contains
+      procedure :: initialize => initialize_particle_gradB
+      procedure :: calc_error => calculate_error_gradB
+  end type
+  type, extends(case_gradB) :: case_gradB_cartesian
+  contains
+    procedure, nopass :: E => E_zero
+    procedure, nopass :: B => B_cartesian
+  end type
+  type, extends(case_gradB) :: case_gradB_cylindrical
+  contains
+    procedure, nopass :: E => E_zero
+    procedure, nopass :: B => B_cylindrical
+  end type
+
+  public :: gradB_solution, case_gradB_cartesian, case_gradB_cylindrical
   private
 contains
 
-!> Interface exists because we need to set prescribed_fields to the right value.
-!> it is important to use this! otherwise you need to set the fields manually.
-pure function new_case_gradB(geometry) result(new)
-  integer*1, intent(in) :: geometry
-  type(case_gradB) :: new
-  new%time_end = time_end
-  if (geometry .eq. CARTESIAN)   new%fields = prescribed_fields(geometry, E_zero, B_cartesian)
-  if (geometry .eq. CYLINDRICAL) new%fields = prescribed_fields(geometry, E_zero, B_cylindrical)
-end function new_case_gradB
-
 !> Initialize a particle for the gradB test case
-subroutine initialize_particle_gradB(this, particle, pusher)
+pure subroutine initialize_particle_gradB(this, particle)
   class(case_gradB), intent(in)       :: this
   class(particle_base), intent(inout) :: particle
-  class(pusher_base), intent(in)      :: pusher
-  call this%initialize_particle_all(particle, pusher, x0, v0, charge, mass)
+  particle%q = charge
+  particle%m = mass
+  particle%lost = .false.
+  select type (this)
+  type is (case_gradB_cartesian)
+    particle%x = x0
+    select type (particle)
+    type is (particle_kinetic_leapfrog)
+      particle%v = v0
+    end select
+  type is (case_gradB_cylindrical)
+    particle%x = cartesian_to_cylindrical(x0)
+    select type (particle)
+    type is (particle_kinetic_leapfrog)
+      particle%v = vector_rotation(v0, particle%x(2))
+    end select
+  end select
 end subroutine initialize_particle_gradB
 
 !> Calculate the error as the difference between particle posiition vectors
 pure function calculate_error_gradB(this, particle) result(err)
-  class(case_gradB), intent(in) :: this
-  class(particle_base), intent(in)         :: particle
+  class(case_gradB), intent(in)    :: this
+  class(particle_base), intent(in) :: particle
   real*8 :: err
   err = 0.d0
-  if (this%fields%geometry .eq. CARTESIAN)   err = norm2(gradB_solution(this%time_end) - particle%x)
-  if (this%fields%geometry .eq. CYLINDRICAL) err = norm2(gradB_solution(this%time_end) - cylindrical_to_cartesian(particle%x))
+  select type (this)
+  type is (case_gradB_cartesian)
+    err = norm2(gradB_solution(this%time_end) - particle%x)
+  type is (case_gradB_cylindrical)
+    err = norm2(gradB_solution(this%time_end) - cylindrical_to_cartesian(particle%x))
+  end select
 end function calculate_error_gradB
 
 pure function B_cartesian(x, t) result(B)

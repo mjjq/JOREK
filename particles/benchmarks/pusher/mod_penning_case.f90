@@ -19,8 +19,8 @@ module mod_penning_case
   type, extends(case), abstract :: case_penning
     real*8 :: time_end = time_end
     contains
-      procedure :: initialize_particle => initialize_particle_penning
-      procedure :: calculate_error => calculate_error_norm
+      procedure :: initialize => initialize_particle_penning
+      procedure :: calc_error => calculate_error_norm
   end type
   type, extends(case_penning), public :: case_penning_cartesian
     contains

@@ -5,7 +5,7 @@ module mod_boris
   implicit none
   private
 
-  public boris_push_cylindrical, boris_push_cartesian, initial_half_step_backwards
+  public boris_push_cylindrical, boris_push_cartesian, boris_initial_half_step_backwards
 contains
 
 !> Push a single particle for some timesteps with the boris method
@@ -80,7 +80,7 @@ end subroutine boris_method_v_only
 !> Given a particle with position x and velocity v at time t=0 (t^0), calculate v^-1/2
 !> in cylindrical coordinates this is the same as in cartesian coordinates
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
-pure subroutine initial_half_step_backwards(particle, E, B, dt)
+pure subroutine boris_initial_half_step_backwards(particle, E, B, dt)
   use mod_constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, dimension(3), intent(in) :: E, B 
@@ -94,7 +94,7 @@ pure subroutine initial_half_step_backwards(particle, E, B, dt)
       * (left_handed_cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
   v = v + f*E
   particle%v = v
-end subroutine initial_half_step_backwards
+end subroutine boris_initial_half_step_backwards
 
 !> The cross product in a left-handed coordinate system (e.g. XYZ or RPhiZ)
 pure function left_handed_cross_product(a, b)

@@ -17,29 +17,24 @@ program pusher_test
   real*8, dimension(5), parameter :: penning_timesteps = [1d-2, 1d-3, 1d-4, 1d-5, 1d-6]
   real*8, dimension(5), parameter :: gradB_timesteps = [1d-2, 1d-3, 1d-4, 1d-5, 1d-6]
 
-  call boris_cases
-
+  call boris_penning
+  call boris_gradB
 contains
 
 
-
-
-subroutine boris_cases
-  use mod_boris
-  type(case_penning)   :: penning_cartesian
-  type(case_penning)   :: penning_cylindrical
-  type(case_gradB)     :: gradB_cartesian
-  type(case_gradB)     :: gradB_cylindrical
+subroutine boris_penning
+  use mod_penning_case
   type(particle_kinetic_leapfrog) :: particle
-  type(pusher_boris)   :: pusher
   integer :: i, u, stat
   real*8 :: err, runtime
+  type(case_penning) :: case_penning_cylindrical
+  type(case_penning) :: case_penning_cartesian
+
+  ! Cylindrical part
+  call case_penning_cylindrical%initialize_particle(particle)
+  ! half-step backwards for accuracy
+
   
-  ! Setup the cases (sets the fields)
-  penning_cartesian   = case_penning(geometry=CARTESIAN)
-  penning_cylindrical = case_penning(geometry=CYLINDRICAL)
-  gradB_cartesian     = case_gradB(geometry=CARTESIAN)
-  gradB_cylindrical   = case_gradB(geometry=CYLINDRICAL)
 
   open(newunit=u, file="boris.txt")
   do i=1,size(penning_timesteps)

@@ -115,7 +115,7 @@ endif
 # Template for generating object files from source files
 # Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
 define F90_O_TEMPLATE
-$(OBJDIR)/%.o $(MODDIR)/%.mod: $(1)%.f90
+$(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
 	$$(FC) $$(FFLAGS) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 endef

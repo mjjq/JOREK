@@ -9,16 +9,16 @@ public read_action, write_action, &
     get_filename ! public because we test it externally
 
 type, extends(action), abstract :: io_action
-  character(len=80) :: basename = 'part'
-  integer           :: decimal_digits = 3
-  integer           :: fractional_digits = 8
-  character(len=5)  :: extension = '.h5'
+  character(len=120), public :: filename = '' !< Filename to use
+  character(len=80), public  :: basename = 'part' !< If no filename, use basename + digits
+  integer, public            :: decimal_digits = 3 !< Number of decimals before the point in timestamp
+  integer, public            :: fractional_digits = 8 !< Number of decimals after the point
+  character(len=5), public   :: extension = '.h5'
   contains
     procedure :: get_filename
 end type io_action
 
 type, extends(io_action) :: read_action
-  character(len=80) :: filename = '' !< optional filename
   real*8 :: time !< used with the formats from io_action if filename is unset
 contains
   procedure :: do => do_read_action
@@ -56,9 +56,20 @@ function get_filename(this, time) result(filename)
   end if
 end function get_filename
 
-!> Constructor for read_action
-function new_read_action()
+!> Constructor for read_action.
+!> Be sure to use keyword arguments when initializing, to avoid confusion
+function new_read_action(filename, basename, decimal_digits, fractional_digits, extension)
   type(read_action) :: new_read_action
+  character(len=*), intent(in), optional :: filename
+  character(len=*), intent(in), optional :: basename
+  integer, intent(in), optional          :: decimal_digits
+  integer, intent(in), optional          :: fractional_digits
+  character(len=*), intent(in), optional :: extension
+  if (present(filename)) new_read_action%filename = filename
+  if (present(basename)) new_read_action%basename = basename
+  if (present(decimal_digits)) new_read_action%decimal_digits = decimal_digits
+  if (present(fractional_digits)) new_read_action%fractional_digits = fractional_digits
+  if (present(extension)) new_read_action%extension = extension
   new_read_action%name = "ReadAction"
 end function new_read_action
 
@@ -75,15 +86,30 @@ end subroutine do_read_action
 
 
 !> Constructor for write_action
-function new_write_action()
+!> Be sure to use keyword arguments when initializing, to avoid confusion
+function new_write_action(filename, basename, decimal_digits, fractional_digits, extension)
   type(write_action) :: new_write_action
+  character(len=*), intent(in), optional :: filename
+  character(len=*), intent(in), optional :: basename
+  integer, intent(in), optional          :: decimal_digits
+  integer, intent(in), optional          :: fractional_digits
+  character(len=*), intent(in), optional :: extension
   new_write_action%name = "WriteAction"
+  if (present(filename)) new_write_action%filename = filename
+  if (present(basename)) new_write_action%basename = basename
+  if (present(decimal_digits)) new_write_action%decimal_digits = decimal_digits
+  if (present(fractional_digits)) new_write_action%fractional_digits = fractional_digits
+  if (present(extension)) new_write_action%extension = extension
 end function new_write_action
 
 !> Action for writing the simulation
 subroutine do_write_action(this, sim)
   class(write_action), intent(inout) :: this
   type(particle_sim), intent(inout)  :: sim
-  call write_simulation_hdf5(sim, this%get_filename(sim%time))
+  if (len_trim(this%filename) .eq. 0) then
+    call write_simulation_hdf5(sim, this%get_filename(sim%time))
+  else
+    call write_simulation_hdf5(sim, trim(this%filename))
+  end if
 end subroutine do_write_action
 end module mod_io_actions

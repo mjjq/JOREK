@@ -3,21 +3,8 @@ module mod_penning_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_coordinate_transforms
   use mod_case
-  use mod_pusher
-  use mod_boris
   implicit none
 
-  type, extends(case), public :: case_penning
-    contains
-      procedure :: initialize_particle => initialize_particle_penning
-      procedure :: calculate_error => calculate_error_norm
-  end type
-  !> See [[mod_penning_case]] for a description of the testcase.
-  interface case_penning
-    module procedure new_case_penning
-  end interface case_penning
-
-  public :: penning_trajectory
   ! Penning trap parameters (in SI units)
   real*8, parameter :: omega_e = 4.9d0 !< rad/s
   real*8, parameter :: omega_b = 25.d0 !< rad/s
@@ -27,27 +14,51 @@ module mod_penning_case
   real*4, parameter :: mass    = 1.d0 !< atomic mass units
   integer*1, parameter :: charge = 1 !< electron charges
   real*8, parameter :: time_end = 16.d0 !< s
+
+  !> See [[mod_penning_case]] for a description of the testcase.
+  type, extends(case), abstract :: case_penning
+    real*8 :: time_end = time_end
+    contains
+      procedure :: initialize_particle => initialize_particle_penning
+      procedure :: calculate_error => calculate_error_norm
+  end type
+  type, extends(case_penning), public :: case_penning_cartesian
+    contains
+      procedure, nopass :: E => E_cartesian
+      procedure, nopass :: B => B_z
+  end type
+  !> See [[mod_penning_case]] for a description of the testcase.
+  type, extends(case_penning), public :: case_penning_cylindrical
+    contains
+      procedure, nopass :: E => E_cylindrical
+      procedure, nopass :: B => B_z
+  end type
+
+  public :: penning_trajectory
   private
 contains
 
-!> Interface exists because we need to set prescribed_fields to the right value.
-!> it is important to use this! otherwise you need to set the fields manually.
-pure function new_case_penning(geometry) result(new)
-  type(case_penning) :: new
-  integer*1, intent(in) :: geometry !< one of [[mod_constants:CARTESIAN]] or [[mod_constants:CYLINDRICAL]]
-  new%time_end = time_end
-  if (geometry .eq. CARTESIAN)   new%fields = prescribed_fields(geometry, E_cartesian, B_z)
-  if (geometry .eq. CYLINDRICAL) new%fields = prescribed_fields(geometry, E_cylindrical, B_z)
-end function new_case_penning
-
-!> Wrapper to the global initialization routine with the parameters for this case.
-subroutine initialize_particle_penning(this, particle, pusher)
-  class(case_penning), intent(in)     :: this
+pure subroutine initialize_particle_penning(this, particle)
+  class(case_penning), intent(in)   :: this
   class(particle_base), intent(inout) :: particle
-  class(pusher_base), intent(in)      :: pusher
-  call this%initialize_particle_all(particle, pusher, x0, v0, charge, mass)
-end subroutine initialize_particle_penning
-
+  particle%q = charge
+  particle%m = mass
+  particle%lost = .false.
+  select type (this)
+  type is (case_penning_cartesian)
+    particle%x = x0
+    select type (particle)
+    type is (particle_kinetic_leapfrog)
+      particle%v = v0
+    end select
+  type is (case_penning_cylindrical)
+    particle%x = cartesian_to_cylindrical(x0)
+    select type (particle)
+    type is (particle_kinetic_leapfrog)
+      particle%v = vector_rotation(v0, particle%x(2))
+    end select
+  end select
+end subroutine
 
 !> Calculate the error as the difference between particle position vectors
 pure function calculate_error_norm(this, particle) result(err)
@@ -55,8 +66,12 @@ pure function calculate_error_norm(this, particle) result(err)
   class(particle_base), intent(in) :: particle
   real*8 :: err
   err = 0.d0
-  if (this%fields%geometry .eq. CARTESIAN)   err = norm2(penning_trajectory(this%time_end) - particle%x)
-  if (this%fields%geometry .eq. CYLINDRICAL) err = norm2(penning_trajectory(this%time_end) - cylindrical_to_cartesian(particle%x))
+  select type (this)
+  type is (case_penning_cartesian)
+    err = norm2(penning_trajectory(this%time_end) - particle%x)
+  type is (case_penning_cylindrical)
+    err = norm2(penning_trajectory(this%time_end) - cylindrical_to_cartesian(particle%x))
+  end select
 end function calculate_error_norm
 
 

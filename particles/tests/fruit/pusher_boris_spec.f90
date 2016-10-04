@@ -1,7 +1,6 @@
 !> This module contains some trivial tests of the boris pusher
 module pusher_boris_spec
 use mod_constants, only: CARTESIAN, TWOPI, EL_CHG, ATOMIC_MASS_UNIT
-use mod_prescribed_fields, only: prescribed_fields
 use mod_particle_types
 use mod_boris
 use fruit
@@ -47,13 +46,9 @@ end subroutine test_half_gyro_orbit_convergence
 
 function x_orbit(timestep, time) result(x)
   type(particle_kinetic_leapfrog) :: particle
-  type(pusher_boris)   :: pusher
-  type(prescribed_fields) :: fields
   real*8, intent(in)   :: timestep, time
   real*8 :: x(2)
-
-  fields = prescribed_fields(CARTESIAN, E_zero, B_minus_z)
-  pusher = pusher_boris(fixed_timestep=timestep)
+  integer :: i
 
   particle%x(:)  = [1.d0, 0.d0, 0.d0]
   particle%v(:)  = [0.d0, TWOPI, 0.d0] ! TODO get accurate v^(-1/2), see Delzanno, JCP (2013) and pusher_test
@@ -61,20 +56,9 @@ function x_orbit(timestep, time) result(x)
   particle%m     = EL_CHG/TWOPI/ATOMIC_MASS_UNIT ! mass in unified atomic mass units to have f=1Hz in a field of 1 Tesla
   particle%lost = .false.
 
-  call pusher%push_single(fields, particle, 0.d0, time)
+  do i=1,nint(time/timestep)
+    call boris_push_cartesian(particle, [0d0,0d0,0d0], [0d0,0d0,-1d0], timestep)
+  end do
   x = particle%x(1:2)
 end function
-
-pure function E_zero(x, t) result(E)
-  real*8, dimension(3), intent(in) :: x
-  real*8, intent(in) :: t
-  real*8, dimension(3) :: E
-  E = (/0.d0, 0.d0, 0.d0/)
-end function E_zero
-pure function B_minus_z(x, t) result(B)
-  real*8, dimension(3), intent(in) :: x
-  real*8, intent(in) :: t
-  real*8, dimension(3) :: B
-  B = (/0.d0, 0.d0, -1.d0/)
-end function B_minus_z
 end module pusher_boris_spec

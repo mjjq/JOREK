@@ -9,7 +9,7 @@ public action, stop_action
 type, abstract :: action
   !> Logging variable, set this in an initializer
   character(len=30) :: name = "unset action" !< Event name for logging
-  logical :: log = .false. !< Output event duration
+  logical :: log = .true. !< Output event duration
 
   !> Timing variables
   real*8, private :: t0 = 0.0

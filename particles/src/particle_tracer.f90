@@ -5,15 +5,9 @@ module particle_tracer
   use mod_particle_types
   use mod_event
   use mod_action
-  use mod_main_loop
-  use mod_pusher
-  use mod_hook
 
   ! IO
   use mod_io_actions
-
-  ! Fields section
-  use mod_prescribed_fields
 
   ! Pushers
   use mod_boris

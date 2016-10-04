@@ -17,7 +17,6 @@ module mod_gradB_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_case
   use mod_boris
-  use mod_pusher
   use mod_coordinate_transforms
   implicit none
 

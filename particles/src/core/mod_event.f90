@@ -5,6 +5,7 @@ module mod_event
 use mod_action
 use mod_particle_sim
 use mod_constants, only: tick
+use mod_event_timestep
 implicit none
 private
 public event, with, next_event_at, check_and_fix_timesteps
@@ -126,44 +127,49 @@ end subroutine with_action_1D_mask
 !>
 !> Any events that are within 1d-14 of the current time will not run
 !> (to prevent double events due to floating-point issues)
-subroutine next_event_at(events, current_time, event_time)
-  type(event), intent(inout), dimension(:) :: events
-  real*8, intent(in) :: current_time
-  real*8, intent(out) :: event_time
+function next_event_at(sim, events) result(at)
+  type(particle_sim), intent(inout) :: sim
+  type(event), intent(in), dimension(:) :: events
+  real*8 :: at
   logical, dimension(size(events)) :: run_event
   real*8 :: event_run !< when events(i) is to run (at the soonest)
   integer :: i
 
-  event_time = huge(0.d0)
+  at = huge(0.d0)
   run_event(:) = .false.
   do i=1,size(events)
     ! next event needs to be at least tick in the future
-    if (events(i)%start .gt. current_time + tick) then
+    if (events(i)%start .gt. sim%time + tick) then
       event_run = events(i)%start
     else
-      event_run = current_time + events(i)%step - mod(current_time - events(i)%start, events(i)%step)
-      if (abs(event_run - current_time) .le. tick) event_run = current_time + events(i)%step
+      event_run = sim%time + events(i)%step - mod(sim%time - events(i)%start, events(i)%step)
+      if (abs(event_run - sim%time) .le. tick) event_run = sim%time + events(i)%step
     end if
 
     ! If this event has ended already
     if (event_run .gt. events(i)%end + tick) cycle
 
     ! if this event occurs faster than the previously fastest (event_time)
-    if (event_run .lt. event_time - tick) then
+    if (event_run .lt. at - tick) then
       run_event(:) = .false.
       run_event(i) = .true.
-      event_time = event_run
-    else if (event_run .le. event_time + tick) then ! if it is equally fast
+      at = event_run
+    else if (event_run .le. at + tick) then ! if it is equally fast
       run_event(i) = .true.
     end if
   end do
-end subroutine next_event_at
+
+  ! Exit the simulation if there are no more events to do
+  if (at .ge. maxval(events(:)%end)) then
+    sim%stop_now = .true.
+    if (at .eq. huge(0.d0)) at = sim%time ! if the next event is not occurring or at infinity keep the current time
+  end if
+end function next_event_at
 
 
 !> Calculate whether we need to change any of the fixed timesteps or events to match
 !> For each of the pushers with a fixed timestep
 subroutine check_and_fix_timesteps(pusher_timestep, events)
-  use mod_event_timestep
   real*8,      intent(inout), dimension(:) :: pusher_timestep
   type(event), intent(inout), dimension(:) :: events
 

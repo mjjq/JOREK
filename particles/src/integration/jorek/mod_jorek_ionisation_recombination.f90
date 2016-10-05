@@ -4,12 +4,6 @@ implicit none
 private
 public particle_ion_rec
 
-type, extends(particle_action) :: particle_ion_rec
-  type(type_ADF11_all) :: adf11
-contains
-  procedure :: do => update_particle_charge
-end type particle_ion_rec
-
 contains
 !> Calculate the new charge of a particle after a specific time
 subroutine update_particle_charge(this, sim, particle)

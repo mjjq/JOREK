@@ -3,7 +3,7 @@ contains
 !> At step i_step, look for next file and use the appropriate method to import
 !> The next file can be up to 10 istep away, and if it is more than 2 away
 !> deltas are recalculated to fix the import
-subroutine import_next_restart(node_list,element_list, istep, istep_out, rst_format)
+subroutine import_next_restart(node_list, element_list, istep, istep_out, rst_format)
   use data_structure
   use mpi
   implicit none

@@ -5,25 +5,21 @@ use mod_action
 use mod_particle_sim
 implicit none
 
-type, extends(fields) :: jorek_fields
+type, extends(action) :: read_jorek_fields
   type(type_node_list), pointer    :: node_list
   type(type_element_list), pointer :: element_list
-  real*8 :: F0
-  real*8 :: tstep
-  ! parameters?
   logical :: static = .false.
-  contains
-    procedure :: at_particle => at_particle_impl
-end type jorek_fields
-
-type, extends(action) :: read_jorek_fields
   contains
     procedure :: do => read_jorek_fields_impl
 end type read_jorek_fields
-
-private
+!interface read_jorek_fields
+  !module procedure new_read_jorek_fields
+!end interface read_jorek_fields
 
 contains
+!function new_read_jorek_fields(node_list, element_list) result(new)
+  !type(read_jorek_fields) :: new
+  !type
 
 !> Read jorek fields from a restart file
 subroutine read_jorek_fields_impl(this, sim)
@@ -32,19 +28,6 @@ subroutine read_jorek_fields_impl(this, sim)
   type(particle_sim), intent(inout) :: sim
   write(*,*) "TODO: read JOREK fields"
 end subroutine read_jorek_fields_impl
-
-pure subroutine at_particle_impl(this, particle, t, E, B, psi, U)
-  use mod_particle_types
-  class(jorek_fields),  intent(in)  :: this
-  class(particle_base), intent(in)  :: particle
-  real*8, intent(in)                :: t
-  real*8, dimension(3), intent(out) :: E, B
-  real*8, intent(out), optional     :: psi, U
-
-  if (present(psi) .and. present(U)) then
-    call calc_EB(particle%i_elm, particle%st, particle%x(3), E, B, psi, U, 0.d0)
-  end if
-end subroutine at_particle_impl
 
 !> Calculates the electric and magnetic fields at a specific position
 !> in the jorek element `i_elm` at `st`.

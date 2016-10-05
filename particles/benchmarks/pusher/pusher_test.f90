@@ -23,8 +23,7 @@ contains
 !> Run some tests with the boris pusher.
 subroutine test_boris
   use mod_boris
-  type(particle_kinetic_leapfrog) :: particle
-  !class(particle_kinetic_leapfrog), allocatable :: particle
+  class(particle_kinetic_leapfrog), allocatable :: particle
   integer :: i, u, k, n_steps
   real*8 :: err, t0, t1
   type(case_penning_cylindrical) :: case1
@@ -32,7 +31,7 @@ subroutine test_boris
   type(case_gradB_cylindrical)   :: case3
   type(case_gradB_cartesian)     :: case4
   character(len=*), parameter :: format = "(A,g9.2,g16.8,g16.8)"
-  !allocate(particle_kinetic_leapfrog::particle)
+  allocate(particle_kinetic_leapfrog::particle)
 
   open(newunit=u, file="boris.txt")
   do i=1,size(penning_timesteps)

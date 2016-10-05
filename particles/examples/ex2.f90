@@ -19,11 +19,10 @@ implicit none
 
 ! 1. Set up the simulation variables containing
 !    sim: particles, time, and io.
-!    pushers: information on timestepping (and hooks).
 !    events: halting points for the pushers and actions to run.
-real*8 :: timesteps(1) = [1d-6]
 type(particle_sim) :: sim
 type(event), dimension(:), allocatable :: events
+real*8 :: timesteps(1) = [1d-6]
 integer :: i, j, k, n_steps
 real*8  :: target_time
 
@@ -55,7 +54,7 @@ call with(sim, events, at=0.d0)
 ! 7. Loop until we the simulation requests a stop
 do while (.not. sim%stop_now)
   ! 7.1 Find out which events are next and when they will run
-  call next_event_at(events, sim%time, target_time)
+  target_time = next_event_at(sim, events)
 
   ! 7.2 Loop over all particle groups
   do i=1,1

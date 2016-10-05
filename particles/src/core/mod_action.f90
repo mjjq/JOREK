@@ -26,7 +26,7 @@ interface
 end interface
 
 
-!> Example action (stops the simulation using MPI_ABORT)
+!> Example action (stops the simulation)
 type, extends(action) :: stop_action
 contains
   procedure :: do => do_stop_action

@@ -2,42 +2,40 @@
 !> static JOREK fields, file jorek_restart.h5 or jorek_restart.rst
 program ex1_jorek
 use particle_tracer
-!use jorek_integration
-use data_structure
+use jorek_particle_tracer
 implicit none
 
-real*8             :: timestep = [1d-6] !< timesteps might be slightly changed by fix_timesteps
+real*8             :: timesteps(1) = [1d-6] !< timesteps might be slightly changed by fix_timesteps
 
 type(particle_sim) :: sim
-type(type_node_list), target :: node_list
-type(type_element_list), target :: element_list
 type(event), dimension(:), allocatable :: events
+type(type_node_list)    :: node_list
+type(type_element_list) :: element_list
 
 integer :: i, j, k, n_steps, i_elm_old, ifail
-real*8 ::  target_time, t
-real*8, dimension(3) :: E, B
-real*8, dimension(2) :: rz_old, st_old
+real*8 :: target_time, t
+real*8 :: E(3), B(3), rz_old(2), st_old(2)
 
 call sim%initialize(num_groups=1)
 
 call with(sim, read_jorek_fields(node_list, element_list, basename='jorek_restart'))
-call with(sim, init_particles(particle_kinetic_leapfrog(), num_groups=1, uniform_density=1.d0, num_particles=100000))
+call with(sim, init_particles_in_jorek_fields(particle_kinetic_leapfrog(), num_groups=1, uniform_density=1.d0, num_particles=100000))
 
-events = [event(write_action(basename='test', decimal_digits=0), step=1d-4), &
+events = [event(write_action(basename='test'), step=1d-4), &
           event(stop_action(), start=1d-3)]
 call check_and_fix_timesteps(timesteps, events)
 call with(sim, events, at=0.d0)
 
 do while (.not. sim%stop_now)
-  call next_event_at(events, sim%time, target_time)
+  target_time = next_event_at(sim, events)
 
   do i=1,1 ! loop over groups
-    n_steps = nint((next_event_time - sim%time)/timestep)
+    n_steps = nint((target_time - sim%time)/timesteps(i))
 
     select type (particles => sim%groups(i)%particles)
     type is (particle_kinetic_leapfrog)
       !$omp parallel do default(private) &
-      !$omp shared(n_steps, timesteps, i, node_list, element_list)
+      !$omp shared(sim, n_steps, timesteps, i, node_list, element_list)
       do j=1,size(particles)
         if (particles(j)%lost) cycle
         do k=1,n_steps

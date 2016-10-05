@@ -3,10 +3,7 @@ ex1: static fields
 ex2: input/output
 ex3: diagnostics (as postprocessing tool)
 ex4: diagnostics (live in run)
-ex5: hooks for pushers
-ex6: three groups, default pusher set once
-ex7: domain topology
+ex5: multiple groups and different pushers
 
 jorek/ex1_jorek: static fields
-jorek/ex2_jorek: time-varying fields (postprocessing, interpolation)
-jorek/ex3_jorek: run live coupled with JOREK
+jorek/ex2_jorek: time-varying fields (as postprocessing tool, with interpolation)

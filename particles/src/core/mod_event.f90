@@ -13,12 +13,14 @@ public event, with, next_event_at, check_and_fix_timesteps
 type :: event
   real*8  :: start    = 0.d0       !< Physical starting time
   real*8  :: step     = huge(0.d0) !< Step every how long?
-  real*8  :: end      = huge(0.d0) !< Stop after time end
+  real*8  :: end      = huge(0.d0) !< Stop after time end. If equal to start, runs once
 
   integer, dimension(:), allocatable :: sync_groups !< which groups to require at a full-timestep (default = all, empty array = none)
 
   !> Action to perform when this event runs
   class(action), allocatable :: action
+contains
+  procedure run_at
 end type event
 interface event
   module procedure new_event
@@ -26,7 +28,7 @@ end interface
 
 interface with
   module procedure with_event_0D, with_action_0D, &
-        with_event_1D, with_event_1D_mask, &
+        with_event_1D, with_event_1D_at, with_event_1D_mask, &
         with_action_1D, with_action_1D_mask
   end interface
 contains
@@ -42,6 +44,19 @@ function new_event(act, start, step, end)
   allocate(new_event%action, source=act) ! because assignment is not yet supported in gfortran 6.1.1
 end function new_event
 
+function run_at(this, time)
+  class(event), intent(in) :: this
+  real*8, intent(in) :: time
+  logical :: run_at
+  integer :: closest_iteration
+  closest_iteration = nint((time - this%start)/this%step)
+  run_at = .false.
+  if (closest_iteration .ge. 0 &
+    .and. abs(time - (this%start + closest_iteration*this%step)) .le. tick &
+    .and. (time - this%end .le. tick)) then
+    run_at = .true.
+  end if
+end function
 
 subroutine with_event_0D(sim, single_event)
   type(particle_sim), intent(inout) :: sim
@@ -69,6 +84,15 @@ subroutine with_action_1D(sim, actions)
     call actions(i)%run(sim)
   end do
 end subroutine with_action_1D
+subroutine with_event_1D_at(sim, events, at)
+  type(particle_sim), intent(inout) :: sim
+  type(event), intent(inout), dimension(:) :: events
+  real*8, intent(in) :: at
+  integer :: i
+  do i=1,size(events)
+    if (events(i)%run_at(at)) call events(i)%action%run(sim)
+  end do
+end subroutine with_event_1D_at
 subroutine with_event_1D_mask(sim, events, mask)
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), dimension(:) :: events
@@ -102,11 +126,11 @@ end subroutine with_action_1D_mask
 !>
 !> Any events that are within 1d-14 of the current time will not run
 !> (to prevent double events due to floating-point issues)
-subroutine next_event_at(events, current_time, run_event, event_time)
+subroutine next_event_at(events, current_time, event_time)
   type(event), intent(inout), dimension(:) :: events
   real*8, intent(in) :: current_time
-  logical, dimension(size(events)), intent(out) :: run_event
   real*8, intent(out) :: event_time
+  logical, dimension(size(events)) :: run_event
   real*8 :: event_run !< when events(i) is to run (at the soonest)
   integer :: i
 

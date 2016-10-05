@@ -31,6 +31,7 @@ subroutine do_print_kinetic_energy(this, sim)
       tmp = boris_kinetic_energy(p)
     class default
       write(*,*) "do_print_kinetic_energy not implemented for this particle type"
+      return
     end select
 
     write(*,"(g12.7,A,i3,A,5g12.7)") sim%time, "Group", i, " kinetic energy min/mean/max/stddev/sum ", mpi_stats_list(tmp)
@@ -45,6 +46,7 @@ end subroutine do_print_kinetic_energy
 !> starting with implementation of the openmp 4.1 spec
 !>
 !> if there are any problems, it can be removed along with the simd instruction
+!> The speed improvements of this still have to be tested
 impure elemental function boris_kinetic_energy(particle) result(energy)
   !$omp declare simd(boris_kinetic_energy)
   class(particle_kinetic_leapfrog), intent(in) :: particle

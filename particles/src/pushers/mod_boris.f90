@@ -1,5 +1,4 @@
 !> Particle pusher module with the Boris scheme
-!> See [[mod_pusher_no_action]] for an annotated example of the components below.
 module mod_boris
   use mod_particle_types
   implicit none

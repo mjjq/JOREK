@@ -1,4 +1,0 @@
-module jorek_particle_tracer
-use mod_jorek_fields_linear
-
-end module jorek_particle_tracer

@@ -1,0 +1,27 @@
+    ! Find new st coordinates and new element
+    call find_RZ_nearby(node_list,element_list,x(1:2),(/R,Z/),st,st,i_elm,i_elm,ifail)
+    ! If ifail in 2..5 we used find_RZ
+    if (ifail .ge. 2 .and. ifail .le. 5) then
+      find_RZ_count = find_RZ_count + 1
+    endif
+
+    if (ifail .eq. -1 .or. i_elm .eq. 0) then
+      particle%lost = .true.
+      n_lost = n_lost + 1
+      ! Save lost energy (using inaccurate velocity at t-dt/2, use variables
+      ! because omp atomic does not work with particle%q)
+      q = real(particle%q) * EL_CHG
+      m = particle%mass * ATOMIC_MASS_UNIT
+      energy_lost_particles = energy_lost_particles + 0.5 * m * dot_product(v,v) &
+                            + q * F0 * U * t_norm
+      exit
+    endif
+
+    ! Calculate ionisation and recombination odds to find new charge
+    if (particle_ion_rec(i_species)) then
+      call update_particle_charge(node_list, element_list, particle, adf11, t_step*t_norm)
+    endif
+
+if (my_id .eq. 0) write(*,'(A,4f9.5,A)') '   Find_RZ used in ', stats(1:4), ' % of the runs'
+pir = particles_in_regions(node_list, element_list, particle_list)
+if (my_id .eq. 0) write(*,'(A,5i8)') '   particle locations (plasma, sol, out, up, low): ', pir

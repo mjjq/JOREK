@@ -99,7 +99,7 @@ pure function E_cylindrical(x, t) result(E)
       [-x(1), 0.d0, 2.d0*x(3)]
 end function E_cylindrical
 
-!> Calculate the position of a particle in the penning trap, released at 
+!> Calculate the position of a particle in the penning trap, released at
 !> \(x_0\) with speed \(v_0\), at time \(t\)
 pure function penning_trajectory(t) result(x)
   real*8, intent(in) :: t !< The time at which to calculate the solution value

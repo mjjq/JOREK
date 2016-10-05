@@ -27,7 +27,7 @@ module mod_case
       import :: case, particle_base
       class(case), intent(in)          :: this
       class(particle_base), intent(in) :: particle
-      real*8 :: calculate_error
+      real*8 :: calc_error
     end function calc_error
   end interface
 contains

@@ -13,8 +13,8 @@ program pusher_test
   use mod_penning_case
   use mod_gradB_case
   implicit none
-  real*8, dimension(4), parameter :: penning_timesteps = [1d-2, 1d-3, 1d-4, 1d-5]
-  real*8, dimension(4), parameter :: gradB_timesteps = [1d-2, 1d-3, 1d-4, 1d-5]
+  real*8, dimension(5), parameter :: penning_timesteps = [1d-2, 1d-3, 1d-4, 1d-5, 1d-6]
+  real*8, dimension(5), parameter :: gradB_timesteps = [1d-2, 1d-3, 1d-4, 1d-5, 1d-6]
 
   call test_boris
 contains
@@ -24,7 +24,7 @@ contains
 subroutine test_boris
   use mod_boris
   type(particle_kinetic_leapfrog) :: particle
-  integer :: i, u, stat, k, n_steps
+  integer :: i, u, k, n_steps
   real*8 :: err, t0, t1
   type(case_penning_cylindrical) :: case1
   type(case_penning_cartesian)   :: case2
@@ -105,7 +105,7 @@ subroutine test_boris
     call cpu_time(t0)
     do k=1,n_steps
       call boris_push_cartesian(particle, c%E(particle%x, 0.d0), c%B(particle%x, 0.d0), dt)
-      if (mod(k,10) .eq. 0) write(u,*) particle%x
+      write(u,*) particle%x
     end do
     call cpu_time(t1)
     err = c%calc_error(particle)
@@ -121,7 +121,7 @@ subroutine test_boris
     call cpu_time(t0)
     do k=1,n_steps
       call boris_push_cartesian(particle, c%E(particle%x, 0.d0), c%B(particle%x, 0.d0), dt)
-      if (mod(k,10) .eq. 0) write(u,*) particle%x
+      write(u,*) particle%x
     end do
     call cpu_time(t1)
     err = c%calc_error(particle)
@@ -137,14 +137,16 @@ subroutine test_boris
       set format x "10^{%L}"; set format y "10^{%L}"; &
       set output "media/tests/all_pushers/penning.png"; &
       set title "Penning trap test"; &
+      set ylabel "error"; &
       plot "< grep Penning boris.txt | grep Cartesian" u 3:4 w l t "Boris Cartesian", &
            "< grep Penning boris.txt | grep Cylindrical" u 3:4 w l t "Boris Cylindrical"; &
       set ylabel "calculation time [s]"; &
       set output "media/tests/all_pushers/penning_time.png"; &
-      plot "< grep Penning boris.txt | grep Cartesian" u 5:4 w l t "Boris Cartesian", &
-           "< grep Penning boris.txt | grep Cylindrical" u 5:4 w l t "Boris Cylindrical"; &
+      plot "< grep Penning boris.txt | grep Cartesian" u 3:5 w l t "Boris Cartesian", &
+           "< grep Penning boris.txt | grep Cylindrical" u 3:5 w l t "Boris Cylindrical"; &
       set title "gradB test"; &
       set xlabel "timestep size"; &
+      set ylabel "error"; &
       set output "media/tests/all_pushers/gradB.png"; &
       plot "< grep gradB boris.txt | grep Cartesian" u 3:4 w l t "Boris Cartesian", &
            "< grep gradB boris.txt | grep Cylindrical" u 3:4 w l t "Boris Cylindrical"; &
@@ -160,13 +162,16 @@ subroutine test_boris
   call system('gnuplot pusher_test.gp')
 
   ! delete the created files again
-  open(newunit=u, iostat=stat, file='pusher_test.gp', status='old')
-  if (stat .eq. 0) close(u, status='delete')
-  open(newunit=u, iostat=stat, file='boris.txt', status='old')
-  if (stat .eq. 0) close(u, status='delete')
-  open(newunit=u, iostat=stat, file='gradB_cartesian_1d-2.txt', status='old')
-  if (stat .eq. 0) close(u, status='delete')
-  open(newunit=u, iostat=stat, file='penning_cartesian_1d-2.txt', status='old')
-  if (stat .eq. 0) close(u, status='delete')
+  call rm('pusher_test.gp')
+  call rm('boris.txt')
+  call rm('gradB_cartesian_1d-2.txt')
+  call rm('penning_cartesian_1d-2.txt')
 end subroutine test_boris
+
+subroutine rm(file)
+  character(len=*), intent(in) :: file
+  integer :: u, stat
+  open(newunit=u, iostat=stat, file=file, status='old')
+  if (stat .eq. 0) close(u, status='delete')
+end subroutine rm
 end program pusher_test

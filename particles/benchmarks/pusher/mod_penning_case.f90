@@ -12,7 +12,7 @@ module mod_penning_case
   real*8, parameter :: x0(3)   = [10.d0,0.d0,0.d0] !< m (xyz)
   real*8, parameter :: v0(3)   = [50.d0,0.d0,20.d0] !< m (xyz)
   real*4, parameter :: mass    = 1.d0 !< atomic mass units
-  integer*1, parameter :: charge = 1 !< electron charges
+  integer*1, parameter :: charge = 1 !< charge units
   real*8, parameter :: time_end = 16.d0 !< s
 
   !> See [[mod_penning_case]] for a description of the testcase.

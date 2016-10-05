@@ -29,10 +29,10 @@ ifeq ($(COMPILER), gnu)
   #FLAGS += -Wrealloc-lhs-all
   FLAGS += -fimplicit-none
   FLAGS += -flto=4 # link-time optimization with 4 jobs
-  #FFLAGS += -fwhole-program
+  FLAGS += -fwhole-program
   # options still to be tested
-  #FFLAGS += -fexternal-blas
-  #FFLAGS += -ffast-math # better -Ofast
+  #FLAGS += -fexternal-blas
+  #FLAGS += -ffast-math # better -Ofast
   #more optimization options
   ifeq ($(DEBUG), 1)
     # Debug flags for gfortran, in ascending order of severity

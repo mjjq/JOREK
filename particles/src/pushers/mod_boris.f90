@@ -31,7 +31,6 @@ pure subroutine boris_push_cylindrical(particle, E, B, dt)
   ! Adjust R and Phi velocities to the new reference frame (z component stays the same)
   particle%v(1:2) = [R     * particle%v(1) + RPhi * particle%v(2), &
                      -RPhi * particle%v(1) + R    * particle%v(2)] / particle%x(1)
-            particle%x = particle%x + particle%v * dt
 end subroutine boris_push_cylindrical
 
 !> Push a single particle for some timesteps with the boris method

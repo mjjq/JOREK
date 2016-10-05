@@ -375,7 +375,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   use data_structure
   use diffusivities, only: get_dperp, get_zkperp
   use pellet_module
-  use bootstrap_functions
+  use mod_bootstrap_functions
   
   implicit none
   

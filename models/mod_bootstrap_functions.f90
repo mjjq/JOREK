@@ -1,4 +1,4 @@
-module bootstrap_functions
+module mod_bootstrap_functions
 
   implicit none
   integer, parameter :: n_spline = 30
@@ -1208,5 +1208,5 @@ end subroutine bootstrap_current_wilson
 
 
 
-end module bootstrap_functions
+end module mod_bootstrap_functions
 

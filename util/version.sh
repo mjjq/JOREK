@@ -2,7 +2,6 @@
 export LANG=C
 export LC_ALL=C
 
-OUTFILE="version.h"
 USER=$PWD
 RCS_VERSION=""
 
@@ -34,7 +33,5 @@ if [ -z "$RCS_VERSION" ]
 then RCS_VERSION="Not under SVN or GIT version control"
 fi
 
-echo "#define RCS_VERSION           '${RCS_VERSION}'"   >> $OUTFILE
-echo "#define COMPILE_DATE          '$(date '+%F %T')'" >> $OUTFILE
-
-
+echo "#define RCS_VERSION           '${RCS_VERSION}'"
+echo "#define COMPILE_DATE          '$(date '+%F %T')'"

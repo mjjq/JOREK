@@ -443,7 +443,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   use phys_module
   use equation_variables
   use data_structure
-  use bootstrap_functions
+  use mod_bootstrap_functions
   
   implicit none
   

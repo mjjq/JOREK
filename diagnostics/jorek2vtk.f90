@@ -8,7 +8,7 @@ use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
 use pellet_module
 use mpi_mod
-use bootstrap_functions
+use mod_bootstrap_functions
 use corr_neg
 
 implicit none

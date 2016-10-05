@@ -1,0 +1,177 @@
+# This makefile automatically searches and compiles fortran programs
+# Known limitations:
+# - All dependencies must be in modules
+# - Module name must be equal to file name
+# - Dependencies do not work correctly on make < 3.81
+
+# Include jorek-specific things and settings
+include Makefile.inc
+ifeq (1, $(USE_HDF5))
+  LIBS     := $(LIBS) $(HDF5LIB)
+  INCLUDES := $(INCLUDES) -I$(HDF5INCLUDE)
+else
+  $(warning "USE_HDF5=1 is required for input/output")
+endif
+
+# Build in release mode by default
+DEBUG ?= 0
+FLAGS += -DUSE_MPI -Ilibs/flogging/include # For flogging
+
+# Default flags for gfortran
+ifeq ($(COMPILER), gnu)
+  FLAGS += -O3 -cpp -fopenmp
+  FLAGS += -Wall -Wextra
+  FLAGS += -Wcharacter-truncation
+  FLAGS += -Wimplicit-interface -Wimplicit-procedure
+  FLAGS += -Winteger-division
+  FLAGS += -Wintrinsics-std
+  FLAGS += -Wsurprising
+  #FLAGS += -Wrealloc-lhs-all
+  FLAGS += -fimplicit-none
+  FLAGS += -flto=4 # link-time optimization with 4 jobs
+  FLAGS += -fwhole-program
+  # options still to be tested
+  #FLAGS += -fexternal-blas
+  #FLAGS += -ffast-math # better -Ofast
+  #more optimization options
+  ifeq ($(DEBUG), 1)
+    # Debug flags for gfortran, in ascending order of severity
+    FLAGS += -g -Og -ggdb -fno-lto
+    FLAGS += -fcheck=all
+    FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv \
+#	      -finit-real=nan -finit-int=nan -finit-logical=false
+#   FLAGS += -Warray-temporaries -Wconversion-extra
+  endif
+
+  OUTPUT_MODULE_COMMAND=-J#no space
+endif
+
+# Default flags for intel
+ifeq ($(COMPILER), intel)
+  FLAGS += -openmp
+  FLAGS += -implicitnone
+  FLAGS += -cpp
+  FLAGS += -warn all
+  FLAGS += -align
+  FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
+  ifeq ($(DEBUG), 1)
+    # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
+    FLAGS += -O0 -g -traceback
+    FLAGS += -check all,noarg_temp_created
+    FLAGS += -check bounds
+    FLAGS += -check uninit
+    FLAGS += -ftrapuv
+    FLAGS += -debug all -debug-parameters
+    FLAGS += -gen-interfaces -warn-interfaces
+    FLAGS += -fstack-security-check
+    FLAGS += -fpe0
+    FLAGS += -assume ieee_fpe_flags # not sure about this one
+  else
+    FLAGS += -O3
+  endif
+
+  OUTPUT_MODULE_COMMAND=-module #space is important
+endif
+
+
+# build-private directories
+MODDIR := .mod
+OBJDIR := .obj
+DEPDIR := .dep
+$(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
+
+
+# Prepend the default flags so FFLAGS can override it
+FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
+
+
+# default action
+all: particles
+clean:
+	rm -rf $(OBJDIR)
+	rm -f tests/fruit_test_driver.f90
+cleanall: clean
+	rm -rf $(DEPDIR) $(MODDIR)
+	find . -name '*.mod' -delete
+.PHONY: clean cleanall test fruit docs
+test: fruit
+fruit:
+	PYTHONPATH=$(FRUITPYDIR) python tests/fruit.py
+docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
+	ford particles.md --no-search
+# above we have one output per subprogram to run for docs
+
+# Most of the sources are actually fortran 2003/8 but use the .f90 suffix
+sources:=$(shell find libs src tests examples benchmarks -iname '*.f90' -not -path "*/doc/*")
+depends:=$(patsubst %.f90,$(DEPDIR)/%.d,$(notdir $(sources)))
+# check if there are any duplicate files
+duplicates:=$(shell echo $(notdir $(sources)) | tr ' ' "\n" | sort | uniq -d)
+ifneq ($(strip $(duplicates)),)
+  $(error Duplicate filenames found: $(duplicates))
+endif
+
+# Make rules for all directories that we have found sources in
+# This is needed because the file stems must match and we do not really want to recreate the directory structure in $(OBJDIR) and $(DEPDIR)
+# Also, it will make everything slightly nicer later
+# Template for generating object files from source files
+# Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
+define F90_O_TEMPLATE
+$(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
+	$$(FC) $$(FFLAGS) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
+endef
+# Template for generating dependencies from source file
+# TODO: alter sfmakedepend to do all of this automatically
+# rule defined with double colon so that we will not look for %.f90.c etc (terminal rule)
+define F90_D_TEMPLATE
+$(DEPDIR)/%.d:: $(1)%.f90
+	@echo "Generating dependencies for $$<"
+	@libs/sfmakedepend/sfmakedepend -f $(DEPDIR)/$$(*F).Td $$<; \
+	  grep -F "$$(*F).o: " $(DEPDIR)/$$(*F).Td |\
+	  sed -e 's/ hdf5[.]mod//g' -e 's/ mpi[.]mod//g' -e 's/ omp_lib[.]mod//g' \
+	  -e 's/ iso_c_binding[.]mod//g' -e 's/ iso_fortran_env[.]mod//g' \
+	  -e 's/ fruit[.]mod//g' \
+	  -e 's/^/$(OBJDIR)\//g' -e 's/ \([^ ][^ ]*\)/ $(MODDIR)\/\1/g' \
+	  > $(DEPDIR)/$$(*F).d; rm $(DEPDIR)/$$(*F).Td
+endef
+# For each directory containing source files add the templates above
+$(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_O_TEMPLATE,$(dir))))
+$(foreach dir,$(sort $(dir $(sources))),$(eval $(call F90_D_TEMPLATE,$(dir))))
+
+# Cancel all rules that make a .f90 file, Makefile or Makefile.inc
+%.f90: ;
+Makefile: ;
+Makefile.inc: ;
+
+# what does this do again?
+%.d: ;
+-include $(depends)
+
+
+# This template defines a program $(file_stem)
+# which has prerequisites $(OBJDIR)/$(file_stem).o and as determined by the output of obj_deps.sh
+# Since make will try to build the .d files first and re-exec every time
+# these will be up-to-date
+file_stem=$(notdir $(basename $(1)))
+define PROGRAM_TEMPLATE
+$(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps.sh $(OBJDIR)/$(file_stem).o | sort | uniq)
+	$$(FC) $$(FFLAGS) $$(FLAGS) -o $(file_stem) $$^ $$(LIBS)
+endef
+
+# All examples
+EXAMPLES := $(shell find examples -iname '*.f90')
+examples: $(patsubst %.f90,%,$(notdir $(EXAMPLES)))
+
+PROGRAM_SOURCES := tests/fruit_test_driver.f90 \
+		   benchmarks/pusher/pusher_test.f90
+$(foreach prog,$(PROGRAM_SOURCES) $(EXAMPLES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
+
+# non-standard object files (extra include options, target-specific variable)
+fruit_test_driver: INCLUDES += -I$(INC_FRUIT)
+fruit_test_driver: LIBS += -L$(LIB_FRUIT) -lfruit -Wl,-rpath=$(LIB_FRUIT)
+
+# Benchmarks and other output used in the documentation
+media/tests/all_pushers/penning.png: pusher_test # do not name other outputs
+	./pusher_test
+media/tests/openadas/charge_state_time.png: compare_mc_coronal # do not name other output
+	./compare_mc_coronal

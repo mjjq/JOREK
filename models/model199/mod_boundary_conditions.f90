@@ -41,6 +41,7 @@ contains
          MURGE_SUCCESS, murge_add_one_entry
     use murge_module, only : MURGE_ASSEMBLYEND
     use mpi_mod
+    use mod_locate_irn_jcn
 
     implicit none
 

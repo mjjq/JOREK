@@ -48,8 +48,9 @@ contains
     use pastix_module
     use global_distributed_matrix
     use mpi_mod 
-    use clock_module
+    use mod_clock
     use phys_module, only : index_now
+    use mod_coicsr
     implicit none
 
 #include "r3_info.h"

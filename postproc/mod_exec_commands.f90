@@ -7,7 +7,7 @@ module exec_commands
   use data_structure
   use equil_info
   use nodes_elements
-  use boundary
+  use mod_boundary
   use basis_at_gaussian
   use mod_new_diag
   use domains

@@ -6,6 +6,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   use tr_module
   use data_structure
   use global_distributed_matrix
+  use mod_ch_node_struct
 
   implicit none
 

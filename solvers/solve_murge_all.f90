@@ -52,6 +52,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   USE murge_module, only : MURGE_GetGlobalSolution
 #endif
   USE global_distributed_matrix
+  USE mod_coicsr
   USE mpi_mod
   IMPLICIT NONE
 #include "r3_info.h"

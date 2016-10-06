@@ -420,7 +420,7 @@ CONTAINS
          &                                type_node_list, MURGE_UserData_t
     USE parameters,                ONLY : n_tor, n_var
     USE global_distributed_matrix, ONLY : ndof_glob
-    USE clock_module,              ONLY : clcktype, clck_time, clck_ldiff,     &
+    USE mod_clock,              ONLY : clcktype, clck_time, clck_ldiff,     &
          &                                FMT_TIMING
     USE mpi_mod,                   ONLY : MPI_REAL8, MPI_MAX, MPI_COMM_WORLD,  &
          &                                MPI_MIN, MPI_INTEGER, MPI_SUM

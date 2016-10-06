@@ -11,6 +11,7 @@ use data_structure
 use mumps_module
 use pastix_module
 use vacuum_equilibrium, only: vacuum_equil
+use mod_coicsr
 use mpi_mod
 implicit none
 

@@ -37,7 +37,7 @@ program JOREK2
   use nodes_elements
   use pellet_module
   use equil_info
-  use boundary,            only: boundary_from_grid
+  use mod_boundary,            only: boundary_from_grid
   use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum, wall_curr_initialized
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
@@ -57,7 +57,7 @@ program JOREK2
 
   use solve_mat_n
   use tr_module
-  use clock_module
+  use mod_clock
 #ifdef USE_HDF5
   use hdf5
   use HDF5_io_module

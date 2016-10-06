@@ -1,5 +1,6 @@
 subroutine reduce(my_id,A,IRN,JCN,NZ,N,IHWB,NZNEW,first_row,last_row)
 use tr_module 
+use sort_I_mrgrnk
 implicit none
 !--------------------------------------------------------------------------
 ! subroutine to change format of matrix from MUMPS to compressed column

@@ -1,3 +1,6 @@
+module mod_locate_irn_jcn
+implicit none
+contains
 subroutine locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
 !**************************************************************************
 ! subroutine finds the position in the global matrix of the index of      *
@@ -6,9 +9,6 @@ subroutine locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_positi
 ! search to be replaced by binary search                                  *
 !**************************************************************************
 use global_distributed_matrix
-
-implicit none
-
 integer :: index_node1, index_node2, index_min, index_max, ijA_position, i, index1_local
 logical :: found_index
 
@@ -42,3 +42,4 @@ endif
 
 return
 end
+end module mod_locate_irn_jcn

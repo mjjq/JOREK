@@ -1,3 +1,5 @@
+module sort_I_mrgrnk
+contains
 Subroutine I_mrgrnk (XDONT, IRNGT, NVAL)
   implicit none
 ! __________________________________________________________
@@ -197,3 +199,4 @@ Subroutine I_mrgrnk (XDONT, IRNGT, NVAL)
       Return
 !
 End Subroutine I_mrgrnk
+end module sort_I_mrgrnk

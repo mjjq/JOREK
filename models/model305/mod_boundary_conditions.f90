@@ -41,6 +41,7 @@ contains
     use murge_module, only : MURGE_ASSEMBLYEND
     USE tr_module
     use mpi_mod
+    use mod_locate_irn_jcn
 
     implicit none
 

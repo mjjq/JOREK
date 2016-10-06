@@ -1,8 +1,8 @@
+module mod_chgmt_node
+contains
 !*****************************************************************************
 !        Modifications of the stiffness matrix and RHS                       *
 !*****************************************************************************
-
-
 subroutine Chgmt_node(i_element, element,nodes,element_father,nodes_father,ELM,RHS,node_out)
 
 
@@ -253,3 +253,4 @@ implicit none
 
 
 end subroutine Chgmt_node
+end module chgmt_node

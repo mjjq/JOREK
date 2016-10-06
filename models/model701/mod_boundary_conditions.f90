@@ -39,7 +39,8 @@ contains
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
          MURGE_SUCCESS, murge_add_one_entry
     use murge_module, only : MURGE_ASSEMBLYEND
-   use mpi_mod
+    use mpi_mod
+    use mod_locate_irn_jcn
 
     implicit none
 

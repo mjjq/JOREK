@@ -1,5 +1,5 @@
 ! module dedicated to time measurement
-module clock_module
+module mod_clock
 
   use mpi_mod
   
@@ -81,4 +81,4 @@ contains
       count_max=nb_periods_max)
   end subroutine clck_init
 
-end module clock_module
+end module mod_clock

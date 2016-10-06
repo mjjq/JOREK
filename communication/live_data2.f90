@@ -32,6 +32,7 @@ module live_data2
     
     use parameters,    only: n_tor, n_plane, n_period, jorek_model, variable_names
     use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase
+    use mod_init_live_data_model, only: init_live_data_model
     
     implicit none
     

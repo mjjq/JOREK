@@ -40,6 +40,7 @@ contains
          MURGE_SUCCESS, murge_add_one_entry
     USE tr_module
     use mpi_mod
+    use mod_locate_irn_jcn
 
     implicit none
 

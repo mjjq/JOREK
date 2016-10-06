@@ -12,7 +12,7 @@ use phys_module
 use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
 use nodes_elements
-use boundary
+use mod_boundary
 implicit none
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors, my_id

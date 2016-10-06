@@ -1,14 +1,9 @@
-
-
-
+module mod_ch_node_struct
+implicit none
+contains
 subroutine Ch_node_struct(i_element, element,nodes,node_out)
-
-
-
  use parameters
  use data_structure
-
-implicit none
 
  type (type_element)   :: element
 
@@ -22,11 +17,6 @@ implicit none
  integer			 		:: pos1, pos2,n_constrained
  integer                                        :: i, j,k, p					   
  
-
-
-
-  
-
   do j = 1, n_vertex_max               
        node_out(j)=0 
   enddo 
@@ -70,8 +60,5 @@ implicit none
        node_out(j)=parent(n_constrained,2)	    
        endif	    
   enddo
-
-  return
-
-
 end subroutine Ch_node_struct
+end module mod_ch_node_struct

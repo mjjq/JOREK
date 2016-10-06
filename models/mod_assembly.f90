@@ -35,6 +35,7 @@ contains
     USE parameters
     USE global_distributed_matrix
     USE murge_module, ONLY : murge_add_one_entry
+    USE mod_locate_irn_jcn
 
     INTEGER, INTENT(IN)    :: index_node,  k,  in
     INTEGER, INTENT(IN)    :: index_node2, k2, in2

@@ -17,6 +17,7 @@ contains
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
     use mod_elt_matrix_fft,       only : element_matrix_fft
+    use mod_locate_irn_jcn
 
     ! --- Routine parameters
     type (type_element),              intent(in)     :: element
@@ -180,6 +181,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mod_elt_matrix_fft
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
+  use mod_locate_irn_jcn
   implicit none
   
 #include "r3_info.h"

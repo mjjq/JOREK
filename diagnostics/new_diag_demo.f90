@@ -4,7 +4,7 @@ program demo
   use parameters
   use data_structure
   use phys_module
-  use boundary
+  use mod_boundary
   use mod_new_diag
   use basis_at_gaussian
   

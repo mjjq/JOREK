@@ -70,6 +70,7 @@ contains
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
          MURGE_SUCCESS, murge_add_one_entry
     use mpi_mod
+    use mod_locate_irn_jcn
 
     implicit none
     !include 'mpif.h'
@@ -505,6 +506,7 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
+    use mod_locate_irn_jcn
     
     implicit none
     

@@ -7,6 +7,10 @@
 # Include jorek-specific things and settings
 include Makefile.inc
 default: jorek2_main
+
+MODEL_NUMBER = `echo $(MODEL) | sed -e 's/model//'`
+DEFINES := $(DEFINES) -DJOREK_MODEL=$(MODEL_NUMBER)
+DEFINES += -DUSE_MPI
 include defaults.mk
 
 .PHONY: .mod/version.h clean cleanall cleandep
@@ -16,11 +20,12 @@ clean:
 	-@rm -r $(OBJDIR)
 	@echo ">> Deleting Module Files <<"
 	-@rm -r $(MODDIR)
-	-@find . -name '*.mod' -or -name '*.dep' -or -name '*.o' -delete
+	-@find . -name '*.mod' -delete -or -name '*.o' -delete
 
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
+	-@find . -name '*.dep' -delete
 
 
 # Most of the sources are actually fortran 2003/8 but use the .f90 suffix
@@ -116,7 +121,7 @@ all: $(notdir $(PROGRAM_SOURCES))
 	@echo "#define compile_modules '$(LOADEDMODULES)'" >> $@
 
 # Special cases
-jorek2_main.o: INCLUDES += -Itiming
-#r3_info.o: INCLUDES += -Itiming # not sure if this one is neded, as it will probably look in .
-# Is this used by anyone?
-#-include forcheck.mk
+INCLUDES += -Itiming # for r3_info.h
+
+# Is this used by anyone? Otherwise we could remove it
+-include forcheck.mk

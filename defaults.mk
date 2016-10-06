@@ -10,13 +10,12 @@ OBJDIR := .obj
 DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 
-# Save and load modules from $(MODDIR)
-FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
-
 #TODO put this somewhere
 LIBS = $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 
 
+# Do some guessing to get the compiler family if it is unset
+# TODO
 
 # Default flags for gfortran
 ifeq ($(COMPILER_FAMILY), gnu)
@@ -85,7 +84,11 @@ ifdef IBMFC
 else
   INCLUDES := $(INCLUDES) $(DEFINES)
 endif
-# TODO set the option to output module files to a specific directory
+# TODO set the option to output module files to a specific directory for XLF
+
+
+# Save and load modules from $(MODDIR)
+FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 
 
 
@@ -115,10 +118,20 @@ $(DEPDIR)/%.d:: $(1)%.f90
 	  grep -F "$$(*F).o: " $(DEPDIR)/$$(*F).Td |\
 	  sed -e 's/ hdf5[.]mod//g' -e 's/ mpi[.]mod//g' -e 's/ omp_lib[.]mod//g' \
 	  -e 's/ iso_c_binding[.]mod//g' -e 's/ iso_fortran_env[.]mod//g' \
-	  -e 's/ fruit[.]mod//g' \
+	  -e 's/ fruit[.]mod//g' -e 's/ h5lt[.]mod//g' \
+	  -e 's/ mgi_module[.]mod//g' \
 	  -e 's/^/$(OBJDIR)\//g' -e 's/ \([^ ][^ ]*\)/ $(MODDIR)\/\1/g' \
 	  > $(DEPDIR)/$$(*F).d; rm $(DEPDIR)/$$(*F).Td
 endef
+# Notes above: hdf5, mpi, omp_lib, iso_c_binding, iso_fortran_env, h5lt are system libraries/intrinsics
+# mgi_module is removed here because it is not in all models. Add it again explicitly for model5XX
+ifeq ($(MODEL_NUMBER), 500)
+.obj/jorek2_main.o: .obj/mgi_module.o .mod/mgi_module.mod
+endif
+ifeq ($(MODEL_NUMBER), 555)
+.obj/jorek2_main.o: .obj/mgi_module.o .mod/mgi_module.mod
+endif
+
 # This template defines a program $(file_stem)
 # which has prerequisites $(OBJDIR)/$(file_stem).o and as determined by the output of obj_deps.sh
 # Since make will try to build the .d files first and re-exec every time
@@ -132,10 +145,6 @@ endef
 
 
 # Use flags
-MODEL_NUMBER = `echo $(MODEL) | sed -e 's/model//'`
-DEFINES := $(DEFINES) -DJOREK_MODEL=$(MODEL_NUMBER)
-DEFINES += -DUSE_MPI
-
 ifeq (model710, $(MODEL))
   DEFINES  := $(DEFINES) -Dfullmhd
 endif

@@ -41,5 +41,5 @@ if (.not.found_index) then
 endif
 
 return
-end
+end subroutine locate_irn_jcn
 end module mod_locate_irn_jcn

@@ -12,7 +12,7 @@ $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 
 # Do some guessing to get the compiler family if it is unset
 ifeq ($(COMPILER_FAMILY),)
-  COMPILER_FAMILY := $(shell $(FC) --version | grep -i 'intel\|gnu' | tr A-Z a-z)
+  COMPILER_FAMILY := $(shell $(FC) --version | grep -oi 'intel\|gnu' | tr A-Z a-z)
 endif
 
 # Default flags for gfortran
@@ -48,10 +48,12 @@ endif
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
   FLAGS += -openmp
-  FLAGS += -cpp
+  FLAGS += -fpp
   FLAGS += -warn all
+  FLAGS += -warn nounused
   FLAGS += -align
-  FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
+  #FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
+  # Could take a long time on some machines
   ifeq ($(DEBUG), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback

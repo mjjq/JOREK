@@ -34,5 +34,5 @@ if (nb .gt. 1 ) then
 else
 endif
 return
-end
+end function neighbours
 end module mod_neighbours

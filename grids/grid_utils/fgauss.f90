@@ -25,7 +25,7 @@ FGAUS  = BGF + (1.d0 - BGF) * (F1 + FACT * F2) / FACT
 DFGAUSS = (1.d0-BGF) * (DF1 + FACT * DF2) / FACT
 
 RETURN
-END
+END FUNCTION FGAUS
 
 FUNCTION FGAUS3(ZS,BGF,XR1,XR2,XR3,SIG1,SIG2,SIG3,FACT,DFGAUSS3)
 !-----------------------------------------------------------------------
@@ -61,6 +61,6 @@ FGAUS3  = BGF + (1.d0 - BGF) * (F1 + FACT * F2 + F3) / FACT
 DFGAUSS3 = (1.d0-BGF) * (DF1 + FACT * DF2 + DF3) / FACT
 
 RETURN
-END
+END FUNCTION FGAUS3
 
 end module fgauss

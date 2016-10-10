@@ -54,8 +54,8 @@ DIRS := diagnostics			\
 	vacuum
 
 # All .f90 files we should generate .d dependency files for
-depends:=$(shell find $(DIRS) -maxdepth 1 -iname '*.f90' |\
-  xargs basename -s .f90 -a | sed -e 's/^/$(DEPDIR)\//' -e 's/$$/.d/')
+depends:=$(basename $(notdir $(shell find $(DIRS) -maxdepth 1 -iname '*.f90')))
+depends:=$(foreach dep,$(depends),$(DEPDIR)/$(dep).d)
 
 # Check for multiple files with the same name in $(DIRS)
 duplicates:

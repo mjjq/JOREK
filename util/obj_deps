@@ -2,11 +2,14 @@
 # Recursively check all of the .dep/*.d files for dependencies of $1
 use strict;
 use warnings;
-use List::MoreUtils qw(uniq);
 
 my $filename = shift(@ARGV);
 my $checked = "";
 
+sub uniq {
+    my %seen;
+    return grep { !$seen{$_}++ } @_;
+}
 # Check file $1 and print everything to the right of :
 sub check_file {
     open(my $fh, shift) or return;

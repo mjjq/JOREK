@@ -152,7 +152,7 @@ CONTAINS
          &                      murge_id_prod, MURGE_COEF_KIND,                &
          &                      murge_ndof_prod
     USE phys_module,     ONLY : refinement
-    USE murge_module,    ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER
+    USE murge_module,    ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER, vertex_is_local
     USE mpi_mod
     use construct_matrix_mod, only : elementary_matrix_build
     use data_structure,   only : thread_struct
@@ -851,7 +851,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE phys_module,  ONLY : index_now, freeboundary, freeboundary_equil, resistive_wall
   USE mpi_mod
   USE murge_module, ONLY : murge_assembly_step, murge_elem_block_size, &
-       murge_global_n, murge_global_n_prod
+       murge_global_n, murge_global_n_prod, vertex_is_local
   use mod_boundary_conditions, only : boundary_conditions
   IMPLICIT NONE
 #include "r3_info.h"

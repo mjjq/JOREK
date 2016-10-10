@@ -1,3 +1,6 @@
+module export_restart
+implicit none
+contains
 !> Export the current simulation state as a restart file that can be read back into JOREK or into
 !! a diagnostic program by the routine import_restart.
 
@@ -474,3 +477,4 @@ end if
 
   return
 end subroutine export_hdf5_restart
+end module export_restart

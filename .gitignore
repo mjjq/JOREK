@@ -11,8 +11,6 @@
 Makefile.inc
 j302_1
 j302_3
-version.h
-version.h.tmp
 .fuse_hidden*
 jorek_model*
 jorek2_poincare
@@ -45,3 +43,6 @@ rst_bin2hdf5
 rst_hdf52bin
 tmp[1-9]*
 .info
+.mod/
+.dep/
+.obj/

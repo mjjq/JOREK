@@ -1,5 +1,5 @@
 !> Broadcast all namelist input parameters from MPI task 0 to the others
-subroutine Broadcast_phys(my_id)
+subroutine broadcast_phys(my_id)
 
 use tr_module
 use phys_module
@@ -669,4 +669,4 @@ call tr_unregister_mem(bufsize,"bcastp_buffer")
 deallocate(buffer)
 
 return
-end subroutine Broadcast_phys
+end subroutine broadcast_phys

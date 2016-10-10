@@ -1729,6 +1729,7 @@ end subroutine element_matrix_fft
 
 subroutine my_fft(in_fft,out_fft,n)
 
+implicit none
 real*8     :: in_fft(*)
 complex*16 :: out_fft(*)
 

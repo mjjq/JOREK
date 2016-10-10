@@ -39,7 +39,7 @@ contains
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
          MURGE_SUCCESS, murge_add_one_entry
-    use murge_module, only : MURGE_ASSEMBLYEND
+    use murge_module, only : MURGE_ASSEMBLYEND, vertex_is_local
     use mpi_mod
     use mod_locate_irn_jcn
 

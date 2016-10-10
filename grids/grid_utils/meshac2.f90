@@ -3,6 +3,7 @@ SUBROUTINE MESHAC2(NR,SG,XR1,XR2,SIG1,SIG2,BGF,FACT)
 ! subroutine to construct non-equidistant radial mesh
 ! the starting value is given by SG(1)
 !-----------------------------------------------------------------------
+use fgauss
 implicit none
 integer :: NMAX
 parameter (NMAX = 10001)
@@ -10,7 +11,6 @@ parameter (NMAX = 10001)
 real*8  :: SG(*), XR1, XR2, SIG1, SIG2, BGF, FACT, SUM, FINT2, FINT1, DSI, DFG, FI
 real*8  :: S1(NMAX),FSUM(NMAX)
 integer :: I, J, NR
-real*8,external :: FGAUS
 
 !write(*,*) '*******************************'
 !write(*,*) '* MESHAC                      *'
@@ -64,6 +64,7 @@ SUBROUTINE MESHAC3(NR,SG,XR1,XR2,XR3,SIG1,SIG2,SIG3,BGF,FACT)
 ! subroutine to construct non-equidistant radial mesh
 ! the starting value is given by SG(1)
 !-----------------------------------------------------------------------
+use fgauss
 implicit none
 integer :: NMAX
 parameter (NMAX = 10001)
@@ -72,7 +73,6 @@ real*8  :: SG(*), XR1, XR2, XR3, SIG1, SIG2, SIG3
 real*8  :: BGF, FACT, SUM, FINT2, FINT1, DSI, DFG, FI
 real*8  :: S1(NMAX),FSUM(NMAX)
 integer :: I, J, NR
-real*8,external :: FGAUS3
 
 write(*,*) '*******************************'
 write(*,*) '* MESHAC3                      *'

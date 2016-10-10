@@ -10,6 +10,7 @@ use pellet_module
 use mpi_mod
 use mod_bootstrap_functions
 use corr_neg
+use import_restart
 
 implicit none
 

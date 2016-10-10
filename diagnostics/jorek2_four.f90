@@ -5,6 +5,7 @@ program JOREK2_FOUR
   use nodes_elements, only: element_list, node_list
   use fourier,        only: t_theta_mapping, determine_theta_mag, transform_qttys
   use phys_module,    only: rst_format
+  use import_restart
 
   implicit none
   

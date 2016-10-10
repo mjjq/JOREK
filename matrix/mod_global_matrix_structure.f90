@@ -1,3 +1,5 @@
+module mod_global_matrix_structure
+contains
 subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
@@ -253,3 +255,4 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   return
 end subroutine global_matrix_structure
+end module mod_global_matrix_structure

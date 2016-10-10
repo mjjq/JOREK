@@ -1,7 +1,10 @@
+module mod_add_pellet
+contains
 subroutine add_pellet(node_list,element_list,pellet_density,pellet_size,sig_pellet,pellet_R,pellet_Z)
 use constants
 use tr_module
 use data_structure
+
 implicit none
 
 type (type_node_list)    :: node_list
@@ -160,3 +163,4 @@ call tr_deallocate(T_phi_st,"T_phi_st",CAT_GRID)
 
 return
 end
+end module add_pellet

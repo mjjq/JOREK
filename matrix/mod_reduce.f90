@@ -1,3 +1,5 @@
+use module mod_reduce
+contains
 subroutine reduce(my_id,A,IRN,JCN,NZ,N,IHWB,NZNEW,first_row,last_row)
 use tr_module 
 use sort_I_mrgrnk
@@ -123,3 +125,4 @@ call tr_deallocate(Inew,"Inew",CAT_DMATRIX)
 call tr_deallocate(Jnew,"Jnew",CAT_DMATRIX)
 
 end
+end module mod_reduce

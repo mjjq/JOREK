@@ -11,6 +11,7 @@ use phys_module
 use basis_at_gaussian
 use pellet_module
 use mpi_mod
+use import_restart
 implicit none
 
 type (type_node_list)    :: node_list

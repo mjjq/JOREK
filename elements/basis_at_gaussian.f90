@@ -20,7 +20,7 @@
 module basis_at_gaussian
   
   use parameters
-  use Gauss
+  use gauss
   
   implicit none
   

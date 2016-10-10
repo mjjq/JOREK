@@ -370,6 +370,8 @@ end subroutine ELM_apply_fft
 !------------------------------------------------------------------------------------------------------------------------------
 subroutine my_fft(in_fft,out_fft,n)
 !DEC$ ATTRIBUTES FORCEINLINE :: my_fft
+  
+  implicit none
     
   real*8     :: in_fft(*)
   complex*16 :: out_fft(*)	

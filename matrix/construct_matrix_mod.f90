@@ -18,6 +18,7 @@ contains
     use mod_elt_matrix,           only : element_matrix
     use mod_elt_matrix_fft,       only : element_matrix_fft
     use mod_locate_irn_jcn
+    use mod_global_matrix_structure
 
     ! --- Routine parameters
     type (type_element),              intent(in)     :: element
@@ -46,7 +47,7 @@ contains
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use fft for toroidal integration
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   !  for toroidal integration
     else
       call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use direct integration
     endif

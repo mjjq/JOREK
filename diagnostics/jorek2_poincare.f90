@@ -18,6 +18,8 @@ use data_structure
 use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
+use mod_neighbours
+use import_restart
 
 implicit none
 
@@ -36,8 +38,6 @@ real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi
 real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, atmp, cur_pert
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_out
 integer :: i_elm_axis, i_elm_xpoint(2), ierr
-
-logical, external :: neighbours
 
 
 write(*,*) '***************************************'

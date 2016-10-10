@@ -1,3 +1,5 @@
+module mod_neighbours
+contains
 logical function neighbours(elm1,elm2,inb1,inb2)
 !-------------------------------------------------------
 ! function to check if the two elements elm1 and elm2
@@ -33,3 +35,4 @@ else
 endif
 return
 end
+end module mod_neighbours

@@ -20,6 +20,7 @@ use elements_nodes_neighbours
 use constants
 use mod_boundary
 use divertor_desc
+use import_restart
 
 implicit none
 include 'mpif.h'

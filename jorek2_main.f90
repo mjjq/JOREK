@@ -45,6 +45,9 @@ program JOREK2
   use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
+  use mod_global_matrix_structure
+  use import_restart
+  use export_restart
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -70,6 +73,9 @@ program JOREK2
 #endif
 
   use, intrinsic :: iso_c_binding
+  use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
+                                            stdout=>output_unit, &
+                                            stderr=>error_unit
   
   implicit none
 
@@ -838,7 +844,7 @@ required = 0
     t0 = t_itstart
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
-    call flushc !flush the output stream
+    flush stdout
     call tr_debug_write("JMAIN:Index_now",index_now)
 
     index_now = index_now + 1

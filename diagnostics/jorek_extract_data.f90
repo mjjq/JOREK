@@ -17,6 +17,7 @@ program JOREK_EXTRACT_DATA
   use equil_info
   use mod_boundary
   use mod_log_params
+  use import_restart
   
   implicit none
   

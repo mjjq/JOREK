@@ -590,7 +590,7 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
-    USE murge_module, ONLY : use_murge, use_murge_element, murge_add_one_entry
+    USE murge_module, ONLY : use_murge, use_murge_element, murge_add_one_entry, vertex_is_local
     
     implicit none
     

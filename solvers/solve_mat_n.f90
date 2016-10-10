@@ -247,11 +247,11 @@ contains
 
           ! Split MPI_BCAST if MPI buffer beyond 2Go
           type='intIRN'
-          call split_brodcast(type,MPI_COMM_N)
+          call split_broadcast(type,MPI_COMM_N)
           type='intJCN'
-          call split_brodcast(type,MPI_COMM_N)
+          call split_broadcast(type,MPI_COMM_N)
           type='double'
-          call split_brodcast(type,MPI_COMM_N)
+          call split_broadcast(type,MPI_COMM_N)
 
         endif
 

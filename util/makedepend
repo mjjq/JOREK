@@ -1,0 +1,101 @@
+#!/usr/bin/env perl
+# Simple script to look for use dependencies in files given on stdin and print them
+# use as:
+# makedepend file_to_check.f90 DIR1 DIR2 DIR3 ...
+use strict;
+use warnings;
+use List::MoreUtils qw(uniq);
+
+my $filename = shift(@ARGV);
+$filename =~ /([^\/]*)[.]f90/;
+my $basename = $1;
+$filename =~ /(.*)\/[^\/]*[.]f90/;
+my $dirname = $1;
+my $skip_modules = "hdf5 mpi omp_lib iso_c_binding iso_fortran_env fruit h5lt mgi_module";
+my $include_headers = "version.h"; # only include this header file if found
+
+# Print the dependencies of this file alone
+sub print_dependencies {
+    open(my $fh, shift) or return;
+
+    my $found_modules = "";
+    my $to_check = "";
+    while (<$fh>) {
+
+	# Test if this is a program
+	if (/^\s*program\s*[a-z][a-z0-9_]*/i) {
+	    print "PROGRAM_SOURCES += $basename\n";
+	}
+
+	# modules defined in the current file (checked against later)
+	if (/^\s*module\s*([a-z][a-z0-9_]*)/i) {
+	    $found_modules .= "$1 ";
+	# C preprocessor style includes (header files)
+	} elsif (/^#\s*include\s*["<]([^">]*.h)[">]/) {
+	    my $header_name = $1;
+	    if ($include_headers =~ /\b$header_name\b/i) {
+		print ".obj/$basename.o: .mod/$header_name\n";
+	    }
+	    # Workaround for r3_info.
+	    # Add r3_info.o as a dependency if the header file is used
+	    if ($header_name =~ /r3_info[.]h/i) {
+		print "$basename: .obj/r3_info.o\n";
+	    }
+	# C preprocessor style includes
+	} elsif (/^#\s*include\s*["<]([^">]*)[">]/) {
+	    if ( -f "$dirname/$1" ) {
+		print_dependencies("$dirname/$1");
+	    }
+	# Fortran 90 "use"
+	} elsif (/^\s*use\s+(\w+)/i) {
+	    unless ($skip_modules =~ /\b$1\b/i or $found_modules =~ /\b$1\b/i) {
+		print ".obj/$basename.o: .mod/$1.mod\n";
+	    }
+	# Subroutine calls
+	} elsif (/call\s*([a-z][a-z0-9_]*)/i) {
+	    unless ($to_check =~ /\b$1\b/i) {
+		$to_check .= "$1 ";
+	    }
+	} else {
+	    # function calls
+	    while (/^[^!']*external\s*:?:?\s*([a-z][a-z0-9_]*,?\s*)+/gi) {
+		unless ($to_check =~ /\b$1\b/i) {
+		    $to_check .= "$1 ";
+		}
+	    }
+	}
+    }
+
+    # Perform some known translations
+    $to_check =~ s/\blplot6\b/ppplib/gi;
+    $to_check =~ s/\blplot\b/ppplib/gi;
+    $to_check =~ s/\bdrive_dgmres\b/dPackgmres/gi;
+    $to_check =~ s/\bdgmres\b/dPackgmres/gi;
+    $to_check =~ s/\binit_dgmres\b/dPackgmres/gi;
+
+    # Delete some known stuff
+    $to_check =~ s/\bomp_[^ ]*\b//gi;
+    $to_check =~ s/\bmpi_[^ ]*\b//gi;
+
+    # Create an array with all names to search
+    my @names = split ' ', $to_check;
+
+    # Check for files with the same name as any subroutines
+    my $cmd = "find @ARGV -maxdepth 1 ";
+    for (uniq @names) {
+	$cmd .= "-iname '$_.f90' -or -iname '$_.f' -or -iname '$_.c' -or ";
+    }
+    $cmd .= '-name "nomatchlistend"';
+    my $targets=`$cmd`;
+    for (split "\n", $targets) {
+	$_ =~ /([^\/]*)[.](f90|f|c)?/i;
+	unless ($basename eq $1) {
+	    # Add the dependency on the output file, not the object file
+	    # This will be picked up by obj_deps.sh and be used correctly while avoiding
+	    # problems with dependency loops.
+	    print "$basename: .obj/$1.o\n";
+	}
+    }
+}
+
+print_dependencies($filename);

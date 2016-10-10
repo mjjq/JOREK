@@ -1,3 +1,5 @@
+module fgauss
+contains
 FUNCTION FGAUS(ZS,BGF,XR1,XR2,SIG1,SIG2,FACT,DFGAUSS)
 !-----------------------------------------------------------------------
 !     BGF + (1 - BGF) * (GAUSS1 + FACT * GAUSS2) / FACT
@@ -61,3 +63,4 @@ DFGAUSS3 = (1.d0-BGF) * (DF1 + FACT * DF2 + DF3) / FACT
 RETURN
 END
 
+end module fgauss

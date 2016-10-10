@@ -4,6 +4,7 @@ program jorek2vtk_3d
 use constants
 use data_structure
 use phys_module
+use import_restart
 implicit none
 
 type (type_node_list)    :: node_list

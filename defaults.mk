@@ -101,11 +101,11 @@ FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 # Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
 define O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
-	$$(FC) $$(FFLAGS) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FLAGS) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 
 $(OBJDIR)/%.o:: $(1)%.f
-	$$(FC) $$(FFLAGS) $$(FLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FLAGS) $$(FFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(CFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
@@ -132,7 +132,7 @@ endif
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps $(DEPDIR)/$(file_stem).d)
-	$$(FC) $$(FFLAGS) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
+	$$(FC) $$(FLAGS) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
 endef
 
 

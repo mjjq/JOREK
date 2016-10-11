@@ -26,7 +26,7 @@ clean:
 	@echo ">> Deleting Module Files <<"
 	-@rm -r $(MODDIR)
 	-@find . -name '*.mod' -delete -or -name '*.o' -delete
-	-@rm -f tests/fruit_test_driver.f90
+	-@rm -f particle_test_driver.f90
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)

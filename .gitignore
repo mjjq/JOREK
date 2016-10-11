@@ -13,8 +13,6 @@
 Makefile.inc
 j302_1
 j302_3
-version.h
-version.h.tmp
 .fuse_hidden*
 jorek_model*
 jorek2_poincare

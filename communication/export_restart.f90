@@ -1,5 +1,5 @@
 module export_restart
-  implicit none
+implicit none
 contains
 !> Export the current simulation state as a restart file that can be read back into JOREK or into
 !! a diagnostic program by the routine import_restart.
@@ -130,14 +130,14 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
      write(21) pellet_particles, pellet_R, pellet_Z
   endif
 
-
+   
   ! save Revision control
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   write(21) version_control
 
   ! save parameters
   write(21) jorek_model
-
+  
   write(21) n_var
   write(21) n_order
   write(21) n_tor
@@ -157,26 +157,26 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
   return
 end subroutine export_binary_restart
 
- !
+ ! 
  ! Export in a HDF5 binary restart file
 subroutine export_hdf5_restart(node_list,element_list,filename)
-
+ 
   use data_structure
   use phys_module
   use pellet_module
   use vacuum, only : export_HDF5_restart_vacuum
-
+  
 #ifdef USE_HDF5
   use hdf5
   use HDF5_io_module
   use tr_module
   use parameters
 #endif
-
+ 
   implicit none
-
+ 
 #include "version.h"
-
+ 
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
@@ -199,12 +199,12 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real(RKIND), allocatable :: t_Fprof_eq(:,:)              ! n_order+1
 
   integer,     allocatable :: t_index(:,:)                 ! n_order+1
-  integer,     allocatable :: t_boundary(:)                !
+  integer,     allocatable :: t_boundary(:)                ! 
   integer,     allocatable :: t_parents(:,:)               ! 2
-  integer,     allocatable :: t_parent_elem(:)             !
+  integer,     allocatable :: t_parent_elem(:)             ! 
   real(RKIND), allocatable :: t_ref_lambda(:)
   real(RKIND), allocatable :: t_ref_mu(:)
-  character,   allocatable :: t_constrained(:)
+  character,   allocatable :: t_constrained(:)     
 
   ! element, element_list%n_elements
   integer,     allocatable :: t_vertex(:,:)                ! n_vertex_max
@@ -220,10 +220,10 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
   real(RKIND), allocatable :: t_energies(:,:,:)            ! n_tor,2,index_start+nstep
-#ifdef JECCD
+#ifdef JECCD                                          
   real(RKIND), allocatable :: t_energies2(:,:,:)           ! n_tor,2,index_start+nstep
   real(RKIND), allocatable :: t_energies3(:,:,:)           ! n_tor,2,index_start+nstep
-#ifdef JEC2DIAG
+#ifdef JEC2DIAG                                       
   real(RKIND), allocatable :: t_energies4(:,:,:)           ! n_tor,2,index_start+nstep
 #endif
 #endif
@@ -337,7 +337,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      print*,'pglobal_id = ',pglobal_id, &
           ' ==> error for opening of HDF5 file',filename
   end if
-
+  
   ! -> Save version of revision control system
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   version_control = trim(adjustl(version_control))
@@ -360,7 +360,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,nref_max,'nref_max'//char(0))
   call HDF5_integer_saving(file_id,n_ref_list,'n_ref_list'//char(0))
 
-  ! ->
+  ! -> 
   call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
   call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
   call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
@@ -462,7 +462,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   end if
 
 
-  ! Export restart vacuum
+  ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
 
   ! -> clode file
@@ -512,4 +512,3 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   return
 end subroutine export_hdf5_restart
-end module export_restart

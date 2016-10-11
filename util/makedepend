@@ -23,6 +23,7 @@ sub print_dependencies {
 
     my $found_modules = "";
     my $to_check = "";
+    my $target = ".obj/$basename.o";
     while (<$fh>) {
 
 	# Test if this is a program
@@ -33,11 +34,13 @@ sub print_dependencies {
 	# modules defined in the current file (checked against later)
 	if (/^\s*module\s*([a-z][a-z0-9_]*)/i) {
 	    $found_modules .= "$1 ";
+	    # If the module keyword is found add it as a target
+	    $target = ".obj/$basename.o .mod/$basename.mod";
 	# C preprocessor style includes (header files)
 	} elsif (/^#\s*include\s*["<]([^">]*.h)[">]/) {
 	    my $header_name = $1;
 	    if ($include_headers =~ /\b$header_name\b/i) {
-		print ".obj/$basename.o: .mod/$header_name\n";
+		print "$target: .mod/$header_name\n";
 	    }
 	    # Workaround for r3_info.
 	    # Add r3_info.o as a dependency if the header file is used
@@ -52,7 +55,7 @@ sub print_dependencies {
 	# Fortran 90 "use"
 	} elsif (/^\s*use\s+(\w+)/i) {
 	    unless ($skip_modules =~ /\b$1\b/i or $found_modules =~ /\b$1\b/i) {
-		print ".obj/$basename.o: .mod/$1.mod\n";
+		print "$target: .mod/$1.mod\n";
 	    }
 	# Subroutine calls
 	} elsif (/call\s*([a-z][a-z0-9_]*)/i) {

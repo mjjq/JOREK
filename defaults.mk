@@ -24,7 +24,6 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
   FLAGS += -Wsurprising
-  FLAGS += -flto=4 # link-time optimization with 4 jobs
   FLAGS += -fwhole-program
   # options still to be tested
   #FLAGS += -fexternal-blas
@@ -40,6 +39,9 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv \
 #	      -finit-real=nan -finit-int=nan -finit-logical=false
 #   FLAGS += -Warray-temporaries -Wconversion-extra
+  else
+    FLAGS += -flto=4 # link-time optimization with 4 jobs
+    CFLAGS += -flto=4 # also for C routines
   endif
 
   OUTPUT_MODULE_COMMAND=-J#no space
@@ -99,6 +101,7 @@ FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 # Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
 define O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
+	cat $(DEPDIR)/$$*.d
 	$$(FC) $$(FFLAGS) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 

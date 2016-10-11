@@ -1,6 +1,6 @@
-!> {!benchmarks/pusher/mod_penning_case.md!}
+!> {!particles/benchmarks/pusher/mod_penning_case.md!}
 module mod_penning_case
-  use constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
+  use constants, only: ATOMIC_MASS_UNIT, EL_CHG
   use mod_coordinate_transforms
   use mod_case
   implicit none

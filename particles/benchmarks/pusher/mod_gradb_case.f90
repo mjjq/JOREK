@@ -14,7 +14,7 @@
 ! The different pushers in the [[pusher_test]] perform as follows on this case
 ! ![pusher-test-gradB](|media|/tests/all_pushers/gradB.png)
 module mod_gradb_case
-  use constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
+  use constants, only: ATOMIC_MASS_UNIT, EL_CHG
   use mod_case
   use mod_coordinate_transforms
   implicit none

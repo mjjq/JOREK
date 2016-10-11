@@ -4,13 +4,11 @@ module mod_particle_io
 use hdf5
 use mpi
 use mod_particle_types
-use constants, only: CARTESIAN, CYLINDRICAL
 use mod_particle_sim
 implicit none
 private
 public write_simulation_hdf5, read_simulation_hdf5
 
-integer(HSIZE_T), parameter :: geometry_name_length = 20 !< length of the string used to write geometries (cartesian or cylindrical)
 integer(HSIZE_T), parameter :: particle_type_name_length = 40 !< length of the string used to identify a specific type of particle
 character(len=*), parameter :: particle_type_name_field_name = 'particle_type' !< Name of the field containing the particle_type_name
 contains
@@ -138,7 +136,6 @@ integer(HID_T)                :: file, file_space, mem_space, dset, plist ! hand
 integer(HID_T)                :: group_id, attr_id, aspace_id, atype_id
 integer(HID_T)                :: data_type
 integer(HID_T)                :: time_space_id, time_set_id
-integer(HID_T)                :: geometry_space_id, geometry_set_id
 character(len=80)             :: dataset_name
 character(len=particle_type_name_length) :: particle_type_name
 integer                       :: i, hdferr
@@ -182,15 +179,6 @@ call h5dcreate_f(file, '/time', H5T_NATIVE_DOUBLE, time_space_id, time_set_id, h
 call h5dwrite_f(time_set_id, H5T_NATIVE_DOUBLE, sim%time, [1_HSIZE_T], hdferr)
 call h5dclose_f(time_set_id, hdferr)
 call h5sclose_f(time_space_id, hdferr)
-
-
-! Write the geometry used
-! Create a character type of length geometry_name_length
-call h5screate_simple_f(1, [1_HSIZE_T], geometry_space_id, hdferr)
-call h5dcreate_f(file, '/geometry', H5T_NATIVE_INTEGER, geometry_space_id, geometry_set_id, hdferr)
-call h5dwrite_f(geometry_set_id, H5T_NATIVE_INTEGER, sim%geometry, [1_HSIZE_T], hdferr)
-call h5sclose_f(geometry_space_id, hdferr)
-call h5dclose_f(geometry_set_id, hdferr)
 
 
 if (allocated(sim%groups)) then
@@ -269,7 +257,7 @@ integer(HID_T)    :: file, file_space, mem_space, dset, plist ! handles
 integer(HID_T)    :: data_type
 integer(HID_T)    :: group_id
 integer(HID_T)    :: attr_id, atype_id
-integer(HID_T)    :: time_set_id, geometry_set_id
+integer(HID_T)    :: time_set_id
 integer           :: storage_type, max_corder
 character(len=80) :: dataset_name
 character(len=particle_type_name_length) :: particle_type_name
@@ -296,11 +284,6 @@ call h5pclose_f(plist, hdferr)
 call h5dopen_f(file, '/time', time_set_id, hdferr)
 call h5dread_f(time_set_id, H5T_NATIVE_DOUBLE, sim%time, [1_HSIZE_T], hdferr)
 call h5dclose_f(time_set_id, hdferr)
-
-! read geometry, give an error if geometry differs
-call h5dopen_f(file, '/geometry', geometry_set_id, hdferr)
-call h5dread_f(geometry_set_id, H5T_NATIVE_INTEGER, sim%geometry, [1_HSIZE_T], hdferr)
-call h5dclose_f(geometry_set_id, hdferr)
 
 ! Get the number of groups
 call h5gopen_f(file, '/groups/', group_id, hdferr)

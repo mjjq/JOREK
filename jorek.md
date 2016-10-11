@@ -4,10 +4,21 @@ summary: JOREK is a non-linear extended MHD code for toroidal X-point geometries
 author: the JOREK team
 project_dir: .
 src_dir: .
-output_dir: doc
-exclude_dir: doc
-exclude_dir: models/*
-include_dir: models/model303
+output_dir: ./doc
+exclude_dir: ./doc
+	     ./pages
+	     ./media
+	     ./models/model001
+	     ./models/model199
+	     ./models/model302
+	     ./models/model305
+	     ./models/model306
+	     ./models/model333
+	     ./models/model400
+	     ./models/model500
+	     ./models/model555
+	     ./models/model701
+	     ./models/model710
 docmark: <
 docmark_alt: *
 predocmark: >
@@ -15,8 +26,8 @@ predocmark_alt: #
 extra_filetypes: c //
 graph: true
 coloured_edges: true
-page_dir: pages
-media_dir: media
+page_dir: ./pages
+media_dir: ./media
 
 The non-linear extended MHD code JOREK resolves realistic toroidal X-point geometries with a C1 continuous flux-surface aligned grid including main plasma, scrape-off layer and divertor region. It is based on robust fully implicit numerics, and includes divertor boundary conditions, 3D resistive wall effects, two-fluid effects and neoclassical flows.
 

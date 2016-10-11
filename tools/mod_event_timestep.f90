@@ -35,7 +35,7 @@ contains
 !> as normalization. In the second case the weight factor is close to zero, and the result for
 !> this event_step is ignored.
 subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constraints, ierr)
-  use mod_constants, only: TICK
+  use constants, only: TICK
   real*8, intent(inout), dimension(:)                                      :: pusher_timesteps !< steps of each of the used pushers
   real*8, intent(inout), dimension(:)                                      :: event_start
   real*8, intent(inout), dimension(size(event_start))                      :: event_step

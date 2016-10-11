@@ -1,6 +1,6 @@
 !> This module contains some trivial tests of the boris pusher
 module pusher_boris_spec
-use mod_constants, only: CARTESIAN, TWOPI, EL_CHG, ATOMIC_MASS_UNIT
+use constants, only: CARTESIAN, TWOPI, EL_CHG, ATOMIC_MASS_UNIT
 use mod_particle_types
 use mod_boris
 use fruit

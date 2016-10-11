@@ -4,7 +4,7 @@
 module mod_event
 use mod_action
 use mod_particle_sim
-use mod_constants, only: tick
+use constants, only: tick
 use mod_event_timestep
 implicit none
 private

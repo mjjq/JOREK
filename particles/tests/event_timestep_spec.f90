@@ -1,7 +1,7 @@
 !> This module contains testcases for the event system
 module event_timestep_spec
 use mod_event_timestep
-use mod_constants
+use constants
 use fruit
 implicit none
 

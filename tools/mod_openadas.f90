@@ -35,7 +35,7 @@ contains
 !> if the files exist. Files of format acd$suffix.dat are read.
 !> Suffix is usually of the form 50_w, 96_li
 function read_adf11(suffix, directory) result(ad)
-use mod_constants
+use constants
 use mpi
 implicit none
 

@@ -4,7 +4,7 @@ module mod_particle_io
 use hdf5
 use mpi
 use mod_particle_types
-use mod_constants, only: CARTESIAN, CYLINDRICAL
+use constants, only: CARTESIAN, CYLINDRICAL
 use mod_particle_sim
 implicit none
 private

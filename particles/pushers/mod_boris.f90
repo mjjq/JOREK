@@ -47,7 +47,7 @@ end subroutine boris_push_cartesian
 
 
 pure subroutine boris_method_v_only(particle, E, B, dt)
-  use mod_constants, only: EL_CHG, ATOMIC_MASS_UNIT
+  use constants, only: EL_CHG, ATOMIC_MASS_UNIT
   real*8, dimension(3), intent(in) :: E, B
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: dt
@@ -79,7 +79,7 @@ end subroutine boris_method_v_only
 !> in cylindrical coordinates this is the same as in cartesian coordinates
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine boris_initial_half_step_backwards(particle, E, B, dt)
-  use mod_constants, only: EL_CHG, ATOMIC_MASS_UNIT
+  use constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, dimension(3), intent(in) :: E, B 
   real*8, intent(in) :: dt

@@ -2,6 +2,7 @@
 !> static JOREK fields, file jorek_restart.h5 or jorek_restart.rst
 program ex1_jorek
 use particle_tracer
+use mod_field_interp_linear
 implicit none
 
 real*8             :: timesteps(1) = [1d-6] !< timesteps might be slightly changed by fix_timesteps

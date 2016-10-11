@@ -4,7 +4,7 @@ module coordinate_transforms_spec
 use mod_coordinate_transforms, only: cylindrical_to_cartesian, &
                                      cartesian_to_cylindrical, &
                                      vector_rotation
-use mod_constants, only: PI
+use constants, only: PI
 use fruit
 implicit none
 

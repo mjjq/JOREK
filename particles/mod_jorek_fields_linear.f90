@@ -1,5 +1,4 @@
-module mod_jorek_fields
-use mod_fields
+module mod_field_interp_linear
 use data_structure
 use mod_action
 use mod_particle_sim
@@ -8,7 +7,8 @@ implicit none
 type, extends(action) :: read_jorek_fields
   type(type_node_list), pointer    :: node_list
   type(type_element_list), pointer :: element_list
-  logical :: static = .false.
+  character(len=80) :: basename
+  logical :: static
   contains
     procedure :: do => read_jorek_fields_impl
 end type read_jorek_fields
@@ -135,4 +135,4 @@ B     = (/ + psi_Z, - psi_R, F0 /) * R_inv
 ! See http://jorek.eu/wiki/doku.php?id=u_phi
 E     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi * R_inv - R * psi_time /)
 end subroutine calc_EB
-end module mod_jorek_fields
+end module mod_field_interp_linear

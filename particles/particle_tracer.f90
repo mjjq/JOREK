@@ -1,6 +1,6 @@
 module particle_tracer
 ! Base section
-use mod_constants
+use constants
 use mod_particle_sim
 use mod_particle_types
 use mod_event

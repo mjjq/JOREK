@@ -9,7 +9,7 @@ contains
 subroutine update_particle_charge(this, sim, particle)
 use mod_particle_types
 use data_structure
-use mod_constants
+use constants
 use phys_module
 implicit none
 interface

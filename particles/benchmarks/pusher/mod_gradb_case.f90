@@ -14,7 +14,7 @@
 ! The different pushers in the [[pusher_test]] perform as follows on this case
 ! ![pusher-test-gradB](|media|/tests/all_pushers/gradB.png)
 module mod_gradb_case
-  use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
+  use constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_case
   use mod_coordinate_transforms
   implicit none
@@ -111,7 +111,7 @@ end function E_zero
 
 !> Particle position at time \(t\) for motion with the parameters defined in [[mod_gradb_case]]
 pure function gradB_solution(t) result(x)
-  use mod_constants, only: PI, TWOPI
+  use constants, only: PI, TWOPI
   real*8, intent(in)   :: t !< time [s]
   real*8, dimension(3) :: x !< position vector [m]
 

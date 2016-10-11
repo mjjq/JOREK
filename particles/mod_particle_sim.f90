@@ -1,7 +1,7 @@
 !> Module containing a datatype for simulation parameters
 module mod_particle_sim
 use mod_particle_types
-use mod_constants, only: CYLINDRICAL
+use constants, only: CYLINDRICAL
 implicit none
 private
 public particle_group, particle_sim

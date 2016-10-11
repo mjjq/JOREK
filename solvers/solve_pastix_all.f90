@@ -9,7 +9,8 @@ use mumps_module
 use pastix_module
 use global_distributed_matrix
 use mpi_mod
-use clock_module
+use mod_clock
+use mod_coicsr
 
 implicit none
 

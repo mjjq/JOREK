@@ -4,6 +4,7 @@ program enbiggen
 use parameters, only: n_var, variable_names
 use data_structure
 use phys_module
+use import_restart
 !use vacuum, only: export_restart_vacuum
 
 implicit none

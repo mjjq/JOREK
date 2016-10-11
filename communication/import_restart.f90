@@ -1,3 +1,6 @@
+module import_restart
+implicit none
+contains
 !> Imports a restart file written out by the routine export_restart.
 
 !
@@ -787,4 +790,4 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   return
 end subroutine import_hdf5_restart
-
+end module import_restart

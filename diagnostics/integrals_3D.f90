@@ -4,7 +4,7 @@ subroutine Integrals_3D(my_id, node_list,element_list,density_tot,density_in,den
 !---------------------------------------------------------------
 use constants
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
 use pellet_module
@@ -334,7 +334,7 @@ do ife = ife_min, ife_max
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
         VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T * (ZJ0-current_source)**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
 
         P_max = max(P_max,r0 * T0)
 
@@ -380,7 +380,7 @@ do ife = ife_min, ife_max
           VP_int = VP_int + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_int = J2_int + eta_T * (ZJ0-current_source)**2 * xjac * BigR * wst * delta_phi
+          J2_int = J2_int + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
 
         else
 
@@ -392,7 +392,7 @@ do ife = ife_min, ife_max
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_ext = J2_ext + eta_T * (ZJ0-current_source)**2 * xjac * BigR * wst * delta_phi
+          J2_ext = J2_ext + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
 
         endif
 
@@ -462,9 +462,9 @@ kin_perp_out= n_period * kin_perp_out / MU_zero * 0.5d0
 mag_tot     = n_period * mag_tot      / MU_zero * 0.5d0
 mag_in      = n_period * mag_in       / MU_zero * 0.5d0
 mag_out     = n_period * mag_out     / MU_zero * 0.5d0
-ohm_tot     = n_period * ohm_tot     / MU_zero / t_norm * 1.5d0
-ohm_in      = n_period * ohm_in      / MU_zero / t_norm * 1.5d0
-ohm_out     = n_period * ohm_out     / MU_zero / t_norm * 1.5d0
+ohm_tot     = n_period * ohm_tot     / MU_zero / t_norm
+ohm_in      = n_period * ohm_in      / MU_zero / t_norm
+ohm_out     = n_period * ohm_out     / MU_zero / t_norm
 heating_out = n_period * heating_out / MU_zero / t_norm * 1.5d0
 heating_in  = n_period * heating_in  / MU_zero / t_norm * 1.5d0
 source_out  = n_period * source_out  * central_density / t_norm

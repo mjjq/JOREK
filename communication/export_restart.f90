@@ -1,5 +1,9 @@
+module export_restart
+  implicit none
+contains
 !> Export the current simulation state as a restart file that can be read back into JOREK or into
 !! a diagnostic program by the routine import_restart.
+
 !
 ! Export in a binary restart file
 subroutine export_binary_restart(node_list,element_list,filename,format_rst)
@@ -44,7 +48,6 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
   type(type_element_list_OLD) :: element_list_OLD
 
   ! -> Write binary restart file
-  write(*,*) filename, len(filename), len_trim(filename)
   open(21, file=filename, form='unformatted', status='replace', action='write')
 
   if (format_rst .gt.0) then
@@ -132,7 +135,7 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   write(21) version_control
 
-  ! save mod_parameters
+  ! save parameters
   write(21) jorek_model
 
   write(21) n_var
@@ -340,7 +343,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   version_control = trim(adjustl(version_control))
   call HDF5_char_saving(file_id,version_control,"RCS_version"//char(0))
 
-  ! -> Save mod_parameters
+  ! -> Save parameters
   call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0))
   call HDF5_integer_saving(file_id,n_var,'n_var'//char(0))
   call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
@@ -416,7 +419,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_real_saving(file_id,eta,'eta'//char(0))
   call HDF5_real_saving(file_id,visco,'visco'//char(0))
   call HDF5_real_saving(file_id,visco_par,'visco_par'//char(0))
-  call HDF5_integer_saving(file_id,index_now,'index_now'//char(0))
+  call HDF5_integer_saving(file_id,index_now,'index_now'//char(0)) 
   call HDF5_real_saving(file_id,t_now,'t_now'//char(0))
   call HDF5_integer_saving(file_id,h5_nbsave_all,'h5_nbsave_all'//char(0))
 
@@ -425,7 +428,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      call HDF5_array3D_saving(file_id,t_energies, &
           n_tor,2,index_now,'energies'//char(0))
      !           n_tor,2,index_now,'energies'//char(0))
-#ifdef JECCD
+#ifdef JECCD                   
      call HDF5_array3D_saving(file_id,t_energies2, &
           n_tor,2,index_now,'energies2'//char(0))
      !           n_tor,2,index_now,'energies2'//char(0))
@@ -509,3 +512,4 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   return
 end subroutine export_hdf5_restart
+end module export_restart

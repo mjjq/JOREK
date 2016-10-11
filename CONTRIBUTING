@@ -1,0 +1,26 @@
+Source code conventions have mostly been taken from http://fortranwiki.org/fortran/show/Source+conventions,
+http://stackoverflow.com/questions/2758635/writing-robust-and-modern-fortran-code,
+http://research.metoffice.gov.uk/research/nwp/numerical/fortran90/f90_standards.html and
+https://github.com/Fortran-FOSS-Programmers/Best_Practices
+
+This is a short list of things to do and not to do:
+- Do not use real*8 and other extensions; Use KINDs from ISO_FORTRAN_ENV (int64 etc)
+- Use ISO_FORTRAN_ENV for standard I/O units
+- Use NEWUNIT= for writing to files
+- Always use implicit none at the start of module, submodule and program (routines inherit it)
+- Always use modules
+- Don't use global variables. If you must, use ALL_CAPS for these
+- Don't use gotos, jump labels
+- Write modular code
+- Compile in debug mode by default
+- Write PURE functions and subroutines as much as possible
+- Do not use COMMON blocks
+- Do not use EQUIVALENCE
+- Use meaningful variable names, in lowercase, with underscores
+- Indent by 2 spaces
+- Use spaces to line up = signs
+- Write FORD/Doxygen compatible documentation for all public procedures
+- Procedures should have a verb in their name
+
+Other remarks:
+- Submodules are probably not supported in the build system. Feel free to change this!

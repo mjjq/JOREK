@@ -9,6 +9,7 @@ subroutine Ref_Update_Neighbours(node_list,element_list,iref,idir)
 
 
  use data_structure
+ use mod_neighbours
 
 implicit none 
 
@@ -20,7 +21,6 @@ implicit none
                              nsides,iside,idir, inb,inb_ns, &
                              inb_son,is,ison_side,inb_son_side
  integer                  :: i,j,k
- logical, external        :: neighbours
 
 
 !**********************************************************************

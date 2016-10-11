@@ -68,11 +68,12 @@ program jorek2vtk_GaussVortTerms
 use constants
 use parameters
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
 use corr_neg
 use elements_nodes_neighbours
+use import_restart
 
 
 implicit none

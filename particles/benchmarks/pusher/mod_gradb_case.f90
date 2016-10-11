@@ -13,7 +13,7 @@
 !### Comparing pushers
 ! The different pushers in the [[pusher_test]] perform as follows on this case
 ! ![pusher-test-gradB](|media|/tests/all_pushers/gradB.png)
-module mod_gradB_case
+module mod_gradb_case
   use mod_constants, only: CARTESIAN, CYLINDRICAL, ATOMIC_MASS_UNIT, EL_CHG
   use mod_case
   use mod_coordinate_transforms
@@ -130,4 +130,4 @@ pure function gradB_solution(t) result(x)
           , big_gamma * v_perp * t + (theta - theta_zero)/lambda &
           , 0.d0]
 end function gradB_solution
-end module mod_gradB_case
+end module mod_gradb_case

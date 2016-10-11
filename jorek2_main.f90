@@ -37,14 +37,17 @@ program JOREK2
   use nodes_elements
   use pellet_module
   use equil_info
-  use boundary,            only: boundary_from_grid
+  use mod_boundary,            only: boundary_from_grid
   use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum, wall_curr_initialized
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
-  use bootstrap_functions
+  use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
+  use mod_global_matrix_structure
+  use import_restart
+  use export_restart
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -57,7 +60,7 @@ program JOREK2
 
   use solve_mat_n
   use tr_module
-  use clock_module
+  use mod_clock
 #ifdef USE_HDF5
   use hdf5
   use HDF5_io_module
@@ -70,6 +73,9 @@ program JOREK2
 #endif
 
   use, intrinsic :: iso_c_binding
+  use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
+                                            stdout=>output_unit, &
+                                            stderr=>error_unit
   
   implicit none
 
@@ -233,7 +239,7 @@ required = 0
     use_murge = .false. 
   end if
   
-  ! --- Write out all parameters defined in mod_parameters and the namelist input file.
+  ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -838,7 +844,7 @@ required = 0
     t0 = t_itstart
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
-    call flushc !flush the output stream
+    flush stdout
     call tr_debug_write("JMAIN:Index_now",index_now)
 
     index_now = index_now + 1
@@ -1232,13 +1238,13 @@ required = 0
 
     	  if (.not. gmres) then
 
-    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
     		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
     	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
             call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-                 mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                 DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
                  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
    
        	  endif

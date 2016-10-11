@@ -15,7 +15,9 @@ program JOREK_EXTRACT_DATA
   use nodes_elements
   use phys_module
   use equil_info
-  use boundary
+  use mod_boundary
+  use mod_log_params
+  use import_restart
   
   implicit none
   

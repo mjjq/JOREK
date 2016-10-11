@@ -1,4 +1,0 @@
-sfmakedepend copied from https://marine.rutgers.edu/po/tools/perl/sfmakedepend on 28-07-2016
-
-Changes:
-- Change /usr/local/bin/perl into /usr/bin/env perl

@@ -8,14 +8,16 @@ use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
 use pellet_module
 use mpi_mod
-use bootstrap_functions
+use mod_bootstrap_functions
 use corr_neg
 use mod_vtk
+use import_restart
 
 implicit none
 
-type (type_node_list)   , pointer :: node_list
-type (type_element_list), pointer :: element_list
+type (type_node_list)   ,     pointer :: node_list
+type (type_element_list),     pointer :: element_list
+type (type_bnd_element_list), pointer :: bnd_elm_list    
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -101,6 +103,7 @@ call flush_it(6)
 
 allocate(node_list)
 allocate(element_list)
+allocate(bnd_elm_list)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
@@ -143,7 +146,7 @@ write(*,*) 'si_units        =', si_units
 write(*,*) 'include_fluxes  =', include_fluxes
 write(*,*) 'include_neo     =', include_neo
 write(*,*) 'include_magnetic_field =',include_magnetic_field
-write(*,*) 'include_electric_field =',include_magnetic_field
+write(*,*) 'include_electric_field =',include_electric_field
 write(*,*) 'include_velocity_field =',include_velocity_field
 write(*,*) 'include_bootstrap =',include_bootstrap
 write(*,*) 'include_psi_norm =', include_psi_norm
@@ -166,6 +169,8 @@ n_scalars   = n_var
 n_vectors   = 0
 n_fluxes    = 0
 n_neo       = 0
+n_bfield    = 0
+n_vfield    = 0
 n_pellet    = 0
 n_bootstrap = 0
 n_psi_norm  = 0

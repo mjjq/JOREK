@@ -11,9 +11,10 @@ use parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian
-use Gauss
+use gauss
 use constants
 use diffusivities, only: get_dperp, get_zkperp
+use import_restart
 implicit none
 
 type (type_node_list)    :: node_list

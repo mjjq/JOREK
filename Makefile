@@ -7,7 +7,6 @@
 #
 # Known limitations:
 # - Module/function/subroutine name must be equal to file name
-# - Dependencies might not work correctly on make < 3.81
 
 # Include jorek-specific things and settings
 include Makefile.inc

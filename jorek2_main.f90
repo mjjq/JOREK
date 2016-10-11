@@ -239,7 +239,7 @@ required = 0
     use_murge = .false. 
   end if
   
-  ! --- Write out all parameters defined in mod_parameters and the namelist input file.
+  ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)

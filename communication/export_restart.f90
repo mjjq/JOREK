@@ -92,7 +92,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   write(21) version_control
 
-  ! save mod_parameters
+  ! save parameters
   write(21) jorek_model
   
   write(21) n_var
@@ -308,7 +308,7 @@ end if
   version_control = trim(adjustl(version_control))
   call HDF5_char_saving(file_id,version_control,"RCS_version"//char(0))
 
-  ! -> Save mod_parameters
+  ! -> Save parameters
   call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0)) 
   call HDF5_integer_saving(file_id,n_var,'n_var'//char(0)) 
   call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0)) 

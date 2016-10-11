@@ -4,7 +4,7 @@ implicit none
 
 contains
 
-!> Write out all relevant parameters defined in mod_parameters
+!> Write out all relevant parameters defined in parameters
 !! and by the namelist input file.
 subroutine log_parameters(my_id, short)
 

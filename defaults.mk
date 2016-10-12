@@ -24,7 +24,6 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
   FLAGS += -Wsurprising
-  FLAGS += -fwhole-program
   # options still to be tested
   #FLAGS += -fexternal-blas
   #FLAGS += -ffast-math # better -Ofast

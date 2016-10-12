@@ -31,7 +31,7 @@ module mod_penning_case
   type, extends(case_penning), public :: case_penning_cylindrical
     contains
       procedure, nopass :: E => E_cylindrical
-      procedure, nopass :: B => B_z
+      procedure, nopass :: B => B_z_cyl
   end type
 
   public :: penning_trajectory
@@ -55,7 +55,7 @@ pure subroutine initialize_particle_penning(this, particle)
     particle%x = cartesian_to_cylindrical(x0)
     select type (particle)
     type is (particle_kinetic_leapfrog)
-      particle%v = vector_rotation(v0, particle%x(2))
+      particle%v = vector_rotation(cartesian_to_cylindrical(v0), particle%x(3))
     end select
   end select
 end subroutine
@@ -75,14 +75,20 @@ pure function calculate_error_norm(this, particle) result(err)
 end function calculate_error_norm
 
 
-!> Magnetic field in the penning trap (valid for both cylindrical and cartesian
-!> cases because there is only a z-component)
+!> Magnetic field in the penning trap
 pure function B_z(x, t) result(B)
   real*8, dimension(3), intent(in) :: x
   real*8, intent(in) :: t
   real*8, dimension(3) :: B
   B = [0.d0, 0.d0, 1.d0]*omega_b*mass*ATOMIC_MASS_UNIT/(real(charge)*EL_CHG)
 end function B_z
+!> Magnetic field in the penning trap in RZPhi coordinates
+pure function B_z_cyl(x, t) result(B)
+  real*8, dimension(3), intent(in) :: x
+  real*8, intent(in) :: t
+  real*8, dimension(3) :: B
+  B = [0.d0, 1.d0, 0.d0]*omega_b*mass*ATOMIC_MASS_UNIT/(real(charge)*EL_CHG)
+end function B_z_cyl
 
 pure function E_cartesian(x, t) result(E)
   real*8, dimension(3), intent(in) :: x
@@ -96,7 +102,7 @@ pure function E_cylindrical(x, t) result(E)
   real*8, intent(in) :: t
   real*8, dimension(3) :: E
   E = epsilon*omega_e**2/(real(charge)*el_chg)*mass*atomic_mass_unit * &
-      [-x(1), 0.d0, 2.d0*x(3)]
+      [-x(1), 2.d0*x(2), 0.d0]
 end function E_cylindrical
 
 !> Calculate the position of a particle in the penning trap, released at

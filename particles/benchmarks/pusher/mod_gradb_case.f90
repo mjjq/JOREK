@@ -70,7 +70,7 @@ pure subroutine initialize_particle_gradB(this, particle)
     particle%x = cartesian_to_cylindrical(x0)
     select type (particle)
     type is (particle_kinetic_leapfrog)
-      particle%v = vector_rotation(v0, particle%x(2))
+      particle%v = vector_rotation(v0, particle%x(3))
     end select
   end select
 end subroutine initialize_particle_gradB
@@ -99,7 +99,7 @@ pure function B_cylindrical(x, t) result(B)
   real*8, dimension(3), intent(in) :: x
   real*8, intent(in) :: t
   real*8, dimension(3) :: B
-  B = [0.d0, 0.d0, B0*exp(lambda*x(1)*cos(x(2)))]
+  B = [0.d0, B0*exp(lambda*x(1)*cos(-x(3))), 0.d0]
 end function B_cylindrical
 pure function E_zero(x, t) result(E)
   real*8, dimension(3), intent(in) :: x

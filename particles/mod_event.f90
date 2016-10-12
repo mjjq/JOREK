@@ -16,7 +16,7 @@ type :: event
   real*8  :: step     = huge(0.d0) !< Step every how long?
   real*8  :: end      = huge(0.d0) !< Stop after time end. If equal to start, runs once
 
-  integer, dimension(:), allocatable :: sync_groups !< which groups to require at a full-timestep (default = all, empty array = none)
+  integer, dimension(:), allocatable :: sync_groups !< which groups to require at a full-timestep (unallocated = all, empty array = none)
 
   !> Action to perform when this event runs
   class(action), allocatable :: action
@@ -45,6 +45,7 @@ function new_event(act, start, step, end)
   allocate(new_event%action, source=act) ! because assignment is not yet supported in gfortran 6.1.1
 end function new_event
 
+!> Should this event run at this time?
 function run_at(this, time)
   class(event), intent(in) :: this
   real*8, intent(in) :: time

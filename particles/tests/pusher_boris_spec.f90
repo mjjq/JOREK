@@ -1,4 +1,4 @@
-!> This module contains some trivial tests of the boris pusher
+!> This module contains some simple tests of the boris pusher in cartesian geometry.
 module pusher_boris_spec
 use constants, only: TWOPI, EL_CHG, ATOMIC_MASS_UNIT
 use mod_particle_types

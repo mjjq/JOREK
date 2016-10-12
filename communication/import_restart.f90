@@ -1,12 +1,11 @@
+!> Routines to import a restart file written out by a routine in [[export_restart]].
 module import_restart
 implicit none
 contains
-!> Imports a restart file written out by the routine export_restart.
 
-!
-! Import a binary restart file
+!> Import a binary restart file.
+!> Does not read element%transform! Remember to call update_neighbours manually if you need it
 subroutine import_binary_restart(node_list, element_list, filename, format_rst, error)
-
   use tr_module 
   use data_structure
   use phys_module
@@ -403,11 +402,9 @@ call import_restart_vacuum(21, freeboundary, resistive_wall)
 end subroutine import_binary_restart
 
 
-!
-! Import an HDF5 restart file
+!> Import an HDF5 restart file
+!> Does not read element%transform! Remember to call update_neighbours manually if you need it
 subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)
-
-#include "version.h"
 
   use tr_module 
   use data_structure

@@ -17,29 +17,29 @@ endif
 
 # Default flags for gfortran
 ifeq ($(COMPILER_FAMILY), gnu)
-  FLAGS += -O3 -cpp -fopenmp
+  FLAGS += -cpp
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-tabs -Wno-unused-variable
   FLAGS += -Wcharacter-truncation
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
   FLAGS += -Wsurprising
-  FLAGS += -fwhole-program
+  FLAGS += -Wno-ampersand
   # options still to be tested
   #FLAGS += -fexternal-blas
   #FLAGS += -ffast-math # better -Ofast
   #more optimization options
   ifeq ($(DEBUG), 1)
     # Debug flags for gfortran, in ascending order of severity
-    FLAGS += -g -Og -ggdb -fno-lto
+    FLAGS += -g -Og -ggdb
     FLAGS += -fimplicit-none
     FLAGS += -Wimplicit-interface -Wimplicit-procedure
     FLAGS += -fcheck=all
     FLAGS += -Wunused-variable
     FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv \
-#	      -finit-real=nan -finit-int=nan -finit-logical=false
-#   FLAGS += -Warray-temporaries -Wconversion-extra
+	      -finit-real=nan -finit-logical=false
   else
+    FLAGS += -O3 -cpp
     FLAGS += -flto=4 # link-time optimization with 4 jobs
     CFLAGS += -flto=4 # also for C routines
   endif
@@ -49,7 +49,6 @@ endif
 
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
-  FLAGS += -openmp
   FLAGS += -fpp
   FLAGS += -warn all
   FLAGS += -warn nounused

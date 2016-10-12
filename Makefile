@@ -18,7 +18,7 @@ jorek_model$(MODEL_NUMBER): jorek2_main
 # Some defaults and parsing logic for makefile.inc
 include defaults.mk
 
-.PHONY: .mod/version.h clean cleanall cleandep duplicates test particle_test
+.PHONY: .mod/version.h clean cleanall cleandep duplicates test particle_test doc docs
 cleanall: clean cleandep
 clean:
 	@echo ">> Deleting Object Files <<"
@@ -34,7 +34,8 @@ cleandep:
 test: particle_test
 particle_test:
 	PYTHONPATH=$(FRUITPYDIR) python particles/tests/particle_test.py
-docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
+doc docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
+	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search
 
 

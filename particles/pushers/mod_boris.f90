@@ -21,8 +21,8 @@ pure subroutine boris_push_cylindrical(particle, E, B, dt)
   real*8, dimension(3), intent(in) :: E, B
   real*8, intent(in) :: dt
   real*8 :: R, Rphi
-  real*8  :: fE, fB, eom
-  real*8  :: psi, U, B2, Bnorm
+  real*8 :: fE, fB, eom
+  real*8 :: psi, U, B2, Bnorm
   eom = EL_CHG / (particle%m * ATOMIC_MASS_UNIT)
 
   B2    = dot_product(B,B)
@@ -45,16 +45,16 @@ pure subroutine boris_push_cylindrical(particle, E, B, dt)
   ! update the position from v^n to v^(n+1)
   ! Calculate the new R and RPhi
   R    = particle%x(1) + particle%v(1) * dt
-  RPhi = particle%v(2) * dt
+  RPhi = particle%v(3) * dt
 
   ! Calculate the new R, Phi, Z
   particle%x(1) = sqrt(R**2 + RPhi**2)
-  particle%x(2) = particle%x(2) + asin(RPhi / particle%x(1))
-  particle%x(3) = particle%x(3) + dt * particle%v(3)
+  particle%x(2) = particle%x(2) + dt * particle%v(2)
+  particle%x(3) = particle%x(3) + asin(RPhi / particle%x(1))
 
-  ! Adjust R and Phi velocities to the new reference frame (z component stays the same)
-  particle%v(1:2) = [R     * particle%v(1) + RPhi * particle%v(2), &
-                     -RPhi * particle%v(1) + R    * particle%v(2)] / particle%x(1)
+  ! Adjust R and Phi velocities (component 1 and 3) to the new reference frame
+  particle%v(1:3:2) = [R     * particle%v(1) + RPhi * particle%v(3), &
+                       -RPhi * particle%v(1) + R    * particle%v(3)] / particle%x(1)
 end subroutine boris_push_cylindrical
 
 !> Push a single particle for some timesteps with the boris method

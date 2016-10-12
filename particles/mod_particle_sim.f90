@@ -2,7 +2,7 @@
 module mod_particle_sim
 use mod_particle_types
 implicit none
-private
+!private
 public particle_group, particle_sim
 
 !> A group of particles, implemented as an allocatable array
@@ -34,6 +34,7 @@ subroutine initialize(sim, num_groups)
 
   allocate(sim%groups(num_groups))
 end subroutine
+
 !> Actions to perform when stopping the simulation.
 subroutine finalize(sim)
   class(particle_sim), intent(in) :: sim !< why is this class() and not type()?

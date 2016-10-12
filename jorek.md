@@ -2,10 +2,11 @@ project: JOREK
 project_website: http://jorek.eu
 summary: JOREK is a non-linear extended MHD code for toroidal X-point geometries
 author: the JOREK team
-project_dir: .
-src_dir: .
+project_dir: ./
+src_dir: ./
 output_dir: ./doc
 exclude_dir: ./doc
+	     ./.git
 	     ./pages
 	     ./media
 	     ./models/model001

@@ -1,32 +1,87 @@
-module mod_field_interp_linear
+!> Module for linearly interpolating in time between values and deltas
+!> in JOREK restart files. Contains an action to read the fields.
+module mod_jorek_fields_interp_linear
 use data_structure
 use mod_action
 use mod_particle_sim
 implicit none
+public
 
-type, extends(action) :: read_jorek_fields
+type, extends(action) :: read_jorek_fields_interp_linear
   type(type_node_list), pointer    :: node_list
   type(type_element_list), pointer :: element_list
-  character(len=80) :: basename
-  logical :: static
+  character(len=80) :: basename = 'jorek' !< Comes before the file number or extension
+  integer :: i = 0 !< Number of the restart file to read. Set to -1 to not include
+  integer :: rst_format = 0 !< Format of restart file if .rst type
   contains
     procedure :: do => read_jorek_fields_impl
-end type read_jorek_fields
-!interface read_jorek_fields
-  !module procedure new_read_jorek_fields
-!end interface read_jorek_fields
-
+end type read_jorek_fields_interp_linear
+interface read_jorek_fields_interp_linear
+  module procedure new_read_jorek_fields_interp_linear
+end interface read_jorek_fields_interp_linear
 contains
-!function new_read_jorek_fields(node_list, element_list) result(new)
-  !type(read_jorek_fields) :: new
-  !type
+
+function new_read_jorek_fields_interp_linear(node_list, element_list, basename, i, rst_format) result(new)
+  type(type_node_list), intent(in), pointer    :: node_list
+  type(type_element_list), intent(in), pointer :: element_list
+  character(len=80), intent(in), optional :: basename
+  integer, intent(in), optional :: i
+  integer, intent(in), optional :: rst_format
+  type(read_jorek_fields_interp_linear) :: new
+  new%node_list = node_list
+  new%element_list = element_list
+  if (present(basename)) new%basename = basename
+  if (present(i)) new%i = i
+  if (present(rst_format)) new%rst_format = rst_format
+end function new_read_jorek_fields_interp_linear
+
+
 
 !> Read jorek fields from a restart file
 subroutine read_jorek_fields_impl(this, sim)
-  !use mod_import_export_restart
-  class(read_jorek_fields), intent(inout) :: this
+  use import_restart
+  class(read_jorek_fields_interp_linear), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
-  write(*,*) "TODO: read JOREK fields"
+  character(len=80) :: restart_file
+  integer :: i, ierr
+  logical :: file_exists
+
+  ! Read only one file
+  if (this%i .eq. -1) then
+    write(restart_file,'(A,A)') trim(this%basename), '.rst'
+    inquire(file=trim(restart_file), exist=file_exists)
+    if (file_exists) then
+      call import_binary_restart(this%node_list,this%element_list,restart_file,this%rst_format,ierr)
+    else
+      write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
+      call exit(1)
+    end if
+  else ! Linearly interpolating case
+    write(*,*) "ERROR: reading with interpolation not implemented yet"
+    call exit(1)
+    ! TODO: set the time to run the event at next
+    ! TODO: recalculate simulation time and timestep
+    ! If not, keep looping (up to 10) to find one, and use the merge import
+    ! This assumes that the current node_list contains the values
+    ! at time istep (but does not need to contain the deltas, these are calculated)
+    write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i+1, '.rst'
+    inquire(file=trim(restart_file), exist=file_exists)
+    if (file_exists) then
+      ! If so, import it and we're done
+      call import_binary_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
+      this%i = this%i+1
+    else ! loop over the next few files of this name format
+      do i=this%i+2,this%i+10
+        write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.rst'
+        inquire(file=trim(restart_file), exist=file_exists)
+        if (file_exists) then
+          call import_merge_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
+          this%i=i
+          exit
+        endif
+      enddo
+    end if
+  end if
 end subroutine read_jorek_fields_impl
 
 !> Calculates the electric and magnetic fields at a specific position
@@ -34,11 +89,11 @@ end subroutine read_jorek_fields_impl
 !> Linear interpolation with element%deltas is performed according to
 !> `delta_fraction`, which starts at 1 and goes to 0 for no mixing.
 !> If it is 1 we get the fields of the previous timesteps.
-pure subroutine calc_EB(i_elm,st,phi,E,B,psi,U,delta_fraction)
+pure subroutine EM_fields_interp_linear(node_list, element_list, i_elm, st, phi, E, B, psi, U, delta_fraction)
+use data_structure
 use parameters
 use constants
 use phys_module, only : F0, tstep
-
 
 interface
   pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, &
@@ -68,6 +123,8 @@ interface
 end interface
 
 ! Routine parameters
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
 integer, intent(in) :: i_elm !< JOREK element index
 real*8, intent(in)  :: st(2) !< element-local coordinates
 real*8, intent(in)  :: phi !< toroidal angle
@@ -134,5 +191,48 @@ B     = (/ + psi_Z, - psi_R, F0 /) * R_inv
 ! The local electric field, obtained from E=-Grad (u F0)-\partial_t A
 ! See http://jorek.eu/wiki/doku.php?id=u_phi
 E     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi * R_inv - R * psi_time /)
-end subroutine calc_EB
-end module mod_field_interp_linear
+end subroutine EM_fields_interp_linear
+
+
+
+!> Import a binary restart file and merges it with the values currently known
+!> This can then be used to interpolate linearly between any two restart files
+subroutine import_merge_restart(node_list,element_list, restart_file, format_rst, ierr)
+  use data_structure
+  use phys_module
+  use import_restart
+  implicit none
+
+  ! --- Routine parameters
+  type(type_node_list),    intent(inout) :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  character(len=*),        intent(in)    :: restart_file !< Filename of new restart file to import
+  integer,                 intent(out)   :: ierr
+  integer,                 intent(in)    :: format_rst !< Restart file format
+
+  ! --- Internal variables
+  real*8, allocatable, dimension(:,:,:,:) :: values
+  integer :: inode
+  real*8 :: tstart_old
+
+  ! Save the old values to calculate the new deltas
+  allocate(values(n_tor,n_order+1,n_var,node_list%n_nodes))
+  do inode=1,node_list%n_nodes
+    values(:,:,:,inode) = node_list%node(inode)%values(:,:,:)
+  enddo
+  tstart_old = t_start
+
+  ! Import new values
+  call import_binary_restart(node_list,element_list, restart_file, format_rst, ierr)
+
+  ! Calculate deltas as values_new - values_old
+  do inode=1,node_list%n_nodes
+    node_list%node(inode)%deltas = node_list%node(inode)%values - values(:,:,:,inode)
+  enddo
+
+  ! Set timestep to time between restart files
+  tstep = t_start - tstart_old
+
+  deallocate(values)
+end subroutine import_merge_restart
+end module mod_jorek_fields_interp_linear

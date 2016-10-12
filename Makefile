@@ -65,6 +65,7 @@ DIRS := diagnostics			\
 	timing				\
 	. 				\
 	vacuum
+DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline
 
 # All .f90 files we should generate .d dependency files for
 depends:=$(basename $(notdir $(shell find $(DIRS) -maxdepth 1 -iname '*.f90')))

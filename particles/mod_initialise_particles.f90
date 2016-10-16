@@ -7,18 +7,12 @@ use mod_particle_types
 use constants
 implicit none
 private
-public particle_init_params
-public set_particle_position_rejection_sampling, no_transform
-
-type particle_init_params
-  real*8 :: f !< Weighting factor: f=0 indicates uniform weights, f=1 indicates uniform distribution
-end type particle_init_params
-
+public set_particle_position_rejection_sampling, no_transform, adjust_particle_weights
+public set_kinetic_particle_velocity_from_T
 contains
-
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
-!> if present.
+!> if present. See [[test_rejection_sampling]] for examples.
 subroutine set_particle_position_rejection_sampling(particles, node_list, element_list, &
         rng, variables, transform, f, Rbound, Zbound, Phibound)
   use mpi
@@ -196,6 +190,19 @@ pure function no_transform(in) result(out)
 end function no_transform
 
 
+!> Adjust weights on all particles to have the correct number of atoms in total
+subroutine adjust_particle_weights(particles, num_atoms_total)
+use mpi
+class(particle_base), intent(inout), dimension(:) :: particles
+real*8, intent(in)                                :: num_atoms_total !< What the sum of the weights should be
+real*8 :: local_weights, sum_weights
+integer :: ifail
+local_weights = sum(particles(:)%weight)
+call MPI_AllReduce(local_weights,sum_weights,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ifail)
+! Divide all weights by the sum of weights and multiply by the requested number of atoms
+particles(:)%weight = particles(:)%weight / sum_weights * num_atoms_total
+end subroutine adjust_particle_weights
+
 !> Set v and q of a particle for use with kinetic codes
 subroutine set_charge_from_coronal_eq(particles, cor, ran4, ifail)
 use constants
@@ -257,4 +264,75 @@ type is (particle_kinetic_leapfrog)
 end select
 
 end subroutine set_charge_from_coronal_eq
+
+!> Set v of a particle for use with kinetic codes
+subroutine set_kinetic_particle_velocity_from_T(particles, node_list, element_list, rng, v_par, grad_T)
+use constants
+use data_structure
+use phys_module, only : central_density, central_mass
+use mod_sampling
+use mpi
+use mod_random_seed
+implicit none
+
+class(particle_base), intent(inout), dimension(:) :: particles !< Particle to initialize
+type(type_node_list), intent(in)                  :: node_list
+type(type_element_list), intent(in)               :: element_list
+class(type_rng), intent(in)                       :: rng
+logical, intent(in), optional                     :: v_par !< Include the parallel velocity if present and true
+logical, intent(in), optional                     :: grad_T !< Include the temperature gradient if present and true
+
+class(type_rng), allocatable :: my_rng
+integer :: i, ifail, seed, my_id, n_cpu
+real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8 :: v_out(4), ran4(4)
+real*8 :: R, R_s, R_t, Z, Z_s, Z_t
+real*8 :: background_density, background_kbT, background_kelvin, V_thermal
+real*8 :: v_norm
+real*8 :: Z_coronal, radiation_coronal
+real*8 :: mass_main_ion
+
+allocate(my_rng, source=rng)
+! Calculate a single random seed and communicate it over MPI
+call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
+call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
+if (my_id .eq. 0) seed = random_seed()
+call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
+call my_rng%initialize(4, seed, n_cpu, my_id, ifail)
+
+#if (JOREK_MODEL != 303)
+write(*,*) "ERROR: v// not implemented"
+call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
+#endif
+if (present(v_par) .and. v_par) then
+  write(*,*) "ERROR: initialization with v// not implemented"
+  call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
+end if
+if (present(grad_T) .and. grad_T) then
+  write(*,*) "ERROR: initialization with gradT not implemented"
+  call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
+end if
+
+do i=1,size(particles)
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[5,6],2,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+      P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+
+  background_density = P(1) * 1d20                                    ! plasma density [1/m^3]
+  background_kbT     = P(2) /(MU_ZERO*central_density*1.d20)          ! Total plasma temperature in J/kB = T = Te + Ti
+  background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron temperature [K]
+  ! This is not valid for model400 (for that, remove the factor 2 above and below)
+
+  V_thermal = sqrt(background_kbT / (2.d0*particles(i)%m*ATOMIC_MASS_UNIT))      ! [m/s]
+
+  call my_rng%next(ran4)
+  v_out = boxmueller_transform(ran4) * V_thermal ! [m/s], vx, vy, vz, dummy
+
+  select type (p => particles(i))
+  type is (particle_kinetic_leapfrog)
+    p%v(1) =   v_out(1) * cos(p%x(3)) + v_out(2) * sin(p%x(3))   ! V_R
+    p%v(3) = - v_out(1) * sin(p%x(3)) + v_out(2) * cos(p%x(3))   ! V_phi [physical component]
+    p%v(2) =   v_out(3)                                          ! V_Z
+  end select
+end do
+end subroutine set_kinetic_particle_velocity_from_T
 end module mod_initialise_particles

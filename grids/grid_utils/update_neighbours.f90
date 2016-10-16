@@ -50,7 +50,7 @@ do i=1, element_list%n_elements
         endif
 
       else
-        write(*,*) 'not yet implemented'
+        write(*,*) 'more or less than 2 neighbour indices not yet implemented'
       endif
 
       i_elm = i

@@ -1,3 +1,6 @@
+module mod_basisfunctions
+implicit none
+contains
 !> Subroutine which defines the basis functions derived from
 !! a mixed Bezier/Cubic finite element representation.
 !!
@@ -6,7 +9,6 @@
 !! - the functions are defined on the interval [0,1][0,1]
 !! \see ::basisfunctions and ::basisfunctions1
 pure subroutine basisfunctions3(s, t, H, H_s, H_t)
-
 implicit none
 
 ! --- Routine parameters
@@ -83,6 +85,5 @@ H_t(4,3) =-3.d0*(-1.d0 + s)**2*(1.d0 + 2.d0*s)*t*(-2.d0 + 3.d0*t)
 H(4,4)   =-9.d0*(-1.d0 + s)**2*s*(-1.d0 + t)*t**2
 H_s(4,4) =9.d0*(1.d0 - 3.d0*s)*(-1.d0 + s)*(-1.d0 + t)*t**2
 H_t(4,4) =-9.d0*(-1.d0 + s)**2*s*t*(-2.d0 + 3.d0*t)
-
-return
 end subroutine basisfunctions3
+end module mod_basisfunctions

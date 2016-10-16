@@ -71,6 +71,7 @@ function new_read_action(filename, basename, decimal_digits, fractional_digits, 
   if (present(fractional_digits)) new_read_action%fractional_digits = fractional_digits
   if (present(extension)) new_read_action%extension = extension
   new_read_action%name = "ReadAction"
+  new_read_action%log = .true.
 end function new_read_action
 
 !> Action for reading the simulation
@@ -78,7 +79,7 @@ subroutine do_read_action(this, sim)
   class(read_action), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   if (len_trim(this%filename) .eq. 0) then
-    call read_simulation_hdf5(sim, this%get_filename(this%time))
+    call read_simulation_hdf5(sim, trim(this%get_filename(this%time)))
   else
     call read_simulation_hdf5(sim, trim(this%filename))
   end if
@@ -95,6 +96,7 @@ function new_write_action(filename, basename, decimal_digits, fractional_digits,
   integer, intent(in), optional          :: fractional_digits
   character(len=*), intent(in), optional :: extension
   new_write_action%name = "WriteAction"
+  new_write_action%log = .true.
   if (present(filename)) new_write_action%filename = filename
   if (present(basename)) new_write_action%basename = basename
   if (present(decimal_digits)) new_write_action%decimal_digits = decimal_digits
@@ -107,7 +109,7 @@ subroutine do_write_action(this, sim)
   class(write_action), intent(inout) :: this
   type(particle_sim), intent(inout)  :: sim
   if (len_trim(this%filename) .eq. 0) then
-    call write_simulation_hdf5(sim, this%get_filename(sim%time))
+    call write_simulation_hdf5(sim, trim(this%get_filename(sim%time)))
   else
     call write_simulation_hdf5(sim, trim(this%filename))
   end if

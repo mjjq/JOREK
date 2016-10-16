@@ -413,7 +413,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use vacuum, only: import_HDF5_restart_vacuum
 #ifdef USE_HDF5
   use hdf5
-  use HDF5_io_module
+  use hdf5_io_module
   !use tr_module
   use parameters, ONLY : n_tor, n_var, n_order
 #endif
@@ -708,7 +708,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   write(*,*) '************* restart ******************'
   write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
-  write(*,'(A19,I4,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
+  write(*,'(A19,I4,A)') ' *  HDF5 files read : ',h5_nbsave_all,' *'
   write(*,*) '****************************************'
   
   do i=2,index_start

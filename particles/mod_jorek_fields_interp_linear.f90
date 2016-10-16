@@ -5,11 +5,14 @@ use data_structure
 use mod_action
 use mod_particle_sim
 implicit none
-public
+private
+public read_jorek_fields_interp_linear, EM_fields_interp_linear
 
+!> Action to read jorek fields and store enough data for linear interpolation
+!> in time.
 type, extends(action) :: read_jorek_fields_interp_linear
-  type(type_node_list), pointer    :: node_list
-  type(type_element_list), pointer :: element_list
+  type(type_node_list), allocatable    :: node_list
+  type(type_element_list), allocatable :: element_list
   character(len=80) :: basename = 'jorek' !< Comes before the file number or extension
   integer :: i = 0 !< Number of the restart file to read. Set to -1 to not include
   integer :: rst_format = 0 !< Format of restart file if .rst type
@@ -21,18 +24,19 @@ interface read_jorek_fields_interp_linear
 end interface read_jorek_fields_interp_linear
 contains
 
-function new_read_jorek_fields_interp_linear(node_list, element_list, basename, i, rst_format) result(new)
-  type(type_node_list), intent(in), pointer    :: node_list
-  type(type_element_list), intent(in), pointer :: element_list
-  character(len=80), intent(in), optional :: basename
+!> Constructor to allow for optional and default variables
+function new_read_jorek_fields_interp_linear(basename, i, rst_format) result(new)
+  character(len=*), intent(in), optional :: basename
   integer, intent(in), optional :: i
   integer, intent(in), optional :: rst_format
   type(read_jorek_fields_interp_linear) :: new
-  new%node_list = node_list
-  new%element_list = element_list
+  allocate(new%node_list)
+  allocate(new%element_list)
   if (present(basename)) new%basename = basename
   if (present(i)) new%i = i
   if (present(rst_format)) new%rst_format = rst_format
+  new%name = "ReadJorekFieldsInterpLinear"
+  new%log = .true.
 end function new_read_jorek_fields_interp_linear
 
 
@@ -46,12 +50,14 @@ subroutine read_jorek_fields_impl(this, sim)
   integer :: i, ierr
   logical :: file_exists
 
+  logical, save :: neighbours_updated = .false.
+
   ! Read only one file
   if (this%i .eq. -1) then
-    write(restart_file,'(A,A)') trim(this%basename), '.rst'
+    write(restart_file,'(A,A)') trim(this%basename), '.h5'
     inquire(file=trim(restart_file), exist=file_exists)
     if (file_exists) then
-      call import_binary_restart(this%node_list,this%element_list,restart_file,this%rst_format,ierr)
+      call import_hdf5_restart(this%node_list,this%element_list,restart_file,this%rst_format,ierr)
     else
       write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
       call exit(1)
@@ -64,23 +70,30 @@ subroutine read_jorek_fields_impl(this, sim)
     ! If not, keep looping (up to 10) to find one, and use the merge import
     ! This assumes that the current node_list contains the values
     ! at time istep (but does not need to contain the deltas, these are calculated)
-    write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i+1, '.rst'
+    write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i+1, '.h5'
     inquire(file=trim(restart_file), exist=file_exists)
     if (file_exists) then
       ! If so, import it and we're done
-      call import_binary_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
+      call import_hdf5_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
       this%i = this%i+1
     else ! loop over the next few files of this name format
       do i=this%i+2,this%i+10
-        write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.rst'
+        write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
         inquire(file=trim(restart_file), exist=file_exists)
         if (file_exists) then
-          call import_merge_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
+          call import_hdf5_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
           this%i=i
           exit
         endif
       enddo
     end if
+  end if
+
+  ! After reading we need to update_neighbours, but only do it the first time
+  ! This will not work for simulations with refinement!
+  if (.not. neighbours_updated) then
+    call update_neighbours(this%element_list, this%node_list)
+    neighbours_updated = .true.
   end if
 end subroutine read_jorek_fields_impl
 
@@ -89,7 +102,7 @@ end subroutine read_jorek_fields_impl
 !> Linear interpolation with element%deltas is performed according to
 !> `delta_fraction`, which starts at 1 and goes to 0 for no mixing.
 !> If it is 1 we get the fields of the previous timesteps.
-pure subroutine EM_fields_interp_linear(node_list, element_list, i_elm, st, phi, E, B, psi, U, delta_fraction)
+pure subroutine EM_fields_interp_linear(fields, i_elm, st, phi, E, B, psi, U, delta_fraction)
 use data_structure
 use parameters
 use constants
@@ -123,8 +136,7 @@ interface
 end interface
 
 ! Routine parameters
-type (type_node_list),    intent(in)  :: node_list
-type (type_element_list), intent(in)  :: element_list
+type (read_jorek_fields_interp_linear), intent(in) :: fields
 integer, intent(in) :: i_elm !< JOREK element index
 real*8, intent(in)  :: st(2) !< element-local coordinates
 real*8, intent(in)  :: phi !< toroidal angle
@@ -149,8 +161,8 @@ i_var = (/1,2/)
 
 ! Interpolate the fields to get psi and U at the current position (and the
 ! changes u_n - u(n-1))
-call       interp_PRZ(node_list,element_list,i_elm,i_var,2,st(1),st(2),phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-call interp_PRZ_delta(node_list,element_list,i_elm,i_var,2,st(1),st(2),phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
+call       interp_PRZ(fields%node_list,fields%element_list,i_elm,i_var,2,st(1),st(2),phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+call interp_PRZ_delta(fields%node_list,fields%element_list,i_elm,i_var,2,st(1),st(2),phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
 R_inv = 1.d0/R
 inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)

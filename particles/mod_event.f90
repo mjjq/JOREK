@@ -176,7 +176,7 @@ subroutine check_and_fix_timesteps(pusher_timestep, events)
 
   real*8, dimension(:), allocatable    :: event_start, event_step, pusher_timestep_work
   logical, dimension(:,:), allocatable :: constraints
-  integer :: i, j, pusher, ierr
+  integer :: i, j, ierr
 
   ! select start and step times of all events
   event_start = [(events(i)%start, i=1, size(events))]

@@ -2,6 +2,7 @@
 subroutine interp3_RZ(node_list,element_list,i_elm,s,t,R,R_s,R_t,Z,Z_s,Z_t)
 
 use data_structure
+use mod_basisfunctions
 implicit none
 
 ! --- Routine parameters

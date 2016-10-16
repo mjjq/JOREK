@@ -5,7 +5,8 @@ implicit none
 !private
 public particle_group, particle_sim
 
-!> A group of particles, implemented as an allocatable array
+!> A group of particles, implemented as an allocatable array.
+!> It must contain particles of the same species (charge number).
 type :: particle_group
   class(particle_base), dimension(:), allocatable :: particles
 end type particle_group
@@ -24,31 +25,35 @@ end type particle_sim
 contains
 !> Actions to perform when setting up a simulation
 subroutine initialize(sim, num_groups)
-#include "version.h"
   use mpi
+  use parameters, only: n_tor, n_period
+  use phys_module, only: mode
   class(particle_sim), intent(inout) :: sim !< why is this class() and not type()?
   integer, intent(in) :: num_groups
-  integer :: provided, ierr, my_id
+  integer :: provided, ierr, my_id, i_tor
+
   call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, ierr)
   if (ierr .ne. 0) write(*,*) "Error ", ierr, " in MPI_Init_thread"
   if (provided .ne. MPI_THREAD_MULTIPLE) write(*,*) "WARNING: provided(", provided, ") != MPI_THREAD_MULTIPLE"
   allocate(sim%groups(num_groups))
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
-  111 format(2x,a,': ',a)
-  if (my_id .eq. 0) then
-    write(*,*) ' ', trim(adjustl(RCS_VERSION))
-    write(*,111) 'compile_time        ', trim(adjustl(compile_time))
-    write(*,111) 'compile_user        ', trim(adjustl(compile_user))
-    write(*,111) 'compile_machine     ', trim(adjustl(compile_machine))
-    write(*,111) 'compile_dir         ', trim(adjustl(compile_dir))
-    write(*,111) 'compile_command     ', trim(adjustl(compile_command))
-    write(*,111) 'compile_flags       ', trim(adjustl(compile_flags))
-    write(*,111) 'compile_includes    ', trim(adjustl(compile_includes))
-    write(*,111) 'compile_defines     ', trim(adjustl(compile_defines))
-    write(*,111) 'compile_libs        ', trim(adjustl(compile_libs))
-    write(*,111) 'compile_modules     ', trim(adjustl(compile_modules))
-  end if
+  if (my_id .eq. 0) call print_version
+
+  ! Initialise mode numbers
+  do i_tor=1, n_tor
+    mode(i_tor) = + int(i_tor / 2) * n_period
+    if (my_id .eq. 0) write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
+  enddo
+
+  ! Initialise the gaussian points at basis functions
+  call initialise_basis
+
+  ! Initialise parameters
+
+  ! Broadcast parameters, phys
+
+  ! Initialise RNG seed, select (Q)RNG
 end subroutine
 
 !> Actions to perform when stopping the simulation.

@@ -8,7 +8,7 @@ module out_save_module
   use phys_module
   use basis_at_gaussian
 #ifdef USE_HDF5
-  use HDF5_io_module
+  use hdf5_io_module
 
   implicit none
   

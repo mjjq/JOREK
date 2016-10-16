@@ -183,6 +183,10 @@ call h5sclose_f(time_space_id, hdferr)
 
 if (allocated(sim%groups)) then
   do i=1,size(sim%groups,1)
+    if (.not. allocated(sim%groups(i)%particles)) then
+      write(*,*) "WARNING: group ", i, " not allocated, exiting"
+      call MPI_ABORT(MPI_COMM_WORLD, 1, ierr)
+    end if
     ! Find the number of particles on each node
     call MPI_AllGather(size(sim%groups(i)%particles,1),1,MPI_INTEGER,&
         particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -238,6 +242,8 @@ end if
 call h5sclose_f(aspace_id, hdferr)
 call h5fclose_f(file, hdferr)
 call h5close_f(hdferr)
+
+write(*,*) "Writing particle output file to ", filename, " succeeded"
 end subroutine write_simulation_hdf5
 
 

@@ -3,17 +3,17 @@
 module mod_random_seed
   implicit none
   private
-  public :: gen_random_seed
+  public :: random_seed
 contains
   !> Try some methods to get a nice random seed
-  subroutine gen_random_seed(seed)
+  function random_seed() result(seed)
     implicit none
-    integer, intent(out) :: seed
+    integer :: seed
     integer :: ierr
 
     call read_urandom_int(seed, ierr)
     if (ierr .ne. 0) seed = xor_time_pid()
-  end subroutine gen_random_seed
+end function random_seed
 
   !> Read an int from /dev/urandom
   subroutine read_urandom_int(seed, ierr)

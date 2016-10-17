@@ -28,7 +28,7 @@ program JOREK2_FOUR
   call initialise_parameters(0, "__NO_FILENAME__")                 ! default values and namelist input
   call log_parameters(0)
   call initialise_basis                         ! define the basis functions at the Gaussian points
-  call import_restart(node_list,element_list, rst_format, ierr)   ! read restart file
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)   ! read restart file
   !   --- Preset field line tracing parameters.
   nstpts      = 30
   nmaxsteps   = 2500

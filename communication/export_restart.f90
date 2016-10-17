@@ -499,6 +499,8 @@ end if
 #endif
   end if
 
+#else
+  write (6,*) " ERROR: trying to export with hdf5 but USE_HDF5 was not set at compile-time"
 #endif
 
   return

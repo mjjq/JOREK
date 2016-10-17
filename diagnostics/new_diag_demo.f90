@@ -88,7 +88,7 @@ program demo
   my_id = 0
   call initialise_parameters(my_id, "__NO_FILENAME__")
   call det_modes()
-  call import_restart(node_list, element_list, rst_format, ierr)
+  call import_restart(node_list, element_list, 'jorek_restart',  rst_format, ierr)
   call initialise_basis()
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
   

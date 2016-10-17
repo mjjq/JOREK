@@ -329,7 +329,7 @@ required = 0
   
   if ( restart .and. (my_id == 0) ) then
     
-    call import_restart(node_list, element_list, rst_format, ierr)
+    call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
 #ifdef USE_HDF5

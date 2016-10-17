@@ -1,6 +1,6 @@
 module mod_neighbours
 contains
-logical function neighbours(elm1,elm2,inb1,inb2)
+logical function neighbours(node_list,elm1,elm2,inb1,inb2)
 !-------------------------------------------------------
 ! function to check if the two elements elm1 and elm2
 ! are neighbours. Two elements are neighbours if they
@@ -12,27 +12,34 @@ logical function neighbours(elm1,elm2,inb1,inb2)
 use data_structure
 implicit none
 
-type (type_element) :: elm1, elm2
-integer             :: inb1, inb2, iv(4,2), i, j, nb
+type (type_element), intent(in) :: elm1, elm2
+type (type_node_list),intent(in) ::  node_list
 
-neighbours = .false.
-nb = 0
-! write(*,'(A13,4i6,A2,4i6)') ' NEIGHBOURS? ',elm1%vertex,'  ',elm2%vertex
-do i=1,4
-  do j=1,4
-    if (elm1%vertex(i)==elm2%vertex(j)) then
-      nb = nb + 1
-      iv(nb,1) = i
-      iv(nb,2) = j
-    endif
+integer, intent(out) :: inb1, inb2
+
+real*8,parameter :: toll=1.d-8
+
+integer :: iv(4,2), i, j, nb
+real*8 :: dist
+
+  neighbours = .false.
+  nb = 0
+  ! write(*,'(A13,4i6,A2,4i6)') ' NEIGHBOURS? ',elm1%vertex,'  ',elm2%vertex
+  do i=1,4
+    do j=1,4
+      dist = norm2(node_list%node(elm1%vertex(i))%x(1,1:2)-node_list%node(elm2%vertex(j))%x(1,1:2))
+      if((dist.lt.toll).and.(nb.lt.4)) then
+        nb = nb + 1
+        iv(nb,1) = i
+        iv(nb,2) = j
+      endif
+    enddo
   enddo
-enddo
-if (nb .gt. 1 ) then
-  neighbours=.true.
-  inb1 = minval(iv(1:nb,1)) ; if ( abs(iv(1,1)-iv(2,1)) .gt. 1 ) inb1 = 4
-  inb2 = minval(iv(1:nb,2)) ; if ( abs(iv(1,2)-iv(2,2)) .gt. 1 ) inb2 = 4
-else
-endif
-return
+  if (nb .gt. 1 ) then
+    neighbours=.true.
+    inb1 = minval(iv(1:nb,1)) ; if ( abs(iv(1,1)-iv(2,1)) .gt. 1 ) inb1 = 4
+    inb2 = minval(iv(1:nb,2)) ; if ( abs(iv(1,2)-iv(2,2)) .gt. 1 ) inb2 = 4
+  endif
+  return
 end function neighbours
 end module mod_neighbours

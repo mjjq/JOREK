@@ -488,6 +488,25 @@ do i=1,element_list%n_elements
 
       endif         ! xjac
 
+#ifdef fullmhd
+      ! Magnetic field components
+      call interp(node_list,element_list,i,var_AR,i_tor,s,t,U0,U0_s,U0_t,U0_st,U0_ss,U0_tt)
+      call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V0,V0_s,V0_t,V0_st,V0_ss,V0_tt)
+      call interp(node_list,element_list,i,var_A3,i_tor,s,t,W0,W0_s,W0_t,W0_st,W0_ss,W0_tt)
+
+      AR_Z = ( - R_t * U0_s + R_s * U0_t ) / xjac
+      AZ_R = (   Z_t * V0_s - Z_s * V0_t ) / xjac
+      A3_R = (   Z_t * W0_s - Z_s * W0_t ) / xjac
+      A3_Z = ( - R_t * W0_s + R_s * W0_t ) / xjac
+      AR_p = 0.d0 ; AZ_p = 0.d0
+
+      call interp(node_list,element_list,i,456,i_tor,s,t,W0,W0_s,W0_t,W0_st,W0_ss,W0_tt)
+      Fprof = W
+
+      scalars(inode,n_var+1) = ( AZ_R - AR_Z )+ Fprof / R	 ! B_phi
+      scalars(inode,n_var+2) = ( A3_Z - AZ_p )/ BigR		 ! B_R
+      scalars(inode,n_var+3) = ( AR_p - A3_R )/ BigR		 ! B_Z
+#endif
 
       ! old values back to normal
       i_tor = i_tor_old
@@ -576,6 +595,13 @@ do i=1,element_list%n_elements
         Ti_sum  = 0.d0; Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0
         Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
         w_sum	= 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
+
+#ifdef fullmhd
+        !reinitialize Bphi,BR,B_Z for loop over all modes
+        scalars(inode,n_var+1) = 0.  
+        scalars(inode,n_var+2) = 0.  
+        scalars(inode,n_var+3) = 0.  
+#endif
 
         do i_tor = 1, n_tor
 

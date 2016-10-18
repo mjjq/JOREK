@@ -47,17 +47,16 @@ end subroutine test_half_gyro_orbit_convergence
 function x_orbit(timestep, time) result(x)
   type(particle_kinetic_leapfrog) :: particle
   real*8, intent(in)   :: timestep, time
-  real*8 :: x(2)
+  real*8 :: x(2), m
   integer :: i
 
   particle%x(:)  = [1.d0, 0.d0, 0.d0]
   particle%v(:)  = [0.d0, TWOPI, 0.d0] ! TODO get accurate v^(-1/2), see Delzanno, JCP (2013) and pusher_test
   particle%q     = 1 ! +1 e
-  particle%m     = EL_CHG/TWOPI/ATOMIC_MASS_UNIT ! mass in unified atomic mass units to have f=1Hz in a field of 1 Tesla
-  particle%lost = .false.
+  m              = EL_CHG/TWOPI/ATOMIC_MASS_UNIT ! mass in unified atomic mass units to have f=1Hz in a field of 1 Tesla
 
   do i=1,nint(time/timestep)
-    call boris_push_cartesian(particle, [0d0,0d0,0d0], [0d0,0d0,-1d0], timestep)
+    call boris_push_cartesian(particle, m, [0d0,0d0,0d0], [0d0,0d0,-1d0], timestep)
   end do
   x = particle%x(1:2)
 end function

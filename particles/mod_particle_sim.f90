@@ -8,6 +8,8 @@ public particle_group, particle_sim
 !> A group of particles, implemented as an allocatable array.
 !> It must contain particles of the same species (charge number).
 type :: particle_group
+  integer :: Z !< Atomic number of al particles in the group (-1 for electrons, 0 for fieldline-following)
+  real*8  :: mass !< Mass of all the particles in the group
   class(particle_base), dimension(:), allocatable :: particles
 end type particle_group
 
@@ -46,14 +48,11 @@ subroutine initialize(sim, num_groups)
     if (my_id .eq. 0) write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
   enddo
 
+  ! Initialise parameters
+  call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
+
   ! Initialise the gaussian points at basis functions
   call initialise_basis
-
-  ! Initialise parameters
-
-  ! Broadcast parameters, phys
-
-  ! Initialise RNG seed, select (Q)RNG
 end subroutine
 
 !> Actions to perform when stopping the simulation.

@@ -18,6 +18,7 @@ module mod_penning_case
   !> See [[mod_penning_case]] for a description of the testcase.
   type, extends(case), abstract :: case_penning
     real*8 :: time_end = time_end
+    real*8 :: mass = mass
     contains
       procedure :: initialize => initialize_particle_penning
       procedure :: calc_error => calculate_error_norm
@@ -41,20 +42,19 @@ contains
 pure subroutine initialize_particle_penning(this, particle)
   class(case_penning), intent(in)   :: this
   class(particle_base), intent(inout) :: particle
-  particle%q = charge
-  particle%m = mass
-  particle%lost = .false.
   select type (this)
   type is (case_penning_cartesian)
     particle%x = x0
     select type (particle)
     type is (particle_kinetic_leapfrog)
+      particle%q = charge
       particle%v = v0
     end select
   type is (case_penning_cylindrical)
     particle%x = cartesian_to_cylindrical(x0)
     select type (particle)
     type is (particle_kinetic_leapfrog)
+      particle%q = charge
       particle%v = vector_rotation(cartesian_to_cylindrical(v0), particle%x(3))
     end select
   end select

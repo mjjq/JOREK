@@ -20,6 +20,7 @@ type (type_element_list),     pointer :: element_list
 type (type_bnd_element_list), pointer :: bnd_elm_list    
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
+integer               :: n_bfield, n_vfield
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 integer,allocatable   :: ien (:,:)
 integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node, my_id

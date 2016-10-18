@@ -19,4 +19,14 @@ use mod_jorek_fields_interp_linear
 ! RNGs
 use mod_pcg32_rng
 use mod_sobseq_rng
+
+! Diagnostics
+use mod_diag_print_kinetic_energy
+use mod_project_particles
+
+! Default variables
+implicit none
+type(particle_sim) :: sim
+type(event), dimension(:), allocatable :: events
+type(read_jorek_fields_interp_linear)  :: fields
 end module particle_tracer

@@ -1,5 +1,5 @@
 #include <unistd.h>
-void fgetpid(int *id)
+int fgetpid()
 {
-  *id = (int)getpid();
+  return (int)getpid();
 }

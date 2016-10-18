@@ -184,13 +184,10 @@ subroutine allocate_particles(particles, n)
   type is (particle_kinetic_leapfrog)
     do i=1,size(p,1)
       p(i)%x = real((/i,i+1,i+2/),8)
-      p(i)%m = real(i,4)/3
       p(i)%weight = real(i+1,4)/4
       call random_number(p(i)%st)
       p(i)%i_elm = 100*i
       p(i)%q = int(3*i,1)
-      p(i)%label = int(4*i,1)
-      p(i)%lost = .true.
       p(i)%v = real((/2*i,2*i+1,2*i+2/),8)
     end do
   end select
@@ -205,19 +202,16 @@ function particles_same(p1, p2) result(same)
 
   ! Base attributes testing
   if (norm2(p1%x-p2%x)         .gt. tolerance) same = .false.
-  if (abs(p1%m-p2%m)     .gt. tolerance) same = .false.
   if (abs(p1%weight-p2%weight) .gt. tolerance) same = .false.
   if (norm2(p1%st-p2%st)       .gt. tolerance) same = .false.
   if (p1%i_elm .ne. p2%i_elm)  same = .false.
-  if (p1%q     .ne. p2%q)      same = .false.
-  if (p1%label .ne. p2%label)  same = .false.
-  if (p1%lost  .neqv. p2%lost) same = .false.
 
   select type(p1 => p1)
     type is (particle_kinetic_leapfrog)
       select type (p2 => p2)
         type is (particle_kinetic_leapfrog)
           if (norm2(p1%v-p2%v) .gt. tolerance) same = .false.
+          if (p1%q     .ne. p2%q)      same = .false.
         class default
           same = .false.
       end select

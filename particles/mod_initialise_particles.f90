@@ -72,8 +72,24 @@ subroutine set_particle_position_rejection_sampling(particles, node_list, elemen
   ! Setup bounding boxes
   call domain_bounding_box(node_list, element_list, Rbox(1), Rbox(2), Zbox(1), Zbox(2))
   Phibox = [0.d0, TWOPI]
-  if (present(Rbound)) Rbox = Rbound
-  if (present(Zbound)) Zbox = Zbound
+  ! Check if the requested bounding boxes have any overlap with the domain
+  ! Does not check for combinations of R and Z
+  if (present(Rbound)) then
+    if (maxval(Rbound) .gt. minval(Rbox) .and. maxval(Rbox) .gt. minval(Rbound)) then
+      Rbox = Rbound
+    else
+      write(*,*) "ERROR: no overlap between domain and requested bounding box in R, domain=", Rbox, ", box=", Rbound
+      write(*,*) "Sampling from whole domain in R"
+    end if
+  end if
+  if (present(Zbound)) then
+    if (maxval(Zbound) .gt. minval(Zbox) .and. maxval(Zbox) .gt. minval(Zbound)) then
+      Zbox = Zbound
+    else
+      write(*,*) "ERROR: no overlap between domain and requested bounding box in Z, domain=", Zbox, ", box=", Zbound
+      write(*,*) "Sampling from whole domain in Z"
+    end if
+  end if
   if (present(Phibound)) PhiBox = Phibound
 
   ! Setup (Q)RNGs, one per thread
@@ -204,10 +220,9 @@ particles(:)%weight = particles(:)%weight / sum_weights * num_atoms_total
 end subroutine adjust_particle_weights
 
 !> Set v and q of a particle for use with kinetic codes
-subroutine set_charge_from_coronal_eq(particles, cor, ran4, ifail)
+subroutine set_charge_from_coronal_eq(particles, node_list, element_list, cor, ran4, ifail)
 use constants
 use data_structure
-use nodes_elements
 use phys_module, only : central_density, central_mass
 use mod_openadas
 use mod_sampling
@@ -215,44 +230,28 @@ use mod_coronal
 implicit none
 
 class(particle_base), intent(inout), dimension(:) :: particles !< Particle to initialize
+type(type_node_list), intent(in)                  :: node_list
+type(type_element_list), intent(in)               :: element_list
 type(type_coronal), intent(in)     :: cor !< Coronal equilibrium datatype for this particle
 real*8, dimension(4), intent(in)   :: ran4 !< Four uniform random numbers (or sobol subset)
 integer, intent(out) :: ifail
 
-integer :: i_var(4), i
-real*8, dimension(4) :: P, P_s, P_t, P_phi
-real*8 :: v_out(4)
+integer :: i
+real*8, dimension(2) :: P, P_s, P_t, P_phi
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
-real*8 :: background_density, background_kbT, background_kelvin, V_thermal
-real*8 :: v_norm
+real*8 :: background_density, background_kbT, background_kelvin
 real*8 :: Z_coronal, radiation_coronal
 real*8 :: mass_main_ion
 
 select type (particles)
 type is (particle_kinetic_leapfrog)
   do i=1,size(particles)
-    i_var = (/ 1, 5, 6, 7 /)
-    call interp_PRZ(node_list,element_list,particles(i)%i_elm,i_var,size(i_var),particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+    call interp_PRZ(node_list,element_list,particles(i)%i_elm,[5,6],2,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
         P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
-    background_density = P(2) * 1d20                                    ! plasma density [1/m^3]
-    background_kbT     = P(3) /(MU_ZERO*central_density*1.d20)          ! Total plasma temperature in J/kB = T = Te + Ti
+    background_density = P(1) * 1d20                                    ! plasma density [1/m^3]
+    background_kbT     = P(2) /(MU_ZERO*central_density*1.d20)          ! Total plasma temperature in J/kB = T = Te + Ti
     background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron temperature [K]
-    ! This is not valid for model400 (for that, remove the factor 2 above and below)
-
-    V_thermal = sqrt(background_kbT / (2.d0*particles(i)%m*ATOMIC_MASS_UNIT))      ! [m/s]
-
-    v_out = boxmueller_transform(ran4) * V_thermal ! [m/s], vx, vy, vz, dummy
-
-    particles(i)%v(1) =   v_out(1) * cos(particles(i)%x(3)) + v_out(2) * sin(particles(i)%x(3))   ! V_R
-    particles(i)%v(3) = - v_out(1) * sin(particles(i)%x(3)) + v_out(2) * cos(particles(i)%x(3))   ! V_phi [physical component]
-    particles(i)%v(2) =   v_out(3)                                    ! V_Z
-
-    mass_main_ion        = mass_proton * central_mass
-
-    v_norm = sqrt(mu_zero * mass_main_ion * central_density * 1.d20)      ! JOREK normalisation for velocity
-    particles(i)%v = particles(i)%v * v_norm
-
     if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
       ifail = 1
     else
@@ -266,7 +265,7 @@ end select
 end subroutine set_charge_from_coronal_eq
 
 !> Set v of a particle for use with kinetic codes
-subroutine set_kinetic_particle_velocity_from_T(particles, node_list, element_list, rng, v_par, grad_T)
+subroutine set_kinetic_particle_velocity_from_T(particles, mass, node_list, element_list, rng, v_par, grad_T)
 use constants
 use data_structure
 use phys_module, only : central_density, central_mass
@@ -276,6 +275,7 @@ use mod_random_seed
 implicit none
 
 class(particle_base), intent(inout), dimension(:) :: particles !< Particle to initialize
+real*8, intent(in)                                :: mass
 type(type_node_list), intent(in)                  :: node_list
 type(type_element_list), intent(in)               :: element_list
 class(type_rng), intent(in)                       :: rng
@@ -300,10 +300,6 @@ if (my_id .eq. 0) seed = random_seed()
 call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
 call my_rng%initialize(4, seed, n_cpu, my_id, ifail)
 
-#if (JOREK_MODEL != 303)
-write(*,*) "ERROR: v// not implemented"
-call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
-#endif
 if (present(v_par) .and. v_par) then
   write(*,*) "ERROR: initialization with v// not implemented"
   call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
@@ -322,7 +318,7 @@ do i=1,size(particles)
   background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron temperature [K]
   ! This is not valid for model400 (for that, remove the factor 2 above and below)
 
-  V_thermal = sqrt(background_kbT / (2.d0*particles(i)%m*ATOMIC_MASS_UNIT))      ! [m/s]
+  V_thermal = sqrt(background_kbT / (2.d0*mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
   call my_rng%next(ran4)
   v_out = boxmueller_transform(ran4) * V_thermal ! [m/s], vx, vy, vz, dummy

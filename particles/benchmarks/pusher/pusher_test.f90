@@ -37,11 +37,11 @@ subroutine test_boris
   do i=1,size(penning_timesteps)
     n_steps = nint(case1%time_end/penning_timesteps(i))
     call case1%initialize(particle)
-    call boris_initial_half_step_backwards_RZPhi(particle, case1%E(particle%x, 0.d0), &
+    call boris_initial_half_step_backwards_RZPhi(particle, case1%mass, case1%E(particle%x, 0.d0), &
       case1%B(particle%x, 0.d0), penning_timesteps(i))
     call cpu_time(t0)
     do k=1,n_steps
-      call boris_push_cylindrical(particle, case1%E(particle%x, 0.d0), case1%B(particle%x, 0.d0), penning_timesteps(i))
+      call boris_push_cylindrical(particle, case1%mass, case1%E(particle%x, 0.d0), case1%B(particle%x, 0.d0), penning_timesteps(i))
     end do
     call cpu_time(t1)
     err = case1%calc_error(particle)
@@ -50,11 +50,11 @@ subroutine test_boris
   do i=1,size(penning_timesteps)
     n_steps = nint(case2%time_end/penning_timesteps(i))
     call case2%initialize(particle)
-    call boris_initial_half_step_backwards_XYZ(particle, case2%E(particle%x, 0.d0), &
+    call boris_initial_half_step_backwards_XYZ(particle, case2%mass, case2%E(particle%x, 0.d0), &
       case2%B(particle%x, 0.d0), penning_timesteps(i))
     call cpu_time(t0)
     do k=1,n_steps
-      call boris_push_cartesian(particle, case2%E(particle%x, 0.d0), case2%B(particle%x, 0.d0), penning_timesteps(i))
+      call boris_push_cartesian(particle, case2%mass, case2%E(particle%x, 0.d0), case2%B(particle%x, 0.d0), penning_timesteps(i))
     end do
     call cpu_time(t1)
     err = case2%calc_error(particle)
@@ -63,11 +63,11 @@ subroutine test_boris
   do i=1,size(gradB_timesteps)
     n_steps = nint(case3%time_end/gradB_timesteps(i))
     call case3%initialize(particle)
-    call boris_initial_half_step_backwards_RZPhi(particle, case3%E(particle%x, 0.d0), &
+    call boris_initial_half_step_backwards_RZPhi(particle, case3%mass, case3%E(particle%x, 0.d0), &
       case3%B(particle%x, 0.d0), gradB_timesteps(i))
     call cpu_time(t0)
     do k=1,n_steps
-      call boris_push_cylindrical(particle, case3%E(particle%x, 0.d0), case3%B(particle%x, 0.d0), gradB_timesteps(i))
+    call boris_push_cylindrical(particle, case3%mass, case3%E(particle%x, 0.d0), case3%B(particle%x, 0.d0), gradB_timesteps(i))
     end do
     call cpu_time(t1)
     err = case3%calc_error(particle)
@@ -76,11 +76,11 @@ subroutine test_boris
   do i=1,size(gradB_timesteps)
     n_steps = nint(case4%time_end/gradB_timesteps(i))
     call case4%initialize(particle)
-    call boris_initial_half_step_backwards_XYZ(particle, case4%E(particle%x, 0.d0), &
+    call boris_initial_half_step_backwards_XYZ(particle, case4%mass, case4%E(particle%x, 0.d0), &
       case4%B(particle%x, 0.d0), gradB_timesteps(i))
     call cpu_time(t0)
     do k=1,n_steps
-      call boris_push_cartesian(particle, case4%E(particle%x, 0.d0), case4%B(particle%x, 0.d0), gradB_timesteps(i))
+      call boris_push_cartesian(particle, case4%mass, case4%E(particle%x, 0.d0), case4%B(particle%x, 0.d0), gradB_timesteps(i))
     end do
     call cpu_time(t1)
     err = case4%calc_error(particle)
@@ -92,10 +92,10 @@ subroutine test_boris
   open(newunit=u, file='gradB_cartesian_1d-2.txt')
   n_steps = nint(case4%time_end/1d-2)
   call case4%initialize(particle)
-  call boris_initial_half_step_backwards_RZPhi(particle, case4%E(particle%x, 0.d0), &
+  call boris_initial_half_step_backwards_RZPhi(particle, case4%mass, case4%E(particle%x, 0.d0), &
     case4%B(particle%x, 0.d0), 1d-2)
   do k=1,n_steps
-    call boris_push_cartesian(particle, case4%E(particle%x, 0.d0), case4%B(particle%x, 0.d0), 1d-2)
+    call boris_push_cartesian(particle, case4%mass, case4%E(particle%x, 0.d0), case4%B(particle%x, 0.d0), 1d-2)
     write(u,*) particle%x
   end do
   close(u)
@@ -103,10 +103,10 @@ subroutine test_boris
   open(newunit=u, file='penning_cartesian_1d-2.txt')
   n_steps = nint(case2%time_end/1d-2)
   call case2%initialize(particle)
-  call boris_initial_half_step_backwards_XYZ(particle, case2%E(particle%x, 0.d0), &
+  call boris_initial_half_step_backwards_XYZ(particle, case2%mass, case2%E(particle%x, 0.d0), &
     case2%B(particle%x, 0.d0), 1d-2)
   do k=1,n_steps
-    call boris_push_cartesian(particle, case2%E(particle%x, 0.d0), case2%B(particle%x, 0.d0), 1d-2)
+  call boris_push_cartesian(particle, case2%mass, case2%E(particle%x, 0.d0), case2%B(particle%x, 0.d0), 1d-2)
     write(u,*) particle%x
   end do
   close(u)

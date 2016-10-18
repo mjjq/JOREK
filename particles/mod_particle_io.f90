@@ -14,7 +14,7 @@ character(len=*), parameter :: particle_type_name_field_name = 'particle_type' !
 contains
 
 !> Create hdf5 data type.
-!> The code below ([[import_particles]] and [[export_particles]]) is slightly 
+!> The code below ([[import_particles]] and [[export_particles]]) is slightly
 !> illegal according to the standard.
 !> - interoperability between C and fortran is not supported for polymorphism
 !> - we don't know if all of the particles will follow eachother in memory
@@ -23,7 +23,7 @@ contains
 !> but it seems to work in ifort and in gfortran with a workaround for C_LOC.
 !>
 !>###TODO
-!> 
+!>
 !>* Check portability when using only a single datatype instead of a filetype and memtype
 function get_hdf5_particle_data_type(particles) result(data_type)
 use iso_c_binding
@@ -35,14 +35,14 @@ integer                     :: hdferr
 integer(HID_T)              :: st_array, x_array
 integer(HSIZE_T), parameter :: st_dim(1) = (/2/) !< JOREK integration
 integer(HSIZE_T), parameter :: x_dim(1) = (/3/) !< JOREK integration
-integer(HSIZE_T), dimension(0:9) :: offsets
+integer(HSIZE_T), dimension(0:6) :: offsets
 
 ! Reallocate to a fixed-size list to allow for single-particle lists
 if (size(particles,1) .eq. 0) then
   write(*,*) "ERROR: no particles given"
   call exit(1)
 end if
-allocate(particles_2(1:2), source=particles(1)) 
+allocate(particles_2(1:2), source=particles(1))
 
 ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
 ! for now, copy this code for each particle type expected
@@ -51,23 +51,15 @@ select type(p => particles_2)
 type is (particle_kinetic)
   offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
   offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
-  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%m))
+  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
   offsets(3) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%weight))
-  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
-  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
-  offsets(7) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%label))
-  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
-  offsets(8) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%lost))
+  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
 type is (particle_kinetic_leapfrog)
   offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
   offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
-  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%m))
+  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
   offsets(3) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%weight))
-  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
-  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
-  offsets(7) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%label))
-  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
-  offsets(8) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%lost))
+  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
 class default
   write(*,*) "ERROR: unknown particle type for creating hdf5 type"
   call exit(1)
@@ -77,45 +69,33 @@ end select
 call h5open_f(hdferr)
 
 ! Create the compound data_type
-call h5tcreate_f(H5T_COMPOUND_F, offsets(0), &
-                                 data_type, hdferr)
+call h5tcreate_f(H5T_COMPOUND_F, offsets(0), data_type, hdferr)
 
 call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, st_dim, st_array, hdferr)
 call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, x_dim, x_array, hdferr)
 
 ! Fill type
-call h5tinsert_f(data_type, "x [m] at time t", &
-     offsets(1), x_array, hdferr)
-call h5tinsert_f(data_type, "m [atomic mass units]", &
-     offsets(2), H5T_NATIVE_REAL, hdferr)
+call h5tinsert_f(data_type, "x [m] at time t", offsets(1), x_array, hdferr)
+call h5tinsert_f(data_type, "st", offsets(2), st_array, hdferr)
 call h5tinsert_f(data_type, "weight (number of particles)", &
      offsets(3), H5T_NATIVE_REAL, hdferr)
-
-
-call h5tinsert_f(data_type, "st", offsets(4), st_array, hdferr)
-call h5tinsert_f(data_type, "i_elm", offsets(5), H5T_NATIVE_INTEGER, hdferr)
-
-
-call h5tinsert_f(data_type, "q [electron charges]", offsets(6), &
-     h5kind_to_type(kind(particles(1)%q),H5_INTEGER_KIND), hdferr)
-
-call h5tinsert_f(data_type, "label", offsets(7), &
-     h5kind_to_type(kind(particles(1)%label),H5_INTEGER_KIND), hdferr)
-
-call h5tinsert_f(data_type, "lost", offsets(8), &
-     h5kind_to_type(kind(particles(1)%lost),H5_INTEGER_KIND), hdferr)
+call h5tinsert_f(data_type, "i_elm", offsets(4), H5T_NATIVE_INTEGER, hdferr)
 
 
 ! type-specific fields
 select type(p => particles)
 type is (particle_kinetic)
-  offsets(9) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
-  call h5tinsert_f(data_type, "v [m/s]", &
-     offsets(9), x_array, hdferr)
+  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
+  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
+  call h5tinsert_f(data_type, "v [m/s]", offsets(5), x_array, hdferr)
+  call h5tinsert_f(data_type, "q [e]",   offsets(6), &
+      h5kind_to_type(kind(p%q),H5_INTEGER_KIND), hdferr)
 type is (particle_kinetic_leapfrog)
-  offsets(9) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
-  call h5tinsert_f(data_type, "v [m/s] at time t-1/2 dt", &
-     offsets(9), x_array, hdferr)
+  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
+  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
+  call h5tinsert_f(data_type, "v [m/s]", offsets(5), x_array, hdferr)
+  call h5tinsert_f(data_type, "q [e]",   offsets(6), &
+      h5kind_to_type(kind(p%q),H5_INTEGER_KIND), hdferr)
 ! add new particle types here
 end select
 end function get_hdf5_particle_data_type

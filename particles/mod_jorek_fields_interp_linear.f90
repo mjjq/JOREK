@@ -49,6 +49,8 @@ subroutine read_jorek_fields_impl(this, sim)
   character(len=80) :: restart_file
   integer :: i, ierr
   logical :: file_exists
+  integer :: DUMMY_INT
+  real*8  :: DUMMY_REAL
 
   logical, save :: neighbours_updated = .false.
 
@@ -95,6 +97,9 @@ subroutine read_jorek_fields_impl(this, sim)
     call update_neighbours(this%element_list, this%node_list)
     neighbours_updated = .true.
   end if
+
+  ! Call find_RZ once to initialise elements_minmax
+  call find_RZ(this%node_list,this%element_list,0.d0,0.d0,DUMMY_REAL,DUMMY_REAL,DUMMY_INT,DUMMY_REAL,DUMMY_REAL,DUMMY_INT)
 end subroutine read_jorek_fields_impl
 
 !> Calculates the electric and magnetic fields at a specific position

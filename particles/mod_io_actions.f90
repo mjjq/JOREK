@@ -5,8 +5,8 @@ use mod_action
 use mod_particle_sim
 implicit none
 private
-public read_action, write_action, &
-    get_filename ! public because we test it externally
+public io_action, read_action, write_action, &
+    get_filename
 
 type, extends(action), abstract :: io_action
   character(len=120), public :: filename = '' !< Filename to use

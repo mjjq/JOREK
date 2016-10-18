@@ -91,6 +91,8 @@ do element_try_index = 1, element_try_max
     do backtrack_step = 0, num_backtrack_steps
       st_try = (st_new + 0.5**backtrack_step * st_step)
 
+      ! Stop if st_try becomes too large
+      if (maxval(abs(st_try)) .gt. 1d2) exit
       ! Calculate the x_step corresponding to st_try with the coordinates of element i_elm_new
       call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
       err2 = dot_product(x_step-x_new,x_step-x_new)
@@ -140,7 +142,7 @@ do element_try_index = 1, element_try_max
     return
   case (3) ! SEARCH
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    write(*,"(A,i5,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
+    !write(*,"(A,i5,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
     ifail=4
     return ! Stop because find_RZ works always
   case default ! SAME == 0
@@ -161,10 +163,14 @@ type (type_element_list), intent(in)    :: element_list
 real*8,                   intent(in)    :: st(2)
 integer,                  intent(in)    :: i_elm
 real*8,                   intent(out)   :: x(2), R_s, R_t, Z_s, Z_t, inv_st_jac_det
-
-real*8, parameter :: inv_st_jac_det_max = 1.d6
+real*8 :: jac
 
 call interp3_RZ(node_list,element_list,i_elm,st(1),st(2),x(1),R_s,R_t,x(2),Z_s,Z_t)
-inv_st_jac_det = 1.d0/(R_s * Z_t - R_t * Z_s)
-if (inv_st_jac_det**2 .gt. inv_st_jac_det_max**2) inv_st_jac_det = sign(inv_st_jac_det_max, inv_st_jac_det)
+! Guard against the determinant being close to zero
+jac = R_s * Z_t - R_t * Z_s
+if (abs(jac) .lt. 1d-8) then
+  inv_st_jac_det = sign(1d8, jac) 
+else
+  inv_st_jac_det = 1.d0/(jac)
+end if
 end subroutine try_interp

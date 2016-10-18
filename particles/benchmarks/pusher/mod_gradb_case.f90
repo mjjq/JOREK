@@ -33,6 +33,7 @@ module mod_gradb_case
   !> Case for a penning trap in cartesian coordinates
   type, extends(case), abstract :: case_gradB
     real*8 :: time_end = time_end
+    real*8 :: mass = mass
     contains
       procedure :: initialize => initialize_particle_gradB
       procedure :: calc_error => calculate_error_gradB
@@ -56,20 +57,19 @@ contains
 pure subroutine initialize_particle_gradB(this, particle)
   class(case_gradB), intent(in)       :: this
   class(particle_base), intent(inout) :: particle
-  particle%q = charge
-  particle%m = mass
-  particle%lost = .false.
   select type (this)
   type is (case_gradB_cartesian)
     particle%x = x0
     select type (particle)
     type is (particle_kinetic_leapfrog)
+      particle%q = charge
       particle%v = v0
     end select
   type is (case_gradB_cylindrical)
     particle%x = cartesian_to_cylindrical(x0)
     select type (particle)
     type is (particle_kinetic_leapfrog)
+      particle%q = charge
       particle%v = vector_rotation(v0, particle%x(3))
     end select
   end select

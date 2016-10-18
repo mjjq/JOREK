@@ -16,14 +16,15 @@ contains
 !> Push a single particle for some timesteps with the boris method
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details.
 !> This routine works in RZPhi coordinates
-pure subroutine boris_push_cylindrical(particle, E, B, dt)
+pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
   type(particle_kinetic_leapfrog), intent(inout)  :: particle
+  real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
   real*8, intent(in) :: dt
   real*8 :: R, Rphi
   real*8 :: fE, fB, eom
   real*8 :: psi, U, B2, Bnorm
-  eom = EL_CHG / (particle%m * ATOMIC_MASS_UNIT)
+  eom = EL_CHG / (m * ATOMIC_MASS_UNIT)
 
   B2    = dot_product(B,B)
   Bnorm = sqrt(B2)
@@ -60,13 +61,14 @@ end subroutine boris_push_cylindrical
 !> Push a single particle for some timesteps with the boris method
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
 !> This routine works in a left-handed cartesian coordinate system (XYZ)
-pure subroutine boris_push_cartesian(particle, E, B, dt)
+pure subroutine boris_push_cartesian(particle, m, E, B, dt)
   class(particle_kinetic_leapfrog), intent(inout)  :: particle
+  real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
   real*8, intent(in) :: dt
   real*8  :: fE, fB, eom
   real*8  :: psi, U, B2, Bnorm
-  eom = EL_CHG / (particle%m * ATOMIC_MASS_UNIT)
+  eom = EL_CHG / (m * ATOMIC_MASS_UNIT)
 
   B2    = dot_product(B,B)
   Bnorm = sqrt(B2)
@@ -92,14 +94,15 @@ end subroutine boris_push_cartesian
 
 !> Given a particle with position x and velocity v at time t=0 (t^0), calculate v^-1/2
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
-pure subroutine boris_initial_half_step_backwards_XYZ(particle, E, B, dt)
+pure subroutine boris_initial_half_step_backwards_XYZ(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(particle_kinetic_leapfrog), intent(inout) :: particle
+  real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B 
   real*8, intent(in) :: dt
   real*8, dimension(3) :: v !< for calculating the initial half-step
   real*8 :: f, B2
-  f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * particle%m) * dt * 0.25d0
+  f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * m) * dt * 0.25d0
   B2 = dot_product(B, B)
   v = particle%v + f*E
   v = (v + 2.d0*f/(1.d0+f**2*B2) &
@@ -111,14 +114,15 @@ end subroutine boris_initial_half_step_backwards_XYZ
 !> Given a particle with position x and velocity v at time t=0 (t^0), calculate v^-1/2
 !> in cylindrical coordinates this is the same as in cartesian coordinates
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
-pure subroutine boris_initial_half_step_backwards_RZPhi(particle, E, B, dt)
+pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(particle_kinetic_leapfrog), intent(inout) :: particle
+  real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B 
   real*8, intent(in) :: dt
   real*8, dimension(3) :: v !< for calculating the initial half-step
   real*8 :: f, B2
-  f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * particle%m) * dt * 0.25d0
+  f = - (EL_CHG * real(particle%q)) / (ATOMIC_MASS_UNIT * m) * dt * 0.25d0
   B2 = dot_product(B, B)
   v = particle%v + f*E
   v = (v + 2.d0*f/(1.d0+f**2*B2) &

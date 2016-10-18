@@ -16,10 +16,10 @@ subroutine test_penning_case_cartesian_4
 
   n_steps = nint(case%time_end/dt)
   call case%initialize(particle)
-  call boris_initial_half_step_backwards_XYZ(particle, case%E(particle%x, 0.d0), &
+  call boris_initial_half_step_backwards_XYZ(particle, case%mass, case%E(particle%x, 0.d0), &
     case%B(particle%x, 0.d0), dt)
   do k=1,n_steps
-    call boris_push_cartesian(particle, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
+  call boris_push_cartesian(particle, case%mass, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
   end do
   err = case%calc_error(particle)
   call assert_true(1.1d-4 .gt. err, "Error must be below 1.1d-4")
@@ -33,10 +33,10 @@ subroutine test_penning_case_cartesian_5
 
   n_steps = nint(case%time_end/dt)
   call case%initialize(particle)
-  call boris_initial_half_step_backwards_XYZ(particle, case%E(particle%x, 0.d0), &
+  call boris_initial_half_step_backwards_XYZ(particle, case%mass, case%E(particle%x, 0.d0), &
     case%B(particle%x, 0.d0), dt)
   do k=1,n_steps
-    call boris_push_cartesian(particle, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
+    call boris_push_cartesian(particle, case%mass, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
   end do
   err = case%calc_error(particle)
   call assert_true(1.1d-6 .gt. err, "Error must be below 1.1d-6")
@@ -52,10 +52,10 @@ subroutine test_penning_case_cylindrical_4
 
   n_steps = nint(case%time_end/dt)
   call case%initialize(particle)
-  call boris_initial_half_step_backwards_RZPhi(particle, case%E(particle%x, 0.d0), &
+  call boris_initial_half_step_backwards_RZPhi(particle, case%mass, case%E(particle%x, 0.d0), &
     case%B(particle%x, 0.d0), dt)
   do k=1,n_steps
-    call boris_push_cylindrical(particle, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
+    call boris_push_cylindrical(particle, case%mass, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
   end do
   err = case%calc_error(particle)
   call assert_true(1.1d-4 .gt. err, "Error must be below 1.1d-4")
@@ -70,10 +70,10 @@ subroutine test_penning_case_cylindrical_5
 
   n_steps = nint(case%time_end/dt)
   call case%initialize(particle)
-  call boris_initial_half_step_backwards_RZPhi(particle, case%E(particle%x, 0.d0), &
+  call boris_initial_half_step_backwards_RZPhi(particle, case%mass, case%E(particle%x, 0.d0), &
     case%B(particle%x, 0.d0), dt)
   do k=1,n_steps
-    call boris_push_cylindrical(particle, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
+  call boris_push_cylindrical(particle, case%mass, case%E(particle%x, 0.d0), case%B(particle%x, 0.d0), dt)
   end do
   err = case%calc_error(particle)
   call assert_true(1.1d-6 .gt. err, "Error must be below 1.1d-6")

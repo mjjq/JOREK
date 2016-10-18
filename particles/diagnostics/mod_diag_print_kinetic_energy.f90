@@ -26,15 +26,14 @@ subroutine do_print_kinetic_energy(this, sim)
   ! appropriate method
   do i=1,size(sim%groups)
     select type (p => sim%groups(i)%particles)
-    type is (particle_kinetic_leapfrog) ! no difference between norms for cartesian
-                             ! and cylindrical
+    type is (particle_kinetic_leapfrog)
       tmp = boris_kinetic_energy(p)
     class default
       write(*,*) "do_print_kinetic_energy not implemented for this particle type"
       return
     end select
 
-    write(*,"(g12.7,A,i3,A,5g12.7)") sim%time, "Group", i, " kinetic energy min/mean/max/stddev/sum ", mpi_stats_list(tmp)
+    write(*,"(f14.7,A,i3,A,5g14.7)") sim%time, "Group", i, " kinetic energy min/mean/max/stddev/sum ", mpi_stats_list(tmp)
     deallocate(tmp)
   end do
 end subroutine do_print_kinetic_energy

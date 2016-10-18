@@ -116,7 +116,7 @@ implicit none
               else
                  do is = 1,inb_ns
                       inb_son = element_list%element(inb)%sons(is)
-                      if ( Neighbours(node_list, element_list%element(ison),element_list%element(inb_son),ison_side,inb_son_side))  then
+                      if ( neighbours(node_list, element_list%element(ison),element_list%element(inb_son),ison_side,inb_son_side))  then
                            if (ison_side .eq. iside) then
                                 element_list%element(ison)%neighbours(ison_side)       = inb_son
                                 element_list%element(inb_son)%neighbours(inb_son_side) = ison

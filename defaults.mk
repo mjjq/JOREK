@@ -107,7 +107,10 @@ $(OBJDIR)/%.o:: $(1)%.f
 	$$(FC) $$(FLAGS) $$(FFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.c
-	$$(CC) $$(CFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CC) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+
+$(OBJDIR)/%.o:: $(1)%.cpp
+	$$(CXX) $$(CXXFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE

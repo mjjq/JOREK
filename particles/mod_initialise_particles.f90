@@ -260,7 +260,7 @@ end select
 end subroutine set_charge_from_coronal_eq
 
 !> Set v of a particle for use with kinetic codes
-subroutine set_velocity_from_T(particles, node_list, element_list, rng, v_par, grad_T)
+subroutine set_velocity_from_T(particles, mass, node_list, element_list, rng, v_par, grad_T)
 use constants
 use data_structure
 use phys_module, only : central_density, central_mass

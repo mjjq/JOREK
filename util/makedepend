@@ -96,7 +96,7 @@ sub print_dependencies {
     # Check for files with the same name as any subroutines
     my $cmd = "find @ARGV -maxdepth 1 ";
     for (uniq @names) {
-	$cmd .= "-iname '$_.f90' -or -iname '$_.f' -or -iname '$_.c' -or ";
+	$cmd .= "-iname '$_.f90' -or -iname '$_.f' -or -iname '$_.c' -or -iname '$_.cpp' -or ";
     }
     $cmd .= '-name "nomatchlistend"';
     my $targets=`$cmd`;

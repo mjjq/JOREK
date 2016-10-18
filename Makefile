@@ -94,6 +94,9 @@ all: $(basename $(notdir $(PROGRAM_SOURCES)))
 # Special cases
 # Add here: Global includes (as the line below)
 INCLUDES += -Itiming # for r3_info.h
+# C++ support
+LIBS += -lstdc++
+CXXFLAGS += -pedantic -Wall
 # non-standard object files (extra include options, target-specific variable)
 # Rule-specific includes: an example
 particle_test_driver: INCLUDES += -I$(INC_FRUIT)
@@ -109,6 +112,7 @@ media/tests/openadas/charge_state_time.png: compare_mc_coronal # do not name oth
 particles/examples/%50_w.dat:
 	wget http://open.adas.ac.uk/download/adf11/$*50/$*50_w.dat -O $@
 compare_mc_coronal: | particles/examples/acd50_w.dat particles/examples/scd50_w.dat
+
 
 # Is this used by anyone? Otherwise we could remove it
 # It is not updated to this format yet.

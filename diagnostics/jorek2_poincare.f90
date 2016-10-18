@@ -1,6 +1,7 @@
 module elements_nodes_neighbours
   
   use data_structure
+  use mod_log_params
   
   type (type_node_list)    :: node_list
   type (type_element_list) :: element_list

@@ -13,8 +13,9 @@ use corr_neg
 
 implicit none
 
-type (type_node_list)   , pointer :: node_list
-type (type_element_list), pointer :: element_list
+type (type_node_list)   ,     pointer :: node_list
+type (type_element_list),     pointer :: element_list
+type (type_bnd_element_list), pointer :: bnd_elm_list    
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -101,6 +102,7 @@ call flush_it(6)
 
 allocate(node_list)
 allocate(element_list)
+allocate(bnd_elm_list)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0

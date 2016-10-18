@@ -1193,9 +1193,12 @@ module vacuum_response
         allocate( response_m_l(n_dof_starwall, sr%ncoil) )
       
       ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
-      do j = 1, 2*sr%n_bnd, 2
+      
+      response_m_eq = 0.d0
+
+      do j = 1, sr%nd_bez, 2
         j2 = (j-1)*sr%n_tor+1
-        do k = 1, 2*sr%n_bnd, 2
+        do k = 1, sr%nd_bez, 2
           k2 = (k-1)*sr%n_tor+1
           response_m_eq(j:j+1,k:k+1) = sr%a_ee(j2:j2+1,k2:k2+1)
         end do

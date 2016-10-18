@@ -4,6 +4,7 @@ use mod_io_actions
 use data_structure
 use mod_particle_sim
 implicit none
+include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 private
 public project_particles, write_particle_distribution_to_vtk
 public project_to_vtk
@@ -12,6 +13,9 @@ public project_to_vtk
 type, extends(io_action) :: project_to_vtk
   type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
   type(type_element_list), allocatable :: element_list !< a pointer to the global element_list
+  real*8 :: smoothing !< Smoothing factor used for this projection
+  integer :: nsub !< Number of subdivisions to make
+  type (DMUMPS_STRUC) :: projection_matrix
 contains
   procedure :: do => project_and_save_to_vtk
 end type project_to_vtk
@@ -22,16 +26,21 @@ end interface project_to_vtk
 contains
 !> Constructor for project_to_vtk
 !> Be sure to use keyword arguments when initializing, to avoid confusion
-function new_project_to_vtk(node_list, element_list, filename, basename, decimal_digits, fractional_digits) result(new)
+function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, basename, decimal_digits, fractional_digits) result(new)
   type(project_to_vtk) :: new
   type(type_node_list), intent(in)       :: node_list
   type(type_element_list), intent(in)    :: element_list
+  real*8, intent(in)                     :: smoothing
+  integer, intent(in), optional          :: nsub !< number of subdivisions of the finite elements
   character(len=*), intent(in), optional :: filename
   character(len=*), intent(in), optional :: basename
   integer, intent(in), optional          :: decimal_digits
   integer, intent(in), optional          :: fractional_digits
   allocate(new%node_list,    source=node_list)
   allocate(new%element_list, source=element_list)
+  new%smoothing = smoothing
+  new%nsub = 4
+  if (present(nsub)) new%nsub = nsub
   if (present(filename)) new%filename = filename
   if (present(basename)) new%basename = basename
   if (present(decimal_digits)) new%decimal_digits = decimal_digits
@@ -39,6 +48,9 @@ function new_project_to_vtk(node_list, element_list, filename, basename, decimal
   new%extension ='.vtk'
   new%name = "ProjectToVtk"
   new%log = .true.
+
+  ! Precalculate the projection matrix for this node_list and element_list
+  call prepare_projection_matrix(new%node_list, new%element_list, new%projection_matrix, new%smoothing)
 end function new_project_to_vtk
 
 !> Action for projecting all particles and writing output to vtk
@@ -46,6 +58,7 @@ subroutine project_and_save_to_vtk(this, sim)
   class(project_to_vtk), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
   integer :: i
+  character(len=120) :: filename
 
   ! Safety checks
   if (.not. allocated(sim%groups)) return
@@ -53,14 +66,20 @@ subroutine project_and_save_to_vtk(this, sim)
     ! this constructs the projection matrix once for every group while they are the same each run.
     ! If slow this could change, for instance by storing the matrix in the action.
     if (.not. allocated(sim%groups(i)%particles)) cycle
-    call project_particles(this%node_list, this%element_list, sim%groups(i)%particles, i)
+    call project_particles(this%node_list, this%element_list, this%projection_matrix, &
+        sim%groups(i)%particles, i)
   end do
 
-  !if (len_trim(this%filename) .eq. 0) then
-  !  call read_simulation_hdf5(sim, trim(this%get_filename(sim%time)))
-  !else
-  !  call read_simulation_hdf5(sim, trim(this%filename))
-  !end if
+  if (len_trim(this%filename) .eq. 0) then
+    filename = this%get_filename(sim%time)
+  else
+    filename = this%filename
+  end if
+
+  call write_particle_distribution_to_vtk(this%node_list, this%element_list, &
+    trim(filename), this%nsub, min(size(sim%groups),n_var))
+
+  write(*,*) "Written projection to ", trim(filename)
 end subroutine project_and_save_to_vtk
 
 !> Project particles by weight onto the elements
@@ -73,7 +92,9 @@ end subroutine project_and_save_to_vtk
 !> A smoothing factor lambda is included
 !> x is a vector (R,Z,phi) and dV is r dr dphi
 !> divide by 1 or 2pi on both sides (LHS gets 2pi for n=0 mode, 1pi for other modes)
-subroutine project_particles(node_list, element_list, particles, ivar_out)
+!>
+!> See also [project_particles]
+subroutine prepare_projection_matrix(node_list, element_list, projection_matrix, smoothing)
 use phys_module
 use data_structure
 use basis_at_gaussian
@@ -83,25 +104,27 @@ implicit none
 
 type (type_node_list), intent(inout) :: node_list !< A copy of the node list which will be used to save variables
 type (type_element_list), intent(in) :: element_list
-class (particle_base), intent(in), dimension(:)    :: particles
-integer, intent(in) :: ivar_out
+type (DMUMPS_STRUC), intent(inout)   :: projection_matrix
+real*8, intent(in)                   :: smoothing
 
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
-include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
-
-type (DMUMPS_STRUC) :: projection_matrix
 
 real*8     :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1),element_list%n_elements)
 real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
-real*8     :: R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
+real*8     :: R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3)
 real*8     :: v, v_x, v_y, psi, psi_x, psi_y, wst, area, volume
 integer    :: i, j, k, l, m, i_tor, ilarge, index_large_i, index_large_k, inode, knode
-integer    :: nz_AA, n_AA, n_border, i_elm, index, index_ij, index_kl
+integer    :: nz_AA, n_AA, i_elm, index_ij, index_kl
 integer    :: ms, mt, n_p
 
-real*8, parameter :: smoothing = 1d-3
+! Initialise MUMPS
+projection_matrix%COMM = MPI_COMM_WORLD
+projection_matrix%JOB  = -1
+projection_matrix%SYM  = 0
+projection_matrix%PAR  = 1
+call DMUMPS(projection_matrix)
 
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
 
@@ -111,13 +134,6 @@ do inode = 1, node_list%n_nodes
 enddo
 write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
 write(*,*) ' nz_AA                   : ',nz_AA
-
-! Initialise MUMPS
-projection_matrix%COMM = MPI_COMM_WORLD
-projection_matrix%JOB  = -1
-projection_matrix%SYM  = 0
-projection_matrix%PAR  = 1
-call DMUMPS(projection_matrix)
 
 ! Allocate space for elements
 allocate(projection_matrix%A(nz_AA),projection_matrix%irn(nz_AA),projection_matrix%jcn(nz_AA))
@@ -135,7 +151,7 @@ write(*,*) 'constructing particle projection matrix'
 !$omp shared(element_list, node_list, H, H_s, H_t, projection_matrix) &
 !$omp private(ELM, i_elm, element, nodes, i, j, ms, mt, &
 !$omp         x_g, y_g, x_s, x_t, y_s, y_t, wst, xjac, &
-!$omp         index_ij, index_kl, v, v_x, v_y, psi, psi_x, psi_y, ilarge, &
+!$omp         index_ij, index_kl, psi, psi_x, psi_y, ilarge, &
 !$omp         inode, index_large_i, knode, index_large_k) &
 !$omp reduction(+:area,volume)
 do i_elm=1,element_list%n_elements
@@ -229,9 +245,7 @@ enddo
 write(*,'(A,e14.6)') ' Area        : ',area
 write(*,'(A,e14.6)') ' Volume      : ',volume
 
-!
 ! Perform the analysis and factorisation
-!
 projection_matrix%JOB       = 4
 projection_matrix%n         = n_AA
 projection_matrix%nz        = nz_AA
@@ -241,90 +255,7 @@ projection_matrix%icntl(7)  = 4
 projection_matrix%icntl(8)  = 7
 projection_matrix%icntl(14) = 80
 call DMUMPS(projection_matrix)
-
-!
-! Create the RHS and calculate the projection
-!
-do i_tor=1, n_tor
-  n_p = 0
-  RHS = 0.d0
-  projection_matrix%rhs = 0.d0
-  !$omp parallel do default(none) &
-  !$omp shared(particles, element_list, node_list, mode, i_tor) &
-  !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
-  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode) &
-  !$omp reduction(+:n_p,RHS)
-  do m=1,size(particles,1)
-    if (particles(m)%i_elm .eq. 0) cycle
-    n_p = n_p + 1
-
-    associate(particle => particles(m))
-    x(1:2) = particle%st
-    x(3)   = particle%x(3)
-
-    call interp3_RZ(node_list,element_list,particle%i_elm,x(1),x(2),R_g,R_s,R_t,Z_g,Z_s,Z_t)
-    xjac =  R_s*Z_t - R_t*Z_s
-    call basisfunctions3(x(1), x(2), HH, HH_s, HH_t)
-    do i=1,n_vertex_max
-      do j=1,n_order+1
-        index_ij = (i-1)*(n_order+1) + j
-
-        v   = HH(i,j)  * element_list%element(particle%i_elm)%size(i,j)
-        if (mode(i_tor) .gt. 1) then ! mode(1) = 0, mode(2) -> cos, mode(3) -> sin
-          if (mod(i_tor,2) .eq. 0) then
-            v = v * cos(mode(i_tor)*x(3))
-          else
-            v = v * sin(mode(i_tor)*x(3))
-          endif
-          v = v / PI ! int cos^2(nx) from 0 to 2pi = pi for n > 0
-        else
-          v = v / TWOPI ! int 1 from 0 to 2pi = 2pi
-        endif
-
-        RHS(index_ij,particle%i_elm) = RHS(index_ij,particle%i_elm) + v * particle%weight
-      enddo
-    enddo
-    end associate
-  enddo
-  !$omp end parallel do
-
-  ! Fill RHS of Projection matrix
-  do i_elm=1,element_list%n_elements
-    do i=1,n_vertex_max
-      inode = element_list%element(i_elm)%vertex(i)
-      do j=1,n_order+1
-        index_ij = (i-1)*(n_order+1) + j
-        index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
-
-        projection_matrix%rhs(index_large_i) = projection_matrix%rhs(index_large_i) + RHS(index_ij, i_elm)
-      enddo
-    enddo
-  enddo
-
-  if (i_tor .eq. 1) then
-    write(*,'(A,i14)')   ' Particles   : ',n_p
-    write(*,'(A,e14.6)') ' Avg density : ',float(n_p)/volume
-  endif
-
-  ! Compute the solution of Ax=b (b = RHS)
-  projection_matrix%JOB = 3
-  call DMUMPS(projection_matrix)
-
-  write(*,*) 'Projection ', i_tor, ' finished'
-  write(*,*) minval(projection_matrix%RHS), maxval(projection_matrix%RHS)
-
-  do i=1,node_list%n_nodes
-    do k=1,n_order+1
-      index = node_list%node(i)%index(k)
-      node_list%node(i)%values(i_tor,k,ivar_out) = projection_matrix%RHS(index)
-    enddo    ! order
-  enddo      ! nodes
-enddo ! i_tor
-
-! Clean up MUMPS
-projection_matrix%JOB      = -2
-call DMUMPS(projection_matrix)
-end subroutine project_particles
+end subroutine prepare_projection_matrix
 
 
 !> Helper subroutine to write a particle distribution, saved in variables 1:n,
@@ -351,7 +282,7 @@ integer,allocatable   :: ien (:,:)
 integer :: n_scalars, n_vectors = 0
 character*12, allocatable :: vector_names(:), scalar_names(:)
 
-integer :: i_min, i_max, i_t, i_v
+integer :: i_t, i_v
 integer, parameter :: etype = 9 ! for vtk_quad
 
 n_scalars = n_tor * n_fields
@@ -415,4 +346,99 @@ call write_vtk(filename,xyz,&
   scalar_names,scalars,&
   vector_names,vectors)
 end subroutine write_particle_distribution_to_vtk
+
+
+!> Perform the actual projection of a set of particles ono variable ivar_out in node_list
+subroutine project_particles(node_list, element_list, projection_matrix, particles, ivar_out)
+use phys_module
+use data_structure
+use basis_at_gaussian
+use mod_basisfunctions
+use mpi
+implicit none
+
+type (type_node_list), intent(inout) :: node_list !< A copy of the node list which will be used to save variables
+type (type_element_list), intent(in) :: element_list
+type (DMUMPS_STRUC), intent(inout)   :: projection_matrix
+class (particle_base), intent(in), dimension(:)    :: particles
+integer, intent(in) :: ivar_out
+
+real*8     :: RHS(n_vertex_max*(n_order+1),element_list%n_elements)
+real*8     :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
+integer    :: i, j, k, m, i_tor, index_large_i, inode
+integer    :: i_elm, index, index_ij
+integer    :: n_p
+
+! Create the RHS and calculate the projection
+do i_tor=1, n_tor
+  n_p = 0
+  RHS = 0.d0
+  projection_matrix%rhs = 0.d0
+  !$omp parallel do default(none) &
+  !$omp shared(particles, element_list, node_list, mode, i_tor) &
+  !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
+  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode) &
+  !$omp reduction(+:n_p,RHS)
+  do m=1,size(particles,1)
+    if (particles(m)%i_elm .eq. 0) cycle
+    n_p = n_p + 1
+
+    associate(particle => particles(m))
+    x(1:2) = particle%st
+    x(3)   = particle%x(3)
+
+    call interp3_RZ(node_list,element_list,particle%i_elm,x(1),x(2),R_g,R_s,R_t,Z_g,Z_s,Z_t)
+    xjac =  R_s*Z_t - R_t*Z_s
+    call basisfunctions3(x(1), x(2), HH, HH_s, HH_t)
+    do i=1,n_vertex_max
+      do j=1,n_order+1
+        index_ij = (i-1)*(n_order+1) + j
+
+        v   = HH(i,j)  * element_list%element(particle%i_elm)%size(i,j)
+        if (mode(i_tor) .gt. 1) then ! mode(1) = 0, mode(2) -> cos, mode(3) -> sin
+          if (mod(i_tor,2) .eq. 0) then
+            v = v * cos(mode(i_tor)*x(3))
+          else
+            v = v * sin(mode(i_tor)*x(3))
+          endif
+          v = v / PI ! int cos^2(nx) from 0 to 2pi = pi for n > 0
+        else
+          v = v / TWOPI ! int 1 from 0 to 2pi = 2pi
+        endif
+
+        RHS(index_ij,particle%i_elm) = RHS(index_ij,particle%i_elm) + v * particle%weight
+      enddo
+    enddo
+    end associate
+  enddo
+  !$omp end parallel do
+
+  ! Fill RHS of Projection matrix
+  do i_elm=1,element_list%n_elements
+    do i=1,n_vertex_max
+      inode = element_list%element(i_elm)%vertex(i)
+      do j=1,n_order+1
+        index_ij = (i-1)*(n_order+1) + j
+        index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
+
+        projection_matrix%rhs(index_large_i) = projection_matrix%rhs(index_large_i) + RHS(index_ij, i_elm)
+      enddo
+    enddo
+  enddo
+
+  ! Compute the solution of Ax=b (b = RHS)
+  projection_matrix%JOB = 3
+  call DMUMPS(projection_matrix)
+
+  write(*,*) 'Projection ', i_tor, ' finished'
+  write(*,*) minval(projection_matrix%RHS), maxval(projection_matrix%RHS)
+
+  do i=1,node_list%n_nodes
+    do k=1,n_order+1
+      index = node_list%node(i)%index(k)
+      node_list%node(i)%values(i_tor,k,ivar_out) = projection_matrix%RHS(index)
+    enddo    ! order
+  enddo      ! nodes
+enddo ! i_tor
+end subroutine project_particles
 end module mod_project_particles

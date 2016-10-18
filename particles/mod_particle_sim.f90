@@ -60,9 +60,9 @@ subroutine finalize(sim)
   class(particle_sim), intent(in) :: sim !< why is this class() and not type()?
   integer :: ierr
   if (sim%stop_now) then
-    write(*,"(A,g12.6,A)") "INFO: Stop requested at ", sim%time, " , exiting"
+    write(*,"(A,g14.6,A)") "INFO: Stop requested at ", sim%time, " , exiting"
   else
-    write(*,"(A,g12.6,A)") "INFO: End of events at ", sim%time, " , exiting"
+    write(*,"(A,g14.6,A)") "INFO: End of events at ", sim%time, " , exiting"
   end if
   call MPI_Finalize(ierr)
 end subroutine

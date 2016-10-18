@@ -14,7 +14,7 @@ use mod_io_actions
 use mod_boris
 
 ! Fields
-use mod_jorek_fields_interp_linear
+use mod_fields_linear
 
 ! RNGs
 use mod_pcg32_rng

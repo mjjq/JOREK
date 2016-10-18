@@ -7,13 +7,13 @@ use mod_particle_types
 use constants
 implicit none
 private
-public set_particle_position_rejection_sampling, no_transform, adjust_particle_weights
-public set_kinetic_particle_velocity_from_T
+public seed_positions, no_transform, adjust_particle_weights
+public set_velocity_from_T
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
 !> if present. See [[test_rejection_sampling]] for examples.
-subroutine set_particle_position_rejection_sampling(particles, node_list, element_list, &
+subroutine seed_positions(particles, node_list, element_list, &
         rng, variables, transform, f, Rbound, Zbound, Phibound)
   use mpi
   use mod_sampling
@@ -33,11 +33,6 @@ subroutine set_particle_position_rejection_sampling(particles, node_list, elemen
   !< (particle weight proportional to transform(P) at that point.) If omitted take f=0.
   real*8, dimension(2), intent(in), optional        :: Rbound, Zbound, Phibound !< Between which coordinates to sample (RZPhi).
   !< if omitted, determine automatically from node_list
-  interface
-    pure function transform(in)
-      real*8, intent(in), dimension(:) :: in !< Values of variables(:) at the particle position
-    end function transform
-  end interface
 
   ! Internal variables
   real*8  :: R, Z, phi, s, t, DUMMY_REAL
@@ -106,7 +101,7 @@ subroutine set_particle_position_rejection_sampling(particles, node_list, elemen
   !$ ostart = omp_get_wtime()
 
   !$omp parallel default(none) &
-  !$omp   shared(node_list, element_list, Rbox, Zbox, PhiBox, variables, &
+  !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, variables, &
   !$omp          n_cpu, rngs, n_threads, n_streams, seed, my_id, n_mhd, n_geom) &
   !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL)
 
@@ -171,7 +166,7 @@ subroutine set_particle_position_rejection_sampling(particles, node_list, elemen
     write(*,*) '* done initialising particles    *'
     write(*,*) '**********************************'
   endif
-end subroutine set_particle_position_rejection_sampling
+end subroutine seed_positions
 
 
 !> Calculate the size of a box around the domain (in RZ)
@@ -265,7 +260,7 @@ end select
 end subroutine set_charge_from_coronal_eq
 
 !> Set v of a particle for use with kinetic codes
-subroutine set_kinetic_particle_velocity_from_T(particles, mass, node_list, element_list, rng, v_par, grad_T)
+subroutine set_velocity_from_T(particles, node_list, element_list, rng, v_par, grad_T)
 use constants
 use data_structure
 use phys_module, only : central_density, central_mass
@@ -330,5 +325,5 @@ do i=1,size(particles)
     p%v(2) =   v_out(3)                                          ! V_Z
   end select
 end do
-end subroutine set_kinetic_particle_velocity_from_T
+end subroutine set_velocity_from_T
 end module mod_initialise_particles

@@ -218,11 +218,11 @@ subroutine check_and_fix_timesteps(pusher_timestep, events)
   end do
   do i=1,size(events)
     if (abs(event_start(i) - events(i)%start) .gt. TICK) then
-      write(*,"(A,i3,A,A,A,g14.8,A,g14.8)") "INFO: changing start time of event ", i, &
+      write(*,"(A,i3,A,A,A,g14.6,A,g14.6)") "INFO: changing start time of event ", i, &
           "(", trim(events(i)%action%name), ") from ", events(i)%start, " to ", event_start(i)
     end if
     if (abs(event_step(i) - events(i)%step) .gt. TICK) then
-      write(*,"(A,i3,A,A,A,g14.8,A,g14.8)") "INFO: changing timestep of event ", i, &
+      write(*,"(A,i3,A,A,A,g14.6,A,g14.6)") "INFO: changing timestep of event ", i, &
           "(", trim(events(i)%action%name), ") from ", events(i)%step, " to ", event_step(i)
     end if
     ! always update, notify only for significant changes

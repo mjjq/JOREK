@@ -15,14 +15,14 @@ type, abstract :: action
   real*8, private :: t0 = 0.0
 contains
   procedure, pass, public :: run
-  procedure(do), deferred, pass, private :: do
+  procedure(do_interface), deferred, pass, private :: do
 end type action
 interface
-  subroutine do(this, sim)
+  subroutine do_interface(this, sim)
     import :: action, particle_sim
     class(action), intent(inout)      :: this
     type(particle_sim), intent(inout) :: sim
-  end subroutine do
+  end subroutine do_interface
 end interface
 
 

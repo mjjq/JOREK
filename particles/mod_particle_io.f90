@@ -42,7 +42,7 @@ if (size(particles,1) .eq. 0) then
   write(*,*) "ERROR: no particles given"
   call exit(1)
 end if
-allocate(particles_2(1:2), source=particles(1))
+allocate(particles_2(1:2), source=particles(1)) ! supported in ifort >= 12.1
 
 ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
 ! for now, copy this code for each particle type expected

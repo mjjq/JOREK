@@ -1,6 +1,6 @@
 !> Module for linearly interpolating in time between values and deltas
 !> in JOREK restart files. Contains an action to read the fields.
-module mod_jorek_fields_interp_linear
+module mod_fields_linear
 use data_structure
 use mod_action
 use mod_particle_sim
@@ -17,7 +17,7 @@ type, extends(action) :: read_jorek_fields_interp_linear
   integer :: i = 0 !< Number of the restart file to read. Set to -1 to not include
   integer :: rst_format = 0 !< Format of restart file if .rst type
   contains
-    procedure :: do => read_jorek_fields_impl
+    procedure :: do => do_read
 end type read_jorek_fields_interp_linear
 interface read_jorek_fields_interp_linear
   module procedure new_read_jorek_fields_interp_linear
@@ -42,15 +42,13 @@ end function new_read_jorek_fields_interp_linear
 
 
 !> Read jorek fields from a restart file
-subroutine read_jorek_fields_impl(this, sim)
+subroutine do_read(this, sim)
   use import_restart
   class(read_jorek_fields_interp_linear), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   character(len=80) :: restart_file
   integer :: i, ierr
   logical :: file_exists
-  integer :: DUMMY_INT
-  real*8  :: DUMMY_REAL
 
   logical, save :: neighbours_updated = .false.
 
@@ -97,10 +95,7 @@ subroutine read_jorek_fields_impl(this, sim)
     call update_neighbours(this%element_list, this%node_list)
     neighbours_updated = .true.
   end if
-
-  ! Call find_RZ once to initialise elements_minmax
-  call find_RZ(this%node_list,this%element_list,0.d0,0.d0,DUMMY_REAL,DUMMY_REAL,DUMMY_INT,DUMMY_REAL,DUMMY_REAL,DUMMY_INT)
-end subroutine read_jorek_fields_impl
+end subroutine do_read
 
 !> Calculates the electric and magnetic fields at a specific position
 !> in the jorek element `i_elm` at `st`.
@@ -214,7 +209,7 @@ end subroutine EM_fields_interp_linear
 
 !> Import a binary restart file and merges it with the values currently known
 !> This can then be used to interpolate linearly between any two restart files
-subroutine import_merge_restart(node_list,element_list, restart_file, format_rst, ierr)
+subroutine merge_restart(node_list,element_list, restart_file, format_rst, ierr)
   use data_structure
   use phys_module
   use import_restart
@@ -251,5 +246,5 @@ subroutine import_merge_restart(node_list,element_list, restart_file, format_rst
   tstep = t_start - tstart_old
 
   deallocate(values)
-end subroutine import_merge_restart
-end module mod_jorek_fields_interp_linear
+end subroutine merge_restart
+end module mod_fields_linear

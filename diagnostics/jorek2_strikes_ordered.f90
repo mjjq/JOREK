@@ -65,7 +65,7 @@ type(type_bnd_element), allocatable :: bnd_elements(:)
 real*8 startpos
 logical :: psi_theta
 
-logical, external :: neighbours2
+logical, external :: neighbours
 
 integer f_div, f_testelem_nodes, f_testelem_interp, f_cl_plus, f_cl_minus, f_phistart, f_turns_plus, f_turns_minus, f_divstart, f_divshape
 integer f_heatflux, f_dens, f_temp, f_heatflux_par, f_dens_norm
@@ -161,7 +161,7 @@ do i=1,element_list%n_elements
 
   do j=i+1,element_list%n_elements
 
-    if (neighbours2(element_list%element(i),element_list%element(j),iside_i,iside_j)) then
+    if (neighbours(node_list,element_list%element(i),element_list%element(j),iside_i,iside_j)) then
       element_neighbours(iside_i,i) = j
       element_neighbours(iside_j,j) = i
     endif
@@ -1573,47 +1573,3 @@ enddo
 
 return
 end subroutine var_value
-
-logical function neighbours2(elm1,elm2,inb1,inb2)
-!-------------------------------------------------------
-! function to check if the two elements elm1 and elm2
-! are neighbours. Two elements are neighbours if they
-! share a side, i.e. if two nodes are the same.
-! inb1 -> the index of the shared neighbour of elm1
-! inb2 -> the index of the shared neighbour of elm2
-!   note : does not work for unequal sized neighbours
-!-------------------------------------------------------
-use data_structure
-use elements_nodes_neighbours
-implicit none
-
-type (type_element) :: elm1, elm2
-integer             :: inb1, inb2, iv(8,2), i, j, nb, inode1,inode2
-
-neighbours2 = .false.
-nb = 0
-
-do i=1,4
-  do j=1,4
-    inode1 = elm1%vertex(i)
-    inode2 = elm2%vertex(j)
-    if     ((abs(node_list%node(inode1)%x(1,1)-node_list%node(inode2)%x(1,1)) .lt. 1d-8) &
-      .and. (abs(node_list%node(inode1)%x(1,2)-node_list%node(inode2)%x(1,2)) .lt. 1d-8)) then
-      nb = nb + 1
-      iv(nb,1) = i
-      iv(nb,2) = j
-!      if (nb .gt. 4) then
-!         write (*,*) 'ERREUR, trop de voisins! i=', inode1, inode2
-!      endif
-    endif
-  enddo
-  if (nb .ge. 4) exit
-enddo
-if (nb .gt. 1 ) then
-  neighbours2=.true.
-  inb1 = minval(iv(1:nb,1)) ; if ( abs(iv(1,1)-iv(2,1)) .gt. 1 ) inb1 = 4
-  inb2 = minval(iv(1:nb,2)) ; if ( abs(iv(1,2)-iv(2,2)) .gt. 1 ) inb2 = 4
-else
-endif
-return
-end function neighbours2

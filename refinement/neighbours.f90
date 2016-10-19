@@ -10,33 +10,41 @@ logical function neighbours(node_list,elm1,elm2,inb1,inb2)
 use data_structure
 implicit none
 
-type (type_element), intent(in) :: elm1, elm2
-type (type_node_list),intent(in) ::  node_list
+type (type_node_list), intent(in) :: node_list
+type (type_element), intent(in)   :: elm1, elm2
+integer, intent(out)              :: inb1, inb2
+real*8, parameter :: tol=1.d-8
 
-integer, intent(out) :: inb1, inb2
+integer :: n1(2), n2(2) ! nodes of side i of elm1 or of side j of elm2
+integer :: i, j
+neighbours = .false.
 
-real*8,parameter :: toll=1.d-8
-
-integer :: iv(4,2), i, j, nb
-real*8 :: dist
-
-  neighbours = .false.
-  nb = 0
-  ! write(*,'(A13,4i6,A2,4i6)') ' NEIGHBOURS? ',elm1%vertex,'  ',elm2%vertex
-  do i=1,4
-    do j=1,4
-      dist = norm2(node_list%node(elm1%vertex(i))%x(1,1:2)-node_list%node(elm2%vertex(j))%x(1,1:2))
-      if((dist.lt.toll).and.(nb.lt.4)) then
-        nb = nb + 1
-        iv(nb,1) = i
-        iv(nb,2) = j
-      endif
-    enddo
+! First test by node number
+do i=1,4 ! Loop over sides of element 1
+  do j=1,4 ! Loop over sides of element 2
+    ! node numbers are related to sides as node1=mod(side-1,4)+1, node2=mod(side,4)+1
+    n1 = elm1%vertex(mod([i-1,i],4)+1)
+    n2 = elm2%vertex(mod([j-1,j],4)+1)
+    ! If match cross or straight (i.e. 1->2/2->1 or 1->1/2->2)
+    ! Four different cases
+    if      (n1(1) .eq. n2(2)) then
+      neighbours = (n1(2) .eq. n2(1)) .or. &
+        (norm2(node_list%node(n1(2))%x(1,1:2)-node_list%node(n2(1))%x(1,1:2)) .lt. tol)
+    else if (n1(2) .eq. n2(1)) then
+      neighbours = (n1(1) .eq. n2(2)) .or. &
+        (norm2(node_list%node(n1(1))%x(1,1:2)-node_list%node(n2(2))%x(1,1:2)) .lt. tol)
+    else if (n1(1) .eq. n2(1)) then
+      neighbours = (n1(2) .eq. n2(2)) .or. &
+        (norm2(node_list%node(n1(2))%x(1,1:2)-node_list%node(n2(2))%x(1,1:2)) .lt. tol)
+    else if (n1(2) .eq. n2(2)) then
+      neighbours = (n1(1) .eq. n2(1)) .or. &
+        (norm2(node_list%node(n1(1))%x(1,1:2)-node_list%node(n2(1))%x(1,1:2)) .lt. tol)
+    end if
+    if (neighbours) then
+      inb1 = i
+      inb2 = j
+      return
+    end if
   enddo
-  if (nb .gt. 1 ) then
-    neighbours=.true.
-    inb1 = minval(iv(1:nb,1)) ; if ( abs(iv(1,1)-iv(2,1)) .gt. 1 ) inb1 = 4
-    inb2 = minval(iv(1:nb,2)) ; if ( abs(iv(1,2)-iv(2,2)) .gt. 1 ) inb2 = 4
-  endif
-  return
-end
+enddo
+end function neighbours

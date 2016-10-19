@@ -23,7 +23,7 @@ pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
   real*8, intent(in) :: dt
   real*8 :: R, Rphi
   real*8 :: fE, fB, eom
-  real*8 :: psi, U, B2, Bnorm
+  real*8 :: B2, Bnorm
   eom = EL_CHG / (m * ATOMIC_MASS_UNIT)
 
   B2    = dot_product(B,B)
@@ -31,7 +31,7 @@ pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
 
   ! update the velocity from v^(n-1/2) to v^(n+1/2)
   ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
-  fE = particle%q*eom * dt * 0.5d0
+  fE =     particle%q*eom * dt * 0.5d0
   fB = tan(particle%q*eom * dt * 0.5d0 * Bnorm) / Bnorm
 
   ! Calculate the electric field update (v^n-1/2 -> v-) with the Boris method
@@ -67,7 +67,7 @@ pure subroutine boris_push_cartesian(particle, m, E, B, dt)
   real*8, dimension(3), intent(in) :: E, B
   real*8, intent(in) :: dt
   real*8  :: fE, fB, eom
-  real*8  :: psi, U, B2, Bnorm
+  real*8  :: B2, Bnorm
   eom = EL_CHG / (m * ATOMIC_MASS_UNIT)
 
   B2    = dot_product(B,B)
@@ -75,7 +75,7 @@ pure subroutine boris_push_cartesian(particle, m, E, B, dt)
 
   ! update the velocity from v^(n-1/2) to v^(n+1/2)
   ! Calculate the geometric factor f = tan(q/m delta_t/2 |B|)/|B|
-  fE = particle%q*eom * dt * 0.5d0
+  fE =     particle%q*eom * dt * 0.5d0
   fB = tan(particle%q*eom * dt * 0.5d0 * Bnorm) / Bnorm
 
   ! Calculate the electric field update (v^n-1/2 -> v-) with the Boris method
@@ -98,7 +98,7 @@ pure subroutine boris_initial_half_step_backwards_XYZ(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
-  real*8, dimension(3), intent(in) :: E, B 
+  real*8, dimension(3), intent(in) :: E, B
   real*8, intent(in) :: dt
   real*8, dimension(3) :: v !< for calculating the initial half-step
   real*8 :: f, B2
@@ -118,7 +118,7 @@ pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
-  real*8, dimension(3), intent(in) :: E, B 
+  real*8, dimension(3), intent(in) :: E, B
   real*8, intent(in) :: dt
   real*8, dimension(3) :: v !< for calculating the initial half-step
   real*8 :: f, B2
@@ -146,7 +146,7 @@ pure function right_handed_cross_product(a, b)
   real*8, dimension(3), intent(in) :: a, b
 
   right_handed_cross_product(1) = a(2) * b(3) - a(3) * b(2)
-  right_handed_cross_product(2) = a(1) * b(3) - a(3) * b(1)
+  right_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
   right_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
 end function right_handed_cross_product
 end module mod_boris

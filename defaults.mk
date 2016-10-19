@@ -19,7 +19,7 @@ endif
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp
   FLAGS += -Wall -Wextra
-  FLAGS += -Wno-tabs -Wno-unused-variable
+  FLAGS += -Wno-tabs
   FLAGS += -Wcharacter-truncation
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std

@@ -265,6 +265,7 @@ use data_structure
 use basis_at_gaussian ! for HZ (initialise_basis must be called before use!)
 use phys_module, only: mode
 use mod_vtk
+use mpi
 implicit none
 
 !> Input parameters
@@ -275,19 +276,22 @@ integer, intent(in) :: nsub !< Number of subdivisions of each element
 integer, intent(in) :: n_fields !< number of different particle groups to output
 
 integer :: nnos, nnoel, nel, i, j, ielm, inode, k
-real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
+real*4,allocatable :: xyz (:,:), scalars(:,:), vectors(:,:,:), sum_scalars(:,:), sum_vectors(:,:,:)
 real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 integer,allocatable   :: ien (:,:)
-integer :: n_scalars, n_vectors = 0
+integer :: my_id, ierr, n_scalars, n_vectors = 0
 character*12, allocatable :: vector_names(:), scalar_names(:)
 
 integer :: i_t, i_v
 integer, parameter :: etype = 9 ! for vtk_quad
 
+call MPI_comm_rank(MPI_COMM_WORLD, my_id, ierr)
+
 n_scalars = n_tor * n_fields
 nnos = nsub*nsub*node_list%n_nodes
 allocate(xyz(3,nnos),scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
+if (my_id .eq. 0) allocate(sum_scalars(nnos,n_scalars),sum_vectors(nnos,3,n_vectors))
 allocate(scalar_names(n_scalars),vector_names(n_vectors))
 do i=1,n_fields
   write(scalar_names(n_tor*(i-1)+1),'(A,i0.2)') "rho_", i
@@ -317,7 +321,7 @@ do i=1,element_list%n_elements
       t = float(k-1)/float(nsub-1)
       call interp_RZ2(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
       inode = inode+1
-      xyz(1:3,inode) = (/ R, Z, 0.d0/)
+      xyz(1:3,inode) = real([R, Z, 0.0], 4)
 
       do i_v=1,n_fields
         do i_t=1,n_tor
@@ -340,15 +344,22 @@ do i=1,element_list%n_elements
   enddo
 enddo  ! n_elements
 
-! ------------- Write to VTK
-call write_vtk(filename,xyz,&
-  ien, etype,&
-  scalar_names,scalars,&
-  vector_names,vectors)
+! Gather scalars and vectors with MPI
+call MPI_Reduce(scalars, sum_scalars, size(scalars), MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+call MPI_Reduce(vectors, sum_vectors, size(vectors), MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+
+if (my_id .eq. 0) then
+  ! ------------- Write to VTK
+  call write_vtk(filename,xyz,&
+    ien, etype,&
+    scalar_names,sum_scalars,&
+    vector_names,sum_vectors)
+end if
 end subroutine write_particle_distribution_to_vtk
 
 
-!> Perform the actual projection of a set of particles ono variable ivar_out in node_list
+!> Perform the actual projection of a set of particles ono variable ivar_out in node_list.
+!> This is performed locally, so per MPI process.
 subroutine project_particles(node_list, element_list, projection_matrix, particles, ivar_out)
 use phys_module
 use data_structure
@@ -363,25 +374,23 @@ type (DMUMPS_STRUC), intent(inout)   :: projection_matrix
 class (particle_base), intent(in), dimension(:)    :: particles
 integer, intent(in) :: ivar_out
 
-real*8     :: RHS(n_vertex_max*(n_order+1),element_list%n_elements)
+real*8, allocatable :: RHS(:,:)
 real*8     :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
 integer    :: i, j, k, m, i_tor, index_large_i, inode
 integer    :: i_elm, index, index_ij
-integer    :: n_p
 
+allocate(RHS(n_vertex_max*(n_order+1),element_list%n_elements))
 ! Create the RHS and calculate the projection
 do i_tor=1, n_tor
-  n_p = 0
   RHS = 0.d0
   projection_matrix%rhs = 0.d0
   !$omp parallel do default(none) &
   !$omp shared(particles, element_list, node_list, mode, i_tor) &
   !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
   !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode) &
-  !$omp reduction(+:n_p,RHS)
+  !$omp reduction(+:RHS)
   do m=1,size(particles,1)
     if (particles(m)%i_elm .eq. 0) cycle
-    n_p = n_p + 1
 
     associate(particle => particles(m))
     x(1:2) = particle%st
@@ -431,8 +440,6 @@ do i_tor=1, n_tor
   call DMUMPS(projection_matrix)
 
   write(*,*) 'Projection ', i_tor, ' finished'
-  write(*,*) minval(projection_matrix%RHS), maxval(projection_matrix%RHS)
-
   do i=1,node_list%n_nodes
     do k=1,n_order+1
       index = node_list%node(i)%index(k)

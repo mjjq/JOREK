@@ -2,6 +2,7 @@ subroutine update_neighbours(element_list,node_list)
 use data_structure
 use mod_neighbours
 use mod_element_rtree
+use mod_qsort
 implicit none
 
 type (type_element_list) :: element_list
@@ -19,10 +20,13 @@ call populate_element_rtree(node_list, element_list)
 !$omp   shared(element_list,node_list)
 do i=1, element_list%n_elements
   call nearby_elements(node_list, element_list, i, i_nearby)
+  ! careful. There is an implied ordering dependency of the elements in the code below
+  ! but I cannot find it (only in the output of sum(element_list%element(:)%neighbours(1)))
+  ! let's just sort the list beforehand
+  call qsort(i_nearby)
   do k=1,size(i_nearby,1)
     j = i_nearby(k)
-
-    if (i .ne. j) then
+    if (i .eq. j) cycle
 
     if  (neighbours(node_list, element_list%element(i), element_list%element(j),inb_i,inb_j)) then
 
@@ -75,8 +79,6 @@ do i=1, element_list%n_elements
       endif
 
     endif
-    endif
-
   enddo
 enddo
 !$omp end parallel do
@@ -108,6 +110,4 @@ enddo
 !    write(*,'(i5,6f12.4)') j,element_list%element(i)%transform(j,1,:),element_list%element(i)%transform(j,2,:)
 !  enddo
 !enddo
-
-return
 end

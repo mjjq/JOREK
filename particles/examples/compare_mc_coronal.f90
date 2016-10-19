@@ -112,7 +112,7 @@ subroutine plot_coronal_equilibrium(adf11)
   type(type_ADF11_all), intent(in) :: adf11
   real*8, dimension(0:adf11%n_Z) :: p
   real*8 :: T
-  integer :: t_exp, u, stat, i
+  integer :: t_exp, u, i
   character(len=80), parameter :: datafile = "W_coronal_equilibrium.txt"
   character(len=80), parameter :: plotfile = "plot_coronal_equilibrium.gp"
   character(len=3) :: Z

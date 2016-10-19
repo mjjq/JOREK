@@ -267,6 +267,7 @@ use phys_module, only : central_density, central_mass
 use mod_sampling
 use mpi
 use mod_random_seed
+use mod_coordinate_transforms
 implicit none
 
 class(particle_base), intent(inout), dimension(:) :: particles !< Particle to initialize
@@ -279,13 +280,11 @@ logical, intent(in), optional                     :: grad_T !< Include the tempe
 
 class(type_rng), allocatable :: my_rng
 integer :: i, ifail, seed, my_id, n_cpu
-real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8, dimension(1) :: P, P_s, P_t, P_phi
 real*8 :: v_out(4), ran4(4)
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
-real*8 :: background_density, background_kbT, background_kelvin, V_thermal
+real*8 :: background_kbT, V_thermal
 real*8 :: v_norm
-real*8 :: Z_coronal, radiation_coronal
-real*8 :: mass_main_ion
 
 allocate(my_rng, source=rng)
 ! Calculate a single random seed and communicate it over MPI
@@ -305,14 +304,20 @@ if (present(grad_T) .and. grad_T) then
 end if
 
 do i=1,size(particles)
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[5,6],2,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+#if (JOREK_MODEL == 400)
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[8],1,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+#else
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[6],1,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+      P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+#endif
 
-  background_density = P(1) * 1d20                                    ! plasma density [1/m^3]
-  background_kbT     = P(2) /(MU_ZERO*central_density*1.d20)          ! Total plasma temperature in J/kB = T = Te + Ti
-  background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron temperature [K]
-  ! This is not valid for model400 (for that, remove the factor 2 above and below)
-
+  ! Assume that the particles have the same temperature as the electrons
+#if (JOREK_MODEL == 400)
+  background_kbT = P(1)/(MU_ZERO*central_density*1.d20)  ! P(1) contains the electron temperature
+#else
+  background_kbT = P(1)/(2.d0*MU_ZERO*central_density*1.d20) ! P(1) contains the total plasma temperature in J/kB = T = Te + Ti
+#endif
   V_thermal = sqrt(background_kbT / (2.d0*mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
   call my_rng%next(ran4)
@@ -320,9 +325,7 @@ do i=1,size(particles)
 
   select type (p => particles(i))
   type is (particle_kinetic_leapfrog)
-    p%v(1) =   v_out(1) * cos(p%x(3)) + v_out(2) * sin(p%x(3))   ! V_R
-    p%v(3) = - v_out(1) * sin(p%x(3)) + v_out(2) * cos(p%x(3))   ! V_phi [physical component]
-    p%v(2) =   v_out(3)                                          ! V_Z
+    p%v = vector_rotation(v_out(1:3), p%x(3)) ! rotate the velocity vector to the correct angle
   end select
 end do
 end subroutine set_velocity_from_T

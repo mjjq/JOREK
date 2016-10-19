@@ -30,7 +30,7 @@ end interface
 
 contains
 
-!> Populate the RTree with the squares containing elements completely.
+!> Populate the RTree with the squares containing nodes of elements.
 !> x=R, y=Z
 subroutine populate_element_rtree(node_list, element_list)
   type(type_node_list), intent(in)    :: node_list

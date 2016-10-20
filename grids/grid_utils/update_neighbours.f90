@@ -2,7 +2,6 @@ subroutine update_neighbours(element_list,node_list)
 use data_structure
 use mod_neighbours
 use mod_element_rtree
-use mod_qsort
 implicit none
 
 type (type_element_list) :: element_list

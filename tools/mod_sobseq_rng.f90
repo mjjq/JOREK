@@ -10,11 +10,14 @@ module mod_sobseq_rng
     private
     integer :: n_streams
     integer :: i_stream
-      type(sobol_state), dimension(:), allocatable :: state
+    type(sobol_state), dimension(:), allocatable :: state
     contains
       procedure, public :: initialize => initialize_sobseq_rng
       procedure, public :: next => next_sobseq_rng
   end type
+  interface sobseq_rng
+    module procedure empty_sobseq_rng
+  end interface sobseq_rng
 
   ! Direction numbers taken from Joe and Kuo
   integer, parameter, dimension(1:8)   :: s = (/1,2,3,3,4,4,5,5/)
@@ -29,6 +32,9 @@ module mod_sobseq_rng
                                                 1,1,5,5,5/), (/5,8/))
   public :: ilog2_b_ceil
 contains
+  type(sobseq_rng) function empty_sobseq_rng()
+  end function empty_sobseq_rng
+
   subroutine initialize_sobseq_rng(rng, n_dims, seed, n_streams, i_stream, ierr)
     use mpi
     implicit none
@@ -84,7 +90,7 @@ contains
   end subroutine initialize_sobseq_rng
 
   !> Generate the next value in the sobol series for n_streams.
-  !> This routine contains some extra logic to handle n_streams not being a 
+  !> This routine contains some extra logic to handle n_streams not being a
   !> power of 2, in which case n_streams values need to be selected out of 2^ilog2_b_ceil(n_streams)
   subroutine next_sobseq_rng(rng, out)
     implicit none
@@ -102,7 +108,7 @@ contains
       if (rng%n_streams .lt. 2**N) then
         ! We have to select n_streams values from 2^N values
         write(*,*) "ERROR: selecting ", rng%n_streams, " values from ", 2**N, " values not implemented"
-        call exit(137)
+        !call exit(137)
       else
         do i=1,size(rng%state,1)
           out(i) = rng%state(i)%next_strided()

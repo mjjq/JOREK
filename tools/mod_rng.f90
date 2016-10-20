@@ -19,7 +19,7 @@ module mod_rng
       integer, intent(in)  :: n_dims !< Dimension of the generated output vector
       integer, intent(in)  :: seed !< Seed for the RNG if required
       integer, intent(in)  :: n_streams !< Number of output streams needed
-      integer, intent(in)  :: i_stream !< Index of this output stream
+      integer, intent(in)  :: i_stream !< Index of this output stream (1<=i_stream<=n_streams)
       integer, intent(out), optional :: ierr !< Error code. If present, return on error, otherwise call mpi_abort
     end subroutine initialize
 

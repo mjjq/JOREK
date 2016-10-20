@@ -37,7 +37,7 @@ subroutine seed_positions(particles, node_list, element_list, &
   ! Internal variables
   real*8  :: R, Z, phi, s, t, DUMMY_REAL
   real*8  :: Rbox(2), Zbox(2), Phibox(2)
-  integer :: i, j, ifail
+  integer :: i, j, k, ifail
   real*8  :: ran(4)
   integer :: i_elm
   real*8  :: t0, t1, ostart, oend
@@ -47,6 +47,8 @@ subroutine seed_positions(particles, node_list, element_list, &
   integer :: seed
   real*8, dimension(:), allocatable :: P
   class(type_rng), allocatable, dimension(:) :: rngs ! The RNGs for all the threads
+  integer, dimension(:), allocatable :: i_to_find
+  logical, dimension(:), allocatable :: not_found
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
@@ -87,56 +89,65 @@ subroutine seed_positions(particles, node_list, element_list, &
   end if
   if (present(Phibound)) PhiBox = Phibound
 
+  ! Calculate a single random seed and communicate it over MPI
+  if (my_id .eq. 0) seed = random_seed()
+  call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
+
+  ! Prepare list of particles to seed
+  allocate(i_to_find(size(particles,1)),not_found(size(particles,1)))
+  i_to_find = [(i, i=1,size(particles,1))] ! which particles still to do
+  not_found = .true. ! whether this one has been sampled succesfully
+
   ! Setup (Q)RNGs, one per thread
   n_threads = 1
   !$ n_threads = omp_get_max_threads()
   allocate(rngs(0:n_threads-1), source=rng)
   n_streams = n_cpu*n_threads ! Works only for homogeneous environments!
 
-  ! Calculate a single random seed and communicate it over MPI
-  if (my_id .eq. 0) seed = random_seed()
-  call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
+  do i_thread=0,n_threads-1
+    seq = my_id*n_threads + i_thread + 1
+    call rngs(i_thread)%initialize(4, seed, n_streams, seq, ifail)
+    if (ifail .ne. 0) call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
+  end do
 
   call cpu_time(t0)
   !$ ostart = omp_get_wtime()
 
+  ! Filter over all particles to sample them, repeat for rejected positions until
+  ! empty. This is required if the distribution has some correlation with the
+  ! samples mod something (as is the case for the Sobol sequence).
+  ! Even then, an inbalance in openmp scheduling or number of particles per node
+  ! could cause a slight correlation
+  ! in the output. This could be worse if the distribution is very narrow.
+  ! In that case the Sobol series should also be implemented in 64-bits as the total
+  ! number of values is 2^31 now.
+  do while (any(not_found))
   !$omp parallel default(none) &
   !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, variables, &
-  !$omp          n_cpu, rngs, n_threads, n_streams, seed, my_id, n_mhd, n_geom) &
+  !$omp          rngs, n_threads, n_streams, seed, my_id, n_mhd, n_geom, i_to_find, not_found) &
   !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL)
-
   i_thread = 0
-  !$ i_thread = omp_get_thread_num()
-  seq = my_id*n_threads + i_thread + 1
-  ! generate random numbers in 4 dimensions
-  call rngs(i_thread)%initialize(4, seed, n_streams, seq, ifail)
-  if (ifail .ne. 0) then
-    write(*,*) "Error seeding rng: ", ifail
-    call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
-  endif
-
+  !$ i_thread=omp_get_thread_num()
   !$omp do
-  do j=1,size(particles,1)
-    ifail = 1
-    do while (ifail .ne. 0)
-      ! Generate a random position to put this particle
-      call rngs(i_thread)%next(ran)
-      call transform_uniform_cylindrical(ran(1:3), Rbox, Zbox, PhiBox, R, Z, phi)
+  do i=1,size(i_to_find,1)
+    j = i_to_find(i)
+    ! Generate a random position to put this particle
+    call rngs(i_thread)%next(ran)
+    call transform_uniform_cylindrical(ran(1:3), Rbox, Zbox, PhiBox, R, Z, phi)
 
-      call find_RZ(node_list,element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
-      if (ifail .ne. 0) cycle ! out of domain
-
+    call find_RZ(node_list,element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
+    if (ifail .eq. 0) then
       if (present(variables)) then
         ! Select the mhd variables requested
         if (n_mhd .ge. 1) then
           call interp4(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P(n_geom:n_geom+n_mhd))
         end if
-        do i=1,n_geom
-          select case (variables(i))
-          case (0);  P(i) = 1.d0
-          case (-1); P(i) = R
-          case (-2); P(i) = Z
-          case (-3); P(i) = phi
+        do k=1,n_geom
+          select case (variables(k))
+          case (0);  P(k) = 1.d0
+          case (-1); P(k) = R
+          case (-2); P(k) = Z
+          case (-3); P(k) = phi
           end select
         end do
 
@@ -145,21 +156,24 @@ subroutine seed_positions(particles, node_list, element_list, &
             particles(j)%x = [R, Z, phi]
             particles(j)%i_elm = i_elm
             particles(j)%st = [s, t]
-            ifail = 0
-          else
-            ifail = 1
+            not_found(i) = .false.
           end if
         end if
       else
         particles(j)%x = [R, Z, phi]
         particles(j)%i_elm = i_elm
         particles(j)%st = [s, t]
-        ifail = 0
+        not_found(i) = .false.
       end if
-    enddo
+    end if
   enddo
   !$omp end do
   !$omp end parallel
+  ! Now pack only the indices of particles we still need to do
+  i_to_find = pack(i_to_find, not_found) ! implicitly allocates
+  deallocate(not_found); allocate(not_found(size(i_to_find,1)))
+  not_found = .true.
+  end do
 
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
@@ -243,7 +257,7 @@ real*8, dimension(4) :: P, P_s, P_t, P_phi
 real*8 :: v_out(4), ran4(4), Psi_R, Psi_Z, B(3)
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: background_kbT, background_Kelvin, background_density, V_thermal
-real*8 :: v_norm, DUMMY_REAL, Z_coronal
+real*8 :: DUMMY_REAL, Z_coronal
 
 allocate(my_rng, source=rng)
 ! Calculate a single random seed and communicate it over MPI

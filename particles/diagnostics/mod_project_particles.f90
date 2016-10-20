@@ -285,7 +285,7 @@ integer, intent(in) :: nsub !< Number of subdivisions of each element
 integer, intent(in) :: n_fields !< number of different particle groups to output
 
 integer :: nnos, nnoel, nel, i, j, ielm, inode, k
-real*4,allocatable :: xyz (:,:), scalars(:,:), vectors(:,:,:), sum_scalars(:,:), sum_vectors(:,:,:)
+real*4,allocatable :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 integer,allocatable   :: ien (:,:)
@@ -353,8 +353,8 @@ enddo  ! n_elements
 ! ------------- Write to VTK
 call write_vtk(filename,xyz,&
   ien, etype,&
-  scalar_names,sum_scalars,&
-  vector_names,sum_vectors)
+  scalar_names,scalars,&
+  vector_names,vectors)
 end subroutine write_particle_distribution_to_vtk
 
 
@@ -373,7 +373,7 @@ type (DMUMPS_STRUC), intent(inout)   :: projection_matrix
 class (particle_base), intent(in), dimension(:)    :: particles
 integer, intent(in) :: ivar_out
 
-real*8, allocatable :: RHS(:,:)
+real*8, allocatable :: RHS(:,:), sum_rhs(:)
 real*8     :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
 integer    :: i, j, k, m, i_tor, index_large_i, inode
 integer    :: i_elm, index, index_ij, my_id, ierr
@@ -437,20 +437,24 @@ do i_tor=1, n_tor
   enddo
 
   ! Gather the RHS's to the root process
-  call MPI_Reduce(projection_matrix%rhs,projection_matrix%rhs,size(projection_matrix%rhs), &
+  if (my_id .eq. 0) allocate(sum_rhs(size(projection_matrix%rhs,1)))
+  call MPI_Reduce(projection_matrix%rhs,sum_rhs,size(projection_matrix%rhs,1), &
       MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   ! Compute the solution of Ax=b (b = RHS)
   projection_matrix%JOB = 3
   projection_matrix%icntl(21) = 0 ! solution is available only on host
   projection_matrix%icntl(4)  = 1 ! print only errors
+  if (my_id .eq. 0) then
+    projection_matrix%rhs = sum_rhs
+    deallocate(sum_rhs)
+  end if
   call DMUMPS(projection_matrix)
 
   if (my_id .eq. 0) then
-    write(*,*) 'Projection ', i_tor, ' finished'
     do i=1,node_list%n_nodes
       do k=1,n_order+1
         index = node_list%node(i)%index(k)
-        node_list%node(i)%values(i_tor,k,ivar_out) = projection_matrix%RHS(index)
+        node_list%node(i)%values(i_tor,k,ivar_out) = projection_matrix%rhs(index)
       enddo    ! order
     enddo      ! nodes
   end if

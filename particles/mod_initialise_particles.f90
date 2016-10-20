@@ -126,28 +126,30 @@ subroutine seed_positions(particles, node_list, element_list, &
       call find_RZ(node_list,element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
       if (ifail .ne. 0) cycle ! out of domain
 
-      ! Select the mhd variables requested
-      if (n_mhd .ge. 1) then
-        call interp4(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P(n_geom:n_geom+n_mhd))
-      end if
-      do i=1,n_geom
-        select case (variables(i))
-        case (0);  P(i) = 1.d0
-        case (-1); P(i) = R
-        case (-2); P(i) = Z
-        case (-3); P(i) = phi
-        end select
-      end do
+      if (present(variables)) then
+        ! Select the mhd variables requested
+        if (n_mhd .ge. 1) then
+          call interp4(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P(n_geom:n_geom+n_mhd))
+        end if
+        do i=1,n_geom
+          select case (variables(i))
+          case (0);  P(i) = 1.d0
+          case (-1); P(i) = R
+          case (-2); P(i) = Z
+          case (-3); P(i) = phi
+          end select
+        end do
 
-      if (present(variables) .and. present(transform)) then
-        if (ran(4) .lt. transform(P)) then
-          particles(j)%x = [R, Z, phi]
-          particles(j)%i_elm = i_elm
-          particles(j)%st = [s, t]
-          ifail = 0
-        else
-          ifail = 1
-        endif
+        if (present(transform)) then
+          if (ran(4) .lt. transform(P)) then
+            particles(j)%x = [R, Z, phi]
+            particles(j)%i_elm = i_elm
+            particles(j)%st = [s, t]
+            ifail = 0
+          else
+            ifail = 1
+          end if
+        end if
       else
         particles(j)%x = [R, Z, phi]
         particles(j)%i_elm = i_elm
@@ -214,60 +216,16 @@ call MPI_AllReduce(local_weights,sum_weights,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,
 particles(:)%weight = particles(:)%weight / sum_weights * num_atoms_total
 end subroutine adjust_particle_weights
 
-!> Set v and q of a particle for use with kinetic codes
-subroutine set_charge_from_coronal_eq(particles, node_list, element_list, cor, ran4, ifail)
-use constants
-use data_structure
-use phys_module, only : central_density, central_mass
-use mod_openadas
-use mod_sampling
-use mod_coronal
-implicit none
-
-class(particle_base), intent(inout), dimension(:) :: particles !< Particle to initialize
-type(type_node_list), intent(in)                  :: node_list
-type(type_element_list), intent(in)               :: element_list
-type(type_coronal), intent(in)     :: cor !< Coronal equilibrium datatype for this particle
-real*8, dimension(4), intent(in)   :: ran4 !< Four uniform random numbers (or sobol subset)
-integer, intent(out) :: ifail
-
-integer :: i
-real*8, dimension(2) :: P, P_s, P_t, P_phi
-real*8 :: R, R_s, R_t, Z, Z_s, Z_t
-real*8 :: background_density, background_kbT, background_kelvin
-real*8 :: Z_coronal, radiation_coronal
-real*8 :: mass_main_ion
-
-select type (particles)
-type is (particle_kinetic_leapfrog)
-  do i=1,size(particles)
-    call interp_PRZ(node_list,element_list,particles(i)%i_elm,[5,6],2,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
-        P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
-
-    background_density = P(1) * 1d20                                    ! plasma density [1/m^3]
-    background_kbT     = P(2) /(MU_ZERO*central_density*1.d20)          ! Total plasma temperature in J/kB = T = Te + Ti
-    background_kelvin  = background_kbT / K_BOLTZ / 2.d0                ! electron temperature [K]
-    if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
-      ifail = 1
-    else
-      ifail = 0
-      call interpolate_coronal(cor, log10(background_density),log10(background_kelvin),Z_coronal,radiation_coronal)
-      particles(i)%q       = nint(Z_coronal,1)                     !< charge (initialised with the coronal equilibrium value)
-    endif
-  end do
-end select
-
-end subroutine set_charge_from_coronal_eq
-
 !> Set v of a particle for use with kinetic codes
-subroutine set_velocity_from_T(particles, mass, node_list, element_list, rng, v_par, grad_T)
+subroutine set_velocity_from_T(particles, mass, node_list, element_list, rng, cor, v_par, grad_T)
 use constants
 use data_structure
-use phys_module, only : central_density, central_mass
+use phys_module, only: central_density, central_mass, F0
 use mod_sampling
 use mpi
 use mod_random_seed
 use mod_coordinate_transforms
+use mod_coronal
 implicit none
 
 class(particle_base), intent(inout), dimension(:) :: particles !< Particle to initialize
@@ -275,16 +233,17 @@ real*8, intent(in)                                :: mass
 type(type_node_list), intent(in)                  :: node_list
 type(type_element_list), intent(in)               :: element_list
 class(type_rng), intent(in)                       :: rng
+type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
 logical, intent(in), optional                     :: v_par !< Include the parallel velocity if present and true
 logical, intent(in), optional                     :: grad_T !< Include the temperature gradient if present and true
 
 class(type_rng), allocatable :: my_rng
 integer :: i, ifail, seed, my_id, n_cpu
-real*8, dimension(1) :: P, P_s, P_t, P_phi
-real*8 :: v_out(4), ran4(4)
+real*8, dimension(4) :: P, P_s, P_t, P_phi
+real*8 :: v_out(4), ran4(4), Psi_R, Psi_Z, B(3)
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t
-real*8 :: background_kbT, V_thermal
-real*8 :: v_norm
+real*8 :: background_kbT, background_Kelvin, background_density, V_thermal
+real*8 :: v_norm, DUMMY_REAL, Z_coronal
 
 allocate(my_rng, source=rng)
 ! Calculate a single random seed and communicate it over MPI
@@ -294,10 +253,12 @@ if (my_id .eq. 0) seed = random_seed()
 call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
 call my_rng%initialize(4, seed, n_cpu, my_id, ifail)
 
+#if (JOREK_MODEL < 300)
 if (present(v_par) .and. v_par) then
-  write(*,*) "ERROR: initialization with v// not implemented"
+  write(*,*) "ERROR: initialization with v// not possible with this model"
   call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
 end if
+#endif
 if (present(grad_T) .and. grad_T) then
   write(*,*) "ERROR: initialization with gradT not implemented"
   call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
@@ -305,27 +266,42 @@ end if
 
 do i=1,size(particles)
 #if (JOREK_MODEL == 400)
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[8],1,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,8,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #else
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[6],1,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,6,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #endif
 
+  background_density = P(2) * 1d20                           ! plasma density [1/m^3]
   ! Assume that the particles have the same temperature as the electrons
 #if (JOREK_MODEL == 400)
-  background_kbT = P(1)/(MU_ZERO*central_density*1.d20)  ! P(1) contains the electron temperature
+  background_kbT = P(3)/(MU_ZERO*central_density*1.d20)      ! P(1) contains the electron temperature
 #else
-  background_kbT = P(1)/(2.d0*MU_ZERO*central_density*1.d20) ! P(1) contains the total plasma temperature in J/kB = T = Te + Ti
+  background_kbT = P(3)/(2.d0*MU_ZERO*central_density*1.d20) ! P(1) contains the total plasma temperature in J/kB = T = Te + Ti
 #endif
   V_thermal = sqrt(background_kbT / (2.d0*mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
   call my_rng%next(ran4)
   v_out = boxmueller_transform(ran4) * V_thermal ! [m/s], vx, vy, vz, dummy
+  if (present(v_par) .and. v_par) then
+    psi_R = (  P_s(4) * Z_t - P_t(4) * Z_s )/(R_s * Z_t - R_t * Z_s)
+    psi_Z = (- P_s(4) * R_t + P_t(4) * R_s )/(R_s * Z_t - R_t * Z_s)
+    B     = [psi_Z, -psi_R, F0]/R
+    v_out(1:3) = v_out(1:3) + P(4)*B/norm2(B)
+  end if
+
+  background_kelvin  = background_kbT / K_BOLTZ              ! electron temperature [K]
+  if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
+    Z_coronal = 0.d0
+  else
+    call cor%interp(log10(background_density),log10(background_kelvin),Z_coronal,DUMMY_REAL)
+  endif
 
   select type (p => particles(i))
   type is (particle_kinetic_leapfrog)
     p%v = vector_rotation(v_out(1:3), p%x(3)) ! rotate the velocity vector to the correct angle
+    p%q = nint(Z_coronal,1)                   !< charge
   end select
 end do
 end subroutine set_velocity_from_T

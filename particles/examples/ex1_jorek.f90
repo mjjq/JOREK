@@ -6,6 +6,8 @@ implicit none
 
 real*8 :: timesteps(1) = [1d-7] !< seconds
 
+type(adf11_all) :: adas
+type(coronal)   :: cor
 integer :: i, j, k, n_steps, i_elm_old, ifail
 real*8 :: target_time, t
 real*8 :: E(3), B(3), rz_old(2), st_old(2), psi, U
@@ -18,22 +20,20 @@ fields = read_jorek_fields_interp_linear(basename='jorek_restart', i=-1)
 call with(sim, fields)
 
 ! Set up particles
-allocate(particle_kinetic_leapfrog::sim%groups(1)%particles(100))
+allocate(particle_kinetic_leapfrog::sim%groups(1)%particles(100000))
 sim%groups(1)%Z    = 74
 sim%groups(1)%mass = 183.84 !< atomic mass units
-select type (p => sim%groups(1)%particles)
-type is (particle_kinetic_leapfrog)
-  do i=1,size(p,1)
-    p(i)%q = 20
-  end do
-end select
+
+! Prepare the coronal equilibrium
+adas = read_adf11('50_w')
+cor  = coronal(adas)
 
 ! Distribute particles uniformly throughout the domain
 call seed_positions(sim%groups(1)%particles, &
     fields%node_list, fields%element_list, pcg32_rng())
 call adjust_particle_weights(sim%groups(1)%particles, num_atoms_total=1d23)
 call set_velocity_from_T(sim%groups(1)%particles, sim%groups(1)%mass, &
-    fields%node_list, fields%element_list, pcg32_rng())
+    fields%node_list, fields%element_list, pcg32_rng(), cor, v_par=.true.)
 
 events = [event(write_action(basename='test'),   step=1d-4), &
           !event(diag_print_kinetic_energy(),     step=1d-6), &

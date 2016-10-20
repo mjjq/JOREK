@@ -55,19 +55,19 @@ end function new_project_to_vtk
 
 !> Action for projecting all particles and writing output to vtk
 subroutine project_and_save_to_vtk(this, sim)
+  use mpi
   class(project_to_vtk), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
-  integer :: i
+  integer :: i, my_id, ierr
   character(len=120) :: filename
 
   ! Safety checks
   if (.not. allocated(sim%groups)) return
   do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
-    ! this constructs the projection matrix once for every group while they are the same each run.
-    ! If slow this could change, for instance by storing the matrix in the action.
     if (.not. allocated(sim%groups(i)%particles)) cycle
     call project_particles(this%node_list, this%element_list, this%projection_matrix, &
         sim%groups(i)%particles, i)
+    ! results are saved only on mpi process 0
   end do
 
   if (len_trim(this%filename) .eq. 0) then
@@ -76,10 +76,14 @@ subroutine project_and_save_to_vtk(this, sim)
     filename = this%filename
   end if
 
-  call write_particle_distribution_to_vtk(this%node_list, this%element_list, &
-    trim(filename), this%nsub, min(size(sim%groups),n_var))
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  if (my_id .eq. 0) then
+    ! write only on the host
+    call write_particle_distribution_to_vtk(this%node_list, this%element_list, &
+      trim(filename), this%nsub, min(size(sim%groups),n_var))
 
-  write(*,*) "Written projection to ", trim(filename)
+    write(*,*) "Written projection to ", trim(filename)
+  end if
 end subroutine project_and_save_to_vtk
 
 !> Project particles by weight onto the elements
@@ -117,7 +121,7 @@ real*8     :: R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3)
 real*8     :: v, v_x, v_y, psi, psi_x, psi_y, wst, area, volume
 integer    :: i, j, k, l, m, i_tor, ilarge, index_large_i, index_large_k, inode, knode
 integer    :: nz_AA, n_AA, i_elm, index_ij, index_kl
-integer    :: ms, mt, n_p
+integer    :: ms, mt, n_p, my_id, ierr
 
 ! Initialise MUMPS
 projection_matrix%COMM = MPI_COMM_WORLD
@@ -125,13 +129,16 @@ projection_matrix%JOB  = -1
 projection_matrix%SYM  = 0
 projection_matrix%PAR  = 1
 call DMUMPS(projection_matrix)
+call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
-
 n_AA = 0
 do inode = 1, node_list%n_nodes
   n_AA = max(n_AA,node_list%node(inode)%index(4))
 enddo
+
+! Only perform the construction of the matrix on the host
+if (my_id .eq. 0) then
 write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
 write(*,*) ' nz_AA                   : ',nz_AA
 
@@ -244,28 +251,30 @@ enddo
 
 write(*,'(A,e14.6)') ' Area        : ',area
 write(*,'(A,e14.6)') ' Volume      : ',volume
+end if
 
-! Perform the analysis and factorisation
+! Perform the analysis and factorisation with all nodes
 projection_matrix%JOB       = 4
 projection_matrix%n         = n_AA
 projection_matrix%nz        = nz_AA
-projection_matrix%icntl(5)  = 0
-projection_matrix%icntl(18) = 0
-projection_matrix%icntl(7)  = 4
-projection_matrix%icntl(8)  = 7
-projection_matrix%icntl(14) = 80
+projection_matrix%icntl(5)  = 0 ! assembled form
+projection_matrix%icntl(18) = 0 ! centralized (i.e. only on cpu 0)
+projection_matrix%icntl(7)  = 4 ! compute symmetric perturbation? (if 1)
+projection_matrix%icntl(8)  = 7 ! scaling
+projection_matrix%icntl(14) = 80 ! memory relaxation parameter
+projection_matrix%icntl(4)  = 2 ! Print errors, warnings and main statistics
 call DMUMPS(projection_matrix)
 end subroutine prepare_projection_matrix
 
 
 !> Helper subroutine to write a particle distribution, saved in variables 1:n,
 !> to `filename`. `nsub` is the number of subdivisions to make per element.
+!> Should be called only by process 1
 subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub,n_fields)
 use data_structure
 use basis_at_gaussian ! for HZ (initialise_basis must be called before use!)
 use phys_module, only: mode
 use mod_vtk
-use mpi
 implicit none
 
 !> Input parameters
@@ -280,18 +289,15 @@ real*4,allocatable :: xyz (:,:), scalars(:,:), vectors(:,:,:), sum_scalars(:,:),
 real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
 real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 integer,allocatable   :: ien (:,:)
-integer :: my_id, ierr, n_scalars, n_vectors = 0
+integer :: n_scalars, n_vectors = 0
 character*12, allocatable :: vector_names(:), scalar_names(:)
 
 integer :: i_t, i_v
 integer, parameter :: etype = 9 ! for vtk_quad
 
-call MPI_comm_rank(MPI_COMM_WORLD, my_id, ierr)
-
 n_scalars = n_tor * n_fields
 nnos = nsub*nsub*node_list%n_nodes
 allocate(xyz(3,nnos),scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
-if (my_id .eq. 0) allocate(sum_scalars(nnos,n_scalars),sum_vectors(nnos,3,n_vectors))
 allocate(scalar_names(n_scalars),vector_names(n_vectors))
 do i=1,n_fields
   write(scalar_names(n_tor*(i-1)+1),'(A,i0.2)') "rho_", i
@@ -344,22 +350,15 @@ do i=1,element_list%n_elements
   enddo
 enddo  ! n_elements
 
-! Gather scalars and vectors with MPI
-call MPI_Reduce(scalars, sum_scalars, size(scalars), MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-call MPI_Reduce(vectors, sum_vectors, size(vectors), MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-
-if (my_id .eq. 0) then
-  ! ------------- Write to VTK
-  call write_vtk(filename,xyz,&
-    ien, etype,&
-    scalar_names,sum_scalars,&
-    vector_names,sum_vectors)
-end if
+! ------------- Write to VTK
+call write_vtk(filename,xyz,&
+  ien, etype,&
+  scalar_names,sum_scalars,&
+  vector_names,sum_vectors)
 end subroutine write_particle_distribution_to_vtk
 
 
-!> Perform the actual projection of a set of particles ono variable ivar_out in node_list.
-!> This is performed locally, so per MPI process.
+!> Perform the actual projection of a set of particles on variable ivar_out in node_list.
 subroutine project_particles(node_list, element_list, projection_matrix, particles, ivar_out)
 use phys_module
 use data_structure
@@ -377,7 +376,9 @@ integer, intent(in) :: ivar_out
 real*8, allocatable :: RHS(:,:)
 real*8     :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
 integer    :: i, j, k, m, i_tor, index_large_i, inode
-integer    :: i_elm, index, index_ij
+integer    :: i_elm, index, index_ij, my_id, ierr
+
+call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 allocate(RHS(n_vertex_max*(n_order+1),element_list%n_elements))
 ! Create the RHS and calculate the projection
@@ -435,17 +436,24 @@ do i_tor=1, n_tor
     enddo
   enddo
 
+  ! Gather the RHS's to the root process
+  call MPI_Reduce(projection_matrix%rhs,projection_matrix%rhs,size(projection_matrix%rhs), &
+      MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   ! Compute the solution of Ax=b (b = RHS)
   projection_matrix%JOB = 3
+  projection_matrix%icntl(21) = 0 ! solution is available only on host
+  projection_matrix%icntl(4)  = 1 ! print only errors
   call DMUMPS(projection_matrix)
 
-  write(*,*) 'Projection ', i_tor, ' finished'
-  do i=1,node_list%n_nodes
-    do k=1,n_order+1
-      index = node_list%node(i)%index(k)
-      node_list%node(i)%values(i_tor,k,ivar_out) = projection_matrix%RHS(index)
-    enddo    ! order
-  enddo      ! nodes
+  if (my_id .eq. 0) then
+    write(*,*) 'Projection ', i_tor, ' finished'
+    do i=1,node_list%n_nodes
+      do k=1,n_order+1
+        index = node_list%node(i)%index(k)
+        node_list%node(i)%values(i_tor,k,ivar_out) = projection_matrix%RHS(index)
+      enddo    ! order
+    enddo      ! nodes
+  end if
 enddo ! i_tor
 end subroutine project_particles
 end module mod_project_particles

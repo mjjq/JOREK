@@ -3,10 +3,11 @@
 module mod_openadas
 implicit none
 private
-public type_ADF11, type_ADF11_all, read_adf11, GRC, L2Dinterp
+public ADF11, ADF11_all, read_ADF11
+public L2Dinterp
 
 !> Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
-type type_ADF11
+type ADF11
   integer             :: n_Z !< Atomic number
   integer             :: izmin, izmax !< minimum and maximum value of z for which data is available
   real*8, allocatable :: density(:) !< log10 density (m^-3)
@@ -14,18 +15,20 @@ type type_ADF11
   real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: d, T, z). Units:
   !< ACD, SCD: cm3s-1 (for *CD ?)
   !< PLT, PRB: Wcm3 (for P* ?)
-end type type_ADF11
+contains
+  procedure :: interp => GRC
+end type ADF11
 
 !> Compound datatype containing many type_ADF11
-type type_ADF11_all
+type ADF11_all
   integer          :: n_Z !< Atomic number
-  type(type_ADF11) :: ACD !< Effective recombination coefficients
-  type(type_ADF11) :: SCD !< Effective ionisation coefficients
-  type(type_ADF11) :: CCD !< Charge exchange effective recombination coefficients
-  type(type_ADF11) :: PLT !< Line power driven by excitation of dominant ions
-  type(type_ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
-  type(type_ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
-end type type_ADF11_all
+  type(ADF11) :: ACD !< Effective recombination coefficients
+  type(ADF11) :: SCD !< Effective ionisation coefficients
+  type(ADF11) :: CCD !< Charge exchange effective recombination coefficients
+  type(ADF11) :: PLT !< Line power driven by excitation of dominant ions
+  type(ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
+  type(ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
+end type ADF11_all
 !< Recombination data is given as recombining FROM (Z=1 to Z=74)
 !< Ionisation data is given as ionising TO (Z=1 up to Z=74)
 contains
@@ -37,13 +40,11 @@ contains
 function read_adf11(suffix, directory) result(ad)
 use constants
 use mpi
-implicit none
-
-character*6, intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li), give this in input file
+character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
-type(type_ADF11_all), target :: ad !< OpenAdas data type
+type(ADF11_all), target :: ad !< OpenAdas data type
 
-type(type_ADF11), pointer :: a
+type(ADF11), pointer :: a
 integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*120 :: filename
@@ -120,9 +121,7 @@ end function read_adf11
 
 !> interpolation of log10 values of GRC in density and temperature
 pure function GRC(a, z, density, temperature)
-implicit none
-
-type (type_ADF11), intent(in) :: a           !< ADF11 datatype
+class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
 integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
@@ -157,8 +156,6 @@ end function GRC
 !> x1,2 and y1,2 are chosen in order of closeness
 !> This algorithm can also be used for extrapolation
 pure function L2Dinterp(tx,ty,f,x,y) result(fout)
-implicit none
-
 real*8, intent(in), dimension(:)                 :: tx !< Grid points in x
 real*8, intent(in), dimension(:)                 :: ty !< Grid points in y
 real*8, intent(in), dimension(size(tx),size(ty)) :: f !< Function values at these points

@@ -16,6 +16,10 @@ use mod_boris
 ! Fields
 use mod_fields_linear
 
+! ADAS
+use mod_openadas
+use mod_coronal
+
 ! RNGs
 use mod_pcg32_rng
 use mod_sobseq_rng

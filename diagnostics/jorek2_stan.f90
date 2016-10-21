@@ -47,7 +47,7 @@ program jorek2_stan
   enddo
   
   ! --- Import restart and define bases.
-  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
   call initialise_basis
   
   allocate(stpts)

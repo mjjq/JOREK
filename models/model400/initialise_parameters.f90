@@ -20,6 +20,7 @@ integer :: ierr, i, err
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
+                rst_hdf5,                                           &
                 eta, visco, visco_par,                              &
                 restart, regrid, bootstrap,                         &
                 force_horizontal_Xline,                             &

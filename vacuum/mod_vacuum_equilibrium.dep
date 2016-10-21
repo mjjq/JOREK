@@ -1,0 +1,11 @@
+  vacuum/mod_vacuum_equilibrium.o : constants.mod
+  vacuum/mod_vacuum_equilibrium.o : vacuum.mod
+  vacuum/mod_vacuum_equilibrium.o : vacuum_response.mod
+  vacuum/mod_vacuum_equilibrium.o : mpi_mod.mod
+  vacuum/mod_vacuum_equilibrium.o : parameters.mod
+  vacuum/mod_vacuum_equilibrium.o : data_structure.mod
+  vacuum/mod_vacuum_equilibrium.o : gauss.mod
+  vacuum/mod_vacuum_equilibrium.o : basis_at_gaussian.mod
+  vacuum/mod_vacuum_equilibrium.o : mumps_module.mod
+  vacuum/mod_vacuum_equilibrium.o : vacuum_response.mod
+vacuum_equilibrium.mod :  vacuum/mod_vacuum_equilibrium.o

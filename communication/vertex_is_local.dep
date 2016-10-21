@@ -1,0 +1,4 @@
+  communication/vertex_is_local.o : tr_module.mod
+  communication/vertex_is_local.o : murge_module.mod
+  communication/vertex_is_local.o : tr_module.mod
+  communication/vertex_is_local.o : murge_module.mod

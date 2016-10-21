@@ -1,0 +1,5 @@
+  grids/grid_utils/define_new_grid_points.o : constants.mod
+  grids/grid_utils/define_new_grid_points.o : tr_module.mod
+  grids/grid_utils/define_new_grid_points.o : data_structure.mod
+  grids/grid_utils/define_new_grid_points.o : grid_xpoint_data.mod
+  grids/grid_utils/define_new_grid_points.o : phys_module.mod

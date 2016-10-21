@@ -1,0 +1,6 @@
+  models/mod_assembly.o : parameters.mod
+  models/mod_assembly.o : global_distributed_matrix.mod
+  models/mod_assembly.o : murge_module.mod
+  models/mod_assembly.o : parameters.mod
+  models/mod_assembly.o : murge_module.mod
+mod_assembly.mod :  models/mod_assembly.o

@@ -1,0 +1,4 @@
+  communication/broadcast_RMP_profiles.o : tr_module.mod
+  communication/broadcast_RMP_profiles.o : phys_module.mod
+  communication/broadcast_RMP_profiles.o : data_structure.mod
+  communication/broadcast_RMP_profiles.o : mpi_mod.mod

@@ -1,0 +1,7 @@
+  diagnostics/integrals.o : constants.mod
+  diagnostics/integrals.o : parameters.mod
+  diagnostics/integrals.o : data_structure.mod
+  diagnostics/integrals.o : gauss.mod
+  diagnostics/integrals.o : basis_at_gaussian.mod
+  diagnostics/integrals.o : phys_module.mod
+  diagnostics/integrals.o : domains.mod

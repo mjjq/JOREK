@@ -1,0 +1,4 @@
+  models/element_matrix_GS.o : parameters.mod
+  models/element_matrix_GS.o : data_structure.mod
+  models/element_matrix_GS.o : gauss.mod
+  models/element_matrix_GS.o : basis_at_gaussian.mod

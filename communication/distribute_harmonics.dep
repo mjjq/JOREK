@@ -1,0 +1,5 @@
+  communication/distribute_harmonics.o : tr_module.mod
+  communication/distribute_harmonics.o : parameters.mod
+  communication/distribute_harmonics.o : global_distributed_matrix.mod
+  communication/distribute_harmonics.o : mumps_module.mod
+  communication/distribute_harmonics.o : mpi_mod.mod

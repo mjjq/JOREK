@@ -1,0 +1,4 @@
+  diagnostics/output_saving.o : data_structure.mod
+  diagnostics/output_saving.o : phys_module.mod
+  diagnostics/output_saving.o : basis_at_gaussian.mod
+out_save_module.mod :  diagnostics/output_saving.o

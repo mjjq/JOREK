@@ -1,0 +1,4 @@
+  timing/r3_info.o : mpi_mod.mod
+  timing/r3_info.o : mpi_mod.mod
+  timing/r3_info.o : mpi_mod.mod
+ timing/r3_info.o: timing/r3_info.h

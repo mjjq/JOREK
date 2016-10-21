@@ -1,0 +1,8 @@
+  solvers/gmres_driver.o : tr_module.mod
+  solvers/gmres_driver.o : mumps_module.mod
+  solvers/gmres_driver.o : murge_module.mod
+  solvers/gmres_driver.o : global_distributed_matrix.mod
+  solvers/gmres_driver.o : mpi_mod.mod
+  solvers/gmres_driver.o : clock_module.mod
+  solvers/gmres_driver.o : phys_module.mod
+ solvers/gmres_driver.o: timing/r3_info.h

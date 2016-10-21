@@ -1,0 +1,5 @@
+  diagnostics/find_axis.o : data_structure.mod
+  diagnostics/find_axis.o : gauss.mod
+  diagnostics/find_axis.o : basis_at_gaussian.mod
+  diagnostics/find_axis.o : phys_module.mod
+  diagnostics/find_axis.o : data_structure.mod

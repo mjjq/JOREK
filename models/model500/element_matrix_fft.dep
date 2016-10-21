@@ -1,0 +1,11 @@
+  models/model500/element_matrix_fft.o : constants.mod
+  models/model500/element_matrix_fft.o : parameters.mod
+  models/model500/element_matrix_fft.o : data_structure.mod
+  models/model500/element_matrix_fft.o : gauss.mod
+  models/model500/element_matrix_fft.o : basis_at_gaussian.mod
+  models/model500/element_matrix_fft.o : phys_module.mod
+  models/model500/element_matrix_fft.o : pellet_module.mod
+  models/model500/element_matrix_fft.o : diffusivities.mod
+  models/model500/element_matrix_fft.o : corr_neg.mod
+  models/model500/element_matrix_fft.o : mgi_module.mod
+mod_elt_matrix_fft.mod :  models/model500/element_matrix_fft.o

@@ -1,0 +1,2 @@
+  solvers/mnewtax.o : data_structure.mod
+  solvers/mnewtax.o : data_structure.mod

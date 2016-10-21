@@ -1,0 +1,6 @@
+  models/equilibrium.o : tr_module.mod
+  models/equilibrium.o : parameters.mod
+  models/equilibrium.o : data_structure.mod
+  models/equilibrium.o : phys_module.mod
+  models/equilibrium.o : mod_poiss.mod
+  models/equilibrium.o : vacuum.mod

@@ -1,0 +1,3 @@
+  communication/broadcast_elements.o : tr_module.mod
+  communication/broadcast_elements.o : data_structure.mod
+  communication/broadcast_elements.o : mpi_mod.mod

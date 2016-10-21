@@ -1,0 +1,3 @@
+  communication/broadcast_num_profiles.o : tr_module.mod
+  communication/broadcast_num_profiles.o : phys_module.mod
+  communication/broadcast_num_profiles.o : mpi_mod.mod

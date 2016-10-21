@@ -1,0 +1,2 @@
+  diagnostics/determine_PhiN.o : tr_module.mod
+  diagnostics/determine_PhiN.o : data_structure.mod

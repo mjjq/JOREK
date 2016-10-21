@@ -1,0 +1,5 @@
+  models/preset_parameters.o : phys_module.mod
+  models/preset_parameters.o : mumps_module.mod
+  models/preset_parameters.o : murge_module.mod
+  models/preset_parameters.o : pastix_module.mod
+  models/preset_parameters.o : wsmp_module.mod

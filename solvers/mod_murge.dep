@@ -1,0 +1,15 @@
+  solvers/mod_murge.o : tr_module.mod
+  solvers/mod_murge.o : parameters.mod
+  solvers/mod_murge.o : parameters.mod
+  solvers/mod_murge.o : mpi_mod.mod
+  solvers/mod_murge.o : parameters.mod
+  solvers/mod_murge.o : data_structure.mod
+  solvers/mod_murge.o : parameters.mod
+  solvers/mod_murge.o : global_distributed_matrix.mod
+  solvers/mod_murge.o : clock_module.mod
+  solvers/mod_murge.o : mpi_mod.mod
+  solvers/mod_murge.o : parameters.mod
+  solvers/mod_murge.o : data_structure.mod
+  solvers/mod_murge.o : data_structure.mod
+  solvers/mod_murge.o : nodes_elements.mod
+murge_module.mod :  solvers/mod_murge.o

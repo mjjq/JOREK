@@ -1,0 +1,2 @@
+  models/current.o : parameters.mod
+  models/current.o : phys_module.mod

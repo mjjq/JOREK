@@ -28,7 +28,7 @@ factorial = Ans
 end function factorial
 
 
-subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+subroutine mgi_source(mgi_amplitude,mgi_R_new,mgi_Z_new,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
 
 !=================================================================================
@@ -72,8 +72,10 @@ real*8, intent(in)  :: P_Dmv
 real*8, intent(in)  :: t_now
 real*8, intent(in)  :: t_mgi
 real*8, intent(in)  :: mgi_amplitude
-real*8, intent(in)  :: mgi_R
-real*8, intent(in)  :: mgi_Z
+!real*8, intent(in)  :: mgi_R
+!real*8, intent(in)  :: mgi_Z
+real*8, intent(in)  :: mgi_R_new
+real*8, intent(in)  :: mgi_Z_new
 real*8, intent(in)  :: mgi_phi
 real*8, intent(in)  :: mgi_radius
 real*8, intent(in)  :: mgi_sig
@@ -87,7 +89,11 @@ logical, intent(in) :: ASDEX_MGI
 real*8, intent(out) :: rhon_source
 real*8, intent(in)  :: mgi_tor_norm
 
-  radius = sqrt((R-mgi_R)**2 + (Z-mgi_Z)**2)
+  ! For now the velocity is considered to be a constant, will add more complicated model later on.
+  !mgi_R_new = mgi_R + mgi_R_d
+  !mgi_Z_new = mgi_Z + mgi_Z_d
+
+  radius = sqrt((R-mgi_R_new)**2 + (Z-mgi_Z_new)**2)
 
   c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed Deuterium
 
@@ -102,8 +108,9 @@ real*8, intent(in)  :: mgi_tor_norm
   
    mgi_tor_shape = exp(-(dphi/mgi_deltaphi)**2.d0)
 
-   V_mgi  = PI * mgi_R * mgi_tor_norm * mgi_radius**2.d0
+   V_mgi  = PI * mgi_R_new * mgi_tor_norm * mgi_radius**2.d0
 
+   ! Normalized to Alfven time here.... Are we assuming B/R=1?
    t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
    t_loc = (t_now-t_mgi) * t_norm + L_tube/(3.d0 * c0_D)

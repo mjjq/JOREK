@@ -1,0 +1,3 @@
+  diagnostics/find_flux_surfaces.o : constants.mod
+  diagnostics/find_flux_surfaces.o : tr_module.mod
+  diagnostics/find_flux_surfaces.o : data_structure.mod

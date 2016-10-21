@@ -1,0 +1,3 @@
+  grids/grid_flux_surface.o : constants.mod
+  grids/grid_flux_surface.o : tr_module.mod
+  grids/grid_flux_surface.o : data_structure.mod

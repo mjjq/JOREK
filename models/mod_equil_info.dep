@@ -1,0 +1,3 @@
+  models/mod_equil_info.o : constants.mod
+  models/mod_equil_info.o : data_structure.mod
+equil_info.mod :  models/mod_equil_info.o

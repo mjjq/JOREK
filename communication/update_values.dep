@@ -1,0 +1,2 @@
+  communication/update_values.o : data_structure.mod
+  communication/update_values.o : phys_module.mod

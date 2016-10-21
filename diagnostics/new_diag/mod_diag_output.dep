@@ -1,0 +1,5 @@
+  diagnostics/new_diag/mod_diag_output.o : parameters.mod
+  diagnostics/new_diag/mod_diag_output.o : mod_expression.mod
+  diagnostics/new_diag/mod_diag_output.o : mod_position.mod
+  diagnostics/new_diag/mod_diag_output.o : equil_info.mod
+mod_diag_output.mod :  diagnostics/new_diag/mod_diag_output.o

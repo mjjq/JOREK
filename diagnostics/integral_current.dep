@@ -1,0 +1,6 @@
+  diagnostics/integral_current.o : constants.mod
+  diagnostics/integral_current.o : parameters.mod
+  diagnostics/integral_current.o : data_structure.mod
+  diagnostics/integral_current.o : gauss.mod
+  diagnostics/integral_current.o : basis_at_gaussian.mod
+  diagnostics/integral_current.o : phys_module.mod

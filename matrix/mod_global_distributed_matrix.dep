@@ -1,0 +1,4 @@
+  matrix/mod_global_distributed_matrix.o : parameters.mod
+  matrix/mod_global_distributed_matrix.o : parameters.mod
+  matrix/mod_global_distributed_matrix.o : data_structure.mod
+global_distributed_matrix.mod :  matrix/mod_global_distributed_matrix.o

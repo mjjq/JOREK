@@ -1,0 +1,8 @@
+  diagnostics/new_diag/mod_straight_field_line.o : constants.mod
+  diagnostics/new_diag/mod_straight_field_line.o : tr_module.mod
+  diagnostics/new_diag/mod_straight_field_line.o : parameters.mod
+  diagnostics/new_diag/mod_straight_field_line.o : phys_module.mod
+  diagnostics/new_diag/mod_straight_field_line.o : equil_info.mod
+  diagnostics/new_diag/mod_straight_field_line.o : data_structure.mod
+  diagnostics/new_diag/mod_straight_field_line.o : data_structure.mod
+mod_straight_field_line.mod :  diagnostics/new_diag/mod_straight_field_line.o

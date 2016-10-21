@@ -1,0 +1,7 @@
+  models/poisson.o : tr_module.mod
+  models/poisson.o : data_structure.mod
+  models/poisson.o : mumps_module.mod
+  models/poisson.o : pastix_module.mod
+  models/poisson.o : vacuum_equilibrium.mod
+  models/poisson.o : mpi_mod.mod
+mod_poiss.mod :  models/poisson.o

@@ -1,0 +1,3 @@
+  models/mod_nodes_elements.o : data_structure.mod
+  models/mod_nodes_elements.o : parameters.mod
+nodes_elements.mod :  models/mod_nodes_elements.o

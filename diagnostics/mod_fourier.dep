@@ -1,0 +1,7 @@
+  diagnostics/mod_fourier.o : constants.mod
+  diagnostics/mod_fourier.o : tr_module.mod
+  diagnostics/mod_fourier.o : parameters.mod
+  diagnostics/mod_fourier.o : nodes_elements.mod
+  diagnostics/mod_fourier.o : phys_module.mod
+  diagnostics/mod_fourier.o : mod_straight_field_line.mod
+fourier.mod :  diagnostics/mod_fourier.o

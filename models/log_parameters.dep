@@ -1,0 +1,7 @@
+  models/log_parameters.o : phys_module.mod
+  models/log_parameters.o : mumps_module.mod
+  models/log_parameters.o : murge_module.mod
+  models/log_parameters.o : pastix_module.mod
+  models/log_parameters.o : wsmp_module.mod
+  models/log_parameters.o : vacuum.mod
+mod_log_params.mod :  models/log_parameters.o

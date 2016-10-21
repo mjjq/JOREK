@@ -1,0 +1,3 @@
+  communication/broadcast_boundary.o : tr_module.mod
+  communication/broadcast_boundary.o : data_structure.mod
+  communication/broadcast_boundary.o : mpi_mod.mod

@@ -1,0 +1,4 @@
+  datatypes/mod_data_structure.o : parameters.mod
+  datatypes/mod_data_structure.o : tr_module.mod
+  datatypes/mod_data_structure.o : gauss.mod
+data_structure.mod :  datatypes/mod_data_structure.o

@@ -1,0 +1,3 @@
+  models/mod_corr_neg.o : phys_module.mod
+  models/mod_corr_neg.o : phys_module.mod
+corr_neg.mod :  models/mod_corr_neg.o

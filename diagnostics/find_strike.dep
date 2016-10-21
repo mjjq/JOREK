@@ -1,0 +1,4 @@
+  diagnostics/find_strike.o : data_structure.mod
+  diagnostics/find_strike.o : gauss.mod
+  diagnostics/find_strike.o : equil_info.mod
+  diagnostics/find_strike.o : basis_at_gaussian.mod

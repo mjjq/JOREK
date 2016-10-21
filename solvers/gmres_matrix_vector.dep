@@ -1,0 +1,5 @@
+  solvers/gmres_matrix_vector.o : tr_module.mod
+  solvers/gmres_matrix_vector.o : parameters.mod
+  solvers/gmres_matrix_vector.o : global_distributed_matrix.mod
+  solvers/gmres_matrix_vector.o : murge_module.mod
+  solvers/gmres_matrix_vector.o : mpi_mod.mod

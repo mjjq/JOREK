@@ -90,6 +90,16 @@ real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rh
 ! Neutral source
 real*8     :: source_mgi
 
+! time normalization
+real*8     :: t_norm
+
+! Displacement of neutral source center
+!real*8     :: mgi_R_d
+!real*8     :: mgi_Z_d
+real*8     :: mgi_R_new
+real*8     :: mgi_Z_new
+
+
 ! Neutral diffusion coefficients
 real*8     :: Dn0x, Dn0y, Dn0p
 
@@ -621,8 +631,15 @@ do ms=1, n_gauss
    !--------------------------------------------------------
 
      source_mgi = 0.d0                    
-     
-     call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &       
+
+ ! For now we only consider a cosntant velocity along R direction, to be fixed 
+
+     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+
+     mgi_R_new = mgi_R + (t_now-t_mgi)*t_norm*mgi_Vel
+     mgi_Z_new = mgi_Z
+
+     call mgi_source(mgi_amplitude,mgi_R_new,mgi_Z_new,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &       
                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)                                 
 
      if (source_mgi .lt. 0.d0) then

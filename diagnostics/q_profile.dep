@@ -1,0 +1,3 @@
+  diagnostics/q_profile.o : tr_module.mod
+  diagnostics/q_profile.o : data_structure.mod
+  diagnostics/q_profile.o : phys_module.mod

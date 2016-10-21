@@ -1,0 +1,7 @@
+  models/mod_domains.o : data_structure.mod
+  models/mod_domains.o : phys_module.mod
+  models/mod_domains.o : diagnostics.mod
+  models/mod_domains.o : phys_module.mod
+  models/mod_domains.o : phys_module.mod
+  models/mod_domains.o : phys_module.mod
+domains.mod :  models/mod_domains.o

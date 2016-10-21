@@ -1,0 +1,2 @@
+  timing/clock.o : mpi_mod.mod
+clock_module.mod :  timing/clock.o

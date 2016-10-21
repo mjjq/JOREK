@@ -1,0 +1,3 @@
+  matrix/global_matrix_structure.o : tr_module.mod
+  matrix/global_matrix_structure.o : data_structure.mod
+  matrix/global_matrix_structure.o : global_distributed_matrix.mod

@@ -1,0 +1,6 @@
+  plots/plot_solution.o : constants.mod
+  plots/plot_solution.o : tr_module.mod
+  plots/plot_solution.o : parameters.mod
+  plots/plot_solution.o : data_structure.mod
+  plots/plot_solution.o : basis_at_gaussian.mod
+  plots/plot_solution.o : phys_module.mod

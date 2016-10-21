@@ -1,0 +1,3 @@
+  communication/export_pov.o : parameters.mod
+  communication/export_pov.o : data_structure.mod
+  communication/export_pov.o : basis_at_gaussian.mod

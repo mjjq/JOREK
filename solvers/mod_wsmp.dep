@@ -1,0 +1,5 @@
+  solvers/mod_wsmp.o : mpi_mod.mod
+  solvers/mod_wsmp.o : mpi_mod.mod
+  solvers/mod_wsmp.o : mpi_mod.mod
+  solvers/mod_wsmp.o : mpi_mod.mod
+wsmp_module.mod :  solvers/mod_wsmp.o

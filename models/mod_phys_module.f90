@@ -203,6 +203,7 @@ module phys_module
   real*8  :: mgi_amplitude      !< amplitude of neutral density source
   real*8  :: mgi_R             !< major radius position of neutral density source
   real*8  :: mgi_Z             !< Z position of neutral density source
+  real*8  :: mgi_Vel           !< Velocity of neutral density source along R
   real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction
   real*8  :: mgi_radius        !< radius of the neutral density source in poloidal plane
   real*8  :: mgi_sig           !< width of smoothing of the neutral density source in poloidal plane

@@ -1,0 +1,5 @@
+  grids/grid_utils/find_strategic_points.o : constants.mod
+  grids/grid_utils/find_strategic_points.o : tr_module.mod
+  grids/grid_utils/find_strategic_points.o : data_structure.mod
+  grids/grid_utils/find_strategic_points.o : grid_xpoint_data.mod
+  grids/grid_utils/find_strategic_points.o : phys_module.mod

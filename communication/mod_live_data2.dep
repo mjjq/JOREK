@@ -1,0 +1,7 @@
+  communication/mod_live_data2.o : parameters.mod
+  communication/mod_live_data2.o : phys_module.mod
+  communication/mod_live_data2.o : parameters.mod
+  communication/mod_live_data2.o : phys_module.mod
+  communication/mod_live_data2.o : phys_module.mod
+ communication/mod_live_data2.o: version.h
+live_data2.mod :  communication/mod_live_data2.o

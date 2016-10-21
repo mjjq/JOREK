@@ -1,0 +1,4 @@
+  models/element_matrix_poisson.o : parameters.mod
+  models/element_matrix_poisson.o : data_structure.mod
+  models/element_matrix_poisson.o : gauss.mod
+  models/element_matrix_poisson.o : basis_at_gaussian.mod

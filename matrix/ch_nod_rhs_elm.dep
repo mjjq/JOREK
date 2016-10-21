@@ -1,0 +1,3 @@
+  matrix/ch_nod_rhs_elm.o : parameters.mod
+  matrix/ch_nod_rhs_elm.o : data_structure.mod
+mod_ch_nod_rhs_elm.mod :  matrix/ch_nod_rhs_elm.o

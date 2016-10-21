@@ -1,0 +1,3 @@
+  plots/plot_grid.o : tr_module.mod
+  plots/plot_grid.o : parameters.mod
+  plots/plot_grid.o : data_structure.mod

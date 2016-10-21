@@ -1,0 +1,10 @@
+  communication/export_restart.o : parameters.mod
+  communication/export_restart.o : data_structure.mod
+  communication/export_restart.o : phys_module.mod
+  communication/export_restart.o : pellet_module.mod
+  communication/export_restart.o : vacuum.mod
+  communication/export_restart.o : data_structure.mod
+  communication/export_restart.o : phys_module.mod
+  communication/export_restart.o : pellet_module.mod
+  communication/export_restart.o : vacuum.mod
+ communication/export_restart.o: version.h

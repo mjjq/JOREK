@@ -1,0 +1,2 @@
+  vacuum/mod_vacuum.o : mpi_mod.mod
+vacuum.mod :  vacuum/mod_vacuum.o

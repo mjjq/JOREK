@@ -1,0 +1,2 @@
+  models/chgmt_node.o : parameters.mod
+  models/chgmt_node.o : data_structure.mod

@@ -12,16 +12,16 @@ CC                = mpicc
 FFLAGS_OMP        = -qopenmp 
 FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp
-FFLAGS           += -xHost -O0
+FFLAGS           += -xHost -O2
 
 # --- Debugging options
-DEBUGFLAGS        = -g
-DEBUGFLAGS      += -warn all,nounused
-DEBUGFLAGS      += -check all,noarg_temp_created
-DEBUGFLAGS      += -debug all
-DEBUGFLAGS      += -debug-parameters
-DEBUGFLAGS      += -fstack-security-check
-DEBUGFLAGS      += -ftrapuv
+#DEBUGFLAGS        = -g
+#DEBUGFLAGS      += -warn all,nounused
+#DEBUGFLAGS      += -check all,noarg_temp_created
+#DEBUGFLAGS      += -debug all
+#DEBUGFLAGS      += -debug-parameters
+#DEBUGFLAGS      += -fstack-security-check
+#DEBUGFLAGS      += -ftrapuv
 
 # --- Various switches
 USE_PASTIX        = 1

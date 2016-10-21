@@ -12,7 +12,7 @@ type, abstract :: action
   logical :: log = .false. !< Output event duration
 
   !> Timing variables
-  real*8, private :: t0 = 0.0
+  real*8, private :: t0 = 0.d0, w0 = 0.d0
 contains
   procedure, pass, public :: run
   procedure(do_interface), deferred, pass, private :: do
@@ -55,13 +55,25 @@ end subroutine do_stop_action
 
 !> Run an action
 subroutine run(this, sim)
+  !$ use omp_lib
   class(action), intent(inout)      :: this
   type(particle_sim), intent(inout) :: sim
-  real*8 :: t1
+  real*8 :: t1, w1
+  logical :: has_omp
+  has_omp = .false.
+  !$ has_omp = .true.
 
   call cpu_time(this%t0)
+  !$ this%w0 = omp_get_wtime()
   call this%do(sim)
   call cpu_time(t1)
-  if (this%log) write(*,"(A,A,f7.4,A)") trim(this%name), " finished in ", t1-this%t0, "s"
+  !$ w1 = omp_get_wtime()
+
+  ! this is only on node 0 of course
+  if (this%log) then
+    if (.not. has_omp) write(*,"(A,A,f7.4,A)") trim(this%name), " finished in ", t1-this%t0, "s"
+    !$ write(*,"(A,A,f7.4,A,f7.4,A)") trim(this%name), " finished in ", w1-this%w0, &
+    !$ "s (cpu time: ", t1-this%t0, ")"
+  end if
 end subroutine run
 end module mod_action

@@ -15,7 +15,9 @@ type, extends(io_action) :: project_to_vtk
   type(type_element_list), allocatable :: element_list !< a pointer to the global element_list
   real*8 :: smoothing !< Smoothing factor used for this projection
   integer :: nsub !< Number of subdivisions to make
-  type (DMUMPS_STRUC) :: projection_matrix
+  type (DMUMPS_STRUC), private :: projection_matrix
+  real*4,allocatable, private  :: xyz (:,:) !< positions of points in vtk file
+  integer,allocatable, private :: ien (:,:) !< connectivity in vtk file
 contains
   procedure :: do => project_and_save_to_vtk
 end type project_to_vtk
@@ -27,6 +29,7 @@ contains
 !> Constructor for project_to_vtk
 !> Be sure to use keyword arguments when initializing, to avoid confusion
 function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, basename, decimal_digits, fractional_digits) result(new)
+  use mpi
   type(project_to_vtk) :: new
   type(type_node_list), intent(in)       :: node_list
   type(type_element_list), intent(in)    :: element_list
@@ -36,6 +39,7 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
   character(len=*), intent(in), optional :: basename
   integer, intent(in), optional          :: decimal_digits
   integer, intent(in), optional          :: fractional_digits
+  integer :: my_id, ierr
   allocate(new%node_list,    source=node_list)
   allocate(new%element_list, source=element_list)
   new%smoothing = smoothing
@@ -51,16 +55,24 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
 
   ! Precalculate the projection matrix for this node_list and element_list
   call prepare_projection_matrix(new%node_list, new%element_list, new%projection_matrix, new%smoothing)
+
+  ! Precalculate the node positions in the vtk file and the connectivity
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  if (my_id .eq. 0) call prepare_write_particle_distribution_to_vtk(new%node_list, new%element_list,new%nsub,new%xyz,new%ien)
 end function new_project_to_vtk
 
 !> Action for projecting all particles and writing output to vtk
 subroutine project_and_save_to_vtk(this, sim)
   use mpi
+  !$ use omp_lib
   class(project_to_vtk), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
   integer :: i, my_id, ierr
   character(len=120) :: filename
+  real*8 :: t0, t1, ostart, oend
 
+  call cpu_time(t0)
+  !$ ostart = omp_get_wtime()
   ! Safety checks
   if (.not. allocated(sim%groups)) return
   do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
@@ -69,6 +81,9 @@ subroutine project_and_save_to_vtk(this, sim)
         sim%groups(i)%particles, i)
     ! results are saved only on mpi process 0
   end do
+  call cpu_time(t1)
+  !$ oend = omp_get_wtime()
+  write(*,*) "projection wall/cpu", oend-ostart, t1-t0
 
   if (len_trim(this%filename) .eq. 0) then
     filename = this%get_filename(sim%time)
@@ -76,14 +91,19 @@ subroutine project_and_save_to_vtk(this, sim)
     filename = this%filename
   end if
 
+  call cpu_time(t0)
+  !$ ostart = omp_get_wtime()
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   if (my_id .eq. 0) then
     ! write only on the host
     call write_particle_distribution_to_vtk(this%node_list, this%element_list, &
-      trim(filename), this%nsub, min(size(sim%groups),n_var))
+      trim(filename), this%nsub, min(size(sim%groups),n_var), this%xyz, this%ien)
 
     write(*,*) "Written projection to ", trim(filename)
   end if
+  call cpu_time(t1)
+  !$ oend = omp_get_wtime()
+  write(*,*) "writing wall/cpu", oend-ostart, t1-t0
 end subroutine project_and_save_to_vtk
 
 !> Project particles by weight onto the elements
@@ -271,9 +291,9 @@ end subroutine prepare_projection_matrix
 subroutine project_particles(node_list, element_list, projection_matrix, particles, ivar_out)
 use phys_module
 use data_structure
-use basis_at_gaussian
 use mod_basisfunctions
 use mpi
+!$ use omp_lib
 implicit none
 
 type (type_node_list), intent(inout) :: node_list !< A copy of the node list which will be used to save variables
@@ -295,10 +315,9 @@ do i_tor=1, n_tor
   RHS = 0.d0
   projection_matrix%rhs = 0.d0
   !$omp parallel do default(none) &
-  !$omp shared(particles, element_list, node_list, mode, i_tor) &
+  !$omp shared(particles, element_list, node_list, mode, i_tor, RHS) &
   !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
-  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode) &
-  !$omp reduction(+:RHS)
+  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode)
   do m=1,size(particles,1)
     if (particles(m)%i_elm .eq. 0) cycle
 
@@ -307,13 +326,13 @@ do i_tor=1, n_tor
     x(3)   = particle%x(3)
 
     call interp3_RZ(node_list,element_list,particle%i_elm,x(1),x(2),R_g,R_s,R_t,Z_g,Z_s,Z_t)
-    xjac =  R_s*Z_t - R_t*Z_s
+    xjac = R_s*Z_t - R_t*Z_s
     call basisfunctions3(x(1), x(2), HH, HH_s, HH_t)
     do i=1,n_vertex_max
       do j=1,n_order+1
         index_ij = (i-1)*(n_order+1) + j
 
-        v   = HH(i,j)  * element_list%element(particle%i_elm)%size(i,j)
+        v   = HH(i,j) * element_list%element(particle%i_elm)%size(i,j)
         if (mode(i_tor) .gt. 1) then ! mode(1) = 0, mode(2) -> cos, mode(3) -> sin
           if (mod(i_tor,2) .eq. 0) then
             v = v * cos(mode(i_tor)*x(3))
@@ -325,7 +344,7 @@ do i_tor=1, n_tor
           v = v / TWOPI ! int 1 from 0 to 2pi = 2pi
         endif
 
-        RHS(index_ij,particle%i_elm) = RHS(index_ij,particle%i_elm) + v * particle%weight
+        RHS(index_ij,particle%i_elm) = RHS(index_ij,particle%i_elm) + v * particle%weight ! very small chance of overwriting same memory area
       enddo
     enddo
     end associate
@@ -371,45 +390,23 @@ enddo ! i_tor
 end subroutine project_particles
 
 
-!> Helper subroutine to write a particle distribution, saved in variables 1:n,
-!> to `filename`. `nsub` is the number of subdivisions to make per element.
-!> Should be called only by process 1
-subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub,n_fields)
+!> Calculate the structure of the vtk file without putting in any scalars
+subroutine prepare_write_particle_distribution_to_vtk(node_list,element_list,nsub,xyz,ien)
 use data_structure
-use basis_at_gaussian ! for HZ (initialise_basis must be called before use!)
-use phys_module, only: mode
-use mod_vtk
 implicit none
 
 !> Input parameters
 type(type_node_list), intent(in)    :: node_list
 type(type_element_list), intent(in) :: element_list
-character*(*), intent(in)           :: filename
-integer, intent(in) :: nsub !< Number of subdivisions of each element
-integer, intent(in) :: n_fields !< number of different particle groups to output
+integer, intent(in)                 :: nsub !< Number of subdivisions of each element
+real*4,allocatable, intent(out)     :: xyz (:,:)
+integer,allocatable, intent(out)    :: ien (:,:)
 
 integer :: nnos, nnoel, nel, i, j, ielm, inode, k
-real*4,allocatable :: xyz (:,:), scalars(:,:), vectors(:,:,:)
 real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
-real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
-integer,allocatable   :: ien (:,:)
-integer :: n_scalars, n_vectors = 0
-character*12, allocatable :: vector_names(:), scalar_names(:)
 
-integer :: i_t, i_v
-integer, parameter :: etype = 9 ! for vtk_quad
-
-n_scalars = n_tor * n_fields
 nnos = nsub*nsub*node_list%n_nodes
-allocate(xyz(3,nnos),scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
-allocate(scalar_names(n_scalars),vector_names(n_vectors))
-do i=1,n_fields
-  write(scalar_names(n_tor*(i-1)+1),'(A,i0.2)') "rho_", i
-  do j=1,(n_tor-1)/2
-    write(scalar_names(n_tor*(i-1)+j+1),"(A,i0.2,A,i0.2)") "rho_", i, "_cos_", mode(2*j)
-    write(scalar_names(n_tor*(i-1)+j+2),"(A,i0.2,A,i0.2)") "rho_", i, "_sin_", mode(2*j+1)
-  end do
-end do
+allocate(xyz(3,nnos))
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements
@@ -417,8 +414,6 @@ allocate(ien(nnoel,nel))
 
 inode   = 0
 ielm    = 0
-scalars = 0.d0
-vectors = 0.d0
 xyz     = 0
 ien     = 0
 
@@ -431,15 +426,7 @@ do i=1,element_list%n_elements
       t = float(k-1)/float(nsub-1)
       call interp_RZ2(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
       inode = inode+1
-      xyz(1:3,inode) = real([R, Z, 0.0], 4)
-
-      do i_v=1,n_fields
-        do i_t=1,n_tor
-          call interp(node_list,element_list,i,i_v,i_t,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-          scalars(inode,(i_v-1)*n_tor+i_t) = real(P,4)
-          !do not give the value at a specific plane, but give the coefficient
-        enddo
-      enddo
+      xyz(1:3,inode) = real([R, Z, 0.d0], 4)
     enddo
   enddo
 
@@ -453,6 +440,73 @@ do i=1,element_list%n_elements
      enddo
   enddo
 enddo  ! n_elements
+end subroutine prepare_write_particle_distribution_to_vtk
+
+
+!> Helper subroutine to write a particle distribution, saved in variables 1:n,
+!> to `filename`. `nsub` is the number of subdivisions to make per element.
+!> Should be called only by process 1
+subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub,n_fields,xyz,ien)
+use data_structure
+use phys_module, only: mode
+use mod_vtk
+use mod_interp4
+use mod_basisfunctions
+!$ use omp_lib
+implicit none
+
+!> Input parameters
+type(type_node_list), intent(in)    :: node_list
+type(type_element_list), intent(in) :: element_list
+character*(*), intent(in)           :: filename
+integer, intent(in) :: nsub !< Number of subdivisions of each element
+integer, intent(in) :: n_fields !< number of different particle groups to output
+real*4, intent(in)  :: xyz(:,:)
+integer, intent(in) :: ien(:,:)
+
+integer :: nnos, i, j, k, l, m, inode, ivar
+real*4, allocatable :: scalars(:,:), vectors(:,:,:)
+integer :: n_scalars, n_vectors = 0
+character*12, allocatable :: vector_names(:), scalar_names(:)
+real*8 :: s, t
+
+integer :: i_t, kv, iv, kf
+integer, parameter :: etype = 9 ! for vtk_quad
+
+n_scalars = n_tor * n_fields
+nnos = nsub*nsub*node_list%n_nodes
+allocate(scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
+allocate(scalar_names(n_scalars),vector_names(n_vectors))
+do i=1,n_fields
+  write(scalar_names(n_tor*(i-1)+1),'(A,i0.2)') "rho_", i
+  do j=1,(n_tor-1)/2
+    write(scalar_names(n_tor*(i-1)+j+1),"(A,i0.2,A,i0.2)") "rho_", i, "_cos_", mode(2*j)
+    write(scalar_names(n_tor*(i-1)+j+2),"(A,i0.2,A,i0.2)") "rho_", i, "_sin_", mode(2*j+1)
+  end do
+end do
+
+scalars = 0.d0
+vectors = 0.d0
+
+! Create points for each element
+!$omp parallel do default(none) shared(element_list,nsub,node_list,n_fields,scalars) &
+!$omp private(i,j,k,l,m,inode,ivar,s,t)
+do i=1,element_list%n_elements
+  do j=1,n_fields
+    do k=1,n_tor
+      ivar = (j-1)*n_tor + k
+      do l=1,nsub
+        s = float(l-1)/float(nsub-1)
+        do m=1,nsub
+          t = float(m-1)/float(nsub-1)
+          inode = (i-1)*nsub*nsub+(l-1)*nsub+m
+          scalars(inode,ivar) = real(interp5(node_list,element_list,i,j,k,s,t),4)
+        end do
+      end do
+    end do
+  end do
+end do ! n_elements
+!$omp end parallel do
 
 ! ------------- Write to VTK
 call write_vtk(filename,xyz,&

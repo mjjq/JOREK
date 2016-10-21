@@ -128,7 +128,7 @@ subroutine initialise_particles(particles, node_list, element_list, &
   !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL)
   i_thread = 0
   !$ i_thread=omp_get_thread_num()
-  !$omp do
+  !$omp do schedule(static)
   do i=1,size(i_to_find,1)
     j = i_to_find(i)
     ! Generate a random position to put this particle
@@ -328,7 +328,7 @@ do i=1,size(particles)
     ! and rotate it by another vector perpendicular to b.
     ! use the vector triple product to simplify.
     ! I'm not sure if this formula is the same in a right-handed coordinate system...
-    ! this might change the direction of the rotation, but this is not important.
+    ! this might change the direction of the rotation, but that is not important.
     pa%v = v_out(1) * B_hat + v_out(2) * &
       ((cos(v_out(3)) * [0.d0, B_hat(3), -B_hat(2)]) + &
         sin(v_out(3)) * (B_hat(1) * B_hat - r_hat))

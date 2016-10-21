@@ -16,10 +16,10 @@ real*8,                   intent(in)  :: s, t, phi
 real*8,                   intent(out) :: P(n_v)
 
 ! --- Local variables
-real*8  :: H(4,4), H_s(4,4), H_t(4,4), ss
+real*8  :: H(4,4), ss
 integer :: kv, iv, kf, m, i, i_harm, i_tor
 
-call basisfunctions3(s,t,H,H_s,H_t)
+call basisfunctions4(s,t,H)
 
 P = 0.d0
 
@@ -39,4 +39,34 @@ do kv = 1,n_vertex_max  ! 4 vertices
 end do
 return
 end subroutine interp4
+
+!> This subroutine returns the coefficients of variable i_v at a toroidal mode number at several positions
+pure function interp5(node_list, element_list, i_elm, i_v, i_harm, s, t) result(P)
+use data_structure
+use mod_basisfunctions
+implicit none
+
+! --- Routine parameters
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_v
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s, t
+real*8                                :: P
+
+! --- Local variables
+real*8  :: H(4,4)
+integer :: kv, iv, kf, m, i
+
+call basisfunctions4(s,t,H)
+P = 0.d0
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_order+1       ! 4 basis functions
+    P = P + node_list%node(iv)%values(i_harm,kf,i_v) * element_list%element(i_elm)%size(kv,kf) * H(kv,kf)
+  end do
+end do
+end function interp5
 end module mod_interp4

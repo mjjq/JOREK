@@ -7,13 +7,13 @@ use mod_particle_types
 use constants
 implicit none
 private
-public seed_positions, no_transform, adjust_particle_weights
+public initialise_particles, no_transform, adjust_particle_weights
 public set_velocity_from_T
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
 !> if present. See [[test_rejection_sampling]] for examples.
-subroutine seed_positions(particles, node_list, element_list, &
+subroutine initialise_particles(particles, node_list, element_list, &
         rng, variables, transform, f, Rbound, Zbound, Phibound)
   use mpi
   use mod_sampling
@@ -25,7 +25,7 @@ subroutine seed_positions(particles, node_list, element_list, &
   class(particle_base), dimension(:), intent(inout) :: particles
   type(type_node_list), intent(in)                  :: node_list
   type(type_element_list), intent(in)               :: element_list
-  class(type_rng), intent(in)                       :: rng
+  class(type_rng), intent(in)                       :: rng !< What type of random number generator to use. Is re-seeded in the subroutine.
   integer, dimension(:), intent(in), optional       :: variables !< Which variables from JOREK to use. If absent, sample uniformly.
   real*8, external, optional                        :: transform !< Merge variables into a single criterium between 0 and 1 for rej.  sampling
   !< Special values: 0 = 1, -1 = R, -2 = Z, -3 = Phi. Must be in ascending order!
@@ -38,7 +38,7 @@ subroutine seed_positions(particles, node_list, element_list, &
   real*8  :: R, Z, phi, s, t, DUMMY_REAL
   real*8  :: Rbox(2), Zbox(2), Phibox(2)
   integer :: i, j, k, ifail
-  real*8  :: ran(4)
+  real*8  :: ran(7)
   integer :: i_elm
   real*8  :: t0, t1, ostart, oend
   integer :: seq, n_streams, n_threads, i_thread
@@ -106,7 +106,7 @@ subroutine seed_positions(particles, node_list, element_list, &
 
   do i_thread=0,n_threads-1
     seq = my_id*n_threads + i_thread + 1
-    call rngs(i_thread)%initialize(4, seed, n_streams, seq, ifail)
+    call rngs(i_thread)%initialize(7, seed, n_streams, seq, ifail)
     if (ifail .ne. 0) call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
   end do
 
@@ -156,6 +156,10 @@ subroutine seed_positions(particles, node_list, element_list, &
             particles(j)%x = [R, Z, phi]
             particles(j)%i_elm = i_elm
             particles(j)%st = [s, t]
+            select type (particles(j))
+            type is (particle_kinetic_leapfrog)
+              particles(j)%v = ran(5:7) ! save other components of this point for velocity init in a later routine
+            end select
             not_found(i) = .false.
           end if
         end if
@@ -163,6 +167,10 @@ subroutine seed_positions(particles, node_list, element_list, &
         particles(j)%x = [R, Z, phi]
         particles(j)%i_elm = i_elm
         particles(j)%st = [s, t]
+        select type (particles(j))
+        type is (particle_kinetic_leapfrog)
+          particles(j)%v = ran(5:7) ! save other components of this point for velocity init in a later routine
+        end select
         not_found(i) = .false.
       end if
     end if
@@ -182,7 +190,7 @@ subroutine seed_positions(particles, node_list, element_list, &
     write(*,*) '* done initialising particles    *'
     write(*,*) '**********************************'
   endif
-end subroutine seed_positions
+end subroutine initialise_particles
 
 
 !> Calculate the size of a box around the domain (in RZ)
@@ -231,7 +239,7 @@ particles(:)%weight = particles(:)%weight / sum_weights * num_atoms_total
 end subroutine adjust_particle_weights
 
 !> Set v of a particle for use with kinetic codes
-subroutine set_velocity_from_T(particles, mass, node_list, element_list, rng, cor, v_par, grad_T)
+subroutine set_velocity_from_T(particles, mass, node_list, element_list, cor, v_par)
 use constants
 use data_structure
 use phys_module, only: central_density, central_mass, F0
@@ -246,26 +254,25 @@ class(particle_base), intent(inout), dimension(:) :: particles !< Particle to in
 real*8, intent(in)                                :: mass
 type(type_node_list), intent(in)                  :: node_list
 type(type_element_list), intent(in)               :: element_list
-class(type_rng), intent(in)                       :: rng
 type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
 logical, intent(in), optional                     :: v_par !< Include the parallel velocity if present and true
-logical, intent(in), optional                     :: grad_T !< Include the temperature gradient if present and true
 
 class(type_rng), allocatable :: my_rng
 integer :: i, ifail, seed, my_id, n_cpu
 real*8, dimension(4) :: P, P_s, P_t, P_phi
-real*8 :: v_out(4), ran4(4), Psi_R, Psi_Z, B(3)
-real*8 :: R, R_s, R_t, Z, Z_s, Z_t
+real*8 :: v_out(3)
+real*8 :: R, R_s, R_t, Z, Z_s, Z_t, Psi, Psi_R, Psi_Z, B_hat(3)
+real*8, parameter :: r_hat(3) = [1.d0, 0.d0, 0.d0]
 real*8 :: background_kbT, background_Kelvin, background_density, V_thermal
-real*8 :: DUMMY_REAL, Z_coronal
+real*8 :: DUMMY_REAL, Z_coronal, t_norm
 
-allocate(my_rng, source=rng)
+t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+
 ! Calculate a single random seed and communicate it over MPI
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
 if (my_id .eq. 0) seed = random_seed()
 call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
-call my_rng%initialize(4, seed, n_cpu, my_id, ifail)
 
 #if (JOREK_MODEL < 300)
 if (present(v_par) .and. v_par) then
@@ -273,10 +280,6 @@ if (present(v_par) .and. v_par) then
   call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
 end if
 #endif
-if (present(grad_T) .and. grad_T) then
-  write(*,*) "ERROR: initialization with gradT not implemented"
-  call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
-end if
 
 do i=1,size(particles)
 #if (JOREK_MODEL == 400)
@@ -296,26 +299,42 @@ do i=1,size(particles)
 #endif
   V_thermal = sqrt(background_kbT / (2.d0*mass*ATOMIC_MASS_UNIT))      ! [m/s]
 
-  call my_rng%next(ran4)
-  v_out = boxmueller_transform(ran4) * V_thermal ! [m/s], vx, vy, vz, dummy
-  if (present(v_par) .and. v_par) then
+  ! Only an implementation for particle_kinetic_leapfrog now
+  select type (pa => particles(i))
+  type is (particle_kinetic_leapfrog)
+    ! v_out now contains parallel and perpendicular velocities and the gyrophase
+    v_out(1:2) = boxmueller_transform(pa%v(1:2))*V_thermal ! 2 gaussian distributed random numbers
+    v_out(2)   = v_out(2)*sqrt(2.d0) ! equipartition of energy in parallel and 2 perpendicular directions
+    v_out(3)   = pa%v(3)*TWOPI ! gyrophase, between 0 and 2PI
+    if (present(v_par) .and. v_par) then
+      v_out(1) = v_out(1) + P(4)/t_norm
+    end if
+
+    background_kelvin  = background_kbT / K_BOLTZ              ! electron temperature [K]
+    if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
+      Z_coronal = 0.d0
+    else
+      call cor%interp(log10(background_density),log10(background_kelvin),Z_coronal,DUMMY_REAL)
+    endif
+
+    ! Calculate b^ (unit vector in direction of B)
     psi_R = (  P_s(4) * Z_t - P_t(4) * Z_s )/(R_s * Z_t - R_t * Z_s)
     psi_Z = (- P_s(4) * R_t + P_t(4) * R_s )/(R_s * Z_t - R_t * Z_s)
-    B     = [psi_Z, -psi_R, F0]/R
-    v_out(1:3) = v_out(1:3) + P(4)*B/norm2(B)
-  end if
+    B_hat = [psi_Z, -psi_R, F0]/(R)
+    B_hat = B_hat/norm2(B_hat)
 
-  background_kelvin  = background_kbT / K_BOLTZ              ! electron temperature [K]
-  if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
-    Z_coronal = 0.d0
-  else
-    call cor%interp(log10(background_density),log10(background_kelvin),Z_coronal,DUMMY_REAL)
-  endif
-
-  select type (p => particles(i))
-  type is (particle_kinetic_leapfrog)
-    p%v = vector_rotation(v_out(1:3), p%x(3)) ! rotate the velocity vector to the correct angle
-    p%q = nint(Z_coronal,1)                   !< charge
+    ! Transform parallel and perpendicular velocities to R, Z, Phi
+    ! To get the perpendicular vector, get a single vector perpendicular to b (b x r)
+    ! and rotate it by another vector perpendicular to b.
+    ! use the vector triple product to simplify.
+    ! I'm not sure if this formula is the same in a right-handed coordinate system...
+    ! this might change the direction of the rotation, but this is not important.
+    pa%v = v_out(1) * B_hat + v_out(2) * &
+      ((cos(v_out(3)) * [0.d0, B_hat(3), -B_hat(2)]) + &
+        sin(v_out(3)) * (B_hat(1) * B_hat - r_hat))
+    pa%q = nint(Z_coronal,1)                   !< charge
+  class default
+    write(*,*) "set_velocity_from_T not implemented for this particle type"
   end select
 end do
 end subroutine set_velocity_from_T

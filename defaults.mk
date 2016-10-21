@@ -20,6 +20,8 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-tabs
+  FLAGS += -ffree-line-length-none
+  FLAGS += -fdefault-real-8 -fdefault-double-8
   FLAGS += -Wcharacter-truncation
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
@@ -54,7 +56,7 @@ ifeq ($(COMPILER_FAMILY), intel)
   FLAGS += -warn nounused
   FLAGS += -align
   #FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
-  # Could take a long time on some machines
+  # Could take a long time on some machines. Test performance increase first
   ifeq ($(DEBUG), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback
@@ -85,7 +87,7 @@ endif
 
 
 # Save and load modules from $(MODDIR)
-FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
+FFLAGS := $(FLAGS) $(FFLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 
 
 
@@ -100,11 +102,11 @@ FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 # Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
 define O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
-	$$(FC) $$(FLAGS) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FFLAGS) $$(EXTRA_FFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 
 $(OBJDIR)/%.o:: $(1)%.f
-	$$(FC) $$(FLAGS) $$(FFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FFLAGS) $$(EXTRA_FFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
@@ -134,7 +136,7 @@ endif
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps $(DEPDIR)/$(file_stem).d)
-	$$(FC) $$(FLAGS) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
+	$$(FC) $$(FFLAGS) $$(EXTRA_FFLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
 endef
 
 
@@ -203,7 +205,7 @@ Makefile.inc: ;
 	@echo "Generate .mod/version.h"
 	@`pwd`/util/version.sh 2>/dev/null > $@
 	@echo "#define compile_command '$(FC)'" >> $@
-	@echo "#define compile_flags '$(FFLAGS)'" >> $@
+	@echo "#define compile_flags '$(FFLAGS) $(EXTRA_FFLAGS)'" >> $@
 	@echo "#define compile_includes '$(INCLUDES)'" >> $@
 	@echo "#define compile_defines '$(DEFINES)'" >> $@
 	@echo "#define compile_libs '$(LIBS)'" >> $@

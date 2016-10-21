@@ -38,7 +38,7 @@ pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
   particle%v = particle%v + fE * E
   ! Calculate the rotation
   particle%v = (particle%v + 2.d0*fB/(1.d0+fB*fB*B2)*( &
-    right_handed_cross_product(particle%v,B) &
+    left_handed_cross_product(particle%v,B) &
     - fB * particle%v * B2 &
     + fB * B * dot_product(particle%v,B)))
   ! Calculate the next electric field update (v+ -> v^n+1/2)
@@ -82,7 +82,7 @@ pure subroutine boris_push_cartesian(particle, m, E, B, dt)
   particle%v = particle%v + fE * E
   ! Calculate the rotation
   particle%v = (particle%v + 2.d0*fB/(1.d0+fB*fB*B2)*( &
-    left_handed_cross_product(particle%v,B) &
+    right_handed_cross_product(particle%v,B) &
     - fB * particle%v * B2 &
     + fB * B * dot_product(particle%v,B)))
   ! Calculate the next electric field update (v+ -> v^n+1/2)
@@ -106,7 +106,7 @@ pure subroutine boris_initial_half_step_backwards_XYZ(particle, m, E, B, dt)
   B2 = dot_product(B, B)
   v = particle%v + f*E
   v = (v + 2.d0*f/(1.d0+f**2*B2) &
-      * (left_handed_cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
+      * (right_handed_cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
   v = v + f*E
   particle%v = v
 end subroutine boris_initial_half_step_backwards_XYZ
@@ -126,21 +126,12 @@ pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   B2 = dot_product(B, B)
   v = particle%v + f*E
   v = (v + 2.d0*f/(1.d0+f**2*B2) &
-      * (right_handed_cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
+      * (left_handed_cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
   v = v + f*E
   particle%v = v
 end subroutine boris_initial_half_step_backwards_RZPhi
 
-!> The cross product in a left-handed coordinate system (e.g. XYZ or RPhiZ)
-pure function left_handed_cross_product(a, b)
-  real*8, dimension(3) :: left_handed_cross_product
-  real*8, dimension(3), intent(in) :: a, b
-
-  left_handed_cross_product(1) = a(2) * b(3) - a(3) * b(2)
-  left_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
-  left_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
-end function left_handed_cross_product
-!> The cross product in a right-handed coordinate system (e.g. RZPhi)
+!> The cross product in a right-handed coordinate system (e.g. XYZ or RPhiZ)
 pure function right_handed_cross_product(a, b)
   real*8, dimension(3) :: right_handed_cross_product
   real*8, dimension(3), intent(in) :: a, b
@@ -149,4 +140,13 @@ pure function right_handed_cross_product(a, b)
   right_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
   right_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
 end function right_handed_cross_product
+!> The cross product in a left-handed coordinate system (e.g. RZPhi)
+pure function left_handed_cross_product(a, b)
+  real*8, dimension(3) :: left_handed_cross_product
+  real*8, dimension(3), intent(in) :: a, b
+
+  left_handed_cross_product(1) = a(2) * b(3) - a(3) * b(2)
+  left_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
+  left_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
+end function left_handed_cross_product
 end module mod_boris

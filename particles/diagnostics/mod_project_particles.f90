@@ -267,97 +267,6 @@ call DMUMPS(projection_matrix)
 end subroutine prepare_projection_matrix
 
 
-!> Helper subroutine to write a particle distribution, saved in variables 1:n,
-!> to `filename`. `nsub` is the number of subdivisions to make per element.
-!> Should be called only by process 1
-subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub,n_fields)
-use data_structure
-use basis_at_gaussian ! for HZ (initialise_basis must be called before use!)
-use phys_module, only: mode
-use mod_vtk
-implicit none
-
-!> Input parameters
-type(type_node_list), intent(in)    :: node_list
-type(type_element_list), intent(in) :: element_list
-character*(*), intent(in)           :: filename
-integer, intent(in) :: nsub !< Number of subdivisions of each element
-integer, intent(in) :: n_fields !< number of different particle groups to output
-
-integer :: nnos, nnoel, nel, i, j, ielm, inode, k
-real*4,allocatable :: xyz (:,:), scalars(:,:), vectors(:,:,:)
-real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
-real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
-integer,allocatable   :: ien (:,:)
-integer :: n_scalars, n_vectors = 0
-character*12, allocatable :: vector_names(:), scalar_names(:)
-
-integer :: i_t, i_v
-integer, parameter :: etype = 9 ! for vtk_quad
-
-n_scalars = n_tor * n_fields
-nnos = nsub*nsub*node_list%n_nodes
-allocate(xyz(3,nnos),scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
-allocate(scalar_names(n_scalars),vector_names(n_vectors))
-do i=1,n_fields
-  write(scalar_names(n_tor*(i-1)+1),'(A,i0.2)') "rho_", i
-  do j=1,(n_tor-1)/2
-    write(scalar_names(n_tor*(i-1)+j+1),"(A,i0.2,A,i0.2)") "rho_", i, "_cos_", mode(2*j)
-    write(scalar_names(n_tor*(i-1)+j+2),"(A,i0.2,A,i0.2)") "rho_", i, "_sin_", mode(2*j+1)
-  end do
-end do
-
-nnoel = 4
-nel   = (nsub-1)*(nsub-1)*element_list%n_elements
-allocate(ien(nnoel,nel))
-
-inode   = 0
-ielm    = 0
-scalars = 0.d0
-vectors = 0.d0
-xyz     = 0
-ien     = 0
-
-! Create points for each element
-do i=1,element_list%n_elements
-  do j=1,nsub
-    s = float(j-1)/float(nsub-1)
-    ! Create nsub^2 points per element at regularly spaced intervals
-    do k=1,nsub
-      t = float(k-1)/float(nsub-1)
-      call interp_RZ2(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
-      inode = inode+1
-      xyz(1:3,inode) = real([R, Z, 0.0], 4)
-
-      do i_v=1,n_fields
-        do i_t=1,n_tor
-          call interp(node_list,element_list,i,1,i_t,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-          scalars(inode,(i_v-1)*n_tor+i_t) = real(P,4)
-          !do not give the value at a specific plane, but give the coefficient
-        enddo
-      enddo
-    enddo
-  enddo
-
-  do j=1,nsub-1
-     do k=1,nsub-1
-        ielm	  = ielm+1
-        ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
-        ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
-        ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
-        ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
-     enddo
-  enddo
-enddo  ! n_elements
-
-! ------------- Write to VTK
-call write_vtk(filename,xyz,&
-  ien, etype,&
-  scalar_names,scalars,&
-  vector_names,vectors)
-end subroutine write_particle_distribution_to_vtk
-
-
 !> Perform the actual projection of a set of particles on variable ivar_out in node_list.
 subroutine project_particles(node_list, element_list, projection_matrix, particles, ivar_out)
 use phys_module
@@ -460,4 +369,95 @@ do i_tor=1, n_tor
   end if
 enddo ! i_tor
 end subroutine project_particles
+
+
+!> Helper subroutine to write a particle distribution, saved in variables 1:n,
+!> to `filename`. `nsub` is the number of subdivisions to make per element.
+!> Should be called only by process 1
+subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,nsub,n_fields)
+use data_structure
+use basis_at_gaussian ! for HZ (initialise_basis must be called before use!)
+use phys_module, only: mode
+use mod_vtk
+implicit none
+
+!> Input parameters
+type(type_node_list), intent(in)    :: node_list
+type(type_element_list), intent(in) :: element_list
+character*(*), intent(in)           :: filename
+integer, intent(in) :: nsub !< Number of subdivisions of each element
+integer, intent(in) :: n_fields !< number of different particle groups to output
+
+integer :: nnos, nnoel, nel, i, j, ielm, inode, k
+real*4,allocatable :: xyz (:,:), scalars(:,:), vectors(:,:,:)
+real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
+real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
+integer,allocatable   :: ien (:,:)
+integer :: n_scalars, n_vectors = 0
+character*12, allocatable :: vector_names(:), scalar_names(:)
+
+integer :: i_t, i_v
+integer, parameter :: etype = 9 ! for vtk_quad
+
+n_scalars = n_tor * n_fields
+nnos = nsub*nsub*node_list%n_nodes
+allocate(xyz(3,nnos),scalars(nnos,n_scalars),vectors(nnos,3,n_vectors))
+allocate(scalar_names(n_scalars),vector_names(n_vectors))
+do i=1,n_fields
+  write(scalar_names(n_tor*(i-1)+1),'(A,i0.2)') "rho_", i
+  do j=1,(n_tor-1)/2
+    write(scalar_names(n_tor*(i-1)+j+1),"(A,i0.2,A,i0.2)") "rho_", i, "_cos_", mode(2*j)
+    write(scalar_names(n_tor*(i-1)+j+2),"(A,i0.2,A,i0.2)") "rho_", i, "_sin_", mode(2*j+1)
+  end do
+end do
+
+nnoel = 4
+nel   = (nsub-1)*(nsub-1)*element_list%n_elements
+allocate(ien(nnoel,nel))
+
+inode   = 0
+ielm    = 0
+scalars = 0.d0
+vectors = 0.d0
+xyz     = 0
+ien     = 0
+
+! Create points for each element
+do i=1,element_list%n_elements
+  do j=1,nsub
+    s = float(j-1)/float(nsub-1)
+    ! Create nsub^2 points per element at regularly spaced intervals
+    do k=1,nsub
+      t = float(k-1)/float(nsub-1)
+      call interp_RZ2(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
+      inode = inode+1
+      xyz(1:3,inode) = real([R, Z, 0.0], 4)
+
+      do i_v=1,n_fields
+        do i_t=1,n_tor
+          call interp(node_list,element_list,i,i_v,i_t,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          scalars(inode,(i_v-1)*n_tor+i_t) = real(P,4)
+          !do not give the value at a specific plane, but give the coefficient
+        enddo
+      enddo
+    enddo
+  enddo
+
+  do j=1,nsub-1
+     do k=1,nsub-1
+        ielm	  = ielm+1
+        ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
+        ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
+        ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
+        ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
+     enddo
+  enddo
+enddo  ! n_elements
+
+! ------------- Write to VTK
+call write_vtk(filename,xyz,&
+  ien, etype,&
+  scalar_names,scalars,&
+  vector_names,vectors)
+end subroutine write_particle_distribution_to_vtk
 end module mod_project_particles

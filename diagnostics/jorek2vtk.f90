@@ -596,6 +596,13 @@ do i=1,element_list%n_elements
         Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
         w_sum	= 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
 
+#ifdef fullmhd
+        !reinitialize Bphi,BR,B_Z for loop over all modes
+        scalars(inode,n_var+1) = 0.  
+        scalars(inode,n_var+2) = 0.  
+        scalars(inode,n_var+3) = 0.  
+#endif
+
         do i_tor = 1, n_tor
 
           if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode

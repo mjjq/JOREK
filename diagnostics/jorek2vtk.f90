@@ -298,7 +298,7 @@ do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -595,6 +595,13 @@ do i=1,element_list%n_elements
         Ti_sum  = 0.d0; Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0
         Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
         w_sum	= 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
+
+#ifdef fullmhd
+        !reinitialize Bphi,BR,B_Z for loop over all modes
+        scalars(inode,n_var+1) = 0.  
+        scalars(inode,n_var+2) = 0.  
+        scalars(inode,n_var+3) = 0.  
+#endif
 
         do i_tor = 1, n_tor
 

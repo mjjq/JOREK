@@ -203,7 +203,6 @@ module phys_module
   real*8  :: mgi_amplitude      !< amplitude of neutral density source
   real*8  :: mgi_R             !< major radius position of neutral density source
   real*8  :: mgi_Z             !< Z position of neutral density source
-  real*8  :: mgi_Vel           !< Velocity of neutral density source along R
   real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction
   real*8  :: mgi_radius        !< radius of the neutral density source in poloidal plane
   real*8  :: mgi_sig           !< width of smoothing of the neutral density source in poloidal plane
@@ -220,7 +219,14 @@ module phys_module
   logical :: JET_MGI !< Switch to have a real time dependent MGI or a constant injection
   logical :: ASDEX_MGI
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
-  
+ 
+  !> @name Shattered pellet injection-related input parameters
+  !! Note that the SPI share many of the MGI parameters. For now we only consider a single pellet.
+  real*8  :: spi_R             !< major radius position of shattered pellet center
+  real*8  :: spi_Z             !< Z position of shattered pellet center
+  real*8  :: spi_Vel           !< Velocity of neutral density source along R
+
+ 
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
   logical :: freeboundary_equil!< use a free or fixed boundary equilibrium?

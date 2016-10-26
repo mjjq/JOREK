@@ -28,9 +28,10 @@ USE_PASTIX        = 1
 USE_PASTIX_MURGE  = 0
 USE_HDF5          = 1
 USE_FFTW          = 1
+USE_MUMPS         = 0
 
 # --- PaStiX solver
-PASTIX_HOME = "<<<<path-to-your-PaStiX-directory>>>>>"
+PASTIX_HOME ?= "<<<<path-to-your-PaStiX-directory>>>>>"
 LIB_PASTIX        = `$(PASTIX_HOME)/install/pastix-conf --libs` 
 LIB_PASTIX_MURGE  = `$(PASTIX_HOME)/install/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS   = `$(PASTIX_HOME)/install/pastix-conf --blas`
@@ -53,3 +54,7 @@ HDF5LIB     = $(HDF5_HOME)/lib/libhdf5hl_fortran.a \
               $(HDF5_HOME)/lib/libhdf5.a \
               $(SZIP_LIB)/libsz.a -lz
 
+# --- MUMPS solver
+LIB_MUMPS = -L$(MUMPS_LIB) -ldmumps -lmumps_common -lptesmumps -lptscotch -lptscotcherr -lscotch -lpord
+INC_MUMPS = $(MUMPS_INC)                                                        
+SCALAP    = -L$(MKL_LIB) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64

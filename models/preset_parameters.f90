@@ -297,7 +297,8 @@ subroutine preset_parameters
     mgi_amplitude = 0.d0  ! 0.007d0
     mgi_R      = 3.2d0
     mgi_Z      =  1.5d0
-    spi_Vel    = 0.0d0
+    spi_Vel_R    = 0.0d0
+    spi_Vel_Z    = 0.0d0
     mgi_phi    = 1.57d0
     mgi_radius =   0.08d0
     mgi_sig    =  0.05

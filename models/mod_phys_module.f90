@@ -224,7 +224,8 @@ module phys_module
   !! Note that the SPI share many of the MGI parameters. For now we only consider a single pellet.
   real*8  :: spi_R             !< major radius position of shattered pellet center
   real*8  :: spi_Z             !< Z position of shattered pellet center
-  real*8  :: spi_Vel           !< Velocity of neutral density source along R
+  real*8  :: spi_Vel_R         !< Velocity of pellet center along R
+  real*8  :: spi_Vel_Z         !< Velocity of pellet center along Z
 
  
   !> @name Free boundary extension

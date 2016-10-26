@@ -634,10 +634,10 @@ do ms=1, n_gauss
 
  ! For now we only consider a cosntant velocity along R direction, to be fixed 
 
-     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+ !    t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
-     spi_R = mgi_R + (t_now-t_mgi)*t_norm*spi_Vel
-     spi_Z = mgi_Z
+ !    spi_R = mgi_R + (t_now-t_mgi)*t_norm*spi_Vel
+ !    spi_Z = mgi_Z
 
      call mgi_source(mgi_amplitude,spi_R,spi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &       
                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)                                 

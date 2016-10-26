@@ -146,7 +146,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_density, central_mass, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          total_n_particles_inj, total_n_particles_plasma, &
-!$omp          n_particles_inj, n_particles_plasma, mgi_amplitude, mgi_R, mgi_Z,spi_R, spi_Z, t_norm, spi_Vel,  &
+!$omp          n_particles_inj, n_particles_plasma, mgi_amplitude, mgi_R, mgi_Z,spi_R, spi_Z, t_norm,  &
+!$omp          spi_Vel_R, spi_Vel_Z,  &
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm, t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube,   &
 !$omp          JET_MGI,ASDEX_MGI, wgauss_copy)    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -361,8 +362,8 @@ do ife = ife_min, ife_max
 ! Added to take into account the moving source
      t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
-     spi_R = mgi_R + (t_now-t_mgi)*t_norm*spi_Vel
-     spi_Z = mgi_Z
+     spi_R = mgi_R + (t_now-t_mgi)*t_norm*spi_Vel_R
+     spi_Z = mgi_Z + (t_now-t_mgi)*t_norm*spi_Vel_Z
 
 
         call mgi_source(mgi_amplitude,spi_R,spi_R,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &

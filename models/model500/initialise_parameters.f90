@@ -84,7 +84,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
-                mgi_amplitude, mgi_R, mgi_Z, spi_Vel, mgi_phi, mgi_radius,   &
+                mgi_amplitude, mgi_R, mgi_Z, spi_Vel_R,spi_Vel_Z, mgi_phi, mgi_radius,   &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
                 delta_n_convection, nimp_bg,                               &
                 RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
@@ -151,8 +151,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 endif
 
 ! --- Initialize the shattered pellet position
-spi_R = mgi_R
-spi_Z = mgi_Z
+!spi_R = mgi_R
+!spi_Z = mgi_Z
 
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)

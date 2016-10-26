@@ -1014,6 +1014,7 @@ required = 0
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
        call update_mgi(my_id,node_list,element_list)
+       call update_spi(my_id,node_list,element_list)
 #endif
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values

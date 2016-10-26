@@ -115,7 +115,19 @@ module data_structure
      real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
 
   END TYPE type_thread_buffer
-  
+
+! This type is added to represent the properties of shattered pellets 
+  type type_SPI                                   !< type definition for one shattered pellet
+    real*8  :: spi_R                              !< R coordinate of pellet
+    real*8  :: spi_Z                              !< Z coordinate of pellet
+    real*8  :: spi_phi                            !< Phi coordinate of pellet
+    real*8  :: spi_R_Vel                          !< Velocity of pellet along R direction
+    real*8  :: spi_Z_Vel                          !< Velocity of pellet along Z direction
+    real*8  :: spi_phi_Vel                        !< Velocity of pellet along Phi direction
+    real*8  :: spi_radius                         !< Velocity of pellet along Phi direction
+  end type type_SPI
+! End of shattered pellet type
+ 
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()
   

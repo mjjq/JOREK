@@ -178,7 +178,7 @@ return
  
 end subroutine update_pellet
 
-subroutine update_SPI(my_id,node_List,element_list)
+subroutine update_spi(my_id,node_List,element_list)
 !******************************************************************************
 ! routine updates the shattered pellet position and the size of the simulated *
 ! and physical pellet sizes (from the integral of the pellet particle source) *
@@ -215,6 +215,6 @@ V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mas
 
 return 
  
-end subroutine update_SPI
+end subroutine update_spi
 
 end module pellet_module

@@ -227,6 +227,7 @@ module phys_module
   real*8  :: spi_Vel_R         !< Velocity of pellet center along R
   real*8  :: spi_Vel_Z         !< Velocity of pellet center along Z
 
+  logical :: using_spi         !< This determines whether to use SPI or traditional MGI
  
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).

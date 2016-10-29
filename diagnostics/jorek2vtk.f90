@@ -212,8 +212,8 @@ endif
     n_radiation = 0
  if (include_radiation) then
     n_radiation = 5
-    s_raditation = n_scalars
-    n_scalars    = n_scalars + n_radiation
+    s_radiation = n_scalars
+    n_scalars   = n_scalars + n_radiation
  endif
 #endif
 

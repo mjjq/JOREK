@@ -1,3 +1,4 @@
   models/mod_phys_module.o : parameters.mod
   models/mod_phys_module.o : constants.mod
+  models/mod_phys_module.o : data_structure.mod
 phys_module.mod :  models/mod_phys_module.o

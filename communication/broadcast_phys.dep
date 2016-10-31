@@ -6,3 +6,5 @@
   communication/broadcast_phys.o : wsmp_module.mod
   communication/broadcast_phys.o : vacuum.mod
   communication/broadcast_phys.o : mpi_mod.mod
+  communication/broadcast_phys.o : mgi_module.mod
+  communication/broadcast_phys.o : pellet_module.mod

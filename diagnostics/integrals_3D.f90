@@ -52,6 +52,19 @@ real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: n_particles_inj, n_particles_plasma, source_mgi, rn0
 
+! Temporary variables serving the SPI module
+integer    :: spi_i
+
+real*8     :: spi_R_tmp
+real*8     :: spi_Z_tmp
+real*8     :: spi_phi_tmp
+real*8     :: spi_radius_tmp
+! Additional variables reserved for future implementation
+!real*8     :: spi_Vel_R_tmp
+!real*8     :: spi_Vel_Z_tmp
+!real*8     :: spi_Vel_phi_tmp
+
+
 #ifdef _OPENMP
 integer,external :: omp_get_num_threads, omp_get_thread_num
 #endif
@@ -146,8 +159,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_density, central_mass, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          total_n_particles_inj, total_n_particles_plasma, &
-!$omp          n_particles_inj, n_particles_plasma, mgi_amplitude, mgi_R, mgi_Z,spi_R, spi_Z, t_norm,  &
-!$omp          spi_Vel_R, spi_Vel_Z,  &
+!$omp          n_particles_inj, n_particles_plasma, mgi_amplitude, mgi_R, mgi_Z, pellets,  &
+!$omp          n_spi, using_spi,  spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp,            &
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm, t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube,   &
 !$omp          JET_MGI,ASDEX_MGI, wgauss_copy)    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -360,14 +373,27 @@ do ife = ife_min, ife_max
         source_mgi = 0.d0
 
 ! Added to take into account the moving source
-     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+     if (using_spi == .true.) then
 
-     spi_R = mgi_R + (t_now-t_mgi)*t_norm*spi_Vel_R
-     spi_Z = mgi_Z + (t_now-t_mgi)*t_norm*spi_Vel_Z
+       do spi_i=1, n_spi
+
+         spi_R_tmp   = pellets(i)%spi_R
+         spi_Z_tmp   = pellets(i)%spi_Z
+         spi_phi_tmp = pellets(i)%spi_phi
 
 
-        call mgi_source(mgi_amplitude,spi_R,spi_R,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+         call mgi_source(mgi_amplitude,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,mgi_radius,mgi_sig,mgi_deltaphi,&
+                       mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                       phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+       end do
+
+     else
+
+       call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+     end if
+
 
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 

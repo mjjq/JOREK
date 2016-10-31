@@ -1,6 +1,7 @@
 module pellet_module
 
 use constants
+use data_structure
 
 real*8 :: total_pellet_particles   !< the (total) pellet particles added in this timestep
 real*8 :: total_plasma_particles   !< the total plasma density (before this timestep)
@@ -202,19 +203,82 @@ real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_
 real*8 :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
 integer :: i_elm, ifail
 
+integer :: i
+
 V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 
 !spi_R = spi_R + spi_Vel_R * tstep / V_normalisation
 !spi_Z = spi_Z + spi_Vel_Z * tstep / V_normalisation
 
-     spi_R = mgi_R + (t_now-t_mgi)*spi_Vel_R/V_normalisation
-     spi_Z = mgi_Z + (t_now-t_mgi)*spi_Vel_Z/V_normalisation
+!spi_R = mgi_R + (t_now-t_mgi)*spi_Vel_R/V_normalisation
+!spi_Z = mgi_Z + (t_now-t_mgi)*spi_Vel_Z/V_normalisation
 
-    write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
+  do i=1, n_spi
+    pellets(i)%spi_R       = pellets(i)%spi_R + pellets(i)%spi_Vel_R * tstep / V_normalisation
+    pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
+    pellets(i)%spi_phi     = pellets(i)%spi_phi
+    pellets(i)%spi_Vel_R   = spi_Vel_Rref
+    pellets(i)%spi_Vel_Z   = spi_Vel_Zref
+    pellets(i)%spi_Vel_phi = spi_Vel_phiref
+    pellets(i)%spi_radius  = spi_radiusref
+  end do
+
+  !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
+
+  do i=1, n_spi
+    write (*,*) "Pellet number: ", i
+    write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
+    write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_phi 
+  end do
 
 
 return 
  
 end subroutine update_spi
+
+!> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)
+!! If it already exists the old handle is returned
+function get_pellet_derived_type() result(dtype_out)
+  use mpi_mod
+  use parameters
+
+  implicit none
+
+  integer               :: ierr, dtype_out
+  integer, save         :: dtype
+  logical, save         :: dtype_set = .false.
+
+  integer :: len(7) = (/1,1,1,1,1,1,1/), t(7) = (/ &
+    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
+    MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+
+  integer(kind=MPI_ADDRESS_KIND) :: base, disp(7)
+  type(type_SPI) :: sample_pellet
+
+  dtype_out = dtype
+  if (dtype_set) return
+
+  ! Get memory addresses in the type
+  call MPI_Get_address(sample_pellet,             base,    ierr)
+  call MPI_Get_address(sample_pellet%spi_R,       disp(1), ierr)
+  call MPI_Get_address(sample_pellet%spi_Z,       disp(2), ierr)
+  call MPI_Get_address(sample_pellet%spi_phi,     disp(3), ierr)
+  call MPI_Get_address(sample_pellet%spi_Vel_R,   disp(4), ierr)
+  call MPI_Get_address(sample_pellet%spi_Vel_Z,   disp(5), ierr)
+  call MPI_Get_address(sample_pellet%spi_Vel_phi, disp(6), ierr)
+  call MPI_Get_address(sample_pellet%spi_radius,  disp(7), ierr)
+
+  ! Rebase to particle memory beginning
+  disp = disp - base
+
+  ! Commit the structured type
+  call MPI_Type_create_struct(7, len, disp, t, dtype, ierr)
+  call MPI_Type_commit(dtype, ierr)
+
+  ! Set the save bit
+  dtype_set = .true.
+  dtype_out = dtype
+  return
+end function get_pellet_derived_type
 
 end module pellet_module

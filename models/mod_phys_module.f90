@@ -3,6 +3,7 @@ module phys_module
   
   use parameters
   use constants
+  use data_structure              !< Added in order to dynamically allocate pellets
   
   implicit none
   
@@ -221,13 +222,21 @@ module phys_module
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
  
   !> @name Shattered pellet injection-related input parameters
-  !! Note that the SPI share many of the MGI parameters. For now we only consider a single pellet.
-  real*8  :: spi_R             !< major radius position of shattered pellet center
-  real*8  :: spi_Z             !< Z position of shattered pellet center
-  real*8  :: spi_Vel_R         !< Velocity of pellet center along R
-  real*8  :: spi_Vel_Z         !< Velocity of pellet center along Z
+  ! Note that the SPI share many of the MGI parameters. For now we only consider a single pellet.
+  ! Also note that there is no reference space coordinates for pellets since we are using mgi_R etc. 
+  !real*8  :: spi_R             !< major radius position of shattered pellet center
+  !real*8  :: spi_Z             !< Z position of shattered pellet center
+  real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R
+  real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z
+  real*8  :: spi_Vel_phiref     !< Reference velocity of pellet center along phi
+  real*8  :: spi_radiusref      !< Reference radius of pellets
 
-  logical :: using_spi         !< This determines whether to use SPI or traditional MGI
+
+  integer :: n_spi              !< Number of shattered pellets injected
+
+  logical :: using_spi          !< This determines whether to use SPI or traditional MGI
+
+  type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet 
  
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).

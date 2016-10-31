@@ -99,11 +99,18 @@ real*8     :: source_mgi
 ! time normalization
 real*8     :: t_norm
 
-! Displacement of neutral source center
-!real*8     :: mgi_R_d
-!real*8     :: mgi_Z_d
-!real*8     :: mgi_R_new
-!real*8     :: mgi_Z_new
+! Temporary variables serving the SPI module
+integer    :: spi_i
+
+real*8     :: spi_R_tmp
+real*8     :: spi_Z_tmp
+real*8     :: spi_phi_tmp
+real*8     :: spi_radius_tmp
+! Additional variables reserved for future implementation
+!real*8     :: spi_Vel_R_tmp
+!real*8     :: spi_Vel_Z_tmp
+!real*8     :: spi_Vel_phi_tmp
+
 
 
 ! Neutral diffusion coefficients
@@ -673,17 +680,30 @@ do ms=1, n_gauss
 
      source_mgi = 0.d0                    
 
- ! For now we only consider a cosntant velocity along R direction, to be fixed 
-
- !    t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-
- !    spi_R = mgi_R + (t_now-t_mgi)*t_norm*spi_Vel
- !    spi_Z = mgi_Z
+!============================================================!
+! Important note: in order to implementing more complicated  !
+!    model, we should add more arguments to mgi_source       !
+!============================================================!
 
      if (using_spi == .true.) then
 
-       call mgi_source(mgi_amplitude,spi_R,spi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+       if (JET_MGI == .true. .or. ASDEX_MGI == .true.) then
+         write(*,*) "WARNING: Using SPI, disabling MGI settings"
+         JET_MGI = .false.
+         ASDEX_MGI = .false.
+       end if
+
+       do spi_i=1, n_spi 
+
+         spi_R_tmp   = pellets(i)%spi_R
+         spi_Z_tmp   = pellets(i)%spi_Z
+         spi_phi_tmp = pellets(i)%spi_phi
+
+         call mgi_source(mgi_amplitude,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,mgi_radius,mgi_sig,mgi_deltaphi,&
+                       mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                       phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+       end do
 
      else
 
@@ -2072,6 +2092,7 @@ do i=1,n_vertex_max*n_var*(n_order+1)
   enddo
 
 enddo
+
 
 ELM = 0.5d0 * ELM
 

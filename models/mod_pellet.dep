@@ -1,4 +1,5 @@
   models/mod_pellet.o : constants.mod
+  models/mod_pellet.o : data_structure.mod
   models/mod_pellet.o : constants.mod
   models/mod_pellet.o : data_structure.mod
   models/mod_pellet.o : phys_module.mod
@@ -8,4 +9,6 @@
   models/mod_pellet.o : phys_module.mod
   models/mod_pellet.o : mpi_mod.mod
   models/mod_pellet.o : mgi_module.mod
+  models/mod_pellet.o : mpi_mod.mod
+  models/mod_pellet.o : parameters.mod
 pellet_module.mod :  models/mod_pellet.o

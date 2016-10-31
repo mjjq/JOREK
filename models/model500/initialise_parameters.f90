@@ -18,6 +18,7 @@ real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
 integer :: ierr,err,i
+integer :: err_alloc=0
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -85,7 +86,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
-                spi_Vel_R,spi_Vel_Z, using_spi,    &
+                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
+                spi_Vel_phiref, spi_radiusref,                      &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
                 delta_n_convection, nimp_bg,                               &
                 RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
@@ -154,6 +156,37 @@ endif
 ! --- Initialize the shattered pellet position
 !spi_R = mgi_R
 !spi_Z = mgi_Z
+
+if (using_spi == .true.) then
+
+  if (allocated(pellets)) then
+    deallocate(pellets)
+  end if
+
+  allocate (pellets(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for pellets
+
+  if (err_alloc /= 0) then
+    write(*,*) "Error when trying to dynamically allocate memeries for pellets, reverting to non-SPI case."
+    using_spi = .false. 
+  else
+    if (n_spi >= 1) then
+      do i=1, n_spi
+        pellets(i)%spi_R       = mgi_R
+        pellets(i)%spi_Z       = mgi_Z
+        pellets(i)%spi_phi     = mgi_phi
+        pellets(i)%spi_Vel_R   = spi_Vel_Rref
+        pellets(i)%spi_Vel_Z   = spi_Vel_Zref
+        pellets(i)%spi_Vel_phi = spi_Vel_phiref
+        pellets(i)%spi_radius  = spi_radiusref
+      end do
+      write(*,*) "SPI initialized successfully."
+    else
+      write(*,*) "...... Seriously!? Reverting to non-SPI case."
+      using_spi = .false.
+    end if
+  end if
+
+end if
 
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)

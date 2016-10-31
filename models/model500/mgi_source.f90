@@ -206,7 +206,7 @@ real*8, intent(in)  :: mgi_tor_norm
 
   else 
 
-    rhon_source = mgi_amplitude * mgi_pol_shape * mgi_tor_shape   
+    rhon_source = rhon_source + mgi_amplitude * mgi_pol_shape * mgi_tor_shape / V_mgi  
  
   endif
 

@@ -121,9 +121,9 @@ module data_structure
     real*8  :: spi_R                              !< R coordinate of pellet
     real*8  :: spi_Z                              !< Z coordinate of pellet
     real*8  :: spi_phi                            !< Phi coordinate of pellet
-    real*8  :: spi_R_Vel                          !< Velocity of pellet along R direction
-    real*8  :: spi_Z_Vel                          !< Velocity of pellet along Z direction
-    real*8  :: spi_phi_Vel                        !< Velocity of pellet along Phi direction
+    real*8  :: spi_Vel_R                          !< Velocity of pellet along R direction
+    real*8  :: spi_Vel_Z                          !< Velocity of pellet along Z direction
+    real*8  :: spi_Vel_phi                        !< Velocity of pellet along Phi direction
     real*8  :: spi_radius                         !< Velocity of pellet along Phi direction
   end type type_SPI
 ! End of shattered pellet type

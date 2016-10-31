@@ -9,6 +9,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only: export_restart_vacuum
 
   implicit none
@@ -23,6 +24,16 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Local variables
   integer :: i
   character*50 :: version_control
+
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_phi_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+
+  integer :: err_alloc
 
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
@@ -84,6 +95,44 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) pellet_particles, pellet_R, pellet_Z
   endif
 
+
+  ! Dynamically allocate memeries for temporary arrays in order to export
+  if (using_spi) then
+    allocate (spi_R_arr(n_spi),stat=err_alloc)  
+    allocate (spi_Z_arr(n_spi),stat=err_alloc)     
+    allocate (spi_phi_arr(n_spi),stat=err_alloc) 
+    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc) 
+    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc) 
+    allocate (spi_Vel_phi_arr(n_spi),stat=err_alloc) 
+    allocate (spi_radius_arr(n_spi),stat=err_alloc) 
+
+    do i=1, n_spi
+      spi_R_arr(i)       = pellets(i)%spi_R
+      spi_Z_arr(i)       = pellets(i)%spi_Z
+      spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
+      spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
+      spi_Vel_phi_arr(i) = pellets(i)%spi_Vel_phi
+      spi_radius_arr(i)  = pellets(i)%spi_radius
+    end do
+
+    write(21) spi_R_arr(1:n_spi)
+    write(21) spi_Z_arr(1:n_spi)
+    write(21) spi_phi_arr(1:n_spi)
+    write(21) spi_Vel_R_arr(1:n_spi)
+    write(21) spi_Vel_Z_arr(1:n_spi)
+    write(21) spi_Vel_phi_arr(1:n_spi)
+    write(21) spi_radius_arr(1:n_spi)
+
+    deallocate (spi_R_arr)
+    deallocate (spi_Z_arr)
+    deallocate (spi_phi_arr)
+    deallocate (spi_Vel_R_arr)
+    deallocate (spi_Vel_Z_arr)
+    deallocate (spi_Vel_phi_arr)
+    deallocate (spi_radius_arr)
+
+  end if
    
   ! save Revision control
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))

@@ -102,8 +102,6 @@ contains
       enddo
     endif
     
-    
-    
     ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
 #ifdef COMPARE_ELEMENT_MATRIX
     ! --- Comparison is performed only for one finite element
@@ -346,7 +344,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
          &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
          &                       ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
          &                       n_local_elms, node_list)
-    
+   
+    !write(*,*) "Check Point 02: ", ife 
     ! --- Define element nodes (depends if it's refined)
     if (refinement) then   
       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
@@ -424,6 +423,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp end do
   !$omp end parallel
 
+  write(*,*) "Check Point 04"
+
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if (freeboundary) then
@@ -443,6 +444,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   end if
 #endif
 
+  write(*,*) "Check Point 04.1"
+
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc",A_glob,nz_glob)
 
@@ -453,9 +456,14 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
- 
+
+  write(*,*) "Check Point 04.15"
+
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
+  write(*,*) "Check Point 04.175"
+
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
   ! --- For debugging purpose
@@ -463,6 +471,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 !     write(fname,'(A,I6.6)')"rhsbc",index_now
 !     call tr_vdump(fname,RHS_glob,ndof_glob)
 !  end if
+
+  write(*,*) "Check Point 04.2"
 
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS_glob,ndof_glob)
@@ -479,6 +489,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   call r3_info_end(r3_info_index_0)
   call tr_print_memsize("EndConstM")
   
+  write(*,*) "Check Point 04.3"
+
 ! --- Summarise element_matrix comparison
 #ifdef COMPARE_ELEMENT_MATRIX
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -505,7 +517,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   if ( difference_found ) stop
 #endif
   
-  
+ write(*,*) "Check Point 05" 
   
   contains
   

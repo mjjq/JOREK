@@ -294,12 +294,9 @@ subroutine preset_parameters
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
     JET_MGI = .false.
     ASDEX_MGI = .false.
-    using_spi = .false.
     mgi_amplitude = 0.d0  ! 0.007d0
     mgi_R      = 3.2d0
     mgi_Z      =  1.5d0
-    spi_Vel_R    = 0.0d0
-    spi_Vel_Z    = 0.0d0
     mgi_phi    = 1.57d0
     mgi_radius =   0.08d0
     mgi_sig    =  0.05
@@ -317,6 +314,19 @@ subroutine preset_parameters
     !=====
      delta_n_convection = 0
      nimp_bg = 0.
+    !======= Additional parameters for SPI =======
+    !spi_Vel_R    = 0.0d0
+    !spi_Vel_Z    = 0.0d0
+ 
+     spi_Vel_Rref   = 0.0d0
+     spi_Vel_Zref   = 0.0d0
+     spi_Vel_phiref = 0.0d0
+     spi_radiusref  = 8.0d-2 
+     
+     n_spi          = 1
+     using_spi      = .false.
+    !=========== End of SPI parameters ===========
+
 #endif
 !======================AF
 

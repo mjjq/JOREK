@@ -235,9 +235,9 @@ required = 0
   
   ! --- Write out all parameters defined in mod_parameters and the namelist input file.
   call log_parameters(my_id)
-  write(*,*) "Check Point 00"
+ 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  write(*,*) "Check Point 01"
+
   ! --- Some checks not to waste any cpu time
   if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
@@ -923,8 +923,6 @@ required = 0
          index_max(my_id+1), xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
          Z_xpoint, psi_xpoint)
     endif
-    
-    write(*,*) "Check Point 03" 
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
@@ -1015,8 +1013,6 @@ required = 0
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
        call update_mgi(my_id,node_list,element_list)
-
-       write(*,*) "Check Point 01"
 
        if (using_spi == .true. .and. t_now >= t_mgi) then
          call update_spi(my_id,node_list,element_list)

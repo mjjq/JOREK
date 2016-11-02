@@ -670,6 +670,10 @@ do ms=1, n_gauss
 
      end if
 
+     if (source_mgi /= source_mgi) then
+       write(*,*) "WARNING: source_mgi = ", source_mgi
+     end if
+
      if (source_mgi .lt. 0.d0) then
       source_mgi = 0.d0
      endif

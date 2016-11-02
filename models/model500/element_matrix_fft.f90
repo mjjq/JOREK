@@ -695,9 +695,9 @@ do ms=1, n_gauss
 
        do spi_i=1, n_spi 
 
-         spi_R_tmp   = pellets(i)%spi_R
-         spi_Z_tmp   = pellets(i)%spi_Z
-         spi_phi_tmp = pellets(i)%spi_phi
+         spi_R_tmp   = pellets(spi_i)%spi_R
+         spi_Z_tmp   = pellets(spi_i)%spi_Z
+         spi_phi_tmp = pellets(spi_i)%spi_phi
 
          call mgi_source(mgi_amplitude,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,mgi_radius,mgi_sig,mgi_deltaphi,&
                        mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
@@ -711,6 +711,11 @@ do ms=1, n_gauss
                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
    
      end if
+
+     if (source_mgi /= source_mgi) then
+       write(*,*) "WARNING: source_mgi = ", source_mgi
+     end if
+
 
      if (source_mgi .lt. 0.d0) then 
       source_mgi = 0.d0

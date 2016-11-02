@@ -32,6 +32,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_phi_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
 
   integer :: err_alloc
 
@@ -105,6 +106,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc) 
     allocate (spi_Vel_phi_arr(n_spi),stat=err_alloc) 
     allocate (spi_radius_arr(n_spi),stat=err_alloc) 
+    allocate (spi_abl_arr(n_spi),stat=err_alloc)
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R
@@ -114,6 +116,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
       spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
       spi_Vel_phi_arr(i) = pellets(i)%spi_Vel_phi
       spi_radius_arr(i)  = pellets(i)%spi_radius
+      spi_abl_arr(i)     = pellets(i)%spi_abl
     end do
 
     write(21) spi_R_arr(1:n_spi)
@@ -123,6 +126,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     write(21) spi_Vel_Z_arr(1:n_spi)
     write(21) spi_Vel_phi_arr(1:n_spi)
     write(21) spi_radius_arr(1:n_spi)
+    write(21) spi_abl_arr(1:n_spi)
 
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
@@ -131,6 +135,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_Vel_Z_arr)
     deallocate (spi_Vel_phi_arr)
     deallocate (spi_radius_arr)
+    deallocate (spi_abl_arr)
 
   end if
    

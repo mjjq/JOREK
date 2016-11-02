@@ -221,6 +221,13 @@ V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mas
     pellets(i)%spi_Vel_Z   = spi_Vel_Zref
     pellets(i)%spi_Vel_phi = spi_Vel_phiref
     pellets(i)%spi_radius  = spi_radiusref
+
+    if (flag_spi == 0) then
+      pellets(i)%spi_abl   = mgi_amplitude
+    else
+      pellets(i)%spi_abl   = 0.d0
+    end if
+
   end do
 
   !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
@@ -248,11 +255,11 @@ function get_pellet_derived_type() result(dtype_out)
   integer, save         :: dtype
   logical, save         :: dtype_set = .false.
 
-  integer :: len(7) = (/1,1,1,1,1,1,1/), t(7) = (/ &
+  integer :: len(8) = (/1,1,1,1,1,1,1,1/), t(8) = (/ &
     MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-    MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+    MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
 
-  integer(kind=MPI_ADDRESS_KIND) :: base, disp(7)
+  integer(kind=MPI_ADDRESS_KIND) :: base, disp(8)
   type(type_SPI) :: sample_pellet
 
   dtype_out = dtype
@@ -267,12 +274,13 @@ function get_pellet_derived_type() result(dtype_out)
   call MPI_Get_address(sample_pellet%spi_Vel_Z,   disp(5), ierr)
   call MPI_Get_address(sample_pellet%spi_Vel_phi, disp(6), ierr)
   call MPI_Get_address(sample_pellet%spi_radius,  disp(7), ierr)
+  call MPI_Get_address(sample_pellet%spi_abl,     disp(8), ierr)
 
   ! Rebase to particle memory beginning
   disp = disp - base
 
   ! Commit the structured type
-  call MPI_Type_create_struct(7, len, disp, t, dtype, ierr)
+  call MPI_Type_create_struct(8, len, disp, t, dtype, ierr)
   call MPI_Type_commit(dtype, ierr)
 
   ! Set the save bit

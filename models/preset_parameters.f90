@@ -324,6 +324,7 @@ subroutine preset_parameters
      spi_radiusref  = 8.0d-2 
      
      n_spi          = 1
+     flag_spi       = 0
      using_spi      = .false.
     !=========== End of SPI parameters ===========
 

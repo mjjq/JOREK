@@ -233,6 +233,8 @@ module phys_module
 
 
   integer :: n_spi              !< Number of shattered pellets injected
+  integer :: flag_spi           !< Determine which type of ablation model is using.
+                                !< 0 for constant release rate, 1 for NGS model
 
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
 

@@ -24,7 +24,7 @@ character, allocatable :: buffer(:)
 
 ! --- Additional variables in order to broadcast derived MPI type
 integer                :: dtype
-integer                :: err_alloc
+integer                :: err_alloc = 0
 
 if ( my_id == 0 ) then
   write(*,*) '*************************************'
@@ -175,6 +175,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(spi_radiusref,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(n_spi,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(flag_spi,               1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(using_spi,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
@@ -509,11 +510,15 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,spi_radiusref,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,n_spi,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,flag_spi,               1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
   if (.not. allocated(pellets)) then
     allocate (pellets(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for pellets
+    if (err_alloc /= 0) then
+      write(*,*) "WARNING: Error when trying to allocate pellets on MPI nodes!!!"
+    end if
   end if
 
   call MPI_UNPACK(buffer,bufsize,position,pellets,                n_spi,dtype,MPI_COMM_WORLD,ierr)

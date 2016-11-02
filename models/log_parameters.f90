@@ -503,8 +503,10 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
 
+     !< Additional log for SPI model
      write(*,REAL_FMT) 'using_spi           ',  using_spi
      write(*,REAL_FMT) 'n_spi               ',  n_spi
+     write(*,REAL_FMT) 'flag_spi            ',  flag_spi
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_phiref      ',  spi_Vel_phiref

@@ -87,7 +87,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
-                spi_Vel_phiref, spi_radiusref,                      &
+                spi_Vel_phiref, spi_radiusref, flag_spi,            &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
                 delta_n_convection, nimp_bg,                               &
                 RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
@@ -178,6 +178,13 @@ if (using_spi == .true.) then
         pellets(i)%spi_Vel_Z   = spi_Vel_Zref
         pellets(i)%spi_Vel_phi = spi_Vel_phiref
         pellets(i)%spi_radius  = spi_radiusref
+
+        if (flag_spi == 0) then
+          pellets(i)%spi_abl   = mgi_amplitude
+        else
+          pellets(i)%spi_abl   = 0.d0
+        end if
+
       end do
       write(*,*) "SPI initialized successfully."
     else

@@ -29,7 +29,8 @@ end function factorial
 
 
 subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now, &
+                      JET_MGI,ASDEX_MGI,central_density,central_mass)
 
 !=================================================================================
 !  This subroutine computes the neutral density source for a realistic Deuterium

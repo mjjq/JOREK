@@ -32,6 +32,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_phi_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
 
   integer :: err_alloc
 
@@ -212,6 +213,7 @@ endif
       allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
       allocate (spi_Vel_phi_arr(n_spi),stat=err_alloc)
       allocate (spi_radius_arr(n_spi),stat=err_alloc)
+      allocate (spi_abl_arr(n_spi),stat=err_alloc)
     
       read(21,err=999, end=999)  spi_R_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Z_arr(1:n_spi)
@@ -220,6 +222,7 @@ endif
       read(21,err=999, end=999)  spi_Vel_Z_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Vel_phi_arr(1:n_spi)
       read(21,err=999, end=999)  spi_radius_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_abl_arr(1:n_spi)
 
       do i=1, n_spi
         pellets(i)%spi_R       = spi_R_arr(i)
@@ -229,6 +232,7 @@ endif
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
         pellets(i)%spi_Vel_phi = spi_Vel_phi_arr(i)
         pellets(i)%spi_radius  = spi_radius_arr(i)
+        pellets(i)%spi_abl     = spi_abl_arr(i)
 
         write(*,'(A,I,2f10.5)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z
       end do
@@ -240,6 +244,7 @@ endif
       deallocate (spi_Vel_Z_arr)
       deallocate (spi_Vel_phi_arr)
       deallocate (spi_radius_arr)
+      deallocate (spi_abl_arr)
 
     end if
   end if

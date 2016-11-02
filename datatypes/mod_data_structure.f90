@@ -124,7 +124,8 @@ module data_structure
     real*8  :: spi_Vel_R                          !< Velocity of pellet along R direction
     real*8  :: spi_Vel_Z                          !< Velocity of pellet along Z direction
     real*8  :: spi_Vel_phi                        !< Velocity of pellet along Phi direction
-    real*8  :: spi_radius                         !< Velocity of pellet along Phi direction
+    real*8  :: spi_radius                         !< Radisu of pellet assuming spherical pellet
+    real*8  :: spi_abl                            !< Pellet ablation rate
   end type type_SPI
 ! End of shattered pellet type
  

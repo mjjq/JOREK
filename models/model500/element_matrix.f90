@@ -99,7 +99,7 @@ integer    :: spi_i
 real*8     :: spi_R_tmp
 real*8     :: spi_Z_tmp
 real*8     :: spi_phi_tmp
-real*8     :: spi_radius_tmp
+real*8     :: spi_abl_tmp
 ! Additional variables reserved for future implementation
 !real*8     :: spi_Vel_R_tmp
 !real*8     :: spi_Vel_Z_tmp
@@ -656,9 +656,9 @@ do ms=1, n_gauss
          spi_R_tmp   = pellets(spi_i)%spi_R
          spi_Z_tmp   = pellets(spi_i)%spi_Z
          spi_phi_tmp = pellets(spi_i)%spi_phi
+         spi_abl_tmp = pellets(spi_i)%spi_abl
 
-
-         call mgi_source(mgi_amplitude,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,mgi_radius,mgi_sig,mgi_deltaphi,&
+         call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,mgi_radius,mgi_sig,mgi_deltaphi,&
                        mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
                        phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
        end do
@@ -666,7 +666,8 @@ do ms=1, n_gauss
      else
 
        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now, &
+                     JET_MGI,ASDEX_MGI,central_density,central_mass)
 
      end if
 

@@ -318,14 +318,15 @@ subroutine preset_parameters
     !spi_Vel_R    = 0.0d0
     !spi_Vel_Z    = 0.0d0
  
-     spi_Vel_Rref   = 0.0d0
-     spi_Vel_Zref   = 0.0d0
-     spi_Vel_phiref = 0.0d0
-     spi_radiusref  = 8.0d-2 
+     spi_Vel_Rref    = 0.0d0
+     spi_Vel_Zref    = 0.0d0
+     spi_Vel_phiref  = 0.0d0
+     spi_radiusref   = 8.0d-2 
+     ng_radius_ratio = 1.4d0
      
-     n_spi          = 1
-     flag_spi       = 0
-     using_spi      = .false.
+     n_spi           = 1
+     flag_spi        = 0
+     using_spi       = .false.
     !=========== End of SPI parameters ===========
 
 #endif

@@ -20,6 +20,9 @@ real*8 :: vacuum_fraction, b_over_a, a_over_b
 integer :: ierr,err,i
 integer :: err_alloc=0
 
+real*8  :: V_mgi     !< Volume integration constant
+real*8  :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
+
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta, visco, visco_par,                              &
@@ -87,7 +90,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
-                spi_Vel_phiref, spi_radiusref, flag_spi,            &
+                spi_Vel_phiref, spi_radiusref, flag_spi, ng_radius_ratio,&
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
                 delta_n_convection, nimp_bg,                               &
                 RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
@@ -181,6 +184,9 @@ if (using_spi == .true.) then
 
         if (flag_spi == 0) then
           pellets(i)%spi_abl   = mgi_amplitude
+        elseif (flag_spi == 1) then
+          ng_radius = pellets(i)%spi_radius * ng_radius_ratio
+          V_mgi     = PI * pellets(i)%spi_R * mgi_tor_norm * mgi_radius**2.d0 
         else
           pellets(i)%spi_abl   = 0.d0
         end if

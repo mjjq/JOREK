@@ -230,7 +230,8 @@ module phys_module
   real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z
   real*8  :: spi_Vel_phiref     !< Reference velocity of pellet center along phi
   real*8  :: spi_radiusref      !< Reference radius of pellets
-
+  real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
+                                !< and that of shattered pellets
 
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: flag_spi           !< Determine which type of ablation model is using.

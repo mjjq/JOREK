@@ -186,7 +186,7 @@ if (using_spi == .true.) then
           pellets(i)%spi_abl   = mgi_amplitude
         elseif (flag_spi == 1) then
           ng_radius = pellets(i)%spi_radius * ng_radius_ratio
-          V_mgi     = PI * pellets(i)%spi_R * mgi_tor_norm * mgi_radius**2.d0 
+          V_mgi     = PI * pellets(i)%spi_R * mgi_tor_norm * ng_radius**2.d0 
         else
           pellets(i)%spi_abl   = 0.d0
         end if

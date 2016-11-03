@@ -106,6 +106,7 @@ real*8     :: spi_R_tmp
 real*8     :: spi_Z_tmp
 real*8     :: spi_phi_tmp
 real*8     :: spi_abl_tmp 
+real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
 ! Additional variables reserved for future implementation
 !real*8     :: spi_Vel_R_tmp
 !real*8     :: spi_Vel_Z_tmp
@@ -700,7 +701,9 @@ do ms=1, n_gauss
          spi_phi_tmp = pellets(spi_i)%spi_phi
          spi_abl_tmp = pellets(spi_i)%spi_abl
 
-         call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,mgi_radius,mgi_sig,mgi_deltaphi,&
+         ng_radius   = pellets(i)%spi_radius * ng_radius_ratio
+
+         call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                        mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
                        phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
 

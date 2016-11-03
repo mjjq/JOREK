@@ -17,11 +17,14 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-integer :: ierr,err,i
+integer :: ierr,err,i,ifail,i_elm
 integer :: err_alloc=0
 
-real*8  :: V_mgi     !< Volume integration constant
-real*8  :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
+real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8  :: R, R_s, R_t, Z, Z_s, Z_t
+real*8  :: s_out,t_out,R_out,Z_out
+
+real*8  :: n_SI, T_eV
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -185,8 +188,22 @@ if (using_spi == .true.) then
         if (flag_spi == 0) then
           pellets(i)%spi_abl   = mgi_amplitude
         elseif (flag_spi == 1) then
-          ng_radius = pellets(i)%spi_radius * ng_radius_ratio
-          V_mgi     = PI * pellets(i)%spi_R * mgi_tor_norm * ng_radius**2.d0 
+
+          call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
+                       R_out,Z_out,i_elm,s_out,t_out,ifail)
+          call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
+                          P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+
+          ! Now, P(1) represents mass density and P(2) represents temperature
+          ! Undoing the normalization!
+
+          n_SI           = P(1) * 1.d20 * central_density / (central_mass * MASS_PROTON)
+          T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
+
+          ! NGS model
+          pellets(i)%spi_abl   = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
+                                 (T_eV**1.64)
+
         else
           pellets(i)%spi_abl   = 0.d0
         end if

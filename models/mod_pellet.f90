@@ -220,10 +220,26 @@ V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mas
     pellets(i)%spi_Vel_R   = spi_Vel_Rref
     pellets(i)%spi_Vel_Z   = spi_Vel_Zref
     pellets(i)%spi_Vel_phi = spi_Vel_phiref
-    pellets(i)%spi_radius  = spi_radiusref
+    !pellets(i)%spi_radius  = spi_radiusref
 
     if (flag_spi == 0) then
       pellets(i)%spi_abl   = mgi_amplitude
+    elseif (flag_spi == 1) then
+
+      call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
+                   R_out,Z_out,i_elm,s_out,t_out,ifail)
+      call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
+                      P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+
+      ! Now, P(1) represents mass density and P(2) represents temperature
+      ! Undoing the normalization!
+
+      n_SI           = P(1) * 1.d20 * central_density / (central_mass * MASS_PROTON)
+      T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
+
+      ! NGS model
+      pellets(i)%spi_abl   = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
+                             (T_eV**1.64)
     else
       pellets(i)%spi_abl   = 0.d0
     end if
@@ -236,6 +252,7 @@ V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mas
     write (*,*) "Pellet number: ", i
     write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
     write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_phi 
+    write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
   end do
 
 

@@ -7,6 +7,7 @@ ALL_BINARIES_SRC := $(ALL_BINARIES_SRC)			\
 	$(DIR)/initialise_basis.f90			\
 	$(DIR)/interp.f90				\
 	$(DIR)/interp_RZ.f90				\
+        $(DIR)/interp_PRZ.f90                           \
 	$(DIR)/mod_basis_at_gaussian.f90		\
 	$(DIR)/mod_gauss.f90
 

@@ -118,14 +118,14 @@ module data_structure
 
 ! This type is added to represent the properties of shattered pellets 
   type type_SPI                                   !< type definition for one shattered pellet
-    real*8  :: spi_R                              !< R coordinate of pellet
-    real*8  :: spi_Z                              !< Z coordinate of pellet
-    real*8  :: spi_phi                            !< Phi coordinate of pellet
-    real*8  :: spi_Vel_R                          !< Velocity of pellet along R direction
-    real*8  :: spi_Vel_Z                          !< Velocity of pellet along Z direction
-    real*8  :: spi_Vel_phi                        !< Velocity of pellet along Phi direction
-    real*8  :: spi_radius                         !< Radisu of pellet assuming spherical pellet
-    real*8  :: spi_abl                            !< Pellet ablation rate
+    real*8  :: spi_R                              !< R coordinate of pellet (m)
+    real*8  :: spi_Z                              !< Z coordinate of pellet (m)
+    real*8  :: spi_phi                            !< Phi coordinate of pellet (degree)
+    real*8  :: spi_Vel_R                          !< Velocity of pellet along R direction (m/s)
+    real*8  :: spi_Vel_Z                          !< Velocity of pellet along Z direction (m/s)
+    real*8  :: spi_Vel_phi                        !< Velocity of pellet along Phi direction (dgree/s)
+    real*8  :: spi_radius                         !< Radisu of pellet assuming spherical pellet (m)
+    real*8  :: spi_abl                            !< Pellet ablation rate (atom/s)
   end type type_SPI
 ! End of shattered pellet type
  

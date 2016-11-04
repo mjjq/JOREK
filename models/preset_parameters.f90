@@ -323,6 +323,7 @@ subroutine preset_parameters
      spi_Vel_phiref  = 0.0d0
      spi_radiusref   = 8.0d-2 
      ng_radius_ratio = 1.4d0
+     ng_radius_min   = 8.d-2
      
      n_spi           = 1
      flag_spi        = 0

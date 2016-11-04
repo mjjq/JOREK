@@ -701,7 +701,11 @@ do ms=1, n_gauss
          spi_phi_tmp = pellets(spi_i)%spi_phi
          spi_abl_tmp = pellets(spi_i)%spi_abl
 
-         ng_radius   = pellets(i)%spi_radius * ng_radius_ratio
+         ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+         if (ng_radius < ng_radius_min) then
+           ng_radius = ng_radius_min
+         end if
 
          call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                        mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &

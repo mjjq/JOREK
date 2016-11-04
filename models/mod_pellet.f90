@@ -242,8 +242,10 @@ V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mas
       ! Now, P(1) represents mass density and P(2) represents temperature
       ! Undoing the normalization!
 
-      n_SI           = P(1) * 1.d20 * central_density / (central_mass * MASS_PROTON)
+      n_SI           = P(1) * 1.d20 * central_density
       T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
+
+      write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
 
       ! NGS model
       pellets(i)%spi_abl   = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &

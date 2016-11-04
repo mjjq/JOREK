@@ -99,7 +99,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
-                spi_Vel_phiref, spi_radiusref, flag_spi, ng_radius_ratio,&
+                spi_Vel_phiref, spi_radiusref, flag_spi,            &
+                ng_radius_ratio, ng_radius_min,                     &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
                 delta_n_convection, nimp_bg,                               &
                 RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
@@ -203,7 +204,7 @@ if (using_spi == .true.) then
           ! Now, P(1) represents mass density and P(2) represents temperature
           ! Undoing the normalization!
 
-          n_SI           = P(1) * 1.d20 * central_density / (central_mass * MASS_PROTON)
+          n_SI           = P(1) * 1.d20 * central_density
           T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
 
           ! NGS model

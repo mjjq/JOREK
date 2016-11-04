@@ -233,6 +233,9 @@ module phys_module
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
                                 !< and that of shattered pellets
 
+  real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
+                                !< with regard to the simulation resolution
+
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: flag_spi           !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model

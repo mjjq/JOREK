@@ -59,6 +59,7 @@ real*8     :: spi_R_tmp
 real*8     :: spi_Z_tmp
 real*8     :: spi_phi_tmp
 real*8     :: spi_abl_tmp
+real*8     :: ng_radius
 ! Additional variables reserved for future implementation
 !real*8     :: spi_Vel_R_tmp
 !real*8     :: spi_Vel_Z_tmp
@@ -160,7 +161,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          total_n_particles_inj, total_n_particles_plasma, &
 !$omp          n_particles_inj, n_particles_plasma, mgi_amplitude, mgi_R, mgi_Z, pellets,  &
-!$omp          n_spi, using_spi, flag_spi, spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp,  &
+!$omp          n_spi, using_spi, flag_spi, spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp, &
+!$omp          ng_radius_ratio, ng_radius_min, ng_radius,&
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm, t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube,   &
 !$omp          JET_MGI,ASDEX_MGI, wgauss_copy)    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -377,12 +379,18 @@ do ife = ife_min, ife_max
 
        do spi_i=1, n_spi
 
-         spi_R_tmp   = pellets(i)%spi_R
-         spi_Z_tmp   = pellets(i)%spi_Z
-         spi_phi_tmp = pellets(i)%spi_phi
+         spi_R_tmp   = pellets(spi_i)%spi_R
+         spi_Z_tmp   = pellets(spi_i)%spi_Z
+         spi_phi_tmp = pellets(spi_i)%spi_phi
          spi_abl_tmp = pellets(spi_i)%spi_abl
 
-         call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,mgi_radius,mgi_sig,mgi_deltaphi,&
+         ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+         if (ng_radius < ng_radius_min) then
+           ng_radius = ng_radius_min
+         end if
+
+         call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                        mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
                        phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
        end do

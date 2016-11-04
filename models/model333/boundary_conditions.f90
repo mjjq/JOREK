@@ -450,7 +450,7 @@ contains
     use data_structure
     use phys_module, only: F0, FF_0, xpoint, xcase, tokamak_device,    &
                            central_mass, mass_proton, central_density, &
-			   mu_zero, tauIC
+			   mu_zero, tauIC, renormalise
     use corr_neg
     
     implicit none
@@ -532,6 +532,14 @@ contains
     ! --- Diamagnetic term
     tau_IC = tauIC
     
+    ! --- Renormalise MHD parameters?
+    if (central_density .gt. 1.d10) then
+      rho_norm = central_density	 * central_mass * mass_proton
+    else
+      rho_norm = central_density * 1.d20 * central_mass * mass_proton
+    endif
+    if (renormalise) tau_IC = tau_IC / sqrt(mu_zero * rho_norm)
+
     return
   end subroutine construct_variables
   

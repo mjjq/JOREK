@@ -173,8 +173,9 @@ subroutine preset_parameters
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
   
-  tauIC = 0.d0
-  Wdia  = .false.
+  tauIC       = 0.d0
+  Wdia        = .false.
+  U_sheath    = .false.
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0

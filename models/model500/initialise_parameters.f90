@@ -3,6 +3,9 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
+use data_structure
+use constants
+use mpi_mod
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
@@ -17,6 +20,9 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
+type (type_node_list)    :: node_list
+type (type_element_list) :: element_list
+
 integer :: ierr,err,i,ifail,i_elm
 integer :: err_alloc=0
 

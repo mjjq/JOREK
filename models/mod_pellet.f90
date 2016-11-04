@@ -196,14 +196,22 @@ implicit none
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
+! --- Local variables
 real*8  :: psi_axis, psi_bnd
 integer :: my_id, ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
-real*8 :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
+real*8 :: R_out, Z_out
 integer :: i_elm, ifail
 
 integer :: i
+
+real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8  :: R, R_s, R_t, Z, Z_s, Z_t
+real*8  :: s_out,t_out
+
+real*8  :: n_SI, T_eV
+
 
 V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 

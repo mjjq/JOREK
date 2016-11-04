@@ -1,5 +1,8 @@
   models/model500/initialise_parameters.o : tr_module.mod
   models/model500/initialise_parameters.o : phys_module.mod
+  models/model500/initialise_parameters.o : data_structure.mod
+  models/model500/initialise_parameters.o : constants.mod
+  models/model500/initialise_parameters.o : mpi_mod.mod
   models/model500/initialise_parameters.o : mumps_module.mod
   models/model500/initialise_parameters.o : murge_module.mod
   models/model500/initialise_parameters.o : pastix_module.mod

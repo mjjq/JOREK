@@ -51,7 +51,8 @@ real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t
 real*8                :: psi_norm, psi_bnd, grad_psi
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-integer               :: n_fluxes, n_neo, n_bfield, n_vfield, n_pellet,n_bootstrap, n_psi_norm
+integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm
+integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
@@ -67,11 +68,15 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 
 !====================== --- Variables related to atomic physics terms (model 500 or 555)
 logical               :: include_radiation
-integer               :: n_radiation
+integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8
+#ifdef fullmhd
+!====================== --- Variables related to full mhd 
+integer               :: n_fullmhd,s_fullmhd
+#endif
 
 integer, parameter :: nplot = 200
 integer :: iplot, i_elm
@@ -109,9 +114,9 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub                   = 2	 ! Number of subdivisions of the cubic finite elements into linear pieces
-i_tor                  = -1	 ! If i_tor > 0, only this mode will be included in the vtk file...
-i_plane                = 1	 ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
+nsub                   = 2       ! Number of subdivisions of the cubic finite elements into linear pieces
+i_tor                  = -1      ! If i_tor > 0, only this mode will be included in the vtk file...
+i_plane                = 1       ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
 SI_units               = .false. ! when true, write variables in SI units
 include_fluxes         = .false. ! include energy and density fluxes (or not)
@@ -157,11 +162,6 @@ write(*,*)
 call flush_it(6)
 
 ! --- Number of scalars to write to the VTK output file
-#ifdef fullmhd
-n_scalars = n_var + 3
-! --- Number of vectors to write to the VTK output file
-n_vectors = 0
-#else
 n_scalars   = n_var
 n_vectors   = 0
 n_fluxes    = 0
@@ -173,42 +173,55 @@ n_bootstrap = 0
 n_psi_norm  = 0
 
 if (include_fluxes) then
-  n_fluxes = 8
+  n_fluxes  = 8
+  s_fluxes  = n_scalars
   n_scalars = n_scalars + n_fluxes
 endif
 if (include_neo) then
-  n_neo = 10
+  n_neo     = 10
+  s_neo     = n_scalars
   n_scalars = n_scalars + n_neo
 endif
 if (include_magnetic_field) then
   n_bfield  = 1
+  s_bfield  = n_vectors
   n_vectors = n_vectors + n_bfield
 endif
 if (include_velocity_field) then
   n_vfield  = 1
+  s_vfield  = n_vectors
   n_vectors = n_vectors + n_vfield
 endif
 if (use_pellet) then
   n_pellet  = 2  ! pellet and pressuren
+  s_pellet  = n_scalars
   n_scalars = n_scalars + n_pellet
 endif
 if (include_bootstrap) then
-  n_bootstrap=2
-  n_scalars = n_scalars + n_bootstrap
+  n_bootstrap = 2
+  s_bootstrap = n_scalars
+  n_scalars   = n_scalars + n_bootstrap
 endif
 if (include_psi_norm) then
    n_psi_norm = 1
+   s_psi_norm = n_scalars
    n_scalars  = n_scalars + n_psi_norm
 endif
-#endif
 
 #if (JOREK_MODEL == 500)
     n_radiation = 0
  if (include_radiation) then
     n_radiation = 5
-    n_scalars = n_scalars + n_radiation
+    s_radiation = n_scalars
+    n_scalars   = n_scalars + n_radiation
  endif
 #endif
+
+#if fullmhd
+ n_fullmhd = 3
+ s_fullmhd = n_scalars
+ n_scalars = n_scalars + n_fullmhd
+#endif /*fullmhd*/
 
 allocate(scalar_names(n_scalars), vector_names(n_vectors))
 
@@ -232,67 +245,63 @@ if ( SI_units ) then
 
 endif
 
-#ifdef fullmhd
-scalar_names(n_var+1:n_var+3) = (/  'B_phi       ', 'B_R         ', 'B_Z         '/)
-
-#else
 if ( SI_units ) then
 
   if (include_fluxes) then
-     scalar_names(n_var+1:n_var+n_fluxes) = (/ &
+     scalar_names(s_fluxes+1:s_fluxes+n_fluxes) = (/ &
       'P_kPa       ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ', &
       'E_flux_Vperp', 'D_flux_Dperp', 'D_flux_Vpar ', 'D_flux_Vperp'/)
   endif
   if (include_neo) then
-     scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &
+     scalar_names(s_neo+1:s_neo+n_neo) = (/ &
       'Er_kV/m     ', 'Vtheta_km/s ', 'Mach_par    ', 'Mach_pol    ', &
       'Vsound_km/s ', 'Btot_T      ', 'Vneo_km/s   ', 'Vperp_e_km/s', &
       'ki_neo      ', 'mu_neo      '/)
   endif
   if (include_bootstrap)then
-     scalar_names(n_var+n_fluxes+n_pellet+n_neo+1:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/'j_b_MA/m2   ', 'j_av_MA/m2  '/)
+     scalar_names(s_bootstrap+1:s_bootstrap+n_bootstrap) = (/'j_b_MA/m2   ', 'j_av_MA/m2  '/)
   endif
 
 else
 
   if (include_fluxes) then
-    scalar_names(n_var+1:n_var+n_fluxes) = (/ &
+    scalar_names(s_fluxes+1:s_fluxes+n_fluxes) = (/ &
       'pressure    ', 'E_flux_Kpar ', 'E_flux_kperp', 'E_flux_Vpar ',&
       'E_flux_Vperp', 'D_flux_Dperp', 'D_flux_Vpar ', 'D_flux_Vperp'/)
   endif
   if (include_neo) then
-    scalar_names(n_var+1+n_fluxes:n_var+n_fluxes+n_neo) = (/ &
+    scalar_names(s_neo+1:s_neo+n_neo) = (/ &
       'Er          ', 'Vtheta      ', 'Mach_par    ', 'Mach_pol    ', &
       'Vsound      ', 'Btot        ', 'Vneo        ', 'Vperp_e     ', &
       'ki_neo      ', 'mu_neo      '/)
    endif
    if (include_bootstrap) then
       if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'
-      scalar_names(n_var+1+n_fluxes+n_neo+n_pellet:n_var+n_fluxes+n_neo+n_pellet+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
+      scalar_names(s_bootstrap+1:s_bootstrap+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
    endif
 !======================end SI units
 endif
 
 if (use_pellet) then
-   scalar_names(n_var+1+n_fluxes+n_neo:n_var+n_fluxes+n_neo+n_pellet) =          (/ 'Pressure    ', 'Pellet      ' /)
+   scalar_names(s_pellet+1:s_pellet+n_pellet) =          (/ 'Pressure    ', 'Pellet      ' /)
 endif
 if (include_psi_norm) then
-   scalar_names(n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+1) = ('psi_norm    ')
+   scalar_names(s_psi_norm+1:s_psi_norm+n_psi_norm) = ('psi_norm    ')
 endif
 
 #if (JOREK_MODEL == 500)
  if (include_radiation) then
-     scalar_names(n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+1:                                             &
-                  n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+n_radiation)                                   &
+     scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
                   = (/ 'Ionis_Wm-3     ', 'Lin_radWm-3     ', 'Brems_Wm-3     ', 'Joule_Wm-3    ', 'Imp_bg_Wm-3 '/)
  endif
 #endif
 
+#ifdef fullmhd
+scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         '/)
+#endif /*fullmhd*/
 
-#endif
-
-if (include_magnetic_field)  vector_names(1:n_bfield)                   = (/ 'B_R     ','B_Z     ','B_phi   '/)
-if (include_velocity_field)  vector_names(n_bfield+1:n_bfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
+if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = (/ 'B_R     ','B_Z     ','B_phi   '/)
+if (include_velocity_field)  vector_names(s_vfield+1:s_vfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
@@ -426,7 +435,7 @@ do i=1,element_list%n_elements
           Vperp_e = 0.0
           Vneo    = 0.d0
           Er      = 0.d0
-	  mach_par= 0.d0
+          mach_par= 0.d0
           mach_pol= 0.d0
           vsound  = 0.d0
           amu_neo_node = 0.d0
@@ -464,27 +473,27 @@ do i=1,element_list%n_elements
 
           ! save those specific values of axisymmetric parameters
           if (grad_psi .ne. 0.d0) then
-            scalars(inode,n_var+n_fluxes+1) = Er
-            scalars(inode,n_var+n_fluxes+2) = Vtheta
-            scalars(inode,n_var+n_fluxes+3) = Mach_par
-            scalars(inode,n_var+n_fluxes+4) = Mach_pol
-            scalars(inode,n_var+n_fluxes+5) = Vsound
-            scalars(inode,n_var+n_fluxes+6) = Btot
-            scalars(inode,n_var+n_fluxes+7) = Vneo
-            scalars(inode,n_var+n_fluxes+8) = Vperp_e
+            scalars(inode,s_fluxes+1) = Er
+            scalars(inode,s_fluxes+2) = Vtheta
+            scalars(inode,s_fluxes+3) = Mach_par
+            scalars(inode,s_fluxes+4) = Mach_pol
+            scalars(inode,s_fluxes+5) = Vsound
+            scalars(inode,s_fluxes+6) = Btot
+            scalars(inode,s_fluxes+7) = Vneo
+            scalars(inode,s_fluxes+8) = Vperp_e
             if (NEO) then
                if (num_neo_file) then
-                  scalars(inode,n_var+n_fluxes+9) = aki_neo_node
-                  scalars(inode,n_var+n_fluxes+10) = amu_neo_node
+                  scalars(inode,s_fluxes+9) = aki_neo_node
+                  scalars(inode,s_fluxes+10) = amu_neo_node
                else
-                  scalars(inode,n_var+n_fluxes+9) = aki_neo_const
-                  scalars(inode,n_var+n_fluxes+10) = amu_neo_const
+                  scalars(inode,s_fluxes+9) = aki_neo_const
+                  scalars(inode,s_fluxes+10) = amu_neo_const
                endif
             endif   ! NEO
 
           endif     ! grad_psi
 
-	endif       ! include_neo
+        endif       ! include_neo
 
       endif         ! xjac
 
@@ -503,10 +512,10 @@ do i=1,element_list%n_elements
       call interp(node_list,element_list,i,456,i_tor,s,t,W0,W0_s,W0_t,W0_st,W0_ss,W0_tt)
       Fprof = W
 
-      scalars(inode,n_var+1) = ( AZ_R - AR_Z )+ Fprof / R	 ! B_phi
-      scalars(inode,n_var+2) = ( A3_Z - AZ_p )/ BigR		 ! B_R
-      scalars(inode,n_var+3) = ( AR_p - A3_R )/ BigR		 ! B_Z
-#endif
+      scalars(inode,s_fullmhd+1) = ( AZ_R - AR_Z )+ Fprof / R ! B_phi
+      scalars(inode,s_fullmhd+2) = ( A3_Z - AZ_p )/ BigR      ! B_R
+      scalars(inode,s_fullmhd+3) = ( AR_p - A3_R )/ BigR      ! B_Z
+#endif /*fullmhd*/
 
       ! old values back to normal
       i_tor = i_tor_old
@@ -534,8 +543,8 @@ do i=1,element_list%n_elements
             V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
           end if
 
-          u_x	= (   Z_t * U_s  - Z_s * U_t ) / xjac
-          u_y	= ( - R_t * U_s  + R_s * U_t ) / xjac
+          u_x   = (   Z_t * U_s  - Z_s * U_t ) / xjac
+          u_y   = ( - R_t * U_s  + R_s * U_t ) / xjac
 
           ps_x  = (   Z_t * PS_s - Z_s * PS_t ) / xjac
           ps_y  = ( - R_t * PS_s + R_s * PS_t ) / xjac
@@ -549,12 +558,12 @@ do i=1,element_list%n_elements
            !*** compute diagnostics ***
           v_perp  = R * sqrt(u_x*u_x + u_y*u_y)
 
-              ! 	 vectors(inode,:,1) = (/ - R * u0_y ,	+ R * u0_x ,   0.d0 /)
-              ! 	 vectors(inode,:,2) = (/ + ps_y /R * V, - ps_x /R * V, F0/R * V /)
-              ! 	 vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * V, + R * u0_x - ps_x /R * V, F0/R * V /)
+              !  vectors(inode,:,1) = (/ - R * u0_y ,+ R * u0_x ,   0.d0 /)
+              !  vectors(inode,:,2) = (/ + ps_y /R * V, - ps_x /R * V, F0/R * V /)
+              !  vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * V, + R * u0_x - ps_x /R * V, F0/R * V /)
 
           psi_J = (Ps_s * ZJ_t - PS_t * ZJ_s ) / xjac
-          R_p	= (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
+          R_p   = (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
           error = psi_J - R_p  ! "error" in Grad_Shafranov equilibrium force balance
 
         endif  ! xjac check
@@ -577,31 +586,31 @@ do i=1,element_list%n_elements
 
         if (i_tor == 1) then
           call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-          scalars(inode,n_var+1)   = ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
+          scalars(inode,s_fullmhd+1) = ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
         else
-          scalars(inode,n_var+1)   = ( AZ_R - AR_Z )
+          scalars(inode,s_fullmhd+1) = ( AZ_R - AR_Z )
         endif
-        scalars(inode,n_var+2) = ( A3_Z - AZ_p )/ BigR  ! B_R
-        scalars(inode,n_var+3) = ( AR_p - A3_R )/ BigR  ! B_Z
-#endif
+        scalars(inode,s_fullmhd+2) = ( A3_Z - AZ_p )/ BigR  ! B_R
+        scalars(inode,s_fullmhd+3) = ( AR_p - A3_R )/ BigR  ! B_Z
+#endif /*fullmhd*/
 
       else  ! i_tor
 
-        u_sum	= 0.d0; u_x  = 0.d0; u_y  = 0.d0; u_p  = 0.d0
+        u_sum   = 0.d0; u_x  = 0.d0; u_y  = 0.d0; u_p  = 0.d0
         psi_sum = 0.d0; ps_x = 0.d0; ps_y = 0.d0; ps_p = 0.d0
         zj_sum  = 0.d0; zj_x = 0.d0; zj_y = 0.d0; zj_p = 0.d0
-        T_sum	= 0.d0; TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0
+        T_sum   = 0.d0; TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0
         zn_sum  = 0.d0; zn_x = 0.d0; zn_y = 0.d0; zn_p = 0.d0;
         Ti_sum  = 0.d0; Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0
         Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
-        w_sum	= 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
+        w_sum   = 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
 
 #ifdef fullmhd
         !reinitialize Bphi,BR,B_Z for loop over all modes
-        scalars(inode,n_var+1) = 0.  
-        scalars(inode,n_var+2) = 0.  
-        scalars(inode,n_var+3) = 0.  
-#endif
+        scalars(inode,s_fullmhd+1) = 0.  
+        scalars(inode,s_fullmhd+2) = 0.  
+        scalars(inode,s_fullmhd+3) = 0.  
+#endif /*fullmhd*/
 
         do i_tor = 1, n_tor
 
@@ -622,11 +631,11 @@ do i=1,element_list%n_elements
              call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
           else
              V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
-          end if
+          endif
           if ( jorek_model .eq. 400 ) then
              call interp(node_list,element_list,i,6,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
              call interp(node_list,element_list,i,8,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
-          end if
+          endif
 
           psi_sum = psi_sum + psi * HZ(i_tor,i_plane)
           zj_sum  = zj_sum  + zj  * HZ(i_tor,i_plane)
@@ -639,7 +648,7 @@ do i=1,element_list%n_elements
           else
             Ti_sum  = Ti_sum + 0.5d0*TT * HZ(i_tor,i_plane)
             Te_sum  = Te_sum + 0.5d0*TT * HZ(i_tor,i_plane)
-	  end if
+          endif
 
 #ifdef fullmhd
           ! Magnetic field components
@@ -659,27 +668,27 @@ do i=1,element_list%n_elements
 
           if (i_tor == 1) then
             call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-            scalars(inode,n_var+1) = scalars(inode,n_var+1) + ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
+            scalars(inode,s_fullmhd+1) = scalars(inode,n_var+1) + ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
           else
-            scalars(inode,n_var+1) = scalars(inode,n_var+1) + ( AZ_R - AR_Z )	  * HZ(i_tor,i_plane)
-           endif
+            scalars(inode,s_fullmhd+1) = scalars(inode,n_var+1) + ( AZ_R - AR_Z )     * HZ(i_tor,i_plane)
+          endif
 
-          scalars(inode,n_var+2) = scalars(inode,n_var+2) + ( A3_Z - AZ_p )/ BigR * HZ(i_tor,i_plane)  ! B_R
-          scalars(inode,n_var+3) = scalars(inode,n_var+3) + ( AR_p - A3_R )/ BigR * HZ(i_tor,i_plane)  ! B_Z
-#endif
+          scalars(inode,s_fullmhd+2) = scalars(inode,n_var+2) + ( A3_Z - AZ_p )/ BigR * HZ(i_tor,i_plane)  ! B_R
+          scalars(inode,s_fullmhd+3) = scalars(inode,n_var+3) + ( AR_p - A3_R )/ BigR * HZ(i_tor,i_plane)  ! B_Z
+#endif /*fullmhd*/
 
-          if ((xjac .gt. 1.d-6)) then	   ! avoid the axis
+          if ((xjac .gt. 1.d-6)) then  ! avoid the axis
 
-             u_x  = u_x   + (	Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
+             u_x  = u_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
              u_y  = u_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
-             ps_x  = ps_x + (	Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
+             ps_x  = ps_x + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
              ps_y  = ps_y + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
 
-             zj_x  = zj_x + (	Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
+             zj_x  = zj_x + (   Z_t * ZJ_s - Z_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
              zj_y  = zj_y + ( - R_t * ZJ_s + R_s * ZJ_t )   / xjac * HZ(i_tor,i_plane)
 
-             TT_x  = TT_x + (	Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
+             TT_x  = TT_x + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
              TT_y  = TT_y + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
              TT_p  = TT_p + TT * HZ_p(i_tor,i_plane)
 
@@ -697,24 +706,24 @@ do i=1,element_list%n_elements
                Te_x  = TT_x / 2.0
                Te_y  = TT_y / 2.0
                Te_p  = TT_p / 2.0
-	     end if
+             end if
 
-             zn_x = zn_x  + (	Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
+             zn_x = zn_x  + (   Z_t * RHO_s - Z_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
              zn_y = zn_y  + ( - R_t * RHO_s + R_s * RHO_t ) / xjac * HZ(i_tor,i_plane)
              zn_p = zn_p  + RHO * HZ_p(i_tor,i_plane)
 
-             w_x  = w_x   + (	Z_t * w_s - Z_s * w_t )     / xjac * HZ(i_tor,i_plane)
+             w_x  = w_x   + (   Z_t * w_s - Z_s * w_t )     / xjac * HZ(i_tor,i_plane)
              w_y  = w_y   + ( - R_t * w_s + R_s * w_t )     / xjac * HZ(i_tor,i_plane)
 
              w_xx = w_xx  + (w_ss * Z_t**2 - 2.d0*w_st * Z_s*Z_t + w_tt * Z_s**2        &
-        	  + w_s * (Z_st*Z_t - Z_tt*Z_s )					&
-        	  + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2			&
-        	  - xjac_x * (w_s* Z_t - w_t * Z_s)  / xjac**2
+                  + w_s * (Z_st*Z_t - Z_tt*Z_s )                                        &
+                  + w_t * (Z_st*Z_s - Z_ss*Z_t ) )     / xjac**2                        &
+                  - xjac_x * (w_s* Z_t - w_t * Z_s)  / xjac**2
 
              w_yy = w_yy  + (w_ss * R_t**2 - 2.d0*w_st * R_s*R_t + w_tt * R_s**2        &
-        	  + w_s * (R_st*R_t - R_tt*R_s )					&
-        	  + w_t * (R_st*R_s - R_ss*R_t ) )	   / xjac**2			&
-        	  - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
+                  + w_s * (R_st*R_t - R_tt*R_s )                                        &
+                  + w_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2                      &
+                  - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
 
           endif ! xjac
 
@@ -736,20 +745,20 @@ do i=1,element_list%n_elements
 
         if (include_bootstrap) then
           call bootstrap_current(minRad, R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
-        			 psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
-        			 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
-          scalars(inode,n_var+1+n_fluxes+n_neo+n_pellet) = Jb
-          scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
+                                 psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
+                                 Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
+          scalars(inode,s_bootstrap+1) = Jb
+          scalars(inode,s_bootstrap+2) = bootstrap_spline3_eval(n_spline_vtk-1,psi_knots_vtk,j_knots_vtk,j_spline_vtk,psi_norm)
           ! --- The JOREK bootstrap is not constant on flux surface
-	  ! --- Because J_jorek = R*J_physical, and the physical bootstrap is constant on a surface
-	  ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
-	  scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) = R* scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) / R_axis
+          ! --- Because J_jorek = R*J_physical, and the physical bootstrap is constant on a surface
+          ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
+          scalars(inode,s_bootstrap+2) = R* scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) / R_axis
         else
           Jb = 0.d0
         endif
 
         v_perp  = R * sqrt(u_x*u_x + u_y * u_y)
-        Btot	= sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR
+        Btot    = sqrt(F0**2 + ps_x**2 + ps_y**2) / BigR
         D_prof  = get_dperp (psi_norm)
         ZK_prof = get_zkperp(psi_norm)
 
@@ -765,29 +774,29 @@ do i=1,element_list%n_elements
 
         if (include_fluxes) then
 
-          scalars(inode,n_var+1)   = scalars(inode,5) * scalars(inode,6)
+          scalars(inode,s_fluxes+1)   = scalars(inode,5) * scalars(inode,6)
 
           if (grad_psi .ne. 0.d0) then
 
-            scalars(inode,n_var+2)  = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
+            scalars(inode,s_fluxes+2)  = ZKpar_T * ( F0 * TT_p / BigR**2  + (TT_x * ps_y - TT_y * ps_x) / BigR ) / Btot
 
-            scalars(inode,n_var+3)  = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
+            scalars(inode,s_fluxes+3)  = ZK_prof * (TT_x * ps_x + TT_y * ps_y) / grad_psi
 
-            scalars(inode,n_var+4)  = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
+            scalars(inode,s_fluxes+4)  = scalars(inode,5) * scalars(inode,6) * scalars(inode,7) * Btot
 
-            scalars(inode,n_var+5)  = BigR   * (u_x * ps_y - u_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
+            scalars(inode,s_fluxes+5)  = BigR   * (u_x * ps_y - u_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5) * scalars(inode,6)
 
-            scalars(inode,n_var+6)  = D_prof * (zn_x * ps_x + zn_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
+            scalars(inode,s_fluxes+6)  = D_prof * (zn_x * ps_x + zn_y * ps_y) / sqrt(ps_x*ps_x + ps_y*ps_y)
 
-            scalars(inode,n_var+7)  = scalars(inode,5) * scalars(inode,7) * Btot
+            scalars(inode,s_fluxes+7)  = scalars(inode,5) * scalars(inode,7) * Btot
 
-            scalars(inode,n_var+8)  = BigR   * (u_x * ps_y - u_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
+            scalars(inode,s_fluxes+8)  = BigR   * (u_x * ps_y - u_y * ps_x) / sqrt(ps_x*ps_x + ps_y*ps_y) * scalars(inode,5)
 
           endif ! grad_psi
-        endif	! include_fluxes
+        endif ! include_fluxes
 
         if (include_psi_norm) then
-           scalars(inode,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+1) = psi_norm
+           scalars(inode,s_psi_norm+1) = psi_norm
         endif
 
         if (use_pellet) then
@@ -796,7 +805,7 @@ do i=1,element_list%n_elements
            local_temperature = scalars(inode,6)/2.
            local_psi         = scalars(inode,1)
            local_pressure    = local_density * local_temperature
-           scalars(inode,n_var+n_fluxes+n_neo+n_pellet-1)  = local_pressure
+           scalars(inode,s_pellet+1)  = local_pressure
 
            angle = 0.0
            call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
@@ -806,12 +815,12 @@ do i=1,element_list%n_elements
                 central_density, pellet_particles, pellet_density, &
                 total_pellet_volume, local_source, source_volume)
 
-           scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
+           scalars(inode,s_pellet+2) = local_source
         endif ! use_pellet
 
-        !	 vectors(inode,:,1) = (/ - R * u0_y ,	+ R * u0_x ,   0.d0 /)
-        !	 vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
-        !	 vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
+        ! vectors(inode,:,1) = (/ - R * u0_y ,+ R * u0_x ,   0.d0 /)
+        ! vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
+        ! vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
 
      endif ! i_tor from 1 to n_tor
 
@@ -820,7 +829,7 @@ enddo     ! nsub
 
 do j=1,nsub-1
    do k=1,nsub-1
-      ielm	  = ielm+1
+      ielm        = ielm+1
       ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
       ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
       ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
@@ -862,10 +871,10 @@ enddo  ! n_elements
     eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
                             *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
-    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
-    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+2) = scalars(i,5) * scalars(i,8) * LradDrays_T
-    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+3) = LradDcont_T * scalars(i,5)**2.d0
-    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+    scalars(i,s_radiation+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
+    scalars(i,s_radiation+2) = scalars(i,5) * scalars(i,8) * LradDrays_T
+    scalars(i,s_radiation+3) = LradDcont_T * scalars(i,5)**2.d0
+    scalars(i,s_radiation+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
 
  !--------------------------------------------------------
    ! --- Radiation from background impurity
@@ -883,11 +892,11 @@ enddo  ! n_elements
                    *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
                    *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+5) = scalars(i,5) * frad_bg
+    scalars(i,s_radiation+5) = scalars(i,5) * frad_bg
 
    enddo
   endif
-#endif
+#endif /*(JOREK_MODEL == 500)*/
 
 
 if (SI_units) then
@@ -917,26 +926,26 @@ if (SI_units) then
     scalars(i,8) = scalars(i,8) * central_density
 #endif
     !=====================Pressure in kPa
-    if (include_fluxes) scalars(i,n_var+1) = scalars(i,n_var+1) / MU_zero/1.e3
+    if (include_fluxes) scalars(i,s_fluxes+1) = scalars(i,s_fluxes+1) / MU_zero/1.e3
     if (include_neo) then
       !============================Er in kV/m
-      scalars(i,n_var+n_fluxes+1) = F0*scalars(i,n_var+n_fluxes+1) / t_norm/1.e3
+      scalars(i,s_neo+ 1) = F0*scalars(i,s_neo+ 1) / t_norm/1.e3
       !====================================Vtheta km/s
-      scalars(i,n_var+n_fluxes+2) = scalars(i,n_var+n_fluxes+2) / t_norm/1.e3
+      scalars(i,s_neo+ 2) =    scalars(i,s_neo+ 2) / t_norm/1.e3
       !===================================Vsound in km/s
-      scalars(i,n_var+n_fluxes+5) = scalars(i,n_var+n_fluxes+5) / t_norm/1.e3
+      scalars(i,s_neo+ 5) =    scalars(i,s_neo+ 5) / t_norm/1.e3
       !===================================Vneo in km/s
-      scalars(i,n_var+n_fluxes+7) = scalars(i,n_var+n_fluxes+7) / t_norm/1.e3
+      scalars(i,s_neo+ 7) =    scalars(i,s_neo+ 7) / t_norm/1.e3
       !===================================Vperp_e in km/s
-      scalars(i,n_var+n_fluxes+8) = scalars(i,n_var+n_fluxes+8) / t_norm/1.e3
+      scalars(i,s_neo+ 8) =    scalars(i,s_neo+ 8) / t_norm/1.e3
       ! ===================================mu_neo in SI units
-      scalars(i,n_var+n_fluxes+10) = scalars(i,n_var+n_fluxes+10) / sqrt(rho_norm*MU_zero)
+      scalars(i,s_neo+10) =    scalars(i,s_neo+10) / sqrt(rho_norm*MU_zero)
     endif
     !============================================j_bootstrap, javeraged in MA/m2
 
     if (include_bootstrap) then
-    scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+1+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6
-    scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)=scalars(i,n_var+2+n_fluxes+n_neo+n_pellet)/MU_zero*1.e-6
+    scalars(i,s_bootstrap+1)=scalars(i,s_bootstrap+1)/MU_zero*1.e-6
+    scalars(i,s_bootstrap+2)=scalars(i,s_bootstrap+2)/MU_zero*1.e-6
     endif
   !========================================================
 
@@ -970,14 +979,14 @@ if (SI_units) then
 
     eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
 
-       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
+       scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
                                            * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
 
-       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
+       scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
 
-       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
+       scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
 
-       scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+       scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
 
  !--------------------------------------------------------
    ! --- Radiation from background impurity
@@ -993,11 +1002,11 @@ if (SI_units) then
                    *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
                    *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-    scalars(i,n_var+n_fluxes+n_neo+n_pellet+n_bootstrap+n_psi_norm+5) = scalars(i,5)*1.d20 * frad_bg
+    scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
 
  endif
 
-#endif
+#endif /*(JOREK_MODEL == 500)*/
 
   enddo  ! nnos
 

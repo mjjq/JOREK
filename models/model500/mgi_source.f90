@@ -5,7 +5,7 @@ use constants
 implicit none
 
 real*8 :: total_n_particles_inj
-real*8 :: total_n_particles_plasma
+real*8 :: total_n_particles
 real*8 :: total_n_particles_inj_all
 
 contains 
@@ -243,9 +243,9 @@ call Integrals_3D(my_id, node_list, element_list,density,density_in,density_out,
 total_n_particles_inj_all = total_n_particles_inj_all + total_n_particles_inj*tstep*sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
 
 if (my_id .eq. 0) then
-  write(*,*) 'total neutrals particles injected per second =', total_n_particles_inj
-  write(*,*) 'total neutrals particles into the plasma =', total_n_particles_plasma
-  write(*,*) 'total neutrals particles injected since the start of the simulation = ', total_n_particles_inj_all
+  write(*,'(A,e14.6)') 'total neutrals particles injected per second =', total_n_particles_inj
+  write(*,'(A,e14.6)') 'total neutrals particles in the plasma       =', total_n_particles
+  write(*,'(A,e14.6)') 'total neutrals particles injected since the start of the simulation = ', total_n_particles_inj_all
   !write(*,*) 'Check of density conservation'
 endif
 

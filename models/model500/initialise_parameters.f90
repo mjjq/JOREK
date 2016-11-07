@@ -30,7 +30,7 @@ real*8, dimension(2) :: P, P_s, P_t, P_phi
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out,R_out,Z_out
 
-real*8  :: n_SI, T_eV
+real*8  :: n_SI, T_eV, n_corr, T_corr
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -210,10 +210,14 @@ if (using_spi == .true.) then
                           P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
           ! Now, P(1) represents mass density and P(2) represents temperature
-          ! Undoing the normalization!
+          ! Correct any possible negative values!
 
-          n_SI           = P(1) * 1.d20 * central_density
-          T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
+          n_corr         = corr_neg_dens(P(1))
+          T_corr         = corr_neg_temp(P(2))
+
+          ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i
+          n_SI           = n_corr * 1.d20 * central_density
+          T_eV           = T_corr / (2.d0 * EL_CHG * MU_ZERO * central_density * 1.d20)
 
           !if (n_SI == 0.d0 .or. T_eV == 0.d0) then
           !   n_SI = central_density * 1.d20

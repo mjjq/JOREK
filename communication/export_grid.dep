@@ -1,2 +1,0 @@
-  communication/export_grid.o : parameters.mod
-  communication/export_grid.o : data_structure.mod

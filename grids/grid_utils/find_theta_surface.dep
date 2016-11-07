@@ -1,2 +1,0 @@
-  grids/grid_utils/find_theta_surface.o : constants.mod
-  grids/grid_utils/find_theta_surface.o : data_structure.mod

@@ -1,2 +1,0 @@
-  diagnostics/new_diag/mod_four_filter.o : parameters.mod
-mod_four_filter.mod :  diagnostics/new_diag/mod_four_filter.o

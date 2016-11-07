@@ -1,7 +1,0 @@
-  models/model500/boundary_conditions.o : data_structure.mod
-  models/model500/boundary_conditions.o : global_distributed_matrix.mod
-  models/model500/boundary_conditions.o : phys_module.mod
-  models/model500/boundary_conditions.o : murge_module.mod
-  models/model500/boundary_conditions.o : tr_module.mod
-  models/model500/boundary_conditions.o : mpi_mod.mod
-mod_boundary_conditions.mod :  models/model500/boundary_conditions.o

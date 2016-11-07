@@ -1,2 +1,0 @@
-  solvers/initialise_mumps.o : mumps_module.mod
-  solvers/initialise_mumps.o : mpi_mod.mod

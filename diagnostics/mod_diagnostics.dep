@@ -1,8 +1,0 @@
-  diagnostics/mod_diagnostics.o : parameters.mod
-  diagnostics/mod_diagnostics.o : nodes_elements.mod
-  diagnostics/mod_diagnostics.o : phys_module.mod
-  diagnostics/mod_diagnostics.o : data_structure.mod
-diagnostics.mod :  diagnostics/mod_diagnostics.o
-procedure.mod :  diagnostics/mod_diagnostics.o
-procedure.mod :  diagnostics/mod_diagnostics.o
-procedure.mod :  diagnostics/mod_diagnostics.o

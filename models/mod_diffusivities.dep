@@ -1,4 +1,0 @@
-  models/mod_diffusivities.o : parameters.mod
-  models/mod_diffusivities.o : phys_module.mod
-  models/mod_diffusivities.o : profiles.mod
-diffusivities.mod :  models/mod_diffusivities.o

@@ -1,2 +1,0 @@
-  grids/grid_bezier_square.o : parameters.mod
-  grids/grid_bezier_square.o : data_structure.mod

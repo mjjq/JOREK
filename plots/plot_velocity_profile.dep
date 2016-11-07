@@ -1,3 +1,0 @@
-  plots/plot_velocity_profile.o : tr_module.mod
-  plots/plot_velocity_profile.o : data_structure.mod
-  plots/plot_velocity_profile.o : phys_module.mod

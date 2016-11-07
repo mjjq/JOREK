@@ -1,5 +1,0 @@
-  models/element_matrix_GS_perturbation.o : parameters.mod
-  models/element_matrix_GS_perturbation.o : data_structure.mod
-  models/element_matrix_GS_perturbation.o : gauss.mod
-  models/element_matrix_GS_perturbation.o : basis_at_gaussian.mod
-  models/element_matrix_GS_perturbation.o : phys_module.mod

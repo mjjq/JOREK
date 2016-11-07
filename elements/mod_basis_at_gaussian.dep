@@ -1,3 +1,0 @@
-  elements/mod_basis_at_gaussian.o : parameters.mod
-  elements/mod_basis_at_gaussian.o : gauss.mod
-basis_at_gaussian.mod :  elements/mod_basis_at_gaussian.o

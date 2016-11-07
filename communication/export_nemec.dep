@@ -1,2 +1,0 @@
-  communication/export_nemec.o : constants.mod
-  communication/export_nemec.o : data_structure.mod

@@ -1,5 +1,0 @@
-  communication/distribute_vector.o : tr_module.mod
-  communication/distribute_vector.o : parameters.mod
-  communication/distribute_vector.o : global_distributed_matrix.mod
-  communication/distribute_vector.o : mumps_module.mod
-  communication/distribute_vector.o : mpi_mod.mod

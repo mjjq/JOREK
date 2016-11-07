@@ -1,5 +1,0 @@
-  diagnostics/temp.o : data_structure.mod
-  diagnostics/temp.o : gauss.mod
-  diagnostics/temp.o : basis_at_gaussian.mod
-  diagnostics/temp.o : phys_module.mod
-  diagnostics/temp.o : parameters.mod

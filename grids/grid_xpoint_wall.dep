@@ -1,5 +1,0 @@
-  grids/grid_xpoint_wall.o : data_structure.mod
-  grids/grid_xpoint_wall.o : tr_module.mod
-  grids/grid_xpoint_wall.o : gauss.mod
-  grids/grid_xpoint_wall.o : basis_at_gaussian.mod
-  grids/grid_xpoint_wall.o : phys_module.mod

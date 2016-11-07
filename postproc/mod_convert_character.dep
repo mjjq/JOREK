@@ -1,2 +1,0 @@
-  postproc/mod_convert_character.o : parameters.mod
-convert_character.mod :  postproc/mod_convert_character.o

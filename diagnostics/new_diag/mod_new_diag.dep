@@ -1,7 +1,0 @@
-  diagnostics/new_diag/mod_new_diag.o : parameters.mod
-  diagnostics/new_diag/mod_new_diag.o : mod_position.mod
-  diagnostics/new_diag/mod_new_diag.o : mod_straight_field_line.mod
-  diagnostics/new_diag/mod_new_diag.o : mod_expression.mod
-  diagnostics/new_diag/mod_new_diag.o : mod_four_filter.mod
-  diagnostics/new_diag/mod_new_diag.o : mod_diag_output.mod
-mod_new_diag.mod :  diagnostics/new_diag/mod_new_diag.o

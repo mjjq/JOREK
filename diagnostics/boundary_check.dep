@@ -1,5 +1,0 @@
-  diagnostics/boundary_check.o : tr_module.mod
-  diagnostics/boundary_check.o : data_structure.mod
-  diagnostics/boundary_check.o : phys_module.mod
-  diagnostics/boundary_check.o : nodes_elements.mod
-  diagnostics/boundary_check.o : vacuum_response.mod

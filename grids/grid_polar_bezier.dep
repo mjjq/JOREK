@@ -1,5 +1,0 @@
-  grids/grid_polar_bezier.o : constants.mod
-  grids/grid_polar_bezier.o : tr_module.mod
-  grids/grid_polar_bezier.o : parameters.mod
-  grids/grid_polar_bezier.o : data_structure.mod
-  grids/grid_polar_bezier.o : phys_module.mod

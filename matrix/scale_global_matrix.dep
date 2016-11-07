@@ -1,3 +1,0 @@
-  matrix/scale_global_matrix.o : tr_module.mod
-  matrix/scale_global_matrix.o : global_distributed_matrix.mod
-  matrix/scale_global_matrix.o : mpi_mod.mod

@@ -1,2 +1,0 @@
-  models/det_modes.o : parameters.mod
-  models/det_modes.o : phys_module.mod

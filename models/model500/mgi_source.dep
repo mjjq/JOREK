@@ -1,5 +1,0 @@
-  models/model500/mgi_source.o : constants.mod
-  models/model500/mgi_source.o : data_structure.mod
-  models/model500/mgi_source.o : phys_module.mod
-  models/model500/mgi_source.o : mpi_mod.mod
-mgi_module.mod :  models/model500/mgi_source.o

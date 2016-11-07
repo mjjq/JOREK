@@ -1,2 +1,0 @@
-  solvers/initialise_pastix.o : pastix_module.mod
-  solvers/initialise_pastix.o : mumps_module.mod

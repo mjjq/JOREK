@@ -1,3 +1,0 @@
-  elements/interp_PRZ.o : data_structure.mod
-  elements/interp_PRZ.o : phys_module.mod
-  elements/interp_PRZ.o : mod_basisfunctions.mod

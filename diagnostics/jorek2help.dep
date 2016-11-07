@@ -1,3 +1,0 @@
-  diagnostics/jorek2help.o : parameters.mod
-  diagnostics/jorek2help.o : mod_log_params.mod
- diagnostics/jorek2help.o: version.h

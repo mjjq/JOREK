@@ -1,6 +1,0 @@
-  diagnostics/new_diag/mod_expression.o : parameters.mod
-  diagnostics/new_diag/mod_expression.o : mod_position.mod
-  diagnostics/new_diag/mod_expression.o : phys_module.mod
-  diagnostics/new_diag/mod_expression.o : diffusivities.mod
-  diagnostics/new_diag/mod_expression.o : corr_neg.mod
-mod_expression.mod :  diagnostics/new_diag/mod_expression.o

@@ -1,4 +1,0 @@
-  elements/initialise_basis.o : constants.mod
-  elements/initialise_basis.o : gauss.mod
-  elements/initialise_basis.o : basis_at_gaussian.mod
-  elements/initialise_basis.o : phys_module.mod

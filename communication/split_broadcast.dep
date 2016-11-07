@@ -1,2 +1,0 @@
-  communication/split_broadcast.o : mumps_module.mod
-  communication/split_broadcast.o : mpi_mod.mod

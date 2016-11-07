@@ -1,8 +1,0 @@
-  solvers/solve_murge_all.o : tr_module.mod
-  solvers/solve_murge_all.o : parameters.mod
-  solvers/solve_murge_all.o : mumps_module.mod
-  solvers/solve_murge_all.o : pastix_module.mod
-  solvers/solve_murge_all.o : murge_module.mod
-  solvers/solve_murge_all.o : global_distributed_matrix.mod
-  solvers/solve_murge_all.o : mpi_mod.mod
- solvers/solve_murge_all.o: timing/r3_info.h

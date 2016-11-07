@@ -1,4 +1,0 @@
-  plots/plot_profiles.o : tr_module.mod
-  plots/plot_profiles.o : data_structure.mod
-  plots/plot_profiles.o : phys_module.mod
-  plots/plot_profiles.o : basis_at_gaussian.mod

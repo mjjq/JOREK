@@ -1,3 +1,0 @@
-  grids/grid_bezier_square_polar.o : constants.mod
-  grids/grid_bezier_square_polar.o : parameters.mod
-  grids/grid_bezier_square_polar.o : data_structure.mod

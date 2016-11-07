@@ -1,4 +1,0 @@
-  models/model500/initial_conditions.o : constants.mod
-  models/model500/initial_conditions.o : data_structure.mod
-  models/model500/initial_conditions.o : phys_module.mod
-  models/model500/initial_conditions.o : mod_poiss.mod

@@ -1,5 +1,0 @@
-  grids/grid_double_xpoint.o : constants.mod
-  grids/grid_double_xpoint.o : tr_module.mod
-  grids/grid_double_xpoint.o : data_structure.mod
-  grids/grid_double_xpoint.o : grid_xpoint_data.mod
-  grids/grid_double_xpoint.o : phys_module.mod

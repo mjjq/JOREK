@@ -1,3 +1,0 @@
-  grids/grid_utils/mod_high_resolution_wall.o : data_structure.mod
-  grids/grid_utils/mod_high_resolution_wall.o : phys_module.mod
-high_resolution_wall.mod :  grids/grid_utils/mod_high_resolution_wall.o

@@ -1,4 +1,0 @@
-  models/element_matrix_GS_inverse.o : parameters.mod
-  models/element_matrix_GS_inverse.o : data_structure.mod
-  models/element_matrix_GS_inverse.o : gauss.mod
-  models/element_matrix_GS_inverse.o : basis_at_gaussian.mod

@@ -1,5 +1,0 @@
-  communication/export_helena.o : constants.mod
-  communication/export_helena.o : tr_module.mod
-  communication/export_helena.o : parameters.mod
-  communication/export_helena.o : data_structure.mod
-  communication/export_helena.o : phys_module.mod

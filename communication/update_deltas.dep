@@ -1,3 +1,0 @@
-  communication/update_deltas.o : tr_module.mod
-  communication/update_deltas.o : data_structure.mod
-  communication/update_deltas.o : global_distributed_matrix.mod

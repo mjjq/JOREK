@@ -1,7 +1,0 @@
-  models/model500/boundary_matrix_open.o : constants.mod
-  models/model500/boundary_matrix_open.o : parameters.mod
-  models/model500/boundary_matrix_open.o : data_structure.mod
-  models/model500/boundary_matrix_open.o : gauss.mod
-  models/model500/boundary_matrix_open.o : basis_at_gaussian.mod
-  models/model500/boundary_matrix_open.o : phys_module.mod
-mod_boundary_matrix_open.mod :  models/model500/boundary_matrix_open.o

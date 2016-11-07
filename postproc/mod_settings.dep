@@ -1,2 +1,0 @@
-  postproc/mod_settings.o : convert_character.mod
-settings.mod :  postproc/mod_settings.o

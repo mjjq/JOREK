@@ -1,6 +1,0 @@
-  diagnostics/new_diag/mod_position.o : constants.mod
-  diagnostics/new_diag/mod_position.o : parameters.mod
-  diagnostics/new_diag/mod_position.o : equil_info.mod
-  diagnostics/new_diag/mod_position.o : data_structure.mod
-  diagnostics/new_diag/mod_position.o : mod_straight_field_line.mod
-mod_position.mod :  diagnostics/new_diag/mod_position.o

@@ -1,4 +1,0 @@
-  diagnostics/energy.o : data_structure.mod
-  diagnostics/energy.o : gauss.mod
-  diagnostics/energy.o : basis_at_gaussian.mod
-  diagnostics/energy.o : phys_module.mod

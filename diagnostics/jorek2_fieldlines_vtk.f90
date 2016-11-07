@@ -97,7 +97,7 @@ do i_tor=1, n_tor
   endif
 enddo
 
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 
@@ -109,7 +109,7 @@ do i=1,element_list%n_elements
 
   do j=i+1,element_list%n_elements
 
-    if (neighbours(element_list%element(i),element_list%element(j),iside_i,iside_j)) then
+    if (neighbours(node_list, element_list%element(i),element_list%element(j),iside_i,iside_j)) then
       element_neighbours(iside_i,i) = j
       element_neighbours(iside_j,j) = i
     endif

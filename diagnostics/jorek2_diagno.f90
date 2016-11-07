@@ -44,7 +44,7 @@ do i_tor=1, n_tor
   write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
 
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 

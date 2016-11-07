@@ -190,6 +190,8 @@ use data_structure
 use phys_module
 use mpi_mod
 use mgi_module
+use corr_neg
+
 implicit none
 
 

@@ -201,7 +201,7 @@ real*8  :: psi_axis, psi_bnd
 integer :: my_id, ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
-real*8 :: R_out, Z_out
+real*8  :: R_out, Z_out
 integer :: i_elm, ifail
 
 integer :: i
@@ -211,15 +211,10 @@ real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out
 
 real*8  :: n_SI, T_eV
+real*8  :: t_norm
 
 
-V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
-
-!spi_R = spi_R + spi_Vel_R * tstep / V_normalisation
-!spi_Z = spi_Z + spi_Vel_Z * tstep / V_normalisation
-
-!spi_R = mgi_R + (t_now-t_mgi)*spi_Vel_R/V_normalisation
-!spi_Z = mgi_Z + (t_now-t_mgi)*spi_Vel_Z/V_normalisation
+  V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 
   do i=1, n_spi
     pellets(i)%spi_R       = pellets(i)%spi_R + pellets(i)%spi_Vel_R * tstep / V_normalisation
@@ -244,27 +239,40 @@ V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mas
 
       n_SI           = P(1) * 1.d20 * central_density
       T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
+      t_norm         = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
       write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
 
       ! NGS model
-      pellets(i)%spi_abl   = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
+      
+      if (pellets(i)%spi_radius > 0.0) then 
+        pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep *                            &
+                                (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
+                                pellet_density * 1.d20))
+
+        if (pellets(i)%spi_radius < 0.d0) then
+          pellets(i)%spi_radius = 0.d0
+        end if
+      end if
+
+      pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                              (T_eV**1.64)
     else
-      pellets(i)%spi_abl   = 0.d0
+      pellets(i)%spi_abl    = 0.d0
     end if
 
   end do
 
   !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
-
-  do i=1, n_spi
-    write (*,*) "Pellet number: ", i
-    write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
-    write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_phi 
-    write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
-  end do
-
+  
+  if (my_id == 0) then
+    do i=1, n_spi
+      write (*,*) "Pellet number: ", i
+      write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
+      write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_phi
+      write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
+    end do
+  end if
 
 return 
  

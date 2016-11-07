@@ -169,6 +169,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(mgi_tor_norm,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 !==========================Added input for SPI model===========================================
+
   call MPI_PACK(spi_Vel_Rref,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_Vel_Zref,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_Vel_phiref,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -181,8 +182,10 @@ if (my_id .eq. 0) then
 
   call MPI_PACK(using_spi,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+if (using_spi == .true.) then
   call MPI_PACK(pellets,                n_spi,dtype,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   write(*,*) "packing pellets: ", ierr
+end if
 !===============================End of SPI model===============================================
 
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -506,6 +509,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,mgi_tor_norm,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
 !==========================Added input for SPI model===========================================
+
+
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_Rref,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_Zref,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_phiref,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -518,6 +523,7 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
+if (using_spi == .true.) then
   if (.not. allocated(pellets)) then
     allocate (pellets(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for pellets
     if (err_alloc /= 0) then
@@ -527,6 +533,7 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,pellets,                n_spi,dtype,MPI_COMM_WORLD,ierr)
   write(*,*) "unpacking pellets: ",ierr
+end if
 
 !===============================End of SPI model===============================================
 

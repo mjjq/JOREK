@@ -166,6 +166,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
 endif
 
+
+! --- Read numerical profiles for rho, T, and ff'.
+call read_num_profiles(my_id)
+
+! --- Determine the derivatives of the numerical input profiles.
+call derive_num_profiles(my_id)
+
+
 ! --- Initialize the shattered pellet position
 !spi_R = mgi_R
 !spi_Z = mgi_Z
@@ -207,6 +215,11 @@ if (using_spi == .true.) then
           n_SI           = P(1) * 1.d20 * central_density
           T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
 
+          !if (n_SI == 0.d0 .or. T_eV == 0.d0) then
+          !   n_SI = central_density * 1.d20
+          !   T_eV = 300
+          !end if
+
           ! NGS model
           pellets(i)%spi_abl   = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                                  (T_eV**1.64)
@@ -214,6 +227,8 @@ if (using_spi == .true.) then
         else
           pellets(i)%spi_abl   = 0.d0
         end if
+
+        write(*,*) "Check Point: i, spi_abl =", i, pellets(i)%spi_abl 
 
       end do
       write(*,*) "SPI initialized successfully."
@@ -224,12 +239,6 @@ if (using_spi == .true.) then
   end if
 
 end if
-
-! --- Read numerical profiles for rho, T, and ff'.
-call read_num_profiles(my_id)
-
-! --- Determine the derivatives of the numerical input profiles.
-call derive_num_profiles(my_id)
   
 return
 end subroutine initialise_parameters

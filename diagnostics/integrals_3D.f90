@@ -403,7 +403,6 @@ do ife = ife_min, ife_max
 
      end if
 
-
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
         n_particles_inj      = n_particles_inj + 0.5d0 * central_density * 1.d20 * source_mgi * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)

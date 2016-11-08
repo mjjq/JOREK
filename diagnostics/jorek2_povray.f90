@@ -13,7 +13,7 @@ program jorek2_povray
   use phys_module
   use diagnostics
   use profiles
-  use import_restart
+  use mod_import_restart
   
   implicit none
   
@@ -67,7 +67,7 @@ program jorek2_povray
     x_cart2(nplot,nplot,n_phi), y_cart2(nplot,nplot,n_phi), z_cart2(nplot,nplot,n_phi),            &
     value2(nplot,nplot,n_phi) )
   open(FH, file='jorek_data.pov', status='replace', action='write', form='formatted')
-  call import_binary_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
   call initialise_basis()
   
   ! --- Locate magnetic axis and X-point.

@@ -5,8 +5,8 @@ program RST_convert_bin2hdf5
   use phys_module
   ! Argument parsing
   use cla
-  use import_restart
-  use export_restart
+  use mod_import_restart
+  use mod_export_restart
 
   implicit none
 

@@ -5,7 +5,7 @@ program JOREK2_FOUR
   use nodes_elements, only: element_list, node_list
   use fourier,        only: t_theta_mapping, determine_theta_mag, transform_qttys
   use phys_module,    only: rst_format
-  use import_restart
+  use mod_import_restart
 
   implicit none
   
@@ -29,7 +29,7 @@ program JOREK2_FOUR
   call initialise_parameters(0, "__NO_FILENAME__")                 ! default values and namelist input
   call log_parameters(0)
   call initialise_basis                         ! define the basis functions at the Gaussian points
-  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)   ! read restart file
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)   ! read restart file
   !   --- Preset field line tracing parameters.
   nstpts      = 30
   nmaxsteps   = 2500

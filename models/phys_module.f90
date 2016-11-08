@@ -29,6 +29,8 @@ module phys_module
   real*8  :: sigma                !< (model400)
   real*8  :: tauIC                !< (diamagnetic terms)
   logical :: Wdia                 !< (diamagnetic vorticity)
+  logical :: U_sheath             !< Use Stangeby BCs for electric potential
+  logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
   real*8  :: gamma_sheath         !< sheath boundary condition open fieldlines (model303)
   real*8  :: density_reflection   !< density reflection coeeficient open fieldlines (model303)
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8

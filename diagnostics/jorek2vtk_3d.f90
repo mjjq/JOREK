@@ -4,7 +4,7 @@ program jorek2vtk_3d
 use constants
 use data_structure
 use phys_module
-use import_restart
+use mod_import_restart
 implicit none
 
 type (type_node_list)    :: node_list
@@ -72,7 +72,7 @@ do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
 enddo
 
-call import_binary_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
 nnos = n_toroidal * nsub*nsub*node_list%n_nodes
 
 allocate(xyz(3,nnos), scalars(nnos,1:n_scalars), scalar_names(n_scalars))

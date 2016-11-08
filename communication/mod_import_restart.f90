@@ -1,7 +1,36 @@
-module import_restart
+module mod_import_restart
 implicit none
 contains
 !> Imports a restart file written out by the routine export_restart.
+
+subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
+
+  use tr_module
+  use data_structure
+  use phys_module
+  use pellet_module
+
+  implicit none
+  
+  ! --- Routine parameters
+  type(type_node_list),    intent(inout) :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  character*(*)          , intent(in)    :: filename
+  integer,                 intent(out)   :: ierr
+  integer,                 intent(in)    :: format_rst  ! format of restart file 
+
+  if ( rst_hdf5 == 0 ) then
+    write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
+    call import_binary_restart(node_list, element_list, trim(filename)//'.rst', &
+            format_rst, ierr)
+  else if ( rst_hdf5 == 1 ) then
+    write(*,*) " Restart from HDF5 file " // trim(filename) // '.h5'
+    call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
+            format_rst,ierr)
+  end if
+
+end subroutine import_restart
+
 
 !
 ! Import a binary restart file
@@ -743,8 +772,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_deallocate(t_contain_node,"t_contain_node",CAT_UNKNOWN)
   call tr_deallocate(t_nref,"t_nref",CAT_UNKNOWN)
 
+#else
+  write (6,*) " ERROR: trying to import with hdf5 but USE_HDF5 was not set at compile-time"
 #endif
 
   return
 end subroutine import_hdf5_restart
-end module import_restart
+end module mod_import_restart

@@ -10,7 +10,7 @@ program jorek2_stan
   use constants
   use tr_module 
   use grid_xpoint_data
-  use import_restart
+  use mod_import_restart
 
   implicit none
   
@@ -48,7 +48,7 @@ program jorek2_stan
   enddo
   
   ! --- Import restart and define bases.
-  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
   call initialise_basis
   
   allocate(stpts)

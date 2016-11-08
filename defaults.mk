@@ -18,6 +18,7 @@ endif
 # Default flags for gfortran
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -O3 -cpp -fopenmp
+  FLAGS += -ffree-line-length-none
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-tabs -Wno-unused-variable
   FLAGS += -Wcharacter-truncation

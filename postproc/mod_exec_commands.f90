@@ -16,7 +16,7 @@ module exec_commands
   use convert_character
   use postproc_help
   use mod_log_params
-  use import_restart
+  use mod_import_restart
   
   
   
@@ -209,20 +209,13 @@ module exec_commands
     
     ierr = 0
     
-    write(file_name,'(a,i5.5,a)') 'jorek', istep, '.rst'
-    
-    inquire(file=file_name, exist=file_exists)
-    if ( .not. file_exists ) then
-      ierr = 1
-      return
-    end if
-    
+    write(file_name,'(a,i5.5)') 'jorek', istep
     write(*,*)
     write(*,'(a,i5.5,a)') '#################### TIME STEP ', istep, ' ####################'
     write(*,*)
     
     ! --- Load the restart file
-    call import_binary_restart(node_list, element_list, trim(file_name), rst_format, ierr)
+    call import_restart(node_list, element_list, file_name, rst_format, ierr)
     if ( ierr /= 0 ) return
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     

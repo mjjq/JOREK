@@ -244,7 +244,7 @@ module mod_position
       
       call alloc_pol_pos(pos_list, (/nR,nZ/))
       
-      !$OMP parallel do default(none) firstprivate(pos,R_out,Z_out,ierr) private(i,j)              & 
+      !$OMP parallel do default(none) firstprivate(R_out,Z_out,ierr) private(pos,i,j)              & 
       !$OMP shared(nR,nZ,node_list,element_list,pos_list,Rmin,Rmax,Zmin,Zmax) schedule(static)
       do i = 1, nR
         do j = 1, nZ

@@ -194,7 +194,7 @@ Makefile.inc: ;
 
 .mod/version.h:
 	@echo "Generate .mod/version.h"
-	@`pwd`/util/version.sh 2>/dev/null > $@
+	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" > $@
 	@echo "#define compile_command '$(FC)'" >> $@
 	@echo "#define compile_flags '$(FFLAGS)'" >> $@
 	@echo "#define compile_includes '$(INCLUDES)'" >> $@

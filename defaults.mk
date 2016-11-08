@@ -17,7 +17,7 @@ endif
 
 # Default flags for gfortran
 ifeq ($(COMPILER_FAMILY), gnu)
-  FLAGS += -O3 -cpp -fopenmp
+  FLAGS += -cpp -fopenmp
   FLAGS += -ffree-line-length-none
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-tabs -Wno-unused-variable
@@ -39,9 +39,6 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv \
 #	      -finit-real=nan -finit-int=nan -finit-logical=false
 #   FLAGS += -Warray-temporaries -Wconversion-extra
-  else
-    FLAGS += -flto=4 # link-time optimization with 4 jobs
-    CFLAGS += -flto=4 # also for C routines
   endif
 
   OUTPUT_MODULE_COMMAND=-J#no space
@@ -69,8 +66,6 @@ ifeq ($(COMPILER_FAMILY), intel)
     FLAGS += -fstack-security-check
     FLAGS += -fpe0
     FLAGS += -assume ieee_fpe_flags # not sure about this one
-  else
-    FLAGS += -O3
   endif
 
   OUTPUT_MODULE_COMMAND=-module #space is important

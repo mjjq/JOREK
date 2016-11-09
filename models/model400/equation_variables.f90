@@ -1,7 +1,7 @@
 ! Contains all the variables for the equations, to share with each equation routine
 module equation_variables
 
-  use parameters
+  use mod_parameters
   
   implicit none
 

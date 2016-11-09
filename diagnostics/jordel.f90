@@ -8,7 +8,7 @@ program jordel
 !> with the variables rpos and zpos. The linear cut will pass through that
 !> point and also the origin.
 
-use parameters, only: n_var, variable_names
+use mod_parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian

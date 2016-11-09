@@ -12,7 +12,7 @@ subroutine ELM_main_rhs_1(rhs,rhs_k)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_main_rhs_1
 
   ! --- Modules
-  use parameters
+  use mod_parameters
   use phys_module
   use equation_variables
   

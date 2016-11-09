@@ -31,7 +31,7 @@ program JOREK2
   use wsmp_module
   use data_structure
   use phys_module
-  use parameters
+  use mod_parameters
   use mod_log_params
   use global_distributed_matrix
   use nodes_elements

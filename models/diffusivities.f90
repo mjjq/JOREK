@@ -1,7 +1,7 @@
 !> Module containing functions to determine particle and heat diffusivities
 module diffusivities
   
-  use parameters,  only: jorek_model
+  use mod_parameters,  only: jorek_model
   use phys_module, only: num_d_perp, D_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len,           &
     num_zk_perp, ZK_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len
   use profiles,    only: interpolProf

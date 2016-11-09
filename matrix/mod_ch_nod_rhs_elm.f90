@@ -5,7 +5,7 @@ module mod_ch_nod_rhs_elm
   implicit none
 contains  
   subroutine Ch_nod_rhs_elm(i_element, element,nodes,element_father,nodes_father,ELM,RHS,node_out)
-  use parameters
+  use mod_parameters
   use data_structure
   
   implicit none

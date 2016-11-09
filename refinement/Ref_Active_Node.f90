@@ -2,7 +2,7 @@ subroutine Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)
 
 
 
- use parameters
+ use mod_parameters
  use data_structure
 
 implicit none

@@ -1,7 +1,7 @@
 !> Input parameters and physical variables.
 module phys_module
   
-  use parameters
+  use mod_parameters
   use constants
   
   implicit none

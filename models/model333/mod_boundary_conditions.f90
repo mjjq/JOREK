@@ -565,7 +565,7 @@ contains
                            solve_only, gmres,	     				&
     	                   cnt, cnt_prod, only_count, index_min,index_max)
   
-    use parameters
+    use mod_parameters
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
@@ -662,7 +662,7 @@ contains
   !******************************************************************************
   subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
   
-    use parameters
+    use mod_parameters
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
@@ -721,7 +721,7 @@ contains
   !******************************************************************************
   subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
   
-    use parameters
+    use mod_parameters
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero
@@ -935,7 +935,7 @@ contains
   !******************************************************************************
   subroutine apply_U_sheath(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
   
-    use parameters
+    use mod_parameters
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero, F0, FF_0

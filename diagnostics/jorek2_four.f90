@@ -1,7 +1,7 @@
 !> Allows to Fourier-analyse the physical variables of a JOREK restart file in magnetic coordinates.
 program JOREK2_FOUR
 
-  use parameters,     only: n_tor, n_var, n_period, variable_names
+  use mod_parameters,     only: n_tor, n_var, n_period, variable_names
   use nodes_elements, only: element_list, node_list
   use fourier,        only: t_theta_mapping, determine_theta_mag, transform_qttys
   use phys_module,    only: rst_format

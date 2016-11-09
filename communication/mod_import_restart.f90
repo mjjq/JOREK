@@ -404,7 +404,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use hdf5
   use HDF5_io_module
   !use tr_module
-  use parameters, ONLY : n_tor, n_var, n_order
+  use mod_parameters, ONLY : n_tor, n_var, n_order
 #endif
   
   implicit none

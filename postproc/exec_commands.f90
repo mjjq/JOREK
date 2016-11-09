@@ -2,7 +2,7 @@
 module exec_commands
   
   use constants
-  use parameters
+  use mod_parameters
   use phys_module
   use data_structure
   use equil_info

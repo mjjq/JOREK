@@ -14,7 +14,7 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
 
   ! --- Modules
   use phys_module
-  use parameters    
+  use mod_parameters    
   use data_structure
   
   implicit none

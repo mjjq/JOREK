@@ -5,7 +5,7 @@ contains
 !! a diagnostic program by the routine import_restart.
 subroutine export_restart(node_list,element_list,filename)
 
-  use parameters
+  use mod_parameters
   use data_structure
   use phys_module
   use pellet_module
@@ -37,7 +37,7 @@ end subroutine export_restart
 ! Export in a binary restart file
 subroutine export_binary_restart(node_list,element_list,filename)
 
-  use parameters
+  use mod_parameters
   use data_structure
   use phys_module
   use pellet_module
@@ -156,7 +156,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use hdf5
   use HDF5_io_module
   use tr_module
-  use parameters
+  use mod_parameters
 #endif
  
   implicit none

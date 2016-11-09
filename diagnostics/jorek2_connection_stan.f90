@@ -965,7 +965,7 @@ end
 
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
-  use parameters
+  use mod_parameters
   use elements_nodes_neighbours
   use phys_module
   
@@ -1042,7 +1042,7 @@ end
 
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
-  use parameters
+  use mod_parameters
   use elements_nodes_neighbours
   use phys_module
   

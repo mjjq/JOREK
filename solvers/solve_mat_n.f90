@@ -6,7 +6,7 @@ contains
   subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
     use tr_module
-    use parameters
+    use mod_parameters
     use mumps_module
     use murge_module, only: API_NO, IPARM_MODIFY_PARAMETER, MURGE_EPSILON,     &
          &                  MURGE_RPARAM_EPSILON_ERROR, MURGE_IPARAM_BASEVAL,  &

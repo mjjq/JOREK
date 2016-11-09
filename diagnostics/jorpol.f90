@@ -8,7 +8,7 @@ program jorpol
 !> The width and placement can be manipulated by defining zbot and ztop,
 !> the minimum and maximum values of the minor radius.
 
-use parameters, only: n_var, variable_names
+use mod_parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian

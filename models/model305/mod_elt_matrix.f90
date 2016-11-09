@@ -15,7 +15,7 @@ subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axi
 !   Jane Pratt - J.L.Pratt@differ.nl                                
 !---------------------------------------------------------------
 use constants
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian

@@ -1,11 +1,11 @@
 !> Basic model-dependend hard-coded run parameters.
-module parameters
+module mod_parameters
 
   implicit none
 
-  integer, parameter :: jorek_model    = 305       !< JOREK physics model
+  integer, parameter :: jorek_model    = 306       !< JOREK physics model
 
-  integer, parameter :: n_var          = 8         !< number of variables
+  integer, parameter :: n_var          = 9         !< number of variables
   integer, parameter :: n_dim          = 2         !< number of dimensions
   integer, parameter :: n_order        = 3         !< order of the polynomial basis
   integer, parameter :: n_tor          = 3         !< number of toroidal harmonics
@@ -23,6 +23,6 @@ module parameters
   !> Names of the physical variables
   character(len=11) :: variable_names(n_var) =                       &
     (/ Trim('Flux       '),Trim('Potential  '),Trim('Current    '),Trim('Vorticity  '),      &
-       Trim('Density    '),Trim('Temperature'),Trim('V_parallel '), Trim('J_ECCD    ') /)
+       Trim('Density    '),Trim('Temperature'),Trim('V_parallel '), Trim('J_EC1     '), Trim('J_EC2     ') /)
 
-end module parameters
+end module mod_parameters

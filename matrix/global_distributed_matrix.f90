@@ -28,7 +28,7 @@ module global_distributed_matrix
   !> Determine the matrix row or column for given values of ::i_index, ::i_var, and ::i_tor.
   integer recursive function det_row_col(i_index, i_var, i_tor)
     
-    use parameters, only: n_tor, n_var
+    use mod_parameters, only: n_tor, n_var
     
     implicit none
     
@@ -97,7 +97,7 @@ module global_distributed_matrix
   !> Initialize the (freeboundary related) row and column numbers in the sparse matrix structure.
   subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max)
     
-    use parameters, only: n_tor, n_var
+    use mod_parameters, only: n_tor, n_var
     use data_structure, only: type_node_list, type_bnd_node_list
     
     implicit none

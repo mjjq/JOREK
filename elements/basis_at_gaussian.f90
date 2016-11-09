@@ -19,7 +19,7 @@
 !! @see Gauss
 module basis_at_gaussian
   
-  use parameters
+  use mod_parameters
   use gauss
   
   implicit none

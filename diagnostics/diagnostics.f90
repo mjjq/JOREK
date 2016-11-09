@@ -1,7 +1,7 @@
 !> Module for general purpose diagnostic routines.
 module diagnostics
   
-  use parameters
+  use mod_parameters
   use nodes_elements
   use phys_module
   

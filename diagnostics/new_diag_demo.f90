@@ -1,7 +1,7 @@
 !> Demonstration of the diagnostic framework mod_position / mod_expression / mod_four_filter / mod_straight_field_line / ...
 program demo
   
-  use parameters
+  use mod_parameters
   use data_structure
   use phys_module
   use mod_boundary

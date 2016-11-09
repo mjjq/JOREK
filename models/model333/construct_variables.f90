@@ -9,7 +9,7 @@ subroutine ELM_build_RZ_and_Jacobians(element, nodes, ms, mt)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_RZ_and_Jacobians
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -87,7 +87,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_variables
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -343,7 +343,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use phys_module
   use equation_variables
@@ -620,7 +620,7 @@ subroutine ELM_build_basis_functions(element, nodes, ms, mt, i_plane, i_vertex, 
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_basis_functions
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure

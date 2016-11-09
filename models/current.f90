@@ -4,7 +4,7 @@ subroutine current(xpoint2,xcase2,R,Z,Z_xpoint,psi,psi_axis,psi_bnd,zjz)
 ! temperature, and FF' input profiles
 !-----------------------------------------------------------------------
 
-use parameters
+use mod_parameters
 use phys_module
 
 implicit none

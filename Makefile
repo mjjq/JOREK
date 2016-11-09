@@ -29,7 +29,7 @@ clean:
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
-	-@find . -name '*.dep' -delete 2>/dev/null
+	-@find . -name '*.d' -delete 2>/dev/null
 
 
 # Directories containing sources, ordered by number of files

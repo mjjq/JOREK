@@ -13,7 +13,7 @@ include Makefile.inc
 MODEL_NUMBER := $(subst model,,$(MODEL))
 
 jorek_model$(MODEL_NUMBER): jorek2_main
-	cp jorek2_main jorek_model$(MODEL_NUMBER)
+	mv jorek2_main jorek_model$(MODEL_NUMBER)
 
 # Some defaults and parsing logic for makefile.inc
 include defaults.mk

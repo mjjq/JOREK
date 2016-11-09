@@ -30,7 +30,7 @@ program jorek2_import_perturbation
   write(*,*)'from the .rst file named jorek_perturbation.rst and'
   write(*,*)'export that perturbation into jorek_restart.rst, whose'
   write(*,*)'final n_tor number is determined by the n_tor you used'
-  write(*,*)'to compile this code (ie. in parameters.f90).'
+  write(*,*)'to compile this code (ie. in mod_parameters.f90).'
   write(*,*)'Note that jorek_restart.rst and jorek_perturbation.rst'
   write(*,*)'must have exactly the same grids.'
   write(*,*)'------------------------------------------------------'

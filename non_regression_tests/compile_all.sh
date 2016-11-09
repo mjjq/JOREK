@@ -7,7 +7,7 @@ for dirname in ${startdir}/testcases/*; do
    name=$(basename $dirname)
    echo ""
    echo "===== Compile $name ====="
-   (cd ${codedir}; non_regression_tests/run_test.sh $@ -j 2 -p ${name} 1> log_$name.out 2> log_$name.err)  || (tail ${codedir}/log_$name.*; exit 1) || exit 1
+   (cd ${codedir}; non_regression_tests/run_test.sh $@ -j 8 -p ${name} 1> log_$name.out 2> log_$name.err)  || (tail ${codedir}/log_$name.*; exit 1) || exit 1
  fi
 done
 

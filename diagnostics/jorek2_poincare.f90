@@ -7,6 +7,7 @@ use basis_at_gaussian
 use elements_nodes_neighbours
 use mod_neighbours
 use mod_import_restart
+use mod_log_params
 
 implicit none
 

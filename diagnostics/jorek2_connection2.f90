@@ -42,6 +42,7 @@ character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
 logical :: psi_theta
 
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -50,7 +51,6 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 write(*,*) 'my_id = ', my_id
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
 
 if (my_id .eq. 0 ) then
    write(*,*) '***************************************'
@@ -718,12 +718,16 @@ n_scalars = 3             ! number of scalars to write to the VTK output file
 
 allocate(scalar_names(n_scalars))
 
-scalar_names  = (/ 'length_m    ','T_start_keV ','psi_norm  ' /)
+scalar_names  = (/ 'length_m    ','T_start_keV ','psi_norm    ' /)
 
 lf = char(10) ! line feed character
 
 if (my_id .eq. 0) then
-  open(unit=ivtk,file='connection_new.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream')
+#else
+  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
   buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)
@@ -834,7 +838,11 @@ do i=1,i_strike
 enddo
 
 if (my_id .eq. 0) then
-  open(unit=ivtk,file='strikes.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+  open(unit=ivtk,file='strikes.vtk',form='unformatted',access='stream')
+#else
+  open(unit=ivtk,file='strikes.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
   buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)

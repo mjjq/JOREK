@@ -32,8 +32,6 @@ integer :: ivtk, i_var, my_id, ierr
 logical :: psi_theta
 real*8  :: coord_min(2), coord_max(2), coord_out(2)
 
-logical, external :: neighbours
-
 namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
 
 write(*,*) '***************************************'
@@ -547,7 +545,11 @@ lf = char(10) ! line feed character
 
 ivtk = 20
 
-open(unit=ivtk,file='field_lines.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+open(unit=ivtk,file='field_lines.vtk',form='unformatted',access='stream')
+#else
+open(unit=ivtk,file='field_lines.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
 
 buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
 buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)
@@ -558,7 +560,7 @@ buffer = 'DATASET POLYDATA'//lf//lf                                             
 write(str1(1:12),'(i12)') n_total
 buffer = 'POINTS '//str1//'  float'//lf                                               ; write(ivtk) trim(buffer)
 
-write(ivtk) (((Xfield(j,i),Yfield(j,i),Zfield(j,i)), j=1,Nfield(i)),i=1,n_lines)
+write(ivtk) (([Xfield(j,i),Yfield(j,i),Zfield(j,i)], j=1,Nfield(i)),i=1,n_lines)
 
 !LINES SECTION
 write(str3(1:24),'(2i12)') n_lines,n_total+n_lines

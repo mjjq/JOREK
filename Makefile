@@ -83,6 +83,7 @@ all: $(basename $(notdir $(PROGRAM_SOURCES)))
 INCLUDES += -Itiming # for r3_info.h
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
+eqdsk2jorek: LIBS+=-ldierckx
 
 # Is this used by anyone? Otherwise we could remove it
 # It is not updated to this format yet.

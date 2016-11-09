@@ -37,8 +37,8 @@ DIRS := diagnostics			\
 	models				\
 	communication			\
 	grids/grid_utils		\
-	solvers 			\
-        models/$(MODEL) 		\
+	solvers				\
+	models/$(MODEL)			\
 	refinement			\
 	matrix				\
 	elements			\
@@ -46,10 +46,10 @@ DIRS := diagnostics			\
 	plots				\
 	diagnostics/new_diag		\
 	postproc			\
-	tools                           \
-        datatypes			\
+	tools				\
+	datatypes			\
 	timing				\
-	. 				\
+	.				\
 	vacuum
 
 # All .f90 files we should generate .d dependency files for

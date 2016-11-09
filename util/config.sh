@@ -11,7 +11,7 @@
 function usage() {
   echo ""
   echo "Purpose: Modify or print physics model in config.in and/or Makefile.inc and"
-  echo "  parameters like n_tor in the corresponding parameters file."
+  echo "  parameters like n_tor in the corresponding mod_parameters file."
   echo ""
   echo "Usage: `basename $0` [<key1>=<value1> [...]]   Modify model and/or parameters"
   echo "       `basename $0` -p <key>                  Print the value for <key> and exit"
@@ -108,7 +108,7 @@ function print_info() {
 }
 
 function check_param_file() {
-  param_file="models/$model/parameters.f90"
+  param_file="models/$model/mod_parameters.f90"
   if [ ! -f $param_file ]; then
     echo "ERROR: File '$param_file' does not exist." >&2
     exit 1

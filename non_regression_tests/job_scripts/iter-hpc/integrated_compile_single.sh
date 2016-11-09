@@ -11,5 +11,5 @@ source job_scripts/iter-hpc/env.sh || exit 1
 ./get_all_data.sh || exit 1
 cd ..
 make cleanall
-non_regression_tests/run_test.sh -j 4 $1 -p
+non_regression_tests/run_test.sh $1 -p
 

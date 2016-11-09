@@ -20,7 +20,8 @@ export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
 
 export LANG=C
 export JOREK_HOST=iter-hpc
-export compilethreads=1
+export compilethreads=8
+export MAKEFLAGS="-j$compilethreads"
 export PRERUN="export OMP_NUM_THREADS=2"
 export MPIRUN="mpirun -np "
 export BATCHCOMMAND="qsub"

@@ -14,7 +14,6 @@ use basis_at_gaussian
 use phys_module
 use diffusivities,  only: get_dperp, get_zkperp
 use corr_neg
-!use pellet_module
 
 implicit none
 

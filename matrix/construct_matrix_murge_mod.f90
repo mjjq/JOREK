@@ -145,7 +145,7 @@ CONTAINS
   ! Assembly loop
   INTEGER FUNCTION LOOP(DATA)
     USE data_structure,  ONLY : type_node, type_element
-    USE parameters,      ONLY : n_vertex_max , n_var, n_order, n_tor, jorek_model
+    use mod_parameters,      ONLY : n_vertex_max , n_var, n_order, n_tor, jorek_model
     USE murge_module,    ONLY : MURGE_SUCCESS,                                 &
          &                      MURGE_ASSEMBLYSETNODEVALUES,                   &
          &                      MURGE_ASSEMBLYEND, murge_id,                   &
@@ -824,7 +824,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE data_structure, ONLY : type_node, type_element,                          &
        &                     type_element_list, type_bnd_node_list,            &
        &                     type_node_list, thread_struct
-  USE parameters,     ONLY : n_vertex_max , n_var, n_order, n_tor
+  use mod_parameters,     ONLY : n_vertex_max , n_var, n_order, n_tor
   USE murge_module,   ONLY : MURGE_SUCCESS,                                    &
        &                     MURGE_ASSEMBLYSETNODEVALUES,                      &
        &                     MURGE_ASSEMBLYEND, murge_id,                      &

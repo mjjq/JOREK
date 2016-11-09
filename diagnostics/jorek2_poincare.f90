@@ -1,16 +1,3 @@
-module elements_nodes_neighbours
-  
-  use data_structure
-  use mod_log_params
-  
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-  
-end module elements_nodes_neighbours
-
-
-
 !> Create a Poincare plot for a JOREK restart file
 program jorek2_poincare
 

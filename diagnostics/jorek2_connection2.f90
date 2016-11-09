@@ -1,13 +1,3 @@
-module elements_nodes_neighbours
-
-  use data_structure
-
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-
-end module
-
 program jorek2_connection2
 !-----------------------------------------------------------------------
 !
@@ -18,6 +8,7 @@ use basis_at_gaussian
 use elements_nodes_neighbours
 use constants
 use mod_import_restart
+use mod_neighbours
 
 implicit none
 include 'mpif.h'
@@ -41,7 +32,7 @@ real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, zl1, zl2, partial(2)
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), value_out, psi_bnd
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, element_start_percent
-integer :: i_elm_xpoint, i_elm_axis, elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
+integer :: i_elm_xpoint(2), i_elm_axis, elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
 integer :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
 real*4,allocatable :: RZkeep(:,:),scalars(:,:)
 real*4             :: ZERO
@@ -50,8 +41,6 @@ integer            :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
 character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
 logical :: psi_theta
-
-logical, external :: neighbours
 
 
 call MPI_INIT(IERR)

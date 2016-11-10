@@ -10,61 +10,16 @@ module diffusivities
   implicit none
   
   private
-  public get_dperp, get_zkperp, get_dperp_stan, get_zkperp_stan
+  public get_dperp, get_zkperp
   
   
   
   contains
   
   
-  
-  !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
-  real*8 function get_dperp(psin)
-    
-    implicit none
-    real*8, intent(in) :: psin
-    real*8	       :: atn_D
-    
-    if ( num_d_perp ) then
-      get_dperp = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psin)
-    else
-      atn_D = (0.5d0 - 0.5d0*tanh((psin-D_perp(5))/D_perp(4)))
-      get_dperp = D_perp(1) * ( (1.d0-D_perp(2)) + D_perp(2)*atn_D )
-      if ( jorek_model >= 300 ) then
-        atn_D = ((0.5d0 - 0.5d0*tanh((-psin+D_perp(5)+D_perp(3)) /D_perp(4))))
-        get_dperp = get_dperp + D_perp(6) * D_perp(2) * atn_D
-      end if
-    end if
-    
-  end function get_dperp
-  
-  
-  
-  !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N
-  real*8 function get_zkperp(psin)
-    
-    implicit none
-    
-    real*8, intent(in) :: psin
-    real*8	       :: atn_D
-    
-    if ( num_zk_perp ) then
-      get_zkperp = interpolProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, psin)
-    else
-      atn_D = (0.5d0 - 0.5d0*tanh((psin-ZK_perp(5))/ZK_perp(4)))
-      get_zkperp = ZK_perp(1) * ( (1.d0-ZK_perp(2)) + ZK_perp(2) * atn_D )
-      if ( jorek_model >= 300 ) then
-        atn_D = ((0.5d0 - 0.5d0*tanh((-psin+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
-        get_zkperp = get_zkperp + ZK_perp(6) * ZK_perp(2) * atn_D
-      end if
-    end if
-    
-  end function get_zkperp
-
-
 
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
-  real*8 function get_dperp_stan(psi, psi_norm, psi_axis, psi_bnd, Z, Z_xpoint)
+  real*8 function get_dperp(psi, psi_norm, psi_axis, psi_bnd, Z, Z_xpoint)
     
     implicit none
     
@@ -76,7 +31,7 @@ module diffusivities
     ! --- Numerical profile
     if ( num_d_perp ) then
       
-      get_dperp_stan = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psi_norm)
+      get_dperp = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psi_norm)
       
     ! --- Normal (analytical) profiles
     else
@@ -85,10 +40,10 @@ module diffusivities
       if (D_perp(10) .ne. 1.d0) then
         
 	atn_D = (0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5))/D_perp(4)))
-        get_dperp_stan = D_perp(1) * ( (1.d0-D_perp(2)) + D_perp(2) * atn_D )
+        get_dperp = D_perp(1) * ( (1.d0-D_perp(2)) + D_perp(2) * atn_D )
         if (jorek_model >= 300) then
           atn_D = ((0.5d0 - 0.5d0*tanh((-psi_norm+D_perp(5)+D_perp(3)) /D_perp(4))))
-	  get_dperp_stan = get_dperp_stan + D_perp(6) * D_perp(2) * atn_D
+	  get_dperp = get_dperp + D_perp(6) * D_perp(2) * atn_D
         endif
 	
       ! --- Adapted profile, going like Dperp ~ 1/grad(rho) to obtain constand perp flux in pedestal
@@ -135,18 +90,18 @@ module diffusivities
       	dpol_D   =    (Diff(1)	   + 2.d0*Diff(2)*psi_D     + 3.d0*Diff(3)*psi_D**2.d0)/(psi_bnd - psi_axis)
 
       	! --- Build the profile (goes like 1/grad(density_profile) in the pedestal region
-      	get_dperp_stan = D_perp(1) / (dpol_D*atn_D + pol_D*datn_D) / D_min 
+      	get_dperp = D_perp(1) / (dpol_D*atn_D + pol_D*datn_D) / D_min 
         
       end if
       
     end if
     
-  end function get_dperp_stan
+  end function get_dperp
   
   
   
   !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N
-  real*8 function get_zkperp_stan(psi, psi_norm, psi_axis, psi_bnd, Z, Z_xpoint)
+  real*8 function get_zkperp(psi, psi_norm, psi_axis, psi_bnd, Z, Z_xpoint)
     
     implicit none
     
@@ -160,7 +115,7 @@ module diffusivities
     ! --- Numerical profile
     if ( num_zk_perp ) then
       
-      get_zkperp_stan = interpolProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, psi_norm)
+      get_zkperp = interpolProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, psi_norm)
       
     ! --- Normal (analytical) profiles
     else
@@ -169,19 +124,12 @@ module diffusivities
       if (D_perp(10) .ne. 1.d0) then
         
 	atn_D = (0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4)))
-	get_zkperp_stan = ZK_perp(1) * ( (1.d0-ZK_perp(2)) + ZK_perp(2) * atn_D )
+	get_zkperp = ZK_perp(1) * ( (1.d0-ZK_perp(2)) + ZK_perp(2) * atn_D )
         if ( jorek_model >= 300 ) then
           atn_D = ((0.5d0 - 0.5d0*tanh((-psi_norm+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
-          get_zkperp_stan = get_zkperp_stan + ZK_perp(6) * ZK_perp(2) * atn_D
+          get_zkperp = get_zkperp + ZK_perp(6) * ZK_perp(2) * atn_D
         endif
 
-        ! --- K-perp is the pressure diffusion, not the temperature diffusion, so need to divide by rho
-        psi_D = psi
-        call density(xpoint, xcase, Z, Z_xpoint, psi_D,psi_axis,psi_bnd, &
-                     zn,dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-        rho_norm        = zn / rho_0 ! normalise to 1.0 in core
-        get_zkperp_stan = get_zkperp_stan / rho_norm
-      
       ! --- Adapted profile, going like Dperp ~ 1/grad(rho) to obtain constand perp flux in pedestal
       else
       	
@@ -227,20 +175,20 @@ module diffusivities
       	dpol_D   =    (Diff(1)	   + 2.d0*Diff(2)*psi_D     + 3.d0*Diff(3)*psi_D**2.d0)/(psi_bnd - psi_axis)
 
       	! --- Build the profile (goes like 1/grad(density_profile) in the pedestal region
-      	get_zkperp_stan = ZK_perp(1) / (dpol_D*atn_D + pol_D*datn_D) / D_min 
+      	get_zkperp = ZK_perp(1) / (dpol_D*atn_D + pol_D*datn_D) / D_min 
 
         ! --- K-perp is the pressure diffusion, not the temperature diffusion, so need to divide by rho
       	psi_D = psi
       	call density(xpoint, xcase, Z, Z_xpoint, psi_D,psi_axis,psi_bnd, &
       		     zn,dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
       	rho_norm        = zn / rho_0 ! normalise to 1.0 in core
-      	get_zkperp_stan = get_zkperp_stan / rho_norm
+      	get_zkperp = get_zkperp / rho_norm
 	
       end if
       
     end if
     
-  end function get_zkperp_stan
+  end function get_zkperp
 
 
 

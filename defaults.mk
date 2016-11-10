@@ -18,7 +18,6 @@ endif
 # Default flags for gfortran
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
-  FLAGS += -march=native
   FLAGS += -ffree-line-length-none
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-tabs -Wno-unused-variable
@@ -48,7 +47,7 @@ endif
 
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
-  FLAGS += -r8 -xHost
+  FLAGS += -r8
   FLAGS += -openmp
   FLAGS += -fpp
   FLAGS += -warn all

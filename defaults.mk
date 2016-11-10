@@ -18,6 +18,7 @@ endif
 # Default flags for gfortran
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
+  FLAGS += -march=native
   FLAGS += -ffree-line-length-none
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-tabs -Wno-unused-variable
@@ -25,6 +26,7 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
   FLAGS += -Wsurprising
+  FLAGS += -fdefault-real-8 -fdefault-double-8
   # options still to be tested
   #FLAGS += -fexternal-blas
   #FLAGS += -ffast-math # better -Ofast

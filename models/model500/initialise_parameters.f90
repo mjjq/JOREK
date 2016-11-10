@@ -200,41 +200,7 @@ if (using_spi == .true.) then
         pellets(i)%spi_Vel_Z   = spi_Vel_Zref
         pellets(i)%spi_Vel_phi = spi_Vel_phiref
         pellets(i)%spi_radius  = spi_radiusref
-
-        if (flag_spi == 0) then
-          pellets(i)%spi_abl   = mgi_amplitude
-        elseif (flag_spi == 1) then
-
-          call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
-                       R_out,Z_out,i_elm,s_out,t_out,ifail)
-          call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
-                          P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
-
-          ! Now, P(1) represents mass density and P(2) represents temperature
-          ! Correct any possible negative values!
-
-          n_corr         = corr_neg_dens(P(1))
-          T_corr         = corr_neg_temp(P(2))
-
-          ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i
-          n_SI           = n_corr * 1.d20 * central_density
-          T_eV           = T_corr / (2.d0 * EL_CHG * MU_ZERO * central_density * 1.d20)
-
-          !if (n_SI == 0.d0 .or. T_eV == 0.d0) then
-          !   n_SI = central_density * 1.d20
-          !   T_eV = 300
-          !end if
-
-          ! NGS model
-          pellets(i)%spi_abl   = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
-                                 (T_eV**1.64)
-
-        else
-          pellets(i)%spi_abl   = 0.d0
-        end if
-
-        write(*,*) "Check Point: i, spi_abl =", i, pellets(i)%spi_abl 
-
+        pellets(i)%spi_abl     = mgi_amplitude
       end do
       write(*,*) "SPI initialized successfully."
     else

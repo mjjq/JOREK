@@ -37,11 +37,11 @@ program jorek2_import_perturbation
   
   
   ! --- Import main restart file
-  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
   ! --- Import rst file that contains the perturbation you want to import
   write(*,*)' '
-  call import_binary_restart(node_list2,element_list2, 'jorek_perturbation.rst', rst_format, ierr)
+  call import_restart(node_list2,element_list2, 'jorek_perturbation', rst_format, ierr)
 
 
   ! --- Save energies if we are importing into an equilibrium with n_tor>3
@@ -140,7 +140,7 @@ program jorek2_import_perturbation
   ! Export restart file with perturbation
   write(*,*)' '
   write(*,*)'Exporting restart...'
-  call export_binary_restart(node_list,element_list,'jorek_restart.rst')
+  call export_restart(node_list,element_list,'jorek_restart')
 
   write(*,*)'Finished'
 

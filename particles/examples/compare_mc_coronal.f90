@@ -20,21 +20,21 @@ implicit none
 
 character(len=6), parameter :: suffix = "50_w"
 character(len=80), parameter :: dir = "particles/examples/"
-type(type_ADF11_all) :: adf11
+type(ADF11_all) :: ad
 integer :: ierr, provided
 call MPI_INIT_Thread(MPI_THREAD_SINGLE, provided, ierr)
 
-adf11 = read_adf11(suffix, directory=dir)
+ad = read_adf11(suffix, directory=dir)
 call random_seed()
 
-call plot_coronal_equilibrium(adf11)
-call plot_mc_coronal_equilibria(adf11)
+call plot_coronal_equilibrium(ad)
+call plot_mc_coronal_equilibria(ad)
 
 call MPI_Finalize(ierr)
 contains
 
-subroutine plot_mc_coronal_equilibria(adf11)
-  type(type_ADF11_all), intent(in) :: adf11
+subroutine plot_mc_coronal_equilibria(ad)
+  type(ADF11_all), intent(in)  :: ad
   character(len=80), parameter :: datafile_mc = "W_mc_equilibrium.txt"
   character(len=80), parameter :: datafile_cor = "W_coronal_equilibria.txt"
   character(len=80), parameter :: plotfile = "plot_mc_coronal_equilibria.gp"
@@ -51,8 +51,8 @@ subroutine plot_mc_coronal_equilibria(adf11)
   integer :: i, it, u_mc, u_cor, u
 
 
-  allocate(p_mc(0:adf11%n_Z))
-  allocate(p_cor(0:adf11%n_Z))
+  allocate(p_mc(0:ad%n_Z))
+  allocate(p_cor(0:ad%n_Z))
   allocate(z(n_particles))
 
   open(newunit=u_mc,  file=datafile_mc,  status="replace")
@@ -60,7 +60,7 @@ subroutine plot_mc_coronal_equilibria(adf11)
 
   ! Set z over all particles from 1 to adf11%n_Z
   do i=1,n_particles
-    z(i) = nint(adf11%n_Z * real(i,8)/real(n_particles,8))
+    z(i) = nint(ad%n_Z * real(i,8)/real(n_particles,8))
   enddo
 
   p_cor = 1.d0
@@ -71,14 +71,14 @@ subroutine plot_mc_coronal_equilibria(adf11)
   do i=1,nstep
     p_mc = 0
     do it=1,n_particles
-      z(it) = new_charge(z(it), adf11, density, temperature, tstep)
+      z(it) = new_charge(z(it), ad, density, temperature, tstep)
       p_mc(z(it)) = p_mc(z(it)) + 1
     enddo
     do it=lbound(p_mc,1),ubound(p_mc,1)
       write(u_mc,"(3g16.8)") i, it, real(p_mc(it),8)/real(sum(p_mc),8)
     enddo
 
-    call coronal_timestep(adf11, p_cor, tstep, density, temperature)
+    call coronal_timestep(ad, p_cor, tstep, density, temperature)
     do it=lbound(p_cor,1),ubound(p_cor,1)
       write(u_cor,"(3g16.8)") i, it, p_cor(it)/sum(p_cor)
     enddo
@@ -108,9 +108,9 @@ subroutine plot_mc_coronal_equilibria(adf11)
   call rm(plotfile)
 end subroutine
 
-subroutine plot_coronal_equilibrium(adf11)
-  type(type_ADF11_all), intent(in) :: adf11
-  real*8, dimension(0:adf11%n_Z) :: p
+subroutine plot_coronal_equilibrium(ad)
+  type(ADF11_all), intent(in)    :: ad
+  real*8, dimension(0:ad%n_Z)    :: p
   real*8 :: T
   integer :: t_exp, u, i
   character(len=80), parameter :: datafile = "W_coronal_equilibrium.txt"
@@ -122,7 +122,7 @@ subroutine plot_coronal_equilibrium(adf11)
     T = real(t_exp,8)/1000.d0 ! in log10 K
 
     p = 1.d0 ! initialize to 1
-    call coronal_timestep(adf11, p, 1.d0, 20.d0, T) ! use a fixed large timestep of 1 to solve
+    call coronal_timestep(ad, p, 1.d0, 20.d0, T) ! use a fixed large timestep of 1 to solve
     write(u,"(100g16.8)") 10.d0**T, p/sum(p)
   end do
   close(u)
@@ -137,7 +137,7 @@ subroutine plot_coronal_equilibrium(adf11)
       set yrange [0.0000001:1]; &
       set output "media/tests/openadas/charge_state_temperature.png"; &
       plot \'
-  do i=1,adf11%n_Z
+  do i=1,ad%n_Z
     write(Z, "(i3)") i
     write(u, "(5A)") '"', trim(datafile), '" using 1:', adjustl(Z), ' with lines notitle, \'
   end do

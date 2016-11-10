@@ -14,7 +14,7 @@ function new_charge(z, ad, electron_density, electron_temperature, timestep) res
 implicit none
 
 integer, intent(in)              :: z !< Old charge state
-type(type_ADF11_all), intent(in) :: ad !< ADF11 data
+type(ADF11_all), intent(in)      :: ad !< ADF11 data
 real*8, intent(in)               :: electron_density !< log10 Electron density in m^-3
 real*8, intent(in)               :: electron_temperature !< log10 Electron temperature in K
 real*8, intent(in)               :: timestep !< Timestep in s
@@ -26,8 +26,8 @@ real*8 :: rand(2)
 z_new = z
 call random_number(rand)
 ! probabilities of recombination and ionisation events
-prob = 1.d0 - exp([GRC(ad%ACD, z,   electron_density, electron_temperature), & ! rec
-                   GRC(ad%SCD, z+1, electron_density, electron_temperature)] & ! ion
+prob = 1.d0 - exp([ad%ACD%interp(z,   electron_density, electron_temperature), & ! rec
+                   ad%SCD%interp(z+1, electron_density, electron_temperature)] & ! ion
          * 10.d0**electron_density * timestep)
 if (prob(1) .gt. rand(1)) z_new = z_new - 1 ! recombination
 if (prob(2) .gt. rand(2)) z_new = z_new + 1 ! ionization

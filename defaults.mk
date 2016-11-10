@@ -46,6 +46,7 @@ endif
 
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
+  FLAGS += -r8 -xHost
   FLAGS += -openmp
   FLAGS += -fpp
   FLAGS += -warn all
@@ -65,7 +66,6 @@ ifeq ($(COMPILER_FAMILY), intel)
     FLAGS += -gen-interfaces -warn-interfaces
     FLAGS += -fstack-security-check
     FLAGS += -fpe0
-    FLAGS += -assume ieee_fpe_flags # not sure about this one
   endif
 
   OUTPUT_MODULE_COMMAND=-module #space is important

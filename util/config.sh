@@ -53,6 +53,8 @@ function setmodel() {
   for file in $make_config_files; do
     sed -i -e "s/\(^ *MODEL *= *\)[^ ]*\(.*$\)/\1$model\2/" $file
   done
+  # --- Clean up .d/.o/.mod files because of the model change
+  make cleanall
 }
 
 function getmodel() {

@@ -66,8 +66,8 @@ duplicates:
 # For each source dir add an explicit rule with the template
 $(foreach dir,$(DIRS),$(eval $(call O_TEMPLATE,$(dir)/)))
 # For each source dir add a rule to create dependency files
-ifneq ($(MAKECMDGOALS),cleanall)
-  ifneq ($(MAKECMDGOALS),cleandep)
+ifneq (cleanall,$(findstring cleanall,$(MAKECMDGOALS)))
+  ifneq (cleandep,$(findstring cleandep,$(MAKECMDGOALS)))
     $(foreach dir,$(DIRS),$(eval $(call F90_D_TEMPLATE,$(dir)/)))
   endif
 endif

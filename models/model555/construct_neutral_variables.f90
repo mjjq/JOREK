@@ -9,7 +9,7 @@ subroutine ELM_build_neutral_variables(element, nodes, ms, mt, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_neutral_variables
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -317,7 +317,7 @@ subroutine ELM_build_neutral_diffusivities_and_sources(element, nodes, xpoint2, 
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_neutral_diffusivities_and_sources
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use phys_module
   use equation_variables

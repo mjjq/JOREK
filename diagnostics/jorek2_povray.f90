@@ -13,6 +13,7 @@ program jorek2_povray
   use phys_module
   use diagnostics
   use profiles
+  use mod_import_restart
   
   implicit none
   

@@ -3,7 +3,7 @@ subroutine export_helena(node_list,element_list,bnd_elm_list)
 
 use constants
 use tr_module 
-use parameters
+use mod_parameters
 use data_structure
 use phys_module
 

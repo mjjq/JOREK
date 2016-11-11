@@ -2,7 +2,7 @@ subroutine element_matrix_poisson_inverse(itype,element,nodes,ivar_in,ivar_out,i
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian

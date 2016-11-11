@@ -1,12 +1,13 @@
 !> Demonstration of the diagnostic framework mod_position / mod_expression / mod_four_filter / mod_straight_field_line / ...
 program demo
   
-  use parameters
+  use mod_parameters
   use data_structure
   use phys_module
-  use boundary
+  use mod_boundary
   use mod_new_diag
   use basis_at_gaussian
+  use mod_import_restart
   
   implicit none
   

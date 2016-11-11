@@ -9,6 +9,7 @@ program jorek2_import_perturbation
   use phys_module
   use basis_at_gaussian
   use nodes_elements
+  use mod_import_restart
   implicit none
 
   ! Internal parameters

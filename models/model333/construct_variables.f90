@@ -9,7 +9,7 @@ subroutine ELM_build_RZ_and_Jacobians(element, nodes, ms, mt)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_RZ_and_Jacobians
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -87,7 +87,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_variables
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -280,6 +280,51 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   
   return
 
+contains
+! --- Function to compute derivative with respect to x
+real*8 function get_deriv_x(VAR_s, VAR_t)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t
+  get_deriv_x = (   y_t * VAR_s - y_s * VAR_t ) / xjac
+end function get_deriv_x
+
+! --- Function to compute derivative with respect to y
+real*8 function get_deriv_y(VAR_s, VAR_t)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t
+  get_deriv_y = ( - x_t * VAR_s + x_s * VAR_t ) / xjac
+end function get_deriv_y
+
+! --- Function to compute derivative with respect to xx
+real*8 function get_deriv_xx(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
+  get_deriv_xx = (VAR_ss * y_t**2 - 2.d0*VAR_st * y_s*y_t + VAR_tt * y_s**2  & 	    
+	        + VAR_s  * (y_st*y_t - y_tt*y_s )			     &    
+	        + VAR_t  * (y_st*y_s - y_ss*y_t ) )        / xjac**2         & 	
+	        - xjac_x * (VAR_s * y_t - VAR_t * y_s)     / xjac**2
+end function get_deriv_xx
+
+! --- Function to compute derivative with respect to yy
+real*8 function get_deriv_yy(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
+  get_deriv_yy = (VAR_ss * x_t**2 - 2.d0*VAR_st * x_s*x_t + VAR_tt * x_s**2  & 	    
+	        + VAR_s * (x_st*x_t - x_tt*x_s )			     &    
+	        + VAR_t * (x_st*x_s - x_ss*x_t ) )         / xjac**2         & 	
+	        - xjac_y * (- VAR_s * x_t + VAR_t * x_s )  / xjac**2
+end function get_deriv_yy
+
+! --- Function to compute derivative with respect to yy
+real*8 function get_deriv_xy(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
+  get_deriv_xy = (- VAR_ss * y_t*x_t - VAR_tt * x_s*y_s		         &
+	          + VAR_st * (y_s*x_t  + y_t*x_s  )  		         &        
+	          - VAR_s  * (x_st*y_t - x_tt*y_s )  		         &    
+	          - VAR_t  * (x_st*y_s - x_ss*y_t )  )       / xjac**2   & 	
+	          - xjac_x * (- VAR_s * x_t + VAR_t * x_s )  / xjac**2
+end function get_deriv_xy
 end subroutine ELM_build_variables
 
 
@@ -299,14 +344,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use phys_module
   use equation_variables
   use data_structure
   use diffusivities, only: get_dperp, get_zkperp
   use pellet_module
-  use bootstrap_functions
+  use mod_bootstrap_functions
   
   implicit none
   
@@ -578,7 +623,7 @@ subroutine ELM_build_basis_functions(element, nodes, ms, mt, i_plane, i_vertex, 
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_basis_functions
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -640,49 +685,4 @@ subroutine ELM_build_basis_functions(element, nodes, ms, mt, i_plane, i_vertex, 
 
 end subroutine ELM_build_basis_functions
 
-
-! --- Function to compute derivative with respect to x
-real*8 function get_deriv_x(VAR_s, VAR_t)
-  use equation_variables
-  real*8, intent(in) :: VAR_s, VAR_t
-  get_deriv_x = (   y_t * VAR_s - y_s * VAR_t ) / xjac
-end function get_deriv_x
-
-! --- Function to compute derivative with respect to y
-real*8 function get_deriv_y(VAR_s, VAR_t)
-  use equation_variables
-  real*8, intent(in) :: VAR_s, VAR_t
-  get_deriv_y = ( - x_t * VAR_s + x_s * VAR_t ) / xjac
-end function get_deriv_y
-
-! --- Function to compute derivative with respect to xx
-real*8 function get_deriv_xx(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
-  use equation_variables
-  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
-  get_deriv_xx = (VAR_ss * y_t**2 - 2.d0*VAR_st * y_s*y_t + VAR_tt * y_s**2  & 	    
-	        + VAR_s  * (y_st*y_t - y_tt*y_s )			     &    
-	        + VAR_t  * (y_st*y_s - y_ss*y_t ) )        / xjac**2         & 	
-	        - xjac_x * (VAR_s * y_t - VAR_t * y_s)     / xjac**2
-end function get_deriv_xx
-
-! --- Function to compute derivative with respect to yy
-real*8 function get_deriv_yy(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
-  use equation_variables
-  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
-  get_deriv_yy = (VAR_ss * x_t**2 - 2.d0*VAR_st * x_s*x_t + VAR_tt * x_s**2  & 	    
-	        + VAR_s * (x_st*x_t - x_tt*x_s )			     &    
-	        + VAR_t * (x_st*x_s - x_ss*x_t ) )         / xjac**2         & 	
-	        - xjac_y * (- VAR_s * x_t + VAR_t * x_s )  / xjac**2
-end function get_deriv_yy
-
-! --- Function to compute derivative with respect to yy
-real*8 function get_deriv_xy(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
-  use equation_variables
-  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
-  get_deriv_xy = (- VAR_ss * y_t*x_t - VAR_tt * x_s*y_s		         &
-	          + VAR_st * (y_s*x_t  + y_t*x_s  )  		         &        
-	          - VAR_s  * (x_st*y_t - x_tt*y_s )  		         &    
-	          - VAR_t  * (x_st*y_s - x_ss*y_t )  )       / xjac**2   & 	
-	          - xjac_x * (- VAR_s * x_t + VAR_t * x_s )  / xjac**2
-end function get_deriv_xy
 

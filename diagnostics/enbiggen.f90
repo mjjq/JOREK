@@ -1,9 +1,10 @@
 !> Program to convert a JOREK2 restart file into binary VTK format
 program enbiggen
 
-use parameters, only: n_var, variable_names
+use mod_parameters, only: n_var, variable_names
 use data_structure
 use phys_module
+use mod_import_restart
 !use vacuum, only: export_restart_vacuum
 
 implicit none

@@ -1,13 +1,11 @@
 !*****************************************************************************
 !        Modifications of the stiffness matrix and RHS                       *
 !*****************************************************************************
-
-
 subroutine Chgmt_node(i_element, element,nodes,element_father,nodes_father,ELM,RHS,node_out)
 
 
 
- use parameters
+ use mod_parameters
  use data_structure
 
 implicit none

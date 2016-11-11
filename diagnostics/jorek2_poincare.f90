@@ -1,16 +1,3 @@
-module elements_nodes_neighbours
-  
-  use data_structure
-  use mod_log_params
-  
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-  
-end module elements_nodes_neighbours
-
-
-
 !> Create a Poincare plot for a JOREK restart file
 program jorek2_poincare
 
@@ -18,6 +5,9 @@ use data_structure
 use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
+use mod_neighbours
+use mod_import_restart
+use mod_log_params
 
 implicit none
 
@@ -36,8 +26,6 @@ real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi
 real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, atmp, cur_pert
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_out
 integer :: i_elm_axis, i_elm_xpoint(2), ierr
-
-logical, external :: neighbours
 
 
 write(*,*) '***************************************'
@@ -462,7 +450,7 @@ end program jorek2_poincare
 
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 
@@ -565,7 +553,7 @@ end subroutine step
 
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 

@@ -7,7 +7,7 @@
 
 subroutine Ref_Find_Constrained_Node(node_list, element_list, iref,iside,inode)
 
- use parameters
+ use mod_parameters
  use data_structure
 
 implicit none

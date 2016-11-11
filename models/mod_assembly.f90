@@ -32,9 +32,10 @@ contains
        &   use_murge, use_murge_element,        &
        &   cnt, cnt_prod, only_count,           &
        &   index_min, index_max)
-    USE parameters
+    use mod_parameters
     USE global_distributed_matrix
-    USE murge_module, ONLY : murge_add_one_entry
+    USE murge_module, ONLY : murge_add_one_entry, vertex_is_local
+    USE mod_locate_irn_jcn
 
     INTEGER, INTENT(IN)    :: index_node,  k,  in
     INTEGER, INTENT(IN)    :: index_node2, k2, in2
@@ -100,8 +101,8 @@ contains
        &   use_murge, use_murge_element,  &
        &   index_min, index_max,          &
        &   RHS_loc,  val)
-    USE parameters
-    use murge_module, only : murge_harmonic
+    use mod_parameters
+    use murge_module, only : murge_harmonic, vertex_is_local
     INTEGER, INTENT(IN)    :: index_node,  k,  in
     LOGICAL, INTENT(IN)    :: use_murge, use_murge_element
     INTEGER, INTENT(IN)    :: index_min, index_max

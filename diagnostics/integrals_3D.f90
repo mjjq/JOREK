@@ -4,7 +4,7 @@ subroutine Integrals_3D(my_id, node_list,element_list,density_tot,density_in,den
 !---------------------------------------------------------------
 use constants
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
 use pellet_module

@@ -39,9 +39,9 @@ do inode=1,node_list%n_nodes
   index_total = max(index_total,maxval(node_list%node(inode)%index))
 enddo
 !stop
-!write(*,*) ' n_elements  : ',my_id,element_list%n_elements
-!write(*,*) ' n_nodes     : ',my_id,node_list%n_nodes
-!write(*,*) ' index_total : ',my_id,index_total
+write(*,*) ' n_elements  : ',my_id,element_list%n_elements
+write(*,*) ' n_nodes     : ',my_id,node_list%n_nodes
+write(*,*) ' index_total : ',my_id,index_total
 
 index_min(1:n_cpu) = 0
 index_max(1:n_cpu) = 0
@@ -106,7 +106,7 @@ enddo
 
 n_local_ELMs = inext
 
-!write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
+write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
 
 
 return

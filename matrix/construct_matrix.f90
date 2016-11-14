@@ -244,6 +244,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     do iv=1,n_vertex_max
 
+      if (ielm > n_elements_max) then
+        write(*,*) "WARNING: ielm, n_elements_max = ", ielm, n_elements_max
+      end if
+
       inode = element_list%element(ielm)%vertex(iv)
 
       if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
@@ -344,7 +348,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
          &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
          &                       ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
          &                       n_local_elms, node_list)
-   
+  
     ! --- Define element nodes (depends if it's refined)
     if (refinement) then   
       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
@@ -356,7 +360,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     ! --- We don't want the next part to run in parallel
     !$omp critical  
-    
+   
     ! --- We only look at non-refined elements
     if ((.not. refinement) .or. (refinement .and. (element%n_sons .eq. 0))) then
     

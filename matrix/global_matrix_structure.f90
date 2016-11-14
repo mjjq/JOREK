@@ -18,7 +18,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   integer :: local_elms(*), index_min, index_max, my_id, n_local_elms
   integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
-  integer :: j_larger, j, ibase, n_max
+  integer :: j_larger, j, n_max, ibase
   integer :: inode,i_father
   integer, dimension(n_vertex_max) ::  node_out
   logical :: freeboundary

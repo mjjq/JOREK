@@ -5,7 +5,7 @@
 
 subroutine Ref_boundary_node(node_list, element_list, lambda,mu,iref, inew)
 
- use parameters
+ use mod_parameters
  use data_structure
 
 implicit none

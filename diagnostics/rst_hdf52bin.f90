@@ -5,6 +5,8 @@ program RST_convert_hdf52bin
   use phys_module
   ! Argument parsing
   use cla
+  use mod_import_restart
+  use mod_export_restart
 
   implicit none
 

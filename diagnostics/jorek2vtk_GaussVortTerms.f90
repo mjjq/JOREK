@@ -48,31 +48,21 @@
 !
 !---------------------------------------------------------------------------------------------------
 
-! --- Module used
-module elements_nodes_neighbours
-
-  use data_structure
-
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-
-end module
-
-
 ! --- PROGRAM
 program jorek2vtk_GaussVortTerms
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
 use constants
-use parameters
+use mod_parameters
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
 use corr_neg
 use elements_nodes_neighbours
+use mod_import_restart
+use mod_neighbours
 
 
 implicit none
@@ -163,7 +153,6 @@ integer                     :: n_scalars, n_terms, etype, i_var, iside_i, iside_
 character*12, allocatable   :: scalar_names(:)
 integer, parameter          :: ivtk = 22 ! an arbitrary unit number for the VTK output file
 character                   :: buffer*80, lf*1, str1*12, str2*12
-logical, external           :: neighbours2
 
 namelist /vtk_params/          n_plane_local 
 
@@ -177,7 +166,7 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 call det_modes()
 
 ! --- Read rst file
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 ! --- Define the basis functions at the Gaussian points
 call initialise_basis
@@ -1217,7 +1206,7 @@ do i=1,(element_list%n_elements-1)
         .AND. (i .LE. (n_flux * n_tht)) ) then
   
       do j=(i-n_tht+1),(i+n_tht+1)
-        if ( neighbours2(element_list%element(i),element_list%element(j),iside_i) ) then
+        if ( neighbours(node_list,element_list%element(i),element_list%element(j),iside_i,iside_j) ) then
           element_neighbours(iside_i,i) = j
         endif
       enddo
@@ -1225,7 +1214,7 @@ do i=1,(element_list%n_elements-1)
     else
   
       do j=(i+1),(i + n_tht + 2*n_leg + 4) !element_list%n_elements
-        if ( neighbours2(element_list%element(i),element_list%element(j),iside_i) ) then
+        if ( neighbours(node_list,element_list%element(i),element_list%element(j),iside_i,iside_j) ) then
           element_neighbours(iside_i,i) = j
         endif
       enddo
@@ -1235,7 +1224,7 @@ do i=1,(element_list%n_elements-1)
   else
   
     do j=( i - n_open*(n_tht + 2*(n_leg)) ),element_list%n_elements
-      if ( neighbours2(element_list%element(i),element_list%element(j),iside_i) ) then
+      if ( neighbours(node_list,element_list%element(i),element_list%element(j),iside_i,iside_j) ) then
         element_neighbours(iside_i,i) = j
       endif
     enddo
@@ -1330,7 +1319,11 @@ etype = 9  ! for VTK_QUAD
 lf = char(10) ! line feed character
 
 
-open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
+#else
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
 
 
 buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)
@@ -1373,62 +1366,3 @@ close(ivtk)
 write(*,*) 'Done.'
  
 end program jorek2vtk_GaussVortTerms
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! --- SUBROUTINE 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-logical function neighbours2(elm1,elm2,inb1)
-  !-------------------------------------------------------
-  ! function to check if the two elements elm1 and elm2
-  ! are neighbours. Two elements are neighbours if they
-  ! share a side, i.e. if two nodes are the same.
-  ! inb1 -> the index of the shared neighbour of elm1
-  !   note : does not work for unequal sized neighbours
-  !-------------------------------------------------------
-  use data_structure
-  use elements_nodes_neighbours
-  implicit none
-  
-  type (type_element) :: elm1, elm2
-  integer             :: inb1, iv(8,1), i, j, nb, inode1,inode2
-  
-  neighbours2 = .false.
-  nb = 0
-  
-  do i=1,4
-    do j=1,4
-      inode1 = elm1%vertex(i)
-      inode2 = elm2%vertex(j)
-      if     ((abs(node_list%node(inode1)%x(1,1)-node_list%node(inode2)%x(1,1)) .lt. 1d-8)         &
-        .AND. (abs(node_list%node(inode1)%x(1,2)-node_list%node(inode2)%x(1,2)) .lt. 1d-8)) then
-        nb = nb + 1
-        iv(nb,1) = i
-      endif
-    enddo
-    if (nb .ge. 4) exit
-  enddo
-  if (nb .gt. 4) then
-    inb1 = minval(iv(1:nb,1))
-    if     ((inb1 .eq. 1) .AND. (iv(3,1) .eq. 3) ) then 
-      neighbours2 = .true. ; inb1 = 3
-    elseif ( inb1 .eq. 2 ) then
-      neighbours2 = .true. ; inb1 = 1
-    else
-    endif
-  elseif ( (nb .gt. 1) .AND. (nb .lt. 5) ) then
-    inb1 = minval(iv(1:nb,1))
-    if     ( inb1 .eq. 3 ) then 
-      neighbours2 = .true. ; inb1 = 3
-    elseif ( inb1 .eq. 2 ) then
-      neighbours2 = .true. ; inb1 = 1
-    else
-    endif
-  elseif (nb .eq. 1 .AND. iv(1,1) .eq. 3) then
-      neighbours2 = .true. ; inb1 = 2
-  else
-  endif
-  
-  return
-end
-

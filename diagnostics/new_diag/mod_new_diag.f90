@@ -5,7 +5,7 @@ module mod_new_diag
   
   
   
-  use parameters
+  use mod_parameters
   use mod_position
   use mod_straight_field_line
   use mod_expression

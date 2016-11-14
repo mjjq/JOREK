@@ -3,7 +3,7 @@ subroutine energy(node_list,element_list,W_mag,W_kin)
 !
 !---------------------------------------------------------------
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
 

@@ -1,15 +1,15 @@
 
 module helena_boundary
   integer             :: mf, n_bnd
-  real, allocatable   :: fr(:), R_bnd(:), Z_bnd(:)
-  real                :: Bgeo, Rgeo, Zgeo, amin, eps, ellip, tria_u, tria_l, quad_u, quad_l
-  real                :: Reast, Rwest
+  real*8, allocatable :: fr(:), R_bnd(:), Z_bnd(:)
+  real*8              :: Bgeo, Rgeo, Zgeo, amin, eps, ellip, tria_u, tria_l, quad_u, quad_l
+  real*8              :: Reast, Rwest
 end
 
 module helena_profiles
   integer             :: n_prof
-  real,allocatable    :: psi(:),dp_dpsi(:),fdf_dpsi(:),p_psi(:),f_psi(:),zjz_psi(:),q(:)
-  real                :: p_bnd
+  real*8,allocatable  :: psi(:),dp_dpsi(:),fdf_dpsi(:),p_psi(:),f_psi(:),zjz_psi(:),q(:)
+  real*8              :: p_bnd
 endmodule
 
 program jorek_to_helena
@@ -24,7 +24,7 @@ real*8  :: current, beta_p, beta_t, beta_n
 integer :: i
 
 read(5,*) R_axis,Z_axis,F0
-read(5,*) psi_bnd,psi_axis,psi_xpoint
+read(5,*) psi_bnd,psi_axis  !,psi_xpoint
 read(5,*) n_bnd
 
 allocate(r_bnd(n_bnd),z_bnd(n_bnd))
@@ -125,19 +125,20 @@ subroutine fshape
 use tr_module
 use helena_boundary
 use constants
+
 implicit none
 
-real              :: xj, yj, ga
-real, allocatable :: THETA(:), GAMMA(:), XV(:),YV(:)
-real              :: angle, error, gamm
-real, allocatable :: tht_tmp(:),  fr_tmp(:), work(:)
-real, allocatable :: tht_sort(:), fr_sort(:), dfr_sort(:)
+real*8              :: xj, yj, ga
+real*8, allocatable :: THETA(:), GAMMA(:), XV(:),YV(:)
+real*8              :: angle, error, gamm
+real*8, allocatable :: tht_tmp(:),  fr_tmp(:), work(:)
+real*8, allocatable :: tht_sort(:), fr_sort(:), dfr_sort(:)
 integer, allocatable :: index_order(:)
-real              :: tht, Rbnd_av, ORbnd_av, values(4)
-integer           :: m, igrinv, i, j, ishape, ieast(1), iwest(1), n_bnd_short
-parameter (error = 1.e-8)
+real*8              :: tht, Rbnd_av, ORbnd_av, values(4)
+integer             :: m, igrinv, i, j, ishape, ieast(1), iwest(1), n_bnd_short
+parameter (error = 1.d-8)
 
-call tr_allocate(fr,1,mf+2,"fr",CAT_GRID)
+allocate(fr(mf+2))
 allocate(theta(mf),gamma(mf),xv(mf),yv(mf))
 
   write(*,*) ' fshape : (R,Z) set given on ',n_bnd,' points'
@@ -152,13 +153,13 @@ allocate(theta(mf),gamma(mf),xv(mf),yv(mf))
 
   write(*,'(A,3f12.8)') ' Rgeo, Zgeo : ',Rgeo,Zgeo,amin
 
-  call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp",CAT_GRID)
-  call tr_allocate(fr_tmp,1,n_bnd,"fr_tmp",CAT_GRID)
-  call tr_allocate(work,1,3*n_bnd+6,"work",CAT_GRID)
-  call tr_allocate(tht_sort,1,n_bnd+2,"tht_sort",CAT_GRID)
-  call tr_allocate(fr_sort,1,n_bnd+2,"fr_sort",CAT_GRID)
-  call tr_allocate(dfr_sort,1,n_bnd+2,"dfr_sort",CAT_GRID)
-  call tr_allocate(index_order,1,n_bnd+2,"index_order",CAT_GRID)
+  allocate(tht_tmp(n_bnd))
+  allocate(fr_tmp(n_bnd))
+  allocate(work(3*n_bnd+6))
+  allocate(tht_sort(n_bnd+2))
+  allocate(fr_sort(n_bnd+2))
+  allocate(dfr_sort(n_bnd+2))
+  allocate(index_order(n_bnd+2))
 
   do i=1,n_bnd
 
@@ -252,8 +253,8 @@ SUBROUTINE QSORT2 (ORD,N,A)
 !     respectively  similarly for X,XX,Z,ZZ,Y. L is the
 !     character length of the elements of A.
 !
-      REAL A(N)
-      REAL X,XX,Z,ZZ,Y
+      REAL*8 A(N)
+      REAL*8 X,XX,Z,ZZ,Y
 !
       NDEEP=0
       U1=N
@@ -382,8 +383,8 @@ SUBROUTINE RFT2(DATA,NR,KR)
 ! LASL ROUTINE MAY 75, CALLING FFT2 AND RTRAN2.                  *
 !*****************************************************************
 implicit none
-real    :: DATA(*)
-integer :: kr,nr, ktran
+real*8    :: DATA(*)
+integer   :: kr,nr, ktran
 
 CALL FFT2(DATA(1),DATA(KR+1),NR/2,-(KR+KR))
 CALL RTRAN2(DATA,NR,KR,1)
@@ -398,8 +399,8 @@ SUBROUTINE RTRAN2(DATA,NR,KR,KTRAN)
 ! LASL ROUTINE MAY 75, CALLED FROM RFT2 AND RFI2.                *
 !*****************************************************************
 implicit none
-real    :: data(*), theta, dc, ds, ws, wc, sumr, difr, sumi, difi
-real    :: tr, ti, wca
+real*8  :: data(*), theta, dc, ds, ws, wc, sumr, difr, sumi, difi
+real*8  :: tr, ti, wca
 integer :: nr, kr, ktran, ks, n, nmax, kmax, k, nk
 
 KS=2*KR
@@ -442,7 +443,7 @@ SUBROUTINE FFT2 (DATAR,DATAI,N,INC)
 !*****************************************************************
 ! FFT2 FORTRAN VERSION CLAIR NIELSON MAY 75.                     *
 !*****************************************************************
-real    :: DATAR(*), DATAI(*)
+real*8  :: DATAR(*), DATAI(*)
 integer :: n, ninc
 
 KTRAN=ISIGN(-1,INC)
@@ -505,7 +506,7 @@ SUBROUTINE FSUM2(F,T,FFNUL,FFCOS,FFSIN,MHARM)
 !-----------------------------------------------------------------------
 implicit none
 integer :: mharm, m
-real    :: ffnul, ffcos(*), ffsin(*), f, t, s, c, co, ca, si, sum
+real*8  :: ffnul, ffcos(*), ffsin(*), f, t, s, c, co, ca, si, sum
 
 CO=COS(T)
 SI=SIN(T)
@@ -534,11 +535,11 @@ SUBROUTINE TB15A(N,X,F,D,W,LP)
 !    W : workspace (dimension 3N)
 !   LP : unit number for output
 !------------------------------------------------------------------
-REAL ZERO,ONE,TWO,THREE
+REAL*8 ZERO,ONE,TWO,THREE
 PARAMETER (ZERO=0.0E0,ONE=1.0E0,TWO=2.0E0,THREE=3.0E0)
 INTEGER LP,N
-REAL D(N),F(N),W(*),X(N)
-REAL A3N1,F1,F2,H1,H2,P
+REAL*8 D(N),F(N),W(*),X(N)
+REAL*8 A3N1,F1,F2,H1,H2,P
 INTEGER I,J,K,N2
 
 WRITE(*,*) F(1),F(N)
@@ -613,10 +614,10 @@ SUBROUTINE TG02A(IX,N,U,S,D,X,V)
 !   X   : the coordinate where the output is wanted
 !   V(1-4) : value and derivatives of the spline interpolation
 !------------------------------------------------------------------
-REAL X
+REAL*8 X
 INTEGER IX,N
-REAL D(*),S(*),U(*),V(*)
-REAL A,B,C,C3,D0,D1,EPS,GAMA,H,HR,HRR,PHI,S0,S1,T,THETA
+REAL*8 D(*),S(*),U(*),V(*)
+REAL*8 A,B,C,C3,D0,D1,EPS,GAMA,H,HR,HRR,PHI,S0,S1,T,THETA
 INTEGER I,IFLG,J
 
 EPS = 1.E-33

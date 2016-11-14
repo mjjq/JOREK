@@ -8,7 +8,7 @@ module mod_position
   
   
   use constants
-  use parameters
+  use mod_parameters
   use equil_info
   use data_structure
   use mod_straight_field_line

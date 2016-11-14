@@ -1,4 +1,4 @@
-module bootstrap_functions
+module mod_bootstrap_functions
 
   implicit none
   integer, parameter :: n_spline = 30
@@ -195,6 +195,7 @@ subroutine bootstrap_current(minRad, R, Z,                   &
   Jb = abs(Jb)
   
   ! --- There should not be any bootstrap outside plasma, the Xpoint can be noisy...
+  Jb = Jb * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.01)/0.005d0 ) )
   ! --- Cut off bootstrap source around the Xpoint with a radius of 5% the distance Xpoint-axis.
   if (xpoint .and.  (xcase .ne. 2) ) then
     distance_xpoint      = sqrt( (R      - R_xpoint(1))**2 + (Z      - Z_xpoint(1))**2 )
@@ -1208,5 +1209,5 @@ end subroutine bootstrap_current_wilson
 
 
 
-end module bootstrap_functions
+end module mod_bootstrap_functions
 

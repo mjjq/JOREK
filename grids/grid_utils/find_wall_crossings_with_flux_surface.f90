@@ -10,6 +10,7 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, ignor
   use high_resolution_wall
   use constants
   use grid_xpoint_data
+  use py_plots_grids
   implicit none
   
   ! --- Routine parameters

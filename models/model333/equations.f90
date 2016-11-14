@@ -12,7 +12,7 @@ subroutine ELM_main_rhs_1(rhs,rhs_k)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_main_rhs_1
 
   ! --- Modules
-  use parameters
+  use mod_parameters
   use phys_module
   use equation_variables
   
@@ -809,12 +809,12 @@ subroutine ELM_main_rhs_7(rhs,rhs_k)
   ! --- The RHS term (Viscosity and source of parallel rotation)
   if (normalized_velocity_profile) then
     rhs(7)   = rhs(7)                                                                                              &
-      + visco_par * (v_x * Vt0_x   + v_y * Vt0_y)   * R                                            * xjac * tstep  &
-      - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * R                                            * xjac * tstep  
+      + visco_parr * (v_x * Vt0_x   + v_y * Vt0_y)   * R                                           * xjac * tstep  &
+      - visco_parr * (v_x * vpar0_x + v_y * vpar0_y) * R                                           * xjac * tstep  
   else
     rhs(7)   = rhs(7)                                                                                                                &
-      - visco_par * v_x * ( vpar0_x * F0**2 / R**2 -2.d0 * vpar0 * F0**2 / R**3 - 2.d0 * PI * F0 * Omega_tor0_y ) * R * xjac * tstep &
-      - visco_par * v_y * ( vpar0_y * F0**2 / R**2 - 2.d0 * PI * F0 * Omega_tor0_y ) * R                              * xjac * tstep            
+      - visco_parr * v_x * ( vpar0_x * F0**2 / R**2 -2.d0 * vpar0 * F0**2 / R**3 - 2.d0 * PI * F0 * Omega_tor0_y ) * R * xjac * tstep &
+      - visco_parr * v_y * ( vpar0_y * F0**2 / R**2 - 2.d0 * PI * F0 * Omega_tor0_y ) * R                              * xjac * tstep            
   endif
 
   ! -----------------------------------    
@@ -871,10 +871,10 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
                 + v * r0 * vpar0 / R * (ps0_x * psi_x + ps0_y * psi_y)						* xjac * (1.d0 + zeta) 
   if (normalized_velocity_profile) then
     amat(7,1) = amat(7,1)                                                                                                               &
-                - visco_par * (v_x * Vt_x_psi   + v_y * Vt_y_psi)   * R 					* xjac * theta * tstep
+                - visco_parr * (v_x * Vt_x_psi   + v_y * Vt_y_psi)   * R 					* xjac * theta * tstep
   else
     amat(7,1) = amat(7,1)                                                                                                               &
-                - visco_par * 2.d0 * PI * F0 * (v_x * Omega_tor_x_psi   + v_y * Omega_tor_y_psi)   * R		* xjac * theta * tstep
+                - visco_parr * 2.d0 * PI * F0 * (v_x * Omega_tor_x_psi   + v_y * Omega_tor_y_psi)   * R		* xjac * theta * tstep
   endif
   
   amat_k(7,1) = - 0.5d0 * r0 * vpar0**2 * BB2_psi * F0 / R * v_p						* xjac * theta * tstep 
@@ -910,10 +910,10 @@ subroutine ELM_main_lhs_7(amat, amat_k, amat_n, amat_kn)
   ! --- The LHS term (Viscosity and source of parallel rotation)
   if (normalized_velocity_profile) then
     amat(7,7) = amat(7,7)                                                                          &
-      + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * R * xjac * theta * tstep
+      + visco_parr * (v_x * Vpar_x + v_y * Vpar_y) * R * xjac * theta * tstep
   else
     amat(7,7) = amat(7,7)                                                                          &
-      + visco_par * F0**2 / R**2 * (v_x * (Vpar_x -2.d0 * vpar / R) + v_y * Vpar_y) * R * xjac * theta * tstep
+      + visco_parr * F0**2 / R**2 * (v_x * (Vpar_x -2.d0 * vpar / R) + v_y * Vpar_y) * R * xjac * theta * tstep
   endif
   
   ! -----------------------------------

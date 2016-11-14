@@ -35,8 +35,9 @@ real*8  :: n_SI, T_eV, n_corr, T_corr
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
+                rst_hdf5,                                           &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap,             &                                                                                                                         
+                restart, rst_format, regrid, bootstrap,             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &

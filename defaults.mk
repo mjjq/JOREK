@@ -112,14 +112,6 @@ $(DEPDIR)/%.d: $(1)%.f90
 	@echo "Generating dependencies for $$<"
 	@util/makedepend $$< $(DIRS) > $(DEPDIR)/$$(*F).d
 endef
-# First call makedepend for use
-# mgi_module is removed here because it is not in all models. Add it again explicitly for model5XX
-ifeq ($(MODEL_NUMBER), 500)
-.obj/jorek2_main.o: .obj/mgi_module.o .mod/mgi_module.mod
-endif
-ifeq ($(MODEL_NUMBER), 555)
-.obj/jorek2_main.o: .obj/mgi_module.o .mod/mgi_module.mod
-endif
 
 # This template defines a program $(file_stem)
 # which has prerequisites $(OBJDIR)/$(file_stem).o and as determined by the output of obj_deps.sh

@@ -289,7 +289,7 @@ end subroutine update_spi
 !! If it already exists the old handle is returned
 function get_pellet_derived_type() result(dtype_out)
   use mpi_mod
-  use parameters
+  use mod_parameters
 
   implicit none
 

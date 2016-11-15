@@ -4,9 +4,9 @@ subroutine integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint
   pressure_in, pressure_out)
 
 use constants
-use parameters
+use mod_parameters
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
 use domains

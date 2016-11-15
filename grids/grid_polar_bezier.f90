@@ -4,7 +4,7 @@ subroutine grid_polar_bezier(Rgeo,Zgeo,amin,acentre,angle_start,fbnd,fpsi,mf,nr,
 
 use constants
 use tr_module
-use parameters
+use mod_parameters
 use data_structure
 use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht
 

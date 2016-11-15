@@ -3,7 +3,7 @@ subroutine grid_bezier_square_polar(nR, nZ, n_radial, R_begin, R_end, Z_begin, Z
   amin, fbnd, fpsi, mf, boundary, node_list, element_list)
 
 use constants
-use parameters
+use mod_parameters
 use data_structure
 
 implicit none

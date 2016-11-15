@@ -2,7 +2,7 @@
 subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 
 use tr_module 
-use parameters
+use mod_parameters
 use mumps_module
 use pastix_module
 use murge_module, only : use_murge, murge_id, MURGE_ASSEMBLY_OVW, MURGE_SUCCESS
@@ -11,7 +11,7 @@ use murge_module, only : MURGE_GetGlobalSolution
 use wsmp_module
 use global_distributed_matrix
 use mpi_mod
-use clock_module
+use mod_clock
 
 implicit none
 

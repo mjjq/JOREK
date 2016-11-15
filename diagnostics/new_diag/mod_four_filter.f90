@@ -7,7 +7,7 @@ module mod_four_filter
   
   
   use iso_c_binding
-  use parameters
+  use mod_parameters
   
   
   

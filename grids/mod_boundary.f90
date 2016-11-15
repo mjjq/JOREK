@@ -1,5 +1,5 @@
 !> Allows to generate the boundary-element and boundary-node data structures for a given grid.
-module boundary
+module mod_boundary
 
   implicit none
   private
@@ -404,4 +404,4 @@ module boundary
 
   end subroutine remove_elem
 
-end module boundary
+end module mod_boundary

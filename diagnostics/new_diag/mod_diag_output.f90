@@ -5,7 +5,7 @@ module mod_diag_output
   
   
   
-  use parameters
+  use mod_parameters
   use mod_expression
   use mod_position
   use equil_info

@@ -1,13 +1,3 @@
-module elements_nodes_neighbours
-
-  use data_structure
-
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-
-end module
-
 program jorek2_connection2
 !-----------------------------------------------------------------------
 !
@@ -17,6 +7,8 @@ use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
 use constants
+use mod_import_restart
+use mod_neighbours
 
 implicit none
 include 'mpif.h'
@@ -40,7 +32,7 @@ real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, zl1, zl2, partial(2)
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), value_out, psi_bnd
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, element_start_percent
-integer :: i_elm_xpoint, i_elm_axis, elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
+integer :: i_elm_xpoint(2), i_elm_axis, elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
 integer :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
 real*4,allocatable :: RZkeep(:,:),scalars(:,:)
 real*4             :: ZERO
@@ -50,8 +42,7 @@ character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
 logical :: psi_theta
 
-logical, external :: neighbours2
-
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -60,7 +51,6 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 write(*,*) 'my_id = ', my_id
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
 
 if (my_id .eq. 0 ) then
    write(*,*) '***************************************'
@@ -114,7 +104,7 @@ do i_tor=1, n_tor
   endif
 enddo
 
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 
@@ -137,7 +127,7 @@ do i=1,element_list%n_elements
 
   do j=i+1,element_list%n_elements
 
-    if (neighbours2(element_list%element(i),element_list%element(j),iside_i,iside_j)) then
+    if (neighbours(node_list,element_list%element(i),element_list%element(j),iside_i,iside_j)) then
       element_neighbours(iside_i,i) = j
       element_neighbours(iside_j,j) = i
     endif
@@ -728,12 +718,16 @@ n_scalars = 3             ! number of scalars to write to the VTK output file
 
 allocate(scalar_names(n_scalars))
 
-scalar_names  = (/ 'length_m    ','T_start_keV ','psi_norm  ' /)
+scalar_names  = (/ 'length_m    ','T_start_keV ','psi_norm    ' /)
 
 lf = char(10) ! line feed character
 
 if (my_id .eq. 0) then
-  open(unit=ivtk,file='connection_new.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream')
+#else
+  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
   buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)
@@ -844,7 +838,11 @@ do i=1,i_strike
 enddo
 
 if (my_id .eq. 0) then
-  open(unit=ivtk,file='strikes.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+  open(unit=ivtk,file='strikes.vtk',form='unformatted',access='stream')
+#else
+  open(unit=ivtk,file='strikes.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
   buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)
@@ -933,7 +931,7 @@ call MPI_FINALIZE(IERR)                                ! clean up MPI
 end program jorek2_connection2
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 
@@ -981,7 +979,7 @@ return
 end subroutine step
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 
@@ -1018,47 +1016,3 @@ enddo
 
 return
 end subroutine var_value
-
-logical function neighbours2(elm1,elm2,inb1,inb2)
-!-------------------------------------------------------
-! function to check if the two elements elm1 and elm2
-! are neighbours. Two elements are neighbours if they
-! share a side, i.e. if two nodes are the same.
-! inb1 -> the index of the shared neighbour of elm1
-! inb2 -> the index of the shared neighbour of elm2
-!   note : does not work for unequal sized neighbours
-!-------------------------------------------------------
-use data_structure
-use elements_nodes_neighbours
-implicit none
-
-type (type_element) :: elm1, elm2
-integer             :: inb1, inb2, iv(8,2), i, j, nb, inode1,inode2
-
-neighbours2 = .false.
-nb = 0
-
-do i=1,4
-  do j=1,4
-    inode1 = elm1%vertex(i)
-    inode2 = elm2%vertex(j)
-    if     ((abs(node_list%node(inode1)%x(1,1)-node_list%node(inode2)%x(1,1)) .lt. 1d-8) &
-      .and. (abs(node_list%node(inode1)%x(1,2)-node_list%node(inode2)%x(1,2)) .lt. 1d-8)) then
-      nb = nb + 1
-      iv(nb,1) = i
-      iv(nb,2) = j
-!      if (nb .gt. 4) then
-!         write (*,*) 'ERREUR, trop de voisins! i=', inode1, inode2
-!      endif
-    endif
-  enddo
-  if (nb .ge. 4) exit
-enddo
-if (nb .gt. 1 ) then
-  neighbours2=.true.
-  inb1 = minval(iv(1:nb,1)) ; if ( abs(iv(1,1)-iv(2,1)) .gt. 1 ) inb1 = 4
-  inb2 = minval(iv(1:nb,2)) ; if ( abs(iv(1,2)-iv(2,2)) .gt. 1 ) inb2 = 4
-else
-endif
-return
-end function neighbours2

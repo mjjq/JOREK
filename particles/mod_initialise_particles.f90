@@ -121,6 +121,7 @@ subroutine initialise_particles(particles, node_list, element_list, &
   ! in the output. This could be worse if the distribution is very narrow.
   ! In that case the Sobol series should also be implemented in 64-bits as the total
   ! number of values is 2^31 now.
+  ! TODO fix also for MPI or broadcast to nodes
   do while (any(not_found))
   !$omp parallel default(none) &
   !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, variables, &
@@ -152,24 +153,24 @@ subroutine initialise_particles(particles, node_list, element_list, &
         end do
 
         if (present(transform)) then
-          if (ran(4) .lt. transform(P)) then
-            particles(j)%x = [R, Z, phi]
+          if (ran(4) .lt. transform(p)) then
+            particles(j)%x = [r, z, phi]
             particles(j)%i_elm = i_elm
             particles(j)%st = [s, t]
-            select type (particles(j))
+            select type (pa => particles(j))
             type is (particle_kinetic_leapfrog)
-              particles(j)%v = ran(5:7) ! save other components of this point for velocity init in a later routine
+              pa%v = ran(5:7) ! save other components of this point for velocity init in a later routine
             end select
             not_found(i) = .false.
           end if
         end if
       else
-        particles(j)%x = [R, Z, phi]
+        particles(j)%x = [r, z, phi]
         particles(j)%i_elm = i_elm
         particles(j)%st = [s, t]
-        select type (particles(j))
+        select type (pa => particles(j))
         type is (particle_kinetic_leapfrog)
-          particles(j)%v = ran(5:7) ! save other components of this point for velocity init in a later routine
+          pa%v = ran(5:7) ! save other components of this point for velocity init in a later routine
         end select
         not_found(i) = .false.
       end if
@@ -177,7 +178,7 @@ subroutine initialise_particles(particles, node_list, element_list, &
   enddo
   !$omp end do
   !$omp end parallel
-  ! Now pack only the indices of particles we still need to do
+  ! now pack only the indices of particles we still need to do
   i_to_find = pack(i_to_find, not_found) ! implicitly allocates
   deallocate(not_found); allocate(not_found(size(i_to_find,1)))
   not_found = .true.

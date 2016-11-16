@@ -118,7 +118,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   do i =1,n_vertex_max
     do j=1,n_order+1
       
-      ! --- Axisymmetric variables for quasilinear diamagnetic terms
+      ! --- Axisymmetric variables for localised sources
       r00            = r00        + nodes(i)%values(1    ,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (1    ,i_plane)
       T00            = T00        + nodes(i)%values(1    ,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (1    ,i_plane)
       

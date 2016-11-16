@@ -1,0 +1,30 @@
+#!/usr/bin/env perl
+# Recursively check all of the .dep/*.d files for dependencies of $1
+use strict;
+use warnings;
+
+my $filename = shift(@ARGV);
+my $checked = "";
+
+sub uniq {
+    my %seen;
+    return grep { !$seen{$_}++ } @_;
+}
+# Check file $1 and print everything to the right of :
+sub check_file {
+    open(my $fh, shift) or return;
+    while (<$fh>) {
+	# Select the rightmost thing between a / and a .
+	if (/\/([a-z0-9_]+)[.](mod|o)$/i) {
+	    unless ($checked =~ /\b$1\b/i) {
+		$checked .= ".obj/$1.o ";
+		check_file(".dep/".$1.".d");
+	    }
+	}
+    }
+}
+
+check_file($filename);
+# The list in checked is the result of the program
+my @names = uniq (split ' ', $checked);
+print "@names";

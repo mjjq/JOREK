@@ -302,6 +302,7 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
   use tr_module 
   use data_structure
   use phys_module, only : n_limiter, R_limiter, Z_limiter
+  use py_plots_grids
   
   implicit none
   

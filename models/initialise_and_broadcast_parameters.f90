@@ -1,7 +1,7 @@
 !> Initialize parameters and broadcast them to all MPI procs.
 subroutine initialise_and_broadcast_parameters(my_id, filename)
   
-  use parameters,  only: n_tor, n_period
+  use mod_parameters,  only: n_tor, n_period
   use phys_module, only: mode, mode_type
   
   implicit none

@@ -28,7 +28,7 @@
 subroutine Refine_Element(node_list, element_list, iref,idir,lambda_ref, mu_ref, iref_out,n_out,istatus,counter)
 
 
- use parameters
+ use mod_parameters
  use data_structure
 
  implicit none 

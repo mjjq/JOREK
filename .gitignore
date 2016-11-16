@@ -11,8 +11,6 @@
 Makefile.inc
 j302_1
 j302_3
-version.h
-version.h.tmp
 .fuse_hidden*
 jorek_model*
 jorek2_poincare
@@ -32,6 +30,7 @@ jorek2vtk_3d
 jorek2_diagno
 jorek_to_helena
 import_eqdsk
+jorek2_main
 jorek2_target2vtk
 jorek2_powers
 jorek2_import_perturbation
@@ -45,3 +44,6 @@ rst_bin2hdf5
 rst_hdf52bin
 tmp[1-9]*
 .info
+.mod/
+.dep/
+.obj/

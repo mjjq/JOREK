@@ -2,7 +2,7 @@ subroutine element_matrix_GS_perturbation(xpoint2,xcase2,Z_xpoint,psi_axis,psi_b
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian

@@ -14,7 +14,7 @@ module mod_expression
   
   
   
-  use parameters
+  use mod_parameters
   use mod_position
   use phys_module
   use diffusivities

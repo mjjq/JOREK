@@ -17,7 +17,7 @@
 !! writer: Mark Verbeek
 !! data  : 11-02-2016
 subroutine jorek2help(n_cpu, nbthreads)
-  use parameters
+  use mod_parameters
   use mod_log_params
 
 !#include "r3_info.h"

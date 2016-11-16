@@ -4,7 +4,7 @@ subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,x
 !   both freeboundary and fixed boundary solutions
 !-----------------------------------------------------------------------
 use tr_module 
-use parameters
+use mod_parameters
 use data_structure
 use phys_module
 use mod_poiss

@@ -52,7 +52,7 @@ ifeq ($(COMPILER_FAMILY), intel)
   FLAGS += -fpp
   FLAGS += -warn all
   FLAGS += -warn nounused
-  F70FLAGS += -warn nodeclarations
+  F77FLAGS += -warn nodeclarations
   FLAGS += -align
   #FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
   # Could take a long time on some machines
@@ -95,7 +95,7 @@ $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
 	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 
 $(OBJDIR)/%.o:: $(1)%.f
-	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F70FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F77FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o

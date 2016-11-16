@@ -33,7 +33,7 @@ ifeq ($(COMPILER_FAMILY), gnu)
   ifeq ($(DEBUG), 1)
     # Debug flags for gfortran, in ascending order of severity
     FLAGS += -g -Og -ggdb -fno-lto
-    FLAGS += -fimplicit-none
+    F90FLAGS += -fimplicit-none
     FLAGS += -Wimplicit-interface -Wimplicit-procedure
     FLAGS += -fcheck=all
     FLAGS += -Wunused-variable
@@ -52,6 +52,7 @@ ifeq ($(COMPILER_FAMILY), intel)
   FLAGS += -fpp
   FLAGS += -warn all
   FLAGS += -warn nounused
+  F70FLAGS += -warn nodeclarations
   FLAGS += -align
   #FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
   # Could take a long time on some machines
@@ -59,7 +60,7 @@ ifeq ($(COMPILER_FAMILY), intel)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback
     FLAGS += -check all,noarg_temp_created
-    FLAGS += -implicitnone
+    F90FLAGS += -implicitnone
     FLAGS += -check bounds
     FLAGS += -check uninit
     FLAGS += -ftrapuv
@@ -80,15 +81,8 @@ ifdef IBMFC
 endif
 # TODO set the option to output module files to a specific directory for XLF
 
-
 # Save and load modules from $(MODDIR)
 FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
-
-
-
-# Make any object or module file depend on the makefiles
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@  $(INCLUDES)
 
 # Make rules for specific files
 # This is needed because the file stems must match and we do not really want to recreate the directory structure in $(OBJDIR) and $(DEPDIR)
@@ -97,14 +91,14 @@ FLAGS := $(FLAGS) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 # Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
 define O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
-	$$(FC) $$(FLAGS) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F90FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 
 $(OBJDIR)/%.o:: $(1)%.f
-	$$(FC) $$(FLAGS) $$(FFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F70FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.c
-	$$(CC) $$(CFLAGS) -fno-implicit-none $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CC) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE

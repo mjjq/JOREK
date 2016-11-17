@@ -84,7 +84,6 @@ program JOREK2
 #endif
   
 #include "r3_info.h"
-#include "version.h"
   
   interface
 

@@ -20,7 +20,6 @@ subroutine jorek2help(n_cpu, nbthreads)
   use mod_parameters
   use mod_log_params
 
-!#include "r3_info.h"
 #include "version.h"
   
   implicit none

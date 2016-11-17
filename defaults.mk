@@ -82,7 +82,7 @@ endif
 # TODO set the option to output module files to a specific directory for XLF
 
 # Save and load modules from $(MODDIR)
-INCLUDES := $(INCLUDES) -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
+FLAGS += -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
 
 # Make rules for specific files
 # This is needed because the file stems must match and we do not really want to recreate the directory structure in $(OBJDIR) and $(DEPDIR)
@@ -104,7 +104,7 @@ endef
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90 | $(MODDIR)/version.h
 	@echo "Generating dependencies for $$<"
-	@cpp -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
+	@cpp -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) -I$(MODDIR) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
 endef
 # First call makedepend for use
 # mgi_module is removed here because it is not in all models. Add it again explicitly for model5XX

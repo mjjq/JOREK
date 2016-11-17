@@ -38,6 +38,7 @@ USE_PASTIX       = 1
 USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
 USE_FFTW         = 1
+USE_HDF5         = 1
 
 # Directory containing the user-compiled libraries (e.g., MUMPS, PASTIX, ...)
 LIBDIR = $(HOME)/lib
@@ -79,3 +80,7 @@ LIBDIERCKX = $(LIBDIR)/Dierckx/dierckx.a
 
 #PPPLIB
 PPPLIB = -L$(PPPLIB_HOME)/lib -lppplib
+
+#HDF5
+HDF5LIB = -L$(H5DIR)/lib/ -lhdf5_fortran -lhdf5hl_fortran -lhdf5 -lhdf5_hl
+HDF5INCLUDE = $(H5DIR)/include

@@ -218,7 +218,19 @@ real*8  :: t_norm
 
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 
+  if (my_id == 0) then
+    open(20,file="pellets_parameters.dat",status="OLD")
+    write(20,"(e12.3)",advance="no") t_now/V_normalisation
+  end if
+
   do i=1, n_spi
+
+    if (my_id == 0 .and. i < n_spi) then
+      write(20,"(e14.6)",advance="no") pellets(i)%spi_abl
+    elseif (my_id == 0 .and. i == n_spi) then
+      write(20,"(e14.6)") pellets(i)%spi_abl
+    end if
+
     pellets(i)%spi_R       = pellets(i)%spi_R + pellets(i)%spi_Vel_R * tstep / V_normalisation
     pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
     pellets(i)%spi_phi     = pellets(i)%spi_phi
@@ -273,8 +285,11 @@ real*8  :: t_norm
   !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
   
   if (my_id == 0) then
+
+    close(20)
+
     do i=1, n_spi
-      write (*,*) "Pellet number: ", i
+      write(*,*) "Pellet number: ", i
       write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
       write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_phi
       write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl

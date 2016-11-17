@@ -129,7 +129,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   else
 
     read(5,in1)
- endif
+  endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
   mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
@@ -193,6 +193,12 @@ if (using_spi == .true.) then
     using_spi = .false. 
   else
     if (n_spi >= 1) then
+
+      if (my_id == 0 .and. restart == .true.) then
+        open(20,file="pellets_parameters.dat",status="REPLACE")
+        write(20,"(A,A11)",advance="no") "# t, "
+      end if
+
       do i=1, n_spi
         pellets(i)%spi_R       = mgi_R
         pellets(i)%spi_Z       = mgi_Z
@@ -202,7 +208,19 @@ if (using_spi == .true.) then
         pellets(i)%spi_Vel_phi = spi_Vel_phiref
         pellets(i)%spi_radius  = spi_radiusref
         pellets(i)%spi_abl     = mgi_amplitude
+
+        if (my_id == 0 .and. i < n_spi .and. restart == .true.) then
+          write(20,"(A11,I3.3)",advance="no") "abl N.: ", i
+        elseif (my_id == 0 .and. i == n_spi .and. restart == .true.) then
+          write(20,"(A11,I3.3)") "abl N.: ", i
+        end if
+        
       end do
+
+      if (my_id == 0 .and. restart == .true.) then
+        close(20)
+      end if
+
       write(*,*) "SPI initialized successfully."
     else
       write(*,*) "...... Seriously!? Reverting to non-SPI case."

@@ -1,14 +1,3 @@
-module elements_nodes_neighbours
-
-  use data_structure
-
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-
-  integer,allocatable      :: element_neighbours(:,:)
-
-end module
-
 program jorek2_connection2
 !-----------------------------------------------------------------------
 !
@@ -18,8 +7,9 @@ use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
 use constants
-use boundary
+use mod_boundary
 use divertor_desc
+use mod_import_restart
 
 implicit none
 include 'mpif.h'
@@ -1488,7 +1478,7 @@ contains
 end program jorek2_connection2
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 
@@ -1536,7 +1526,7 @@ return
 end subroutine step
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 

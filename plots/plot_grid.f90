@@ -3,7 +3,7 @@ subroutine plot_grid(node_list, element_list, boundary_list, bnd_node_list, fram
   gridname)
 
 use tr_module 
-use parameters
+use mod_parameters
 use data_structure
 
 implicit none

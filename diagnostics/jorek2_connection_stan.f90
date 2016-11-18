@@ -1,22 +1,3 @@
-module elements_nodes_neighbours
-
-  use data_structure
-
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-
-end module
-
-
-
-
-
-
-
-
-
-
 program jorek2_poincare
   !-----------------------------------------------------------------------
   !
@@ -26,6 +7,8 @@ program jorek2_poincare
   use basis_at_gaussian
   use elements_nodes_neighbours
   use constants
+  use mod_import_restart
+  use mod_neighbours
   
   implicit none
   include 'mpif.h'
@@ -85,9 +68,6 @@ program jorek2_poincare
   real*8		:: R_tmp,Z_tmp
   real*8		:: psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt
   integer		:: ielm_tmp
-  
-  logical, external	:: neighbours
-  
   
   write(*,*) '***************************************'
   write(*,*) '* JOREK2_poincare 		    *'
@@ -723,7 +703,11 @@ program jorek2_poincare
   
   ! --- Open file and write headers
   if (my_id .eq. 0) then
-    open(unit=ivtk,file='connection.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream')
+#else
+    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
     buffer = '# vtk DataFile Version 3.0'//lf						  ; write(ivtk) trim(buffer)
     buffer = 'vtk output'//lf								  ; write(ivtk) trim(buffer)
     buffer = 'BINARY'//lf								  ; write(ivtk) trim(buffer)
@@ -834,7 +818,7 @@ program jorek2_poincare
   ! --- Reallocate data for strike points
   n_scalars = 3
   allocate(scalar_names(n_scalars),scalars(100000,n_scalars))
-  scalar_names  = (/ 'length	  ','psi_start   ','T_start	'/)
+  scalar_names  = (/ 'length   ','psi_start','T_start  '/)
   
   ! --- Copy data
   do i=1,i_strike
@@ -845,7 +829,11 @@ program jorek2_poincare
   
   ! --- Open file and write headers
   if (my_id .eq. 0) then
-    open(unit=ivtk,file='strikes.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+    open(unit=ivtk,file='strikes.vtk',form='unformatted',access='stream')
+#else
+    open(unit=ivtk,file='strikes.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
     buffer = '# vtk DataFile Version 3.0'//lf						  ; write(ivtk) trim(buffer)
     buffer = 'vtk output'//lf								  ; write(ivtk) trim(buffer)
     buffer = 'BINARY'//lf								  ; write(ivtk) trim(buffer)
@@ -983,7 +971,7 @@ end
 
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
-  use parameters
+  use mod_parameters
   use elements_nodes_neighbours
   use phys_module
   
@@ -1060,7 +1048,7 @@ end
 
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
-  use parameters
+  use mod_parameters
   use elements_nodes_neighbours
   use phys_module
   

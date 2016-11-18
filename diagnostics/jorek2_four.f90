@@ -1,10 +1,11 @@
 !> Allows to Fourier-analyse the physical variables of a JOREK restart file in magnetic coordinates.
 program JOREK2_FOUR
 
-  use parameters,     only: n_tor, n_var, n_period, variable_names
+  use mod_parameters,     only: n_tor, n_var, n_period, variable_names
   use nodes_elements, only: element_list, node_list
   use fourier,        only: t_theta_mapping, determine_theta_mag, transform_qttys
   use phys_module,    only: rst_format
+  use mod_import_restart
 
   implicit none
   
@@ -86,8 +87,8 @@ program JOREK2_FOUR
         
         write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i, (j-1)*n_period
         l = l + 1
-        do k = 1, mapping.nstpts
-          write(42,'(5es16.7)') mapping.psin(k), ABS(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)), AIMAG(vfour(i+1,j,k,ivar)), ATAN2(AIMAG(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)))
+        do k = 1, mapping%nstpts
+          write(42,'(5es16.7)') mapping%psin(k), ABS(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)), AIMAG(vfour(i+1,j,k,ivar)), ATAN2(AIMAG(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)))
         end do
         write(42,*)
         write(42,*)

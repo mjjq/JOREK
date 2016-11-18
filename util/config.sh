@@ -2,7 +2,7 @@
 
 #
 # Purpose: Set the model in the makefile and/or certain parameters in the respective
-#   mod_parameters file.
+#   parameters file.
 #
 # Date: 2011-04-07
 # Author: Matthias Hoelzl, IPP Garching
@@ -53,6 +53,8 @@ function setmodel() {
   for file in $make_config_files; do
     sed -i -e "s/\(^ *MODEL *= *\)[^ ]*\(.*$\)/\1$model\2/" $file
   done
+  # --- Clean up .d/.o/.mod files because of the model change
+  make cleanall
 }
 
 function getmodel() {

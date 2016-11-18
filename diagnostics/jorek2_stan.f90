@@ -1,7 +1,7 @@
 !> Program to convert a JOREK2 restart file into binary VTK format
 program jorek2_stan
 
-  use parameters, only: n_var, variable_names
+  use mod_parameters, only: n_var, variable_names
   use data_structure
   use phys_module
   use basis_at_gaussian
@@ -10,6 +10,7 @@ program jorek2_stan
   use constants
   use tr_module 
   use grid_xpoint_data
+  use mod_import_restart
 
   implicit none
   

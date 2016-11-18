@@ -3,9 +3,9 @@ subroutine integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, x
 !
 !---------------------------------------------------------------
 use constants
-use parameters
+use mod_parameters
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
 

@@ -1,15 +1,16 @@
 !> Program to convert a JOREK2 restart file into binary VTK format
 program jorek2vtk
 
-use parameters, only: n_var, variable_names
+use mod_parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
 use pellet_module
 use mpi_mod
-use bootstrap_functions
+use mod_bootstrap_functions
 use corr_neg
+use mod_import_restart
 
 implicit none
 
@@ -1021,7 +1022,6 @@ lf = char(10) ! line feed character
 open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
 #else
 open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
-!open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)

@@ -11,12 +11,13 @@
 !! * nodes            -- Geometry information from the node_list: node(i)%x(:,:)
 program JOREK_EXTRACT_DATA
   
-  use parameters
+  use mod_parameters
   use nodes_elements
   use phys_module
   use equil_info
-  use boundary
+  use mod_boundary
   use mod_log_params
+  use mod_import_restart
   
   implicit none
   

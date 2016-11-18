@@ -10,7 +10,7 @@ subroutine Refine_Elem_List(node_list, element_list,list_to_be_refined,n_to_be_r
 
 
  use data_structure
- use parameters
+ use mod_parameters
 
  implicit none 
 

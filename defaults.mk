@@ -47,14 +47,14 @@ endif
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
   COMPILER_MAJOR_VERSION=$(shell $(FC) -V 2>&1 | grep -o "Version [0-9]*" | cut -d' ' -f 2)
-  FLAGS += -warn all
-  FLAGS += -warn nounused
   FLAGS += -align
   ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -ge 15; echo $$?),0)
     FLAGS += -qopenmp
   else
     FLAGS += -openmp
   endif
+  FFLAGS += -warn all
+  FFLAGS += -warn nounused
   FFLAGS += -fpp
   FFLAGS += -r8
   F77FLAGS += -warn nodeclarations

@@ -9,73 +9,70 @@ MODDIR := .mod
 OBJDIR := .obj
 DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
+INCLUDES += -I$(MODDIR)
 
 # Do some guessing to get the compiler family if it is unset
 ifeq ($(COMPILER_FAMILY),)
   COMPILER_FAMILY := $(shell $(FC) --version | grep -oi 'intel\|gnu' | tr A-Z a-z)
 endif
 
-# Default flags for gfortran
+# Clear some variables (makefile bug?)
+F77FLAGS=
+F90FLAGS=
+
+# Default flags for GCC
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
-  FLAGS += -ffree-line-length-none
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-tabs -Wno-unused-variable
   FLAGS += -Wcharacter-truncation
   FLAGS += -Winteger-division
   FLAGS += -Wintrinsics-std
-  FLAGS += -Wsurprising
-  FLAGS += -fdefault-real-8 -fdefault-double-8
-  # options still to be tested
-  #FLAGS += -fexternal-blas
-  #FLAGS += -ffast-math # better -Ofast
-  #more optimization options
+  FFLAGS += -Wsurprising
+  FFLAGS += -ffree-line-length-none
+  F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
-    # Debug flags for gfortran, in ascending order of severity
-    FLAGS += -g -Og -ggdb -fno-lto
+    FLAGS  += -g -Og -ggdb -fno-lto
+    FLAGS  += -fcheck=all
+    FLAGS  += -Wunused-variable
+    FLAGS  += -ffpe-trap=invalid,zero,overflow -ftrapv
+    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
+    FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
-    FLAGS += -Wimplicit-interface -Wimplicit-procedure
-    FLAGS += -fcheck=all
-    FLAGS += -Wunused-variable
-    FLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv \
-#	      -finit-real=nan -finit-int=nan -finit-logical=false
-#   FLAGS += -Warray-temporaries -Wconversion-extra
   endif
 
-  OUTPUT_MODULE_COMMAND=-J#no space
+  FFLAGS +=-J$(MODDIR)
 endif
 
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
   COMPILER_MAJOR_VERSION=$(shell $(FC) -V 2>&1 | grep -o "Version [0-9]*" | cut -d' ' -f 2)
-  FLAGS += -r8
+  FLAGS += -warn all
+  FLAGS += -warn nounused
+  FLAGS += -align
   ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -ge 15; echo $$?),0)
     FLAGS += -qopenmp
   else
     FLAGS += -openmp
   endif
-  FLAGS += -fpp
-  FLAGS += -warn all
-  FLAGS += -warn nounused
+  FFLAGS += -fpp
+  FFLAGS += -r8
   F77FLAGS += -warn nodeclarations
-  FLAGS += -align
-  #FLAGS += -ipo -ipo-jobs4 # like -flto for gfortran, see https://software.intel.com/en-us/node/524765
-  # Could take a long time on some machines
   ifeq ($(DEBUG), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback
     FLAGS += -check all,noarg_temp_created
-    F90FLAGS += -implicitnone
     FLAGS += -check bounds
     FLAGS += -check uninit
     FLAGS += -ftrapuv
     FLAGS += -debug all -debug-parameters
-    FLAGS += -gen-interfaces -warn-interfaces
     FLAGS += -fstack-security-check
     FLAGS += -fpe0
+    FFLAGS += -gen-interfaces -warn-interfaces
+    F90FLAGS += -implicitnone
   endif
 
-  OUTPUT_MODULE_COMMAND=-module #space is important
+  FFLAGS +=-module $(MODDIR)
 endif
 
 #TODO identify good default flags for XLF
@@ -86,39 +83,28 @@ ifdef IBMFC
 endif
 # TODO set the option to output module files to a specific directory for XLF
 
-# Save and load modules from $(MODDIR)
-FLAGS += -I$(MODDIR) $(OUTPUT_MODULE_COMMAND)$(MODDIR)
-
 # Make rules for specific files
 # This is needed because the file stems must match and we do not really want to recreate the directory structure in $(OBJDIR) and $(DEPDIR)
 # Also, it will make everything slightly nicer later
 # Template for generating object files from source files
-# Touch the .mod file again if it exists (because it is not written if there is no change, and this messes with the make rules)
+# Touch the .mod file again if it exists (because it is not written if there is no change to the interfaces, and this messes with the make rules)
 define O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
-	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F90FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F90FLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 	@test -e $(MODDIR)/$$*.mod && touch $(MODDIR)/$$*.mod || true
 
 $(OBJDIR)/%.o:: $(1)%.f
-	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F77FLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F77FLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.c
-	$$(CC) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90 | $(MODDIR)/version.h
 	@echo "Generating dependencies for $$<"
-	@cpp -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) -I$(MODDIR) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
+	@cpp -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
 endef
-# First call makedepend for use
-# mgi_module is removed here because it is not in all models. Add it again explicitly for model5XX
-ifeq ($(MODEL_NUMBER), 500)
-.obj/jorek2_main.o: .obj/mgi_module.o .mod/mgi_module.mod
-endif
-ifeq ($(MODEL_NUMBER), 555)
-.obj/jorek2_main.o: .obj/mgi_module.o .mod/mgi_module.mod
-endif
 
 # This template defines a program $(file_stem)
 # which has prerequisites $(OBJDIR)/$(file_stem).o and as determined by the output of obj_deps.sh
@@ -127,7 +113,7 @@ endif
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps $(DEPDIR)/$(file_stem).d)
-	$$(FC) $$(FLAGS) $$(FFLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
+	$$(FC) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
 endef
 
 
@@ -196,7 +182,7 @@ Makefile.inc: ;
 	@echo "Generate .mod/version.h"
 	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" > $@
 	@echo "#define compile_command '$(FC)'" >> $@
-	@echo "#define compile_flags '$(FFLAGS)'" >> $@
+	@echo "#define compile_flags '$(FLAGS) $(FFLAGS)'" >> $@
 	@echo "#define compile_includes '$(INCLUDES)'" >> $@
 	@echo "#define compile_defines '$(DEFINES)'" >> $@
 	@echo "#define compile_libs '$(LIBS)'" >> $@

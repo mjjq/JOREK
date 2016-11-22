@@ -63,6 +63,19 @@ duplicates:
 	@if [[ -z "${dups// }" ]]; then echo "No duplicates detected"; \
 	else echo "Duplicates found: ${dups}"; fi
 
+printsettings:
+	@echo "FC        = $(FC)"
+	@echo "CC        = $(CC)"
+	@echo "DEBUG     = $(DEBUG)"
+	@echo "FLAGS     = $(FLAGS)"
+	@echo "FFLAGS    = $(FFLAGS)"
+	@echo "F90FLAGS  = $(F90FLAGS)"
+	@echo "F77FLAGS  = $(F77FLAGS)"
+	@echo "CFLAGS    = $(CFLAGS)"
+	@echo "DEFINES   = $(DEFINES)"
+	@echo "INCLUDES  = $(INCLUDES)"
+	@echo "LIBS      = $(LIBS)"
+
 # For each source dir add an explicit rule with the template
 $(foreach dir,$(DIRS),$(eval $(call O_TEMPLATE,$(dir)/)))
 # For each source dir add a rule to create dependency files

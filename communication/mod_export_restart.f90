@@ -154,7 +154,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   
 #ifdef USE_HDF5
   use hdf5
-  use HDF5_io_module
+  use hdf5_io_module
   use tr_module
   use mod_parameters
 #endif

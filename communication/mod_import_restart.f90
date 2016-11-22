@@ -444,8 +444,6 @@ end subroutine import_binary_restart
 ! Import an HDF5 restart file
 subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)
 
-#include "version.h"
-
   use tr_module 
   use data_structure
   use phys_module
@@ -453,7 +451,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use vacuum, only: import_HDF5_restart_vacuum
 #ifdef USE_HDF5
   use hdf5
-  use HDF5_io_module
+  use hdf5_io_module
   !use tr_module
   use mod_parameters, ONLY : n_tor, n_var, n_order
 #endif

@@ -182,12 +182,15 @@ if (my_id .eq. 0) then
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime",CAT_GRID)
 
-  if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_GRID)
-  if (nstep .gt. 0)              call tr_allocate(xtime_pellet_R,1,nstep,"xtime_pellet_R")
-  if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_GRID)
-  if (nstep .gt. 0)              call tr_allocate(xtime_pellet_Z,1,nstep,"xtime_pellet_Z")
+  if (allocated(xtime_pellet_R))         call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_R,1,nstep,"xtime_pellet_R")
+  if (allocated(xtime_pellet_Z))         call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_Z,1,nstep,"xtime_pellet_Z")
+  if (allocated(xtime_pellet_psi))       call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_psi,1,nstep,"xtime_pellet_psi")
   if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_GRID)
   if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_particles,1,nstep,"xtime_pellet_particles")
+  
   if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_GRID)
   if (nstep .gt. 0)                   call tr_allocate(xtime_phys_ablation,1,nstep,"xtime_phys_ablation")
   
@@ -229,6 +232,9 @@ if (my_id .eq. 0) then
   
   if (allocated(particle_source_t)) call tr_deallocate(particle_source_t,"particle_source_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(particle_source_t,1,index_start+nstep,"particle_source_t",CAT_UNKNOWN)
+  
+  if (allocated(xtime_phys_ablation))    call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_phys_ablation,1,nstep,"xtime_phys_ablation")
 
 endif
 

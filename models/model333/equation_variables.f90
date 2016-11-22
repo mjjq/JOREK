@@ -88,6 +88,10 @@ module equation_variables
   real*8 	:: Bgrad_rho, Bgrad_rho_star, Bgrad_rho_k_star
   real*8 	:: Bgrad_T,   Bgrad_T_star,   Bgrad_T_k_star
   
+  ! --- Equilibrium (n=0 or n_tor=1) variables
+  real*8        :: r00
+  real*8        :: T00
+  
   ! --- Linearized equation terms
   real*8 	:: rhs_tmp(n_var),        rhs_k_tmp(n_var)
   real*8 	:: amat_tmp(n_var,n_var), amat_k_tmp(n_var,n_var), amat_n_tmp(n_var,n_var), amat_kn_tmp(n_var,n_var)
@@ -144,6 +148,8 @@ module equation_variables
   !$omp 	BB2, BB2_psi,															&
   !$omp 	Bgrad_rho, Bgrad_rho_star, Bgrad_rho_k_star,											&
   !$omp 	Bgrad_T,   Bgrad_T_star,   Bgrad_T_k_star,											&
+  !$omp 	r00,										   					   	&
+  !$omp 	T00,										   					   	&
   !$omp 	rhs_tmp,        rhs_k_tmp,													&
   !$omp 	amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
 

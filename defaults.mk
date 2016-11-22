@@ -48,7 +48,7 @@ endif
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
   FLAGS += -r8
-  FLAGS += -qopenmp
+  FLAGS += -openmp
   FLAGS += -fpp
   FLAGS += -warn all
   FLAGS += -warn nounused

@@ -477,7 +477,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     return
   end if
 
-  call HDF5_integer_reading(file_id,version_control_tmp, "RCS_version")
+  call HDF5_char_reading(file_id,version_control_tmp, "RCS_version")
 version_control = trim(adjustl(RCS_VERSION))
   if (version_control_tmp .ne. version_control) then
     write(*,*) 'WARNING: Current version control', version_control, 'differs from previous version', version_control_tmp

@@ -108,15 +108,20 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   ps0	= 0.d0; ps0_s	= 0.d0; ps0_t	= 0.d0; ps0_ss	 = 0.d0; ps0_tt   = 0.d0; ps0_st   = 0.d0; ps0_p   = 0.d0; ps0_pp   = 0.d0
   u0	= 0.d0; u0_s	= 0.d0; u0_t	= 0.d0; u0_ss	 = 0.d0; u0_tt    = 0.d0; u0_st    = 0.d0; u0_p    = 0.d0; u0_pp    = 0.d0
   zj0	= 0.d0; zj0_s	= 0.d0; zj0_t	= 0.d0; zj0_ss	 = 0.d0; zj0_tt   = 0.d0; zj0_st   = 0.d0; zj0_p   = 0.d0; zj0_pp   = 0.d0
-  w0	= 0.d0; w0_s	= 0.d0; w0_t	= 0.d0; w0_ss	 = 0.d0; w0_tt    = 0.d0; w0_st    = 0.d0; w0_p    = 0.d0; w0_pp    = 0.d0
-  r0	= 0.d0; r0_s	= 0.d0; r0_t	= 0.d0; r0_ss	 = 0.d0; r0_tt    = 0.d0; r0_st    = 0.d0; r0_p    = 0.d0; r0_pp    = 0.d0
-  T0	= 0.d0; T0_s	= 0.d0; T0_t	= 0.d0; T0_ss    = 0.d0; T0_tt    = 0.d0; T0_st    = 0.d0; T0_p    = 0.d0; T0_pp    = 0.d0
+  w0	= 0.d0; w0_s	= 0.d0; w0_t	= 0.d0; w0_ss	 = 0.d0; w0_tt    = 0.d0; w0_st    = 0.d0; w0_p    = 0.d0; w0_pp    = 0.d0! --- n=0 variables
+  r0	= 0.d0; r0_s	= 0.d0; r0_t	= 0.d0; r0_ss	 = 0.d0; r0_tt    = 0.d0; r0_st    = 0.d0; r0_p    = 0.d0; r0_pp    = 0.d0; r00 = 0.d0
+  T0	= 0.d0; T0_s	= 0.d0; T0_t	= 0.d0; T0_ss    = 0.d0; T0_tt    = 0.d0; T0_st    = 0.d0; T0_p    = 0.d0; T0_pp    = 0.d0; T00 = 0.d0
   Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
   delta_g = 0.d0 ; delta_s = 0.d0 ; delta_t = 0.d0
 
   ! --- Integrate
   do i =1,n_vertex_max
     do j=1,n_order+1
+      
+      ! --- Axisymmetric variables for localised sources
+      r00            = r00        + nodes(i)%values(1    ,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (1    ,i_plane)
+      T00            = T00        + nodes(i)%values(1    ,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (1    ,i_plane)
+      
       do i_tor =1,n_tor
 
 	! --- Variable 1
@@ -231,6 +236,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   
   ! --- Variable 5
   r0_corr  = corr_neg_dens(r0)
+  r0_corr2 = corr_neg_dens(r0, (/0.5,0.5/) ) ! A second one specially for the diamagnetic terms
   r0_x	   = get_deriv_x (r0_s, r0_t)
   r0_y	   = get_deriv_y (r0_s, r0_t)
   r0_xx    = get_deriv_xx(r0_s, r0_t, r0_ss, r0_st, r0_tt)
@@ -369,6 +375,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
   real*8		      :: Jb_0
   real*8		      :: rho_norm
+  real*8		      :: above_prof
       
   
   ! -------------------------------------
@@ -577,7 +584,11 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     total_rho_source = particle_source + source_pellet
   endif
   
-  ! --- Renormalise all MHD parameters (ie. if input values are given in physical units) Not done for sources yet...
+  ! -------------------------------------------------------------------
+  ! --- Renormalise all MHD parameters
+  ! -------------------------------------------------------------------
+  
+  ! --- (ie. if input values are given in physical units) Not done for sources yet...
   if (renormalise) then
     if (central_density .gt. 1.d10) then
       rho_norm    = central_density         * central_mass * mass_proton
@@ -594,6 +605,92 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     K_par       = K_par       * sqrt(mu_zero  / rho_norm)
     dK_par      = dK_par      * sqrt(mu_zero  / rho_norm)
     tau_IC      = tau_IC      / sqrt(mu_zero  * rho_norm)
+  endif
+
+  ! -------------------------------------------------------------------
+  ! --- SOL sources to stabilise diamagnetic terms (not applied by default!)
+  ! -------------------------------------------------------------------
+  
+  ! --- Make sure SOL density/temperature stays levelled
+  if (.false.) then
+    if (psi_norm .gt. 1.0) then
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      ! --- If equilibrium density comes below half of initial SOL value, we fill it up
+      if (r00 .lt. 0.5*zn) total_rho_source = 0.5 * (0.5*zn-r00) / tstep
+      if (T00 .lt. 0.5*zT) heat_source = 0.5 * (0.5*zT-T00) / tstep
+    endif
+  endif
+  
+  ! --- Make sure SOL density stays above zero (nonlinearly)
+  ! --- This is a bit more complex, but negative density is the worst enemy of diamagnetic terms
+  ! --- If we see that density becomes less than 30% of initial SOL value, and if this
+  ! --- is happening due to the nonlinear ballooning mode, then we fill up the loss
+  if (.false.) then
+    ! --- Usually this happens outside the separatrix
+    if (psi_norm .gt. 1.0) then
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      if ( (r0 .lt. 0.3*zn) .and. (r00 .gt. 0.3*zn) ) then
+    	total_rho_source = 0.5 * (0.3*zn-r0) / tstep
+      endif
+    endif
+    ! --- But it can also happen in the pedestal, where you might want to use different values
+    if ( (psi_norm .gt. 0.95) .and. (psi_norm .le. 1.0) ) then
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      if ( (r0 .lt. 0.3*zn) .and. (r00 .gt. 0.3*zn) ) then
+    	total_rho_source = 0.5 * (0.3*zn-r0) / tstep
+      endif
+    endif
+  endif
+
+  ! -------------------------------------------------------------------
+  ! --- Pedestal sources to get ELM cycles (not applied by default!)
+  ! -------------------------------------------------------------------
+  
+  ! --- Just a source localised in the pedestal
+  if (.false.) then
+    ! --- Density
+    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+    if (r00 .lt. 1.3*zn) then ! should not exceed 30% above equilibrium initial value
+      total_rho_source = particlesource * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.0d0)/0.003) ) * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.60d0)/0.1) ) &
+                       + 1.d-4 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.998d0)/0.003) )
+    endif
+    ! --- Temperature
+    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    if (T00 .lt. 1.3*zT) then ! should not exceed 30% above equilibrium initial value
+      heat_source      = heatsource     * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.0d0)/0.003) ) * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.60d0)/0.1) ) &
+                       + 4.d-7 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.998d0)/0.003) )
+    endif
+  endif
+  
+  ! --- A source adapted to the actual profile and the profile you want to reach in the end (here based on the initial profiles)
+  if (.false.) then
+    total_rho_source = 0.d0
+    heat_source      = 0.d0
+    ! --- We do this only inside the separatrix
+    if ( ( (ps0-psi_axis)/(psi_bnd-psi_axis) .lt. 1.0) .and. (y_g .gt. Z_xpoint(1)) ) then
+      ! --- This determines how far above the initial equilibrium profiles you want to go
+      ! --- eg. 0.4 means 40% above, 0.0 means exactly the initial profile, not above
+      above_prof = 1.d0 + 0.4d0 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.6d0)/0.3) )
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                       zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      ! --- Note that here, the value of particlesource and heatsource determines how long
+      ! --- it will take for the target profile to be recovered. eg. if 0.1, it will take
+      ! --- 10 JOREK times. If 0.001 it will take 1000 JOREK times
+      if (r00 .lt. above_prof*zn) total_rho_source = particlesource * (above_prof*zn-r00) / tstep
+      if (T00 .lt. above_prof*zT) heat_source      = heatsource     * (above_prof*zT-T00) / tstep
+    else
+      total_rho_source = 0.d0
+      heat_source      = 0.d0
+    endif
   endif
 
   return

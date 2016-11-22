@@ -44,7 +44,7 @@ contains
     real*8, dimension (:,:)	     		:: ELM
     real*8, dimension (:)	     		:: RHS
     real*8, dimension(:,:,:) , pointer  	:: ELM_p, ELM_n, ELM_k, ELM_kn
-    real*8, dimension(:,:)   , pointer  	:: RHS_p, RHS_k 
+    real*8, dimension(:,:)   , pointer  	:: RHS_p, RHS_k
     
     ! --- Indexes
     integer    :: i_ij, ij_tmp

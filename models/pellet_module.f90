@@ -219,7 +219,7 @@ real*8  :: t_norm
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 
   if (my_id == 0) then
-    open(20,file="pellets_parameters.dat",status="OLD")
+    open(20,file="pellets_parameters.dat",position="APPEND",status="OLD")
     write(20,"(e12.3)",advance="no") t_now/V_normalisation
   end if
 

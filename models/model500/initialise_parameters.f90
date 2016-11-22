@@ -194,7 +194,7 @@ if (using_spi == .true.) then
   else
     if (n_spi >= 1) then
 
-      if (my_id == 0 .and. restart == .true.) then
+      if (my_id == 0 .and. restart == .false.) then
         open(20,file="pellets_parameters.dat",status="REPLACE")
         write(20,"(A,A11)",advance="no") "# t, "
       end if
@@ -209,15 +209,15 @@ if (using_spi == .true.) then
         pellets(i)%spi_radius  = spi_radiusref
         pellets(i)%spi_abl     = mgi_amplitude
 
-        if (my_id == 0 .and. i < n_spi .and. restart == .true.) then
+        if (my_id == 0 .and. i < n_spi .and. restart == .false.) then
           write(20,"(A11,I3.3)",advance="no") "abl N.: ", i
-        elseif (my_id == 0 .and. i == n_spi .and. restart == .true.) then
+        elseif (my_id == 0 .and. i == n_spi .and. restart == .false.) then
           write(20,"(A11,I3.3)") "abl N.: ", i
         end if
         
       end do
 
-      if (my_id == 0 .and. restart == .true.) then
+      if (my_id == 0 .and. restart == .false.) then
         close(20)
       end if
 

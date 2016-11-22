@@ -553,7 +553,7 @@ version_control = trim(adjustl(RCS_VERSION))
   call tr_allocate(t_boundary,   1,node_list%n_nodes,            "boundary",   CAT_UNKNOWN)
   call tr_allocate(t_parents,    1,node_list%n_nodes,1,2,        "parent",     CAT_UNKNOWN)
   call tr_allocate(t_parent_elem,1,node_list%n_nodes,            "parent_elem",CAT_UNKNOWN)
-  call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,            "ref_lambade",CAT_UNKNOWN)
+  call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,            "ref_lambda" ,CAT_UNKNOWN)
   call tr_allocate(t_ref_mu,     1,node_list%n_nodes,            "ref_mu",     CAT_UNKNOWN)
   call tr_allocate(t_constrained,1,node_list%n_nodes,            "constrained",CAT_UNKNOWN)
 

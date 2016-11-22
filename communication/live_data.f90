@@ -56,7 +56,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_period: ', n_period
-    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies growth_rates times input_profiles'
+    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies growth_rates times input_profiles axis current betas particlecontent thermalenergy heatingpower particlesource'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
@@ -93,6 +93,55 @@ module live_data
     end do
     write(LIVE_DATA_HANDLE,*)
     
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_axis: ', 3
+    write(LIVE_DATA_HANDLE,'(A)') '@axis_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@axis_ylabel: Magnetic axis properties'
+    write(LIVE_DATA_HANDLE,'(A)') '@axis_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@axis: %"time"           "R position"              "Z position"           "Psi on axis"'
+    write(LIVE_DATA_HANDLE,*)
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_current: ', 1
+    write(LIVE_DATA_HANDLE,'(A)') '@current_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@current_ylabel: plasma current'
+    write(LIVE_DATA_HANDLE,'(A)') '@current_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@current: %"time"           "Current"'
+    write(LIVE_DATA_HANDLE,*)
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_betas: ', 3
+    write(LIVE_DATA_HANDLE,'(A)') '@betas_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@betas_ylabel: plasma beta'
+    write(LIVE_DATA_HANDLE,'(A)') '@betas_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@betas: %"time"           "beta poloidal"       "beta toroidal"       "beta normalized"'
+    write(LIVE_DATA_HANDLE,*)
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlecontent: ', 2
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_ylabel: particle content'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"           "inside separatrix"   "outside separatrix"'
+    write(LIVE_DATA_HANDLE,*)
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_thermalenergy: ', 2
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel: thermal energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy: %"time"   "inside separatrix"   "outside separatrix"'
+    write(LIVE_DATA_HANDLE,*)
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_heatingpower: ', 1
+    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_ylabel: heating power'
+    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower: %"time"   "inside separatrix"'
+    write(LIVE_DATA_HANDLE,*)
+    
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlesource: ', 1
+    write(LIVE_DATA_HANDLE,'(A)') '@particlesource_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlesource_ylabel: particle source'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlesource_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlesource: %"time"   "inside separatrix"'
+    write(LIVE_DATA_HANDLE,*)
+    
     ! --- Call the model-specific part of the init_live_data routine
     call init_live_data_model(LIVE_DATA_HANDLE) 
     
@@ -106,7 +155,9 @@ module live_data
   subroutine write_live_data(index)
     
     use mod_parameters,  only: n_tor
-    use phys_module, only: xtime, energies, produce_live_data
+    use phys_module, only: xtime, energies, produce_live_data, R_axis_t, Z_axis_t, Psi_axis_t,     &
+      current_t, beta_p_t, beta_t_t, beta_n_t, density_in_t, density_out_t, pressure_in_t,               &
+      pressure_out_t, heating_power_t, particle_source_t
     
     implicit none
     
@@ -144,6 +195,14 @@ module live_data
         end do
       end do
     end if
+    write(LIVE_DATA_HANDLE,*)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@axis: ', xtime(index), R_axis_t(index), Z_axis_t(index), Psi_axis_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@current: ', xtime(index), current_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@betas: ', xtime(index), beta_p_t(index), beta_t_t(index), beta_n_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent: ', xtime(index), density_in_t(index), density_out_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy: ', xtime(index), pressure_in_t(index), pressure_out_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@heatingpower: ', xtime(index), heating_power_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlesource: ', xtime(index), particle_source_t(index)
     
     close(LIVE_DATA_HANDLE)
     

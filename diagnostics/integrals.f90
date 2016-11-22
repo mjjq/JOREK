@@ -1,7 +1,7 @@
 !> Determines some integrals over the JOREK computational domain to determine the total current etc.
 subroutine integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
   aminor, Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure,       &
-  pressure_in, pressure_out)
+  pressure_in, pressure_out, heating_power, particle_source)
 
 use constants
 use mod_parameters
@@ -35,6 +35,8 @@ real*8,                  intent(out)   :: density_out
 real*8,                  intent(out)   :: pressure
 real*8,                  intent(out)   :: pressure_in
 real*8,                  intent(out)   :: pressure_out
+real*8,                  intent(out)   :: heating_power
+real*8,                  intent(out)   :: particle_source
 
 ! --- Local variables
 type (type_element)      :: element
@@ -46,7 +48,7 @@ integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: xjac, BigR, wst, P_int, C_intern, ZJ_0, PS_0, Volume, Area
 real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
-real*8     :: particle_source, heat_source, heat_source_i, heat_source_e, heating_power
+real*8     :: particle_source_loc, heat_source, heat_source_i, heat_source_e
 
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
@@ -146,11 +148,11 @@ do ife =1, element_list%n_elements
         
 #if JOREK_MODEL == 400
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-          psi_limit, particle_source, heat_source_i, heat_source_e)
+          psi_limit, particle_source_loc, heat_source_i, heat_source_e)
           heat_source = heat_source_i + heat_source_e
 #else
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-          psi_limit, particle_source, heat_source)
+          psi_limit, particle_source_loc, heat_source)
 #endif
         
         ! --- 3D integrals
@@ -162,7 +164,8 @@ do ife =1, element_list%n_elements
         P_hel = P_hel + rho_00 * T_00 * xjac * wst
         C_hel = C_hel + ZJ_0 /BigR  * xjac * wst
         Volume = Volume + 2.d0 * PI * BigR * xjac * wst
-        heating_power = heating_power + 2.d0 * PI * BigR * xjac * wst * heat_source
+        heating_power   = heating_power   + 2.d0 * PI * BigR * xjac * wst * heat_source
+        particle_source = particle_source + 2.d0 * PI * BigR * xjac * wst * particle_source_loc
         Area   = Area   + xjac * wst
         
       else
@@ -191,14 +194,15 @@ beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
 beta_n  = 100.d0 * (4.*PI/10.) * beta_t / (MU_zero * abs(current) /  (aminor * Bgeo))
 
-write(*,'(A,f12.7)') ' psi_limit: ',psi_limit
-write(*,'(A,f12.7,A)') ' current  : ',current/1.e6,' MA'
-write(*,'(A,f12.7)') ' beta_p   : ',beta_p
-write(*,'(A,f12.7)') ' beta_t   : ',beta_t
-write(*,'(A,f12.7,A)') ' beta_n   : ',beta_n,' [%]'
-write(*,'(A,f12.7,A)') ' Area     : ',area,' m^2'
-write(*,'(A,f12.7,A)') ' Volume   : ',volume,' m^3'
-write(*,'(A,es18.7,A)') ' Heating power : ',heating_power,' / sqrt((mu_0)^3 rho_0) W'
+write(*,'(A,f12.7)')    ' psi_limit       : ',psi_limit
+write(*,'(A,f12.7,A)')  ' current         : ',current/1.e6,' MA'
+write(*,'(A,f12.7)')    ' beta_p          : ',beta_p
+write(*,'(A,f12.7)')    ' beta_t          : ',beta_t
+write(*,'(A,f12.7,A)')  ' beta_n          : ',beta_n,' [%]'
+write(*,'(A,f12.7,A)')  ' Area            : ',area,' m^2'
+write(*,'(A,f12.7,A)')  ' Volume          : ',volume,' m^3'
+write(*,'(A,es18.7,A)') ' Heating power   : ', heating_power,' / sqrt((mu_0)^3 rho_0) W'
+write(*,'(A,es18.7,A)') ' Particle source : ', particle_source
 
 write(*,'(A,5f10.5)') ' density  (total/in/out) : ',density,  density_in,  density_out 
 write(*,'(A,5f10.5)') ' pressure (total/in/out) : ',pressure, pressure_in, pressure_out 

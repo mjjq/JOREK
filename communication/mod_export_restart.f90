@@ -422,6 +422,21 @@ end if
      call HDF5_array3D_saving(file_id,t_energies, &
           n_tor,2,index_now,'energies'//char(0))
      !           n_tor,2,index_now,'energies'//char(0))
+
+     call HDF5_array1D_saving(file_id,R_axis_t(1:index_now),index_now,'R_axis_t'//char(0))
+     call HDF5_array1D_saving(file_id,Z_axis_t(1:index_now),index_now,'Z_axis_t'//char(0))
+     call HDF5_array1D_saving(file_id,psi_axis_t(1:index_now),index_now,'psi_axis_t'//char(0))
+     call HDF5_array1D_saving(file_id,current_t(1:index_now),index_now,'current_t'//char(0))
+     call HDF5_array1D_saving(file_id,beta_p_t(1:index_now),index_now,'beta_p_t'//char(0))
+     call HDF5_array1D_saving(file_id,beta_t_t(1:index_now),index_now,'beta_t_t'//char(0))
+     call HDF5_array1D_saving(file_id,beta_n_t(1:index_now),index_now,'beta_n_t'//char(0))
+     call HDF5_array1D_saving(file_id,density_in_t(1:index_now),index_now,'density_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,density_out_t(1:index_now),index_now,'density_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,pressure_in_t(1:index_now),index_now,'pressure_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,pressure_out_t(1:index_now),index_now,'pressure_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,heating_power_t(1:index_now),index_now,'heating_power_t'//char(0))
+     call HDF5_array1D_saving(file_id,particle_source_t(1:index_now),index_now,'particle_source_t'//char(0))
+
 #ifdef JECCD                   
      call HDF5_array3D_saving(file_id,t_energies2, &
           n_tor,2,index_now,'energies2'//char(0))

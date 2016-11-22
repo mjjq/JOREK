@@ -1054,7 +1054,7 @@ module exec_commands
     
     call integrals(node_list, element_list, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint,        &
       eq%Z_xpoint, eq%psi_xpoint, eq%psi_lim, aminor, Bgeo, current, beta_p, beta_t, beta_n,       &
-      density, density_in, density_out, pressure, pressure_in, pressure_out)
+      density, density_in, density_out, pressure, pressure_in, pressure_out, heating_power, particle_source)
     
     write(i_file,'(33es20.13)') time_now, pressure/fact_mu_zero, pressure_in/fact_mu_zero,         &
       pressure_out/fact_mu_zero, density*fact_ne, density_in*fact_ne, density_out*fact_ne, beta_n, &

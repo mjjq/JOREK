@@ -146,7 +146,7 @@ program JOREK2
   real*8                   :: zTe, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz
   real*8                   :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
   real*8                   :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, psi
-  real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out
+  real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
   logical                  :: is_local, file_exists
@@ -1081,6 +1081,14 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
+       call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
+         psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
+         beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
+         density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
+         pressure_out_t(index_now), heating_power_t(index_now), particle_source_t(index_now))
+       R_axis_t(index_now)   = R_axis
+       Z_axis_t(index_now)   = Z_axis
+       psi_axis_t(index_now) = psi_axis
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)

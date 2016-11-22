@@ -404,7 +404,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use hdf5
   use HDF5_io_module
   !use tr_module
-  use mod_parameters, ONLY : n_tor, n_var, n_order
+  use mod_parameters !, ONLY : n_tor, n_var, n_order
 #endif
   
   implicit none
@@ -425,7 +425,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   logical, parameter   			:: import_perturbation = .false.
 
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp
+  integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp
+  integer              :: n_plane_tmp, n_vertex_max_tmp, n_nodes_max_tmp, n_elements_max_tmp,n_boundary_max_tmp
+  integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
@@ -474,7 +476,25 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     return
   end if
 
-  call HDF5_integer_reading(file_id,n_tor_tmp,'n_tor')
+  call HDF5_integer_reading(file_id,version_control_tmp, "version_control")
+  if (version_control_tmp .ne. version_control) then
+      write(*,*) 'WARNING: Current version control', version_control, 'differs from previous version', version_control_tmp
+! Should we add warnings or info for all important variables?
+  call HDF5_integer_reading(file_id,jorek_model_tmp,"jorek_model")
+  call HDF5_integer_reading(file_id,n_var_tmp,"n_var")
+  call HDF5_integer_reading(file_id,n_order_tmp,"n_order")
+  call HDF5_integer_reading(file_id,n_tor_tmp, "n_tor")
+  call HDF5_integer_reading(file_id,n_period_tmp, "n_period")
+  call HDF5_integer_reading(file_id,n_plane_tmp, "n_plane")
+  call HDF5_integer_reading(file_id,n_vertex_max_tmp, "n_vertex_max")
+  call HDF5_integer_reading(file_id,n_nodes_max_tmp, "n_nodes_max")
+  call HDF5_integer_reading(file_id,n_elements_max_tmp, "n_elements_max")
+  call HDF5_integer_reading(file_id,n_boundary_max_tmp, "n_boundary_max")
+  call HDF5_integer_reading(file_id,n_pieces_max_tmp, "n_pieces_max")
+  call HDF5_integer_reading(file_id,n_degrees_tmp, "n_degrees")
+  call HDF5_integer_reading(file_id,nref_max_tmp, "nref_max")
+  call HDF5_integer_reading(file_id,n_ref_list_tmp, "n_ref_list")
+
 
   if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
   allocate(mode_tmp(n_tor_tmp))
@@ -484,12 +504,18 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     write(*,*) " import_restart, HDF5 file : n_var     = ",mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
-    write(*,*) ' mode : ',mode
-    if (n_tor .eq. n_tor_tmp) then 
-       mode_tmp = mode
-    else
-       mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
-    endif
+    !write(*,*) ' mode : ',mode
+    !if ( (n_tor .eq. n_tor_tmp) .and. (n_period .eq. n_period_tmp) ) then 
+    !   mode_tmp = mode
+    !elseif (n_period .eq. n_period_tmp) then
+    !   mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
+    !else
+       
+    !endif
+    do i=1, n_tor_tmp
+       mode_tmp(i) = int(i / 2) * n_period_tmp
+    enddo
+    
     write(*,*) ' OLD format (0) : '
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
     write(*,'(A,999i4)') ' new mode numbers	: ',mode
@@ -502,7 +528,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
        ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
 
-  write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
+  write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics', 'with n_period=', n_period_tmp 
 
   call HDF5_integer_reading(file_id,node_list%n_nodes,"n_nodes")
   call HDF5_integer_reading(file_id,element_list%n_elements,"n_elements")

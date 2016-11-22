@@ -431,6 +431,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+  character*50         :: version_control, version_control_tmp
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -476,9 +477,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     return
   end if
 
-  call HDF5_integer_reading(file_id,version_control_tmp, "version_control")
+  call HDF5_integer_reading(file_id,version_control_tmp, "RCS_version")
+version_control = trim(adjustl(RCS_VERSION))
   if (version_control_tmp .ne. version_control) then
-      write(*,*) 'WARNING: Current version control', version_control, 'differs from previous version', version_control_tmp
+    write(*,*) 'WARNING: Current version control', version_control, 'differs from previous version', version_control_tmp
+  endif
 ! Should we add warnings or info for all important variables?
   call HDF5_integer_reading(file_id,jorek_model_tmp,"jorek_model")
   call HDF5_integer_reading(file_id,n_var_tmp,"n_var")

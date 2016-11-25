@@ -17,7 +17,7 @@ use nodes_elements
 use mod_particles
 use clock_module
 use mod_coordinate_transforms ! For solution of penning trap trajectory
-use parameters
+use mod_parameters
 use constants
 
 implicit none

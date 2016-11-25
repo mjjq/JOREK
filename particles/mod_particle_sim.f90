@@ -28,7 +28,7 @@ contains
 !> Actions to perform when setting up a simulation
 subroutine initialize(sim, num_groups)
   use mpi
-  use parameters, only: n_tor, n_period
+  use mod_parameters, only: n_tor, n_period
   use phys_module, only: mode
   class(particle_sim), intent(inout) :: sim !< why is this class() and not type()?
   integer, intent(in) :: num_groups

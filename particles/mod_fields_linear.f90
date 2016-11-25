@@ -104,7 +104,7 @@ end subroutine do_read
 !> If it is 1 we get the fields of the previous timesteps.
 pure subroutine EM_fields_interp_linear(fields, i_elm, st, phi, E, B, psi, U, delta_fraction)
 use data_structure
-use parameters
+use mod_parameters
 use constants
 use phys_module, only : F0, tstep
 

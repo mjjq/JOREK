@@ -5,7 +5,7 @@
 !>   - velocity (vector at t-dt/2 NB!)
 !>   - lost (scalar 0 or 1)
 subroutine particles_vtk(particle_list,particle_file)
-use parameters
+use mod_parameters
 use data_structure
 use mod_particles
 use mpi

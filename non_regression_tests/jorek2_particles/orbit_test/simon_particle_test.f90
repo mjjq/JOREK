@@ -12,7 +12,7 @@ use basis_at_gaussian
 use nodes_elements
 use mod_particles
 use clock_module
-use parameters
+use mod_parameters
 use constants
 use tr_module
 use mumps_module

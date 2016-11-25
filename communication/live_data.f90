@@ -67,29 +67,29 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
     
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*(n_tor+1)/2
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', n_period * (n_tor -1) +2
     write(LIVE_DATA_HANDLE,'(A)') '@energies_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel: normalized energy'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: %"time"           '
-    do n = 1, n_tor, 2
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{mag', mode(n), '}"'
+    do n = 0, n_period * (n_tor -1) /2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{mag', n, '}"'
     end do
-    do n = 1, n_tor, 2
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{kin', mode(n), '}"'
+    do n = 0, n_period * (n_tor -1) /2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{kin', n, '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*(n_tor+1)/2
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', n_period * (n_tor -1) +2
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel: normalized growth rate'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: %"time"           '
-    do n = 1, n_tor, 2
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{mag', mode(n), '}"'
+    do n = 0,  n_period * (n_tor -1) / 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{mag', n, '}"'
     end do
-    do n = 1, n_tor, 2
-      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{kin', mode(n), '}"'
+    do n = 0,  n_period * (n_tor -1) / 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{kin', n, '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
     
@@ -105,14 +105,14 @@ module live_data
   !> Write out data to text files during the code run.
   subroutine write_live_data(index)
     
-    use mod_parameters,  only: n_tor
+    use mod_parameters,  only: n_tor, n_period
     use phys_module, only: xtime, energies, produce_live_data
     
     implicit none
     
     integer, intent(in) :: index !< Timestep index to write data for
     
-    integer :: i, j
+    integer :: i, j, m, index_max
     real*8  :: e1, e2, growth_rate
     
     if ( .not. produce_live_data ) return
@@ -122,9 +122,34 @@ module live_data
     ! --- Write data to the files.
     write(LIVE_DATA_HANDLE,'(A,I6,1X,ES17.9)') '@times:', index, xtime(index)
     write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@energies:', xtime(index)
+      print*, 'index=', index
+      print*, 'n_tor=', n_tor, 'n_period=', n_period
+      print*, 'Magnetic energies=', energies(:,1, index)
+      print*, 'Kinetic energies=', energies(:,2, index)
+
+      index_max= size(energies(:,1, index)) 
+      print*, 'index_max=', index_max
+
     do j = 1, 2
-      do i = 1, n_tor, 2
-        write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') sum(energies(max(i-1,1):i,j,index))
+       print*, 'j (1=mag, 2=kin) =', j
+      write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') energies(1,j,index)
+      print*, 'm=0'
+      print*, 'energy written=', energies(1,j,index)
+    !  do i = 1, n_tor, 2
+      do m = 1, n_period * (n_tor -1) /2
+         print*, 'm=', m
+        if ( mod(m,n_period) .eq. 0 ) then
+!          if (m .le. index_max) then
+            write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') sum(energies(int(2*m/n_period):int(2*m/n_period)+1,j,index))
+            print*, 'indexes read=', int(2*m/n_period), 'and', int(2*m/n_period)+1 
+            print*, 'energy written=', sum(energies(int(2*m/n_period):int(2*m/n_period)+1,j,index))
+!          else
+!            write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') 0.d0
+!          endif
+        else
+          write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') 0.d0
+          print*, 'energy written=', 0.d0
+        endif
       end do
     end do
     write(LIVE_DATA_HANDLE,*)
@@ -132,13 +157,18 @@ module live_data
       write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@growth_rates:', &
         (xtime(index)+xtime(index-1))/2.d0
       do j = 1, 2
-        do i = 1, n_tor, 2
-          e1 = sum(energies(max(i-1,1):i,j,index))
-          e2 = sum(energies(max(i-1,1):i,j,index-1))
-          if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
-             growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
+!        do i = 1, n_tor, 2
+        do m = 0, n_period * (n_tor -1) /2
+          if ( mod(m,n_period) .eq. 0 ) then
+            e1 = sum(energies(max(2*m/n_period,1):2*m/n_period+1,j,index))
+            e2 = sum(energies(max(2*m/n_period,1):2*m/n_period+1,j,index-1))
+            if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
+               growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
+            else
+               growth_rate = 0.d0
+            endif
           else
-             growth_rate = 0.d0
+            growth_rate = 0.d0
           endif
           write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') growth_rate
         end do

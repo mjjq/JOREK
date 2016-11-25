@@ -462,6 +462,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_contain_node(:,:)
   integer,     allocatable :: t_nref(:)
 
+  real*8, allocatable :: t_energies(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
   !
 #endif
   error = 0
@@ -665,11 +666,45 @@ version_control = trim(adjustl(RCS_VERSION))
     call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
     call HDF5_array1D_reading(file_id,xtime,'xtime')
 
+    if (allocated(t_energies))   call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
+    call tr_allocate(t_energies,1,n_tor_tmp,1,2,1,index_start+nstep, &
+         "t_energies",CAT_UNKNOWN)
+    t_energies = 0.d0
+    call HDF5_array3D_reading(file_id,t_energies,'energies')
+    print*, 'ENERGIES TEMPORARILY IMPORTED'
+    print*, t_energies
+
     if (allocated(energies))   call tr_deallocate(energies,"energies",CAT_UNKNOWN)
-    call tr_allocate(energies,1,n_tor_tmp,1,2,1,index_start+nstep, &
+    call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep, &
          "energies",CAT_UNKNOWN)
     energies = 0.d0
-    call HDF5_array3D_reading(file_id,energies,'energies')
+!    if ( (n_tor .ge. n_tor_tmp) and (n_period_tmp .eq. n_period)) then
+!      energies(1:n_tor_tmp,:,:) = t_energies(:,:,:)
+!    elseif (n_tor .lt. n_tor_tmp) and (n_period_tmp .eq. n_period)) then
+!      energies(:,:,:) = t_energies(1:n_tor_tmp,:,:)
+!    else
+      do m=1,n_tor_tmp,2
+        do k=1, n_tor,2 
+           print*, 'mtor_tmp=', m, 'ktor_new=', k 
+          if (mode_tmp(m) .eq. mode(k)) then
+             print*, 'modes old and new=', mode_tmp(m), mode(k)
+            if ((m .eq. 1) .and. (k.eq.1)) then
+              energies(k,:,:) = t_energies(m,:,:)
+              print*, 'mtor=1, NRJcas1=', energies(k,:,:)
+            else
+            energies(k-1,:,:) = t_energies(m-1,:,:)
+            energies(k,:,:)   = t_energies(m,:,:) 
+           print*, 'mtor_tmp=', m, 'ktor_new=', k 
+              print*, 'NRJother=', energies(k-1,:,:), energies(k,:,:)
+            endif
+          endif
+        enddo
+      enddo
+
+!    endif
+    print*, 'ENERGIES IMPORTED (SELECTED)'
+    print*, energies
+
 
 #ifdef JECCD                   
     if (allocated(energies2))	call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)	  

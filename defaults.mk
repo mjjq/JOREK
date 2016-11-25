@@ -9,6 +9,7 @@ MODDIR := .mod
 OBJDIR := .obj
 DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
+INCLUDES+=-I$(MODDIR)
 
 # Do some guessing to get the compiler family if it is unset
 ifeq ($(COMPILER_FAMILY),)

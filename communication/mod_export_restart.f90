@@ -35,7 +35,7 @@ end subroutine export_restart
 
 !
 ! Export in a binary restart file
-subroutine export_binary_restart(node_list,element_list,filename,format_rst)
+subroutine export_binary_restart(node_list,element_list,filename)
 
   use mod_parameters
   use data_structure
@@ -51,7 +51,6 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
   character(len=*),        intent(in) :: filename
-  integer,                 intent(in) :: format_rst
 
   ! --- Local variables
   integer :: i
@@ -79,15 +78,7 @@ subroutine export_binary_restart(node_list,element_list,filename,format_rst)
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
 
-  if (format_rst .gt.0) then
-    write(21) format_rst
-  endif
-
   write(21) n_tor
-
-  if (format_rst .gt.0) then
-     write(21) mode(1:n_tor)
-  endif
 
   write(21) node_list%n_nodes,element_list%n_elements
   write(21) node_list%n_dof

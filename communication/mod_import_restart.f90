@@ -97,14 +97,6 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     return
   end if
 
-if (format_rst .gt. 0) then
-  read(21) format_rst_file
-  if (format_rst .ne. format_rst_file) write(*,*) ' IMPORT WARNING : format_rst != format_rst_file :', format_rst, format_rst_file
-else
-  format_rst_file = 0
-endif
-write(*,*) '  Using format : ',format_rst_file
-
   read(21) n_tor_tmp
 
   allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))

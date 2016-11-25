@@ -2,7 +2,7 @@ subroutine Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)
 
 
 
- use parameters
+ use mod_parameters
  use data_structure
 
 implicit none
@@ -57,7 +57,7 @@ integer                               :: i,j,k,l,p,iv,ielm,inode,ov
    
        ap(iv)=element_list%element(ielm)%contain_node(iv)
     if (ap(iv).ne.0) then
-     if ((node_list%node(ap(iv))%constrained .eqv. .false.) ) then
+     if (.not. node_list%node(ap(iv))%constrained) then
      n_active_nodes = n_active_nodes + 1
      active_node(n_active_nodes) = ap(iv)
      else

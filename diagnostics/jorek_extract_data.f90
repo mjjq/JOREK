@@ -11,13 +11,13 @@
 !! * nodes            -- Geometry information from the node_list: node(i)%x(:,:)
 program JOREK_EXTRACT_DATA
   
-  use parameters
+  use mod_parameters
   use nodes_elements
   use phys_module
   use equil_info
   use mod_boundary
   use mod_log_params
-  use import_restart
+  use mod_import_restart
   
   implicit none
   
@@ -33,7 +33,7 @@ program JOREK_EXTRACT_DATA
   call initialise_parameters(0, "__NO_FILENAME__")
   call log_parameters(0)
   call initialise_basis
-  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
   
   ! --- If extract_data.nml file exists, read it.

@@ -11,7 +11,7 @@ contains
        &                             n_local_elms, node_list)
 
     ! --- Modules
-    use parameters,               only : n_tor, jorek_model, n_vertex_max
+    use mod_parameters,               only : n_tor, jorek_model, n_vertex_max
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
     USE data_structure,           only : type_element, type_node, type_node_list
     use mod_boundary_matrix_open, only : boundary_matrix_open
@@ -169,7 +169,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                             minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
   
   use tr_module 
-  use parameters
+  use mod_parameters
   use data_structure
   use global_distributed_matrix
   use phys_module

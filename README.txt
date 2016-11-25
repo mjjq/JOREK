@@ -12,7 +12,7 @@ to build jorek2:
   choose a model : model199 (reduced MHD, no v_parallel)
                    model300 (reduced MHD, with V_parallel)
 
-- edit the model dependent parameters.f90 file to define
+- edit the model dependent mod_parameters.f90 file to define
   n_tor    : the number of toroidal harmnonics (sin+cos) 
   n_plane  : the number of toroidal planes (for FFT)
   n_period : the periodicity of the torus

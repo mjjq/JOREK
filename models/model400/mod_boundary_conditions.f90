@@ -502,7 +502,7 @@ contains
 		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                            index_min,index_max)
   
-    use parameters
+    use mod_parameters
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
@@ -586,7 +586,7 @@ contains
   !******************************************************************************
   subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
   
-    use parameters
+    use mod_parameters
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
@@ -657,7 +657,7 @@ contains
   !******************************************************************************
   subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
   
-    use parameters
+    use mod_parameters
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA

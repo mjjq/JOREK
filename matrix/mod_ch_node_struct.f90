@@ -2,7 +2,7 @@ module mod_ch_node_struct
 implicit none
 contains
 subroutine Ch_node_struct(i_element, element,nodes,node_out)
- use parameters
+ use mod_parameters
  use data_structure
 
  type (type_element)   :: element

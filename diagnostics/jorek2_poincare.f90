@@ -1,16 +1,3 @@
-module elements_nodes_neighbours
-  
-  use data_structure
-  use mod_log_params
-  
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-  
-end module elements_nodes_neighbours
-
-
-
 !> Create a Poincare plot for a JOREK restart file
 program jorek2_poincare
 
@@ -19,7 +6,8 @@ use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
 use mod_neighbours
-use import_restart
+use mod_import_restart
+use mod_log_params
 
 implicit none
 
@@ -54,7 +42,7 @@ call log_parameters(my_id)
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis
 
@@ -66,7 +54,7 @@ do i=1,element_list%n_elements
   
   do j=i+1,element_list%n_elements
     
-    if (neighbours(element_list%element(i),element_list%element(j),iside_i,iside_j)) then
+    if (neighbours(node_list,element_list%element(i),element_list%element(j),iside_i,iside_j)) then
       element_neighbours(iside_i,i) = j
       element_neighbours(iside_j,j) = i
     endif
@@ -462,7 +450,7 @@ end program jorek2_poincare
 
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 
@@ -565,7 +553,7 @@ end subroutine step
 
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 

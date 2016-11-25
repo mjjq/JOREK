@@ -31,7 +31,7 @@ program JOREK2
   use wsmp_module
   use data_structure
   use phys_module
-  use parameters
+  use mod_parameters
   use mod_log_params
   use global_distributed_matrix
   use nodes_elements
@@ -46,8 +46,8 @@ program JOREK2
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
   use mod_global_matrix_structure
-  use import_restart
-  use export_restart
+  use mod_import_restart
+  use mod_export_restart
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -84,7 +84,6 @@ program JOREK2
 #endif
   
 #include "r3_info.h"
-#include "version.h"
   
   interface
 
@@ -134,9 +133,7 @@ program JOREK2
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
   character*8              :: label, itlabel
-  character*14             :: fileout_bin
-  character*13             :: fileout_h5
-  character*50             :: version_control
+  character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
@@ -173,6 +170,7 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
+  
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
@@ -204,7 +202,7 @@ required = 0
   if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)  
   
   CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
-  write(*,'(A,I4,A)') "#MPI id, ProcessorName ", rank, name
+  write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', rank, ': ', name
     
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
@@ -336,15 +334,7 @@ required = 0
   
   if ( restart .and. (my_id == 0) ) then
     
-    if ( rst_hdf5 == 0 ) then
-       ! --- Read the restart binary file (jorek_restart.rst)
-       write(*,*) " Restart from BINARY files jorek_restart.rst "
-       call import_binary_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
-    elseif ( rst_hdf5 == 1 ) then
-       ! --- Read the restart HDF5 file (jorek_restart.h5)
-       write(*,*) " Restart from HDF5 files jorek_restart.h5 "
-       call import_hdf5_restart(node_list, element_list, 'jorek_restart.h5', rst_format, ierr)
-    end if
+    call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
 #ifdef USE_HDF5
@@ -804,23 +794,14 @@ required = 0
        endif
     endif
 
- endif ! (nstep >0)
+  endif ! (nstep >0)
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-     if ( rst_hdf5 == 0 ) then
-        ! --- Write restart binary file
-        fileout_bin = "jorek00000.rst"
-        write (6,*) " =============>, jorek2, filename = ", fileout_bin
-        call export_binary_restart(node_list, element_list, fileout_bin,rst_format)
-     elseif ( rst_hdf5 == 1 ) then
-        ! --- Write restart HDF5 file
-        fileout_h5 = "jorek00000.h5"
-        write (6,*) " =============>, jorek2, filename = ", fileout_h5
-        call export_hdf5_restart(node_list, element_list, fileout_h5)
-     end if
+    fileout = 'jorek00000'
+    call export_restart(node_list, element_list, fileout)
   end if
-
+  
   !***********************************************************************
   !***********************************************************************
   !*                          time stepping                              *
@@ -1175,17 +1156,8 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-     if ( rst_hdf5 == 0 ) then
-        ! --- Write restart binary file
-        write(fileout_bin,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
-        write (6,*) " =============>, jorek2, BIN filename = ",fileout_bin
-        call export_binary_restart(node_list,element_list,fileout_bin,rst_format)
-     elseif ( rst_hdf5 == 1 ) then
-        ! --- Write restart HDF5 file
-        write(fileout_h5,'(A5,i5.5,A3)') 'jorek',index_now,'.h5'
-        write (6,*) " =============>, jorek2, HDF5 filename = ",fileout_h5
-        call export_hdf5_restart(node_list,element_list,fileout_h5)
-     end if
+      write(fileout,'(A5,i5.5)') 'jorek',index_now
+      call export_restart(node_list, element_list, fileout)
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
@@ -1275,17 +1247,8 @@ required = 0
   !***********************************************************************
 
   if (my_id .eq. 0)  then
-     write (6,*) " =============>, jorek2, filename = jorek_restart"
-
-     if ( rst_hdf5 == 0 ) then
-        ! --- Write restart binary file
-        write (6,*) " =============>, jorek2, filename = jorek_restart.rst "
-        call export_binary_restart(node_list,element_list, 'jorek_restart.rst',rst_format)
-     elseif ( rst_hdf5 == 1 ) then
-        ! --- Write restart HDF5 file
-        write (6,*) " =============>, jorek2, filename = jorek_restart.h5 "
-        call export_hdf5_restart(node_list,element_list, 'jorek_restart.h5')
-     end if
+    fileout = 'jorek_restart'
+    call export_restart(node_list, element_list, fileout)
 
     if (.not. bench_without_plot) then
        

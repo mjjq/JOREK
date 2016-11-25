@@ -10,7 +10,7 @@ $filename =~ /([^\/]*)[.]f90/;
 my $basename = $1;
 $filename =~ /(.*)\/[^\/]*[.]f90/;
 my $dirname = $1;
-my $skip_modules = "hdf5 mpi omp_lib iso_c_binding iso_fortran_env fruit h5lt mgi_module";
+my $skip_modules = "hdf5 mpi omp_lib iso_c_binding iso_fortran_env fruit h5lt";
 my $include_headers = "version.h"; # only include this header file if found
 
 sub uniq {
@@ -80,6 +80,7 @@ sub print_dependencies {
     # Perform some known translations
     $to_check =~ s/\blplot6\b/ppplib/gi;
     $to_check =~ s/\blplot\b/ppplib/gi;
+    $to_check =~ s/\bpplot\b/ppplib/gi;
     $to_check =~ s/\bdrive_dgmres\b/dPackgmres/gi;
     $to_check =~ s/\bdgmres\b/dPackgmres/gi;
     $to_check =~ s/\binit_dgmres\b/dPackgmres/gi;
@@ -111,4 +112,10 @@ sub print_dependencies {
     }
 }
 
-print_dependencies($filename);
+# Read from filename, or stdin if - is the second argument
+if ($ARGV[0] eq "-") {
+    shift(@ARGV);
+    print_dependencies("/dev/stdin");
+} else {
+    print_dependencies($filename);
+}

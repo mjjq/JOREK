@@ -30,7 +30,7 @@ module live_data3
   !> Open file, write out headers and some parameters.
   subroutine init_live_data3()
     
-    use parameters,    only: n_tor, n_plane, n_period, jorek_model, variable_names
+    use mod_parameters,    only: n_tor, n_plane, n_period, jorek_model, variable_names
     use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase
     
     implicit none
@@ -105,7 +105,7 @@ module live_data3
   !> Write out data to text files during the code run.
   subroutine write_live_data3(index)
     
-    use parameters,  only: n_tor
+    use mod_parameters,  only: n_tor
     use phys_module, only: xtime, energies3, produce_live_data
     
     implicit none

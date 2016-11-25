@@ -8,7 +8,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use parameters
+use mod_parameters
 
 implicit none
 

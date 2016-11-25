@@ -1,11 +1,42 @@
 !> Routines to import a restart file written out by a routine in [[export_restart]].
-module import_restart
+module mod_import_restart
 implicit none
 contains
+!> Imports a restart file written out by the routine export_restart.
 
-!> Import a binary restart file.
-!> Does not read element%transform! Remember to call update_neighbours manually if you need it
+subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
+
+  use tr_module
+  use data_structure
+  use phys_module
+  use pellet_module
+
+  implicit none
+  
+  ! --- Routine parameters
+  type(type_node_list),    intent(inout) :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  character*(*)          , intent(in)    :: filename
+  integer,                 intent(out)   :: ierr
+  integer,                 intent(in)    :: format_rst  ! format of restart file 
+
+  if ( rst_hdf5 == 0 ) then
+    write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
+    call import_binary_restart(node_list, element_list, trim(filename)//'.rst', &
+            format_rst, ierr)
+  else if ( rst_hdf5 == 1 ) then
+    write(*,*) " Restart from HDF5 file " // trim(filename) // '.h5'
+    call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
+            format_rst,ierr)
+  end if
+
+end subroutine import_restart
+
+
+!
+! Import a binary restart file
 subroutine import_binary_restart(node_list, element_list, filename, format_rst, error)
+
   use tr_module 
   use data_structure
   use phys_module
@@ -22,7 +53,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   integer,                 intent(in)    :: format_rst  ! format of restart file
   
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp, format_rst_file, ierr
+  integer              :: i, j, m, k, n_tor_tmp
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
@@ -78,7 +109,7 @@ write(*,*) '  Using format : ',format_rst_file
 
   allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))
 
-if (format_rst .gt. 0) then
+  if (format_rst == 1) then
     read(21) mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
@@ -164,7 +195,7 @@ if (format_rst .gt. 0) then
   read(21) tstep,eta_rst,visco_rst,visco_par_rst
   read(21) index_start
   read(21) t_start
- 
+  
 #ifdef USE_HDF5
   read(21) h5_nbsave_all
 #endif
@@ -210,40 +241,40 @@ if (format_rst .gt. 0) then
 #endif
 endif
 
+  call import_restart_vacuum(21, freeboundary, resistive_wall)
 
-if (format_rst_file .gt. 1) then
+  if (use_pellet) then
+    if (index_start .ge. 1) then
+      if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_UNKNOWN)
+      call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R",CAT_UNKNOWN)
+      if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_UNKNOWN)
+      call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z",CAT_UNKNOWN)
+      if (allocated(xtime_pellet_psi)) call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_UNKNOWN)
+      call tr_allocate(xtime_pellet_psi,1,index_start+nstep,"xtime_pellet_psi",CAT_UNKNOWN)
+      if (allocated(xtime_pellet_particles)) &
+           call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_UNKNOWN)
+      call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles",CAT_UNKNOWN)
+      if (allocated(xtime_phys_ablation)) &
+           call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_UNKNOWN)
+      call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation",CAT_UNKNOWN)
 
-  if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R")
-  call tr_allocate(xtime_pellet_R,1,index_start+nstep,"xtime_pellet_R")
-  if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z")
-  call tr_allocate(xtime_pellet_Z,1,index_start+nstep,"xtime_pellet_Z")
-  if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles")
-  call tr_allocate(xtime_pellet_particles,1,index_start+nstep,"xtime_pellet_particles")
-  if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation")
-  call tr_allocate(xtime_phys_ablation,1,index_start+nstep,"xtime_phys_ablation")
-
-  read(21)  xtime_pellet_R(1:index_start)
-  read(21)  xtime_pellet_Z(1:index_start)
+      read(21,err=999, end=999)  xtime_pellet_R(1:index_start)
+      read(21)  xtime_pellet_Z(1:index_start)
       read(21)  xtime_pellet_psi(1:index_start)
-  read(21)  xtime_pellet_particles(1:index_start)
-  read(21)  xtime_phys_ablation(1:index_start)
-
-endif
-
-if (use_pellet) then
+      read(21)  xtime_pellet_particles(1:index_start)
+      read(21)  xtime_phys_ablation(1:index_start)
+    endif
     read(21,err=999, end=999)  pellet_particles, pellet_R, pellet_Z
     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
   endif
 999 continue
-
-call import_restart_vacuum(21, freeboundary, resistive_wall)
   
   close(21)
   
   write(*,*) '************* restart ******************'
   write(*,'(A,I6,F14.6,A)') ' *  restart time       : ',index_start,t_start,' *'
 #ifdef USE_HDF5
-  !write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
+  write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
 #endif
   write(*,*) '****************************************'
 
@@ -402,8 +433,8 @@ call import_restart_vacuum(21, freeboundary, resistive_wall)
 end subroutine import_binary_restart
 
 
-!> Import an HDF5 restart file
-!> Does not read element%transform! Remember to call update_neighbours manually if you need it
+!
+! Import an HDF5 restart file
 subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)
 
   use tr_module 
@@ -415,7 +446,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use hdf5
   use hdf5_io_module
   !use tr_module
-  use parameters, ONLY : n_tor, n_var, n_order
+  use mod_parameters, ONLY : n_tor, n_var, n_order
 #endif
   
   implicit none
@@ -783,8 +814,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_deallocate(t_contain_node,"t_contain_node",CAT_UNKNOWN)
   call tr_deallocate(t_nref,"t_nref",CAT_UNKNOWN)
 
+#else
+  write (6,*) " ERROR: trying to import with hdf5 but USE_HDF5 was not set at compile-time"
 #endif
 
   return
 end subroutine import_hdf5_restart
-end module import_restart
+end module mod_import_restart

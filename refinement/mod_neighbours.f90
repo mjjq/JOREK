@@ -1,14 +1,15 @@
 module mod_neighbours
 contains
 logical function neighbours(node_list,elm1,elm2,inb1,inb2)
-use data_structure
 !-------------------------------------------------------
 ! function to check if the two elements elm1 and elm2
 ! are neighbours. Two elements are neighbours if they
 ! share a side, i.e. if two nodes are the same.
 ! inb1 -> the index of the shared neighbour of elm1
 ! inb2 -> the index of the shared neighbour of elm2
+!   note : does not work for unequal sized neighbours
 !-------------------------------------------------------
+use data_structure
 implicit none
 
 type (type_node_list), intent(in) :: node_list
@@ -19,7 +20,6 @@ real*8, parameter :: tol=1.d-8
 integer :: n1(2), n2(2) ! nodes of side i of elm1 or of side j of elm2
 integer :: i, j
 neighbours = .false.
-
 
 ! First test by node number
 do i=1,4 ! Loop over sides of element 1

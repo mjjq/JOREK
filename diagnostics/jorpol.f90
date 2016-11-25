@@ -8,11 +8,11 @@ program jorpol
 !> The width and placement can be manipulated by defining zbot and ztop,
 !> the minimum and maximum values of the minor radius.
 
-use parameters, only: n_var, variable_names
+use mod_parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian
-use import_restart
+use mod_import_restart
 
 implicit none
 
@@ -72,9 +72,9 @@ i_plane   = 1             ! ... otherwise, all modes will be summed up at the to
 
 ! do-loop for multiple restart files
 do ii=snum,fct
-Write(fname,"('jorek',i5.5,'.rst')") ii
+Write(fname,"('jorek',i5.5)") ii
 if(ii.eq.fct) Write(fname,"('jorek_restart.rst')")
-call import_binary_restart(node_list,element_list, fname, rst_format, ierr)
+call import_restart(node_list,element_list, fname, rst_format, ierr)
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period

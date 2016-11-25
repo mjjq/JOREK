@@ -5,7 +5,7 @@ module fourier
   
   use constants
   use tr_module 
-  use parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
+  use mod_parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
   use nodes_elements,  only: node_list, element_list
   use phys_module,     only: F0, xpoint, xcase
   use mod_straight_field_line
@@ -38,7 +38,7 @@ module fourier
     integer :: i_elm_out, ifail
     real*8  :: v, basis_function
     integer*8 :: fftw_plan
-    integer :: nequidist_tor
+    integer :: nequidist_tor, nequidist_pts
     
     nequidist_tor = n_plane-1
     nequidist_pts = 2*(maxval(m_pol_range))
@@ -58,8 +58,9 @@ module fourier
         
         !$omp parallel do                                                                          &
 	!$omp   default(shared)                                                                    &
-	!$omp   firstprivate(i,iharm,R_out,Z_out,i_elm_out,s_out,t_out,ifail,v,l,nn,kv,iv,kf,      &
-	!$omp     basis_function,G,G_s,G_t,G_st,G_ss,G_tt)
+	!$omp   firstprivate(iharm,R_out,Z_out,i_elm_out,s_out,t_out,ifail,v,l,nn,kv,iv,kf,      &
+	!$omp     basis_function,G,G_s,G_t,G_st,G_ss,G_tt) &
+        !$omp   private(i)
         do i = 1, nequidist_pts  ! poloidal positions
           
           call find_RZ(node_list,element_list,mapping%rre(k,i-1),mapping%zze(k,i-1),R_out,Z_out,   &

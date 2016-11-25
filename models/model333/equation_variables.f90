@@ -1,7 +1,7 @@
 ! Contains all the variables for the equations, to share with each equation routine
 module equation_variables
 
-  use parameters
+  use mod_parameters
   
   implicit none
 
@@ -14,9 +14,10 @@ module equation_variables
   real*8 	:: Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source
   
   ! --- Diffusivities
-  real*8 	:: r0_corr, T0_corr
+  real*8 	:: r0_corr, r0_corr2, T0_corr
   real*8 	:: eta_T,    deta_dT, d2eta_d2T
   real*8 	:: visco_T,  dvisco_dT
+  real*8 	:: visco_parr
   real*8 	:: D_prof
   real*8 	:: K_prof, K_par, dK_par
   
@@ -87,6 +88,10 @@ module equation_variables
   real*8 	:: Bgrad_rho, Bgrad_rho_star, Bgrad_rho_k_star
   real*8 	:: Bgrad_T,   Bgrad_T_star,   Bgrad_T_k_star
   
+  ! --- Equilibrium (n=0 or n_tor=1) variables
+  real*8        :: r00
+  real*8        :: T00
+  
   ! --- Linearized equation terms
   real*8 	:: rhs_tmp(n_var),        rhs_k_tmp(n_var)
   real*8 	:: amat_tmp(n_var,n_var), amat_k_tmp(n_var,n_var), amat_n_tmp(n_var,n_var), amat_kn_tmp(n_var,n_var)
@@ -100,9 +105,10 @@ module equation_variables
   !$omp 	current_source, particle_source, heat_source, total_rho_source,									&
   !$omp 	source_mgi, source_pellet, source_volume,											&
   !$omp 	Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source,				                                &
-  !$omp 	r0_corr, T0_corr,														&
+  !$omp 	r0_corr, r0_corr2, T0_corr,													&
   !$omp 	eta_T,    deta_dT, d2eta_d2T,													&
   !$omp 	visco_T,  dvisco_dT,														&
+  !$omp 	visco_parr,															&
   !$omp 	D_prof,																&
   !$omp 	K_prof, K_par, dK_par,														&
   !$omp 	Dn0x, Dn0y, Dn0p, S_ion, S_ion_T, phi, ksiion,											&
@@ -142,6 +148,8 @@ module equation_variables
   !$omp 	BB2, BB2_psi,															&
   !$omp 	Bgrad_rho, Bgrad_rho_star, Bgrad_rho_k_star,											&
   !$omp 	Bgrad_T,   Bgrad_T_star,   Bgrad_T_k_star,											&
+  !$omp 	r00,										   					   	&
+  !$omp 	T00,										   					   	&
   !$omp 	rhs_tmp,        rhs_k_tmp,													&
   !$omp 	amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
 

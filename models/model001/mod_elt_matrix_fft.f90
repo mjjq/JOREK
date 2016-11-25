@@ -4,7 +4,7 @@ subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian

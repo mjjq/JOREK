@@ -1,13 +1,13 @@
 !> Demonstration of the diagnostic framework mod_position / mod_expression / mod_four_filter / mod_straight_field_line / ...
 program demo
   
-  use parameters
+  use mod_parameters
   use data_structure
   use phys_module
   use mod_boundary
   use mod_new_diag
   use basis_at_gaussian
-  use import_restart
+  use mod_import_restart
   
   implicit none
   
@@ -89,7 +89,7 @@ program demo
   my_id = 0
   call initialise_parameters(my_id, "__NO_FILENAME__")
   call det_modes()
-  call import_binary_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list, element_list, 'jorek_restart',  rst_format, ierr)
   call initialise_basis()
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
   

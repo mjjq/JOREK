@@ -9,7 +9,7 @@ subroutine ELM_build_RZ_and_Jacobians(element, nodes, ms, mt)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_RZ_and_Jacobians
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -87,7 +87,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_variables
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure
@@ -108,15 +108,20 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   ps0	= 0.d0; ps0_s	= 0.d0; ps0_t	= 0.d0; ps0_ss	 = 0.d0; ps0_tt   = 0.d0; ps0_st   = 0.d0; ps0_p   = 0.d0; ps0_pp   = 0.d0
   u0	= 0.d0; u0_s	= 0.d0; u0_t	= 0.d0; u0_ss	 = 0.d0; u0_tt    = 0.d0; u0_st    = 0.d0; u0_p    = 0.d0; u0_pp    = 0.d0
   zj0	= 0.d0; zj0_s	= 0.d0; zj0_t	= 0.d0; zj0_ss	 = 0.d0; zj0_tt   = 0.d0; zj0_st   = 0.d0; zj0_p   = 0.d0; zj0_pp   = 0.d0
-  w0	= 0.d0; w0_s	= 0.d0; w0_t	= 0.d0; w0_ss	 = 0.d0; w0_tt    = 0.d0; w0_st    = 0.d0; w0_p    = 0.d0; w0_pp    = 0.d0
-  r0	= 0.d0; r0_s	= 0.d0; r0_t	= 0.d0; r0_ss	 = 0.d0; r0_tt    = 0.d0; r0_st    = 0.d0; r0_p    = 0.d0; r0_pp    = 0.d0
-  T0	= 0.d0; T0_s	= 0.d0; T0_t	= 0.d0; T0_ss    = 0.d0; T0_tt    = 0.d0; T0_st    = 0.d0; T0_p    = 0.d0; T0_pp    = 0.d0
+  w0	= 0.d0; w0_s	= 0.d0; w0_t	= 0.d0; w0_ss	 = 0.d0; w0_tt    = 0.d0; w0_st    = 0.d0; w0_p    = 0.d0; w0_pp    = 0.d0! --- n=0 variables
+  r0	= 0.d0; r0_s	= 0.d0; r0_t	= 0.d0; r0_ss	 = 0.d0; r0_tt    = 0.d0; r0_st    = 0.d0; r0_p    = 0.d0; r0_pp    = 0.d0; r00 = 0.d0
+  T0	= 0.d0; T0_s	= 0.d0; T0_t	= 0.d0; T0_ss    = 0.d0; T0_tt    = 0.d0; T0_st    = 0.d0; T0_p    = 0.d0; T0_pp    = 0.d0; T00 = 0.d0
   Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
   delta_g = 0.d0 ; delta_s = 0.d0 ; delta_t = 0.d0
 
   ! --- Integrate
   do i =1,n_vertex_max
     do j=1,n_order+1
+      
+      ! --- Axisymmetric variables for localised sources
+      r00            = r00        + nodes(i)%values(1    ,j,5) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (1    ,i_plane)
+      T00            = T00        + nodes(i)%values(1    ,j,6) * element%size(i,j) * H   (i,j,ms,mt) * HZ   (1    ,i_plane)
+      
       do i_tor =1,n_tor
 
 	! --- Variable 1
@@ -201,131 +206,61 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   enddo
 
   ! --- Variable 1
-  ps0_x    = (   y_t * ps0_s - y_s * ps0_t ) / xjac
-  ps0_y    = ( - x_t * ps0_s + x_s * ps0_t ) / xjac
-  ps0_xx   = (ps0_ss * y_t**2 - 2.d0*ps0_st * y_s*y_t + ps0_tt * y_s**2  & 	    
-	      + ps0_s * (y_st*y_t - y_tt*y_s )			         &    
-	      + ps0_t * (y_st*y_s - y_ss*y_t ) )       / xjac**2         & 	
-	    - xjac_x * (ps0_s * y_t - ps0_t * y_s)     / xjac**2
-  ps0_yy   = (ps0_ss * x_t**2 - 2.d0*ps0_st * x_s*x_t + ps0_tt * x_s**2  & 	    
-	      + ps0_s * (x_st*x_t - x_tt*x_s )			         &    
-	      + ps0_t * (x_st*x_s - x_ss*x_t ) )       / xjac**2         & 	
-	    - xjac_y * (- ps0_s * x_t + ps0_t * x_s )  / xjac**2
-  ps0_xy   = (- ps0_ss * y_t*x_t - ps0_tt * x_s*y_s		         &
-	      + ps0_st * (y_s*x_t  + y_t*x_s  )  		         &        
-	      - ps0_s  * (x_st*y_t - x_tt*y_s )  		         &    
-	      - ps0_t  * (x_st*y_s - x_ss*y_t )  )     / xjac**2         & 	
-	    - xjac_x * (- ps0_s * x_t + ps0_t * x_s )  / xjac**2
+  ps0_x    = get_deriv_x (ps0_s, ps0_t)
+  ps0_y    = get_deriv_y (ps0_s, ps0_t)
+  ps0_xx   = get_deriv_xx(ps0_s, ps0_t, ps0_ss, ps0_st, ps0_tt)
+  ps0_yy   = get_deriv_yy(ps0_s, ps0_t, ps0_ss, ps0_st, ps0_tt)
+  ps0_xy   = get_deriv_xy(ps0_s, ps0_t, ps0_ss, ps0_st, ps0_tt)
 
   ! --- Variable 2
-  u0_x     = (   y_t * u0_s - y_s * u0_t ) / xjac
-  u0_y     = ( - x_t * u0_s + x_s * u0_t ) / xjac
-  u0_xx    = (u0_ss * y_t**2 - 2.d0*u0_st * y_s*y_t + u0_tt * y_s**2  & 	    
-	      + u0_s * (y_st*y_t - y_tt*y_s )			      &    
-	      + u0_t * (y_st*y_s - y_ss*y_t ) )      / xjac**2        & 	
-	    - xjac_x * (u0_s * y_t - u0_t * y_s)     / xjac**2
-  u0_yy    = (u0_ss * x_t**2 - 2.d0*u0_st * x_s*x_t + u0_tt * x_s**2  & 	    
-	      + u0_s * (x_st*x_t - x_tt*x_s )			      &    
-	      + u0_t * (x_st*x_s - x_ss*x_t ) )      / xjac**2        & 	
-	    - xjac_y * (- u0_s * x_t + u0_t * x_s )  / xjac**2
-  u0_xy    = (- u0_ss * y_t*x_t - u0_tt * x_s*y_s		      &
-	      + u0_st * (y_s*x_t  + y_t*x_s  )  		      &        
-	      - u0_s  * (x_st*y_t - x_tt*y_s )  		      &    
-	      - u0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
-	    - xjac_x * (- u0_s * x_t + u0_t * x_s )  / xjac**2
+  u0_x	   = get_deriv_x (u0_s, u0_t)
+  u0_y	   = get_deriv_y (u0_s, u0_t)
+  u0_xx    = get_deriv_xx(u0_s, u0_t, u0_ss, u0_st, u0_tt)
+  u0_yy    = get_deriv_yy(u0_s, u0_t, u0_ss, u0_st, u0_tt)
+  u0_xy    = get_deriv_xy(u0_s, u0_t, u0_ss, u0_st, u0_tt)
   vv2	   = R**2 *  ( u0_x * u0_x + u0_y *u0_y  )
   
   ! --- Variable 3
-  zj0_x    = (   y_t * zj0_s - y_s * zj0_t ) / xjac
-  zj0_y    = ( - x_t * zj0_s + x_s * zj0_t ) / xjac
-  zj0_xx   = (zj0_ss * y_t**2 - 2.d0*zj0_st * y_s*y_t + zj0_tt * y_s**2  & 	    
-	      + zj0_s * (y_st*y_t - y_tt*y_s )			         &    
-	      + zj0_t * (y_st*y_s - y_ss*y_t ) )       / xjac**2         & 	
-	    - xjac_x * (zj0_s * y_t - zj0_t * y_s)     / xjac**2
-  zj0_yy   = (zj0_ss * x_t**2 - 2.d0*zj0_st * x_s*x_t + zj0_tt * x_s**2  & 	    
-	      + zj0_s * (x_st*x_t - x_tt*x_s )			         &    
-	      + zj0_t * (x_st*x_s - x_ss*x_t ) )       / xjac**2         & 	
-	    - xjac_y * (- zj0_s * x_t + zj0_t * x_s )  / xjac**2
-  zj0_xy   = (- zj0_ss * y_t*x_t - zj0_tt * x_s*y_s		         &
-	      + zj0_st * (y_s*x_t  + y_t*x_s  )  		         &        
-	      - zj0_s  * (x_st*y_t - x_tt*y_s )  		         &    
-	      - zj0_t  * (x_st*y_s - x_ss*y_t )  )     / xjac**2         & 	
-	    - xjac_x * (- zj0_s * x_t + zj0_t * x_s )  / xjac**2
+  zj0_x	   = get_deriv_x (zj0_s, zj0_t)
+  zj0_y	   = get_deriv_y (zj0_s, zj0_t)
+  zj0_xx   = get_deriv_xx(zj0_s, zj0_t, zj0_ss, zj0_st, zj0_tt)
+  zj0_yy   = get_deriv_yy(zj0_s, zj0_t, zj0_ss, zj0_st, zj0_tt)
+  zj0_xy   = get_deriv_xy(zj0_s, zj0_t, zj0_ss, zj0_st, zj0_tt)
   
   ! --- Variable 4
-  w0_x     = (   y_t * w0_s - y_s * w0_t ) / xjac
-  w0_y     = ( - x_t * w0_s + x_s * w0_t ) / xjac
-  w0_xx    = (w0_ss * y_t**2 - 2.d0*w0_st * y_s*y_t + w0_tt * y_s**2  & 	    
-	      + w0_s * (y_st*y_t - y_tt*y_s )			      &    
-	      + w0_t * (y_st*y_s - y_ss*y_t ) )      / xjac**2        & 	
-	    - xjac_x * (w0_s * y_t - w0_t * y_s)     / xjac**2
-  w0_yy    = (w0_ss * x_t**2 - 2.d0*w0_st * x_s*x_t + w0_tt * x_s**2  & 	    
-	      + w0_s * (x_st*x_t - x_tt*x_s )			      &    
-	      + w0_t * (x_st*x_s - x_ss*x_t ) )      / xjac**2        & 	
-	    - xjac_y * (- w0_s * x_t + w0_t * x_s )  / xjac**2
-  w0_xy    = (- w0_ss * y_t*x_t - w0_tt * x_s*y_s		      &
-	      + w0_st * (y_s*x_t  + y_t*x_s  )  		      &        
-	      - w0_s  * (x_st*y_t - x_tt*y_s )  		      &    
-	      - w0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
-	    - xjac_x * (- w0_s * x_t + w0_t * x_s )  / xjac**2
+  w0_x	   = get_deriv_x (w0_s, w0_t)
+  w0_y	   = get_deriv_y (w0_s, w0_t)
+  w0_xx    = get_deriv_xx(w0_s, w0_t, w0_ss, w0_st, w0_tt)
+  w0_yy    = get_deriv_yy(w0_s, w0_t, w0_ss, w0_st, w0_tt)
+  w0_xy    = get_deriv_xy(w0_s, w0_t, w0_ss, w0_st, w0_tt)
   
   ! --- Variable 5
-  r0_corr = corr_neg_dens(r0)
-  r0_x     = (   y_t * r0_s - y_s * r0_t ) / xjac
-  r0_y     = ( - x_t * r0_s + x_s * r0_t ) / xjac
-  r0_xx    = (r0_ss * y_t**2 - 2.d0*r0_st * y_s*y_t + r0_tt * y_s**2  & 	    
-	      + r0_s * (y_st*y_t - y_tt*y_s )			      &    
-	      + r0_t * (y_st*y_s - y_ss*y_t ) )      / xjac**2        & 	
-	    - xjac_x * (r0_s * y_t - r0_t * y_s)     / xjac**2
-  r0_yy    = (r0_ss * x_t**2 - 2.d0*r0_st * x_s*x_t + r0_tt * x_s**2  & 	    
-	      + r0_s * (x_st*x_t - x_tt*x_s )			      &    
-	      + r0_t * (x_st*x_s - x_ss*x_t ) )      / xjac**2        & 	
-	    - xjac_y * (- r0_s * x_t + r0_t * x_s )  / xjac**2
-  r0_xy    = (- r0_ss * y_t*x_t - r0_tt * x_s*y_s		      &
-	      + r0_st * (y_s*x_t  + y_t*x_s  )  		      &        
-	      - r0_s  * (x_st*y_t - x_tt*y_s )  		      &    
-	      - r0_t  * (x_st*y_s - x_ss*y_t )  )    / xjac**2        & 	
-	    - xjac_x * (- r0_s * x_t + r0_t * x_s )  / xjac**2
+  r0_corr  = corr_neg_dens(r0)
+  r0_corr2 = corr_neg_dens(r0, (/0.5,0.5/) ) ! A second one specially for the diamagnetic terms
+  r0_x	   = get_deriv_x (r0_s, r0_t)
+  r0_y	   = get_deriv_y (r0_s, r0_t)
+  r0_xx    = get_deriv_xx(r0_s, r0_t, r0_ss, r0_st, r0_tt)
+  r0_yy    = get_deriv_yy(r0_s, r0_t, r0_ss, r0_st, r0_tt)
+  r0_xy    = get_deriv_xy(r0_s, r0_t, r0_ss, r0_st, r0_tt)
   r0_hat   = R**2 * r0
   r0_x_hat = 2.d0 * R * R_x  * r0 + R**2 * r0_x
   r0_y_hat = R**2 * r0_y
   
   ! --- Variable 6
-  T0_corr    = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
-  T0_x      = (   y_t * T0_s  - y_s * T0_t ) / xjac
-  T0_y      = ( - x_t * T0_s  + x_s * T0_t ) / xjac
-  T0_xx     = (T0_ss * y_t**2 - 2.d0*T0_st * y_s*y_t + T0_tt * y_s**2	& 	    
-	      + T0_s * (y_st*y_t - y_tt*y_s )			        &    
-	      + T0_t * (y_st*y_s - y_ss*y_t ) )        / xjac**2        & 	
-	     - xjac_x * (T0_s * y_t - T0_t * y_s)      / xjac**2
-  T0_yy     = (T0_ss * x_t**2 - 2.d0*T0_st * x_s*x_t + T0_tt * x_s**2   & 	    
-	      + T0_s * (x_st*x_t - x_tt*x_s )			        &    
-	      + T0_t * (x_st*x_s - x_ss*x_t ) )        / xjac**2        & 	
-	     - xjac_y * (- T0_s * x_t + T0_t * x_s )   / xjac**2
-  T0_xy     = (- T0_ss * y_t*x_t - T0_tt * x_s*y_s		        &
-	       + T0_st * (y_s*x_t  + y_t*x_s  )  		        &        
-	       - T0_s  * (x_st*y_t - x_tt*y_s )  		        &    
-	       - T0_t  * (x_st*y_s - x_ss*y_t )  )     / xjac**2        & 	
-	       - xjac_x * (- T0_s * x_t + T0_t * x_s ) / xjac**2
+  T0_corr  = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
+  T0_x	   = get_deriv_x (T0_s, T0_t)
+  T0_y	   = get_deriv_y (T0_s, T0_t)
+  T0_xx    = get_deriv_xx(T0_s, T0_t, T0_ss, T0_st, T0_tt)
+  T0_yy    = get_deriv_yy(T0_s, T0_t, T0_ss, T0_st, T0_tt)
+  T0_xy    = get_deriv_xy(T0_s, T0_t, T0_ss, T0_st, T0_tt)
 
-  
-  ! --- Variable 7
-  Vpar0_x  = (   y_t * Vpar0_s - y_s * Vpar0_t ) / xjac
-  Vpar0_y  = ( - x_t * Vpar0_s + x_s * Vpar0_t ) / xjac
-  Vpar0_xx = (Vpar0_ss * y_t**2 - 2.d0*Vpar0_st * y_s*y_t + Vpar0_tt * y_s**2  &	 
-	      + Vpar0_s * (y_st*y_t - y_tt*y_s )			       &	
-	      + Vpar0_t * (y_st*y_s - y_ss*y_t ) )         / xjac**2           &      
-	    - xjac_x * (Vpar0_s * y_t - Vpar0_t * y_s)     / xjac**2
-  Vpar0_yy = (Vpar0_ss * x_t**2 - 2.d0*Vpar0_st * x_s*x_t + Vpar0_tt * x_s**2  &	 
-	      + Vpar0_s * (x_st*x_t - x_tt*x_s )			       &	
-	      + Vpar0_t * (x_st*x_s - x_ss*x_t ) )         / xjac**2           &      
-	    - xjac_y * (- Vpar0_s * x_t + Vpar0_t * x_s )  / xjac**2
-  Vpar0_xy = (- Vpar0_ss * y_t*x_t - Vpar0_tt * x_s*y_s 		       &
-	      + Vpar0_st * (y_s*x_t  + y_t*x_s  )  		               &	    
-	      - Vpar0_s  * (x_st*y_t - x_tt*y_s )  		               &	
-	      - Vpar0_t  * (x_st*y_s - x_ss*y_t )  )       / xjac**2           &      
-	    - xjac_x * (- Vpar0_s * x_t + Vpar0_t * x_s )  / xjac**2
-  
+  ! --- Variable 6
+  Vpar0_x  = get_deriv_x (Vpar0_s, Vpar0_t)
+  Vpar0_y  = get_deriv_y (Vpar0_s, Vpar0_t)
+  Vpar0_xx = get_deriv_xx(Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt)
+  Vpar0_yy = get_deriv_yy(Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt)
+  Vpar0_xy = get_deriv_xy(Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt)
+
   ! --- Deltas
   delta_u_x  = (   y_t * delta_s(2) - y_s * delta_t(2) ) / xjac
   delta_u_y  = ( - x_t * delta_s(2) + x_s * delta_t(2) ) / xjac
@@ -345,10 +280,56 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   P0_xy    = r0_xy * T0 + r0 * T0_xy + r0_x * T0_y + r0_y * T0_x
   
   ! --- Magnetic field amplitude (squared)
-  BB2	    = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/R**2
+  BB2	   = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/R**2
+  
   
   return
 
+contains
+! --- Function to compute derivative with respect to x
+real*8 function get_deriv_x(VAR_s, VAR_t)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t
+  get_deriv_x = (   y_t * VAR_s - y_s * VAR_t ) / xjac
+end function get_deriv_x
+
+! --- Function to compute derivative with respect to y
+real*8 function get_deriv_y(VAR_s, VAR_t)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t
+  get_deriv_y = ( - x_t * VAR_s + x_s * VAR_t ) / xjac
+end function get_deriv_y
+
+! --- Function to compute derivative with respect to xx
+real*8 function get_deriv_xx(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
+  get_deriv_xx = (VAR_ss * y_t**2 - 2.d0*VAR_st * y_s*y_t + VAR_tt * y_s**2  & 	    
+	        + VAR_s  * (y_st*y_t - y_tt*y_s )			     &    
+	        + VAR_t  * (y_st*y_s - y_ss*y_t ) )        / xjac**2         & 	
+	        - xjac_x * (VAR_s * y_t - VAR_t * y_s)     / xjac**2
+end function get_deriv_xx
+
+! --- Function to compute derivative with respect to yy
+real*8 function get_deriv_yy(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
+  get_deriv_yy = (VAR_ss * x_t**2 - 2.d0*VAR_st * x_s*x_t + VAR_tt * x_s**2  & 	    
+	        + VAR_s * (x_st*x_t - x_tt*x_s )			     &    
+	        + VAR_t * (x_st*x_s - x_ss*x_t ) )         / xjac**2         & 	
+	        - xjac_y * (- VAR_s * x_t + VAR_t * x_s )  / xjac**2
+end function get_deriv_yy
+
+! --- Function to compute derivative with respect to yy
+real*8 function get_deriv_xy(VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt)
+  use equation_variables
+  real*8, intent(in) :: VAR_s, VAR_t, VAR_ss, VAR_st, VAR_tt
+  get_deriv_xy = (- VAR_ss * y_t*x_t - VAR_tt * x_s*y_s		         &
+	          + VAR_st * (y_s*x_t  + y_t*x_s  )  		         &        
+	          - VAR_s  * (x_st*y_t - x_tt*y_s )  		         &    
+	          - VAR_t  * (x_st*y_s - x_ss*y_t )  )       / xjac**2   & 	
+	          - xjac_x * (- VAR_s * x_t + VAR_t * x_s )  / xjac**2
+end function get_deriv_xy
 end subroutine ELM_build_variables
 
 
@@ -368,7 +349,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use phys_module
   use equation_variables
@@ -393,6 +374,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   real*8		      :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
   real*8		      :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
   real*8		      :: Jb_0
+  real*8		      :: rho_norm
+  real*8		      :: above_prof
       
   
   ! -------------------------------------
@@ -419,6 +402,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     visco_T   = visco
     dvisco_dT = 0.d0
   end if
+  visco_parr  = visco_par  
   
   
   ! -------------------------------------------------------------
@@ -435,9 +419,11 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     endif
   endif
 
-  ! --- Call Diff functions
-  D_prof = get_dperp (psi_norm)
-  K_prof = get_zkperp(psi_norm)
+  ! --- Call Diff functions (same as before, but with additional profile if D_perp(10)=1.d0 or ZK_perp(10) = 1.d0)
+  D_prof = get_dperp (ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
+  K_prof = get_zkperp(ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
+  
+  ! --- Increase diffusivity if negative density/temperature
   if (xpoint2) then
     if (r0 .lt. 0.d0)  then
       D_prof = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
@@ -589,7 +575,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     if (use_pellet) then
       call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
     			  pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-    			  x_g,y_g, ps0, phi, zn, zT, &
+    			  x_g,y_g, ps0, phi, zn, zT/2.0, &
     			  central_density, pellet_particles, pellet_density, total_pellet_volume, &
     			  source_pellet, source_volume)
     endif
@@ -598,6 +584,115 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     total_rho_source = particle_source + source_pellet
   endif
   
+  ! -------------------------------------------------------------------
+  ! --- Renormalise all MHD parameters
+  ! -------------------------------------------------------------------
+  
+  ! --- (ie. if input values are given in physical units) Not done for sources yet...
+  if (renormalise) then
+    if (central_density .gt. 1.d10) then
+      rho_norm    = central_density         * central_mass * mass_proton
+    else
+      rho_norm    = central_density * 1.d20 * central_mass * mass_proton
+    endif
+    eta_T       = eta_T       * sqrt(rho_norm / mu_zero )
+    deta_dT     = deta_dT     * sqrt(rho_norm / mu_zero )
+    visco_T     = visco_T     * sqrt(mu_zero  / rho_norm)
+    dvisco_dT   = dvisco_dT   * sqrt(mu_zero  / rho_norm)
+    visco_parr  = visco_par   * sqrt(mu_zero  / rho_norm)
+    D_prof      = D_prof      * sqrt(mu_zero  * rho_norm)
+    K_prof      = K_prof      * sqrt(mu_zero  / rho_norm)
+    K_par       = K_par       * sqrt(mu_zero  / rho_norm)
+    dK_par      = dK_par      * sqrt(mu_zero  / rho_norm)
+    tau_IC      = tau_IC      / sqrt(mu_zero  * rho_norm)
+  endif
+
+  ! -------------------------------------------------------------------
+  ! --- SOL sources to stabilise diamagnetic terms (not applied by default!)
+  ! -------------------------------------------------------------------
+  
+  ! --- Make sure SOL density/temperature stays levelled
+  if (.false.) then
+    if (psi_norm .gt. 1.0) then
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      ! --- If equilibrium density comes below half of initial SOL value, we fill it up
+      if (r00 .lt. 0.5*zn) total_rho_source = 0.5 * (0.5*zn-r00) / tstep
+      if (T00 .lt. 0.5*zT) heat_source = 0.5 * (0.5*zT-T00) / tstep
+    endif
+  endif
+  
+  ! --- Make sure SOL density stays above zero (nonlinearly)
+  ! --- This is a bit more complex, but negative density is the worst enemy of diamagnetic terms
+  ! --- If we see that density becomes less than 30% of initial SOL value, and if this
+  ! --- is happening due to the nonlinear ballooning mode, then we fill up the loss
+  if (.false.) then
+    ! --- Usually this happens outside the separatrix
+    if (psi_norm .gt. 1.0) then
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      if ( (r0 .lt. 0.3*zn) .and. (r00 .gt. 0.3*zn) ) then
+    	total_rho_source = 0.5 * (0.3*zn-r0) / tstep
+      endif
+    endif
+    ! --- But it can also happen in the pedestal, where you might want to use different values
+    if ( (psi_norm .gt. 0.95) .and. (psi_norm .le. 1.0) ) then
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      if ( (r0 .lt. 0.3*zn) .and. (r00 .gt. 0.3*zn) ) then
+    	total_rho_source = 0.5 * (0.3*zn-r0) / tstep
+      endif
+    endif
+  endif
+
+  ! -------------------------------------------------------------------
+  ! --- Pedestal sources to get ELM cycles (not applied by default!)
+  ! -------------------------------------------------------------------
+  
+  ! --- Just a source localised in the pedestal
+  if (.false.) then
+    ! --- Density
+    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+    if (r00 .lt. 1.3*zn) then ! should not exceed 30% above equilibrium initial value
+      total_rho_source = particlesource * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.0d0)/0.003) ) * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.60d0)/0.1) ) &
+                       + 1.d-4 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.998d0)/0.003) )
+    endif
+    ! --- Temperature
+    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    if (T00 .lt. 1.3*zT) then ! should not exceed 30% above equilibrium initial value
+      heat_source      = heatsource     * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.0d0)/0.003) ) * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.60d0)/0.1) ) &
+                       + 4.d-7 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.998d0)/0.003) )
+    endif
+  endif
+  
+  ! --- A source adapted to the actual profile and the profile you want to reach in the end (here based on the initial profiles)
+  if (.false.) then
+    total_rho_source = 0.d0
+    heat_source      = 0.d0
+    ! --- We do this only inside the separatrix
+    if ( ( (ps0-psi_axis)/(psi_bnd-psi_axis) .lt. 1.0) .and. (y_g .gt. Z_xpoint(1)) ) then
+      ! --- This determines how far above the initial equilibrium profiles you want to go
+      ! --- eg. 0.4 means 40% above, 0.0 means exactly the initial profile, not above
+      above_prof = 1.d0 + 0.4d0 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.6d0)/0.3) )
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
+                       zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      ! --- Note that here, the value of particlesource and heatsource determines how long
+      ! --- it will take for the target profile to be recovered. eg. if 0.1, it will take
+      ! --- 10 JOREK times. If 0.001 it will take 1000 JOREK times
+      if (r00 .lt. above_prof*zn) total_rho_source = particlesource * (above_prof*zn-r00) / tstep
+      if (T00 .lt. above_prof*zT) heat_source      = heatsource     * (above_prof*zT-T00) / tstep
+    else
+      total_rho_source = 0.d0
+      heat_source      = 0.d0
+    endif
+  endif
+
   return
 
 end subroutine ELM_build_diffusivities_and_sources
@@ -624,7 +719,7 @@ subroutine ELM_build_basis_functions(element, nodes, ms, mt, i_plane, i_vertex, 
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_basis_functions
 
   ! --- Modules
-  use parameters    
+  use mod_parameters    
   use basis_at_gaussian
   use equation_variables
   use data_structure

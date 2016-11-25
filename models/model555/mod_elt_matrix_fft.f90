@@ -21,7 +21,7 @@ contains
     ! --- Modules
     use equation_variables
     use constants
-    use parameters
+    use mod_parameters
     use data_structure
     use gauss
     use basis_at_gaussian

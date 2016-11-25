@@ -7,14 +7,13 @@ subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axi
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
 use constants
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
 use diffusivities,  only: get_dperp, get_zkperp
 use corr_neg
-!use pellet_module
 
 implicit none
 

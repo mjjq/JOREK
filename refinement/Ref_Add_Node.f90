@@ -15,7 +15,7 @@ subroutine Ref_Add_Node(node_list, element_list,lambda, mu, iref,iside, i12, ine
 
 
  use data_structure
- use parameters
+ use mod_parameters
  
  implicit none
 
@@ -43,7 +43,7 @@ subroutine Ref_Add_Node(node_list, element_list,lambda, mu, iref,iside, i12, ine
      
     if (i12==0) then ! It is a boundary node
 
-       call Ref_boundary_node(node_list, element_list, lambda, mu, iref, inew); 
+       call Ref_boundary_node(node_list, element_list, lambda, mu, iref, inew)
 
     
     else             ! It is not a boundary node

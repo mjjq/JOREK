@@ -140,7 +140,7 @@ CONTAINS
        &                          index_node2, k2, in2,                &
        &                          zbig, solve_only, gmres,             &
        &                          cnt, cnt_prod, only_count)
-    USE parameters
+    USE mod_parameters
 
     INTEGER, INTENT(IN)    :: index_node,  k,  in
     INTEGER, INTENT(IN)    :: index_node2, k2, in2
@@ -208,7 +208,7 @@ CONTAINS
   !! @param mpi_comm_n  By harmonic communicator.
   !! @param i_tor       Harmonic ID.
   SUBROUTINE murge_initialization(gmres, my_id, mpi_comm_n, i_tor)
-    USE parameters, ONLY : n_tor, n_var
+    use mod_parameters, ONLY : n_tor, n_var
     USE mpi_mod
 
     LOGICAL, INTENT(IN) :: gmres
@@ -415,10 +415,10 @@ CONTAINS
        &                    node_list, n_aa, my_id, my_id_trans, n_cpu_trans, &
        &                    MPI_COMM_N, MPI_COMM_TRANS)
 
-    USE parameters,                ONLY : n_order, n_vertex_max
+    use mod_parameters,                ONLY : n_order, n_vertex_max
     USE data_structure,            ONLY : type_element, type_element_list,     &
          &                                type_node_list, MURGE_UserData_t
-    USE parameters,                ONLY : n_tor, n_var
+    use mod_parameters,                ONLY : n_tor, n_var
     USE global_distributed_matrix, ONLY : ndof_glob
     USE mod_clock,              ONLY : clcktype, clck_time, clck_ldiff,     &
          &                                FMT_TIMING
@@ -952,7 +952,7 @@ CONTAINS
   END SUBROUTINE murge_setGraph
 
   INTEGER(C_INT32_T) FUNCTION getVertices(e, idx) BIND(C, name="getVertices")
-    USE parameters,                ONLY : n_order, n_vertex_max
+    use mod_parameters,                ONLY : n_order, n_vertex_max
     USE data_structure,            ONLY : type_element, type_element_list
     USE data_structure,            ONLY : type_node_list
     USE nodes_elements,            ONLY : element_list, node_list

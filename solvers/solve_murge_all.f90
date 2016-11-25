@@ -25,7 +25,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   ! distributed matrix on the main group mpi_comm_world
   !---------------------------------------------------------------------
   USE tr_module
-  USE parameters
+  use mod_parameters
   USE mumps_module
   USE pastix_module
   USE murge_module, only : murge_sym, murge_epsilon, murge_solver,             &

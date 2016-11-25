@@ -1,7 +1,7 @@
 !> Module for converting character strings to integer or float values (used by jorek2_postproc)
 module convert_character
 
-  use parameters, only: n_var, variable_names
+  use mod_parameters, only: n_var, variable_names
 
   implicit none
   

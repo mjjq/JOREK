@@ -41,7 +41,7 @@ module vacuum_response
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
     freeboundary_equil, resistive_wall)
   
-    use parameters,     only: n_tor
+    use mod_parameters,     only: n_tor
     use data_structure, only: type_node_list, type_bnd_element_list, type_bnd_node_list
     use mpi_mod
 
@@ -224,7 +224,7 @@ module vacuum_response
   subroutine read_starwall_response(sr, filename)
     
     use constants
-    use parameters, only: n_tor, n_period
+    use mod_parameters, only: n_tor, n_period
     
     implicit none
     
@@ -421,7 +421,7 @@ module vacuum_response
   !> Write out information about the STARWALL response matrices.
   subroutine log_starwall_response(sr)
     
-    use parameters, only: n_period
+    use mod_parameters, only: n_period
     
     implicit none
     
@@ -577,7 +577,7 @@ module vacuum_response
     freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
       
     use data_structure, only: type_node_list, type_bnd_node_list, type_bnd_element_list, type_bnd_element
-    use parameters,     only: n_plane, n_var, n_tor
+    use mod_parameters,     only: n_plane, n_var, n_tor
     use gauss,          only: n_gauss, xgauss, wgauss
     use global_distributed_matrix, only: irn_glob, jcn_glob, a_glob, ndof_glob, det_row_col, det_sparse_pos
     use basis_at_gaussian, only: H1, H1_s, HZ

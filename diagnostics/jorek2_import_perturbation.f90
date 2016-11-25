@@ -9,7 +9,7 @@ program jorek2_import_perturbation
   use phys_module
   use basis_at_gaussian
   use nodes_elements
-  use import_restart
+  use mod_import_restart
   implicit none
 
   ! Internal parameters
@@ -30,7 +30,7 @@ program jorek2_import_perturbation
   write(*,*)'from the .rst file named jorek_perturbation.rst and'
   write(*,*)'export that perturbation into jorek_restart.rst, whose'
   write(*,*)'final n_tor number is determined by the n_tor you used'
-  write(*,*)'to compile this code (ie. in parameters.f90).'
+  write(*,*)'to compile this code (ie. in mod_parameters.f90).'
   write(*,*)'Note that jorek_restart.rst and jorek_perturbation.rst'
   write(*,*)'must have exactly the same grids.'
   write(*,*)'------------------------------------------------------'
@@ -38,11 +38,11 @@ program jorek2_import_perturbation
   
   
   ! --- Import main restart file
-  call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
   ! --- Import rst file that contains the perturbation you want to import
   write(*,*)' '
-  call import_binary_restart(node_list2,element_list2, 'jorek_perturbation.rst', rst_format, ierr)
+  call import_restart(node_list2,element_list2, 'jorek_perturbation', rst_format, ierr)
 
 
   ! --- Save energies if we are importing into an equilibrium with n_tor>3
@@ -141,7 +141,7 @@ program jorek2_import_perturbation
   ! Export restart file with perturbation
   write(*,*)' '
   write(*,*)'Exporting restart...'
-  call export_binary_restart(node_list,element_list,'jorek_restart.rst')
+  call export_restart(node_list,element_list,'jorek_restart')
 
   write(*,*)'Finished'
 

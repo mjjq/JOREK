@@ -16,7 +16,7 @@ subroutine distribute_harmonics(my_id,my_id_n,n_cpu)
 !
 !---------------------------------------------------------------------
 use tr_module
-use parameters
+use mod_parameters
 use global_distributed_matrix
 use mumps_module
 use mpi_mod

@@ -2,7 +2,7 @@
 module nodes_elements
   
   use data_structure
-  use parameters
+  use mod_parameters
   
   type (type_node_list)        :: node_list      !< List of grid nodes.
   type (type_element_list)     :: element_list   !< List of grid elements.

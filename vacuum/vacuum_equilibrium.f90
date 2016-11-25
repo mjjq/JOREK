@@ -135,7 +135,7 @@ module vacuum_equilibrium
   !! using the vacuum response from STARWALL
   subroutine vacuum_equil(node_list, bnd_node_list, bnd_elm_list, psi_axis, psi_bnd)
     
-    use parameters
+    use mod_parameters
     use data_structure
     use gauss
     use basis_at_gaussian

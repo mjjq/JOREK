@@ -1,14 +1,43 @@
-module export_restart
+module mod_export_restart
 implicit none
 contains
 !> Export the current simulation state as a restart file that can be read back into JOREK or into
 !! a diagnostic program by the routine import_restart.
+subroutine export_restart(node_list,element_list,filename)
+
+  use mod_parameters
+  use data_structure
+  use phys_module
+  use pellet_module
+
+  implicit none
+
+  ! --- Routine parameters
+  type(type_node_list),    intent(in) :: node_list
+  type(type_element_list), intent(in) :: element_list
+  character*(*)          , intent(in) :: filename
+
+  character*17 :: fileout
+
+  if ( rst_hdf5 == 0 ) then
+    ! --- Write restart binary file
+    fileout = trim(filename)//".rst"
+    write (6,*) " =============>, jorek2, filename = ", fileout
+    call export_binary_restart(node_list, element_list, fileout)
+  elseif ( rst_hdf5 == 1 ) then
+    ! --- Write restart HDF5 file
+    fileout = trim(filename)//".h5"
+    write (6,*) " =============>, jorek2, filename = ", fileout
+    call export_hdf5_restart(node_list, element_list, fileout)
+  end if
+
+end subroutine export_restart
 
 !
 ! Export in a binary restart file
 subroutine export_binary_restart(node_list,element_list,filename,format_rst)
 
-  use parameters
+  use mod_parameters
   use data_structure
   use phys_module
   use pellet_module
@@ -170,7 +199,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use hdf5
   use hdf5_io_module
   use tr_module
-  use parameters
+  use mod_parameters
 #endif
  
   implicit none
@@ -508,8 +537,10 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 #endif
   end if
 
+#else
+  write (6,*) " ERROR: trying to export with hdf5 but USE_HDF5 was not set at compile-time"
 #endif
 
   return
 end subroutine export_hdf5_restart
-end module export_restart
+end module mod_export_restart

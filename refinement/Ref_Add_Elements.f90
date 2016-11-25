@@ -8,7 +8,7 @@
 subroutine Ref_Add_Elements(node_list,element_list,iref,idir,lambda_ref, mu_ref, &
 			    P5,P6,P7,P8,P9,istatus)
 
- use parameters
+ use mod_parameters
  use data_structure
 
 implicit none 

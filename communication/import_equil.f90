@@ -2,7 +2,7 @@ subroutine import_equil(node_list,element_list)
 !**************************************************************************
 ! import the grid and values of the nodes/elements                        *
 !**************************************************************************
-use parameters
+use mod_parameters
 use data_structure
 
 implicit none

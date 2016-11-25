@@ -9,7 +9,7 @@ subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcas
 ! implements the natural boundary conditions
 !---------------------------------------------------------------------
 use constants
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian

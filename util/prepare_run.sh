@@ -81,7 +81,7 @@ for job_step in `seq $nsteps`; do
   template_dir=`readlink -f $template_dir`
   code_dir=`readlink -f $code_dir`
   
-  # --- Set parameters in Makefile.inc and parameters.f90; compile the binary
+  # --- Set parameters in Makefile.inc and mod_parameters.f90; compile the binary
   echo "  Compiling binary."
   cd $code_dir
   $SCRIPTDIR/config.sh $code_params >> /dev/null || exit 1

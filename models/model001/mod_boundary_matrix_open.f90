@@ -9,7 +9,7 @@ subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcas
 ! calculates the matrix contribution of the boundaries of one element
 ! implements the natural boundary conditions
 !---------------------------------------------------------------------
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian

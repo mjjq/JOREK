@@ -1,7 +1,7 @@
 !> Definitions of derived data types for grid nodes and elements, boundary nodes and elements,
 !! and flux surface elements
 module data_structure
-  use parameters
+  use mod_parameters
   use tr_module
   use gauss
   use ISO_C_BINDING, ONLY : C_INT

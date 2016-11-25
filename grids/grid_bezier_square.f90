@@ -1,7 +1,7 @@
 !> Create a square grid based on the Bezier/modified cubic Hermite representation
 subroutine grid_bezier_square(nR,nZ,R_begin,R_end,Z_begin,Z_end,boundary,node_list,element_list)
 
-use parameters
+use mod_parameters
 use data_structure
 
 implicit none

@@ -28,7 +28,7 @@ module out_save_module
 #ifdef USE_HDF5
     use hdf5
 #endif
-    use parameters,  only: jorek_model, n_tor, n_plane, n_period
+    use mod_parameters,  only: jorek_model, n_tor, n_plane, n_period
     use phys_module, only: tstep, heatsource, particlesource, &
          eta, eta_num, visco, visco_num, visco_par, visco_par_num, &
          tauIC, gamma_sheath, numfmt
@@ -109,7 +109,7 @@ module out_save_module
 #ifdef USE_HDF5
     use hdf5
 #endif
-    use parameters,  only: n_tor
+    use mod_parameters,  only: n_tor
     use phys_module, only: tstep, index_start, energies
     !type(type_node_list)   , intent(in) :: node_list
     !type(type_element_list), intent(in) :: element_list

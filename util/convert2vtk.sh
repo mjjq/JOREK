@@ -121,8 +121,8 @@ function do_convert () {
   if ( [ ! -e $targetFile ] || [ "$file" -nt "$targetFile" ] ) \
     && [ `is_selected $stepnum` == "yes" ]; then
     
-    rm -f jorek_restart.rst
-    ln -s $file jorek_restart.rst
+    rm -f jorek_restart${SUFF}
+    ln -s $file jorek_restart${SUFF}
     for copyfile in $copyfiles; do
       cp $startDir/$copyfile .
     done
@@ -406,10 +406,18 @@ for i in `seq $nthreads`; do
 done
 
 
-
+H5=$(grep rst_hdf5 $infile | sed 's/^[!].*//g;s/^[^!].*= *\([01]\).*/\1/g')
+if [ -z "$H5" ]; then
+  H5=0
+fi
+if [ $H5 == 0 ]; then
+  SUFF=".rst"
+else
+  SUFF=".h5"
+fi
 # --- Parallel file conversion
 echo ""
-files=`ls $sourceDir/jorek?????.rst 2> /dev/null`
+files=`ls $sourceDir/jorek?????${SUFF} 2> /dev/null`
 for file in $files; do
   if [ -f "$ERROR_STOP_FILE" ]; then cleanup; fi
   ithread=`get_available_thread`

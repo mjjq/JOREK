@@ -208,7 +208,6 @@ if (include_psi_norm) then
    s_psi_norm = n_scalars
    n_scalars  = n_scalars + n_psi_norm
 endif
-#endif
 
 #if (JOREK_MODEL == 500)
     n_radiation = 0

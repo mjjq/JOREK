@@ -480,10 +480,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_char_reading(file_id,version_control_tmp, "RCS_version")
 version_control = trim(adjustl(RCS_VERSION))
-  if (version_control_tmp .ne. version_control) then
-    write(*,*) 'WARNING: Current version control', version_control, 'differs from previous version', version_control_tmp
-  endif
-! Should we add warnings or info for all important variables?
+!  if (trim(adjustl(version_control_tmp)) .ne. version_control ) then
+!    write(*,*) 'WARNING: Current version control', version_control, 'differs from previous version', trim(adjustl(version_control_tmp))
+!  endif
+
   call HDF5_integer_reading(file_id,jorek_model_tmp,"jorek_model")
   call HDF5_integer_reading(file_id,n_var_tmp,"n_var")
   call HDF5_integer_reading(file_id,n_order_tmp,"n_order")
@@ -531,8 +531,11 @@ version_control = trim(adjustl(RCS_VERSION))
        ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
        ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_period_tmp .ne. n_period) write(*,'(3(a,i4))') &
+       ' IMPORT WARNING : n_period has changed from', n_period_tmp, ' to', n_period
 
-  write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics', 'with n_period=', n_period_tmp 
+
+  write(*,'(A,i5,A, i5)') ' Importing ',n_tor_tmp,' harmonics with n_period=', n_period_tmp 
 
   call HDF5_integer_reading(file_id,node_list%n_nodes,"n_nodes")
   call HDF5_integer_reading(file_id,element_list%n_elements,"n_elements")

@@ -671,40 +671,24 @@ version_control = trim(adjustl(RCS_VERSION))
          "t_energies",CAT_UNKNOWN)
     t_energies = 0.d0
     call HDF5_array3D_reading(file_id,t_energies,'energies')
-    print*, 'ENERGIES TEMPORARILY IMPORTED'
-    print*, t_energies
 
     if (allocated(energies))   call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep, &
          "energies",CAT_UNKNOWN)
     energies = 0.d0
-!    if ( (n_tor .ge. n_tor_tmp) and (n_period_tmp .eq. n_period)) then
-!      energies(1:n_tor_tmp,:,:) = t_energies(:,:,:)
-!    elseif (n_tor .lt. n_tor_tmp) and (n_period_tmp .eq. n_period)) then
-!      energies(:,:,:) = t_energies(1:n_tor_tmp,:,:)
-!    else
-      do m=1,n_tor_tmp,2
-        do k=1, n_tor,2 
-           print*, 'mtor_tmp=', m, 'ktor_new=', k 
-          if (mode_tmp(m) .eq. mode(k)) then
-             print*, 'modes old and new=', mode_tmp(m), mode(k)
-            if ((m .eq. 1) .and. (k.eq.1)) then
-              energies(k,:,:) = t_energies(m,:,:)
-              print*, 'mtor=1, NRJcas1=', energies(k,:,:)
-            else
+    do m=1,n_tor_tmp,2
+      do k=1, n_tor,2 
+        if (mode_tmp(m) .eq. mode(k)) then
+!         print*, 'modes old and new=', mode_tmp(m), mode(k)
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            energies(k,:,:) = t_energies(m,:,:)
+          else
             energies(k-1,:,:) = t_energies(m-1,:,:)
             energies(k,:,:)   = t_energies(m,:,:) 
-           print*, 'mtor_tmp=', m, 'ktor_new=', k 
-              print*, 'NRJother=', energies(k-1,:,:), energies(k,:,:)
-            endif
           endif
-        enddo
+        endif
       enddo
-
-!    endif
-    print*, 'ENERGIES IMPORTED (SELECTED)'
-    print*, energies
-
+    enddo
 
 #ifdef JECCD                   
     if (allocated(energies2))	call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)	  

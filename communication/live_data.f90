@@ -67,29 +67,25 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
     
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', n_tor +1 !n_period * (n_tor -1) +2
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', n_tor +1 
     write(LIVE_DATA_HANDLE,'(A)') '@energies_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel: normalized energy'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: %"time"           '
-!    do n = 0,  n_period * (n_tor -1) / 2
     do n = 1, n_tor, 2 
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{mag', mode(n), '}"'
     end do
-!    do n = 0,  n_period * (n_tor -1) / 2
     do n = 1, n_tor, 2 
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{kin', mode(n), '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', n_tor +1 !n_period * (n_tor -1) +2
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', n_tor +1 
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel: normalized growth rate'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: %"time"           '
-!    do n = 0,  n_period * (n_tor -1) / 2
     do n = 1, n_tor, 2 
-!      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{mag', n, '}"'
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{mag', mode(n), '}"'
     end do
     do n = 1,  n_tor, 2
@@ -128,7 +124,6 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@energies:', xtime(index)
     do j = 1, 2
       write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') energies(1,j,index)
-    !  do i = 1, n_tor, 2
       do m = 1, n_period * (n_tor -1) /2
         if ( mod(m,n_period) .eq. 0 ) then
           write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') sum(energies(int(2*m/n_period):int(2*m/n_period)+1,j,index))

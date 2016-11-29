@@ -404,7 +404,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use hdf5
   use HDF5_io_module
   !use tr_module
-  use mod_parameters !, ONLY : n_tor, n_var, n_order
+  use mod_parameters 
 #endif
   
   implicit none
@@ -480,9 +480,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_char_reading(file_id,version_control_tmp, "RCS_version")
 version_control = trim(adjustl(RCS_VERSION))
-!  if (trim(adjustl(version_control_tmp)) .ne. version_control ) then
-!    write(*,*) 'WARNING: Current version control', version_control, 'differs from previous version', trim(adjustl(version_control_tmp))
-!  endif
 
   call HDF5_integer_reading(file_id,jorek_model_tmp,"jorek_model")
   call HDF5_integer_reading(file_id,n_var_tmp,"n_var")
@@ -508,14 +505,6 @@ version_control = trim(adjustl(RCS_VERSION))
     write(*,*) " import_restart, HDF5 file : n_var     = ",mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
-    !write(*,*) ' mode : ',mode
-    !if ( (n_tor .eq. n_tor_tmp) .and. (n_period .eq. n_period_tmp) ) then 
-    !   mode_tmp = mode
-    !elseif (n_period .eq. n_period_tmp) then
-    !   mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
-    !else
-       
-    !endif
     do i=1, n_tor_tmp
        mode_tmp(i) = int(i / 2) * n_period_tmp
     enddo
@@ -682,7 +671,6 @@ version_control = trim(adjustl(RCS_VERSION))
     do m=1,n_tor_tmp,2
       do k=1, n_tor,2 
         if (mode_tmp(m) .eq. mode(k)) then
-!         print*, 'modes old and new=', mode_tmp(m), mode(k)
           if ((m .eq. 1) .and. (k.eq.1)) then
             energies(k,:,:) = t_energies(m,:,:)
           else

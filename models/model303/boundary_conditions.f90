@@ -80,85 +80,73 @@ contains
   integer :: loop_nbr, loop, cnt, cnt_prod
   integer :: ierr
   logical :: is_local, only_count
-
-
-!=============== RMP ==============
   real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
   real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   integer :: ilarge_vp, ilarge_vp2
   integer :: kp, j, err, itest 
-!=========================================RMP spectrum
   integer :: n_rmp_harm, N_rmp_har_block_size
 
+  RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
+  
 ! for the moment it's done in a way that all RMP harmonics follow each other,i.e. n=2,n=3,n=4... 
 ! if you want for example n=2 and n=4 RMP you should consider n=2,3,4, but put zeros at the boundary in the input file for n=3 RMP
 ! example: ntor=13 and nperiod=1(so taking into account, toroidal numbers n=0,1,2....6) and  n=2 and n=3 are toroidal numbers of RMPs, 
 ! so Number_RMP_harmonics=2, RMP_har_cos_spectrum(1)=4,RMP_har_sin_spectrum(1)=5,RMP_har_cos_spectrum(2)=6,RMP_har_sin_spectrum(2)=7.  
- 
-!=========================================RMP spectrum
+  
+    call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_cos1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+    call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_sin1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
+    N_rmp_har_block_size=bnd_node_list%n_bnd_nodes
 
-  if (RMP_on .and. (n_tor .ge. 3)) then !*****
+    do i = 1, node_list%n_nodes
+      if (node_list%node(i)%boundary .ne.0) then
+        if (node_list%node(i)%boundary_index == 1 ) then
 
-  call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_cos1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
-  call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_sin1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
-!======================================RMP spectrum
-  N_rmp_har_block_size=bnd_node_list%n_bnd_nodes
-!======================================RMP spectrum
-
-     do i = 1, node_list%n_nodes
-        if (node_list%node(i)%boundary .ne.0) then
-           if (node_list%node(i)%boundary_index == 1 ) then
-
-              if (n_tor .eq. 1) then
-                 itest = 1
-              else 
-                 itest = RMP_har_cos_spectrum(1) !===================RMP spectrum
-              endif
+          if (n_tor .eq. 1) then
+            itest = 1
+          else 
+            itest = RMP_har_cos_spectrum(1)
+          endif
               
-              psi_test = node_list%node(i)%values(itest,1,1)
-              if (my_id == 0) then
-                 write (*,*) 'psi_bnd at previous time step', psi_test
-              endif
-           endif
+          psi_test = node_list%node(i)%values(itest,1,1)
+          if (my_id == 0) then
+            write (*,*) 'psi_bnd at previous time step', psi_test
+          endif
         endif
-     enddo
-!====================================================     
-     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
-     !   establish_RMP = (1.d-3)*tstep
+      endif
+    enddo
+    
+    if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
+    !   establish_RMP = (1.d-3)*tstep
       sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
           - ( 1. + exp(-lambda*( 0. - tset )))**(-1) 
-        establish_RMP = (lambda*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
-     else
-        establish_RMP = 0.0
-     endif
-     ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*tset ) then establish_RMP =0.0
+      establish_RMP = (lambda*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
+    else
+      establish_RMP = 0.0
+    endif
+    ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*tset ) then establish_RMP =0.0
   
-     do j=1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics  
-        psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
-        dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
-        dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
-        psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
-        dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
-        dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
-     end do
+    do j=1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics  
+      psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
+      dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
+      dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
+      psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
+      dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
+      dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
+    end do
 
-     if (my_id == 0) then
-       
+    if (my_id == 0) then
+      write (*,*) 'psi_RMP_cos1(1) and derivatives after multiplication in boundary conditions'
+      write (*,*) psi_RMP_cos1(1), dpsi_RMP_cos_dR1(1), dpsi_RMP_cos_dZ1(1)
+      write (*,*) 'establish_RMP', establish_RMP
+    endif
 
-        write (*,*) 'psi_RMP_cos1(1) and derivatives after multiplication in boundary conditions'
-        write (*,*) psi_RMP_cos1(1), dpsi_RMP_cos_dR1(1), dpsi_RMP_cos_dZ1(1)
-        write (*,*) 'establish_RMP', establish_RMP
-     
-     endif
-
-  endif !*****
-!=============== RMP ==============
+  end if RMPspectrum
 
   zbig = 1.d12
   if (use_murge .and. use_murge_element) then
@@ -201,8 +189,8 @@ contains
            if (node_list%node(inode)%boundary .ne. 0) then !==================if boundary nodes
 
               do in=1, n_tor  !========================do n_tor
-!===============================================================RMP spectrum cycle §§§§§§§§
-              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics , by defalt=1
+
+              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
                  do k=1, n_var ! ================================do variables
 

@@ -410,7 +410,6 @@ module phys_module
   real*8, allocatable :: dpsi_RMP_sin_dR(:)
   real*8, allocatable :: dpsi_RMP_sin_dZ(:) 
   integer             :: RMP_har_cos,RMP_har_sin ! Harmoics numbers for RMP-cos and RMP-sin(for ex. ntor=3, nperiod=2,RMP_har_cos=2, RMP_har_sin=3)
-!========================================================================RMP spectrum
   integer, parameter  :: N_RMP_max = 10                  ! Maximum of RMP harmonics to take into account
   integer             :: Number_RMP_harmonics            ! Number_RMP_harmonics < N_RMP_max. If only one harmonic,  Number_RMP_harmonics=1, by default it's =1 in models/preset_parameters.f90 
   integer             :: RMP_har_cos_spectrum(N_RMP_max) ! If only one harmonic,by default RMP_har_cos_spectrum(1)=RMP_har_cos; 

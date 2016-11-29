@@ -1,15 +1,3 @@
-module elements_nodes_neighbours
-
-  use data_structure
-
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  integer,allocatable      :: element_neighbours(:,:)
-
-end module elements_nodes_neighbours
-
-
-
 program jorek2_fieldlines_vtk
 
 use constants
@@ -18,6 +6,8 @@ use phys_module
 use basis_at_gaussian
 use elements_nodes_neighbours
 use tr_module
+use mod_neighbours
+use mod_import_restart
 
 implicit none
 
@@ -41,8 +31,6 @@ character :: buffer*80, lf*1, str1*12, str2*12, str3*24
 integer :: ivtk, i_var, my_id, ierr
 logical :: psi_theta
 real*8  :: coord_min(2), coord_max(2), coord_out(2)
-
-logical, external :: neighbours
 
 namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
 
@@ -97,7 +85,7 @@ do i_tor=1, n_tor
   endif
 enddo
 
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 
@@ -109,7 +97,7 @@ do i=1,element_list%n_elements
 
   do j=i+1,element_list%n_elements
 
-    if (neighbours(element_list%element(i),element_list%element(j),iside_i,iside_j)) then
+    if (neighbours(node_list, element_list%element(i),element_list%element(j),iside_i,iside_j)) then
       element_neighbours(iside_i,i) = j
       element_neighbours(iside_j,j) = i
     endif
@@ -557,7 +545,11 @@ lf = char(10) ! line feed character
 
 ivtk = 20
 
-open(unit=ivtk,file='field_lines.vtk',form='binary',convert='BIG_ENDIAN')
+#ifdef IBM_MACHINE
+open(unit=ivtk,file='field_lines.vtk',form='unformatted',access='stream')
+#else
+open(unit=ivtk,file='field_lines.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+#endif
 
 buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
 buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)
@@ -568,7 +560,7 @@ buffer = 'DATASET POLYDATA'//lf//lf                                             
 write(str1(1:12),'(i12)') n_total
 buffer = 'POINTS '//str1//'  float'//lf                                               ; write(ivtk) trim(buffer)
 
-write(ivtk) (((Xfield(j,i),Yfield(j,i),Zfield(j,i)), j=1,Nfield(i)),i=1,n_lines)
+write(ivtk) (([Xfield(j,i),Yfield(j,i),Zfield(j,i)], j=1,Nfield(i)),i=1,n_lines)
 
 !LINES SECTION
 write(str3(1:24),'(2i12)') n_lines,n_total+n_lines
@@ -602,7 +594,7 @@ end program jorek2_fieldlines_vtk
 
 
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 
@@ -652,7 +644,7 @@ end subroutine step
 
 
 subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
-use parameters
+use mod_parameters
 use elements_nodes_neighbours
 use phys_module
 

@@ -1,4 +1,4 @@
-SUBROUTINE split_brodcast(type,MPI_COMM_N)
+SUBROUTINE split_broadcast(type,MPI_COMM_N)
   !
   ! Split MPI_BCAST if MPI buffer beyond 2Go
   ! 
@@ -60,4 +60,4 @@ SUBROUTINE split_brodcast(type,MPI_COMM_N)
      !
   ENDIF
   !
-END SUBROUTINE split_brodcast
+END SUBROUTINE split_broadcast

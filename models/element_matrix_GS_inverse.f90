@@ -2,7 +2,7 @@ subroutine element_matrix_GS_inverse(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,elem
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
-use parameters
+use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian

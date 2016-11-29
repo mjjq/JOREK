@@ -1,4 +1,4 @@
-module bootstrap_functions
+module mod_bootstrap_functions
 
   implicit none
   integer, parameter :: n_spline = 30
@@ -195,6 +195,7 @@ subroutine bootstrap_current(minRad, R, Z,                   &
   Jb = abs(Jb)
   
   ! --- There should not be any bootstrap outside plasma, the Xpoint can be noisy...
+  Jb = Jb * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.01)/0.005d0 ) )
   ! --- Cut off bootstrap source around the Xpoint with a radius of 5% the distance Xpoint-axis.
   if (xpoint .and.  (xcase .ne. 2) ) then
     distance_xpoint      = sqrt( (R      - R_xpoint(1))**2 + (Z      - Z_xpoint(1))**2 )
@@ -261,6 +262,30 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
   real*8			:: dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
   logical			:: found
 
+  ! --- Simplest case when we have a limiter plasma
+  if (.not. xpoint) then
+    flux_list%n_psi = 1
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+    flux_list%psi_values(1) = psi_bnd
+    call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+    call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
+    ! --- If this didn't work, it means psi=1.0 is the grid boundary, try with psi=0.99
+    if (i_find .eq. 0) then
+      flux_list%psi_values(1) = 0.99 * (psi_bnd - psi_axis) + psi_axis
+      call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+      call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
+    endif
+    if (i_find .ne. 0) then
+      call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
+    		     R_find,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
+    		     Z_find,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+      minRad = R_find - R_axis
+    else
+      minRad = amin
+    endif
+    call tr_deallocate(flux_list%psi_values,"flux_list%psi_values",CAT_GRID)
+    return
+  endif
   
   ! --- Step along line with 2cm resolution
   n_iter     = 0
@@ -1184,5 +1209,5 @@ end subroutine bootstrap_current_wilson
 
 
 
-end module bootstrap_functions
+end module mod_bootstrap_functions
 

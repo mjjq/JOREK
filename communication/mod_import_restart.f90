@@ -699,6 +699,9 @@ version_control = trim(adjustl(RCS_VERSION))
     if (allocated(energies2))   call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
     call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep, &
          "energies2",CAT_UNKNOWN)
+    if (allocated(energies3))   call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
+    call tr_allocate(energies3,1,n_tor,1,2,1,index_start+nstep, &
+         "energies3",CAT_UNKNOWN)
     energies2 = 0.d0
     energies3 = 0.d0
 

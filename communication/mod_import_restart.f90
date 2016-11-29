@@ -463,6 +463,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_nref(:)
 
   real*8, allocatable :: t_energies(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies3(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies4(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
   !
 #endif
   error = 0
@@ -682,26 +685,66 @@ version_control = trim(adjustl(RCS_VERSION))
     enddo
 
 #ifdef JECCD                   
-    if (allocated(energies2))	call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)	  
-    call tr_allocate(energies2,1,n_tor_tmp,1,2,1,index_start+nstep, &
-    	 "energies2",CAT_UNKNOWN)
-    if (allocated(energies3))	call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
-    call tr_allocate(energies3,1,n_tor_tmp,1,2,1,index_start+nstep, &
-    	 "energies3",CAT_UNKNOWN)
+    if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
+    call tr_allocate(t_energies2,1,n_tor_tmp,1,2,1,index_start+nstep, &
+         "t_energies2",CAT_UNKNOWN)
+    if (allocated(t_energies3))   call tr_deallocate(t_energies3,"t_energies3",CAT_UNKNOWN)
+    call tr_allocate(t_energies3,1,n_tor_tmp,1,2,1,index_start+nstep, &
+         "t_energies3",CAT_UNKNOWN)
+    t_energies2 = 0.d0
+    t_energies3 = 0.d0
+    call HDF5_array3D_reading(file_id,t_energies2,'energies2')
+    call HDF5_array3D_reading(file_id,t_energies3,'energies3')
+
+    if (allocated(energies2))   call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
+    call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep, &
+         "energies2",CAT_UNKNOWN)
     energies2 = 0.d0
     energies3 = 0.d0
-    call HDF5_array3D_reading(file_id,energies2,'energies2')
-    call HDF5_array3D_reading(file_id,energies3,'energies3')
+
+    do m=1,n_tor_tmp,2
+      do k=1, n_tor,2 
+        if (mode_tmp(m) .eq. mode(k)) then
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            energies2(k,:,:) = t_energies2(m,:,:)
+            energies3(k,:,:) = t_energies3(m,:,:)
+          else
+            energies2(k-1,:,:) = t_energies2(m-1,:,:)
+            energies2(k,:,:)   = t_energies2(m,:,:) 
+            energies3(k-1,:,:) = t_energies3(m-1,:,:)
+            energies3(k,:,:)   = t_energies3(m,:,:) 
+          endif
+        endif
+      enddo
+    enddo
 
 #ifdef JEC2DIAG
+    if (allocated(t_energies4))   call tr_deallocate(t_energies4,"t_energies4",CAT_UNKNOWN)
+    call tr_allocate(t_energies4,1,n_tor_tmp,1,2,1,index_start+nstep, &
+         "t_energies4",CAT_UNKNOWN)
+    t_energies4 = 0.d0
+    call HDF5_array3D_reading(file_id,t_energies4,'energies4')
+
     if (allocated(energies4))   call tr_deallocate(energies4,"energies4",CAT_UNKNOWN)
-    call tr_allocate(energies4,1,n_tor_tmp,1,2,1,index_start+nstep, &
-           "energies4",CAT_UNKNOWN)
+    call tr_allocate(energies4,1,n_tor,1,2,1,index_start+nstep, &
+         "energies4",CAT_UNKNOWN)
     energies4 = 0.d0
-    call HDF5_array3D_reading(file_id,energies4,'energies4')
+    do m=1,n_tor_tmp,2
+      do k=1, n_tor,2 
+        if (mode_tmp(m) .eq. mode(k)) then
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            energies4(k,:,:) = t_energies4(m,:,:)
+          else
+            energies4(k-1,:,:) = t_energies4(m-1,:,:)
+            energies4(k,:,:)   = t_energies4(m,:,:) 
+          endif
+        endif
+      enddo
+    enddo
 #endif
+
 #endif
-   end if
+  end if
 
   ! Import restart Vacuum 
   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)

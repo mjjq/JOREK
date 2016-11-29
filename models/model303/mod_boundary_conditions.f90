@@ -102,24 +102,9 @@ contains
     call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
     call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
     N_rmp_har_block_size=bnd_node_list%n_bnd_nodes
-
-    do i = 1, node_list%n_nodes
-      if (node_list%node(i)%boundary .ne.0) then
-        if (node_list%node(i)%boundary_index == 1 ) then
-
-          if (n_tor .eq. 1) then
-            itest = 1
-          else 
-            itest = RMP_har_cos_spectrum(1)
-          endif
-              
-          psi_test = node_list%node(i)%values(itest,1,1)
-          if (my_id == 0) then
-            write (*,*) 'psi_bnd at previous time step', psi_test
-          endif
-        endif
-      endif
-    enddo
+    
+    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos_spectrum(1),1),1,1)
+    write (*,*) 'psi_bnd at previous time step', psi_test
     
     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
     !   establish_RMP = (1.d-3)*tstep
@@ -361,17 +346,11 @@ contains
 
                             if (xcase2 .eq. 2) then
                                direction = -direction
-                            endif
-!  git                      elseif ( (xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) )then
-!  git                      direction = -direction
-!===========================marina KSTAR
-                           if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
-                               direction = -1.
-			      endif
-                             if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
-                               direction = +1.
-				endif
-!====================================marina KSTAR
+                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
+                              direction = -1.
+                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
+                              direction = +1.
+                            end if
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR

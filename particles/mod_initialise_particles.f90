@@ -8,7 +8,7 @@ use constants
 implicit none
 private
 public initialise_particles, no_transform, adjust_particle_weights
-public set_velocity_from_T
+public set_velocity_from_T, domain_bounding_box
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound

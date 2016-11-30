@@ -43,7 +43,7 @@ end function new_read_jorek_fields_interp_linear
 
 !> Read jorek fields from a restart file
 subroutine do_read(this, sim)
-  use import_restart
+  use mod_import_restart
   class(read_jorek_fields_interp_linear), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   character(len=80) :: restart_file
@@ -212,7 +212,7 @@ end subroutine EM_fields_interp_linear
 subroutine merge_restart(node_list,element_list, restart_file, format_rst, ierr)
   use data_structure
   use phys_module
-  use import_restart
+  use mod_import_restart
   implicit none
 
   ! --- Routine parameters

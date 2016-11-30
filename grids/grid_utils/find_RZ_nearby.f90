@@ -106,9 +106,9 @@ do element_try_index = 1, element_try_max
 
 
   if (isnan(err2)) then
-    write(*,*) "WARNING: NaN encountered after newton iteration, using find_RZ"
+    !write(*,*) "WARNING: NaN encountered after newton iteration, using find_RZ"
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    ifail=2
+    if (ifail .eq. 0) ifail=2
     return
   endif
   if (newton_iter_number .gt. newton_iter_max) then
@@ -116,7 +116,7 @@ do element_try_index = 1, element_try_max
     !" using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
       !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    ifail=3
+    if (ifail .eq. 0) ifail=3
     return
   endif
 
@@ -129,7 +129,7 @@ do element_try_index = 1, element_try_max
       !write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
       !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
       call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-      ifail = 5
+      if (ifail .eq. 0) ifail=5
       return
     else
       ! We have changed element, recalculate st_jac and err2
@@ -143,7 +143,7 @@ do element_try_index = 1, element_try_max
   case (3) ! SEARCH
     call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
     !write(*,"(A,i5,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
-    ifail=4
+    if (ifail .eq. 0) ifail=4
     return ! Stop because find_RZ works always
   case default ! SAME == 0
     return ! we are converged anyhow, no problem

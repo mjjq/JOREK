@@ -4,7 +4,7 @@ module mod_sobseq_rng
   use mod_rng
   implicit none
   private
-  public sobseq_rng
+  public type_rng, sobseq_rng
 
   type, extends(type_rng) :: sobseq_rng
     private

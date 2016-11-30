@@ -98,6 +98,9 @@ $(OBJDIR)/%.o:: $(1)%.f
 
 $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+
+$(OBJDIR)/%.o:: $(1)%.cpp
+	$$(CXX) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE

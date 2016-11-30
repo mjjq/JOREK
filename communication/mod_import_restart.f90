@@ -427,9 +427,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   ! --- Local variables
   integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp
   integer              :: n_plane_tmp, n_vertex_max_tmp, n_nodes_max_tmp, n_elements_max_tmp,n_boundary_max_tmp
-  integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp
+  integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp, test
   real*8               :: growth_mag, growth_kin, amplitude
-  integer, allocatable :: mode_tmp(:)
+  integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
   character*50         :: version_control, version_control_tmp
   
@@ -583,6 +583,26 @@ version_control = trim(adjustl(RCS_VERSION))
   call HDF5_array1D_reading     (file_id,t_ref_mu,      'ref_mu')
   call HDF5_array1D_reading_char(file_id,t_constrained, 'constrained')
 
+  if (allocated(new_mode))   call tr_deallocate(new_mode,"new_mode",CAT_UNKNOWN)
+  allocate(new_mode(n_tor))
+  new_mode(:)=1
+
+  do m=1,n_tor_tmp,2
+    do k=1, n_tor,2 
+      if (mode_tmp(m) .eq. mode(k)) then
+        if ((m .eq. 1) .and. (k.eq.1)) then
+          new_mode(k)=0
+          print*, 'new_mode(k=0)=', new_mode(k)
+        else
+          new_mode(k-1)=0
+          new_mode(k)=0
+          print*, 'new_mode(k-1/k)=', new_mode(k-1), new_mode(k)
+        end if
+      end if
+    end do
+  end do
+print*, 'new_mode all=', new_mode
+  
   do i=1,node_list%n_nodes
     node_list%node(i)%x = t_x(i,:,:) 
 
@@ -623,7 +643,7 @@ version_control = trim(adjustl(RCS_VERSION))
     else
        node_list%node(i)%constrained = .false.
     end if
-  end do
+  end do ! do i=1,node_list%n_nodes
 
   call HDF5_array2D_reading_int(file_id,t_vertex,      'vertex')
   call HDF5_array2D_reading_int(file_id,t_neighbours,  'neighbours')
@@ -654,7 +674,7 @@ version_control = trim(adjustl(RCS_VERSION))
   call HDF5_integer_reading(file_id,index_start,'index_now')
   call HDF5_real_reading(file_id,t_start,'t_now')
   call HDF5_integer_reading(file_id,h5_nbsave_all,'h5_nbsave_all')
-  
+
   if (index_start .ge. 1) then
 
     if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
@@ -671,6 +691,7 @@ version_control = trim(adjustl(RCS_VERSION))
     call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep, &
          "energies",CAT_UNKNOWN)
     energies = 0.d0
+
     do m=1,n_tor_tmp,2
       do k=1, n_tor,2 
         if (mode_tmp(m) .eq. mode(k)) then
@@ -804,33 +825,48 @@ version_control = trim(adjustl(RCS_VERSION))
   enddo
  
   ! --- initialise new harmonics (only density and temperature, to be improved)
-  if (n_tor_tmp .lt. n_tor) then
-     ! --- Using an already computated mode
-     if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
-        write(*,*)'Importing perturbation from jorek_perturbation.rst file...'
-        write(*,*) " Not yet implemeted !! "
+
+  test = sum(new_mode(1:n_tor))
+  write(*,*), 'Warning:', test, ' new modes initialized to noise level' 
+  if ( test .gt. 0 ) then
+    ! --- Using an already computated mode
+    if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
+      write(*,*)'Importing perturbation from jorek_perturbation.rst file...'
+      write(*,*) " Not yet implemeted !! "
         
-     ! --- Using just noise
-     else
-        
-        amplitude = 1.d-10
-        do i=1,node_list%n_nodes
-           node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
-           do j=n_tor_tmp+1, n_tor
-              node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
-              node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
-           enddo
+    ! --- Using just noise
+    else
+      amplitude = 1.d-10
+      do i=1,node_list%n_nodes
+        do m=2,n_tor
+          if ( new_mode(m) .eq. 1 ) then
+          node_list%node(i)%values(m,:,1:4)= 0.d0
+          node_list%node(i)%values(m,:,5)= amplitude * node_list%node(i)%values(1,:,5)
+          node_list%node(i)%values(m,:,6)= amplitude * node_list%node(i)%values(1,:,6)
+          endif
         enddo
-     endif
+      enddo
+    endif
   end if
+
   !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
   
   ! -> Deallocate temporary arrays 
   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
+  call tr_deallocate(new_mode,"new_mode",CAT_UNKNOWN)
   
   call tr_deallocate(t_x,"t_x",CAT_UNKNOWN)
   call tr_deallocate(t_values,"t_values",CAT_UNKNOWN)
   call tr_deallocate(t_deltas,"t_deltas",CAT_UNKNOWN)
+  call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
+
+#ifdef JECCD                   
+  call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
+  call tr_deallocate(t_energies3,"t_energies3",CAT_UNKNOWN)
+#ifdef JEC2DIAG
+  call tr_deallocate(t_energies4,"t_energies4",CAT_UNKNOWN)
+#endif
+#endif
  
 #ifdef fullmhd
   call tr_deallocate(t_psi_eq,"t_psi_eq",CAT_UNKNOWN)

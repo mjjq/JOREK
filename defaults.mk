@@ -64,6 +64,7 @@ ifeq ($(COMPILER_FAMILY), intel)
     FLAGS += -openmp
   endif
   FFLAGS += -warn all
+  FFLAGS += -warn nointerfaces
   FFLAGS += -warn nounused
   FFLAGS += -fpp
   FFLAGS += -r8

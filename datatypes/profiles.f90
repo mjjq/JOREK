@@ -61,8 +61,8 @@ module profiles
     call destructProf(x, y, len)
     
     len = max(len,1) ! at least length 1
-    call tr_allocate(x,1,len,"x ",CAT_GRID)
-    call tr_allocate(y,1,len,"y ",CAT_GRID)
+    call tr_allocate(x,1,len,"x",CAT_GRID)
+    call tr_allocate(y,1,len,"y",CAT_GRID)
     
   end subroutine constructProf
   

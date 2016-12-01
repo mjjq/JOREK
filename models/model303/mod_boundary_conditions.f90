@@ -107,7 +107,6 @@ contains
     write (*,*) 'psi_bnd at previous time step', psi_test
     
     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
-    !   establish_RMP = (1.d-3)*tstep
       sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
           - ( 1. + exp(-lambda*( 0. - tset )))**(-1) 
       establish_RMP = (lambda*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 

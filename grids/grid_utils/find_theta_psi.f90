@@ -42,7 +42,7 @@ real*8 :: amax, amin
 
 ! 0. Preparation
 ! Normalize theta to -pi,pi
-theta_normalized = modulo(theta,TWOPI)-PI
+theta_normalized = modulo(theta+PI,TWOPI)-PI
 out_of_domain = .false.
 
 ! 1. Find the right elements (all elements where the theta and psi lines enter)
@@ -57,12 +57,15 @@ do i=1,element_list%n_elements
     ! workaround for the one element at the boundary
     amax = maxval(angle)
     amin = minval(angle)
+    ! separate case if the discontinuity (at theta=-pi) is in this element
     if (amax .gt. PI*0.5d0 .and. amin .lt. -PI*0.5d0) then
-      where (angle < 0) angle = angle + TWOPI
-      amax = maxval(angle)
-      amin = minval(angle)
+      ! We need now to compare the minimum on the positive side and the maximum on the negative side
+      if (minval(angle,angle .gt. PI*0.5d0) .lt. theta .and. maxval(angle,angle .lt. -PI*0.5d0)+TWOPI .gt. theta) then
+        i_elm = i
+      end if
+    else
+      if (amax .gt. theta_normalized .and. amin .lt. theta_normalized) i_elm = i
     end if
-    if (amax .gt. theta_normalized .and. amin .lt. theta_normalized) i_elm = i
   end if
 end do
 if (i_elm .eq. 0) then

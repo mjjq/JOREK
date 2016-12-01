@@ -8,7 +8,7 @@ use constants
 implicit none
 private
 public initialise_particles, no_transform, adjust_particle_weights
-public set_velocity_from_T, domain_bounding_box
+public set_velocity_from_T, domain_bounding_box, initialise_particles_H_mu_psi
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
@@ -192,6 +192,118 @@ subroutine initialise_particles(particles, node_list, element_list, &
     write(*,*) '**********************************'
   endif
 end subroutine initialise_particles
+
+!> Initialise particle positions in H, mu, psi, theta, phi, gamma (gyrophase) space.
+!> Set H_transform to transform from [0,1] to your desired range, Psi_transform to do the same (optional)
+!>
+!> **This subroutine does not support MPI or openMP yet!**
+subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng_base, mass, charge, H_transform, Theta_transform, Psi_transform)
+  use data_structure
+  use mod_rng
+  use mod_random_seed
+  use constants
+  use phys_module, only: F0
+  implicit none
+  class(particle_base), dimension(:), intent(inout) :: particles
+  type(type_node_list), intent(in)                  :: node_list
+  type(type_element_list), intent(in)               :: element_list
+  class(type_rng), intent(in)                       :: rng_base !< What type of random number generator to use (will be reseeded here)
+  real*8, intent(in)                                :: mass
+  integer*4, intent(in)                             :: charge
+  real*8, external                                  :: H_transform !< Function to transform 0-1 to the H-domain (eV)
+  real*8, external, optional                        :: Theta_transform !< Function to transform 0-1 to the theta-domain
+  real*8, external, optional                        :: Psi_transform !< Function to transform 0-1 to the Psi-domain
+  !< if omitted, determine automatically from node_list
+
+  ! Internal variables
+  class(type_rng), allocatable :: rng
+  real*8  :: ran(6), Rbox(2), Zbox(2)
+  real*8  :: H, muB, v_perp, v_par, gamma
+  real*8  :: psi, psimin, psimax, theta, phi
+  real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3), B_hat(3)
+  real*8, dimension(1) :: P, P_s, P_t, P_phi
+  real*8  :: R_s, R_t, Z_s, Z_t
+  real*8  :: s, t, u_init_max
+  real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
+  integer :: i_elm, i, ifail, n_try
+  real*8, dimension(element_list%n_elements,2) :: psi_minmax_list
+
+  psimin= 1d10
+  psimax=-1d10
+  ! Preparatory work: determine psi_min,max
+  !$omp parallel do default(shared) &
+  !$omp private(i_elm) reduction(min:psimin) &
+  !$omp reduction(max:psimax)
+  do i_elm=1,element_list%n_elements
+    call psi_minmax(node_list,element_list,i_elm,psi_minmax_list(i_elm,1),psi_minmax_list(i_elm,2))
+    psimin = min(psi_minmax_list(i_elm,1),psimin)
+    psimax = max(psi_minmax_list(i_elm,2),psimax)
+  end do
+  !$omp end parallel do
+  ! Preparatory work: setup RNG
+  allocate(rng,source=rng_base)
+  call rng%initialize(6, random_seed(), 1, 1, ifail)
+  ! Preparatory work: get R_axis, Z_axis
+  call find_axis(0, node_list, element_list, psi_axis, R_axis, Z_axis, s_axis, t_axis, i_elm, ifail)
+
+
+  ! Loop over all points in the series until we have enough particles
+  n_try = 0
+  do i=1,size(particles)
+    i_elm = 0
+    do while (i_elm .eq. 0)
+      call rng%next(ran)
+
+      if (present(Psi_transform)) then
+        psi = Psi_transform(ran(1))
+      else
+        psi = (psimax-psimin)*ran(1)+psimin
+      end if
+      ! Try to find this position
+      if (present(Theta_transform)) then
+        theta = Theta_transform(ran(5))
+      else
+	theta = TWOPI*ran(5)
+      end if
+      phi = TWOPI*ran(4)
+      !write(*,*) "Try psi=", psi, " theta=", theta, " phi=", phi
+      ! 1. Find R, Z corresponding to psi, theta
+      call find_theta_psi(node_list,element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
+      n_try = n_try + 1
+    end do
+    ! If we are here a suitable position has been found
+    ! For now set the guiding center position of the particle
+    particles(i)%i_elm = i_elm
+    particles(i)%st = [s,t]
+    particles(i)%x = [R,Z,phi]
+
+    ! Get B at this position
+    call       interp_PRZ(node_list,element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+    inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
+    psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
+    psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
+    ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
+    B        = [+psi_Z, -psi_R, F0] / R
+    B_hat = B/norm2(B)
+
+    ! 2. Calculate v_perp and v_par
+    H  = H_transform(ran(2)) ! [eV]
+    muB = H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
+    v_perp = sqrt(2*abs(muB*EL_CHG)/(mass*ATOMIC_MASS_UNIT)) ! [m/s]
+    v_par  = sign(sqrt(2*(H-muB)*EL_CHG/(mass*ATOMIC_MASS_UNIT)),muB)
+
+    ! 3. Calculate the real position (particle-type dependent)
+    gamma = TWOPI*ran(6)
+    select type(p => particles(i))
+    type is (particle_kinetic_leapfrog)
+      p%v = v_par * B_hat + v_perp * &
+      ((cos(gamma) * [0.d0, B_hat(3), -B_hat(2)]) + &
+        sin(gamma) * (B_hat(1) * B_hat - [1.d0, 0.d0, 0.d0]))
+      p%x = p%x + (mass*ATOMIC_MASS_UNIT*v_perp)/(real(charge,8)*norm2(B))
+    end select
+  end do
+end subroutine initialise_particles_H_mu_psi
+
 
 
 !> Calculate the size of a box around the domain (in RZ)

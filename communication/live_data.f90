@@ -72,10 +72,10 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel: normalized energy'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: %"time"           '
-    do n = 1, n_tor, 2 
+    do n = 1, n_tor, 2
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{mag', mode(n), '}"'
     end do
-    do n = 1, n_tor, 2 
+    do n = 1, n_tor, 2
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{kin', mode(n), '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
@@ -85,10 +85,10 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel: normalized growth rate'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: %"time"           '
-    do n = 1, n_tor, 2 
+    do n = 1, n_tor, 2
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{mag', mode(n), '}"'
     end do
-    do n = 1,  n_tor, 2
+    do n = 1, n_tor, 2
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{kin', mode(n), '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
@@ -127,7 +127,7 @@ module live_data
       do m = 1, n_period * (n_tor -1) /2
         if ( mod(m,n_period) .eq. 0 ) then
           write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') sum(energies(int(2*m/n_period):int(2*m/n_period)+1,j,index))
-        endif
+        end if
       end do
     end do
 
@@ -154,7 +154,7 @@ module live_data
               growth_rate = 0.d0
             endif
           write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') growth_rate
-          endif
+          end if
         end do
       end do
     end if

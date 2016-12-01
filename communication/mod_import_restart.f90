@@ -432,6 +432,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
   character*50         :: version_control, version_control_tmp
+  logical              :: kept
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -515,6 +516,13 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     write(*,*) ' OLD format (0) : '
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
     write(*,'(A,999i4)') ' new mode numbers     : ',mode
+    do i = 1, n_tor_tmp, 2
+      kept = .false.
+      do j = 1, n_tor, 2
+        if ( mode_tmp(i) == mode(j) ) kept = .true.
+      end do
+      if ( .not. kept ) write (*,'(1x,a,i5,a)') 'WARNING: The mode n=', mode_tmp(i), ' is being dropped!'
+    end do
   else
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
   endif

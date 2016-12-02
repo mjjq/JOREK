@@ -46,12 +46,10 @@ program RST_convert_hdf52bin
 
   ! --- Initialize mode and mode_type arrays
   call det_modes()
-  
-  rst_format = 0
 
   ! --- Read the restart HDF5 file
   if (verbose) write (6,*) " =============> rst_hdf52bin for filename = ",filein
-  call import_hdf5_restart(node_list, element_list, filein, rst_format, ierr)
+  call import_hdf5_restart(node_list, element_list, filein, ierr)
 
   index_now = index_start
   t_now     = t_start
@@ -63,6 +61,6 @@ program RST_convert_hdf52bin
 
   ! -- Write the BINARY restart file
   if (verbose) write (6,*) " =============> rst_hdf52bin, write BIN file = ",fileout
-  call export_binary_restart(node_list, element_list, fileout, rst_format)
+  call export_binary_restart(node_list, element_list, fileout)
 
 end program RST_convert_hdf52bin

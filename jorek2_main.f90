@@ -113,6 +113,11 @@ program JOREK2
       logical(kind=4),             intent(in)    :: xpoint2
       logical(kind=4),             intent(in)    :: nice_q
     end subroutine equilibrium
+
+    subroutine set_trap_sigterm() bind(C)
+    end subroutine set_trap_sigterm
+    logical*1 function sigterm_called() bind(C)
+    end function sigterm_called
   end interface
   
   type (type_surface_list) :: surface_list
@@ -135,6 +140,7 @@ program JOREK2
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
+  logical*1                :: to_quit
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
   logical                  :: solve_only
@@ -219,6 +225,9 @@ required = 0
     open(42, file='STOP_NOW', iostat=ierr)
     if ( ierr == 0 ) close(42, status='delete')
   end if
+
+  ! --- Set a signal handler for SIGTERM
+  call set_trap_sigterm()
 
   ! --- Preset some solver variables
   pastix_initialised = .false.
@@ -1167,6 +1176,17 @@ required = 0
     	write(*,*)
     	write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
     	write(*,*)
+      end if
+      exit jstep_loop
+    end if
+
+    ! --- Exit the code if SIGTERM has been called on any node
+    call MPI_ALLReduce(sigterm_called(), to_quit, 1, MPI_LOGICAL1, MPI_LOR, MPI_COMM_WORLD, ierr)
+    if (to_quit) then ! only present on id 0
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,*) ">>>>> SIGTERM RECEIVED: EXITING THE CODE <<<<<"
+        write(*,*)
       end if
       exit jstep_loop
     end if

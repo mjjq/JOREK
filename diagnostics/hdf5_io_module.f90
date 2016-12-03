@@ -5,7 +5,7 @@
 !
 ! Adapted from GYSELA routines
 !---------------------------------------------
-module HDF5_io_module
+module hdf5_io_module
   implicit none
 
 #ifdef USE_HDF5  
@@ -910,4 +910,4 @@ module HDF5_io_module
   end subroutine HDF5_array5D_reading
 
 #endif
-end module HDF5_io_module
+end module hdf5_io_module

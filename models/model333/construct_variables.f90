@@ -575,7 +575,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     if (use_pellet) then
       call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
     			  pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-    			  x_g,y_g, ps0, phi, zn, zT, &
+    			  x_g,y_g, ps0, phi, zn, zT/2.0, &
     			  central_density, pellet_particles, pellet_density, total_pellet_volume, &
     			  source_pellet, source_volume)
     endif

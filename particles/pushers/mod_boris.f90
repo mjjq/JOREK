@@ -10,7 +10,7 @@ module mod_boris
   private
 
   public boris_push_cylindrical, boris_push_cartesian, boris_initial_half_step_backwards_XYZ
-  public boris_initial_half_step_backwards_RZPhi
+  public boris_initial_half_step_backwards_RZPhi, left_handed_cross_product, right_handed_cross_product
 contains
 
 !> Push a single particle for some timesteps with the boris method

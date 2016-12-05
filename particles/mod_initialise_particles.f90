@@ -9,6 +9,7 @@ implicit none
 private
 public initialise_particles, no_transform, adjust_particle_weights
 public set_velocity_from_T, domain_bounding_box, initialise_particles_H_mu_psi
+public set_particle_weights_canonical_maxwellian, normalize_with_projection
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
@@ -196,24 +197,29 @@ end subroutine initialise_particles
 !> Initialise particle positions in H, mu, psi, theta, phi, gamma (gyrophase) space.
 !> Set H_transform to transform from [0,1] to your desired range, Psi_transform to do the same (optional)
 !>
+!> Does not do weighting of the particles.
+!>
 !> **This subroutine does not support MPI or openMP yet!**
-subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng_base, mass, charge, H_transform, Theta_transform, Psi_transform)
+subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng_base, mass, &
+        H_transform, Theta_transform, Psi_transform, cor)
   use data_structure
   use mod_rng
   use mod_random_seed
   use constants
   use phys_module, only: F0
+  use mod_coronal
+  use mod_boris, only: left_handed_cross_product
   implicit none
   class(particle_base), dimension(:), intent(inout) :: particles
   type(type_node_list), intent(in)                  :: node_list
   type(type_element_list), intent(in)               :: element_list
   class(type_rng), intent(in)                       :: rng_base !< What type of random number generator to use (will be reseeded here)
   real*8, intent(in)                                :: mass
-  integer*4, intent(in)                             :: charge
   real*8, external                                  :: H_transform !< Function to transform 0-1 to the H-domain (eV)
   real*8, external, optional                        :: Theta_transform !< Function to transform 0-1 to the theta-domain
   real*8, external, optional                        :: Psi_transform !< Function to transform 0-1 to the Psi-domain
   !< if omitted, determine automatically from node_list
+  type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
 
   ! Internal variables
   class(type_rng), allocatable :: rng
@@ -266,7 +272,6 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
 	theta = TWOPI*ran(5)
       end if
       phi = TWOPI*ran(4)
-      !write(*,*) "Try psi=", psi, " theta=", theta, " phi=", phi
       ! 1. Find R, Z corresponding to psi, theta
       call find_theta_psi(node_list,element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
       n_try = n_try + 1
@@ -277,7 +282,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
     particles(i)%st = [s,t]
     particles(i)%x = [R,Z,phi]
 
-    ! Get B at this position
+    ! 1. Get B at this position
     call       interp_PRZ(node_list,element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
     inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
     psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
@@ -292,18 +297,124 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
     v_perp = sqrt(2*abs(muB*EL_CHG)/(mass*ATOMIC_MASS_UNIT)) ! [m/s]
     v_par  = sign(sqrt(2*(H-muB)*EL_CHG/(mass*ATOMIC_MASS_UNIT)),muB)
 
-    ! 3. Calculate the real position (particle-type dependent)
+    ! 3. Calculate charge (if cor is present)
+    if (present(cor)) then
+      select type (p => particles(i))
+      type is (particle_kinetic_leapfrog)
+        p%q = q_coronal(node_list, element_list, s, t, phi, i_elm, cor)
+      end select
+    end if
+
+    ! 4. Output to particles (dependent on type of particle)
     gamma = TWOPI*ran(6)
     select type(p => particles(i))
     type is (particle_kinetic_leapfrog)
       p%v = v_par * B_hat + v_perp * &
       ((cos(gamma) * [0.d0, B_hat(3), -B_hat(2)]) + &
         sin(gamma) * (B_hat(1) * B_hat - [1.d0, 0.d0, 0.d0]))
-      p%x = p%x + (mass*ATOMIC_MASS_UNIT*v_perp)/(real(charge,8)*norm2(B))
+      if (p%q .gt. 0) p%x = p%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(p%v,B_hat))/(real(p%q,8)*EL_CHG*norm2(B))
     end select
   end do
 end subroutine initialise_particles_H_mu_psi
 
+!> Calculate the particle weights according to the canonical maxwellian distribution function
+!> (no electric fields):
+!> \[ F_{MC}(P_\phi,H,\mu) = \frac{n(\bar\psi)}{\left[2\pi \bar T(\bar\psi)/m\right]^3/2}
+!>                          exp\left{-\frac{H}{\bar T(\bar\psi)}\right} \]
+!> where \(\bar\psi = P_\phi/q\), \(P_\phi = q\psi + m R v_\phi\),
+!> \( H = m/2 v_\parallel^2 + \mu B \) and \(\mu = \frac{m v_\perp^2}{2B}\)
+!>
+!> The particle weight is set to the value of this distribution function at the specific point.
+!> \(\bar T(\bar\psi)\) is approximated by \(T(\psi)\) if it is missing.
+!> \(\bar n(\bar\psi)\) is approximated by 1 if it is missing.
+subroutine set_particle_weights_canonical_maxwellian(particles, node_list, element_list, mass, n_psibar, T_psibar)
+  use data_structure
+  use constants
+  use phys_module, only: central_density, central_mass
+  implicit none
+  class(particle_base), dimension(:), intent(inout) :: particles
+  type(type_node_list), intent(in)                  :: node_list
+  type(type_element_list), intent(in)               :: element_list
+  real*8, intent(in)                                :: mass
+  real*8, external, optional                        :: n_psibar
+  real*8, external, optional                        :: T_psibar
+
+  interface
+    function n_psibar(psibar)
+      real*8, intent(in) :: psibar
+    end function n_psibar
+    function T_psibar(psibar)
+      real*8, intent(in) :: psibar
+    end function T_psibar
+  end interface
+
+  integer :: i
+  real*8  :: t_norm, psibar, H, n, T
+  real*8, dimension(1) :: P, P_s, P_t, P_phi
+  real*8  :: R, R_s, R_t, Z, Z_s, Z_t
+
+  t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+
+  !$omp parallel do default(none) private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
+  !$omp shared(particles, node_list, element_list, mass, central_density)
+  do i=1,size(particles,1)
+    call       interp_PRZ(node_list,element_list,particles(i)%i_elm,[1],1, &
+        particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+    select type (pa => particles(i))
+    type is (particle_kinetic_leapfrog)
+      psibar = real(pa%q,8) * P(1) * EL_CHG + mass * ATOMIC_MASS_UNIT * R * pa%v(3)
+      H = mass*ATOMIC_MASS_UNIT*0.5d0 * norm2(pa%v)
+    class default
+      write(*,*) "ERROR: add code for your type here"
+    end select
+
+    if (present(n_psibar)) then
+      n = n_psibar(psibar) ! [m^-3]
+    else
+      n = 1 ! units irrelevant if normalized later to a total number of particles
+    end if
+    if (present(T_psibar)) then
+      T = T_psibar(psibar) ! [K]
+    else
+      ! Calculate the local temperature and use this instead
+      call       interp_PRZ(node_list,element_list,particles(i)%i_elm,[6],1, &
+        particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+      T = P(1)/(2.d0*MU_ZERO*central_density*1.d20*K_BOLTZ) ! [K]
+#if (JOREK_MODEL == 400)
+      T = T*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
+#endif
+      ! Workaround for low-temperature regions
+      ! Because we give weights based on the energy and temperature areas with lower temperature are getting
+      ! too high weights. Work around this by defining a minimum temperature to stop the outer regions from 
+      ! dominating the projection.
+      T = max(1d7,T)
+    end if
+    particles(i)%weight = n/(TWOPI*T/(mass*ATOMIC_MASS_UNIT)) * exp(-H/T)
+  end do
+  !$omp end parallel do
+end subroutine set_particle_weights_canonical_maxwellian
+
+!> Normalize particles with the result of the projection of the first group
+subroutine normalize_with_projection(proj, particles, i_group)
+  use mod_project_particles
+  type(project_to_vtk), intent(in) :: proj
+  class(particle_base), dimension(:), intent(inout) :: particles
+  integer, intent(in), optional :: i_group
+
+  integer :: group = 1
+  integer :: i
+  real*8, dimension(1) :: P, P_s, P_t, P_phi
+  real*8 :: R, R_s, R_t, Z, Z_s, Z_t
+  if (present(i_group)) group = i_group
+
+  do i=1,size(particles,1)
+    if (particles(i)%i_elm .ne. 0) then
+      call interp_PRZ(proj%node_list,proj%element_list,particles(i)%i_elm,[group],1, &
+        particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+      particles(i)%weight = particles(i)%weight/P(1)
+    end if
+  end do
+end subroutine normalize_with_projection
 
 
 !> Calculate the size of a box around the domain (in RZ)
@@ -350,6 +461,42 @@ call MPI_AllReduce(local_weights,sum_weights,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,
 ! Divide all weights by the sum of weights and multiply by the requested number of atoms
 particles(:)%weight = particles(:)%weight / sum_weights * num_atoms_total
 end subroutine adjust_particle_weights
+
+function q_coronal(node_list, element_list, s, t, phi, i_elm, cor)
+use data_structure
+use phys_module, only: central_density
+use mod_coronal
+type(type_node_list), intent(in)                  :: node_list
+type(type_element_list), intent(in)               :: element_list
+real*8, intent(in)                                :: s, t, phi
+integer, intent(in)                               :: i_elm
+type(coronal), intent(in)                         :: cor
+integer                                           :: q_coronal
+
+real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8               :: R, R_s, R_t, Z, Z_s, Z_t, q
+real*8 :: local_Te, local_Ne, DUMMY_REAL
+call interp_PRZ(node_list,element_list,i_elm,&
+#if (JOREK_MODEL == 400)
+      [5,8],& ! electron temperature
+#else
+      [5,6],& ! electron temperature + ion temperature (assumed equal)
+#endif
+          2,s,t,phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+
+local_Ne = P(1) * 1d20                           ! plasma density [1/m^3]
+local_Te = P(2)/(2.d0*MU_ZERO*central_density*1.d20)/K_BOLTZ
+#if (JOREK_MODEL == 400)
+local_Te = local_T_e*2d0 ! P(1) contains the electron temperature, reverse previous correction
+#endif
+
+if (local_Ne .le. 0.d0 .or. local_Te .le. 0.d0) then
+  q_coronal = 0
+else
+  call cor%interp(log10(local_Ne),log10(local_Te),q,DUMMY_REAL)
+  q_coronal = nint(q,1)
+endif
+end function
 
 !> Set v of a particle for use with kinetic codes
 subroutine set_velocity_from_T(particles, mass, node_list, element_list, cor, v_par)

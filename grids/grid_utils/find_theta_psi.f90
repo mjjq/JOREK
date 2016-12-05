@@ -29,7 +29,7 @@ real*8  :: inv_st_jac, psi_R, psi_Z, psi_u
 integer :: i_elm_out, ifail, backtrack_step, newton_iter_number
 integer, parameter :: num_backtrack_steps = 10 ! to prevent going over the border of the domain
 real*8, parameter  :: backtrack_factor = 0.99d0
-integer, parameter :: newton_iter_max = 6
+integer, parameter :: newton_iter_max = 8
 integer, parameter :: i_var(1) = [1], n_ivar=1
 real*8, parameter  :: tol = 1d-8
 
@@ -89,7 +89,7 @@ do i=1,3
 end do
 i = minloc(abs(P_init-psi),1)
 u = u_init(i)/cos(angle(i)-theta)
-write(*,"(6g16.8)") P_init-psi, u_init
+!write(*,"(6g16.8)") P_init-psi, u_init
 ! Keep trying with smaller u until we find an element
 do backtrack_step = 0, num_backtrack_steps
   R_try = R_axis + u*cos(theta)
@@ -126,7 +126,7 @@ do newton_iter_number = 1, newton_iter_max
 
   ! Formulate a new guess (u) based on psi and psi' 
   du = -err/psi_u
-  write(*,"(12g14.6)") P(1)-psi, u, du, i_elm_out, s, t, out_of_domain
+  !write(*,"(12g14.6)") P(1)-psi, u, du, i_elm_out, s, t, out_of_domain
   if (out_of_domain .and. du .gt. 0.d0) du = -du ! u must go down in this case
   ! Calculate R and Z for this guess
   R_try = R_axis + (u+du)*cos(theta)

@@ -267,6 +267,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   enddo
 
+  if (my_id == 0) then
+    write(*,*) "Check Point 00a"
+  end if
+
   ! --- Memory allocation
   if (.not. allocated(A_glob))    call tr_allocate(A_glob,  1,nz_glob,"A_glob",  CAT_DMATRIX)
   if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
@@ -275,6 +279,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocate (rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocatep(rhs_loc, 1,ndof_glob,"rhs_loc", CAT_DMATRIX)
+
+  if (my_id == 0) then
+    write(*,*) "Check Point 00b"
+  end if
+
 
   ! --- Initialise internal variables
   irn_glob = 0
@@ -285,6 +294,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   difference_found = .false.
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
+
+  if (my_id == 0) then
+    write(*,*) "Check Point 00be, A_glob = ", A_glob
+  end if
+
 
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
@@ -363,6 +377,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     ! --- We don't want the next part to run in parallel
     !$omp critical  
+
+    if (my_id == 0) then
+      write(*,*) "Check Point 00d"
+    end if
+
    
     ! --- We only look at non-refined elements
     if ((.not. refinement) .or. (refinement .and. (element%n_sons .eq. 0))) then
@@ -428,6 +447,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   end do
   !$omp end do
   !$omp end parallel
+
+  if (my_id == 0) then
+    write(*,*) "Check Point 00c"
+  end if
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if (freeboundary) then

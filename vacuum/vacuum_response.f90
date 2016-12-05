@@ -303,7 +303,7 @@ module vacuum_response
 
     ! --- Import normalization
     sr%a_ee(:,:) = sr%a_ee(:,:) * 2.d0*PI
-    sr%a_ey(:,:) = sr%a_ey(:,:) * 2.d0*PI
+    sr%a_ye(:,:) = sr%a_ye(:,:) * 2.d0*PI
     if ( vacuum_debug) write(*,*) 'Applied import normalization.'
 
     ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates (replace y <-> z)

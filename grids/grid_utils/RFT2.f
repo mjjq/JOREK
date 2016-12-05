@@ -1,5 +1,5 @@
       SUBROUTINE RFT2(DATA,NR,KR)
-      !******************************************************************
+      !*****************************************************************
       !* REAL FOURIER TRANSFORM.                                       *
       !* INPUT:  NR REAL COEFFICIENTS                                  *
       !*            DATA(1),DATA(1+KR),....,DATA(1+(NR-1)*KR).         *
@@ -8,10 +8,10 @@
       !*           (DATA(1+2*KR), DATA(1+3*KR))                        *
       !*            .............................                      *
       !*           (DATA(1+NR*KR),DATA(1+(NR+1)*KR).                   *
-      !* THE CALLING PROGRAM SHOULD HAVE DATA DIMENSIONED WITH AT LEAST *
+      !* THE CALLING PROGRAM SHOULD HAVE DATA DIMENSIONED WITH AT LEAST*
       !* (NR+1)*KR+1 ELEMENTS. (I.E., NR+2 IF INCREMENT KR=1).         *
       !* LASL ROUTINE MAY 75, CALLING FFT2 AND RTRAN2.                 *
-      !******************************************************************
+      !*****************************************************************
 
       real*8  :: DATA(*)
       integer :: nr, kr
@@ -23,12 +23,12 @@
       END
 
       SUBROUTINE RTRAN2(DATA,NR,KR,KTRAN)
-      !******************************************************************
+      !*****************************************************************
       !* INTERFACE BETWEEN RFT2, RFI2, AND FFT2.                       *
-      !* THE CALLING PROGRAM SHOULD HAVE DATA DIMENSIONED WITH AT LEAST *
+      !* THE CALLING PROGRAM SHOULD HAVE DATA DIMENSIONED WITH AT LEAST*
       !* (NR+1)*KR+1 ELEMENTS.                                         *
       !* LASL ROUTINE MAY 75, CALLED FROM RFT2 AND RFI2.               *
-      !******************************************************************
+      !*****************************************************************
 
       real*8 DATA(*)
 
@@ -70,9 +70,9 @@
       END
 
       SUBROUTINE FFT2 (DATAR,DATAI,N,INC)
-      !******************************************************************
+      !*****************************************************************
       !* FFT2 FORTRAN VERSION CLAIR NIELSON MAY 75.                    *
-      !******************************************************************
+      !*****************************************************************
 
       DIMENSION DATAR(*), DATAI(*)
 

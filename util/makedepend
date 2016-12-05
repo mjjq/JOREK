@@ -105,4 +105,10 @@ sub print_dependencies {
     }
 }
 
-print_dependencies($filename);
+# Read from filename, or stdin if - is the second argument
+if ($ARGV[0] eq "-") {
+    shift(@ARGV);
+    print_dependencies("/dev/stdin");
+} else {
+    print_dependencies($filename);
+}

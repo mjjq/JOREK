@@ -225,7 +225,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
   ! Internal variables
   class(type_rng), allocatable :: rng
   real*8  :: ran(6), Rbox(2), Zbox(2)
-  real*8  :: H, muB, v_perp, v_par, gamma
+  real*8  :: H, muB, v_perp, v_par, chi
   real*8  :: psi, psimin, psimax, theta, phi
   real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3), B_hat(3)
   real*8, dimension(1) :: P, P_s, P_t, P_phi
@@ -307,12 +307,12 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
     end if
 
     ! 4. Output to particles (dependent on type of particle)
-    gamma = TWOPI*ran(6)
+    chi = TWOPI*ran(6)
     select type(p => particles(i))
     type is (particle_kinetic_leapfrog)
       p%v = v_par * B_hat + v_perp * &
-      ((cos(gamma) * [0.d0, B_hat(3), -B_hat(2)]) + &
-        sin(gamma) * (B_hat(1) * B_hat - [1.d0, 0.d0, 0.d0]))
+      ((cos(chi) * [0.d0, B_hat(3), -B_hat(2)]) + &
+        sin(chi) * (B_hat(1) * B_hat - [1.d0, 0.d0, 0.d0]))
       if (p%q .gt. 0) p%x = p%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(p%v,B_hat))/(real(p%q,8)*EL_CHG*norm2(B))
     end select
   end do

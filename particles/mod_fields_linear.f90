@@ -2,27 +2,69 @@
 !> in JOREK restart files. Contains an action to read the fields.
 module mod_fields_linear
 use data_structure
-use mod_action
 use mod_particle_sim
+use mod_fields
+use mod_interp4
+use mod_action
+use mod_interp_PRZ
 implicit none
 private
-public read_jorek_fields_interp_linear, EM_fields_interp_linear
+public jorek_fields_interp_linear, read_jorek_fields_interp_linear
 
-!> Action to read jorek fields and store enough data for linear interpolation
-!> in time.
+!> Action to read in the fields into sim%fields
 type, extends(action) :: read_jorek_fields_interp_linear
-  type(type_node_list), allocatable    :: node_list
-  type(type_element_list), allocatable :: element_list
   character(len=80) :: basename = 'jorek' !< Comes before the file number or extension
   integer :: i = 0 !< Number of the restart file to read. Set to -1 to not include
   integer :: rst_format = 0 !< Format of restart file if .rst type
   contains
     procedure :: do => do_read
-end type read_jorek_fields_interp_linear
+end type
 interface read_jorek_fields_interp_linear
   module procedure new_read_jorek_fields_interp_linear
 end interface read_jorek_fields_interp_linear
+
+!> store enough data for linear interpolation
+!> in time.
+!> This does not really work for changing grids in time!
+!> Use at your own peril in that case. (e.g. i_elm and s,t for a specific spatial position might depend on time)
+!>
+!> The reason behind not using deltas is that we do not have to alter much code
+!> and can import two restarts which are not consecutive and still interpolate.
+type, extends(fields_base) :: jorek_fields_interp_linear
+  type(type_node_list), allocatable    :: node_list
+  type(type_element_list), allocatable :: element_list
+  real*8 :: time_now !< Time of current restart file (SI)
+  real*8 :: time_prev !< Time of previous restart file (SI)
+  contains
+    procedure :: interp_PRZ => do_interp_PRZ
+end type jorek_fields_interp_linear
 contains
+
+!> Interpolate a variable at a specific position (with phi), with first derivatives only
+pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
+  use mod_interp_PRZ
+  class(jorek_fields_interp_linear),  intent(in)  :: this
+  real*8,                   intent(in)  :: time !< Time at which to calculate this variable
+  integer,                  intent(in)  :: i_elm
+  integer,                  intent(in)  :: n_v, i_v(n_v)
+  real*8,                   intent(in)  :: s, t, phi
+  real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v), P_phi(n_v), P_time(n_v)
+  real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
+
+  real*8 :: f, df !< result = (1-df)*values_now - df*deltas, df = 1-f
+  real*8, dimension(n_v) :: Pd, Pd_s, Pd_t, Pd_phi
+  df = (time - this%time_prev)/(this%time_now - this%time_prev)
+  f  = 1.d0 - df
+
+  call       interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+  call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
+
+  P      = f*P     - df*Pd
+  P_s    = f*P_s   - df*Pd_s
+  P_t    = f*P_t   - df*Pd_t
+  P_phi  = f*P_phi - df*Pd_phi
+  P_time = Pd/(this%time_now - this%time_prev) ! linearisation
+end subroutine do_interp_PRZ
 
 !> Constructor to allow for optional and default variables
 function new_read_jorek_fields_interp_linear(basename, i, rst_format) result(new)
@@ -30,8 +72,6 @@ function new_read_jorek_fields_interp_linear(basename, i, rst_format) result(new
   integer, intent(in), optional :: i
   integer, intent(in), optional :: rst_format
   type(read_jorek_fields_interp_linear) :: new
-  allocate(new%node_list)
-  allocate(new%element_list)
   if (present(basename)) new%basename = basename
   if (present(i)) new%i = i
   if (present(rst_format)) new%rst_format = rst_format
@@ -41,7 +81,7 @@ end function new_read_jorek_fields_interp_linear
 
 
 
-!> Read jorek fields from a restart file
+!> Read jorek fields from the next restart file (regardless of when the file number)
 subroutine do_read(this, sim)
   use mod_import_restart
   class(read_jorek_fields_interp_linear), intent(inout) :: this
@@ -52,158 +92,73 @@ subroutine do_read(this, sim)
 
   logical, save :: neighbours_updated = .false.
 
-  ! Read only one file
-  if (this%i .eq. -1) then
-    write(restart_file,'(A,A)') trim(this%basename), '.h5'
-    inquire(file=trim(restart_file), exist=file_exists)
-    if (file_exists) then
-      call import_hdf5_restart(this%node_list,this%element_list,restart_file,this%rst_format,ierr)
-    else
-      write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
+  ! Check that the right fields are allocated in sim and allocate if needed
+  if (allocated(sim%fields)) then
+    select type (f => sim%fields)
+    type is (jorek_fields_interp_linear) ! do nothing
+    class default
+      write(*,*) "WARNING: wrong type of fields in particle%sim, reallocating"
+      deallocate(sim%fields)
+      allocate(jorek_fields_interp_linear::sim%fields)
+    end select
+  else
+    allocate(jorek_fields_interp_linear::sim%fields)
+  end if
+
+  ! Continue for jorek_fields_interp_linear
+  select type (f => sim%fields)
+  type is (jorek_fields_interp_linear)
+    ! Allocate node and element_list if needed
+    if (.not. allocated(f%node_list))    allocate(f%node_list)
+    if (.not. allocated(f%element_list)) allocate(f%element_list)
+
+    ! Read only one file
+    if (this%i .eq. -1) then
+      write(restart_file,'(A,A)') trim(this%basename), '.h5'
+      inquire(file=trim(restart_file), exist=file_exists)
+      if (file_exists) then
+        call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
+      else
+        write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
+        call exit(1)
+      end if
+    else ! Linearly interpolating case
+      write(*,*) "ERROR: reading with interpolation not implemented yet"
       call exit(1)
+      ! TODO: set the time to run the event at next
+      ! TODO: recalculate simulation time and timestep
+      ! If not, keep looping (up to 10) to find one, and use the merge import
+      ! This assumes that the current node_list contains the values
+      ! at time istep (but does not need to contain the deltas, these are calculated)
+      write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i+1, '.h5'
+      inquire(file=trim(restart_file), exist=file_exists)
+      if (file_exists) then
+        ! If so, import it and we're done
+        call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
+        this%i = this%i+1
+      else ! loop over the next few files of this name format
+        do i=this%i+2,this%i+10
+          write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
+          inquire(file=trim(restart_file), exist=file_exists)
+          if (file_exists) then
+            call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
+            this%i=i
+            exit
+          endif
+        enddo
+      end if
     end if
-  else ! Linearly interpolating case
-    write(*,*) "ERROR: reading with interpolation not implemented yet"
-    call exit(1)
-    ! TODO: set the time to run the event at next
-    ! TODO: recalculate simulation time and timestep
-    ! If not, keep looping (up to 10) to find one, and use the merge import
-    ! This assumes that the current node_list contains the values
-    ! at time istep (but does not need to contain the deltas, these are calculated)
-    write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i+1, '.h5'
-    inquire(file=trim(restart_file), exist=file_exists)
-    if (file_exists) then
-      ! If so, import it and we're done
-      call import_hdf5_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
-      this%i = this%i+1
-    else ! loop over the next few files of this name format
-      do i=this%i+2,this%i+10
-        write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
-        inquire(file=trim(restart_file), exist=file_exists)
-        if (file_exists) then
-          call import_hdf5_restart(this%node_list,this%element_list,trim(restart_file),this%rst_format,ierr)
-          this%i=i
-          exit
-        endif
-      enddo
-    end if
-  end if
 
-  ! After reading we need to update_neighbours, but only do it the first time
-  ! This will not work for simulations with refinement!
-  if (.not. neighbours_updated) then
-    call update_neighbours(this%element_list, this%node_list)
-    neighbours_updated = .true.
-  end if
+    ! After reading we need to update_neighbours, but only do it the first time
+    ! This will not work for simulations with refinement!
+    if (.not. neighbours_updated) then
+      call update_neighbours(f%element_list, f%node_list)
+      neighbours_updated = .true.
+    end if
+  class default
+    write(*,*) "ERROR, do_read called with wrong sim%fields"
+  end select
 end subroutine do_read
-
-!> Calculates the electric and magnetic fields at a specific position
-!> in the jorek element `i_elm` at `st`.
-!> Linear interpolation with element%deltas is performed according to
-!> `delta_fraction`, which starts at 1 and goes to 0 for no mixing.
-!> If it is 1 we get the fields of the previous timesteps.
-pure subroutine EM_fields_interp_linear(fields, i_elm, st, phi, E, B, psi, U, delta_fraction)
-use data_structure
-use mod_parameters
-use constants
-use phys_module, only : F0, tstep
-
-interface
-  pure subroutine interp_PRZ(node_list, element_list, i_elm, i_v, n_v, &
-          s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
-    import :: type_node_list, type_element_list
-    type (type_node_list),    intent(in)  :: node_list
-    type (type_element_list), intent(in)  :: element_list
-    integer,                  intent(in)  :: i_elm
-    integer,                  intent(in)  :: n_v, i_v(n_v)
-    real*8,                   intent(in)  :: s, t, phi
-    real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
-    real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
-    real*8,                   intent(out) :: P_phi(n_v)
-  end subroutine interp_PRZ
-  pure subroutine interp_PRZ_delta(node_list, element_list, i_elm, i_v, n_v, &
-          s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
-    import :: type_node_list, type_element_list
-    type (type_node_list),    intent(in)  :: node_list
-    type (type_element_list), intent(in)  :: element_list
-    integer,                  intent(in)  :: i_elm
-    integer,                  intent(in)  :: n_v, i_v(n_v)
-    real*8,                   intent(in)  :: s, t, phi
-    real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
-    real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
-    real*8,                   intent(out) :: P_phi(n_v)
-  end subroutine interp_PRZ_delta
-end interface
-
-! Routine parameters
-type (read_jorek_fields_interp_linear), intent(in) :: fields
-integer, intent(in) :: i_elm !< JOREK element index
-real*8, intent(in)  :: st(2) !< element-local coordinates
-real*8, intent(in)  :: phi !< toroidal angle
-real*8, intent(in), optional :: delta_fraction !< linear interpolation factor. goes from 1 to 0 in time
-
-real*8, intent(out) :: E(3), B(3), psi, U !< Fields and potentials
-
-! Internal parameters
-integer :: i_var(2)
-real*8                    :: P(2), P_s(2), P_t(2), P_phi(2) ! Placeholder for evaluating variables and derivatives locally
-! Values
-real*8                    :: R, R_s, R_t, Z, Z_s, Z_t
-! Deltas
-real*8                    :: Pd(2), Pd_s(2), Pd_t(2), Pd_phi(2) ! Placeholder for evaluating variables and derivatives locally
-! Others
-real*8                    :: inv_st_jac, R_inv
-real*8                    :: psi_R, psi_Z, U_R, U_Z, U_phi
-real*8                    :: psi_time !< Derivative of psi to time (linearly interpolated from values and deltas)
-
-! Select psi and U
-i_var = (/1,2/)
-
-! Interpolate the fields to get psi and U at the current position (and the
-! changes u_n - u(n-1))
-call       interp_PRZ(fields%node_list,fields%element_list,i_elm,i_var,2,st(1),st(2),phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-call interp_PRZ_delta(fields%node_list,fields%element_list,i_elm,i_var,2,st(1),st(2),phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
-
-R_inv = 1.d0/R
-inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
-
-if (present(delta_fraction)) then
-  psi_R    = -(  Pd_s(1) * Z_t - Pd_t(1) * Z_s ) * inv_st_jac * delta_fraction
-  psi_Z    = -(- Pd_s(1) * R_t + Pd_t(1) * R_s ) * inv_st_jac * delta_fraction
-  U_R      = -(  Pd_s(2) * Z_t - Pd_t(2) * Z_s ) * inv_st_jac * delta_fraction
-  U_Z      = -(- Pd_s(2) * R_t + Pd_t(2) * R_s ) * inv_st_jac * delta_fraction
-  U_phi    = -Pd_phi(2) * delta_fraction
-  psi = -Pd(1) * delta_fraction
-  U   = -Pd(2) * delta_fraction
-else
-  psi_R = 0.d0
-  psi_Z = 0.d0
-  U_R   = 0.d0
-  U_Z   = 0.d0
-  U_phi = 0.d0
-  psi = 0.d0
-  U   = 0.d0
-endif
-
-! Calculate the derivatives to R and Z (at delta_fraction if presen)
-psi_R    = psi_R + (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-psi_Z    = psi_Z + (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-U_R      = U_R   + (  P_s(2) * Z_t - P_t(2) * Z_s ) * inv_st_jac
-U_Z      = U_Z   + (- P_s(2) * R_t + P_t(2) * R_s ) * inv_st_jac
-
-! Update psi and U
-psi = psi + P(1)
-U   = U   + P(2)
-
-! Use the current timestep size (very rough)
-psi_time = Pd(1)/tstep
-
-! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
-B     = (/ + psi_Z, - psi_R, F0 /) * R_inv
-! The local electric field, obtained from E=-Grad (u F0)-\partial_t A
-! See http://jorek.eu/wiki/doku.php?id=u_phi
-E     = (/ - F0 * U_R, - F0 * U_Z, - F0 * U_phi * R_inv - R * psi_time /)
-end subroutine EM_fields_interp_linear
 
 
 

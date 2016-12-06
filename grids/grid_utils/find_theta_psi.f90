@@ -8,6 +8,7 @@
 subroutine find_theta_psi(node_list,element_list,psi_minmax,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
 use constants
 use data_structure
+use mod_interp_PRZ
 implicit none
 
 ! --- Routine parameters

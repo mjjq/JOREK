@@ -5,6 +5,7 @@ use mod_rng
 use data_structure
 use mod_particle_types
 use constants
+use mod_interp_PRZ
 implicit none
 private
 public initialise_particles, no_transform, adjust_particle_weights

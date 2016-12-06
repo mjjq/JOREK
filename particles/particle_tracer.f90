@@ -14,6 +14,7 @@ use mod_io_actions
 use mod_boris
 
 ! Fields
+use mod_fields
 use mod_fields_linear
 
 ! ADAS
@@ -28,9 +29,11 @@ use mod_sobseq_rng
 use mod_diag_print_kinetic_energy
 use mod_project_particles
 
+! JOREK
+use data_structure
+
 ! Default variables
 implicit none
 type(particle_sim) :: sim
 type(event), dimension(:), allocatable :: events
-type(read_jorek_fields_interp_linear)  :: fields
 end module particle_tracer

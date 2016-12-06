@@ -4,21 +4,28 @@ program JOREK2_FOUR
   use mod_parameters,     only: n_tor, n_var, n_period, variable_names
   use nodes_elements, only: element_list, node_list
   use fourier,        only: t_theta_mapping, determine_theta_mag, transform_qttys
-  use phys_module,    only: rst_format
+  use phys_module,    only: rst_format, xpoint, xcase
   use mod_import_restart
+  use equil_info
+  use data_structure
+  use mod_boundary
+  use mod_log_params
 
   implicit none
   
-  integer                  :: i, j, k, l, ierr, ivar, n_cpu, m_pol_range(2), err, vars_per_cpu
-  type(t_theta_mapping)    :: mapping        ! Mapping between theta_mag and theta_geo
-  complex, allocatable     :: vfour(:,:,:,:) ! Transformed quantities (m,n,irad,ivar)
-  character(len=128)       :: filename
-  
+  integer                      :: i, j, k, l, ierr, ivar, n_cpu, err, vars_per_cpu, nTht
+  type(t_theta_mapping)        :: mapping        ! Mapping between theta_mag and theta_geo
+  type(t_equil_state)          :: eq
+  type (type_bnd_element_list) :: bnd_elm_list
+  type (type_bnd_node_list)    :: bnd_node_list
+  complex, allocatable         :: vfour(:,:,:,:) ! Transformed quantities (m,n,irad,ivar)
+  character(len=128)           :: filename
+  character(len=64), parameter :: THIS_ROUTINE_NAME = 'JOREK2_FOUR'
+
   ! ---Field line tracing parameters
   integer                  :: nstpts, nmaxsteps, nsmallsteps
   real                     :: deltaphi, rad_range(2)
-  logical                  :: debug
-  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps, m_pol_range, debug, rad_range
+  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps ,rad_range, nTht
   
   ! --- Initialize mode and mode_type arrays
   call det_modes()
@@ -30,14 +37,25 @@ program JOREK2_FOUR
   call log_parameters(0)
   call initialise_basis                         ! define the basis functions at the Gaussian points
   call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)   ! read restart file
+
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
+  ! --- Initialize the plasma equilibrium data structure
+  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, eq)
+  call print_equil_state(eq, .false.)
+
   !   --- Preset field line tracing parameters.
   nstpts      = 30
+  deltaphi         = min(0.3d0, 20.d0 / real(nTht)) !###
+  nmaxsteps        = 400 / deltaphi !###
+  nsmallsteps      = 3 !###
   nmaxsteps   = 2500
   deltaphi    = 0.3
   nsmallsteps = 3
-  m_pol_range = (/0, 7/)
+  !  m_pol_range = (/0, 7/)
   rad_range   = (/0.001, 0.999/)
-  debug       = .false.
+  !  debug       = .false.
+  nTht =32
   !   --- If four_params.nml file exists, read field line tracing parameters from that file.
   open(42, file='./four_params.nml', action='READ', status='OLD', iostat=err)
   if ( err == 0 ) then
@@ -55,24 +73,28 @@ program JOREK2_FOUR
   111 format(1x,a,2i6)
   112 format(1x,a,2es12.4)
   113 format(1x,a,2l6)
-  write(*,111) 'nstpts      =', nstpts
   write(*,111) 'nmaxsteps   =', nmaxsteps
   write(*,112) 'deltaphi    =', deltaphi
   write(*,111) 'nsmallsteps =', nsmallsteps
-  write(*,111) 'm_pol_range =', m_pol_range
-  write(*,112) 'rad_range   =', rad_range
-  write(*,113) 'debug       =', debug
+  write(*,111) 'nTht =', nTht
+  write(*,112) 'rad_range (PsiNmix:PsiNmax)  =', rad_range 
+  write(*,111) 'nstpts (NPsiN)      =', nstpts
+  
+  if ( (mod(nTht, 4) .ne. 0) .or. (nTht .lt. 32) ) then
+    write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': nTht must be a factor of 4, minimum acceptable value=32'
+    ierr=300
+    stop
+  end if
 
   ! --- Determine magnetic coordinates by field line tracing.
   write(*,*)
   write(*,*) '>>> Determining the poloidal straight field line angle theta_star <<<'
-  call determine_theta_mag(nstpts, nmaxsteps, deltaphi, nsmallsteps, mapping, m_pol_range,         &
-    rad_range, debug)
-  
+  call determine_theta_mag(mapping, node_list, element_list, eq, rad_range, nstpts, nTht, ierr, nmaxsteps, deltaphi, nsmallsteps)
+
   ! --- Transform the quantities
   write(*,*)
   write(*,*) '>>> Transforming the variables <<<'
-  call transform_qttys(mapping, vfour, m_pol_range)
+  call transform_qttys(mapping, vfour, nTht)
   
   ! --- Output Fourier modes of the physical quantities.
   write(*,*)
@@ -83,8 +105,8 @@ program JOREK2_FOUR
       write(filename,'(a,a,i3.3)') trim(variable_names(ivar)), '_modes_n', (j-1)*n_period
       open(42, file=trim(filename), status='REPLACE', action='WRITE')
       l = 0
-      do i = m_pol_range(1), m_pol_range(2) ! pol
-        
+
+      do i = - nTht/4, nTht/4
         write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i, (j-1)*n_period
         l = l + 1
         do k = 1, mapping%nstpts

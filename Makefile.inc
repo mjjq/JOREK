@@ -4,7 +4,7 @@
 # * Make sure that you have the following modules loaded: intel intelmpi mkl fftw hdf5 szip
 
 # --- Select physics model
-MODEL             = model500
+MODEL             = model199
 DEBUG            ?= 1
 
 # --- Compiler and options

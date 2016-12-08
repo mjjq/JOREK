@@ -31,8 +31,8 @@ end interface read_jorek_fields_interp_linear
 !> The reason behind not using deltas is that we do not have to alter much code
 !> and can import two restarts which are not consecutive and still interpolate.
 type, extends(fields_base) :: jorek_fields_interp_linear
-  type(type_node_list), allocatable    :: node_list
-  type(type_element_list), allocatable :: element_list
+  type(type_node_list), allocatable    :: node_list !< Perhaps put these in fields_base?
+  type(type_element_list), allocatable :: element_list !< Perhaps put these in fields_base?
   real*8 :: time_now !< Time of current restart file (SI)
   real*8 :: time_prev !< Time of previous restart file (SI)
   contains
@@ -122,6 +122,8 @@ subroutine do_read(this, sim)
         write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
         call exit(1)
       end if
+      f%time_now = 0.d0
+      f%time_prev = -1d20 ! So that time-derivatives go to zero
     else ! Linearly interpolating case
       write(*,*) "ERROR: reading with interpolation not implemented yet"
       call exit(1)

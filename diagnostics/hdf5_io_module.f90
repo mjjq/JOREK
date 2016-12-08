@@ -68,6 +68,52 @@ module hdf5_io_module
     call H5Fclose_f(file_id,error)
   end subroutine HDF5_close
 
+  !----------------------------------------
+  ! Open or create HDF5 file
+  !----------------------------------------
+  subroutine HDF5_open_or_create(filename,parallel,file_id,ierr)
+    use HDF5
+    use mpi
+    character(LEN=*) , intent(in)  :: filename  !< file name
+    logical, optional, intent(in)  :: parallel  !< Open in parallel mode
+    integer(HID_T)   , intent(out) :: file_id   !< file identifier
+    integer, optional, intent(out) :: ierr
+
+    integer        :: ierr_HDF5
+    integer(HID_T) :: plist
+    logical        :: file_exists, is_hdf5
+
+    !*** Initialize fortran interface ***
+    call H5open_f(ierr_HDF5)
+
+    ! Create file property list for parallel access
+    call h5pcreate_f(H5P_FILE_ACCESS_F, plist, ierr_HDF5)
+    if (present(parallel) .and. parallel) then
+      call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, ierr_HDF5)
+    end if
+
+    !*** Test if the file exists ***
+    inquire(file=trim(filename), exist=file_exists)
+    if (file_exists) then
+      !*** Test if it is an HDF5 file ***!
+      call H5Fis_hdf5_f(trim(filename)//char(0), is_hdf5, ierr_HDF5)
+      if (is_hdf5) then
+        !*** Try to open the HDF5 file ***!
+        call H5Fopen_f(trim(filename)//char(0), &
+          H5F_ACC_RDWR_F,file_id,ierr_HDF5, access_prp=plist)
+        if (present(ierr)) ierr = ierr_HDF5
+      else
+        !*** Present an error ***!
+        write(*,*) "ERROR: Invalid HDF5 file, exiting"
+        call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
+      end if
+    else
+      !*** Try to create an HDF5 file ***
+      call H5Fcreate_f(trim(filename)//char(0), &
+        H5F_ACC_EXCL_F, file_id, ierr_HDF5, access_prp=plist)
+      if (present(ierr)) ierr = ierr_HDF5
+    end if
+  end subroutine HDF5_open_or_create
 
   !*************************************************
   !  HDF5 WRITING

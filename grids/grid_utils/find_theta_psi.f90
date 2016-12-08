@@ -30,7 +30,7 @@ real*8  :: inv_st_jac, psi_R, psi_Z, psi_u
 integer :: i_elm_out, ifail, backtrack_step, newton_iter_number
 integer, parameter :: num_backtrack_steps = 10 ! to prevent going over the border of the domain
 real*8, parameter  :: backtrack_factor = 0.99d0
-integer, parameter :: newton_iter_max = 8
+integer, parameter :: newton_iter_max = 6
 integer, parameter :: i_var(1) = [1], n_ivar=1
 real*8, parameter  :: tol = 1d-8
 
@@ -74,8 +74,8 @@ if (i_elm .eq. 0) then
   return
 end if
 
-  
-  
+
+
 
 ! 2. Preparation for the loop
 ! Calculate three different guesses for u
@@ -125,7 +125,7 @@ do newton_iter_number = 1, newton_iter_max
   err = (P(1) - psi)
   if (abs(err) .lt. tol) return
 
-  ! Formulate a new guess (u) based on psi and psi' 
+  ! Formulate a new guess (u) based on psi and psi'
   du = -err/psi_u
   !write(*,"(12g14.6)") P(1)-psi, u, du, i_elm_out, s, t, out_of_domain
   if (out_of_domain .and. du .gt. 0.d0) du = -du ! u must go down in this case

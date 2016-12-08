@@ -66,7 +66,7 @@ do while (.not. sim%stop_now)
     select type (particles => sim%groups(i)%particles)
     type is (particle_kinetic_leapfrog)
       !$omp parallel do default(private) &
-      !$omp shared(sim, n_steps, timesteps, i) &
+      !$omp shared(sim, n_steps, timesteps, i, node_list, element_list) &
       !$omp reduction(+:n_lost)
       do j=1,size(particles,1)
         do k=1,n_steps

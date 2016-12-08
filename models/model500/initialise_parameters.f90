@@ -107,10 +107,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 delta_n_convection, nimp_bg,                               &
                 RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file
 
+ call preset_parameters()
+
+
  if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
-  call preset_parameters()
+  !call preset_parameters()
 
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
@@ -175,6 +178,8 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
+! --- Set current source term to zero
+eta_T_0 = 0.0
 
 ! --- Initialize the shattered pellet position
 !spi_R = mgi_R

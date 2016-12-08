@@ -452,14 +452,11 @@ contains
 
         else if (use_pastix) then
 
-          write(*,*) "Check Point 01, my_id = ", my_id
-
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
 !          pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO
 #ifdef USE_BLOCK
 
-          write(*,*) "Check Point 01.5, my_id = ", my_id
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
@@ -476,8 +473,6 @@ contains
 
       endif
      
-      write(*,*) "Check Point 02, my_id = ", my_id
- 
       if (my_id_n .eq.0) then                            ! elapsed time facto end
          call MPI_Barrier(MPI_COMM_MASTER,ierr)
          call clck_time(t1)

@@ -160,7 +160,6 @@ real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt
 real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
 
 
-
 eq_g    => thread_struct(tid)%eq_g   
 eq_s    => thread_struct(tid)%eq_s   
 eq_t    => thread_struct(tid)%eq_t   
@@ -224,7 +223,6 @@ endif
 !======================================= NEO
 
 
-
 do i=1,n_vertex_max
  do j=1,n_order+1
 
@@ -253,6 +251,7 @@ do i=1,n_vertex_max
 
            do in=1,n_tor
 
+
              eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
              eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
              eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
@@ -273,6 +272,7 @@ do i=1,n_vertex_max
        enddo
      enddo
    enddo
+
  enddo
 enddo
 
@@ -295,7 +295,6 @@ do ms=1, n_gauss
 enddo
 
 eq_zTe = eq_zTe / 2.d0  ! electron temperature
-
 
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
@@ -801,8 +800,7 @@ do ms=1, n_gauss
 !#  equation 1   (induction equation)                                                              #
 !###################################################################################################
 
-
-           rhs_ij_1 =   v * (eta_T  * zj0 - eta_T_0 * current_source(ms,mt))/ BigR  * xjac * tstep &
+           rhs_ij_1 =   v * (eta_T  * zj0)/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &

@@ -44,7 +44,7 @@ contains
     ! -- internal parameters
     integer iv, iv2, inode1, inode2, i, j
     integer vertex(2), direction(2)
-
+           
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
       call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   !  for toroidal integration
@@ -317,6 +317,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   RHS2 => thread_struct(omp_tid)%RHS2
 #endif
 
+
   ! --- Loop over local elements
   !$omp do 
   do ife =1, n_local_elms
@@ -351,7 +352,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
          &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
          &                       ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
          &                       n_local_elms, node_list)
-  
+
     ! --- Define element nodes (depends if it's refined)
     if (refinement) then   
       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 

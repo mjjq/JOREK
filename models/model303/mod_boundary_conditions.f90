@@ -103,7 +103,9 @@ contains
     call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
     N_rmp_har_block_size=bnd_node_list%n_bnd_nodes
     
-    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos_spectrum(1),1),1,1)
+    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos_spectrum(1),1,1)
+    ! if necessary, replace by:
+    ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos_spectrum(1), n_tor),1,1)
     write (*,*) 'psi_bnd at previous time step', psi_test
     
     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then

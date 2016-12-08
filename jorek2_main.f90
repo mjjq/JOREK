@@ -902,12 +902,12 @@ required = 0
 
     ! --- The following is for parallel debugging only
 
-    !holder = 0;
-    !write(*,*) "my_id", my_id, "PID", getpid(), "Host", name
+    holder = 0;
+    write(*,*) "my_id", my_id, "PID", getpid(), "Host", name
 
-    !do while (holder == 0)
-    !  call sleep(5)
-    !end do
+    do while (holder == 0)
+      call sleep(5)
+    end do
 
     ! --- End of parallel debugging section 
     

@@ -71,26 +71,19 @@ module hdf5_io_module
   !----------------------------------------
   ! Open or create HDF5 file
   !----------------------------------------
-  subroutine HDF5_open_or_create(filename,parallel,file_id,ierr)
+  subroutine HDF5_open_or_create(filename,plist,file_id,ierr)
     use HDF5
     use mpi
     character(LEN=*) , intent(in)  :: filename  !< file name
-    logical, optional, intent(in)  :: parallel  !< Open in parallel mode
+    integer(HID_T)   , intent(in), optional :: plist     !< Which features to use when opening
     integer(HID_T)   , intent(out) :: file_id   !< file identifier
     integer, optional, intent(out) :: ierr
 
     integer        :: ierr_HDF5
-    integer(HID_T) :: plist
     logical        :: file_exists, is_hdf5
 
     !*** Initialize fortran interface ***
     call H5open_f(ierr_HDF5)
-
-    ! Create file property list for parallel access
-    call h5pcreate_f(H5P_FILE_ACCESS_F, plist, ierr_HDF5)
-    if (present(parallel) .and. parallel) then
-      call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, ierr_HDF5)
-    end if
 
     !*** Test if the file exists ***
     inquire(file=trim(filename), exist=file_exists)

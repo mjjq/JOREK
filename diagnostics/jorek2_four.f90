@@ -46,16 +46,12 @@ program JOREK2_FOUR
 
   !   --- Preset field line tracing parameters.
   nstpts      = 30
-  deltaphi         = min(0.3d0, 20.d0 / real(nTht)) !###
-  nmaxsteps        = 400 / deltaphi !###
-  nsmallsteps      = 3 !###
+  nTht        = 32
+  nsmallsteps = 3 !###
   nmaxsteps   = 2500
   deltaphi    = 0.3
   nsmallsteps = 3
-  !  m_pol_range = (/0, 7/)
   rad_range   = (/0.001, 0.999/)
-  !  debug       = .false.
-  nTht =32
   !   --- If four_params.nml file exists, read field line tracing parameters from that file.
   open(42, file='./four_params.nml', action='READ', status='OLD', iostat=err)
   if ( err == 0 ) then
@@ -66,6 +62,8 @@ program JOREK2_FOUR
     write(*,*) 'WARNING: Could not find file four_params.nml -- using default parameters.'
   end if
   write(42,'(a)') '#      Psi_N     absolute_value     real_part    imaginary_part      phase'
+  deltaphi  = min(0.3d0, 20.d0 / real(nTht)) !###
+  nmaxsteps = 400 / deltaphi !###
   
   ! --- Log field line tracing parameters.
   write(*,*)

@@ -20,11 +20,7 @@ jorek2_povray
 jorek2_connection2
 jorek2_connection_stan
 jorek2_strikes
-enbiggen
-jordel
-jorpol
 jorek2vtk
-jorek2_stan
 jorek2_fieldlines_vtk
 jorek2vtk_3d
 jorek2_diagno
@@ -37,7 +33,6 @@ jorek2_import_perturbation
 jorek2_import_perturbation_new_flags
 jorek2_import_perturbation_new_flags
 jorek2_import_perturbation_tmp
-jorek_extract_data
 forcheck*
 *__genmod*
 rst_bin2hdf5

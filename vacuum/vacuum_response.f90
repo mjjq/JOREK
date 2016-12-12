@@ -785,7 +785,7 @@ module vacuum_response
                                   - sum( response_m_h(i_resp,:) * psibnd_coils(:) )                 &
                                   + sum( response_m_j(i_resp,:) * dpsibnd_vec(:)  )
 
-                      if ( l_tor == 1 ) &
+                      if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) ) &
                         rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )
 
                       if ( resistive_wall ) &

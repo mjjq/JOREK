@@ -432,7 +432,7 @@ module phys_module
   !> @name Global quantities determined in each time step
   real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), current_t(:), beta_p_t(:),       &
     beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:),                 &
-    pressure_out_t(:), heating_power_t(:), particle_source_t(:)
+    pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:)
   
   !> @name gmres parameters
   integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated

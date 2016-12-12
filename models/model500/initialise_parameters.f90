@@ -182,12 +182,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   if (allocated(pressure_out_t)) call tr_deallocate(pressure_out_t,"pressure_out_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
   
-  if (allocated(heating_power_t)) call tr_deallocate(heating_power_t,"heating_power_t",CAT_UNKNOWN)
-  if (nstep .gt. 0) call tr_allocate(heating_power_t,1,index_start+nstep,"heating_power_t",CAT_UNKNOWN)
+  if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heat_src_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
   
-  if (allocated(particle_source_t)) call tr_deallocate(particle_source_t,"particle_source_t",CAT_UNKNOWN)
-  if (nstep .gt. 0) call tr_allocate(particle_source_t,1,index_start+nstep,"particle_source_t",CAT_UNKNOWN)
-
+  if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heat_src_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+  
+  if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"part_src_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+  
+  if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"part_src_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
 endif
 
 ! --- Read numerical profiles for rho, T, and ff'.

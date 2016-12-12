@@ -1084,7 +1084,8 @@ required = 0
          psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
          beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
          density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
-         pressure_out_t(index_now), heating_power_t(index_now), particle_source_t(index_now))
+         pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
+         part_src_in_t(index_now), part_src_out_t(index_now))
        R_axis_t(index_now)   = R_axis
        Z_axis_t(index_now)   = Z_axis
        psi_axis_t(index_now) = psi_axis

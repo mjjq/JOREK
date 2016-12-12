@@ -128,18 +128,18 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy: %"time"   "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_heatingpower: ', 1
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_heatingpower: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_ylabel: heating power'
     write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower: %"time"   "inside separatrix"'
+    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower: %"time"   "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlesource: ', 1
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlesource: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource_ylabel: particle source'
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@particlesource: %"time"   "inside separatrix"'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlesource: %"time"   "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
     
     ! --- Call the model-specific part of the init_live_data routine
@@ -157,7 +157,7 @@ module live_data
     use mod_parameters,  only: n_tor
     use phys_module, only: xtime, energies, produce_live_data, R_axis_t, Z_axis_t, Psi_axis_t,     &
       current_t, beta_p_t, beta_t_t, beta_n_t, density_in_t, density_out_t, pressure_in_t,               &
-      pressure_out_t, heating_power_t, particle_source_t
+      pressure_out_t, heat_src_in_t, heat_src_out_t, part_src_in_t, part_src_out_t
     
     implicit none
     
@@ -201,8 +201,8 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@betas: ', xtime(index), beta_p_t(index), beta_t_t(index), beta_n_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent: ', xtime(index), density_in_t(index), density_out_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy: ', xtime(index), pressure_in_t(index), pressure_out_t(index)
-    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@heatingpower: ', xtime(index), heating_power_t(index)
-    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlesource: ', xtime(index), particle_source_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@heatingpower: ', xtime(index), heat_src_in_t(index), heat_src_out_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlesource: ', xtime(index), part_src_in_t(index), part_src_out_t(index)
     
     close(LIVE_DATA_HANDLE)
     

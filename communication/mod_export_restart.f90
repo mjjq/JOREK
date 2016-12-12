@@ -434,8 +434,10 @@ end if
      call HDF5_array1D_saving(file_id,density_out_t(1:index_now),index_now,'density_out_t'//char(0))
      call HDF5_array1D_saving(file_id,pressure_in_t(1:index_now),index_now,'pressure_in_t'//char(0))
      call HDF5_array1D_saving(file_id,pressure_out_t(1:index_now),index_now,'pressure_out_t'//char(0))
-     call HDF5_array1D_saving(file_id,heating_power_t(1:index_now),index_now,'heating_power_t'//char(0))
-     call HDF5_array1D_saving(file_id,particle_source_t(1:index_now),index_now,'particle_source_t'//char(0))
+     call HDF5_array1D_saving(file_id,heat_src_in_t(1:index_now),index_now,'heat_src_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,heat_src_out_t(1:index_now),index_now,'heat_src_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_src_in_t(1:index_now),index_now,'part_src_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_src_out_t(1:index_now),index_now,'part_src_out_t'//char(0))
 
 #ifdef JECCD                   
      call HDF5_array3D_saving(file_id,t_energies2, &

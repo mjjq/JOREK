@@ -1014,7 +1014,7 @@ module exec_commands
     integer :: units, i_file
     character(len=1024) :: filename, status, access
     real*8 :: aminor, Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out,     &
-      pressure, pressure_in, pressure_out
+      pressure, pressure_in, pressure_out, heat_src_in, heat_src_out, part_src_in, part_src_out
     real*8 :: fact_mu_zero, fact_ne
     
     ierr = 0
@@ -1054,7 +1054,8 @@ module exec_commands
     
     call integrals(node_list, element_list, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint,        &
       eq%Z_xpoint, eq%psi_xpoint, eq%psi_lim, aminor, Bgeo, current, beta_p, beta_t, beta_n,       &
-      density, density_in, density_out, pressure, pressure_in, pressure_out, heating_power, particle_source)
+      density, density_in, density_out, pressure, pressure_in, pressure_out, heat_src_in,          &
+      heat_src_out, part_src_in, part_src_out)
     
     write(i_file,'(33es20.13)') time_now, pressure/fact_mu_zero, pressure_in/fact_mu_zero,         &
       pressure_out/fact_mu_zero, density*fact_ne, density_in*fact_ne, density_out*fact_ne, beta_n, &

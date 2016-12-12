@@ -209,14 +209,22 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
     pressure_out_t = 0.d0
     
-    if (allocated(heating_power_t)) call tr_deallocate(heating_power_t,"heating_power_t",CAT_UNKNOWN)
-    call tr_allocate(heating_power_t,1,index_start+nstep,"heating_power_t",CAT_UNKNOWN)
-    heating_power_t = 0.d0
+    if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+    heat_src_in_t = 0.d0
     
-    if (allocated(particle_source_t)) call tr_deallocate(particle_source_t,"particle_source_t",CAT_UNKNOWN)
-    call tr_allocate(particle_source_t,1,index_start+nstep,"particle_source_t",CAT_UNKNOWN)
-    particle_source_t = 0.d0
-
+    if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+    heat_src_out_t = 0.d0
+    
+    if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+    part_src_in_t = 0.d0
+    
+    if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+    part_src_out_t = 0.d0
+    
 #ifdef JECCD
     if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
     call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep,"energies2",CAT_UNKNOWN)
@@ -746,15 +754,25 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     pressure_out_t = 0.d0
     call HDF5_array1D_reading(file_id,pressure_out_t,'pressure_out_t')
     
-    if (allocated(heating_power_t)) call tr_deallocate(heating_power_t,"heating_power_t",CAT_UNKNOWN)
-    call tr_allocate(heating_power_t,1,index_start+nstep,"heating_power_t",CAT_UNKNOWN)
-    heating_power_t = 0.d0
-    call HDF5_array1D_reading(file_id,heating_power_t,'heating_power_t')
+    if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+    heat_src_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,heat_src_in_t,'heat_src_in_t')
     
-    if (allocated(particle_source_t)) call tr_deallocate(particle_source_t,"particle_source_t",CAT_UNKNOWN)
-    call tr_allocate(particle_source_t,1,index_start+nstep,"particle_source_t",CAT_UNKNOWN)
-    particle_source_t = 0.d0
-    call HDF5_array1D_reading(file_id,particle_source_t,'particle_source_t')
+    if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+    heat_src_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,heat_src_out_t,'heat_src_out_t')
+    
+    if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+    part_src_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_src_in_t,'part_src_in_t')
+    
+    if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+    part_src_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_src_out_t,'part_src_out_t')
     
 #ifdef JECCD                   
     if (allocated(energies2))	call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)	  

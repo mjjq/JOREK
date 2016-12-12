@@ -11,9 +11,19 @@ DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 INCLUDES += -I$(MODDIR)
 
-# Do some guessing to get the compiler family if it is unset
+# Detect the compiler vendors (sort to remove duplicates)
+F_COMPILER_FAMILY := $(sort $(shell $(FC) --version | grep -oim 1 'intel\|gcc' | tr A-Z a-z | sed 's/gcc/gnu/'))
+C_COMPILER_FAMILY := $(sort $(shell $(CC) --version | grep -oim 1 'intel\|gcc' | tr A-Z a-z | sed 's/gcc/gnu/'))
+ifneq ($(F_COMPILER_FAMILY),$(C_COMPILER_FAMILY))
+  $(error "Fortran compiler ($(F_COMPILER_FAMILY)) must be same as C compiler ($(C_COMPILER_FAMILY))")
+endif
 ifeq ($(COMPILER_FAMILY),)
-  COMPILER_FAMILY := $(shell $(FC) --version | grep -oi 'intel\|gnu' | tr A-Z a-z)
+  COMPILER_FAMILY = $(F_COMPILER_FAMILY)
+endif
+ifneq ($(F_COMPILER_FAMILY),$(COMPILER_FAMILY))
+  $(warning "*******************************************************************************************")
+  $(warning "Set compiler family ($(COMPILER_FAMILY)) is different from $(FC) ($(F_COMPILER_FAMILY))")
+  $(warning "*******************************************************************************************")
 endif
 
 # Clear some variables (makefile bug?)
@@ -24,11 +34,11 @@ F90FLAGS=
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
   FLAGS += -Wall -Wextra
-  FLAGS += -Wno-tabs -Wno-unused-variable
-  FLAGS += -Wcharacter-truncation
-  FLAGS += -Winteger-division
-  FLAGS += -Wintrinsics-std
-  FFLAGS += -Wsurprising
+  FLAGS += -Wno-unused-variable
+  FFLAGS += -Winteger-division
+  FFLAGS += -Wintrinsics-std
+  FFLAGS += -Wcharacter-truncation
+  FFLAGS += -Wsurprising -Wno-tabs
   FFLAGS += -ffree-line-length-none
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
@@ -54,6 +64,7 @@ ifeq ($(COMPILER_FAMILY), intel)
     FLAGS += -openmp
   endif
   FFLAGS += -warn all
+  FFLAGS += -warn nointerfaces
   FFLAGS += -warn nounused
   FFLAGS += -fpp
   FFLAGS += -r8
@@ -61,13 +72,13 @@ ifeq ($(COMPILER_FAMILY), intel)
   ifeq ($(DEBUG), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback
-    FLAGS += -check all,noarg_temp_created
-    FLAGS += -check bounds
-    FLAGS += -check uninit
     FLAGS += -ftrapuv
     FLAGS += -debug all -debug-parameters
     FLAGS += -fstack-security-check
     FLAGS += -fpe0
+    FFLAGS += -check all,noarg_temp_created
+    FFLAGS += -check bounds
+    FFLAGS += -check uninit
     FFLAGS += -gen-interfaces -warn-interfaces
     F90FLAGS += -implicitnone
   endif

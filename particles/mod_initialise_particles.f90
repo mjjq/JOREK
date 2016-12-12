@@ -209,7 +209,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
   use constants
   use phys_module, only: F0
   use mod_coronal
-  use mod_boris, only: left_handed_cross_product
+  use mod_boris, only: gc_to_kinetic_leapfrog
   implicit none
   class(particle_base), dimension(:), intent(inout) :: particles
   type(type_node_list), intent(in)                  :: node_list
@@ -223,6 +223,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
 
   ! Internal variables
+  type(particle_gc) :: particle
   class(type_rng), allocatable :: rng
   real*8  :: ran(6), Rbox(2), Zbox(2)
   real*8  :: H, muB, v_perp, v_par, chi
@@ -278,10 +279,9 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
       n_try = n_try + 1
     end do
     ! If we are here a suitable position has been found
-    ! For now set the guiding center position of the particle
-    particles(i)%i_elm = i_elm
-    particles(i)%st = [s,t]
-    particles(i)%x = [R,Z,phi]
+    particle%i_elm = i_elm
+    particle%st    = [s,t]
+    particle%x     = [R,Z,phi]
 
     ! 1. Get B at this position
     call       interp_PRZ(node_list,element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
@@ -290,30 +290,25 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
     psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
     ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
     B        = [+psi_Z, -psi_R, F0] / R
-    B_hat = B/norm2(B)
 
-    ! 2. Calculate v_perp and v_par
+    ! 2. Calculate H and mu, save in particle
     H  = H_transform(ran(2)) ! [eV]
     muB = H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
-    v_perp = sqrt(2*abs(muB*EL_CHG)/(mass*ATOMIC_MASS_UNIT)) ! [m/s]
-    v_par  = sign(sqrt(2*(H-muB)*EL_CHG/(mass*ATOMIC_MASS_UNIT)),muB)
+    particle%E  = H
+    particle%mu = muB/norm2(B)
 
     ! 3. Calculate charge (if cor is present)
     if (present(cor)) then
-      select type (p => particles(i))
-      type is (particle_kinetic_leapfrog)
-        p%q = q_coronal(node_list, element_list, s, t, phi, i_elm, cor)
-      end select
+      particle%q = q_coronal(node_list, element_list, s, t, phi, i_elm, cor)
     end if
 
     ! 4. Output to particles (dependent on type of particle)
     chi = TWOPI*ran(6)
     select type(p => particles(i))
     type is (particle_kinetic_leapfrog)
-      p%v = v_par * B_hat + v_perp * &
-      ((cos(chi) * [0.d0, B_hat(3), -B_hat(2)]) + &
-        sin(chi) * (B_hat(1) * B_hat - [1.d0, 0.d0, 0.d0]))
-      if (p%q .gt. 0) p%x = p%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(p%v,B_hat))/(real(p%q,8)*EL_CHG*norm2(B))
+      p = gc_to_kinetic_leapfrog(particle, chi, B, mass)
+    type is (particle_gc)
+      p = particle
     end select
   end do
 end subroutine initialise_particles_H_mu_psi

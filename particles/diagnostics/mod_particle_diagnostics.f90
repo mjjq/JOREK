@@ -259,6 +259,7 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   use mod_particle_types
   use phys_module, only: F0
   use constants
+  use mod_boris
   class(fields_base), intent(in)                      :: fields
   real*8, intent(in)                                  :: time
   class(particle_base), intent(in), dimension(:)      :: particles
@@ -266,8 +267,9 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   real*8, dimension(3,size(particles,1)), intent(out) :: out !< List of values
   logical, dimension(size(particles,1)), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
-  real*8               :: inv_st_jac, psi_R, psi_Z, B(3), B_hat(3), B_norm
+  real*8               :: inv_st_jac, psi_R, psi_Z, B(3), v_par
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
+  type(particle_gc)    :: particle
 
   integer :: i
 
@@ -276,40 +278,42 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   !$omp parallel do default(none) &
   !$omp shared(particles, fields, out, mask, time, f0, mass) &
   !$omp private(P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t, &
-  !$omp inv_st_jac, psi_R, psi_Z, B, B_hat)
+  !$omp inv_st_jac, psi_R, psi_Z, B, particle, v_par)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
     else
-      select type (pa => particles(i))
-      !> Should we calculate this for the guiding-centers?
-      type is (particle_kinetic_leapfrog)
-        ! Calculate psi and B
-        call fields%interp_PRZ(time, pa%i_elm, &
-                      [1], 1, pa%st(1),pa%st(2), &
-                      pa%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-        inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
-        psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-        psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-        ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
-        B        = [+psi_Z, -psi_R, F0] / R
-        B_hat = B/norm2(B)
+      ! Calculate psi and B
+      call fields%interp_PRZ(time, particles(i)%i_elm, &
+                    [1], 1, particles(i)%st(1),particles(i)%st(2), &
+                    particles(i)%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
+      inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
+      psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
+      psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
+      ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
+      B        = [+psi_Z, -psi_R, F0] / R
 
-        ! Calculate output variables
-        out(1,i) = real(pa%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * pa%v(3)
-        out(2,i) = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(pa%v,pa%v)
-        out(3,i) = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(&
-            pa%v - dot_product(pa%v,B_hat)*B_hat, &
-            pa%v - dot_product(pa%v,B_hat)*B_hat &
-            )/norm2(B)
+
+      select type (pa => particles(i))
+      type is (particle_kinetic_leapfrog)
+        ! Let the conversion calculate the conserved quantities
+        particle = kinetic_leapfrog_to_gc(pa, B, mass)
+      type is (particle_gc)
+        particle = pa
       class default
         write(*,*) "ERROR: calculate_pphi_H_mu not implemented for this particle type"
       end select
+
+
+      ! Calculate output variables
+      v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
+      out(1,i) = real(particle%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
+      out(2,i) = particle%E
+      out(3,i) = particle%mu
     endif
   enddo
   !$omp end parallel do
 end subroutine calculate_pphi_H_mu
-
 
 
 !> Calculate particles present in specific regions on all particles

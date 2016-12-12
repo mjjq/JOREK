@@ -105,7 +105,7 @@ program JOREK2_FOUR
       l = 0
 
       do i = 1, nTht/2+1
-        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i, (j-1)*n_period
+        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i-1, (j-1)*n_period
         l = l + 1
         do k = 1, mapping%nstpts
           write(42,'(5es16.7)') mapping%psin(k), ABS(vfour(i,j,k,ivar)), REAL(vfour(i,j,k,ivar)), AIMAG(vfour(i,j,k,ivar)), ATAN2(AIMAG(vfour(i,j,k,ivar)), REAL(vfour(i,j,k,ivar)))

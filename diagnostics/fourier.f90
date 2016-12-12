@@ -41,7 +41,7 @@ module fourier
     integer :: nequidist_tor, nequidist_pts
     
     nequidist_tor = n_plane-1
-    nequidist_pts =  nTht !2*(maxval(m_pol_range))
+    nequidist_pts =  nTht
     
     if ( allocated(vfour) ) deallocate(vfour)
     allocate(vve(nequidist_pts,nequidist_tor,mapping%nstpts,n_var))

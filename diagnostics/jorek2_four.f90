@@ -104,11 +104,11 @@ program JOREK2_FOUR
       open(42, file=trim(filename), status='REPLACE', action='WRITE')
       l = 0
 
-      do i = - nTht/4, nTht/4
+      do i = 1, nTht/2+1
         write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i, (j-1)*n_period
         l = l + 1
         do k = 1, mapping%nstpts
-          write(42,'(5es16.7)') mapping%psin(k), ABS(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)), AIMAG(vfour(i+1,j,k,ivar)), ATAN2(AIMAG(vfour(i+1,j,k,ivar)), REAL(vfour(i+1,j,k,ivar)))
+          write(42,'(5es16.7)') mapping%psin(k), ABS(vfour(i,j,k,ivar)), REAL(vfour(i,j,k,ivar)), AIMAG(vfour(i,j,k,ivar)), ATAN2(AIMAG(vfour(i,j,k,ivar)), REAL(vfour(i,j,k,ivar)))
         end do
         write(42,*)
         write(42,*)

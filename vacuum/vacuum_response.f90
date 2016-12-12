@@ -70,7 +70,8 @@ module vacuum_response
       endif
     enddo
 
-    write(*,'(A,i5)') 'total number of degrees of freedom on the boundary : ',n_dof_bnd
+
+    if ( my_id == 0 ) write(*,'(A,i5)') 'total number of degrees of freedom on the boundary : ',n_dof_bnd
     
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
@@ -894,8 +895,6 @@ module vacuum_response
     ! --- Local variables
     integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp, j_resp_0, j_resp_old
 
-    write(*,*) 'det_psibnd_vec: n_dof_starwall : ',n_dof_starwall
-
     if ( allocated(psibnd_vec) ) deallocate(psibnd_vec)
     allocate( psibnd_vec(n_dof_starwall) )
     psibnd_vec(:) = 0.d0
@@ -972,6 +971,11 @@ module vacuum_response
     
     if ( resistive_wall ) then
       
+      if ( (allocated(wall_curr)) .and. (.not. wall_curr_initialized) ) &
+        deallocate(wall_curr)
+      if ( (allocated(dwall_curr)) .and. (.not. wall_curr_initialized) ) &
+        deallocate(dwall_curr)
+      
       if ( .not. allocated(wall_curr) ) then
         allocate( wall_curr(n_wall_curr) )
         do k = 1, n_wall_curr
@@ -997,6 +1001,7 @@ module vacuum_response
     deallocate( psibnd_vec, dpsibnd_vec )
     
     if ( vacuum_debug ) write(*,*) 'Wall currents initialized.'
+    wall_curr_initialized = .true.
     
   end subroutine init_wall_currents
   
@@ -1196,9 +1201,9 @@ module vacuum_response
       
       response_m_eq = 0.d0
 
-      do j = 1, sr%nd_bez, 2
+      do j = 1, sr%nd_bez/sr%n_tor, 2
         j2 = (j-1)*sr%n_tor+1
-        do k = 1, sr%nd_bez, 2
+        do k = 1, sr%nd_bez/sr%n_tor, 2
           k2 = (k-1)*sr%n_tor+1
           response_m_eq(j:j+1,k:k+1) = sr%a_ee(j2:j2+1,k2:k2+1)
         end do

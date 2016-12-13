@@ -5,7 +5,7 @@
 
 # --- Select physics model
 MODEL             = model500
-DEBUG            ?= 1
+DEBUG             = 0
 
 # --- Compiler and options
 FC                = mpif90 -f90=ifort -mt_mpi

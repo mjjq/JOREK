@@ -188,7 +188,7 @@ subroutine do_write_constants_of_motion(this, sim)
          ierr, file_space_id = dspace, mem_space_id = mem_space)
     !write(*,*) "EXTRA_DEBUG: out(8,2)", stats(8,2,1)
     !write(*,*) "EXTRA_DEBUG: out(2,2)", stats(2,2,1)
-    write(*,*) "Done", sum(stats)
+    write(*,*) "Done"
 
     ! Add the current time to the timeset
     call h5dget_space_f(tset, tspace, ierr)
@@ -267,7 +267,7 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   real*8, dimension(size(particles,1),3,1), intent(out)        :: out !< List of values
   logical, dimension(size(particles,1)), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
-  real*8               :: inv_st_jac, psi_R, psi_Z, B(3), v_par
+  real*8               :: inv_st_jac, psi_R, psi_Z, B(3), B_norm, B_hat(3), v_par, v_perp(3)
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
   type(particle_gc)    :: particle
 
@@ -278,12 +278,12 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   !$omp parallel do default(none) &
   !$omp shared(particles, fields, out, mask, time, f0, mass) &
   !$omp private(P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t, &
-  !$omp inv_st_jac, psi_R, psi_Z, B, particle, v_par)
+  !$omp inv_st_jac, psi_R, psi_Z, B, B_norm, B_hat, particle, v_par, v_perp)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
     else
-      ! Calculate psi and B
+      ! Calculate psi and B in the current particle location (either GC or kinetic)
       call fields%interp_PRZ(time, particles(i)%i_elm, &
                     [1], 1, particles(i)%st(1),particles(i)%st(2), &
                     particles(i)%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
@@ -296,10 +296,14 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
 
       select type (particles(i))
       type is (particle_kinetic_leapfrog)
+        out(i,1,1) = real(particles(i)%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particles(i)%v(3)
         ! Let the conversion calculate the conserved quantities
         particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particles(i), B, mass)
+
+
+
         ! Correct for muB being in x-coordinate (divide by norm2(B_gc) later)
-        particle%mu = particle%mu * norm2(B)
+        !particle%mu = particle%mu * norm2(B)
 
         ! This recalculates P in the gc position also
         call fields%interp_PRZ(time, particle%i_elm, &
@@ -309,9 +313,16 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
         psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
         psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
         B        = [+psi_Z, -psi_R, F0] / R
-        particle%mu = particle%mu / norm2(B)
+        B_norm   = norm2(B)
+        B_hat    = B/B_norm
+        v_perp   = particles(i)%v - dot_product(particles(i)%v,B_hat)*B_hat
+        ! Recalculate mu from the gc coordinates
+        particle%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(v_perp,v_perp) / B_norm
+
       type is (particle_gc)
+        v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particles(i)
+        out(i,1,1) = real(particles(i)%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
       class default
         write(*,*) "ERROR: calculate_pphi_H_mu not implemented for this particle type"
         cycle ! skip this iteration
@@ -319,9 +330,6 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
 
 
       ! Calculate output variables
-      v_par      = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
-      out(i,1,1) = real(particle%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
-      write(*,*) out(i,1,1)
       out(i,2,1) = particle%E
       out(i,3,1) = particle%mu
     endif

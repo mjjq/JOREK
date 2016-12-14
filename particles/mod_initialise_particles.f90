@@ -201,10 +201,10 @@ end subroutine initialise_particles
 !> Does not do weighting of the particles.
 !>
 !> **This subroutine does not support MPI or openMP yet!**
-subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng_base, mass, &
+subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         H_transform, Theta_transform, Psi_transform, cor)
-  use data_structure
   use mod_rng
+  use mod_fields
   use mod_random_seed
   use constants
   use phys_module, only: F0
@@ -212,8 +212,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
   use mod_boris, only: gc_to_kinetic_leapfrog
   implicit none
   class(particle_base), dimension(:), intent(inout) :: particles
-  type(type_node_list), intent(in)                  :: node_list
-  type(type_element_list), intent(in)               :: element_list
+  class(fields_base), intent(in)                    :: fields
   class(type_rng), intent(in)                       :: rng_base !< What type of random number generator to use (will be reseeded here)
   real*8, intent(in)                                :: mass
   real*8, external                                  :: H_transform !< Function to transform 0-1 to the H-domain (eV)
@@ -234,7 +233,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
   real*8  :: s, t, u_init_max
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
   integer :: i_elm, i, ifail, n_try
-  real*8, dimension(element_list%n_elements,2) :: psi_minmax_list
+  real*8, dimension(fields%element_list%n_elements,2) :: psi_minmax_list
 
   psimin= 1d10
   psimax=-1d10
@@ -242,8 +241,8 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
   !$omp parallel do default(shared) &
   !$omp private(i_elm) reduction(min:psimin) &
   !$omp reduction(max:psimax)
-  do i_elm=1,element_list%n_elements
-    call psi_minmax(node_list,element_list,i_elm,psi_minmax_list(i_elm,1),psi_minmax_list(i_elm,2))
+  do i_elm=1,fields%element_list%n_elements
+    call psi_minmax(fields%node_list,fields%element_list,i_elm,psi_minmax_list(i_elm,1),psi_minmax_list(i_elm,2))
     psimin = min(psi_minmax_list(i_elm,1),psimin)
     psimax = max(psi_minmax_list(i_elm,2),psimax)
   end do
@@ -252,7 +251,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
   allocate(rng,source=rng_base)
   call rng%initialize(6, random_seed(), 1, 1, ifail)
   ! Preparatory work: get R_axis, Z_axis
-  call find_axis(0, node_list, element_list, psi_axis, R_axis, Z_axis, s_axis, t_axis, i_elm, ifail)
+  call find_axis(0, fields%node_list, fields%element_list, psi_axis, R_axis, Z_axis, s_axis, t_axis, i_elm, ifail)
 
 
   ! Loop over all points in the series until we have enough particles
@@ -275,7 +274,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
       end if
       phi = TWOPI*ran(4)
       ! 1. Find R, Z corresponding to psi, theta
-      call find_theta_psi(node_list,element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
+      call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
       n_try = n_try + 1
     end do
     ! If we are here a suitable position has been found
@@ -284,7 +283,7 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
     particle%x     = [R,Z,phi]
 
     ! 1. Get B at this position
-    call       interp_PRZ(node_list,element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+    call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
     inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
     psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
     psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
@@ -299,14 +298,14 @@ subroutine initialise_particles_H_mu_psi(particles, node_list, element_list, rng
 
     ! 3. Calculate charge (if cor is present)
     if (present(cor)) then
-      particle%q = q_coronal(node_list, element_list, s, t, phi, i_elm, cor)
+      particle%q = q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor)
     end if
 
     ! 4. Output to particles (dependent on type of particle)
     chi = TWOPI*ran(6)
     select type(p => particles(i))
     type is (particle_kinetic_leapfrog)
-      p = gc_to_kinetic_leapfrog(particle, chi, B, mass)
+      p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
     type is (particle_gc)
       p = particle
     end select

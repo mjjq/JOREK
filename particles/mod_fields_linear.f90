@@ -31,8 +31,6 @@ end interface read_jorek_fields_interp_linear
 !> The reason behind not using deltas is that we do not have to alter much code
 !> and can import two restarts which are not consecutive and still interpolate.
 type, extends(fields_base) :: jorek_fields_interp_linear
-  type(type_node_list), allocatable    :: node_list !< Perhaps put these in fields_base?
-  type(type_element_list), allocatable :: element_list !< Perhaps put these in fields_base?
   real*8 :: time_now !< Time of current restart file (SI)
   real*8 :: time_prev !< Time of previous restart file (SI)
   contains
@@ -65,6 +63,7 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   P_phi  = f*P_phi - df*Pd_phi
   P_time = Pd/(this%time_now - this%time_prev) ! linearisation
 end subroutine do_interp_PRZ
+
 
 !> Constructor to allow for optional and default variables
 function new_read_jorek_fields_interp_linear(basename, i, rst_format) result(new)
@@ -108,9 +107,6 @@ subroutine do_read(this, sim)
   ! Continue for jorek_fields_interp_linear
   select type (f => sim%fields)
   type is (jorek_fields_interp_linear)
-    ! Allocate node and element_list if needed
-    if (.not. allocated(f%node_list))    allocate(f%node_list)
-    if (.not. allocated(f%element_list)) allocate(f%element_list)
 
     ! Read only one file
     if (this%i .eq. -1) then

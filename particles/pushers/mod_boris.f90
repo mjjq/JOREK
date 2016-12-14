@@ -11,6 +11,7 @@ module mod_boris
 
   public boris_push_cylindrical, boris_push_cartesian, boris_initial_half_step_backwards_XYZ
   public boris_initial_half_step_backwards_RZPhi, left_handed_cross_product, right_handed_cross_product
+  public boris_all_initial_half_step_backwards_RZPhi
   public gc_to_kinetic_leapfrog, kinetic_leapfrog_to_gc
 contains
 
@@ -132,6 +133,24 @@ pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   particle%v = v
 end subroutine boris_initial_half_step_backwards_RZPhi
 
+!> Given a list of particles and the fields, perfom half-steps backwards for all
+pure subroutine boris_all_initial_half_step_backwards_RZPhi(particles, m, fields, dt)
+  use mod_fields
+  class(particle_kinetic_leapfrog), intent(inout), dimension(:) :: particles
+  real*8, intent(in) :: m
+  class(fields_base), intent(in) :: fields
+  real*8, intent(in) :: dt
+
+  integer :: i
+  real*8  :: psi, U, E(3), B(3)
+
+  do i=1,size(particles,1)
+    call fields%calc_EBpsiU(0.d0, particles(i)%i_elm, particles(i)%st, particles(i)%x(3), &
+        E, B, psi, U)
+    call boris_initial_half_step_backwards_RZPhi(particles(i), m, E, B, dt)
+  end do
+end subroutine boris_all_initial_half_step_backwards_RZPhi
+
 !> The cross product in a right-handed coordinate system (e.g. XYZ or RPhiZ)
 pure function right_handed_cross_product(a, b)
   real*8, dimension(3) :: right_handed_cross_product
@@ -154,12 +173,18 @@ end function left_handed_cross_product
 !> Take a particle_kinetic_leapfrog and B and return a particle_guiding_centre.
 !> This is an approximation based on the magnetic field at the kinetic position.
 !> gc_to_kinetic_leapfrog is not a true inverse of this function! Use with care.
-pure function kinetic_leapfrog_to_gc(in, B, mass) result(out)
-  type(particle_gc)                           :: out
+!> Note that this stores mu as calculated on the kinetic position. For a more
+!> 'averaged' quantity, correct by multiplying with |B_x|/|B_gc|
+function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out)
+  use data_structure
+  type(type_node_list), intent(in)            :: node_list
+  type(type_element_list), intent(in)         :: element_list
   type(particle_kinetic_leapfrog), intent(in) :: in
   real*8, dimension(3), intent(in)            :: B !< Magnetic field at kinetic position [T]
   real*8, intent(in)                          :: mass !< Mass of the particle [amu]
-  real*8 :: B_hat(3), B_norm
+  type(particle_gc)                           :: out
+  real*8  :: B_hat(3), B_norm
+  integer :: ifail
 
   call copy_particle_base(in, out)
   out%q      = in%q
@@ -175,23 +200,33 @@ pure function kinetic_leapfrog_to_gc(in, B, mass) result(out)
 
   ! Calculate velocity-related variables
   out%E  = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(in%v,in%v)
+  ! Perhaps we could also use the magnetic field in the guiding center to calculate
+  ! v_perp, but don't do it for now.
   out%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(&
       in%v - dot_product(in%v,B_hat)*B_hat, &
       in%v - dot_product(in%v,B_hat)*B_hat &
       )/B_norm
+
+  ! Calculate new st and i_elm
+  call find_RZ_nearby(node_list, element_list, out%x, in%x, in%st, out%st, in%i_elm, out%i_elm, ifail)
 end function kinetic_leapfrog_to_gc
 
 !> Take a particle_gc and get the kinetic particle.
 !> Does not perform the initial half-step!
 !> Only updates performed are a transform of E and mu (and chi) to v, and of x_gc to x
-pure function gc_to_kinetic_leapfrog(in, chi, B, mass) result(out)
+!> Calls find_RZ_nearby to find st
+function gc_to_kinetic_leapfrog(node_list, element_list, in, chi, B, mass) result(out)
   use constants
-  type(particle_gc), intent(in)   :: in
-  type(particle_kinetic_leapfrog) :: out !< Particle of which to update x and v
+  use data_structure
+  type(type_node_list), intent(in)    :: node_list
+  type(type_element_list), intent(in) :: element_list
+  type(particle_gc), intent(in)       :: in
+  type(particle_kinetic_leapfrog)     :: out !< Particle of which to update x and v
   real*8, intent(in) :: chi !< Gyrophase [0,2pi]
   real*8, intent(in) :: B(3) !< Magnetic field at GC position [T]
   real*8, intent(in) :: mass !< Mass of the particle [amu]
   real*8 :: B_norm, v_perp, v_par, B_hat(3)
+  integer :: ifail
 
   call copy_particle_base(in, out)
   out%q      = in%q
@@ -210,5 +245,8 @@ pure function gc_to_kinetic_leapfrog(in, chi, B, mass) result(out)
   else
     out%x = in%x
   end if
+
+  ! Calculate new st and i_elm
+  call find_RZ_nearby(node_list, element_list, out%x, in%x, in%st, out%st, in%i_elm, out%i_elm, ifail)
 end function gc_to_kinetic_leapfrog
 end module mod_boris

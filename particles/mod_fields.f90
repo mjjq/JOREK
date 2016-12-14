@@ -1,6 +1,7 @@
 !> Module containing base type for field interpolations, with interfaces
 !> to implement
 module mod_fields
+use data_structure
 implicit none
 private
 public fields_base
@@ -8,9 +9,13 @@ public fields_base
 !> Base type for a field interpolator.
 !> Must implement the following interfaces, which are the normal
 !> functions and an additional time component (JOREK units)
+!> node_list and element_list should be the currently-valid representation of the grid
+!> (values themselves should not be used, only for find_RZ etc)
 type, abstract :: fields_base
+  type(type_node_list)    :: node_list !< Current node list
+  type(type_element_list) :: element_list !< Current element list
   contains
-    procedure(interp_PRZ), deferred :: interp_PRZ
+    procedure(interp_PRZ), deferred       :: interp_PRZ
     procedure :: calc_EBpsiU
 end type fields_base
 

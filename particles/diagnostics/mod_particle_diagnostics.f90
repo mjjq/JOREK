@@ -152,9 +152,10 @@ subroutine do_write_constants_of_motion(this, sim)
     ! After extending, dspace and tspace are invalid. Close them already
     call h5sclose_f(dspace, ierr)
     call h5sclose_f(tspace, ierr)
-    data_dims(3) = data_dims(3) + 1_HSIZE_T
     time_dims(1) = time_dims(1) + 1_HSIZE_T
     data_dims(1) = max(data_dims(1), int(sum(particles_per_proc,1),HSIZE_T)) ! only grow this set
+    data_dims(2) = n_var
+    data_dims(3) = data_dims(3) + 1_HSIZE_T
     write(*,"(A,3i6)") " DEBUG: extending dset to ", data_dims
     call h5dset_extent_f(dset, data_dims, ierr)
     write(*,"(A,1i6)") " DEBUG: extending tset to ", time_dims
@@ -162,7 +163,7 @@ subroutine do_write_constants_of_motion(this, sim)
 
     ! Create dataspace for file and memory separately
     write(*,*) "DEBUG: creating dataspace for memory and file"
-    call h5screate_simple_f(3, [size(sim%groups(i)%particles,dim=1,kind=HSIZE_T),n_var,n_time], mem_space, ierr)
+    call h5screate_simple_f(3, [size(sim%groups(i)%particles,dim=1,kind=HSIZE_T), n_var, n_time], mem_space, ierr)
     ! We must create a hyperslab space here because simple does not play well
     ! with HDF5 (but does not tell you this!).
     ! It is also important to get the space belonging to this dataset, instead of
@@ -173,9 +174,6 @@ subroutine do_write_constants_of_motion(this, sim)
         count=[1_HSIZE_T,1_HSIZE_T,1_HSIZE_T], &
         block=[size(sim%groups(i)%particles,dim=1,kind=HSIZE_T),n_var,n_time], &
         hdferr=ierr)
-    write(*,"(A,3i6)") " DEBUG: mem size ", size(sim%groups(i)%particles,dim=1,kind=HSIZE_T),n_var,n_time
-    write(*,"(A,3i6)") " DEBUG: offset=", int(sum(particles_per_proc(0:my_id-1)),HSIZE_T), 0_HSIZE_T, data_dims(3)-1_HSIZE_T
-    write(*,"(A,3i6)") " DEBUG: file size ", size(sim%groups(i)%particles,dim=1,kind=HSIZE_T),n_var,n_time
 
     ! Calculate the statistics
     call calculate_pphi_H_mu(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, stats(:,:,1))
@@ -188,7 +186,9 @@ subroutine do_write_constants_of_motion(this, sim)
     write(*,"(A,3i6)") " DEBUG: writing statistics to block. dims=", data_dims
     call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, stats, [1_HSIZE_T,1_HSIZE_T,1_HSIZE_T], &
          ierr, file_space_id = dspace, mem_space_id = mem_space)
-    write(*,*) "Done"
+    !write(*,*) "EXTRA_DEBUG: out(8,2)", stats(8,2,1)
+    !write(*,*) "EXTRA_DEBUG: out(2,2)", stats(2,2,1)
+    write(*,*) "Done", sum(stats)
 
     ! Add the current time to the timeset
     call h5dget_space_f(tset, tspace, ierr)
@@ -227,10 +227,10 @@ subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, ds
   ! Create a dataset property list, enable chunking
   call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
   call h5pset_chunk_f(crp_list, 3, chunk_size, ierr)
-  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_REAL, dspace, dset, ierr, crp_list)
+  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_DOUBLE, dspace, dset, ierr, crp_list)
   call h5pclose_f(crp_list, ierr)
 
-  ! shuffle filter + zlib (usually present) (give 20% compression, not for now)
+  ! shuffle filter + zlib (present on most system) (give 20% compression, don't use for)
 end subroutine create_constants_dataset
 
 !> Create a new dataset for time data (1-d extensible, chunked (required for extensibility))
@@ -248,7 +248,7 @@ subroutine create_constants_time_dataset(file_id, dataset_name, dset, dspace)
   ! Create a dataset property list, enable chunking
   call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
   call h5pset_chunk_f(crp_list, 1, chunk_size, ierr)
-  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_REAL, dspace, dset, ierr, crp_list)
+  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_DOUBLE, dspace, dset, ierr, crp_list)
   call h5pclose_f(crp_list, ierr)
 end subroutine create_constants_time_dataset
 
@@ -260,11 +260,11 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   use phys_module, only: F0
   use constants
   use mod_boris
-  class(fields_base), intent(in)                      :: fields
-  real*8, intent(in)                                  :: time
-  class(particle_base), intent(in), dimension(:)      :: particles
-  real*8, intent(in)                                  :: mass
-  real*8, dimension(3,size(particles,1)), intent(out) :: out !< List of values
+  class(fields_base), intent(in)                               :: fields
+  real*8, intent(in)                                           :: time
+  class(particle_base), intent(in), dimension(:)               :: particles
+  real*8, intent(in)                                           :: mass
+  real*8, dimension(size(particles,1),3,1), intent(out)        :: out !< List of values
   logical, dimension(size(particles,1)), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
   real*8               :: inv_st_jac, psi_R, psi_Z, B(3), v_par
@@ -294,22 +294,36 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
       B        = [+psi_Z, -psi_R, F0] / R
 
 
-      select type (pa => particles(i))
+      select type (particles(i))
       type is (particle_kinetic_leapfrog)
         ! Let the conversion calculate the conserved quantities
-        particle = kinetic_leapfrog_to_gc(pa, B, mass)
+        particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particles(i), B, mass)
+        ! Correct for muB being in x-coordinate (divide by norm2(B_gc) later)
+        particle%mu = particle%mu * norm2(B)
+
+        ! This recalculates P in the gc position also
+        call fields%interp_PRZ(time, particle%i_elm, &
+                      [1], 1, particle%st(1),particle%st(2), &
+                      particle%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
+        inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
+        psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
+        psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
+        B        = [+psi_Z, -psi_R, F0] / R
+        particle%mu = particle%mu / norm2(B)
       type is (particle_gc)
-        particle = pa
+        particle = particles(i)
       class default
         write(*,*) "ERROR: calculate_pphi_H_mu not implemented for this particle type"
+        cycle ! skip this iteration
       end select
 
 
       ! Calculate output variables
-      v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
-      out(1,i) = real(particle%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
-      out(2,i) = particle%E
-      out(3,i) = particle%mu
+      v_par      = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
+      out(i,1,1) = real(particle%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
+      write(*,*) out(i,1,1)
+      out(i,2,1) = particle%E
+      out(i,3,1) = particle%mu
     endif
   enddo
   !$omp end parallel do

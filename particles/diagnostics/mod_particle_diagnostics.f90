@@ -188,7 +188,7 @@ subroutine do_write_constants_of_motion(this, sim)
          ierr, file_space_id = dspace, mem_space_id = mem_space)
     !write(*,*) "EXTRA_DEBUG: out(8,2)", stats(8,2,1)
     !write(*,*) "EXTRA_DEBUG: out(2,2)", stats(2,2,1)
-    write(*,*) "Done"
+    write(*,*) "Done", sum(stats) ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
 
     ! Add the current time to the timeset
     call h5dget_space_f(tset, tspace, ierr)
@@ -205,10 +205,10 @@ subroutine do_write_constants_of_motion(this, sim)
     call h5sclose_f(tspace, ierr)
     call h5dclose_f(dset, ierr)
     call h5dclose_f(tset, ierr)
-    call h5fclose_f(this%file_id, ierr)
-    call h5close_f(ierr)
     deallocate(stats)
   end do
+  call h5fclose_f(this%file_id, ierr)
+  call h5close_f(ierr)
 end subroutine do_write_constants_of_motion
 
 !> Create a new dataset for diagnostics with the right dimensions in file_id

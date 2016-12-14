@@ -202,7 +202,7 @@ end subroutine initialise_particles
 !>
 !> **This subroutine does not support MPI or openMP yet!**
 subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
-        H_transform, Theta_transform, Psi_transform, cor)
+        H_transform, Theta_transform, Psi_transform, cor, charge)
   use mod_rng
   use mod_fields
   use mod_random_seed
@@ -220,6 +220,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*8, external, optional                        :: Psi_transform !< Function to transform 0-1 to the Psi-domain
   !< if omitted, determine automatically from node_list
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
+  integer, intent(in), optional                     :: charge !< Use this if cor is not present
 
   ! Internal variables
   type(particle_gc) :: particle
@@ -299,6 +300,10 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     ! 3. Calculate charge (if cor is present)
     if (present(cor)) then
       particle%q = q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor)
+    else
+      if (present(charge)) then
+        particle%q = charge
+      end if
     end if
 
     ! 4. Output to particles (dependent on type of particle)

@@ -40,7 +40,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use data_structure
   use phys_module
   use pellet_module
-  use vacuum, only: import_restart_vacuum
+  use vacuum, only: import_restart_vacuum, current_FB_fact
   
   implicit none
   
@@ -197,7 +197,8 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 #endif
 endif
 
-  call import_restart_vacuum(21, freeboundary, resistive_wall)
+  call import_restart_vacuum(21, freeboundary, resistive_wall)  
+  T_0 = T_0 * current_FB_fact
 
   if (use_pellet) then
     if (index_start .ge. 1) then
@@ -397,7 +398,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use data_structure
   use phys_module
   use pellet_module
-  use vacuum, only: import_HDF5_restart_vacuum
+  use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
@@ -664,6 +665,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   ! Import restart Vacuum 
   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
+  T_0 = T_0 * current_FB_fact
   
   if (use_pellet) then
      if (index_start .ge. 1) then

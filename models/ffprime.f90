@@ -5,6 +5,7 @@ recursive subroutine FFprime(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,FFpr
 ! position (Z, psi) from the analytical or numerical input profile.
 !-----------------------------------------------------------------------
 use phys_module
+use vacuum, only: current_FB_fact
 
 implicit none
 
@@ -151,6 +152,17 @@ else
 end if
 
 FFprime_profile = FFprime_profile + FF_1
+
+if (freeboundary_equil .and. num_ffprime) then            !if the ffprime profile is given in a file and freeboundary equilibrium is on,
+                                                         !the full profile is multiplied by a factor in order to iterate to a given current   
+   FFprime_profile  = FFprime_profile  * current_FB_fact
+   dFF_dpsi         = dFF_dpsi         * current_FB_fact
+   dFF_dpsi2        = dFF_dpsi2        * current_FB_fact
+   dFF_dz           = dFF_dz           * current_FB_fact
+   dFF_dz2          = dFF_dz2          * current_FB_fact
+   dFF_dpsi_dz      = dFF_dpsi_dz      * current_FB_fact
+
+end if
 
 return
 end subroutine FFprime

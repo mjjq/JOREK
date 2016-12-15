@@ -43,7 +43,7 @@ real*8     :: current_tot, current_ref, current_int, ZKP, ZKI, ZKD, diff, R_xpoi
 real*8     :: sigmas(16), Z_axis_ref
 integer    :: n_grids(10)
 logical    :: freeboundary_equil2
-real*8     :: T_prof
+real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
 real*8, allocatable     :: density_profile(:)
@@ -139,8 +139,9 @@ freeboundary_equil = freeboundary_equil2
 
 current_int = 0.d0
 ZKP         = 1.                ! PI feedback on the total current changed to Guido's parameters! 
-ZKI         = 0.01 !0.01 
-!amix=0.96
+ZKI         = 0.01 !0.01
+ 
+T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
 
 if (freeboundary_equil) then
 
@@ -166,10 +167,19 @@ if (freeboundary_equil) then
 
     current_int = current_int + (current_tot-current_ref)
     
-    T_0  = T_0  * (1. - ZKP*(current_tot-current_ref)/current_ref - ZKI*current_int/current_ref)
-    FF_0 = FF_0 * (1. - ZKP*(current_tot-current_ref)/current_ref - ZKI*current_int/current_ref)
+    current_FB_fact  = current_FB_fact * (1. - ZKP*(current_tot-current_ref)/current_ref - ZKI*current_int/current_ref)
     
-    write(*,'(A,8e12.4)') 'FEEDBACK : ',current_ref,current_tot,current_int,T_0, FF_0
+    !-------------- Multiplying FF' and p' profiles by the same factor to scale total current (analytical profiles)--------------
+    if (.not. num_ffprime) then
+      FF_0 = FF_0_old * current_FB_fact;    FF_1 = FF_1_old * current_FB_fact  
+    endif  
+   
+    if (.not. num_T) then      
+      T_0  = T_0_old  * current_FB_fact;    T_1  = T_1_old  * current_FB_fact
+    endif
+    !-----------------------------------------------------------------------------------------------------------
+    
+    write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact
                    
     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
     

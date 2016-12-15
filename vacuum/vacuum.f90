@@ -49,6 +49,7 @@ module vacuum
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
   real*8, allocatable :: dR_coils(:), dZ_coils(:)        ! ### old
   real*8, allocatable :: coil_voltages(:)                !< Coil voltages
+  real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   
   type :: t_starwall_response
     integer :: n_bnd
@@ -198,6 +199,8 @@ module vacuum
         
       end if
       
+      read(file_handle) current_FB_fact
+      
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then
@@ -276,6 +279,8 @@ module vacuum
           
        end if
        
+       call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
+       
     end if
      
     if ( vacuum_debug .and. resistive_wall ) then
@@ -316,6 +321,8 @@ module vacuum
         write(file_handle) dwall_curr(:)
         
       end if
+      
+      write(file_handle) current_FB_fact
       
     end if
     
@@ -367,6 +374,9 @@ module vacuum
           call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
           call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
        end if
+       
+       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
+       
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then

@@ -45,6 +45,16 @@ module vacuum
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
+  !> @name Equilibrium parameters for feedback
+  real*8              :: amix_freeb, amix, min_diff      !< Choose poisson solver paramters
+  real*8              :: ZCP, ZCI, current_ref           !< Current feedback parameters
+  real*8              :: ZFP, ZFI, ZFD, Z_axis_ref       !< Vertical position feedback parameters 
+  integer             :: start_VFB                       !< Iteration for starting VB
+  integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations
+  integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations
+  integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum
+  
+  
   ! ### various variables, some need to be removed
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
   real*8, allocatable :: dR_coils(:), dZ_coils(:)        ! ### old
@@ -89,6 +99,21 @@ module vacuum
     freeboundary         = .false.
     resistive_wall       = .false.
     wall_resistivity     = 0.d0
+        
+    amix                 = 0.d0
+    amix_freeb           = 0.85d0
+    min_diff             = 1.d-6
+    ZCP                  = 0.2d0
+    ZCI                  = 0.01d0
+    current_ref          = 1.d22
+    ZFP                  = 1.d0
+    ZFI                  = 0.d0
+    ZFD                  = 0.d0
+    Z_axis_ref           = 1.d22
+    start_VFB            = 10
+    n_feedback_current   = 2
+    n_feedback_vertical  = 1
+    n_iter_freeb         = 900
     
   end subroutine vacuum_preset
   

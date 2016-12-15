@@ -6,7 +6,7 @@ use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
-use vacuum,        only: vacuum_preset, wall_resistivity
+use vacuum
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -61,7 +61,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-		gmres_4, gmres_m, gmres_tol, iter_precon,           &
+		            gmres_4, gmres_m, gmres_tol, iter_precon,           &
                 rst_format,                                         &
                 wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter,                    &
@@ -69,7 +69,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-                linear_run, export_for_nemec
+                linear_run, export_for_nemec,                       &
+                amix, amix_freeb, min_diff, ZCP, ZCI, current_ref,  &
+                ZFP, ZFI, ZFD, Z_axis_ref, start_VFB,               &
+                n_feedback_current, n_feedback_vertical,            &
+                n_iter_freeb  
                 
 if (my_id .eq. 0) then
 

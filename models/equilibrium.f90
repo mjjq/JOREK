@@ -39,8 +39,8 @@ real*8     :: R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_xpoint(2)
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
-real*8     :: current_tot, current_ref, current_int, ZKP, ZKI, ZKD, diff, R_xpoint2(2), Z_xpoint2(2)
-real*8     :: sigmas(16), Z_axis_ref
+real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
+real*8     :: sigmas(16), dZ_axis, Z_axis_int
 integer    :: n_grids(10)
 logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
@@ -137,9 +137,7 @@ enddo
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
 
-current_int = 0.d0
-ZKP         = 1.                ! PI feedback on the total current changed to Guido's parameters! 
-ZKI         = 0.01 !0.01
+current_int = 0.d0; Z_axis_int = 0.d0
  
 T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
 
@@ -151,14 +149,17 @@ if (freeboundary_equil) then
   write(*,*) '------------------------------------------------------'
   write(*,*)
 
-  n_iter = 999
+  ! Target current and axis
+  if (current_ref .gt. 1.d20) then    !choose fix bnd equilibrium final current in case of non specification of target current
+    call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
+  endif
+ 
+  if (Z_axis_ref .gt. 1.d20) then     !choose fix bnd equilibrium final Zaxis in case of non specification of target Zaxis
+    Z_axis_ref = Z_axis
+  endif
+ 
 
-! Target current
- call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
- current_ref = 11.92d6 !###
- Z_axis_ref  = 0.538d0 !###
-
-  do iter=1,n_iter
+  do iter=1, n_iter_freeb
     
     write(*,*)
     write(*,'(1x,a,i5,a)') '>>> ITERATION', iter, ' <<<'
@@ -167,9 +168,11 @@ if (freeboundary_equil) then
 
     current_int = current_int + (current_tot-current_ref)
     
-    current_FB_fact  = current_FB_fact * (1. - ZKP*(current_tot-current_ref)/current_ref - ZKI*current_int/current_ref)
+    if (mod(iter,n_feedback_current) .eq. 0) then
+      current_FB_fact  = current_FB_fact * (1. - ZCP*(current_tot-current_ref)/current_ref - ZCI*current_int/current_ref)
+    endif
     
-    !-------------- Multiplying FF' and p' profiles by the same factor to scale total current (analytical profiles)--------------
+    !-------------- Multiplying FF' and p' profiles by the same factor to scale total current (analytical profiles)----
     if (.not. num_ffprime) then
       FF_0 = FF_0_old * current_FB_fact;    FF_1 = FF_1_old * current_FB_fact  
     endif  
@@ -177,7 +180,7 @@ if (freeboundary_equil) then
     if (.not. num_T) then      
       T_0  = T_0_old  * current_FB_fact;    T_1  = T_1_old  * current_FB_fact
     endif
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------------
     
     write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact
                    
@@ -212,19 +215,25 @@ if (freeboundary_equil) then
 !if (iter .lt. 30) then
     call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
 
+    psi_bnd = psi_lim
+
     if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
-      write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
+     write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
     endif
 !endif
        
     if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
     if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
 
-! Vertical feedback - needed for vertically unstable plasmas
-    if (iter .gt. 20) then
-      vertical_FB = 10.d0*(Z_axis-Z_axis_ref) ! This parameter is used in vacuum/mod_vacuum_equilibrium.f90 to modify the coils current
-      write(*,*) 'vertical_FB =', vertical_FB
+    !Vertical feedback - needed for vertically unstable plasmas
+    dZ_axis = Z_axis - dZ_axis
+    Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
+
+    if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
+      vertical_FB = ZFP * (Z_axis-Z_axis_ref) &
+                  + ZFI * Z_axis_int          &   ! This parameter is used in vacuum/mod_vacuum_equilibrium.f90 to modify the coils current
+                  + ZFD * dZ_axis
     endif
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
@@ -240,7 +249,7 @@ if (freeboundary_equil) then
   
     write(*,'(A,i5,e14.6)') ' iteration, diff : ',iter,diff
   
-    if ((iter .gt. 1) .and. (diff .lt. 1.d-6)) exit
+    if ((iter .gt. 1) .and. (diff .lt. min_diff)) exit
 
   enddo
 

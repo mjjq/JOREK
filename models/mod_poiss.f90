@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mumps_module
 use pastix_module
-use vacuum_equilibrium, only: vacuum_equil
+use vacuum_equilibrium, only: vacuum_equil, amix, amix_freeb
 use mod_coicsr
 use mpi_mod
 implicit none
@@ -39,7 +39,7 @@ type (type_bnd_element_list) :: bnd_elm_list
 
 real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1))
 real*8   :: zbig, Z_xpoint(2), psi_axis, psi_bnd, psi_xpoint(2), R_xpoint(2), s_xpoint(2), t_xpoint(2)
-real*8   :: R_axis, Z_axis, s_axis, t_axis, amix
+real*8   :: R_axis, Z_axis, s_axis, t_axis
 integer  :: i_elm_axis, i_elm_xpoint(2)
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
 integer  :: inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
@@ -108,11 +108,7 @@ ilarge=0
 
 amix = 0.d0
 if (itype .eq. -1) then
-  if (freeboundary_equil) then
-    amix= 0.95
-  else
-    amix = 0.0
-  endif
+  if (freeboundary_equil) amix = amix_freeb
 endif
     
 do ife =1, element_list%n_elements

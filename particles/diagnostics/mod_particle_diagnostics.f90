@@ -300,10 +300,10 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
         ! Let the conversion calculate the conserved quantities
         particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particles(i), B, mass)
 
-
-
         ! Correct for muB being in x-coordinate (divide by norm2(B_gc) later)
         !particle%mu = particle%mu * norm2(B)
+
+        if (particle%i_elm .eq. 0) cycle
 
         ! This recalculates P in the gc position also
         call fields%interp_PRZ(time, particle%i_elm, &

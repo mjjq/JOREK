@@ -258,62 +258,66 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   ! Loop over all points in the series until we have enough particles
   n_try = 0
   do i=1,size(particles)
-    i_elm = 0
-    do while (i_elm .eq. 0)
-      call rng%next(ran)
+    particles(i)%i_elm = 0
+    do while(particles(i)%i_elm .eq. 0)
+      i_elm = 0
+      do while (i_elm .eq. 0) !continue until we find a suitable GC position
+        call rng%next(ran)
 
-      if (present(Psi_transform)) then
-        psi = Psi_transform(ran(1))
+        if (present(Psi_transform)) then
+          psi = Psi_transform(ran(1))
+        else
+          psi = (psimax-psimin)*ran(1)+psimin
+        end if
+        ! Try to find this position
+        if (present(Theta_transform)) then
+          theta = Theta_transform(ran(5))
+        else
+          theta = TWOPI*ran(5)
+        end if
+        phi = TWOPI*ran(4)
+        ! 1. Find R, Z corresponding to psi, theta
+        call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
+        n_try = n_try + 1
+      end do
+      ! If we are here a suitable position has been found
+      particle%i_elm = i_elm
+      particle%st    = [s,t]
+      particle%x     = [R,Z,phi]
+
+      ! 1. Get B at this position
+      call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+      inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
+      psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
+      psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
+      ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
+      B        = [+psi_Z, -psi_R, F0] / R
+
+      ! 2. Calculate H and mu, save in particle
+      H  = H_transform(ran(2)) ! [eV]
+      muB = H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
+      particle%E  = H
+      particle%mu = muB/norm2(B)
+
+      ! 3. Calculate charge (if cor is present)
+      if (present(cor)) then
+        particle%q = q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor)
       else
-        psi = (psimax-psimin)*ran(1)+psimin
+        if (present(charge)) then
+          particle%q = charge
+        end if
       end if
-      ! Try to find this position
-      if (present(Theta_transform)) then
-        theta = Theta_transform(ran(5))
-      else
-	theta = TWOPI*ran(5)
-      end if
-      phi = TWOPI*ran(4)
-      ! 1. Find R, Z corresponding to psi, theta
-      call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
-      n_try = n_try + 1
+
+      ! 4. Output to particles (dependent on type of particle)
+      chi = TWOPI*ran(6)
+      select type(p => particles(i))
+      type is (particle_kinetic_leapfrog)
+        p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
+        ! if the kinetic position is not in the grid particles(i)%i_elm will be zero after this step and we will loop again
+      type is (particle_gc)
+        p = particle
+      end select
     end do
-    ! If we are here a suitable position has been found
-    particle%i_elm = i_elm
-    particle%st    = [s,t]
-    particle%x     = [R,Z,phi]
-
-    ! 1. Get B at this position
-    call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-    inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
-    psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-    psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-    ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
-    B        = [+psi_Z, -psi_R, F0] / R
-
-    ! 2. Calculate H and mu, save in particle
-    H  = H_transform(ran(2)) ! [eV]
-    muB = H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
-    particle%E  = H
-    particle%mu = muB/norm2(B)
-
-    ! 3. Calculate charge (if cor is present)
-    if (present(cor)) then
-      particle%q = q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor)
-    else
-      if (present(charge)) then
-        particle%q = charge
-      end if
-    end if
-
-    ! 4. Output to particles (dependent on type of particle)
-    chi = TWOPI*ran(6)
-    select type(p => particles(i))
-    type is (particle_kinetic_leapfrog)
-      p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
-    type is (particle_gc)
-      p = particle
-    end select
   end do
 end subroutine initialise_particles_H_mu_psi
 

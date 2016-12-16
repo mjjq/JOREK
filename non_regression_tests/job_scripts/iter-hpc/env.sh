@@ -22,7 +22,7 @@ export LANG=C
 export JOREK_HOST=iter-hpc
 export compilethreads=4
 export MAKEFLAGS="-j$compilethreads"
-export PRERUN="export OMP_NUM_THREADS=2"
+export PRERUN="export OMP_NUM_THREADS=4"
 export MPIRUN="mpirun -np "
 export BATCHCOMMAND="qsub"
 

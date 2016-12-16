@@ -260,6 +260,7 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   use phys_module, only: F0
   use constants
   use mod_boris
+  use mod_fields_linear
   class(fields_base), intent(in)                               :: fields
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
@@ -293,10 +294,9 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
       ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
       B        = [+psi_Z, -psi_R, F0] / R
 
-
       select type (particles(i))
       type is (particle_kinetic_leapfrog)
-        out(i,1,1) = real(particles(i)%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particles(i)%v(3)
+        out(i,1,1) = particles(i)%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particles(i)%v(3)
         ! Let the conversion calculate the conserved quantities
         particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particles(i), B, mass)
 
@@ -306,18 +306,18 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
         if (particle%i_elm .eq. 0) cycle
 
         ! This recalculates P in the gc position also
-        call fields%interp_PRZ(time, particle%i_elm, &
-                      [1], 1, particle%st(1),particle%st(2), &
-                      particle%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-        inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
-        psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-        psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-        B        = [+psi_Z, -psi_R, F0] / R
-        B_norm   = norm2(B)
-        B_hat    = B/B_norm
-        v_perp   = particles(i)%v - dot_product(particles(i)%v,B_hat)*B_hat
-        ! Recalculate mu from the gc coordinates
-        particle%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(v_perp,v_perp) / B_norm
+        !call fields%interp_PRZ(time, particle%i_elm, &
+        !              [1], 1, particle%st(1),particle%st(2), &
+        !              particle%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
+        !inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
+        !psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
+        !psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
+        !B        = [+psi_Z, -psi_R, F0] / R
+        !B_norm   = norm2(B)
+        !B_hat    = B/B_norm
+        !v_perp   = particles(i)%v - dot_product(particles(i)%v,B_hat)*B_hat
+        !! Recalculate mu from the gc coordinates
+        !particle%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(v_perp,v_perp) / B_norm
 
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
@@ -330,10 +330,9 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
 
 
       ! Calculate output variables
+      out(i,1,1) = out(i,1,1) / EL_CHG ! normalize to ZPsi
       out(i,2,1) = particle%E
-      write(*,*) "E_after", i, particle%E
       out(i,3,1) = particle%mu
-      write(*,*) "mu_after", i, particle%mu
     endif
   enddo
   !$omp end parallel do

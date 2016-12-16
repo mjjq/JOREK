@@ -151,6 +151,32 @@ subroutine test_gc_kinetic_gc
   ! Do not check st, i_elm
 end subroutine test_gc_kinetic_gc
 
+!> Test the performance by transforming back and forth
+subroutine test_gc_kinetic_gc_negative_mu
+  type(particle_kinetic_leapfrog) :: kinetic
+  type(particle_gc)               :: gc1, gc2
+  real*8, parameter :: chi  = 0.d0
+
+  node_list%n_nodes = 0
+  element_list%n_elements = 0
+
+  gc1%x  = [1d0, 1d0, 2d0]
+  gc1%E  = 1d3
+  gc1%mu = -1d2
+  gc1%q  = 1
+
+  kinetic = gc_to_kinetic_leapfrog(node_list, element_list, gc1, chi, B, mass)
+  gc2 = kinetic_leapfrog_to_gc(node_list, element_list, kinetic, B, mass)
+
+  call assert_equals(gc1%x(1), gc2%x(1), tol, "R positions must be same")
+  call assert_equals(gc1%x(2), gc2%x(2), tol, "Z positions must be same")
+  call assert_equals(gc1%x(3), gc2%x(3), tol, "phi positions must be same")
+  call assert_equals(gc1%E, gc2%E, tol, "Energies must be same")
+  call assert_equals(gc1%mu, gc2%mu, tol, "Mu must be same")
+  call assert_equals(int(gc1%q,4), int(gc2%q,4), "q must be same")
+  ! Do not check st, i_elm
+end subroutine test_gc_kinetic_gc_negative_mu
+
 !> Test function to generate orthonormal vectors
 subroutine test_get_orthonormals
   real*8, dimension(3) :: in, e1, e2

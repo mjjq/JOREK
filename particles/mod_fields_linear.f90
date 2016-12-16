@@ -31,8 +31,8 @@ end interface read_jorek_fields_interp_linear
 !> The reason behind not using deltas is that we do not have to alter much code
 !> and can import two restarts which are not consecutive and still interpolate.
 type, extends(fields_base) :: jorek_fields_interp_linear
-  real*8 :: time_now !< Time of current restart file (SI)
-  real*8 :: time_prev !< Time of previous restart file (SI)
+  real*8 :: time_now = 0.d0 !< Time of current restart file (SI)
+  real*8 :: time_prev = 0.d0!< Time of previous restart file (SI)
   contains
     procedure :: interp_PRZ => do_interp_PRZ
 end type jorek_fields_interp_linear
@@ -49,19 +49,24 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v), P_phi(n_v), P_time(n_v)
   real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
 
-  real*8 :: f, df !< result = (1-df)*values_now - df*deltas, df = 1-f
+  real*8 :: f, df, dt !< result = (1-df)*values_now - df*deltas, df = 1-f
   real*8, dimension(n_v) :: Pd, Pd_s, Pd_t, Pd_phi
-  df = (time - this%time_prev)/(this%time_now - this%time_prev)
-  f  = 1.d0 - df
 
   call       interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-  call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
+  if (this%time_prev .ne. this%time_now) then
+    dt = 1.d0/(this%time_now - this%time_prev)
+    df = (time - this%time_prev)*dt
+    f  = 1.d0 - df
+    call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
+    P      = f*P     - df*Pd
+    P_s    = f*P_s   - df*Pd_s
+    P_t    = f*P_t   - df*Pd_t
+    P_phi  = f*P_phi - df*Pd_phi
+    P_time = Pd*dt
+  else
+    P_time = 0.d0
+  end if
 
-  P      = f*P     - df*Pd
-  P_s    = f*P_s   - df*Pd_s
-  P_t    = f*P_t   - df*Pd_t
-  P_phi  = f*P_phi - df*Pd_phi
-  P_time = Pd/(this%time_now - this%time_prev) ! linearisation
 end subroutine do_interp_PRZ
 
 
@@ -118,8 +123,6 @@ subroutine do_read(this, sim)
         write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
         call exit(1)
       end if
-      f%time_now = 0.d0
-      f%time_prev = -1d20 ! So that time-derivatives go to zero
     else ! Linearly interpolating case
       write(*,*) "ERROR: reading with interpolation not implemented yet"
       call exit(1)

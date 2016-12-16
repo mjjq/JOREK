@@ -208,7 +208,7 @@ function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out
   real*8, dimension(3), intent(in)            :: B !< Magnetic field at kinetic position [T]
   real*8, intent(in)                          :: mass !< Mass of the particle [amu]
   type(particle_gc)                           :: out
-  real*8  :: B_hat(3), B_norm
+  real*8  :: B_hat(3), B_norm, v_par, v2
   integer :: ifail
 
   call copy_particle_base(in, out)
@@ -216,6 +216,8 @@ function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out
 
   B_norm = norm2(B)
   B_hat = B/B_norm
+  v_par = dot_product(in%v,B_hat)
+  v2    = dot_product(in%v,in%v)
   ! Calculate GC position
   if (out%q .gt. 0) then
     out%x = in%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(in%v,B_hat))/(in%q*EL_CHG*B_norm)
@@ -224,11 +226,11 @@ function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out
   end if
 
   ! Calculate velocity-related variables
-  out%E  = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(in%v,in%v) / EL_CHG ! [eV]
+  out%E  = mass * ATOMIC_MASS_UNIT * 0.5d0 * v2 / EL_CHG ! [eV]
   ! Perhaps we could also use the magnetic field in the guiding center to calculate
   ! v_perp, but don't do it for now.
-  out%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * (dot_product(in%v,in%v) - dot_product(in%v,B_hat)**2)&
-      /B_norm/EL_CHG ! [eV/T]
+  out%mu = sign(mass * ATOMIC_MASS_UNIT * 0.5d0 * (v2 - v_par**2)&
+      /B_norm/EL_CHG, v_par) ! [eV/T]
 
   ! Calculate new st and i_elm
   call find_RZ_nearby(node_list, element_list, out%x, in%x, in%st, out%st, in%i_elm, out%i_elm, ifail)
@@ -259,7 +261,7 @@ function gc_to_kinetic_leapfrog(node_list, element_list, in, chi, B, mass) resul
   B_hat  = B/B_norm
   ! mu [eV/T] * B_norm [T] * EL_CHG [C] = E [J]
   v_perp = sqrt(2*abs(in%mu*B_norm*EL_CHG)/(mass*ATOMIC_MASS_UNIT)) ! [m/s]
-  v_par  = sign(sqrt(2*(in%E-in%mu*B_norm)*EL_CHG/(mass*ATOMIC_MASS_UNIT)),in%mu)
+  v_par  = sign(sqrt(2*(in%E-abs(in%mu)*B_norm)*EL_CHG/(mass*ATOMIC_MASS_UNIT)),in%mu)
 
   ! Define chi as the angle of the velocity vector with b x r
   call get_orthonormals(B_hat, e1, e2)

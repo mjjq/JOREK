@@ -312,8 +312,6 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
       chi = TWOPI*ran(6)
       select type(p => particles(i))
       type is (particle_kinetic_leapfrog)
-        write(*,*) "E_before", i, particle%E
-        write(*,*) "mu_before", i, particle%mu
         p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
         ! if the kinetic position is not in the grid particles(i)%i_elm will be zero after this step and we will loop again
       type is (particle_gc)

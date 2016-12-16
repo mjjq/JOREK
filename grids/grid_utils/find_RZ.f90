@@ -6,6 +6,16 @@ subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_o
 use data_structure
 implicit none
 
+interface
+  subroutine RZ_minmax(node_list,element_list,i_elm,Rmin,Rmax,Zmin,Zmax)
+    use data_structure
+    type (type_node_list), intent(in)    :: node_list
+    type (type_element_list), intent(in) :: element_list
+    integer, intent(in) :: i_elm
+    real*8, intent(out) :: Rmin, Rmax, Zmin, Zmax
+  end subroutine RZ_minmax
+end interface
+
 type (type_node_list), intent(in)    :: node_list
 type (type_element_list), intent(in) :: element_list
 real*8, intent(in)     :: R_find, Z_find

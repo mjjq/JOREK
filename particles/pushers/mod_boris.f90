@@ -12,7 +12,7 @@ module mod_boris
   public boris_push_cylindrical, boris_push_cartesian, boris_initial_half_step_backwards_XYZ
   public boris_initial_half_step_backwards_RZPhi, left_handed_cross_product, right_handed_cross_product
   public boris_all_initial_half_step_backwards_RZPhi
-  public gc_to_kinetic_leapfrog, kinetic_leapfrog_to_gc
+  public gc_to_kinetic_leapfrog, kinetic_leapfrog_to_gc, get_orthonormals
 contains
 
 !> Push a single particle for some timesteps with the boris method
@@ -169,12 +169,37 @@ pure function left_handed_cross_product(a, b)
   left_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
   left_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
 end function left_handed_cross_product
+!> Get two vectors orthogonal to a given vector.
+!> This is the RZPhi-version, the right-handed version will have different directions but will also work.
+pure subroutine get_orthonormals(b, e1, e2)
+  real*8, dimension(3), intent(in)  :: b !< Does not need to be normalized
+  real*8, dimension(3), intent(out) :: e1, e2
+
+  ! Take r as a reference vector (this will fail therefore if B is purely in r direction)
+  if (b(2) .eq. 0.d0 .and. b(3) .eq. 0.d0) then
+    e1 = [0.d0, 1.d0, 0.d0]
+    e2 = [0.d0, 0.d0, 1.d0]
+  else
+    e1 = left_handed_cross_product(b, [1.d0, 0.d0, 0.d0])
+    ! Normalize
+    e1 = e1/norm2(e1)
+    ! Obtain a second reference vector
+    e2 = left_handed_cross_product(b, e1)
+    ! Normalize
+    e2 = e2/norm2(e2)
+  end if
+end subroutine get_orthonormals
 
 !> Take a particle_kinetic_leapfrog and B and return a particle_guiding_centre.
 !> This is an approximation based on the magnetic field at the kinetic position.
-!> gc_to_kinetic_leapfrog is not a true inverse of this function! Use with care.
-!> Note that this stores mu as calculated on the kinetic position. For a more
-!> 'averaged' quantity, correct by multiplying with |B_x|/|B_gc|
+!> gc_to_kinetic_leapfrog is not a true inverse of this function! Use with care. (only works if B uniform)
+!> This should actually use the current timestep size and fields to be a bit more accurate.
+!>
+!> See for instance http://iter.rma.ac.be/Stufftodownload/Texts/GuidingCenterMotion.pdf
+!> 
+!> The kinetic position is given by
+!> \[ x = x_{gc} - \frac{m}{q B^2} v \times B \]
+!> Which can easily be adjusted to obtain the gc position from a kinetic position and velocity.
 function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out)
   use data_structure
   type(type_node_list), intent(in)            :: node_list
@@ -193,19 +218,17 @@ function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out
   B_hat = B/B_norm
   ! Calculate GC position
   if (out%q .gt. 0) then
-    out%x = in%x - (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(in%v,B_hat))/(real(in%q,8)*EL_CHG*B_norm)
+    out%x = in%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(in%v,B_hat))/(in%q*EL_CHG*B_norm)
   else
     out%x = in%x
   end if
 
   ! Calculate velocity-related variables
-  out%E  = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(in%v,in%v)
+  out%E  = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(in%v,in%v) / EL_CHG ! [eV]
   ! Perhaps we could also use the magnetic field in the guiding center to calculate
   ! v_perp, but don't do it for now.
-  out%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(&
-      in%v - dot_product(in%v,B_hat)*B_hat, &
-      in%v - dot_product(in%v,B_hat)*B_hat &
-      )/B_norm
+  out%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * (dot_product(in%v,in%v) - dot_product(in%v,B_hat)**2)&
+      /B_norm/EL_CHG ! [eV/T]
 
   ! Calculate new st and i_elm
   call find_RZ_nearby(node_list, element_list, out%x, in%x, in%st, out%st, in%i_elm, out%i_elm, ifail)
@@ -215,6 +238,7 @@ end function kinetic_leapfrog_to_gc
 !> Does not perform the initial half-step!
 !> Only updates performed are a transform of E and mu (and chi) to v, and of x_gc to x
 !> Calls find_RZ_nearby to find st
+!> See for reference http://iter.rma.ac.be/Stufftodownload/Texts/GuidingCenterMotion.pdf
 function gc_to_kinetic_leapfrog(node_list, element_list, in, chi, B, mass) result(out)
   use constants
   use data_structure
@@ -225,7 +249,7 @@ function gc_to_kinetic_leapfrog(node_list, element_list, in, chi, B, mass) resul
   real*8, intent(in) :: chi !< Gyrophase [0,2pi]
   real*8, intent(in) :: B(3) !< Magnetic field at GC position [T]
   real*8, intent(in) :: mass !< Mass of the particle [amu]
-  real*8 :: B_norm, v_perp, v_par, B_hat(3)
+  real*8 :: B_norm, v_perp, v_par, B_hat(3), e1(3), e2(3)
   integer :: ifail
 
   call copy_particle_base(in, out)
@@ -233,15 +257,16 @@ function gc_to_kinetic_leapfrog(node_list, element_list, in, chi, B, mass) resul
 
   B_norm = norm2(B)
   B_hat  = B/B_norm
+  ! mu [eV/T] * B_norm [T] * EL_CHG [C] = E [J]
   v_perp = sqrt(2*abs(in%mu*B_norm*EL_CHG)/(mass*ATOMIC_MASS_UNIT)) ! [m/s]
   v_par  = sign(sqrt(2*(in%E-in%mu*B_norm)*EL_CHG/(mass*ATOMIC_MASS_UNIT)),in%mu)
 
   ! Define chi as the angle of the velocity vector with b x r
-  out%v  = v_par * B_hat + v_perp * &
-          ((cos(chi) * [0.d0, B_hat(3), -B_hat(2)]) + &
-            sin(chi) * (B_hat(1) * B_hat - [1.d0, 0.d0, 0.d0]))
+  call get_orthonormals(B_hat, e1, e2)
+  out%v  = v_par * B_hat + v_perp * (cos(chi) * e1 + sin(chi) * e2)
+
   if (out%q .gt. 0) then
-    out%x = in%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(out%v,B_hat))/(real(out%q,8)*EL_CHG*B_norm)
+    out%x = in%x - (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(out%v,B_hat))/(real(out%q,8)*EL_CHG*B_norm)
   else
     out%x = in%x
   end if

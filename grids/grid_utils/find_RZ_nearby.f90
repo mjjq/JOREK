@@ -65,6 +65,12 @@ real*8 :: err2, err2_old
 integer, parameter :: status_kind = KIND(1)
 integer(status_kind) :: stat
 
+! Check if element is valid
+if (i_elm_old .lt. 1 .or. i_elm_old .gt. element_list%n_elements) then
+  ifail=1
+  return
+end if
+
 ! Setup initial values
 x_step = x_old ! start at the current position
 i_elm_new = i_elm_old ! start in the current element

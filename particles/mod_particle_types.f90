@@ -23,8 +23,8 @@ module mod_particle_types
 
   !> A simple guiding-center particle type.
   type, extends(particle_base) :: particle_gc
-    real*8    :: E !< The particle energy
-    real*8    :: mu !< The magnetic moment
+    real*8    :: E !< The particle energy [eV]
+    real*8    :: mu !< The magnetic moment [eV/T]
     integer*1 :: q !< Charge [e]
   end type particle_gc
 

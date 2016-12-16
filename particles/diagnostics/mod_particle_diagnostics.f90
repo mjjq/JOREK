@@ -331,7 +331,9 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
 
       ! Calculate output variables
       out(i,2,1) = particle%E
+      write(*,*) "E_after", i, particle%E
       out(i,3,1) = particle%mu
+      write(*,*) "mu_after", i, particle%mu
     endif
   enddo
   !$omp end parallel do

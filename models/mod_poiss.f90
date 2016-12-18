@@ -106,7 +106,6 @@ mumps_par%RHS = 0.d0
 
 ilarge=0
 
-amix = 0.d0
 if (itype .eq. -1) then
   if (freeboundary_equil) amix = amix_freeb
 endif

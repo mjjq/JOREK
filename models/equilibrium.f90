@@ -40,7 +40,7 @@ real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
-real*8     :: sigmas(16), dZ_axis, Z_axis_int
+real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old
 integer    :: n_grids(10)
 logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
@@ -157,7 +157,6 @@ if (freeboundary_equil) then
   if (Z_axis_ref .gt. 1.d20) then     !choose fix bnd equilibrium final Zaxis in case of non specification of target Zaxis
     Z_axis_ref = Z_axis
   endif
- 
 
   do iter=1, n_iter_freeb
     
@@ -207,34 +206,35 @@ if (freeboundary_equil) then
         if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
       else
         Z_xpoint(1) = -99.d0 
-	Z_xpoint(2) = +99.d0
+	      Z_xpoint(2) = +99.d0
       endif
     endif
 
 ! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
 !if (iter .lt. 30) then
     call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-
-    psi_bnd = psi_lim
-
     if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
-     write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
+      write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
     endif
 !endif
        
     if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
     if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
 
-    !Vertical feedback - needed for vertically unstable plasmas
-    dZ_axis = Z_axis - dZ_axis
+    !Vertical feedback - needed for vertically unstable plasmas    
+    
     Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
-
+    dZ_axis = Z_axis - Z_axis_old
+    if (iter .eq. 1) dZ_axis = 0.d0
+    
     if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
       vertical_FB = ZFP * (Z_axis-Z_axis_ref) &
                   + ZFI * Z_axis_int          &   ! This parameter is used in vacuum/mod_vacuum_equilibrium.f90 to modify the coils current
-                  + ZFD * dZ_axis
+                  + ZFD * dZ_axis      
     endif
+    
+    Z_axis_old = Z_axis
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1

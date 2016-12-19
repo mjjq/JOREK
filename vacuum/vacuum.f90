@@ -38,21 +38,24 @@ module vacuum
   real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
-  integer             :: n_coils                         !< number of poloidal field coils
-  real*8, allocatable :: I_coils(:)                      !< coil currents 
+  integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
+  integer             :: n_coils_nml                     !< specified number of poloidal field coils in namelist
+  real*8, allocatable :: I_coils(:)                      !< coil currents                 
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
   !> @name Equilibrium parameters for feedback
-  real*8              :: amix_freeb, amix, min_diff      !< Choose poisson solver paramters
+  real*8              :: amix_freeb, amix, min_diff      !< Choose poisson solver parameters
   real*8              :: ZCP, ZCI, current_ref           !< Current feedback parameters
   real*8              :: ZFP, ZFI, ZFD, Z_axis_ref       !< Vertical position feedback parameters 
+  real*8              :: Zaxis_find_limit                !< Above the absolute value of this number the axis will not be searched
   integer             :: start_VFB                       !< Iteration for starting VB
   integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations
   integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum
+  integer             :: FB_coils_index(10)              !< The index of the coils that will perform the vertical feedback
   
   
   ! ### various variables, some need to be removed
@@ -81,7 +84,14 @@ module vacuum
     real*8,  allocatable :: xyzpot_w(:,:)
     integer, allocatable :: jpot_w(:,:)
   end type t_starwall_response
-  type(t_starwall_response) :: sr
+  
+  type :: initial_pf_coil
+    real*8  :: FB_amp          !< If different than 0, define a FB coil. Value used to tune the direction and magnitud of the feedback
+    real*8  :: current         !< Current of the coil in Amperes
+  end type initial_pf_coil
+  
+  type(t_starwall_response) :: sr             !< STARWALL response
+  type(initial_pf_coil)     :: coils0(30)     !< Initial coil currents, given in namelist file
   
   
   contains
@@ -111,9 +121,12 @@ module vacuum
     ZFD                  = 0.d0
     Z_axis_ref           = 1.d22
     start_VFB            = 10
+    Zaxis_find_limit     = 99.d0
     n_feedback_current   = 2
     n_feedback_vertical  = 1
     n_iter_freeb         = 900
+    coils0(:)%current    = 0.d0
+    coils0(:)%FB_amp     = 0.d0
     
   end subroutine vacuum_preset
   
@@ -225,6 +238,11 @@ module vacuum
       end if
       
       read(file_handle) current_FB_fact
+      read(file_handle) n_coils
+      
+      if ( allocated(I_coils) ) deallocate(I_coils)
+      allocate( I_coils(n_coils) )
+      read(file_handle) I_coils(:)
       
     end if
     
@@ -305,6 +323,12 @@ module vacuum
        end if
        
        call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
+       call HDF5_integer_saving(file_id,n_coils,"n_coils")
+       
+       if ( allocated(I_coils) ) deallocate(I_coils)
+       allocate( I_coils(n_coils) )
+       
+       call HDF5_array1D_reading(file_id,I_coils,"I_coils")
        
     end if
      
@@ -348,6 +372,14 @@ module vacuum
       end if
       
       write(file_handle) current_FB_fact
+      
+      if ( (.not. allocated(I_coils)) ) then
+          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+          stop
+      end if
+    
+      write(file_handle) n_coils
+      write(file_handle) I_coils(:)
       
     end if
     
@@ -401,6 +433,14 @@ module vacuum
        end if
        
        call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
+       
+       if ( (.not. allocated(I_coils)) )  then
+          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+          stop
+       end if
+       
+       call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))
+       call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
        
     end if
     

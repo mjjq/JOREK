@@ -65,7 +65,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_format,                                         &
                 wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter,                    &
-                first_target_point, last_target_point,		    &
+                first_target_point, last_target_point,		          &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
@@ -73,7 +73,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 amix, amix_freeb, min_diff, ZCP, ZCI, current_ref,  &
                 ZFP, ZFI, ZFD, Z_axis_ref, start_VFB,               &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb  
+                n_iter_freeb, n_coils_nml, coils0,                  &
+                Zaxis_find_limit  
                 
 if (my_id .eq. 0) then
 

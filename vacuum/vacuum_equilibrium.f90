@@ -76,28 +76,16 @@ module vacuum_equilibrium
       write(*,32)
       write(*,*)
       
-      ! === ITER LIMITER TEST CASE LIM1 ==============================================================
-      if ( n_coils /= 12 ) then
-        write(*,*) 'ITER LIMITER TEST CASE LIM1: 12 coils expected!'
+      if ( n_coils /= n_coils_nml ) then
+        write(*,*) 'NAMELIST COILS NUMBER DOES NOT MATCH WITH EXTERNAL COILS NUMBER!'
         stop
       end if
+      
       if ( .not. allocated(I_coils) ) then
         allocate( I_coils(n_coils) )
-        I_coils = (/  0.600000d+7, & ! pf1
-                     -0.080000d+7, & ! pf2
-                     -0.620000d+7, & ! pf3
-                     -0.370000d+7, & ! pf4
-                     -0.680000d+7, & ! pf5
-                      2.190000d+7, & ! pf6
-                      0.984528d+7, & ! cs3u
-                     -0.284091d+7, & ! cs2u
-                     -0.630050d+7, & ! cs1u
-                     -0.630050d+7, & ! cs1l
-                     -0.407839d+7, & ! cs2l
-                     -0.043469d+7  & ! cs3l
-                  /)
+        I_coils(1:n_coils) =  coils0(1:n_coils_nml)%current 
+        write(*,*) 'I_coils allocated '               
       end if
-      ! ==============================================================================================
       
     end if
     
@@ -121,10 +109,12 @@ module vacuum_equilibrium
       allocate( I_coils(n_coils) )
     end if
     
-    call MPI_bcast(bext_tan, dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(bext_nor, dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(bext_psi, dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(I_coils,  n_coils,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(bext_tan,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(bext_nor,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(bext_psi,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(I_coils,               n_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(coils0%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(coils0%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     
   end subroutine import_external_fields
   
@@ -159,30 +149,8 @@ module vacuum_equilibrium
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
     real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i
-    
-    ! === ITER LIMITER TEST CASE LIM1 ================================================================
-    n_coils = 12
-    if ( .not. allocated(I_coils) ) allocate( I_coils(n_coils) )
-    I_coils = (/  0.600000d+7, & ! pf1
-                 -0.080000d+7, & ! pf2
-                 -0.620000d+7, & ! pf3
-                 -0.370000d+7, & ! pf4
-                 -0.680000d+7, & ! pf5
-                  2.190000d+7, & ! pf6
-                  0.984528d+7, & ! cs3u
-                 -0.284091d+7, & ! cs2u
-                 -0.630050d+7, & ! cs1u
-                 -0.630050d+7, & ! cs1l
-                 -0.407839d+7, & ! cs2l
-                 -0.043469d+7  & ! cs3l
-              /)
-    write(*,*) 'n_coils                   = ', n_coils
-    write(*,*) 'vertical_FB               = ', vertical_FB
-    write(*,'(a,20es10.2)') 'I_coils (before feedback) = ', I_coils(:)
-    I_coils(1) = I_coils(1) * (1.d0 - vertical_FB)
-    I_coils(6) = I_coils(6) * (1.d0 + vertical_FB)
-    !#####if ( vertical_FB /= 0.d0 ) write(*,'(a,20es10.2)') 'I_coils (after feedback)  = ', I_coils(:)
-    ! ================================================================================================
+
+    call equilibrium_VFB
     
     ilarge = mumps_par%nz
     
@@ -254,6 +222,25 @@ module vacuum_equilibrium
     mumps_par%nz = ilarge   ! update the size of the matrix
     
   end subroutine vacuum_equil
+  
+  
+  
+  subroutine equilibrium_VFB
+    
+   implicit none
+  
+   integer  :: i
+   
+   write(*,*) ' vertical_FB = ', vertical_FB
+   
+   do i=1, n_coils
+     if( abs(coils0(i)%FB_amp) .gt. 1.d-6 ) then
+       I_coils(i) =  coils0(i)%current * (1 + coils0(i)%FB_amp * vertical_FB ) 
+       write(*,'(a,I,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
+     endif
+   enddo
+    
+  end subroutine equilibrium_VFB
 
 
 

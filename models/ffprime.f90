@@ -151,8 +151,6 @@ else
   
 end if
 
-FFprime_profile = FFprime_profile + FF_1
-
 if (freeboundary_equil .and. num_ffprime) then            !if the ffprime profile is given in a file and freeboundary equilibrium is on,
                                                          !the full profile is multiplied by a factor in order to iterate to a given current   
    FFprime_profile  = FFprime_profile  * current_FB_fact
@@ -163,6 +161,8 @@ if (freeboundary_equil .and. num_ffprime) then            !if the ffprime profil
    dFF_dpsi_dz      = dFF_dpsi_dz      * current_FB_fact
 
 end if
+
+FFprime_profile = FFprime_profile + FF_1
 
 return
 end subroutine FFprime

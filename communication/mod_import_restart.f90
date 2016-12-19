@@ -198,7 +198,12 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 endif
 
   call import_restart_vacuum(21, freeboundary, resistive_wall)  
-  T_0 = T_0 * current_FB_fact
+  
+  !--- Some parameters need to be scaled when importing a free-boundary equilibrium
+  T_0  = T_0 * current_FB_fact
+  T_1  = T_1 * current_FB_fact
+  FF_0 = FF_0 * current_FB_fact
+  FF_1 = FF_1 * current_FB_fact
 
   if (use_pellet) then
     if (index_start .ge. 1) then
@@ -665,7 +670,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   ! Import restart Vacuum 
   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
-  T_0 = T_0 * current_FB_fact
+  
+  !--- Some parameters need to be scaled when importing a free-boundary equilibrium
+  T_0  = T_0 * current_FB_fact
+  T_1  = T_1 * current_FB_fact
+  FF_0 = FF_0 * current_FB_fact
+  FF_1 = FF_1 * current_FB_fact
   
   if (use_pellet) then
      if (index_start .ge. 1) then

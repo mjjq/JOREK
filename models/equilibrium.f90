@@ -171,14 +171,12 @@ if (freeboundary_equil) then
       current_FB_fact  = current_FB_fact * (1. - ZCP*(current_tot-current_ref)/current_ref - ZCI*current_int/current_ref)
     endif
     
-    !-------------- Multiplying FF' and p' profiles by the same factor to scale total current (analytical profiles)----
-    if (.not. num_ffprime) then
-      FF_0 = FF_0_old * current_FB_fact;    FF_1 = FF_1_old * current_FB_fact  
-    endif  
-   
-    if (.not. num_T) then      
-      T_0  = T_0_old  * current_FB_fact;    T_1  = T_1_old  * current_FB_fact
-    endif
+    !-------------- Multiplying FF' and p' profiles by the same factor to scale total current -------------------------
+    FF_0 = FF_0_old * current_FB_fact   
+    FF_1 = FF_1_old * current_FB_fact      
+      
+    T_0  = T_0_old  * current_FB_fact    
+    T_1  = T_1_old  * current_FB_fact
     !------------------------------------------------------------------------------------------------------------------
     
     write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact

@@ -150,8 +150,6 @@ else
 
 end if
 
-temperature_profile = temperature_profile + T_1
-
 if (freeboundary_equil .and. num_T) then                        !if the temperature profile is given in a file and there is freeboundary equilibrium
                                                                 !the full profile is multiplied by a facto in order to iterate to a given current
   temperature_profile = temperature_profile * current_FB_fact
@@ -165,6 +163,8 @@ if (freeboundary_equil .and. num_T) then                        !if the temperat
   dT_dpsi_dz2 = dT_dpsi_dz2                 * current_FB_fact
 
 end if
+
+temperature_profile = temperature_profile + T_1
 
 return
 end subroutine temperature

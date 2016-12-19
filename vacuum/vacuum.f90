@@ -47,7 +47,7 @@ module vacuum
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
   !> @name Equilibrium parameters for feedback
-  real*8              :: amix_freeb, amix, min_diff      !< Choose poisson solver parameters
+  real*8              :: min_diff                        !< Choose poisson solver parameters
   real*8              :: ZCP, ZCI, current_ref           !< Current feedback parameters
   real*8              :: ZFP, ZFI, ZFD, Z_axis_ref       !< Vertical position feedback parameters 
   real*8              :: Zaxis_find_limit                !< Above the absolute value of this number the axis will not be searched
@@ -110,8 +110,6 @@ module vacuum
     resistive_wall       = .false.
     wall_resistivity     = 0.d0
         
-    amix                 = 0.d0
-    amix_freeb           = 0.85d0
     min_diff             = 1.d-6
     ZCP                  = 0.2d0
     ZCI                  = 0.01d0

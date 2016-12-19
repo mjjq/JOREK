@@ -52,6 +52,9 @@ subroutine preset_parameters
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   
+  amix        = 0.d0
+  amix_freeb  = 0.85d0
+  
   n_R       = 0
   n_Z       = 0
 

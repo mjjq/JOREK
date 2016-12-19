@@ -222,11 +222,15 @@ module phys_module
   logical :: ASDEX_MGI
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
   
+  !> @name Fix boundary equilibrium parameters
+  real*8  :: amix              !< Mix Poisson solution with previous one with a given factor  
+  
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
   logical :: freeboundary_equil!< use a free or fixed boundary equilibrium?
   logical :: freeboundary      !< use free or fixed boundary conditions in time-evolution?
   logical :: resistive_wall    !< use a resistive or ideal wall?    (free boundary only)
+  real*8  :: amix_freeb        !< choose amix for freeboundary equilibriums
   
   !> @name Rectangular Grid
   !! Parameters defining a rectangular grid in R- and Z-directions in the poloidal plane.

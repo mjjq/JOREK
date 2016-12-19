@@ -10,7 +10,8 @@ use tr_module
 use data_structure
 use mumps_module
 use pastix_module
-use vacuum_equilibrium, only: vacuum_equil, amix, amix_freeb
+use phys_module, only: amix, amix_freeb
+use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
 implicit none
@@ -40,6 +41,7 @@ type (type_bnd_element_list) :: bnd_elm_list
 real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1))
 real*8   :: zbig, Z_xpoint(2), psi_axis, psi_bnd, psi_xpoint(2), R_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8   :: R_axis, Z_axis, s_axis, t_axis
+real*8   :: amix_used
 integer  :: i_elm_axis, i_elm_xpoint(2)
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
 integer  :: inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
@@ -106,8 +108,10 @@ mumps_par%RHS = 0.d0
 
 ilarge=0
 
+amix_used = amix
+
 if (itype .eq. -1) then
-  if (freeboundary_equil) amix = amix_freeb
+  if (freeboundary_equil) amix_used = amix_freeb
 endif
     
 do ife =1, element_list%n_elements
@@ -369,12 +373,12 @@ do i=1,node_list%n_nodes
       if ((.not. freeboundary_equil) .and. (itype .eq. -1)) then
         node_list%node(i)%deltas(i_harm,k,ivar_out) = mumps_par%RHS(index)
         node_list%node(i)%values(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) &
-                                                    + (1.d0 - amix) * mumps_par%RHS(index)
+                                                    + (1.d0 - amix_used) * mumps_par%RHS(index)
       else
 !--------------- for equation on total flux
         node_list%node(i)%deltas(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) - mumps_par%RHS(index)
-        node_list%node(i)%values(i_harm,k,ivar_out) = amix * node_list%node(i)%values(i_harm,k,ivar_out) &
-                                                    + (1.d0 - amix) * mumps_par%RHS(index)
+        node_list%node(i)%values(i_harm,k,ivar_out) = amix_used * node_list%node(i)%values(i_harm,k,ivar_out) &
+                                                    + (1.d0 - amix_used) * mumps_par%RHS(index)
       endif
       
     enddo    ! order

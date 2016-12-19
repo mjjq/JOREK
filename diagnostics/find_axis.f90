@@ -5,8 +5,7 @@ subroutine find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: R_geo, tokamak_device 
-use vacuum, only: Zaxis_find_limit  
+use phys_module, only: R_geo, tokamak_device, Zaxis_find_limit  
 
 implicit none
 

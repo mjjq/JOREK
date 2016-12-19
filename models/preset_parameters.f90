@@ -56,6 +56,7 @@ subroutine preset_parameters
   amix_freeb           = 0.85d0
   equil_accuracy       = 1.d-6
   equil_accuracy_freeb = 1.d-6
+  Zaxis_find_limit     = 99.d0
   
   n_R       = 0
   n_Z       = 0

@@ -49,7 +49,6 @@ module vacuum
   !> @name Equilibrium parameters for feedback
   real*8              :: ZCP, ZCI, current_ref           !< Current feedback parameters
   real*8              :: ZFP, ZFI, ZFD, Z_axis_ref       !< Vertical position feedback parameters 
-  real*8              :: Zaxis_find_limit                !< Above the absolute value of this number the axis will not be searched
   integer             :: start_VFB                       !< Iteration for starting VB
   integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations
@@ -117,7 +116,6 @@ module vacuum
     ZFD                  = 0.d0
     Z_axis_ref           = 1.d22
     start_VFB            = 10
-    Zaxis_find_limit     = 99.d0
     n_feedback_current   = 2
     n_feedback_vertical  = 1
     n_iter_freeb         = 900
@@ -489,7 +487,7 @@ module vacuum
       
     end if
     
-    call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
     
   end subroutine broadcast_vacuum
   

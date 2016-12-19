@@ -7,7 +7,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use wsmp_module,   only: use_wsmp
-use vacuum,        only: wall_resistivity, Zaxis_find_limit
+use vacuum,        only: wall_resistivity
 use mpi_mod
 
 implicit none

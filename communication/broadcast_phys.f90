@@ -7,7 +7,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use wsmp_module,   only: use_wsmp
-use vacuum,        only: wall_resistivity, current_FB_fact, Zaxis_find_limit
+use vacuum,        only: wall_resistivity, Zaxis_find_limit
 use mpi_mod
 
 implicit none
@@ -207,7 +207,6 @@ if (my_id .eq. 0) then
   call MPI_PACK (amu_neo_const,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK (wall_resistivity,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK (current_FB_fact ,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (Zaxis_find_limit ,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -533,7 +532,6 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,amu_neo_const,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,wall_resistivity,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,current_FB_fact ,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,Zaxis_find_limit ,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   
 

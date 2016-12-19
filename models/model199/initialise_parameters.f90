@@ -70,7 +70,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
                 linear_run, export_for_nemec,                       &
-                amix, amix_freeb, min_diff, ZCP, ZCI, current_ref,  &
+                amix, amix_freeb, equil_accuracy,                   &
+                equil_accuracy_freeb, ZCP, ZCI, current_ref,        &
                 ZFP, ZFI, ZFD, Z_axis_ref, start_VFB,               &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_coils_nml, coils0,                  &

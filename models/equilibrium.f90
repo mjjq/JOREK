@@ -123,7 +123,7 @@ do iter = 1, n_iter
   
   write(*,'(A,I4,A,ES10.3)') ' Iteration ', iter, ': diff=', diff
   
-  if ( (iter > 1) .and. (diff < 1.d-6) ) then
+  if ( (iter > 1) .and. (diff < equil_accuracy) ) then
     write(*,'(A,I4,A)') ' Equilibrium converged: after', iter, ' iterations'
     exit
   else if ( iter == n_iter) then
@@ -249,7 +249,7 @@ if (freeboundary_equil) then
   
     write(*,'(A,i5,e14.6)') ' iteration, diff : ',iter,diff
   
-    if ((iter .gt. 1) .and. (diff .lt. min_diff)) exit
+    if ((iter .gt. 1) .and. (diff .lt. equil_accuracy_freeb)) exit
 
   enddo
 

@@ -25,12 +25,12 @@
  
  amix                 = 0.d0
  amix_freeb           = 0.85d0
- ZCP                  = 0.5d0
- ZCI                  = 0.1d0
+ FB_Ip_position       = 0.5d0
+ FB_Ip_integral       = 0.1d0
  current_ref          = 0.13d6
- ZFP                  = 1.d0
- ZFI                  = 0.d0
- ZFD                  = 0.d0
+ FB_Zaxis_position    = 1.d0
+ FB_Zaxis_integral    = 0.d0
+ FB_Zaxis_derivative  = 0.d0
  Z_axis_ref           = 0.d0
  start_VFB            = 7
  n_feedback_current   = 4

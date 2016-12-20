@@ -13,7 +13,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
 use wsmp_module,   only: use_wsmp
-use vacuum,        only: wall_resistivity
+use vacuum
 
 implicit none
 
@@ -406,6 +406,27 @@ if (my_id == 0) then
       write(*,REAL_FMT) 'wall_resistivity      ', wall_resistivity
     end if
   end if
+  
+  write(*,REAL_FMT) 'amix                  ', amix
+  write(*,REAL_FMT) 'amix_freeb            ', amix_freeb
+  write(*,REAL_FMT) 'equil_accuracy        ', equil_accuracy
+  write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
+  write(*,REAL_FMT) 'Zaxis_find_limit      ', Zaxis_find_limit
+  write(*,REAL_FMT) 'current_ref           ', current_ref
+  write(*,REAL_FMT) 'FB_Ip_position        ', FB_Ip_position
+  write(*,REAL_FMT) 'FB_Ip_integral        ', FB_Ip_integral
+  write(*,REAL_FMT) 'Z_axis_ref            ', Z_axis_ref
+  write(*,REAL_FMT) 'FB_Zaxis_position     ', FB_Zaxis_position
+  write(*,REAL_FMT) 'FB_Zaxis_derivative   ', FB_Zaxis_derivative
+  write(*,REAL_FMT) 'FB_Zaxis_integral     ', FB_Zaxis_integral
+  write(*,INTG_FMT) 'start_VFB             ', start_VFB
+  write(*,INTG_FMT) 'n_feedback_current    ', n_feedback_current
+  write(*,INTG_FMT) 'n_feedback_vertical   ', n_feedback_vertical
+  write(*,INTG_FMT) 'n_iter_freeb          ', n_iter_freeb
+  write(*,INTG_FMT) 'n_coils_nml           ', n_coils_nml
+  write(*,REAL_FMT) 'coils0%current        ', coils0(:)%current
+  write(*,REAL_FMT) 'coils0%FB_amp         ', coils0(:)%FB_amp
+
 
   write(*,REAL_FMT) 'Q_bar                 ', Q_bar
   write(*,REAL_FMT) 'sigma                 ', sigma

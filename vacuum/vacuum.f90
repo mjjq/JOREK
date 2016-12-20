@@ -90,6 +90,7 @@ module vacuum
   type :: initial_pf_coil
     real*8  :: FB_amp          !< If different than 0, define a FB coil. Value used to tune the direction and magnitud of the feedback
     real*8  :: current         !< Current of the coil in Amperes
+    real*8  :: pert            !< Perturbation of the current of the coil in Amperes, this is useful to speed-up VDEs
   end type initial_pf_coil
   
   type(t_starwall_response) :: sr             !< STARWALL response
@@ -127,6 +128,7 @@ module vacuum
     n_iter_freeb         = 900
     coils0(:)%current    = 0.d0
     coils0(:)%FB_amp     = 0.d0
+    coils0(:)%pert       = 0.d0
     
   end subroutine vacuum_preset
   
@@ -188,6 +190,8 @@ module vacuum
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_restart_vacuum(file_handle, freeboundary, resistive_wall)
     
+    use phys_module, only: t_start
+    
     ! --- Routine parameters
     integer, intent(in) :: file_handle
     logical, intent(in) :: freeboundary
@@ -244,6 +248,11 @@ module vacuum
       allocate( I_coils(n_coils) )
       read(file_handle) I_coils(:)
       
+      !-- Add perturbation in PF coils currents in the first timestep after equilibrium to speed-up VDEs
+      if (t_start .lt. 1.d-8 ) then
+        I_coils(1:n_coils) = I_coils(1:n_coils) + coils0(1:n_coils)%pert
+      endif
+      
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then
@@ -261,6 +270,7 @@ module vacuum
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
     
+    use phys_module, only: t_start
 #ifdef USE_HDF5
     use hdf5
     use hdf5_io_module
@@ -329,6 +339,11 @@ module vacuum
        allocate( I_coils(n_coils) )
        
        call HDF5_array1D_reading(file_id,I_coils,"I_coils")
+       
+       !-- Add perturbation in PF coils currents in the first timestep after equilibrium to speed-up VDEs
+       if (t_start .lt. 1.d-8 ) then
+         I_coils(1:n_coils) = I_coils(1:n_coils) + coils0(1:n_coils)%pert
+       endif
        
     end if
      

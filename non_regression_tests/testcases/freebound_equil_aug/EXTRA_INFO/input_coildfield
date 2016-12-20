@@ -1,0 +1,7 @@
+&input
+  coil_file    = 'polcoils_cliste',
+  num_tor_pts  = 360,
+  
+  debug        = .t.,
+  verbose      = .f.,
+/

@@ -71,8 +71,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #endif
                 linear_run, export_for_nemec,                       &
                 amix, amix_freeb, equil_accuracy,                   &
-                equil_accuracy_freeb, ZCP, ZCI, current_ref,        &
-                ZFP, ZFI, ZFD, Z_axis_ref, start_VFB,               &
+                equil_accuracy_freeb, current_ref, FB_Ip_position,  &
+                FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
+                FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_coils_nml, coils0,                  &
                 Zaxis_find_limit  

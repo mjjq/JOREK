@@ -168,7 +168,8 @@ if (freeboundary_equil) then
     current_int = current_int + (current_tot-current_ref)
     
     if (mod(iter,n_feedback_current) .eq. 0) then
-      current_FB_fact  = current_FB_fact * (1. - ZCP*(current_tot-current_ref)/current_ref - ZCI*current_int/current_ref)
+      current_FB_fact  = current_FB_fact * (1. - FB_Ip_position * (current_tot-current_ref)/current_ref &
+                                               - FB_Ip_integral *  current_int/current_ref   )
     endif
     
     !-------------- Multiplying FF' and p' profiles by the same factor to scale total current -------------------------
@@ -227,9 +228,9 @@ if (freeboundary_equil) then
     if (iter .eq. 1) dZ_axis = 0.d0
     
     if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
-      vertical_FB = ZFP * (Z_axis-Z_axis_ref) &
-                  + ZFI * Z_axis_int          &   ! This parameter is used in vacuum/mod_vacuum_equilibrium.f90 to modify the coils current
-                  + ZFD * dZ_axis      
+      vertical_FB = FB_Zaxis_position   * (Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current
+                  + FB_Zaxis_integral   * Z_axis_int          &   
+                  + FB_Zaxis_derivative * dZ_axis      
     endif
     
     Z_axis_old = Z_axis

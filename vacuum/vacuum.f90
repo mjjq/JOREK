@@ -46,14 +46,18 @@ module vacuum
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
-  !> @name Equilibrium parameters for feedback
-  real*8              :: ZCP, ZCI, current_ref           !< Current feedback parameters
-  real*8              :: ZFP, ZFI, ZFD, Z_axis_ref       !< Vertical position feedback parameters 
-  integer             :: start_VFB                       !< Iteration for starting VB
+  !> @name Equilibrium parameters for feedback 
+  real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB)
+  real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback
+  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback 
+  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position 
+  real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback
+  real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback
+  real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback
+  integer             :: start_VFB                       !< Iteration for starting vertical feedback
   integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations
   integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum
-  integer             :: FB_coils_index(10)              !< The index of the coils that will perform the vertical feedback
   
   
   ! ### various variables, some need to be removed
@@ -108,16 +112,18 @@ module vacuum
     resistive_wall       = .false.
     wall_resistivity     = 0.d0
         
-    ZCP                  = 0.2d0
-    ZCI                  = 0.01d0
     current_ref          = 1.d22
-    ZFP                  = 1.d0
-    ZFI                  = 0.d0
-    ZFD                  = 0.d0
-    Z_axis_ref           = 1.d22
-    start_VFB            = 10
+    FB_Ip_position       = 0.2d0
+    FB_Ip_integral       = 0.01d0
     n_feedback_current   = 2
+        
+    Z_axis_ref           = 1.d22
+    FB_Zaxis_position    = 1.d0
+    FB_Zaxis_derivative  = 0.d0
+    FB_Zaxis_integral    = 0.d0
     n_feedback_vertical  = 1
+    start_VFB            = 10
+    
     n_iter_freeb         = 900
     coils0(:)%current    = 0.d0
     coils0(:)%FB_amp     = 0.d0

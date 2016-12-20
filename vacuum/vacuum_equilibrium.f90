@@ -77,7 +77,7 @@ module vacuum_equilibrium
       write(*,*)
       
       if ( n_coils /= n_coils_nml ) then
-        write(*,*) 'NAMELIST COILS NUMBER DOES NOT MATCH WITH EXTERNAL COILS NUMBER!'
+        write(*,*) 'WARNING: namelist coils number n_coils_nml does not match with external coils number n_coils from coil_field.txt!'
         stop
       end if
       

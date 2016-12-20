@@ -17,8 +17,7 @@ function compile_jorek () {
 
 # --- Re-run the whole case from scratch into the non-linear phase
 function initial_run () {
-  echo "Remark: This test case is not based on a restart and does not require an initial run."
-  # --- Dummy run
+  # --- Dummy run not actually needed...
   ${codedir}/util/setinput.sh input restart=.f. freeboundary_equil=.f.               || exit 1
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile               || exit 1
 }

@@ -32,11 +32,13 @@ function new_write_constants_of_motion(filename) result(new)
 end function new_write_constants_of_motion
 
 !> Action to calculate all of these values and write them to an HDF5 file
-subroutine do_write_constants_of_motion(this, sim)
+subroutine do_write_constants_of_motion(this, sim, ev)
   use hdf5_io_module
   use mpi
+  use mod_event
   class(write_constants_of_motion), intent(inout) :: this
   type(particle_sim), intent(inout)               :: sim
+  type(event), intent(inout), optional            :: ev
 
   integer(HSIZE_T), parameter :: n_time = 1_HSIZE_T, n_var = 3_HSIZE_T
 
@@ -98,12 +100,12 @@ subroutine do_write_constants_of_motion(this, sim)
         call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
       else
         call h5dget_space_f(dset, dspace, ierr)
-        write(*,*) "DEBUG: dataset opened, getting space (", ierr, ")"
+        !write(*,*) "DEBUG: dataset opened, getting space (", ierr, ")"
       end if
     else
       call create_constants_dataset(this%file_id, dataset_name, &
           int(sum(particles_per_proc,1),HSIZE_T), dset, dspace)
-      write(*,*) "DEBUG: created new dataset ", trim(dataset_name)
+      !write(*,*) "DEBUG: created new dataset ", trim(dataset_name)
     end if
 
     ! Check the timeset existence and properties
@@ -111,26 +113,26 @@ subroutine do_write_constants_of_motion(this, sim)
     call h5lexists_f(this%file_id, trim(timeset_name), link_exists, ierr)
 
     if (link_exists) then
-      write(*,*) "DEBUG: link to ", trim(timeset_name), " exists, trying to open"
+      !write(*,*) "DEBUG: link to ", trim(timeset_name), " exists, trying to open"
       call h5dopen_f(this%file_id, trim(timeset_name), tset, ierr)
       if (ierr .ne. 0) then
         write(*,*) "Error opening timeset", i
         call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
       else
         call h5dget_space_f(tset, tspace, ierr)
-        write(*,*) "DEBUG: dataset opened, getting space: ", ierr
+        !write(*,*) "DEBUG: dataset opened, getting space: ", ierr
       end if
     else
       call create_constants_time_dataset(this%file_id, trim(timeset_name), &
           tset, tspace)
-      write(*,*) "DEBUG: created new timeset ", trim(dataset_name)
+      !write(*,*) "DEBUG: created new timeset ", trim(dataset_name)
     end if
 
     ! Get the current sizes
     call h5sget_simple_extent_dims_f(dspace, data_dims, data_maxdims, ierr)
     call h5sget_simple_extent_dims_f(tspace, time_dims, time_maxdims, ierr)
-    write(*,"(A,3i6,A,3i6)") " DEBUG: dspace sizes(3): ", data_dims, " maxdims(3): ", data_maxdims
-    write(*,"(A,i6,A,i6)") " DEBUG: tspace sizes(1): ", time_dims, " maxdims(1): ", time_maxdims
+    !write(*,"(A,3i6,A,3i6)") " DEBUG: dspace sizes(3): ", data_dims, " maxdims(3): ", data_maxdims
+    !write(*,"(A,i6,A,i6)") " DEBUG: tspace sizes(1): ", time_dims, " maxdims(1): ", time_maxdims
     if (time_dims(1) .ne. data_dims(3)) then
       write(*,*) "ERROR: data and time series are not of equal length"
       call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
@@ -156,13 +158,13 @@ subroutine do_write_constants_of_motion(this, sim)
     data_dims(1) = max(data_dims(1), int(sum(particles_per_proc,1),HSIZE_T)) ! only grow this set
     data_dims(2) = n_var
     data_dims(3) = data_dims(3) + 1_HSIZE_T
-    write(*,"(A,3i6)") " DEBUG: extending dset to ", data_dims
+    !write(*,"(A,3i6)") " DEBUG: extending dset to ", data_dims
     call h5dset_extent_f(dset, data_dims, ierr)
-    write(*,"(A,1i6)") " DEBUG: extending tset to ", time_dims
+    !write(*,"(A,1i6)") " DEBUG: extending tset to ", time_dims
     call h5dset_extent_f(tset, time_dims, ierr)
 
     ! Create dataspace for file and memory separately
-    write(*,*) "DEBUG: creating dataspace for memory and file"
+    !write(*,*) "DEBUG: creating dataspace for memory and file"
     call h5screate_simple_f(3, [size(sim%groups(i)%particles,dim=1,kind=HSIZE_T), n_var, n_time], mem_space, ierr)
     ! We must create a hyperslab space here because simple does not play well
     ! with HDF5 (but does not tell you this!).
@@ -177,13 +179,13 @@ subroutine do_write_constants_of_motion(this, sim)
 
     ! Calculate the statistics
     call calculate_pphi_H_mu(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, stats(:,:,1))
-    write(*,*) "DEBUG: calculated statistics"
+    !write(*,*) "DEBUG: calculated statistics"
 
     ! Write the dataset independently
     data_dims(1) = size(stats,dim=1,kind=HSIZE_T)
     data_dims(2) = n_var
     data_dims(3) = n_time
-    write(*,"(A,3i6)") " DEBUG: writing statistics to block. dims=", data_dims
+    !write(*,"(A,3i6)") " DEBUG: writing statistics to block. dims=", data_dims
     call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, stats, [1_HSIZE_T,1_HSIZE_T,1_HSIZE_T], &
          ierr, file_space_id = dspace, mem_space_id = mem_space)
     !write(*,*) "EXTRA_DEBUG: out(8,2)", stats(8,2,1)
@@ -195,9 +197,9 @@ subroutine do_write_constants_of_motion(this, sim)
     call h5sselect_hyperslab_f(tspace, H5S_SELECT_SET_F, &
         start=[time_dims(1)-1_HSIZE_T], count=[n_time], hdferr=ierr)
     call h5screate_f(H5S_SCALAR_F, t_mem_space, ierr)
-    write(*,*) "DEBUG: writing single time value", sim%time
+    !write(*,*) "DEBUG: writing single time value", sim%time
     call h5dwrite_f(tset, H5T_NATIVE_DOUBLE, sim%time, [n_time], ierr, file_space_id=tspace, mem_space_id=t_mem_space)
-    write(*,*) "Done"
+    !write(*,*) "Done"
 
     call h5sclose_f(t_mem_space, ierr)
     call h5sclose_f(mem_space, ierr)

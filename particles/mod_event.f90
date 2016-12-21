@@ -2,13 +2,40 @@
 !> Events are objects (derived types) containing information
 !> about when to run, and an action they should run.
 module mod_event
-use mod_action
 use mod_particle_sim
 use constants, only: tick
 use mod_event_timestep
 implicit none
 private
+public action, stop_action
 public event, with, next_event_at, check_and_fix_timesteps
+
+
+!> Action abstract type, representing anything that can be done to a simulation
+type, abstract :: action
+  !> Logging variable, set this in an initializer
+  character(len=30) :: name = "unset action" !< Event name for logging
+  logical :: log = .false. !< Output event duration
+
+  !> Timing variables
+  real*8, private :: t0 = 0.d0, w0 = 0.d0
+contains
+  procedure, pass, public :: run
+  procedure(do_interface), deferred, pass, private :: do
+end type action
+!> Example action (stops the simulation)
+type, extends(action) :: stop_action
+contains
+  procedure :: do => do_stop_action
+end type stop_action
+interface stop_action
+  module procedure new_stop_action
+end interface
+
+
+
+
+
 
 !> Event type
 type :: event
@@ -31,12 +58,22 @@ interface with
   module procedure with_event_0D, with_action_0D, &
         with_event_1D, with_event_1D_at, with_event_1D_mask, &
         with_action_1D, with_action_1D_mask
-  end interface
+end interface
+interface
+  subroutine do_interface(this, sim, ev)
+    import :: action, particle_sim, event
+    class(action), intent(inout)      :: this
+    type(particle_sim), intent(inout) :: sim
+    type(event), intent(inout), optional :: ev
+  end subroutine do_interface
+end interface
+
+
 contains
 !> Constructor for an event
 !> This is needed to allow changing default values
 function new_event(act, start, step, end)
-  type(event) :: new_event
+  type(event), target           :: new_event
   class(action), intent(in)     :: act
   real*8, intent(in), optional  :: start, step, end
   if (present(start))    new_event%start    = start
@@ -63,7 +100,7 @@ end function
 subroutine with_event_0D(sim, single_event)
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout) :: single_event
-  call single_event%action%run(sim)
+  call single_event%action%run(sim, single_event)
 end subroutine with_event_0D
 subroutine with_action_0D(sim, single_action)
   type(particle_sim), intent(inout) :: sim
@@ -75,7 +112,7 @@ subroutine with_event_1D(sim, events)
   type(event), intent(inout), dimension(:) :: events
   integer :: i
   do i=1,size(events)
-    call events(i)%action%run(sim)
+    call events(i)%action%run(sim, events(i))
   end do
 end subroutine with_event_1D
 subroutine with_action_1D(sim, actions)
@@ -92,7 +129,7 @@ subroutine with_event_1D_at(sim, events, at)
   real*8, intent(in) :: at
   integer :: i
   do i=1,size(events)
-    if (events(i)%run_at(at)) call events(i)%action%run(sim)
+    if (events(i)%run_at(at)) call events(i)%action%run(sim, events(i))
   end do
 end subroutine with_event_1D_at
 subroutine with_event_1D_mask(sim, events, mask)
@@ -102,7 +139,7 @@ subroutine with_event_1D_mask(sim, events, mask)
   logical, dimension(:), intent(in) :: mask
   integer :: i
   do i=1,size(events)
-    if (mask(i)) call events(i)%action%run(sim)
+    if (mask(i)) call events(i)%action%run(sim, events(i))
   end do
 end subroutine with_event_1D_mask
 subroutine with_action_1D_mask(sim, actions, mask)
@@ -158,6 +195,7 @@ function next_event_at(sim, events) result(at)
     else if (event_run .le. at + tick) then ! if it is equally fast
       run_event(i) = .true.
     end if
+    write(*,*) i, event_run, events(i)%action%name
   end do
 
   ! Exit the simulation if there are no more events to do
@@ -230,4 +268,55 @@ subroutine check_and_fix_timesteps(pusher_timestep, events)
     events(i)%step = event_step(i)
   end do
 end subroutine check_and_fix_timesteps
+
+
+
+
+
+!> Constructor for stop_action
+function new_stop_action()
+  type(stop_action) :: new_stop_action
+  new_stop_action%name = "Stop"
+  new_stop_action%log  = .false.
+end function new_stop_action
+
+!> Perform the stop action
+subroutine do_stop_action(this, sim, ev)
+  class(stop_action), intent(inout) :: this
+  type(particle_sim), intent(inout) :: sim
+  type(event), intent(inout), optional :: ev
+  sim%stop_now = .true.
+end subroutine do_stop_action
+
+
+
+
+!> Run an action
+subroutine run(this, sim, ev)
+  !$ use omp_lib
+  class(action), intent(inout)      :: this
+  type(particle_sim), intent(inout) :: sim
+  type(event), intent(inout), optional :: ev !< If run from an event, get a pointer to it here
+  real*8 :: t1, w1
+  logical :: has_omp
+  has_omp = .false.
+  !$ has_omp = .true.
+
+  call cpu_time(this%t0)
+  !$ this%w0 = omp_get_wtime()
+  if (present(ev)) then
+    call this%do(sim, ev)
+  else
+    call this%do(sim)
+  end if
+  call cpu_time(t1)
+  !$ w1 = omp_get_wtime()
+
+  ! this is only on node 0 of course
+  if (this%log) then
+    if (.not. has_omp) write(*,"(A,A,f7.4,A)") trim(this%name), " finished in ", t1-this%t0, "s"
+    !$ write(*,"(A,A,f7.4,A,f7.4,A)") trim(this%name), " finished in ", w1-this%w0, &
+    !$ "s (cpu time: ", t1-this%t0, ")"
+  end if
+end subroutine run
 end module mod_event

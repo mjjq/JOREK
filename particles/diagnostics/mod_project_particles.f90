@@ -62,11 +62,13 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
 end function new_project_to_vtk
 
 !> Action for projecting all particles and writing output to vtk
-subroutine project_and_save_to_vtk(this, sim)
+subroutine project_and_save_to_vtk(this, sim, ev)
   use mpi
+  use mod_event
   !$ use omp_lib
   class(project_to_vtk), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
+  type(event), intent(inout), optional :: ev
   integer :: i, my_id, ierr
   character(len=120) :: filename
   real*8 :: t0, t1, ostart, oend

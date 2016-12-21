@@ -3,9 +3,9 @@
 module mod_fields_linear
 use data_structure
 use mod_particle_sim
+use mod_event
 use mod_fields
 use mod_interp4
-use mod_action
 use mod_interp_PRZ
 implicit none
 private
@@ -14,7 +14,7 @@ public jorek_fields_interp_linear, read_jorek_fields_interp_linear
 !> Action to read in the fields into sim%fields
 type, extends(action) :: read_jorek_fields_interp_linear
   character(len=80) :: basename = 'jorek' !< Comes before the file number or extension
-  integer :: i = 0 !< Number of the restart file to read. Set to -1 to not include
+  integer :: i = 0 !< Number of the restart file to read. Set to -1 to not include. Corresponds to the index of NOW
   integer :: rst_format = 0 !< Format of restart file if .rst type
   contains
     procedure :: do => do_read
@@ -31,8 +31,8 @@ end interface read_jorek_fields_interp_linear
 !> The reason behind not using deltas is that we do not have to alter much code
 !> and can import two restarts which are not consecutive and still interpolate.
 type, extends(fields_base) :: jorek_fields_interp_linear
-  real*8 :: time_now = 0.d0 !< Time of current restart file (SI)
-  real*8 :: time_prev = 0.d0!< Time of previous restart file (SI)
+  real*8 :: time_now  = 0.d0 !< Time of current restart file (SI units)
+  real*8 :: time_prev = 0.d0!< Time of previous restart file (SI units)
   contains
     procedure :: interp_PRZ => do_interp_PRZ
 end type jorek_fields_interp_linear
@@ -53,9 +53,9 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   real*8, dimension(n_v) :: Pd, Pd_s, Pd_t, Pd_phi
 
   call       interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-  if (this%time_prev .ne. this%time_now) then
+  if (abs(this%time_prev-this%time_now) .gt. 1d-10) then
     dt = 1.d0/(this%time_now - this%time_prev)
-    df = (time - this%time_prev)*dt
+    df = (this%time_now - time)*dt
     f  = 1.d0 - df
     call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
     P      = f*P     - df*Pd
@@ -86,15 +86,19 @@ end function new_read_jorek_fields_interp_linear
 
 
 !> Read jorek fields from the next restart file (regardless of when the file number)
-subroutine do_read(this, sim)
+subroutine do_read(this, sim, ev)
   use mod_import_restart
+  use phys_module
   class(read_jorek_fields_interp_linear), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
+  type(event), intent(inout), optional :: ev
   character(len=80) :: restart_file
   integer :: i, ierr
   logical :: file_exists
 
   logical, save :: neighbours_updated = .false.
+  real*8 :: t_norm
+  t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
   ! Check that the right fields are allocated in sim and allocate if needed
   if (allocated(sim%fields)) then
@@ -115,38 +119,63 @@ subroutine do_read(this, sim)
 
     ! Read only one file
     if (this%i .eq. -1) then
-      write(restart_file,'(A,A)') trim(this%basename), '.h5'
+      write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
       inquire(file=trim(restart_file), exist=file_exists)
       if (file_exists) then
         call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
+        f%time_now  = 0.d0
+        f%time_prev = 0.d0
       else
         write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
         call exit(1)
       end if
     else ! Linearly interpolating case
-      write(*,*) "ERROR: reading with interpolation not implemented yet"
-      call exit(1)
-      ! TODO: set the time to run the event at next
-      ! TODO: recalculate simulation time and timestep
-      ! If not, keep looping (up to 10) to find one, and use the merge import
-      ! This assumes that the current node_list contains the values
-      ! at time istep (but does not need to contain the deltas, these are calculated)
-      write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i+1, '.h5'
-      inquire(file=trim(restart_file), exist=file_exists)
-      if (file_exists) then
-        ! If so, import it and we're done
-        call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
-        this%i = this%i+1
-      else ! loop over the next few files of this name format
-        do i=this%i+2,this%i+10
-          write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
-          inquire(file=trim(restart_file), exist=file_exists)
-          if (file_exists) then
-            call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
+      ! If nothing has been loaded (i.e. fields%time_prev = 0.d0) load the initial file
+      if (abs(f%time_prev) .lt. 1.d-50) then
+        write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
+        inquire(file=trim(restart_file), exist=file_exists)
+        if (file_exists) then
+          call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
+          if (ierr .ne. 0) then
+            write(*,*) "ERROR: cannot open restart file"
+            call exit(1)
+          else
+            f%time_prev = t_start*t_norm ! set by import_hdf5_restart
+            ! Set sim%time to this time also, to start at the right point
+            sim%time = f%time_prev
+            write(*,"(A,f9.8,A)") "Read initial restart file, values at t=", f%time_prev, " [s]"
+          end if
+        else
+          write(*,*) "ERROR: cannot read initial file ", trim(restart_file)
+          call exit(1)
+        end if
+      end if
+      
+      ! Find the following file (next timestep number)
+      do i=this%i+1,this%i+10
+        write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
+        inquire(file=trim(restart_file), exist=file_exists)
+        if (file_exists) then
+          call merge_restart(f%node_list, f%element_list, trim(restart_file), this%rst_format, ierr)
+          if (ierr .ne. 0) then
+            write(*,*) "ERROR: cannot open restart file"
+            call exit(1)
+          else
+            f%time_now = t_start*t_norm ! Set by import_merge_restart
             this%i=i
-            exit
-          endif
-        enddo
+            ! set the time to run this event at next
+            write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%time_now, " [s]"
+            if (present(ev)) then
+              ev%start = f%time_now
+              write(*,*) "Set time for next restart file read to ", ev%start
+            end if
+            exit ! the file-finding loop
+          end if
+        endif
+      enddo
+      if (i .gt. this%i+10) then
+        write(*,*) "ERROR: cannot find any next restart files"
+        call exit(1)
       end if
     end if
 
@@ -191,7 +220,7 @@ subroutine merge_restart(node_list,element_list, restart_file, format_rst, ierr)
   tstart_old = t_start
 
   ! Import new values
-  call import_binary_restart(node_list,element_list, restart_file, format_rst, ierr)
+  call import_hdf5_restart(node_list,element_list, restart_file, format_rst, ierr)
 
   ! Calculate deltas as values_new - values_old
   do inode=1,node_list%n_nodes

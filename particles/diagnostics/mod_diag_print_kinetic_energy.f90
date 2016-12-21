@@ -3,7 +3,7 @@
 module mod_diag_print_kinetic_energy
 use mod_particle_sim
 use mod_particle_types
-use mod_action
+use mod_event
 implicit none
 
 type, extends(action) :: diag_print_kinetic_energy
@@ -15,10 +15,11 @@ contains
 
 !> Print some statistics on the kinetic energy of all particles in the simulation (with MPI and openmp support).
 !> Writing analysis scripts in this way aids reusability, as they can also be called inline in a simulation then.
-subroutine do_print_kinetic_energy(this, sim)
+subroutine do_print_kinetic_energy(this, sim, ev)
   use mod_mpi_stats
   class(diag_print_kinetic_energy), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
+  type(event), intent(inout), optional :: ev
   integer :: i, j
   real*8, dimension(:), allocatable :: tmp
 

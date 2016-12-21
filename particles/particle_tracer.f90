@@ -4,7 +4,6 @@ use constants
 use mod_particle_sim
 use mod_particle_types
 use mod_event
-use mod_action
 use mod_initialise_particles
 
 ! IO
@@ -35,5 +34,5 @@ use data_structure
 ! Default variables
 implicit none
 type(particle_sim) :: sim
-type(event), dimension(:), allocatable :: events
+type(event), dimension(:), allocatable, target :: events
 end module particle_tracer

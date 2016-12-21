@@ -1,7 +1,7 @@
 !> Particle input-output event module
 module mod_io_actions
 use mod_particle_io
-use mod_action
+use mod_event
 use mod_particle_sim
 implicit none
 private
@@ -75,9 +75,10 @@ function new_read_action(filename, basename, decimal_digits, fractional_digits, 
 end function new_read_action
 
 !> Action for reading the simulation
-subroutine do_read_action(this, sim)
+subroutine do_read_action(this, sim, ev)
   class(read_action), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
+  type(event), intent(inout), optional :: ev
   if (len_trim(this%filename) .eq. 0) then
     call read_simulation_hdf5(sim, trim(this%get_filename(this%time)))
   else
@@ -105,9 +106,10 @@ function new_write_action(filename, basename, decimal_digits, fractional_digits,
 end function new_write_action
 
 !> Action for writing the simulation
-subroutine do_write_action(this, sim)
+subroutine do_write_action(this, sim, ev)
   class(write_action), intent(inout) :: this
   type(particle_sim), intent(inout)  :: sim
+  type(event), intent(inout), optional :: ev
   if (len_trim(this%filename) .eq. 0) then
     call write_simulation_hdf5(sim, trim(this%get_filename(sim%time)))
   else

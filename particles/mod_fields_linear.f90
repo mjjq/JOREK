@@ -96,7 +96,6 @@ subroutine do_read(this, sim, ev)
   integer :: i, ierr
   logical :: file_exists
 
-  logical, save :: neighbours_updated = .false.
   real*8 :: t_norm
   t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
@@ -179,12 +178,7 @@ subroutine do_read(this, sim, ev)
       end if
     end if
 
-    ! After reading we need to update_neighbours, but only do it the first time
-    ! This will not work for simulations with refinement!
-    if (.not. neighbours_updated) then
-      call update_neighbours(f%element_list, f%node_list)
-      neighbours_updated = .true.
-    end if
+    call update_neighbours(f%element_list, f%node_list)
   class default
     write(*,*) "ERROR, do_read called with wrong sim%fields"
   end select

@@ -68,7 +68,7 @@ integer(status_kind) :: stat
 
 ! Check if element is valid
 if (i_elm_old .lt. 1 .or. i_elm_old .gt. element_list%n_elements) then
-  ifail=1
+  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
   return
 end if
 

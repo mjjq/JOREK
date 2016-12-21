@@ -52,6 +52,9 @@ subroutine initialise_particles(particles, node_list, element_list, &
   integer, dimension(:), allocatable :: i_to_find
   logical, dimension(:), allocatable :: not_found
 
+  ostart = 0.d0
+  oend   = 0.d0
+
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
   if (present(variables)) then
@@ -301,10 +304,10 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
       ! 3. Calculate charge (if cor is present)
       if (present(cor)) then
-        particle%q = q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor)
+        particle%q = int(q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor),1)
       else
         if (present(charge)) then
-          particle%q = charge
+          particle%q = int(charge,1)
         end if
       end if
 
@@ -370,6 +373,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       H = mass*ATOMIC_MASS_UNIT*0.5d0 * norm2(pa%v)
     class default
       write(*,*) "ERROR: add code for your type here"
+      cycle
     end select
 
     if (present(n_psibar)) then
@@ -393,7 +397,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       ! dominating the projection.
       T = max(1d7,T)
     end if
-    particles(i)%weight = n/(TWOPI*T/(mass*ATOMIC_MASS_UNIT)) * exp(-H/T)
+    particles(i)%weight = real(n/(TWOPI*T/(mass*ATOMIC_MASS_UNIT)) * exp(-H/T),4)
   end do
   !$omp end parallel do
 end subroutine set_particle_weights_canonical_maxwellian
@@ -415,7 +419,7 @@ subroutine normalize_with_projection(proj, particles, i_group)
     if (particles(i)%i_elm .ne. 0) then
       call interp_PRZ(proj%node_list,proj%element_list,particles(i)%i_elm,[group],1, &
         particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-      particles(i)%weight = particles(i)%weight/P(1)
+      particles(i)%weight = real(particles(i)%weight/P(1),4)
     end if
   end do
 end subroutine normalize_with_projection
@@ -463,7 +467,7 @@ integer :: ifail
 local_weights = sum(particles(:)%weight)
 call MPI_AllReduce(local_weights,sum_weights,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ifail)
 ! Divide all weights by the sum of weights and multiply by the requested number of atoms
-particles(:)%weight = particles(:)%weight / sum_weights * num_atoms_total
+particles(:)%weight = real(real(particles(:)%weight,8) / sum_weights * num_atoms_total,4)
 end subroutine adjust_particle_weights
 
 function q_coronal(node_list, element_list, s, t, phi, i_elm, cor)

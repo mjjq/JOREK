@@ -139,7 +139,7 @@ do i=1,element_list%n_elements
       call SOLVP3(A-psi,B,C,D,r1,r2,r3,ifail)
       ! Pick the root closest to 0.5
       i_root = minloc(abs([r1,r2,r3]-0.5d0),1)
-      if (i_root .eq. 1) root = r1
+      root = r1 ! if (i_root .eq. 1) is implied
       if (i_root .eq. 2) root = r2
       if (i_root .eq. 3) root = r3
       u = root*(u2-u1)+u1

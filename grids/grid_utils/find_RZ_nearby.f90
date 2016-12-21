@@ -45,13 +45,14 @@ real*8,                   intent(in)    :: st_old(2) !< The old st location (use
 integer,                  intent(in)    :: i_elm_old
 real*8,                   intent(out)   :: st_new(2) !< The found new coordinates
 integer,                  intent(out)   :: i_elm_new
-integer,                  intent(out)   :: ifail !< if ifail = -1 the position could not be found in the grid
+integer,                  intent(out)   :: ifail !< if ifail = -1 the position could not be found in the grid.
+!< ifail > 0 indicates various other cases
 
 !> Accuracy defaults (tolerances are squared!, units of element size)
-real*8, parameter ::  element_tolerance = 1.d-12
-integer, parameter :: newton_iter_max = 4
-integer, parameter :: element_try_max = 2 ! Try newton iterations in at most this many elements
-integer, parameter :: num_backtrack_steps = 2 ! Try 0.5**this times the step at a minimum
+real*8,  parameter :: element_tolerance   = 1.d-12 !< Tolerance for finding a position inside an element
+integer, parameter :: newton_iter_max     = 4 !< Number of iterations within an element to try
+integer, parameter :: element_try_max     = 2 !< Try newton iterations in at most this many elements
+integer, parameter :: num_backtrack_steps = 2 !< Try 0.5**this times the step at a minimum
 
 !> Internal variables
 integer :: newton_iter_number

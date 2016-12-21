@@ -512,6 +512,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
   allocate(mode_tmp(n_tor_tmp))
+  mode_tmp = -1 ! unset
 
   if (format_rst == 1) then
     call HDF5_array1D_reading_int(file_id,mode_tmp,"mode_tmp")

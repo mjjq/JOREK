@@ -43,7 +43,8 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   integer, intent(out) :: ierr
   integer :: i, j, k
   integer :: n, p !< dimension for GLSE problem. See http://www.netlib.org/lapack/lug/node28.html (with m=n)
-  integer :: num_pushers, num_events
+  integer :: num_pushers, num_event_start, num_event_step
+  integer :: i_constrain_start, i_constrain_step
 
   real*8, dimension(:), allocatable   :: x !< timesteps of pushers and events
   real*8, dimension(:), allocatable   :: c, d !< constraints and reference value
@@ -55,27 +56,28 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   real*8, parameter :: tolerance = 1d-8 ! for comparing numbers of order 1000, no problem
 
   ierr = 0
-  num_pushers = size(pusher_timesteps)
-  num_events  = size(event_start)
+  num_pushers     = size(pusher_timesteps)
+  num_event_start = count(abs(event_start-0.d0) .gt. TICK) ! number of nonzeros here
+  num_event_step  = count(event_step .lt. huge(event_step)*(1.d0-tolerance)) ! number of < huge numbers
+
+  ! Matrix construction:
+  ! All timesteps can be changed by default.
+  ! Starting times can be changed if they are nonzero
+  ! Step times can be changed if they are not huge(0.d0)
 
   ! Set the number of variables, the weighting matrix A and the target vector c
   ! count the number of non-huge event_steps
-  n = num_pushers + 2*num_events
+  n = num_pushers + num_event_start + num_event_step
   allocate(x(n), c(n), A(n,n))
-  x = [pusher_timesteps, event_start, event_step]
+  x = [pusher_timesteps, pack(event_start, mask=abs(event_start-0.d0) .gt. TICK), &
+      pack(event_step, mask=event_step .lt. huge(event_step)*(1.d0-tolerance))]
 
+  ! Weight matrix and reference
   c(:) = 1.d0 ! reference value = A x0 = 1
   A(:,:) = 0.d0 ! A contains a normalization by the current timestep size
   do i=1,n
-    if (i .gt. num_pushers .and. i .le. num_pushers + num_events .and. abs(x(i)) .le. TICK) then
-      ! if x(i) is zero normalize by the event step, and set c(i) to zero
-      A(i,i) = 1.d0/x(i+num_events)
-      c(i) = 0.d0
-    else
-      A(i,i) = 1.d0/x(i)
-    end if
+    A(i,i) = 1.d0/x(i)
   end do
-
 
   ! convert the constraints into B_real
   k = 2*count(constraints) ! maximum number of constraints
@@ -85,16 +87,22 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   do i=1,size(constraints,1) ! i numbers the event
     do j=1,size(constraints,2) ! j numbers the pusher
       if (constraints(i,j)) then
-        p = p+1
-        if (event_step(i) .lt. huge(event_step(i))*(1.d0-tolerance)) then ! if it is not huge
+        ! the index below is given by the number of constrained events before this
+        ! plus the number of pushers, (optionally plus the number of start constraints, for step constraints)
+        if (event_step(i) .lt. huge(event_step(i))*(1.d0-tolerance)) then
+          p = p+1
+          i_constrain_step  = count(event_step(1:i) .lt. huge(event_step(1:i))*(1.d0-tolerance))
           ! equation: m * t_j = T_step,i (where m is the number of steps to fit)
           B_real(p,j) = event_step(i)/pusher_timesteps(j)
-          B_real(p,num_pushers+num_events+i) = -1.d0
-          p = p+1
+          B_real(p,num_pushers+num_event_start+i_constrain_step) = -1.d0
         end if
-        ! equation: l * t_j = T_start,i (where l is the number of steps to fit)
-        B_real(p,j) = event_start(i)/pusher_timesteps(j)
-        B_real(p,num_pushers+i) = -1.d0
+        if (abs(event_start(i)-0.d0) .gt. TICK) then
+          p = p+1
+          i_constrain_start = count(abs(event_start(1:i)-0.d0) .gt. TICK)
+          ! equation: l * t_j = T_start,i (where l is the number of steps to fit)
+          B_real(p,j) = event_start(i)/pusher_timesteps(j)
+          B_real(p,num_pushers+i_constrain_start) = -1.d0
+        end if
       end if
     end do
   end do
@@ -130,14 +138,14 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   d(:) = 0.d0
 
   if (.false.) then ! TODO add debug logging flag
-    write(*,"(A,100f9.3)") "c=", c
-    write(*,"(A,100f9.3)") "d=", d
-    write(*,"(A,100f9.3)") "A(i,i)=", [(A(i,i), i=1, size(A,1))]
+    write(*,"(A,100g10.3)") "c=", c
+    write(*,"(A,100g10.3)") "d=", d
+    write(*,"(A,100g10.3)") "A(i,i)=", [(A(i,i), i=1, size(A,1))]
     do i=1,size(B_real,1)
-      write(*,"(A,i1,A,100f8.4)") "B1(",i,",:)=", real(nint(B_real(i,:)),8)
+      write(*,"(A,i1,A,100g10.3)") "B1(",i,",:)=", real(nint(B_real(i,:)),8)
     end do
     do i=1,p
-      write(*,"(A,i1,A,100f8.4)") "B2(",i,",:)=", B(i,:)
+      write(*,"(A,i1,A,100g10.3)") "B2(",i,",:)=", B(i,:)
     end do
     write(*,*) "x0=", x
   end if
@@ -155,6 +163,11 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   ! get the optimum size of the work array
   allocate(work(1))
   call dgglse(n,n,p,A,n,B,p,c,d,x,work,-1,info)
+  if (info .ne. 0) then
+    write(*,*) "ERROR: dgglse setup info: ", info
+    ierr = info
+    return
+  end if
   lwork = nint(work(1))
   deallocate(work);allocate(work(lwork))
   call dgglse(n,n,p,A,n,B,p,c,d,x,work,lwork,info)
@@ -164,19 +177,23 @@ subroutine fix_event_timestep(pusher_timesteps, event_start, event_step, constra
   else
     ! Save values
     if (.false.) write(*,*) "x=", x
-    do i=1,n
-      if (i .le. num_pushers) then
-        pusher_timesteps(i) = x(i)
-      else if (i .le. num_pushers + num_events) then
-        event_start(i-num_pushers) = x(i)
-      else
-        ! if the event_step was not huge
-        if (event_step(i-num_pushers-num_events) .lt. huge(event_step(i))*(1.d0-tolerance)) then
-          event_step(i-num_pushers-num_events) = x(i)
-        end if
+    do i=1,num_pushers
+      pusher_timesteps(i) = x(i)
+    end do
+    j=1
+    do i=1,num_event_start
+      if (abs(event_start(j)-0.d0) .gt. TICK) then
+        event_start(j) = x(i+num_pushers)
+        j = j+1
       end if
     end do
-
+    j=1
+    do i=1,num_event_step
+      if (event_step(i) .lt. huge(event_step(i))*(1.d0-tolerance)) then ! if it is not huge
+        event_step(j) = x(i+num_pushers+num_event_start)
+        j = j+1
+      end if
+    end do
     ! if debug: verify whether all timesteps 'fit' in integer values into events
   end if
 end subroutine fix_event_timestep

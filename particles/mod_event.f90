@@ -195,7 +195,6 @@ function next_event_at(sim, events) result(at)
     else if (event_run .le. at + tick) then ! if it is equally fast
       run_event(i) = .true.
     end if
-    write(*,*) i, event_run, events(i)%action%name
   end do
 
   ! Exit the simulation if there are no more events to do

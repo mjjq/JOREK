@@ -405,6 +405,7 @@ if (my_id == 0) then
     if ( resistive_wall ) then
       write(*,REAL_FMT) 'wall_resistivity      ', wall_resistivity
     end if
+    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time    
   end if
   
   write(*,REAL_FMT) 'amix                  ', amix

@@ -581,6 +581,7 @@ module vacuum_response
     use gauss,          only: n_gauss, xgauss, wgauss
     use global_distributed_matrix, only: irn_glob, jcn_glob, a_glob, ndof_glob, det_row_col, det_sparse_pos
     use basis_at_gaussian, only: H1, H1_s, HZ
+    use phys_module, only: t_now 
     
     implicit none
     
@@ -625,6 +626,7 @@ module vacuum_response
     real*8 :: wgauss_copy(4)
 #endif
     !integer :: rate, t0, t1 !### timing ###
+    logical, save  :: PF_perturbation = .true. 
 
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
     
@@ -643,6 +645,13 @@ module vacuum_response
     end if
 
     if ( my_id == 0 ) call boundary_check()
+    
+    !-- Add perturbation in PF coils currents to speed-up VDEs
+    if (PF_perturbation .and. (t_now .ge. PF_pert_start_time) ) then
+      if ( my_id == 0 ) write(*,*) 'Perturbing PF coil currents'
+      I_coils(1:n_coils) = I_coils(1:n_coils) + coils0(1:n_coils)%pert
+      PF_perturbation    = .false.
+    endif
     
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)

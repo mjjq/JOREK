@@ -77,7 +77,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_coils_nml, coils0,                  &
-                Zaxis_find_limit
+                Zaxis_find_limit, PF_pert_start_time
 
 if (my_id .eq. 0) then
 

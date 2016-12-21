@@ -59,6 +59,9 @@ module vacuum
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations
   integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum
   
+  !> @name Time-evolution PF coils parameters
+  real*8              :: PF_pert_start_time              !< Time to start a perturbation to speed-up VDEs
+  
   
   ! ### various variables, some need to be removed
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
@@ -129,6 +132,8 @@ module vacuum
     coils0(:)%current    = 0.d0
     coils0(:)%FB_amp     = 0.d0
     coils0(:)%pert       = 0.d0
+    
+    PF_pert_start_time   = 1.d99
     
   end subroutine vacuum_preset
   
@@ -248,11 +253,6 @@ module vacuum
       allocate( I_coils(n_coils) )
       read(file_handle) I_coils(:)
       
-      !-- Add perturbation in PF coils currents in the first timestep after equilibrium to speed-up VDEs
-      if (t_start .lt. 1.d-8 ) then
-        I_coils(1:n_coils) = I_coils(1:n_coils) + coils0(1:n_coils)%pert
-      endif
-      
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then
@@ -339,11 +339,6 @@ module vacuum
        allocate( I_coils(n_coils) )
        
        call HDF5_array1D_reading(file_id,I_coils,"I_coils")
-       
-       !-- Add perturbation in PF coils currents in the first timestep after equilibrium to speed-up VDEs
-       if (t_start .lt. 1.d-8 ) then
-         I_coils(1:n_coils) = I_coils(1:n_coils) + coils0(1:n_coils)%pert
-       endif
        
     end if
      

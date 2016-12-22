@@ -56,12 +56,11 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   if (abs(this%time_prev-this%time_now) .gt. 1d-10) then
     dt = 1.d0/(this%time_now - this%time_prev)
     df = (this%time_now - time)*dt
-    f  = 1.d0 - df
     call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
-    P      = f*P     - df*Pd
-    P_s    = f*P_s   - df*Pd_s
-    P_t    = f*P_t   - df*Pd_t
-    P_phi  = f*P_phi - df*Pd_phi
+    P      = P     - df*Pd
+    P_s    = P_s   - df*Pd_s
+    P_t    = P_t   - df*Pd_t
+    P_phi  = P_phi - df*Pd_phi
     P_time = Pd*dt
   else
     P_time = 0.d0
@@ -208,18 +207,22 @@ subroutine merge_restart(node_list,element_list, restart_file, format_rst, ierr)
 
   ! Save the old values to calculate the new deltas
   allocate(values(n_tor,n_order+1,n_var,node_list%n_nodes))
+  !$omp parallel do default(shared) private(inode)
   do inode=1,node_list%n_nodes
     values(:,:,:,inode) = node_list%node(inode)%values(:,:,:)
   enddo
+  !$omp end parallel do
   tstart_old = t_start
 
   ! Import new values
   call import_hdf5_restart(node_list,element_list, restart_file, format_rst, ierr)
 
   ! Calculate deltas as values_new - values_old
+  !$omp parallel do default(shared) private(inode)
   do inode=1,node_list%n_nodes
     node_list%node(inode)%deltas = node_list%node(inode)%values - values(:,:,:,inode)
   enddo
+  !$omp end parallel do
 
   ! Set timestep to time between restart files
   tstep = t_start - tstart_old

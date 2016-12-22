@@ -1,8 +1,8 @@
 #!/bin/bash
 
-startdir=`pwd`
-
-
+startdir=`readlink -f $(dirname $0)`
+codedir=`readlink -f ${startdir}/..` # Assumption about source code location
+cd $codedir
 for i in `ls -1d non_regression_tests/testcases/*`; do
   if [ -d $i ]; then
     cd $i
@@ -12,6 +12,6 @@ for i in `ls -1d non_regression_tests/testcases/*`; do
     
     rm -f *.h5 *.rst jorek_model* rst_*bin* *.tgz ${extra_remote_files}
     
-    cd $startdir
+    cd $codedir
   fi
 done

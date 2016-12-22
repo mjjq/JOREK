@@ -427,9 +427,21 @@ if (my_id == 0) then
     write(*,INTG_FMT) 'n_feedback_vertical   ', n_feedback_vertical
     write(*,INTG_FMT) 'n_iter_freeb          ', n_iter_freeb
     write(*,INTG_FMT) 'n_coils_nml           ', n_coils_nml
-    write(*,REAL_FMT) 'coils0%current        ', coils0(1:n_coils_nml)%current
-    write(*,REAL_FMT) 'coils0%FB_amp         ', coils0(1:n_coils_nml)%FB_amp
-    write(*,REAL_FMT) 'coils0%pert           ', coils0(1:n_coils_nml)%pert
+    write(*,REAL_FMT,advance='no') 'coils0%current        '
+    do i = 1, n_coils_nml
+      write(*,'(10ES12.4)',advance='no') coils0(i)%current
+    end do
+    write(*,*)
+    write(*,REAL_FMT,advance='no') 'coils0%FB_amp         '
+    do i = 1, n_coils_nml
+      write(*,'(10ES12.4)',advance='no') coils0(i)%FB_amp
+    end do
+    write(*,*)
+    write(*,REAL_FMT,advance='no') 'coils0%pert           '
+    do i = 1, n_coils_nml
+      write(*,'(10ES12.4)',advance='no') coils0(i)%pert
+    end do
+    write(*,*)
   endif
 
 

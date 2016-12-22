@@ -47,3 +47,5 @@ tmp[1-9]*
 .mod/
 .dep/
 .obj/
+starwall-response.dat
+coil_field.dat

@@ -1,48 +1,56 @@
-!> This module contains some routines for calculating diagnostics on particles
+!> This module contains some routines for calculating diagnostics on particles.
+!> Outputs are:
+!> 1. Energy
+!> 2. Magnetic moment
+!> 3. P_phi (generalized toroidal momentum)
+!> 4. Psi_bar (P_phi/q)
+!> 5. Psi
+!> 6. q (charge)
 module mod_particle_diagnostics
 use mod_io_actions
-use data_structure
 use mod_particle_sim
 use hdf5
 implicit none
 private
-public write_constants_of_motion
+public write_particle_diagnostics, calculate_particle_diagnostics
+
+integer(HSIZE_T), parameter :: n_var = 6
 
 !> Action to calculate pphi_H_mu and write this to an HDF5 file
 !> in an extensible (in the time-dimension) dataset
-type, extends(io_action) :: write_constants_of_motion
+type, extends(io_action) :: write_particle_diagnostics
   integer(HID_T) :: file_id !< file identifier
 contains
-  procedure :: do => do_write_constants_of_motion
-end type write_constants_of_motion
-interface write_constants_of_motion
-  module procedure new_write_constants_of_motion
-end interface write_constants_of_motion
+  procedure :: do => do_write_particle_diagnostics
+end type write_particle_diagnostics
+interface write_particle_diagnostics
+  module procedure new_write_particle_diagnostics
+end interface write_particle_diagnostics
 
 
 contains
 !> Constructor. Must use this or open the HDF5 file manually.
 !> Be sure to use keyword arguments when initializing, to avoid confusion
-function new_write_constants_of_motion(filename) result(new)
-  type(write_constants_of_motion) :: new
+function new_write_particle_diagnostics(filename) result(new)
+  type(write_particle_diagnostics) :: new
   character(len=*), intent(in)    :: filename
   new%filename = filename
   new%name = "WriteConstantsOfMotion"
   new%log = .true.
-end function new_write_constants_of_motion
+end function new_write_particle_diagnostics
 
 !> Action to calculate all of these values and write them to an HDF5 file
-subroutine do_write_constants_of_motion(this, sim, ev)
+subroutine do_write_particle_diagnostics(this, sim, ev)
   use hdf5_io_module
   use mpi
   use mod_event
-  class(write_constants_of_motion), intent(inout) :: this
+  class(write_particle_diagnostics), intent(inout) :: this
   type(particle_sim), intent(inout)               :: sim
   type(event), intent(inout), optional            :: ev
 
-  integer(HSIZE_T), parameter :: n_time = 1_HSIZE_T, n_var = 3_HSIZE_T
+  integer(HSIZE_T), parameter :: n_time = 1_HSIZE_T
 
-  integer(HSIZE_T)  :: data_dims(3), time_dims(1), data_maxdims(3), time_maxdims(1) ! equality with parameters above is coincidence
+  integer(HSIZE_T)  :: data_dims(3), time_dims(1), data_maxdims(3), time_maxdims(1)
   integer(HSIZE_T)  :: npoints_mem, npoints_file
   integer           :: i, my_id, n_cpu, ierr, rank
   integer(HID_T)    :: dspace, dset, mem_space
@@ -86,14 +94,14 @@ subroutine do_write_constants_of_motion(this, sim, ev)
     ! Find the number of particles on each node
     call MPI_AllGather(size(sim%groups(i)%particles,1),1,MPI_INTEGER,&
         particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    allocate(stats(size(sim%groups(i)%particles,1),3,1))
+    allocate(stats(size(sim%groups(i)%particles,1),n_var,1))
 
     ! Check the dataset existence and properties
     write(dataset_name,'(A,i0.3)') 'groups/', i
     call h5lexists_f(this%file_id, trim(dataset_name), link_exists, ierr)
 
     if (link_exists) then
-      write(*,*) "DEBUG: link to ", trim(dataset_name), " exists, trying to open"
+      !write(*,*) "DEBUG: link to ", trim(dataset_name), " exists, trying to open"
       call h5dopen_f(this%file_id, trim(dataset_name), dset, ierr)
       if (ierr .ne. 0) then
         write(*,*) "Error opening dataset", i
@@ -138,18 +146,6 @@ subroutine do_write_constants_of_motion(this, sim, ev)
       call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
     end if
 
-    ! Check the last value in the time dataset
-    ! We assume that time is monotonous (in this dataset)
-    ! so that the last value is the largest.
-    ! If this is not true raise an error and exit
-    !last_time = -1d99
-    !write(*,*) i
-    !call h5dread_f(tset, H5T_NATIVE_DOUBLE, last_time, [1_HSIZE_T], ierr, tspace)
-    !if (last_time .gt. sim%time) then
-    !  write(*,*) "WARNING: overwriting existing timesteps not supported yet, appending"
-    !end if
-    !write(*,*) i
-
     ! Extend the dataset by 1 in the time-dimension
     ! After extending, dspace and tspace are invalid. Close them already
     call h5sclose_f(dspace, ierr)
@@ -178,7 +174,7 @@ subroutine do_write_constants_of_motion(this, sim, ev)
         hdferr=ierr)
 
     ! Calculate the statistics
-    call calculate_pphi_H_mu(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, stats(:,:,1))
+    call calculate_particle_diagnostics(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, stats(:,:,1))
     !write(*,*) "DEBUG: calculated statistics"
 
     ! Write the dataset independently
@@ -190,7 +186,7 @@ subroutine do_write_constants_of_motion(this, sim, ev)
          ierr, file_space_id = dspace, mem_space_id = mem_space)
     !write(*,*) "EXTRA_DEBUG: out(8,2)", stats(8,2,1)
     !write(*,*) "EXTRA_DEBUG: out(2,2)", stats(2,2,1)
-    write(*,*) "Done", sum(stats) ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
+    write(*,*) "Done writing, sum=", sum(stats) ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
 
     ! Add the current time to the timeset
     call h5dget_space_f(tset, tspace, ierr)
@@ -211,7 +207,7 @@ subroutine do_write_constants_of_motion(this, sim, ev)
   end do
   call h5fclose_f(this%file_id, ierr)
   call h5close_f(ierr)
-end subroutine do_write_constants_of_motion
+end subroutine do_write_particle_diagnostics
 
 !> Create a new dataset for diagnostics with the right dimensions in file_id
 subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, dspace)
@@ -221,11 +217,11 @@ subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, ds
   integer(HSIZE_T), intent(in) :: n_particles
   integer :: ierr
   integer(HID_T) :: crp_list
-  integer(HSIZE_T), parameter :: chunk_size(3) = [1000,3,1]
+  integer(HSIZE_T), parameter :: chunk_size(3) = [1000_HSIZE_T,n_var,1_HSIZE_T]
 
   ! Create a dataspace with unlimited dimensions, 
-  call h5screate_simple_f(3, [n_particles,3_HSIZE_T,0_HSIZE_T], dspace, ierr, &
-      maxdims=[H5S_UNLIMITED_F,3_HSIZE_T,H5S_UNLIMITED_F])
+  call h5screate_simple_f(3, [n_particles,n_var,0_HSIZE_T], dspace, ierr, &
+      maxdims=[H5S_UNLIMITED_F,n_var,H5S_UNLIMITED_F])
   ! Create a dataset property list, enable chunking
   call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
   call h5pset_chunk_f(crp_list, 3, chunk_size, ierr)
@@ -257,7 +253,7 @@ end subroutine create_constants_time_dataset
 
 !> Calculate P_phi, H and mu for a list of particles.
 !> mask is .f. if a particle is lost. These values in out are 0.d0
-subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
+subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, mask)
   use mod_particle_types
   use phys_module, only: F0
   use constants
@@ -267,8 +263,8 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
   real*8, intent(in)                                           :: mass
-  real*8, dimension(size(particles,1),3,1), intent(out)        :: out !< List of values
-  logical, dimension(size(particles,1)), intent(out), optional :: mask !< Mask containing .f. if particle is lost
+  real*8, dimension(:,:), intent(out)                          :: out !< List of values (is actually size(particles,1),n_var big, but gfortran doesn't like that
+  logical, dimension(:), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
   real*8               :: inv_st_jac, psi_R, psi_Z, B(3), B_norm, B_hat(3), v_par, v_perp(3)
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
@@ -298,33 +294,21 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
 
       select type (particles(i))
       type is (particle_kinetic_leapfrog)
-        out(i,1,1) = particles(i)%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particles(i)%v(3)
+        out(i,3) = particles(i)%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particles(i)%v(3)
         ! Let the conversion calculate the conserved quantities
         particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particles(i), B, mass)
-
-        ! Correct for muB being in x-coordinate (divide by norm2(B_gc) later)
-        !particle%mu = particle%mu * norm2(B)
 
         if (particle%i_elm .eq. 0) cycle
 
         ! This recalculates P in the gc position also
-        !call fields%interp_PRZ(time, particle%i_elm, &
-        !              [1], 1, particle%st(1),particle%st(2), &
-        !              particle%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-        !inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
-        !psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-        !psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-        !B        = [+psi_Z, -psi_R, F0] / R
-        !B_norm   = norm2(B)
-        !B_hat    = B/B_norm
-        !v_perp   = particles(i)%v - dot_product(particles(i)%v,B_hat)*B_hat
-        !! Recalculate mu from the gc coordinates
-        !particle%mu = mass * ATOMIC_MASS_UNIT * 0.5d0 * dot_product(v_perp,v_perp) / B_norm
+        call fields%interp_PRZ(time, particle%i_elm, &
+                      [1], 1, particle%st(1),particle%st(2), &
+                      particle%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
 
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particles(i)
-        out(i,1,1) = real(particles(i)%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
+        out(i,3) = real(particles(i)%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
       class default
         write(*,*) "ERROR: calculate_pphi_H_mu not implemented for this particle type"
         cycle ! skip this iteration
@@ -332,13 +316,22 @@ subroutine calculate_pphi_H_mu(fields, time, particles, mass, out, mask)
 
 
       ! Calculate output variables
-      out(i,1,1) = out(i,1,1) / EL_CHG ! normalize to ZPsi
-      out(i,2,1) = particle%E
-      out(i,3,1) = particle%mu
+      ! 1. Energy
+      out(i,1) = particle%E
+      ! 2. Magnetic moment
+      out(i,2) = particle%mu
+      ! 3. P_phi (generalized toroidal momentum)
+      out(i,3) = out(i,3) / EL_CHG ! normalize to ZPsi
+      ! 4. Psi_bar (P_phi/q)
+      out(i,4) = out(i,3) / real(particle%q)
+      ! 5. Psi (at GC position)
+      out(i,5) = P(1)
+      ! 6. q (charge)
+      out(i,6) = real(particle%q)
     endif
   enddo
   !$omp end parallel do
-end subroutine calculate_pphi_H_mu
+end subroutine calculate_particle_diagnostics
 
 
 !> Calculate particles present in specific regions on all particles

@@ -482,8 +482,8 @@ allocate(scalar_names(n_scalars),vector_names(n_vectors))
 do i=1,n_fields
   write(scalar_names(n_tor*(i-1)+1),'(A,i0.2)') "rho_", i
   do j=1,(n_tor-1)/2
-    write(scalar_names(n_tor*(i-1)+j+1),"(A,i0.2,A,i0.2)") "rho_", i, "_cos_", mode(2*j)
-    write(scalar_names(n_tor*(i-1)+j+2),"(A,i0.2,A,i0.2)") "rho_", i, "_sin_", mode(2*j+1)
+    write(scalar_names(n_tor*(i-1)+j+1),"(A4,i0.2,A4,i0.2)") "rho_", i, "_cos", mode(2*j)
+    write(scalar_names(n_tor*(i-1)+j+2),"(A4,i0.2,A4,i0.2)") "rho_", i, "_sin", mode(2*j+1)
   end do
 end do
 

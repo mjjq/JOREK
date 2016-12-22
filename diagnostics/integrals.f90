@@ -144,8 +144,8 @@ do ife =1, element_list%n_elements
       ZJ_0  = eq_g(3,ms,mt)
       PS_0  = eq_g(1,ms,mt)
       
-      pressure = pressure + rho_00 * T_00 * xjac * BigR * wst
-      density  = density  + rho_00       * xjac * BigR * wst
+      pressure = pressure + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
+      density  = density  + rho_00       * xjac * 2.d0 * PI * BigR * wst
       
       if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
@@ -160,23 +160,23 @@ do ife =1, element_list%n_elements
 #endif
         
         ! --- 3D integrals
-        D_int = D_int + rho_00       * xjac * BigR * wst
-        P_int = P_int + rho_00 * T_00 * xjac * BigR * wst
-        C_intern = C_intern + ZJ_0 /BigR  * xjac * BigR * wst
+        D_int = D_int + rho_00       * xjac * 2.d0 * PI * BigR * wst
+        P_int = P_int + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
+        C_intern = C_intern + ZJ_0 /BigR  * xjac * 2.d0 * PI * BigR * wst
+        Volume = Volume + 2.d0 * PI * BigR * xjac * wst
+        heat_src_in = heat_src_in + 2.d0 * PI * BigR * xjac * wst * heat_src
+        part_src_in = part_src_in + 2.d0 * PI * BigR * xjac * wst * part_src
         
         ! --- 2D integrals
         P_hel = P_hel + rho_00 * T_00 * xjac * wst
         C_hel = C_hel + ZJ_0 /BigR  * xjac * wst
-        Volume = Volume + 2.d0 * PI * BigR * xjac * wst
-        heat_src_in = heat_src_in + 2.d0 * PI * BigR * xjac * wst * heat_src
-        part_src_in = part_src_in + 2.d0 * PI * BigR * xjac * wst * part_src
         Area   = Area   + xjac * wst
         
       else
         
-        D_ext = D_ext + rho_00       * xjac * BigR * wst      
-        P_ext = P_ext + rho_00 * T_00 * xjac * BigR * wst
-        C_ext = C_ext + ZJ_0 /BigR  * xjac * BigR * wst
+        D_ext = D_ext + rho_00       * xjac * 2.d0 * PI * BigR * wst      
+        P_ext = P_ext + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
+        C_ext = C_ext + ZJ_0 /BigR  * xjac * 2.d0 * PI * BigR * wst
         
         heat_src_out = heat_src_out + 2.d0 * PI * BigR * xjac * wst * heat_src
         part_src_out = part_src_out + 2.d0 * PI * BigR * xjac * wst * part_src
@@ -185,15 +185,6 @@ do ife =1, element_list%n_elements
     enddo
   enddo
 enddo
-
-density      = density  * 2.d0 * PI
-density_in   = D_int    * 2.d0 * PI
-density_out  = D_ext    * 2.d0 * PI
-pressure     = pressure * 2.d0 * PI
-pressure_in  = P_int    * 2.d0 * PI
-pressure_out = P_ext    * 2.d0 * PI
-current_in   = C_intern * 2.d0 * PI
-current_out  = C_ext    * 2.d0 * PI
 
 current = C_hel / MU_zero
 beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )

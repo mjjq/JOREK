@@ -17,6 +17,7 @@ OK_COL="\x1b[32;02m"     # green#
 
 startdir=`readlink -f $(dirname $0)`
 codedir=`readlink -f ${startdir}/..` # Assumption about source code location
+cd $codedir || exit 1
 
 # --- Usage printing function
 function printusage() {
@@ -46,7 +47,7 @@ if [ -z "$MPIRUN" ]; then
 fi
 
 # --- Test if directory 'non_regression_tests' exists
-if [ ! -d "non_regression_tests" ]; then
+if [ ! -d "${codedir}/non_regression_tests" ]; then
     printf "\n$ERROR_COL ERROR: Run the script from the trunk. \n $NO_COL"
     printusage
     exit 1

@@ -1,5 +1,5 @@
 !> Basic model-dependend hard-coded run parameters.
-module parameters
+module mod_parameters
 
   implicit none
 
@@ -34,4 +34,4 @@ module parameters
     (/ 'A_3        ','A_R        ','A_Z        ','u_R        ',      &
        'u_Z        ','u_phi      ','Density    ','Temperature' /)
 
-end module parameters
+end module mod_parameters

@@ -6,13 +6,14 @@ program jorek_diagnostics
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-use parameters, only: n_var, variable_names
+use mod_parameters, only: n_var, variable_names
 use data_structure
 use phys_module
 use basis_at_gaussian
 use diffusivities, only: get_dperp, get_zkperp
 use nodes_elements
-use boundary
+use mod_boundary
+use mod_import_restart
 implicit none
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors, my_id
@@ -90,7 +91,7 @@ do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
 enddo
 
-call import_binary_restart(node_list,element_list, 'jorek_restart.rst', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 

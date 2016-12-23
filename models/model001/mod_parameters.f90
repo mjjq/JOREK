@@ -1,4 +1,4 @@
-module parameters
+module mod_parameters
 
   implicit none
 

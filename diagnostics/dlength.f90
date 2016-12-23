@@ -1,5 +1,5 @@
 real*8 function dlength(x1,x2)
-use parameters
+use mod_parameters
 real*8 :: total, x1(*), x2(*)
 integer :: i
 total = 0.

@@ -31,20 +31,23 @@ program JOREK2
   use wsmp_module
   use data_structure
   use phys_module
-  use parameters
+  use mod_parameters
   use mod_log_params
   use global_distributed_matrix
   use nodes_elements
   use pellet_module
   use equil_info
-  use boundary,            only: boundary_from_grid
+  use mod_boundary,            only: boundary_from_grid
   use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum, wall_curr_initialized
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
-  use bootstrap_functions
+  use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
+  use mod_global_matrix_structure
+  use mod_import_restart
+  use mod_export_restart
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -57,10 +60,10 @@ program JOREK2
 
   use solve_mat_n
   use tr_module
-  use clock_module
+  use mod_clock
 #ifdef USE_HDF5
   use hdf5
-  use HDF5_io_module
+  use hdf5_io_module
   use out_save_module
 #endif
   use mpi_mod
@@ -70,6 +73,9 @@ program JOREK2
 #endif
 
   use, intrinsic :: iso_c_binding
+  use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
+                                            stdout=>output_unit, &
+                                            stderr=>error_unit
   
   implicit none
 
@@ -78,7 +84,6 @@ program JOREK2
 #endif
   
 #include "r3_info.h"
-#include "version.h"
   
   interface
 
@@ -128,8 +133,7 @@ program JOREK2
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
   character*8              :: label, itlabel
-  character*14             :: fileout_bin
-  character*13             :: fileout_h5
+  character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
@@ -141,7 +145,7 @@ program JOREK2
   real*8                   :: zTe, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz
   real*8                   :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
   real*8                   :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, psi
-  real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out
+  real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
   logical                  :: is_local, file_exists
@@ -233,7 +237,7 @@ required = 0
     use_murge = .false. 
   end if
   
-  ! --- Write out all parameters defined in mod_parameters and the namelist input file.
+  ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -330,15 +334,7 @@ required = 0
   
   if ( restart .and. (my_id == 0) ) then
     
-    if ( rst_hdf5 == 0 ) then
-       ! --- Read the restart binary file (jorek_restart.rst)
-       write(*,*) " Restart from BINARY files jorek_restart.rst "
-       call import_binary_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
-    elseif ( rst_hdf5 == 1 ) then
-       ! --- Read the restart HDF5 file (jorek_restart.h5)
-       write(*,*) " Restart from HDF5 files jorek_restart.h5 "
-       call import_hdf5_restart(node_list, element_list, 'jorek_restart.h5', rst_format, ierr)
-    end if
+    call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
 #ifdef USE_HDF5
@@ -798,23 +794,14 @@ required = 0
        endif
     endif
 
- endif ! (nstep >0)
+  endif ! (nstep >0)
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-     if ( rst_hdf5 == 0 ) then
-        ! --- Write restart binary file
-        fileout_bin = "jorek00000.rst"
-        write (6,*) " =============>, jorek2, filename = ", fileout_bin
-        call export_binary_restart(node_list, element_list, fileout_bin)
-     elseif ( rst_hdf5 == 1 ) then
-        ! --- Write restart HDF5 file
-        fileout_h5 = "jorek00000.h5"
-        write (6,*) " =============>, jorek2, filename = ", fileout_h5
-        call export_hdf5_restart(node_list, element_list, fileout_h5)
-     end if
+    fileout = 'jorek00000'
+    call export_restart(node_list, element_list, fileout)
   end if
-
+  
   !***********************************************************************
   !***********************************************************************
   !*                          time stepping                              *
@@ -838,7 +825,7 @@ required = 0
     t0 = t_itstart
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
-    call flushc !flush the output stream
+    flush stdout
     call tr_debug_write("JMAIN:Index_now",index_now)
 
     index_now = index_now + 1
@@ -1093,6 +1080,15 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
+       call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
+         psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
+         beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
+         density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
+         pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
+         part_src_in_t(index_now), part_src_out_t(index_now))
+       R_axis_t(index_now)   = R_axis
+       Z_axis_t(index_now)   = Z_axis
+       psi_axis_t(index_now) = psi_axis
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
@@ -1169,17 +1165,8 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-     if ( rst_hdf5 == 0 ) then
-        ! --- Write restart binary file
-        write(fileout_bin,'(A5,i5.5,A4)') 'jorek',index_now,'.rst'
-        write (6,*) " =============>, jorek2, BIN filename = ",fileout_bin
-        call export_binary_restart(node_list,element_list,fileout_bin)
-     elseif ( rst_hdf5 == 1 ) then
-        ! --- Write restart HDF5 file
-        write(fileout_h5,'(A5,i5.5,A3)') 'jorek',index_now,'.h5'
-        write (6,*) " =============>, jorek2, HDF5 filename = ",fileout_h5
-        call export_hdf5_restart(node_list,element_list,fileout_h5)
-     end if
+      write(fileout,'(A5,i5.5)') 'jorek',index_now
+      call export_restart(node_list, element_list, fileout)
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
@@ -1232,13 +1219,13 @@ required = 0
 
     	  if (.not. gmres) then
 
-    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
     		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
     	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
 
             call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-                 mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                 DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
                  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
    
        	  endif
@@ -1269,17 +1256,8 @@ required = 0
   !***********************************************************************
 
   if (my_id .eq. 0)  then
-     write (6,*) " =============>, jorek2, filename = jorek_restart"
-
-     if ( rst_hdf5 == 0 ) then
-        ! --- Write restart binary file
-        write (6,*) " =============>, jorek2, filename = jorek_restart.rst "
-        call export_binary_restart(node_list,element_list, 'jorek_restart.rst')
-     elseif ( rst_hdf5 == 1 ) then
-        ! --- Write restart HDF5 file
-        write (6,*) " =============>, jorek2, filename = jorek_restart.h5 "
-        call export_hdf5_restart(node_list,element_list, 'jorek_restart.h5')
-     end if
+    fileout = 'jorek_restart'
+    call export_restart(node_list, element_list, fileout)
 
     if (.not. bench_without_plot) then
        

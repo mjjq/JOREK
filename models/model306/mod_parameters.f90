@@ -1,5 +1,5 @@
 !> Basic model-dependend hard-coded run parameters.
-module parameters
+module mod_parameters
 
   implicit none
 
@@ -25,4 +25,4 @@ module parameters
     (/ Trim('Flux       '),Trim('Potential  '),Trim('Current    '),Trim('Vorticity  '),      &
        Trim('Density    '),Trim('Temperature'),Trim('V_parallel '), Trim('J_EC1     '), Trim('J_EC2     ') /)
 
-end module parameters
+end module mod_parameters

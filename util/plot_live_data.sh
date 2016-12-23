@@ -73,9 +73,9 @@ while [ $# -gt 0 ]; do
     usage
     exit
   elif [ "$1" == "-l" ]; then
-    plottable=`$extract_live_data plottable -f $file`
     echo ""
-    echo "Plottable quantities are: $plottable"
+    echo "Plottable quantities are:"
+    $extract_live_data plottable -f $file | sed -e 's/\s\+/\n/g' | sort | sed -e 's/^/\* /'
     echo ""
     exit
   else

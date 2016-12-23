@@ -158,6 +158,10 @@ module vacuum
     sr%ntri_w = 0
     sr%n_tor  = 0
     
+    if ( (my_id == 0) .and. (sum(coils0%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
+       write(*,*) 'WARNING: Poloidal field coil perturbation coils0%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
+    end if
+    
   end subroutine vacuum_init
   
   

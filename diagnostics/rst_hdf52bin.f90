@@ -25,6 +25,8 @@ program RST_convert_hdf52bin
 #error " Should be compiled with -DUSE_HDF5"
 #endif
 
+  call initialise_parameters(0, '__NO_FILENAME__')
+
   ! Parse command line arguments
   call cla_init
   call pcla_register('filename', 'name of the restart hdf5 file to convert',  cla_char, 'jorek_restart.h5')    

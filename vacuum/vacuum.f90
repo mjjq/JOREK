@@ -310,8 +310,8 @@ module vacuum
        end if
        
        if ( resistive_wall ) then
-          call HDF5_integer_saving(file_id,n_wall_curr,"n_wall_curr")
-          call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall")
+          call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
+          call HDF5_integer_reading(file_id,n_dof_starwall,"n_dof_starwall")
           
           if ( allocated(wall_curr) ) deallocate(wall_curr)
           allocate( wall_curr(n_wall_curr) )
@@ -337,7 +337,7 @@ module vacuum
        end if
        
        call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
-       call HDF5_integer_saving(file_id,n_coils,"n_coils")
+       call HDF5_integer_reading(file_id,n_coils,"n_coils")
        
        if ( allocated(I_coils) ) deallocate(I_coils)
        allocate( I_coils(n_coils) )

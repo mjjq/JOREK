@@ -337,7 +337,7 @@ module vacuum
        end if
        
        call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
-       call HDF5_integer_saving(file_id,n_coils,"n_coils")
+       call HDF5_integer_reading(file_id,n_coils,"n_coils")
        
        if ( allocated(I_coils) ) deallocate(I_coils)
        allocate( I_coils(n_coils) )

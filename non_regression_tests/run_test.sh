@@ -194,7 +194,7 @@ if [ "$runit" == "yes" ]; then
   # --- Run the test case
   if [ "$initialrun" == "no" ]; then
     cp ${testcasedir}/begin.h5 jorek_restart.h5           || exit 1
-    ./rst_hdf52bin                                        || exit 1
+    ./rst_hdf52bin < ./input                              || exit 1
     restart_run                                           || exit 1
     
     cd $tmpdir                                              || exit 1
@@ -207,11 +207,11 @@ if [ "$runit" == "yes" ]; then
     fi
   else
     initial_run                                           || exit 1
-    ./rst_bin2hdf5                                        || exit 1
+    ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/begin.h5           || exit 1
     
     restart_run                                           || exit 1
-    ./rst_bin2hdf5                                        || exit 1
+    ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/end.h5             || exit 1
   fi
 

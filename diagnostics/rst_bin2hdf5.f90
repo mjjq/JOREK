@@ -7,14 +7,16 @@ program RST_convert_bin2hdf5
   use cla
   use mod_import_restart
   use mod_export_restart
+  use mod_boundary, only: boundary_from_grid
+  use vacuum
+  use vacuum_response
+  use vacuum_equilibrium
+  use nodes_elements
+  use mpi_mod
 
   implicit none
 
-  type (type_node_list)   , pointer :: node_list
-  type (type_element_list), pointer :: element_list
-
-  integer :: ierr, i
-
+  integer :: ierr, i, provided, StatInfo
   character(len=80) :: filein, fileout
   logical :: verbose, file_exists
 
@@ -22,7 +24,11 @@ program RST_convert_bin2hdf5
 #error " Should be compiled with -DUSE_HDF5"
 #endif
 
+  call MPI_Init_thread(MPI_THREAD_FUNNELED, provided, StatInfo)
+  call init_threads()
+
   call initialise_parameters(0, '__NO_FILENAME__')
+  call vacuum_init(0, freeboundary_equil, freeboundary, resistive_wall)
 
   ! Parse command line arguments
   call cla_init
@@ -34,9 +40,6 @@ program RST_convert_bin2hdf5
 
   ! Create output filename
   fileout = filein(1:index(filein,'.rst',.true.)) // 'h5' ! .true. searches backwards
-
-  allocate(node_list)
-  allocate(element_list)
 
   ! --- Initialize mode and mode_type arrays
   call det_modes()
@@ -62,6 +65,15 @@ program RST_convert_bin2hdf5
   visco_par = visco_par_rst
 
   eta       = eta_rst
+
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+  if ( freeboundary ) then
+    call get_vacuum_response(0, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
+      resistive_wall)
+    call update_response(tstep, freeboundary_equil, resistive_wall)
+    call import_external_fields('coil_field.dat', 0)
+    if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(0, resistive_wall)
+  end if
 
   ! -- Write the HDF5 restart file
   if (verbose) write (6,*) " =============> rst_bin2hdf5, write HDF5 file = ",fileout

@@ -33,5 +33,5 @@ function restart_run () {
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
   ./rst_bin2hdf5 < ./input                                                           || exit 1
-  h5diff -d 1e-10 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
+  h5diff -d 3e-7 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
 }

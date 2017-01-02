@@ -175,9 +175,68 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     
     if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies",CAT_UNKNOWN)
-
     energies = 0.d0
-
+    
+    if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
+    call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
+    R_axis_t = 0.d0
+    
+    if (allocated(Z_axis_t)) call tr_deallocate(Z_axis_t,"Z_axis_t",CAT_UNKNOWN)
+    call tr_allocate(Z_axis_t,1,index_start+nstep,"Z_axis_t",CAT_UNKNOWN)
+    Z_axis_t = 0.d0
+    
+    if (allocated(psi_axis_t)) call tr_deallocate(psi_axis_t,"psi_axis_t",CAT_UNKNOWN)
+    call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
+    psi_axis_t = 0.d0
+    
+    if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
+    call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)
+    current_t = 0.d0
+    
+    if (allocated(beta_p_t)) call tr_deallocate(beta_p_t,"beta_p_t",CAT_UNKNOWN)
+    call tr_allocate(beta_p_t,1,index_start+nstep,"beta_p_t",CAT_UNKNOWN)
+    beta_p_t = 0.d0
+    
+    if (allocated(beta_t_t)) call tr_deallocate(beta_t_t,"beta_t_t",CAT_UNKNOWN)
+    call tr_allocate(beta_t_t,1,index_start+nstep,"beta_t_t",CAT_UNKNOWN)
+    beta_t_t = 0.d0
+    
+    if (allocated(beta_n_t)) call tr_deallocate(beta_n_t,"beta_n_t",CAT_UNKNOWN)
+    call tr_allocate(beta_n_t,1,index_start+nstep,"beta_n_t",CAT_UNKNOWN)
+    beta_n_t = 0.d0
+    
+    if (allocated(density_in_t)) call tr_deallocate(density_in_t,"density_in_t",CAT_UNKNOWN)
+    call tr_allocate(density_in_t,1,index_start+nstep,"density_in_t",CAT_UNKNOWN)
+    density_in_t = 0.d0
+    
+    if (allocated(density_out_t)) call tr_deallocate(density_out_t,"density_out_t",CAT_UNKNOWN)
+    call tr_allocate(density_out_t,1,index_start+nstep,"density_out_t",CAT_UNKNOWN)
+    density_out_t = 0.d0
+    
+    if (allocated(pressure_in_t)) call tr_deallocate(pressure_in_t,"pressure_in_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_in_t,1,index_start+nstep,"pressure_in_t",CAT_UNKNOWN)
+    pressure_in_t = 0.d0
+    
+    if (allocated(pressure_out_t)) call tr_deallocate(pressure_out_t,"pressure_out_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
+    pressure_out_t = 0.d0
+    
+    if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+    heat_src_in_t = 0.d0
+    
+    if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+    heat_src_out_t = 0.d0
+    
+    if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+    part_src_in_t = 0.d0
+    
+    if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+    part_src_out_t = 0.d0
+    
 #ifdef JECCD
     if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
     call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep,"energies2",CAT_UNKNOWN)
@@ -697,7 +756,82 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
          "energies",CAT_UNKNOWN)
     energies = 0.d0
     call HDF5_array3D_reading(file_id,energies,'energies')
-
+    
+    if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
+    call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
+    R_axis_t = 0.d0
+    call HDF5_array1D_reading(file_id,R_axis_t,'R_axis_t')
+    
+    if (allocated(Z_axis_t)) call tr_deallocate(Z_axis_t,"Z_axis_t",CAT_UNKNOWN)
+    call tr_allocate(Z_axis_t,1,index_start+nstep,"Z_axis_t",CAT_UNKNOWN)
+    Z_axis_t = 0.d0
+    call HDF5_array1D_reading(file_id,Z_axis_t,'Z_axis_t')
+    
+    if (allocated(psi_axis_t)) call tr_deallocate(psi_axis_t,"psi_axis_t",CAT_UNKNOWN)
+    call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
+    psi_axis_t = 0.d0
+    call HDF5_array1D_reading(file_id,psi_axis_t,'psi_axis_t')
+    
+    if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
+    call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)
+    current_t = 0.d0
+    call HDF5_array1D_reading(file_id,current_t,'current_t')
+    
+    if (allocated(beta_p_t)) call tr_deallocate(beta_p_t,"beta_p_t",CAT_UNKNOWN)
+    call tr_allocate(beta_p_t,1,index_start+nstep,"beta_p_t",CAT_UNKNOWN)
+    beta_p_t = 0.d0
+    call HDF5_array1D_reading(file_id,beta_p_t,'beta_p_t')
+    
+    if (allocated(beta_t_t)) call tr_deallocate(beta_t_t,"beta_t_t",CAT_UNKNOWN)
+    call tr_allocate(beta_t_t,1,index_start+nstep,"beta_t_t",CAT_UNKNOWN)
+    beta_t_t = 0.d0
+    call HDF5_array1D_reading(file_id,beta_t_t,'beta_t_t')
+    
+    if (allocated(beta_n_t)) call tr_deallocate(beta_n_t,"beta_n_t",CAT_UNKNOWN)
+    call tr_allocate(beta_n_t,1,index_start+nstep,"beta_n_t",CAT_UNKNOWN)
+    beta_n_t = 0.d0
+    call HDF5_array1D_reading(file_id,beta_n_t,'beta_n_t')
+    
+    if (allocated(density_in_t)) call tr_deallocate(density_in_t,"density_in_t",CAT_UNKNOWN)
+    call tr_allocate(density_in_t,1,index_start+nstep,"density_in_t",CAT_UNKNOWN)
+    density_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,density_in_t,'density_in_t')
+    
+    if (allocated(density_out_t)) call tr_deallocate(density_out_t,"density_out_t",CAT_UNKNOWN)
+    call tr_allocate(density_out_t,1,index_start+nstep,"density_out_t",CAT_UNKNOWN)
+    density_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,density_out_t,'density_out_t')
+    
+    if (allocated(pressure_in_t)) call tr_deallocate(pressure_in_t,"pressure_in_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_in_t,1,index_start+nstep,"pressure_in_t",CAT_UNKNOWN)
+    pressure_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,pressure_in_t,'pressure_in_t')
+    
+    if (allocated(pressure_out_t)) call tr_deallocate(pressure_out_t,"pressure_out_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
+    pressure_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,pressure_out_t,'pressure_out_t')
+    
+    if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+    heat_src_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,heat_src_in_t,'heat_src_in_t')
+    
+    if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+    heat_src_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,heat_src_out_t,'heat_src_out_t')
+    
+    if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+    part_src_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_src_in_t,'part_src_in_t')
+    
+    if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+    part_src_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_src_out_t,'part_src_out_t')
+    
 #ifdef JECCD                   
     if (allocated(energies2))	call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)	  
     call tr_allocate(energies2,1,n_tor_tmp,1,2,1,index_start+nstep, &

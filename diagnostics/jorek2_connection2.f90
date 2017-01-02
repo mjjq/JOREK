@@ -42,7 +42,9 @@ character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
 logical :: psi_theta
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
+integer :: n_stride
+
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, n_stride, element_start_percent
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -72,6 +74,7 @@ n_phi   = 200 !1000            ! number of steps per toroidal turn
 
 ns = 1                          ! number of (s) starting points within one element
 nt = 1                          ! number of (t) starting points within one element
+n_stride =  1                   ! interval of elements between starting points
 element_start_percent = 0.25
 
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
@@ -93,6 +96,7 @@ if (my_id .eq. 0 ) then
    write(*,*) 'n_phi = ', n_phi
    write(*,*) 'ns = ', ns
    write(*,*) 'nt = ', nt
+   write(*,*) 'n_stride = ', n_stride
    write(*,*) 'element_start = ', element_start_percent, ' percent of nb_elements'
 endif
 
@@ -104,7 +108,7 @@ do i_tor=1, n_tor
   endif
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_poincare', rst_format, ierr)
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 
@@ -140,7 +144,7 @@ tol       = 1.d-6!1.e-6
 
 i_var_psi = 1                                  ! the index of the magnetic flux variable
 
-n_lines = element_list%n_elements * ns * nt    ! number of starting points
+n_lines = int(element_list%n_elements * ns * nt / n_stride)   ! number of starting points
 
 allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
 allocate(T0_strike(n_lines),T_strike(n_lines),ZN0_strike(n_lines),ZN_strike(n_lines),PS0_strike(n_lines))
@@ -213,7 +217,7 @@ ikeep = 0
 allocate(RZkeep(2,1000000),scalars(1000000,n_scalars))
 
 
-do i = local_elm_start, local_elm_end
+do i = local_elm_start, local_elm_end, n_stride
 
   do k=1, ns
 
@@ -692,7 +696,7 @@ do i = local_elm_start, local_elm_end
 
         endif
       enddo
-if ((i == local_elm_start) .or.(i == local_elm_end)) then
+if ((i == local_elm_start) .or.(i >= local_elm_end)) then
 write (*,*) 'popopop 9', my_id, i, scalars(ikeep,1:n_scalars)
 endif
 

@@ -7,10 +7,10 @@
 MODEL             = model199
 
 # --- Compiler and options
-FC                = mpif90 
-CC                = mpicc
+FC                = mpif90 #INTELMPI#-mt_mpi
+CC                = mpicc  #INTELMPI#-mt_mpi
 FFLAGS_OMP        = -qopenmp 
-FFLAGS            = -r8 -i4  -DFUNNELED -DUSE_BLOCK
+FFLAGS            = -r8 -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
 FFLAGS           += -fpp
 FFLAGS           += -xHost -O2
 
@@ -28,11 +28,11 @@ USE_PASTIX        = 1
 USE_PASTIX_MURGE  = 0
 USE_HDF5          = 1
 USE_FFTW          = 1
-USE_MUMPS         = 0
+USE_MUMPS         = 1
 
 # --- PaStiX solver
-PASTIX_LIBDIR ?= "<<<<path-to-your-PaStiX-lib-directory>>>>>"
-LIB_PASTIX        = `$(PASTIX_LIBDIR)/pastix-conf --libs` 
+PASTIX_LIBDIR ?= "<<<<path-to-pastix-library-directory>>>>"
+LIB_PASTIX        = `$(PASTIX_LIBDIR)/pastix-conf --libs` -L$(MKL_LIB)
 LIB_PASTIX_MURGE  = `$(PASTIX_LIBDIR)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS   = `$(PASTIX_LIBDIR)/pastix-conf --blas`
 INC_PASTIX        = `$(PASTIX_LIBDIR)/pastix-conf --incs`
@@ -58,6 +58,6 @@ HDF5LIB     = $(HDF5_HOME)/lib/libhdf5hl_fortran.a \
 MUMPS_HOME ?= "<<<<path-to-your-Mumps-directory>>>>>"
 MUMPS_LIB ?= $(MUMPS_HOME)/lib
 MUMPS_INC ?= $(MUMPS_HOME)/include
-LIB_MUMPS = -L$(MUMPS_LIB) -ldmumps -lmumps_common  -lpord -lgfortran
+LIB_MUMPS = -L$(MUMPS_LIB) -ldmumps -lmumps_common  -lpord #-lgfortran
 INC_MUMPS = $(MUMPS_INC)                                                        
 SCALAP    = -L$(MKL_LIB) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64

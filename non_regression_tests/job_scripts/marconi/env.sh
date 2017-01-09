@@ -9,9 +9,9 @@ module load intel/pe-xe-2017--binary intelmpi/2017--binary \
           lapack/3.6.1--intel--pe-xe-2017--binary \
           blas/3.6.0--intel--pe-xe-2017--binary 
 
-#NEWER-PASTIX# export PASTIX_LIBDIR=/marconi/home/userexternal/glatu000/jorek_tools/pastix-5.2.3_impi_17/install
+#NEWER-PASTIX# export PASTIX_LIB=/marconi/home/userexternal/glatu000/jorek_tools/pastix-5.2.3_impi_17/install
 #NEWER-PASTIX# export MUMPS_HOME=/marconi/home/userexternal/glatu000/jorek_tools/mumps-5.0.2_impi_17
-export PASTIX_LIBDIR=/marconi/home/userexternal/glatu000/jorek_tools/pastix_3184_impi_17/install
+export PASTIX_LIB=/marconi/home/userexternal/glatu000/jorek_tools/pastix_3184_impi_17/install
 export MUMPS_HOME=/marconi/home/userexternal/glatu000/jorek_tools/mumps-5.0.2_impi_17             
 export LANG=C
 export JOREK_HOST=marconi

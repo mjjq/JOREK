@@ -7,10 +7,10 @@
 MODEL             = model199
 
 # --- Compiler and options
-FC                = mpif90 
-CC                = mpicc
+FC                = mpif90 -mt_mpi
+CC                = mpicc -mt_mpi
 FFLAGS_OMP        = -qopenmp 
-FFLAGS            = -r8 -i4 -DUSE_BLOCK -DFUNNELED 
+FFLAGS            = -r8 -i4 -DUSE_BLOCK -DFUNNELED #-DWORLDWAR2
 FFLAGS           += -fpp
 FFLAGS           += -axmic-avx512 -qopt-prefetch=5 -O2
 
@@ -31,15 +31,15 @@ USE_FFTW          = 1
 USE_MUMPS         = 0
 
 # --- PaStiX solver
-PASTIX_HOME= /marconi/home/userexternal/glatu000/jorek_tools/pastix-5.2.3_knl_17
-LIB_PASTIX        = `$(PASTIX_HOME)/install/pastix-conf --libs` -L${MKL_LIB}
-LIB_PASTIX_MURGE  = `$(PASTIX_HOME)/install/pastix-conf --libs_murge`
-LIB_PASTIX_BLAS   = `$(PASTIX_HOME)/install/pastix-conf --blas`
-INC_PASTIX        = `$(PASTIX_HOME)/install/pastix-conf --incs`
+PASTIX_LIB ?= "<<<<path-to-pastix-library-directory>>>>"
+LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` -L${MKL_LIB}
+LIB_PASTIX_MURGE  = `$(PASTIX_LIB)/pastix-conf --libs_murge`
+LIB_PASTIX_BLAS   = `$(PASTIX_LIB)/pastix-conf --blas`
+INC_PASTIX        = `$(PASTIX_LIB)/pastix-conf --incs`
 
 # --- FFTW Library
-LIBFFTW           = -L$(FFTW_HOME)/lib -lfftw3
-INC_FFTW          = -I$(FFTW_HOME)/include
+LIBFFTW           = -L$(FFTW_LIB) -lfftw3
+INC_FFTW          = -I$(FFTW_INC)
 
 # --- Usually not to be changed
 FFLAGS_FIXEDFORM := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
@@ -51,6 +51,9 @@ HDF5INCLUDE = $(HDF5_HOME)/include
 HDF5LIB     = -L$(HDF5_HOME)/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5 -L$(SZIP_LIB) -lsz -lz
 
 # --- MUMPS solver
-#LIB_MUMPS = -L$(MUMPS_LIB) -ldmumps -lmumps_common -lptesmumps -lptscotch -lptscotcherr -lscotch -lpord
-#INC_MUMPS = $(MUMPS_INC)                                                        
-#SCALAP    = -L$(MKL_LIB) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64
+MUMPS_HOME ?= "<<<<path-to-your-Mumps-directory>>>>>"
+MUMPS_LIB ?= $(MUMPS_HOME)/lib
+MUMPS_INC ?= $(MUMPS_HOME)/include
+LIB_MUMPS = -L$(MUMPS_LIB) -ldmumps -lmumps_common  -lpord #-lgfortran
+INC_MUMPS = $(MUMPS_INC)                                                        
+SCALAP    = -L$(MKL_LIB) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64

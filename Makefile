@@ -95,7 +95,7 @@ all: $(basename $(notdir $(PROGRAM_SOURCES)))
 
 # Special cases
 # Add here: Global includes (as the line below)
-INCLUDES += -Itiming # for r3_info.h
+INCLUDES +=-Itiming # for r3_info.h
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
 eqdsk2jorek: LIBS+=-ldierckx

@@ -31,15 +31,15 @@ USE_FFTW          = 1
 USE_MUMPS         = 1
 
 # --- PaStiX solver
-PASTIX_LIBDIR ?= "<<<<path-to-pastix-library-directory>>>>"
-LIB_PASTIX        = `$(PASTIX_LIBDIR)/pastix-conf --libs` -L$(MKL_LIB)
-LIB_PASTIX_MURGE  = `$(PASTIX_LIBDIR)/pastix-conf --libs_murge`
-LIB_PASTIX_BLAS   = `$(PASTIX_LIBDIR)/pastix-conf --blas`
-INC_PASTIX        = `$(PASTIX_LIBDIR)/pastix-conf --incs`
+PASTIX_LIB ?= "<<<<path-to-pastix-library-directory>>>>"
+LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` -L$(MKL_LIB)
+LIB_PASTIX_MURGE  = `$(PASTIX_LIB)/pastix-conf --libs_murge`
+LIB_PASTIX_BLAS   = `$(PASTIX_LIB)/pastix-conf --blas`
+INC_PASTIX        = `$(PASTIX_LIB)/pastix-conf --incs`
 
 # --- FFTW Library
-LIBFFTW           = /lib64/libfftw3.a
-INC_FFTW          = -I/usr/include
+LIBFFTW           = $(FFTW_LIB)/libfftw3.a
+INC_FFTW          = -I$(FFTW_INC)
 
 # --- Usually not to be changed
 FFLAGS_FIXEDFORM := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)

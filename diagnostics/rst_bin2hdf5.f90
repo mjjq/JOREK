@@ -26,14 +26,14 @@ program RST_convert_bin2hdf5
 
   call MPI_Init_thread(MPI_THREAD_FUNNELED, provided, StatInfo)
   call init_threads()
-
+  
   call initialise_parameters(0, '__NO_FILENAME__')
   call vacuum_init(0, freeboundary_equil, freeboundary, resistive_wall)
 
   ! Parse command line arguments
   call cla_init
   call pcla_register('filename', 'name of the restart file to convert',  cla_char, 'jorek_restart.rst')    
-  call cla_register('-v','--verbose','enable verbose output', cla_flag,'v')
+  call cla_register('-v','--verbose','enable verbose output', cla_flag,'n')
   call cla_validate("rst_bin2hdf5")
   call cla_get('filename',filein)
   verbose = cla_key_present('--verbose')
@@ -43,7 +43,6 @@ program RST_convert_bin2hdf5
 
   ! --- Initialize mode and mode_type arrays
   call det_modes()
-  
   rst_format = 0
 
   ! --- Check for presence of the restart file
@@ -60,19 +59,18 @@ program RST_convert_bin2hdf5
 
   index_now = index_start
   t_now     = t_start
-
   visco     = visco_rst
   visco_par = visco_par_rst
-
   eta       = eta_rst
 
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+  
   if ( freeboundary ) then
     call get_vacuum_response(0, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
       resistive_wall)
     call update_response(tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', 0)
-    if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(0, resistive_wall)
+    if ( .not. wall_curr_initialized ) call init_wall_currents(0, resistive_wall)
   end if
 
   ! -- Write the HDF5 restart file

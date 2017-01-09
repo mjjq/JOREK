@@ -33,7 +33,7 @@ program RST_convert_hdf52bin
   ! Parse command line arguments
   call cla_init
   call pcla_register('filename', 'name of the restart hdf5 file to convert',  cla_char, 'jorek_restart.h5')    
-  call cla_register('-v','--verbose','enable verbose output', cla_flag,'v')
+  call cla_register('-v','--verbose','enable verbose output', cla_flag,'n')
   call cla_validate("rst_hdf52bin")
   call cla_get('filename',filein)
   verbose = cla_key_present('--verbose')
@@ -51,7 +51,6 @@ program RST_convert_hdf52bin
 
   ! --- Initialize mode and mode_type arrays
   call det_modes()
-  
   rst_format = 0
 
   ! --- Read the restart HDF5 file
@@ -60,19 +59,18 @@ program RST_convert_hdf52bin
 
   index_now = index_start
   t_now     = t_start
-  
   visco     = visco_rst
   visco_par = visco_par_rst
-
   eta       = eta_rst
 
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+  
   if ( freeboundary ) then
     call get_vacuum_response(0, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
       resistive_wall)
     call update_response(tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', 0)
-    if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(0, resistive_wall)
+    if ( .not. wall_curr_initialized ) call init_wall_currents(0, resistive_wall)
   end if
 
   ! -- Write the BINARY restart file

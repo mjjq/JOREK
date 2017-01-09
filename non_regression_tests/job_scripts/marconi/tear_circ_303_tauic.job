@@ -1,0 +1,44 @@
+#!/bin/bash
+#PBS -N tear_circ_303_tauic
+#PBS -q xfuaprod
+#PBS -A FUA11_AUGJOR
+#PBS -l select=1:ncpus=36:mpiprocs=2
+#PBS -l place=excl
+#PBS -j oe
+#PBS -l walltime=0:15:00
+#PBS -m e
+#PBS -o tear_circ_303_tauic.log
+#PBS -e tear_circ_303_tauic.err
+
+########################################################################
+# Look to non_regression_tests/testcases/tear_circ_303_tauic/settings.sh
+# to determine nb of nodes, MPI processes, and nb of threads
+########################################################################
+
+cd $PBS_O_WORKDIR
+
+ulimit -l unlimited
+ulimit -s unlimited
+cat $PBS_NODEFILE > hosts.txt
+
+
+CASE=tear_circ_303_tauic
+JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
+echo " jorek_home = " ${JOREK_HOME}
+
+export OMP_NUM_THREADS=18
+export KMP_AFFINITY=verbose
+export I_MPI_DEBUG=4
+
+#export NPROC=`qstat -f $PBS_JOBID | awk '/Resource_List.mpiprocs/ {print $3}'`
+
+cd ${JOREK_HOME}
+source non_regression_tests/job_scripts/marconi/env.sh
+echo $MPIRUN
+## Compile with:       
+# non_regression_tests/run_test.sh -p $CASE
+## Initial Long run: 
+#non_regression_tests/run_test.sh -k -i -n $CASE 
+## Restart run: 
+non_regression_tests/run_test.sh -k -n $CASE 
+

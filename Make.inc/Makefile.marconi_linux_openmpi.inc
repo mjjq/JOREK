@@ -48,11 +48,7 @@ FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 FFLAGS_NO_OMP     = $(FFLAGS) $(DEBUGFLAGS)
 
 HDF5INCLUDE = $(HDF5_HOME)/include
-HDF5LIB     = $(HDF5_HOME)/lib/libhdf5hl_fortran.a \
-              $(HDF5_HOME)/lib/libhdf5_hl.a \
-              $(HDF5_HOME)/lib/libhdf5_fortran.a \
-              $(HDF5_HOME)/lib/libhdf5.a \
-              $(SZIP_LIB)/libsz.a -lz
+HDF5LIB     = -L$(HDF5_HOME)/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5 -L$(SZIP_LIB) -lsz -lz
 
 # --- MUMPS solver
 MUMPS_HOME ?= "<<<<path-to-your-Mumps-directory>>>>>"

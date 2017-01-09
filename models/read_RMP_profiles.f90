@@ -52,8 +52,8 @@ subroutine read_RMP_profiles(bnd_node_list)
   rewind(87)
 !==========================================================================RMP spectrum 
 
-  if ( k .ne. bnd_node_list%n_bnd_nodes*Number_RMP_harmonics ) then
-     write(*,*) 'ERROR in read_RMP_profiles:  ''RMP_psi_cos_file'' has a wrong dimension'
+  if ( k .lt. bnd_node_list%n_bnd_nodes*Number_RMP_harmonics ) then
+     write(*,*) 'ERROR in read_RMP_profiles:  ''RMP_psi_cos_file'' is too small, wrong dimension'
      write(*,*) 'k_err = ', k
      return
   end if
@@ -68,8 +68,8 @@ subroutine read_RMP_profiles(bnd_node_list)
   rewind(88)
 !==========================================================================RMP spectrum 
 
-  if ( k .ne. bnd_node_list%n_bnd_nodes*Number_RMP_harmonics ) then
-     write(*,*) 'ERROR in read_RMP_profiles:  ''RMP_psi_sin_file'' has a wrong dimension'
+  if ( k .lt. bnd_node_list%n_bnd_nodes*Number_RMP_harmonics ) then
+     write(*,*) 'ERROR in read_RMP_profiles:  ''RMP_psi_sin_file'' is too small, wrong dimension'
      write(*,*) 'k1_err = ', k
      return
   end if

@@ -13,6 +13,8 @@ module load intel/pe-xe-2017--binary intelmpi/2017--binary \
 #NEWER-PASTIX# export MUMPS_HOME=/marconi/home/userexternal/glatu000/jorek_tools/mumps-5.0.2_impi_17
 export PASTIX_LIB=/marconi/home/userexternal/glatu000/jorek_tools/pastix_3184_impi_17/install
 export MUMPS_HOME=/marconi/home/userexternal/glatu000/jorek_tools/mumps-5.0.2_impi_17             
+export FFTW_LIB=/lib64
+export FFTW_INC=/usr/include
 export LANG=C
 export JOREK_HOST=marconi
 export compilethreads=32

@@ -176,7 +176,7 @@ contains
 
               do in=1, n_tor  !========================do n_tor
 
-              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
+!              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
                  do k=1, n_var ! ================================do variables
 
@@ -196,7 +196,8 @@ contains
                        
                        if (RMP_on ) then
 !=========================================================RMP spectrum========================================Marina
-                       
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
+
                           if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) &
                               .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos corresponds to cos(n_perturbation)
@@ -259,7 +260,7 @@ contains
                              endif
                           endif
 
-                          
+                       enddo  !(end RMP harmonics)   
                        endif !(end RMP)
 !======================================= end RMPs ==================================
 
@@ -680,6 +681,7 @@ contains
 ! ======================================================================================================================
                        
                        if (RMP_on ) then
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
                           if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
@@ -757,9 +759,8 @@ contains
                                      RHS_loc, ZBIG * delta_psi_rmp_dt)
                              endif
                           endif
-                       endif
-                       
-!======================================= end RMPs ==================================
+                        enddo        !(end RMP harmonics)
+                        endif        !(end RMPs on)  ==================================
 
 
                        if (                                                      &
@@ -803,7 +804,7 @@ contains
 
                  enddo  ! ================================do variables
 
-              enddo !===========do RMP harmonics , by defalt=1
+!              enddo !===========do RMP harmonics , by defalt=1
 
               enddo !========================do n_tor
 

@@ -2,7 +2,7 @@
 #PBS -N _CASE_
 #PBS -q knl
 # #PBS -A FUA21_<project-id>
-#PBS -l mcdram=cache,numa=snc2
+#PBS -l mcdram=cache:numa=snc2
 #PBS -l place=excl
 #PBS -l walltime=0:15:00
 #PBS -l select=1:mpiprocs=2

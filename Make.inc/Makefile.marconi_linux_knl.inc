@@ -1,7 +1,7 @@
 # Makefile.inc file for compiling JOREK on the Marconi-Fusion Supercomputer
 #
-# * Make sure to set PASTIX_HOME below to the correct directory.
-# * Make sure that you have the following modules loaded: intel intelmpi mkl fftw hdf5 szip
+# Make sure to set environment variables and load modules as described in 
+#   http://jorek.eu/wiki/doku.php?id=marconi-fusion_compile_knl_intelmpi_i17&do=
 
 # --- Select physics model
 MODEL             = model199
@@ -9,26 +9,15 @@ MODEL             = model199
 # --- Compiler and options
 FC                = mpif90 -mt_mpi
 CC                = mpicc -mt_mpi
-FFLAGS_OMP        = -qopenmp 
-FFLAGS            = -r8 -i4 -DUSE_BLOCK -DFUNNELED #-DWORLDWAR2
-FFLAGS           += -fpp
+FFLAGS            = -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
 FFLAGS           += -axmic-avx512 -qopt-prefetch=5 -O2
-
-# --- Debugging options
-#DEBUGFLAGS        = -g
-#DEBUGFLAGS      += -warn all,nounused
-#DEBUGFLAGS      += -check all,noarg_temp_created
-#DEBUGFLAGS      += -debug all
-#DEBUGFLAGS      += -debug-parameters
-#DEBUGFLAGS      += -fstack-security-check
-#DEBUGFLAGS      += -ftrapuv
 
 # --- Various switches
 USE_PASTIX        = 1
 USE_PASTIX_MURGE  = 0
 USE_HDF5          = 1
 USE_FFTW          = 1
-USE_MUMPS         = 0
+USE_MUMPS         = 1
 
 # --- PaStiX solver
 PASTIX_LIB ?= "<<<<path-to-pastix-library-directory>>>>"

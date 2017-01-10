@@ -1,5 +1,5 @@
 #!/bin/bash
-LIST=`cd ../../..;./non_regression_tests/run_test.sh -s`
+LIST=`cd ../../..;./non_regression_tests/run_test.sh -L`
 echo "== Creating job files =="
 for NAME in $LIST; do 
   TG=${NAME}.job; 

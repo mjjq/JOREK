@@ -27,8 +27,6 @@ JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 echo " jorek_home = " ${JOREK_HOME}
 
 export OMP_NUM_THREADS=18
-export KMP_AFFINITY=verbose
-export I_MPI_DEBUG=4
 
 #export NPROC=`qstat -f $PBS_JOBID | awk '/Resource_List.mpiprocs/ {print $3}'`
 

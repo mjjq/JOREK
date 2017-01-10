@@ -270,6 +270,55 @@ fi
 ;;
 
 # -----------------------------------------------------------------
+# marconi (CINECA)
+# -----------------------------------------------------------------
+marconi*)
+
+# batch control
+# -------------
+((THPNODE=36))
+MPIPROCS=2
+NTHREAD=18
+NNODES=2
+((NPES=NNODES*MPIPROCS))
+PROJ=FUA11_JOREKED
+WALLTIME=00:30:00
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+SRCDIR=$(dirname $PWD)
+WKDIR=`pwd`
+UTILDIR=${SRCDIR}/util
+DIR=$(basename $(dirname $PWD))
+REP=`echo $DIR | tr -s "/" " " | awk '{print $1}' `
+RESDIR1=$CINECA_SCRATCH/${REP}
+RESDIR=${RESDIR1}/${CASE}
+echo " RESDIR  " $RESDIR
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
+# -----------------------------------------------------------------
 # occigen (CINES)
 # -----------------------------------------------------------------
 occigen*)
@@ -963,6 +1012,39 @@ EOF
 ;;
 
 # -----------------------------------------------------------------
+# marconi (IRFM)
+# -----------------------------------------------------------------
+marconi*)
+
+JOREKENV="source ${SRCDIR}/../non_regression_tests/job_scripts/marconi/env.sh"
+CMD_MPIRUN="$JOREKENV; ${MPIRUN} ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -A ${PROJ}
+#PBS -q xfuaprod
+#PBS -j oe
+#PBS -l place=excl
+#PBS -l walltime=${WALLTIME}
+#PBS -l select=${NNODES}:ncpus=36:mpiprocs=${MPIPROCS}
+
+# environment
+#------------
+ulimit -l unlimited
+ulimit -s unlimited
+
+export OMP_NUM_THREADS=18
+
+EOF
+;;
+
+
+# -----------------------------------------------------------------
 # occigen (CINES)
 # -----------------------------------------------------------------
 occigen*)
@@ -1238,5 +1320,6 @@ EOF
 chmod +x go_$DATANAME.cmd
 cd ${WKDIR}
 ${CMD_SUB}
+
 
 

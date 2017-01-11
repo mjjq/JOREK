@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export LANG=C
+export ARCH=marconi
 export JOREK_HOST=marconi
 export compilethreads=32
 USE_INTELMPI=$(mpirun -V | grep -c -i "Intel.*MPI")

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 export LANG=C
-export ARCH=marconi_knl
+export ARCH=marconi
 export JOREK_HOST=marconi_knl
 export compilethreads=32
 

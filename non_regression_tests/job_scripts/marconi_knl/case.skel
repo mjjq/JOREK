@@ -7,6 +7,7 @@
 #PBS -l walltime=0:15:00
 #PBS -l select=1:mpiprocs=2
 #PBS -j oe
+#PBS -V
 #PBS -m e
 #PBS -o _CASE_.log
 #PBS -e _CASE_.err

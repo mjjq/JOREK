@@ -5,6 +5,7 @@
 #PBS -l select=1:ncpus=36:mpiprocs=2
 #PBS -l place=excl
 #PBS -j oe
+#PBS -V
 #PBS -l walltime=0:15:00
 #PBS -m e
 #PBS -o _CASE_.log

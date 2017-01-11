@@ -276,13 +276,23 @@ marconi*)
 
 # batch control
 # -------------
-((THPNODE=36))
-MPIPROCS=2
-NTHREAD=18
-NNODES=2
-((NPES=NNODES*MPIPROCS))
-PROJ=FUA11_JOREKED
-WALLTIME=00:30:00
+if [ "${JOREK_HOST}" == "marconi_knl" ]; then
+  ((THPNODE=68))
+  MPIPROCS=2
+  NTHREAD=34
+  NNODES=2
+  ((NPES=NNODES*MPIPROCS))
+  PROJ=FUA21_JOREKED
+  WALLTIME=00:30:00
+else
+  ((THPNODE=36))
+  MPIPROCS=2
+  NTHREAD=18
+  NNODES=2
+  ((NPES=NNODES*MPIPROCS))
+  PROJ=FUA11_JOREKED
+  WALLTIME=00:30:00
+fi 
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
 echo " NPES = $NNODES x $MPIPROCS = " $NPES
@@ -1026,7 +1036,28 @@ CMD_SUBRST=${CMD_SUB}
 
 # batch job creation
 # ------------------
-cat <<EOF > go_$DATANAME.cmd
+if [ "${JOREK_HOST}" == "marconi_knl" ]; then
+  cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -A ${PROJ}
+#PBS -q knl
+#PBS -V
+#PBS -j oe
+#PBS -l place=excl
+#PBS -l walltime=${WALLTIME}
+#PBS -l select=${NNODES}:mpiprocs=${MPIPROCS}
+
+# environment
+#------------
+ulimit -l unlimited
+ulimit -s unlimited
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+else
+  cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
 #PBS -N ${CASENAME}
 #PBS -A ${PROJ}
@@ -1042,10 +1073,10 @@ cat <<EOF > go_$DATANAME.cmd
 ulimit -l unlimited
 ulimit -s unlimited
 
-export OMP_NUM_THREADS=18
-${JOREKENV}
+export OMP_NUM_THREADS=${NTHREAD}
 
 EOF
+fi
 ;;
 
 

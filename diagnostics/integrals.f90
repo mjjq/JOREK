@@ -186,6 +186,13 @@ do ife =1, element_list%n_elements
   enddo
 enddo
 
+density_in   = D_int
+density_out  = D_ext
+pressure_in  = P_int
+pressure_out = P_ext
+current_in   = C_intern
+current_out  = C_ext
+
 current = C_hel / MU_zero
 beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)

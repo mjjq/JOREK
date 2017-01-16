@@ -1,0 +1,56 @@
+   kkEQdd2sol: int,TYP=      2      2
+   kkEQddsol: intrnl=       5
+Experiment (e.g. AUGD):
+micdu
+Diagnostic (e.g.eqi):
+eqb
+Shot:
+31128
+Edition:
+7
+Time:
+2.4
+rzbnd_file:
+rz.dat
+ne_file:
+ne.dat
+num_points:
+3000
+default_array_size:
+2000
+
+Available timepoints:  2.40000009537   
+
+Equilibrium = micdu/eqb/31128/7/2.40000009537
+
+R_axis      =  1.73775625229 m
+Z_axis      =  0.0628327801824 m
+Psi_axis    =  1.20351803303 Wb
+R_xpoint    =  1.43054163456 m
+Z_xpoint    =  -0.954596459866 m
+Psi_xpoint  =  0.0494873933494 Wb
+(Psi_axis - Psi_xpoint) / 2pi =  0.183669680784
+
+
+pres_axis   = 111514.703125 Pa
+ne_axis     = 5.2318422e+19 m^-3
+T_axis      = 17.9081980209 keV (= T_e + T_i)
+q0          =  1.02405208347
+q95         =  3.82634091268
+R_geo       = 1.64907519 m
+Z_geo       = -0.0150409 m
+F0          = 3.03592621927 T m
+0.140133508842 0.00140133508842
+
+plsq_rho    = [-0.19640138 -2.00724314  5.30326072 -5.80648317  2.43836269  0.06989764
+  0.9735231 ]  (fitting coefficients)
+
+plsq_T      = [ -1.8591367    3.28607182 -10.87436367  17.22289673  -8.76925096
+   0.06340249   1.00049954]  (fitting coefficients)
+
+plsq_ffp    = [ -9.56316714e-01   6.37990285e-01   4.13552326e+01  -2.70481425e+02
+   7.60368167e+02  -1.07581391e+03   6.55466206e+02  -5.72239150e+02
+   1.44322417e+00   3.45901572e-01]  (fitting coefficients)
+
+Plotting control plots of the fits to 'control.pdf'.
+

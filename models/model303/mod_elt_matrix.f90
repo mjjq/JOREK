@@ -60,6 +60,7 @@ real*8     :: amat_51, amat_52, amat_55, amat_56, amat_57, amat_61, amat_62, ama
 real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_15
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
+real*8     :: freeb_curr
 logical    :: xpoint2
 !==================MB: velocity profile is kept by a source which compensating diffusion
 real*8     :: Vt0,Omega_tor0_x,Omega_tor0_y,Vt0_x,Vt0_y
@@ -127,6 +128,9 @@ eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_st = 0.d0; eq_ss = 0.d0; eq_tt = 0.d0;
 psieq   = 0.d0; psieq_s = 0.d0; psieq_t = 0.d0
 #endif
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
+
+freeb_curr =  0.d0
+if (freeboundary) freeb_curr = 1.d0
 
 current_source  = 0.d0
 particle_source = 0.d0
@@ -672,7 +676,7 @@ do ms=1, n_gauss
 !#  equation 3                                                                                     #
 !###################################################################################################
 
-           rhs_ij_3 = 0.d0 !- ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * tstep
+           rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac  *  freeb_curr
 
 !###################################################################################################
 !#  equation 4                                                                                     #
@@ -1068,8 +1072,8 @@ do ms=1, n_gauss
 !#  equation 3                                                                                     #
 !###################################################################################################
 
-                 amat_33 = v * zj / BigR * xjac                               * tstep
-                 amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac         * tstep
+                 amat_33 = v * zj / BigR * xjac                             
+                 amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac        
 
 !###################################################################################################
 !#  equation 4                                                                                     #

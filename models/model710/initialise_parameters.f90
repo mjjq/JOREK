@@ -6,7 +6,7 @@ use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
-use vacuum,        only: vacuum_preset
+use vacuum
 
 implicit none
 
@@ -66,8 +66,15 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 linear_run, export_for_nemec,                       &
                 output_bnd_elements,                                &
                 wall_file,                                          &
-                first_target_point, last_target_point,		    &
-                n_limiter, R_limiter, Z_limiter
+                first_target_point, last_target_point,		          &
+                n_limiter, R_limiter, Z_limiter,                    &
+                amix, amix_freeb, equil_accuracy,                   &
+                equil_accuracy_freeb, current_ref, FB_Ip_position,  &
+                FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
+                FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
+                n_feedback_current, n_feedback_vertical,            &
+                n_iter_freeb, n_coils_nml, coils0,                  &
+                Zaxis_find_limit, PF_pert_start_time
 
 if (my_id .eq. 0) then
 

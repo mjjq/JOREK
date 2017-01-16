@@ -31,7 +31,8 @@ function printusage() {
     echo "   -i            Launch the inital, full-length run"
     echo "                 (not only the test starting from a restart file)"
     echo "   -j nthreads   Set the number of compile threads (default 1)"
-    echo "   -l            List available test cases."
+    echo "   -l            List available test cases using long format."
+    echo "   -L            List available test cases without any description (short format)"
     echo "   -n            Do not compile (assume executables already exist)"
     echo "   -p            Prepare the case but do not run it"
     echo "   -t tempdir    Specify a temp directory used for the test run"
@@ -103,7 +104,7 @@ while [ $# -gt 0 ]; do
 	echo "Available test cases:"
 	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
 	for i in $cases; do
-	    if [ ! -f ${i}/BROKEN ]; then
+	    if [ -e ${i}/.version ]; then
   	      case=$(basename $i)
 	      source ${startdir}/testcases/$case/settings.sh
 	      printf " %-25s %s\n" "$case" "$description"
@@ -111,6 +112,15 @@ while [ $# -gt 0 ]; do
 	done
 	echo ""
 	exit 1
+    elif [ "$option" == "-L" ]; then
+	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
+	for i in $cases; do
+	    if [ -e ${i}/.version ]; then
+              case=$(basename $i)
+              echo $case
+            fi
+	done
+	exit 0
     elif [ "$option" == "-i" ]; then
 	initialrun="yes"
 	shift

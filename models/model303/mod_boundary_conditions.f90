@@ -34,6 +34,7 @@ contains
 
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use data_structure
+    use vacuum, ONLY: is_freebound
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep,RMP_har_cos,RMP_har_sin, &
@@ -762,21 +763,13 @@ contains
                         enddo        !(end RMP harmonics)
                         endif        !(end RMPs on)  ==================================
 
-
-                       if (                                                      &
-                            ((freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &               ! exclude condition on psi (freeboundary) except n=0
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))   &
+                       ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
+                       if (      (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))        &
                             .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos_spectrum(1) ))   &
-
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)))  & 
-                            .or. (k .eq. 2)    &
-                            .or. (k .eq. 3)    &
-                            .or. (k .eq. 4)    &
-                            .or. (k .eq. 5)    &
-                            .or. (k .eq. 6)    &
-                            .or. (k .eq. 7)    &
-                            ) then
+                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))                               &
+                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics) )) & 
+                            .or. (.not. is_freebound(in,k))                                                               &
+                          ) then
 
                           index_node = node_list%node(inode)%index(1)
 

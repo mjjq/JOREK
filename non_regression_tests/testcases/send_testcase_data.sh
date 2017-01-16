@@ -30,7 +30,7 @@ testname=$(basename $testcasedir)
 TGZFILE=${testname}${VERSION}.tgz
 
 echo "Creating tarball ${TGZFILE}"
-tar cvzf ${TGZFILE} .info begin.h5 end.h5  || exit 1
+tar cvzf ${TGZFILE} .info begin.h5 end.h5 ${extra_remote_files} || exit 1
  
 echo "Uploading ${TGZFILE}"
 TESTNAME=$(basename $TESTDIR)

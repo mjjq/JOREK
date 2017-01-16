@@ -77,7 +77,9 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_coils_nml, coils0,                  &
-                Zaxis_find_limit, PF_pert_start_time
+                Zaxis_find_limit, PF_pert_start_time,               &
+                first_target_point, last_target_point,		    &
+                n_limiter, R_limiter, Z_limiter
 
 if (my_id .eq. 0) then
 
@@ -196,6 +198,7 @@ if (my_id .eq. 0) then
   
   if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"part_src_out_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+  
 endif
 
 ! --- Read numerical profiles for rho, T, and ff'.

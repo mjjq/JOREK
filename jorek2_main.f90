@@ -63,7 +63,7 @@ program JOREK2
   use mod_clock
 #ifdef USE_HDF5
   use hdf5
-  use HDF5_io_module
+  use hdf5_io_module
   use out_save_module
 #endif
   use mpi_mod
@@ -84,7 +84,6 @@ program JOREK2
 #endif
   
 #include "r3_info.h"
-#include "version.h"
   
   interface
 
@@ -114,6 +113,11 @@ program JOREK2
       logical(kind=4),             intent(in)    :: xpoint2
       logical(kind=4),             intent(in)    :: nice_q
     end subroutine equilibrium
+
+    subroutine set_trap_sigterm() bind(C)
+    end subroutine set_trap_sigterm
+    logical function sigterm_called() bind(C)
+    end function sigterm_called
   end interface
   
   type (type_surface_list) :: surface_list
@@ -138,7 +142,7 @@ program JOREK2
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
-  logical                  :: solve_only
+  logical                  :: solve_only, to_quit
   integer*4                :: rank, comm_size 
   real*8                   :: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
   real*8                   :: zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
@@ -146,7 +150,7 @@ program JOREK2
   real*8                   :: zTe, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz
   real*8                   :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
   real*8                   :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, psi
-  real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out
+  real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
   logical                  :: is_local, file_exists
@@ -220,6 +224,9 @@ required = 0
     open(42, file='STOP_NOW', iostat=ierr)
     if ( ierr == 0 ) close(42, status='delete')
   end if
+
+  ! --- Set a signal handler for SIGTERM
+  call set_trap_sigterm()
 
   ! --- Preset some solver variables
   pastix_initialised = .false.
@@ -1081,6 +1088,15 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
+       call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
+         psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
+         beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
+         density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
+         pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
+         part_src_in_t(index_now), part_src_out_t(index_now))
+       R_axis_t(index_now)   = R_axis
+       Z_axis_t(index_now)   = Z_axis
+       psi_axis_t(index_now) = psi_axis
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
@@ -1168,6 +1184,17 @@ required = 0
     	write(*,*)
     	write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
     	write(*,*)
+      end if
+      exit jstep_loop
+    end if
+
+    ! --- Exit the code if SIGTERM has been called on any node
+    call MPI_ALLReduce(sigterm_called(), to_quit, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, ierr)
+    if (to_quit) then ! only present on id 0
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,*) ">>>>> SIGTERM RECEIVED: EXITING THE CODE <<<<<"
+        write(*,*)
       end if
       exit jstep_loop
     end if

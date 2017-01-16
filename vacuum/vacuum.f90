@@ -217,7 +217,7 @@ module vacuum
     
 #ifdef USE_HDF5
     use hdf5
-    use HDF5_io_module
+    use hdf5_io_module
     
     ! --- Routine parameters
     integer(HID_T), intent(in) :: file_id
@@ -250,8 +250,8 @@ module vacuum
        end if
        
        if ( resistive_wall ) then
-          call HDF5_integer_saving(file_id,n_wall_curr,"n_wall_curr")
-          call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall")
+          call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
+          call HDF5_integer_reading(file_id,n_dof_starwall,"n_dof_starwall")
           
           if ( allocated(wall_curr) ) deallocate(wall_curr)
           allocate( wall_curr(n_wall_curr) )
@@ -334,7 +334,7 @@ module vacuum
     
 #ifdef USE_HDF5
     use hdf5
-    use HDF5_io_module
+    use hdf5_io_module
 
     ! --- Routine parameters
     integer(HID_T), intent(in) :: file_id

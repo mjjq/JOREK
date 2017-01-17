@@ -153,6 +153,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) t_start
   
 #ifdef USE_HDF5
+  h5_nbsave_all = 0
   if ( rst_format > 1 ) then
     read(21) h5_nbsave_all
   end if

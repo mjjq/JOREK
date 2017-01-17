@@ -38,7 +38,7 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub            = 2        		! Number of subdivisions of the cubic finite elements into linear pieces
+nsub            = 5        		! Number of subdivisions of the cubic finite elements into linear pieces
 without_n0_mode = .false.  		! If true, do not include the n=0 mode (i_tor=1)
 periodic        = .true.		! Are we doing the whole tor?
 density_only    = .false.		! Write density only (for smaller vtk file)

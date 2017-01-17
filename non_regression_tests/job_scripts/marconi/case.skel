@@ -1,27 +1,39 @@
 #!/bin/bash
-#SBATCH -J tear_circ_303_tauic
-#SBATCH -N 2
-#SBATCH -n 2
-#SBATCH -t 00:20:00
-#SBATCH -o tear_circ_303_tauic.%j.out
-#SBATCH -e tear_circ_303_tauic.%j.err
+#PBS -N _CASE_
+#PBS -q xfuaprod
+#PBS -A FUA11_AUGJOR
+#PBS -l select=1:ncpus=36:mpiprocs=2
+#PBS -l place=excl
+#PBS -j oe
+#PBS -V
+#PBS -l walltime=0:15:00
+#PBS -m e
+#PBS -o _CASE_.log
+#PBS -e _CASE_.err
 
 ########################################################################
-# Look to non_regression_tests/testcases/tear_circ_303_tauic/settings.sh
+# Look to non_regression_tests/testcases/_CASE_/settings.sh
 # to determine nb of nodes, MPI processes, and nb of threads
 ########################################################################
 
-ulimit -d unlimited
-ulimit -s unlimited
-ulimit -Sa
-ulimit -Ha
+cd $PBS_O_WORKDIR
 
-CASE=tear_circ_303_tauic
+ulimit -l unlimited
+ulimit -s unlimited
+cat $PBS_NODEFILE > hosts.txt
+
+
+CASE=_CASE_
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 echo " jorek_home = " ${JOREK_HOME}
 
+export OMP_NUM_THREADS=18
+
+#export NPROC=`qstat -f $PBS_JOBID | awk '/Resource_List.mpiprocs/ {print $3}'`
+
 cd ${JOREK_HOME}
-source non_regression_tests/job_scripts/helios/env.sh
+source non_regression_tests/job_scripts/marconi/env.sh
+echo $MPIRUN
 ## Compile with:       
 # non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 

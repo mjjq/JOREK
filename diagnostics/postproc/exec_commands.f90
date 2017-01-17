@@ -210,6 +210,16 @@ module exec_commands
     ierr = 0
     
     write(file_name,'(a,i5.5)') 'jorek', istep
+    if ( rst_hdf5 ) then
+      inquire (file=trim(file_name)//'.h5', exist=file_exists)
+    else
+      inquire (file=trim(file_name)//'.rst', exist=file_exists)
+    end if
+    if ( .not. file_exists ) then
+      ierr = 42
+      return
+    end if
+    
     write(*,*)
     write(*,'(a,i5.5,a)') '#################### TIME STEP ', istep, ' ####################'
     write(*,*)

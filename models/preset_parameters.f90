@@ -41,7 +41,7 @@ subroutine preset_parameters
   restart      = .false.
   import_equil = .false.
   regrid       = .false.
-  rst_format   = 0             ! use 'old' format for restart import
+  rst_format   = 2             ! use 'old' format for restart import
 
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?

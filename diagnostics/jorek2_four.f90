@@ -23,8 +23,8 @@ program JOREK2_FOUR
   character(len=64), parameter :: THIS_ROUTINE_NAME = 'JOREK2_FOUR'
 
   ! ---Field line tracing parameters
-  integer                  :: nstpts, nmaxsteps, nsmallsteps
-  real                     :: deltaphi, rad_range(2)
+  integer                  :: nstpts, nmaxsteps, nsmallsteps, nmaxsteps_corr
+  real                     :: deltaphi, rad_range(2), deltaphi_corr
   namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps ,rad_range, nTht
   
   ! --- Initialize mode and mode_type arrays
@@ -62,8 +62,8 @@ program JOREK2_FOUR
     write(*,*) 'WARNING: Could not find file four_params.nml -- using default parameters.'
   end if
   write(42,'(a)') '#      Psi_N     absolute_value     real_part    imaginary_part      phase'
-  deltaphi  = min(0.3d0, 20.d0 / real(nTht)) !###
-  nmaxsteps = 400 / deltaphi !###
+  deltaphi_corr  = min(0.3d0, 20.d0 / real(nTht), deltaphi) !###
+  nmaxsteps_corr = max(nmaxsteps, int(400 / deltaphi_corr)) !###
   
   ! --- Log field line tracing parameters.
   write(*,*)
@@ -71,15 +71,18 @@ program JOREK2_FOUR
   111 format(1x,a,2i6)
   112 format(1x,a,2es12.4)
   113 format(1x,a,2l6)
-  write(*,111) 'nmaxsteps   =', nmaxsteps
-  write(*,112) 'deltaphi    =', deltaphi
-  write(*,111) 'nsmallsteps =', nsmallsteps
-  write(*,111) 'nTht =', nTht
-  write(*,112) 'rad_range (PsiNmix:PsiNmax)  =', rad_range 
-  write(*,111) 'nstpts (NPsiN)      =', nstpts
+  write(*,112) 'rad_range (PsiNmix:PsiNmax) =', rad_range 
+  write(*,111) 'nstpts (NPsiN) =', nstpts
+  write(*,111) 'nTht          =', nTht
+  write(*,111) 'nsmallsteps   =', nsmallsteps
+  write(*,112) 'deltaphi      =', deltaphi
+  write(*,112) 'deltaphi corr =', deltaphi_corr
+  write(*,111) 'nmaxsteps     =', nmaxsteps
+  write(*,111) 'nmaxsteps corr=', nmaxsteps_corr
+
   
   if ( (mod(nTht, 4) .ne. 0) .or. (nTht .lt. 32) ) then
-    write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': nTht must be a factor of 4, minimum acceptable value=32'
+    write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': nTht must be a factor of 4, minimum acceptable value=32, recommanded value(jorek2_postproc four2d)=6*4*n_tor'
     ierr=300
     stop
   end if
@@ -87,7 +90,7 @@ program JOREK2_FOUR
   ! --- Determine magnetic coordinates by field line tracing.
   write(*,*)
   write(*,*) '>>> Determining the poloidal straight field line angle theta_star <<<'
-  call determine_theta_mag(mapping, node_list, element_list, eq, rad_range, nstpts, nTht, ierr, nmaxsteps, deltaphi, nsmallsteps)
+  call determine_theta_mag(mapping, node_list, element_list, eq, rad_range, nstpts, nTht, ierr, nmaxsteps_corr, deltaphi_corr, nsmallsteps)
 
   ! --- Transform the quantities
   write(*,*)

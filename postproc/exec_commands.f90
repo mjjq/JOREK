@@ -1351,6 +1351,14 @@ module exec_commands
     
 
     write(filename_start,'(3a)') DIR, 'exprs_four2d', trim(step_range_string(index_now,index_now))
+    write(*,*) 'Input parameters set:'
+    write(*,*) 'units        =', units
+    write(*,*) 'surfaces     =', npts
+    write(*,*) 'nsmallsteps  =', nsmall
+    write(*,*) 'nmaxsteps    =', nmaxstep
+    write(*,*) 'deltaphi     =', delta_phi
+    write(*,*) 'rad_range    =', radial_range
+    write(*,*) 'n_thetastar  =', n_thetastar
     
     call fourier_analysis(node_list, element_list, eq, units, expr_list, cp, npts, ierr,           &
       filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &

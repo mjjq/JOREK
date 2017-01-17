@@ -71,7 +71,7 @@ program JOREK2_FOUR
   111 format(1x,a,2i6)
   112 format(1x,a,2es12.4)
   113 format(1x,a,2l6)
-  write(*,112) 'rad_range (PsiNmix:PsiNmax) =', rad_range 
+  write(*,112) 'rad_range (PsiNmin:PsiNmax) =', rad_range 
   write(*,111) 'nstpts (NPsiN) =', nstpts
   write(*,111) 'nTht          =', nTht
   write(*,111) 'nsmallsteps   =', nsmallsteps

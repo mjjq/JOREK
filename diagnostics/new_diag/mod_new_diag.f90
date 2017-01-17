@@ -404,7 +404,7 @@ module mod_new_diag
     112 format(1x,a,2es12.4)
     113 format(1x,a,2l6)
 
-    write(*,112) 'rad_range (PsiNmix:PsiNmax) =', rad_range 
+    write(*,112) 'rad_range (PsiNmin:PsiNmax) =', rad_range 
     write(*,111) 'nstpts (NPsiN) =', nPsiN
     write(*,111) 'nTht corrected =', nTht2
     write(*,111) 'nsmallsteps    =', nsmallsteps

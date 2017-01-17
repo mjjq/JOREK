@@ -1327,7 +1327,8 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: units, npts, nsmall
+    integer :: units, npts, nsmall, nmaxstep, n_thetastar
+    real*8  :: radial_range(2), delta_phi
     character(len=1024) :: filename_start
     type(t_pol_pos_list), save :: pol_pos_list
     type(t_tor_pos_list), save :: tor_pos_list
@@ -1339,14 +1340,21 @@ module exec_commands
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
     call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
-    units = get_int_setting('units', ierr)
-    npts  = get_int_setting('surfaces', ierr)
-    nsmall= get_int_setting('nsmallsteps', ierr)
+    units  = get_int_setting('units', ierr)
+    npts   = get_int_setting('surfaces', ierr)
+    nsmall = get_int_setting('nsmallsteps', ierr)
+    nmaxstep = get_int_setting('nmaxsteps', ierr)
+    delta_phi = get_float_setting('deltaphi', ierr)
+    radial_range(1) = get_float_setting('rad_range_min', ierr)
+    radial_range(2) = get_float_setting('rad_range_max', ierr)
+    n_thetastar = get_int_setting('nTht', ierr)
     
+
     write(filename_start,'(3a)') DIR, 'exprs_four2d', trim(step_range_string(index_now,index_now))
     
     call fourier_analysis(node_list, element_list, eq, units, expr_list, cp, npts, ierr,           &
-      filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall)
+      filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &
+      rad_range=radial_range, nTht=n_thetastar)
     
   end subroutine four2d
   

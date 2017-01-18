@@ -205,8 +205,8 @@ write(*,'(A,f12.7)')    ' beta_t           : ',beta_t
 write(*,'(A,f12.7,A)')  ' beta_n           : ',beta_n,' [%]'
 write(*,'(A,f12.7,A)')  ' Area             : ',area,' m^2'
 write(*,'(A,f12.7,A)')  ' Volume           : ',volume,' m^3'
-write(*,'(A,es18.7,A)') ' Heat.src (in/out): ', heat_src_in, heat_src_out, '/ sqrt((mu_0)^3 rho_0) W'
-write(*,'(A,es18.7,A)') ' Part.src (in/out): ', part_src_in, part_src_out
+write(*,'(A,2es18.7,A)') ' Heat.src (in/out): ', heat_src_in, heat_src_out, '/ sqrt((mu_0)^3 rho_0) W'
+write(*,'(A,2es18.7,A)') ' Part.src (in/out): ', part_src_in, part_src_out
 
 write(*,'(A,5f10.5)') ' density  (total/in/out)  : ',density,  density_in,  density_out 
 write(*,'(A,5f10.5)') ' pressure (total/in/out)  : ',pressure, pressure_in, pressure_out 

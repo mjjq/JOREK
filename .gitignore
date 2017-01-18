@@ -45,3 +45,5 @@ tmp[1-9]*
 mod_parameters.f90
 models/model500/mod_parameters.f90
 version.h
+starwall-response.dat
+coil_field.dat

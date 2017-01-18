@@ -165,6 +165,7 @@ subroutine preset_parameters
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
+  Dn_perp_num   = 0.d0
 
   heatsource          = 1.e-7
   heatsource_psin     = 1.0d0

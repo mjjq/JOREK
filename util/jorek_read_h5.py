@@ -26,23 +26,24 @@ input arguments:
 """
 class fields:
     var_names = ["psi", "u", "j", "w", "rho", "T", "v_par"] # rest is ambiguous
-    def __init__(self, variables=''):
+    def read(self, filename, variables=''):
         if (isinstance(variables, str)):
             self.variables = self.variablesToDict(variables)
         else:
             self.variables = variables
+        self.var_nums = list(self.variables.keys())
 
-    def read(self, filename):
         with h5py.File(filename, 'r') as hf:
             self.n_var        = hf.get('n_var')[0]
             self.n_period     = hf.get('n_period')[0]
             self.n_tor        = hf.get('n_tor')[0]
             self.n_vertex_max = hf.get('n_vertex_max')[0]
             self.n_elements   = hf.get('n_elements')[0]
-            self.vertex       = np.array(hf.get('vertex'))
+            self.vertex       = np.array(hf.get('vertex'), dtype=np.int32)-1
             self.x            = np.array(hf.get('x'))
             self.size         = np.array(hf.get('size'))
-            self.values       = np.array(hf.get('values'))
+            if (len(self.var_nums) > 0):
+                self.values       = np.array(hf.get('values'))[self.var_nums,:,:]
 
     """
     Convert a list of variables like 1,2,3
@@ -64,7 +65,7 @@ class fields:
             print("ERROR: no file read yet")
             return
         # Get the basis functions at each of the points
-        lin = np.linspace(0.0, 1.0, n_sub)
+        lin = np.linspace(0.0, 1.0, n_sub, dtype=np.double)
         s  = np.tensordot(lin, [1]*n_sub, axes=0)
         t  = s.transpose()
         bf = basis_functions(s, t)
@@ -95,13 +96,20 @@ class fields:
         # Multiply x[var, order, vertex, element] on the last two dimensions
         # with size[order, vertex, element]*bf[order, vertex, s, t]
         # See http://stackoverflow.com/questions/26089893/understanding-numpys-einsum
-        x = np.einsum('lijk,ijk,ijmn->kmnl', self.x[:,:,self.vertex[:,:]-1], self.size, bf)
-        #x = np.tensordot(self.x[:,:,self.vertex[:,:]-1],
-                         #self.size[:,:,:,np.newaxis,np.newaxis]*bf[:,:,np.newaxis,:,:],
-                         #axes=((1,2),(0,1)))
-        # TODO check this again thoroughly
-        # Some mistake in the tensordot probably
-        print(x)
+        x = np.einsum('lijk,ijk,ijmn->kmnl', self.x[:,:,self.vertex], self.size, bf)
+        # x[element,is,it,var]
+
+        # Multiply values[var,order,harm,vertex,element] with
+        # size[order, vertex, element] and bf[order, vertex, s, t]
+        if (len(self.var_nums) > 0):
+            scalars = np.einsum('lihjk,ijk,ijmn->lhkmn',
+                                self.values[:,:,:,self.vertex],
+                                self.size, bf)
+
+        # TODO: use numba for GPU / vectorization?
+        #print(scalars)
+        return (x, scalars)
+
 
 """
 Calculate values of the basis functions at positions s and t
@@ -129,20 +137,3 @@ def basis_functions(s,t):
           9*(-1 + s)*s**2*(-1 + t)*t**2,
          -9*(-1 + s)**2*s*(-1 + t)*t**2]])
 
-def basis_functions_vertexorder(s,t):
-    return np.asarray([[ (-1 + s)**2*(1 + 2*s)*(-1 + t)**2*(1 + 2*t)
-    , 3*(-1 + s)**2*s*(-1 + t)**2*(1 + 2*t)
-    , 3*(-1 + s)**2*(1 + 2*s)*(-1 + t)**2*t
-    , 9*(-1 + s)**2*s*(-1 + t)**2*t],
-    [ -(s**2*(-3 + 2*s)*(-1 + t)**2*(1 + 2*t))
-    , -3*(-1 + s)*s**2*(-1 + t)**2*(1 + 2*t)
-    , -3*s**2*(-3 + 2*s)*(-1 + t)**2*t
-    , -9*(-1 + s)*s**2*(-1 + t)**2*t],
-    [ s**2*(-3 + 2*s)*t**2*(-3 + 2*t)
-    , 3*(-1 + s)*s**2*t**2*(-3 + 2*t)
-    , 3*s**2*(-3 + 2*s)*(-1 + t)*t**2
-    , 9*(-1 + s)*s**2*(-1 + t)*t**2],
-    [ -((-1 + s)**2*(1 + 2*s)*t**2*(-3 + 2*t))
-    , -3*(-1 + s)**2*s*t**2*(-3 + 2*t)
-    , -3*(-1 + s)**2*(1 + 2*s)*(-1 + t)*t**2
-    , -9*(-1 + s)**2*s*(-1 + t)*t**2]])

@@ -40,7 +40,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use data_structure
   use phys_module
   use pellet_module
-  use vacuum, only: import_restart_vacuum
+  use vacuum, only: import_restart_vacuum, current_FB_fact
   
   implicit none
   
@@ -92,7 +92,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     endif
     write(*,*) ' OLD format (0) : '
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
-    write(*,'(A,999i4)') ' new mode numbers	: ',mode
+    write(*,'(A,999i4)') ' new mode numbers     : ',mode
   else
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
   endif
@@ -163,9 +163,68 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     
     if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies",CAT_UNKNOWN)
-
     energies = 0.d0
-
+    
+    if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
+    call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
+    R_axis_t = 0.d0
+    
+    if (allocated(Z_axis_t)) call tr_deallocate(Z_axis_t,"Z_axis_t",CAT_UNKNOWN)
+    call tr_allocate(Z_axis_t,1,index_start+nstep,"Z_axis_t",CAT_UNKNOWN)
+    Z_axis_t = 0.d0
+    
+    if (allocated(psi_axis_t)) call tr_deallocate(psi_axis_t,"psi_axis_t",CAT_UNKNOWN)
+    call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
+    psi_axis_t = 0.d0
+    
+    if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
+    call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)
+    current_t = 0.d0
+    
+    if (allocated(beta_p_t)) call tr_deallocate(beta_p_t,"beta_p_t",CAT_UNKNOWN)
+    call tr_allocate(beta_p_t,1,index_start+nstep,"beta_p_t",CAT_UNKNOWN)
+    beta_p_t = 0.d0
+    
+    if (allocated(beta_t_t)) call tr_deallocate(beta_t_t,"beta_t_t",CAT_UNKNOWN)
+    call tr_allocate(beta_t_t,1,index_start+nstep,"beta_t_t",CAT_UNKNOWN)
+    beta_t_t = 0.d0
+    
+    if (allocated(beta_n_t)) call tr_deallocate(beta_n_t,"beta_n_t",CAT_UNKNOWN)
+    call tr_allocate(beta_n_t,1,index_start+nstep,"beta_n_t",CAT_UNKNOWN)
+    beta_n_t = 0.d0
+    
+    if (allocated(density_in_t)) call tr_deallocate(density_in_t,"density_in_t",CAT_UNKNOWN)
+    call tr_allocate(density_in_t,1,index_start+nstep,"density_in_t",CAT_UNKNOWN)
+    density_in_t = 0.d0
+    
+    if (allocated(density_out_t)) call tr_deallocate(density_out_t,"density_out_t",CAT_UNKNOWN)
+    call tr_allocate(density_out_t,1,index_start+nstep,"density_out_t",CAT_UNKNOWN)
+    density_out_t = 0.d0
+    
+    if (allocated(pressure_in_t)) call tr_deallocate(pressure_in_t,"pressure_in_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_in_t,1,index_start+nstep,"pressure_in_t",CAT_UNKNOWN)
+    pressure_in_t = 0.d0
+    
+    if (allocated(pressure_out_t)) call tr_deallocate(pressure_out_t,"pressure_out_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
+    pressure_out_t = 0.d0
+    
+    if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+    heat_src_in_t = 0.d0
+    
+    if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+    heat_src_out_t = 0.d0
+    
+    if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+    part_src_in_t = 0.d0
+    
+    if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+    part_src_out_t = 0.d0
+    
 #ifdef JECCD
     if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
     call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep,"energies2",CAT_UNKNOWN)
@@ -197,7 +256,13 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 #endif
 endif
 
-  call import_restart_vacuum(21, freeboundary, resistive_wall)
+  call import_restart_vacuum(21, freeboundary, resistive_wall)  
+  
+  !--- Some parameters need to be scaled when importing a free-boundary equilibrium
+  T_0  = T_0 * current_FB_fact
+  T_1  = T_1 * current_FB_fact
+  FF_0 = FF_0 * current_FB_fact
+  FF_1 = FF_1 * current_FB_fact
 
   if (use_pellet) then
     if (index_start .ge. 1) then
@@ -393,16 +458,18 @@ end subroutine import_binary_restart
 ! Import an HDF5 restart file
 subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)
 
+#include "version.h"
+
   use tr_module 
   use data_structure
   use phys_module
   use pellet_module
-  use vacuum, only: import_HDF5_restart_vacuum
+  use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
   !use tr_module
-  use mod_parameters, ONLY : n_tor, n_var, n_order
+  use mod_parameters 
 #endif
   
   implicit none
@@ -423,10 +490,14 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   logical, parameter   			:: import_perturbation = .false.
 
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp
+  integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp
+  integer              :: n_plane_tmp, n_vertex_max_tmp, n_nodes_max_tmp, n_elements_max_tmp,n_boundary_max_tmp
+  integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp, n_new_modes
   real*8               :: growth_mag, growth_kin, amplitude
-  integer, allocatable :: mode_tmp(:)
+  integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+  character*50         :: version_control, version_control_tmp
+  logical              :: kept
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -457,6 +528,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_contain_node(:,:)
   integer,     allocatable :: t_nref(:)
 
+  real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies3(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies4(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
   !
 #endif
   error = 0
@@ -472,7 +547,24 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     return
   end if
 
-  call HDF5_integer_reading(file_id,n_tor_tmp,'n_tor')
+  call HDF5_char_reading(file_id,version_control_tmp, "RCS_version")
+  version_control = trim(adjustl(RCS_VERSION))
+
+  call HDF5_integer_reading(file_id,jorek_model_tmp,"jorek_model")
+  call HDF5_integer_reading(file_id,n_var_tmp,"n_var")
+  call HDF5_integer_reading(file_id,n_order_tmp,"n_order")
+  call HDF5_integer_reading(file_id,n_tor_tmp, "n_tor")
+  call HDF5_integer_reading(file_id,n_period_tmp, "n_period")
+  call HDF5_integer_reading(file_id,n_plane_tmp, "n_plane")
+  call HDF5_integer_reading(file_id,n_vertex_max_tmp, "n_vertex_max")
+  call HDF5_integer_reading(file_id,n_nodes_max_tmp, "n_nodes_max")
+  call HDF5_integer_reading(file_id,n_elements_max_tmp, "n_elements_max")
+  call HDF5_integer_reading(file_id,n_boundary_max_tmp, "n_boundary_max")
+  call HDF5_integer_reading(file_id,n_pieces_max_tmp, "n_pieces_max")
+  call HDF5_integer_reading(file_id,n_degrees_tmp, "n_degrees")
+  call HDF5_integer_reading(file_id,nref_max_tmp, "nref_max")
+  call HDF5_integer_reading(file_id,n_ref_list_tmp, "n_ref_list")
+
 
   if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
   allocate(mode_tmp(n_tor_tmp))
@@ -482,25 +574,33 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     write(*,*) " import_restart, HDF5 file : n_var     = ",mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
-    write(*,*) ' mode : ',mode
-    if (n_tor .eq. n_tor_tmp) then 
-       mode_tmp = mode
-    else
-       mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
-    endif
+    do i=1, n_tor_tmp
+       mode_tmp(i) = int(i / 2) * n_period_tmp
+    end do
+    
     write(*,*) ' OLD format (0) : '
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
-    write(*,'(A,999i4)') ' new mode numbers	: ',mode
+    write(*,'(A,999i4)') ' new mode numbers     : ',mode
+    do i = 1, n_tor_tmp, 2
+      kept = .false.
+      do j = 1, n_tor, 2
+        if ( mode_tmp(i) == mode(j) ) kept = .true.
+      end do
+      if ( .not. kept ) write (*,'(1x,a,i5,a)') 'WARNING: The mode n=', mode_tmp(i), ' is being dropped!'
+    end do
   else
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
   endif
 
-  if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &
+  if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i5))') &
        ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
-  if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
+  if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i5))') &
        ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_period_tmp .ne. n_period) write(*,'(3(a,i5))') &
+       ' IMPORT WARNING : n_period has changed from', n_period_tmp, ' to', n_period
 
-  write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
+
+  write(*,'(2(A,i5))') ' Importing ',n_tor_tmp,' harmonics with n_period=', n_period_tmp 
 
   call HDF5_integer_reading(file_id,node_list%n_nodes,"n_nodes")
   call HDF5_integer_reading(file_id,element_list%n_elements,"n_elements")
@@ -522,7 +622,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_allocate(t_boundary,   1,node_list%n_nodes,            "boundary",   CAT_UNKNOWN)
   call tr_allocate(t_parents,    1,node_list%n_nodes,1,2,        "parent",     CAT_UNKNOWN)
   call tr_allocate(t_parent_elem,1,node_list%n_nodes,            "parent_elem",CAT_UNKNOWN)
-  call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,            "ref_lambade",CAT_UNKNOWN)
+  call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,            "ref_lambda" ,CAT_UNKNOWN)
   call tr_allocate(t_ref_mu,     1,node_list%n_nodes,            "ref_mu",     CAT_UNKNOWN)
   call tr_allocate(t_constrained,1,node_list%n_nodes,            "constrained",CAT_UNKNOWN)
 
@@ -556,6 +656,25 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_array1D_reading     (file_id,t_ref_mu,      'ref_mu')
   call HDF5_array1D_reading_char(file_id,t_constrained, 'constrained')
 
+  ! --- Detect new modes that need to be initialized to noise level
+  if (allocated(new_mode))   call tr_deallocate(new_mode,"new_mode",CAT_UNKNOWN)
+  allocate(new_mode(n_tor))
+  new_mode(:)=1
+
+  do m=1,n_tor_tmp,2
+    do k=1, n_tor,2 
+      if (mode_tmp(m) .eq. mode(k)) then
+        if ((m .eq. 1) .and. (k.eq.1)) then
+          new_mode(k)=0
+        else
+          new_mode(k-1)=0
+          new_mode(k)=0
+        end if
+      end if
+    end do
+  end do
+  write(*,'(a,999i4)') ' need initialization  : ', new_mode
+  
   do i=1,node_list%n_nodes
     node_list%node(i)%x = t_x(i,:,:) 
 
@@ -634,36 +753,168 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
     call HDF5_array1D_reading(file_id,xtime,'xtime')
 
-    if (allocated(energies))   call tr_deallocate(energies,"energies",CAT_UNKNOWN)
-    call tr_allocate(energies,1,n_tor_tmp,1,2,1,index_start+nstep, &
-         "energies",CAT_UNKNOWN)
-    energies = 0.d0
-    call HDF5_array3D_reading(file_id,energies,'energies')
+    if (allocated(t_energies))   call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
+    call tr_allocate(t_energies,1,n_tor_tmp,1,2,1,index_start+nstep,"t_energies",CAT_UNKNOWN)
+    t_energies = 0.d0
+    call HDF5_array3D_reading(file_id,t_energies,'energies')
 
+    if (allocated(energies))   call tr_deallocate(energies,"energies",CAT_UNKNOWN)
+    call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies",CAT_UNKNOWN)
+    energies = 0.d0
+
+    do m=1,n_tor_tmp,2
+      do k=1, n_tor,2 
+        if (mode_tmp(m) .eq. mode(k)) then
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            energies(k,:,:) = t_energies(m,:,:)
+          else
+            energies(k-1:k,:,:) = t_energies(m-1:m,:,:)
+          end if
+        end if
+      end do
+    end do
+
+    call HDF5_array3D_reading(file_id,energies,'energies')
+    
+    if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
+    call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
+    R_axis_t = 0.d0
+    call HDF5_array1D_reading(file_id,R_axis_t,'R_axis_t')
+    
+    if (allocated(Z_axis_t)) call tr_deallocate(Z_axis_t,"Z_axis_t",CAT_UNKNOWN)
+    call tr_allocate(Z_axis_t,1,index_start+nstep,"Z_axis_t",CAT_UNKNOWN)
+    Z_axis_t = 0.d0
+    call HDF5_array1D_reading(file_id,Z_axis_t,'Z_axis_t')
+    
+    if (allocated(psi_axis_t)) call tr_deallocate(psi_axis_t,"psi_axis_t",CAT_UNKNOWN)
+    call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
+    psi_axis_t = 0.d0
+    call HDF5_array1D_reading(file_id,psi_axis_t,'psi_axis_t')
+    
+    if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
+    call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)
+    current_t = 0.d0
+    call HDF5_array1D_reading(file_id,current_t,'current_t')
+    
+    if (allocated(beta_p_t)) call tr_deallocate(beta_p_t,"beta_p_t",CAT_UNKNOWN)
+    call tr_allocate(beta_p_t,1,index_start+nstep,"beta_p_t",CAT_UNKNOWN)
+    beta_p_t = 0.d0
+    call HDF5_array1D_reading(file_id,beta_p_t,'beta_p_t')
+    
+    if (allocated(beta_t_t)) call tr_deallocate(beta_t_t,"beta_t_t",CAT_UNKNOWN)
+    call tr_allocate(beta_t_t,1,index_start+nstep,"beta_t_t",CAT_UNKNOWN)
+    beta_t_t = 0.d0
+    call HDF5_array1D_reading(file_id,beta_t_t,'beta_t_t')
+    
+    if (allocated(beta_n_t)) call tr_deallocate(beta_n_t,"beta_n_t",CAT_UNKNOWN)
+    call tr_allocate(beta_n_t,1,index_start+nstep,"beta_n_t",CAT_UNKNOWN)
+    beta_n_t = 0.d0
+    call HDF5_array1D_reading(file_id,beta_n_t,'beta_n_t')
+    
+    if (allocated(density_in_t)) call tr_deallocate(density_in_t,"density_in_t",CAT_UNKNOWN)
+    call tr_allocate(density_in_t,1,index_start+nstep,"density_in_t",CAT_UNKNOWN)
+    density_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,density_in_t,'density_in_t')
+    
+    if (allocated(density_out_t)) call tr_deallocate(density_out_t,"density_out_t",CAT_UNKNOWN)
+    call tr_allocate(density_out_t,1,index_start+nstep,"density_out_t",CAT_UNKNOWN)
+    density_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,density_out_t,'density_out_t')
+    
+    if (allocated(pressure_in_t)) call tr_deallocate(pressure_in_t,"pressure_in_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_in_t,1,index_start+nstep,"pressure_in_t",CAT_UNKNOWN)
+    pressure_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,pressure_in_t,'pressure_in_t')
+    
+    if (allocated(pressure_out_t)) call tr_deallocate(pressure_out_t,"pressure_out_t",CAT_UNKNOWN)
+    call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
+    pressure_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,pressure_out_t,'pressure_out_t')
+    
+    if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+    heat_src_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,heat_src_in_t,'heat_src_in_t')
+    
+    if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heating_power_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+    heat_src_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,heat_src_out_t,'heat_src_out_t')
+    
+    if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+    part_src_in_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_src_in_t,'part_src_in_t')
+    
+    if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"parting_power_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+    part_src_out_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_src_out_t,'part_src_out_t')
+    
 #ifdef JECCD                   
-    if (allocated(energies2))	call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)	  
-    call tr_allocate(energies2,1,n_tor_tmp,1,2,1,index_start+nstep, &
-    	 "energies2",CAT_UNKNOWN)
-    if (allocated(energies3))	call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
-    call tr_allocate(energies3,1,n_tor_tmp,1,2,1,index_start+nstep, &
-    	 "energies3",CAT_UNKNOWN)
+    if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
+    call tr_allocate(t_energies2,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies2",CAT_UNKNOWN)
+    if (allocated(t_energies3))   call tr_deallocate(t_energies3,"t_energies3",CAT_UNKNOWN)
+    call tr_allocate(t_energies3,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies3",CAT_UNKNOWN)
+    t_energies2 = 0.d0
+    t_energies3 = 0.d0
+    call HDF5_array3D_reading(file_id,t_energies2,'energies2')
+    call HDF5_array3D_reading(file_id,t_energies3,'energies3')
+
+    if (allocated(energies2))   call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
+    call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep, "energies2",CAT_UNKNOWN)
+    if (allocated(energies3))   call tr_deallocate(energies3,"energies3",CAT_UNKNOWN)
+    call tr_allocate(energies3,1,n_tor,1,2,1,index_start+nstep, "energies3",CAT_UNKNOWN)
     energies2 = 0.d0
     energies3 = 0.d0
-    call HDF5_array3D_reading(file_id,energies2,'energies2')
-    call HDF5_array3D_reading(file_id,energies3,'energies3')
+
+    do m=1,n_tor_tmp,2
+      do k=1, n_tor,2 
+        if (mode_tmp(m) .eq. mode(k)) then
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            energies2(k,:,:) = t_energies2(m,:,:)
+            energies3(k,:,:) = t_energies3(m,:,:)
+          else
+            energies2(k-1:k,:,:) = t_energies2(m-1:m,:,:)
+            energies3(k-1:k,:,:) = t_energies3(m-1:m,:,:)
+          end if
+        end if
+      end do
+    end do
 
 #ifdef JEC2DIAG
+    if (allocated(t_energies4))   call tr_deallocate(t_energies4,"t_energies4",CAT_UNKNOWN)
+    call tr_allocate(t_energies4,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies4",CAT_UNKNOWN)
+    t_energies4 = 0.d0
+    call HDF5_array3D_reading(file_id,t_energies4,'energies4')
+
     if (allocated(energies4))   call tr_deallocate(energies4,"energies4",CAT_UNKNOWN)
-    call tr_allocate(energies4,1,n_tor_tmp,1,2,1,index_start+nstep, &
-           "energies4",CAT_UNKNOWN)
+    call tr_allocate(energies4,1,n_tor,1,2,1,index_start+nstep, "energies4",CAT_UNKNOWN)
     energies4 = 0.d0
-    call HDF5_array3D_reading(file_id,energies4,'energies4')
+    do m=1,n_tor_tmp,2
+      do k=1, n_tor,2 
+        if (mode_tmp(m) .eq. mode(k)) then
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            energies4(k,:,:) = t_energies4(m,:,:)
+          else
+            energies4(k-1:k,:,:) = t_energies4(m-1:m,:,:)
+          end if
+        end if
+      end do
+    end do
 #endif
+
 #endif
-   end if
+  end if
 
   ! Import restart Vacuum 
   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
+  
+  !--- Some parameters need to be scaled when importing a free-boundary equilibrium
+  T_0  = T_0 * current_FB_fact
+  T_1  = T_1 * current_FB_fact
+  FF_0 = FF_0 * current_FB_fact
+  FF_1 = FF_1 * current_FB_fact
   
   if (use_pellet) then
      if (index_start .ge. 1) then
@@ -717,33 +968,47 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   enddo
  
   ! --- initialise new harmonics (only density and temperature, to be improved)
-  if (n_tor_tmp .lt. n_tor) then
-     ! --- Using an already computated mode
-     if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
-        write(*,*)'Importing perturbation from jorek_perturbation.rst file...'
-        write(*,*) " Not yet implemeted !! "
-        
-     ! --- Using just noise
-     else
-        
-        amplitude = 1.d-10
-        do i=1,node_list%n_nodes
-           node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
-           do j=n_tor_tmp+1, n_tor
-              node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
-              node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
-           enddo
-        enddo
-     endif
+  n_new_modes = sum(new_mode(1:n_tor))
+  write(*,*), 'Warning:', n_new_modes, ' new modes initialized to noise level' 
+  if ( n_new_modes .gt. 0 ) then
+    ! --- Using an already computed mode
+    if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
+      write(*,*) 'ERROR: Importing perturbation from jorek_perturbation.rst file...'
+      write(*,*) 'ERROR: Not yet implemeted!'
+      stop
+    ! --- Using just noise
+    else
+      amplitude = 1.d-10
+      do i=1,node_list%n_nodes
+        do m=2,n_tor
+          if ( new_mode(m) .eq. 1 ) then
+          node_list%node(i)%values(m,:,1:4) = 0.d0
+          node_list%node(i)%values(m,:,5)   = amplitude * node_list%node(i)%values(1,:,5)
+          node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
+          end if
+        end do
+      end do
+    endif
   end if
+
   !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
   
   ! -> Deallocate temporary arrays 
   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
+  call tr_deallocate(new_mode,"new_mode",CAT_UNKNOWN)
   
   call tr_deallocate(t_x,"t_x",CAT_UNKNOWN)
   call tr_deallocate(t_values,"t_values",CAT_UNKNOWN)
   call tr_deallocate(t_deltas,"t_deltas",CAT_UNKNOWN)
+  call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
+
+#ifdef JECCD                   
+  call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
+  call tr_deallocate(t_energies3,"t_energies3",CAT_UNKNOWN)
+#ifdef JEC2DIAG
+  call tr_deallocate(t_energies4,"t_energies4",CAT_UNKNOWN)
+#endif
+#endif
  
 #ifdef fullmhd
   call tr_deallocate(t_psi_eq,"t_psi_eq",CAT_UNKNOWN)

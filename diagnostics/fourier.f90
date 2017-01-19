@@ -25,11 +25,11 @@ module fourier
   
   
   !> Fourier-transform the physical variables in the magnetic angle theta_mag.
-  subroutine transform_qttys(mapping, vfour, m_pol_range)
+  subroutine transform_qttys(mapping, vfour, nTht)
     
     type(t_theta_mapping), intent(in)    :: mapping
     complex, allocatable,  intent(inout) :: vfour(:,:,:,:) !< Transformed quantities (m,n,irad,ivar)
-    integer,               intent(in)    :: m_pol_range(2) !< Range of poloidal mode numbers
+    integer,               intent(in)    :: nTht !< Number of poloidal equidistant points
     
     real*8, allocatable :: vve(:,:,:,:) ! Variable values (ipol,itor,irad,ivar)
     real*8  :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
@@ -41,14 +41,13 @@ module fourier
     integer :: nequidist_tor, nequidist_pts
     
     nequidist_tor = n_plane-1
-    nequidist_pts = 2*(maxval(m_pol_range))
+    nequidist_pts =  nTht
     
     if ( allocated(vfour) ) deallocate(vfour)
     allocate(vve(nequidist_pts,nequidist_tor,mapping%nstpts,n_var))
     allocate(vfour(nequidist_pts/2+1,nequidist_tor,mapping%nstpts,n_var))
     vve   = 0.d0
     vfour = 0.d0
-    
     
     do k = 1, mapping%nstpts ! radial positions
       
@@ -112,6 +111,7 @@ module fourier
       do l = 1, n_var
         call dfftw_plan_dft_r2c_2d(fftw_plan, nequidist_pts, nequidist_tor, vve(:,:,k,l),          &
 	  vfour(:,:,k,l), FFTW_ESTIMATE)
+! output FFT for nTht/2 +1 poloidal harmonics: check that it is indeed the modes between -nTht/4 and +nTht/4 
         call dfftw_execute(fftw_plan)
         call dfftw_destroy_plan(fftw_plan)
       end do

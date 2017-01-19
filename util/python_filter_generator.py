@@ -269,6 +269,8 @@ def generatePythonFilter(info):
     shortHelp = e(info['Help'])
     longHelp = e(info['Help'])
     extraXml = info.get('ExtraXml', '')
+    extension = info['Extension']
+    fileDescription = info['FileDescription']
 
     proxyGroup = getProxyGroup(info)
     inputPropertyXml = getInputPropertyXml(info)
@@ -276,16 +278,80 @@ def generatePythonFilter(info):
     scriptProperties = getScriptPropertiesXml(info)
     filterProperties = getFilterPropertiesXml(info)
 
-
+    # Adjust according to http://www.paraview.org/Wiki/Animating_legacy_VTK_file_series#Making_custom_readers_work_with_file_series
     outputXml = '''\
 <ServerManagerConfiguration>
   <ProxyGroup name="%s">
-    <SourceProxy name="%s" class="vtkPythonProgrammableFilter" label="%s">
-
+    <SourceProxy name="%s" class="vtkFileSeriesReader"
+                 si_class="vtkSIFileSeriesReaderProxy"
+                 label="%s"
+                 file_name_method="SetFileName">
       <Documentation
         long_help="%s"
         short_help="%s">
       </Documentation>
+      <SubProxy>
+        <Proxy name="Reader" proxygroup="internal_sources" proxyname="%s_internal">
+        </Proxy>
+      </SubProxy>
+
+      <StringVectorProperty name="FileNameInfo"
+        command="GetCurrentFileName"
+        information_only="1" >
+        <SimpleStringInformationHelper />
+      </StringVectorProperty>
+ 
+      <StringVectorProperty
+        name="FileNames"
+        clean_command="RemoveAllFileNames"
+        command="AddFileName"
+        animateable="0"
+        number_of_elements="0" 
+        repeat_command="1">
+        <FileListDomain name="files"/>
+      <Documentation>
+         The list of files to be read by the reader. If more than 1 file is specified, 
+         the reader will switch to file series mode in which it will pretend that it 
+         can support time and provide 1 file per time step.
+       </Documentation>
+     </StringVectorProperty>
+ 
+     <DoubleVectorProperty 
+        name="TimestepValues"
+        repeatable="1"
+        information_only="1">
+        <TimeStepsInformationHelper/>
+        <Documentation>
+          Available timestep values.
+        </Documentation>
+     </DoubleVectorProperty>
+ 
+     <Hints>
+      <ReaderFactory extensions="%s"
+          file_description="%s" />
+     </Hints>
+
+
+    </SourceProxy>
+  </ProxyGroup>
+  <ProxyGroup name="internal_sources">
+    <SourceProxy name="%s_internal" class="vtkPythonProgrammableFilter" label="%s">
+      <StringVectorProperty
+        name="FileName"
+        animateable="0"
+        command="SetFileName"
+        number_of_elements="1">
+        <FileListDomain name="files"/>
+        <Documentation>
+          This property specifies the file name for the reader.
+        </Documentation>
+      </StringVectorProperty>
+
+     <Hints>
+      <ReaderFactory extensions="%s"
+          file_description="%s" />
+     </Hints>
+
 
 %s
 
@@ -300,7 +366,10 @@ def generatePythonFilter(info):
     </SourceProxy>
  </ProxyGroup>
 </ServerManagerConfiguration>
-      ''' % (proxyGroup, proxyName, proxyLabel, longHelp, shortHelp, inputPropertyXml,
+      ''' % (proxyGroup, proxyName, proxyLabel, longHelp, shortHelp,
+             proxyName, extension, fileDescription, # internal source after this
+             proxyName, proxyLabel, extension, fileDescription,
+             inputPropertyXml,
              filterProperties, extraXml, outputDataSetType, scriptProperties)
 
     return textwrap.dedent(outputXml)

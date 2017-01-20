@@ -13,6 +13,7 @@ Before interpolating, set:
 Created by Daan van Vugt on 2017-01-18
 """
 
+from __future__ import print_function
 import h5py
 import numpy as np
 
@@ -58,9 +59,94 @@ class fields:
         return dict
 
     """
-    Create a set of points and cells and interpolate values 
+    Create VTK objects for this file
+    input:
+        n_sub: number of subdivisions per element
+        n_plane: number of planes in toroidal direction
+        phi: range (2 elements) or single value of phi
+        without_n0_mode: do not include n0 mode if true
+
+    returns:
+        vtkUnstructuredGrid
     """
-    def interp_to_mesh(self, n_sub=4, n_plane=40, phi=[0,2*np.pi], without_n0_mode=False):
+    def to_vtk(self, n_sub=2, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False):
+        import vtk
+        from vtk.util import numpy_support as npvtk
+
+        # If we do not have a range in phi make only one plane
+        if (isinstance(phi,int)):
+            n_plane = 1
+            phis = np.asarray([phi])
+        elif (n_plane == 1):
+            phis = np.asarray([phi[0]])
+        else:
+            phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=False)
+
+        RZ, values, HZ = self.interp_to_mesh(n_sub, n_plane, phis, without_n0_mode)
+
+        xyz = np.zeros((self.n_elements*n_sub**2*n_plane,3))
+        xyz[:,0:2] = np.reshape(np.tensordot(
+            RZ[:,:,:,0],
+            np.stack((np.cos(phis), np.sin(phis))),
+            axes=0),
+            (-1,2))
+        xyz[:,2] = np.ravel(np.tensordot(np.ones(len(phis)), RZ[:,:,:,1], axes=0))
+
+        pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk.VTK_FLOAT)
+        points = vtk.vtkPoints()
+        points.SetData(pcoords)
+
+        ug = vtk.vtkUnstructuredGrid()
+        ug.SetPoints(points)
+        # Create connectivity data
+        # Calculate 2D connectivity first
+        # For each element, calculate the number of the lowest point
+        # Create (n_sub-1)**2 quadrangles
+        n_points = self.n_elements*(n_sub**2)
+        i_start = np.arange(0,n_points, n_sub**2)
+        block = np.zeros((n_sub-1,n_sub-1,4))
+        for j in range(n_sub-1):
+            for k in range(n_sub-1):
+                block[j,k,:] = [n_sub*j    +k  ,n_sub*(j+1)+k,
+                                n_sub*(j+1)+k+1,n_sub*j    +k+1]
+        ien = np.reshape(i_start[:,np.newaxis,np.newaxis,np.newaxis]+
+                         block[np.newaxis,:,:,:], (-1,4))
+        # Define only _within_ an element for now
+        if (len(phis) > 1): # Create a volume
+            # Calculate 3D connectivity instead
+            # The number of planes=len(phis)
+            periodic = (np.mod(phi[0]-phi[1],2*np.pi) < 1e-9)
+            if (periodic):
+                i_start = np.arange(0,len(phis)*(n_points),n_points)
+                i_start[-1] = 0 # loop
+                n_cells  = self.n_elements*((n_sub-1)**2)*n_plane
+            else:
+                i_start = np.arange(0,(len(phis)-1)*(n_points),n_points)
+                n_cells  = self.n_elements*((n_sub-1)**2)*(n_plane-1)
+
+            ien = np.reshape(i_start[:,np.newaxis,np.newaxis] +
+                             ien[np.newaxis,:,:], (-1, 4))
+
+            # Set connectivity
+        else: # or stay 2D
+            # Create triangles
+            n_cells  = self.n_elements*((n_sub-1)**2)*(n_plane-1)
+            pass
+        cells = vtk.vtkCellArray()
+        cells.SetCells(n_cells, npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
+
+        ug.SetCells(vtk.VTK_QUAD, cells)
+        return ug
+
+    """
+    Create a set of points and cells and interpolate values
+
+    returns: (tuple of)
+        x: point coordinates, x[element, is, it, var] where var = R, Z
+        values: interpolated values, values[var, harmonic, element, is, it]
+        HZ: interpolations for the selected values of phi, without_n0_mode
+    """
+    def interp_to_mesh(self, n_sub, n_plane, phis, without_n0_mode):
         if not hasattr(self, 'n_tor'):
             print("ERROR: no file read yet")
             return
@@ -69,15 +155,6 @@ class fields:
         s  = np.tensordot(lin, [1]*n_sub, axes=0)
         t  = s.transpose()
         bf = basis_functions(s, t)
-
-        # If we do not have a range in phi make only one plane
-        if (isinstance(phi,int)):
-            n_plane = 1
-            phis = phi
-        elif (n_plane == 1):
-            phis = np.asarray([phi[0]])
-        else:
-            phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=False)
 
         # Setup toroidal coefficients for each plane and toroidal harmonic
         HZ = np.zeros((self.n_tor,n_plane))
@@ -90,7 +167,7 @@ class fields:
                 HZ[i,:] = np.sin(mode*phis)
             elif (i % 2 == 1):
                 HZ[i,:] = np.cos(mode*phis)
-        
+
         # Calculate RZ for all of the elements (dimension 0) for each of the s
         # positions (dimension 1) for each of the t positions (dimension 2)
         # Multiply x[var, order, vertex, element] on the last two dimensions
@@ -106,9 +183,8 @@ class fields:
                                 self.values[:,:,:,self.vertex],
                                 self.size, bf)
 
-        # TODO: use numba for GPU / vectorization?
-        #print(scalars)
-        return (x, scalars)
+        # TODO: use numba for GPU / vectorization? (does this work if the function is split?)
+        return (x, scalars, HZ)
 
 
 """

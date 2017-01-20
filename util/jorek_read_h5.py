@@ -82,7 +82,7 @@ class fields:
         else:
             phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=False)
 
-        RZ, values, HZ = self.interp_to_mesh(n_sub, n_plane, phis, without_n0_mode)
+        RZ, values, HZ = self.interp_to_mesh(n_sub, phis, without_n0_mode)
 
         xyz = np.zeros((self.n_elements*n_sub**2*n_plane,3))
         xyz[:,0:2] = np.reshape(np.tensordot(
@@ -98,44 +98,61 @@ class fields:
 
         ug = vtk.vtkUnstructuredGrid()
         ug.SetPoints(points)
+
+        # Add values
+        i = 0
+        for var in self.variables.keys():
+            val = npvtk.numpy_to_vtk(np.ravel(
+                np.einsum('hkmn,hp->pkmn', values[i,:,:,:], HZ)),
+                                     deep=True, array_type=vtk.VTK_FLOAT)
+            i = i+1
+            val.SetName(self.variables[var])
+            #ug.GetPointData().AddArray(val)
+            ug.GetPointData().SetScalars(val)
+
+
+
         # Create connectivity data
         # Calculate 2D connectivity first
         # For each element, calculate the number of the lowest point
         # Create (n_sub-1)**2 quadrangles
-        n_points = self.n_elements*(n_sub**2)
-        i_start = np.arange(0,n_points, n_sub**2)
-        block = np.zeros((n_sub-1,n_sub-1,4))
+        n_points = self.n_elements*(n_sub**2) # number of points in one plane
+        n_cells  = self.n_elements*((n_sub-1)**2) # Number of cells in one plane
+        i_start = np.arange(0,n_points, n_sub**2, dtype=np.int32)
+
+        # The base block in a 2D plane
+        block = np.zeros((n_sub-1,n_sub-1,4), dtype=np.int32)
         for j in range(n_sub-1):
             for k in range(n_sub-1):
                 block[j,k,:] = [n_sub*j    +k  ,n_sub*(j+1)+k,
                                 n_sub*(j+1)+k+1,n_sub*j    +k+1]
+
         ien = np.reshape(i_start[:,np.newaxis,np.newaxis,np.newaxis]+
                          block[np.newaxis,:,:,:], (-1,4))
         # Define only _within_ an element for now
         if (len(phis) > 1): # Create a volume
-            # Calculate 3D connectivity instead
-            # The number of planes=len(phis)
-            periodic = (np.mod(phi[0]-phi[1],2*np.pi) < 1e-9)
+            periodic = (np.mod(phis[0]-phi[-1],2*np.pi) < 1e-9)
             if (periodic):
                 i_start = np.arange(0,len(phis)*(n_points),n_points)
                 i_start[-1] = 0 # loop
-                n_cells  = self.n_elements*((n_sub-1)**2)*n_plane
+                n_cells = n_cells * n_plane
             else:
                 i_start = np.arange(0,(len(phis)-1)*(n_points),n_points)
-                n_cells  = self.n_elements*((n_sub-1)**2)*(n_plane-1)
+                n_cells = n_cells * (n_plane - 1)
 
             ien = np.reshape(i_start[:,np.newaxis,np.newaxis] +
-                             ien[np.newaxis,:,:], (-1, 4))
-
-            # Set connectivity
+                             ien[np.newaxis,:,:], (-1,8))
+            etype = vtk.VTK_HEXAHEDRON
+            n_vertex = 8
         else: # or stay 2D
-            # Create triangles
-            n_cells  = self.n_elements*((n_sub-1)**2)*(n_plane-1)
-            pass
-        cells = vtk.vtkCellArray()
-        cells.SetCells(n_cells, npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
+            n_cells = self.n_elements*((n_sub-1)**2)*n_plane
+            etype = vtk.VTK_QUAD
+            n_vertex = 4
 
-        ug.SetCells(vtk.VTK_QUAD, cells)
+        cells = vtk.vtkCellArray()
+        cells.SetCells(n_cells, npvtk.numpy_to_vtk(np.insert(ien, 0, n_vertex, axis=1), deep=True, array_type=vtk.VTK_ID_TYPE))
+
+        ug.SetCells(etype, cells)
         return ug
 
     """
@@ -146,7 +163,7 @@ class fields:
         values: interpolated values, values[var, harmonic, element, is, it]
         HZ: interpolations for the selected values of phi, without_n0_mode
     """
-    def interp_to_mesh(self, n_sub, n_plane, phis, without_n0_mode):
+    def interp_to_mesh(self, n_sub, phis, without_n0_mode):
         if not hasattr(self, 'n_tor'):
             print("ERROR: no file read yet")
             return
@@ -157,7 +174,7 @@ class fields:
         bf = basis_functions(s, t)
 
         # Setup toroidal coefficients for each plane and toroidal harmonic
-        HZ = np.zeros((self.n_tor,n_plane))
+        HZ = np.zeros((self.n_tor,len(phis)))
         for i in range(self.n_tor):
             mode = np.floor((i+1)/2)*self.n_period
             if (i == 0):

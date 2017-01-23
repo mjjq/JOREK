@@ -69,7 +69,7 @@ class fields:
     returns:
         vtkUnstructuredGrid
     """
-    def to_vtk(self, n_sub=2, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False):
+    def to_vtk(self, n_sub=4, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False):
         import vtk
         from vtk.util import numpy_support as npvtk
 
@@ -80,17 +80,32 @@ class fields:
         elif (n_plane == 1):
             phis = np.asarray([phi[0]])
         else:
-            phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=False)
+            periodic = (np.mod(phi[0]-phi[1],2*np.pi) < 1e-9)
+            phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=not periodic)
 
         RZ, values, HZ = self.interp_to_mesh(n_sub, phis, without_n0_mode)
 
-        xyz = np.zeros((self.n_elements*n_sub**2*n_plane,3))
-        xyz[:,0:2] = np.reshape(np.tensordot(
-            RZ[:,:,:,0],
-            np.stack((np.cos(phis), np.sin(phis))),
-            axes=0),
-            (-1,2))
-        xyz[:,2] = np.ravel(np.tensordot(np.ones(len(phis)), RZ[:,:,:,1], axes=0))
+        # Create connectivity data
+        # Calculate 2D connectivity first
+        # For each element, calculate the number of the lowest point
+        # Create (n_sub-1)**2 quadrangles
+        n_points = self.n_elements*(n_sub**2) # number of points in one plane
+        n_cells  = self.n_elements*((n_sub-1)**2) # Number of cells in one plane
+        if (n_plane > 1): # Create a volume
+            if (periodic):
+                n_cells_tor = n_plane
+            else:
+                n_cells_tor = n_plane - 1
+        else:
+            n_cells_tor = 1
+
+        xyz = np.zeros((n_points*n_plane,3))
+        for i in range(n_plane):
+            xyz[i*n_points:(i+1)*n_points,:] = np.reshape(
+                np.stack((RZ[:,:,:,0]*np.cos(phis[i]),
+                         RZ[:,:,:,0]*np.sin(phis[i]),
+                         RZ[:,:,:,1]), axis=-1),
+                (-1,3))
 
         pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk.VTK_FLOAT)
         points = vtk.vtkPoints()
@@ -112,13 +127,6 @@ class fields:
 
 
 
-        # Create connectivity data
-        # Calculate 2D connectivity first
-        # For each element, calculate the number of the lowest point
-        # Create (n_sub-1)**2 quadrangles
-        n_points = self.n_elements*(n_sub**2) # number of points in one plane
-        n_cells  = self.n_elements*((n_sub-1)**2) # Number of cells in one plane
-        i_start = np.arange(0,n_points, n_sub**2, dtype=np.int32)
 
         # The base block in a 2D plane
         block = np.zeros((n_sub-1,n_sub-1,4), dtype=np.int32)
@@ -127,30 +135,30 @@ class fields:
                 block[j,k,:] = [n_sub*j    +k  ,n_sub*(j+1)+k,
                                 n_sub*(j+1)+k+1,n_sub*j    +k+1]
 
+        i_start = np.arange(0,n_points, n_sub**2, dtype=np.int32)
         ien = np.reshape(i_start[:,np.newaxis,np.newaxis,np.newaxis]+
                          block[np.newaxis,:,:,:], (-1,4))
-        # Define only _within_ an element for now
-        if (len(phis) > 1): # Create a volume
-            periodic = (np.mod(phis[0]-phi[-1],2*np.pi) < 1e-9)
-            if (periodic):
-                i_start = np.arange(0,len(phis)*(n_points),n_points)
-                i_start[-1] = 0 # loop
-                n_cells = n_cells * n_plane
-            else:
-                i_start = np.arange(0,(len(phis)-1)*(n_points),n_points)
-                n_cells = n_cells * (n_plane - 1)
 
-            ien = np.reshape(i_start[:,np.newaxis,np.newaxis] +
-                             ien[np.newaxis,:,:], (-1,8))
+        # Define only _within_ an element for now
+        if (n_plane > 1):
+            ien_2D = ien
+            ien = np.zeros((n_cells*n_cells_tor,9), dtype=np.int32)
+            ien[:,0] = 8
+            ien[:,1:9] = np.tile(ien_2D, (n_cells_tor,2))
+            for i in range(len(phis)-1):
+                ien[i*n_cells:(i+1)*n_cells,1:9] += np.concatenate(([n_points*i]*4,[n_points*(i+1)]*4))
+            if (periodic):
+                i = len(phis)
+                ien[i*n_cells:(i+1)*n_cells,1:9] += np.concatenate(([n_points*i]*4,[0]*4))
+
+            n_cells = n_cells * n_cells_tor
             etype = vtk.VTK_HEXAHEDRON
-            n_vertex = 8
         else: # or stay 2D
-            n_cells = self.n_elements*((n_sub-1)**2)*n_plane
+            ien = np.insert(ien, 0, 4, axis=1)
             etype = vtk.VTK_QUAD
-            n_vertex = 4
 
         cells = vtk.vtkCellArray()
-        cells.SetCells(n_cells, npvtk.numpy_to_vtk(np.insert(ien, 0, n_vertex, axis=1), deep=True, array_type=vtk.VTK_ID_TYPE))
+        cells.SetCells(n_cells, npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
 
         ug.SetCells(etype, cells)
         return ug

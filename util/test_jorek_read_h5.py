@@ -2,11 +2,14 @@ from __future__ import print_function
 import vtk
 import numpy as np
 import jorek_read_h5 as jorek
+import sys
 
 f = jorek.fields()
 f.read('/tmp/jorek_restart.h5', variables='0')
-grid = f.to_vtk(phi=0)
-#grid = f.to_vtk(n_plane=2, phi=[0,0.4])
+#grid = f.to_vtk(phi=0)
+grid = f.to_vtk(phi=[0,np.pi/2])
+
+sys.exit(0)
 
 
 # Visualize
@@ -18,7 +21,6 @@ else:
 
 # Create color map based on range of first var
 data_range = grid.GetPointData().GetAbstractArray(0).GetRange()
-print(data_range)
 colormap = vtk.vtkLookupTable()
 colormap.SetHueRange(data_range[0], data_range[1])
 colormap.Build()
@@ -41,6 +43,3 @@ renderer.AddActor(actor)
 
 renderWindow.Render()
 renderWindowInteractor.Start()
-
-
-#vtk.WritePNG(renderWindowInteractor.GetRenderWindow(), "Cell3DDemonstration.png")

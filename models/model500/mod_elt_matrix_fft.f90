@@ -45,7 +45,8 @@ real*8     :: ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, ps
 real*8     :: zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t
 real*8     :: u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_st, u0_tt, u0_xx, u0_xy, u0_yy 
 real*8     :: w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_st, w0_tt, w0_xx, w0_xy, w0_yy
-real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy, r0_hat, r0_x_hat, r0_y_hat
+real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy
+real*8     :: r0_hat, r0_x_hat, r0_y_hat, r0_corr, rn0_corr
 real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T_corr
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_yy, psi_xy
 real*8     :: zj, zj_x, zj_y, zj_p, zj_s, zj_t, zj_ss, zj_st, zj_tt
@@ -370,6 +371,9 @@ do ms=1, n_gauss
      r0_st = eq_st(mp,5,ms,mt)
      r0_tt = eq_tt(mp,5,ms,mt)
 
+     r0_corr = corr_neg_dens(r0) ! Correction for negative r0 ...
+
+
      r0_hat   = BigR**2 * abs(r0)
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
      r0_y_hat = BigR**2 * r0_y
@@ -383,6 +387,8 @@ do ms=1, n_gauss
      rn0_ss = eq_ss(mp,8,ms,mt)                                                            
      rn0_st = eq_st(mp,8,ms,mt)                                                            
      rn0_tt = eq_tt(mp,8,ms,mt)                                                            
+
+     rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...
 
      rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
             + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
@@ -620,7 +626,8 @@ do ms=1, n_gauss
 
     ksiion = ksi_ion * central_density * 1.d20
 
-    Tion = corr_neg_temp(T0,(/1.d-5,0.3/))/(2.d0)
+    Tion = corr_neg_temp(T0,(/1.d-5,0.3/))/(2.d0) 
+    !Tion = corr_neg_temp(T0)/(2.d0) !Moved the L1 and L2 of correction to the input file
 
     Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
 
@@ -817,8 +824,8 @@ do ms=1, n_gauss
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
 
-                      - v * tauIC/(r0*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &
-                      + v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
+                      - v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &
+                      + v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
 
                       + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
 
@@ -851,8 +858,8 @@ do ms=1, n_gauss
 
                       + (1.d0 - delta_n_convection) * (   &
 
-                      + BigR**3*(r0*rn0*Sion_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep &
-                      - BigR**3*(r0*r0 *Srec_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep &
+                      + BigR**3*(r0_corr*rn0_corr*Sion_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep &
+                      - BigR**3*(r0_corr*r0_corr *Srec_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep &
                         )
 
 
@@ -893,8 +900,8 @@ do ms=1, n_gauss
                     - TG_num5 * 0.25d0 / BigR * vpar0**2                                                      &
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                               * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep       &
-                    + v * r0 * rn0 * BigR * Sion_T                                              * xjac * tstep&
-                    - v * r0 * r0  * BigR * Srec_T                                              * xjac * tstep
+                    + v * r0_corr * rn0_corr * BigR * Sion_T                                    * xjac * tstep&
+                    - v * r0_corr * r0_corr  * BigR * Srec_T                                    * xjac * tstep
 		    
  
 
@@ -949,12 +956,12 @@ do ms=1, n_gauss
                     + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
                     + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac &
                     
-                    - v * BigR * ksiion * r0 * rn0 * Sion_T                            * xjac * tstep &
+                    - v * BigR * ksiion * r0_corr * rn0_corr * Sion_T                  * xjac * tstep &
 
-                    + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
-                    - v * BigR * r0 * rn0 * LradDrays_T                                * xjac * tstep  &
-                    - v * BigR * r0 * r0  * LradDcont_T                                * xjac * tstep  &
-                    - v * BigR * r0 * frad_bg                                          * xjac * tstep  
+                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                 * xjac * tstep  &
+                    - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep  &
+                    - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep  &
+                    - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
 
          rhs_ij_6_k =  - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T  * xjac * tstep &
                        - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )   * xjac * tstep  &
@@ -997,8 +1004,8 @@ do ms=1, n_gauss
 
                       + (1.d0 - delta_n_convection) * (   &
 
-		   	    - v *(r0 * rn0 * Sion_T) * vpar0 * BB2 * BigR                        * xjac * tstep & 
-                            + v *(r0 * r0  * Srec_T) * vpar0 * BB2 * BigR                        * xjac * tstep )
+		   	    - v *(r0_corr * rn0_corr * Sion_T) * vpar0 * BB2 * BigR              * xjac * tstep & 
+                            + v *(r0_corr * r0_corr  * Srec_T) * vpar0 * BB2 * BigR              * xjac * tstep )
 		    
 	 rhs_ij_7_k = + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep &
 
@@ -1023,8 +1030,8 @@ do ms=1, n_gauss
                       - v * F0 / BigR * rn0 * vpar0_p                                                            * xjac * tstep &
                       )                                                                                                         &
 
-	            - BigR * v * r0 * rn0 * Sion_T                                                               * xjac * tstep &
-                    + BigR * v * r0 * r0 * Srec_T                                                                * xjac * tstep &  
+	            - BigR * v * r0_corr * rn0_corr * Sion_T                                                     * xjac * tstep &
+                    + BigR * v * r0_corr * r0_corr * Srec_T                                                      * xjac * tstep &  
          	    + BigR * v * source_mgi                                                                      * xjac * tstep &
                     + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta                                                              &
                     - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) * BigR * xjac * tstep
@@ -1128,7 +1135,7 @@ do ms=1, n_gauss
 
              amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                              &
                      - v * (psi_s * u0_t - psi_t * u0_s)                                  * theta * tstep &
-                     + v * tauIC/(r0*BB2) * F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep 
+                     + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep 
 
              amat_12 = -  v * (ps0_s * u_t - ps0_t * u_s)                             * theta * tstep
 
@@ -1137,21 +1144,21 @@ do ms=1, n_gauss
              amat_13 = - eta_num_T * (v_x * zj_x + v_y * zj_y)                 * xjac * theta * tstep  &
                        - eta_T * v * zj / BigR                                 * xjac * theta * tstep
 
-	     amat_15 = + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T0  * (ps0_s * rho_t - ps0_t * rho_s) * theta * tstep &
-		       + v * tauIC/(r0*BB2) * F0**2/BigR**2 * rho * (ps0_s * T0_t  - ps0_t * T0_s)  * theta * tstep &
-		       - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * rho * T0_p  * xjac          * theta * tstep &
+	     amat_15 = + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * T0  * (ps0_s * rho_t - ps0_t * rho_s) * theta * tstep &
+		       + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * rho * (ps0_s * T0_t  - ps0_t * T0_s)  * theta * tstep &
+		       - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * rho * T0_p  * xjac          * theta * tstep &
 
-                      - v * tauIC * rho /(r0**2 * BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * theta * tstep &
-                      + v * tauIC * rho /(r0**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep
+                      - v * tauIC * rho /(r0_corr**2 * BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * theta * tstep &
+                      + v * tauIC * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep
 
-             amat_15_n = - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T0  * rho_p * xjac * theta * tstep 
+             amat_15_n = - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * T0  * rho_p * xjac * theta * tstep 
 
              amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt))/ BigR * xjac         * theta * tstep &
-		     + v * tauIC/(r0*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
-		     + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &
-	             - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac        * theta * tstep 
+		     + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
+		     + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &
+	             - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac        * theta * tstep 
 
-             amat_16_n = - v * tauIC/(r0*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep 
+             amat_16_n = - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep 
 
 !###################################################################################################
 !#  equation 2   (perpendicular momentum equation)                                                 #
@@ -1174,8 +1181,8 @@ do ms=1, n_gauss
                                  * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   &
 
                        + (1.d0 - delta_n_convection) * (  &		     
-                       - BigR**3 * (r0*rn0*Sion_T)*(v_x * u_x + v_y * u_y)                        * xjac * theta * tstep &
-                       + BigR**3 * (r0*r0 *Srec_T)*(v_x * u_x + v_y * u_y)                        * xjac * theta * tstep ) 
+                       - BigR**3 * (r0_corr*rn0_corr*Sion_T)*(v_x * u_x + v_y * u_y)              * xjac * theta * tstep &
+                       + BigR**3 * (r0_corr*r0_corr *Srec_T)*(v_x * u_x + v_y * u_y)              * xjac * theta * tstep ) 
 
 
              amat_23 = - v * (ps0_s * zj_t  - ps0_t * zj_s)                * theta * tstep
@@ -1207,8 +1214,8 @@ do ms=1, n_gauss
                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep        & 
 
                                + (1.d0 - delta_n_convection) * (  &
-         		       - BigR**3 * (rho*rn0*Sion_T)*(v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                               + BigR**3 * (rho*2.d0*r0*Srec_T)*(v_x * u0_x + v_y * u0_y) * xjac * theta * tstep)
+         		       - BigR**3 * (rho*rn0_corr*Sion_T)*(v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                               + BigR**3 * (rho*2.d0*r0_corr*Srec_T)*(v_x*u0_x+v_y * u0_y) * xjac * theta * tstep)
 
              amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                        - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
@@ -1223,8 +1230,8 @@ do ms=1, n_gauss
                                              * xjac * theta * tstep &
 
                            + (1.d0 - delta_n_convection) * (  &
-                           - BigR**3 * (r0*rn0*dSion_dT*T)*(v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                           + BigR**3 * (r0*r0 *dSrec_dT*T)*(v_x * u0_x + v_y * u0_y) * xjac * theta * tstep)
+                           - BigR**3 * (r0_corr*rn0_corr*dSion_dT*T)*(v_x*u0_x+v_y * u0_y) * xjac * theta * tstep &
+                           + BigR**3 * (r0_corr*r0_corr *dSrec_dT*T)*(v_x*u0_x+v_y * u0_y) * xjac * theta * tstep)
                           
 	     amat_28 = - (1.d0 - delta_n_convection) * BigR**3 * (r0*rhon*Sion_T)*(v_x * u0_x + v_y * u0_y) * xjac * theta * tstep				 
 
@@ -1304,8 +1311,8 @@ do ms=1, n_gauss
                                * (rho_x * ps0_y - rho_y * ps0_x )                             &
                                * ( v_x * ps0_y -  v_y * ps0_x   ) * xjac * theta * tstep * tstep &
      
-                     - v * rho * rn0 * BigR * Sion_T * xjac * theta * tstep &
-                     + v * rho * 2.d0 * r0 * BigR * Srec_T * xjac * theta * tstep
+                     - v * rho * rn0_corr * BigR * Sion_T * xjac * theta * tstep &
+                     + v * rho * 2.d0 * r0_corr * BigR * Srec_T * xjac * theta * tstep
 
 
              amat_55_k = + (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rho          * xjac * theta * tstep &
@@ -1329,8 +1336,8 @@ do ms=1, n_gauss
                                * ( + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
              amat_56   = - v * 2.d0 * tauIC * (T_y * r0 + T*r0_y) * BigR                           * xjac * theta * tstep &
-	                 - v * BigR * r0 * rn0 * dSion_dT * T                                       * xjac * theta * tstep   &
-                           + v * BigR * r0 * r0 *  dSrec_dT * T                                          * xjac * theta * tstep
+	                 - v * BigR * r0_corr * rn0_corr * dSion_dT * T                            * xjac * theta * tstep   &
+                           + v * BigR * r0_corr * r0_corr *  dSrec_dT * T                          * xjac * theta * tstep
 
              amat_57   = + v * F0 / BigR * Vpar * r0_p                                             * xjac * theta * tstep &
                          + v * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                                       * theta * tstep &
@@ -1346,7 +1353,7 @@ do ms=1, n_gauss
 
              amat_57_n = + v * r0 * F0 / BigR * vpar_p                                             * xjac * theta * tstep
 	     
-	         amat_58 = - BigR * v * r0 * Sion_T * rhon                                              * xjac * theta * tstep
+	         amat_58 = - BigR * v * r0_corr * Sion_T * rhon                                    * xjac * theta * tstep
 
 !###################################################################################################
 !#  equation 6   (energy equation)                                                                 #
@@ -1441,10 +1448,9 @@ do ms=1, n_gauss
                     + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                               * rho * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                        &
                               * ( v_x * ps0_y -  v_y * ps0_x ) * xjac * theta * tstep * tstep &
-	                + v * BigR * rho * rn0 * ksiion * Sion_T                             * xjac * theta * tstep &
-
-                    + v * BigR * rho * rn0 * LradDrays_T                                   * xjac * theta * tstep  &
-                    + v * BigR * rho * 2d0 * r0 * LradDcont_T                              * xjac * theta * tstep  &
+	                + v * BigR * rho * rn0_corr * ksiion * Sion_T                        * xjac * theta * tstep  &
+                    + v * BigR * rho * rn0_corr * LradDrays_T                                * xjac * theta * tstep  &
+                    + v * BigR * rho * 2d0 * r0_corr * LradDcont_T                           * xjac * theta * tstep  &
                     + v * BigR * rho * frad_bg                                             * xjac * theta * tstep 
 
 
@@ -1498,12 +1504,12 @@ do ms=1, n_gauss
                              * r0 * (T_x * ps0_y - T_y * ps0_x               )                            &
                              * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
  
-		        + v * BigR * r0 * rn0 * ksiion * dSion_dT * T                    * xjac * theta * tstep &
+		        + v * BigR * r0_corr * rn0_corr * ksiion * dSion_dT * T        * xjac * theta * tstep &
 
                            - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2                              * xjac * theta * tstep  &
-                           + v * BigR * T * r0 * rn0 * dLradDrays_dT                                              * xjac * theta * tstep  & 
-                           + v * BigR * T * r0 * r0  * dLradDcont_dT                                              * xjac * theta * tstep  &
-                           + v * BigR * T * r0 * dfrad_bg_dT                                                      * xjac * theta * tstep
+                           + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT                                    * xjac * theta * tstep  & 
+                           + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT                                    * xjac * theta * tstep  &
+                           + v * BigR * T * r0_corr * dfrad_bg_dT                                                 * xjac * theta * tstep
  
              amat_66_k = + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T    * xjac * theta * tstep &
 
@@ -1557,8 +1563,8 @@ do ms=1, n_gauss
 
              amat_67_n = + v * r0 * GAMMA * T0 * F0 / BigR * vpar_p             * xjac * theta * tstep
 	     
-	     amat_68 = + v * BigR * r0 * rhon * ksiion * Sion_T                        * xjac * theta * tstep &
-                   + v * BigR * rhon * r0 * LradDrays_T                            * xjac * theta * tstep
+	     amat_68 = + v * BigR * r0_corr * rhon * ksiion * Sion_T               * xjac * theta * tstep &
+                   + v * BigR * rhon * r0_corr * LradDrays_T                       * xjac * theta * tstep
 
 
 
@@ -1593,9 +1599,9 @@ do ms=1, n_gauss
 
                        + (1.d0 - delta_n_convection) * (  &
 
-		       + v *(r0 * rn0 * Sion_T) * vpar0 * BB2_psi * BigR         * xjac * theta * tstep &
+		       + v *(r0_corr * rn0_corr * Sion_T) * vpar0 * BB2_psi * BigR   * xjac * theta * tstep &
                        
-                       - v *(r0 * r0  * Srec_T) * vpar0 * BB2_psi * BigR         * xjac * theta * tstep )
+                       - v *(r0_corr * r0_corr  * Srec_T) * vpar0 * BB2_psi * BigR   * xjac * theta * tstep )
 
              amat_72 = 0.d0 
 
@@ -1615,8 +1621,8 @@ do ms=1, n_gauss
                                  * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac           ) * xjac * theta * tstep*tstep &
 
                        + (1.d0 - delta_n_convection) * (  &
-                       + v *(rho * rn0 * Sion_T) * vpar0 * BB2 * BigR          * xjac * theta * tstep  &
-                       - v *(rho*2.d0*r0*Srec_T) * vpar0 * BB2 * BigR          * xjac * theta * tstep )
+                       + v *(rho * rn0_corr * Sion_T) * vpar0 * BB2 * BigR          * xjac * theta * tstep  &
+                       - v *(rho*2.d0*r0_corr*Srec_T) * vpar0 * BB2 * BigR          * xjac * theta * tstep )
 
              amat_75_k = - 0.5d0 * rho * vpar0**2 * BB2 * F0 / BigR * v_p       * xjac * theta * tstep &
 
@@ -1636,8 +1642,8 @@ do ms=1, n_gauss
                        + v * F0 / BigR * T * r0_p                               * xjac * theta * tstep &
 
                        + (1.d0 - delta_n_convection) * (  &
-                       + v *(r0 * rn0 * dSion_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep &
-                       - v *(r0 * r0  * dSrec_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep )
+                       + v *(r0_corr * rn0_corr * dSion_dT * T) * vpar0 * BB2 * BigR * xjac * theta * tstep &
+                       - v *(r0_corr * r0_corr  * dSrec_dT * T) * vpar0 * BB2 * BigR * xjac * theta * tstep )
 
              amat_76_n = + v * F0 / BigR * T_p * r0                              * xjac * theta * tstep
 
@@ -1666,8 +1672,8 @@ do ms=1, n_gauss
                       * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep    &
 
                         + (1.d0 - delta_n_convection) * (  &
-                        + v*(r0 * rn0 * Sion_T)*vpar*BB2 * BigR * xjac * theta * tstep &
-                        - v*(r0 * r0  * Srec_T)*vpar*BB2 * BigR * xjac * theta * tstep )
+                        + v*(r0_corr * rn0_corr * Sion_T)*vpar*BB2 * BigR * xjac * theta * tstep &
+                        - v*(r0_corr * r0_corr  * Srec_T)*vpar*BB2 * BigR * xjac * theta * tstep )
  
 	     amat_77_k = - r0 * vpar0 * vpar * BB2 * F0 / BigR * v_p                 * xjac * theta * tstep               &
 
@@ -1693,7 +1699,7 @@ do ms=1, n_gauss
                       * (                                        + F0 / BigR * vpar_p) / BigR                        &
                       * (                                        + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
 	     
-	     amat_78 = + (1.d0 - delta_n_convection) * v *(r0 * rhon * Sion_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep
+	     amat_78 = + (1.d0 - delta_n_convection) * v *(r0_corr * rhon * Sion_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep
 		     		     
 !################################################################################################### 
 !#  equation 8   neutral density equation                                                          # 
@@ -1708,11 +1714,11 @@ do ms=1, n_gauss
                                          + v * BigR**2 * ( rn0_s * u_t - rn0_t * u_s)                 * theta * tstep &
                                          + v * 2.d0 * BigR * rn0 * u_y                         * xjac * theta * tstep )
 
-        amat_85 = + BigR * v * rn0 * Sion_T * rho                                              * xjac * theta * tstep &
-                  - BigR * v * 2d0 * r0 * rho * Srec_T                                         * xjac * theta * tstep 
+        amat_85 = + BigR * v * rn0_corr * Sion_T * rho                                         * xjac * theta * tstep &
+                  - BigR * v * 2d0 * r0_corr * rho * Srec_T                                    * xjac * theta * tstep 
 
-        amat_86  = + BigR * v * r0 * rn0 * dSion_dT * T                                        * xjac * theta * tstep &
-                   - BigR * v * r0 * r0  * dSrec_dT * T                                        * xjac * theta * tstep 
+        amat_86  = + BigR * v * r0_corr * rn0_corr * dSion_dT * T                              * xjac * theta * tstep &
+                   - BigR * v * r0_corr * r0_corr  * dSrec_dT * T                              * xjac * theta * tstep 
        
         amat_87 = + delta_n_convection * ( v * F0 / BigR * Vpar * rn0_p                        *  xjac * theta * tstep &
                                          + v * Vpar * (rn0_s * ps0_t - rn0_t * ps0_s)                  * theta * tstep &
@@ -1730,7 +1736,7 @@ do ms=1, n_gauss
                                          + v * F0 / BigR * rhon * vpar0_p                     * xjac * theta * tstep ) &
                                        
                    + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                        * xjac * theta * tstep &   
-	           + BigR * v * r0 * rhon* Sion_T                                              * xjac * theta * tstep &
+	           + BigR * v * r0_corr * rhon* Sion_T                                         * xjac * theta * tstep &
                    + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)  * BigR * xjac * theta * tstep   
           
         amat_88_n = + delta_n_convection * v * F0 / BigR * Vpar0 * rhon_p                      * xjac * theta * tstep 

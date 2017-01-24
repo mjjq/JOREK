@@ -21,23 +21,22 @@ function compile_jorek () {
 
 # --- Re-run the whole case from scratch into the non-linear phase
 function initial_run () {
-  #${codedir}/util/setinput.sh input nstep_n=10,10,10, tstep_n=1.,100.,3000.          || exit 1
-  $MPIRUN 1 ./jorek_model${jorekmodel}_1 < input | tee -a logfile                                    || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee -a logfile                                    || exit 1
   echo "Equil done"
- # ${codedir}/util/setinput.sh input nstep_n=30 tstep_n=3000. restart=.t.             || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < JET_RMP3_303_NTOR3_NPER3_NPLA32  | tee -a logfile                  || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. tstep_n=5. nstep_n=1 iter_precon=0 gmres_4=1.d4 RMP_on=.t. RMP_psi_cos_file=RMP_psi_cos_JET_N3.txt RMP_psi_sin_file=RMP_psi_sin_JET_N3.txt nout=1       || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input  | tee -a logfile                  || exit 1
 }
 
 
 # --- Carry out the test case, i.e., run a single time step in the non-linear phase
 function restart_run () {
-  ${codedir}/util/setinput.sh JET_RMP3_303_NTOR3_NPER3_NPLA32 restart=.t. nstep_n=1 nout=1       || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < JET_RMP3_303_NTOR3_NPER3_NPLA32 | tee -a logfile                  || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. tstep_n=5. nstep_n=1 iter_precon=0 gmres_4=1.d4 RMP_on=.t. RMP_psi_cos_file=RMP_psi_cos_JET_N3.txt RMP_psi_sin_file=RMP_psi_sin_JET_N3.txt nout=1       || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile                  || exit 1
 }
 
 
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
-  ./rst_bin2hdf5 < ./JET_RMP3_303_NTOR3_NPER3_NPLA32                                                           || exit 1
+  ./rst_bin2hdf5 < ./input                                                           || exit 1
   h5diff -d 1e-12 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
 }

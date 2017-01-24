@@ -17,6 +17,8 @@ from __future__ import print_function
 import h5py
 import numpy as np
 
+prec=np.float32
+
 """
 Class encapsulating some read data from a restart file
 
@@ -39,10 +41,10 @@ class fields(object):
             self.n_vertex_max = hf.get('n_vertex_max')[0]
             self.n_elements   = hf.get('n_elements')[0]
             self.vertex       = np.array(hf.get('vertex'), dtype=np.int32)-1
-            self.x            = np.array(hf.get('x'))
-            self.size         = np.array(hf.get('size'))
+            self.x            = np.array(hf.get('x'), dtype=prec)
+            self.size         = np.array(hf.get('size'), dtype=prec)
             if (len(self.vars) > 0):
-                self.values       = np.array(hf.get('values'))[self.vars,:,:]
+                self.values   = np.array(hf.get('values')[self.vars,:,:], dtype=prec)
 
     """
     Create VTK objects from points and connectivity matrix
@@ -55,7 +57,6 @@ class fields(object):
     returns:
         vtkUnstructuredGrid
     """
-    @profile
     def to_vtk(self, n_sub=4, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False):
         import vtk
         from vtk.util import numpy_support as npvtk
@@ -110,10 +111,25 @@ return x[element,is,it,var] (where var is 0->R or 1->Z)
 def grid_2D(x, vertex, size, n_sub):
     # Calculate RZ for all of the elements (dimension 0) for each of the s
     # positions (dimension 1) for each of the t positions (dimension 2)
-    # Multiply x[var, order, vertex, element] on the last two dimensions
+    # Multiply x[var, order, node[vertex, element]] on the last two dimensions
     # with size[order, vertex, element]*bf[order, vertex, s, t]
     # See http://stackoverflow.com/questions/26089893/understanding-numpys-einsum
-    return np.einsum('lijk,ijk,ijmn->kmnl', x[:,:,vertex], size, bf(n_sub))
+    #return np.einsum('lijk,ijk,ijmn->kmnl', x[:,:,vertex], size, bf(n_sub))
+    # Code below is ~5x faster or so! try again when einsum supports optimize=True
+
+    # First create a temporary array holding: x[order, vertex, element, var]
+    tmp = np.zeros((x.shape[0], x.shape[1],vertex.shape[0],vertex.shape[1]), dtype=prec)
+    # Fill it with the right x
+    for i in range(vertex.shape[0]): # small loop over vertices (hardcode 4 here?)
+        tmp[:,:,i,:] = x[:,:,vertex[i,:]]
+    # multiply by size[order, vertex, element]
+    tmp[0,:,:,:] *= size
+    tmp[1,:,:,:] *= size
+    # Create output array
+    out = np.zeros((vertex.shape[1],n_sub,n_sub,2), dtype=prec)
+    out[:,:,:,0] = np.tensordot(tmp[0,:,:,:], bf(n_sub), axes=((0,1),(0,1)))
+    out[:,:,:,1] = np.tensordot(tmp[1,:,:,:], bf(n_sub), axes=((0,1),(0,1)))
+    return out
 
 
 """
@@ -248,7 +264,7 @@ Calculate basis functions at n_sub**2 points
 """
 def bf(n_sub):
     # Get the basis functions at each of the points
-    lin = np.linspace(0.0, 1.0, n_sub, dtype=np.double)
+    lin = np.linspace(0.0, 1.0, n_sub, dtype=prec)
     s  = np.tensordot(lin, [1]*n_sub, axes=0)
     t  = s.transpose()
     return basis_functions(s, t)

@@ -5,11 +5,11 @@ import jorek_read_h5 as jorek
 import sys
 
 f = jorek.fields()
-f.read('/tmp/jorek_restart.h5', variables='0')
+f.read('/tmp/jorek_restart.h5', variables='1')
 #grid = f.to_vtk(phi=0)
 grid = f.to_vtk(phi=[0,np.pi/2])
 
-sys.exit(0)
+#sys.exit(0)
 
 
 # Visualize

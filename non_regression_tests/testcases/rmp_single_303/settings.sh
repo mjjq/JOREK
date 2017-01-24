@@ -22,15 +22,14 @@ function compile_jorek () {
 # --- Re-run the whole case from scratch into the non-linear phase
 function initial_run () {
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee -a logfile                                    || exit 1
-  echo "Equil done"
-  ${codedir}/util/setinput.sh input restart=.t. tstep_n=5. nstep_n=1 iter_precon=0 gmres_4=1.d4 RMP_on=.t. RMP_psi_cos_file=RMP_psi_cos_JET_N3.txt RMP_psi_sin_file=RMP_psi_sin_JET_N3.txt nout=1       || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. tstep_n=5. nstep_n=222 iter_precon=0 gmres_4=1.d4 RMP_on=.t. RMP_psi_cos_file=\'RMP_psi_cos_JET_N3.txt\' RMP_psi_sin_file=\'RMP_psi_sin_JET_N3.txt\' nout=1       || exit 1
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input  | tee -a logfile                  || exit 1
 }
 
 
 # --- Carry out the test case, i.e., run a single time step in the non-linear phase
 function restart_run () {
-  ${codedir}/util/setinput.sh input restart=.t. tstep_n=5. nstep_n=1 iter_precon=0 gmres_4=1.d4 RMP_on=.t. RMP_psi_cos_file=RMP_psi_cos_JET_N3.txt RMP_psi_sin_file=RMP_psi_sin_JET_N3.txt nout=1       || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. tstep_n=5. nstep_n=1 iter_precon=0 gmres_4=1.d4 RMP_on=.t. RMP_psi_cos_file=\'RMP_psi_cos_JET_N3.txt\' RMP_psi_sin_file=\'RMP_psi_sin_JET_N3.txt\' nout=1       || exit 1
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile                  || exit 1
 }
 
@@ -38,5 +37,5 @@ function restart_run () {
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
   ./rst_bin2hdf5 < ./input                                                           || exit 1
-  h5diff -d 1e-12 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
+  h5diff -d 1e-6 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
 }

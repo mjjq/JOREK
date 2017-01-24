@@ -3,7 +3,7 @@
  restart = .t.
  regrid  = .f.
  tstep_n   = 5. !0.1 0.2 0.5 1.
- nstep_n   = 500 !20  20  100 1000
+ nstep_n   = 222 !20  20  100 1000
 
  nout = 10
  rho_file      = none   ! none otherwise

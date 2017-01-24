@@ -123,7 +123,6 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
-        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -138,7 +137,6 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
-        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -151,7 +149,6 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
-        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -164,7 +161,6 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
-        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -283,7 +279,7 @@ def generatePythonFilter(info):
 <ServerManagerConfiguration>
   <ProxyGroup name="%s">
     <SourceProxy name="%s" class="vtkFileSeriesReader"
-                 si_class="vtkSIFileSeriesReaderProxy"
+                 si_class="vtkSIMetaReaderProxy"
                  label="%s"
                  file_name_method="SetFileName">
       <Documentation
@@ -325,11 +321,13 @@ def generatePythonFilter(info):
           Available timestep values.
         </Documentation>
      </DoubleVectorProperty>
- 
+
      <Hints>
       <ReaderFactory extensions="%s"
           file_description="%s" />
      </Hints>
+
+%s
 
 
     </SourceProxy>
@@ -368,6 +366,7 @@ def generatePythonFilter(info):
 </ServerManagerConfiguration>
       ''' % (proxyGroup, proxyName, proxyLabel, longHelp, shortHelp,
              proxyName, extension, fileDescription, # internal source after this
+             filterProperties,
              proxyName, proxyLabel, extension, fileDescription,
              inputPropertyXml,
              filterProperties, extraXml, outputDataSetType, scriptProperties)

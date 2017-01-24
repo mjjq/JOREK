@@ -14,6 +14,8 @@ Created by Daan van Vugt on 2017-01-18
 """
 
 from __future__ import print_function
+import sys
+sys.path.append('/usr/lib/python2.7/site-packages/h5py')
 import h5py
 import numpy as np
 
@@ -57,7 +59,7 @@ class fields(object):
     returns:
         vtkUnstructuredGrid
     """
-    def to_vtk(self, n_sub=4, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False):
+    def to_vtk(self, n_sub=4, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False, output=None):
         import vtk
         from vtk.util import numpy_support as npvtk
 
@@ -79,8 +81,9 @@ class fields(object):
         points = vtk.vtkPoints()
         points.SetData(pcoords)
 
-        ug = vtk.vtkUnstructuredGrid()
-        ug.SetPoints(points)
+        if (output == None):
+            output = vtk.vtkUnstructuredGrid()
+            output.SetPoints(points)
 
         HZ = toroidal_basis(self.n_tor, self.n_period, phis, without_n0_mode)
         for i in self.vars:
@@ -89,7 +92,7 @@ class fields(object):
                                    deep=True, array_type=vtk.VTK_FLOAT)
 
             val.SetName(self.var_names[i])
-            ug.GetPointData().SetScalars(val)
+            output.GetPointData().SetScalars(val)
 
 
         if (n_plane > 1):
@@ -100,8 +103,8 @@ class fields(object):
         cells = vtk.vtkCellArray()
         cells.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
 
-        ug.SetCells(etype, cells)
-        return ug
+        output.SetCells(etype, cells)
+        return output
     
 
 """

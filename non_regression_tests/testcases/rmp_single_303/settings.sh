@@ -3,7 +3,7 @@ jorekmodel="303"
 description="after eq with flows single rmp n_tor=3."
 mpitasks=2
 binaries="jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin"
-requiredfiles="$binaries JET_EQ_FLOWS_303_NTOR1_NPER1_NPLA12 JET_RMP3_303_NTOR3_NPER3_NPLA32 RMP_psi_cos_JET_N3.txt RMP_psi_sin_JET_N3.txt RMP_start_time.dat "
+requiredfiles="$binaries input JET_RMP3_303_NTOR3_NPER3_NPLA32 RMP_psi_cos_JET_N3.txt RMP_psi_sin_JET_N3.txt RMP_start_time.dat "
 
 
 # --- Compile the code for the test case
@@ -22,7 +22,8 @@ function compile_jorek () {
 # --- Re-run the whole case from scratch into the non-linear phase
 function initial_run () {
   #${codedir}/util/setinput.sh input nstep_n=10,10,10, tstep_n=1.,100.,3000.          || exit 1
-  ./jorek_model${jorekmodel}_1 < JET_EQ_FLOWS_303_NTOR1_NPER1_NPLA12 | tee -a logfile                                    || exit 1
+  $MPIRUN 1 ./jorek_model${jorekmodel}_1 < input | tee -a logfile                                    || exit 1
+  echo "Equil done"
  # ${codedir}/util/setinput.sh input nstep_n=30 tstep_n=3000. restart=.t.             || exit 1
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < JET_RMP3_303_NTOR3_NPER3_NPLA32  | tee -a logfile                  || exit 1
 }

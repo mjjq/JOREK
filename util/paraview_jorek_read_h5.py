@@ -14,10 +14,11 @@ OutputDataType = 'vtkUnstructuredGrid'
 Properties = dict(
     Variables = "1,2,3,4,5,6",
     Number_of_planes = 1,
-    Number_of_subdivisions = 5,
-    phi_range_in_pi = [0.0, 0.0],
+    Number_of_subdivisions = 3,
+    phi_range_in_pi = [0.0, 1.0],
+    Quadratic = False,
     Exclude_n0_mode = False,
-    Force_remake_grid = False,
+    Force_remake_grid = False, # use this only when you have refinement files
 )
 
 
@@ -34,7 +35,7 @@ def RequestData(self):
     # Get the current timestep
     req_time = GetUpdateTimestep(self)
 
-    req_time = round(req_time)
+    req_time = int(round(req_time))
     if (req_time < 0):
         req_time = 0
     elif (req_time >= len(FileNames)):
@@ -45,10 +46,10 @@ def RequestData(self):
     f = fields()
     f.read(fname, variables=Variables)
     
-    output = fields.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
+    output = f.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
                            n_plane=Number_of_planes, without_n0_mode=Exclude_n0_mode,
                            force_remake_grid=Force_remake_grid,
-                           output=self.GetUnstructuredGridOutput())
+                           output=self.GetUnstructuredGridOutput(), quadratic=Quadratic)
     return output
 
 """

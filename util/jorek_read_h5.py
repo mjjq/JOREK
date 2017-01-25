@@ -58,8 +58,8 @@ class fields(object):
     returns:
         vtkUnstructuredGrid
     """
-    def to_vtk(self, n_sub=4, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False, 
-               force_remake_grid=False, output=None):
+    def to_vtk(self, n_sub=2, phi=[0,2*np.pi], n_plane=8, without_n0_mode=False, 
+               force_remake_grid=False, quadratic=True, output=None):
         import vtk
         from vtk.util import numpy_support as npvtk
 
@@ -71,20 +71,25 @@ class fields(object):
         elif (n_plane == 1):
             phis = np.asarray([phi[0]])
         else:
+            if (quadratic):
+                n_plane = n_plane*2-1
             periodic = (np.mod(phi[0]-phi[1],2*np.pi) < 1e-9)
             phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=not periodic)
+
+        if (quadratic):
+            n_sub = n_sub*2-1
 
         if (output == None):
             output = vtk.vtkUnstructuredGrid()
 
-        settings = [n_sub, phi, n_plane, without_n0_mode]
+        settings = [n_sub, phi, n_plane, without_n0_mode, quadratic]
         if (not hasattr(self, 'old_settings') or self.old_settings != settings):
             force_remake_grid = True
         self.old_settings = settings
 
         if (force_remake_grid or not hasattr(self, 'points') or not hasattr(self, 'cells')):
             (xyz, ien) = create_grid(self.x, self.vertex, self.size, self.n_elements,
-                                     n_sub, phis, n_plane, periodic)
+                                     n_sub, phis, n_plane, periodic, quadratic)
 
             pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk.VTK_FLOAT)
             self.points = vtk.vtkPoints()
@@ -102,13 +107,19 @@ class fields(object):
                                    deep=True, array_type=vtk.VTK_FLOAT)
 
             val.SetName(self.var_names[i])
-            output.GetPointData().SetScalars(val)
+            output.GetPointData().AddArray(val)
 
 
-        if (n_plane > 1):
-            etype = vtk.VTK_HEXAHEDRON
-        else: # or stay 2D
-            etype = vtk.VTK_QUAD
+        if (quadratic):
+            if (n_plane > 1):
+                etype = vtk.VTK_QUADRATIC_HEXAHEDRON
+            else: # or stay 2D
+                etype = vtk.VTK_QUADRATIC_QUAD
+        else:
+            if (n_plane > 1):
+                etype = vtk.VTK_HEXAHEDRON
+            else: # or stay 2D
+                etype = vtk.VTK_QUAD
 
         output.SetCells(etype, self.cells)
         return output
@@ -208,7 +219,7 @@ def interp_scalars_3D(values, vertex, size, n_sub, HZ):
 Create a grid of nsub**2 points per element, at phis positions
 return points and connectivity matrix
 """
-def create_grid(x, vertex, size, n_elements, n_sub=4, phis=[0], n_plane=1, periodic=False):
+def create_grid(x, vertex, size, n_elements, n_sub, phis, n_plane, periodic, quadratic):
     RZ     = grid_2D(x, vertex, size, n_sub)
 
     # Create connectivity data
@@ -229,36 +240,78 @@ def create_grid(x, vertex, size, n_elements, n_sub=4, phis=[0], n_plane=1, perio
     for i in range(n_plane):
         xyz[i*n_points:(i+1)*n_points,:] = np.reshape(
             np.stack((RZ[:,:,:,0]*np.cos(phis[i]),
-                      RZ[:,:,:,0]*np.sin(phis[i]),
-                      RZ[:,:,:,1]), axis=-1),
+                      RZ[:,:,:,1],
+                      RZ[:,:,:,0]*np.sin(phis[i])), axis=-1),
             (-1,3))
 
-    # The base block in a 2D plane
-    block = np.zeros((n_sub-1,n_sub-1,4), dtype=np.int32)
-    for j in range(n_sub-1):
-        for k in range(n_sub-1):
-            block[j,k,:] = [n_sub*j    +k  ,n_sub*(j+1)+k,
-                            n_sub*(j+1)+k+1,n_sub*j    +k+1]
+    # See http://www.vtk.org/doc/nightly/html/classvtkQuadraticHexahedron.html#details
+    if (quadratic):
+        if (n_plane > 1):
+            # The base block for a quadratic element
+            face_block = np.zeros(21, dtype=np.int32)
+            face_block[1:21] = [0,2*n_sub,2*n_sub+2,2, # corners front face
+                                2*n_points,2*n_points+2*n_sub,2*n_points+2*n_sub+2,2*n_points+2, # corners back face
+                                n_sub,2*n_sub+1,n_sub+2,1,# midedges front face
+                                2*n_points+n_sub,2*n_points+2*n_sub+1,2*n_points+n_sub+2,2*n_points+1,# midedges back face
+                                n_points,2*n_sub+n_points,2*n_sub+2+n_points,2+n_points]# midedges middle
+            i_start_t = np.arange(0,n_sub*(n_sub-1),2*n_sub,dtype=np.int32)
+            i_start_s = np.arange(0,n_sub-1,2,dtype=np.int32)
 
-    i_start = np.arange(0,n_points, n_sub**2, dtype=np.int32)
-    ien = np.reshape(i_start[:,np.newaxis,np.newaxis,np.newaxis]+
-                     block[np.newaxis,:,:,:], (-1,4))
+            element_block = i_start_t[:,np.newaxis,np.newaxis] + \
+                            i_start_s[np.newaxis,:,np.newaxis] + \
+                            face_block[np.newaxis,np.newaxis,:]
 
-    # Define only _within_ an element for now
-    if (n_plane > 1):
-        ien_2D = ien
-        ien = np.zeros((n_cells*n_cells_tor,9), dtype=np.int32)
-        ien[:,0] = 8
-        ien[:,1:9] = np.tile(ien_2D, (n_cells_tor,2))
-        for i in range(len(phis)-1):
-            ien[i*n_cells:(i+1)*n_cells,1:9] += np.concatenate(([n_points*i]*4,[n_points*(i+1)]*4))
-        if (periodic):
-            i = len(phis)
-            ien[i*n_cells:(i+1)*n_cells,1:9] += np.concatenate(([n_points*i]*4,[0]*4))
+            i_start_elm   = np.arange(0,n_points, n_sub**2, dtype=np.int32)
+            i_start_plane = np.arange(0,n_points*(n_plane-1),2*n_points, dtype=np.int32)
+            if (periodic):
+                i_start_plane[-1] = 0
+            ien = np.reshape(i_start_plane[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis]+
+                             i_start_elm[np.newaxis,:,np.newaxis,np.newaxis,np.newaxis]+
+                             element_block[np.newaxis,np.newaxis,:,:,:], (-1,21))
+            ien[:,0] = 20
+        else:
+            # The base block for a quadratic element
+            face_block = np.zeros(9, dtype=np.int32)
+            face_block[1:9] = [0,2*n_sub,2*n_sub+2,2, # corners
+                               n_sub,2*n_sub+1,n_sub+2,1] # midedges
+            i_start_t = np.arange(0,n_sub*(n_sub-1),2*n_sub,dtype=np.int32)
+            i_start_s = np.arange(0,n_sub-1,2,dtype=np.int32)
 
-        n_cells = n_cells * n_cells_tor
+            element_block = i_start_t[:,np.newaxis,np.newaxis] + \
+                            i_start_s[np.newaxis,:,np.newaxis] + \
+                            face_block[np.newaxis,np.newaxis,:]
+
+            i_start_elm = np.arange(0,n_points, n_sub**2, dtype=np.int32)
+            ien = np.reshape(i_start_elm[:,np.newaxis,np.newaxis,np.newaxis]+
+                             element_block[np.newaxis,:,:,:], (-1,9))
+            ien[:,0] = 8
     else:
-        ien = np.insert(ien, 0, 4, axis=1)
+        # The base block in a 2D plane
+        block = np.zeros((n_sub-1,n_sub-1,4), dtype=np.int32)
+        for j in range(n_sub-1):
+            for k in range(n_sub-1):
+                block[j,k,:] = [n_sub*j    +k  ,n_sub*(j+1)+k,
+                                n_sub*(j+1)+k+1,n_sub*j    +k+1]
+
+        i_start = np.arange(0,n_points, n_sub**2, dtype=np.int32)
+        ien = np.reshape(i_start[:,np.newaxis,np.newaxis,np.newaxis]+
+                         block[np.newaxis,:,:,:], (-1,4))
+
+        # Define only _within_ an element for now
+        if (n_plane > 1):
+            ien_2D = ien
+            ien = np.zeros((n_cells*n_cells_tor,9), dtype=np.int32)
+            ien[:,0] = 8
+            ien[:,1:9] = np.tile(ien_2D, (n_cells_tor,2))
+            for i in range(len(phis)-1):
+                ien[i*n_cells:(i+1)*n_cells,1:9] += np.concatenate(([n_points*i]*4,[n_points*(i+1)]*4))
+            if (periodic):
+                i = len(phis)
+                ien[i*n_cells:(i+1)*n_cells,1:9] += np.concatenate(([n_points*i]*4,[0]*4))
+
+            n_cells = n_cells * n_cells_tor
+        else:
+            ien = np.insert(ien, 0, 4, axis=1)
 
     return (xyz, ien)
 

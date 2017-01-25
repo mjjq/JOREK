@@ -6,10 +6,8 @@ import sys
 
 f = jorek.fields()
 f.read('/tmp/jorek_restart.h5', variables='1')
-#grid = f.to_vtk(phi=0)
-grid = f.to_vtk(phi=[0,np.pi/2])
-
-
+grid = f.to_vtk(phi=0)
+#grid = f.to_vtk(phi=[0,np.pi/2])
 
 # Visualize
 mapper = vtk.vtkDataSetMapper()
@@ -21,7 +19,7 @@ else:
 # Create color map based on range of first var
 data_range = grid.GetPointData().GetAbstractArray(0).GetRange()
 colormap = vtk.vtkLookupTable()
-colormap.SetHueRange(data_range[0], data_range[1])
+colormap.SetTableRange(data_range[0], data_range[1])
 colormap.Build()
 mapper.SetColorModeToDefault()
 mapper.SetScalarRange(data_range)

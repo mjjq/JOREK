@@ -17,6 +17,7 @@ Properties = dict(
     Number_of_subdivisions = 5,
     phi_range_in_pi = [0.0, 0.0],
     Exclude_n0_mode = False,
+    Force_remake_grid = False,
 )
 
 
@@ -40,13 +41,13 @@ def RequestData(self):
         req_time = len(FileNames)-1
 
     fname = FileNames[req_time]
-    print(fname)
     # Read the h5 file
     f = fields()
     f.read(fname, variables=Variables)
     
     output = fields.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
                            n_plane=Number_of_planes, without_n0_mode=Exclude_n0_mode,
+                           force_remake_grid=Force_remake_grid,
                            output=self.GetUnstructuredGridOutput())
     return output
 

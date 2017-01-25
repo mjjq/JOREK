@@ -10,12 +10,15 @@ Before interpolating, set:
     - Without_n0_mode (default false)
 
 Created by Daan van Vugt on 2017-01-18
-"""
 
+prec controls the precision of the calculation. Values: np.float32 or np.float64
+Calculation time is not really affected, render time maybe?
+"""
 import h5py
 import numpy as np
-
 prec=np.float32
+
+
 
 """
 Class encapsulating some read data from a restart file
@@ -38,11 +41,11 @@ class fields(object):
             self.n_tor        = hf.get('n_tor')[0]
             self.n_vertex_max = hf.get('n_vertex_max')[0]
             self.n_elements   = hf.get('n_elements')[0]
-            self.vertex       = np.array(hf.get('vertex'), dtype=np.int32)-1
-            self.x            = np.array(hf.get('x'), dtype=prec)
-            self.size         = np.array(hf.get('size'), dtype=prec)
-            if (len(self.vars) > 0):
-                self.values   = np.array(hf.get('values')[self.vars,:,:], dtype=prec)
+        self.vertex   = read_mmap_or_h5py(filename, 'vertex')
+        self.x        = read_mmap_or_h5py(filename, 'x', type_out=prec)
+        self.size     = read_mmap_or_h5py(filename, 'size', type_out=prec)
+        self.values   = read_mmap_or_h5py(filename, 'values', type_out=prec)
+
 
     """
     Create VTK objects from points and connectivity matrix
@@ -55,7 +58,8 @@ class fields(object):
     returns:
         vtkUnstructuredGrid
     """
-    def to_vtk(self, n_sub=4, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False, output=None):
+    def to_vtk(self, n_sub=4, phi=[0,2*np.pi], n_plane=16, without_n0_mode=False, 
+               force_remake_grid=False, output=None):
         import vtk
         from vtk.util import numpy_support as npvtk
 
@@ -70,16 +74,26 @@ class fields(object):
             periodic = (np.mod(phi[0]-phi[1],2*np.pi) < 1e-9)
             phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=not periodic)
 
-        (xyz, ien) = create_grid(self.x, self.vertex, self.size, self.n_elements,
-                                 n_sub, phis, n_plane, periodic)
-
-        pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk.VTK_FLOAT)
-        points = vtk.vtkPoints()
-        points.SetData(pcoords)
-
         if (output == None):
             output = vtk.vtkUnstructuredGrid()
-            output.SetPoints(points)
+
+        settings = [n_sub, phi, n_plane, without_n0_mode]
+        if (not hasattr(self, 'old_settings') or self.old_settings != settings):
+            force_remake_grid = True
+        self.old_settings = settings
+
+        if (force_remake_grid or not hasattr(self, 'points') or not hasattr(self, 'cells')):
+            (xyz, ien) = create_grid(self.x, self.vertex, self.size, self.n_elements,
+                                     n_sub, phis, n_plane, periodic)
+
+            pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk.VTK_FLOAT)
+            self.points = vtk.vtkPoints()
+            self.points.SetData(pcoords)
+
+            self.cells = vtk.vtkCellArray()
+            self.cells.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
+
+        output.SetPoints(self.points)
 
         HZ = toroidal_basis(self.n_tor, self.n_period, phis, without_n0_mode)
         for i in self.vars:
@@ -96,12 +110,30 @@ class fields(object):
         else: # or stay 2D
             etype = vtk.VTK_QUAD
 
-        cells = vtk.vtkCellArray()
-        cells.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
-
-        output.SetCells(etype, cells)
+        output.SetCells(etype, self.cells)
         return output
-    
+
+
+"""
+Read part of a hdf5 file directly
+"""
+def read_mmap_or_h5py(path, h5path, type_out=None):
+    with h5py.File(path, 'r') as f:
+        ds = f[h5path]
+        offset = ds.id.get_offset()
+        if (ds.chunks is None and ds.compression is None and offset > 0):
+            dtype = ds.dtype
+            shape = ds.shape
+            arr = np.memmap(path, mode='r', shape=shape, offset=offset, dtype=dtype)
+            if (type_out is not None and type_out is not dtype):
+                return arr.astype(type_out)
+        else:
+            if (type_out is None):
+                arr = np.array(f.get(h5path))
+            else:
+                arr = np.array(f.get(h5path), dtype=type_out)
+    return arr
+
 
 """
 Calculate RZ positions of all points
@@ -120,7 +152,7 @@ def grid_2D(x, vertex, size, n_sub):
     tmp = np.zeros((x.shape[0], x.shape[1],vertex.shape[0],vertex.shape[1]), dtype=prec)
     # Fill it with the right x
     for i in range(vertex.shape[0]): # small loop over vertices (hardcode 4 here?)
-        tmp[:,:,i,:] = x[:,:,vertex[i,:]]
+        tmp[:,:,i,:] = x[:,:,vertex[i,:]-1]
     # multiply by size[order, vertex, element]
     tmp[0,:,:,:] *= size
     tmp[1,:,:,:] *= size
@@ -160,7 +192,7 @@ def interp_scalars(values, vertex, size, n_sub):
     # Multiply values[var,order,harm,vertex,element] with
     # size[order, vertex, element] and bf[order, vertex, s, t]
     return np.einsum('lihjk,ijk,ijmn->lhkmn',
-                        values[:,:,:,vertex],
+                        values[:,:,:,vertex-1],
                         size, bf(n_sub))
 
 

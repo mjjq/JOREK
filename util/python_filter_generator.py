@@ -85,15 +85,16 @@ def getScriptPropertiesXml(info):
 
 
 
-def getPythonPathProperty():
+def getPythonPathProperty(paths=[]):
     return '''
       <StringVectorProperty command="SetPythonPath"
                             name="PythonPath"
                             number_of_elements="1"
+                            default_values="'%s'"
                             panel_visibility="advanced">
         <Documentation>A semi-colon (;) separated list of directories to add to
         the python library search path.</Documentation>
-      </StringVectorProperty>'''
+      </StringVectorProperty>'''%"';'".join(paths)
 
 
 
@@ -123,6 +124,7 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
+        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -137,6 +139,7 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
+        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -149,6 +152,7 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
+        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -161,6 +165,7 @@ def getFilterPropertyXml(propertyInfo, propertyName):
         name="%s"
         label="%s"
         initial_string="%s"
+        command="SetParameter"
         animateable="1"
         default_values="%s"
         number_of_elements="%s">
@@ -254,61 +259,21 @@ def getOutputDataSetTypeXml(info):
 def getProxyGroup(info):
     return 'sources' if getNumberOfInputs(info) == 0 else 'filters'
 
-
-def generatePythonFilter(info):
-
-
-    e = escapeForXmlAttribute
-
-    proxyName = info['Name']
-    proxyLabel = info['Label']
-    shortHelp = e(info['Help'])
-    longHelp = e(info['Help'])
-    extraXml = info.get('ExtraXml', '')
-    extension = info['Extension']
-    fileDescription = info['FileDescription']
-
-    proxyGroup = getProxyGroup(info)
-    inputPropertyXml = getInputPropertyXml(info)
-    outputDataSetType = getOutputDataSetTypeXml(info)
-    scriptProperties = getScriptPropertiesXml(info)
-    filterProperties = getFilterPropertiesXml(info)
-
-    # Adjust according to http://www.paraview.org/Wiki/Animating_legacy_VTK_file_series#Making_custom_readers_work_with_file_series
-    outputXml = '''\
-<ServerManagerConfiguration>
-  <ProxyGroup name="%s">
-    <SourceProxy name="%s" class="vtkFileSeriesReader"
-                 si_class="vtkSIMetaReaderProxy"
-                 label="%s"
-                 file_name_method="SetFileName">
-      <Documentation
-        long_help="%s"
-        short_help="%s">
-      </Documentation>
-      <SubProxy>
-        <Proxy name="Reader" proxygroup="internal_sources" proxyname="%s_internal">
-        </Proxy>
-      </SubProxy>
-
-      <StringVectorProperty name="FileNameInfo"
-        command="GetCurrentFileName"
-        information_only="1" >
-        <SimpleStringInformationHelper />
-      </StringVectorProperty>
- 
+def getFileReaderXml(info):
+    extension = info.get('Extension', '')
+    fileDescription = info.get('FileDescription', '')
+    return '''
       <StringVectorProperty
         name="FileNames"
-        clean_command="RemoveAllFileNames"
-        command="AddFileName"
+        initial_string="FileNames"
         animateable="0"
         number_of_elements="0" 
+        command="AddParameter"
+        clean_command="ClearParameter"
         repeat_command="1">
         <FileListDomain name="files"/>
       <Documentation>
-         The list of files to be read by the reader. If more than 1 file is specified, 
-         the reader will switch to file series mode in which it will pretend that it 
-         can support time and provide 1 file per time step.
+         The list of files to be read by the reader.
        </Documentation>
      </StringVectorProperty>
  
@@ -321,35 +286,47 @@ def generatePythonFilter(info):
           Available timestep values.
         </Documentation>
      </DoubleVectorProperty>
-
      <Hints>
       <ReaderFactory extensions="%s"
           file_description="%s" />
      </Hints>
+     '''%(extension, fileDescription)
+
+
+def generatePythonFilter(info):
+
+
+    e = escapeForXmlAttribute
+
+    proxyName = info['Name']
+    proxyLabel = info['Label']
+    shortHelp = e(info['Help'])
+    longHelp = e(info['Help'])
+    extraXml = info.get('ExtraXml', '')
+
+    proxyGroup = getProxyGroup(info)
+    inputPropertyXml = getInputPropertyXml(info)
+    outputDataSetType = getOutputDataSetTypeXml(info)
+    scriptProperties = getScriptPropertiesXml(info)
+    filterProperties = getFilterPropertiesXml(info)
+    fileReaderProperties = getFileReaderXml(info)
+
+    # Get paths to put in the file by default
+    pathProperty     = getPythonPathProperty(info.get('PythonPaths',[]))
+
+    outputXml = '''\
+<ServerManagerConfiguration>
+  <ProxyGroup name="%s">
+    <SourceProxy name="%s" class="vtkPythonProgrammableFilter" label="%s">
+      <Documentation
+        long_help="%s"
+        short_help="%s">
+      </Documentation>
+
 
 %s
 
-
-    </SourceProxy>
-  </ProxyGroup>
-  <ProxyGroup name="internal_sources">
-    <SourceProxy name="%s_internal" class="vtkPythonProgrammableFilter" label="%s">
-      <StringVectorProperty
-        name="FileName"
-        animateable="0"
-        command="SetFileName"
-        number_of_elements="1">
-        <FileListDomain name="files"/>
-        <Documentation>
-          This property specifies the file name for the reader.
-        </Documentation>
-      </StringVectorProperty>
-
-     <Hints>
-      <ReaderFactory extensions="%s"
-          file_description="%s" />
-     </Hints>
-
+%s
 
 %s
 
@@ -365,11 +342,9 @@ def generatePythonFilter(info):
  </ProxyGroup>
 </ServerManagerConfiguration>
       ''' % (proxyGroup, proxyName, proxyLabel, longHelp, shortHelp,
-             proxyName, extension, fileDescription, # internal source after this
-             filterProperties,
-             proxyName, proxyLabel, extension, fileDescription,
-             inputPropertyXml,
-             filterProperties, extraXml, outputDataSetType, scriptProperties)
+             inputPropertyXml, fileReaderProperties,
+             filterProperties, extraXml, pathProperty, outputDataSetType,
+             scriptProperties)
 
     return textwrap.dedent(outputXml)
 
@@ -397,7 +372,16 @@ def replaceFunctionWithSourceString(namespace, functionName, allowEmpty=False):
     # skip first line (the declaration) and then dedent the source code
     sourceCode = textwrap.dedent(''.join(lines[1:]))
 
-    namespace[functionName] = sourceCode
+    # Loop for any include statements
+    newCode = ""
+    for line in sourceCode.split("\n"):
+      if (line.startswith("#include")):
+        file = line.split("'")[1]
+        newCode = newCode + "\n" + open(file, 'r').read()
+      else:
+        newCode = newCode + "\n" + line
+
+    namespace[functionName] = newCode
 
 
 def generatePythonFilterFromFiles(scriptFile, outputFile):

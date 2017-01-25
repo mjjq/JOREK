@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 jorek_read_h5.py
 
@@ -13,9 +12,6 @@ Before interpolating, set:
 Created by Daan van Vugt on 2017-01-18
 """
 
-from __future__ import print_function
-import sys
-sys.path.append('/usr/lib/python2.7/site-packages/h5py')
 import h5py
 import numpy as np
 

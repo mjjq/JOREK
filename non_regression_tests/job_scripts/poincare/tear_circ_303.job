@@ -1,5 +1,5 @@
 #!/bin/bash
-# @ job_name = _CASE_
+# @ job_name = tear_circ_303
 # @ class = clallmds+
 # @ as_limit = 24gb
 # @ error  = $(job_name).$(jobid).err
@@ -24,7 +24,7 @@ ulimit -s unlimited
 ulimit -Sa
 ulimit -Ha
 
-CASE=_CASE_
+CASE=tear_circ_303
 JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 
 cd ${JOREK_HOME}

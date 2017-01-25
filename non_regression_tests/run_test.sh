@@ -102,7 +102,7 @@ while [ $# -gt 0 ]; do
     elif [ "$option" == "-l" ]; then
 	echo ""
 	echo "Available test cases:"
-	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
+	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
 	    if [ -e ${i}/.version ]; then
   	      case=$(basename $i)
@@ -113,7 +113,7 @@ while [ $# -gt 0 ]; do
 	echo ""
 	exit 1
     elif [ "$option" == "-L" ]; then
-	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
+	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
 	    if [ -e ${i}/.version ]; then
               case=$(basename $i)

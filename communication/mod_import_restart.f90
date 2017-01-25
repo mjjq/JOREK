@@ -93,7 +93,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     write(*,*) ' OLD format (0) : '
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
     write(*,'(A,999i4)') ' new mode numbers     : ',mode
-  else
+  elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
   endif
 
@@ -153,7 +153,10 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) t_start
   
 #ifdef USE_HDF5
-  read(21) h5_nbsave_all
+  h5_nbsave_all = 0
+  if ( rst_format > 1 ) then
+    read(21) h5_nbsave_all
+  end if
 #endif
   
   if (index_start .ge. 1) then
@@ -353,7 +356,7 @@ endif
    	write(*,*) ' OLD format (0) : '
    	write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp_perturbation
    	write(*,'(A,999i4)') ' new mode numbers     : ',mode
-      else
+      elseif (format_rst > 2 ) then
    	write(*,'(A,i3)') ' restart file format not supported : ',format_rst
       endif
 
@@ -588,7 +591,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       end do
       if ( .not. kept ) write (*,'(1x,a,i5,a)') 'WARNING: The mode n=', mode_tmp(i), ' is being dropped!'
     end do
-  else
+  elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
   endif
 

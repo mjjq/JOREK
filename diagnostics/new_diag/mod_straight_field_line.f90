@@ -36,7 +36,7 @@ module mod_straight_field_line
   
   ! --- Constants
   character(len=23), parameter, private :: THIS_MOD_NAME = 'mod_straight_field_line'
-  logical,           parameter, private :: DEBUG         = .false. !< Switch on/off debugging output
+  logical,           parameter, private :: DEBUG         = .true. !< Switch on/off debugging output
   
   
   
@@ -253,6 +253,8 @@ module mod_straight_field_line
       write(*,*) 'nmaxsteps   =', nmaxsteps
       write(*,*) 'deltaphi    =', deltaphi
       write(*,*) 'nsmallsteps =', nsmallsteps
+      write(*,*) 'psiNrange   =', psiNrange
+
     end if
     
     call alloc_mapping(mapping, nPsiN, nmaxsteps, nTht)

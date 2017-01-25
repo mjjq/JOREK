@@ -6,9 +6,9 @@
  nstep_n   = 20  20  100 1000
 
  nout = 10
- rho_file      = 
- T_file        = 
- ffprime_file  = 
+ rho_file      = none
+ T_file        = none
+ ffprime_file  = none
 
  tauIC     = 0.001
  eta       = 1.d-7
@@ -132,8 +132,8 @@
  murge_cuda_nbr = 0
  output_bnd_elements=.f.
  RMP_on = .f.
- RMP_psi_cos_file =  
- RMP_psi_sin_file = 
+ RMP_psi_cos_file = none 
+ RMP_psi_sin_file = none
  lambda =0.0111
  tset = 500
 

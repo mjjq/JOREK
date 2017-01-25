@@ -176,7 +176,8 @@ module mod_position
     integer :: ierr
     
     call create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s, t, Rmin, Rmax, &
-      nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN)
+      nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN,      &
+      nmaxsteps, deltaphi, nsmallsteps)
     
   end function pol_pos
   

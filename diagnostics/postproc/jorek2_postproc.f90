@@ -35,6 +35,11 @@ program jorek2_postproc
   call set_setting('verbose',         'false', ierr)
   call set_setting('debug',           'false', ierr)
   call set_setting('nsmallsteps',     '3',     ierr) ! numerical parameter for straight field lines
+  call set_setting('nmaxsteps',       '2500',  ierr)
+  call set_setting('deltaphi',        '0.3',   ierr)
+  call set_setting('rad_range_min',   '0.001', ierr)
+  call set_setting('rad_range_max',   '0.999', ierr)
+  call set_setting('nTht',            '32',    ierr)
   
   ! --- Print getting started information
   call specific_help('getting_started')

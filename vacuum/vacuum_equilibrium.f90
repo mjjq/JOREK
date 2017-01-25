@@ -148,7 +148,7 @@ module vacuum_equilibrium
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
-    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i
+    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, psi_0_j
 
     call equilibrium_VFB
     
@@ -184,7 +184,8 @@ module vacuum_equilibrium
                 i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
                 i_index    = node_list%node(i_node)%index(i_dir)
                 size_i     = bndelem_m%size(i_vertex,i_dof)
-                i_resp     = response_index_eq(i_node_bnd,i_dof)
+                !i_resp     = response_index_eq(i_node_bnd,i_dof)
+                i_resp = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
                 basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
                 
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
@@ -197,15 +198,18 @@ module vacuum_equilibrium
                     j_node     = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
                     j_dir      = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
                     j_index    = node_list%node(j_node)%index(j_dir)
-                    j_resp     = response_index_eq(j_node_bnd,j_dof)
+                   ! j_resp     = response_index_eq(j_node_bnd,j_dof)
+                    j_resp     = bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)
                     psi_coil_j = sum( I_coils(:) * bext_psi(j_resp,:) )
+                    psi_0_j    = node_list%node(j_node)%values(1,j_dir,1)
                     
                     ilarge                 = ilarge + 1
                     mumps_par%irn(ilarge)  = l_index
                     mumps_par%jcn(ilarge)  = j_index
                     mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
                     mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                                &
-                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j
+                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j               &
+                      - common_prefactor * response_m_eq(i_resp,j_resp) * psi_0_j
                   end do
                 end do
                 

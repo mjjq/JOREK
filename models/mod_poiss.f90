@@ -144,11 +144,11 @@ do ife =1, element_list%n_elements
 
   if (itype .eq. -1) then
     
-    if (freeboundary_equil) then
-      call element_matrix_GS(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
-    else
+!    if (freeboundary_equil) then
+!      call element_matrix_GS(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
+!    else
       call element_matrix_GS_perturbation(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
-    endif
+!    endif
     
   elseif (itype .eq. -2) then
 
@@ -370,7 +370,8 @@ do i=1,node_list%n_nodes
       index = node_list%node(i)%index(k)
 
 !--------------- for equation in perturbation form
-      if ((.not. freeboundary_equil) .and. (itype .eq. -1)) then
+      !if ((.not. freeboundary_equil) .and. (itype .eq. -1)) then
+      if (itype .eq. -1) then
         node_list%node(i)%deltas(i_harm,k,ivar_out) = mumps_par%RHS(index)
         node_list%node(i)%values(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) &
                                                     + (1.d0 - amix_used) * mumps_par%RHS(index)

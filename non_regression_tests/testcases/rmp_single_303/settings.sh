@@ -1,9 +1,10 @@
 # --- General settings
 jorekmodel="303"
-description="after eq with flows single rmp n_tor=3."
+description="RMP with flows, n_tor=3"
 mpitasks=2
 binaries="jorek_model${jorekmodel}_1 jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin"
-requiredfiles="$binaries input JET_RMP3_303_NTOR3_NPER3_NPLA32 RMP_psi_cos_JET_N3.txt RMP_psi_sin_JET_N3.txt RMP_start_time.dat "
+requiredfiles="$binaries input RMP_psi_cos_JET_N3.txt RMP_psi_sin_JET_N3.txt RMP_start_time.dat"
+extra_remote_files="RMP_psi_cos_JET_N3.txt RMP_psi_sin_JET_N3.txt RMP_start_time.dat"
 
 
 # --- Compile the code for the test case

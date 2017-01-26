@@ -181,6 +181,9 @@ if [ "$compile" == "yes" ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
   fi
+  if [ "$initialrun" == "yes" ]; then
+    mv $binaries_initial $testcasedir/ || exit 1
+  fi
   mv $binaries $testcasedir/ || exit 1
 fi
 
@@ -192,12 +195,12 @@ if [ "$runit" == "yes" ]; then
   # --- Copy files
   cd $testcasedir
   echo " requiredfiles=" $requiredfiles
-  cp $requiredfiles $tmpdir
-  cd $tmpdir
-  if [ $? -ne 0 ]; then
-    printf "\n$ERROR_COL ERROR: Copying required files ($requiredfiles) failed.$NO_COL\n"
-    exit 1
+  cp $requiredfiles $tmpdir || exit 1
+  cp $binaries $tmpdir || exit 1
+  if [ "$initialrun" == "yes" ] && [ "$binaries_initial" != "" ]; then
+    cp $binaries_initial $tmpdir || exit 1
   fi
+  cd $tmpdir
     
   # --- Some preparations
   if [ -n "$ompthreads" ]; then

@@ -88,7 +88,9 @@ subroutine export_binary_restart(node_list,element_list,filename)
   write(21) t_now
 
 #ifdef USE_HDF5
-  write(21) h5_nbsave_all
+  if (rst_format > 1 ) then
+    write(21) h5_nbsave_all
+  end if
 #endif
 
   if (index_now .gt. 0) then

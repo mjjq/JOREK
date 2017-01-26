@@ -3,7 +3,8 @@ jorekmodel="199"
 description="Free boundary equilibrium for ASDEX Upgrade plasma (JOREK-STARWALL)."
 mpitasks=1
 binaries="jorek_model${jorekmodel}_1 rst_bin2hdf5 rst_hdf52bin"
-requiredfiles="$binaries input starwall-response.dat coil_field.dat ffp.dat t.dat rho.dat"
+binaries_initial=""
+requiredfiles="input starwall-response.dat coil_field.dat ffp.dat t.dat rho.dat"
 extra_remote_files="starwall-response.dat coil_field.dat"
 
 
@@ -34,5 +35,5 @@ function restart_run () {
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
   ./rst_bin2hdf5 < ./input                                                           || exit 1
-  h5diff -d 1e-10 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
+  h5diff -d 1e-9 jorek_restart.h5 ${testcasedir}/end.h5 values                       || exit 1
 }

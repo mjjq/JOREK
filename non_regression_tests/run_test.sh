@@ -31,6 +31,7 @@ function printusage() {
     echo "   -i            Launch the inital, full-length run"
     echo "                 (not only the test starting from a restart file)"
     echo "   -j nthreads   Set the number of compile threads (default 1)"
+    echo "   -d            Compilation with debugging options (DEBUG=1)"
     echo "   -l            List available test cases using long format."
     echo "   -L            List available test cases without any description (short format)"
     echo "   -n            Do not compile (assume executables already exist)"
@@ -83,6 +84,7 @@ compile="yes"           # (preset)
 keep="no"               # (preset)
 runit="yes"             # (preset)
 initialrun="no"         # (preset)
+debugoptions=""         # (preset)
 if [ -z "$compilethreads" ]; then
     compilethreads="1"  # (preset)
 fi
@@ -96,6 +98,9 @@ while [ $# -gt 0 ]; do
     elif [ "$option" == "-j" ]; then
 	compilethreads="$2"
 	shift 2
+    elif [ "$option" == "-d" ]; then
+	debugoptions="DEBUG=1"
+	shift
     elif [ "$option" == "-k" ]; then
 	keep="yes"
 	shift

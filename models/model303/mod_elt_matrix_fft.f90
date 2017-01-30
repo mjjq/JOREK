@@ -683,7 +683,7 @@ do ms=1, n_gauss
 !#  equation 3   (current definition)                                                              #
 !###################################################################################################
 
-         rhs_ij_3 = 0.d0 !- ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_curr
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_curr
 
 !###################################################################################################
 !#  equation 4   (vorticity definition)                                                            #

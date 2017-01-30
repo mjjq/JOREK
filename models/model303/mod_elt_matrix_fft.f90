@@ -17,6 +17,7 @@ use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
+use vacuum, only: freeb_fact
 
 implicit none
 
@@ -76,7 +77,6 @@ real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8     :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
 logical    :: xpoint2
-real*8     :: freeb_curr
 real*8     :: w00_xx, w00_yy                                                                                                                                                                
 !======================================= NEO
 real*8     :: amat_27, Btheta2
@@ -152,9 +152,6 @@ y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_st  = 0.d0; y_ss  = 0.d0; y_tt  = 0.d0;
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_st = 0.d0; eq_ss = 0.d0; eq_tt = 0.d0; eq_p = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
-
-freeb_curr =  0.d0
-if (freeboundary) freeb_curr = 1.d0
 
 current_source  = 0.d0
 particle_source = 0.d0
@@ -683,7 +680,7 @@ do ms=1, n_gauss
 !#  equation 3   (current definition)                                                              #
 !###################################################################################################
 
-         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_curr
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_fact
 
 !###################################################################################################
 !#  equation 4   (vorticity definition)                                                            #
@@ -1078,15 +1075,15 @@ do ms=1, n_gauss
 !#  equation 3   (current definition)                                                              #
 !###################################################################################################
 
-             amat_33 = v * zj / BigR * xjac                                * tstep
-             amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac          * tstep
+             amat_33 = v * zj / BigR * xjac                                
+             amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac         
 
 !###################################################################################################
 !#  equation 4   (vorticity definition)                                                            #
 !###################################################################################################
 
-             amat_44 =  v * w * BigR * xjac                                * tstep
-             amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
+             amat_44 =  v * w * BigR * xjac                                
+             amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac              
 
 !###################################################################################################
 !#  equation 5   (density equation)                                                                #

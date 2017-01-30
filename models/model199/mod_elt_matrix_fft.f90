@@ -17,6 +17,7 @@ use phys_module
 use tr_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
+use vacuum, only: freeb_fact
 
 implicit none
  
@@ -56,7 +57,6 @@ real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n,
 real*8     :: amat_stab_11, amat_stab_12, amat_stab_13, amat_stab_14 ,amat_stab_21,amat_stab_22, amat_stab_23, amat_stab_24
 real*8     :: amat_stab_31, amat_stab_32, amat_stab_33, amat_stab_34 ,amat_stab_41,amat_stab_42, amat_stab_43, amat_stab_44
 real*8     :: theta, zeta, delta_u_x, delta_u_y
-real*8     :: freeb_curr
 logical    :: xpoint2
 
 integer*8  :: plan
@@ -118,9 +118,6 @@ zeta  = time_evol_zeta
 current_source  = 0.d0
 particle_source = 0.d0
 heat_source     = 0.d0
-
-freeb_curr =  0.d0
-if (freeboundary) freeb_curr = 1.d0
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
@@ -320,7 +317,7 @@ do ms=1, n_gauss
                       + visco_num * (v_s * w0_s + v_t * w0_t)                    * tstep &
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac  
 
-         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_curr 
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_fact 
          rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
          rhs_ij_5   = v * BigR * particle_source(ms,mt)                                        * xjac * tstep &

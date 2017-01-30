@@ -178,6 +178,10 @@ subroutine preset_parameters
   particlesource      = 1.e-5
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
+! edge source (only for model303 for the moment)
+  edgesource      = 0.d0
+  edgesource_psin = 0.98
+  edgesource_sig  = 0.01
   
   tauIC       = 0.d0
   Wdia        = .false.

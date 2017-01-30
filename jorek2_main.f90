@@ -483,7 +483,7 @@ required = 0
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
-    if ( freeboundary .and. (n_flux .eq. 0)) then
+    if ( freeboundary_equil .and. (n_flux .eq. 0)) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)

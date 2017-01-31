@@ -34,7 +34,7 @@ contains
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, n_pol, n_tht, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
          psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
-       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -102,9 +102,9 @@ contains
        call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
        call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
 
-    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos(1),1,1)
+    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos,1,1)
     ! if necessary, replace by:
-    ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos(1), n_tor),1,1)
+    ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos, n_tor),1,1)
     write (*,*) 'psi_bnd at previous time step', psi_test
     
     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
@@ -116,7 +116,7 @@ contains
     endif
     ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*RMP_ramp_up_time/2.d0 ) then establish_RMP =0.0
   
-    do j=1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics  
+    do j=1, bnd_node_list%n_bnd_nodes  
       psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
       dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
       dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP

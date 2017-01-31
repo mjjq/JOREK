@@ -127,16 +127,10 @@ contains
       call tr_allocate(dpsi_RMP_sin_dR1,1, bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
       call tr_allocate(dpsi_RMP_sin_dZ1,1, bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
 
-      do i = 1, node_list%n_nodes
-        if (node_list%node(i)%boundary .ne.0) then
-          if (node_list%node(i)%boundary_index == 1 ) then
-            itest = RMP_har_cos
-            if (n_tor .eq. 1) itest = 1
-            psi_test = node_list%node(i)%values(itest,1,1)
-            if (my_id == 0) write (*,*) 'psi_bnd at previous time step', psi_test
-          endif
-        endif
-      enddo
+      psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos,1,1)
+      ! if necessary, replace by:
+      ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos, n_tor),1,1)
+      write (*,*) 'psi_bnd at previous time step', psi_test
       
       if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
         establish_RMP = 0.5d-3 

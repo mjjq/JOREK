@@ -346,15 +346,6 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
   real*8, external, optional                        :: n_psibar
   real*8, external, optional                        :: T_psibar
 
-  interface
-    function n_psibar(psibar)
-      real*8, intent(in) :: psibar
-    end function n_psibar
-    function T_psibar(psibar)
-      real*8, intent(in) :: psibar
-    end function T_psibar
-  end interface
-
   integer :: i
   real*8  :: t_norm, psibar, H, n, T
   real*8, dimension(1) :: P, P_s, P_t, P_phi

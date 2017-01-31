@@ -292,11 +292,11 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
       ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
       B        = [+psi_Z, -psi_R, F0] / R
 
-      select type (particles(i))
+      select type (particle_in => particles(i))
       type is (particle_kinetic_leapfrog)
-        out(i,3) = particles(i)%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particles(i)%v(3)
+        out(i,3) = particle_in%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particle_in%v(3)
         ! Let the conversion calculate the conserved quantities
-        particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particles(i), B, mass)
+        particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particle_in, B, mass)
 
         if (particle%i_elm .eq. 0) cycle
 
@@ -307,8 +307,8 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
 
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
-        particle = particles(i)
-        out(i,3) = real(particles(i)%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
+        particle = particle_in
+        out(i,3) = real(particle_in%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
       class default
         write(*,*) "ERROR: calculate_pphi_H_mu not implemented for this particle type"
         cycle ! skip this iteration

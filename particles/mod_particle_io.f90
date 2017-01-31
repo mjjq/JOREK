@@ -1,6 +1,7 @@
 !> Particle input-output module, containing hdf5 data_type and writing routines
 !> TODO: add metadata and/or use H5MD format (http://nongnu.org/h5md/h5md.html)
 module mod_particle_io
+use hdf5_io_module
 use hdf5
 use mpi
 use mod_particle_types
@@ -13,113 +14,29 @@ integer(HSIZE_T), parameter :: particle_type_name_length = 40 !< length of the s
 character(len=*), parameter :: particle_type_name_field_name = 'particle_type' !< Name of the field containing the particle_type_name
 contains
 
-!> Create hdf5 data type.
-!> The code below ([[import_particles]] and [[export_particles]]) is slightly
-!> illegal according to the standard.
-!> - interoperability between C and fortran is not supported for polymorphism
-!> - we don't know if all of the particles will follow eachother in memory
-!> From "15.2.3.6 C_LOC(X)": (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56305)
-!> > Argument. X shall have either the POINTER or TARGET attribute. It shall not be a coindexed object. It shall either be a variable with interoperable type and kind type parameters, or be a scalar, nonpolymorphic variable with no length type parameters. If it is allocatable, it shall be allocated. If it is a pointer, it shall be associated. If it is an array, it shall be contiguous and have nonzero size. It shall not be a zero-length string.
-!> but it seems to work in ifort and in gfortran with a workaround for C_LOC.
-!>
-!>###TODO
-!>
-!>* Check portability when using only a single datatype instead of a filetype and memtype
-function get_hdf5_particle_data_type(particles) result(data_type)
-use iso_c_binding
-integer(HID_T)              :: data_type
-
-class(particle_base), dimension(:), intent(in) :: particles
-class(particle_base), dimension(:), allocatable :: particles_2
-integer                     :: hdferr
-integer(HID_T)              :: st_array, x_array
-integer(HSIZE_T), parameter :: st_dim(1) = (/2/) !< JOREK integration
-integer(HSIZE_T), parameter :: x_dim(1) = (/3/) !< JOREK integration
-integer(HSIZE_T), dimension(0:6) :: offsets
-
-! Reallocate to a fixed-size list to allow for single-particle lists
-if (size(particles,1) .eq. 0) then
-  write(*,*) "ERROR: no particles given"
-  call exit(1)
-end if
-allocate(particles_2(1:2), source=particles(1)) ! supported in ifort >= 12.1
-
-! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
-! for now, copy this code for each particle type expected
-! (C_LOC does not work on a polymorphic entity yet)
-select type(p => particles_2)
-type is (particle_kinetic)
-  offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
-  offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
-  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
-  offsets(3) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%weight))
-  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
-type is (particle_kinetic_leapfrog)
-  offsets(0) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(2))) ! full size
-  offsets(1) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%x))
-  offsets(2) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%st))
-  offsets(3) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%weight))
-  offsets(4) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%i_elm))
-class default
-  write(*,*) "ERROR: unknown particle type for creating hdf5 type"
-  call exit(1)
-end select
-
-! Reinitialize the library
-call h5open_f(hdferr)
-
-! Create the compound data_type
-call h5tcreate_f(H5T_COMPOUND_F, offsets(0), data_type, hdferr)
-
-call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, st_dim, st_array, hdferr)
-call h5tarray_create_f(H5T_NATIVE_DOUBLE, 1, x_dim, x_array, hdferr)
-
-! Fill type
-call h5tinsert_f(data_type, "x [m] at time t", offsets(1), x_array, hdferr)
-call h5tinsert_f(data_type, "st", offsets(2), st_array, hdferr)
-call h5tinsert_f(data_type, "weight (number of particles)", &
-     offsets(3), H5T_NATIVE_REAL, hdferr)
-call h5tinsert_f(data_type, "i_elm", offsets(4), H5T_NATIVE_INTEGER, hdferr)
-
-
-! type-specific fields
-select type(p => particles)
-type is (particle_kinetic)
-  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
-  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
-  call h5tinsert_f(data_type, "v [m/s]", offsets(5), x_array, hdferr)
-  call h5tinsert_f(data_type, "q [e]",   offsets(6), &
-      h5kind_to_type(kind(p%q),H5_INTEGER_KIND), hdferr)
-type is (particle_kinetic_leapfrog)
-  offsets(5) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%v))
-  offsets(6) = H5OFFSETOF(C_LOC(p(1)), C_LOC(p(1)%q))
-  call h5tinsert_f(data_type, "v [m/s]", offsets(5), x_array, hdferr)
-  call h5tinsert_f(data_type, "q [e]",   offsets(6), &
-      h5kind_to_type(kind(p%q),H5_INTEGER_KIND), hdferr)
-! add new particle types here
-end select
-end function get_hdf5_particle_data_type
-
-
-
-
 !> Export all particles using HDF5 Parallel File IO
 subroutine write_simulation_hdf5(sim, filename)
 type(particle_sim)   , intent(in) :: sim
 character*(*)        , intent(in) :: filename
 
 integer :: my_id, n_cpu, ierr
-integer, allocatable, dimension(:) :: particles_per_proc
+integer :: n_here, n_total
+integer(HSIZE_T) :: i_here
+integer(HSIZE_T), allocatable, dimension(:) :: particles_per_proc
 
 ! For HDF5 writing
-integer(HID_T)                :: file, file_space, mem_space, dset, plist ! handles
-integer(HID_T)                :: group_id, attr_id, aspace_id, atype_id
+integer(HID_T)                :: file, create_file_space, write_file_space, dset, plist ! handles
+integer(HID_T)                :: group_id
 integer(HID_T)                :: data_type
 integer(HID_T)                :: time_space_id, time_set_id
-character(len=80)             :: dataset_name
+character(len=12)             :: group_name
 character(len=particle_type_name_length) :: particle_type_name
-integer                       :: i, hdferr
+integer                       :: i, j, hdferr
 type(c_ptr) :: p_ptr
+real*8, dimension(:,:), allocatable :: real8_2D
+real*8, dimension(:), allocatable   :: real8_1D
+real*4, dimension(:), allocatable   :: real4_1D
+integer, dimension(:), allocatable  :: int4_1D
 
 ! Preparation
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
@@ -146,13 +63,6 @@ call h5gcreate_f(file, "/groups", group_id, hdferr)
 call h5gclose_f(group_id, hdferr)
 
 
-! Create attribute space to store particle type
-call h5screate_simple_f(1, [1_HSIZE_T], aspace_id, hdferr)
-! Create a character type of length particle_type_name_length
-call h5tcopy_f(H5T_NATIVE_CHARACTER, atype_id, hdferr)
-call h5tset_size_f(atype_id, particle_type_name_length, hdferr)
-
-
 ! Write the time
 call h5screate_simple_f(1, [1_HSIZE_T], time_space_id, hdferr)
 call h5dcreate_f(file, '/time', H5T_NATIVE_DOUBLE, time_space_id, time_set_id, hdferr)
@@ -168,63 +78,131 @@ if (allocated(sim%groups)) then
       call MPI_ABORT(MPI_COMM_WORLD, 1, ierr)
     end if
     ! Find the number of particles on each node
-    call MPI_AllGather(size(sim%groups(i)%particles,1),1,MPI_INTEGER,&
+    n_here = size(sim%groups(i)%particles,1)
+    call MPI_AllGather(n_here,1,MPI_INTEGER,&
         particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    n_total = sum(particles_per_proc)
+    i_here = sum(particles_per_proc(0:my_id-1))
 
-    ! Create dataspace for file and memory separately
-    call h5screate_simple_f(1, (/int(sum(particles_per_proc),HSIZE_T)/), file_space, hdferr)
-    call h5screate_simple_f(1, (/size(sim%groups(i)%particles,dim=1,kind=HSIZE_T)/), mem_space, hdferr)
+    ! Create group to write in
+    write(group_name,"(A,i0.3,A)") "/groups/", i, "/"
+    call h5gcreate_f(file, group_name, group_id, hdferr)
+    call h5gclose_f(group_id, hdferr)
 
-    ! Create dataset for file
-    write(dataset_name,"(A,i0.3)") "/groups/", i
-    data_type = get_hdf5_particle_data_type(sim%groups(i)%particles)
-    call h5dcreate_f(file, trim(dataset_name), data_type, file_space, dset, hdferr)
-    call h5sclose_f(file_space, hdferr)
+    ! particle_base properties
+    ! x
+    allocate(real8_2D(3,n_here))
+    do j=1,n_here
+      real8_2D(:,j) = sim%groups(i)%particles(j)%x
+    end do
+    call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"x",start=[0_HSIZE_T,i_here])
+    deallocate(real8_2D)
 
-    ! Create an attribute for this set with the particle type
-    call h5acreate_f(dset, particle_type_name_field_name, atype_id, aspace_id, attr_id, hdferr)
+    ! st
+    allocate(real8_2D(2,n_here))
+    do j=1,n_here
+      real8_2D(:,j) = sim%groups(i)%particles(j)%st
+    end do
+    call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"st",start=[0_HSIZE_T,i_here])
+    deallocate(real8_2D)
+
+    ! weight
+    allocate(real4_1D(n_here))
+    do j=1,n_here
+      real4_1D(j) = sim%groups(i)%particles(j)%weight
+    end do
+    call HDF5_array1D_saving_r4(file,real4_1D,n_total,group_name//"weight",start=[i_here])
+    deallocate(real4_1D)
+
+    ! i_elm
+    allocate(int4_1D(n_here))
+    do j=1,n_here
+      int4_1D(j) = sim%groups(i)%particles(j)%i_elm
+    end do
+    call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"i_elm",start=[i_here])
+    deallocate(int4_1D)
+
+    ! Write out stuff depending on particle type
     select type (p => sim%groups(i)%particles)
     type is (particle_kinetic)
       particle_type_name = 'particle_kinetic'
+
+      ! v
+      allocate(real8_2D(3,n_here))
+      do j=1,n_here
+        real8_2D(:,j) = p(j)%v
+      end do
+      call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"v",start=[0_HSIZE_T,i_here])
+      deallocate(real8_2D)
+
+      ! q
+      allocate(int4_1D(n_here))
+      do j=1,n_here
+        int4_1D(j) = p(j)%q
+      end do
+      call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"q",start=[i_here])
+      deallocate(int4_1D)
     type is (particle_kinetic_leapfrog)
       particle_type_name = 'particle_kinetic_leapfrog'
+
+      ! v
+      allocate(real8_2D(3,n_here))
+      do j=1,n_here
+        real8_2D(:,j) = p(j)%v
+      end do
+      call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"v",start=[0_HSIZE_T,i_here])
+      deallocate(real8_2D)
+
+      ! q
+      allocate(int4_1D(n_here))
+      do j=1,n_here
+        int4_1D(j) = p(j)%q
+      end do
+      call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"q",start=[i_here])
+      deallocate(int4_1D)
+    type is (particle_gc)
+      particle_type_name = 'particle_gc'
+
+      ! E
+      allocate(real8_1D(n_here))
+      do j=1,n_here
+        real8_1D(j) = p(j)%E
+      end do
+      call HDF5_array1D_saving(file,real8_1D,n_total,group_name//"E",start=[i_here])
+      deallocate(real8_1D)
+
+      ! mu
+      allocate(real8_1D(n_here))
+      do j=1,n_here
+        real8_1D(j) = p(j)%mu
+      end do
+      call HDF5_array1D_saving(file,real8_1D,n_total,group_name//"mu",start=[i_here])
+      deallocate(real8_1D)
+
+      ! q
+      allocate(int4_1D(n_here))
+      do j=1,n_here
+        int4_1D(j) = p(j)%q
+      end do
+      call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"q",start=[i_here])
+      deallocate(int4_1D)
     class default
       write(*,*) "error: missing type name declaration for write"
       call exit(1)
     end select
-    call h5awrite_f(attr_id, atype_id, particle_type_name, [1_HSIZE_T], hdferr)
-    call h5aclose_f(attr_id, hdferr)
 
-    ! Select hyperslab in the file (offset only, no stride)
-    call h5dget_space_f(dset, file_space, hdferr)
-    call h5sselect_hyperslab_f(file_space, H5S_SELECT_SET_F, &
-        start=(/int(sum(particles_per_proc(0:my_id-1)),HSIZE_T)/), &
-        count=(/size(sim%groups(i)%particles,dim=1,kind=HSIZE_T)/), &
-        hdferr=hdferr, stride=(/1_HSIZE_T/), block=(/1_HSIZE_T/))
-
-    ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
-    ! for now, copy this code for each particle type expected
-    select type (p => sim%groups(i)%particles)
-    type is (particle_kinetic)
-      p_ptr = C_LOC(p(1))
-    type is (particle_kinetic_leapfrog)
-      p_ptr = C_LOC(p(1))
-    end select
-    ! Write the dataset independently
-    call h5dwrite_f(dset, data_type, p_ptr, &
-         hdferr, file_space_id = file_space, mem_space_id = mem_space)
-    call h5sclose_f(mem_space, hdferr)
-    call h5dclose_f(dset, hdferr)
+    call HDF5_char_saving(file,particle_type_name,group_name//"type")
   end do
 end if
 
 ! Close everything
-call h5sclose_f(aspace_id, hdferr)
 call h5fclose_f(file, hdferr)
 call h5close_f(hdferr)
 
 write(*,*) "Writing particle output file to ", filename, " succeeded"
 end subroutine write_simulation_hdf5
+
+
 
 
 !> Import all particles using MPI File this
@@ -242,15 +220,20 @@ integer, allocatable, dimension(:) :: particles_per_proc
 integer(HID_T)    :: file, file_space, mem_space, dset, plist ! handles
 integer(HID_T)    :: data_type
 integer(HID_T)    :: group_id
-integer(HID_T)    :: attr_id, atype_id
 integer(HID_T)    :: time_set_id
+integer(HSIZE_T)  :: i_here
+integer           :: n_here
 integer           :: storage_type, max_corder
-character(len=80) :: dataset_name
+character(len=12) :: group_name
 character(len=particle_type_name_length) :: particle_type_name
-integer           :: i, n, hdferr
+integer           :: i, j, n, hdferr
 
 type(c_ptr) :: p_ptr
-integer*8, dimension(1:1) :: tmp, maxdims
+integer*8, dimension(1:2) :: tmp, maxdims
+real*8, dimension(:,:), allocatable :: real8_2D
+integer*4, dimension(:), allocatable :: int4_1D
+real*4, dimension(:), allocatable :: real4_1D
+real*8, dimension(:), allocatable :: real8_1D
 
 ! Preparation
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
@@ -278,40 +261,37 @@ call h5gclose_f(group_id, hdferr)
 
 allocate(sim%groups(n))
 do i=1,n
-  ! Open the dataset
-  write(dataset_name,'(A,i0.3)') 'groups/', i
-  call h5dopen_f(file, dataset_name, dset, hdferr)
+  ! Open the dataset for x
+  write(group_name,'(A,i0.3,A)') '/groups/', i, '/'
+  call h5dopen_f(file, group_name//"x", dset, hdferr)
 
   ! Open the file dataspace
   call h5dget_space_f(dset, file_space, hdferr)
 
-  ! Get the number of particles (fails if dataset is not 1-dimensional!)
+  ! Get the number of particles
   call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
-  if (rank .gt. 1) then
-    write(*,*) "Reading >1-dimensional data not supported yet!"
-    call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
-  endif
   call h5sget_simple_extent_dims_f(file_space, tmp, maxdims, hdferr)
-  n_particles = int(tmp(1),4)
+  n_particles = int(tmp(2),4)
+  call h5sclose_f(file_space, hdferr)
+  call h5dclose_f(dset, hdferr)
 
   ! Divide particles over processors
   particles_per_proc(0)         = n_particles/n_cpu + modulo(n_particles, n_cpu)
   particles_per_proc(1:n_cpu-1) = n_particles/n_cpu
+  i_here = sum(particles_per_proc(0:my_id-1))
+  n_here = particles_per_proc(my_id)
 
   ! Get the particle type from the attribute
-  call h5aopen_f(dset, particle_type_name_field_name, attr_id, hdferr)
-  call h5aget_type_f(attr_id, atype_id, hdferr)
-  call h5aread_f(attr_id, atype_id, particle_type_name, [1_HSIZE_T], hdferr)
-  call h5tclose_f(atype_id, hdferr)
-  call h5aclose_f(attr_id, hdferr)
-
+  call HDF5_char_reading(file,particle_type_name,group_name//"type")
 
   ierr = 0
-  select case (particle_type_name)
+  select case (trim(particle_type_name))
   case ('particle_kinetic')
-    allocate(particle_kinetic::sim%groups(i)%particles(particles_per_proc(my_id)), stat=ierr)
+    allocate(particle_kinetic::sim%groups(i)%particles(n_here), stat=ierr)
   case ('particle_kinetic_leapfrog')
-    allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(particles_per_proc(my_id)), stat=ierr)
+    allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(n_here), stat=ierr)
+  case ('particle_gc')
+    allocate(particle_gc::sim%groups(i)%particles(n_here), stat=ierr)
   case default
     write(*,*) "error: missing type name declaration for read"
     call exit(1)
@@ -319,34 +299,95 @@ do i=1,n
   if (ierr .gt. 0) write(*,"(i3,a,i12,a)") my_id, &
       "unable to allocate particles(", particles_per_proc(my_id), ")"
 
-  call h5screate_simple_f(1, (/int(particles_per_proc(my_id),kind=HSIZE_T)/), mem_space, hdferr)
+  ! Read base particle attributes
+  ! x
+  allocate(real8_2D(3,n_here))
+  call HDF5_array2D_reading(file, real8_2D, group_name//"x",start=[0_HSIZE_T,i_here])
+  do j=1,n_here
+    sim%groups(i)%particles(j)%x = real8_2D(:,j)
+  end do
+  deallocate(real8_2D)
 
-  ! Select hyperslab in the file (offset only, no stride)
-  call h5sselect_hyperslab_f(file_space, H5S_SELECT_SET_F, &
-      start=(/int(sum(particles_per_proc(0:my_id-1)),HSIZE_T)/), &
-      count=(/int(particles_per_proc(my_id),kind=HSIZE_T)/), &
-      hdferr=hdferr, stride=(/1_HSIZE_T/), block=(/1_HSIZE_T/))
+  ! st
+  allocate(real8_2D(2,n_here))
+  call HDF5_array2D_reading(file, real8_2D, group_name//"st",start=[0_HSIZE_T,i_here])
+  do j=1,n_here
+    sim%groups(i)%particles(j)%st = real8_2D(:,j)
+  end do
+  deallocate(real8_2D)
 
-  ! Read the dataset independently
-  ! ugly workaround, remove as soon as gfortran supports the 2012 interop TS
-  ! for now, copy this code for each particle type expected
+  ! weight
+  allocate(real4_1D(n_here))
+  call HDF5_array1D_reading_r4(file, real4_1D, group_name//"weight",start=[i_here])
+  do j=1,n_here
+    sim%groups(i)%particles(j)%weight = real4_1D(j)
+  end do
+  deallocate(real4_1D)
+  ! i_elm
+  allocate(int4_1D(n_here))
+  call HDF5_array1D_reading_int(file, int4_1D, group_name//"i_elm", start=[i_here])
+  do j=1,n_here
+    sim%groups(i)%particles(j)%i_elm = int4_1D(j)
+  end do
+  deallocate(int4_1D)
+
   select type (p => sim%groups(i)%particles)
   type is (particle_kinetic)
-    p_ptr = C_LOC(p(1))
+    ! v
+    allocate(real8_2D(3,n_here))
+    call HDF5_array2D_reading(file, real8_2D, group_name//"v",start=[0_HSIZE_T,i_here])
+    do j=1,n_here
+      p(j)%v = real8_2D(:,j)
+    end do
+    deallocate(real8_2D)
+
+    ! q
+    allocate(int4_1D(n_here))
+    call HDF5_array1D_reading_int(file, int4_1D, group_name//"q", start=[i_here])
+    do j=1,n_here
+      p(j)%q = int4_1D(j)
+    end do
+    deallocate(int4_1D)
   type is (particle_kinetic_leapfrog)
-    p_ptr = C_LOC(p(1))
-  class default
-    write(*,*) "ERROR: missing type declaration for read"
+    ! v
+    allocate(real8_2D(3,n_here))
+    call HDF5_array2D_reading(file, real8_2D, group_name//"v",start=[0_HSIZE_T,i_here])
+    do j=1,n_here
+      p(j)%v = real8_2D(:,j)
+    end do
+    deallocate(real8_2D)
+
+    ! q
+    allocate(int4_1D(n_here))
+    call HDF5_array1D_reading_int(file, int4_1D, group_name//"q", start=[i_here])
+    do j=1,n_here
+      p(j)%q = int4_1D(j)
+    end do
+    deallocate(int4_1D)
+  type is (particle_gc)
+    ! E
+    allocate(real8_1D(n_here))
+    call HDF5_array1D_reading(file, real8_1D, group_name//"E",start=[i_here])
+    do j=1,n_here
+      p(j)%E = real8_1D(j)
+    end do
+    deallocate(real8_1D)
+    ! mu
+    allocate(real8_1D(n_here))
+    call HDF5_array1D_reading(file, real8_1D, group_name//"mu",start=[i_here])
+    do j=1,n_here
+      p(j)%mu = real8_1D(j)
+    end do
+    deallocate(real8_1D)
+    ! q
+    allocate(int4_1D(n_here))
+    call HDF5_array1D_reading_int(file, int4_1D, group_name//"q", start=[i_here])
+    do j=1,n_here
+      p(j)%q = int4_1D(j)
+    end do
+    deallocate(int4_1D)
   end select
 
-  ! Get the data type for this kind of particle
-  data_type = get_hdf5_particle_data_type(sim%groups(i)%particles)
-  call h5dread_f(dset, data_type, p_ptr, &
-    hdferr, mem_space_id=mem_space, file_space_id=file_space)
-
-  call h5dclose_f(dset, hdferr)
-  call h5sclose_f(file_space, hdferr)
-  call h5sclose_f(mem_space, hdferr)
 end do
 
 ! Close everything else

@@ -205,6 +205,8 @@ function particles_same(p1, p2) result(same)
   if (abs(p1%weight-p2%weight) .gt. tolerance) same = .false.
   if (norm2(p1%st-p2%st)       .gt. tolerance) same = .false.
   if (p1%i_elm .ne. p2%i_elm)  same = .false.
+  write(*,*) p1%i_elm, p2%i_elm
+  write(*,*) p1%weight, p2%weight
 
   select type(p1 => p1)
     type is (particle_kinetic_leapfrog)

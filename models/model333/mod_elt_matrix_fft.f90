@@ -31,6 +31,7 @@ contains
     use pellet_module
     use mod_elm_apply_fft
     use mod_bootstrap_functions
+    use vacuum
 
     implicit none
     

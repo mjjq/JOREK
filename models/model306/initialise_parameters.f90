@@ -84,12 +84,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-                RMP_on, lambda, tset,                               &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter,                    &
-                first_target_point, last_target_point,		          &
+                first_target_point, last_target_point,		    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme,                                   &
                 D_prof_neg, ZK_prof_neg, T_min,                     &

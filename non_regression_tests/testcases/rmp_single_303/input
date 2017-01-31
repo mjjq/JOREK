@@ -134,8 +134,8 @@
  RMP_on = .f.
  RMP_psi_cos_file = none 
  RMP_psi_sin_file = none
- lambda =0.0111
- tset = 500
+ RMP_growth_rate = 0.0111
+ RMP_ramp_up_time = 1000.
 
  /
 

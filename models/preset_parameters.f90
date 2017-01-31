@@ -273,8 +273,8 @@ subroutine preset_parameters
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
   RMP_psi_cos_file   = 'none'
   RMP_psi_sin_file   = 'none'
-  lambda=0.0663
-  tset = 150
+  RMP_growth_rate    = 0.011 ! RMP_growth_rate * RMP_ramp_up_time must be ~cst
+  RMP_ramp_up_time   = 1000  ! in JOREK times
   output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
   RMP_har_cos=2
   RMP_har_sin=3

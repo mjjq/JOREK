@@ -37,7 +37,8 @@ contains
     use vacuum, ONLY: is_freebound
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep,RMP_har_cos,RMP_har_sin, &
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
@@ -110,13 +111,13 @@ contains
     write (*,*) 'psi_bnd at previous time step', psi_test
     
     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
-      sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
-          - ( 1. + exp(-lambda*( 0. - tset )))**(-1) 
-      establish_RMP = (lambda*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
+      sigmo_fonc = ( 1.d0 + exp(-RMP_growth_rate*( t_now - RMP_start_time - RMP_ramp_up_time/2.d0 )))**(-1) &
+          - ( 1.d0 + exp(-RMP_growth_rate*( 0.d0 - RMP_ramp_up_time/2.d0 )))**(-1) 
+      establish_RMP = (RMP_growth_rate*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
     else
-      establish_RMP = 0.0
+      establish_RMP = 0.d0
     endif
-    ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*tset ) then establish_RMP =0.0
+    ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*RMP_ramp_up_time/2.d0 ) then establish_RMP =0.0
   
     do j=1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics  
       psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP

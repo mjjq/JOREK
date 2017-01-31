@@ -410,7 +410,7 @@ module phys_module
   logical :: RMP_on            !< Activates RMPs on boundary if .true.
   character(len=512)  :: RMP_psi_cos_file  !< ASCII file the profiles of psi_RMP_cos and derivatives are read from
   character(len=512)  :: RMP_psi_sin_file  !< ASCII file the profiles of psi_RMP_sin and derivatives are read from
-  real*8  :: lambda, tset      !< parameters for time dependence of psi_RMP (sigmoid)
+  real*8  :: RMP_growth_rate, RMP_ramp_up_time  !< parameters for time dependence of psi_RMP: Sigmoid f(t)= 1/ (1 + exp(-RMP_growth_rate*(t-RMP_ramp_up_time/2)))
   real*8  :: RMP_start_time    !< time when RMP coils have been activated (RMP_on = .t.)
   real*8, allocatable :: psi_RMP_cos(:)
   real*8, allocatable :: dpsi_RMP_cos_dR(:)

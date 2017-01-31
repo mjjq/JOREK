@@ -132,9 +132,9 @@ subroutine read_RMP_profiles(bnd_node_list)
 
   end if
 
-     write(*,*) 'RMP_start_time', RMP_start_time
-     write (*,*) 't_start', t_start
-     write (*,*) 't_start - RMP_start_time - tset =', t_start - RMP_start_time - tset
+!     write(*,*) 'RMP_start_time', RMP_start_time
+!     write (*,*) 't_start', t_start
+!     write (*,*) 't_start - RMP_start_time - RMP_ramp_up_time/2 =', t_start - RMP_start_time - RMP_ramp_up_time/2.d0
 
      return
    end subroutine read_RMP_profiles

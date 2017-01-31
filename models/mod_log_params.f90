@@ -496,8 +496,8 @@ if (my_id == 0) then
   if (RMP_on) then
      write(*,CHAR_FMT) 'RMP_psi_cos_file      ', trim(RMP_psi_cos_file)
      write(*,CHAR_FMT) 'RMP_psi_sin_file      ', trim(RMP_psi_sin_file)
-     write(*,REAL_FMT) 'lambda                ', lambda
-     write(*,REAL_FMT) 'tset                  ', tset
+     write(*,REAL_FMT) 'RMP_growth_rate       ', RMP_growth_rate
+     write(*,REAL_FMT) 'RMP_ramp_up_time      ', RMP_ramp_up_time
      write(*,INTG_FMT) 'Number_RMP_harmonics  ', Number_RMP_harmonics 
      write(*,REAL_FMT) 'RMP_har_cos_spectrum ',  RMP_har_cos_spectrum
      write(*,REAL_FMT) 'RMP_har_sin_spectrum ',  RMP_har_sin_spectrum

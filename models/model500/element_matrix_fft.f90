@@ -600,9 +600,9 @@ do ms=1, n_gauss
     coef_ion_3  = EL_CHG*MU_ZERO*central_density*1.d20 * 27.2d0
     S_ion_puiss = 3.9d-1
 
-    Tion     = corr_neg_temp(T0,(/1.d-5,0.3/))/(2.d0)
+    Tion     = corr_neg_temp(T0,(/1.d-5,0.3/))
    ! To be implemented later:
-   ! dTion_dT = dcorr_neg_temp_dT(T0,(/1.d-5,0.3/))/(2.d0)
+   ! dTion_dT = dcorr_neg_temp_dT(T0,(/1.d-5,0.3/))
 
     if (Te_eV .gt. 0.1) then
 

@@ -178,7 +178,6 @@ subroutine preset_parameters
   particlesource      = 1.e-5
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
-! edge particle source (only for model303 for the moment)
   edgeparticlesource      = 0.d0
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01

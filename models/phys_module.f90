@@ -112,7 +112,11 @@ module phys_module
   real*8  :: heatsource_sig      !< Width over which source is ramped down
   real*8  :: heatsource_i        !< Heat source strength (ions), model4xx only
   real*8  :: heatsource_e        !< Heat source strength (electrons), model4xx only
-  
+  real*8  :: edgeparticlesource      !< Edge particle source strench 
+  real*8  :: edgeparticlesource_psin !< Position around which edge particle source is ramped down    
+  real*8  :: edgeparticlesource_sig  !< Width over which edge particle source is ramped down
+
+
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num
   

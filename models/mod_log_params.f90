@@ -337,6 +337,9 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
+  write(*,REAL_FMT) 'edgeparticlesource        ', edgeparticlesource
+  write(*,REAL_FMT) 'edgeparticlesource_psin   ', edgeparticlesource_psin
+  write(*,REAL_FMT) 'edgeparticlesource_sig    ', edgeparticlesource_sig
   write(*,REAL_FMT) 'heatsource            ', heatsource
   write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
   write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig

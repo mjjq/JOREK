@@ -21,7 +21,14 @@ real*8 :: psi_n
 
 psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
 
-particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_psin)/particlesource_sig))
+if (xpoint2) then
+  if ((Z .lt. Z_xpoint(1)) .and. (psi_n .lt. 1.d0) ) then
+     psi_n = 2.d0 - psi_n
+  endif
+endif
+
+particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_psin)/particlesource_sig)) &
+    + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))
 heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))
 
 return

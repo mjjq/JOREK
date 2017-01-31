@@ -76,6 +76,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &

@@ -181,6 +181,10 @@ else
   $(warning "USE_HDF5=1 is recommended for input/output")
 endif
 
+ifeq (1, $(USE_BLOCK))
+  DEFINES := $(DEFINES) -DUSE_BLOCK
+endif
+
 
 # Do not check to make these files to speed up and clean -d output
 Makefile: ;

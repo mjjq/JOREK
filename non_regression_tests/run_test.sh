@@ -26,10 +26,10 @@ function printusage() {
     echo "   $0 [options] testcase"
     echo ""
     echo " Options:"
+    echo "   -i            Launch the inital, full-length run (not only the test itself)"
+    echo "                 NOTE: IF '-i' IS PRESENT, IT MUST BE THE FIRST OPTION"
     echo "   -h            Print this help information"
     echo "   -k            Keep temporary run directory"
-    echo "   -i            Launch the inital, full-length run"
-    echo "                 (not only the test starting from a restart file)"
     echo "   -j nthreads   Set the number of compile threads (default 1)"
     echo "   -l            List available test cases using long format."
     echo "   -L            List available test cases without any description (short format)"
@@ -88,6 +88,7 @@ if [ -z "$compilethreads" ]; then
 fi
 tmpdir="$startdir/tmp$$"
 
+firstoption="yes"
 while [ $# -gt 0 ]; do
     option="$1"
     if [ "$option" == "-h" ]; then
@@ -122,6 +123,11 @@ while [ $# -gt 0 ]; do
 	done
 	exit 0
     elif [ "$option" == "-i" ]; then
+        if [ "$firstoption" == "no" ]; then
+          echo "ERROR: When providing the option '-i', it needs to be the first option."
+          printusage
+          exit -1
+        fi
 	initialrun="yes"
 	shift
     elif [ "$option" == "-p" ]; then
@@ -149,6 +155,7 @@ while [ $# -gt 0 ]; do
 	printusage
 	exit 1
     fi
+    firstoption="no"
 done
 echo " tmpdir = " $tmpdir
 
@@ -174,6 +181,9 @@ if [ "$compile" == "yes" ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
   fi
+  if [ "$initialrun" == "yes" ]; then
+    mv $binaries_initial $testcasedir/ || exit 1
+  fi
   mv $binaries $testcasedir/ || exit 1
 fi
 
@@ -185,12 +195,12 @@ if [ "$runit" == "yes" ]; then
   # --- Copy files
   cd $testcasedir
   echo " requiredfiles=" $requiredfiles
-  cp $requiredfiles $tmpdir
-  cd $tmpdir
-  if [ $? -ne 0 ]; then
-    printf "\n$ERROR_COL ERROR: Copying required files ($requiredfiles) failed.$NO_COL\n"
-    exit 1
+  cp $requiredfiles $tmpdir || exit 1
+  cp $binaries $tmpdir || exit 1
+  if [ "$initialrun" == "yes" ] && [ "$binaries_initial" != "" ]; then
+    cp $binaries_initial $tmpdir || exit 1
   fi
+  cd $tmpdir
     
   # --- Some preparations
   if [ -n "$ompthreads" ]; then

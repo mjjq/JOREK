@@ -340,6 +340,12 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'heatsource            ', heatsource
   write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
   write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
+  write(*,REAL_FMT) 'particlesource_gauss     ', particlesource_gauss
+  write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
+  write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
+  write(*,REAL_FMT) 'heatsource_gauss         ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_psin    ', heatsource_gauss_psin
+  write(*,REAL_FMT) 'heatsource_gauss_sig     ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,REAL_FMT) 'visco_num             ', visco_num

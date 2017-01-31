@@ -104,14 +104,20 @@ module phys_module
   !! - \f$ \Psi_{N,0} \f$ denotes the position around which the source is ramped down (e.g., heatsource_psin)
   !! - \f$ \sigma \f$ denotes the width over which the source is ramped down (e.g., heatsource_sig)
   !!
-  real*8  :: particlesource      !< Particle source strength
-  real*8  :: particlesource_psin !< Position around which source is ramped down
-  real*8  :: particlesource_sig  !< Width over which source is ramped down
-  real*8  :: heatsource          !< Heat source strength
-  real*8  :: heatsource_psin     !< Position around which source is ramped down
-  real*8  :: heatsource_sig      !< Width over which source is ramped down
-  real*8  :: heatsource_i        !< Heat source strength (ions), model4xx only
-  real*8  :: heatsource_e        !< Heat source strength (electrons), model4xx only
+  real*8  :: particlesource            !< Particle source strength
+  real*8  :: particlesource_psin       !< Position around which source is ramped down
+  real*8  :: particlesource_sig        !< Width over which source is ramped down
+  real*8  :: particlesource_gauss      !< Additional gaussian particle source strength
+  real*8  :: particlesource_gauss_psin !< Position around which gaussian source is set
+  real*8  :: particlesource_gauss_sig  !< Width over which gaussian source is set
+  real*8  :: heatsource                !< Heat source strength
+  real*8  :: heatsource_psin           !< Position around which source is ramped down
+  real*8  :: heatsource_sig            !< Width over which source is ramped down
+  real*8  :: heatsource_gauss          !< Additional gaussian heat source strength
+  real*8  :: heatsource_gauss_psin     !< Position around which gaussian source is set
+  real*8  :: heatsource_gauss_sig      !< Width over which gaussian source is set
+  real*8  :: heatsource_i              !< Heat source strength (ions), model4xx only
+  real*8  :: heatsource_e              !< Heat source strength (electrons), model4xx only
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num

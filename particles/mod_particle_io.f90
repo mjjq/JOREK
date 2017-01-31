@@ -103,7 +103,7 @@ if (allocated(sim%groups)) then
     do j=1,n_here
       real8_2D(:,j) = sim%groups(i)%particles(j)%st
     end do
-    call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"st",start=[0_HSIZE_T,i_here])
+    call HDF5_array2D_saving(file,real8_2D,2,n_total,group_name//"st",start=[0_HSIZE_T,i_here])
     deallocate(real8_2D)
 
     ! weight

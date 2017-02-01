@@ -97,7 +97,6 @@ real*8     :: Dn0x, Dn0y, Dn0p
 real*8     :: Te_eV                                           ! Electron temperature in eV
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
-real*8     :: Tion, dTion_dT                                  ! Temperature used in ionization rate
 real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss ! Ionization rate parameters
 real*8     :: ksiion                                          ! Ionization energy
 !   -Recombination
@@ -568,20 +567,9 @@ do ms=1, n_gauss
     coef_ion_3  = EL_CHG*MU_ZERO*central_density*1.d20 * 27.2d0
     S_ion_puiss = 3.9d-1
 
-    Tion     = corr_neg_temp(T0,(/1.d-5,0.3/))
-   ! To be implemented later:
-   ! dTion_dT = dcorr_neg_temp_dT(T0,(/1.d-5,0.3/))
-
     if (Te_eV .gt. 0.1) then
-
-      Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
-
-      dSion_dT = Sion_T * ( -S_ion_puiss/Tion + coef_ion_3/(Tion*(coef_ion_2*Tion+coef_ion_3)) &
-                                       + coef_ion_3*Tion**(-2.d0) )
-      ! To be implemented later:
-      !dSion_dT = dTion_dT * Sion_T * ( -S_ion_puiss/Tion + coef_ion_3/(Tion*(coef_ion_2*Tion+coef_ion_3)) &
-      !                                 + coef_ion_3*Tion**(-2.d0) )
-
+      Sion_T   = coef_ion_1*((coef_ion_3/T0)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/T0)*exp(-coef_ion_3/T0)
+      dSion_dT = Sion_T * ( -S_ion_puiss/T0 + coef_ion_3/(T0*(coef_ion_2*T0+coef_ion_3)) + coef_ion_3*T0**(-2.d0) )
     else
       Sion_T   = 0.
       dSion_dT = 0. 

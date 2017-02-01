@@ -21,7 +21,6 @@ real*8 :: psi_n
 
 psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
 
-<<<<<<< HEAD
 if (xpoint2) then
   if ((Z .lt. Z_xpoint(1)) .and. (psi_n .lt. 1.d0) ) then
      psi_n = 2.d0 - psi_n

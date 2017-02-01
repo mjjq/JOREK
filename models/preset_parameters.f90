@@ -181,6 +181,12 @@ subroutine preset_parameters
   edgeparticlesource      = 0.d0
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01
+  heatsource_gauss          = 0.d0
+  heatsource_gauss_psin     = 0.9d0
+  heatsource_gauss_sig      = 0.1d0
+  particlesource_gauss      = 0.d0
+  particlesource_gauss_psin = 0.9d0
+  particlesource_gauss_sig  = 0.1d0
   
   tauIC       = 0.d0
   Wdia        = .false.

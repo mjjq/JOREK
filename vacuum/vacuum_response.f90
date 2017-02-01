@@ -491,12 +491,20 @@ module vacuum_response
     real*8              :: phi1, phi2, phi3, r1(3), r2(3), r3(3), r21(3), r32(3), r13(3), r21_cross_r32(3)
     real*8              :: nm(3), n13(3), n32(3), n21(3), j_lin(3), j13, j32, j21
     real*8              :: ephi12(3),ephi13(3),ephi23(3), jsides(3)
+    real*8              :: pol13(3), pol32(3), pol21(3)
     real*8              :: mid12(3), mid23(3), mid13(3), angle12, angle13, angle23
     integer             :: filehandle = 60, i, maxcurr_pos
+    logical             :: Iphi_max, Ipol_max, jphi_lin, jpol_lin
     character(len=18)   :: filename
     real*8, allocatable :: tripot_w(:)
     
     if ( mod(index,nout) /= 0 ) return
+    
+    ! --- Preset values
+    Iphi_max = .false.
+    jphi_lin = .true.
+    Ipol_max = .false.
+    jpol_lin = .false.    
     
     ! --- VTK file header
     write(filename,'(A,I5.5,A)') 'wallcurr.',index,'.vtk'
@@ -540,83 +548,315 @@ module vacuum_response
       write(filehandle,142) tripot_w(i)
     end do
     
-    ! --- Maximum toroidal current flowing into each triangle 
+    ! --- Cell data variables
     write(filehandle,141) 'CELL_DATA', sr%ntri_w
-    write(filehandle,140) 'SCALARS Iphi_max(kA) float'
-    write(filehandle,140) 'LOOKUP_TABLE default'
-     
-    do i = 1, sr%ntri_w
-     
-      ! --- Wall potentials at triangle nodes
-      phi1   = tripot_w(sr%jpot_w(i,1))
-      phi2   = tripot_w(sr%jpot_w(i,2))
-      phi3   = tripot_w(sr%jpot_w(i,3))
-      
-      ! --- Positions of triangle nodes
-      r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-      r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-      r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-      
-      ! --- Middle points on triangle sides
-      mid12(:) =   (r1(:) + r2(:)) * 0.5d0
-      mid13(:) =   (r1(:) + r3(:)) * 0.5d0
-      mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
-           
-      ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
-      angle12 = atan2(-mid12(1),mid12(3))
-      angle13 = atan2(-mid13(1),mid13(3))
-      angle23 = atan2(-mid23(1),mid23(3))
-      
-      ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-      ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-      ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-      ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
-     
-      ! --- Quantities needed to calculate the current density vector 
-      r21(:) = r1(:)-r2(:)
-      r32(:) = r2(:)-r3(:)
-      r13(:) = r3(:)-r1(:)
-     
-      r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-        r21(1)*r32(2) - r21(2)*r32(1) /)
+   
+    ! --- Maximum toroidal current flwoing on a triangle (kA)
+    if (Iphi_max) then
         
-      !--- current density vector in kA/m, Merkel 2015
-      j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
-      j_lin = j_lin / mu_zero * 1.d-3  
+      write(filehandle,140) 'SCALARS Iphi_max(kA) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
         
-      !--- Vector normal to triangle surface
-      nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
-      
-      !--- Normal vectors to triangle sides
-      n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
-        r13(1)*nm(2) - r13(2)*nm(1) /)
-      n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
-        r21(1)*nm(2) - r21(2)*nm(1) /)
-      n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
-        r32(1)*nm(2) - r32(2)*nm(1) /)
-      
-      !--- Normalized vectors normal to triangle sides
-      n13(:) = n13(:)/ sqrt(sum(n13**2))
-      n21(:) = n21(:)/ sqrt(sum(n21**2))
-      n32(:) = n32(:)/ sqrt(sum(n32**2))
-      
-      !--- Toroidal current flowing per side of the triangle 
-      j13    = abs(dot_product(n13,ephi13)) * sqrt(sum(r13**2)) * dot_product(ephi13,j_lin)
-      j21    = abs(dot_product(n21,ephi12)) * sqrt(sum(r21**2)) * dot_product(ephi12,j_lin)
-      j32    = abs(dot_product(n32,ephi23)) * sqrt(sum(r32**2)) * dot_product(ephi23,j_lin)
-      
-      jsides(:) = (/ j13, j21, j32 /)
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
           
-      !--- Find the triangle side with maximum absolute current
-      maxcurr_pos   = maxloc(abs(jsides),1)
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+          
+        !--- Vector normal to triangle surface
+        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+        
+        !--- Normal vectors to triangle sides
+        n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
+          r13(1)*nm(2) - r13(2)*nm(1) /)
+        n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
+          r21(1)*nm(2) - r21(2)*nm(1) /)
+        n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
+          r32(1)*nm(2) - r32(2)*nm(1) /)
+        
+        !--- Normalized vectors normal to triangle sides
+        n13(:) = n13(:)/ sqrt(sum(n13**2))
+        n21(:) = n21(:)/ sqrt(sum(n21**2))
+        n32(:) = n32(:)/ sqrt(sum(n32**2))
+        
+        !--- Toroidal current flowing per side of the triangle 
+        j13    = abs(dot_product(n13,ephi13)) * sqrt(sum(r13**2)) * dot_product(ephi13,j_lin)
+        j21    = abs(dot_product(n21,ephi12)) * sqrt(sum(r21**2)) * dot_product(ephi12,j_lin)
+        j32    = abs(dot_product(n32,ephi23)) * sqrt(sum(r32**2)) * dot_product(ephi23,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum absolute current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum toroidal current flowing on a triangle side, in kA
+        write(filehandle,142) jsides(maxcurr_pos) 
       
-      !--- Maximum toroidal current flowing on a triangle side, in kA
-      write(filehandle,142) jsides(maxcurr_pos) 
+      enddo
+    endif
     
-    enddo
+    ! --- Maximum poloidal current flwoing on a triangle (kA)
+    if (Ipol_max) then
+   
+      write(filehandle,140) 'SCALARS Ipol_max(kA) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+          
+        !--- Vector normal to triangle surface
+        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+        
+        !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
+        pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
+          ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
+        pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
+          ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
+        pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
+          ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
+        
+        !--- Normalized poloidal vectors by triangle side
+        pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
+        pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
+        pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
+        
+        !--- Normal vectors to triangle sides
+        n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
+          r13(1)*nm(2) - r13(2)*nm(1) /)
+        n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
+          r21(1)*nm(2) - r21(2)*nm(1) /)
+        n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
+          r32(1)*nm(2) - r32(2)*nm(1) /)
+        
+        !--- Normalized vectors normal to triangle sides
+        n13(:) = n13(:)/ sqrt(sum(n13**2))
+        n21(:) = n21(:)/ sqrt(sum(n21**2))
+        n32(:) = n32(:)/ sqrt(sum(n32**2))
+        
+        !--- Poloidal current flowing per side of the triangle 
+        j13    = abs(dot_product(n13,pol13)) * sqrt(sum(r13**2)) * dot_product(pol13,j_lin)
+        j21    = abs(dot_product(n21,pol21)) * sqrt(sum(r21**2)) * dot_product(pol21,j_lin)
+        j32    = abs(dot_product(n32,pol32)) * sqrt(sum(r32**2)) * dot_product(pol32,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum absolute current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum poloidal current flowing on a triangle side, in kA
+        write(filehandle,142) jsides(maxcurr_pos) 
+      
+      enddo
+    endif
     
-    ! --- Wall current vectors
-    write(filehandle,141) 'CELL_DATA', sr%ntri_w
+    ! --- Linear toroidal current density per triangle (kA/m)
+    if (jphi_lin) then
+   
+      write(filehandle,140) 'SCALARS jphi_lin(kA/m) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+        
+        !--- Toroidal linear density current in each triangle side
+        j13    =  dot_product(ephi13,j_lin)
+        j21    =  dot_product(ephi12,j_lin)
+        j32    =  dot_product(ephi23,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum toroidal linear density current flowing on a triangle side, in kA/m
+        write(filehandle,142) jsides(maxcurr_pos) 
+      
+      enddo
+    endif
+    
+    ! --- Poloidal linear density current flowing on a triangle (kA/m)
+    if (jpol_lin) then
+   
+      write(filehandle,140) 'SCALARS jpol_lin(kA/m) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+          
+        !--- Vector normal to triangle surface
+        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+        
+        !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
+        pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
+          ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
+        pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
+          ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
+        pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
+          ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
+        
+        !--- Normalized poloidal vectors by triangle side
+        pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
+        pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
+        pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
+        
+        !--- Poloidal current flowing per side of the triangle 
+        j13    =  dot_product(pol13,j_lin)
+        j21    =  dot_product(pol21,j_lin)
+        j32    =  dot_product(pol32,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum absolute current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum poloidal linear density current flowing on a triangle, in kA/m
+        write(filehandle,142) jsides(maxcurr_pos) 
+      
+      enddo
+    endif
+      
+    ! --- Total wall current vectors
     write(filehandle,140) 'VECTORS jsurf_w(MA/m) float'
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
     do i = 1, sr%ntri_w

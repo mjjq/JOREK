@@ -2,7 +2,7 @@ subroutine Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)
 
 
 
- use parameters
+ use mod_parameters
  use data_structure
 
 implicit none
@@ -57,7 +57,7 @@ integer                               :: i,j,k,l,p,iv,ielm,inode,ov
    
        ap(iv)=element_list%element(ielm)%contain_node(iv)
     if (ap(iv).ne.0) then
-     if ((node_list%node(ap(iv))%constrained==.false.) ) then
+     if (.not. node_list%node(ap(iv))%constrained) then
      n_active_nodes = n_active_nodes + 1
      active_node(n_active_nodes) = ap(iv)
      else
@@ -74,7 +74,7 @@ integer                               :: i,j,k,l,p,iv,ielm,inode,ov
    
        ap(iv)=element_list%element(son1(i))%contain_node(iv)
     if (ap(iv).ne.0) then
-     if ((node_list%node(ap(iv))%constrained==.false.) ) then
+     if ((node_list%node(ap(iv))%constrained .eqv. .false.) ) then
      n_active_nodes = n_active_nodes + 1
      active_node(n_active_nodes) = ap(iv)
      else
@@ -90,7 +90,7 @@ integer                               :: i,j,k,l,p,iv,ielm,inode,ov
    
        ap(iv)=element_list%element(son2(j))%contain_node(iv)
     if (ap(iv).ne.0) then
-     if ((node_list%node(ap(iv))%constrained==.false.) ) then
+     if ((node_list%node(ap(iv))%constrained .eqv. .false.) ) then
      n_active_nodes = n_active_nodes + 1
      active_node(n_active_nodes) = ap(iv)
      else
@@ -107,7 +107,7 @@ integer                               :: i,j,k,l,p,iv,ielm,inode,ov
    
        ap(iv)=element_list%element(son3(k))%contain_node(iv)
     if (ap(iv).ne.0) then
-     if ((node_list%node(ap(iv))%constrained==.false.) ) then
+     if ((node_list%node(ap(iv))%constrained .eqv. .false.) ) then
      n_active_nodes = n_active_nodes + 1
      active_node(n_active_nodes) = ap(iv)
      else
@@ -123,7 +123,7 @@ integer                               :: i,j,k,l,p,iv,ielm,inode,ov
    
        ap(iv)=element_list%element(son4(l))%contain_node(iv)
     if (ap(iv).ne.0) then
-     if ((node_list%node(ap(iv))%constrained==.false.) ) then
+     if ((node_list%node(ap(iv))%constrained .eqv. .false.) ) then
      n_active_nodes = n_active_nodes + 1
      active_node(n_active_nodes) = ap(iv)
       else
@@ -142,7 +142,7 @@ integer                               :: i,j,k,l,p,iv,ielm,inode,ov
    
        ap(iv)=element_list%element(son5(p))%contain_node(iv)
     if (ap(iv).ne.0) then
-     if ((node_list%node(ap(iv))%constrained==.false.) ) then
+     if ((node_list%node(ap(iv))%constrained .eqv. .false.) ) then
      n_active_nodes = n_active_nodes + 1
      active_node(n_active_nodes) = ap(iv)
      else

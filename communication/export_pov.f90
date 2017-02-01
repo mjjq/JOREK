@@ -2,7 +2,7 @@ subroutine export_POV(node_list,element_list,ivar,iharm)
 !**************************************************************************
 ! write an input file for POVRAY using the bezier patch object            *
 !**************************************************************************
-use parameters
+use mod_parameters
 use data_structure
 use basis_at_gaussian
 implicit none

@@ -1,5 +1,5 @@
 !> Broadcast all namelist input parameters from MPI task 0 to the others
-subroutine Broadcast_phys(my_id)
+subroutine broadcast_phys(my_id)
 
 use tr_module
 use phys_module
@@ -103,6 +103,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(D_perp_num,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(Wdia,			1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(U_sheath,		1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(renormalise,		1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(tauIC,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(gamma_sheath,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(density_reflection,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -423,6 +425,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,D_perp_num,             1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,Wdia,                   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,U_sheath,         	  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,renormalise,         	  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,tauIC,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,gamma_sheath,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,density_reflection,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -669,4 +673,4 @@ call tr_unregister_mem(bufsize,"bcastp_buffer")
 deallocate(buffer)
 
 return
-end subroutine Broadcast_phys
+end subroutine broadcast_phys

@@ -6,7 +6,7 @@ use mumps_module
 use murge_module
 use global_distributed_matrix
 use mpi_mod
-use clock_module
+use mod_clock
 use phys_module,  only : gmres_4, gmres_tol, gmres_m, index_now
 
 implicit none

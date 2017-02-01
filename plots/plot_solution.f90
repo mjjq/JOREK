@@ -4,7 +4,7 @@ subroutine plot_solution(node_list,element_list,ivar,iharm,iangle,label)
 !-----------------------------------------------------------------------
 use constants
 use tr_module 
-use parameters
+use mod_parameters
 use data_structure
 use basis_at_gaussian
 use phys_module

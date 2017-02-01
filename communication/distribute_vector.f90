@@ -3,7 +3,7 @@ subroutine distribute_vector(my_id,rhs,rhs_dis,again)
 ! distribute vector rhs to the MASTERS of each toroidal harmonic
 !-----------------------------------------------------------------------
 use tr_module 
-use parameters
+use mod_parameters
 use global_distributed_matrix
 use mumps_module
 use mpi_mod

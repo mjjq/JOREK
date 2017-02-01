@@ -5,10 +5,10 @@ subroutine temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
 ! live data routines in communication folder
 !---------------------------------------------------------------
 use data_structure
-use Gauss
+use gauss
 use basis_at_gaussian
 use phys_module
-use parameters
+use mod_parameters
 
 implicit none
 

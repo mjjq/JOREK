@@ -131,6 +131,7 @@ module vacuum_equilibrium
     use basis_at_gaussian
     use mumps_module
     use vacuum_response
+    use constants
     
     implicit none
     
@@ -154,8 +155,7 @@ module vacuum_equilibrium
 
     call equilibrium_VFB
     
-    if ( .not. allocated(Btan_starw))   deallocate(Btan_starw)
-    allocate(Btan_starw(sr%ncoil,sr%nd_bez))
+    if ( .not. allocated(Btan_starw))   allocate(Btan_starw(sr%ncoil,sr%nd_bez))
     Btan_starw = 0.d0
     
     do i = 1,  sr%ncoil
@@ -201,7 +201,7 @@ module vacuum_equilibrium
                 
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
               !  B_tan_coil_i           = sum ( I_coils(:) * bext_tan(i_resp,:) )
-                B_tan_coil_i           = sum ( I_coils(:) * Btan_starw(:, i_resp) )
+                B_tan_coil_i           = sum ( I_coils(:) * Btan_starw(:, i_resp) ) * mu_zero 
                 mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i
                 
                 ! --- Sum over boundary dofs contributing to the response
@@ -219,7 +219,7 @@ module vacuum_equilibrium
                     mumps_par%jcn(ilarge)  = j_index
                     mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
                     mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                                &
-      !                + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j               &
+                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j               &
                       - common_prefactor * response_m_eq(i_resp,j_resp) * psi_0_j
                   end do
                 end do

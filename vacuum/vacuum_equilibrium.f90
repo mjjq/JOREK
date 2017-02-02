@@ -219,7 +219,7 @@ module vacuum_equilibrium
                     mumps_par%jcn(ilarge)  = j_index
                     mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
                     mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                                &
-                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j               &
+   !                   + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j               &
                       - common_prefactor * response_m_eq(i_resp,j_resp) * psi_0_j
                   end do
                 end do

@@ -228,12 +228,15 @@ module phys_module
   ! Also note that there is no reference space coordinates for pellets since we are using mgi_R etc. 
   !real*8  :: spi_R             !< major radius position of shattered pellet center
   !real*8  :: spi_Z             !< Z position of shattered pellet center
-  real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R
-  real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z
-  real*8  :: spi_Vel_phiref     !< Reference velocity of pellet center along phi
+  real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
+  real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection
+  real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection
   real*8  :: spi_radiusref      !< Reference radius of pellets
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
                                 !< and that of shattered pellets
+
+  real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
+  real*8  :: spi_L_inj          !< Distance between SPI nozzle
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
                                 !< with regard to the simulation resolution

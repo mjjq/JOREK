@@ -123,7 +123,7 @@ module data_structure
     real*8  :: spi_phi                            !< Phi coordinate of pellet (degree)
     real*8  :: spi_Vel_R                          !< Velocity of pellet along R direction (m/s)
     real*8  :: spi_Vel_Z                          !< Velocity of pellet along Z direction (m/s)
-    real*8  :: spi_Vel_phi                        !< Velocity of pellet along Phi direction (dgree/s)
+    real*8  :: spi_Vel_RxZ                        !< Velocity of pellet along RxZ direction (m/s)
     real*8  :: spi_radius                         !< Radisu of pellet assuming spherical pellet (m)
     real*8  :: spi_abl                            !< Pellet ablation rate (atom/s)
   end type type_SPI

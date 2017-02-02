@@ -214,7 +214,11 @@ real*8  :: s_out,t_out
 
 real*8  :: n_SI, T_eV, n_corr, T_corr
 real*8  :: t_norm
+real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
 
+  spi_delta_phi   = 0.
+  spi_Vel_R_tmp   = 0.
+  spi_Vel_phi_tmp = 0.
 
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 
@@ -231,12 +235,20 @@ real*8  :: t_norm
       write(20,"(e14.6)") pellets(i)%spi_abl
     end if
 
-    pellets(i)%spi_R       = pellets(i)%spi_R + pellets(i)%spi_Vel_R * tstep / V_normalisation
+    spi_delta_phi          = pellets(i)%spi_phi - mgi_phi
+    spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
+                             + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
+    spi_Vel_phi_tmp        = pellets(i)%spi_Vel_RxZ * cos(spi_delta_phi) &
+                             - pellets(i)%spi_Vel_R * sin(spi_delta_phi)
+    spi_Vel_phi_tmp        = spi_Vel_phi_tmp / pellets(i)%spi_R
+
+
+    pellets(i)%spi_R       = pellets(i)%spi_R + spi_Vel_R_tmp * tstep / V_normalisation
     pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
-    pellets(i)%spi_phi     = pellets(i)%spi_phi
+    pellets(i)%spi_phi     = pellets(i)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
     pellets(i)%spi_Vel_R   = spi_Vel_Rref
     pellets(i)%spi_Vel_Z   = spi_Vel_Zref
-    pellets(i)%spi_Vel_phi = spi_Vel_phiref
+    pellets(i)%spi_Vel_RxZ = spi_Vel_RxZref
     !pellets(i)%spi_radius  = spi_radiusref
 
     if (flag_spi == 0) then
@@ -291,7 +303,7 @@ real*8  :: t_norm
     do i=1, n_spi
       write(*,*) "Pellet number: ", i
       write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
-      write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_phi
+      write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_RxZ
       write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
     end do
   end if
@@ -329,7 +341,7 @@ function get_pellet_derived_type() result(dtype_out)
   call MPI_Get_address(sample_pellet%spi_phi,     disp(3), ierr)
   call MPI_Get_address(sample_pellet%spi_Vel_R,   disp(4), ierr)
   call MPI_Get_address(sample_pellet%spi_Vel_Z,   disp(5), ierr)
-  call MPI_Get_address(sample_pellet%spi_Vel_phi, disp(6), ierr)
+  call MPI_Get_address(sample_pellet%spi_Vel_RxZ, disp(6), ierr)
   call MPI_Get_address(sample_pellet%spi_radius,  disp(7), ierr)
   call MPI_Get_address(sample_pellet%spi_abl,     disp(8), ierr)
 

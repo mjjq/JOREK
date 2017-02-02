@@ -63,7 +63,7 @@ real*8     :: ng_radius
 ! Additional variables reserved for future implementation
 !real*8     :: spi_Vel_R_tmp
 !real*8     :: spi_Vel_Z_tmp
-!real*8     :: spi_Vel_phi_tmp
+!real*8     :: spi_Vel_RxZ_tmp
 
 
 #ifdef _OPENMP

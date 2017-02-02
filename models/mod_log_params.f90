@@ -548,7 +548,7 @@ if (my_id == 0) then
      write(*,INTG_FMT) 'flag_spi            ',  flag_spi
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
-     write(*,REAL_FMT) 'spi_Vel_phiref      ',  spi_Vel_phiref
+     write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
      write(*,REAL_FMT) 'spi_radiusref       ',  spi_radiusref
 
 #endif

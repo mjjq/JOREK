@@ -29,6 +29,8 @@ real*8,                   intent(in)    :: Z_axis
 integer,                  intent(out)   :: i_elm
 real*8,                   intent(out)   :: s, t, R, Z
 
+logical, parameter :: verbose = .false.
+
 ! --- Internal variables
 real*8  :: u, du, R_try, Z_try, s_out, t_out, err, st_out(2)
 real*8, dimension(1) :: P, P_s, P_t, P_phi
@@ -37,7 +39,7 @@ real*8  :: inv_st_jac, psi_R, psi_Z, psi_u
 integer :: i_elm_out, ifail, backtrack_step, newton_iter_number
 integer, parameter :: num_backtrack_steps = 10 ! to prevent going over the border of the domain
 real*8,  parameter :: backtrack_factor = 0.99d0
-integer, parameter :: newton_iter_max = 6
+integer, parameter :: newton_iter_max = 8
 integer, parameter :: i_var(1) = [1], n_ivar=1
 real*8,  parameter :: tol = 1d-8
 
@@ -109,7 +111,7 @@ do i=1,element_list%n_elements
       call find_RZ(node_list,element_list,R_axis+u2*cos(theta),Z_axis+u2*sin(theta),R,Z,ielm2,s2,t2,ifail)
       ! Calculate psi and derivative at first crossing
       if (ielm1 .eq. 0 .or. ielm2 .eq. 0) then
-        write(*,*) "Cannot find intersection point in element"
+        if (verbose) write(*,*) "Cannot find intersection point in element, ielm1=", ielm1, ", ielm2=", ielm2, ", istart=",i
         return
       end if
       call interp_PRZ(node_list,element_list,ielm1,i_var,n_ivar,s1,t1,phi, &
@@ -155,7 +157,7 @@ do i=1,element_list%n_elements
   end if
 end do
 if (u .lt. 0.d0) then
-  write(*,"(A,g12.6,A,g12.6,A)") "WARNING: no suitable elements found, skipping for psi=", psi, " theta=", theta/PI, "pi", "u=", u
+  if (verbose) write(*,"(A,g12.6,A,g12.6,A)") "WARNING: no suitable elements found, skipping for psi=", psi, " theta=", theta/PI, "pi", "u=", u
   return
 end if
 
@@ -174,7 +176,7 @@ do backtrack_step = 0, num_backtrack_steps
   end if
 end do
 if (backtrack_step .gt. num_backtrack_steps .or. ifail .ne. 0 .or. i_elm_out .eq. 0) then
-  write(*,*) "Cannot find initial position after ", backtrack_step
+  if (verbose) write(*,*) "Cannot find initial position after ", backtrack_step
   return
 end if
 
@@ -219,7 +221,7 @@ do newton_iter_number = 1, newton_iter_max
     out_of_domain = .false.
   end if
   if (isnan(P(1)) .or. abs(u) .gt. 1d5 .or. abs(P(1)) .gt. 1d5) then
-    write(*,"(A,g12.6,A,g12.6,A,3g12.6,A,g12.6,A)") "Position not found for psi=", psi, ", theta=",theta, " last guess=", u, R_try, Z_try, " (psi=",P(1),")"
+    if (verbose) write(*,"(A,g12.6,A,g12.6,A,3g12.6,A,g12.6,A)") "Position not found for psi=", psi, ", theta=",theta, " last guess=", u, R_try, Z_try, " (psi=",P(1),")"
     i_elm = 0
     return
   end if
@@ -228,7 +230,7 @@ end do
 ! 3. Warn if failed
 if (newton_iter_number .gt. newton_iter_max) then
   ! Indicate this by setting i_elm
-  write(*,*) "Too many iterations, skipping"
+  if (verbose) write(*,*) "Too many iterations, skipping with an error of ", err
   i_elm = 0
 end if
 end subroutine find_theta_psi

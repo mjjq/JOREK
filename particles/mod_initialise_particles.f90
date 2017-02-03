@@ -213,6 +213,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   use phys_module, only: F0
   use mod_coronal
   use mod_boris, only: gc_to_kinetic_leapfrog
+  use mpi
   implicit none
   class(particle_base), dimension(:), intent(inout) :: particles
   class(fields_base), intent(in)                    :: fields
@@ -228,16 +229,26 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   ! Internal variables
   type(particle_gc) :: particle
   class(type_rng), allocatable :: rng
-  real*8  :: ran(6), Rbox(2), Zbox(2)
-  real*8  :: H, muB, v_perp, v_par, chi
+  real*8  :: ran(6)
+  real*8  :: H, muB, chi
   real*8  :: psi, psimin, psimax, theta, phi
-  real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3), B_hat(3)
+  real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3)
   real*8, dimension(1) :: P, P_s, P_t, P_phi
   real*8  :: R_s, R_t, Z_s, Z_t
   real*8  :: s, t, u_init_max
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
-  integer :: i_elm, i, ifail, n_try
+  integer :: i_elm, i, j, ifail, my_id, n_cpu, ierr
   real*8, dimension(fields%element_list%n_elements,2) :: psi_minmax_list
+  real*8, allocatable, dimension(:,:) :: rans
+  class(particle_base), dimension(:), allocatable :: particles_tmp
+  logical, dimension(:), allocatable :: found
+  real*8  :: t0, t1
+  integer :: blocksize, prev_blocksize, particles_to_do_local, particles_done_local
+  integer :: to_find, n_tries_now, n_found
+  logical :: all_done
+
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 
   psimin= 1d10
   psimax=-1d10
@@ -251,76 +262,147 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     psimax = max(psi_minmax_list(i_elm,2),psimax)
   end do
   !$omp end parallel do
+
   ! Preparatory work: setup RNG
   allocate(rng,source=rng_base)
   call rng%initialize(6, random_seed(), 1, 1, ifail)
+
   ! Preparatory work: get R_axis, Z_axis
-  call find_axis(0, fields%node_list, fields%element_list, psi_axis, R_axis, Z_axis, s_axis, t_axis, i_elm, ifail)
+  call find_axis(my_id, fields%node_list, fields%element_list, psi_axis, R_axis, Z_axis, i_elm, s_axis, t_axis, ifail)
 
+  ! Assume equal number of particles everywhere
+  particles_to_do_local  = size(particles)
+  particles_done_local   = 0
+  prev_blocksize = 0 ! initial block size
+  all_done = .false.
 
-  ! Loop over all points in the series until we have enough particles
-  n_try = 0
-  do i=1,size(particles)
-    particles(i)%i_elm = 0
-    do while(particles(i)%i_elm .eq. 0)
-      i_elm = 0
-      do while (i_elm .eq. 0) !continue until we find a suitable GC position
-        call rng%next(ran)
+  do while (.not. all_done)
+    to_find = (particles_to_do_local-particles_done_local)
+    n_tries_now = to_find
+    ! Add a little bit extra to cut off tail of 1/x^n
+    if (n_tries_now .lt. 64 .and. n_tries_now .gt. 0) n_tries_now = 64
 
-        if (present(Psi_transform)) then
-          psi = Psi_transform(ran(1))
-        else
-          psi = (psimax-psimin)*ran(1)+psimin
-        end if
-        ! Try to find this position
-        if (present(Theta_transform)) then
-          theta = Theta_transform(ran(5))
-        else
-          theta = TWOPI*ran(5)
-        end if
-        phi = TWOPI*ran(4)
-        ! 1. Find R, Z corresponding to psi, theta
-        call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
-        n_try = n_try + 1
-      end do
-      ! If we are here a suitable position has been found
-      particle%i_elm = i_elm
-      particle%st    = [s,t]
-      particle%x     = [R,Z,phi]
+    ! Calculate starting-point for this block
+    ! random numbers are generated in blocks per mpi process
+    ! blocks are grouped in a superblock of block*n_cpu size
+    ! blocks must be equal size
+    ! we communicate a blocksize here, and keep a running index of the previous starting points
+    ! make this the biggest of n_tries_now
+    call MPI_AllReduce(n_tries_now, blocksize, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
+    call rng%jump_ahead((n_cpu-my_id-1)*prev_blocksize + my_id*blocksize)
+    prev_blocksize = blocksize
 
-      ! 1. Get B at this position
-      call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-      inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
-      psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-      psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-      ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
-      B        = [+psi_Z, -psi_R, F0] / R
-
-      ! 2. Calculate H and mu, save in particle
-      H  = H_transform(ran(2)) ! [eV]
-      muB = H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
-      particle%E  = H
-      particle%mu = muB/norm2(B)
-
-      ! 3. Calculate charge (if cor is present)
-      if (present(cor)) then
-        particle%q = int(q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor),1)
-      else
-        if (present(charge)) then
-          particle%q = int(charge,1)
-        end if
-      end if
-
-      ! 4. Output to particles (dependent on type of particle)
-      chi = TWOPI*ran(6)
-      select type(p => particles(i))
-      type is (particle_kinetic_leapfrog)
-        p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
-        ! if the kinetic position is not in the grid particles(i)%i_elm will be zero after this step and we will loop again
-      type is (particle_gc)
-        p = particle
-      end select
+    ! Generate the random numbers
+    call cpu_time(t0)
+    allocate(rans(6,blocksize))
+    do i=1,blocksize
+      call rng%next(rans(:,i))
     end do
+    call cpu_time(t1)
+
+    ! Allocate some temporary storage
+    allocate(particles_tmp(blocksize), mold=particles)
+    allocate(found(blocksize))
+
+    !$omp parallel do default(none) &
+    !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
+    !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle) &
+    !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
+    !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis)
+    do i=1,blocksize
+      ran(:) = rans(:,i)
+
+      if (present(Psi_transform)) then
+        psi = Psi_transform(ran(1))
+      else
+        psi = (psimax-psimin)*ran(1)+psimin
+      end if
+      ! Try to find this position
+      if (present(Theta_transform)) then
+        theta = Theta_transform(ran(5))
+      else
+        theta = TWOPI*ran(5)
+      end if
+      phi = TWOPI*ran(4)
+      ! 1. Find R, Z corresponding to psi, theta
+      call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
+
+      if (i_elm .ne. 0) then
+        found(i) = .true.
+        ! If we are here a suitable position has been found
+        particle%i_elm = i_elm
+        particle%st    = [s,t]
+        particle%x     = [R,Z,phi]
+
+        ! 1. Get B at this position
+        call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[1],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+        inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
+        psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
+        psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
+        ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
+        B        = [+psi_Z, -psi_R, F0] / R
+
+        ! 2. Calculate H and mu, save in particle
+        H  = H_transform(ran(2)) ! [eV]
+        muB = H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
+        particle%E  = H
+        particle%mu = muB/norm2(B)
+
+        ! 3. Calculate charge (if cor is present)
+        if (present(cor)) then
+          particle%q = int(q_coronal(fields%node_list, fields%element_list, s, t, phi, i_elm, cor),1)
+        else
+          if (present(charge)) then
+            particle%q = int(charge,1)
+          end if
+        end if
+
+        ! 4. Output to particles (dependent on type of particle)
+        chi = TWOPI*ran(6)
+        select type(p => particles_tmp(i))
+        type is (particle_kinetic_leapfrog)
+          p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
+          ! if the kinetic position is not in the grid particles(i)%i_elm the particle is lost
+        type is (particle_gc)
+          p = particle
+        end select
+      else
+        found(i) = .false.
+      end if
+    end do
+    !$omp end parallel do
+
+    ! How many particles have we found?
+    n_found = count(found)
+    write(*,*) my_id, "tried to find ", to_find, " found: ", n_found
+
+    i=1
+    do j=1,size(found)
+      if (found(j)) then
+        select type(p1 => particles(particles_done_local+i))
+        type is (particle_kinetic_leapfrog)
+          select type (p2 => particles_tmp(j))
+          type is (particle_kinetic_leapfrog)
+            p1 = p2
+          end select
+        type is (particle_gc)
+          select type (p2 => particles_tmp(j))
+          type is (particle_gc)
+            p1 = p2
+          end select
+        end select
+
+        i = i+1
+        if (i .gt. to_find) exit
+      end if
+    end do
+    particles_done_local = particles_done_local + i-1
+
+    deallocate(rans, found, particles_tmp)
+
+    ! check if everyone is done
+    call MPI_AllReduce(particles_to_do_local .eq. particles_done_local, all_done, &
+        1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, ierr)
   end do
 end subroutine initialise_particles_H_mu_psi
 
@@ -356,6 +438,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
   !$omp parallel do default(none) private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
   !$omp shared(particles, node_list, element_list, mass, central_density)
   do i=1,size(particles,1)
+    if (particles(i)%i_elm .eq. 0) cycle
     call       interp_PRZ(node_list,element_list,particles(i)%i_elm,[1],1, &
         particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
     select type (pa => particles(i))

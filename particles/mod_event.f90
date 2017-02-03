@@ -292,11 +292,14 @@ end subroutine do_stop_action
 !> Run an action
 subroutine run(this, sim, ev)
   !$ use omp_lib
+  use mpi
   class(action), intent(inout)      :: this
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), optional :: ev !< If run from an event, get a pointer to it here
-  real*8 :: t1, w1
+  real*8 :: t1, min_cputime, mean_cputime, max_cputime
+  !$ real*8 :: w1, min_walltime, mean_walltime, max_walltime
   logical :: has_omp
+  integer :: ierr
   has_omp = .false.
   !$ has_omp = .true.
 
@@ -310,11 +313,30 @@ subroutine run(this, sim, ev)
   call cpu_time(t1)
   !$ w1 = omp_get_wtime()
 
-  ! this is only on node 0 of course
-  if (this%log) then
-    if (.not. has_omp) write(*,"(A,A,f7.4,A)") trim(this%name), " finished in ", t1-this%t0, "s"
-    !$ write(*,"(A,A,f7.4,A,f7.4,A)") trim(this%name), " finished in ", w1-this%w0, &
-    !$ "s (cpu time: ", t1-this%t0, ")"
+  ! Gather times
+  call MPI_Reduce(t1-this%t0, mean_cputime, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  mean_cputime = mean_cputime / real(sim%n_cpu)
+  call MPI_Reduce(t1-this%t0, max_cputime, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Reduce(t1-this%t0, min_cputime, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  !$ call MPI_Reduce(w1-this%w0, mean_walltime, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  !$ mean_walltime = mean_walltime / real(sim%n_cpu)
+  !$ call MPI_Reduce(w1-this%w0, max_walltime, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  !$ call MPI_Reduce(w1-this%w0, min_walltime, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+
+  if (this%log .and. sim%my_id .eq. 0) then
+    if (sim%n_cpu .gt. 1) then
+      if (.not. has_omp) write(*,"(A,A,3f7.4,A)") trim(this%name), " finished in (min/mean/max): ", &
+          min_cputime, mean_cputime, max_cputime, "s"
+      !$ write(*,"(A,A,3f7.4,A,3f7.4,A)") trim(this%name), " finished in (min/mean/max): ", &
+      !$   min_walltime, mean_walltime, max_walltime, &
+      !$ "s (cpu time: ", min_cputime, mean_cputime, max_cputime, ")"
+    else
+      if (.not. has_omp) write(*,"(A,A,f7.4,A)") trim(this%name), " finished in: ", &
+          mean_cputime, "s"
+      !$ write(*,"(A,A,f7.4,A,f7.4,A)") trim(this%name), " finished in: ", &
+      !$   mean_walltime, &
+      !$ "s (cpu time: ", mean_cputime, ")"
+    end if
   end if
 end subroutine run
 end module mod_event

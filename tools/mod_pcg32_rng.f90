@@ -12,6 +12,7 @@ type, extends(type_rng) :: pcg32_rng
   contains
     procedure :: initialize => initialize_pcg32_rng
     procedure :: next => next_pcg32_rng
+    procedure :: jump_ahead => jump_ahead_pcg32_rng
 end type
 
 contains
@@ -53,4 +54,10 @@ contains
     real*8, dimension(:), intent(out) :: out
     call pcg32_random_doubles_r(rng%state(1), out)
   end subroutine next_pcg32_rng
+
+  subroutine jump_ahead_pcg32_rng(rng, delta)
+    class(pcg32_rng), intent(inout) :: rng
+    integer, intent(in) :: delta
+    call pcg32_jumpahead(rng%state(1), delta)
+  end subroutine jump_ahead_pcg32_rng
 end module mod_pcg32_rng

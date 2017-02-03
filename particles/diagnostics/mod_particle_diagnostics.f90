@@ -121,7 +121,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     call h5lexists_f(this%file_id, trim(timeset_name), link_exists, ierr)
 
     if (link_exists) then
-      !write(*,*) "DEBUG: link to ", trim(timeset_name), " exists, trying to open"
+      write(*,*) "DEBUG: link to ", trim(timeset_name), " exists, trying to open"
       call h5dopen_f(this%file_id, trim(timeset_name), tset, ierr)
       if (ierr .ne. 0) then
         write(*,*) "Error opening timeset", i
@@ -133,7 +133,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     else
       call create_constants_time_dataset(this%file_id, trim(timeset_name), &
           tset, tspace)
-      !write(*,*) "DEBUG: created new timeset ", trim(dataset_name)
+      !write(*,*) "DEBUG: created new timeset ", trim(timeset_name)
     end if
 
     ! Get the current sizes

@@ -22,7 +22,7 @@ character*(*)        , intent(in) :: filename
 integer :: my_id, n_cpu, ierr
 integer :: n_here, n_total
 integer(HSIZE_T) :: i_here
-integer(HSIZE_T), allocatable, dimension(:) :: particles_per_proc
+integer, allocatable, dimension(:) :: particles_per_proc
 
 ! For HDF5 writing
 integer(HID_T)                :: file, create_file_space, write_file_space, dset, plist ! handles
@@ -83,6 +83,7 @@ if (allocated(sim%groups)) then
         particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     n_total = sum(particles_per_proc)
     i_here = sum(particles_per_proc(0:my_id-1))
+    write(*,*) my_id, n_total, i_here, n_here
 
     ! Create group to write in
     write(group_name,"(A,i0.3,A)") "/groups/", i, "/"

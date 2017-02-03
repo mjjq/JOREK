@@ -37,16 +37,17 @@ subroutine initialize(sim, num_groups)
   use phys_module, only: mode
   class(particle_sim), intent(inout) :: sim !< why is this class() and not type()?
   integer, intent(in) :: num_groups
-  integer :: provided, ierr, my_id, i_tor
+  integer :: provided, ierr, i_tor
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
 
   call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, ierr)
   if (ierr .ne. 0) write(*,*) "Error ", ierr, " in MPI_Init_thread"
-  if (provided .ne. MPI_THREAD_MULTIPLE) write(*,*) "WARNING: provided(", provided, ") != MPI_THREAD_MULTIPLE"
-  allocate(sim%groups(num_groups))
   call MPI_COMM_RANK(MPI_COMM_WORLD, sim%my_id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, sim%n_cpu, ierr)
+
+  if (provided .ne. MPI_THREAD_MULTIPLE .and. sim%my_id .eq. 0) write(*,*) "WARNING: provided(", provided, ") != MPI_THREAD_MULTIPLE"
+  allocate(sim%groups(num_groups))
   write(*,*) 
   call MPI_GET_PROCESSOR_NAME(name,resultlength,ierr)
   write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', sim%my_id, ': ', name
@@ -56,7 +57,7 @@ subroutine initialize(sim, num_groups)
   ! Initialise mode numbers
   do i_tor=1, n_tor
     mode(i_tor) = + int(i_tor / 2) * n_period
-    if (my_id .eq. 0) write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
+    if (sim%my_id .eq. 0) write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
   enddo
 
   ! Initialise parameters

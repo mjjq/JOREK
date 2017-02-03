@@ -30,6 +30,7 @@
 
 /*
  * 2016-06-06 daanvanvugt@gmail.com: Add function to generate random doubles (with 2^-32 precision)
+ * 2017-02-02 daanvanvugt@gmail.com: Copy jumpahead from full pcg c library
  */
 
 #ifndef PCG_BASIC_H_INCLUDED
@@ -49,39 +50,32 @@ struct pcg_state_setseq_64 {    // Internals are *Private*.
 };
 typedef struct pcg_state_setseq_64 pcg32_random_t;
 
-// If you *must* statically initialize it, here's one.
+#define PCG_DEFAULT_MULTIPLIER_64  6364136223846793005ULL
 
-#define PCG32_INITIALIZER   { 0x853c49e6748fea9bULL, 0xda3e39cb94b95bdbULL }
-
-// pcg32_srandom(initstate, initseq)
 // pcg32_srandom_r(rng, initstate, initseq):
 //     Seed the rng.  Specified in two parts, state initializer and a
 //     sequence selection constant (a.k.a. stream id)
 
-void pcg32_srandom(uint64_t initstate, uint64_t initseq);
 void pcg32_srandom_r(pcg32_random_t* rng, uint64_t initstate,
                      uint64_t initseq);
 
-// pcg32_random()
 // pcg32_random_r(rng)
 //     Generate a uniformly distributed 32-bit random number
 
-uint32_t pcg32_random(void);
 uint32_t pcg32_random_r(pcg32_random_t* rng);
 
-// pcg32_random_double()
 // pcg32_random_double_r(rng)
 //      Generate a 32-bit floating point number between 0 and 1
 
 double pcg32_random_double_r(pcg32_random_t* rng);
-double pcg32_random_double(void);
 
-// pcg32_boundedrand(bound):
-// pcg32_boundedrand_r(rng, bound):
-//     Generate a uniformly distributed number, r, where 0 <= r < bound
+uint64_t pcg_advance_lcg_64(uint64_t state, uint64_t delta, uint64_t cur_mult,
+                            uint64_t cur_plus);
 
-uint32_t pcg32_boundedrand(uint32_t bound);
-uint32_t pcg32_boundedrand_r(pcg32_random_t* rng, uint32_t bound);
+// pcg32_advance_r
+//      Advance by delta steps in one go
+
+void pcg32_advance_r(pcg32_random_t* rng, uint64_t delta);
 
 #if __cplusplus
 }

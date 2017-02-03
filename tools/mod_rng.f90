@@ -9,6 +9,7 @@ module mod_rng
     contains
       procedure (initialize), deferred :: initialize
       procedure (next),       deferred :: next
+      procedure (jump_ahead), deferred :: jump_ahead
   end type
 
   interface
@@ -29,5 +30,12 @@ module mod_rng
       class(type_rng), intent(inout) :: rng
       real*8, dimension(:), intent(out) :: out
     end subroutine next
+
+    subroutine jump_ahead(rng, delta)
+      import :: type_rng
+      implicit none
+      class(type_rng), intent(inout) :: rng
+      integer, intent(in) :: delta
+    end subroutine jump_ahead
   end interface
 end module mod_rng

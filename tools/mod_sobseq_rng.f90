@@ -14,6 +14,7 @@ module mod_sobseq_rng
     contains
       procedure, public :: initialize => initialize_sobseq_rng
       procedure, public :: next => next_sobseq_rng
+      procedure, public :: jump_ahead => jump_ahead_sobseq_rng
   end type
   interface sobseq_rng
     module procedure empty_sobseq_rng
@@ -117,7 +118,17 @@ contains
     end if
   end subroutine next_sobseq_rng
 
-
+  !> Jump ahead many steps fast
+  subroutine jump_ahead_sobseq_rng(rng, delta)
+    implicit none
+    class(sobseq_rng), intent(inout) :: rng
+    integer, intent(in)              :: delta
+    real*8 :: out
+    integer :: i
+    do i=1,size(rng%state,1)
+      out = rng%state(i)%jump_ahead(delta)
+    end do
+  end subroutine jump_ahead_sobseq_rng
 
   !> Integer logarithm base 2 rounded up (i.e. the smallest n in 2^n >= val)
   function ilog2_b_ceil(val) result(res)

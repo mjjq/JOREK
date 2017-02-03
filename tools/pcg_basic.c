@@ -30,16 +30,12 @@
 
 /*
  * 2016-06-06 daanvanvugt@gmail.com: Add function to generate random doubles (with 2^-32 precision)
+ * 2017-02-02 daanvanvugt@gmail.com: Copy advance_r from full pcg c library, cleanup
  */
 
 #include "pcg_basic.h"
 #include <stdio.h>
 
-// state for global RNGs
-
-static pcg32_random_t pcg32_global = PCG32_INITIALIZER;
-
-// pcg32_srandom(initstate, initseq)
 // pcg32_srandom_r(rng, initstate, initseq):
 //     Seed the rng.  Specified in two parts, state initializer and a
 //     sequence selection constant (a.k.a. stream id)
@@ -53,30 +49,18 @@ void pcg32_srandom_r(pcg32_random_t* rng, uint64_t initstate, uint64_t initseq)
     pcg32_random_r(rng);
 }
 
-void pcg32_srandom(uint64_t seed, uint64_t seq)
-{
-    pcg32_srandom_r(&pcg32_global, seed, seq);
-}
-
-// pcg32_random()
 // pcg32_random_r(rng)
 //     Generate a uniformly distributed 32-bit random number
 
 uint32_t pcg32_random_r(pcg32_random_t* rng)
 {
     uint64_t oldstate = rng->state;
-    rng->state = oldstate * 6364136223846793005ULL + rng->inc;
+    rng->state = oldstate * PCG_DEFAULT_MULTIPLIER_64 + rng->inc;
     uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
     uint32_t rot = oldstate >> 59u;
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
 
-uint32_t pcg32_random()
-{
-    return pcg32_random_r(&pcg32_global);
-}
-
-// pcg32_random_double()
 // pcg32_random_double_r(rng)
 //      Generate a 32-bit floating point number between 0 and 1
 
@@ -85,52 +69,40 @@ double pcg32_random_double_r(pcg32_random_t* rng)
     return ldexp(pcg32_random_r(rng), -32);
 }
 
-double pcg32_random_double()
+
+/* Multi-step advance functions (jump-ahead, jump-back)
+ *
+ * The method used here is based on Brown, "Random Number Generation
+ * with Arbitrary Stride,", Transactions of the American Nuclear
+ * Society (Nov. 1994).  The algorithm is very similar to fast
+ * exponentiation.
+ *
+ * Even though delta is an unsigned integer, we can pass a
+ * signed integer to go backwards, it just goes "the long way round".
+ */
+
+uint64_t pcg_advance_lcg_64(uint64_t state, uint64_t delta, uint64_t cur_mult,
+                            uint64_t cur_plus)
 {
-    return pcg32_random_double_r(&pcg32_global);
-}
-
-
-
-// pcg32_boundedrand(bound):
-// pcg32_boundedrand_r(rng, bound):
-//     Generate a uniformly distributed number, r, where 0 <= r < bound
-
-uint32_t pcg32_boundedrand_r(pcg32_random_t* rng, uint32_t bound)
-{
-    // To avoid bias, we need to make the range of the RNG a multiple of
-    // bound, which we do by dropping output less than a threshold.
-    // A naive scheme to calculate the threshold would be to do
-    //
-    //     uint32_t threshold = 0x100000000ull % bound;
-    //
-    // but 64-bit div/mod is slower than 32-bit div/mod (especially on
-    // 32-bit platforms).  In essence, we do
-    //
-    //     uint32_t threshold = (0x100000000ull-bound) % bound;
-    //
-    // because this version will calculate the same modulus, but the LHS
-    // value is less than 2^32.
-
-    uint32_t threshold = -bound % bound;
-
-    // Uniformity guarantees that this loop will terminate.  In practice, it
-    // should usually terminate quickly; on average (assuming all bounds are
-    // equally likely), 82.25% of the time, we can expect it to require just
-    // one iteration.  In the worst case, someone passes a bound of 2^31 + 1
-    // (i.e., 2147483649), which invalidates almost 50% of the range.  In 
-    // practice, bounds are typically small and only a tiny amount of the range
-    // is eliminated.
-    for (;;) {
-        uint32_t r = pcg32_random_r(rng);
-        if (r >= threshold)
-            return r % bound;
+    uint64_t acc_mult = 1u;
+    uint64_t acc_plus = 0u;
+    while (delta > 0) {
+        if (delta & 1) {
+            acc_mult *= cur_mult;
+            acc_plus = acc_plus * cur_mult + cur_plus;
+        }
+        cur_plus = (cur_mult + 1) * cur_plus;
+        cur_mult *= cur_mult;
+        delta /= 2;
     }
+    return acc_mult * state + acc_plus;
 }
 
+// pcg32_advance_r
+//      Advance by delta steps in one go
 
-uint32_t pcg32_boundedrand(uint32_t bound)
+void pcg32_advance_r(pcg32_random_t* rng, uint64_t delta)
 {
-    return pcg32_boundedrand_r(&pcg32_global, bound);
+    rng->state = pcg_advance_lcg_64(rng->state, delta,
+                                    PCG_DEFAULT_MULTIPLIER_64, rng->inc);
 }
-

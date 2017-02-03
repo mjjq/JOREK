@@ -20,6 +20,7 @@ module mod_sobseq
   contains
       procedure, public :: initialize !< Initialize direction numbers
       procedure, public :: skip_ahead !< Skip ahead to a specific position and return this value
+      procedure, public :: jump_ahead !< Skip ahead to a specific delta and return this value
       procedure, public :: next         !< Generate the next value in the sequence
       procedure, public :: next_strided !< Generate the next value in the sequence (strided version)
   end type sobol_state
@@ -78,8 +79,18 @@ function skip_ahead(state, i) result(output)
   end do
   output = real(tmp) * 2.d0**(-N_M)
   state%x = tmp
-  
 end function skip_ahead
+
+!> Generate a value i positions ahead of us
+function jump_ahead(state, delta) result(output)
+  implicit none
+  class (sobol_state), intent(inout) :: state
+  integer, intent(in) :: delta
+  integer :: n
+  real    :: output
+  n = state%i + delta
+  output = skip_ahead(state, n)
+end function jump_ahead
 
 
 !> Generate the next value in a series

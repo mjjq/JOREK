@@ -21,6 +21,9 @@ type :: particle_sim
   class(fields_base), allocatable                 :: fields
   logical                                         :: stop_now = .false.
   type(particle_group), dimension(:), allocatable :: groups
+  !< MPI settings
+  integer :: my_id
+  integer :: n_cpu
 contains
   procedure :: finalize
   procedure :: initialize
@@ -35,14 +38,20 @@ subroutine initialize(sim, num_groups)
   class(particle_sim), intent(inout) :: sim !< why is this class() and not type()?
   integer, intent(in) :: num_groups
   integer :: provided, ierr, my_id, i_tor
+  character(len=MPI_MAX_PROCESSOR_NAME) :: name
+  integer :: resultlength
 
   call MPI_Init_thread(MPI_THREAD_MULTIPLE, provided, ierr)
   if (ierr .ne. 0) write(*,*) "Error ", ierr, " in MPI_Init_thread"
   if (provided .ne. MPI_THREAD_MULTIPLE) write(*,*) "WARNING: provided(", provided, ") != MPI_THREAD_MULTIPLE"
   allocate(sim%groups(num_groups))
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, sim%my_id, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, sim%n_cpu, ierr)
+  write(*,*) 
+  call MPI_GET_PROCESSOR_NAME(name,resultlength,ierr)
+  write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', sim%my_id, ': ', name
 
-  if (my_id .eq. 0) call print_version
+  if (sim%my_id .eq. 0) call print_version
 
   ! Initialise mode numbers
   do i_tor=1, n_tor
@@ -51,7 +60,7 @@ subroutine initialize(sim, num_groups)
   enddo
 
   ! Initialise parameters
-  call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
+  call initialise_and_broadcast_parameters(sim%my_id, "__NO_FILENAME__")
 
   ! Initialise the gaussian points at basis functions
   call initialise_basis

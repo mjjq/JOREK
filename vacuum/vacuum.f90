@@ -212,25 +212,23 @@ module vacuum
     logical, intent(in) :: resistive_wall
     
     ! --- Local variables
-    logical :: freeboundary_rst, resistive_wall_rst
+    logical :: resistive_wall_rst
     integer :: ierr
-    
-    read(21) freeboundary_rst
     
     if ( freeboundary ) then
       
-      if ( .not. freeboundary_rst ) then
+      read(file_handle, iostat=ierr) resistive_wall_rst
+      if ( ierr /= 0 ) then
         write(*,*) 'WARNING: Restarting a simulation with freeboundary=.t. which was run with'
         write(*,*) '  freeboundary=.f. so far.'
+        return
+      else if ( resistive_wall .neqv. resistive_wall_rst ) then
+        write(*,*) 'ERROR: It is currently not possible to restart a JOREK simulation with a'
+        write(*,*) '  modified setting for resistive_wall.'
+        stop
       end if
       
-      if ( freeboundary_rst ) then
-        read(file_handle, iostat=ierr) resistive_wall_rst
-      else
-        resistive_wall_rst = .false.
-      end if
-      
-      if ( resistive_wall .and. resistive_wall_rst ) then
+      if ( resistive_wall ) then
         
         read(file_handle) n_wall_curr, n_dof_starwall
         
@@ -254,12 +252,6 @@ module vacuum
         end if
         
         wall_curr_initialized = .true.
-        
-      else if ( resistive_wall ) then
-        
-        write(*,*) 'WARNING: Continuing a JOREK simulation with resistive_wall=.f.'
-        write(*,*) '   now with resistive_wall=.t. Wall currents will be initialized to zero.'
-        wall_curr_initialized = .false.
         
       end if
       

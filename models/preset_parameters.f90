@@ -52,6 +52,12 @@ subroutine preset_parameters
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   
+  amix                 = 0.d0
+  amix_freeb           = 0.85d0
+  equil_accuracy       = 1.d-6
+  equil_accuracy_freeb = 1.d-6
+  Zaxis_find_limit     = 99.d0
+  
   n_R       = 0
   n_Z       = 0
 
@@ -172,6 +178,15 @@ subroutine preset_parameters
   particlesource      = 1.e-5
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
+  edgeparticlesource      = 0.d0
+  edgeparticlesource_psin = 0.98
+  edgeparticlesource_sig  = 0.01
+  heatsource_gauss          = 0.d0
+  heatsource_gauss_psin     = 0.9d0
+  heatsource_gauss_sig      = 0.1d0
+  particlesource_gauss      = 0.d0
+  particlesource_gauss_psin = 0.9d0
+  particlesource_gauss_sig  = 0.1d0
   
   tauIC       = 0.d0
   Wdia        = .false.

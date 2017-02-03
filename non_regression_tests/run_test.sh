@@ -17,6 +17,7 @@ OK_COL="\x1b[32;02m"     # green#
 
 startdir=`readlink -f $(dirname $0)`
 codedir=`readlink -f ${startdir}/..` # Assumption about source code location
+cd $codedir || exit 1
 
 # --- Usage printing function
 function printusage() {
@@ -25,12 +26,13 @@ function printusage() {
     echo "   $0 [options] testcase"
     echo ""
     echo " Options:"
+    echo "   -i            Launch the inital, full-length run (not only the test itself)"
+    echo "                 NOTE: IF '-i' IS PRESENT, IT MUST BE THE FIRST OPTION"
     echo "   -h            Print this help information"
     echo "   -k            Keep temporary run directory"
-    echo "   -i            Launch the inital, full-length run"
-    echo "                 (not only the test starting from a restart file)"
     echo "   -j nthreads   Set the number of compile threads (default 1)"
-    echo "   -l            List available test cases."
+    echo "   -l            List available test cases using long format."
+    echo "   -L            List available test cases without any description (short format)"
     echo "   -n            Do not compile (assume executables already exist)"
     echo "   -p            Prepare the case but do not run it"
     echo "   -t tempdir    Specify a temp directory used for the test run"
@@ -46,7 +48,7 @@ if [ -z "$MPIRUN" ]; then
 fi
 
 # --- Test if directory 'non_regression_tests' exists
-if [ ! -d "non_regression_tests" ]; then
+if [ ! -d "${codedir}/non_regression_tests" ]; then
     printf "\n$ERROR_COL ERROR: Run the script from the trunk. \n $NO_COL"
     printusage
     exit 1
@@ -86,6 +88,7 @@ if [ -z "$compilethreads" ]; then
 fi
 tmpdir="$startdir/tmp$$"
 
+firstoption="yes"
 while [ $# -gt 0 ]; do
     option="$1"
     if [ "$option" == "-h" ]; then
@@ -102,7 +105,7 @@ while [ $# -gt 0 ]; do
 	echo "Available test cases:"
 	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
 	for i in $cases; do
-	    if [ ! -f ${i}/BROKEN ]; then
+	    if [ -e ${i}/.version ]; then
   	      case=$(basename $i)
 	      source ${startdir}/testcases/$case/settings.sh
 	      printf " %-25s %s\n" "$case" "$description"
@@ -110,7 +113,21 @@ while [ $# -gt 0 ]; do
 	done
 	echo ""
 	exit 1
+    elif [ "$option" == "-L" ]; then
+	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
+	for i in $cases; do
+	    if [ -e ${i}/.version ]; then
+              case=$(basename $i)
+              echo $case
+            fi
+	done
+	exit 0
     elif [ "$option" == "-i" ]; then
+        if [ "$firstoption" == "no" ]; then
+          echo "ERROR: When providing the option '-i', it needs to be the first option."
+          printusage
+          exit -1
+        fi
 	initialrun="yes"
 	shift
     elif [ "$option" == "-p" ]; then
@@ -138,6 +155,7 @@ while [ $# -gt 0 ]; do
 	printusage
 	exit 1
     fi
+    firstoption="no"
 done
 echo " tmpdir = " $tmpdir
 
@@ -163,6 +181,9 @@ if [ "$compile" == "yes" ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
   fi
+  if [ "$initialrun" == "yes" ]; then
+    mv $binaries_initial $testcasedir/ || exit 1
+  fi
   mv $binaries $testcasedir/ || exit 1
 fi
 
@@ -174,12 +195,12 @@ if [ "$runit" == "yes" ]; then
   # --- Copy files
   cd $testcasedir
   echo " requiredfiles=" $requiredfiles
-  cp $requiredfiles $tmpdir
-  cd $tmpdir
-  if [ $? -ne 0 ]; then
-    printf "\n$ERROR_COL ERROR: Copying required files ($requiredfiles) failed.$NO_COL\n"
-    exit 1
+  cp $requiredfiles $tmpdir || exit 1
+  cp $binaries $tmpdir || exit 1
+  if [ "$initialrun" == "yes" ] && [ "$binaries_initial" != "" ]; then
+    cp $binaries_initial $tmpdir || exit 1
   fi
+  cd $tmpdir
     
   # --- Some preparations
   if [ -n "$ompthreads" ]; then
@@ -193,7 +214,7 @@ if [ "$runit" == "yes" ]; then
   # --- Run the test case
   if [ "$initialrun" == "no" ]; then
     cp ${testcasedir}/begin.h5 jorek_restart.h5           || exit 1
-    ./rst_hdf52bin                                        || exit 1
+    ./rst_hdf52bin < ./input                              || exit 1
     restart_run                                           || exit 1
     
     cd $tmpdir                                              || exit 1
@@ -206,11 +227,11 @@ if [ "$runit" == "yes" ]; then
     fi
   else
     initial_run                                           || exit 1
-    ./rst_bin2hdf5                                        || exit 1
+    ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/begin.h5           || exit 1
     
     restart_run                                           || exit 1
-    ./rst_bin2hdf5                                        || exit 1
+    ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/end.h5             || exit 1
   fi
 

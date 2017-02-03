@@ -115,7 +115,7 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub                   = 2       ! Number of subdivisions of the cubic finite elements into linear pieces
+nsub                   = 5       ! Number of subdivisions of the cubic finite elements into linear pieces
 i_tor                  = -1      ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane                = 1       ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
@@ -474,21 +474,21 @@ do i=1,element_list%n_elements
 
           ! save those specific values of axisymmetric parameters
           if (grad_psi .ne. 0.d0) then
-            scalars(inode,s_fluxes+1) = Er
-            scalars(inode,s_fluxes+2) = Vtheta
-            scalars(inode,s_fluxes+3) = Mach_par
-            scalars(inode,s_fluxes+4) = Mach_pol
-            scalars(inode,s_fluxes+5) = Vsound
-            scalars(inode,s_fluxes+6) = Btot
-            scalars(inode,s_fluxes+7) = Vneo
-            scalars(inode,s_fluxes+8) = Vperp_e
+            scalars(inode,s_neo+1) = Er
+            scalars(inode,s_neo+2) = Vtheta
+            scalars(inode,s_neo+3) = Mach_par
+            scalars(inode,s_neo+4) = Mach_pol
+            scalars(inode,s_neo+5) = Vsound
+            scalars(inode,s_neo+6) = Btot
+            scalars(inode,s_neo+7) = Vneo
+            scalars(inode,s_neo+8) = Vperp_e
             if (NEO) then
                if (num_neo_file) then
-                  scalars(inode,s_fluxes+9) = aki_neo_node
-                  scalars(inode,s_fluxes+10) = amu_neo_node
+                  scalars(inode,s_neo+9) = aki_neo_node
+                  scalars(inode,s_neo+10) = amu_neo_node
                else
-                  scalars(inode,s_fluxes+9) = aki_neo_const
-                  scalars(inode,s_fluxes+10) = amu_neo_const
+                  scalars(inode,s_neo+9) = aki_neo_const
+                  scalars(inode,s_neo+10) = amu_neo_const
                endif
             endif   ! NEO
 

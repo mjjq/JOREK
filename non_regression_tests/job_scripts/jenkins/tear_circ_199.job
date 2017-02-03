@@ -12,6 +12,6 @@ source non_regression_tests/job_scripts/jenkins/env.sh
 ## Compile with:       
 # non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 
-#non_regression_tests/run_test.sh -k -i -n $CASE 
+#non_regression_tests/run_test.sh -i -k -n $CASE 
 ## Restart run: 
 non_regression_tests/run_test.sh -k -n $CASE 

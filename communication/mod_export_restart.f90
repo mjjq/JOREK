@@ -88,7 +88,9 @@ subroutine export_binary_restart(node_list,element_list,filename)
   write(21) t_now
 
 #ifdef USE_HDF5
-  write(21) h5_nbsave_all
+  if (rst_format > 1 ) then
+    write(21) h5_nbsave_all
+  end if
 #endif
 
   if (index_now .gt. 0) then
@@ -422,6 +424,23 @@ end if
      call HDF5_array3D_saving(file_id,t_energies, &
           n_tor,2,index_now,'energies'//char(0))
      !           n_tor,2,index_now,'energies'//char(0))
+
+     call HDF5_array1D_saving(file_id,R_axis_t(1:index_now),index_now,'R_axis_t'//char(0))
+     call HDF5_array1D_saving(file_id,Z_axis_t(1:index_now),index_now,'Z_axis_t'//char(0))
+     call HDF5_array1D_saving(file_id,psi_axis_t(1:index_now),index_now,'psi_axis_t'//char(0))
+     call HDF5_array1D_saving(file_id,current_t(1:index_now),index_now,'current_t'//char(0))
+     call HDF5_array1D_saving(file_id,beta_p_t(1:index_now),index_now,'beta_p_t'//char(0))
+     call HDF5_array1D_saving(file_id,beta_t_t(1:index_now),index_now,'beta_t_t'//char(0))
+     call HDF5_array1D_saving(file_id,beta_n_t(1:index_now),index_now,'beta_n_t'//char(0))
+     call HDF5_array1D_saving(file_id,density_in_t(1:index_now),index_now,'density_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,density_out_t(1:index_now),index_now,'density_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,pressure_in_t(1:index_now),index_now,'pressure_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,pressure_out_t(1:index_now),index_now,'pressure_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,heat_src_in_t(1:index_now),index_now,'heat_src_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,heat_src_out_t(1:index_now),index_now,'heat_src_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_src_in_t(1:index_now),index_now,'part_src_in_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_src_out_t(1:index_now),index_now,'part_src_out_t'//char(0))
+
 #ifdef JECCD                   
      call HDF5_array3D_saving(file_id,t_energies2, &
           n_tor,2,index_now,'energies2'//char(0))

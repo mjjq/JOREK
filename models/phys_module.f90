@@ -104,14 +104,23 @@ module phys_module
   !! - \f$ \Psi_{N,0} \f$ denotes the position around which the source is ramped down (e.g., heatsource_psin)
   !! - \f$ \sigma \f$ denotes the width over which the source is ramped down (e.g., heatsource_sig)
   !!
-  real*8  :: particlesource      !< Particle source strength
-  real*8  :: particlesource_psin !< Position around which source is ramped down
-  real*8  :: particlesource_sig  !< Width over which source is ramped down
-  real*8  :: heatsource          !< Heat source strength
-  real*8  :: heatsource_psin     !< Position around which source is ramped down
-  real*8  :: heatsource_sig      !< Width over which source is ramped down
-  real*8  :: heatsource_i        !< Heat source strength (ions), model4xx only
-  real*8  :: heatsource_e        !< Heat source strength (electrons), model4xx only
+  real*8  :: particlesource            !< Particle source strength
+  real*8  :: particlesource_psin       !< Position around which source is ramped down
+  real*8  :: particlesource_sig        !< Width over which source is ramped down
+  real*8  :: particlesource_gauss      !< Additional gaussian particle source strength
+  real*8  :: particlesource_gauss_psin !< Position around which gaussian source is set
+  real*8  :: particlesource_gauss_sig  !< Width over which gaussian source is set
+  real*8  :: edgeparticlesource        !< Edge particle source strench 
+  real*8  :: edgeparticlesource_psin   !< Position around which edge particle source is ramped down    
+  real*8  :: edgeparticlesource_sig    !< Width over which edge particle source is ramped down
+  real*8  :: heatsource                !< Heat source strength
+  real*8  :: heatsource_psin           !< Position around which source is ramped down
+  real*8  :: heatsource_sig            !< Width over which source is ramped down
+  real*8  :: heatsource_i              !< Heat source strength (ions), model4xx only
+  real*8  :: heatsource_e              !< Heat source strength (electrons), model4xx only
+  real*8  :: heatsource_gauss          !< Additional gaussian heat source strength
+  real*8  :: heatsource_gauss_psin     !< Position around which gaussian source is set
+  real*8  :: heatsource_gauss_sig      !< Width over which gaussian source is set
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num
@@ -222,11 +231,18 @@ module phys_module
   logical :: ASDEX_MGI
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
   
+  !> @name Fix boundary equilibrium parameters
+  real*8  :: amix              !< Mix Poisson solution with previous one with a given factor  
+  real*8  :: equil_accuracy    !< Tolerance of the convergence for the fix-boundary equilibrium
+  real*8  :: Zaxis_find_limit  !< Magnetic axis will be searched between Z=0 and Z=abs(Zaxis_find_limit)
+  
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
-  logical :: freeboundary_equil!< use a free or fixed boundary equilibrium?
-  logical :: freeboundary      !< use free or fixed boundary conditions in time-evolution?
-  logical :: resistive_wall    !< use a resistive or ideal wall?    (free boundary only)
+  logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium?
+  logical :: freeboundary            !< use free or fixed boundary conditions in time-evolution?
+  logical :: resistive_wall          !< use a resistive or ideal wall?    (free boundary only)
+  real*8  :: amix_freeb              !< choose amix for freeboundary equilibriums
+  real*8  :: equil_accuracy_freeb    !< Tolerance of the convergence for the free-boundary equilibrium
   
   !> @name Rectangular Grid
   !! Parameters defining a rectangular grid in R- and Z-directions in the poloidal plane.
@@ -428,7 +444,12 @@ module phys_module
   real*8, allocatable :: num_rot_y2(:)   !< Second derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
   real*8, allocatable :: num_rot_y3(:)   !< Third derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
   logical             :: normalized_velocity_profile !< if true, reads the normalized velocity profile as flux function, else Omega_tor is read as flux function. 
-
+  
+  !> @name Global quantities determined in each time step
+  real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), current_t(:), beta_p_t(:),       &
+    beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:),                 &
+    pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:)
+  
   !> @name gmres parameters
   integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated
   integer             :: gmres_m        !< gmres restart (dimension)

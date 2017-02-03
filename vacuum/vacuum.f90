@@ -375,12 +375,11 @@ module vacuum
     logical, intent(in) :: freeboundary
     logical, intent(in) :: resistive_wall
     
-    write(file_handle) freeboundary
-    
     if ( freeboundary ) then
       
       write(file_handle) resistive_wall
       if ( resistive_wall ) then
+        
         if ( (.not. allocated(wall_curr)) .or. (.not. allocated(dwall_curr)) .or.                    &
           (.not. allocated(old_dpsibnd_vec)) ) then
           write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: Arrays not allocated.'
@@ -388,15 +387,20 @@ module vacuum
         end if
         
         write(file_handle) n_wall_curr, n_dof_starwall
+        
         write(file_handle) wall_curr(:)
+        
         write(file_handle) dwall_curr(:)
+        
       end if
       
       write(file_handle) current_FB_fact
+      
       if ( (.not. allocated(I_coils)) ) then
           write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
           stop
       end if
+    
       write(file_handle) n_coils
       write(file_handle) I_coils(:)
       

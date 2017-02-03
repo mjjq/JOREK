@@ -18,6 +18,7 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mgi_module
+use vacuum, only: freeb_fact
 
 implicit none
 
@@ -754,13 +755,13 @@ do ms=1, n_gauss
 !#  equation 3                                                                                     #
 !###################################################################################################
 
-         rhs_ij_3 = 0.d0 !- ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * tstep
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_fact
 
 !###################################################################################################
 !#  equation 4                                                                                     #
 !###################################################################################################
 
-         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
+         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
 !###################################################################################################
 !#  equation 5 (density equation)                                                                  #
@@ -1120,15 +1121,15 @@ do ms=1, n_gauss
 !#  equation 3                                                                                     #
 !###################################################################################################
 
-                 amat_33 = v * zj / BigR * xjac                               * tstep
-                 amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac         * tstep
+                 amat_33 = v * zj / BigR * xjac                              
+                 amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac         
 
 !###################################################################################################
 !#  equation 4                                                                                     #
 !###################################################################################################
 
-                 amat_44 =  v * w * BigR * xjac                                * tstep
-                 amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
+                 amat_44 =  v * w * BigR * xjac                               
+                 amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac              
 
 !###################################################################################################
 !#  equation 5    continuity equation (density)                                                    #

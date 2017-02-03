@@ -1,30 +1,15 @@
 # Confiduration file for jorek
 # model directory
-MODEL = model199
+MODEL = model303
 
 # Fortran compiler 
 FC     = mpif90 -f90=gfortran
 CC     = mpicc
 
-FFLAGS_OMP       = -fopenmp 
-FFLAGS          := $(FFLAGS) -malign-double -g  
-FFLAGS          := $(FFLAGS) -fdefault-real-8 -fdefault-double-8 
-FFLAGS          := $(FFLAGS) -ffree-line-length-none
-FFLAGS          := $(FFLAGS) -x f95-cpp-input
-## TODO find equivalents of this ifort options
-#FFLAGS          := $(FFLAGS)  -xT -align 
-#FFLAGS          := $(FFLAGS) -ffpe-trap=invalid,zero,overflow,underflow -fbounds-check 
-
-FFLAGS_FIXEDFORM = $(FFLAGS) -ffixed-form  -fbounds-check $(FFLAGS_OMP) 
-FFLAGS_NOBOUNDS  = $(FFLAGS) -ffixed-form                 $(FFLAGS_OMP) 
-FFLAGS          := $(FFLAGS)               $(FFLAGS_OMP) 
-
-#FFLAGS_NO_OMP   = -fpp -r8 -i4 -O2 -xT -align
-FFLAGS          := $(FFLAGS) #-DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
-CFLAGS          := -DSTAN_FLAG 
-
-#NOHDF5FLAG  = -DNOHDF5
-
+FFLAGS          += -malign-double -g  
+FFLAGS          += -fdefault-real-8 -fdefault-double-8 
+FFLAGS          += -x f95-cpp-input
+CFLAGS          += -DSTAN_FLAG
 # Solvers dependencies
 USE_HIPS   = 0
 USE_PASTIX = 1

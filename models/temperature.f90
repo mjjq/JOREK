@@ -5,6 +5,7 @@ subroutine temperature(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,temperatur
 ! position (Z, psi) from the analytical or numerical input profile.
 !-----------------------------------------------------------------------
 use phys_module
+use vacuum, only: current_FB_fact
 
 implicit none
 
@@ -146,6 +147,20 @@ else
   dT_dpsi_dz  = 0.d0
   dT_dpsi2_dz = 0.d0
   dT_dpsi_dz2 = 0.d0
+
+end if
+
+if (freeboundary_equil .and. num_T) then                        !if the temperature profile is given in a file and there is freeboundary equilibrium
+                                                                !the full profile is multiplied by a facto in order to iterate to a given current
+  temperature_profile = temperature_profile * current_FB_fact
+  dT_dpsi     = dT_dpsi                     * current_FB_fact
+  dT_dpsi2    = dT_dpsi2                    * current_FB_fact
+  dT_dpsi3    = dT_dpsi3                    * current_FB_fact
+  dT_dz       = dT_dz                       * current_FB_fact
+  dT_dz2      = dT_dz2                      * current_FB_fact
+  dT_dpsi_dz  = dT_dpsi_dz                  * current_FB_fact
+  dT_dpsi2_dz = dT_dpsi2_dz                 * current_FB_fact
+  dT_dpsi_dz2 = dT_dpsi_dz2                 * current_FB_fact
 
 end if
 

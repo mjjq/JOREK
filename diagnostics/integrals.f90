@@ -186,6 +186,13 @@ do ife =1, element_list%n_elements
   enddo
 enddo
 
+density_in   = D_int
+density_out  = D_ext
+pressure_in  = P_int
+pressure_out = P_ext
+current_in   = C_intern
+current_out  = C_ext
+
 current = C_hel / MU_zero
 beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
@@ -198,8 +205,8 @@ write(*,'(A,f12.7)')    ' beta_t           : ',beta_t
 write(*,'(A,f12.7,A)')  ' beta_n           : ',beta_n,' [%]'
 write(*,'(A,f12.7,A)')  ' Area             : ',area,' m^2'
 write(*,'(A,f12.7,A)')  ' Volume           : ',volume,' m^3'
-write(*,'(A,es18.7,A)') ' Heat.src (in/out): ', heat_src_in, heat_src_out, '/ sqrt((mu_0)^3 rho_0) W'
-write(*,'(A,es18.7,A)') ' Part.src (in/out): ', part_src_in, part_src_out
+write(*,'(A,2es18.7,A)') ' Heat.src (in/out): ', heat_src_in, heat_src_out, '/ sqrt((mu_0)^3 rho_0) W'
+write(*,'(A,2es18.7,A)') ' Part.src (in/out): ', part_src_in, part_src_out
 
 write(*,'(A,5f10.5)') ' density  (total/in/out)  : ',density,  density_in,  density_out 
 write(*,'(A,5f10.5)') ' pressure (total/in/out)  : ',pressure, pressure_in, pressure_out 

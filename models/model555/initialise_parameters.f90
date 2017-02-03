@@ -6,7 +6,7 @@ use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
-use vacuum,        only: vacuum_preset, wall_resistivity
+use vacuum
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -72,11 +72,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_T_dependent, visco_T_dependent,                 &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 linear_run, export_for_nemec,                       &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 gmres_m, gmres_tol, tgnum,                          &
-                RMP_on, lambda, tset,                               &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
@@ -85,9 +91,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_length, n_zero, ksi_ion,               &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 output_bnd_elements,                                &
-                wall_file, rot_file,                                &
-                first_target_point, last_target_point,		    &
-                n_limiter, R_limiter, Z_limiter, bc_natural_open, bc_natural_flux
+                wall_file, rot_file, bc_natural_flux,               &
+                first_target_point, last_target_point,              &
+                n_limiter, R_limiter, Z_limiter, bc_natural_open,   &
+                amix, amix_freeb, equil_accuracy,                   &
+                equil_accuracy_freeb, current_ref, FB_Ip_position,  &
+                FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
+                FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
+                n_feedback_current, n_feedback_vertical,            &
+                n_iter_freeb, n_coils_nml, coils0,                  &
+                Zaxis_find_limit, PF_pert_start_time
 
 if (my_id .eq. 0) then
 

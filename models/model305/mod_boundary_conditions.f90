@@ -33,7 +33,8 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, n_pol, n_tht, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-         psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep
+         psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -101,42 +102,28 @@ contains
        call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
        call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
 
-       do i = 1, node_list%n_nodes
-          if (node_list%node(i)%boundary .ne.0) then
-             if (node_list%node(i)%boundary_index == 1 ) then
-
-                if (n_tor .eq. 1) then
-                   itest = 1
-                else 
-                   itest = 2
-                endif
-
-                psi_test = node_list%node(i)%values(itest,1,1)
-                if (my_id == 0) then
-                   write (*,*) 'psi_bnd at previous time step', psi_test
-                endif
-             endif
-          endif
-       enddo
-
-       if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
-          !   establish_RMP = (1.d-3)*tstep
-          sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
-               - ( 1. + exp(-lambda*( 0. - tset )))**(-1) 
-          establish_RMP = lambda*sigmo_fonc*(1-sigmo_fonc)*tstep
-       else
-          establish_RMP = 0.0
-       endif
-       ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*tset ) then establish_RMP =0.0
-
-       do j=1, bnd_node_list%n_bnd_nodes  
-          psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
-          dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
-          dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
-          psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
-          dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
-          dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
-       end do
+    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos,1,1)
+    ! if necessary, replace by:
+    ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos, n_tor),1,1)
+    write (*,*) 'psi_bnd at previous time step', psi_test
+    
+    if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
+      sigmo_fonc = ( 1.d0 + exp(-RMP_growth_rate*( t_now - RMP_start_time - RMP_ramp_up_time/2.d0 )))**(-1) &
+          - ( 1.d0 + exp(-RMP_growth_rate*( 0.d0 - RMP_ramp_up_time/2.d0 )))**(-1) 
+      establish_RMP = (RMP_growth_rate*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
+    else
+      establish_RMP = 0.d0
+    endif
+    ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*RMP_ramp_up_time/2.d0 ) then establish_RMP =0.0
+  
+    do j=1, bnd_node_list%n_bnd_nodes  
+      psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
+      dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
+      dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
+      psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
+      dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
+      dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
+    end do
 
        if (my_id == 0) then
 

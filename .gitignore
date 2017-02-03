@@ -42,3 +42,7 @@ tmp[1-9]*
 .mod/
 .dep/
 .obj/
+starwall-response.dat
+coil_field.dat
+RMP_psi*.txt
+RMP_start_time.dat

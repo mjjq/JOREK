@@ -13,8 +13,9 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use tr_module
-use diffusivities, only: get_dperp, get_zkperp
+use diffusivities, only: get_dperp, get_zkperp    
 use corr_neg
+use vacuum, only: freeb_fact
 
 implicit none
 
@@ -52,6 +53,7 @@ real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, ama
 real*8     :: amat_51, amat_52, amat_55, amat_61, amat_62, amat_66, amat_16, amat_13
 real*8     :: amat_stab_11, amat_stab_12, amat_stab_13, amat_stab_14 ,amat_stab_21,amat_stab_22, amat_stab_23, amat_stab_24
 real*8     :: amat_stab_31, amat_stab_32, amat_stab_33, amat_stab_34 ,amat_stab_41,amat_stab_42, amat_stab_43, amat_stab_44
+
 logical    :: xpoint2
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
@@ -284,8 +286,8 @@ do ms=1, n_gauss
                       + visco_num * (v_s * w0_s + v_t * w0_t)                    * tstep &
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac  
            
-           rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac
-           rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
+           rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac * freeb_fact
+           rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
            rhs_ij_5 = v * BigR * particle_source(ms,mt)                                        * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &
@@ -391,8 +393,8 @@ do ms=1, n_gauss
                  amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac
 
 !---------------------------------------------------------------- equation 4
-                 amat_44 =  v * w * BigR * xjac                                * tstep
-                 amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
+                 amat_44 =  v * w * BigR * xjac                                
+                 amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               
 
 !---------------------------------------------------------------- equation 5
                  Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR

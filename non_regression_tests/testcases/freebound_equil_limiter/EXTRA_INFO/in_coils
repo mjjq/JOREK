@@ -1,0 +1,8 @@
+
+&input
+  coil_file    = 'coils.txt',
+  num_tor_pts  =  128,
+  
+  debug        = .f.,
+  verbose      = .t.,
+/

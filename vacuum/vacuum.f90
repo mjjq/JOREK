@@ -12,6 +12,7 @@ module vacuum
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
   integer, parameter  :: ivar_psi = 1                    !< Index of Psi variable
   integer, parameter  :: ivar_j   = 3                    !< Index of j variable
+  real*8              :: freeb_fact                      !< Switches on free-boundary terms in elt_matrix when =1.
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity                !< Resistivity of the external wall
@@ -38,17 +39,36 @@ module vacuum
   real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
-  integer             :: n_coils                         !< number of poloidal field coils
-  real*8, allocatable :: I_coils(:)                      !< coil currents 
+  integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
+  integer             :: n_coils_nml                     !< specified number of poloidal field coils in namelist
+  real*8, allocatable :: I_coils(:)                      !< coil currents                 
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
+  !> @name Equilibrium parameters for feedback 
+  real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB)
+  real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback
+  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback 
+  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position 
+  real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback
+  real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback
+  real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback
+  integer             :: start_VFB                       !< Iteration for starting vertical feedback
+  integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations
+  integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations
+  integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum
+  
+  !> @name Time-evolution PF coils parameters
+  real*8              :: PF_pert_start_time              !< Time to start a perturbation to speed-up VDEs
+  
+  
   ! ### various variables, some need to be removed
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
   real*8, allocatable :: dR_coils(:), dZ_coils(:)        ! ### old
   real*8, allocatable :: coil_voltages(:)                !< Coil voltages
+  real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   
   type :: t_starwall_response
     integer :: n_bnd
@@ -70,7 +90,15 @@ module vacuum
     real*8,  allocatable :: xyzpot_w(:,:)
     integer, allocatable :: jpot_w(:,:)
   end type t_starwall_response
-  type(t_starwall_response) :: sr
+  
+  type :: initial_pf_coil
+    real*8  :: FB_amp          !< If different than 0, define a FB coil. Value used to tune the direction and magnitud of the feedback
+    real*8  :: current         !< Current of the coil in Amperes
+    real*8  :: pert            !< Perturbation of the current of the coil in Amperes, this is useful to speed-up VDEs
+  end type initial_pf_coil
+  
+  type(t_starwall_response) :: sr             !< STARWALL response
+  type(initial_pf_coil)     :: coils0(30)     !< Initial coil currents, given in namelist file
   
   
   contains
@@ -88,6 +116,25 @@ module vacuum
     freeboundary         = .false.
     resistive_wall       = .false.
     wall_resistivity     = 0.d0
+        
+    current_ref          = 1.d22
+    FB_Ip_position       = 0.2d0
+    FB_Ip_integral       = 0.01d0
+    n_feedback_current   = 2
+        
+    Z_axis_ref           = 1.d22
+    FB_Zaxis_position    = 1.d0
+    FB_Zaxis_derivative  = 0.d0
+    FB_Zaxis_integral    = 0.d0
+    n_feedback_vertical  = 1
+    start_VFB            = 10
+    
+    n_iter_freeb         = 900
+    coils0(:)%current    = 0.d0
+    coils0(:)%FB_amp     = 0.d0
+    coils0(:)%pert       = 0.d0
+    
+    PF_pert_start_time   = 1.d99
     
   end subroutine vacuum_preset
   
@@ -111,6 +158,14 @@ module vacuum
     sr%n_w    = 0
     sr%ntri_w = 0
     sr%n_tor  = 0
+    
+    ! --- Switch on terms on the RHS of current equation definition when using free-boundary
+    freeb_fact = 0.d0
+    if ( freeboundary ) freeb_fact = 1.d0
+    
+    if ( (my_id == 0) .and. (sum(coils0%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
+       write(*,*) 'WARNING: Poloidal field coil perturbation coils0%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
+    end if
     
   end subroutine vacuum_init
   
@@ -148,6 +203,8 @@ module vacuum
   !!
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_restart_vacuum(file_handle, freeboundary, resistive_wall)
+    
+    use phys_module, only: t_start
     
     ! --- Routine parameters
     integer, intent(in) :: file_handle
@@ -198,6 +255,13 @@ module vacuum
         
       end if
       
+      read(file_handle) current_FB_fact
+      read(file_handle) n_coils
+      
+      if ( allocated(I_coils) ) deallocate(I_coils)
+      allocate( I_coils(n_coils) )
+      read(file_handle) I_coils(:)
+      
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then
@@ -215,6 +279,7 @@ module vacuum
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
     
+    use phys_module, only: t_start
 #ifdef USE_HDF5
     use hdf5
     use hdf5_io_module
@@ -250,8 +315,8 @@ module vacuum
        end if
        
        if ( resistive_wall ) then
-          call HDF5_integer_saving(file_id,n_wall_curr,"n_wall_curr")
-          call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall")
+          call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
+          call HDF5_integer_reading(file_id,n_dof_starwall,"n_dof_starwall")
           
           if ( allocated(wall_curr) ) deallocate(wall_curr)
           allocate( wall_curr(n_wall_curr) )
@@ -275,6 +340,14 @@ module vacuum
           wall_curr_initialized = .true.
           
        end if
+       
+       call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
+       call HDF5_integer_reading(file_id,n_coils,"n_coils")
+       
+       if ( allocated(I_coils) ) deallocate(I_coils)
+       allocate( I_coils(n_coils) )
+       
+       call HDF5_array1D_reading(file_id,I_coils,"I_coils")
        
     end if
      
@@ -316,6 +389,16 @@ module vacuum
         write(file_handle) dwall_curr(:)
         
       end if
+      
+      write(file_handle) current_FB_fact
+      
+      if ( (.not. allocated(I_coils)) ) then
+          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+          stop
+      end if
+    
+      write(file_handle) n_coils
+      write(file_handle) I_coils(:)
       
     end if
     
@@ -367,6 +450,17 @@ module vacuum
           call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
           call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
        end if
+       
+       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
+       
+       if ( (.not. allocated(I_coils)) )  then
+          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+          stop
+       end if
+       
+       call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))
+       call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
+       
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then
@@ -414,9 +508,12 @@ module vacuum
       
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-      call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
       
     end if
+    
+    call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
+    call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum
   

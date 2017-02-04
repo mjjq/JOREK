@@ -331,7 +331,8 @@ endif
         pellets(i)%spi_radius  = spi_radius_arr(i)
         pellets(i)%spi_abl     = spi_abl_arr(i)
 
-        write(*,'(A,I,2f10.5)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z
+        write(*,'(A,I,2f10.5)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_RxZ
       end do
 
       deallocate (spi_R_arr)

@@ -224,8 +224,8 @@ module phys_module
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
  
   !> @name Shattered pellet injection-related input parameters
-  ! Note that the SPI share many of the MGI parameters. For now we only consider a single pellet.
-  ! Also note that there is no reference space coordinates for pellets since we are using mgi_R etc. 
+  ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
+  ! The reference spactial coordinate for shattered pellets are calculated using mgi_R etc...... 
   !real*8  :: spi_R             !< major radius position of shattered pellet center
   !real*8  :: spi_Z             !< Z position of shattered pellet center
   real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
@@ -236,7 +236,7 @@ module phys_module
                                 !< and that of shattered pellets
 
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
-  real*8  :: spi_L_inj          !< Distance between SPI nozzle
+  real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
                                 !< with regard to the simulation resolution

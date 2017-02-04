@@ -550,6 +550,9 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
      write(*,REAL_FMT) 'spi_radiusref       ',  spi_radiusref
+     write(*,REAL_FMT) 'spi_angle           ',  spi_angle
+     write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
+
 
 #endif
 

@@ -3,7 +3,9 @@ jorekmodel="710"
 description="Internal kink, circular plasma, model$jorekmodel, n_tor=3."
 mpitasks=2
 binaries="jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin"
-requiredfiles="$binaries input"
+binaries_initial=""
+requiredfiles="input"
+extra_remote_files=""
 
 
 # --- Compile the code for the test case

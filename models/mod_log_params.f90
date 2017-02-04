@@ -337,9 +337,18 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
+  write(*,REAL_FMT) 'edgeparticlesource        ', edgeparticlesource
+  write(*,REAL_FMT) 'edgeparticlesource_psin   ', edgeparticlesource_psin
+  write(*,REAL_FMT) 'edgeparticlesource_sig    ', edgeparticlesource_sig
   write(*,REAL_FMT) 'heatsource            ', heatsource
   write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
   write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
+  write(*,REAL_FMT) 'particlesource_gauss     ', particlesource_gauss
+  write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
+  write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
+  write(*,REAL_FMT) 'heatsource_gauss         ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_psin    ', heatsource_gauss_psin
+  write(*,REAL_FMT) 'heatsource_gauss_sig     ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,REAL_FMT) 'visco_num             ', visco_num
@@ -497,8 +506,11 @@ if (my_id == 0) then
   if (RMP_on) then
      write(*,CHAR_FMT) 'RMP_psi_cos_file      ', trim(RMP_psi_cos_file)
      write(*,CHAR_FMT) 'RMP_psi_sin_file      ', trim(RMP_psi_sin_file)
-     write(*,REAL_FMT) 'lambda                ', lambda
-     write(*,REAL_FMT) 'tset                  ', tset
+     write(*,REAL_FMT) 'RMP_growth_rate       ', RMP_growth_rate
+     write(*,REAL_FMT) 'RMP_ramp_up_time      ', RMP_ramp_up_time
+     write(*,INTG_FMT) 'Number_RMP_harmonics  ', Number_RMP_harmonics 
+     write(*,REAL_FMT) 'RMP_har_cos_spectrum ',  RMP_har_cos_spectrum
+     write(*,REAL_FMT) 'RMP_har_sin_spectrum ',  RMP_har_sin_spectrum
   endif
   write(*,LOGI_FMT) 'output_bnd_elements   ', output_bnd_elements
   write(*,LOGI_FMT) 'bootstrap             ', bootstrap

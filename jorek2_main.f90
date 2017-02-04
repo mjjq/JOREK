@@ -142,7 +142,7 @@ program JOREK2
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
-  logical                  :: solve_only, to_quit
+  logical                  :: solve_only, to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
   real*8                   :: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
   real*8                   :: zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
@@ -486,12 +486,15 @@ required = 0
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
-    if ( freeboundary ) then
+    if ( freeboundary_equil .and. (n_flux .eq. 0)) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)
       call import_external_fields('coil_field.dat', my_id)
       if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
+    else
+      freeb_equil2        = freeboundary_equil
+      freeboundary_equil  = .false.
     end if
     
     ! --- Plot the grid  
@@ -558,7 +561,16 @@ required = 0
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         
-	call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+	      call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+        
+        if ( freeb_equil2) then
+          freeboundary_equil = .true.
+          call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
+          resistive_wall)
+          call update_response(tstep, freeboundary_equil, resistive_wall)
+          call import_external_fields('coil_field.dat', my_id)
+          if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
+        end if
         
         ! --- Compute the plasma equilibrium
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)

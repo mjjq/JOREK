@@ -72,11 +72,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_T_dependent, visco_T_dependent,                 &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 linear_run, export_for_nemec,                       &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 gmres_m, gmres_tol, tgnum,                          &
-                RMP_on, lambda, tset,                               &
+                RMP_on, RMP_har_cos, RMP_har_sin,                   &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
@@ -84,7 +90,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 output_bnd_elements,                                &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
                 wall_file,                                          &
-                first_target_point, last_target_point,		          &
+                first_target_point, last_target_point,              &
                 n_limiter, R_limiter, Z_limiter, bc_natural_open,   &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &

@@ -318,14 +318,18 @@ if (using_spi == .true.) then
 
       CALL random_number(rnd)
 
+      !write(*,*) "Random number array:", rnd
+
       do i=1, n_spi
 
         spi_gd_angle_01 = rnd(2 * i - 1) * spi_angle / 2.0
         spi_gd_angle_02 = rnd(2 * i) * 2. * PI
 
+        !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
+
         spi_Vel_x       = spi_Vel_totref * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
         spi_Vel_y       = spi_Vel_totref * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
-        spi_Vel_z       = spi_Vel_totref * cos(spi_gd_angle_02) 
+        spi_Vel_z       = spi_Vel_totref * cos(spi_gd_angle_01) 
 
         spi_Vel_R_tmp   = spi_Vel_x * cos(spi_rotation_02)                          &
                           - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
@@ -352,6 +356,10 @@ if (using_spi == .true.) then
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
         pellets(i)%spi_radius  = spi_radiusref
         pellets(i)%spi_abl     = mgi_amplitude
+
+        write(*,'(A,I,5f10.5)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_RxZ
+
 
         if (my_id == 0 .and. i < n_spi .and. restart == .false.) then
           write(20,"(A11,I3.3)",advance="no") "abl N.: ", i

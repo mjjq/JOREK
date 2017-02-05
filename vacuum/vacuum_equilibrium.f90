@@ -201,7 +201,7 @@ module vacuum_equilibrium
                 
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
               !  B_tan_coil_i           = sum ( I_coils(:) * bext_tan(i_resp,:) )
-                B_tan_coil_i           = sum ( I_coils(:) * Btan_starw(:, i_resp) ) * mu_zero 
+                B_tan_coil_i           = -sum ( I_coils(:) * Btan_starw(:, i_resp) ) * mu_zero 
                 mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i
                 
                 ! --- Sum over boundary dofs contributing to the response

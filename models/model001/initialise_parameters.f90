@@ -59,6 +59,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_T_dependent, visco_T_dependent,                 &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
                 produce_live_data, gmres, gmres_max_iter,           &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &

@@ -18,6 +18,7 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mgi_module
+use vacuum, only: freeb_fact
 
 implicit none
 
@@ -94,9 +95,9 @@ real*8     :: source_mgi
 real*8     :: Dn0x, Dn0y, Dn0p
 
 ! Atomic physics coefficients:
+real*8     :: Te_eV                                           ! Electron temperature in eV
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
-real*8     :: Tion                                            ! Temperature used in ionization rate
 real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss ! Ionization rate parameters
 real*8     :: ksiion                                          ! Ionization energy
 !   -Recombination
@@ -547,27 +548,33 @@ do ms=1, n_gauss
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
+
+  ! Electron temperature in eV
+    Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
   !-------------------------------------------
-  ! --- Ionization rate for neutral Deuterium
+  ! --- Normalisation of the ionization energy cost for Deuterium
   !------------------------------------------- 
 
-    coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
-    coef_ion_2 = 0.232d0
-    coef_ion_1 = sqrt(MU_ZERO*central_mass*MASS_PROTON)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+    ksiion = central_density * 1.d20 * ksi_ion
+
+  !-------------------------------------------
+  ! --- Ionization rate for Deuterium
+  ! --- (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#ionization_rate_for_deuterium)
+  !------------------------------------------- 
+
+    coef_ion_1  = sqrt(MU_ZERO*central_mass*MASS_PROTON) * (central_density*1.d20)**(1.5d0) * 0.2917d-13
+    coef_ion_2  = 0.232d0
+    coef_ion_3  = EL_CHG*MU_ZERO*central_density*1.d20 * 27.2d0
     S_ion_puiss = 3.9d-1
 
-    ksiion = ksi_ion * central_density * 1.d20
-
-    Tion = corr_neg_temp(T0,(/1.d-5,0.3/))/(2.d0)
-
-    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
-
-    dSion_dT = Sion_T*(-S_ion_puiss/Tion+coef_ion_3/(Tion*(coef_ion_2*Tion+coef_ion_3)) &
-                          +coef_ion_3*Tion**(S_ion_puiss-2.d0))
-
-
-      !dSion_dT = coef_ion_1*exp(-coef_ion_3/Tion)*((coef_ion_3/Tion)**0.39d0)*1/(Tion*(coef_ion_2*Tion+coef_ion_3)**2.0d0) &
-      !       * (coef_ion_3*((coef_ion_2+1)*Tion+coef_ion_3)-0.39d0*(Tion*(coef_ion_2*Tion+coef_ion_3)))
+    if (Te_eV .gt. 0.1) then
+      Sion_T   = coef_ion_1*((coef_ion_3/T0)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/T0)*exp(-coef_ion_3/T0)
+      dSion_dT = Sion_T * ( -S_ion_puiss/T0 + coef_ion_3/(T0*(coef_ion_2*T0+coef_ion_3)) + coef_ion_3*T0**(-2.d0) )
+    else
+      Sion_T   = 0.
+      dSion_dT = 0. 
+    endif
 
   !-------------------------------------------
   ! --- Radiative Power for neutral Deuterium
@@ -608,6 +615,7 @@ do ms=1, n_gauss
 
   !-------------------------------------------------
   ! --- Recombination rate for ionized Deuterium
+  ! (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#recombination_rate_for_deuterium)
   !-------------------------------------------------
     
     coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)   
@@ -747,13 +755,13 @@ do ms=1, n_gauss
 !#  equation 3                                                                                     #
 !###################################################################################################
 
-         rhs_ij_3 = 0.d0 !- ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * tstep
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_fact
 
 !###################################################################################################
 !#  equation 4                                                                                     #
 !###################################################################################################
 
-         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
+         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
 !###################################################################################################
 !#  equation 5 (density equation)                                                                  #
@@ -1113,15 +1121,15 @@ do ms=1, n_gauss
 !#  equation 3                                                                                     #
 !###################################################################################################
 
-                 amat_33 = v * zj / BigR * xjac                               * tstep
-                 amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac         * tstep
+                 amat_33 = v * zj / BigR * xjac                              
+                 amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac         
 
 !###################################################################################################
 !#  equation 4                                                                                     #
 !###################################################################################################
 
-                 amat_44 =  v * w * BigR * xjac                                * tstep
-                 amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
+                 amat_44 =  v * w * BigR * xjac                               
+                 amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac              
 
 !###################################################################################################
 !#  equation 5    continuity equation (density)                                                    #

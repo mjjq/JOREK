@@ -42,7 +42,7 @@ contains
 !> `delta_fraction`, which starts at 1 and goes to 0 for no mixing.
 !> If it is 1 we get the fields of the previous timesteps.
 pure subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
-use phys_module, only: F0
+use phys_module, only: F0, mode
 
 ! Routine parameters
 class(fields_base), intent(in) :: fields
@@ -68,11 +68,12 @@ call fields%interp_PRZ(time, i_elm, i_var, 2, st(1), st(2), phi, P, P_s, P_t, P_
 R_inv = 1.d0/R
 inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
 
-! Calculate the derivatives to R and Z (at delta_fraction if presen)
+! Calculate the derivatives to R and Z
 psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
 psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
 U_R      = (  P_s(2) * Z_t - P_t(2) * Z_s ) * inv_st_jac
 U_Z      = (- P_s(2) * R_t + P_t(2) * R_s ) * inv_st_jac
+U_phi    = P_phi(2)
 
 ! Update psi and U
 psi = P(1)

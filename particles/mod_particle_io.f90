@@ -83,7 +83,6 @@ if (allocated(sim%groups)) then
         particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     n_total = sum(particles_per_proc)
     i_here = sum(particles_per_proc(0:my_id-1))
-    write(*,*) my_id, n_total, i_here, n_here
 
     ! Create group to write in
     write(group_name,"(A,i0.3,A)") "/groups/", i, "/"

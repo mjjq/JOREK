@@ -315,25 +315,25 @@ subroutine run(this, sim, ev)
 
   ! Gather times
   call MPI_Reduce(t1-this%t0, mean_cputime, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  mean_cputime = mean_cputime / real(sim%n_cpu)
   call MPI_Reduce(t1-this%t0, max_cputime, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
   call MPI_Reduce(t1-this%t0, min_cputime, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
   !$ call MPI_Reduce(w1-this%w0, mean_walltime, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  !$ mean_walltime = mean_walltime / real(sim%n_cpu)
   !$ call MPI_Reduce(w1-this%w0, max_walltime, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
   !$ call MPI_Reduce(w1-this%w0, min_walltime, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
 
   if (this%log .and. sim%my_id .eq. 0) then
     if (sim%n_cpu .gt. 1) then
+      mean_cputime = mean_cputime / real(sim%n_cpu) ! because it is only defined on node 0
+      !$ mean_walltime = mean_walltime / real(sim%n_cpu)
       if (.not. has_omp) write(*,"(A,A,3f7.4,A)") trim(this%name), " finished in (min/mean/max): ", &
           min_cputime, mean_cputime, max_cputime, "s"
-      !$ write(*,"(A,A,3f7.4,A,3f7.4,A)") trim(this%name), " finished in (min/mean/max): ", &
+      !$ write(*,"(A,A,3f7.4,A,3f8.4,A)") trim(this%name), " finished in (min/mean/max): ", &
       !$   min_walltime, mean_walltime, max_walltime, &
       !$ "s (cpu time: ", min_cputime, mean_cputime, max_cputime, ")"
     else
       if (.not. has_omp) write(*,"(A,A,f7.4,A)") trim(this%name), " finished in: ", &
           mean_cputime, "s"
-      !$ write(*,"(A,A,f7.4,A,f7.4,A)") trim(this%name), " finished in: ", &
+      !$ write(*,"(A,A,f7.4,A,f8.4,A)") trim(this%name), " finished in: ", &
       !$   mean_walltime, &
       !$ "s (cpu time: ", mean_cputime, ")"
     end if

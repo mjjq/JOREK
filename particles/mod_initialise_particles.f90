@@ -308,7 +308,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle) &
     !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
-    !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis)
+    !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize)
     do i=1,blocksize
       ran(:) = rans(:,i)
 

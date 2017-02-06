@@ -10,6 +10,7 @@
 *.out
 *.dat
 *.swp
+*.i90
 Makefile.inc
 j302_1
 j302_3

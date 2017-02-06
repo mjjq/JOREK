@@ -21,15 +21,15 @@ USE_HDF5         = 1
 LIBDIR = $(HOME)/lib
 
 #Scotch library
-SCOTCH_HOME ?=  $(LIBDIR)/scotch/scotch_5.1
-LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotch -lptscotcherr
-INC_SCOTCH   = -I$(SCOTCH_HOME)/include
+LIB_SCOTCH   = -lptscotch -lptscotcherr
 
 # MUMPS
 LIB_MUMPS   = -ldmumps -lmumps_common
 LIB_ZMUMPS  = -lzmumps
 ORDLIB      = -lpord -lmetis
-INC_MUMPS   =. # workaround because it needs to be defined
+INC_MUMPS   = /work/imas/opt/EasyBuild/software/MUMPS/4.10.0-goolf-1.5.16-metis/include # sorry sorry sorry but
+# /work/imas/opt/EasyBuild/modules/all/MUMPS/4.10.0-goolf-1.5.16-metis does not define MUMPS_DIR and 
+# gfortran does not follow CPATH apparently
 
 # PASTIX
 PASTIX_HOME     ?=  $(LIBDIR)/pastix/install/
@@ -44,7 +44,6 @@ INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
 
 #FFTW
 LIBFFTW   = -L$(FFTWDIR)/lib -lfftw3
-INC_FFTW  = -I$(FFTWDIR)/include
 
 #LAPACK
 MKL       = $(MKLROOT)/lib/intel64

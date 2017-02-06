@@ -98,6 +98,7 @@ real*8     :: rn0_xx, rn0_yy, rhon_xx, rhon_yy
 
 ! Neutral source
 real*8     :: source_mgi
+real*8     :: source_mgi_tmp       !Temporary neutral source for each shattered pellets 
 
 ! time normalization
 real*8     :: t_norm
@@ -695,7 +696,7 @@ do ms=1, n_gauss
    ! --- Source of neutrals from Massive Gas Injection (MGI)
    !--------------------------------------------------------
 
-     source_mgi = 0.d0                    
+     source_mgi = 0.d0                   
 
 !============================================================!
 ! Important note: in order to implementing more complicated  !
@@ -710,7 +711,9 @@ do ms=1, n_gauss
          ASDEX_MGI = .false.
        end if
 
-       do spi_i=1, n_spi 
+       do spi_i=1, n_spi
+
+         source_mgi_tmp = 0.d0 
 
          spi_R_tmp   = pellets(spi_i)%spi_R
          spi_Z_tmp   = pellets(spi_i)%spi_Z
@@ -725,7 +728,9 @@ do ms=1, n_gauss
 
          call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                        mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
-                       phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                       phi,source_mgi_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+         source_mgi = source_mgi + source_mgi_tmp
 
        end do
 

@@ -10,9 +10,11 @@ module load mpich2/3.1.3-gnu
 module load SCOTCH/6.0.0_esmumps-goolf-1.5.16
 module load METIS/4.0.3-goolf-1.5.16
 module load MUMPS/4.10.0-goolf-1.5.16-metis
-module load pastix/5.2.2.16 # TODO: get goolf version?
+module load pastix/5.2.2.16 # TODO: make goolf version?
 module load FFTW/3.3.4-gompi-1.5.16 
 module load HDF5/1.8.9-goolf-1.5.16
+module unload GCC
+module load GCC/4.9.2 # hack to try to get a new gcc
 
 export LANG=C
 export JOREK_HOST=iter-hpc

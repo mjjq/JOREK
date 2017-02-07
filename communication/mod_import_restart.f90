@@ -492,6 +492,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_sons(:,:)
   integer,     allocatable :: t_contain_node(:,:)
   integer,     allocatable :: t_nref(:)
+  
+  ! For the single find_RZ call
+  real*8 :: R_out,Z_out,s_out,t_out
+  integer :: ielm_out, ifail
 
   !
 #endif
@@ -806,6 +810,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_deallocate(t_sons,"t_sons",CAT_UNKNOWN)
   call tr_deallocate(t_contain_node,"t_contain_node",CAT_UNKNOWN)
   call tr_deallocate(t_nref,"t_nref",CAT_UNKNOWN)
+
+  ! Call find_RZ to setup RZ_minmax
+  ! Do this here because if the first call occurs in an openmp context
+  ! this will cause a segfault sometimes. Using it here does not work for
+  ! the read on id=0 and broadcast model...
+  call find_RZ(node_list,element_list,2.d0,0.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
 #else
   write (6,*) " ERROR: trying to import with hdf5 but USE_HDF5 was not set at compile-time"

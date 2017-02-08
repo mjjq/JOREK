@@ -251,7 +251,7 @@ subroutine create_constants_time_dataset(file_id, dataset_name, dset, dspace)
 end subroutine create_constants_time_dataset
 
 
-!> Calculate P_phi, H and mu for a list of particles.
+!> Calculate H, mu, P_phi, Psi_bar, Psi, q for a list of particles.
 !> mask is .f. if a particle is lost. These values in out are 0.d0
 subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, mask)
   use mod_particle_types

@@ -344,7 +344,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
         ! 2. Calculate H and mu, save in particle
         H  = H_transform(ran(2)) ! [eV]
-        muB = H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
+        muB = 2.d0*H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
         particle%E  = H
         particle%mu = muB/norm2(B)
 

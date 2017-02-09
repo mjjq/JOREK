@@ -75,8 +75,8 @@ def RequestData(self):
     if (interp):
         with h5py.File(FileNames[index-1]) as hf:
             x      = f*x      + (1.0-f)*hf.get('groups/%03d/x'%gid)[sel,:]
-            weight = f*weight + (1.0-f)*hf.get('groups/%03d/weight'%gid)[sel,:]
-            q      = f*q      + (1.0-f)*hf.get('groups/%03d/q'%gid)[sel,:]
+            weight = f*weight + (1.0-f)*hf.get('groups/%03d/weight'%gid)[sel]
+            q      = f*q      + (1.0-f)*hf.get('groups/%03d/q'%gid)[sel]
 
     if (not toroidal):
         pcoords = npvtk.numpy_to_vtk(x, deep=True, array_type=vtk.VTK_FLOAT)

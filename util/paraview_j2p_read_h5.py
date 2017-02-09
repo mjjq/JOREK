@@ -37,12 +37,13 @@ def RequestData(self):
     req_time = GetUpdateTimestep(self)
 
     # Find the closest two files
-    times = np.asarray([re.find(time_re, f) for f in FileNames])
+    times = np.asarray([float(re.search(time_re, f).group()) for f in FileNames])
     # 4 possibilities here:
     # After last step: return last file
     # Before first step: return first file
     # Very close match: return that file
     # Between 2 files: interpolate
+    interp = False
     try:
         index = np.isclose(times, req_time).tolist().index(True)
         # We have a match, read and return data for this filename
@@ -112,12 +113,12 @@ def RequestInformation(self):
         outInfo.Remove(executive.TIME_STEPS())
         for filename in FileNames:
             # keep only the numbers and dots and remove the last dot
-            timestep = re.find(time_re, filename)
+            timestep = float(re.search(time_re, filename).group())
             outInfo.Append(executive.TIME_STEPS(), timestep)
 
         # Remove time range info
         outInfo.Remove(executive.TIME_RANGE())
-        outInfo.Append(executive.TIME_RANGE(), re.find(time_re, FileNames[0]))
-        outInfo.Append(executive.TIME_RANGE(), re.find(time_re, FileNames[-1]))
+        outInfo.Append(executive.TIME_RANGE(), float(re.search(time_re, FileNames[0]).group()))
+        outInfo.Append(executive.TIME_RANGE(), float(re.search(time_re, FileNames[-1]).group()))
 
     setOutputTimesteps(self)

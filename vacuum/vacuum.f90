@@ -257,9 +257,11 @@ module vacuum
       
       read(file_handle) current_FB_fact
       read(file_handle) n_coils
-      if ( allocated(I_coils) ) deallocate(I_coils)
-      allocate( I_coils(n_coils) )
-      read(file_handle) I_coils(:)
+      if ( n_coils /= 0 ) then
+        if ( allocated(I_coils) ) deallocate(I_coils)
+        allocate( I_coils(n_coils) )
+        read(file_handle) I_coils(:)
+      end if
       
     end if
     
@@ -349,9 +351,11 @@ module vacuum
       
       call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
       call HDF5_integer_reading(file_id,n_coils,"n_coils")
-      if ( allocated(I_coils) ) deallocate(I_coils)
-      allocate( I_coils(n_coils) )
-      call HDF5_array1D_reading(file_id,I_coils,"I_coils")
+      if ( n_coils /= 0 ) then
+        if ( allocated(I_coils) ) deallocate(I_coils)
+        allocate( I_coils(n_coils) )
+        call HDF5_array1D_reading(file_id,I_coils,"I_coils")
+      end if
       
     end if
      
@@ -396,13 +400,13 @@ module vacuum
       
       write(file_handle) current_FB_fact
       
-      if ( (.not. allocated(I_coils)) ) then
-          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
-          stop
+      if ( (n_coils/=0) .and. (.not. allocated(I_coils)) ) then
+        write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+        stop
       end if
     
       write(file_handle) n_coils
-      write(file_handle) I_coils(:)
+      if ( n_coils /= 0 ) write(file_handle) I_coils(:)
       
     end if
     
@@ -458,12 +462,12 @@ module vacuum
       end if
       
       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
-      if ( (.not. allocated(I_coils)) )  then
+      if ( (n_coils/=0) .and. (.not. allocated(I_coils)) )  then
         write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
         stop
       end if
       call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))
-      call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
+      if ( n_coils /= 0 ) call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then

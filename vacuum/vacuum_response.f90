@@ -638,7 +638,7 @@ module vacuum_response
     call update_response(tstep, freeboundary_equil, resistive_wall)
     
     ! --- Perform the time-stepping for the wall currents.
-    if ( resistive_wall .and. (index_now>1) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
+    if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
     if ( vacuum_debug ) then
       write(*,*) my_id, 'psibnd_vec:  ', sum(abs(psibnd_vec)), sum(psibnd_vec)
@@ -1148,6 +1148,11 @@ module vacuum_response
     real*8,  save :: old_theta
     real*8,  save :: old_zeta
     logical, save :: old_reswall
+    
+    if ( sr%n_tor == 0 ) then
+      write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'
+      return
+    end if
     
     theta = time_evol_theta
     zeta  = time_evol_zeta

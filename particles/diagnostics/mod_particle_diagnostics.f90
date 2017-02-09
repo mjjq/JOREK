@@ -58,7 +58,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   logical           :: link_exists
   character(len=80) :: dataset_name, timeset_name
   integer, dimension(:), allocatable            :: particles_per_proc
-  real*8, dimension(:,:,:), allocatable, target :: stats ! Data storage order: particle index, variable number, time (in fortran)
+  real*4, dimension(:,:,:), allocatable, target :: stats ! Data storage order: particle index, variable number, time (in fortran)
 
   call h5open_f(ierr)
 
@@ -182,7 +182,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     data_dims(2) = n_var
     data_dims(3) = n_time
     !write(*,"(A,3i6)") " DEBUG: writing statistics to block. dims=", data_dims
-    call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, stats, [1_HSIZE_T,1_HSIZE_T,1_HSIZE_T], &
+    call h5dwrite_f(dset, H5T_NATIVE_REAL, stats, [1_HSIZE_T,1_HSIZE_T,1_HSIZE_T], &
          ierr, file_space_id = dspace, mem_space_id = mem_space)
     !write(*,*) "EXTRA_DEBUG: out(8,2)", stats(8,2,1)
     !write(*,*) "EXTRA_DEBUG: out(2,2)", stats(2,2,1)
@@ -194,7 +194,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
         start=[time_dims(1)-1_HSIZE_T], count=[n_time], hdferr=ierr)
     call h5screate_f(H5S_SCALAR_F, t_mem_space, ierr)
     !write(*,*) "DEBUG: writing single time value", sim%time
-    call h5dwrite_f(tset, H5T_NATIVE_DOUBLE, sim%time, [n_time], ierr, file_space_id=tspace, mem_space_id=t_mem_space)
+    call h5dwrite_f(tset, H5T_NATIVE_REAL, sim%time, [n_time], ierr, file_space_id=tspace, mem_space_id=t_mem_space)
     !write(*,*) "Done"
 
     call h5sclose_f(t_mem_space, ierr)
@@ -225,7 +225,7 @@ subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, ds
   ! Create a dataset property list, enable chunking
   call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
   call h5pset_chunk_f(crp_list, 3, chunk_size, ierr)
-  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_DOUBLE, dspace, dset, ierr, crp_list)
+  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_REAL, dspace, dset, ierr, crp_list)
   call h5pclose_f(crp_list, ierr)
 
   ! shuffle filter + zlib (present on most system) (give 20% compression, don't use for)
@@ -246,7 +246,7 @@ subroutine create_constants_time_dataset(file_id, dataset_name, dset, dspace)
   ! Create a dataset property list, enable chunking
   call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
   call h5pset_chunk_f(crp_list, 1, chunk_size, ierr)
-  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_DOUBLE, dspace, dset, ierr, crp_list)
+  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_REAL, dspace, dset, ierr, crp_list)
   call h5pclose_f(crp_list, ierr)
 end subroutine create_constants_time_dataset
 
@@ -263,7 +263,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
   real*8, intent(in)                                           :: mass
-  real*8, dimension(:,:), intent(out)                          :: out !< List of values (is actually size(particles,1),n_var big, but gfortran doesn't like that
+  real*4, dimension(:,:), intent(out)                          :: out !< List of values (is actually size(particles,1),n_var big, but gfortran doesn't like that
   logical, dimension(:), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
   real*8               :: inv_st_jac, psi_R, psi_Z, B(3), B_norm, B_hat(3), v_par, v_perp(3)

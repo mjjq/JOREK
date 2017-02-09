@@ -24,6 +24,8 @@ def RequestData(self):
     import numpy as np
     import vtk
     from vtk.util import numpy_support as npvtk
+    import re
+    time_re = r"\d+\.?\d*"
 
     def GetUpdateTimestep(algorithm):
         """Returns the requested time value, or None if not present"""
@@ -34,13 +36,29 @@ def RequestData(self):
     # Get the current timestep
     req_time = GetUpdateTimestep(self)
 
-    req_time = int(round(req_time))
-    if (req_time < 0):
-        req_time = 0
-    elif (req_time >= len(FileNames)):
-        req_time = len(FileNames)-1
-
-    fname = FileNames[req_time]
+    # Find the closest two files
+    times = np.asarray([re.find(time_re, f) for f in FileNames])
+    # 4 possibilities here:
+    # After last step: return last file
+    # Before first step: return first file
+    # Very close match: return that file
+    # Between 2 files: interpolate
+    try:
+        index = np.isclose(times, req_time).tolist().index(True)
+        # We have a match, read and return data for this filename
+    except ValueError:
+        # Check for other 3 cases
+        if (np.count_nonzero(req_time < times) == 0):
+            # After last file
+            index = len(FileNames)-1
+        elif (np.count_nonzero(req_time > times) == 0):
+            # Before first file
+            index = 0
+        else:
+            interp = True
+            index = (req_time > times).tolist().index(True)
+            f = (req_time - times[index-1])/(times[index] - times[index-1])
+            # how much of second to take == 1-how much of first to take
 
     gid = int(group)
     if (len(select) > 0):
@@ -48,35 +66,36 @@ def RequestData(self):
     else:
         sel = np.s_[:]
 
-    # Read the h5 file
-    with h5py.File(fname) as hf:
-        x      = hf.get('groups/%03d/x'%gid)
-        weight = hf.get('groups/%03d/weight'%gid)
-        q      = hf.get('groups/%03d/q'%gid)
-        i_elm  = hf.get('groups/%03d/i_elm'%gid)
+    # Read the h5 file(s)
+    with h5py.File(FileNames[index]) as hf:
+        x      = hf.get('groups/%03d/x'%gid)[sel,:]
+        weight = hf.get('groups/%03d/weight'%gid)[sel]
+        q      = hf.get('groups/%03d/q'%gid)[sel]
+    if (interp):
+        with h5py.File(FileNames[index-1]) as hf:
+            x      = f*x      + (1.0-f)*hf.get('groups/%03d/x'%gid)[sel,:]
+            weight = f*weight + (1.0-f)*hf.get('groups/%03d/weight'%gid)[sel,:]
+            q      = f*q      + (1.0-f)*hf.get('groups/%03d/q'%gid)[sel,:]
 
-        if (not toroidal):
-            pcoords = npvtk.numpy_to_vtk(x[sel,:], deep=True, array_type=vtk.VTK_FLOAT)
-        else:
-            tmp = np.stack((x[sel,0]*np.cos(x[sel,2]),
-                            x[sel,1],
-                            x[sel,0]*np.sin(x[sel,2])), axis=-1)
-            pcoords = npvtk.numpy_to_vtk(tmp, deep=True, array_type=vtk.VTK_FLOAT)
-        points = vtk.vtkPoints()
-        points.SetData(pcoords)
-        output.SetPoints(points)
+    if (not toroidal):
+        pcoords = npvtk.numpy_to_vtk(x, deep=True, array_type=vtk.VTK_FLOAT)
+    else:
+        tmp = np.stack((x[:,0]*np.cos(x[:,2]),
+                        x[:,1],
+                        x[:,0]*np.sin(x[:,2])), axis=-1)
+        pcoords = npvtk.numpy_to_vtk(tmp, deep=True, array_type=vtk.VTK_FLOAT)
 
-        val = npvtk.numpy_to_vtk(weight[sel], deep=True, array_type=vtk.VTK_FLOAT)
-        val.SetName("weight")
-        output.GetPointData().AddArray(val)
+    points = vtk.vtkPoints()
+    points.SetData(pcoords)
+    output.SetPoints(points)
 
-        val = npvtk.numpy_to_vtk(q[sel], deep=True, array_type=vtk.VTK_FLOAT)
-        val.SetName("q")
-        output.GetPointData().AddArray(val)
+    val = npvtk.numpy_to_vtk(weight, deep=True, array_type=vtk.VTK_FLOAT)
+    val.SetName("weight")
+    output.GetPointData().AddArray(val)
 
-        val = npvtk.numpy_to_vtk(i_elm[sel], deep=True, array_type=vtk.VTK_INT)
-        val.SetName("i_elm")
-        output.GetPointData().AddArray(val)
+    val = npvtk.numpy_to_vtk(q, deep=True, array_type=vtk.VTK_FLOAT)
+    val.SetName("q")
+    output.GetPointData().AddArray(val)
 
     return output
 
@@ -84,17 +103,21 @@ def RequestData(self):
 See paraview guide 13.2.2
 """
 def RequestInformation(self):
+    import re
+    time_re = r"\d+\.?\d*"
     def setOutputTimesteps(algorithm):
         executive = algorithm.GetExecutive()
         outInfo = executive.GetOutputInformation(0)
 
         outInfo.Remove(executive.TIME_STEPS())
-        for timestep in range(len(FileNames)):
+        for filename in FileNames:
+            # keep only the numbers and dots and remove the last dot
+            timestep = re.find(time_re, filename)
             outInfo.Append(executive.TIME_STEPS(), timestep)
 
         # Remove time range info
         outInfo.Remove(executive.TIME_RANGE())
-        outInfo.Append(executive.TIME_RANGE(), 0)
-        outInfo.Append(executive.TIME_RANGE(), len(FileNames))
+        outInfo.Append(executive.TIME_RANGE(), re.find(time_re, FileNames[0]))
+        outInfo.Append(executive.TIME_RANGE(), re.find(time_re, FileNames[-1]))
 
     setOutputTimesteps(self)

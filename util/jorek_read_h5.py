@@ -17,6 +17,7 @@ Calculation time is not really affected, render time maybe?
 import h5py
 import numpy as np
 prec=np.float32
+vtk_prec=vtk.VTK_FLOAT
 
 
 
@@ -40,11 +41,14 @@ class fields(object):
             self.n_period     = hf.get('n_period')[0]
             self.n_tor        = hf.get('n_tor')[0]
             self.n_vertex_max = hf.get('n_vertex_max')[0]
-            self.n_elements   = hf.get('n_elements')[0]
+            n_elements   = hf.get('n_elements')[0]
 
-        self.vertex   = read_mmap_or_h5py(filename, 'vertex')
-        self.x        = read_mmap_or_h5py(filename, 'x', type_out=prec)
-        self.size     = read_mmap_or_h5py(filename, 'size', type_out=prec)
+        # Assume the grid not to change. Important!
+        if (not (hasattr(self, 'n_elements') and self.n_elements == n_elements)):
+            self.vertex   = read_mmap_or_h5py(filename, 'vertex')
+            self.x        = read_mmap_or_h5py(filename, 'x', type_out=prec)
+            self.size     = read_mmap_or_h5py(filename, 'size', type_out=prec)
+        self.n_elements = n_elements
         self.values   = read_mmap_or_h5py(filename, 'values', type_out=prec)
 
         if (file_prev is not None):
@@ -90,7 +94,7 @@ class fields(object):
         if (output == None):
             output = vtk.vtkUnstructuredGrid()
 
-        settings = [n_sub, phi, n_plane, without_n0_mode, quadratic]
+        settings = [n_sub, phi, n_plane, without_n0_mode, quadratic, self.n_elements]
         if (not hasattr(self, 'old_settings') or self.old_settings != settings):
             force_remake_grid = True
         self.old_settings = settings
@@ -99,7 +103,7 @@ class fields(object):
             (xyz, ien) = create_grid(self.x, self.vertex, self.size, self.n_elements,
                                      n_sub, phis, n_plane, periodic, quadratic)
 
-            pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk.VTK_FLOAT)
+            pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk_prec)
             self.points = vtk.vtkPoints()
             self.points.SetData(pcoords)
 
@@ -109,13 +113,14 @@ class fields(object):
         output.SetPoints(self.points)
 
         HZ = toroidal_basis(self.n_tor, self.n_period, phis, without_n0_mode)
-        for i in self.vars:
-            val = npvtk.numpy_to_vtk(interp_scalars_3D(self.values[i:i+1,:,:,:],
-                                   self.vertex, self.size, n_sub, HZ).reshape(-1),
-                                   deep=True, array_type=vtk.VTK_FLOAT)
+        val = interp_scalars_3D(self.values[self.vars,:,:,:],
+                               self.vertex, self.size, n_sub, HZ).reshape((len(self.vars),-1))
+        # Could split here if we run into memory problems and delete each part after use
 
-            val.SetName(self.var_names[i])
-            output.GetPointData().AddArray(val)
+        for i in range(len(self.vars)):
+            tmp = npvtk.numpy_to_vtk(val[i,:], deep=True, array_type=vtk_prec)
+            tmp.SetName(self.var_names[self.vars[i]])
+            output.GetPointData().AddArray(tmp)
 
 
         if (quadratic):
@@ -135,6 +140,8 @@ class fields(object):
 
 """
 Read part of a hdf5 file directly
+
+memmap is roughly 20% faster on my system
 """
 def read_mmap_or_h5py(path, h5path, type_out=None):
     with h5py.File(path, 'r') as f:
@@ -210,17 +217,21 @@ returns:
 def interp_scalars(values, vertex, size, n_sub):
     # Multiply values[var,order,harm,vertex,element] with
     # size[order, vertex, element] and bf[order, vertex, s, t]
-    return np.einsum('lihjk,ijk,ijmn->lhkmn',
+    try:
+        return np.einsum('lihjk,ijk,ijmn->lhkmn',
                         values[:,:,:,vertex-1],
-                        size, bf(n_sub))
-
+                        size, bf(n_sub), optimize=True)
+    except ArgumentError:
+        return np.einsum('lihjk,ijk,ijmn->lhkmn',
+                        values[:,:,:,vertex-1],
+                        size, bf(n_sub), optimize=True)
 
 """
 Interpolate scalars on 2D planes * n_planes
 """
 def interp_scalars_3D(values, vertex, size, n_sub, HZ):
-    values = interp_scalars(values, vertex, size, n_sub)
-    return np.einsum('lhkmn,hp->lpkmn', values, HZ)
+    vals = interp_scalars(values, vertex, size, n_sub)
+    return np.einsum('lhkmn,hp->lpkmn', vals, HZ, optimize=True)
 
 
 """

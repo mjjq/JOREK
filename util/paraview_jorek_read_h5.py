@@ -18,7 +18,6 @@ Properties = dict(
     phi_range_in_pi = [0.0, 1.0],
     Quadratic = False,
     Exclude_n0_mode = False,
-    Force_remake_grid = False, # use this only when you have refinement files
     central_mass = 2.0, # Convert times to SI units using this norm
     central_density = 1.0 # [1d-20 m^-3]
 )
@@ -70,16 +69,16 @@ def RequestData(self):
             # how much of second to take == 1-how much of first to take
 
     # Read the h5 file
-    f = fields()
+    if (not hasattr(self, 'f')):
+        self.f = fields()
     if (interp):
-        f.read(FileNames[index], variables=Variables, file_prev=FileNames[index-1],
+        self.f.read(FileNames[index], variables=Variables, file_prev=FileNames[index-1],
                interp_fraction=f)
     else:
-        f.read(FileNames[index], variables=Variables)
+        self.f.read(FileNames[index], variables=Variables)
 
-    output = f.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
+    output = self.f.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
                       n_plane=Number_of_planes, without_n0_mode=Exclude_n0_mode,
-                      force_remake_grid=Force_remake_grid,
                       output=self.GetUnstructuredGridOutput(), quadratic=Quadratic)
     return output
 

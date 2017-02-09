@@ -19,6 +19,8 @@ Properties = dict(
     Quadratic = False,
     Exclude_n0_mode = False,
     Force_remake_grid = False, # use this only when you have refinement files
+    central_mass = 2.0, # Convert times to SI units using this norm
+    central_density = 1.0 # [1d-20 m^-3]
 )
 
 
@@ -35,38 +37,78 @@ def RequestData(self):
     # Get the current timestep
     req_time = GetUpdateTimestep(self)
 
-    req_time = int(round(req_time))
-    if (req_time < 0):
-        req_time = 0
-    elif (req_time >= len(FileNames)):
-        req_time = len(FileNames)-1
+    # Read the timestep info from the files
+    MU_ZERO       = 4e-7*np.pi
+    MASS_PROTON   = 1.67262178e-27
+    if (central_mass > 0 and central_density > 0):
+        t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
+    else:
+        t_norm = 1
+    xtime = [h5py.File(fname).get("t_now")[0]*t_norm for fname in FileNames]
 
-    fname = FileNames[req_time]
+    # 4 possibilities here:
+    # After last step: return last file
+    # Before first step: return first file
+    # Very close match: return that file
+    # Between 2 files: interpolate
+    interp = False
+    try:
+        index = np.isclose(xtime, req_time).tolist().index(True)
+        # We have a match, read and return data for this filename
+    except ValueError:
+        # Check for other 3 cases
+        if (np.count_nonzero(req_time < xtime) == 0):
+            # After last file
+            index = len(FileNames)-1
+        elif (np.count_nonzero(req_time > xtime) == 0):
+            # Before first file
+            index = 0
+        else:
+            interp = True
+            index = (req_time > xtime).tolist().index(True)
+            f = (req_time - xtime[index-1])/(xtime[index] - xtime[index-1])
+            # how much of second to take == 1-how much of first to take
+
     # Read the h5 file
     f = fields()
-    f.read(fname, variables=Variables)
-    
+    if (interp):
+        f.read(FileNames[index], variables=Variables, file_prev=FileNames[index-1],
+               interp_fraction=f)
+    else:
+        f.read(FileNames[index], variables=Variables)
+
     output = f.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
-                           n_plane=Number_of_planes, without_n0_mode=Exclude_n0_mode,
-                           force_remake_grid=Force_remake_grid,
-                           output=self.GetUnstructuredGridOutput(), quadratic=Quadratic)
+                      n_plane=Number_of_planes, without_n0_mode=Exclude_n0_mode,
+                      force_remake_grid=Force_remake_grid,
+                      output=self.GetUnstructuredGridOutput(), quadratic=Quadratic)
     return output
 
 """
 See paraview guide 13.2.2
 """
 def RequestInformation(self):
+    import numpy as np
+    import h5py
     def setOutputTimesteps(algorithm):
         executive = algorithm.GetExecutive()
         outInfo = executive.GetOutputInformation(0)
 
+        # Read the timestep info from the files
+        MU_ZERO       = 4e-7*np.pi
+        MASS_PROTON   = 1.67262178e-27
+        if (central_mass > 0 and central_density > 0):
+            t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
+        else:
+            t_norm = 1
+        xtime = [h5py.File(fname).get("t_now")[0]*t_norm for fname in FileNames]
+
         outInfo.Remove(executive.TIME_STEPS())
-        for timestep in range(len(FileNames)):
-            outInfo.Append(executive.TIME_STEPS(), timestep)
+        for i in range(len(FileNames)):
+            outInfo.Append(executive.TIME_STEPS(), xtime[i])
 
         # Remove time range info
         outInfo.Remove(executive.TIME_RANGE())
-        outInfo.Append(executive.TIME_RANGE(), 0)
-        outInfo.Append(executive.TIME_RANGE(), len(FileNames))
+        outInfo.Append(executive.TIME_RANGE(), xtime[0])
+        outInfo.Append(executive.TIME_RANGE(), xtime[-1])
 
     setOutputTimesteps(self)

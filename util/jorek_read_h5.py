@@ -29,7 +29,7 @@ input arguments:
 """
 class fields(object):
     var_names = ["psi", "u", "j", "w", "rho", "T", "v_par"] # rest is ambiguous
-    def read(self, filename, variables=''):
+    def read(self, filename, variables='', file_prev=None, interp_fraction=None):
         if (isinstance(variables, str)):
             self.vars = [int(x)-1 for x in variables.split(',')]
         else:
@@ -41,10 +41,18 @@ class fields(object):
             self.n_tor        = hf.get('n_tor')[0]
             self.n_vertex_max = hf.get('n_vertex_max')[0]
             self.n_elements   = hf.get('n_elements')[0]
+
         self.vertex   = read_mmap_or_h5py(filename, 'vertex')
         self.x        = read_mmap_or_h5py(filename, 'x', type_out=prec)
         self.size     = read_mmap_or_h5py(filename, 'size', type_out=prec)
         self.values   = read_mmap_or_h5py(filename, 'values', type_out=prec)
+
+        if (file_prev is not None):
+            with h5py.File(file_prev, 'r') as hf2:
+                if (self.n_elements != hf2.get('n_elements')[0]):
+                    raise "Error: Files with different numbers of elements read! Refinement is not supported"
+            # Interpolate before making grid etc
+            self.values = f*self.values + (1.0-f)*read_mmap_or_h5py(file_prev, 'values', type_out=prec)
 
 
     """

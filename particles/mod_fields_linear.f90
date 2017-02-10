@@ -16,6 +16,7 @@ type, extends(action) :: read_jorek_fields_interp_linear
   character(len=80) :: basename = 'jorek' !< Comes before the file number or extension
   integer :: i = 0 !< Number of the restart file to read. Set to -1 to not include. Corresponds to the index of NOW
   integer :: rst_format = 0 !< Format of restart file if .rst type
+  logical :: stop_at_end = .true. !< Whether to stop the simulation at the end of the file list
   contains
     procedure :: do => do_read
 end type
@@ -33,6 +34,7 @@ end interface read_jorek_fields_interp_linear
 type, extends(fields_base) :: jorek_fields_interp_linear
   real*8 :: time_now  = 0.d0 !< Time of current restart file (SI units)
   real*8 :: time_prev = 0.d0!< Time of previous restart file (SI units)
+  logical :: static = .false. !< If true do not due time interpolation
   contains
     procedure :: interp_PRZ => do_interp_PRZ
 end type jorek_fields_interp_linear
@@ -53,7 +55,7 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   real*8, dimension(n_v) :: Pd, Pd_s, Pd_t, Pd_phi
 
   call       interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-  if (abs(this%time_prev-this%time_now) .gt. 1d-10) then
+  if (abs(this%time_prev-this%time_now) .gt. 1d-10 .and. .not. this%static) then
     dt = 1.d0/(this%time_now - this%time_prev)
     df = (this%time_now - time)*dt
     call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
@@ -70,14 +72,16 @@ end subroutine do_interp_PRZ
 
 
 !> Constructor to allow for optional and default variables
-function new_read_jorek_fields_interp_linear(basename, i, rst_format) result(new)
+function new_read_jorek_fields_interp_linear(basename, i, rst_format, stop_at_end) result(new)
   character(len=*), intent(in), optional :: basename
   integer, intent(in), optional :: i
   integer, intent(in), optional :: rst_format
+  logical, intent(in), optional :: stop_at_end
   type(read_jorek_fields_interp_linear) :: new
   if (present(basename)) new%basename = basename
   if (present(i)) new%i = i
   if (present(rst_format)) new%rst_format = rst_format
+  if (present(stop_at_end)) new%stop_at_end = stop_at_end
   new%name = "ReadJorekFieldsInterpLinear"
   new%log = .true.
 end function new_read_jorek_fields_interp_linear
@@ -121,8 +125,7 @@ subroutine do_read(this, sim, ev)
       inquire(file=trim(restart_file), exist=file_exists)
       if (file_exists) then
         call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
-        f%time_now  = 0.d0
-        f%time_prev = 0.d0
+        f%static = .true.
       else
         write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
         call exit(1)
@@ -171,9 +174,14 @@ subroutine do_read(this, sim, ev)
           end if
         endif
       enddo
-      if (i .gt. this%i+10) then
-        write(*,*) "ERROR: cannot find any next restart files"
+      if (i .gt. this%i+10 .and. this%stop_at_end) then
+        write(*,*) "WARNING: cannot find any next restart files. Stopping."
         call exit(1)
+      end if
+      if (i .gt. this%i+10 .and. .not. this%stop_at_end) then
+        write(*,*) "WARNING: cannot find any next restart files. Continuing with &
+        the last values without time-dependence"
+        f%static = .true.
       end if
     end if
 

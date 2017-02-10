@@ -344,7 +344,9 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
         ! 2. Calculate H and mu, save in particle
         H  = H_transform(ran(2)) ! [eV]
-        muB = 2.d0*H*(ran(3)-0.5d0) ! uniformly distributed between -H and H [eV]
+        muB = 4.d0*H*(ran(3)-0.5d0)**2 ! linearly distributed between -H and H [eV]
+        ! Because there are 2 dimensions in v_perp => v_par^2/v_perp^2 = 1/2
+        ! we need this distribution
         particle%E  = H
         particle%mu = muB/norm2(B)
 

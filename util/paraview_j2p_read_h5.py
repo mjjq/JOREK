@@ -57,7 +57,7 @@ def RequestData(self):
             index = 0
         else:
             interp = True
-            index = (req_time > times).tolist().index(True)
+            index = (req_time > times).tolist().index(False)
             f = (req_time - times[index-1])/(times[index] - times[index-1])
             # how much of second to take == 1-how much of first to take
 
@@ -73,10 +73,10 @@ def RequestData(self):
         weight = hf.get('groups/%03d/weight'%gid)[sel]
         q      = hf.get('groups/%03d/q'%gid)[sel]
     if (interp):
-        with h5py.File(FileNames[index-1]) as hf:
-            x      = f*x      + (1.0-f)*hf.get('groups/%03d/x'%gid)[sel,:]
-            weight = f*weight + (1.0-f)*hf.get('groups/%03d/weight'%gid)[sel]
-            q      = f*q      + (1.0-f)*hf.get('groups/%03d/q'%gid)[sel]
+        with h5py.File(FileNames[index-1]) as hf2:
+            x      = f*x      + (1.0-f)*hf2.get('groups/%03d/x'%gid)[sel,:]
+            weight = f*weight + (1.0-f)*hf2.get('groups/%03d/weight'%gid)[sel]
+            q      = f*q      + (1.0-f)*hf2.get('groups/%03d/q'%gid)[sel]
 
     if (not toroidal):
         pcoords = npvtk.numpy_to_vtk(x, deep=True, array_type=vtk.VTK_FLOAT)

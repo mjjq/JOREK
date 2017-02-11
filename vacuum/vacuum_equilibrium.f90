@@ -187,7 +187,7 @@ module vacuum_equilibrium
       wall_curr       = 0.d0
       potentials_real = 0.d0
       
-      potentials_real(1:sr%ncoil) = - I_coils(1:sr%ncoil) * mu_zero
+      potentials_real(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
       
       do i = 1, n_wall_curr
         wall_curr(i) = sum(sr%s_ww_inv(i,:) * potentials_real(:))    
@@ -233,9 +233,9 @@ module vacuum_equilibrium
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
                 
                 if (starwall_equil_coils) then
-                  B_tan_coil_i         =  sum (sr%a_ey(i_resp,:) * wall_curr(:) )
+                  B_tan_coil_i         = - sum (sr%a_ey(i_resp,:) * wall_curr(:) )
                 else
-                  B_tan_coil_i         =  sum ( I_coils(:) * bext_tan(i_resp,:) )  
+                  B_tan_coil_i         =   sum ( I_coils(:) * bext_tan(i_resp,:) )  
                 endif
                 
                 mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i

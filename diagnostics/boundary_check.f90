@@ -139,7 +139,7 @@ subroutine boundary_check()
 
             ! --- Determine B_{||,v} as prescribed by the vacuum.
             if ( resistive_wall ) then
-              if (  l_tor == 1  )  then
+              if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
                 B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
                   + sum( sr%a_ee(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:)))                 &
                   + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) - sum( bext_tan(i_resp_0, :) * I_coils(:) )  )
@@ -149,7 +149,7 @@ subroutine boundary_check()
                   + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) )
               end if
             else
-              if (  l_tor == 1  )  then
+              if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
                 B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
                   * (sum( sr%a_id(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:))) - sum( bext_tan(i_resp_0, :) * I_coils(:) ))
               else

@@ -41,6 +41,7 @@ module vacuum
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
   integer             :: n_coils_nml                     !< specified number of poloidal field coils in namelist
+  logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
   real*8, allocatable :: I_coils(:)                      !< coil currents                 
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
@@ -113,6 +114,7 @@ module vacuum
     
     ! --- Preset namelist input parameters.
     freeboundary_equil   = .false.
+    starwall_equil_coils = .false.
     freeboundary         = .false.
     resistive_wall       = .false.
     wall_resistivity     = 0.d0

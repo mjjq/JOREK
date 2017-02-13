@@ -35,7 +35,16 @@ module vacuum_equilibrium
     if (.not. starwall_equil_coils) then
     
       if ( my_id == 0 ) then
-            
+        
+        write(*,*) ''            
+        write(*,*) '****************************************'
+        write(*,*) '* Using COIL_FIELD program for PF coils *'
+        write(*,*) '****************************************'
+        write(*,*) ''
+        write(*,*) 'WARNING: coil currents should be constant in time. If you want proper coil currents time evolution'
+        write(*,*) 'please use STARWALL PF coils'
+        write(*,*) ''
+        
         ! --- Read data from coil field file (only mpi proc 0 reads the file)
         open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
         if ( err /= 0 ) then
@@ -107,10 +116,7 @@ module vacuum_equilibrium
         allocate( bext_nor(dim(1),dim(2)) )
         
         if ( allocated(bext_psi) ) deallocate(bext_psi)
-        allocate( bext_psi(dim(1),dim(2)) )
-        
-        if ( allocated(I_coils) ) deallocate(I_coils)
-        allocate( I_coils(n_coils) )
+        allocate( bext_psi(dim(1),dim(2)) )        
       end if
       
       call MPI_bcast(bext_tan,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
@@ -119,24 +125,40 @@ module vacuum_equilibrium
     
     else    !STARWALL coils
       
-      if ( sr%ncoil /= n_coils_nml ) then
-        write(*,*) 'WARNING: number of namelist coils "n_coils_nml" does not match the STARWALL number of coils'
-        stop
-      end if
+      if ( my_id == 0 ) then
       
-      if ( .not. resistive_wall ) then
-        write(*,*) 'WARNING: ideal wall with equilibrium with starwall_coils is not ready to use yet'
-        stop
-      end if
+        if ( sr%ncoil /= n_coils_nml ) then
+          write(*,*) 'WARNING: number of namelist coils "n_coils_nml" does not match the STARWALL number of coils'
+          stop
+        end if
       
-      if ( .not. allocated(I_coils) ) then
+        if ( .not. resistive_wall ) then
+          write(*,*) 'WARNING: ideal wall with equilibrium with starwall_coils is not ready to use yet'
+          stop
+        end if
+      
+        write(*,*) ''            
+        write(*,*) '***************************************'
+        write(*,*) '* Using STARWALL equilibrium PF coils *'
+        write(*,*) '***************************************'
+        write(*,*) ''
+      
+        if ( .not. allocated(I_coils) ) then
           allocate( I_coils(sr%ncoil) )
-          I_coils(1:sr%ncoil) =  coils0(1:n_coils_nml)%current 
+          I_coils(1:sr%ncoil) =  coils0(1:n_coils_nml)%current
+          n_coils             =  n_coils_nml
           write(*,*) 'I_coils allocated '               
-      end if
+        endif
+      endif
   
     endif   !End choice of STARWALL or COIL_FIELD coils
     
+    if ( my_id /= 0 ) then        
+      if ( allocated(I_coils) ) deallocate(I_coils)
+      allocate( I_coils(n_coils_nml) )
+    end if
+    
+    call MPI_bcast(n_coils,                              1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(I_coils,           n_coils_nml, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(coils0%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(coils0%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)

@@ -639,6 +639,15 @@ module vacuum_response
     ! --- Perform the time-stepping for the wall currents.
     if ( resistive_wall .and. (index_now>1) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
+    ! --- Calculate current source term for PF coil currents imposition
+    if ( (sr%ncoil /= 0) .and. (impose_coil_currents) .and.         &
+         (.not. ( (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils) ) )   ) then    !avoid it when using COIL_FIELD
+      call coil_current_source(my_id)
+    else
+      if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
+      Y_coils0(:) = 0.d0  
+    endif 
+    
     if ( vacuum_debug ) then
       write(*,*) my_id, 'psibnd_vec:  ', sum(abs(psibnd_vec)), sum(psibnd_vec)
       write(*,*) my_id, 'dpsibnd_vec: ', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
@@ -663,7 +672,7 @@ module vacuum_response
     !$omp shared(a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,    &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,      &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec, psibnd_coils,       &
-    !$omp   starwall_equil_coils,                                                                  &
+    !$omp   starwall_equil_coils, response_m_v, Y_coils0,                                          &
 #ifdef __GFORTRAN__
     !$omp   wgauss_copy,                                                                                &
 #endif
@@ -800,7 +809,8 @@ module vacuum_response
 
                       if ( resistive_wall ) &
                         rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) *  wall_curr(:) )  &
-                                                  + sum( response_m_g(i_resp, :) * dwall_curr(:) )   
+                                                  + sum( response_m_g(i_resp, :) * dwall_curr(:) )  &
+                                                  - sum( response_m_v(i_resp, :) *   Y_coils0(:) ) 
 
 
                       rhs_contrib = rhs_contrib * common_prefactor
@@ -1015,6 +1025,38 @@ module vacuum_response
   
   
   
+  !> Imposing PF coil currents as a current source term
+  subroutine coil_current_source(my_id)
+    
+    use constants
+    
+    implicit none
+   
+    ! --- Routine parameters
+    integer, intent(in) :: my_id  
+    integer             :: k
+    real*8, allocatable :: potentials_real_0(:)
+   
+    if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
+   
+    if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
+    if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
+    
+    Y_coils0          = 0.d0
+    potentials_real_0 = 0.d0
+    
+    potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
+    
+    do k = 1, n_wall_curr
+      Y_coils0(k) = sum(sr%s_ww_inv(k,:) * potentials_real_0(:))    
+    end do
+    
+  end subroutine coil_current_source
+  
+  
+  
+  
+  
   
   !> Perform the time-evolution of the wall currents (resistive wall).
   subroutine evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
@@ -1029,19 +1071,28 @@ module vacuum_response
     real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
-    integer :: k
+    integer             :: k
+    real*8, allocatable :: wall_curr0(:)
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)
     
     if ( (.not. allocated(old_dpsibnd_vec)) .or. (size(old_dpsibnd_vec,1)/= n_dof_starwall) ) then
       if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
       allocate( old_dpsibnd_vec(n_dof_starwall) )
-    end if
+    end if    
+    if (.not. allocated (wall_curr0)) allocate(wall_curr0(n_wall_curr))
+    
+    if ( (sr%ncoil /= 0) .and. (impose_coil_currents) .and.         &
+         (.not. ( (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils) ) )   ) then
+      wall_curr0(:) = Y_coils0(:)
+    else
+      wall_curr0(:) = 0.d0
+    endif
     
     do k = 1, n_wall_curr
-      dwall_curr(k) = sum( response_m_a(k,:) * dpsibnd_vec(:) ) &
-        + response_d_b(k) * wall_curr(k) &
-        + response_d_c(k) * dwall_curr(k) &
+      dwall_curr(k) = sum( response_m_a(k,:) * dpsibnd_vec(:) )  &
+        + response_d_b(k) * (wall_curr(k) - wall_curr0(k))       &
+        + response_d_c(k) * dwall_curr(k)                        &
         + sum( response_m_d(k,:) * old_dpsibnd_vec(:) ) !&
         !+ sum( response_m_k(k,:) * coil_voltages(:) )
     end do
@@ -1166,6 +1217,7 @@ module vacuum_response
                  .or. ( .not. allocated(response_m_j)      ) &
                  .or. ( .not. allocated(response_m_k)      ) &
                  .or. ( .not. allocated(response_m_l)      ) &
+                 .or. ( .not. allocated(response_m_v)      ) &                 
                  .or. ( .not. allocated(response_m_eq)     )
     
     if ( update_required ) then
@@ -1202,6 +1254,8 @@ module vacuum_response
         allocate( response_m_k(n_wall_curr, sr%ncoil) )
       if ( .not. allocated(response_m_l) ) &
         allocate( response_m_l(n_dof_starwall, sr%ncoil) )
+      if ( .not. allocated(response_m_v) ) &
+        allocate( response_m_v(n_dof_starwall, n_wall_curr) )
       
       ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
       
@@ -1254,6 +1308,10 @@ module vacuum_response
         
         response_m_l(:,:) = matmul( sr%a_ey(:,:), response_m_k(:,:) )
         
+        do k = 1, n_wall_curr
+          response_m_v(:,k) = sr%a_ey(:,k) * ( response_d_b(k) )
+        end do
+        
         deallocate( tmp_d_s )
         
       else ! (Ideal wall)
@@ -1269,6 +1327,7 @@ module vacuum_response
         response_m_j(:,:) = 0.d0
         response_m_k(:,:) = 0.d0 !####
         response_m_l(:,:) = 0.d0 !####
+        response_m_v(:,:) = 0.d0 !####
         
       end if
       
@@ -1286,6 +1345,7 @@ module vacuum_response
         write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
         write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
         write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
+        write(*,*) 'm_v:', sum(abs(response_m_v)), sum(response_m_v)
         write(*,*) 'm_eq:', sum(abs(response_m_eq(1:128,1:128))), sum(response_m_eq(1:128,1:128))
         write(*,*) 'END: Checksums'
       end if

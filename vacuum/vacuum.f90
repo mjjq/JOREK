@@ -36,13 +36,16 @@ module vacuum
   real*8, allocatable :: response_m_j(:,:)               !< \f$\hat{J}\f$ in the documentation
   real*8, allocatable :: response_m_k(:,:)               !< \f$\hat{K}\f$ in the documentation
   real*8, allocatable :: response_m_l(:,:)               !< \f$\hat{L}\f$ in the documentation
+  real*8, allocatable :: response_m_v(:,:)               !< \f$\hat{V}\f$ in the documentation
   real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
   integer             :: n_coils_nml                     !< specified number of poloidal field coils in namelist
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
-  real*8, allocatable :: I_coils(:)                      !< coil currents                 
+  logical             :: impose_coil_currents            !< PFcoils currents are imposed or free to evolve in time? (not valid for COIL_FIELD)
+  real*8, allocatable :: I_coils(:)                      !< coil currents           
+  real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source       
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
@@ -115,6 +118,7 @@ module vacuum
     ! --- Preset namelist input parameters.
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
+    impose_coil_currents = .true.
     freeboundary         = .false.
     resistive_wall       = .false.
     wall_resistivity     = 0.d0

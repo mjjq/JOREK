@@ -38,7 +38,7 @@ program JOREK2
   use pellet_module
   use equil_info
   use mod_boundary,            only: boundary_from_grid
-  use vacuum,              only: vacuum_preset, vacuum_init, broadcast_vacuum, wall_curr_initialized
+  use vacuum
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data,           only: init_live_data, write_live_data, finalize_live_data
@@ -238,6 +238,7 @@ required = 0
   
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
+  wall_resistivity = wall_resistivity_fact * sqrt( central_density * central_mass * mass_proton / mu_zero )
 
   ! --- MURGE with ntor=1 doesn't work up to now because i_tor is not allocated correctly
   if (n_tor == 1) then

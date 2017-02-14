@@ -15,7 +15,8 @@ module vacuum
   real*8              :: freeb_fact                      !< Switches on free-boundary terms in elt_matrix when =1.
   
   !> @name Resistive wall only
-  real*8              :: wall_resistivity                !< Resistivity of the external wall
+  real*8              :: wall_resistivity_fact           !< Scaling factor for the wall resistivity specified in STARWALL
+  real*8              :: wall_resistivity                !< Same scaling factor with normalization factor sqrt{rho_0/mu_0)
   real*8              :: wall_thickness        = 1.d0    !< Thickness of the external wall
   logical             :: wall_curr_initialized = .false. !< Have the wall currents been initialized?
   integer             :: n_wall_curr                     !< Number of wall current potentials.
@@ -115,7 +116,7 @@ module vacuum
     freeboundary_equil   = .false.
     freeboundary         = .false.
     resistive_wall       = .false.
-    wall_resistivity     = 0.d0
+    wall_resistivity_fact= 1.d0
         
     current_ref          = 1.d22
     FB_Ip_position       = 0.2d0
@@ -149,7 +150,7 @@ module vacuum
     ! --- Make input parameters consistent.
     freeboundary   = freeboundary .or. freeboundary_equil
     resistive_wall = freeboundary .and. resistive_wall
-        
+    
     ! --- Initialize some variables.
     sr%n_bnd  = 0
     sr%nd_bez = 0

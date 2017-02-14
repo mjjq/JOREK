@@ -412,9 +412,9 @@ if (my_id == 0) then
   if ( freeboundary ) then
     write(*,LOGI_FMT) 'resistive_wall        ', resistive_wall
     if ( resistive_wall ) then
-      write(*,REAL_FMT) 'wall_resistivity      ', wall_resistivity
+      write(*,REAL_FMT) 'wall_resistivity_fact ', wall_resistivity_fact
     end if
-    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time    
+    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time
   end if
   
   write(*,REAL_FMT) 'amix                  ', amix

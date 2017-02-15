@@ -65,8 +65,8 @@ call h5gclose_f(group_id, hdferr)
 
 ! Write the time
 call h5screate_simple_f(1, [1_HSIZE_T], time_space_id, hdferr)
-call h5dcreate_f(file, '/time', H5T_NATIVE_DOUBLE, time_space_id, time_set_id, hdferr)
-call h5dwrite_f(time_set_id, H5T_NATIVE_DOUBLE, sim%time, [1_HSIZE_T], hdferr)
+call h5dcreate_f(file, '/time', H5T_NATIVE_REAL, time_space_id, time_set_id, hdferr)
+call h5dwrite_f(time_set_id, H5T_NATIVE_REAL, sim%time, [1_HSIZE_T], hdferr)
 call h5dclose_f(time_set_id, hdferr)
 call h5sclose_f(time_space_id, hdferr)
 
@@ -251,7 +251,7 @@ call h5pclose_f(plist, hdferr)
 
 ! read the time
 call h5dopen_f(file, '/time', time_set_id, hdferr)
-call h5dread_f(time_set_id, H5T_NATIVE_DOUBLE, sim%time, [1_HSIZE_T], hdferr)
+call h5dread_f(time_set_id, H5T_NATIVE_REAL, sim%time, [1_HSIZE_T], hdferr)
 call h5dclose_f(time_set_id, hdferr)
 
 ! Get the number of groups

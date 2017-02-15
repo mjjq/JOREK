@@ -210,7 +210,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   use mod_fields
   use mod_random_seed
   use constants
-  use phys_module, only: F0
+  use phys_module, only: F0, central_density
   use mod_coronal
   use mod_boris, only: gc_to_kinetic_leapfrog
   use mpi
@@ -343,7 +343,13 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         B        = [+psi_Z, -psi_R, F0] / R
 
         ! 2. Calculate H and mu, save in particle
-        H  = H_transform(ran(2)) ! [eV]
+        call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[6],1, &
+          s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+        T = P(1)/(2.d0*MU_ZERO*central_density*1.d20) ! [eV]
+#if (JOREK_MODEL == 400)
+      T = T*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
+#endif
+        H  = H_transform(ran(2), T) ! [eV]
         muB = 4.d0*H*(ran(3)-0.5d0)**2 ! linearly distributed between -H and H [eV]
         ! Because there are 2 dimensions in v_perp => v_par^2/v_perp^2 = 1/2
         ! we need this distribution
@@ -418,7 +424,7 @@ end subroutine initialise_particles_H_mu_psi
 !> The particle weight is set to the value of this distribution function at the specific point.
 !> \(\bar T(\bar\psi)\) is approximated by \(T(\psi)\) if it is missing.
 !> \(\bar n(\bar\psi)\) is approximated by 1 if it is missing.
-subroutine set_particle_weights_canonical_maxwellian(particles, node_list, element_list, mass, n_psibar, T_psibar)
+subroutine set_particle_weights_canonical_maxwellian(particles, node_list, element_list, mass, n_psibar, T_psibar, alpha)
   use data_structure
   use constants
   use phys_module, only: central_density, central_mass
@@ -429,11 +435,13 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
   real*8, intent(in)                                :: mass
   real*8, external, optional                        :: n_psibar
   real*8, external, optional                        :: T_psibar
+  real*8, optional                                  :: alpha !< Interpolation factor between sampling from a block and the maxwellian
 
   integer :: i
   real*8  :: t_norm, psibar, H, n, T
   real*8, dimension(1) :: P, P_s, P_t, P_phi
   real*8  :: R, R_s, R_t, Z, Z_s, Z_t
+  real*8  :: my_alpha
 
   t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
@@ -471,9 +479,14 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       ! Because we give weights based on the energy and temperature areas with lower temperature are getting
       ! too high weights. Work around this by defining a minimum temperature to stop the outer regions from 
       ! dominating the projection.
-      T = max(1d7,T)
+      T = max(1d2,T)
     end if
-    particles(i)%weight = real(n/(TWOPI*T/(mass*ATOMIC_MASS_UNIT)) * exp(-H/T),4)
+    if (present(alpha)) then
+      my_alpha = alpha
+    else
+      my_alpha = 1.d0
+    end if
+    particles(i)%weight = real(n/(TWOPI*T/(mass*ATOMIC_MASS_UNIT)) * exp(-H*my_alpha/T),4)
   end do
   !$omp end parallel do
 end subroutine set_particle_weights_canonical_maxwellian

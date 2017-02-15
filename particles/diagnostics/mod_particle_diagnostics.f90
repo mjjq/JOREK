@@ -217,7 +217,7 @@ subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, ds
   integer(HSIZE_T), intent(in) :: n_particles
   integer :: ierr
   integer(HID_T) :: crp_list
-  integer(HSIZE_T), parameter :: chunk_size(3) = [1000_HSIZE_T,n_var,1_HSIZE_T]
+  integer(HSIZE_T), parameter :: chunk_size(3) = [10000_HSIZE_T,1_HSIZE_T,1_HSIZE_T]
 
   ! Create a dataspace with unlimited dimensions, 
   call h5screate_simple_f(3, [n_particles,n_var,0_HSIZE_T], dspace, ierr, &

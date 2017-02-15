@@ -65,7 +65,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, rot_file,           &
                 normalized_velocity_profile,                        &
                 freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity_fact,              &
+                resistive_wall,                                     &
+                wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &

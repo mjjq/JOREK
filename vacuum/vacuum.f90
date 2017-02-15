@@ -72,6 +72,7 @@ module vacuum
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   
   type :: t_starwall_response
+    integer :: file_version
     integer :: n_bnd
     integer :: nd_bez
     integer :: ncoil
@@ -79,6 +80,7 @@ module vacuum
     integer :: n_w
     integer :: ntri_w
     integer :: n_tor
+    real*8  :: eta_thin_w !< In SI units
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
     real*8,  allocatable :: a_ye(:,:)
@@ -116,6 +118,7 @@ module vacuum
     freeboundary_equil   = .false.
     freeboundary         = .false.
     resistive_wall       = .false.
+    wall_resistivity     = 0.d0
     wall_resistivity_fact= 1.d0
         
     current_ref          = 1.d22

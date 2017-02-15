@@ -238,8 +238,7 @@ required = 0
   
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
-  wall_resistivity = wall_resistivity_fact * sqrt( central_density * central_mass * mass_proton / mu_zero )
-
+  
   ! --- MURGE with ntor=1 doesn't work up to now because i_tor is not allocated correctly
   if (n_tor == 1) then
     gmres     = .false.

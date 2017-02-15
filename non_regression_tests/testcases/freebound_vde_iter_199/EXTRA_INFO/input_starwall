@@ -27,9 +27,6 @@
   !   1=Fourier series, 2=triangles, 3=triangles+index fu.
   iwall      = 1,
   
-  ! Are there external coils? 0=no, 1=yes
-  ! (CURRENTLY UNUSED)
-  nu_coil    = 0,
 /
 
 
@@ -37,6 +34,9 @@
 &PARAMS_WALL
   ! Wall grid points in poloidal direction
   nwu        = 24,
+  
+  ! eta_thin,wall in SI units [Ohm]
+  eta_thin_w = 3.8763328e-5
   
   ! Wall grid points in toroidal direction
   nwv        = 24,

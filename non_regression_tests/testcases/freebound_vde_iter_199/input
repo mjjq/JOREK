@@ -8,7 +8,8 @@
  freeboundary       = .t.
  freeboundary_equil = .t.
  resistive_wall     = .t.
- wall_resistivity   = 2e-5
+ wall_resistivity   = 2.d-5
+ wall_resistivity_fact = 1.
  
  amix                 = 0.25
  amix_freeb           = 0.65

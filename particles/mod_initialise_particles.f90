@@ -308,7 +308,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle) &
     !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
-    !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize)
+    !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, central_density)
     do i=1,blocksize
       ran(:) = rans(:,i)
 
@@ -444,9 +444,14 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
   real*8  :: my_alpha
 
   t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+  if (present(alpha)) then
+    my_alpha = alpha
+  else
+    my_alpha = 1.d0
+  end if
 
   !$omp parallel do default(none) private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
-  !$omp shared(particles, node_list, element_list, mass, central_density)
+  !$omp shared(particles, node_list, element_list, mass, central_density, my_alpha)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .eq. 0) cycle
     call       interp_PRZ(node_list,element_list,particles(i)%i_elm,[1],1, &
@@ -480,11 +485,6 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       ! too high weights. Work around this by defining a minimum temperature to stop the outer regions from 
       ! dominating the projection.
       T = max(1d2,T)
-    end if
-    if (present(alpha)) then
-      my_alpha = alpha
-    else
-      my_alpha = 1.d0
     end if
     particles(i)%weight = real(n/(TWOPI*T/(mass*ATOMIC_MASS_UNIT)) * exp(-H*my_alpha/T),4)
   end do

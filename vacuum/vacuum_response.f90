@@ -86,11 +86,11 @@ module vacuum_response
     
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
     if ( sr%file_version == 1 ) then
-      write(*,*) 'Remark: STARWALL response file_version==1 means that the wall_resistivity is specified inside the JOREK namelist file.'
+      write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
       write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
     else
-      write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input and the JOREK'
-      write(*,*) '        variable wall_resistivity is automatically calculated from it.'
+      write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
+      write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
       write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
       wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
@@ -477,7 +477,7 @@ module vacuum_response
     write(*,33) 'n_w          =', sr%n_w
     write(*,33) 'ntri_w       =', sr%ntri_w
     write(*,33) 'n_tor        =', sr%n_tor
-    write(*,37) 'eta_thin_w   =', sr%eta_thin_w
+    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
     if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
       write(*,32)

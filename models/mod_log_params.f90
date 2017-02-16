@@ -22,7 +22,8 @@ integer,           intent(in) :: my_id !< MPI proc id
 logical, optional             :: short !< commandline short version or run long version
 
 ! --- Constants
-character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 10ES12.4,a)"
+character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 10ES12.4)"
+character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
 character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 10I12)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
 character(len=512), parameter :: REA2_FMT = "(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)"
@@ -412,8 +413,8 @@ if (my_id == 0) then
   if ( freeboundary ) then
     write(*,LOGI_FMT) 'resistive_wall        ', resistive_wall
     if ( resistive_wall ) then
-      write(*,REAL_FMT) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
-      write(*,REAL_FMT) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
+      write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
+      write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
     write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time
   end if

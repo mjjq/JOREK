@@ -41,9 +41,11 @@ module vacuum_response
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
     freeboundary_equil, resistive_wall)
   
-    use mod_parameters,     only: n_tor
-    use data_structure, only: type_node_list, type_bnd_element_list, type_bnd_node_list
     use mpi_mod
+    use constants
+    use mod_parameters, only: n_tor
+    use data_structure, only: type_node_list, type_bnd_element_list, type_bnd_node_list
+    use phys_module,    only: central_mass, central_density
 
     implicit none    
     
@@ -57,6 +59,7 @@ module vacuum_response
     integer :: i,j, ierr, dim
     logical :: exists
  
+    ! --- Determine total number of boundary degrees of freedom per harmonic (skipping duplicates).
     do i=1, bnd_node_list%n_bnd_nodes
       exists = .false.
       do j=1, i-1
@@ -70,7 +73,7 @@ module vacuum_response
       endif
     enddo
 
-    write(*,'(A,i5)') 'total number of degrees of freedom on the boundary : ',n_dof_bnd
+    if (my_id == 0) write(*,'(A,i5)') '   total number of degrees of freedom on the boundary : ',n_dof_bnd
     
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
@@ -81,7 +84,22 @@ module vacuum_response
 
     call broadcast_starwall_response(my_id, sr)
     
-    if ( my_id == 0 ) call log_starwall_response(sr)
+    ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
+    if ( sr%file_version == 1 ) then
+      write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
+      write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
+    else
+      write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
+      write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
+      write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
+      wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
+        sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
+    end if
+    
+    if ( my_id == 0 ) then
+      call log_starwall_response(sr)
+      if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
+    end if
     
   end subroutine get_vacuum_response
   
@@ -235,7 +253,7 @@ module vacuum_response
     ! --- Local variables
     integer, parameter :: filehandle = 60
     character(len=512) :: comment
-    integer            :: file_version, i, j, i_starw, n, is_sin, err, i_tmp
+    integer            :: i, j, i_starw, n, is_sin, err, i_tmp
     real*8             :: r_tmp
     real*8, allocatable :: tmp(:)
     
@@ -274,9 +292,9 @@ module vacuum_response
       read(filehandle) comment
     end if
     
-    file_version = read_intparam(filehandle, 'file_version')
-    if ( file_version > 1 ) then
-      write(*,*) 'ERROR: STARWALL response file version ', file_version, ' is not supported.'
+    sr%file_version = read_intparam(filehandle, 'file_version')
+    if ( sr%file_version > 2 ) then
+      write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
       stop
     end if
 
@@ -289,6 +307,17 @@ module vacuum_response
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
 
     call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
+    
+    ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
+    if ( sr%file_version >= 2 ) then
+      allocate(tmp(1))
+      call read_array(filehandle, 'eta_thin_w', (/1,0/),            float1d=tmp)
+      sr%eta_thin_w = tmp(1)
+      deallocate(tmp)
+    else
+      sr%eta_thin_w = 0.
+    end if
+    
     call read_array(filehandle, 'yy',       (/sr%n_w,0/),            float1d=sr%d_yy)
     call read_array(filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    float2d=sr%a_ye)
     call read_array(filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    float2d=sr%a_ey)
@@ -299,7 +328,7 @@ module vacuum_response
     call read_array(filehandle, 'jpot_w',   (/sr%ntri_w,3/),         int2d=sr%jpot_w)
 
     close(filehandle)
-    if ( vacuum_debug) write(*,*) 'Finished reading import of vacuum response.'
+    if ( vacuum_debug) write(*,*) 'Finished reading vacuum response.'
 
     ! --- Import normalization
     sr%a_ee(:,:) = sr%a_ee(:,:) * 2.d0*PI
@@ -350,7 +379,8 @@ module vacuum_response
   !> Broadcast the STARWALL response matrices to the other MPI procs.
   subroutine broadcast_starwall_response(my_id, sr)
     
-  use mpi_mod
+    use mpi_mod
+    
     implicit none
     
     
@@ -360,18 +390,19 @@ module vacuum_response
     
     ! --- Local parameters
     integer :: ierr
-    real*8  :: checksum
     
     if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
     
     ! --- Broadcast parameters.
-    call MPI_bcast(sr%n_bnd,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%nd_bez,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ncoil,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%npot_w,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_w,     1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ntri_w,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%file_version, 1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_bnd,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nd_bez,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ncoil,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%npot_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     
     n_dof_starwall = sr%nd_bez
     n_wall_curr    = sr%n_w
@@ -404,12 +435,13 @@ module vacuum_response
     call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     
-    if ( vacuum_debug ) write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
-       + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)   &
-       + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil   &
-       + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor
-    
-    if ( vacuum_debug ) write(*,*) my_id, 'Exiting broadcast_starwall_response.'
+    if ( vacuum_debug ) then
+      write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
+        + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)  &
+        + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
+        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version
+      write(*,*) my_id, 'Exiting broadcast_starwall_response.'
+    end if
     
   end subroutine broadcast_starwall_response
   
@@ -432,17 +464,20 @@ module vacuum_response
     34 format(3x,'sum(',a,')=',es24.16)
     35 format(3x,'sum(',a,')=',i24)
     36 format(3x,'sum(',a,')= ---not allocated---')
+    37 format(3x,a,es25.15)
     write(*,*)
     write(*,32)
     write(*,33) 'STARWALL RESPONSE INFORMATION:'
     write(*,32)
-    write(*,33) 'n_bnd =', sr%n_bnd
-    write(*,33) 'nd_bez=', sr%nd_bez
-    write(*,33) 'ncoil =', sr%ncoil
-    write(*,33) 'npot_w=', sr%npot_w
-    write(*,33) 'n_w   =', sr%n_w
-    write(*,33) 'ntri_w=', sr%ntri_w
-    write(*,33) 'n_tor =', sr%n_tor
+    write(*,33) 'file_version =', sr%file_version
+    write(*,33) 'n_bnd        =', sr%n_bnd
+    write(*,33) 'nd_bez       =', sr%nd_bez
+    write(*,33) 'ncoil        =', sr%ncoil
+    write(*,33) 'npot_w       =', sr%npot_w
+    write(*,33) 'n_w          =', sr%n_w
+    write(*,33) 'ntri_w       =', sr%ntri_w
+    write(*,33) 'n_tor        =', sr%n_tor
+    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
     if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
       write(*,32)

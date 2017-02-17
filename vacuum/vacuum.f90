@@ -6,14 +6,16 @@ module vacuum
   implicit none
   
   !> @name General parameters
-  logical, parameter  :: vacuum_debug          = .false. !< Enable additional output and tests
+  logical, parameter  :: vacuum_debug          = .true.  !< Enable additional output and tests
   logical, parameter  :: vacuum_decouple_modes = .false. !< Option to switch off 3D wall mode coupling
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
   integer, parameter  :: ivar_psi = 1                    !< Index of Psi variable
   integer, parameter  :: ivar_j   = 3                    !< Index of j variable
+  real*8              :: freeb_fact                      !< Switches on free-boundary terms in elt_matrix when =1.
   
   !> @name Resistive wall only
+  real*8              :: wall_resistivity_fact           !< Scaling factor for the wall resistivity specified in STARWALL
   real*8              :: wall_resistivity                !< Resistivity of the external wall
   real*8              :: wall_thickness        = 1.d0    !< Thickness of the external wall
   logical             :: wall_curr_initialized = .false. !< Have the wall currents been initialized?
@@ -70,6 +72,7 @@ module vacuum
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   
   type :: t_starwall_response
+    integer :: file_version
     integer :: n_bnd
     integer :: nd_bez
     integer :: ncoil
@@ -77,6 +80,7 @@ module vacuum
     integer :: n_w
     integer :: ntri_w
     integer :: n_tor
+    real*8  :: eta_thin_w !< In SI units
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
     real*8,  allocatable :: a_ye(:,:)
@@ -115,6 +119,7 @@ module vacuum
     freeboundary         = .false.
     resistive_wall       = .false.
     wall_resistivity     = 0.d0
+    wall_resistivity_fact= 1.d0
         
     current_ref          = 1.d22
     FB_Ip_position       = 0.2d0
@@ -157,6 +162,10 @@ module vacuum
     sr%n_w    = 0
     sr%ntri_w = 0
     sr%n_tor  = 0
+    
+    ! --- Switch on terms on the RHS of current equation definition when using free-boundary
+    freeb_fact = 0.d0
+    if ( freeboundary ) freeb_fact = 1.d0
     
     if ( (my_id == 0) .and. (sum(coils0%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
        write(*,*) 'WARNING: Poloidal field coil perturbation coils0%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
@@ -508,6 +517,7 @@ module vacuum
     end if
     
     call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
+    call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum
   

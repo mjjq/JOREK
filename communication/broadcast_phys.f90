@@ -75,8 +75,17 @@ if (my_id .eq. 0) then
   call MPI_PACK(heatsource,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(heatsource_i,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(heatsource_e,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(heatsource_gauss,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(heatsource_gauss_psin,  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(heatsource_gauss_sig,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particlesource,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  
+  call MPI_PACK(particlesource_gauss,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(particlesource_gauss_psin,1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(particlesource_gauss_sig, 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(edgeparticlesource,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
+  call MPI_PACK(edgeparticlesource_psin,1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(edgeparticlesource_sig, 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
   call MPI_PACK(ZK_perp,               10,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ZK_par,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ZK_par_max,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -190,8 +199,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(dPSI_inner,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(dPSI_private,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(dPSI_up_priv,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(lambda,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(tset,                   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(RMP_growth_rate,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(RMP_ramp_up_time,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(RMP_start_time,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(t_start,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(R_limiter,    max_limiter,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
@@ -206,6 +215,7 @@ if (my_id .eq. 0) then
   call MPI_PACK (aki_neo_const,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (amu_neo_const,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+  call MPI_PACK (wall_resistivity_fact, 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (wall_resistivity,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   
   call MPI_PACK (amix,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -361,7 +371,10 @@ if (my_id .eq. 0) then
   call MPI_PACK(R_geo,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(corr_neg_temp_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(corr_neg_dens_coef,     2,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  
+  call MPI_PACK(Number_RMP_harmonics,   1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(RMP_har_cos_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(RMP_har_sin_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
   write(*,'(1x,a,i7,a,i7,a)') 'Buffer usage:', position, ' of', bufsize
   if ( position > bufsize ) then
     err_buff_too_small = .true.
@@ -421,7 +434,16 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,heatsource,             1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,heatsource_i,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,heatsource_e,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss_psin,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss_sig,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particlesource,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particlesource_gauss,   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particlesource_gauss_psin, 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,particlesource_gauss_sig,  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,edgeparticlesource,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,edgeparticlesource_psin, 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,edgeparticlesource_sig, 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,ZK_perp,               10,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ZK_par,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -536,8 +558,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,dPSI_inner,		  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,dPSI_private, 	  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,dPSI_up_priv, 	  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,lambda, 	          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,tset,        	          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,RMP_growth_rate,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,RMP_ramp_up_time,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,RMP_start_time,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,t_start,     	          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,R_limiter,    max_limiter,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -554,6 +576,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,aki_neo_const,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,amu_neo_const,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
+  call MPI_UNPACK(buffer,bufsize,position,wall_resistivity_fact,  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,wall_resistivity,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,amix ,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,amix_freeb ,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -713,6 +736,9 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,corr_neg_temp_coef,     2,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,corr_neg_dens_coef,     2,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position, Number_RMP_harmonics,   1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position, RMP_har_cos_spectrum,   N_RMP_MAX,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position, RMP_har_sin_spectrum,   N_RMP_MAX,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
 endif
 

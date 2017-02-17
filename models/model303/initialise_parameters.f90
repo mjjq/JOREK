@@ -64,7 +64,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, rot_file,           &
                 normalized_velocity_profile,                        &
                 freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   &
+                resistive_wall,                                     &
+                wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 murge_with_starpu, murge_cuda_nbr,                  &
@@ -76,6 +77,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
@@ -83,7 +89,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-                RMP_on, lambda, tset, RMP_har_cos,RMP_har_sin,      &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 wall_file,                                          &
@@ -93,6 +100,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 time_evol_scheme,                                   &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
+                Number_RMP_harmonics,RMP_har_cos_spectrum,          &
+                RMP_har_sin_spectrum,                               &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &

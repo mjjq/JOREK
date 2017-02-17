@@ -50,7 +50,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl, xwidth, xsig, xtheta, xshift, xleft, xpoint, &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
-                freeboundary, resistive_wall, wall_resistivity,     &
+                freeboundary, resistive_wall,                       &
+                wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp, n_tor_fft_thresh,                         &
                 pastix_smp_only, refinement, grid_to_wall,          &
@@ -59,6 +60,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_T_dependent, visco_T_dependent,                 &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
                 produce_live_data, gmres, gmres_max_iter,           &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &

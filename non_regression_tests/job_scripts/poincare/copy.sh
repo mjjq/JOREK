@@ -9,5 +9,5 @@ ORIG=$1
 TG=$2
 PORIG="${ORIG%.*}"
 PTG="${TG%.*}"
-printf "Creating %-32s based on contents of the file $ORIG\n" $TG
+printf "Creating %-32s based on contents of the file $ORIG\n" "$TG"
 sed "s/${PORIG}/${PTG}/g" $ORIG > $TG

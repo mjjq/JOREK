@@ -628,6 +628,11 @@ module vacuum_response
 #endif
     !integer :: rate, t0, t1 !### timing ###
     logical, save  :: PF_perturbation = .true. 
+    
+    if ( sr%n_tor == 0 ) then
+      write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
+      return
+    end if
 
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
     

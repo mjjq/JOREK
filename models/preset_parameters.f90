@@ -282,11 +282,17 @@ subroutine preset_parameters
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
   RMP_psi_cos_file   = 'none'
   RMP_psi_sin_file   = 'none'
-  lambda=0.0663
-  tset = 150
+  RMP_growth_rate    = 0.011 ! RMP_growth_rate * RMP_ramp_up_time must be ~cst
+  RMP_ramp_up_time   = 1000  ! in JOREK times
   output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
   RMP_har_cos=2
   RMP_har_sin=3
+  Number_RMP_harmonics=1
+  RMP_har_cos_spectrum(:)=0
+  RMP_har_cos_spectrum(1)=RMP_har_cos ! =2 if only one harmonic (ntor=3) and this harmonic is RMP 
+  RMP_har_sin_spectrum(:)=0
+  RMP_har_sin_spectrum(1)=RMP_har_sin ! =3 if only one harmonic (ntor=3) and this harmonic is RMP 
+
 ! ===== Neoclassical parameters ======
   NEO = .false.
   neo_file ='none'

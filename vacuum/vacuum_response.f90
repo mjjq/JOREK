@@ -41,9 +41,11 @@ module vacuum_response
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
     freeboundary_equil, resistive_wall)
   
-    use mod_parameters,     only: n_tor
-    use data_structure, only: type_node_list, type_bnd_element_list, type_bnd_node_list
     use mpi_mod
+    use constants
+    use mod_parameters, only: n_tor
+    use data_structure, only: type_node_list, type_bnd_element_list, type_bnd_node_list
+    use phys_module,    only: central_mass, central_density
 
     implicit none    
     
@@ -57,6 +59,7 @@ module vacuum_response
     integer :: i,j, ierr, dim
     logical :: exists
  
+    ! --- Determine total number of boundary degrees of freedom per harmonic (skipping duplicates).
     do i=1, bnd_node_list%n_bnd_nodes
       exists = .false.
       do j=1, i-1
@@ -70,8 +73,7 @@ module vacuum_response
       endif
     enddo
 
-
-    if ( my_id == 0 ) write(*,'(A,i5)') 'total number of degrees of freedom on the boundary : ',n_dof_bnd
+    if (my_id == 0) write(*,'(A,i5)') '   total number of degrees of freedom on the boundary : ',n_dof_bnd
     
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
@@ -82,7 +84,22 @@ module vacuum_response
 
     call broadcast_starwall_response(my_id, sr)
     
-    if ( my_id == 0 ) call log_starwall_response(sr)
+    ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
+    if ( sr%file_version == 1 ) then
+      write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
+      write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
+    else
+      write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
+      write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
+      write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
+      wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
+        sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
+    end if
+    
+    if ( my_id == 0 ) then
+      call log_starwall_response(sr)
+      if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
+    end if
     
   end subroutine get_vacuum_response
   
@@ -236,7 +253,7 @@ module vacuum_response
     ! --- Local variables
     integer, parameter :: filehandle = 60
     character(len=512) :: comment
-    integer            :: file_version, i, j, i_starw, n, is_sin, err, i_tmp
+    integer            :: i, j, i_starw, n, is_sin, err, i_tmp
     real*8             :: r_tmp
     real*8, allocatable :: tmp(:)
     
@@ -275,9 +292,9 @@ module vacuum_response
       read(filehandle) comment
     end if
     
-    file_version = read_intparam(filehandle, 'file_version')
-    if ( file_version > 1 ) then
-      write(*,*) 'ERROR: STARWALL response file version ', file_version, ' is not supported.'
+    sr%file_version = read_intparam(filehandle, 'file_version')
+    if ( sr%file_version > 2 ) then
+      write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
       stop
     end if
 
@@ -290,6 +307,17 @@ module vacuum_response
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
 
     call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
+    
+    ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
+    if ( sr%file_version >= 2 ) then
+      allocate(tmp(1))
+      call read_array(filehandle, 'eta_thin_w', (/1,0/),            float1d=tmp)
+      sr%eta_thin_w = tmp(1)
+      deallocate(tmp)
+    else
+      sr%eta_thin_w = 0.
+    end if
+    
     call read_array(filehandle, 'yy',       (/sr%n_w,0/),            float1d=sr%d_yy)
     call read_array(filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    float2d=sr%a_ye)
     call read_array(filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    float2d=sr%a_ey)
@@ -300,7 +328,7 @@ module vacuum_response
     call read_array(filehandle, 'jpot_w',   (/sr%ntri_w,3/),         int2d=sr%jpot_w)
 
     close(filehandle)
-    if ( vacuum_debug) write(*,*) 'Finished reading import of vacuum response.'
+    if ( vacuum_debug) write(*,*) 'Finished reading vacuum response.'
 
     ! --- Import normalization
     sr%a_ee(:,:) = sr%a_ee(:,:) * 2.d0*PI
@@ -351,7 +379,8 @@ module vacuum_response
   !> Broadcast the STARWALL response matrices to the other MPI procs.
   subroutine broadcast_starwall_response(my_id, sr)
     
-  use mpi_mod
+    use mpi_mod
+    
     implicit none
     
     
@@ -361,18 +390,19 @@ module vacuum_response
     
     ! --- Local parameters
     integer :: ierr
-    real*8  :: checksum
     
     if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
     
     ! --- Broadcast parameters.
-    call MPI_bcast(sr%n_bnd,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%nd_bez,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ncoil,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%npot_w,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_w,     1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ntri_w,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%file_version, 1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_bnd,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nd_bez,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ncoil,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%npot_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     
     n_dof_starwall = sr%nd_bez
     n_wall_curr    = sr%n_w
@@ -405,12 +435,13 @@ module vacuum_response
     call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     
-    if ( vacuum_debug ) write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
-       + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)   &
-       + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil   &
-       + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor
-    
-    if ( vacuum_debug ) write(*,*) my_id, 'Exiting broadcast_starwall_response.'
+    if ( vacuum_debug ) then
+      write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
+        + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)  &
+        + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
+        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version
+      write(*,*) my_id, 'Exiting broadcast_starwall_response.'
+    end if
     
   end subroutine broadcast_starwall_response
   
@@ -433,17 +464,20 @@ module vacuum_response
     34 format(3x,'sum(',a,')=',es24.16)
     35 format(3x,'sum(',a,')=',i24)
     36 format(3x,'sum(',a,')= ---not allocated---')
+    37 format(3x,a,es25.15)
     write(*,*)
     write(*,32)
     write(*,33) 'STARWALL RESPONSE INFORMATION:'
     write(*,32)
-    write(*,33) 'n_bnd =', sr%n_bnd
-    write(*,33) 'nd_bez=', sr%nd_bez
-    write(*,33) 'ncoil =', sr%ncoil
-    write(*,33) 'npot_w=', sr%npot_w
-    write(*,33) 'n_w   =', sr%n_w
-    write(*,33) 'ntri_w=', sr%ntri_w
-    write(*,33) 'n_tor =', sr%n_tor
+    write(*,33) 'file_version =', sr%file_version
+    write(*,33) 'n_bnd        =', sr%n_bnd
+    write(*,33) 'nd_bez       =', sr%nd_bez
+    write(*,33) 'ncoil        =', sr%ncoil
+    write(*,33) 'npot_w       =', sr%npot_w
+    write(*,33) 'n_w          =', sr%n_w
+    write(*,33) 'ntri_w       =', sr%ntri_w
+    write(*,33) 'n_tor        =', sr%n_tor
+    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
     if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
       write(*,32)
@@ -480,6 +514,7 @@ module vacuum_response
   subroutine write_wall_vtk(index, resistive_wall)
     
     use phys_module, only: nout
+    use constants
     
     implicit none
     
@@ -488,12 +523,23 @@ module vacuum_response
     logical, intent(in) :: resistive_wall
     
     ! --- Local variables
-    real*8              :: phi1, phi2, phi3, r1(3), r2(3), r3(3), r21(3), r32(3), r21_cross_r32(3)
-    integer             :: filehandle = 60, i
+    real*8              :: phi1, phi2, phi3, r1(3), r2(3), r3(3), r21(3), r32(3), r13(3), r21_cross_r32(3)
+    real*8              :: nm(3), n13(3), n32(3), n21(3), j_lin(3), j13, j32, j21
+    real*8              :: ephi12(3),ephi13(3),ephi23(3), jsides(3)
+    real*8              :: pol13(3), pol32(3), pol21(3)
+    real*8              :: mid12(3), mid23(3), mid13(3), angle12, angle13, angle23
+    integer             :: filehandle = 60, i, maxcurr_pos
+    logical             :: Iphi_max, Ipol_max, jphi_lin, jpol_lin
     character(len=18)   :: filename
     real*8, allocatable :: tripot_w(:)
     
     if ( mod(index,nout) /= 0 ) return
+    
+    ! --- Preset values
+    Iphi_max = .false.
+    jphi_lin = .true.
+    Ipol_max = .false.
+    jpol_lin = .false.    
     
     ! --- VTK file header
     write(filename,'(A,I5.5,A)') 'wallcurr.',index,'.vtk'
@@ -537,9 +583,316 @@ module vacuum_response
       write(filehandle,142) tripot_w(i)
     end do
     
-    ! --- Wall current vectors
+    ! --- Cell data variables
     write(filehandle,141) 'CELL_DATA', sr%ntri_w
-    write(filehandle,140) 'VECTORS jsurf_w float'
+   
+    ! --- Maximum toroidal current flwoing on a triangle (kA)
+    if (Iphi_max) then
+        
+      write(filehandle,140) 'SCALARS Iphi_max(kA) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+          
+        !--- Vector normal to triangle surface
+        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+        
+        !--- Normal vectors to triangle sides
+        n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
+          r13(1)*nm(2) - r13(2)*nm(1) /)
+        n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
+          r21(1)*nm(2) - r21(2)*nm(1) /)
+        n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
+          r32(1)*nm(2) - r32(2)*nm(1) /)
+        
+        !--- Normalized vectors normal to triangle sides
+        n13(:) = n13(:)/ sqrt(sum(n13**2))
+        n21(:) = n21(:)/ sqrt(sum(n21**2))
+        n32(:) = n32(:)/ sqrt(sum(n32**2))
+        
+        !--- Toroidal current flowing per side of the triangle 
+        j13    = abs(dot_product(n13,ephi13)) * sqrt(sum(r13**2)) * dot_product(ephi13,j_lin)
+        j21    = abs(dot_product(n21,ephi12)) * sqrt(sum(r21**2)) * dot_product(ephi12,j_lin)
+        j32    = abs(dot_product(n32,ephi23)) * sqrt(sum(r32**2)) * dot_product(ephi23,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum absolute current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum toroidal current flowing on a triangle side, in kA
+        write(filehandle,142) jsides(maxcurr_pos) 
+      
+      enddo
+    endif
+    
+    ! --- Maximum poloidal current flwoing on a triangle (kA)
+    if (Ipol_max) then
+   
+      write(filehandle,140) 'SCALARS Ipol_max(kA) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+          
+        !--- Vector normal to triangle surface
+        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+        
+        !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
+        pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
+          ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
+        pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
+          ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
+        pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
+          ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
+        
+        !--- Normalized poloidal vectors by triangle side
+        pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
+        pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
+        pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
+        
+        !--- Normal vectors to triangle sides
+        n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
+          r13(1)*nm(2) - r13(2)*nm(1) /)
+        n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
+          r21(1)*nm(2) - r21(2)*nm(1) /)
+        n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
+          r32(1)*nm(2) - r32(2)*nm(1) /)
+        
+        !--- Normalized vectors normal to triangle sides
+        n13(:) = n13(:)/ sqrt(sum(n13**2))
+        n21(:) = n21(:)/ sqrt(sum(n21**2))
+        n32(:) = n32(:)/ sqrt(sum(n32**2))
+        
+        !--- Poloidal current flowing per side of the triangle 
+        j13    = abs(dot_product(n13,pol13)) * sqrt(sum(r13**2)) * dot_product(pol13,j_lin)
+        j21    = abs(dot_product(n21,pol21)) * sqrt(sum(r21**2)) * dot_product(pol21,j_lin)
+        j32    = abs(dot_product(n32,pol32)) * sqrt(sum(r32**2)) * dot_product(pol32,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum absolute current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum poloidal current flowing on a triangle side, in kA
+        write(filehandle,142) jsides(maxcurr_pos) 
+      
+      enddo
+    endif
+    
+    ! --- Linear toroidal current density per triangle (kA/m)
+    if (jphi_lin) then
+   
+      write(filehandle,140) 'SCALARS jphi_lin(kA/m) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+        
+        !--- Toroidal linear density current in each triangle side
+        j13    =  dot_product(ephi13,j_lin)
+        j21    =  dot_product(ephi12,j_lin)
+        j32    =  dot_product(ephi23,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum toroidal linear density current flowing on a triangle side, in kA/m
+        write(filehandle,142) jsides(maxcurr_pos) 
+      
+      enddo
+    endif
+    
+    ! --- Poloidal linear density current flowing on a triangle (kA/m)
+    if (jpol_lin) then
+   
+      write(filehandle,140) 'SCALARS jpol_lin(kA/m) float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+       
+      do i = 1, sr%ntri_w
+       
+        ! --- Wall potentials at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        
+        ! --- Positions of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        
+        ! --- Middle points on triangle sides
+        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+             
+        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+        angle12 = atan2(-mid12(1),mid12(3))
+        angle13 = atan2(-mid13(1),mid13(3))
+        angle23 = atan2(-mid23(1),mid23(3))
+        
+        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+       
+        ! --- Quantities needed to calculate the current density vector 
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r13(:) = r3(:)-r1(:)
+       
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        !--- current density vector in kA/m, Merkel 2015
+        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+        j_lin = j_lin / mu_zero * 1.d-3  
+          
+        !--- Vector normal to triangle surface
+        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+        
+        !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
+        pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
+          ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
+        pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
+          ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
+        pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
+          ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
+        
+        !--- Normalized poloidal vectors by triangle side
+        pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
+        pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
+        pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
+        
+        !--- Poloidal current flowing per side of the triangle 
+        j13    =  dot_product(pol13,j_lin)
+        j21    =  dot_product(pol21,j_lin)
+        j32    =  dot_product(pol32,j_lin)
+        
+        jsides(:) = (/ j13, j21, j32 /)
+            
+        !--- Find the triangle side with maximum absolute current
+        maxcurr_pos   = maxloc(abs(jsides),1)
+        
+        !--- Maximum poloidal linear density current flowing on a triangle, in kA/m
+        write(filehandle,142) jsides(maxcurr_pos) 
+      
+      enddo
+    endif
+      
+    ! --- Total wall current vectors
+    write(filehandle,140) 'VECTORS jsurf_w(MA/m) float'
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
     do i = 1, sr%ntri_w
       ! --- Wall potential at triangle nodes
@@ -554,7 +907,10 @@ module vacuum_response
       r32(:) = r2(:)-r3(:)
       r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
         r21(1)*r32(2) - r21(2)*r32(1) /)
-      write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sum(r21_cross_r32**2)
+        
+      ! Exports the linear wall density current in MA/m  
+      write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
+                            / mu_zero * 1.d-6
     end do
     
     ! --- Close file, clean up

@@ -12,4 +12,4 @@ export KMP_AFFINITY="verbose,norespect" # if this is not set, the OpenMP threads
 export MKL_NUM_THREADS=1
 export MKL_DYNAMIC=0
 export MV2_ENABLE_AFFINITY=0
-export MPIRUN="mpiexec -envlist LANG,OMP_NUM_THREADS,KMP_STACK_SIZE,KMP_AFFINITY,MKL_NUM_THREADS,MKL_DYNAMIC=,MV2_ENABLE_AFFINITY -launcher-exec /opt/ibmll/LoadL/scheduler/full/bin/llspawn.stdio -f $LOADL_HOSTFILE -n"
+export MPIRUN="mpiexec -envlist LANG,OMP_NUM_THREADS,KMP_STACK_SIZE,KMP_AFFINITY,MKL_NUM_THREADS,MKL_DYNAMIC,MV2_ENABLE_AFFINITY -launcher-exec /opt/ibmll/LoadL/scheduler/full/bin/llspawn.stdio -f $LOADL_HOSTFILE -n"

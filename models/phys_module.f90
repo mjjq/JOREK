@@ -419,7 +419,7 @@ module phys_module
   logical :: RMP_on            !< Activates RMPs on boundary if .true.
   character(len=512)  :: RMP_psi_cos_file  !< ASCII file the profiles of psi_RMP_cos and derivatives are read from
   character(len=512)  :: RMP_psi_sin_file  !< ASCII file the profiles of psi_RMP_sin and derivatives are read from
-  real*8  :: lambda, tset      !< parameters for time dependence of psi_RMP (sigmoid)
+  real*8  :: RMP_growth_rate, RMP_ramp_up_time  !< parameters for time dependence of psi_RMP: Sigmoid f(t)= 1/ (1 + exp(-RMP_growth_rate*(t-RMP_ramp_up_time/2)))
   real*8  :: RMP_start_time    !< time when RMP coils have been activated (RMP_on = .t.)
   real*8, allocatable :: psi_RMP_cos(:)
   real*8, allocatable :: dpsi_RMP_cos_dR(:)
@@ -428,6 +428,11 @@ module phys_module
   real*8, allocatable :: dpsi_RMP_sin_dR(:)
   real*8, allocatable :: dpsi_RMP_sin_dZ(:) 
   integer             :: RMP_har_cos,RMP_har_sin ! Harmoics numbers for RMP-cos and RMP-sin(for ex. ntor=3, nperiod=2,RMP_har_cos=2, RMP_har_sin=3)
+  integer, parameter  :: N_RMP_max = 10                  ! Maximum of RMP harmonics to take into account
+  integer             :: Number_RMP_harmonics            ! Number_RMP_harmonics < N_RMP_max. If only one harmonic,  Number_RMP_harmonics=1, by default it's =1 in models/preset_parameters.f90 
+  integer             :: RMP_har_cos_spectrum(N_RMP_max) ! If only one harmonic,by default RMP_har_cos_spectrum(1)=RMP_har_cos; 
+  integer             :: RMP_har_sin_spectrum(N_RMP_max) ! If only one harmonic,by default RMP_har_sin_spectrum(1)=RMP_har_sin;
+
 
   !> @name toroidal rotation profile
   real*8              :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303

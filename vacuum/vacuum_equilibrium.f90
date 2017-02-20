@@ -239,7 +239,7 @@ module vacuum_equilibrium
    do i=1, n_coils
      if( abs(coils0(i)%FB_amp) .gt. 1.d-6 ) then
        I_coils(i) =  coils0(i)%current * (1 + coils0(i)%FB_amp * vertical_FB ) 
-       write(*,'(a,I,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
+       write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo
     

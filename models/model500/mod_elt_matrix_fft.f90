@@ -101,9 +101,9 @@ real*8     :: source_mgi
 real*8     :: Dn0x, Dn0y, Dn0p 
 
 ! Atomic physics coefficients:
+real*8     :: Te_eV                                           ! Electron temperature in eV
 !   -Ionisation
-real*8     :: Sion_T, dSion_dT                                ! Ionisation rate and its derivative wrt. temperature
-real*8     :: Tion                                            ! Temperature used in ionisation rate
+real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
 real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss ! Ionisation rate parameters 
 real*8     :: ksiion                                          ! Ionisation energy
 !   -Recombination
@@ -581,47 +581,44 @@ do ms=1, n_gauss
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
+  ! Electron temperature in eV
+    Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
   !-------------------------------------------
-  ! --- Ionization rate for neutral Deuterium
+  ! --- Normalisation of the ionization energy cost for Deuterium
   !------------------------------------------- 
 
-    coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
-    coef_ion_2 = 0.232d0
-    coef_ion_1 = sqrt(MU_ZERO*central_mass*MASS_PROTON)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+    ksiion = central_density * 1.d20 * ksi_ion
+
+  !-------------------------------------------
+  ! --- Ionization rate for Deuterium
+  ! --- (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#ionization_rate_for_deuterium)
+  !------------------------------------------- 
+
+    coef_ion_1  = sqrt(MU_ZERO*central_mass*MASS_PROTON) * (central_density*1.d20)**(1.5d0) * 0.2917d-13
+    coef_ion_2  = 0.232d0
+    coef_ion_3  = EL_CHG*MU_ZERO*central_density*1.d20 * 27.2d0
     S_ion_puiss = 3.9d-1
 
-    ksiion = ksi_ion * central_density * 1.d20
-
-    Tion = corr_neg_temp(T0,(/1.d-5,0.3/))/(2.d0)
-
-    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
-
-    dSion_dT = Sion_T*(-S_ion_puiss/Tion+coef_ion_3/(Tion*(coef_ion_2*Tion+coef_ion_3)) &
-                          +coef_ion_3*Tion**(S_ion_puiss-2.d0))
-
-      !dSion_dT = coef_ion_1*exp(-coef_ion_3/Tion)*((coef_ion_3/Tion)**0.39d0)*1/(Tion*(coef_ion_2*Tion+coef_ion_3)**2.0d0) &
-      !       * (coef_ion_3*((coef_ion_2+1)*Tion+coef_ion_3)-0.39d0*(Tion*(coef_ion_2*Tion+coef_ion_3)))
+    if (Te_eV .gt. 0.1) then
+      Sion_T   = coef_ion_1*((coef_ion_3/T0)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/T0)*exp(-coef_ion_3/T0)
+      dSion_dT = Sion_T * ( -S_ion_puiss/T0 + coef_ion_3/(T0*(coef_ion_2*T0+coef_ion_3)) + coef_ion_3*T0**(-2.d0) )
+    else
+      Sion_T   = 0.
+      dSion_dT = 0. 
+    endif
 
   !-------------------------------------------
   ! --- Radiative Power for neutral Deuterium
   ! ------------------------------------------
 
-   T_rad = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20) ! Formulae for radiative power is in SI units and for T = Te + Ti
+   T_rad = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
    if (T0 .gt. 1.d-6) then
 
-   coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
+! Formulae for radiative power is in SI units and for T = Te + Ti
 
-!   LradDcont_T = coef_rad_1*(1.d1)**(2.3964d0*exp(-(log10(T_rad)-7.2576d0)**2.d0/(2.d0*(3.0787d0)**2.d0)) &
-!                                 -34.763d0*exp(-(log10(T_rad)-0.3607d0)**2.d0/(2.d0*(4.0560d0)**2.d0)) &
-!                                 -18.875d0*exp(-(log10(T_rad)-6.0531d0)**2.d0/(2.d0*(2.5253d0)**2.d0)))
-
-  ! dLradDcont_dT = -coef_rad_1*(2.3964d0*(3.0787d0)**(-2.d0)*(log10(T_rad)-7.2576d0)/T_rad*exp(-(log10(T_rad)-7.2576d0)**2.d0/(2.d0*(3.0787d0)**2.d0)) &
-  !                             -34.763d0*(4.0560d0)**(-2.d0)*(log10(T_rad)-0.3607d0)/T_rad*exp(-(log10(T_rad)-0.3607d0)**2.d0/(2.d0*(4.0560d0)**2.d0)) &
-  !                             -18.875d0*(2.5253d0)**(-2.d0)*(log10(T_rad)-6.0531d0)/T_rad*exp(-(log10(T_rad)-6.0531d0)**2.d0/(2.d0*(2.5253d0)**2.d0)))&
-  !                             *(1.d1)**(2.3964d0*exp(-(log10(T_rad)-7.2576d0)**2.d0/(2.d0*(3.0787d0)**2.d0)) &
-  !                                   -34.763d0*exp(-(log10(T_rad)-0.3607d0)**2.d0/(2.d0*(4.0560d0)**2.d0)) &
-  !                                   -18.875d0*exp(-(log10(T_rad)-6.0531d0)**2.d0/(2.d0*(2.5253d0)**2.d0)))
+   coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
    LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
 
@@ -650,9 +647,10 @@ do ms=1, n_gauss
 
   !-------------------------------------------------
   ! --- Recombination rate for ionized Deuterium
+  ! (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#recombination_rate_for_deuterium)
   !-------------------------------------------------
     
-    coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)  
+    coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)   
  
     Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0) 
      

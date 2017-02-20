@@ -37,7 +37,9 @@ contains
     use vacuum, ONLY: is_freebound
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, lambda, tset, RMP_start_time, tstep,RMP_har_cos,RMP_har_sin
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, &
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -80,72 +82,59 @@ contains
   integer :: loop_nbr, loop, cnt, cnt_prod
   integer :: ierr
   logical :: is_local, only_count
-
-
-!=============== RMP ==============
   real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
   real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   integer :: ilarge_vp, ilarge_vp2
   integer :: kp, j, err, itest 
+  integer :: n_rmp_harm, N_rmp_har_block_size
 
-
-  if (RMP_on .and. (n_tor .ge. 3)) then
-  call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes,"psi_RMP_cos1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
-  call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes,"psi_RMP_sin1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
-
-     do i = 1, node_list%n_nodes
-        if (node_list%node(i)%boundary .ne.0) then
-           if (node_list%node(i)%boundary_index == 1 ) then
-
-              if (n_tor .eq. 1) then
-                 itest = 1
-              else 
-                 itest = RMP_har_cos
-              endif
-              
-              psi_test = node_list%node(i)%values(itest,1,1)
-              if (my_id == 0) then
-                 write (*,*) 'psi_bnd at previous time step', psi_test
-              endif
-           endif
-        endif
-     enddo
-     
-     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
-     !   establish_RMP = (1.d-3)*tstep
-      sigmo_fonc = ( 1. + exp(-lambda*( t_now - RMP_start_time - tset )))**(-1) &
-          - ( 1. + exp(-lambda*( 0. - tset )))**(-1) 
-        establish_RMP = (lambda*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
-     else
-        establish_RMP = 0.0
-     endif
-     ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*tset ) then establish_RMP =0.0
+  RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
-     do j=1, bnd_node_list%n_bnd_nodes  
-        psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
-        dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
-        dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
-        psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
-        dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
-        dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
-     end do
+! for the moment it's done in a way that all RMP harmonics follow each other,i.e. n=2,n=3,n=4... 
+! if you want for example n=2 and n=4 RMP you should consider n=2,3,4, but put zeros at the boundary in the input file for n=3 RMP
+! example: ntor=13 and nperiod=1(so taking into account, toroidal numbers n=0,1,2....6) and  n=2 and n=3 are toroidal numbers of RMPs, 
+! so Number_RMP_harmonics=2, RMP_har_cos_spectrum(1)=4,RMP_har_sin_spectrum(1)=5,RMP_har_cos_spectrum(2)=6,RMP_har_sin_spectrum(2)=7.  
+  
+    call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_cos1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+    call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_sin1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
+    N_rmp_har_block_size=bnd_node_list%n_bnd_nodes
+    
+    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos_spectrum(1),1,1)
+    ! if necessary, replace by:
+    ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos_spectrum(1), n_tor),1,1)
+    write (*,*) 'psi_bnd at previous time step', psi_test
+    
+    if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
+      sigmo_fonc = ( 1.d0 + exp(-RMP_growth_rate*( t_now - RMP_start_time - RMP_ramp_up_time/2.d0 )))**(-1) &
+          - ( 1.d0 + exp(-RMP_growth_rate*( 0.d0 - RMP_ramp_up_time/2.d0 )))**(-1) 
+      establish_RMP = (RMP_growth_rate*sigmo_fonc*(1-sigmo_fonc)+1.e-6)*tstep 
+    else
+      establish_RMP = 0.d0
+    endif
+    ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*RMP_ramp_up_time/2.d0 ) then establish_RMP =0.0
+  
+    do j=1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics  
+      psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
+      dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
+      dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
+      psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
+      dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
+      dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
+    end do
 
-     if (my_id == 0) then
+    if (my_id == 0) then
+      write (*,*) 'psi_RMP_cos1(1) and derivatives after multiplication in boundary conditions'
+      write (*,*) psi_RMP_cos1(1), dpsi_RMP_cos_dR1(1), dpsi_RMP_cos_dZ1(1)
+      write (*,*) 'establish_RMP', establish_RMP
+    endif
 
-        write (*,*) 'psi_RMP_cos1(1) and derivatives after multiplication in boundary conditions'
-        write (*,*) psi_RMP_cos1(1), dpsi_RMP_cos_dR1(1), dpsi_RMP_cos_dZ1(1)
-        write (*,*) 'establish_RMP', establish_RMP
-
-     endif
-
-  endif
-!=============== RMP ==============
+  end if RMPspectrum
 
   zbig = 1.d12
   if (use_murge .and. use_murge_element) then
@@ -177,19 +166,21 @@ contains
           end if
        end if
 #endif
-     do i=1, n_local_elms
+     do i=1, n_local_elms !===============================do elements
 
         ielm = local_elms(i)
 
-        do iv=1, n_vertex_max
+        do iv=1, n_vertex_max !==========================do vertex
 
            inode = element_list%element(ielm)%vertex(iv)
 
-           if (node_list%node(inode)%boundary .ne. 0) then
+           if (node_list%node(inode)%boundary .ne. 0) then !==================if boundary nodes
 
-              do in=1, n_tor
+              do in=1, n_tor  !========================do n_tor
 
-                 do k=1, n_var
+!              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
+
+                 do k=1, n_var ! ================================do variables
 
 !========================================================================
 ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
@@ -206,8 +197,11 @@ contains
 ! ======================================================================================================================
                        
                        if (RMP_on ) then
+!=========================================================RMP spectrum========================================Marina
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
-                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) &
+                              .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos corresponds to cos(n_perturbation)
                              ! in .eq. RMP_har_sin corresponds to sin(n_perturbation)
                                        
@@ -221,15 +215,15 @@ contains
                              Znode     = node_list%node(inode)%x(1,2) 
                              dZnode_ds = node_list%node(inode)%x(2,2) 
                           
-                             if (in.eq.RMP_har_cos) then
-                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index +N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
                              else 
-                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
                              endif
                              
@@ -268,16 +262,16 @@ contains
                              endif
                           endif
 
-                          
+                       enddo  !(end RMP harmonics)   
                        endif !(end RMP)
 !======================================= end RMPs ==================================
 
                       
                        if (                  &
                             ((k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))      &
-                            .or.((k .eq. 1) .and. (RMP_on) .and. ( in .lt. RMP_har_cos))&
+                            .or.((k .eq. 1) .and. (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1)))&
                             .or. ((k .eq. 1) .and. (in .eq. 1))  & 
-                            .or. ((k .eq. 1) .and. ( RMP_on) .and.(in .gt. RMP_har_sin))  & 
+                            .or. ((k .eq. 1) .and. ( RMP_on) .and.(in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)))  & 
                             .or. (k .eq. 2)  &
                             .or. (k .eq. 3)  &
                             .or. (k .eq. 4)  &
@@ -356,10 +350,11 @@ contains
 
                             if (xcase2 .eq. 2) then
                                direction = -direction
-                            elseif ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) then
-                               direction = -direction
-                            endif
-
+                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
+                              direction = -1.
+                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
+                              direction = +1.
+                            end if
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
@@ -688,8 +683,9 @@ contains
 ! ======================================================================================================================
                        
                        if (RMP_on ) then
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
-                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
                              ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
                
@@ -705,10 +701,10 @@ contains
                              Znode     = node_list%node(inode)%x(1,2) 
                              dZnode_dt = node_list%node(inode)%x(3,2) 
                           
-                             if (in.eq.RMP_har_cos) then
-                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
                                 if (node_list%node(inode)%boundary_index == 1 ) then
                                    write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
@@ -717,14 +713,14 @@ contains
                                    write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
                                 endif
                              else 
-                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
                              endif
 
                              delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
-                             if (in.eq.RMP_har_cos) then
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
 
                                 if (node_list%node(inode)%boundary_index == 1 ) then
                                    write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
@@ -765,16 +761,14 @@ contains
                                      RHS_loc, ZBIG * delta_psi_rmp_dt)
                              endif
                           endif
-                       endif
-                       
-!======================================= end RMPs ==================================
-
+                        enddo        !(end RMP harmonics)
+                        endif        !(end RMPs on)  ==================================
 
                        ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
                        if (      (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))        &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos ))   &
+                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos_spectrum(1) ))   &
                             .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))                               &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. (in .gt. RMP_har_sin))     & 
+                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics) )) & 
                             .or. (.not. is_freebound(in,k))                                                               &
                           ) then
 
@@ -802,12 +796,20 @@ contains
 
                     endif
 
-                 enddo
+                 enddo  ! ================================do variables
 
-              enddo
-           endif
-        enddo
-     enddo
+!              enddo !===========do RMP harmonics , by defalt=1
+
+              enddo !========================do n_tor
+
+           endif !==================if boundary nodes
+
+     enddo  !==========================do vertex
+
+ 
+    enddo !===============================do elements
+
+ 
 #ifdef USE_MURGE
        if (loop == 2) then
           if (.not. solve_only) then

@@ -63,7 +63,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
                 D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, resistive_wall, wall_resistivity,     &
+                freeboundary, resistive_wall,                       &
+                wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &
                 pastix_smp_only, refinement, grid_to_wall,          &
@@ -81,7 +82,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 linear_run, export_for_nemec,                       &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 gmres_m, gmres_tol, tgnum,                          &
-                RMP_on, lambda, tset,                               &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
@@ -90,9 +92,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_length, n_zero, ksi_ion,               &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 output_bnd_elements,                                &
-                wall_file, rot_file,                                &
-                first_target_point, last_target_point,		          &
-                n_limiter, R_limiter, Z_limiter, bc_natural_open, bc_natural_flux, &
+                wall_file, rot_file, bc_natural_flux,               &
+                first_target_point, last_target_point,              &
+                n_limiter, R_limiter, Z_limiter, bc_natural_open,   &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &

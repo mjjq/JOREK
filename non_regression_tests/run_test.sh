@@ -103,7 +103,7 @@ while [ $# -gt 0 ]; do
     elif [ "$option" == "-l" ]; then
 	echo ""
 	echo "Available test cases:"
-	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
+	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
 	    if [ -e ${i}/.version ]; then
   	      case=$(basename $i)
@@ -114,7 +114,7 @@ while [ $# -gt 0 ]; do
 	echo ""
 	exit 1
     elif [ "$option" == "-L" ]; then
-	cases=`ls -1 -d ${startdir}/testcases/*/ | grep -v ".sh"`
+	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
 	    if [ -e ${i}/.version ]; then
               case=$(basename $i)
@@ -181,7 +181,7 @@ if [ "$compile" == "yes" ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
   fi
-  if [ "$initialrun" == "yes" ]; then
+  if [ "$initialrun" == "yes" ] && [ "$binaries_initial" != "" ]; then
     mv $binaries_initial $testcasedir/ || exit 1
   fi
   mv $binaries $testcasedir/ || exit 1

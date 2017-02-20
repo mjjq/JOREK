@@ -59,7 +59,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   &
+                resistive_wall,                                     &
+                wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp, n_tor_fft_thresh,                         &
@@ -70,6 +71,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
@@ -84,11 +90,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
 
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion, RMP_on, lambda, tset,    &  
+                mgi_sig, mgi_deltaphi, ksi_ion,                     &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
-                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
-                delta_n_convection, nimp_bg,                               &
-                RMP_on, lambda, tset, RMP_psi_cos_file, RMP_psi_sin_file, &
+                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi,          &
+                JET_MGI, ASDEX_MGI,                                 &
+                delta_n_convection, nimp_bg,                        &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
+                RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &

@@ -17,6 +17,7 @@ use phys_module
 use tr_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
+use vacuum, only: freeb_fact
 
 implicit none
  
@@ -316,8 +317,8 @@ do ms=1, n_gauss
                       + visco_num * (v_s * w0_s + v_t * w0_t)                    * tstep &
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac  
 
-         rhs_ij_3 = 0.d0 !- ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * tstep
-         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_fact 
+         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
          rhs_ij_5   = v * BigR * particle_source(ms,mt)                                        * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &
@@ -421,12 +422,12 @@ do ms=1, n_gauss
                        + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep
 
 !------------------------------------------------------------ equation 3
-             amat_33 = v * zj / BigR * xjac                                * tstep
-             amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac          * tstep
+             amat_33 = v * zj / BigR * xjac                                
+             amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac          
 
 !------------------------------------------------------------ equation 4
-             amat_44 =  v * w * BigR * xjac                                * tstep
-             amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
+             amat_44 =  v * w * BigR * xjac                                
+             amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               
 
 !------------------------------------------------------------ equation 5
              Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR

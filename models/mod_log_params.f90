@@ -23,6 +23,7 @@ logical, optional             :: short !< commandline short version or run long 
 
 ! --- Constants
 character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 10ES12.4)"
+character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
 character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 10I12)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
 character(len=512), parameter :: REA2_FMT = "(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)"
@@ -337,9 +338,18 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
+  write(*,REAL_FMT) 'edgeparticlesource        ', edgeparticlesource
+  write(*,REAL_FMT) 'edgeparticlesource_psin   ', edgeparticlesource_psin
+  write(*,REAL_FMT) 'edgeparticlesource_sig    ', edgeparticlesource_sig
   write(*,REAL_FMT) 'heatsource            ', heatsource
   write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
   write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
+  write(*,REAL_FMT) 'particlesource_gauss     ', particlesource_gauss
+  write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
+  write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
+  write(*,REAL_FMT) 'heatsource_gauss         ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_psin    ', heatsource_gauss_psin
+  write(*,REAL_FMT) 'heatsource_gauss_sig     ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,REAL_FMT) 'visco_num             ', visco_num
@@ -403,9 +413,10 @@ if (my_id == 0) then
   if ( freeboundary ) then
     write(*,LOGI_FMT) 'resistive_wall        ', resistive_wall
     if ( resistive_wall ) then
-      write(*,REAL_FMT) 'wall_resistivity      ', wall_resistivity
+      write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
+      write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
-    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time    
+    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time
   end if
   
   write(*,REAL_FMT) 'amix                  ', amix
@@ -497,8 +508,11 @@ if (my_id == 0) then
   if (RMP_on) then
      write(*,CHAR_FMT) 'RMP_psi_cos_file      ', trim(RMP_psi_cos_file)
      write(*,CHAR_FMT) 'RMP_psi_sin_file      ', trim(RMP_psi_sin_file)
-     write(*,REAL_FMT) 'lambda                ', lambda
-     write(*,REAL_FMT) 'tset                  ', tset
+     write(*,REAL_FMT) 'RMP_growth_rate       ', RMP_growth_rate
+     write(*,REAL_FMT) 'RMP_ramp_up_time      ', RMP_ramp_up_time
+     write(*,INTG_FMT) 'Number_RMP_harmonics  ', Number_RMP_harmonics 
+     write(*,REAL_FMT) 'RMP_har_cos_spectrum ',  RMP_har_cos_spectrum
+     write(*,REAL_FMT) 'RMP_har_sin_spectrum ',  RMP_har_sin_spectrum
   endif
   write(*,LOGI_FMT) 'output_bnd_elements   ', output_bnd_elements
   write(*,LOGI_FMT) 'bootstrap             ', bootstrap

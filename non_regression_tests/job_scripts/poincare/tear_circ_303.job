@@ -14,7 +14,7 @@
 #######################################################################
 # @ node = 2
 # @ total_tasks = 2
-# @ resources = ConsumableCpus(8)
+# @ resources = ConsumableCpus(16)
 #####################################
 # @ node_usage = not_shared
 # @ queue
@@ -29,6 +29,7 @@ JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 
 cd ${JOREK_HOME}
 source non_regression_tests/job_scripts/poincare/env.sh
+export OMP_NUM_THREADS=16
 ## Compile with:       
 # non_regression_tests/run_test.sh -p $CASE
 ## Initial Long run: 

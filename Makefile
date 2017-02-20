@@ -30,6 +30,9 @@ cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
 	-@find . -name '*.d' -delete 2>/dev/null
+test: nrt_unit
+nrt_unit:
+	+./util/fruit.sh non_regression_tests/unit_tests
 
 
 # Directories containing sources, ordered by number of files
@@ -48,6 +51,8 @@ DIRS := diagnostics			\
 	diagnostics/postproc		\
 	tools				\
 	tools/rng                       \
+	tools/fruit                     \
+	non_regression_tests/unit_tests \
 	datatypes			\
 	.				\
 	vacuum

@@ -3,7 +3,7 @@ jorekmodel="199"
 description="Free boundary equilibrium for limiter plasma using coils directly in STARWALL (JOREK-STARWALL)."
 mpitasks=1
 binaries="jorek_model${jorekmodel}_1 rst_bin2hdf5 rst_hdf52bin"
-binaries_initial="jorek_model${jorekmodel}_1"
+binaries_initial=""
 requiredfiles="input starwall-response.dat"
 extra_remote_files="starwall-response.dat"
 

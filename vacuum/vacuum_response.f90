@@ -315,7 +315,7 @@ module vacuum_response
       sr%eta_thin_w = tmp(1)
       deallocate(tmp)
     else
-      sr%eta_thin_w = 0.
+      sr%eta_thin_w = 0.d0
     end if
     
     call read_array(filehandle, 'yy',       (/sr%n_w,0/),            float1d=sr%d_yy)
@@ -615,9 +615,9 @@ module vacuum_response
         angle23 = atan2(-mid23(1),mid23(3))
         
         ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+        ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
        
         ! --- Quantities needed to calculate the current density vector 
         r21(:) = r1(:)-r2(:)
@@ -692,9 +692,9 @@ module vacuum_response
         angle23 = atan2(-mid23(1),mid23(3))
         
         ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+        ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
        
         ! --- Quantities needed to calculate the current density vector 
         r21(:) = r1(:)-r2(:)
@@ -782,9 +782,9 @@ module vacuum_response
         angle23 = atan2(-mid23(1),mid23(3))
         
         ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+        ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
        
         ! --- Quantities needed to calculate the current density vector 
         r21(:) = r1(:)-r2(:)
@@ -843,9 +843,9 @@ module vacuum_response
         angle23 = atan2(-mid23(1),mid23(3))
         
         ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+        ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+        ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+        ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
        
         ! --- Quantities needed to calculate the current density vector 
         r21(:) = r1(:)-r2(:)

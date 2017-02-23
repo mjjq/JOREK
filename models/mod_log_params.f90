@@ -416,7 +416,10 @@ if (my_id == 0) then
       write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
       write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
-    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time
+
+    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
+    write(*,LOGI_FMT) 'impose_coil_currents  ', impose_coil_currents
+       
   end if
   
   write(*,REAL_FMT) 'amix                  ', amix

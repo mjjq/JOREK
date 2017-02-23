@@ -353,7 +353,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         temp = temp*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
         H  = H_transform(ran(2), temp) ! [eV]
-        muB = 4.d0*H*(ran(3)-0.5d0)**2 ! linearly distributed between -H and H [eV]
+        muB = sign(4.d0*H*(ran(3)-0.5d0)**2,ran(3)-0.5d0) ! linearly distributed between -H and H [eV]
         ! Because there are 2 dimensions in v_perp => v_par^2/v_perp^2 = 1/2
         ! we need this distribution
         particle%E  = H

@@ -6,6 +6,7 @@
 !> 4. Psi_bar (P_phi/q)
 !> 5. Psi
 !> 6. q (charge)
+!> 7. weight
 module mod_particle_diagnostics
 use mod_io_actions
 use mod_particle_sim
@@ -14,7 +15,7 @@ implicit none
 private
 public write_particle_diagnostics, calculate_particle_diagnostics
 
-integer(HSIZE_T), parameter :: n_var = 6
+integer(HSIZE_T), parameter :: n_var = 7
 
 !> Action to calculate pphi_H_mu and write this to an HDF5 file
 !> in an extensible (in the time-dimension) dataset
@@ -217,7 +218,7 @@ subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, ds
   integer(HSIZE_T), intent(in) :: n_particles
   integer :: ierr
   integer(HID_T) :: crp_list
-  integer(HSIZE_T), parameter :: chunk_size(3) = [10000_HSIZE_T,1_HSIZE_T,1_HSIZE_T]
+  integer(HSIZE_T), parameter :: chunk_size(3) = [100000_HSIZE_T,1_HSIZE_T,1_HSIZE_T]
 
   ! Create a dataspace with unlimited dimensions, 
   call h5screate_simple_f(3, [n_particles,n_var,0_HSIZE_T], dspace, ierr, &
@@ -227,8 +228,6 @@ subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, ds
   call h5pset_chunk_f(crp_list, 3, chunk_size, ierr)
   call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_REAL, dspace, dset, ierr, crp_list)
   call h5pclose_f(crp_list, ierr)
-
-  ! shuffle filter + zlib (present on most system) (give 20% compression, don't use for)
 end subroutine create_constants_dataset
 
 !> Create a new dataset for time data (1-d extensible, chunked (required for extensibility))
@@ -251,8 +250,8 @@ subroutine create_constants_time_dataset(file_id, dataset_name, dset, dspace)
 end subroutine create_constants_time_dataset
 
 
-!> Calculate H, mu, P_phi, Psi_bar, Psi, q for a list of particles.
-!> mask is .f. if a particle is lost. These values in out are 0.d0
+!> Calculate H, mu, P_phi, Psi_bar, Psi, q, weight for a list of particles.
+!> mask is .f. if a particle is lost. Those values in out are set to 0.d0
 subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, mask)
   use mod_particle_types
   use phys_module, only: F0
@@ -328,6 +327,8 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
       out(i,5) = P(1)
       ! 6. q (charge)
       out(i,6) = real(particle%q)
+      ! 7. weight
+      out(i,7) = particle%weight
     endif
   enddo
   !$omp end parallel do

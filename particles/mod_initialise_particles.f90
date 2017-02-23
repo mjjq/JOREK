@@ -235,7 +235,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3)
   real*8, dimension(1) :: P, P_s, P_t, P_phi
   real*8  :: R_s, R_t, Z_s, Z_t
-  real*8  :: s, t, u_init_max
+  real*8  :: s, t, u_init_max, temp
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
   integer :: i_elm, i, j, ifail, my_id, n_cpu, ierr
   real*8, dimension(fields%element_list%n_elements,2) :: psi_minmax_list
@@ -304,11 +304,12 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     allocate(particles_tmp(blocksize), mold=particles)
     allocate(found(blocksize))
 
-    !$omp parallel do default(none) &
-    !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
-    !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle) &
-    !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
-    !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, central_density)
+    ! Disable omp due to buggyness
+    !!$omp parallel do default(none) &
+    !!$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
+    !!$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp) &
+    !!$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
+    !!$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, central_density)
     do i=1,blocksize
       ran(:) = rans(:,i)
 
@@ -345,11 +346,13 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         ! 2. Calculate H and mu, save in particle
         call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[6],1, &
           s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-        T = P(1)/(2.d0*MU_ZERO*central_density*1.d20) ! [eV]
+        ! P(1)/kb/mu_zero/n_zero [K] -> multiply by kb and divide by el_chg to
+        ! go to eV
+        temp = P(1)/(2.d0*MU_ZERO*central_density*1.d20*EL_CHG) ! [eV]
 #if (JOREK_MODEL == 400)
-      T = T*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
+        temp = temp*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
-        H  = H_transform(ran(2), T) ! [eV]
+        H  = H_transform(ran(2), temp) ! [eV]
         muB = 4.d0*H*(ran(3)-0.5d0)**2 ! linearly distributed between -H and H [eV]
         ! Because there are 2 dimensions in v_perp => v_par^2/v_perp^2 = 1/2
         ! we need this distribution
@@ -378,7 +381,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         found(i) = .false.
       end if
     end do
-    !$omp end parallel do
+    !!$omp end parallel do
 
     ! How many particles have we found?
     n_found = count(found)
@@ -434,8 +437,8 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
   type(type_element_list), intent(in)               :: element_list
   real*8, intent(in)                                :: mass
   real*8, external, optional                        :: n_psibar
-  real*8, external, optional                        :: T_psibar
-  real*8, optional                                  :: alpha !< Interpolation factor between sampling from a block and the maxwellian
+  real*8, external, optional                        :: T_psibar !< Provide the temperature in eV as a function of psibar
+  real*8, optional                                  :: alpha !< Interpolation factor between sampling from a block (1) and the maxwellian (0)
 
   integer :: i
   real*8  :: t_norm, psibar, H, n, T
@@ -447,7 +450,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
   if (present(alpha)) then
     my_alpha = alpha
   else
-    my_alpha = 1.d0
+    my_alpha = 0.d0 !< Default
   end if
 
   !$omp parallel do default(none) private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
@@ -459,7 +462,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
     select type (pa => particles(i))
     type is (particle_kinetic_leapfrog)
       psibar = real(pa%q,8) * P(1) * EL_CHG + mass * ATOMIC_MASS_UNIT * R * pa%v(3)
-      H = mass*ATOMIC_MASS_UNIT*0.5d0 * norm2(pa%v)
+      H = mass*ATOMIC_MASS_UNIT*0.5d0 * norm2(pa%v) / EL_CHG ! [eV]
     class default
       write(*,*) "ERROR: add code for your type here"
       cycle
@@ -471,12 +474,14 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       n = 1 ! units irrelevant if normalized later to a total number of particles
     end if
     if (present(T_psibar)) then
-      T = T_psibar(psibar) ! [K]
+      T = T_psibar(psibar) ! [eV]
     else
       ! Calculate the local temperature and use this instead
       call       interp_PRZ(node_list,element_list,particles(i)%i_elm,[6],1, &
         particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-      T = P(1)/(2.d0*MU_ZERO*central_density*1.d20*K_BOLTZ) ! [K]
+      ! P(1)/(kb mu_zero n_zero) is in [K], multiply by kb/el_chg to go to eV
+      T = P(1)/(2.d0*MU_ZERO*central_density*1.d20*EL_CHG) ! [eV] factor 2 is due to
+      ! definition of P(1) as ion + electron temperature
 #if (JOREK_MODEL == 400)
       T = T*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
@@ -484,9 +489,9 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       ! Because we give weights based on the energy and temperature areas with lower temperature are getting
       ! too high weights. Work around this by defining a minimum temperature to stop the outer regions from 
       ! dominating the projection.
-      T = max(1d2,T)
+      T = max(1d1,T)
     end if
-    particles(i)%weight = real(n/(TWOPI*T/(mass*ATOMIC_MASS_UNIT)) * exp(-H*my_alpha/T),4)
+    particles(i)%weight = real(n * exp(-H*my_alpha/T),4) ! if zero, all particles have equal weight n
   end do
   !$omp end parallel do
 end subroutine set_particle_weights_canonical_maxwellian

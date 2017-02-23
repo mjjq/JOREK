@@ -39,7 +39,7 @@ real*8  :: inv_st_jac, psi_R, psi_Z, psi_u
 integer :: i_elm_out, ifail, backtrack_step, newton_iter_number
 integer, parameter :: num_backtrack_steps = 10 ! to prevent going over the border of the domain
 real*8,  parameter :: backtrack_factor = 0.99d0
-integer, parameter :: newton_iter_max = 8
+integer, parameter :: newton_iter_max = 12
 integer, parameter :: i_var(1) = [1], n_ivar=1
 real*8,  parameter :: tol = 1d-8
 
@@ -111,7 +111,9 @@ do i=1,element_list%n_elements
       call find_RZ(node_list,element_list,R_axis+u2*cos(theta),Z_axis+u2*sin(theta),R,Z,ielm2,s2,t2,ifail)
       ! Calculate psi and derivative at first crossing
       if (ielm1 .eq. 0 .or. ielm2 .eq. 0) then
-        if (verbose) write(*,*) "Cannot find intersection point in element, ielm1=", ielm1, ", ielm2=", ielm2, ", istart=",i
+        if (verbose) write(*,*) "Cannot find intersection point in element, ielm1=", ielm1, ", ielm2=", ielm2, ", istart=",i, &
+          R_axis+u1*cos(theta), Z_axis+u1*sin(theta), &
+          R_axis+u2*cos(theta), Z_axis+u2*sin(theta)
         return
       end if
       call interp_PRZ(node_list,element_list,ielm1,i_var,n_ivar,s1,t1,phi, &
@@ -201,6 +203,11 @@ do newton_iter_number = 1, newton_iter_max
 
   ! Formulate a new guess (u) based on psi and psi'
   du = -err/psi_u
+  ! Make sure it is not negative
+  do while (-du .gt. u)
+    du = du*backtrack_factor
+  end do
+
   !write(*,"(12g14.6)") psi, P(1)-psi, u, du, i_elm_out, s, t, out_of_domain
   !if (out_of_domain .and. du .gt. 0.d0) du = -0.5d0*du ! u must go down in this case
   ! Calculate R and Z for this guess

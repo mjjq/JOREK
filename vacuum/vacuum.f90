@@ -80,6 +80,7 @@ module vacuum
     integer :: n_w
     integer :: ntri_w
     integer :: n_tor
+    integer :: n_tor0
     real*8  :: eta_thin_w !< In SI units
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
@@ -162,6 +163,7 @@ module vacuum
     sr%n_w    = 0
     sr%ntri_w = 0
     sr%n_tor  = 0
+    sr%n_tor0 = 0
     
     ! --- Switch on terms on the RHS of current equation definition when using free-boundary
     freeb_fact = 0.d0

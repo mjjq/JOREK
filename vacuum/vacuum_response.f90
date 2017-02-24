@@ -305,6 +305,7 @@ module vacuum_response
     sr%n_w    = read_intparam(filehandle, 'n_w')
     sr%ntri_w = read_intparam(filehandle, 'ntri_w')
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
+    sr%n_tor0 = sr%n_tor
 
     call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
     
@@ -402,6 +403,7 @@ module vacuum_response
     call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor0,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     
     n_dof_starwall = sr%nd_bez
@@ -477,6 +479,7 @@ module vacuum_response
     write(*,33) 'n_w          =', sr%n_w
     write(*,33) 'ntri_w       =', sr%ntri_w
     write(*,33) 'n_tor        =', sr%n_tor
+    write(*,33) 'n_tor0       =', sr%n_tor0
     if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
     if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
@@ -1092,7 +1095,7 @@ module vacuum_response
 
                       i_resp_old   = response_index(i_node_bnd,i_starwall,i_dof)
 
-                      i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor &
+                      i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                + bnd_node_list%bnd_node(i_node_bnd)%n_dof*(i_starwall-1) &
                                + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof) - bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
 
@@ -1124,7 +1127,7 @@ module vacuum_response
 
                             j_resp_old = response_index(j_node_bnd,j_starwall,j_dof)
 
-                            j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor &
+                            j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1) &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)-bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
 
@@ -1295,7 +1298,7 @@ module vacuum_response
           j_resp_old   = response_index(jnode,j_starwall,jbas)
           j_resp_0     = response_index_eq(jnode,jbas)
 
-          j_resp = (bnd_node_list%bnd_node(jnode)%index_starwall(1) - 1)*sr%n_tor &
+          j_resp = (bnd_node_list%bnd_node(jnode)%index_starwall(1) - 1)*sr%n_tor0 &
                  +  bnd_node_list%bnd_node(jnode)%n_dof*(j_starwall-1) &
                  + (bnd_node_list%bnd_node(jnode)%index_starwall(jbas)-bnd_node_list%bnd_node(jnode)%index_starwall(1)) + 1
 
@@ -1307,7 +1310,7 @@ module vacuum_response
 
           if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) ) then
             j_resp_0 = 2*(jnode-1) + jbas
-            psibnd_coils( j_resp_0 ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
+            psibnd_coils( j_resp ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
           end if
 
         end do
@@ -1577,10 +1580,10 @@ module vacuum_response
       
       response_m_eq = 0.d0
 
-      do j = 1, sr%nd_bez/sr%n_tor, 2
-        j2 = (j-1)*sr%n_tor+1
-        do k = 1, sr%nd_bez/sr%n_tor, 2
-          k2 = (k-1)*sr%n_tor+1
+      do j = 1, sr%nd_bez/sr%n_tor0, 2
+        j2 = (j-1)*sr%n_tor0 + 1
+        do k = 1, sr%nd_bez/sr%n_tor0, 2
+          k2 = (k-1)*sr%n_tor0 + 1
           response_m_eq(j:j+1,k:k+1) = sr%a_ee(j2:j2+1,k2:k2+1)
         end do
       end do
@@ -1778,7 +1781,7 @@ module vacuum_response
       write(*,*) 'response_index: illegal value i_starwall=', i_starwall
       stop
     end if
-    response_index = 2*sr%n_tor*(inode-1) + 2*(i_starwall-1) + ibas
+    response_index = 2*sr%n_tor0*(inode-1) + 2*(i_starwall-1) + ibas
     
     if ( response_index < 1 ) then
       write(*,*) 'FATAL: RESPONSE_INDEX < 1 DETECTED'

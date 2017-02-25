@@ -249,7 +249,7 @@ do i = local_elm_start, local_elm_end, n_stride
       i_elm   = i
       R_start = R_out
       Z_start = Z_out
-      P_start =  PI/4.!0.d0
+      P_start =  4.51d0!PI/4.!0.d0
 
      ! write (*,*) 'i_line,R_start,Z_start',i_line,R_start,Z_start
       R_all(i_line) = R_start

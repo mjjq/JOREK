@@ -17,12 +17,12 @@ j302_3
 jorek_model*
 jorek2_poincare
 jorek2_four
-jorek2_postproc
+jorek2_postproc*
 jorek2_povray
-jorek2_connection2
+jorek2_connection2*
 jorek2_connection_stan
 jorek2_strikes
-jorek2vtk
+jorek2vtk*
 jorek2_fieldlines_vtk
 jorek2vtk_3d
 jorek2_diagno

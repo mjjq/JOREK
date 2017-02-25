@@ -252,7 +252,7 @@ if (freeboundary_equil) then
 
   enddo
 
-  !if (my_id == 0) call boundary_check()
+  if (my_id == 0) call boundary_check()
 
 endif
 

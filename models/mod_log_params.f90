@@ -23,6 +23,7 @@ logical, optional             :: short !< commandline short version or run long 
 
 ! --- Constants
 character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 10ES12.4)"
+character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
 character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 10I12)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
 character(len=512), parameter :: REA2_FMT = "(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)"
@@ -413,9 +414,10 @@ if (my_id == 0) then
   if ( freeboundary ) then
     write(*,LOGI_FMT) 'resistive_wall        ', resistive_wall
     if ( resistive_wall ) then
-      write(*,REAL_FMT) 'wall_resistivity      ', wall_resistivity
+      write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
+      write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
-    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time    
+    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time
   end if
   
   write(*,REAL_FMT) 'amix                  ', amix
@@ -423,6 +425,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'Zaxis_find_limit      ', Zaxis_find_limit
   
   if (freeboundary_equil) then
+    write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
     write(*,REAL_FMT) 'current_ref           ', current_ref

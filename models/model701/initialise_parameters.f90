@@ -53,7 +53,8 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, time_evol_scheme,                            &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, resistive_wall, wall_resistivity,     &
+                freeboundary, resistive_wall,                       &
+                wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &
                 pastix_smp_only, refinement, grid_to_wall,          &
@@ -78,8 +79,9 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_coils_nml, coils0,                  &
                 Zaxis_find_limit, PF_pert_start_time,               &
-                first_target_point, last_target_point,		    &
-                n_limiter, R_limiter, Z_limiter
+                first_target_point, last_target_point,		          &
+                n_limiter, R_limiter, Z_limiter,                    &
+                starwall_equil_coils
 
 if (my_id .eq. 0) then
 

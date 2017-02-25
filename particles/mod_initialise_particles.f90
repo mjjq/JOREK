@@ -205,10 +205,11 @@ end subroutine initialise_particles
 !>
 !> **This subroutine does not support MPI or openMP yet!**
 subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
-        H_transform, Theta_transform, Psi_transform, cor, charge)
+        H_transform, Theta_transform, Psi_transform, uniform_space, cor, charge)
   use mod_rng
   use mod_fields
   use mod_random_seed
+  use mod_sampling
   use constants
   use phys_module, only: F0, central_density
   use mod_coronal
@@ -223,6 +224,8 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*8, external, optional                        :: Theta_transform !< Function to transform 0-1 to the theta-domain
   real*8, external, optional                        :: Psi_transform !< Function to transform 0-1 to the Psi-domain
   !< if omitted, determine automatically from node_list
+  logical, intent(in), optional                     :: uniform_space !< Do not
+  !< use {psi,theta}_transform if present but use rejection sampling in RZ
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
   integer, intent(in), optional                     :: charge !< Use this if cor is not present
 
@@ -243,25 +246,34 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   class(particle_base), dimension(:), allocatable :: particles_tmp
   logical, dimension(:), allocatable :: found
   real*8  :: t0, t1
+  real*8  :: Rbox(2), Zbox(2), DUMMY_REAL
   integer :: blocksize, prev_blocksize, particles_to_do_local, particles_done_local
   integer :: to_find, n_tries_now, n_found
-  logical :: all_done
+  logical :: all_done, init_uniform_space
+
+  if (present(uniform_space) .and. uniform_space) then
+    init_uniform_space = .true.
+    call domain_bounding_box(fields%node_list, fields%element_list, Rbox(1), Rbox(2), Zbox(1), Zbox(2))
+  end if
+
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 
-  psimin= 1d10
-  psimax=-1d10
-  ! Preparatory work: determine psi_min,max
-  !$omp parallel do default(shared) &
-  !$omp private(i_elm) reduction(min:psimin) &
-  !$omp reduction(max:psimax)
-  do i_elm=1,fields%element_list%n_elements
-    call psi_minmax(fields%node_list,fields%element_list,i_elm,psi_minmax_list(i_elm,1),psi_minmax_list(i_elm,2))
-    psimin = min(psi_minmax_list(i_elm,1),psimin)
-    psimax = max(psi_minmax_list(i_elm,2),psimax)
-  end do
-  !$omp end parallel do
+  if (.not. init_uniform_space) then
+    psimin= 1d10
+    psimax=-1d10
+    ! Preparatory work: determine psi_min,max
+    !$omp parallel do default(shared) &
+    !$omp private(i_elm) reduction(min:psimin) &
+    !$omp reduction(max:psimax)
+    do i_elm=1,fields%element_list%n_elements
+      call psi_minmax(fields%node_list,fields%element_list,i_elm,psi_minmax_list(i_elm,1),psi_minmax_list(i_elm,2))
+      psimin = min(psi_minmax_list(i_elm,1),psimin)
+      psimax = max(psi_minmax_list(i_elm,2),psimax)
+    end do
+    !$omp end parallel do
+  end if
 
   ! Preparatory work: setup RNG
   allocate(rng,source=rng_base)
@@ -313,20 +325,27 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     do i=1,blocksize
       ran(:) = rans(:,i)
 
-      if (present(Psi_transform)) then
-        psi = Psi_transform(ran(1))
-      else
-        psi = (psimax-psimin)*ran(1)+psimin
-      end if
-      ! Try to find this position
-      if (present(Theta_transform)) then
-        theta = Theta_transform(ran(5))
-      else
-        theta = TWOPI*ran(5)
-      end if
       phi = TWOPI*ran(4)
-      ! 1. Find R, Z corresponding to psi, theta
-      call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
+      if (init_uniform_space) then
+        call transform_uniform_cylindrical([ran(1),ran(4),ran(5)], Rbox, Zbox, [0.d0,TWOPI], R, Z, phi)
+        call find_RZ(fields%node_list,fields%element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
+
+      else
+        if (present(Psi_transform)) then
+          psi = Psi_transform(ran(1))
+        else
+          psi = (psimax-psimin)*ran(1)+psimin
+        end if
+        ! Try to find this position
+        if (present(Theta_transform)) then
+          theta = Theta_transform(ran(5))
+        else
+          theta = TWOPI*ran(5)
+        end if
+        ! 1. Find R, Z corresponding to psi, theta
+        call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
+      end if
+      ! By this point i_elm, s, t, R, Z, phi must be set
 
       if (i_elm .ne. 0) then
         found(i) = .true.

@@ -103,6 +103,9 @@ subroutine project_and_save_to_vtk(this, sim, ev)
 
     write(*,*) "Written projection to ", trim(filename)
   end if
+  ! Communicate these to all processors
+  call broadcast_elements(my_id, this%element_list)
+  call broadcast_nodes(my_id, this%node_list)
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
   write(*,*) "writing wall/cpu", oend-ostart, t1-t0

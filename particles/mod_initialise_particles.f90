@@ -198,7 +198,7 @@ subroutine initialise_particles(particles, node_list, element_list, &
   endif
 end subroutine initialise_particles
 
-!> Initialise particle positions in H, mu, psi, theta, phi, gamma (gyrophase) space.
+!> Initialise particle positions in H, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
 !> Set H_transform to transform from [0,1] to your desired range, Psi_transform to do the same (optional)
 !>
 !> Does not do weighting of the particles.
@@ -325,23 +325,24 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     do i=1,blocksize
       ran(:) = rans(:,i)
 
-      phi = TWOPI*ran(4)
       if (init_uniform_space) then
-        call transform_uniform_cylindrical([ran(1),ran(4),ran(5)], Rbox, Zbox, [0.d0,TWOPI], R, Z, phi)
+        call transform_uniform_cylindrical([ran(3),ran(4),ran(5)], Rbox, Zbox, [0.d0,TWOPI], R, Z, phi)
         call find_RZ(fields%node_list,fields%element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
 
       else
         if (present(Psi_transform)) then
-          psi = Psi_transform(ran(1))
+          psi = Psi_transform(ran(3))
         else
-          psi = (psimax-psimin)*ran(1)+psimin
+          psi = (psimax-psimin)*ran(3)+psimin
         end if
         ! Try to find this position
         if (present(Theta_transform)) then
-          theta = Theta_transform(ran(5))
+          theta = Theta_transform(ran(4))
         else
-          theta = TWOPI*ran(5)
+          theta = TWOPI*ran(4)
         end if
+
+        phi = TWOPI*ran(5)
         ! 1. Find R, Z corresponding to psi, theta
         call find_theta_psi(fields%node_list,fields%element_list,psi_minmax_list,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
       end if
@@ -371,10 +372,10 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 #if (JOREK_MODEL == 400)
         temp = temp*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
-        H  = H_transform(ran(2), temp) ! [eV]
+        H  = H_transform(ran(1), temp) ! [eV]
         ! Reuse ran(6) to determine the sign, this will probably not have
         ! any important effect
-        muB = sign(H*sqrt(ran(3)), ran(6)-0.5d0) ! inverse transform sampling from CDF(x) = x^2
+        muB = sign(H*sqrt(ran(2)), ran(6)-0.5d0) ! inverse transform sampling from CDF(x) = x^2
         ! linearly (PDF(x) = x) distributed between -H and H [eV]
         ! Because there are 2 dimensions in v_perp => v_par^2/v_perp^2 = 1/2
         ! we need this distribution
@@ -397,6 +398,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         select type(p => particles_tmp(i))
         type is (particle_kinetic_leapfrog)
           p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
+          p%v = [ran(1),ran(2),ran(6)] ! Save for later use, HACK
           ! if the kinetic position is not in the grid particles(i)%i_elm the particle is lost
         type is (particle_gc)
           p = particle
@@ -668,6 +670,7 @@ end if
 #endif
 
 do i=1,size(particles)
+  if (particles(i)%i_elm .eq. 0) cycle
 #if (JOREK_MODEL == 400)
   call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,8,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
@@ -696,12 +699,14 @@ do i=1,size(particles)
       v_out(1) = v_out(1) + P(4)/t_norm
     end if
 
-    background_kelvin  = background_kbT / K_BOLTZ              ! electron temperature [K]
-    if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
-      Z_coronal = 0.d0
-    else
-      call cor%interp(log10(background_density),log10(background_kelvin),Z_coronal,DUMMY_REAL)
-    endif
+    if (present(cor)) then
+      background_kelvin  = background_kbT / K_BOLTZ              ! electron temperature [K]
+      if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
+        Z_coronal = 0.d0
+      else
+        call cor%interp(log10(background_density),log10(background_kelvin),Z_coronal,DUMMY_REAL)
+      endif
+    end if
 
     ! Calculate b^ (unit vector in direction of B)
     psi_R = (  P_s(4) * Z_t - P_t(4) * Z_s )/(R_s * Z_t - R_t * Z_s)
@@ -718,7 +723,7 @@ do i=1,size(particles)
     pa%v = v_out(1) * B_hat + v_out(2) * &
       ((cos(v_out(3)) * [0.d0, B_hat(3), -B_hat(2)]) + &
         sin(v_out(3)) * (B_hat(1) * B_hat - r_hat))
-    pa%q = nint(Z_coronal,1)                   !< charge
+    if (present(cor)) pa%q = nint(Z_coronal,1)                   !< charge
   class default
     write(*,*) "set_velocity_from_T not implemented for this particle type"
   end select

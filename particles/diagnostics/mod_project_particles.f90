@@ -12,12 +12,13 @@ public project_to_vtk
 !> Action to project all particle distributions and save them to vtk
 type, extends(io_action) :: project_to_vtk
   type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
-  type(type_element_list), allocatable :: element_list !< a pointer to the global element_list
+  type(type_element_list), allocatable :: element_list
   real*8 :: smoothing !< Smoothing factor used for this projection
   integer :: nsub !< Number of subdivisions to make
   type (DMUMPS_STRUC), private :: projection_matrix
   real*4,allocatable, private  :: xyz (:,:) !< positions of points in vtk file
   integer,allocatable, private :: ien (:,:) !< connectivity in vtk file
+  !< is factored by mumps
 contains
   procedure :: do => project_and_save_to_vtk
 end type project_to_vtk
@@ -53,7 +54,6 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
   new%name = "ProjectToVtk"
   new%log = .true.
 
-  ! Precalculate the projection matrix for this node_list and element_list
   call prepare_projection_matrix(new%node_list, new%element_list, new%projection_matrix, new%smoothing)
 
   ! Precalculate the node positions in the vtk file and the connectivity
@@ -77,6 +77,8 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   !$ ostart = omp_get_wtime()
   ! Safety checks
   if (.not. allocated(sim%groups)) return
+
+
   do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
     if (.not. allocated(sim%groups(i)%particles)) cycle
     call project_particles(this%node_list, this%element_list, this%projection_matrix, &
@@ -157,10 +159,7 @@ call DMUMPS(projection_matrix)
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
-n_AA = 0
-do inode = 1, node_list%n_nodes
-  n_AA = max(n_AA,node_list%node(inode)%index(4))
-enddo
+n_AA = maxval(node_list%node(:)%index(4))
 
 ! Only perform the construction of the matrix on the host
 if (my_id .eq. 0) then
@@ -307,18 +306,18 @@ type (DMUMPS_STRUC), intent(inout)   :: projection_matrix
 class (particle_base), intent(in), dimension(:)    :: particles
 integer, intent(in) :: ivar_out
 
-real*8, allocatable :: RHS(:,:), sum_rhs(:)
+real*8, allocatable :: RHS(:,:), sum_rhs(:), my_rhs(:)
 real*8     :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
-integer    :: i, j, k, m, i_tor, index_large_i, inode
+integer    :: i, j, k, m, i_tor, index_large_i, inode, n_AA
 integer    :: i_elm, index, index_ij, my_id, ierr
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
-allocate(RHS(n_vertex_max*(n_order+1),element_list%n_elements))
+allocate(RHS(n_vertex_max*(n_order+1),element_list%n_elements),my_rhs(projection_matrix%n), sum_rhs(projection_matrix%n))
 ! Create the RHS and calculate the projection
 do i_tor=1, n_tor
   RHS = 0.d0
-  projection_matrix%rhs = 0.d0
+  my_rhs = 0.d0
   !$omp parallel do default(none) &
   !$omp shared(particles, element_list, node_list, mode, i_tor, RHS) &
   !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
@@ -364,14 +363,14 @@ do i_tor=1, n_tor
         index_ij = (i-1)*(n_order+1) + j
         index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
 
-        projection_matrix%rhs(index_large_i) = projection_matrix%rhs(index_large_i) + RHS(index_ij, i_elm)
+        my_rhs(index_large_i) = my_rhs(index_large_i) + RHS(index_ij, i_elm)
       enddo
     enddo
   enddo
 
   ! Gather the RHS's to the root process
-  if (my_id .eq. 0) allocate(sum_rhs(size(projection_matrix%rhs,1)))
-  call MPI_Reduce(projection_matrix%rhs,sum_rhs,size(projection_matrix%rhs,1), &
+  ! but ifort complains otherwise
+  call MPI_Reduce(my_rhs,sum_rhs,projection_matrix%n, &
       MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   ! Compute the solution of Ax=b (b = RHS)
   projection_matrix%JOB = 3
@@ -379,7 +378,6 @@ do i_tor=1, n_tor
   projection_matrix%icntl(4)  = 1 ! print only errors
   if (my_id .eq. 0) then
     projection_matrix%rhs = sum_rhs
-    deallocate(sum_rhs)
   end if
   call DMUMPS(projection_matrix)
 
@@ -392,6 +390,7 @@ do i_tor=1, n_tor
     enddo      ! nodes
   end if
 enddo ! i_tor
+deallocate(RHS,sum_rhs,my_rhs)
 end subroutine project_particles
 
 

@@ -322,7 +322,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
       ! 3. P_phi (generalized toroidal momentum)
       out(i,3) = out(i,3) / EL_CHG ! normalize to ZPsi
       ! 4. Psi_bar (P_phi/q)
-      out(i,4) = out(i,3) / real(particle%q)
+      out(i,4) = out(i,3) / max(real(particle%q),1.0)
       ! 5. Psi (at GC position)
       out(i,5) = P(1)
       ! 6. q (charge)

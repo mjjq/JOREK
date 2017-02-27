@@ -21,6 +21,7 @@ integer(HSIZE_T), parameter :: n_var = 7
 !> in an extensible (in the time-dimension) dataset
 type, extends(io_action) :: write_particle_diagnostics
   integer(HID_T) :: file_id !< file identifier
+  logical :: append = .false. !< Append to existing file
 contains
   procedure :: do => do_write_particle_diagnostics
 end type write_particle_diagnostics
@@ -30,14 +31,15 @@ end interface write_particle_diagnostics
 
 
 contains
-!> Constructor. Must use this or open the HDF5 file manually.
-!> Be sure to use keyword arguments when initializing, to avoid confusion
-function new_write_particle_diagnostics(filename) result(new)
+!> Constructor
+function new_write_particle_diagnostics(filename, append) result(new)
   type(write_particle_diagnostics) :: new
-  character(len=*), intent(in)    :: filename
+  character(len=*), intent(in)     :: filename
+  logical, intent(in), optional    :: append
   new%filename = filename
   new%name = "WriteConstantsOfMotion"
   new%log = .true.
+  if (present(append)) new%append = append
 end function new_write_particle_diagnostics
 
 !> Action to calculate all of these values and write them to an HDF5 file
@@ -51,15 +53,16 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
   integer(HSIZE_T), parameter :: n_time = 1_HSIZE_T
 
-  integer(HSIZE_T)  :: data_dims(3), time_dims(1), data_maxdims(3), time_maxdims(1)
+  integer(HSIZE_T)  :: data_dims(2), time_dims(1), data_maxdims(2), time_maxdims(1)
   integer(HSIZE_T)  :: npoints_mem, npoints_file
-  integer           :: i, my_id, n_cpu, ierr, rank
+  integer           :: i, my_id, n_cpu, ierr, rank, dot_index
   integer(HID_T)    :: dspace, dset, mem_space
   integer(HID_T)    :: tspace, t_mem_space, tset, group_id, plist
-  logical           :: link_exists
+  logical           :: link_exists, file_exists
   character(len=80) :: dataset_name, timeset_name
+  character(len=123):: filename !< len=120 from this%filename + 3
   integer, dimension(:), allocatable            :: particles_per_proc
-  real*4, dimension(:,:,:), allocatable, target :: stats ! Data storage order: particle index, variable number, time (in fortran)
+  real*4, dimension(:,:,:), allocatable, target :: stats ! Data storage order: particle index, time (in fortran)
 
   call h5open_f(ierr)
 
@@ -67,6 +70,22 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   call h5pcreate_f(H5P_FILE_ACCESS_F, plist, ierr)
   call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, ierr)
 
+  if (.not. this%append) then
+    ! Move old file if present
+    inquire(file=trim(this%filename), exist=file_exists)
+    dot_index = scan(this%filename,'.',back=.true.)
+    if (file_exists) then
+      do i=1,99
+        write(filename,'(A,i0.2,A)') this%filename(1:dot_index), i, this%filename(dot_index+1:)
+        inquire(file=trim(filename), exist=file_exists)
+        if (.not. file_exists) then
+          call system("mv '"//trim(this%filename)//"' '"//trim(filename)//"'")
+          exit ! loop
+        end if
+      end do
+    end if
+  end if
+      
   call HDF5_open_or_create(this%filename, plist, file_id=this%file_id, ierr=ierr)
   if (ierr .ne. 0) then
     write(*,*) "ERROR: cannot open HDF5 file"

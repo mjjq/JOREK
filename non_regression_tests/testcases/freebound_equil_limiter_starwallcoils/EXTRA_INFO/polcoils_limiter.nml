@@ -1,0 +1,43 @@
+&polcoil_input
+  
+  polcoil_set          = 'ITER poloidal field coil set for STARWALL_J (produced by M. Hoelzl 2017-02-08)'
+  n_polcoils           = 4
+  polcoils_torpts      = 60 
+  
+  polcoil( 1)%name     = 'PF1'
+  polcoil( 1)%R        = 10.
+  polcoil( 1)%Z        = 2.
+  polcoil( 1)%dR       = 0.01
+  polcoil( 1)%dZ       = 0.03
+  polcoil( 1)%nbands_R = 2
+  polcoil( 1)%nbands_Z = 2
+  polcoil( 1)%resist   = 1.
+  
+  polcoil( 2)%name     = 'PF2'
+  polcoil( 2)%R        = 10.
+  polcoil( 2)%Z        = -2.
+  polcoil( 2)%dR       = 0.02
+  polcoil( 2)%dZ       = 0.01
+  polcoil( 2)%nbands_R = 2
+  polcoil( 2)%nbands_Z = 2
+  polcoil( 2)%resist   = 1.
+  
+  polcoil( 3)%name     = 'PF3'
+  polcoil( 3)%R        = 8.
+  polcoil( 3)%Z        = 0.
+  polcoil( 3)%dR       = 0.02
+  polcoil( 3)%dZ       = 0.04
+  polcoil( 3)%nbands_R = 2
+  polcoil( 3)%nbands_Z = 2
+  polcoil( 3)%resist   = 1.
+  
+  polcoil( 4)%name     = 'PF4'
+  polcoil( 4)%R        = 12.
+  polcoil( 4)%Z        = 0.
+  polcoil( 4)%dR       = 0.05
+  polcoil( 4)%dZ       = 0.03
+  polcoil( 4)%nbands_R = 2
+  polcoil( 4)%nbands_Z = 2
+  polcoil( 4)%resist   = 1.
+  
+/

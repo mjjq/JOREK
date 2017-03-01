@@ -2,13 +2,12 @@
 !> including sampling from gaussian distributions and 
 !> sampling in cylindrical coordinates.
 !>
-!>###TODO
-!>* Replace boxmueller transform with ziggurat or marsaglia polar
 module mod_sampling
   implicit none
   private
   public :: transform_uniform_cylindrical
   public :: boxmueller_transform
+  public :: sample_chi_squared_3
 contains
   !> Transform three uniform random numbers in [0,1] to 
   !> Uniform random numbers in cylindrical coordinates (R,Z,Phi)
@@ -39,4 +38,40 @@ contains
           (/cos(TWOPI*ran(i+1)), sin(TWOPI*ran(i+1))/)
     end do
   end function boxmueller_transform
+
+  !> Transform a uniformly distributed number u on [0,1] into a chi^2(3)-distributed
+  !> number by inverse transform sampling.
+  !> This function might be a bit expensive. There are cheaper ways of making
+  !> chi-squared distributions from squares of normally distributed variables.
+  !> If you are using quasi-random sequences those are not suitable however.
+  pure function sample_chi_squared_3(u) result(x)
+    use mod_rootfinding, only: newtons_method
+    real*8, intent(in)   :: u !< Uniformly distributed number in [0,1]
+    real*8               :: x !< Chi-squared(3) distributed number
+    real*8               :: x0 !< Initial guess
+    integer              :: ierr
+    
+    call newtons_method(f=CDF_chi_squared_3, &
+                       df=PDF_chi_squared_3, &
+                       y0=u, x0=x0, x=x, ierr=ierr)
+    ! Dangerous: ignore ierr for now
+  end function sample_chi_squared_3
+
+  pure function PDF_chi_squared_3(x) result(P)
+    real*8, intent(in) :: x
+    real*8             :: P
+    real*8, parameter  :: PI = atan2(0.d0, -1.d0)
+    ! Workaround if we go out of domain
+    P = 1.d0
+    if (x .gt. 0.d0) P = sqrt(x)*exp(-x*0.5d0)/sqrt(2.d0*PI)
+  end function PDF_chi_squared_3
+
+  pure function CDF_chi_squared_3(x) result(C)
+    real*8, intent(in) :: x
+    real*8             :: C
+    real*8, parameter  :: PI = atan2(0.d0, -1.d0)
+    ! Workaround if we go out of domain
+    C = 0.d0
+    if (x .gt. 0.d0) C = erf(sqrt(x)/sqrt(2.d0)) - sqrt(2.d0/PI)*exp(-x*0.5d0)*sqrt(x)
+  end function CDF_chi_squared_3
 end module mod_sampling

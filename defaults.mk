@@ -12,8 +12,8 @@ $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
 INCLUDES+=-I$(MODDIR)
 
 # Detect the compiler vendors (sort to remove duplicates)
-F_COMPILER_FAMILY := $(sort $(shell $(FC) --version | grep -oim 1 'intel\|gcc' | tr A-Z a-z | sed 's/gcc/gnu/'))
-C_COMPILER_FAMILY := $(sort $(shell $(CC) --version | grep -oim 1 'intel\|gcc' | tr A-Z a-z | sed 's/gcc/gnu/'))
+F_COMPILER_FAMILY :=$(sort $(shell $(FC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
+C_COMPILER_FAMILY :=$(sort $(shell $(CC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
 ifneq ($(F_COMPILER_FAMILY),$(C_COMPILER_FAMILY))
   $(error "Fortran compiler ($(F_COMPILER_FAMILY)) must be same as C compiler ($(C_COMPILER_FAMILY))")
 endif
@@ -35,7 +35,6 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
   FLAGS += -Wall -Wextra
   FLAGS += -Wno-unused-variable
-  FFLAGS += -Winteger-division
   FFLAGS += -Wintrinsics-std
   FFLAGS += -Wcharacter-truncation
   FFLAGS += -Wsurprising -Wno-tabs
@@ -183,6 +182,10 @@ ifeq (1, $(USE_HDF5))
   DEFINES  := $(DEFINES) -DUSE_HDF5
 else
   $(warning "USE_HDF5=1 is recommended for input/output")
+endif
+
+ifeq (1, $(USE_BLOCK))
+  DEFINES := $(DEFINES) -DUSE_BLOCK
 endif
 
 

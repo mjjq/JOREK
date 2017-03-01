@@ -3,7 +3,9 @@ jorekmodel="199"
 description="Tearing mode, circular plasma, model$jorekmodel, n_tor=3."
 mpitasks=2
 binaries="jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin"
-requiredfiles="$binaries input"
+binaries_initial=""
+requiredfiles="input"
+extra_remote_files=""
 
 
 # --- Compile the code for the test case
@@ -31,6 +33,6 @@ function restart_run () {
 
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
-  ./rst_bin2hdf5                                                                     || exit 1
+  ./rst_bin2hdf5 < ./input                                                           || exit 1
   h5diff -d 1e-12 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
 }

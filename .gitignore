@@ -50,7 +50,7 @@ tmp[1-9]*
 .mod/
 .dep/
 .obj/
-ex[0-9]*
-particle_test_driver
-compare_mc_coronal
-pusher_test
+starwall-response.dat
+coil_field.dat
+RMP_psi*.txt
+RMP_start_time.dat

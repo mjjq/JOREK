@@ -1,8 +1,7 @@
 !> Determines some integrals over the JOREK computational domain to determine the total current etc.
 subroutine integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
   aminor, Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure,       &
-  pressure_in, pressure_out)
-
+  pressure_in, pressure_out, heat_src_in, heat_src_out, part_src_in, part_src_out)
 use constants
 use mod_parameters
 use data_structure
@@ -35,6 +34,10 @@ real*8,                  intent(out)   :: density_out
 real*8,                  intent(out)   :: pressure
 real*8,                  intent(out)   :: pressure_in
 real*8,                  intent(out)   :: pressure_out
+real*8,                  intent(out)   :: heat_src_in
+real*8,                  intent(out)   :: heat_src_out
+real*8,                  intent(out)   :: part_src_in
+real*8,                  intent(out)   :: part_src_out
 
 ! --- Local variables
 type (type_element)      :: element
@@ -44,9 +47,9 @@ real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 real*8     :: eq_g(n_var,n_gauss,n_gauss), eq_s(n_var,n_gauss,n_gauss), eq_t(n_var,n_gauss,n_gauss)
 integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: xjac, BigR, wst, P_int, C_intern, ZJ_0, PS_0, Volume, Area
-real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out
+real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
-real*8     :: particle_source, heat_source, heat_source_i, heat_source_e, heating_power
+real*8     :: part_src, heat_src, heat_src_i, heat_src_e
 
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
@@ -64,7 +67,10 @@ P_hel    = 0.d0
 C_hel    = 0.d0
 Volume   = 0.d0
 Area     = 0.d0
-heating_power = 0
+heat_src_in  = 0.d0
+heat_src_out = 0.d0
+part_src_in  = 0.d0
+part_src_out = 0.d0
 
 Bgeo = F0 / R_geo
 
@@ -137,74 +143,74 @@ do ife =1, element_list%n_elements
       endif
       ZJ_0  = eq_g(3,ms,mt)
       PS_0  = eq_g(1,ms,mt)
-
-      pressure = pressure + rho_00 * T_00 * xjac * BigR * wst
-      density  = density  + rho_00       * xjac * BigR * wst
-
-!      if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
-!        xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
-
-      if ((PS_0 .lt. psi_limit) .and. (y_g(ms,mt) .gt. Z_xpoint(1))) then
-
+      
+      pressure = pressure + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
+      density  = density  + rho_00       * xjac * 2.d0 * PI * BigR * wst
+      
+      if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
+        xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
+        
 #if JOREK_MODEL == 400
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-          psi_limit, particle_source, heat_source_i, heat_source_e)
-          heat_source = heat_source_i + heat_source_e
+          psi_limit, par_src, heat_src_i, heat_src_e)
+          heat_src = heat_src_i + heat_src_e
 #else
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-          psi_limit, particle_source, heat_source)
+          psi_limit, part_src, heat_src)
 #endif
-
+        
         ! --- 3D integrals
-        D_int = D_int + rho_00       * xjac * BigR * wst
-        P_int = P_int + rho_00 * T_00 * xjac * BigR * wst
-        C_intern = C_intern + ZJ_0 /BigR  * xjac * BigR * wst
-
+        D_int = D_int + rho_00       * xjac * 2.d0 * PI * BigR * wst
+        P_int = P_int + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
+        C_intern = C_intern + ZJ_0 /BigR  * xjac * 2.d0 * PI * BigR * wst
+        Volume = Volume + 2.d0 * PI * BigR * xjac * wst
+        heat_src_in = heat_src_in + 2.d0 * PI * BigR * xjac * wst * heat_src
+        part_src_in = part_src_in + 2.d0 * PI * BigR * xjac * wst * part_src
+        
         ! --- 2D integrals
         P_hel = P_hel + rho_00 * T_00 * xjac * wst
         C_hel = C_hel + ZJ_0 /BigR  * xjac * wst
-        Volume = Volume + 2.d0 * PI * BigR * xjac * wst
-        heating_power = heating_power + 2.d0 * PI * BigR * xjac * wst * heat_source
         Area   = Area   + xjac * wst
-
+        
       else
-
-        D_ext = D_ext + rho_00       * xjac * BigR * wst
-        P_ext = P_ext + rho_00 * T_00 * xjac * BigR * wst
-        C_ext = C_ext + ZJ_0 /BigR  * xjac * BigR * wst
-
+        
+        D_ext = D_ext + rho_00       * xjac * 2.d0 * PI * BigR * wst      
+        P_ext = P_ext + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
+        C_ext = C_ext + ZJ_0 /BigR  * xjac * 2.d0 * PI * BigR * wst
+        
+        heat_src_out = heat_src_out + 2.d0 * PI * BigR * xjac * wst * heat_src
+        part_src_out = part_src_out + 2.d0 * PI * BigR * xjac * wst * part_src
       endif
-
+      
     enddo
   enddo
 enddo
 
-density      = density  * 2.d0 * PI
-density_in   = D_int    * 2.d0 * PI
-density_out  = D_ext    * 2.d0 * PI
-pressure     = pressure * 2.d0 * PI
-pressure_in  = P_int    * 2.d0 * PI
-pressure_out = P_ext    * 2.d0 * PI
-current_in   = C_intern * 2.d0 * PI
-current_out  = C_ext    * 2.d0 * PI
+density_in   = D_int
+density_out  = D_ext
+pressure_in  = P_int
+pressure_out = P_ext
+current_in   = C_intern
+current_out  = C_ext
 
 current = C_hel / MU_zero
 beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
 beta_n  = 100.d0 * (4.*PI/10.) * beta_t / (MU_zero * abs(current) /  (aminor * Bgeo))
 
-write(*,'(A,f12.7)') ' psi_limit: ',psi_limit
-write(*,'(A,f12.7,A)') ' current  : ',current/1.e6,' MA'
-write(*,'(A,f12.7)') ' beta_p   : ',beta_p
-write(*,'(A,f12.7)') ' beta_t   : ',beta_t
-write(*,'(A,f12.7,A)') ' beta_n   : ',beta_n,' [%]'
-write(*,'(A,f12.7,A)') ' Area     : ',area,' m^2'
-write(*,'(A,f12.7,A)') ' Volume   : ',volume,' m^3'
-write(*,'(A,es18.7,A)') ' Heating power : ',heating_power,' / sqrt((mu_0)^3 rho_0) W'
+write(*,'(A,f12.7)')    ' psi_limit        : ',psi_limit
+write(*,'(A,f12.7,A)')  ' current          : ',current/1.e6,' MA'
+write(*,'(A,f12.7)')    ' beta_p           : ',beta_p
+write(*,'(A,f12.7)')    ' beta_t           : ',beta_t
+write(*,'(A,f12.7,A)')  ' beta_n           : ',beta_n,' [%]'
+write(*,'(A,f12.7,A)')  ' Area             : ',area,' m^2'
+write(*,'(A,f12.7,A)')  ' Volume           : ',volume,' m^3'
+write(*,'(A,2es18.7,A)') ' Heat.src (in/out): ', heat_src_in, heat_src_out, '/ sqrt((mu_0)^3 rho_0) W'
+write(*,'(A,2es18.7,A)') ' Part.src (in/out): ', part_src_in, part_src_out
 
-write(*,'(A,5f10.5)') ' density  (total/in/out) : ',density,  density_in,  density_out
-write(*,'(A,5f10.5)') ' pressure (total/in/out) : ',pressure, pressure_in, pressure_out
-write(*,'(A,5f10.5)') ' current  (in/out)       : ',current_in, current_out
+write(*,'(A,5f10.5)') ' density  (total/in/out)  : ',density,  density_in,  density_out 
+write(*,'(A,5f10.5)') ' pressure (total/in/out)  : ',pressure, pressure_in, pressure_out 
+write(*,'(A,5f10.5)') ' current  (in/out)        : ',current_in, current_out 
 
 return
 end subroutine integrals

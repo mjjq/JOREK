@@ -38,7 +38,7 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub            = 2        		! Number of subdivisions of the cubic finite elements into linear pieces
+nsub            = 5        		! Number of subdivisions of the cubic finite elements into linear pieces
 without_n0_mode = .false.  		! If true, do not include the n=0 mode (i_tor=1)
 periodic        = .true.		! Are we doing the whole tor?
 density_only    = .false.		! Write density only (for smaller vtk file)
@@ -160,7 +160,7 @@ do m=1, n_toroidal
             						    - ps_x * HZ(i_tor,m) / R,			  &
             						    + ps_y * HZ(i_tor,m) / R * sin(angle)  /)
             if (i_tor .eq. 1) then
-              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0., F0/R *cos(angle)/)
+              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0.d0, F0/R *cos(angle)/)
             endif
 
             call interp(node_list,element_list,i,2,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)

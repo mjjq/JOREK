@@ -52,6 +52,12 @@ subroutine preset_parameters
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   
+  amix                 = 0.d0
+  amix_freeb           = 0.85d0
+  equil_accuracy       = 1.d-6
+  equil_accuracy_freeb = 1.d-6
+  Zaxis_find_limit     = 99.d0
+  
   n_R       = 0
   n_Z       = 0
 
@@ -172,6 +178,15 @@ subroutine preset_parameters
   particlesource      = 1.e-5
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
+  edgeparticlesource      = 0.d0
+  edgeparticlesource_psin = 0.98
+  edgeparticlesource_sig  = 0.01
+  heatsource_gauss          = 0.d0
+  heatsource_gauss_psin     = 0.9d0
+  heatsource_gauss_sig      = 0.1d0
+  particlesource_gauss      = 0.d0
+  particlesource_gauss_psin = 0.9d0
+  particlesource_gauss_sig  = 0.1d0
   
   tauIC = 0.d0
   Wdia  = .false.
@@ -265,11 +280,17 @@ subroutine preset_parameters
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
   RMP_psi_cos_file   = 'none'
   RMP_psi_sin_file   = 'none'
-  lambda=0.0663
-  tset = 150
+  RMP_growth_rate    = 0.011 ! RMP_growth_rate * RMP_ramp_up_time must be ~cst
+  RMP_ramp_up_time   = 1000  ! in JOREK times
   output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
   RMP_har_cos=2
   RMP_har_sin=3
+  Number_RMP_harmonics=1
+  RMP_har_cos_spectrum(:)=0
+  RMP_har_cos_spectrum(1)=RMP_har_cos ! =2 if only one harmonic (ntor=3) and this harmonic is RMP 
+  RMP_har_sin_spectrum(:)=0
+  RMP_har_sin_spectrum(1)=RMP_har_sin ! =3 if only one harmonic (ntor=3) and this harmonic is RMP 
+
 ! ===== Neoclassical parameters ======
   NEO = .false.
   neo_file ='none'

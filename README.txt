@@ -4,6 +4,8 @@
 * copyright : Guido Huysmans (Association Euratom/CEA *
 *******************************************************
 
+For a documentation about the code, see jorek.eu/wiki
+
 to build jorek2:
 
 - edit the Makefile.inc file to match your environment

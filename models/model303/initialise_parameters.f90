@@ -7,7 +7,7 @@ use pellet_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
-use vacuum,        only: vacuum_preset, wall_resistivity
+use vacuum
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -64,7 +64,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, rot_file,           &
                 normalized_velocity_profile,                        &
                 freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   &
+                resistive_wall,                                     &
+                wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 murge_with_starpu, murge_cuda_nbr,                  &
@@ -73,9 +74,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
-                zkpar_T_dependent,                                  &
+                zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
@@ -83,7 +89,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-                RMP_on, lambda, tset, RMP_har_cos,RMP_har_sin,      &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 wall_file,                                          &
@@ -91,18 +98,27 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 first_target_point, last_target_point,		    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme,                                   &
+                corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
-                corr_neg_temp_coef, corr_neg_dens_coef
+                Number_RMP_harmonics,RMP_har_cos_spectrum,          &
+                RMP_har_sin_spectrum,                               &
+                amix, amix_freeb, equil_accuracy,                   &
+                equil_accuracy_freeb, current_ref, FB_Ip_position,  &
+                FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
+                FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
+                n_feedback_current, n_feedback_vertical,            &
+                n_iter_freeb, n_coils_nml, coils0,                  &
+                Zaxis_find_limit, PF_pert_start_time
 
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
-
+  
   ! --- Model-specific presets
   particlesource_psin = 100.d0
-
+  
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
      open(42, file=filename, status='old', action='read', iostat=ierr)
@@ -117,7 +133,7 @@ if (my_id .eq. 0) then
     read(5,in1)
 
  endif
-!    write(*,*) 'Input files: T_file = ',  trim(T_file), ',  rho_file = ', trim(rho_file)
+!    write(*,*) 'Input files: T_file = ',  trim(T_file), ',  rho_file = ', trim(rho_file) 
 !    write(*,*) 'ffprime_file = ', trim(ffprime_file),  ',  R_Z_psi_bnd_file = ', trim(R_Z_psi_bnd_file)
 !    if (NEO) then
 !       write(*,*) 'neo_file = ', trim(neo_file)
@@ -131,16 +147,16 @@ if (my_id .eq. 0) then
       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
-      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
+      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
       do i=1,n_boundary
         read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
-        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
       enddo
-    endif
+    endif    
     CLOSE(243)
   endif
  !=========================================
-
+  
  !==============================Limiter==========================
    if (n_limiter.ne.0) then
  ! --- Open the file.
@@ -149,16 +165,16 @@ if (my_id .eq. 0) then
       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
       write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
     else
-      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall '
+      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
       do i=1,n_limiter
         read(244,*) R_limiter(i),Z_limiter(i)
         write(*,*)  R_limiter(i),Z_limiter(i)
       enddo
-    endif
+    endif    
     CLOSE(244)
   endif
  !=========================================
-
+  
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else
@@ -192,7 +208,51 @@ if (my_id .eq. 0) then
   if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_particles,1,nstep,"xtime_pellet_particles")
   if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_GRID)
   if (nstep .gt. 0)                   call tr_allocate(xtime_phys_ablation,1,nstep,"xtime_phys_ablation")
-
+  
+  if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
+  
+  if (allocated(Z_axis_t)) call tr_deallocate(Z_axis_t,"Z_axis_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(Z_axis_t,1,index_start+nstep,"Z_axis_t",CAT_UNKNOWN)
+  
+  if (allocated(psi_axis_t)) call tr_deallocate(psi_axis_t,"psi_axis_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
+  
+  if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)
+  
+  if (allocated(beta_p_t)) call tr_deallocate(beta_p_t,"beta_p_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(beta_p_t,1,index_start+nstep,"beta_p_t",CAT_UNKNOWN)
+  
+  if (allocated(beta_t_t)) call tr_deallocate(beta_t_t,"beta_t_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(beta_t_t,1,index_start+nstep,"beta_t_t",CAT_UNKNOWN)
+  
+  if (allocated(beta_n_t)) call tr_deallocate(beta_n_t,"beta_n_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(beta_n_t,1,index_start+nstep,"beta_n_t",CAT_UNKNOWN)
+  
+  if (allocated(density_in_t)) call tr_deallocate(density_in_t,"density_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(density_in_t,1,index_start+nstep,"density_in_t",CAT_UNKNOWN)
+  
+  if (allocated(density_out_t)) call tr_deallocate(density_out_t,"density_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(density_out_t,1,index_start+nstep,"density_out_t",CAT_UNKNOWN)
+  
+  if (allocated(pressure_in_t)) call tr_deallocate(pressure_in_t,"pressure_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(pressure_in_t,1,index_start+nstep,"pressure_in_t",CAT_UNKNOWN)
+  
+  if (allocated(pressure_out_t)) call tr_deallocate(pressure_out_t,"pressure_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
+  
+  if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heat_src_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+  
+  if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heat_src_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+  
+  if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"part_src_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+  
+  if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"part_src_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
 endif
 
 ! --- Read numerical profiles for rho, T, ff', toroidal rotation and neoclassical coefficients.
@@ -200,6 +260,6 @@ call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-
+  
 return
 end subroutine initialise_parameters

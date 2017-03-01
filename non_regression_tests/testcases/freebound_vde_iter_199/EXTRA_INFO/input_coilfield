@@ -1,0 +1,7 @@
+&input
+  coil_file    = 'polcoils_iter',
+  num_tor_pts  = 80,
+  
+  debug        = .t.,
+  verbose      = .f.,
+/

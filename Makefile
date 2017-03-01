@@ -59,7 +59,7 @@ DIRS := diagnostics			\
 	grids				\
 	plots				\
 	diagnostics/new_diag		\
-	postproc			\
+	diagnostics/postproc		\
 	tools				\
 	datatypes			\
 	timing				\

@@ -109,7 +109,7 @@ all: $(basename $(notdir $(PROGRAM_SOURCES)))
 
 # Special cases
 # Add here: Global includes (as the line below)
-INCLUDES += -Itiming # for r3_info.h
+INCLUDES += -Itools # for r3_info.h
 # C++ support
 LIBS += -lstdc++
 CXXFLAGS += -pedantic -Wall

@@ -50,6 +50,11 @@ contains
     real*8               :: x !< Chi-squared(3) distributed number
     real*8               :: x0 !< Initial guess
     integer              :: ierr
+    real*8, parameter    :: guess_a = 0.24851051d0, guess_b = 1.11289237d0
+
+    ! Generate a guess by inverting a nearby distribution:
+    ! u = tanh(a*x)**b
+    x0 = atanh(u**(1.d0/guess_b))/guess_a
     
     call newtons_method(f=CDF_chi_squared_3, &
                        df=PDF_chi_squared_3, &
@@ -61,17 +66,26 @@ contains
     real*8, intent(in) :: x
     real*8             :: P
     real*8, parameter  :: PI = atan2(0.d0, -1.d0)
-    ! Workaround if we go out of domain
-    P = 1.d0
-    if (x .gt. 0.d0) P = sqrt(x)*exp(-x*0.5d0)/sqrt(2.d0*PI)
+    ! Continue for negative values
+    P = sign(sqrt(abs(x))*exp(-abs(x)*0.5d0)/sqrt(2.d0*PI), x)
   end function PDF_chi_squared_3
 
   pure function CDF_chi_squared_3(x) result(C)
     real*8, intent(in) :: x
     real*8             :: C
     real*8, parameter  :: PI = atan2(0.d0, -1.d0)
-    ! Workaround if we go out of domain
-    C = 0.d0
-    if (x .gt. 0.d0) C = erf(sqrt(x)/sqrt(2.d0)) - sqrt(2.d0/PI)*exp(-x*0.5d0)*sqrt(x)
+    ! Continue for negative values, mirror about y=-x
+    C = sign(erf(sqrt(abs(x))/sqrt(2.d0)) - sqrt(2.d0/PI)*exp(-abs(x)*0.5d0)*sqrt(abs(x)), x)
   end function CDF_chi_squared_3
+
+  !> Second derivative of the CDF for a chi_squared(3) distribution.
+  !> Use this if you would like to use Halley's method to sample.
+  !> In my tests it is faster to use Newton-Raphson iteration though.
+  pure function PDF_prime_chi_squared_3(x) result(P)
+    real*8, intent(in) :: x
+    real*8             :: P
+    real*8, parameter  :: PI = atan2(0.d0, -1.d0)
+    ! Workaround if we go out of domain
+    P = sign((1-abs(x))*exp(-abs(x)*0.5d0)/(2.d0*sqrt(2.d0*PI*abs(x))), x)
+  end function PDF_prime_chi_squared_3
 end module mod_sampling

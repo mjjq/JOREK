@@ -11,6 +11,7 @@
 *.dat
 *.swp
 *.i90
+*.orig
 Makefile.inc
 j302_1
 j302_3

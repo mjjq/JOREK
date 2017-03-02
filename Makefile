@@ -62,7 +62,6 @@ DIRS := diagnostics			\
 	diagnostics/postproc		\
 	tools				\
 	datatypes			\
-	timing				\
 	.				\
 	vacuum
 DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline

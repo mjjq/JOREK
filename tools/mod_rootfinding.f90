@@ -7,8 +7,8 @@ module mod_rootfinding
 contains
   !> Use newton's method to solve f(x) == y0, starting at x0
   pure subroutine newtons_method(f, df, y0, x0, x, ierr)
-    real*8, external     :: f     !< Function value at x
-    real*8, external     :: df    !< Derivative at x
+    !real*8, external     :: f     !< Function value at x
+    !real*8, external     :: df    !< Derivative at x
     real*8, intent(in)   :: y0    !< Intersection to find
     real*8, intent(in)   :: x0    !< Initial value
     real*8, intent(out)  :: x     !< Result value
@@ -41,9 +41,9 @@ contains
 
   !> Use Halley's method to solve f(x) == y0, starting at x0
   pure subroutine halleys_method(f, df, ddf, y0, x0, x, ierr)
-    real*8, external     :: f     !< Function value at x
-    real*8, external     :: df    !< First derivative at x
-    real*8, external     :: ddf   !< Second derivative at x
+    !real*8, external     :: f     !< Function value at x
+    !real*8, external     :: df    !< First derivative at x
+    !real*8, external     :: ddf   !< Second derivative at x
     real*8, intent(in)   :: y0    !< Intersection to find
     real*8, intent(in)   :: x0    !< Initial value
     real*8, intent(out)  :: x     !< Result value

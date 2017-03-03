@@ -4,6 +4,7 @@ eval `tclsh /work/imas/opt/modules-tcl/modulecmd.tcl $(basename $SHELL) autoinit
 module purge
 
 module use /work/imas/opt/EasyBuild/modules/all
+module use /work/imas/etc/modules/all
 
 module load GCC/4.8.3
 module load PaStiX/5.2.2.22-goolf-1.5.16

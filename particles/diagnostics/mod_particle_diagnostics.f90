@@ -65,12 +65,14 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   real*4, dimension(:,:,:), allocatable, target :: stats ! Data storage order: particle index, time (in fortran)
 
   call h5open_f(ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 
   ! Create file property list for parallel access
   call h5pcreate_f(H5P_FILE_ACCESS_F, plist, ierr)
   call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, ierr)
 
-  if (.not. this%append) then
+  if (.not. this%append .and. my_id .eq. 0) then
     ! Move old file if present
     inquire(file=trim(this%filename), exist=file_exists)
     dot_index = scan(this%filename,'.',back=.true.)
@@ -85,6 +87,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
       end do
     end if
   end if
+  call MPI_Barrier(MPI_COMM_WORLD, ierr)
       
   call HDF5_open_or_create(this%filename, plist, file_id=this%file_id, ierr=ierr)
   if (ierr .ne. 0) then
@@ -105,8 +108,6 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   if (.not. allocated(sim%groups)) return
 
   ! Preparation
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
   allocate(particles_per_proc(0:n_cpu-1))
 
   ! For each of the groups

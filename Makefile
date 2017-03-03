@@ -93,8 +93,7 @@ $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 all: $(basename $(notdir $(PROGRAM_SOURCES)))
 # A list of supported diagnostics, that should compile properly for regression
 # testing to pass
-most: eqdsk2jorek \
-      jorek2_connection2 \
+most: jorek2_connection2 \
       jorek2_connection_stan \
       jorek2_diagno \
       jorek2_fieldlines_vtk \

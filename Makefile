@@ -117,7 +117,7 @@ most: eqdsk2jorek \
 INCLUDES += -Itools # for r3_info.h
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
-eqdsk2jorek: LIBS+=-ldierckx
+eqdsk2jorek: LIBS+=$(LIBDIERCKX)
 
 # Is this used by anyone? Otherwise we could remove it
 # It is not updated to this format yet.

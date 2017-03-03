@@ -8,7 +8,7 @@ CC     = mpicc
 
 FFLAGS_OMP       = -fopenmp 
 FFLAGS           = -g -O0 
-FFLAGS          := $(FFLAGS) -fdefault-real-8
+FFLAGS          := $(FFLAGS) -fdefault-real-8 -fdefault-double-8
 FFLAGS          := $(FFLAGS) -ffree-line-length-none
 FFLAGS          := $(FFLAGS) -x f95-cpp-input
 ## TODO find equivalents of this ifort options
@@ -59,6 +59,10 @@ LIB_WSMP = -L$(WSMP_HOME) -lpwsmp64
 # LIBFFTW
 LIBFFTW   = -L$(FFTWDIR)/lib -lfftw3
 INC_FFTW  = -I$(FFTWDIR)/include
+
+# LIBDIERCKX
+DIERCKX_HOME ?= /home/ITER/vanvugd/source/Dierckx
+LIBDIERCKX = -L$(DIERCKX_HOME) -ldierckx
 
 #LAPACK
 #LIBLAPACK = -L$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core

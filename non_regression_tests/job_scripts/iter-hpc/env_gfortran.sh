@@ -6,9 +6,7 @@ module purge
 module use /work/imas/opt/EasyBuild/modules/all
 
 module load GCC/4.8.3
-module load openmpi/1.4.2-gnu
-#module load fftw/3.3.4
-module load hwloc/1.8.1-GCC-4.8.3
+module load PaStiX/5.2.2.22-goolf-1.5.16
 module load hdf5/1.8.15p1-gompi-1.5.16
 module load zlib/1.2.8-GCC-4.8.3
 

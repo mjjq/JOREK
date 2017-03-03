@@ -31,9 +31,9 @@ USE_FFTW   = 0
 USE_HDF5   = 1
 
 #Scotch library
-SCOTCH_HOME  = /home/ITER/vanvugd/source/scotch_5.1.12
-LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lscotch -lscotcherr
-INC_SCOTCH   = -I$(SCOTCH_HOME)/include
+#SCOTCH_HOME  = /home/ITER/vanvugd/source/scotch_5.1.12
+#LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lscotch -lscotcherr
+#INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
 # MUMPS
 MUMPS_HOME ?= 
@@ -43,7 +43,7 @@ INC_MUMPS  = $(MUMPS_HOME)/include/
 ORDLIB     = $(MUMPS_HOME)/lib/libpord.a
 
 # PASTIX
-PASTIX_HOME      = /home/ITER/vanvugd/source/pastix_5.2.2.22/install
+PASTIX_HOME      ?= $(EBROOTPASTIX)
 LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs`
 LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS  = `$(PASTIX_HOME)/pastix-conf --blas`

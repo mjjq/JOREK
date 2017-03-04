@@ -46,7 +46,7 @@ ORDLIB     = $(MUMPS_HOME)/lib/libpord.a
 PASTIX_HOME      ?= $(EBROOTPASTIX)
 LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs`
 LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge`
-LIB_PASTIX_BLAS  = `$(PASTIX_HOME)/pastix-conf --blas`
+LIB_PASTIX_BLAS  = -lopenblas
 INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
 
 #HIPS

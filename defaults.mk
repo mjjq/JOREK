@@ -43,7 +43,6 @@ ifeq ($(COMPILER_FAMILY), gnu)
   ifeq ($(DEBUG), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
     FLAGS  += -fcheck=all
-    FLAGS  += -Wunused-variable
     FLAGS  += -ffpe-trap=invalid,zero,overflow -ftrapv
     FFLAGS += -Wimplicit-interface -Wimplicit-procedure
     FFLAGS += -Wconversion

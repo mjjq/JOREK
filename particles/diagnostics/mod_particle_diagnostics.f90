@@ -53,7 +53,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
   integer(HSIZE_T), parameter :: n_time = 1_HSIZE_T
 
-  integer(HSIZE_T)  :: data_dims(2), time_dims(1), data_maxdims(2), time_maxdims(1)
+  integer(HSIZE_T)  :: data_dims(3), time_dims(1), data_maxdims(3), time_maxdims(1)
   integer(HSIZE_T)  :: npoints_mem, npoints_file
   integer           :: i, my_id, n_cpu, ierr, rank, dot_index
   integer(HID_T)    :: dspace, dset, mem_space
@@ -238,7 +238,7 @@ subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, ds
   integer(HSIZE_T), intent(in) :: n_particles
   integer :: ierr
   integer(HID_T) :: crp_list
-  integer(HSIZE_T), parameter :: chunk_size(3) = [100000_HSIZE_T,1_HSIZE_T,1_HSIZE_T]
+  integer(HSIZE_T), parameter :: chunk_size(3) = [50000_HSIZE_T,1_HSIZE_T,1_HSIZE_T]
 
   ! Create a dataspace with unlimited dimensions, 
   call h5screate_simple_f(3, [n_particles,n_var,0_HSIZE_T], dspace, ierr, &

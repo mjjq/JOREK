@@ -198,14 +198,12 @@ subroutine initialise_particles(particles, node_list, element_list, &
   endif
 end subroutine initialise_particles
 
-!> Initialise particle positions in H, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
-!> Set H_transform to transform from [0,1] to your desired range, Psi_transform to do the same (optional)
+!> Initialise particle positions in E, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
+!> Set Psi_transform to transform from [0,1] to your desired range
 !>
-!> Does not do weighting of the particles.
-!>
-!> **This subroutine does not support MPI or openMP yet!**
+!> **This subroutine does not support openMP yet! There is some race condition... **
 subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
-        H_transform, Theta_transform, Psi_transform, uniform_space, cor, charge)
+        Theta_transform, Psi_transform, alpha, E_max, include_vpar, uniform_space, cor, charge)
   use mod_rng
   use mod_fields
   use mod_random_seed
@@ -220,10 +218,12 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   class(fields_base), intent(in)                    :: fields
   class(type_rng), intent(in)                       :: rng_base !< What type of random number generator to use (will be reseeded here)
   real*8, intent(in)                                :: mass
-  real*8, external                                  :: H_transform !< Function to transform 0-1 to the H-domain (eV)
   real*8, external, optional                        :: Theta_transform !< Function to transform 0-1 to the theta-domain
   real*8, external, optional                        :: Psi_transform !< Function to transform 0-1 to the Psi-domain
   !< if omitted, determine automatically from node_list
+  real*8, intent(in), optional                      :: alpha !< Make more fast (>0) or slow (<0) particles and weigh them appropriately
+  real*8, intent(in), optional                      :: E_max !< If alpha=1 we select particles from a block-distribution, up to E_max
+  logical, intent(in), optional                     :: include_vpar !< Initialize particles with local parallel velocity
   logical, intent(in), optional                     :: uniform_space !< Do not
   !< use {psi,theta}_transform if present but use rejection sampling in RZ
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
@@ -249,11 +249,32 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*8  :: Rbox(2), Zbox(2), DUMMY_REAL
   integer :: blocksize, prev_blocksize, particles_to_do_local, particles_done_local
   integer :: to_find, n_tries_now, n_found
-  logical :: all_done, init_uniform_space
+  logical :: all_done, init_uniform_space, my_include_vpar
+  real*8  :: my_alpha
 
   if (present(uniform_space) .and. uniform_space) then
     init_uniform_space = .true.
     call domain_bounding_box(fields%node_list, fields%element_list, Rbox(1), Rbox(2), Zbox(1), Zbox(2))
+  end if
+
+  my_include_vpar = .false.
+  if (present(include_vpar)) my_include_vpar = include_vpar
+  ! Check if we are in the 3,4,5 series of models
+  if (my_include_vpar .and. .not. (jorek_model .ge. 300 .and. jorek_model .lt. 700)) then
+    write(*,*) "WARNING: This model, ", jorek_model, "does not support parallel flows, disabling"
+    my_include_vpar = .false.
+  end if
+
+  if (present(alpha)) then
+    write(*,*) "Not implemented yet"
+    call exit(1)
+    if (alpha .eq. 1.d0 .and. .not. present(E_max)) then
+      write(*,*) "E_max is required if alpha=1"
+      call exit(1)
+    end if
+    my_alpha = alpha
+  else
+    my_alpha = 0.d0
   end if
 
 
@@ -316,12 +337,12 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     allocate(particles_tmp(blocksize), mold=particles)
     allocate(found(blocksize))
 
-    ! Disable omp due to buggyness
-    !!$omp parallel do default(none) &
-    !!$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
-    !!$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp) &
-    !!$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
-    !!$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, central_density)
+    !$omp parallel do default(none) &
+    !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
+    !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp, ifail, DUMMY_REAL) &
+    !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
+    !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, &
+    !$omp          my_include_vpar, central_density, init_uniform_space, Rbox, Zbox)
     do i=1,blocksize
       ran(:) = rans(:,i)
 
@@ -363,7 +384,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
         B        = [+psi_Z, -psi_R, F0] / R
 
-        ! 2. Calculate H and mu, save in particle
+        ! 2. Calculate E and mu, save in particle
         call       interp_PRZ(fields%node_list,fields%element_list,i_elm,[6],1, &
           s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
         ! P(1)/kb/mu_zero/n_zero [K] -> multiply by kb and divide by el_chg to
@@ -372,13 +393,17 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 #if (JOREK_MODEL == 400)
         temp = temp*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
-        H  = H_transform(ran(1), temp) ! [eV]
-        ! Reuse ran(6) to determine the sign, this will probably not have
-        ! any important effect
-        muB = sign(H*sqrt(ran(2)), ran(6)-0.5d0) ! inverse transform sampling from CDF(x) = x^2
-        ! linearly (PDF(x) = x) distributed between -H and H [eV]
-        ! Because there are 2 dimensions in v_perp => v_par^2/v_perp^2 = 1/2
-        ! we need this distribution
+        
+        H = temp*0.5d0*sample_chi_squared_3(ran(1))
+        ! Solve now for u = 1-sqrt(1-x) (CDF of beta(1,1/2) distribution)
+        muB = sign(H*(2.d0*ran(2)-ran(2)**2), ran(6)-0.5d0)
+        if (my_include_vpar) then
+          call interp_PRZ(fields%node_list,fields%element_list,i_elm,[7],1,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+          ! Convert to sqrt of parallel energy
+          P(1) = P(1)*sqrt(mass*ATOMIC_MASS_UNIT/EL_CHG)
+          H = H + P(1)*(P(1) + 2.d0*sign(sqrt(H-muB),muB))
+        end if
+
         particle%E  = H
         particle%mu = muB/norm2(B)
 
@@ -398,7 +423,6 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         select type(p => particles_tmp(i))
         type is (particle_kinetic_leapfrog)
           p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
-          p%v = [ran(1),ran(2),ran(6)] ! Save for later use, HACK
           ! if the kinetic position is not in the grid particles(i)%i_elm the particle is lost
         type is (particle_gc)
           p = particle
@@ -407,7 +431,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         found(i) = .false.
       end if
     end do
-    !!$omp end parallel do
+    !$omp end parallel do
 
     ! How many particles have we found?
     n_found = count(found)

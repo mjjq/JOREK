@@ -16,6 +16,8 @@ module load pastix/5.2.2.16
 module load fftw/3.3.4
 module load hdf5
 
+ulimit -s unlimited
+
 export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
 
 export LANG=C

@@ -1020,6 +1020,7 @@ module vacuum_response
     !$omp shared(a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,    &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,      &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec, psibnd_coils,       &
+    !$omp   starwall_equil_coils,                                                                  &
 #ifdef __GFORTRAN__
     !$omp   wgauss_copy,                                                                                &
 #endif
@@ -1148,15 +1149,15 @@ module vacuum_response
                       ! --- Contribution of vacuum response to the rhs of the current equation
 
                       rhs_contrib = sum( response_m_h(i_resp,:) * psibnd_vec(:)   )                 &
-                                  - sum( response_m_h(i_resp,:) * psibnd_coils(:) )                 &
                                   + sum( response_m_j(i_resp,:) * dpsibnd_vec(:)  )
 
-                      if ( l_tor == 1 ) &
-                        rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )
+                      if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils)) &
+                        rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )       &
+                                    - sum( response_m_h(i_resp,:) * psibnd_coils(:) )               
 
                       if ( resistive_wall ) &
                         rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) *  wall_curr(:) )  &
-                                                  + sum( response_m_g(i_resp, :) * dwall_curr(:) )
+                                                  + sum( response_m_g(i_resp, :) * dwall_curr(:) )   
 
 
                       rhs_contrib = rhs_contrib * common_prefactor
@@ -1351,7 +1352,7 @@ module vacuum_response
         do k = 1, n_wall_curr
           dwall_curr(:) = 0.d0!- sum( sr%a_ye(k,:) * dpsibnd_vec(:) )
         end do
-      end if
+      end if         
       
     end if
     

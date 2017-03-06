@@ -11,6 +11,7 @@ private
 public initialise_particles, no_transform, adjust_particle_weights
 public set_velocity_from_T, domain_bounding_box, initialise_particles_H_mu_psi
 public set_particle_weights_canonical_maxwellian, normalize_with_projection
+public weigh_with_interp_f
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
@@ -203,7 +204,8 @@ end subroutine initialise_particles
 !>
 !> **This subroutine does not support openMP yet! There is some race condition... **
 subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
-        Theta_transform, Psi_transform, alpha, E_max, include_vpar, uniform_space, cor, charge)
+        Theta_transform, Psi_transform, alpha, E_max, include_vpar, uniform_space, &
+        uniform_space_rej_f, uniform_space_rej_vars, cor, charge)
   use mod_rng
   use mod_fields
   use mod_random_seed
@@ -213,6 +215,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   use mod_coronal
   use mod_boris, only: gc_to_kinetic_leapfrog
   use mpi
+  use mod_interp4
   implicit none
   class(particle_base), dimension(:), intent(inout) :: particles
   class(fields_base), intent(in)                    :: fields
@@ -225,6 +228,9 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*8, intent(in), optional                      :: E_max !< If alpha=1 we select particles from a block-distribution, up to E_max
   logical, intent(in), optional                     :: include_vpar !< Initialize particles with local parallel velocity
   logical, intent(in), optional                     :: uniform_space !< Do not
+  real*4, external, optional                        :: uniform_space_rej_f !< Merge variables into a single criterium between 0 and 1 for rej.  sampling
+  !< Special values: 0 = 1, -1 = R, -2 = Z, -3 = Phi. Must be in ascending order!
+  integer, dimension(:), intent(in), optional       :: uniform_space_rej_vars !< Variables to use for uniform_space_rej_f
   !< use {psi,theta}_transform if present but use rejection sampling in RZ
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
   integer, intent(in), optional                     :: charge !< Use this if cor is not present
@@ -232,15 +238,16 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   ! Internal variables
   type(particle_gc) :: particle
   class(type_rng), allocatable :: rng
-  real*8  :: ran(6)
+  real*8  :: ran(7)
   real*8  :: H, muB, chi
   real*8  :: psi, psimin, psimax, theta, phi
   real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3)
   real*8, dimension(1) :: P, P_s, P_t, P_phi
+  real*8, dimension(:), allocatable :: P2
   real*8  :: R_s, R_t, Z_s, Z_t
   real*8  :: s, t, u_init_max, temp
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
-  integer :: i_elm, i, j, ifail, my_id, n_cpu, ierr
+  integer :: i_elm, i, j, k, ifail, my_id, n_cpu, ierr, n_mhd, n_geom
   real*8, dimension(fields%element_list%n_elements,2) :: psi_minmax_list
   real*8, allocatable, dimension(:,:) :: rans
   class(particle_base), dimension(:), allocatable :: particles_tmp
@@ -263,6 +270,20 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   if (my_include_vpar .and. .not. (jorek_model .ge. 300 .and. jorek_model .lt. 700)) then
     write(*,*) "WARNING: This model, ", jorek_model, "does not support parallel flows, disabling"
     my_include_vpar = .false.
+  end if
+
+  if (present(uniform_space_rej_f)) then
+    if (.not. present(uniform_space_rej_vars)) then
+      write(*,*) "ERROR: if sampling function f is present variables must be given"
+      call MPI_ABORT(MPI_COMM_WORLD, 10, ifail)
+    end if
+    ! Get the number of mhd variables to use
+    allocate(P2(size(uniform_space_rej_vars,1)))
+    n_mhd = count(uniform_space_rej_vars .gt. 0)
+    n_geom = size(uniform_space_rej_vars, 1) - n_mhd
+  else
+    n_mhd = 0
+    n_geom = 0
   end if
 
   if (present(alpha)) then
@@ -298,7 +319,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
   ! Preparatory work: setup RNG
   allocate(rng,source=rng_base)
-  call rng%initialize(6, random_seed(), 1, 1, ifail)
+  call rng%initialize(7, random_seed(), 1, 1, ifail)
 
   ! Preparatory work: get R_axis, Z_axis
   call find_axis(my_id, fields%node_list, fields%element_list, psi_axis, R_axis, Z_axis, i_elm, s_axis, t_axis, ifail)
@@ -327,7 +348,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
     ! Generate the random numbers
     call cpu_time(t0)
-    allocate(rans(6,blocksize))
+    allocate(rans(7,blocksize))
     do i=1,blocksize
       call rng%next(rans(:,i))
     end do
@@ -338,18 +359,34 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     allocate(found(blocksize))
 
     !$omp parallel do default(none) &
-    !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, &
+    !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, &
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp, ifail, DUMMY_REAL) &
     !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
     !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, &
-    !$omp          my_include_vpar, central_density, init_uniform_space, Rbox, Zbox)
+    !$omp          my_include_vpar, central_density, init_uniform_space, Rbox, Zbox, uniform_space_rej_vars, n_geom, n_mhd)
     do i=1,blocksize
       ran(:) = rans(:,i)
 
       if (init_uniform_space) then
         call transform_uniform_cylindrical([ran(3),ran(4),ran(5)], Rbox, Zbox, [0.d0,TWOPI], R, Z, phi)
         call find_RZ(fields%node_list,fields%element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
+        
+        if (present(uniform_space_rej_f)) then
+          if (n_mhd .ge. 1) then
+            call interp4(fields%node_list,fields%element_list,i_elm, &
+              uniform_space_rej_vars(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P2(n_geom:n_geom+n_mhd))
+          end if
+          do k=1,n_geom
+            select case (uniform_space_rej_vars(k))
+            case (0);  P2(k) = 1.d0
+            case (-1); P2(k) = R
+            case (-2); P2(k) = Z
+            case (-3); P2(k) = phi
+            end select
+          end do
 
+          if (uniform_space_rej_f(P2) .le. ran(7)) i_elm = 0
+        end if
       else
         if (present(Psi_transform)) then
           psi = Psi_transform(ran(3))
@@ -567,6 +604,50 @@ subroutine normalize_with_projection(proj, particles, i_group)
     end if
   end do
 end subroutine normalize_with_projection
+
+
+!> Weigh particles with interpolated values.
+!> Note that this multiplies existing weights by the value of f, instead of
+!> overwriting weights. This allows using it with nonuniform weights.
+subroutine weigh_with_interp_f(node_list, element_list, particles, vars, f)
+  use mod_interp4
+  type(type_node_list), intent(in)                  :: node_list
+  type(type_element_list), intent(in)               :: element_list
+  class(particle_base), dimension(:), intent(inout) :: particles
+  integer, dimension(:), intent(in)                 :: vars  !< Which variables to interpolate
+  !< Special numbers: -1: R, -2: Phi, -3: Z. Must be in ascending order!
+  interface
+    !> Transformation function on interpolated variables
+    pure function f(P)
+      real*8, intent(in), dimension(:) :: P
+      real*4 :: f
+    end function f
+  end interface
+
+  integer :: i, k, n_mhd, n_geom
+  real*8, dimension(size(vars,1)) :: P
+
+  ! Get the number of mhd variables to use
+  n_mhd = count(vars .gt. 0)
+  n_geom = size(vars, 1) - n_mhd
+
+  do i=1,size(particles,1)
+    if (particles(i)%i_elm .ne. 0) then
+      call interp4(node_list,element_list,particles(i)%i_elm,&
+        vars(n_geom:n_geom+n_mhd),n_mhd,particles(i)%st(1),particles(i)%st(2),&
+        particles(i)%x(3), P(n_geom:n_geom+n_mhd))
+      do k=1,n_geom
+        select case (vars(k))
+        case (0);  P(k) = 1.d0
+        case (-1); P(k) = particles(i)%x(1)
+        case (-2); P(k) = particles(i)%x(2)
+        case (-3); P(k) = particles(i)%x(3)
+        end select
+      end do
+      particles(i)%weight = particles(i)%weight * f(P)
+    end if
+  end do
+end subroutine weigh_with_interp_f
 
 
 !> Calculate the size of a box around the domain (in RZ)

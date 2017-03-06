@@ -159,7 +159,7 @@ do i=1,element_list%n_elements
   end if
 end do
 if (u .lt. 0.d0) then
-  if (verbose) write(*,"(A,g12.6,A,g12.6,A)") "WARNING: no suitable elements found, skipping for psi=", psi, " theta=", theta/PI, "pi", "u=", u
+  if (verbose) write(*,"(A,g13.6,A,g13.6,A)") "WARNING: no suitable elements found, skipping for psi=", psi, " theta=", theta/PI, "pi", "u=", u
   return
 end if
 
@@ -228,7 +228,7 @@ do newton_iter_number = 1, newton_iter_max
     out_of_domain = .false.
   end if
   if (isnan(P(1)) .or. abs(u) .gt. 1d5 .or. abs(P(1)) .gt. 1d5) then
-    if (verbose) write(*,"(A,g12.6,A,g12.6,A,3g12.6,A,g12.6,A)") "Position not found for psi=", psi, ", theta=",theta, " last guess=", u, R_try, Z_try, " (psi=",P(1),")"
+    if (verbose) write(*,"(A,g13.6,A,g13.6,A,3g13.6,A,g13.6,A)") "Position not found for psi=", psi, ", theta=",theta, " last guess=", u, R_try, Z_try, " (psi=",P(1),")"
     i_elm = 0
     return
   end if

@@ -1159,9 +1159,6 @@ module vacuum_response
                       rhs_contrib = sum( response_m_h(i_resp,:) * psibnd_vec(:)   )                 &
                                   + sum( response_m_j(i_resp,:) * dpsibnd_vec(:)  )
 
-                      if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) ) &
-                        rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )
-
                       if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils)) &
                         rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )       &
                                     - sum( response_m_h(i_resp,:) * psibnd_coils(:) )               

@@ -144,7 +144,7 @@ module equil_info
       else if ( (xcase==DOUBLE_NULL) .and.                                                         &
         (maxval(corr_fact*ES%psi_xpoint) > ES%psi_bnd) ) then
         
-        ES%psi_bnd        = corr_fact * maxval(corr_fact*ES%psi_xpoint)
+        ES%psi_bnd        = corr_fact * minval(corr_fact*ES%psi_xpoint)
         ES%limiter_plasma = .false.
         
         if ( corr_fact*ES%psi_xpoint(1) > corr_fact*ES%psi_xpoint(2) ) then

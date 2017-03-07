@@ -16,9 +16,11 @@ contains
     interface
       pure function f(x)
         real*8, intent(in) :: x
+        real*8 :: f
       end function f
       pure function df(x)
         real*8, intent(in) :: x
+        real*8 :: df
       end function df
     end interface
 
@@ -51,12 +53,15 @@ contains
     interface
       pure function f(x)
         real*8, intent(in) :: x
+        real*8 :: f
       end function f
       pure function df(x)
         real*8, intent(in) :: x
+        real*8 :: df
       end function df
       pure function ddf(x)
         real*8, intent(in) :: x
+        real*8 :: ddf
       end function ddf
     end interface
 

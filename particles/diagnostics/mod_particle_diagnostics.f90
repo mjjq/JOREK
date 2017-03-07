@@ -15,13 +15,25 @@ implicit none
 private
 public write_particle_diagnostics, calculate_particle_diagnostics
 
-integer(HSIZE_T), parameter :: n_var = 7
+!> Cannot use HDF5 types here because these are invalid before h5open_f is called
+!> (I think, did not take the chance)
+integer, parameter :: REAL4 = 1, INT4 = 2
+integer, parameter :: n_var = 8
+character(len=10)  :: var_names(n_var) = ["E      ", "mu     ", "P_phi  ", "Psi_bar", "Psi    ", "weight ", "lost   ", "q      "]
+integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4]
+integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
+integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
+! HDF5 does not support booleans, use INT4
 
-!> Action to calculate pphi_H_mu and write this to an HDF5 file
-!> in an extensible (in the time-dimension) dataset
+integer(HSIZE_T), parameter :: chunk_size(2) = [50000_HSIZE_T,1_HSIZE_T] !< particle, time
+
+
+!> Action to calculate diagnostics and write this to an HDF5 file
+!> in extensible (in the time-dimension) datasets
 type, extends(io_action) :: write_particle_diagnostics
   integer(HID_T) :: file_id !< file identifier
   logical :: append = .false. !< Append to existing file
+  logical, private :: init_done = .false. !< True after we have checked for an existing file
 contains
   procedure :: do => do_write_particle_diagnostics
 end type write_particle_diagnostics
@@ -48,21 +60,22 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   use mpi
   use mod_event
   class(write_particle_diagnostics), intent(inout) :: this
-  type(particle_sim), intent(inout)               :: sim
-  type(event), intent(inout), optional            :: ev
+  type(particle_sim), intent(inout)                :: sim
+  type(event), intent(inout), optional             :: ev
 
   integer(HSIZE_T), parameter :: n_time = 1_HSIZE_T
 
-  integer(HSIZE_T)  :: data_dims(3), time_dims(1), data_maxdims(3), time_maxdims(1)
+  integer(HSIZE_T)  :: data_dims(2), time_dims(1), data_maxdims(2), time_maxdims(1)
   integer(HSIZE_T)  :: npoints_mem, npoints_file
-  integer           :: i, my_id, n_cpu, ierr, rank, dot_index
+  integer           :: i, j, n, my_id, n_cpu, ierr, rank, dot_index, var_index
   integer(HID_T)    :: dspace, dset, mem_space
   integer(HID_T)    :: tspace, t_mem_space, tset, group_id, plist
   logical           :: link_exists, file_exists
-  character(len=80) :: dataset_name, timeset_name
+  character(len=80) :: dataset_name, timeset_name, group_name
   character(len=123):: filename !< len=120 from this%filename + 3
-  integer, dimension(:), allocatable            :: particles_per_proc
-  real*4, dimension(:,:,:), allocatable, target :: stats ! Data storage order: particle index, time (in fortran)
+  integer, dimension(:), allocatable           :: particles_per_proc
+  real*4,  dimension(:,:), allocatable, target :: real4_var ! Data storage order: particle index, var
+  integer, dimension(:,:), allocatable, target :: int4_var ! Data storage order: particle index, var
 
   call h5open_f(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
@@ -71,14 +84,19 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   ! Create file property list for parallel access
   call h5pcreate_f(H5P_FILE_ACCESS_F, plist, ierr)
   call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, ierr)
+  call h5pset_cache_f(plist, 0, 0_SIZE_T, 0_SIZE_T, 1.0_4, ierr) !< disable caching by nbytes=0
+  !< set nslots=0 also, and set pre-emption policy to 1 (read/write once only)
+  !< mdc_nelmts is ignored.
 
-  if (.not. this%append .and. my_id .eq. 0) then
+  ! Move an old file if this is the initialisation, we are id 0 and we are not appending
+  if (.not. this%append .and. my_id .eq. 0 .and. .not. this%init_done) then
+    this%init_done = .true.
     ! Move old file if present
     inquire(file=trim(this%filename), exist=file_exists)
     dot_index = scan(this%filename,'.',back=.true.)
     if (file_exists) then
       do i=1,99
-        write(filename,'(A,i0.2,A)') this%filename(1:dot_index), i, this%filename(dot_index+1:)
+        write(filename,'(A,i0.2,A)') this%filename(1:dot_index-1), i, this%filename(dot_index:)
         inquire(file=trim(filename), exist=file_exists)
         if (.not. file_exists) then
           call system("mv '"//trim(this%filename)//"' '"//trim(filename)//"'")
@@ -113,32 +131,24 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   ! For each of the groups
   do i=lbound(sim%groups,1),ubound(sim%groups,1)
     ! Find the number of particles on each node
-    call MPI_AllGather(size(sim%groups(i)%particles,1),1,MPI_INTEGER,&
+    n = size(sim%groups(i)%particles,1)
+    call MPI_AllGather(n,1,MPI_INTEGER,&
         particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    allocate(stats(size(sim%groups(i)%particles,1),n_var,1))
+    allocate(real4_var(   n,n_real4_var))
+    allocate(int4_var(    n,n_int4_var))
 
-    ! Check the dataset existence and properties
-    write(dataset_name,'(A,i0.3)') 'groups/', i
-    call h5lexists_f(this%file_id, trim(dataset_name), link_exists, ierr)
-
-    if (link_exists) then
-      !write(*,*) "DEBUG: link to ", trim(dataset_name), " exists, trying to open"
-      call h5dopen_f(this%file_id, trim(dataset_name), dset, ierr)
-      if (ierr .ne. 0) then
-        write(*,*) "Error opening dataset", i
-        call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
-      else
-        call h5dget_space_f(dset, dspace, ierr)
-        !write(*,*) "DEBUG: dataset opened, getting space (", ierr, ")"
-      end if
-    else
-      call create_constants_dataset(this%file_id, dataset_name, &
-          int(sum(particles_per_proc,1),HSIZE_T), dset, dspace)
-      !write(*,*) "DEBUG: created new dataset ", trim(dataset_name)
+    ! Create group to write particles in if it does not exist yet
+    write(group_name,'(A,i0.3)') 'groups/', i
+    call h5lexists_f(this%file_id, group_name, link_exists, ierr)
+    if (.not. link_exists) then
+      call h5gcreate_f(this%file_id, group_name, group_id, ierr)
+      call h5gclose_f(group_id, ierr)
     end if
+    ! assume that if it exists it's a group. This breaks appending to old files, not so bad
+
 
     ! Check the timeset existence and properties
-    write(timeset_name,'(A,i0.3,A)') 'groups/', i, '_t'
+    write(timeset_name,'(A,i0.3,A)') 'groups/', i, '/t'
     call h5lexists_f(this%file_id, trim(timeset_name), link_exists, ierr)
 
     if (link_exists) then
@@ -149,106 +159,114 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
         call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
       else
         call h5dget_space_f(tset, tspace, ierr)
-        !write(*,*) "DEBUG: dataset opened, getting space: ", ierr
       end if
     else
       call create_constants_time_dataset(this%file_id, trim(timeset_name), &
           tset, tspace)
-      !write(*,*) "DEBUG: created new timeset ", trim(timeset_name)
     end if
 
-    ! Get the current sizes
-    call h5sget_simple_extent_dims_f(dspace, data_dims, data_maxdims, ierr)
+    ! Get the current time dimensions
     call h5sget_simple_extent_dims_f(tspace, time_dims, time_maxdims, ierr)
-    !write(*,"(A,3i6,A,3i6)") " DEBUG: dspace sizes(3): ", data_dims, " maxdims(3): ", data_maxdims
-    !write(*,"(A,i6,A,i6)") " DEBUG: tspace sizes(1): ", time_dims, " maxdims(1): ", time_maxdims
-    if (time_dims(1) .ne. data_dims(3)) then
-      write(*,*) "ERROR: data and time series are not of equal length"
-      call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
-    end if
-
     ! Extend the dataset by 1 in the time-dimension
-    ! After extending, dspace and tspace are invalid. Close them already
-    call h5sclose_f(dspace, ierr)
+    ! After extending, tspace is invalid. Close here already
     call h5sclose_f(tspace, ierr)
     time_dims(1) = time_dims(1) + 1_HSIZE_T
-    data_dims(1) = max(data_dims(1), int(sum(particles_per_proc,1),HSIZE_T)) ! only grow this set
-    data_dims(2) = n_var
-    data_dims(3) = data_dims(3) + 1_HSIZE_T
-    !write(*,"(A,3i6)") " DEBUG: extending dset to ", data_dims
-    call h5dset_extent_f(dset, data_dims, ierr)
-    !write(*,"(A,1i6)") " DEBUG: extending tset to ", time_dims
     call h5dset_extent_f(tset, time_dims, ierr)
 
-    ! Create dataspace for file and memory separately
-    !write(*,*) "DEBUG: creating dataspace for memory and file"
-    call h5screate_simple_f(3, [size(sim%groups(i)%particles,dim=1,kind=HSIZE_T), n_var, n_time], mem_space, ierr)
-    ! We must create a hyperslab space here because simple does not play well
-    ! with HDF5 (but does not tell you this!).
-    ! It is also important to get the space belonging to this dataset, instead of
-    ! creating a new one.
-    call h5dget_space_f(dset, dspace, ierr)
-    call h5sselect_hyperslab_f(dspace, H5S_SELECT_SET_F, &
-        start=[int(sum(particles_per_proc(0:my_id-1)),HSIZE_T), 0_HSIZE_T, data_dims(3)-1_HSIZE_T], &
-        count=[1_HSIZE_T,1_HSIZE_T,1_HSIZE_T], &
-        block=[size(sim%groups(i)%particles,dim=1,kind=HSIZE_T),n_var,n_time], &
-        hdferr=ierr)
 
-    ! Calculate the statistics
-    call calculate_particle_diagnostics(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, stats(:,:,1))
-    !write(*,*) "DEBUG: calculated statistics"
+    ! Generate data
+    call calculate_particle_diagnostics(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, &
+        real4_var(:,:), int4_var(:,:))
 
-    ! Write the dataset independently
-    data_dims(1) = size(stats,dim=1,kind=HSIZE_T)
-    data_dims(2) = n_var
-    data_dims(3) = n_time
-    !write(*,"(A,3i6)") " DEBUG: writing statistics to block. dims=", data_dims
-    call h5dwrite_f(dset, H5T_NATIVE_REAL, stats, [1_HSIZE_T,1_HSIZE_T,1_HSIZE_T], &
-         ierr, file_space_id = dspace, mem_space_id = mem_space)
-    !write(*,*) "EXTRA_DEBUG: out(8,2)", stats(8,2,1)
-    !write(*,*) "EXTRA_DEBUG: out(2,2)", stats(2,2,1)
-    write(*,*) "Done writing, sum=", sum(stats) ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
+    ! Loop over real4 variables, write
+    do j=1,n_var
+      write(dataset_name,'(A,i0.3,A,A)') 'groups/', i, "/", trim(var_names(j))
+      call h5lexists_f(this%file_id, trim(dataset_name), link_exists, ierr)
+      if (link_exists) then
+        call h5dopen_f(this%file_id, trim(dataset_name), dset, ierr)
+        if (ierr .ne. 0) then
+          write(*,*) "Error opening dataset", i
+          call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
+        else
+          call h5dget_space_f(dset, dspace, ierr)
+        end if
+      else
+        ! Create a dataspace with unlimited dimensions, 
+        call h5screate_simple_f(2, [int(sum(particles_per_proc,1),kind=HSIZE_T),0_HSIZE_T], dspace, ierr, &
+            maxdims=[H5S_UNLIMITED_F,H5S_UNLIMITED_F])
+        ! Create a dataset property list, enable chunking
+        call h5pcreate_f(H5P_DATASET_CREATE_F, plist, ierr)
+        call h5pset_chunk_f(plist, 2, chunk_size, ierr)
+        select case (var_types(j))
+          case (REAL4)
+            call h5dcreate_f(this%file_id, dataset_name, H5T_IEEE_F32LE, dspace, dset, ierr, plist)
+          case (INT4)
+            call h5dcreate_f(this%file_id, dataset_name, H5T_STD_I8LE, dspace, dset, ierr, plist)
+          case DEFAULT
+            write(*,*) "Unknown variable type for diagnostics"
+            call MPI_ABORT(MPI_COMM_WORLD, -1, ierr)
+        end select
+        call h5pclose_f(plist, ierr)
+      end if
+
+      ! Now we must add one to the time dimension for this variable
+      call h5sget_simple_extent_dims_f(dspace, data_dims, data_maxdims, ierr)
+      data_dims(1) = max(data_dims(1), int(sum(particles_per_proc,1),HSIZE_T)) ! only grow this set
+      data_dims(2) = data_dims(2) + 1_HSIZE_T
+      if (time_dims(1) .ne. data_dims(2)) then
+        write(*,*) "ERROR: data and time series are not of equal length"
+        call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
+      end if
+      call h5dset_extent_f(dset, data_dims, ierr) ! dspace becomes invalid now
+
+      ! Create memory space
+      call h5screate_simple_f(2, [int(n,HSIZE_T), n_time], mem_space, ierr)
+      ! We must create a hyperslab space here because simple does not play well
+      ! with chunked HDF5 (but does not tell you this!).
+      ! It is also important to get the space belonging to this dataset, instead of
+      ! creating a new one.
+      call h5dget_space_f(dset, dspace, ierr)
+      call h5sselect_hyperslab_f(dspace, H5S_SELECT_SET_F, &
+          start=[int(sum(particles_per_proc(0:my_id-1)),HSIZE_T), data_dims(2)-1_HSIZE_T], &
+          count=[1_HSIZE_T,1_HSIZE_T], &
+          block=[int(n,HSIZE_T),n_time], &
+          hdferr=ierr)
+
+      var_index = count(var_types(1:j) .eq. var_types(j))
+      select case (var_types(j))
+        case (REAL4)
+          call h5dwrite_f(dset, H5T_NATIVE_REAL, real4_var(:,var_index:var_index), [1_HSIZE_T,1_HSIZE_T], &
+               ierr, file_space_id = dspace, mem_space_id = mem_space)
+        case (INT4)
+          call h5dwrite_f(dset, H5T_NATIVE_INTEGER, int4_var(:,var_index:var_index), [1_HSIZE_T,1_HSIZE_T], &
+               ierr, file_space_id = dspace, mem_space_id = mem_space)
+        case DEFAULT
+          write(*,*) "Unknown variable type for diagnostics"
+          call MPI_ABORT(MPI_COMM_WORLD, -1, ierr)
+      end select
+
+      call h5sclose_f(mem_space, ierr)
+      call h5sclose_f(dspace, ierr)
+      call h5dclose_f(dset, ierr)
+    end do
+    write(*,*) "Done writing, sums=", sum(real4_var), sum(int4_var) ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
 
     ! Add the current time to the timeset
     call h5dget_space_f(tset, tspace, ierr)
     call h5sselect_hyperslab_f(tspace, H5S_SELECT_SET_F, &
         start=[time_dims(1)-1_HSIZE_T], count=[n_time], hdferr=ierr)
     call h5screate_f(H5S_SCALAR_F, t_mem_space, ierr)
-    !write(*,*) "DEBUG: writing single time value", sim%time
     call h5dwrite_f(tset, H5T_NATIVE_REAL, sim%time, [n_time], ierr, file_space_id=tspace, mem_space_id=t_mem_space)
-    !write(*,*) "Done"
+
 
     call h5sclose_f(t_mem_space, ierr)
-    call h5sclose_f(mem_space, ierr)
-    call h5sclose_f(dspace, ierr)
     call h5sclose_f(tspace, ierr)
-    call h5dclose_f(dset, ierr)
     call h5dclose_f(tset, ierr)
-    deallocate(stats)
+    deallocate(real4_var,int4_var)
   end do
   call h5fclose_f(this%file_id, ierr)
   call h5close_f(ierr)
 end subroutine do_write_particle_diagnostics
-
-!> Create a new dataset for diagnostics with the right dimensions in file_id
-subroutine create_constants_dataset(file_id, dataset_name, n_particles, dset, dspace)
-  integer(HID_T), intent(in)   :: file_id
-  character(len=*), intent(in) :: dataset_name
-  integer(HID_T), intent(out)  :: dset, dspace
-  integer(HSIZE_T), intent(in) :: n_particles
-  integer :: ierr
-  integer(HID_T) :: crp_list
-  integer(HSIZE_T), parameter :: chunk_size(3) = [50000_HSIZE_T,1_HSIZE_T,1_HSIZE_T]
-
-  ! Create a dataspace with unlimited dimensions, 
-  call h5screate_simple_f(3, [n_particles,n_var,0_HSIZE_T], dspace, ierr, &
-      maxdims=[H5S_UNLIMITED_F,n_var,H5S_UNLIMITED_F])
-  ! Create a dataset property list, enable chunking
-  call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
-  call h5pset_chunk_f(crp_list, 3, chunk_size, ierr)
-  call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_REAL, dspace, dset, ierr, crp_list)
-  call h5pclose_f(crp_list, ierr)
-end subroutine create_constants_dataset
 
 !> Create a new dataset for time data (1-d extensible, chunked (required for extensibility))
 subroutine create_constants_time_dataset(file_id, dataset_name, dset, dspace)
@@ -272,7 +290,7 @@ end subroutine create_constants_time_dataset
 
 !> Calculate H, mu, P_phi, Psi_bar, Psi, q, weight for a list of particles.
 !> mask is .f. if a particle is lost. Those values in out are set to 0.d0
-subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, mask)
+subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_stats, int_stats, mask)
   use mod_particle_types
   use phys_module, only: F0
   use constants
@@ -282,24 +300,35 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
   real*8, intent(in)                                           :: mass
-  real*4, dimension(:,:), intent(out)                          :: out !< List of values (is actually size(particles,1),n_var big, but gfortran doesn't like that
+  real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Psi_bar, Psi, weight)
+  integer, dimension(:,:), intent(out)                         :: int_stats !< List of values (q, lost)
   logical, dimension(:), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
-  real*8               :: inv_st_jac, psi_R, psi_Z, B(3), B_norm, B_hat(3), v_par, v_perp(3)
+  real*8               :: inv_st_jac, psi_R, psi_Z, B(3), v_par
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
   type(particle_gc)    :: particle
 
   integer :: i
 
   if (present(mask)) mask = .true.
-  out  = 0.d0
+  real_stats = 0.d0
+  int_stats  = 0
   !$omp parallel do default(none) &
-  !$omp shared(particles, fields, out, mask, time, f0, mass) &
+  !$omp shared(particles, fields, int_stats, real_stats, mask, time, f0, mass) &
   !$omp private(P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t, &
-  !$omp inv_st_jac, psi_R, psi_Z, B, B_norm, B_hat, particle, v_par, v_perp)
+  !$omp inv_st_jac, psi_R, psi_Z, B, particle, v_par)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
+      select type (particle_in => particles(i))
+      type is (particle_kinetic_leapfrog)
+        int_stats(i,1) = particle_in%q
+      type is (particle_kinetic)
+        int_stats(i,1) = particle_in%q
+      type is (particle_gc)
+        int_stats(i,1) = particle_in%q
+      end select
+      int_stats(i,2) = 1 ! lost
     else
       ! Calculate psi and B in the current particle location (either GC or kinetic)
       call fields%interp_PRZ(time, particles(i)%i_elm, &
@@ -313,7 +342,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
 
       select type (particle_in => particles(i))
       type is (particle_kinetic_leapfrog)
-        out(i,3) = particle_in%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particle_in%v(3)
+        real_stats(i,3) = real(particle_in%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particle_in%v(3), 4)
         ! Let the conversion calculate the conserved quantities
         particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particle_in, B, mass)
 
@@ -327,28 +356,31 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, out, ma
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particle_in
-        out(i,3) = real(particle_in%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B)
+        real_stats(i,3) = real(real(particle_in%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B),4)
       class default
-        write(*,*) "ERROR: calculate_pphi_H_mu not implemented for this particle type"
+        write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration
       end select
 
 
       ! Calculate output variables
       ! 1. Energy
-      out(i,1) = particle%E
+      real_stats(i,1) = real(particle%E, 4)
       ! 2. Magnetic moment
-      out(i,2) = particle%mu
+      real_stats(i,2) = real(particle%mu, 4)
       ! 3. P_phi (generalized toroidal momentum)
-      out(i,3) = out(i,3) / EL_CHG ! normalize to ZPsi
+      real_stats(i,3) = real(real_stats(i,3) / EL_CHG, 4) ! normalize to ZPsi
       ! 4. Psi_bar (P_phi/q)
-      out(i,4) = out(i,3) / max(real(particle%q),1.0)
+      real_stats(i,4) = real_stats(i,3) / max(real(particle%q),1.0)
       ! 5. Psi (at GC position)
-      out(i,5) = P(1)
-      ! 6. q (charge)
-      out(i,6) = real(particle%q)
-      ! 7. weight
-      out(i,7) = particle%weight
+      real_stats(i,5) = real(P(1), 4)
+      ! 6. weight
+      real_stats(i,6) = particle%weight
+
+      ! 1. q (charge)
+      int_stats(i,1) = particle%q
+      ! 2. lost (boolean)
+      int_stats(i,2) = 0
     endif
   enddo
   !$omp end parallel do

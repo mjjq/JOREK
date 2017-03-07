@@ -371,10 +371,10 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         call transform_uniform_cylindrical([ran(3),ran(4),ran(5)], Rbox, Zbox, [0.d0,TWOPI], R, Z, phi)
         call find_RZ(fields%node_list,fields%element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
         
-        if (present(uniform_space_rej_f)) then
+        if (present(uniform_space_rej_f) .and. i_elm .ne. 0) then
           if (n_mhd .ge. 1) then
             call interp4(fields%node_list,fields%element_list,i_elm, &
-              uniform_space_rej_vars(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P2(n_geom:n_geom+n_mhd))
+              uniform_space_rej_vars(n_geom+1:n_geom+n_mhd),n_mhd,s,t,phi,P2(n_geom+1:n_geom+n_mhd))
           end if
           do k=1,n_geom
             select case (uniform_space_rej_vars(k))
@@ -385,7 +385,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
             end select
           end do
 
-          if (uniform_space_rej_f(P2) .le. ran(7)) i_elm = 0
+          if (uniform_space_rej_f(P2) .lt. ran(7)) i_elm = 0
         end if
       else
         if (present(Psi_transform)) then

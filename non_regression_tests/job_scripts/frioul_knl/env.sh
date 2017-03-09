@@ -13,5 +13,5 @@ export MKL_NUM_THREADS="1"
 export MKL_DYNAMIC="FALSE"
 export MKL_ENABLE_INSTRUCTIONS=AVX512_MIC
 
-export MPIRUN="srun -c 34 -n"
+export MPIRUN="srun -n"
 export BATCHCOMMAND="sbatch"

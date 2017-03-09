@@ -27,7 +27,7 @@ program RST_convert_hdf52bin
   call MPI_Init_thread(MPI_THREAD_FUNNELED, provided, StatInfo)
   call init_threads()
 
-  call initialise_parameters(0, 'input') !WIP: BUG on Frioul cluster (KNL)
+  call initialise_parameters(0, '__NO_FILENAME__')
   call vacuum_init(0, freeboundary_equil, freeboundary, resistive_wall)
 
   ! Parse command line arguments

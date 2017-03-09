@@ -220,13 +220,13 @@ if (.not. pastix_analysed) then
 #ifdef USE_BLOCK
   
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, &
-                      mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                      mumps_par%jcn, mumps_par%irn, mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #else
 
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, &
-                      mumps_par%jcn(1:mumps_par%n+1), mumps_par%irn(1:mumps_par%nz), mumps_par%A(1:mumps_par%nz), &
+                      mumps_par%jcn, mumps_par%irn, mumps_par%A, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #endif
@@ -262,7 +262,7 @@ endif
 pastix_iparm(IPARM_DOF_NBR)            = block_size
 
 call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block,                                                 &
-                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
+                    mumps_par%jcn, mumps_par%irn, mumps_par%A, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #else

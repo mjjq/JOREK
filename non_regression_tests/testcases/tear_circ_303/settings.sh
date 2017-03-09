@@ -1,7 +1,7 @@
 # --- General settings
 jorekmodel="303"
 description="Tearing mode, circular plasma, model$jorekmodel, n_tor=3."
-mpitasks=2
+mpitasks=4
 binaries="jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin"
 binaries_initial="jorek_model${jorekmodel}_1"
 requiredfiles="input"
@@ -35,7 +35,7 @@ function initial_run () {
 # --- Carry out the test case, i.e., run a single time step in the non-linear phase
 function restart_run () {
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=3000. nout=1       || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile                  || exit 1
+  $MPIRUN $mpitasks numactl -p 1 ./jorek_model${jorekmodel}_3 < input | tee -a logfile                  || exit 1
 }
 
 

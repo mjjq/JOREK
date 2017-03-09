@@ -234,7 +234,7 @@ required = 0
   murge_initialised  = .false.
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
-  call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
+  call initialise_and_broadcast_parameters(my_id, "input") !WIP: BUG on Frioul cluster (KNL)
   
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)

@@ -1,7 +1,22 @@
 module solve_mat_n
 
 contains
- 
+  subroutine pastix_bind_threads(my_id)
+
+    use pastix_module
+
+    integer, intent(in) :: my_id
+    integer*4, dimension(1:pastix_nthrd) :: thread_map
+    integer*4 k
+    
+    do k = 1, pastix_nthrd
+!      thread_map(k) = mod(my_id,2) * pastix_nthrd + k-1
+      thread_map(k) = k-1
+    end do
+!    call pastix_fortran_bindthreads(pastix_data, pastix_nthrd, thread_map(1:))
+
+  end subroutine pastix_bind_threads
+
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
@@ -30,7 +45,7 @@ contains
 #endif
          &                  IPARM_THREAD_COMM_MODE,                            &
          &                  IPARM_END_TASK, API_TASK_INIT, IPARM_START_TASK,   &
-         &                  IPARM_BINDTHRD
+         &                  IPARM_BINDTHRD !, API_BIND_TAB
 #ifdef USE_MURGE
     use murge_module, only : MURGE_MatrixReset
     USE murge_module, only : MURGE_Initialize
@@ -454,13 +469,15 @@ contains
 
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
-!          pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO
+!          pastix_iparm(IPARM_BINDTHRD+increment)   = API_BIND_TAB
 #ifdef USE_BLOCK
+          call pastix_bind_threads(my_id)
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #else	   
+          call pastix_bind_threads(my_id)
           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif

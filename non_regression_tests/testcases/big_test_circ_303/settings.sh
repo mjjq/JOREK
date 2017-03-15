@@ -31,16 +31,16 @@ function compile_jorek () {
 # --- Re-run the whole case from scratch into the non-linear phase
 function initial_run () {
   ${codedir}/util/setinput.sh input nstep_n=0  tstep_n=1.          || exit 1
-  export OMP_NUM_THREADS=68
-  ${MPIRUN} 1 ./jorek_model${jorekmodel}_1 < input | tee -a logfile          || exit 1
+  export OMP_NUM_THREADS=136
+  ${MPIRUN} 1 ./jorek_model${jorekmodel}_1 < input        || exit 1
   ${codedir}/util/setinput.sh input nstep_n=10,10,10 restart=.t. tstep_n=1.,100.,3000.          || exit 1
-  export OMP_NUM_THREADS=68
-  ${MPIRUN} 1 ./jorek_model${jorekmodel}_1 < input | tee -a logfile          || exit 1
+  export OMP_NUM_THREADS=136
+  ${MPIRUN} 1 ./jorek_model${jorekmodel}_1 < input         || exit 1
   ${codedir}/util/setinput.sh input nstep_n=30 tstep_n=3000. restart=.t.             || exit 1
   export OMP_NUM_THREADS=34
-  ${MPIRUN} $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile          || exit 1
+  ${MPIRUN} $mpitasks ./jorek_model${jorekmodel}_3 < input        || exit 1
   ${codedir}/util/setinput.sh input nstep_n=1 tstep_n=300. restart=.t.             || exit 1
-  ${MPIRUN} $mpitasks ./jorek_model${jorekmodel}_7 < input | tee -a logfile          || exit 1
+  ${MPIRUN} $mpitasks ./jorek_model${jorekmodel}_7 < input          || exit 1
 }
 
 

@@ -45,7 +45,7 @@
  n_radial = 121
  n_pol    = 96
 
- n_flux   = 76
+ n_flux   = 75
  n_tht    = 64
  n_open   = 0
  n_leg    = 0

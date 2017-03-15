@@ -9,15 +9,12 @@ contains
     integer*4, dimension(1:pastix_nthrd) :: thread_map
     integer*4 k, iplace
     
-!    do k = 1, pastix_nthrd/2
-!      thread_map(1+2*(k-1)) = my_id * (pastix_nthrd/2) + k-1
-!      thread_map(2+2*(k-1)) = my_id * (pastix_nthrd/2) + k-1
-!    end do
+#ifdef MULT_PROC_PER_NODE
     do k = 1, pastix_nthrd
       thread_map(k) = mod(my_id * pastix_nthrd,68) + k-1
     end do
     call pastix_fortran_bindthreads(pastix_data, pastix_nthrd, thread_map(1:))
-
+#endif
   end subroutine pastix_bind_threads
 
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
@@ -241,11 +238,15 @@ contains
 
           !$omp parallel default(none) shared(pastix_nthrd)    
           !$omp master
-          pastix_nthrd = omp_get_num_threads()/2
+#ifdef HYPER_THREADS
+              pastix_nthrd = omp_get_num_threads()/2
+#else
+              pastix_nthrd = omp_get_num_threads
+#endif
           !$omp end master
           !$omp end parallel
           
-          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' Second PastiX n_threads : ',pastix_nthrd, "OMP", omp_get_num_threads() 
+          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
 
           call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -324,10 +325,14 @@ contains
 
               !$omp parallel default(none) shared(pastix_nthrd)    
               !$omp master
+#ifdef HYPER_THREADS
               pastix_nthrd = omp_get_num_threads()/2
+#else
+              pastix_nthrd = omp_get_num_threads
+#endif
               !$omp end master
               !$omp end parallel
-          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' First PastiX n_threads : ',pastix_nthrd, "OMP", omp_get_num_threads() 
+              if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
               pastix_iparm(IPARM_MODIFY_PARAMETER+increment) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+increment)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+increment)         = API_TASK_INIT

@@ -145,10 +145,14 @@ if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecon
 
               !$omp parallel default(none) shared(pastix_nthrd)    
               !$omp master
+#ifdef HYPER_THREADS
               pastix_nthrd = omp_get_num_threads()/2
+#else
+              pastix_nthrd = omp_get_num_threads
+#endif
               !$omp end master
               !$omp end parallel
-          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' Zero PastiX n_threads : ',pastix_nthrd, "OMP", omp_get_num_threads() 
+          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
 
 if (.not. pastix_initialised) then
 

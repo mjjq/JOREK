@@ -430,6 +430,15 @@ module vacuum_response
     call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor0,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_c,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_pol_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_rmp_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_voltage_coils,         1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_diag_coils,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_pol_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_rmp_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_voltage_coils, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_diag_coils,    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     
     n_dof_starwall = sr%nd_bez
@@ -448,6 +457,15 @@ module vacuum_response
       if (allocated(sr%s_ww_inv)) deallocate(sr%s_ww_inv); allocate(sr%s_ww_inv(sr%n_w,sr%n_w))
       if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
       if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
+      if ( sr%ncoil > 0 ) then
+        if (allocated(sr%jtri_c(:))       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
+        if (allocated(sr%x_coil(:,:))     ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
+        if (allocated(sr%y_coil(:,:))     ) deallocate(sr%y_coil);        allocate(sr%y_coil(sr%ntri_c,3))
+        if (allocated(sr%z_coil(:,:))     ) deallocate(sr%z_coil);        allocate(sr%z_coil(sr%ntri_c,3))
+        if (allocated(sr%phi_coil(:,:))   ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
+        if (allocated(sr%eta_thin_coil(:))) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
+        if (allocated(sr%coil_resist(:))  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+      end if
     end if
     
     ! --- Broadcast matrices.
@@ -462,12 +480,24 @@ module vacuum_response
     call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    if ( sr%ncoil > 0 ) then
+      call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    end if
     
     if ( vacuum_debug ) then
       write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
         + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)  &
         + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
-        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version
+        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version + sr%ntri_c  &
+        + sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils                   &
+        + sr%ind_start_pol_coils + sr%ind_start_rmp_coils + sr%ind_start_voltage_coils             &
+        + sr%ind_start_diag_coils
       write(*,*) my_id, 'Exiting broadcast_starwall_response.'
     end if
     
@@ -506,21 +536,36 @@ module vacuum_response
     write(*,33) 'ntri_w       =', sr%ntri_w
     write(*,33) 'n_tor        =', sr%n_tor
     write(*,33) 'n_tor0       =', sr%n_tor0
+    write(*,33) 'n_pol_coils             =', sr%n_pol_coils
+    write(*,33) 'n_rmp_coils             =', sr%n_rmp_coils
+    write(*,33) 'n_voltage_coils         =', sr%n_voltage_coils
+    write(*,33) 'n_diag_coils            =', sr%n_diag_coils
+    write(*,33) 'ind_start_pol_coils     =', sr%ind_start_pol_coils
+    write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
+    write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
+    write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
     if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
     if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
       write(*,32)
-      if (allocated(sr%i_tor   )) then; write(*,35) 'i_tor   ', sum(sr%i_tor   ); else; write(*,36) 'i_tor   '; end if
-      if (allocated(sr%d_yy    )) then; write(*,34) 'd_yy    ', sum(sr%d_yy    ); else; write(*,36) 'd_yy    '; end if
-      if (allocated(sr%a_ye    )) then; write(*,34) 'a_ye    ', sum(sr%a_ye    ); else; write(*,36) 'a_ye    '; end if
-      if (allocated(sr%a_ey    )) then; write(*,34) 'a_ey    ', sum(sr%a_ey    ); else; write(*,36) 'a_ey    '; end if
-      if (allocated(sr%a_ee    )) then; write(*,34) 'a_ee    ', sum(sr%a_ee    ); else; write(*,36) 'a_ee    '; end if
-      if (allocated(sr%a_id    )) then; write(*,34) 'a_id    ', sum(sr%a_id    ); else; write(*,36) 'a_id    '; end if
-      if (allocated(sr%a_nw    )) then; write(*,34) 'a_nw    ', sum(sr%a_nw    ); else; write(*,36) 'a_nw    '; end if
-      if (allocated(sr%s_ww    )) then; write(*,34) 's_ww    ', sum(sr%s_ww    ); else; write(*,36) 's_ww    '; end if
-      if (allocated(sr%s_ww_inv)) then; write(*,34) 's_ww_inv', sum(sr%s_ww_inv); else; write(*,36) 's_ww_inv'; end if
-      if (allocated(sr%xyzpot_w)) then; write(*,34) 'xyzpot_w', sum(sr%xyzpot_w); else; write(*,36) 'xyzpot_w'; end if
-      if (allocated(sr%jpot_w  )) then; write(*,35) 'jpot_w  ', sum(sr%jpot_w  ); else; write(*,36) 'jpot_w  '; end if
+      if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ', sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
+      if (allocated(sr%d_yy         )) then; write(*,34) 'd_yy         ', sum(sr%d_yy          ); else; write(*,36) 'd_yy         '; end if
+      if (allocated(sr%a_ye         )) then; write(*,34) 'a_ye         ', sum(sr%a_ye          ); else; write(*,36) 'a_ye         '; end if
+      if (allocated(sr%a_ey         )) then; write(*,34) 'a_ey         ', sum(sr%a_ey          ); else; write(*,36) 'a_ey         '; end if
+      if (allocated(sr%a_ee         )) then; write(*,34) 'a_ee         ', sum(sr%a_ee          ); else; write(*,36) 'a_ee         '; end if
+      if (allocated(sr%a_id         )) then; write(*,34) 'a_id         ', sum(sr%a_id          ); else; write(*,36) 'a_id         '; end if
+      if (allocated(sr%a_nw         )) then; write(*,34) 'a_nw         ', sum(sr%a_nw          ); else; write(*,36) 'a_nw         '; end if
+      if (allocated(sr%s_ww         )) then; write(*,34) 's_ww         ', sum(sr%s_ww          ); else; write(*,36) 's_ww         '; end if
+      if (allocated(sr%s_ww_inv     )) then; write(*,34) 's_ww_inv     ', sum(sr%s_ww_inv      ); else; write(*,36) 's_ww_inv     '; end if
+      if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ', sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
+      if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ', sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
+      if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ', sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
+      if (allocated(sr%x_coil       )) then; write(*,35) 'x_coil       ', sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
+      if (allocated(sr%y_coil       )) then; write(*,35) 'y_coil       ', sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
+      if (allocated(sr%z_coil       )) then; write(*,35) 'z_coil       ', sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
+      if (allocated(sr%phi_coil     )) then; write(*,35) 'phi_coil     ', sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
+      if (allocated(sr%eta_thin_coil)) then; write(*,35) 'eta_thin_coil', sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
+      if (allocated(sr%coil_resist  )) then; write(*,35) 'coil_resist  ', sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
     end if
     write(*,32)
     write(*,*)

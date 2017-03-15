@@ -324,13 +324,15 @@ module vacuum_response
       sr%ind_start_voltage_coils = read_intparam(filehandle, 'ind_start_voltage_coils')
       sr%ind_start_diag_coils    = read_intparam(filehandle, 'ind_start_diag_coils')
       
-      call read_array(filehandle, 'jtri_c',        (/sr%ncoil,0/),  int1d=sr%jtri_c)
-      call read_array(filehandle, 'x_coil',        (/sr%ntri_c,3/), float2d=sr%x_coil)
-      call read_array(filehandle, 'y_coil',        (/sr%ntri_c,3/), float2d=sr%y_coil)
-      call read_array(filehandle, 'z_coil',        (/sr%ntri_c,3/), float2d=sr%z_coil)
-      call read_array(filehandle, 'phi_coil',      (/sr%ntri_c,3/), float2d=sr%phi_coil)
-      call read_array(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), float1d=sr%eta_thin_coil)
-      call read_array(filehandle, 'coil_resist',   (/sr%ncoil,0/),  float1d=sr%coil_resist)
+      if ( sr%ncoil > 0 ) then
+        call read_array(filehandle, 'jtri_c',        (/sr%ncoil,0/),  int1d=sr%jtri_c)
+        call read_array(filehandle, 'x_coil',        (/sr%ntri_c,3/), float2d=sr%x_coil)
+        call read_array(filehandle, 'y_coil',        (/sr%ntri_c,3/), float2d=sr%y_coil)
+        call read_array(filehandle, 'z_coil',        (/sr%ntri_c,3/), float2d=sr%z_coil)
+        call read_array(filehandle, 'phi_coil',      (/sr%ntri_c,3/), float2d=sr%phi_coil)
+        call read_array(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), float1d=sr%eta_thin_coil)
+        call read_array(filehandle, 'coil_resist',   (/sr%ncoil,0/),  float1d=sr%coil_resist)
+      end if
     end if
     
     ! --- eta_thin_w is only part of the STARWALL response file since file_version 2

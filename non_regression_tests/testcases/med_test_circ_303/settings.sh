@@ -1,7 +1,7 @@
 # --- General settings
 jorekmodel="303"
 description="Tearing mode, circular plasma, model$jorekmodel, n_tor=3."
-mpitasks=2
+mpitasks=16
 binaries="jorek_model${jorekmodel}_3 rst_bin2hdf5 rst_hdf52bin"
 binaries_initial="jorek_model${jorekmodel}_1"
 requiredfiles="input"

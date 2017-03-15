@@ -208,7 +208,8 @@ required = 0
   
   CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
   write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', rank, ': ', name
-    
+!  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+!  call MPI_Abort()
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
 

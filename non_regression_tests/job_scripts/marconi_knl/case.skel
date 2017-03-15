@@ -9,8 +9,6 @@
 #PBS -j oe
 #PBS -V
 #PBS -m e
-#PBS -o _CASE_.log
-#PBS -e _CASE_.err
 
 ########################################################################
 # Look to non_regression_tests/testcases/_CASE_/settings.sh

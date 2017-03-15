@@ -143,11 +143,12 @@ call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
 
 
-!$omp parallel default(none) shared(pastix_nthrd)    
-pastix_nthrd = omp_get_num_threads()
-!$omp end parallel
-
-if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
+              !$omp parallel default(none) shared(pastix_nthrd)    
+              !$omp master
+              pastix_nthrd = omp_get_num_threads()/2
+              !$omp end master
+              !$omp end parallel
+          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' Zero PastiX n_threads : ',pastix_nthrd, "OMP", omp_get_num_threads() 
 
 if (.not. pastix_initialised) then
 

@@ -239,6 +239,10 @@ module vacuum_response
   
   
   !> Read the STARWALL response matrices from a single file.
+  !!
+  !! file_version 1: Original
+  !! file_version 2: Includes eta_thin_w
+  !! file_version 3: Includes additional coil information
   subroutine read_starwall_response(sr, filename)
     
     use constants
@@ -293,7 +297,7 @@ module vacuum_response
     end if
     
     sr%file_version = read_intparam(filehandle, 'file_version')
-    if ( sr%file_version > 2 ) then
+    if ( sr%file_version > 3 ) then
       write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
       stop
     end if
@@ -306,8 +310,28 @@ module vacuum_response
     sr%ntri_w = read_intparam(filehandle, 'ntri_w')
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
     sr%n_tor0 = sr%n_tor
-
-    call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
+    call read_array(filehandle, 'i_tor',         (/sr%n_tor,0/),  int1d=sr%i_tor)
+    
+    ! --- Additional coil information is only available since file_version 3
+    if ( sr%file_version >= 3 ) then
+      sr%ntri_c = read_intparam(filehandle, 'ntri_c')
+      sr%n_pol_coils             = read_intparam(filehandle, 'n_pol_coils')
+      sr%n_rmp_coils             = read_intparam(filehandle, 'n_rmp_coils')
+      sr%n_voltage_coils         = read_intparam(filehandle, 'n_voltage_coils')
+      sr%n_diag_coils            = read_intparam(filehandle, 'n_diag_coils')
+      sr%ind_start_pol_coils     = read_intparam(filehandle, 'ind_start_pol_coils')
+      sr%ind_start_rmp_coils     = read_intparam(filehandle, 'ind_start_rmp_coils')
+      sr%ind_start_voltage_coils = read_intparam(filehandle, 'ind_start_voltage_coils')
+      sr%ind_start_diag_coils    = read_intparam(filehandle, 'ind_start_diag_coils')
+      
+      call read_array(filehandle, 'jtri_c',        (/sr%ncoil,0/),  int1d=sr%jtri_c)
+      call read_array(filehandle, 'x_coil',        (/sr%ntri_c,3/), float2d=sr%x_coil)
+      call read_array(filehandle, 'y_coil',        (/sr%ntri_c,3/), float2d=sr%y_coil)
+      call read_array(filehandle, 'z_coil',        (/sr%ntri_c,3/), float2d=sr%z_coil)
+      call read_array(filehandle, 'phi_coil',      (/sr%ntri_c,3/), float2d=sr%phi_coil)
+      call read_array(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), float1d=sr%eta_thin_coil)
+      call read_array(filehandle, 'coil_resist',   (/sr%ncoil,0/),  float1d=sr%coil_resist)
+    end if
     
     ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
     if ( sr%file_version >= 2 ) then

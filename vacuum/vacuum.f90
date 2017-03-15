@@ -73,16 +73,32 @@ module vacuum
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   
   type :: t_starwall_response
-    integer :: file_version
-    integer :: n_bnd
-    integer :: nd_bez
-    integer :: ncoil
-    integer :: npot_w
-    integer :: n_w
-    integer :: ntri_w
-    integer :: n_tor
-    integer :: n_tor0
-    real*8  :: eta_thin_w !< In SI units
+    integer :: file_version           = 9999
+    integer :: n_bnd                  = -1
+    integer :: nd_bez                 = -1
+    integer :: ncoil                  = -1
+    integer :: npot_w                 = -1
+    integer :: n_w                    = -1
+    integer :: ntri_w                 = -1
+    integer :: n_tor                  = -1
+    integer :: n_tor0                 = -1
+    integer :: ntri_c                 = 0  !< Number of coil triangles
+    integer :: n_pol_coils            = 0  !< Number of poloidal field coils
+    integer :: n_rmp_coils            = 0  !< Number of RMP coils
+    integer :: n_voltage_coils        = 0  !< Number of "voltage coils"
+    integer :: n_diag_coils           = 0  !< Number of diagnostic coils
+    integer :: ind_start_pol_coils    = -1 !< Index of first poloildal field coil
+    integer :: ind_start_rmp_coils    = -1 !< Index of first RMP coil
+    integer :: ind_start_voltage_coils= -1 !< Index of first voltage coil
+    integer :: ind_start_diag_coils   = -1 !< Index of first diagnostic coil
+    integer, allocatable :: jtri_c(:)      !< Number of triangles per coil
+    real*8,  allocatable :: x_coil(:,:)      !< x-position of coil triangle nodes
+    real*8,  allocatable :: y_coil(:,:)      !< y-position of coil triangle nodes
+    real*8,  allocatable :: z_coil(:,:)      !< z-position of coil triangle nodes
+    real*8,  allocatable :: phi_coil(:,:)    !< "Potential" at coil triangle nodes
+    real*8,  allocatable :: eta_thin_coil(:) !< Thin wall resistivity of coil triangles
+    real*8,  allocatable :: coil_resist(:)   !< Resistance of each coil
+    real*8  :: eta_thin_w             = 1. !< Thin wall resistivity of wall triangles
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
     real*8,  allocatable :: a_ye(:,:)

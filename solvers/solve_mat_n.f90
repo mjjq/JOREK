@@ -9,9 +9,9 @@ contains
     integer*4, dimension(1:pastix_nthrd) :: thread_map
     integer*4 k, iplace
     
-#ifdef MULT_PROC_PER_NODE
+#ifdef CORES_PER_NODE
     do k = 1, pastix_nthrd
-      thread_map(k) = mod(my_id * pastix_nthrd,68) + k-1
+      thread_map(k) = mod(my_id * pastix_nthrd,CORES_PER_NODE) + k-1
     end do
     call pastix_fortran_bindthreads(pastix_data, pastix_nthrd, thread_map(1:))
 #endif
@@ -482,7 +482,7 @@ contains
 
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
-#ifdef MULT_PROC_PER_NODE
+#ifdef CORES_PER_NODE
           pastix_iparm(IPARM_BINDTHRD+increment)   = API_BIND_TAB
 #endif
 #ifdef USE_BLOCK

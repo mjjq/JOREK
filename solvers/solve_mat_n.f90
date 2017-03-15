@@ -241,7 +241,7 @@ contains
 #ifdef HYPER_THREADS
               pastix_nthrd = omp_get_num_threads()/2
 #else
-              pastix_nthrd = omp_get_num_threads
+              pastix_nthrd = omp_get_num_threads()
 #endif
           !$omp end master
           !$omp end parallel
@@ -328,7 +328,7 @@ contains
 #ifdef HYPER_THREADS
               pastix_nthrd = omp_get_num_threads()/2
 #else
-              pastix_nthrd = omp_get_num_threads
+              pastix_nthrd = omp_get_num_threads()
 #endif
               !$omp end master
               !$omp end parallel

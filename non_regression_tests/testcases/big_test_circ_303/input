@@ -43,10 +43,10 @@
  n_R      = 0
  n_Z      = 0
  n_radial = 121
- n_pol    = 90
+ n_pol    = 96
 
- n_flux   = 90
- n_tht    = 60
+ n_flux   = 76
+ n_tht    = 64
  n_open   = 0
  n_leg    = 0
  n_private = 0

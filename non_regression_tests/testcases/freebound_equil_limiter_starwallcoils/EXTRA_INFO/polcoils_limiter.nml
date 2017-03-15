@@ -1,43 +1,55 @@
-&polcoil_input
+&coil_set_nml  
+  description          = 'Coil set for simple limiter test case'
+  ncoil                = 4
+/
+
+&coils_nml  
+  coil( 1)%name     = 'PF1'
+  coil( 1)%coil_type= 'axisym_thick'
+  coil( 1)%R        = 10.
+  coil( 1)%Z        = 2.
+  coil( 1)%dR       = 0.01
+  coil( 1)%dZ       = 0.03
+  coil( 1)%nbands_R = 2
+  coil( 1)%nbands_Z = 2
+  coil( 1)%resist   = 1.
+  coil( 1)%nturns   = 1.
+  coil( 1)%ntorpts  = 60
   
-  polcoil_set          = 'ITER poloidal field coil set for STARWALL_J (produced by M. Hoelzl 2017-02-08)'
-  n_polcoils           = 4
-  polcoils_torpts      = 60 
+  coil( 2)%name     = 'PF2'
+  coil( 2)%coil_type= 'axisym_thick'
+  coil( 2)%R        = 10.
+  coil( 2)%Z        = -2.
+  coil( 2)%dR       = 0.02
+  coil( 2)%dZ       = 0.01
+  coil( 2)%nbands_R = 2
+  coil( 2)%nbands_Z = 2
+  coil( 2)%resist   = 1.
+  coil( 2)%nturns   = 1.
+  coil( 2)%ntorpts  = 60
   
-  polcoil( 1)%name     = 'PF1'
-  polcoil( 1)%R        = 10.
-  polcoil( 1)%Z        = 2.
-  polcoil( 1)%dR       = 0.01
-  polcoil( 1)%dZ       = 0.03
-  polcoil( 1)%nbands_R = 2
-  polcoil( 1)%nbands_Z = 2
-  polcoil( 1)%resist   = 1.
+  coil( 3)%name     = 'PF3'
+  coil( 3)%coil_type= 'axisym_thick'
+  coil( 3)%R        = 8.
+  coil( 3)%Z        = 0.
+  coil( 3)%dR       = 0.02
+  coil( 3)%dZ       = 0.04
+  coil( 3)%nbands_R = 2
+  coil( 3)%nbands_Z = 2
+  coil( 3)%resist   = 1.
+  coil( 3)%nturns   = 1.
+  coil( 3)%ntorpts  = 60
   
-  polcoil( 2)%name     = 'PF2'
-  polcoil( 2)%R        = 10.
-  polcoil( 2)%Z        = -2.
-  polcoil( 2)%dR       = 0.02
-  polcoil( 2)%dZ       = 0.01
-  polcoil( 2)%nbands_R = 2
-  polcoil( 2)%nbands_Z = 2
-  polcoil( 2)%resist   = 1.
-  
-  polcoil( 3)%name     = 'PF3'
-  polcoil( 3)%R        = 8.
-  polcoil( 3)%Z        = 0.
-  polcoil( 3)%dR       = 0.02
-  polcoil( 3)%dZ       = 0.04
-  polcoil( 3)%nbands_R = 2
-  polcoil( 3)%nbands_Z = 2
-  polcoil( 3)%resist   = 1.
-  
-  polcoil( 4)%name     = 'PF4'
-  polcoil( 4)%R        = 12.
-  polcoil( 4)%Z        = 0.
-  polcoil( 4)%dR       = 0.05
-  polcoil( 4)%dZ       = 0.03
-  polcoil( 4)%nbands_R = 2
-  polcoil( 4)%nbands_Z = 2
-  polcoil( 4)%resist   = 1.
+  coil( 4)%name     = 'PF4'
+  coil( 4)%coil_type= 'axisym_thick'
+  coil( 4)%R        = 12.
+  coil( 4)%Z        = 0.
+  coil( 4)%dR       = 0.05
+  coil( 4)%dZ       = 0.03
+  coil( 4)%nbands_R = 2
+  coil( 4)%nbands_Z = 2
+  coil( 4)%resist   = 1.
+  coil( 4)%nturns   = 1.
+  coil( 4)%ntorpts  = 60
   
 /

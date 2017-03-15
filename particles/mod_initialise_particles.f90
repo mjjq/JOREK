@@ -228,10 +228,10 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*8, intent(in), optional                      :: E_max !< If alpha=1 we select particles from a block-distribution, up to E_max
   logical, intent(in), optional                     :: include_vpar !< Initialize particles with local parallel velocity
   logical, intent(in), optional                     :: uniform_space !< Do not
+  !< use {psi,theta}_transform if present but use rejection sampling in RZ
   real*4, external, optional                        :: uniform_space_rej_f !< Merge variables into a single criterium between 0 and 1 for rej.  sampling
   !< Special values: 0 = 1, -1 = R, -2 = Z, -3 = Phi. Must be in ascending order!
   integer, dimension(:), intent(in), optional       :: uniform_space_rej_vars !< Variables to use for uniform_space_rej_f
-  !< use {psi,theta}_transform if present but use rejection sampling in RZ
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
   integer, intent(in), optional                     :: charge !< Use this if cor is not present
 

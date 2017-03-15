@@ -90,7 +90,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
   ! Move an old file if this is the initialisation, we are id 0 and we are not appending
   if (.not. this%append .and. my_id .eq. 0 .and. .not. this%init_done) then
-    this%init_done = .true.
+    this%init_done = .true. ! only on ID 0, watch out
     ! Move old file if present
     inquire(file=trim(this%filename), exist=file_exists)
     dot_index = scan(this%filename,'.',back=.true.)
@@ -320,15 +320,15 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   do i=1,size(particles,1)
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
+      int_stats(i,1) = 1 ! lost
       select type (particle_in => particles(i))
       type is (particle_kinetic_leapfrog)
-        int_stats(i,1) = particle_in%q
+        int_stats(i,2) = particle_in%q
       type is (particle_kinetic)
-        int_stats(i,1) = particle_in%q
+        int_stats(i,2) = particle_in%q
       type is (particle_gc)
-        int_stats(i,1) = particle_in%q
+        int_stats(i,2) = particle_in%q
       end select
-      int_stats(i,2) = 1 ! lost
     else
       ! Calculate psi and B in the current particle location (either GC or kinetic)
       call fields%interp_PRZ(time, particles(i)%i_elm, &
@@ -378,9 +378,9 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       real_stats(i,6) = particle%weight
 
       ! 1. q (charge)
-      int_stats(i,1) = particle%q
+      int_stats(i,2) = particle%q
       ! 2. lost (boolean)
-      int_stats(i,2) = 0
+      int_stats(i,1) = 0
     endif
   enddo
   !$omp end parallel do

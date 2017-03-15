@@ -560,12 +560,12 @@ module vacuum_response
       if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ', sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
       if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ', sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
       if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ', sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
-      if (allocated(sr%x_coil       )) then; write(*,35) 'x_coil       ', sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
-      if (allocated(sr%y_coil       )) then; write(*,35) 'y_coil       ', sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
-      if (allocated(sr%z_coil       )) then; write(*,35) 'z_coil       ', sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
-      if (allocated(sr%phi_coil     )) then; write(*,35) 'phi_coil     ', sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
-      if (allocated(sr%eta_thin_coil)) then; write(*,35) 'eta_thin_coil', sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
-      if (allocated(sr%coil_resist  )) then; write(*,35) 'coil_resist  ', sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
+      if (allocated(sr%x_coil       )) then; write(*,34) 'x_coil       ', sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
+      if (allocated(sr%y_coil       )) then; write(*,34) 'y_coil       ', sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
+      if (allocated(sr%z_coil       )) then; write(*,34) 'z_coil       ', sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
+      if (allocated(sr%phi_coil     )) then; write(*,34) 'phi_coil     ', sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
+      if (allocated(sr%eta_thin_coil)) then; write(*,34) 'eta_thin_coil', sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
+      if (allocated(sr%coil_resist  )) then; write(*,34) 'coil_resist  ', sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
     end if
     write(*,32)
     write(*,*)

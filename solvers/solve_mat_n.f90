@@ -482,7 +482,9 @@ contains
 
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
+#ifdef MULT_PROC_PER_NODE
           pastix_iparm(IPARM_BINDTHRD+increment)   = API_BIND_TAB
+#endif
 #ifdef USE_BLOCK
           call pastix_bind_threads(my_id)
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &

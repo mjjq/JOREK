@@ -27,7 +27,7 @@
   !   1=Fourier series, 2=triangles, 3=triangles+index fu.
   iwall      = 1,
   
-  polcoil_file = 'polcoils_iter.nml'
+  pol_coil_file = 'polcoils_iter.nml'
 /
 
 

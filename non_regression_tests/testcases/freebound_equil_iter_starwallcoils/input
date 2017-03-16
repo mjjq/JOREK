@@ -30,18 +30,18 @@
  
  n_coils_nml          = 12
 
- coils0( 1)%current    =  0.600000d+7     ! pf1 
- coils0( 2)%current    = -0.080000d+7     ! pf2 
- coils0( 3)%current    = -0.620000d+7     ! pf3 
- coils0( 4)%current    = -0.370000d+7     ! pf4 
- coils0( 5)%current    = -0.680000d+7     ! pf5 
- coils0( 6)%current    =  2.190000d+7     ! pf6               
- coils0( 7)%current    =  0.984528d+7     ! cs3u
- coils0( 8)%current    = -0.284091d+7     ! cs2u
- coils0( 9)%current    = -0.630050d+7     ! cs1u
- coils0(10)%current    = -0.630050d+7     ! cs1l
- coils0(11)%current    = -0.407839d+7     ! cs2l
- coils0(12)%current    = -0.043469d+7     ! cs3l
+ coils0( 1)%current    =  24135.15687851971     ! pf1 
+ coils0( 2)%current    = -6944.444444444445     ! pf2 
+ coils0( 3)%current    = -33351.26412049489     ! pf3 
+ coils0( 4)%current    = -21777.516185991757     ! pf4 
+ coils0( 5)%current    = -31365.31365313653    ! pf5 
+ coils0( 6)%current    =  47670.87505441881     ! pf6               
+ coils0( 7)%current    = 17771.2635379061367     ! cs3u
+ coils0( 8)%current    = -5127.996389891697     ! cs2u
+ coils0( 9)%current    = -11372.743682310469    ! cs1u
+ coils0(10)%current    = -11372.743682310469     ! cs1l
+ coils0(11)%current    = -7361.714801444044     ! cs2l
+ coils0(12)%current    = -784.6389891696751    ! cs3l
  
  coils0(1)%FB_amp      = -1.d0            ! pf1
  coils0(6)%FB_amp      =  1.d0            ! pf6

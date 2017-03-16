@@ -256,7 +256,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     call h5sselect_hyperslab_f(tspace, H5S_SELECT_SET_F, &
         start=[time_dims(1)-1_HSIZE_T], count=[n_time], hdferr=ierr)
     call h5screate_f(H5S_SCALAR_F, t_mem_space, ierr)
-    call h5dwrite_f(tset, H5T_NATIVE_REAL, sim%time, [n_time], ierr, file_space_id=tspace, mem_space_id=t_mem_space)
+    call h5dwrite_f(tset, H5T_NATIVE_REAL, real(sim%time,4), [n_time], ierr, file_space_id=tspace, mem_space_id=t_mem_space)
 
 
     call h5sclose_f(t_mem_space, ierr)

@@ -16,6 +16,8 @@ use mod_openadas
 use mod_coronal
 use mod_ionisation_recombination
 use mpi
+use mod_pcg32_rng
+use mod_random_seed
 implicit none
 
 character(len=6), parameter :: suffix = "50_w"
@@ -25,7 +27,6 @@ integer :: ierr, provided
 call MPI_INIT_Thread(MPI_THREAD_SINGLE, provided, ierr)
 
 ad = read_adf11(suffix, directory=dir)
-call random_seed()
 
 call plot_coronal_equilibrium(ad)
 call plot_mc_coronal_equilibria(ad)
@@ -50,6 +51,9 @@ subroutine plot_mc_coronal_equilibria(ad)
   real*8, dimension(:), allocatable  :: p_cor !< population at each charge state at this time
   integer :: i, it, u_mc, u_cor, u
 
+  type(pcg32_rng) :: rng
+  real*8 :: ran2(2)
+  call rng%initialize(2, random_seed(), 1, 1)
 
   allocate(p_mc(0:ad%n_Z))
   allocate(p_cor(0:ad%n_Z))
@@ -71,7 +75,8 @@ subroutine plot_mc_coronal_equilibria(ad)
   do i=1,nstep
     p_mc = 0
     do it=1,n_particles
-      z(it) = new_charge(z(it), ad, density, temperature, tstep)
+      call rng%next(ran2)
+      z(it) = new_charge(z(it), ad, density, temperature, tstep, ran2)
       p_mc(z(it)) = p_mc(z(it)) + 1
     enddo
     do it=lbound(p_mc,1),ubound(p_mc,1)

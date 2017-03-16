@@ -70,7 +70,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   write(*,*) 'Importing restart file "', trim(filename), '".'
   write(*,*) '  Using format : ',rst_format
 
-  open(21,file=trim(filename), form='unformatted', status='old', action='read', access='stream', iostat=error)
+  open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
   if ( error /= 0 ) then
     write(*,*) '...failed!'
     return

@@ -57,7 +57,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   character*50 :: version_control
 
   ! -> Write binary restart file
-  open(21, file=filename, form='unformatted', status='replace', action='write', access='stream')
+  open(21, file=filename, form='unformatted', status='replace', action='write')
 
   write(21) n_tor
   write(21) node_list%n_nodes,element_list%n_elements

@@ -134,12 +134,13 @@ pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
 end subroutine boris_initial_half_step_backwards_RZPhi
 
 !> Given a list of particles and the fields, perfom half-steps backwards for all
-subroutine boris_all_initial_half_step_backwards_RZPhi(particles, m, fields, dt)
+subroutine boris_all_initial_half_step_backwards_RZPhi(particles, m, fields, t, dt)
   use mod_fields
   class(particle_kinetic_leapfrog), intent(inout), dimension(:) :: particles
   real*8, intent(in) :: m
   class(fields_base), intent(in) :: fields
-  real*8, intent(in) :: dt
+  real*8, intent(in) :: t !< Time of the current simulation
+  real*8, intent(in) :: dt !< Timestep
 
   integer :: i
   real*8  :: psi, U, E(3), B(3)
@@ -147,7 +148,7 @@ subroutine boris_all_initial_half_step_backwards_RZPhi(particles, m, fields, dt)
   !$omp parallel do default(private) shared(particles, fields, dt, m)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .eq. 0) cycle
-    call fields%calc_EBpsiU(0.d0, particles(i)%i_elm, particles(i)%st, particles(i)%x(3), &
+    call fields%calc_EBpsiU(t, particles(i)%i_elm, particles(i)%st, particles(i)%x(3), &
         E, B, psi, U)
     call boris_initial_half_step_backwards_RZPhi(particles(i), m, E, B, dt)
   end do

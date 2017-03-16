@@ -12,8 +12,13 @@ export MKL_NUM_THREADS="1"
 export MKL_DYNAMIC="FALSE"
 export PRERUN="uniq $PBS_NODEFILE > hosts.txt"
 #-genv I_MPI_PIN=1 -genv I_MPI_PIN_DOMAIN=socket -genv I_MPI_PIN_ORDER=spread -genv OMP_PROC_BIND=1
+if [ -n "$OMP_NUM_THREADS" ]; then
+  ((PPN=36/$OMP_NUM_THREADS))
+else
+  PPN=1
+fi
 if [ ${USE_INTELMPI} -gt 0 ]; then
-  MPIRUN="mpiexec.hydra -genv KMP_AFFINITY=verbose -genv I_MPI_DEBUG=4  -ppn 2 -f hosts.txt -np"
+  MPIRUN="mpiexec.hydra  -genv OMP_PROC_BIND=1 -genv I_MPI_PIN=1 -genv KMP_AFFINITY=verbose -genv I_MPI_DEBUG=4  -ppn $PPN -f hosts.txt -np"
 fi
 if [ ${USE_OPENMPI} -gt 0 ]; then
   MPIRUN="mpirun -x KMP_AFFINITY=verbose -x OMP_PROC_BIND=1 -n"

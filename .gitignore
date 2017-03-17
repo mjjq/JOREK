@@ -12,6 +12,8 @@
 *.swp
 *.i90
 *.orig
+*.pyc
+*.xml
 Makefile.inc
 j302_1
 j302_3

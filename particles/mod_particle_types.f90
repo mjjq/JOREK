@@ -12,9 +12,9 @@ module mod_particle_types
   !> and an element index.
   type, abstract :: particle_base
     real*8    :: x(3)             !< particle position in real space
-    real*8    :: st(2)            !< JOREK integration: particle position in the element
+    real*8    :: st(2)            !< particle position in the element
     real*4    :: weight = 1.0     !< weight (i.e. number of particles)
-    integer*4 :: i_elm            !< JOREK integration: index in element_list
+    integer*4 :: i_elm            !< index in element_list
   end type particle_base
 
   !> A simple type just for fieldline tracing

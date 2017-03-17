@@ -201,8 +201,6 @@ end subroutine initialise_particles
 
 !> Initialise particle positions in E, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
 !> Set Psi_transform to transform from [0,1] to your desired range
-!>
-!> **This subroutine does not support openMP yet! There is some race condition... **
 subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         Theta_transform, Psi_transform, alpha, E_max, include_vpar, uniform_space, &
         uniform_space_rej_f, uniform_space_rej_vars, cor, charge)
@@ -259,6 +257,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   logical :: all_done, init_uniform_space, my_include_vpar
   real*8  :: my_alpha
 
+  init_uniform_space = .false.
   if (present(uniform_space) .and. uniform_space) then
     init_uniform_space = .true.
     call domain_bounding_box(fields%node_list, fields%element_list, Rbox(1), Rbox(2), Zbox(1), Zbox(2))

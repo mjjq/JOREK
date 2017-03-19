@@ -7,11 +7,14 @@ contains
 
     integer, intent(in) :: my_id
     integer*4, dimension(1:pastix_nthrd) :: thread_map
-    integer*4 k, iplace
+    integer*4 k, packsize, procpernode
     
 #ifdef CORES_PER_NODE
-    do k = 1, pastix_nthrd
-      thread_map(k) = mod(my_id * pastix_nthrd,CORES_PER_NODE) + k-1
+    procpernode = CORES_PER_NODE/pastix_nthrd
+    packsize = CORES_PER_NODE/procpernode 
+    if (my_id .eq. 0) print *, "packsize", packsize, "procpernode", procpernode
+    Do k = 1, pastix_nthrd
+      thread_map(k) = mod(my_id * packsize,CORES_PER_NODE) + k-1
     end do
     call pastix_fortran_bindthreads(pastix_data, pastix_nthrd, thread_map(1:))
 #endif

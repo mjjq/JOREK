@@ -11,5 +11,12 @@ export MKL_DYNAMIC="FALSE"
 export MKL_ENABLE_INSTRUCTIONS=AVX512_MIC
 #-genv I_MPI_HBW_POLICY=hbw_preferred,hbw_bind 
 export PRERUN="uniq $PBS_NODEFILE > hosts.txt"
-export MPIRUN="mpiexec.hydra -genv I_MPI_HBW_POLICY=hbw_preferred,hbw_bind  -genv I_MPI_DEBUG=4 -genv KMP_AFFINITY=verbose,scatter -ppn 4 -f hosts.txt -np"
+#-genv I_MPI_PIN=1 -genv I_MPI_PIN_DOMAIN=socket -genv I_MPI_PIN_ORDER=spread -genv OMP_PROC_BIND=1
+if [ -n "$OMP_NUM_THREADS" ]; then
+#  ((PPN=136/$OMP_NUM_THREADS))
+  ((PPN=68/$OMP_NUM_THREADS))
+else
+  PPN=1
+fi
+export MPIRUN="mpiexec.hydra -genv I_MPI_HBW_POLICY=hbw_preferred,hbw_bind  -genv I_MPI_DEBUG=4 -genv KMP_AFFINITY=verbose,scatter -ppn $PPN -f hosts.txt -np"
 export BATCHCOMMAND="qsub"

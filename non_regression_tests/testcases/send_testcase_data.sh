@@ -14,7 +14,7 @@ cd  ${TESTDIR}
 testcasedir=`readlink -f ${PWD}`
 source ./settings.sh
 
-VERSION="_`md5sum end.h5 | sed -e 's/^ //' -e 's/ .*$//'`"
+VERSION="_`cat end.h5 $extra_remote_files | md5sum | sed -e 's/^ //' -e 's/ .*$//'`"
 echo ${VERSION} > .version
 
 printf "date: "      > .info

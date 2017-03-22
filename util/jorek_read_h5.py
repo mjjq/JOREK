@@ -217,21 +217,16 @@ returns:
 def interp_scalars(values, vertex, size, n_sub):
     # Multiply values[var,order,harm,vertex,element] with
     # size[order, vertex, element] and bf[order, vertex, s, t]
-    try:
-        return np.einsum('lihjk,ijk,ijmn->lhkmn',
-                        values[:,:,:,vertex-1],
-                        size, bf(n_sub), optimize=True)
-    except ArgumentError:
-        return np.einsum('lihjk,ijk,ijmn->lhkmn',
-                        values[:,:,:,vertex-1],
-                        size, bf(n_sub), optimize=True)
+    return np.einsum('lihjk,ijk,ijmn->lhkmn',
+                    values[:,:,:,vertex-1],
+                    size, bf(n_sub))
 
 """
 Interpolate scalars on 2D planes * n_planes
 """
 def interp_scalars_3D(values, vertex, size, n_sub, HZ):
     vals = interp_scalars(values, vertex, size, n_sub)
-    return np.einsum('lhkmn,hp->lpkmn', vals, HZ, optimize=True)
+    return np.einsum('lhkmn,hp->lpkmn', vals, HZ)
 
 
 """

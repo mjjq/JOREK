@@ -14,7 +14,7 @@ export PRERUN="uniq $PBS_NODEFILE > hosts.txt"
 export I_MPI_PLATFORM=knl
 export HFI_NO_CPUAFFINITY=1
 #export I_MPI_FABRICS=tmi
-export I_MPI_STATS=3
+#export I_MPI_STATS=3
 
 #-genv I_MPI_PIN=1 -genv I_MPI_PIN_DOMAIN=socket -genv I_MPI_PIN_ORDER=spread -genv OMP_PROC_BIND=1
 if [ -n "$OMP_NUM_THREADS" ]; then

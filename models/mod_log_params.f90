@@ -418,7 +418,6 @@ if (my_id == 0) then
     end if
 
     write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
-    write(*,LOGI_FMT) 'impose_coil_currents  ', impose_coil_currents
        
   end if
   

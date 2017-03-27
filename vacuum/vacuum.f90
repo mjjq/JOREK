@@ -44,7 +44,6 @@ module vacuum
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
   integer             :: n_polcoils_nml                     !< specified number of poloidal field coils in namelist
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
-  logical             :: impose_coil_currents            !< PFcoils currents are imposed or free to evolve in time? (not valid for COIL_FIELD)
   real*8, allocatable :: I_coils(:)                      !< coil currents           
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source       
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
@@ -121,7 +120,6 @@ module vacuum
     ! --- Preset namelist input parameters.
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
-    impose_coil_currents = .true.
     freeboundary         = .false.
     resistive_wall       = .false.
     wall_resistivity     = 0.d0

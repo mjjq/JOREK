@@ -1,17 +1,15 @@
 # Makefile.inc file for compiling JOREK on the Marconi-Fusion Supercomputer
 #
-# * Make sure to set PASTIX_HOME below to the correct directory.
-# * Make sure that you have the following modules loaded: intel intelmpi mkl fftw hdf5 szip
+# Make sure to set environment variables and load modules as described in 
+#   http://jorek.eu/wiki/doku.php?id=marconi-fusion_with_intelmpi_i17&do=
 
 # --- Select physics model
 MODEL             = model303
 
 # --- Compiler and options
 FC                = mpif90 -mt_mpi
-CC                = mpicc  -mt_mpi
-FFLAGS_OMP        = -qopenmp 
-FFLAGS            = -r8 -i4 -DUSE_BLOCK -DWORLDWAR2 #-DCORES_PER_NODE=68 #-DHYPER_THREADS
-FFLAGS           += -fpp
+CC                = mpicc -mt_mpi
+FFLAGS            = -i4 -DUSE_BLOCK -DWORLDWAR2 -DCORES_PER_NODE=68 #-DFUNNELED #RECENT_PASTIX# 
 FFLAGS           += -xmic-avx512 -O2 -fp-model fast=2
 
 # --- Various switches
@@ -23,17 +21,13 @@ USE_MUMPS         = 1
 
 # --- PaStiX solver
 PASTIX_LIB ?= "<<<<path-to-pastix-library-directory>>>>"
-LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` -L${MKL_LIB}
+LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` -L$(MKL_LIB)
 LIB_PASTIX_MURGE  = `$(PASTIX_LIB)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS   = `$(PASTIX_LIB)/pastix-conf --blas`
 INC_PASTIX        = `$(PASTIX_LIB)/pastix-conf --incs`
 
 # --- FFTW Library
-# MKL Setting:
-#LIBFFTW           = -L$(MKL_LIB_DIR) -lfftw3xf_intel
-#INC_FFTW          = -I$(MKL_INC_DIR)/fftw
-# FFTW Setting:
-LIBFFTW           = -L$(FFTW_LIB) -lfftw3
+LIBFFTW           = $(FFTW_LIB)/libfftw3.a
 INC_FFTW          = -I$(FFTW_INC)
 
 # --- Usually not to be changed

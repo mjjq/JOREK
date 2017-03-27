@@ -9,10 +9,10 @@ contains
     integer*4, dimension(1:pastix_nthrd) :: thread_map
     integer*4 k, packsize, procpernode
     
-#ifdef CORES_PER_NODE
+#if defined(WORLDWAR2) && defined(CORES_PER_NODE)
     procpernode = CORES_PER_NODE/pastix_nthrd
     packsize = CORES_PER_NODE/procpernode 
-    if (my_id .eq. 0) print *, "packsize", packsize, "procpernode", procpernode
+!    if (my_id .eq. 0) print *, "packsize", packsize, "procpernode", procpernode
     Do k = 1, pastix_nthrd
       thread_map(k) = mod(my_id * packsize,CORES_PER_NODE) + k-1
     end do
@@ -485,7 +485,7 @@ contains
 
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
-#ifdef CORES_PER_NODE
+#if defined(WORLDWAR2) && defined(CORES_PER_NODE)
           pastix_iparm(IPARM_BINDTHRD+increment)   = API_BIND_TAB
 #endif
 #ifdef USE_BLOCK

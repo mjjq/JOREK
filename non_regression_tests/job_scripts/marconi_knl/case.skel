@@ -1,8 +1,8 @@
 #!/bin/bash
 #PBS -N _CASE_
 #PBS -q knl
-# #PBS -A FUA21_<project-id>
-#PBS -l mcdram=cache:numa=snc2
+#PBS -A FUA21_<project-id>
+# #PBS -l mcdram=cache:numa=snc2
 #PBS -l place=excl
 #PBS -l walltime=0:15:00
 #PBS -l select=1:mpiprocs=2
@@ -19,7 +19,6 @@ cd $PBS_O_WORKDIR
 
 ulimit -l unlimited
 ulimit -s unlimited
-cat $PBS_NODEFILE > hosts.txt
 echo $PBS_O_WORKDIR
 
 CASE=_CASE_
@@ -27,6 +26,7 @@ JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
 echo " jorek_home = " ${JOREK_HOME}
 
 export OMP_NUM_THREADS=34
+export mpitasks=`wc -l < $PBS_NODEFILE`
 
 #export NPROC=`qstat -f $PBS_JOBID | awk '/Resource_List.mpiprocs/ {print $3}'`
 

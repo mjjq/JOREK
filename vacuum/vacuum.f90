@@ -81,6 +81,7 @@ module vacuum
     integer :: n_w
     integer :: ntri_w
     integer :: n_tor
+    integer :: n_tor0
     real*8  :: eta_thin_w !< In SI units
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
@@ -164,6 +165,7 @@ module vacuum
     sr%n_w    = 0
     sr%ntri_w = 0
     sr%n_tor  = 0
+    sr%n_tor0 = 0
     
     ! --- Switch on terms on the RHS of current equation definition when using free-boundary
     freeb_fact = 0.d0
@@ -263,10 +265,11 @@ module vacuum
       
       read(file_handle) current_FB_fact
       read(file_handle) n_coils
-      
-      if ( allocated(I_coils) ) deallocate(I_coils)
-      allocate( I_coils(n_coils) )
-      read(file_handle) I_coils(:)
+      if ( n_coils /= 0 ) then
+        if ( allocated(I_coils) ) deallocate(I_coils)
+        allocate( I_coils(n_coils) )
+        read(file_handle) I_coils(:)
+      end if
       
     end if
     
@@ -300,68 +303,75 @@ module vacuum
     
 #ifdef USE_HDF5
     ! --- Local variables
-    logical   :: resistive_wall_rst
-    character :: t_resistive_wall
+    logical   :: freeboundary_rst, resistive_wall_rst
+    character :: t_freeboundary, t_resistive_wall
+    
+    call HDF5_char_reading(file_id,t_freeboundary,"freeboundary")
+    freeboundary_rst = (t_freeboundary == "T")
     
     if ( freeboundary ) then
-       call HDF5_char_reading(file_id,t_resistive_wall,"resistive_wall")
-       if (t_resistive_wall == "T") then
-          resistive_wall_rst = .TRUE.
-       else
-          resistive_wall_rst = .FALSE.
-       endif
-       if ( .not. resistive_wall_rst ) then
-          write(*,*) 'WARNING: Restarting a simulation with freeboundary=.t. which was run with'
-          write(*,*) '  freeboundary=.f. so far.'
-          return
-       else if ( resistive_wall .neqv. resistive_wall_rst ) then
-          write(*,*) 'ERROR: It is currently not possible to restart a JOREK simulation with a'
-          write(*,*) '  modified setting for resistive_wall.'
-          stop
-       end if
-       
-       if ( resistive_wall ) then
-          call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
-          call HDF5_integer_reading(file_id,n_dof_starwall,"n_dof_starwall")
-          
-          if ( allocated(wall_curr) ) deallocate(wall_curr)
-          allocate( wall_curr(n_wall_curr) )
-          call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
-          
-          if ( allocated(dwall_curr) ) deallocate(dwall_curr)
-          allocate( dwall_curr(n_wall_curr) )
-          call HDF5_array1D_reading(file_id,dwall_curr,"dwall_curr")
-          
-          if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
-          allocate( old_dpsibnd_vec(n_dof_starwall) )
-          old_dpsibnd_vec = 0.d0 !###
-          
-          if ( vacuum_debug .and. resistive_wall ) then
-             write(*,*) 'DEBUG: Checksums'
-             write(*,*) 'wall_curr', sum(abs(wall_curr))
-             write(*,*) 'dwall_curr', sum(abs(dwall_curr))
-             write(*,*) 'END: Checksums'
-          end if
-          
-          wall_curr_initialized = .true.
-          
-       end if
-       
-       call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
-       call HDF5_integer_reading(file_id,n_coils,"n_coils")
-       
-       if ( allocated(I_coils) ) deallocate(I_coils)
-       allocate( I_coils(n_coils) )
-       
-       call HDF5_array1D_reading(file_id,I_coils,"I_coils")
-       
+      
+      if ( .not. freeboundary_rst ) then
+        write(*,*) 'WARNING: Restarting a simulation with freeboundary=.t. which was run with'
+        write(*,*) '  freeboundary=.f. so far.'
+      end if
+      
+      if ( freeboundary_rst ) then
+        call HDF5_char_reading(file_id,t_resistive_wall,"resistive_wall")
+        resistive_wall_rst = (t_resistive_wall == "T")
+      else
+        resistive_wall_rst = .false.
+      end if
+      
+      if ( resistive_wall .and. resistive_wall_rst ) then
+        
+        call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
+        call HDF5_integer_reading(file_id,n_dof_starwall,"n_dof_starwall")
+        
+        if ( allocated(wall_curr) ) deallocate(wall_curr)
+        allocate( wall_curr(n_wall_curr) )
+        call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
+        
+        if ( allocated(dwall_curr) ) deallocate(dwall_curr)
+        allocate( dwall_curr(n_wall_curr) )
+        call HDF5_array1D_reading(file_id,dwall_curr,"dwall_curr")
+        
+        if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
+        allocate( old_dpsibnd_vec(n_dof_starwall) )
+        old_dpsibnd_vec = 0.d0 !###
+        
+        if ( vacuum_debug .and. resistive_wall ) then
+          write(*,*) 'DEBUG: Checksums'
+          write(*,*) 'wall_curr', sum(abs(wall_curr))
+          write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+          write(*,*) 'END: Checksums'
+        end if
+        
+        wall_curr_initialized = .true.
+        
+      else if ( resistive_wall ) then
+        
+        write(*,*) 'WARNING: Continuing a JOREK simulation with resistive_wall=.f.'
+        write(*,*) '   now with resistive_wall=.t. Wall currents will be initialized to zero.'
+        wall_curr_initialized = .false.
+        
+      end if
+      
+      call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
+      call HDF5_integer_reading(file_id,n_coils,"n_coils")
+      if ( n_coils /= 0 ) then
+        if ( allocated(I_coils) ) deallocate(I_coils)
+        allocate( I_coils(n_coils) )
+        call HDF5_array1D_reading(file_id,I_coils,"I_coils")
+      end if
+      
     end if
      
     if ( vacuum_debug .and. resistive_wall ) then
-       write(*,*) 'DEBUG: Checksums'
-       if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
-       if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
-       write(*,*) 'END: Checksums'
+      write(*,*) 'DEBUG: Checksums'
+      if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
+      if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+      write(*,*) 'END: Checksums'
     end if
 
 #endif    
@@ -398,13 +408,13 @@ module vacuum
       
       write(file_handle) current_FB_fact
       
-      if ( (.not. allocated(I_coils)) ) then
-          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
-          stop
+      if ( (n_coils/=0) .and. (.not. allocated(I_coils)) ) then
+        write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+        stop
       end if
     
       write(file_handle) n_coils
-      write(file_handle) I_coils(:)
+      if ( n_coils /= 0 ) write(file_handle) I_coils(:)
       
     end if
     
@@ -435,48 +445,47 @@ module vacuum
     
 #ifdef USE_HDF5
     ! --- Local variables
-    character           :: t_resistive_wall
+    character           :: t_freeboundary, t_resistive_wall
 
+    t_freeboundary = "F"
+    if (freeboundary) t_freeboundary = "T"
+    call HDF5_char_saving(file_id,t_freeboundary,"freeboundary"//char(0))
+    
     if ( freeboundary ) then
-       if (resistive_wall) then
-          t_resistive_wall = "T"
-       else
-          t_resistive_wall = "F"
-       end if
-       call HDF5_char_saving(file_id,t_resistive_wall,"resistive_wall"//char(0))
+    
+      t_resistive_wall = "F"
+      if (resistive_wall) t_resistive_wall = "T"
+      call HDF5_char_saving(file_id,t_resistive_wall,"resistive_wall"//char(0))
 
-       if ( resistive_wall ) then
-          if ( (.not. allocated(wall_curr)) .or. (.not. allocated(dwall_curr)) .or. &
-               (.not. allocated(old_dpsibnd_vec)) ) then
-             write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: Arrays not allocated.'
-             stop
-          end if
-          call HDF5_integer_saving(file_id,n_wall_curr,"n_wall_curr"//char(0))
-          call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall"//char(0))
-          call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
-          call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
-       end if
-       
-       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
-       
-       if ( (.not. allocated(I_coils)) )  then
-          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+      if ( resistive_wall ) then
+        if ( (.not. allocated(wall_curr)) .or. (.not. allocated(dwall_curr)) .or. &
+           (.not. allocated(old_dpsibnd_vec)) ) then
+          write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: Arrays not allocated.'
           stop
-       end if
-       
-       call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))
-       call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
-       
+        end if
+        call HDF5_integer_saving(file_id,n_wall_curr,"n_wall_curr"//char(0))
+        call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall"//char(0))
+        call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
+        call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
+      end if
+      
+      call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
+      if ( (n_coils/=0) .and. (.not. allocated(I_coils)) )  then
+        write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
+        stop
+      end if
+      call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))
+      if ( n_coils /= 0 ) call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
     end if
     
     if ( vacuum_debug .and. resistive_wall ) then
-       write(*,*) 'DEBUG: Checksums'
-       if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
-       if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
-       write(*,*) 'END: Checksums'
+      write(*,*) 'DEBUG: Checksums'
+      if ( allocated(wall_curr)  ) write(*,*) 'wall_curr ', sum(abs(wall_curr))
+      if ( allocated(dwall_curr) ) write(*,*) 'dwall_curr', sum(abs(dwall_curr))
+      write(*,*) 'END: Checksums'
     end if
 #endif
-
+  
   end subroutine export_HDF5_restart_vacuum
   
   
@@ -515,6 +524,7 @@ module vacuum
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
+      call MPI_BCAST(wall_curr_initialized,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
       
     end if
     

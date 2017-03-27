@@ -21,14 +21,14 @@ function compile_jorek () {
 function initial_run () {
   # --- Dummy run not actually needed...
   ${codedir}/util/setinput.sh input restart=.f. freeboundary_equil=.f.               || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile               || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile_initial       || exit 1
 }
 
 
 # --- Carry out the test case (not actually a restart for this testcase...).
 function restart_run () {
   ${codedir}/util/setinput.sh input restart=.f. freeboundary_equil=.t.               || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee -a logfile            || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile               || exit 1
 }
 
 

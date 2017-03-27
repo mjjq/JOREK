@@ -990,22 +990,19 @@ module vacuum_response
     ! --- Determine vectors of the psi and deltapsi boundary values.
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
     
-    ! --- Update the derived response matrices
-    call update_response(tstep, freeboundary_equil, resistive_wall)     
-    
-    ! --- Perform the time-stepping for the wall currents.
-    if ( resistive_wall .and. (index_now>1) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
-    
-    ! --- Here I_coils^{n+1} should be prescribed as a function of time
-    
     ! --- Calculate current source term for PF coil currents imposition
-    if ( (sr%ncoil /= 0) .and. (impose_coil_currents) .and.         &
-         (.not. ( (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils) ) )   ) then    !avoid it when using COIL_FIELD
+    if ( (sr%ncoil /= 0) ) then    !avoid it when using COIL_FIELD
       call coil_current_source(my_id)
     else
       if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
       Y_coils0(:) = 0.d0  
     endif            
+    
+    ! --- Update the derived response matrices
+    call update_response(tstep, freeboundary_equil, resistive_wall)     
+    
+    ! --- Perform the time-stepping for the wall currents.
+    if ( resistive_wall .and. (index_now>1) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
     if ( vacuum_debug ) then
       write(*,*) my_id, 'psibnd_vec:  ', sum(abs(psibnd_vec)), sum(psibnd_vec)
@@ -1440,16 +1437,6 @@ module vacuum_response
       allocate( old_dpsibnd_vec(n_dof_starwall) )
     end if    
     if (.not. allocated (wall_curr0)) allocate(wall_curr0(n_wall_curr))             
-    
-    if ( (sr%ncoil /= 0) .and. (impose_coil_currents) .and.         &
-         (.not. ( (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils) ) )   ) then
-      if (.not. allocated (Y_coils0)) then
-        call coil_current_source(my_id)
-      endif     
-      wall_curr0(:) = Y_coils0(:)
-    else
-      wall_curr0(:) = 0.d0
-    endif            
     
     do k = 1, n_wall_curr
       dwall_curr(k) = sum( response_m_a(k,:) * dpsibnd_vec(:) )  &

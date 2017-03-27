@@ -89,14 +89,14 @@ module vacuum_equilibrium
         write(*,32)
         write(*,*)
         
-        if ( n_coils /= n_coils_nml ) then
-          write(*,*) 'WARNING: namelist coils number n_coils_nml does not match with external coils number n_coils from coil_field.txt!'
+        if ( n_coils /= n_polcoils_nml ) then
+          write(*,*) 'WARNING: namelist coils number n_polcoils_nml does not match with external coils number n_coils from coil_field.txt!'
           stop
         end if
         
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(n_coils) )
-          I_coils(1:n_coils) =  coils0(1:n_coils_nml)%current 
+          I_coils(1:n_coils) =  polcoils0(1:n_polcoils_nml)%current 
           write(*,*) 'I_coils allocated '               
         end if
         
@@ -127,8 +127,8 @@ module vacuum_equilibrium
       
       if ( my_id == 0 ) then
       
-        if ( sr%ncoil /= n_coils_nml ) then
-          write(*,*) 'WARNING: number of namelist coils "n_coils_nml" does not match the STARWALL number of coils'
+        if ( sr%ncoil /= n_polcoils_nml ) then
+          write(*,*) 'WARNING: number of namelist coils "n_polcoils_nml" does not match the STARWALL number of coils'
           stop
         end if
       
@@ -145,8 +145,8 @@ module vacuum_equilibrium
       
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(sr%ncoil) )
-          I_coils(1:sr%ncoil) =  coils0(1:n_coils_nml)%current
-          n_coils             =  n_coils_nml
+          I_coils(1:sr%ncoil) =  polcoils0(1:n_polcoils_nml)%current
+          n_coils             =  n_polcoils_nml
           write(*,*) 'I_coils allocated '               
         endif
       endif
@@ -155,13 +155,13 @@ module vacuum_equilibrium
     
     if ( my_id /= 0 ) then        
       if ( allocated(I_coils) ) deallocate(I_coils)
-      allocate( I_coils(n_coils_nml) )
+      allocate( I_coils(n_polcoils_nml) )
     end if
     
     call MPI_bcast(n_coils,                              1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(I_coils,           n_coils_nml, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(coils0%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(coils0%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(I_coils,           n_polcoils_nml, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(polcoils0%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(polcoils0%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     
   end subroutine import_external_fields
   
@@ -312,9 +312,9 @@ module vacuum_equilibrium
    
    write(*,*) ' vertical_FB = ', vertical_FB
    
-   do i=1, n_coils_nml
-     if( abs(coils0(i)%FB_amp) .gt. 1.d-6 ) then
-       I_coils(i) =  coils0(i)%current * (1 + coils0(i)%FB_amp * vertical_FB ) 
+   do i=1, n_polcoils_nml
+     if( abs(polcoils0(i)%FB_amp) .gt. 1.d-6 ) then
+       I_coils(i) =  polcoils0(i)%current * (1 + polcoils0(i)%FB_amp * vertical_FB ) 
        write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo

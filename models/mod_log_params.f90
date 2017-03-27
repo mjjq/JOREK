@@ -418,7 +418,6 @@ if (my_id == 0) then
     end if
 
     write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
-    write(*,LOGI_FMT) 'impose_coil_currents  ', impose_coil_currents
        
   end if
   
@@ -441,20 +440,20 @@ if (my_id == 0) then
     write(*,INTG_FMT) 'n_feedback_current    ', n_feedback_current
     write(*,INTG_FMT) 'n_feedback_vertical   ', n_feedback_vertical
     write(*,INTG_FMT) 'n_iter_freeb          ', n_iter_freeb
-    write(*,INTG_FMT) 'n_coils_nml           ', n_coils_nml
-    write(*,REAL_FMT,advance='no') 'coils0%current        '
-    do i = 1, n_coils_nml
-      write(*,'(10ES12.4)',advance='no') coils0(i)%current
+    write(*,INTG_FMT) 'n_polcoils_nml           ', n_polcoils_nml
+    write(*,REAL_FMT,advance='no') 'polcoils0%current        '
+    do i = 1, n_polcoils_nml
+      write(*,'(10ES12.4)',advance='no') polcoils0(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'coils0%FB_amp         '
-    do i = 1, n_coils_nml
-      write(*,'(10ES12.4)',advance='no') coils0(i)%FB_amp
+    write(*,REAL_FMT,advance='no') 'polcoils0%FB_amp         '
+    do i = 1, n_polcoils_nml
+      write(*,'(10ES12.4)',advance='no') polcoils0(i)%FB_amp
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'coils0%pert           '
-    do i = 1, n_coils_nml
-      write(*,'(10ES12.4)',advance='no') coils0(i)%pert
+    write(*,REAL_FMT,advance='no') 'polcoils0%pert           '
+    do i = 1, n_polcoils_nml
+      write(*,'(10ES12.4)',advance='no') polcoils0(i)%pert
     end do
     write(*,*)
   endif

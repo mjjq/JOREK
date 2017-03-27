@@ -77,11 +77,11 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_coils_nml, coils0,                  &
+                n_iter_freeb, n_polcoils_nml, polcoils_0,                  &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 first_target_point, last_target_point,		          &
                 n_limiter, R_limiter, Z_limiter,                    &
-                starwall_equil_coils, impose_coil_currents
+                starwall_equil_coils
 
 if (my_id .eq. 0) then
 

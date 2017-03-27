@@ -42,9 +42,8 @@ module vacuum
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
-  integer             :: n_coils_nml                     !< specified number of poloidal field coils in namelist
+  integer             :: n_polcoils_nml                     !< specified number of poloidal field coils in namelist
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
-  logical             :: impose_coil_currents            !< PFcoils currents are imposed or free to evolve in time? (not valid for COIL_FIELD)
   real*8, allocatable :: I_coils(:)                      !< coil currents           
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source       
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
@@ -105,7 +104,7 @@ module vacuum
   end type initial_pf_coil
   
   type(t_starwall_response) :: sr             !< STARWALL response
-  type(initial_pf_coil)     :: coils0(30)     !< Initial coil currents, given in namelist file
+  type(initial_pf_coil)     :: polcoils0(30)     !< Initial coil currents, given in namelist file
   
   
   contains
@@ -121,7 +120,6 @@ module vacuum
     ! --- Preset namelist input parameters.
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
-    impose_coil_currents = .true.
     freeboundary         = .false.
     resistive_wall       = .false.
     wall_resistivity     = 0.d0
@@ -140,9 +138,9 @@ module vacuum
     start_VFB            = 10
     
     n_iter_freeb         = 900
-    coils0(:)%current    = 0.d0
-    coils0(:)%FB_amp     = 0.d0
-    coils0(:)%pert       = 0.d0
+    polcoils0(:)%current    = 0.d0
+    polcoils0(:)%FB_amp     = 0.d0
+    polcoils0(:)%pert       = 0.d0
     
     PF_pert_start_time   = 1.d99
     
@@ -173,8 +171,8 @@ module vacuum
     freeb_fact = 0.d0
     if ( freeboundary ) freeb_fact = 1.d0
     
-    if ( (my_id == 0) .and. (sum(coils0%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
-       write(*,*) 'WARNING: Poloidal field coil perturbation coils0%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
+    if ( (my_id == 0) .and. (sum(polcoils0%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
+       write(*,*) 'WARNING: Poloidal field coil perturbation polcoils0%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
     end if
     
   end subroutine vacuum_init

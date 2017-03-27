@@ -1015,7 +1015,7 @@ module vacuum_response
     if (t_start .gt. PF_pert_start_time)  PF_perturbation = .false.
     if (PF_perturbation .and. (t_now .ge. PF_pert_start_time) ) then
       if ( my_id == 0 ) write(*,*) 'Perturbing PF coil currents'
-      I_coils(1:n_coils) = I_coils(1:n_coils) + coils0(1:n_coils)%pert
+      I_coils(1:n_coils) = I_coils(1:n_coils) + polcoils0(1:n_coils)%pert
       PF_perturbation    = .false.
     endif
     
@@ -1428,7 +1428,7 @@ module vacuum_response
     
     ! --- Local variables
     integer             :: k
-    real*8, allocatable :: wall_curr0(:)
+
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
     
@@ -1436,11 +1436,11 @@ module vacuum_response
       if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
       allocate( old_dpsibnd_vec(n_dof_starwall) )
     end if    
-    if (.not. allocated (wall_curr0)) allocate(wall_curr0(n_wall_curr))             
+
     
     do k = 1, n_wall_curr
       dwall_curr(k) = sum( response_m_a(k,:) * dpsibnd_vec(:) )  &
-        + response_d_b(k) * (wall_curr(k) - wall_curr0(k))       &
+        + response_d_b(k) * (wall_curr(k) - Y_coils0(k))       &
         + response_d_c(k) * dwall_curr(k)                        &
         + sum( response_m_d(k,:) * old_dpsibnd_vec(:) ) !&
         !+ sum( response_m_k(k,:) * coil_voltages(:) )

@@ -28,26 +28,26 @@
  starwall_equil_coils = .t.
 ! impose_coil_currents = .t. 
  
- n_coils_nml          = 12
+ n_polcoils_nml          = 12
 
- coils0( 1)%current    =  0.600000d+7     ! pf1 
- coils0( 2)%current    = -0.080000d+7     ! pf2 
- coils0( 3)%current    = -0.620000d+7     ! pf3 
- coils0( 4)%current    = -0.370000d+7     ! pf4 
- coils0( 5)%current    = -0.680000d+7     ! pf5 
- coils0( 6)%current    =  2.190000d+7     ! pf6               
- coils0( 7)%current    =  0.984528d+7     ! cs3u
- coils0( 8)%current    = -0.284091d+7     ! cs2u
- coils0( 9)%current    = -0.630050d+7     ! cs1u
- coils0(10)%current    = -0.630050d+7     ! cs1l
- coils0(11)%current    = -0.407839d+7     ! cs2l
- coils0(12)%current    = -0.043469d+7     ! cs3l
+ polcoils0( 1)%current    =  0.600000d+7     ! pf1 
+ polcoils0( 2)%current    = -0.080000d+7     ! pf2 
+ polcoils0( 3)%current    = -0.620000d+7     ! pf3 
+ polcoils0( 4)%current    = -0.370000d+7     ! pf4 
+ polcoils0( 5)%current    = -0.680000d+7     ! pf5 
+ polcoils0( 6)%current    =  2.190000d+7     ! pf6               
+ polcoils0( 7)%current    =  0.984528d+7     ! cs3u
+ polcoils0( 8)%current    = -0.284091d+7     ! cs2u
+ polcoils0( 9)%current    = -0.630050d+7     ! cs1u
+ polcoils0(10)%current    = -0.630050d+7     ! cs1l
+ polcoils0(11)%current    = -0.407839d+7     ! cs2l
+ polcoils0(12)%current    = -0.043469d+7     ! cs3l
  
- coils0(1)%FB_amp      = -1.d0            ! pf1
- coils0(6)%FB_amp      =  1.d0            ! pf6
+ polcoils0(1)%FB_amp      = -1.d0            ! pf1
+ polcoils0(6)%FB_amp      =  1.d0            ! pf6
  
- coils0(1)%pert        = -0.2922d+6       ! pf1
- coils0(6)%pert        =  0.1067d+7       ! pf6
+ polcoils0(1)%pert        = -0.2922d+6       ! pf1
+ polcoils0(6)%pert        =  0.1067d+7       ! pf6
  PF_pert_start_time    =  4.3d3    
 
  !------------------------------------------------------------

@@ -8,7 +8,8 @@ public pcg32_rng
 
 type, extends(type_rng) :: pcg32_rng
   private
-    type(pcg_state_setseq_64), dimension(:), allocatable :: state
+    type(pcg_state_setseq_64) :: state = pcg_state_setseq_64( &
+      state = 2346174683814, inc = 12367423712) !< mash-they-keyboard random
   contains
     procedure :: initialize => initialize_pcg32_rng
     procedure :: next => next_pcg32_rng
@@ -41,23 +42,19 @@ contains
       end if
     end if
 
-    ! n_streams and i_stream are not used
-    if (allocated(rng%state)) deallocate(rng%state)
-    allocate(rng%state(1))
-
-    call pcg32_srandom_r(rng%state(1), int(seed, 8), int(i_stream, 8))
+    call pcg32_srandom_r(rng%state, int(seed, 8), int(i_stream, 8))
   end subroutine initialize_pcg32_rng
 
   subroutine next_pcg32_rng(rng, out)
     implicit none
     class(pcg32_rng), intent(inout) :: rng
     real*8, dimension(:), intent(out) :: out
-    call pcg32_random_doubles_r(rng%state(1), out)
+    call pcg32_random_doubles_r(rng%state, out)
   end subroutine next_pcg32_rng
 
   subroutine jump_ahead_pcg32_rng(rng, delta)
     class(pcg32_rng), intent(inout) :: rng
     integer, intent(in) :: delta
-    call pcg32_jumpahead(rng%state(1), delta)
+    call pcg32_jumpahead(rng%state, delta)
   end subroutine jump_ahead_pcg32_rng
 end module mod_pcg32_rng

@@ -143,16 +143,11 @@ call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
 
 
-              !$omp parallel default(none) shared(pastix_nthrd)    
-              !$omp master
-#ifdef HYPER_THREADS
-              pastix_nthrd = omp_get_num_threads()/2
-#else
-              pastix_nthrd = omp_get_num_threads()
-#endif
-              !$omp end master
-              !$omp end parallel
-          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
+!$omp parallel default(none) shared(pastix_nthrd)    
+pastix_nthrd = omp_get_num_threads()
+!$omp end parallel
+
+if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
 
 if (.not. pastix_initialised) then
 
@@ -225,13 +220,13 @@ if (.not. pastix_analysed) then
 #ifdef USE_BLOCK
   
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, &
-                      mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+                      mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #else
 
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, &
-                      mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+                      mumps_par%jcn(1:mumps_par%n+1), mumps_par%irn(1:mumps_par%nz), mumps_par%A(1:mumps_par%nz), &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #endif
@@ -267,7 +262,7 @@ endif
 pastix_iparm(IPARM_DOF_NBR)            = block_size
 
 call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block,                                                 &
-                    mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #else

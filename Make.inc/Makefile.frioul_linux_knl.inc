@@ -10,7 +10,7 @@ MODEL             = model303
 FC                = mpif90 -mt_mpi
 CC                = mpicc -mt_mpi
 FFLAGS            = -i4 -DUSE_BLOCK #-DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
-FFLAGS           += -xmic-avx512 -O2
+FFLAGS           += -xmic-avx512 -O2 -fp-model fast=2
 
 # --- Various switches
 USE_PASTIX        = 1
@@ -27,6 +27,7 @@ LIB_PASTIX_BLAS   = `$(PASTIX_LIB)/pastix-conf --blas`
 INC_PASTIX        = `$(PASTIX_LIB)/pastix-conf --incs`
 
 # --- FFTW Library
+  #Through INTEL MKL 
 LIBFFTW           = -L$(MKL_LIB_DIR) -lfftw3xf_intel
 INC_FFTW          = -I$(MKL_INC_DIR)/fftw
 

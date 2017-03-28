@@ -33,22 +33,22 @@
  
  n_polcoils_nml          = 13
 
- polcoils0( 1)%current    =  0.59079802d+6     ! IV1o   
- polcoils0( 2)%current    =  1.47550797d+6     ! IV1u   
- polcoils0( 3)%current    = -0.40878099d+6     ! IV2o   
- polcoils0( 4)%current    = -1.08130205d+6     ! IV2u   
- polcoils0( 5)%current    = -0.11582000d+6     ! IV3o   
- polcoils0( 6)%current    = -0.11954700d+6     ! IV3u                
- polcoils0( 7)%current    = -0.00274200d+6     ! ICoIo  
- polcoils0( 8)%current    = -0.00008600d+6     ! ICoIu  
- polcoils0( 9)%current    = -0.00048700d+6     ! Ipslon 
- polcoils0(10)%current    =  0.00222000d+6     ! Ipslun 
- polcoils0(11)%current    =  1.03397000d+6     ! IHO2od 
- polcoils0(12)%current    =  1.67137802d+6     ! IHO2ud 
- polcoils0(13)%current    = -8.31900024d+6     ! IOH    
+ polcoils( 1)%current    =  0.59079802d+6     ! IV1o   
+ polcoils( 2)%current    =  1.47550797d+6     ! IV1u   
+ polcoils( 3)%current    = -0.40878099d+6     ! IV2o   
+ polcoils( 4)%current    = -1.08130205d+6     ! IV2u   
+ polcoils( 5)%current    = -0.11582000d+6     ! IV3o   
+ polcoils( 6)%current    = -0.11954700d+6     ! IV3u                
+ polcoils( 7)%current    = -0.00274200d+6     ! ICoIo  
+ polcoils( 8)%current    = -0.00008600d+6     ! ICoIu  
+ polcoils( 9)%current    = -0.00048700d+6     ! Ipslon 
+ polcoils(10)%current    =  0.00222000d+6     ! Ipslun 
+ polcoils(11)%current    =  1.03397000d+6     ! IHO2od 
+ polcoils(12)%current    =  1.67137802d+6     ! IHO2ud 
+ polcoils(13)%current    = -8.31900024d+6     ! IOH    
                          
- polcoils0(3)%FB_amp      =  1.d0              ! IV2o 
- polcoils0(4)%FB_amp      = -1.d0              ! IV2u
+ polcoils(3)%FB_amp      =  1.d0              ! IV2o 
+ polcoils(4)%FB_amp      = -1.d0              ! IV2u
 
  tokamak_device   = 'AUG'
  F0              = 3.03592621927

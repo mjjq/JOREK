@@ -96,7 +96,7 @@ module vacuum_equilibrium
         
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(n_coils) )
-          I_coils(1:n_coils) =  polcoils0(1:n_polcoils_nml)%current 
+          I_coils(1:n_coils) =  polcoils(1:n_polcoils_nml)%current 
           write(*,*) 'I_coils allocated '               
         end if
         
@@ -145,7 +145,7 @@ module vacuum_equilibrium
       
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(sr%ncoil) )
-          I_coils(1:sr%ncoil) =  polcoils0(1:n_polcoils_nml)%current
+          I_coils(1:sr%ncoil) =  polcoils(1:n_polcoils_nml)%current
           n_coils             =  n_polcoils_nml
           write(*,*) 'I_coils allocated '               
         endif
@@ -158,10 +158,10 @@ module vacuum_equilibrium
       allocate( I_coils(n_polcoils_nml) )
     end if
     
-    call MPI_bcast(n_coils,                              1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(I_coils,           n_polcoils_nml, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(polcoils0%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(polcoils0%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(n_coils,                       1, MPI_INTEGER,          0, MPI_COMM_WORLD, err)
+    call MPI_bcast(I_coils,          n_polcoils_nml, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(polcoils%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(polcoils%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     
   end subroutine import_external_fields
   
@@ -313,8 +313,8 @@ module vacuum_equilibrium
    write(*,*) ' vertical_FB = ', vertical_FB
    
    do i=1, n_polcoils_nml
-     if( abs(polcoils0(i)%FB_amp) .gt. 1.d-6 ) then
-       I_coils(i) =  polcoils0(i)%current * (1 + polcoils0(i)%FB_amp * vertical_FB ) 
+     if( abs(polcoils(i)%FB_amp) .gt. 1.d-6 ) then
+       I_coils(i) =  polcoils(i)%current * (1 + polcoils(i)%FB_amp * vertical_FB ) 
        write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo

@@ -1015,7 +1015,7 @@ module vacuum_response
     if (t_start .gt. PF_pert_start_time)  PF_perturbation = .false.
     if (PF_perturbation .and. (t_now .ge. PF_pert_start_time) ) then
       if ( my_id == 0 ) write(*,*) 'Perturbing PF coil currents'
-      I_coils(1:n_coils) = I_coils(1:n_coils) + polcoils0(1:n_coils)%pert
+      I_coils(1:n_coils) = I_coils(1:n_coils) + polcoils(1:n_coils)%pert
       PF_perturbation    = .false.
     endif
     

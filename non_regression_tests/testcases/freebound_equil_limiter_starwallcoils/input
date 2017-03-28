@@ -41,13 +41,13 @@
  
  n_polcoils_nml          = 4
 
- polcoils0(1)%current    = 0.0100d+6  ! pf1
- polcoils0(2)%current    = 0.0100d+6  ! pf2
- polcoils0(3)%current    = -0.0900d+6 ! pf3
- polcoils0(4)%current    = -0.0900d+6 ! pf4
+ polcoils(1)%current    = 0.0100d+6  ! pf1
+ polcoils(2)%current    = 0.0100d+6  ! pf2
+ polcoils(3)%current    = -0.0900d+6 ! pf3
+ polcoils(4)%current    = -0.0900d+6 ! pf4
  
- polcoils0(1)%FB_amp     = -1.d0      ! pf1
- polcoils0(2)%FB_amp     =  1.d0      ! pf2
+ polcoils(1)%FB_amp     = -1.d0      ! pf1
+ polcoils(2)%FB_amp     =  1.d0      ! pf2
 
  xpoint = .f.
 

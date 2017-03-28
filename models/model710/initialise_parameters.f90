@@ -68,14 +68,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 linear_run, export_for_nemec,                       &
                 output_bnd_elements,                                &
                 wall_file,                                          &
-                first_target_point, last_target_point,		          &
+                first_target_point, last_target_point,              &
                 n_limiter, R_limiter, Z_limiter,                    &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_polcoils_nml, polcoils0,                  &
+                n_iter_freeb, n_polcoils_nml, polcoils,             &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 starwall_equil_coils
 if (my_id .eq. 0) then

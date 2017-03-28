@@ -440,20 +440,20 @@ if (my_id == 0) then
     write(*,INTG_FMT) 'n_feedback_current    ', n_feedback_current
     write(*,INTG_FMT) 'n_feedback_vertical   ', n_feedback_vertical
     write(*,INTG_FMT) 'n_iter_freeb          ', n_iter_freeb
-    write(*,INTG_FMT) 'n_polcoils_nml           ', n_polcoils_nml
-    write(*,REAL_FMT,advance='no') 'polcoils0%current        '
+    write(*,INTG_FMT) 'n_polcoils_nml        ', n_polcoils_nml
+    write(*,REAL_FMT,advance='no') 'polcoils%current      '
     do i = 1, n_polcoils_nml
-      write(*,'(10ES12.4)',advance='no') polcoils0(i)%current
+      write(*,'(10ES12.4)',advance='no') polcoils(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'polcoils0%FB_amp         '
+    write(*,REAL_FMT,advance='no') 'polcoils%FB_amp       '
     do i = 1, n_polcoils_nml
-      write(*,'(10ES12.4)',advance='no') polcoils0(i)%FB_amp
+      write(*,'(10ES12.4)',advance='no') polcoils(i)%FB_amp
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'polcoils0%pert           '
+    write(*,REAL_FMT,advance='no') 'polcoils%pert         '
     do i = 1, n_polcoils_nml
-      write(*,'(10ES12.4)',advance='no') polcoils0(i)%pert
+      write(*,'(10ES12.4)',advance='no') polcoils(i)%pert
     end do
     write(*,*)
   endif

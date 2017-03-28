@@ -31,7 +31,7 @@
  n_feedback_vertical  = 1
  n_iter_freeb         = 999 
  
- n_pf_coils_nml          = 13
+ n_pf_coils          = 13
 
  pf_coils( 1)%current    =  0.59079802d+6     ! IV1o   
  pf_coils( 2)%current    =  1.47550797d+6     ! IV1u   

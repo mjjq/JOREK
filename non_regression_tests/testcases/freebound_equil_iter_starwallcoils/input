@@ -28,7 +28,7 @@
  starwall_equil_coils = .t.
 ! impose_coil_currents = .t. 
  
- n_pf_coils_nml          = 12
+ n_pf_coils          = 12
 
  pf_coils( 1)%current    =  0.600000d+7     ! pf1 
  pf_coils( 2)%current    = -0.080000d+7     ! pf2 

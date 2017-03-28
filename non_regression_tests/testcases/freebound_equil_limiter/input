@@ -37,7 +37,7 @@
  n_feedback_vertical  = 2
  n_iter_freeb         = 140 
  
- n_pf_coils_nml          = 4
+ n_pf_coils          = 4
 
  pf_coils(1)%current    = 0.0100d+6  ! pf1
  pf_coils(2)%current    = 0.0100d+6  ! pf2

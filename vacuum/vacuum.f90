@@ -42,7 +42,7 @@ module vacuum
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
-  integer             :: n_pf_coils_nml                     !< specified number of poloidal field coils in namelist
+  integer             :: n_pf_coils                     !< specified number of poloidal field coils in namelist
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
   real*8, allocatable :: I_coils(:)                      !< coil currents           
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source       

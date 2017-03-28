@@ -42,20 +42,20 @@ module vacuum
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
-  integer             :: n_pf_coils                     !< specified number of poloidal field coils in namelist
+  integer             :: n_pf_coils                      !< specified number of poloidal field coils in namelist
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
-  real*8, allocatable :: I_coils(:)                      !< coil currents           
-  real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source       
+  real*8, allocatable :: I_coils(:)                      !< coil currents
+  real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
-  !> @name Equilibrium parameters for feedback 
+  !> @name Equilibrium parameters for feedback
   real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB)
   real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback
-  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback 
-  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position 
+  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback
+  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position
   real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback
   real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback
   real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback
@@ -209,7 +209,7 @@ module vacuum
   
   
   
-  !> Import some vacuum-related data from the restart file  
+  !> Import some vacuum-related data from the restart file
   !!
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_restart_vacuum(file_handle, freeboundary, resistive_wall)
@@ -285,7 +285,7 @@ module vacuum
   end subroutine import_restart_vacuum
 
 
-  !> Import some vacuum-related data from the HDF5 restart file  
+  !> Import some vacuum-related data from the HDF5 restart file
   !!
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
@@ -376,12 +376,12 @@ module vacuum
       write(*,*) 'END: Checksums'
     end if
 
-#endif    
+#endif
 
   end subroutine import_HDF5_restart_vacuum
   
   
-  !> Export some vacuum-related data to the restart file  
+  !> Export some vacuum-related data to the restart file
   subroutine export_restart_vacuum(file_handle, freeboundary, resistive_wall)
     
     ! --- Routine parameters
@@ -430,7 +430,7 @@ module vacuum
   end subroutine export_restart_vacuum
   
   
-  !> Export some vacuum-related data to the HDF5 restart file  
+  !> Export some vacuum-related data to the HDF5 restart file
   subroutine export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
     
 #ifdef USE_HDF5
@@ -530,7 +530,7 @@ module vacuum
       
     end if
     
-    call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
+    call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum

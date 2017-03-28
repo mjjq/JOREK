@@ -1318,7 +1318,7 @@ module vacuum_response
           psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, ivar_psi)
           dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, ivar_psi)
 
-          if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) ) then
+          if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) .and. (.not. starwall_equil_coils) ) then
             j_resp_0 = 2*(jnode-1) + jbas
             psibnd_coils( j_resp ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
           end if

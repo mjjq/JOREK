@@ -230,6 +230,8 @@ if [ "$runit" == "yes" ]; then
     ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/begin.h5           || exit 1
     
+    sleep 3s # to avoid strange "tee: write error" problems
+    
     restart_run                                           || exit 1
     ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/end.h5             || exit 1

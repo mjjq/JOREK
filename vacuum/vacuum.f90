@@ -42,7 +42,7 @@ module vacuum
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
-  integer             :: n_polcoils_nml                     !< specified number of poloidal field coils in namelist
+  integer             :: n_pf_coils_nml                     !< specified number of poloidal field coils in namelist
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
   real*8, allocatable :: I_coils(:)                      !< coil currents           
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source       
@@ -104,7 +104,7 @@ module vacuum
   end type initial_pf_coil
   
   type(t_starwall_response) :: sr             !< STARWALL response
-  type(initial_pf_coil)     :: polcoils(30)   !< Initial coil currents, given in namelist file
+  type(initial_pf_coil)     :: pf_coils(30)   !< Initial coil currents, given in namelist file
   
   
   contains
@@ -138,9 +138,9 @@ module vacuum
     start_VFB            = 10
     
     n_iter_freeb         = 900
-    polcoils(:)%current  = 0.d0
-    polcoils(:)%FB_amp   = 0.d0
-    polcoils(:)%pert     = 0.d0
+    pf_coils(:)%current  = 0.d0
+    pf_coils(:)%FB_amp   = 0.d0
+    pf_coils(:)%pert     = 0.d0
     
     PF_pert_start_time   = 1.d99
     
@@ -171,8 +171,8 @@ module vacuum
     freeb_fact = 0.d0
     if ( freeboundary ) freeb_fact = 1.d0
     
-    if ( (my_id == 0) .and. (sum(polcoils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
-       write(*,*) 'WARNING: Poloidal field coil perturbation polcoils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
+    if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
+       write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
     end if
     
   end subroutine vacuum_init

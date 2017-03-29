@@ -37,23 +37,25 @@ module vacuum
   real*8, allocatable :: response_m_j(:,:)               !< \f$\hat{J}\f$ in the documentation
   real*8, allocatable :: response_m_k(:,:)               !< \f$\hat{K}\f$ in the documentation
   real*8, allocatable :: response_m_l(:,:)               !< \f$\hat{L}\f$ in the documentation
+  real*8, allocatable :: response_m_v(:,:)               !< \f$\hat{V}\f$ in the documentation
   real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
-  integer             :: n_coils_nml                     !< specified number of poloidal field coils in namelist
+  integer             :: n_pf_coils                      !< specified number of poloidal field coils in namelist
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
-  real*8, allocatable :: I_coils(:)                      !< coil currents                 
+  real*8, allocatable :: I_coils(:)                      !< coil currents
+  real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
   
-  !> @name Equilibrium parameters for feedback 
+  !> @name Equilibrium parameters for feedback
   real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB)
   real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback
-  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback 
-  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position 
+  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback
+  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position
   real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback
   real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback
   real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback
@@ -119,7 +121,7 @@ module vacuum
   end type initial_pf_coil
   
   type(t_starwall_response) :: sr             !< STARWALL response
-  type(initial_pf_coil)     :: coils0(30)     !< Initial coil currents, given in namelist file
+  type(initial_pf_coil)     :: pf_coils(30)   !< Initial coil currents, given in namelist file
   
   
   contains
@@ -153,9 +155,9 @@ module vacuum
     start_VFB            = 10
     
     n_iter_freeb         = 900
-    coils0(:)%current    = 0.d0
-    coils0(:)%FB_amp     = 0.d0
-    coils0(:)%pert       = 0.d0
+    pf_coils(:)%current  = 0.d0
+    pf_coils(:)%FB_amp   = 0.d0
+    pf_coils(:)%pert     = 0.d0
     
     PF_pert_start_time   = 1.d99
     
@@ -187,8 +189,8 @@ module vacuum
     freeb_fact = 0.d0
     if ( freeboundary ) freeb_fact = 1.d0
     
-    if ( (my_id == 0) .and. (sum(coils0%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
-       write(*,*) 'WARNING: Poloidal field coil perturbation coils0%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
+    if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
+       write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
     end if
     
   end subroutine vacuum_init
@@ -223,7 +225,7 @@ module vacuum
   
   
   
-  !> Import some vacuum-related data from the restart file  
+  !> Import some vacuum-related data from the restart file
   !!
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_restart_vacuum(file_handle, freeboundary, resistive_wall)
@@ -299,7 +301,7 @@ module vacuum
   end subroutine import_restart_vacuum
 
 
-  !> Import some vacuum-related data from the HDF5 restart file  
+  !> Import some vacuum-related data from the HDF5 restart file
   !!
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
@@ -390,12 +392,12 @@ module vacuum
       write(*,*) 'END: Checksums'
     end if
 
-#endif    
+#endif
 
   end subroutine import_HDF5_restart_vacuum
   
   
-  !> Export some vacuum-related data to the restart file  
+  !> Export some vacuum-related data to the restart file
   subroutine export_restart_vacuum(file_handle, freeboundary, resistive_wall)
     
     ! --- Routine parameters
@@ -444,7 +446,7 @@ module vacuum
   end subroutine export_restart_vacuum
   
   
-  !> Export some vacuum-related data to the HDF5 restart file  
+  !> Export some vacuum-related data to the HDF5 restart file
   subroutine export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
     
 #ifdef USE_HDF5
@@ -544,7 +546,7 @@ module vacuum
       
     end if
     
-    call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
+    call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum

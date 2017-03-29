@@ -1071,7 +1071,7 @@ module vacuum_response
     
     ! --- Calculate current source term for PF coil currents imposition
     if ( (sr%ncoil /= 0) ) then    !avoid it when using COIL_FIELD
-      call coil_current_source(my_id)
+      call coil_current_source(my_id, freeboundary_equil)
     else
       if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
       Y_coils0(:) = 0.d0  
@@ -1465,7 +1465,7 @@ module vacuum_response
   
   
   !> Imposing PF coil currents as a current source term
-  subroutine coil_current_source(my_id)
+  subroutine coil_current_source(my_id, freeboundary_equil)
     
     use constants
     
@@ -1473,19 +1473,25 @@ module vacuum_response
    
     ! --- Routine parameters
     integer, intent(in) :: my_id  
-    integer             :: k
+    logical, intent(in) :: freeboundary_equil
+    integer             :: k, start_pol, end_pol
     real*8, allocatable :: potentials_real_0(:)
    
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
-   
+       
     if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
     if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
     
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
-    
-    potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
-    
+    if (.not. freeboundary_equil) then
+      potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
+    else
+      potentials_real_0(1:sr%ncoil) = 0.d0
+      start_pol                     = sr%ind_start_pol_coils
+      end_pol                       = sr%ind_start_pol_coils+sr%n_pol_coils-1
+      potentials_real_0(start_pol:end_pol)  = I_coils(start_pol:end_pol) * mu_zero
+   end if
     do k = 1, n_wall_curr
       Y_coils0(k) = sum(sr%s_ww_inv(k,:) * potentials_real_0(:))    
     end do

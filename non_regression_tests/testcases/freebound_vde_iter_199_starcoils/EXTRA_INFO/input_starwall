@@ -28,7 +28,7 @@
   iwall      = 1,
 
   ! PF coils file
-  polcoil_file = 'pol_coils_iter.nml'
+  pol_coil_file = 'pol_coils_iter.nml'
 /
 
 

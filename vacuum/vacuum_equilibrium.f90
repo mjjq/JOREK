@@ -128,8 +128,8 @@ module vacuum_equilibrium
       
       if ( my_id == 0 ) then
       
-        if ( sr%ncoil /= n_pf_coils ) then
-          write(*,*) 'WARNING: number of namelist coils "n_pf_coils" does not match the STARWALL number of coils'
+        if ( sr%n_pol_coils /= n_pf_coils ) then
+          write(*,*) 'WARNING: number of namelist coils "n_pf_coils" does not match the STARWALL number of PF coils'
           stop
         end if
       
@@ -146,21 +146,21 @@ module vacuum_equilibrium
       
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(sr%ncoil) )
-          I_coils(1:sr%ncoil) =  pf_coils(1:n_pf_coils)%current
-          n_coils             =  n_pf_coils
-          write(*,*) 'I_coils allocated '               
+          I_coils(:)                =  0.d0 
+          I_coils(1:n_pf_coils)     =  pf_coils(1:n_pf_coils)%current
+          n_coils                   =  sr%ncoil
+          write(*,*) 'I_coils allocated '            
         endif
       endif
   
     endif   !End choice of STARWALL or COIL_FIELD coils
     
+    call MPI_bcast(n_coils,                       1, MPI_INTEGER,          0, MPI_COMM_WORLD, err)
     if ( my_id /= 0 ) then        
       if ( allocated(I_coils) ) deallocate(I_coils)
-      allocate( I_coils(n_pf_coils) )
-    end if
-    
-    call MPI_bcast(n_coils,                       1, MPI_INTEGER,          0, MPI_COMM_WORLD, err)
-    call MPI_bcast(I_coils,              n_pf_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+      allocate( I_coils(n_coils) )
+    end if 
+    call MPI_bcast(I_coils,                 n_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(pf_coils%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(pf_coils%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     
@@ -195,7 +195,7 @@ module vacuum_equilibrium
     integer :: m_bndelem, l_vertex, l_dof, l_node, l_dir, l_node_bnd, l_index, ms
     integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
-    integer :: i, j
+    integer :: i, j, i_start, i_end
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
     real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, psi_0_j
@@ -204,13 +204,14 @@ module vacuum_equilibrium
     call equilibrium_VFB 
     
     if (starwall_equil_coils) then      
-      
+      i_start = sr%index_start_pol_coils
+      i_end   = i_start + sr%n_pol_coils -1
       if ( .not. allocated(wall_curr) )       allocate( wall_curr(n_wall_curr) ) 
       if ( .not. allocated (potentials_real)) allocate(potentials_real(n_wall_curr))      
       wall_curr       = 0.d0
       potentials_real = 0.d0
-      
-      potentials_real(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
+      potentials_real(1:sr%ncoil) = 0.d0
+      potentials_real(i_start:i_end) = I_coils(i_start:i_end) * mu_zero
       
       do i = 1, n_wall_curr
         wall_curr(i) = sum(sr%s_ww_inv(i,:) * potentials_real(:))    

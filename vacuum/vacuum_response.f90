@@ -1094,9 +1094,9 @@ module vacuum_response
     if (t_start .gt. PF_pert_start_time)  PF_perturbation = .false.
     if (PF_perturbation .and. (t_now .ge. PF_pert_start_time) ) then
       if ( my_id == 0 ) write(*,*) 'Perturbing PF coil currents'
-      I_coils(1:n_coils) = I_coils(1:n_coils) + pf_coils(1:n_coils)%pert
+      I_coils(1:n_pf_coils) = I_coils(1:n_pf_coils) + pf_coils(1:n_pf_coils)%pert
       PF_perturbation    = .false.
-    endif
+    endif  
     
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
@@ -1789,7 +1789,7 @@ module vacuum_response
         write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
         write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
         write(*,*) 'm_v:', sum(abs(response_m_v)), sum(response_m_v)
-        write(*,*) 'm_eq:', sum(abs(response_m_eq(1:128,1:128))), sum(response_m_eq(1:128,1:128))
+        write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
         write(*,*) 'END: Checksums'
       end if
       

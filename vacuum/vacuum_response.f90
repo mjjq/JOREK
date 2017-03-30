@@ -1051,8 +1051,10 @@ module vacuum_response
     real*8   :: i_size
     !   --- Quantities related to the boundary dof contributing to the response
     integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_col_psi, j_resp
-
+    
     integer  :: i_resp_old, j_resp_old
+
+    integer  :: i_start_pf, i_end_pf     ! Indices for PF coils
 #ifdef __GFORTRAN__
     real*8 :: wgauss_copy(4)
 #endif
@@ -1094,7 +1096,13 @@ module vacuum_response
     if (t_start .gt. PF_pert_start_time)  PF_perturbation = .false.
     if (PF_perturbation .and. (t_now .ge. PF_pert_start_time) ) then
       if ( my_id == 0 ) write(*,*) 'Perturbing PF coil currents'
-      I_coils(1:n_pf_coils) = I_coils(1:n_pf_coils) + pf_coils(1:n_pf_coils)%pert
+      if (starwall_equil_coils)  then
+        i_start_pf    = sr%ind_start_pol_coils
+        i_end_pf      = i_start_pf + sr%n_pol_coils -1
+        I_coils(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) + pf_coils(1:n_pf_coils)%pert
+      else         
+        I_coils(1:n_pf_coils) = I_coils(1:n_pf_coils) + pf_coils(1:n_pf_coils)%pert
+      end if
       PF_perturbation    = .false.
     endif  
     
@@ -1474,7 +1482,7 @@ module vacuum_response
     ! --- Routine parameters
     integer, intent(in) :: my_id  
     logical, intent(in) :: freeboundary_equil
-    integer             :: k, start_pol, end_pol
+    integer             :: k, i_start_pf, i_end_pf
     real*8, allocatable :: potentials_real_0(:)
    
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
@@ -1488,9 +1496,9 @@ module vacuum_response
       potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
     else
       potentials_real_0(1:sr%ncoil) = 0.d0
-      start_pol                     = sr%ind_start_pol_coils
-      end_pol                       = sr%ind_start_pol_coils+sr%n_pol_coils-1
-      potentials_real_0(start_pol:end_pol)  = I_coils(start_pol:end_pol) * mu_zero
+      i_start_pf                     = sr%ind_start_pol_coils
+      i_end_pf                       = sr%ind_start_pol_coils+sr%n_pol_coils-1
+      potentials_real_0(i_start_pf:i_end_pf)  = I_coils(i_start_pf:i_end_pf) * mu_zero
    end if
     do k = 1, n_wall_curr
       Y_coils0(k) = sum(sr%s_ww_inv(k,:) * potentials_real_0(:))    

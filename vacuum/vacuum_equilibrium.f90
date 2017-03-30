@@ -26,8 +26,9 @@ module vacuum_equilibrium
     integer,          intent(in) :: my_id
     ! --- Local variables
     integer, parameter   :: filehandle = 60
-    integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2), err !n_coils already defined in vacuum module
-    character(len=512)   :: comment
+    integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2), err  !n_coils already defined in vacuum module
+    integer              :: i_start_pf, i_end_pf                                 !Indices for SW coils 
+  character(len=512)   :: comment
     
     if ( sr%n_tor == 0 ) return
     if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
@@ -143,11 +144,14 @@ module vacuum_equilibrium
         write(*,*) '* Using STARWALL equilibrium PF coils *'
         write(*,*) '***************************************'
         write(*,*) ''
+       
+		i_start_pf = sr%ind_start_pol_coils
+        i_end_pf   = i_start_pf + sr%n_pol_coils - 1
       
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(sr%ncoil) )
           I_coils(:)                =  0.d0 
-          I_coils(1:n_pf_coils)     =  pf_coils(1:n_pf_coils)%current
+          I_coils(i_start_pf:i_end_pf) =  pf_coils(1:n_pf_coils)%current 
           n_coils                   =  sr%ncoil
           write(*,*) 'I_coils allocated '            
         endif
@@ -195,7 +199,7 @@ module vacuum_equilibrium
     integer :: m_bndelem, l_vertex, l_dof, l_node, l_dir, l_node_bnd, l_index, ms
     integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
-    integer :: i, j, i_start, i_end
+    integer :: i, j, i_start_pf, i_end_pf
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
     real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, psi_0_j
@@ -204,14 +208,14 @@ module vacuum_equilibrium
     call equilibrium_VFB 
     
     if (starwall_equil_coils) then      
-      i_start = sr%index_start_pol_coils
-      i_end   = i_start + sr%n_pol_coils -1
+      i_start_pf = sr%ind_start_pol_coils
+      i_end_pf   = i_start_pf + sr%n_pol_coils -1
       if ( .not. allocated(wall_curr) )       allocate( wall_curr(n_wall_curr) ) 
       if ( .not. allocated (potentials_real)) allocate(potentials_real(n_wall_curr))      
       wall_curr       = 0.d0
       potentials_real = 0.d0
       potentials_real(1:sr%ncoil) = 0.d0
-      potentials_real(i_start:i_end) = I_coils(i_start:i_end) * mu_zero
+      potentials_real(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) * mu_zero
       
       do i = 1, n_wall_curr
         wall_curr(i) = sum(sr%s_ww_inv(i,:) * potentials_real(:))    

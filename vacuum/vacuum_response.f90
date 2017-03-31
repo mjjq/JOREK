@@ -305,6 +305,7 @@ module vacuum_response
     sr%n_w    = read_intparam(filehandle, 'n_w')
     sr%ntri_w = read_intparam(filehandle, 'ntri_w')
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
+    sr%n_tor0 = sr%n_tor
 
     call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
     
@@ -402,6 +403,7 @@ module vacuum_response
     call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor0,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     
     n_dof_starwall = sr%nd_bez
@@ -477,6 +479,7 @@ module vacuum_response
     write(*,33) 'n_w          =', sr%n_w
     write(*,33) 'ntri_w       =', sr%ntri_w
     write(*,33) 'n_tor        =', sr%n_tor
+    write(*,33) 'n_tor0       =', sr%n_tor0
     if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
     if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
@@ -984,6 +987,11 @@ module vacuum_response
 #endif
     !integer :: rate, t0, t1 !### timing ###
     logical, save  :: PF_perturbation = .true. 
+    
+    if ( sr%n_tor == 0 ) then
+      write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
+      return
+    end if
 
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
     
@@ -994,7 +1002,7 @@ module vacuum_response
     call update_response(tstep, freeboundary_equil, resistive_wall)
     
     ! --- Perform the time-stepping for the wall currents.
-    if ( resistive_wall .and. (index_now>1) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
+    if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
     if ( vacuum_debug ) then
       write(*,*) my_id, 'psibnd_vec:  ', sum(abs(psibnd_vec)), sum(psibnd_vec)
@@ -1088,7 +1096,7 @@ module vacuum_response
 
                       i_resp_old   = response_index(i_node_bnd,i_starwall,i_dof)
 
-                      i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor &
+                      i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                + bnd_node_list%bnd_node(i_node_bnd)%n_dof*(i_starwall-1) &
                                + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof) - bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
 
@@ -1120,7 +1128,7 @@ module vacuum_response
 
                             j_resp_old = response_index(j_node_bnd,j_starwall,j_dof)
 
-                            j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor &
+                            j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1) &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)-bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
 
@@ -1262,8 +1270,6 @@ module vacuum_response
     ! --- Local variables
     integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp, j_resp_0, j_resp_old
 
-    write(*,*) 'det_psibnd_vec: n_dof_starwall : ',n_dof_starwall
-
     if ( allocated(psibnd_vec) ) deallocate(psibnd_vec)
     allocate( psibnd_vec(n_dof_starwall) )
     psibnd_vec(:) = 0.d0
@@ -1293,7 +1299,7 @@ module vacuum_response
           j_resp_old   = response_index(jnode,j_starwall,jbas)
           j_resp_0     = response_index_eq(jnode,jbas)
 
-          j_resp = (bnd_node_list%bnd_node(jnode)%index_starwall(1) - 1)*sr%n_tor &
+          j_resp = (bnd_node_list%bnd_node(jnode)%index_starwall(1) - 1)*sr%n_tor0 &
                  +  bnd_node_list%bnd_node(jnode)%n_dof*(j_starwall-1) &
                  + (bnd_node_list%bnd_node(jnode)%index_starwall(jbas)-bnd_node_list%bnd_node(jnode)%index_starwall(1)) + 1
 
@@ -1305,7 +1311,7 @@ module vacuum_response
 
           if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) ) then
             j_resp_0 = 2*(jnode-1) + jbas
-            psibnd_coils( j_resp_0 ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
+            psibnd_coils( j_resp ) = sum( bext_psi(j_resp_0,:) * I_coils(:) )
           end if
 
         end do
@@ -1340,6 +1346,11 @@ module vacuum_response
     
     if ( resistive_wall ) then
       
+      if ( (allocated(wall_curr)) .and. (.not. wall_curr_initialized) ) &
+        deallocate(wall_curr)
+      if ( (allocated(dwall_curr)) .and. (.not. wall_curr_initialized) ) &
+        deallocate(dwall_curr)
+      
       if ( .not. allocated(wall_curr) ) then
         allocate( wall_curr(n_wall_curr) )
         do k = 1, n_wall_curr
@@ -1365,6 +1376,7 @@ module vacuum_response
     deallocate( psibnd_vec, dpsibnd_vec )
     
     if ( vacuum_debug ) write(*,*) 'Wall currents initialized.'
+    wall_curr_initialized = .true.
     
   end subroutine init_wall_currents
   
@@ -1502,6 +1514,11 @@ module vacuum_response
     real*8,  save :: old_zeta
     logical, save :: old_reswall
     
+    if ( sr%n_tor == 0 ) then
+      write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'
+      return
+    end if
+    
     theta = time_evol_theta
     zeta  = time_evol_zeta
     
@@ -1564,10 +1581,10 @@ module vacuum_response
       
       response_m_eq = 0.d0
 
-      do j = 1, sr%nd_bez, 2
-        j2 = (j-1)*sr%n_tor+1
-        do k = 1, sr%nd_bez, 2
-          k2 = (k-1)*sr%n_tor+1
+      do j = 1, sr%nd_bez/sr%n_tor0, 2
+        j2 = (j-1)*sr%n_tor0 + 1
+        do k = 1, sr%nd_bez/sr%n_tor0, 2
+          k2 = (k-1)*sr%n_tor0 + 1
           response_m_eq(j:j+1,k:k+1) = sr%a_ee(j2:j2+1,k2:k2+1)
         end do
       end do
@@ -1765,7 +1782,7 @@ module vacuum_response
       write(*,*) 'response_index: illegal value i_starwall=', i_starwall
       stop
     end if
-    response_index = 2*sr%n_tor*(inode-1) + 2*(i_starwall-1) + ibas
+    response_index = 2*sr%n_tor0*(inode-1) + 2*(i_starwall-1) + ibas
     
     if ( response_index < 1 ) then
       write(*,*) 'FATAL: RESPONSE_INDEX < 1 DETECTED'

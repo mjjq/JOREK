@@ -78,7 +78,7 @@ if (my_id .eq. 0) then
   enddo
 
   call Poisson(my_id,3,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               2,1,1, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)
+               2,1,1, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary_equil,refinement,1)
 
 endif
 

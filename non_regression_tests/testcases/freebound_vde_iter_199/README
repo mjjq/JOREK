@@ -1,0 +1,16 @@
+Expected results:
+
+* after equilibrium:
+  Z_axis=0.60557
+
+* after time step 300: (end of initial run)
+ R_axis             =   6.43311
+ Z_axis             =   0.32188
+ Psi_axis           = -16.38512
+ R_xpoint1          =   5.30037
+ Z_xpoint1          =  -3.43210
+ Psi_xpoint1        =  -5.75332
+ 
+* after time step 301: (after regression test time step)
+ magnetic axis :    262    6.43296739    0.32096229  -16.38513154
+ Lower X-point :   4678    5.30072673   -3.43214910   -5.75467635    0.00000000

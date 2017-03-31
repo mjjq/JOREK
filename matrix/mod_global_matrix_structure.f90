@@ -9,6 +9,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   use data_structure
   use global_distributed_matrix
   use mod_ch_node_struct
+  use vacuum, only: sr
 
   implicit none
 
@@ -30,7 +31,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
     write(*,*) '**********************************'
     write(*,*) '* global_matrix_structure        *'
     write(*,*) '**********************************'
-    if (freeboundary) write(*,*) ' FREEBOUNDARY is ON'
+    if ( freeboundary .and. (sr%n_tor/=0) ) write(*,*) ' FREEBOUNDARY is ON'
   end if
   
   n_matrix_block_size = n_tor * n_var
@@ -148,7 +149,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   enddo                 ! loop over local elements
 
 
-  if (freeboundary) then      ! add contributions from all boundary nodes
+  if ( freeboundary .and. (sr%n_tor/=0) ) then      ! add contributions from all boundary nodes
 
   do ibnd = 1,boundary_list%n_bnd_elements                                 ! loop over the boundary elements
 

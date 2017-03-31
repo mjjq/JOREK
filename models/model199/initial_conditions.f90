@@ -54,13 +54,6 @@ if (my_id .eq. 0) then
     if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
   endif
 
-  if (freeboundary) then
-    call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-    if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
-      psi_bnd = min(psi_lim,psi_bnd)
-    endif
-  endif
-
   if(xcase2 .eq. 1) write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
   if(xcase2 .eq. 2) write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
 
@@ -134,7 +127,7 @@ do in=2,n_tor
   endif
 
   call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,in, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary,refinement,1)
+               4,2,in, psi_axis,psi_bnd,xpoint2, xcase2,Z_xpoint,freeboundary_equil,refinement,1)
 
 enddo
 

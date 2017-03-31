@@ -173,6 +173,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use phys_module
   use pellet_module
   use nodes_elements
+  use vacuum, only: sr
   use vacuum_response, only: vacuum_boundary_integral
   use mod_ch_nod_rhs_elm
   use mod_boundary_matrix_open
@@ -431,7 +432,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp end parallel
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
-  if (freeboundary) then
+  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
     call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max) !###TODO### move somewhere else
     call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list,                   &
       freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)

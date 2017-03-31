@@ -9,6 +9,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
 
   implicit none
   
@@ -40,6 +41,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only: import_restart_vacuum, current_FB_fact
   
   implicit none
@@ -526,6 +528,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
 #ifdef USE_HDF5
   use hdf5
@@ -589,6 +592,20 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_sons(:,:)
   integer,     allocatable :: t_contain_node(:,:)
   integer,     allocatable :: t_nref(:)
+
+! local variables
+
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
+
+  integer :: err_alloc
+
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.

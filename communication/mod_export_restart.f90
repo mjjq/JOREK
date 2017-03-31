@@ -206,6 +206,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only : export_HDF5_restart_vacuum
   
 #ifdef USE_HDF5
@@ -258,6 +259,19 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer,     allocatable :: t_sons(:,:)                  ! 4
   integer,     allocatable :: t_contain_node(:,:)          ! 5
   integer,     allocatable :: t_nref(:)
+
+  ! local variables
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
+
+  integer :: err_alloc
+
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep

@@ -145,8 +145,6 @@ if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",
 if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
 if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
 
-!write(*,*) "Check Point 03, my_id = ", my_id
-
 call tr_allocatep(mumps_par%A,1,N_recv,"dh_mumps_par%A",CAT_DMATRIX)
 call tr_allocatep(mumps_par%irn,1,N_recv,"dh_mumps_par%irn",CAT_DMATRIX)
 call tr_allocatep(mumps_par%jcn,1,N_recv,"dh_mumps_par%jcn",CAT_DMATRIX)
@@ -154,8 +152,6 @@ call tr_allocatep(mumps_par%jcn,1,N_recv,"dh_mumps_par%jcn",CAT_DMATRIX)
 mumps_par%A = 0.d0
 mumps_par%irn = 0
 mumps_par%jcn = 0
-
-!write(*,*) "Check Point 04, my_id = ", my_id
 
 call mpi_alltoallv(Asnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
                    mumps_par%A,recv_counts,recv_disp,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)

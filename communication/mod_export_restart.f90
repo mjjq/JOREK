@@ -529,6 +529,58 @@ end if
   end if
 
 
+  ! Dynamically allocate memeries for temporary arrays in order to export
+  if (using_spi) then
+    allocate (spi_R_arr(n_spi),stat=err_alloc)
+    allocate (spi_Z_arr(n_spi),stat=err_alloc)
+    allocate (spi_phi_arr(n_spi),stat=err_alloc)
+    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
+    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
+    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
+    allocate (spi_radius_arr(n_spi),stat=err_alloc)
+    allocate (spi_abl_arr(n_spi),stat=err_alloc)
+
+    do i=1, n_spi
+      spi_R_arr(i)       = pellets(i)%spi_R
+      spi_Z_arr(i)       = pellets(i)%spi_Z
+      spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
+      spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
+      spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
+      spi_radius_arr(i)  = pellets(i)%spi_radius
+      spi_abl_arr(i)     = pellets(i)%spi_abl
+    end do
+
+    call HDF5_array1D_saving(file_id,spi_R_arr, &
+             n_spi,'spi_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Z_arr, &
+             n_spi,'spi_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_phi_arr, &
+             n_spi,'spi_phi_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_R_arr, &
+             n_spi,'spi_Vel_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_Z_arr, &
+             n_spi,'spi_Vel_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_RxZ_arr, &
+             n_spi,'spi_Vel_RxZ_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_radius_arr, &
+             n_spi,'spi_radius_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_abl_arr, &
+             n_spi,'spi_abl_arr'//char(0))
+
+    deallocate (spi_R_arr)
+    deallocate (spi_Z_arr)
+    deallocate (spi_phi_arr)
+    deallocate (spi_Vel_R_arr)
+    deallocate (spi_Vel_Z_arr)
+    deallocate (spi_Vel_RxZ_arr)
+    deallocate (spi_radius_arr)
+    deallocate (spi_abl_arr)
+
+  end if
+
+
+
   ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
 

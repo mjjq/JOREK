@@ -1,0 +1,13 @@
+&vtk_params
+  nsub = 8 				 ! Number of subdivisions of the cubic finite elements into linear pieces
+  i_tor                  = -1		 ! If i_tor > 0, only this mode will be included in the vtk file...
+  i_plane                = 1		 ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
+  without_n0_mode        = .false.	 ! If true, do not include the n=0 mode (i_tor=1)
+  SI_units               = .false.	 ! when true, write variables in SI units
+  include_fluxes         = .false.	 ! include energy and density fluxes (or not)
+  include_neo            = .false.	 ! include neoclassical and more terms (or not)
+  include_magnetic_field = .false.	 ! include vector of magnetic field (or not)
+  include_velocity_field = .false.	 ! include vector of velocity field (or not)
+  include_bootstrap      = .false.	 ! include bootstrap current and averaged current
+  include_psi_norm       = .false. 	 ! include normalized flux
+/

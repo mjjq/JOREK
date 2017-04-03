@@ -38,11 +38,9 @@ end interface
 contains
 !> Calculates the electric and magnetic fields at a specific position
 !> in the jorek element `i_elm` at `st`.
-!> Linear interpolation with element%deltas is performed according to
-!> `delta_fraction`, which starts at 1 and goes to 0 for no mixing.
-!> If it is 1 we get the fields of the previous timesteps.
 pure subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
-use phys_module, only: F0, mode
+use phys_module, only: F0, mode, central_mass, central_density
+use constants, only: mu_zero, mass_proton
 
 ! Routine parameters
 class(fields_base), intent(in) :: fields
@@ -50,7 +48,10 @@ real*8, intent(in)  :: time
 integer, intent(in) :: i_elm !< JOREK element index
 real*8, intent(in)  :: st(2) !< element-local coordinates
 real*8, intent(in)  :: phi !< toroidal angle
-real*8, intent(out) :: E(3), B(3), psi, U !< Fields and potentials
+real*8, intent(out) :: E(3) !< Electric field [V/m]
+real*8, intent(out) :: B(3) !< Magnetic field [T]
+real*8, intent(out) :: psi !< psi in JOREK units (~-0.9 at axis, -0.2 at edge)
+real*8, intent(out) :: u !< velocity stream function in m/s
 
 ! Internal parameters
 integer, parameter :: i_var(2) = [1,2]
@@ -59,7 +60,9 @@ real*8             :: P(2), P_s(2), P_t(2), P_phi(2), P_time(2) ! Placeholder fo
 real*8             :: R, R_s, R_t, Z, Z_s, Z_t
 ! Others
 real*8             :: inv_st_jac, R_inv
-real*8             :: psi_R, psi_Z, U_R, U_Z, U_phi
+real*8             :: psi_R, psi_Z, U_R, U_Z, U_phi, t_norm
+
+t_norm  = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
 ! Interpolate the fields to get psi and U at the current position (and the
 ! changes u_n - u(n-1))
@@ -77,12 +80,12 @@ U_phi    = P_phi(2)
 
 ! Update psi and U
 psi = P(1)
-U   = P(2)
+U   = P(2)/t_norm
 
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
 B     = [+psi_Z, -psi_R, F0] * R_inv
 ! The local electric field, obtained from E=-Grad (u F0)-\partial_t A
 ! See http://jorek.eu/wiki/doku.php?id=u_phi
-E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv - R*P_time(1)]
+E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv - R*P_time(1)]/t_norm
 end subroutine calc_EBpsiU
 end module mod_fields

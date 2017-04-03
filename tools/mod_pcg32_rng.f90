@@ -9,7 +9,7 @@ public pcg32_rng
 type, extends(type_rng) :: pcg32_rng
   private
     type(pcg_state_setseq_64) :: state = pcg_state_setseq_64( &
-      state = 2346174683814, inc = 12367423712) !< mash-they-keyboard random
+      state = 234617468, inc = 123674237) !< mash-they-keyboard random
   contains
     procedure :: initialize => initialize_pcg32_rng
     procedure :: next => next_pcg32_rng

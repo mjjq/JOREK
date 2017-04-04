@@ -4,17 +4,8 @@ subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_o
 !< Return the first result.
 !-------------------------------------------------------------------------
 use data_structure
+use mod_element_rtree
 implicit none
-
-interface
-  subroutine RZ_minmax(node_list,element_list,i_elm,Rmin,Rmax,Zmin,Zmax)
-    use data_structure
-    type (type_node_list), intent(in)    :: node_list
-    type (type_element_list), intent(in) :: element_list
-    integer, intent(in) :: i_elm
-    real*8, intent(out) :: Rmin, Rmax, Zmin, Zmax
-  end subroutine RZ_minmax
-end interface
 
 type (type_node_list), intent(in)    :: node_list
 type (type_element_list), intent(in) :: element_list
@@ -23,63 +14,23 @@ real*8, intent(out)    :: R_out,Z_out,s_out,t_out
 integer, intent(inout) :: ielm_out
 integer, intent(out)   :: ifail
 
-real*8  :: Rmin, Rmax, Zmin, Zmax
-logical              :: minmax_initialised
-real*8, allocatable  :: elements_minmax(:,:)
-integer :: k
+logical, save        :: rtree_initialised = .false.
 
-save minmax_initialised, elements_minmax
+integer :: k
+integer, dimension(:), allocatable :: i_elms
 
 ielm_out = 0
+if (.not. rtree_initialised) then
+  call populate_element_rtree(node_list, element_list) ! not OMP safe, call once outside of openmp
+  rtree_initialised = .true.
+end if
 
-if (.not. allocated(elements_minmax)) then
+call elements_containing_point(node_list, element_list, R_find, Z_find, i_elms)
 
-  allocate(elements_minmax(4,element_list%n_elements))
-  minmax_initialised = .false.
-!  write(*,*) ' *** FIND_RZ : initialising ***'
-
-elseif (size(elements_minmax,2) .ne. element_list%n_elements) then
-
-  deallocate(elements_minmax)
-  allocate(elements_minmax(4,element_list%n_elements))
-  minmax_initialised = .false.
-!  write(*,*) ' *** FIND_RZ : re-initialising ***'
-
-endif
-
-if (.not. minmax_initialised) then
-  do k=1,element_list%n_elements
-    call RZ_minmax(node_list,element_list,k,Rmin,Rmax,Zmin,Zmax)
-    elements_minmax(:,k) = [Rmin, Rmax, Zmin, Zmax]
-  enddo
-  minmax_initialised = .true.
-endif
-
-
-! Test the given element first if it is in range
-if (ielm_out .ge. 1 .and. ielm_out .le. element_list%n_elements) then
-  k = ielm_out
-  Rmin =  elements_minmax(1,k)
-  Rmax =  elements_minmax(2,k)
-  Zmin =  elements_minmax(3,k)
-  Zmax =  elements_minmax(4,k)
-  if ((R_find .ge. Rmin) .and. (R_find .le. Rmax) .and. &
-      (Z_find .ge. Zmin) .and. (Z_find .le. Zmax) ) then
-    call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-    if (ifail .eq. 0) return
-  endif
-endif
 ! then loop through all
-do k=1,element_list%n_elements
-  Rmin =  elements_minmax(1,k)
-  Rmax =  elements_minmax(2,k)
-  Zmin =  elements_minmax(3,k)
-  Zmax =  elements_minmax(4,k)
-  if ((R_find .ge. Rmin) .and. (R_find .le. Rmax) .and. &
-      (Z_find .ge. Zmin) .and. (Z_find .le. Zmax) ) then
-    call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-    if (ifail .eq. 0) return
-  endif
+do k=1,size(i_elms)
+  call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  if (ifail .eq. 0) return
 enddo
 
 if (ielm_out .eq. 0) ifail = 99

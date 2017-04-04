@@ -76,8 +76,7 @@ LIBLAPACK = -L$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl
 SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 
 
 #Dierckx
-DIERCKX_HOME ?= /home/ITER/vanvugd/source/Dierckx
-LIBDIERCKX = -L$(DIERCKX_HOME) -ldierckx
+LIBDIERCKX = $(LIBDIR)/Dierckx/dierckx.a
 
 #HDF5
 HDF5_HOME=/work/imas/opt/hdf5/1.8.15

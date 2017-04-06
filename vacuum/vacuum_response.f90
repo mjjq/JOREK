@@ -1518,7 +1518,7 @@ module vacuum_response
   !> Perform the time-evolution of the wall currents (resistive wall).
   subroutine evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
-    use phys_module, only: index_now, resistive_wall
+    use phys_module, only: index_now, index_start, nstep, resistive_wall
     
     implicit none
     
@@ -1528,7 +1528,7 @@ module vacuum_response
     real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
-    integer             :: k
+    integer             :: k, k2
 
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
@@ -1554,6 +1554,18 @@ module vacuum_response
         call log_wall_curr()
         !call log_coil_curr()
       end if
+    end if
+    
+    ! --- Extract diagnostic coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
+    if ( sr%n_diag_coils > 0 ) then
+      if ( .not. allocated(diag_coil_curr) ) then
+         allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
+         diag_coil_curr(:,:) = 0.d0
+      end if
+      do k = 1, sr%n_diag_coils
+        k2 = k + sr%ind_start_diag_coils - 1
+        diag_coil_curr(index_now,k) = sum(sr%s_ww(k2,:) * wall_curr(:))
+      end do
     end if
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)

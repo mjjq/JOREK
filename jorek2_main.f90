@@ -41,7 +41,7 @@ program JOREK2
   use vacuum
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
-  use live_data,           only: init_live_data, write_live_data, finalize_live_data
+  use live_data
   use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
@@ -318,13 +318,12 @@ required = 0
   end if
   
   ! --- Initialize live data file which will be filled during the code run
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data()
+  if ( my_id == 0 ) call init_live_data()
 #ifdef JECCD
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data2()
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data3()
-  if (my_id == 0) write(6,*) "initializing live data"
+  if ( my_id == 0) ) call init_live_data2()
+  if ( my_id == 0) ) call init_live_data3()
 #ifdef JEC2DIAG
-   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data4()
+   if ( my_id == 0 ) call init_live_data4()
 #endif
 #endif
   
@@ -379,6 +378,7 @@ required = 0
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
+        call write_live_data_vacuum(index_now, diag_coil_curr)
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
@@ -1159,12 +1159,13 @@ required = 0
        write(*,*)
 
        ! --- Output energies and growth_rates to text files during the code run
-       if ( .not. bench_without_plot ) call write_live_data(index_now)
+       call write_live_data(index_now)
+       call write_live_data_vacuum(index_now, diag_coil_curr)
 #ifdef JECCD
-       if ( .not. bench_without_plot ) call write_live_data2(index_now)
-       if ( .not. bench_without_plot ) call write_live_data3(index_now)
+       call write_live_data2(index_now)
+       call write_live_data3(index_now)
 #ifdef JEC2DIAG
-       if ( .not. bench_without_plot ) call write_live_data4(index_now)
+       call write_live_data4(index_now)
 #endif
 #endif
     endif
@@ -1273,12 +1274,12 @@ required = 0
   endif
   
   ! --- Close open files
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data()
+  if ( my_id == 0 ) call finalize_live_data()
 #ifdef JECCD
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data2()
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data3()
+  if ( my_id == 0 ) call finalize_live_data2()
+  if ( my_id == 0 ) call finalize_live_data3()
 #ifdef JEC2DIAG
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data4()
+  if ( my_id == 0 ) call finalize_live_data4()
 #endif
 #endif
 

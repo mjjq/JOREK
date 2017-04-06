@@ -73,6 +73,7 @@ module vacuum
   real*8, allocatable :: dR_coils(:), dZ_coils(:)        ! ### old
   real*8, allocatable :: coil_voltages(:)                !< Coil voltages
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
+  real*8, allocatable :: diag_coil_curr(:,:)
   
   type :: t_starwall_response
     integer :: file_version           = 9999
@@ -306,7 +307,7 @@ module vacuum
   !! @todo Does not work currently if variable freeboundary is changed between export and import!
   subroutine import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
     
-    use phys_module, only: t_start
+    use phys_module, only: t_start, nstep, index_start
 #ifdef USE_HDF5
     use hdf5
     use hdf5_io_module
@@ -322,7 +323,9 @@ module vacuum
 #ifdef USE_HDF5
     ! --- Local variables
     logical   :: freeboundary_rst, resistive_wall_rst
+    integer   :: n_diag_coil
     character :: t_freeboundary, t_resistive_wall
+    real*8, allocatable :: t_diag_coil_curr(:,:)
     
     call HDF5_char_reading(file_id,t_freeboundary,"freeboundary")
     freeboundary_rst = (t_freeboundary == "T")
@@ -357,6 +360,16 @@ module vacuum
         if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         old_dpsibnd_vec = 0.d0 !###
+        
+        if ( index_start > 1 ) then
+          if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
+          call HDF5_integer_reading(file_id,n_diag_coil,"n_diag_coil")
+          allocate( t_diag_coil_curr(index_start,n_diag_coil) )
+          call HDF5_array2D_reading(file_id,t_diag_coil_curr,"diag_coil_curr")
+          allocate( diag_coil_curr(index_start+nstep,n_diag_coil) )
+          diag_coil_curr(1:index_start,:) = t_diag_coil_curr(1:index_start,:)
+          deallocate(t_diag_coil_curr)
+        end if
         
         if ( vacuum_debug .and. resistive_wall ) then
           write(*,*) 'DEBUG: Checksums'
@@ -449,6 +462,7 @@ module vacuum
   !> Export some vacuum-related data to the HDF5 restart file
   subroutine export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
     
+    use phys_module, only: index_now
 #ifdef USE_HDF5
     use hdf5
     use hdf5_io_module
@@ -464,6 +478,7 @@ module vacuum
 #ifdef USE_HDF5
     ! --- Local variables
     character           :: t_freeboundary, t_resistive_wall
+    real*8, allocatable :: t_diag_coil_curr(:,:)
 
     t_freeboundary = "F"
     if (freeboundary) t_freeboundary = "T"
@@ -485,6 +500,14 @@ module vacuum
         call HDF5_integer_saving(file_id,n_dof_starwall,"n_dof_starwall"//char(0))
         call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
         call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
+        call HDF5_integer_saving(file_id,sr%n_diag_coils,"n_diag_coil"//char(0))
+        
+        if ( index_now > 0 ) then
+          allocate(t_diag_coil_curr(index_now,sr%n_diag_coils))
+          t_diag_coil_curr(1:index_now,:) = diag_coil_curr(1:index_now,:)
+          call HDF5_array2D_saving(file_id,t_diag_coil_curr,index_now,sr%n_diag_coils,"diag_coil_curr"//char(0))
+          deallocate(t_diag_coil_curr)
+        end if
       end if
       
       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
@@ -518,7 +541,7 @@ module vacuum
     logical, intent(in) :: resistive_wall
     
     ! --- Local variables
-    integer :: ierr
+    integer :: ierr, sz(2)
     
     call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
@@ -527,6 +550,9 @@ module vacuum
       call MPI_BCAST(n_wall_curr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       
       if ( n_wall_curr == 0 ) return
+      
+      if ( my_id == 0 ) sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+      call MPI_BCAST(sz,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       
       if ( my_id /= 0 ) then
         if ( allocated(wall_curr) ) deallocate(wall_curr)
@@ -537,6 +563,10 @@ module vacuum
         
         if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
+        
+        if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
+        allocate( diag_coil_curr(sz(1),sz(2)) )
+      else
       end if
       
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

@@ -338,7 +338,8 @@ module vacuum
         
         if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
-        old_dpsibnd_vec = 0.d0 !###
+        old_dpsibnd_vec(:) = 0.d0
+        call HDF5_array1D_reading(file_id,old_dpsibnd_vec,"old_dpsibnd_vec")
         
         if ( vacuum_debug .and. resistive_wall ) then
           write(*,*) 'DEBUG: Checksums'
@@ -468,6 +469,8 @@ module vacuum
         call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
         call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
       end if
+
+      call HDF5_array1D_saving(file_id,old_dpsibnd_vec,n_dof_starwall,"old_dpsibnd_vec"//char(0))
       
       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
       if ( (n_coils/=0) .and. (.not. allocated(I_coils)) )  then

@@ -1373,7 +1373,7 @@ module vacuum_response
     ! --- Also initialize the old_dpsibnd_vec
     if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
     allocate( old_dpsibnd_vec(n_dof_starwall) )
-    old_dpsibnd_vec(:) = dpsibnd_vec(:)
+    old_dpsibnd_vec(:) = 0.d0
     
     if ( my_id == 0 ) call write_wall_vtk(0, resistive_wall)
     deallocate( psibnd_vec, dpsibnd_vec )

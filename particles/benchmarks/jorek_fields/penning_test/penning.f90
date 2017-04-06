@@ -132,7 +132,7 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
   nstep_n(i) = floor(1.6e8 / tstep_n(i)) ! Override nstep_n
   call reset_particle
   ! Calculate the correct velocity for a half-step backwards to obtain second-order convergence
-  E = [-2.d0*Phi0*x0(1),0.d0,0.d0]
+  E = [-2.d0*Phi0*x0(1),0.d0,0.d0]/t_norm
   B = [0.d0, B0, 0.d0]
   call boris_initial_half_step_backwards_RZPhi(particle, mass, E, B, tstep_n(i)*t_norm)
 

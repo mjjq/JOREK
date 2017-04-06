@@ -145,7 +145,7 @@ subroutine boris_all_initial_half_step_backwards_RZPhi(particles, m, fields, t, 
   integer :: i
   real*8  :: psi, U, E(3), B(3)
 
-  !$omp parallel do default(private) shared(particles, fields, dt, m)
+  !$omp parallel do default(private) shared(particles, fields, dt, m, t)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .eq. 0) cycle
     call fields%calc_EBpsiU(t, particles(i)%i_elm, particles(i)%st, particles(i)%x(3), &

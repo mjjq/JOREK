@@ -22,7 +22,6 @@
 
  freeboundary = .f.
  freeboundary_equil = .t.
- starwall_equil_coils = .t.
  resistive_wall      = .t.
  
  amix                 = 0.d0

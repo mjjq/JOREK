@@ -80,8 +80,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 first_target_point, last_target_point,	            &
-                n_limiter, R_limiter, Z_limiter,                    &
-                starwall_equil_coils
+                n_limiter, R_limiter, Z_limiter
 
 if (my_id .eq. 0) then
 

@@ -33,6 +33,8 @@ module vacuum_equilibrium
     if ( sr%n_tor == 0 ) return
     if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
     
+    if (sr%n_pol_coils /= 0 ) starwall_equil_coils = .true.  ! Use STARWALL PF coils if provided
+    
     ! --- Decide wheter the coils will be given with COIL_FIELD or STARWALL
     if (.not. starwall_equil_coils) then
     
@@ -167,6 +169,7 @@ module vacuum_equilibrium
     call MPI_bcast(I_coils,                 n_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(pf_coils%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(pf_coils%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(starwall_equil_coils,          1,          MPI_LOGICAL, 0, MPI_COMM_WORLD, err)
     
   end subroutine import_external_fields
   

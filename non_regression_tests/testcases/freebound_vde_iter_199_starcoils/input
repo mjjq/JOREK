@@ -10,8 +10,6 @@
  resistive_wall     = .t.
  wall_resistivity   = 2.d-5
  wall_resistivity_fact = 1.
-
- starwall_equil_coils = .t.
  
  amix                 = 0.25
  amix_freeb           = 0.65

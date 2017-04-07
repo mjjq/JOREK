@@ -21,7 +21,7 @@ USE_MUMPS         = 1
 
 # --- PaStiX solver
 PASTIX_LIB ?= "<<<<path-to-pastix-library-directory>>>>"
-LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` -L$(MKL_LIB)
+LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` 
 LIB_PASTIX_MURGE  = `$(PASTIX_LIB)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS   = `$(PASTIX_LIB)/pastix-conf --blas`
 INC_PASTIX        = `$(PASTIX_LIB)/pastix-conf --incs`

@@ -3,6 +3,7 @@ module vacuum_equilibrium
   
   use constants
   use vacuum
+  use phys_module, only: resistive_wall
   
   implicit none
   
@@ -30,89 +31,135 @@ module vacuum_equilibrium
     
     if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
     
-    if ( my_id == 0 ) then
-      
-      ! --- Read data from coil field file (only mpi proc 0 reads the file)
-      open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
-      if ( err /= 0 ) then
-        write(*,*) 'ERROR: Could not open external field file ',trim(filename),'.'
-        stop
-      end if
-      read(filehandle,'(a)') comment
-      
-      file_version = read_intparam(filehandle, 'file_version')
-      if ( file_version > 1 ) then
-        write(*,*) 'ERROR: COIL data file version ', file_version, ' is not supported.'
-        stop
-      end if
-      
-      n_coils     = read_intparam(filehandle, 'n_coils')
-      n_bnd_nodes = read_intparam(filehandle, 'n_bnd_nodes')
-      n_bnd_elems = read_intparam(filehandle, 'n_bnd_elems')
-      
-      dim         = (/ 2*n_bnd_nodes, n_coils /)
-      
-      call read_array(filehandle, 'B_t', dim, float2d=bext_tan)
-      call read_array(filehandle, 'B_n', dim, float2d=bext_nor)
-      call read_array(filehandle, 'Psi', dim, float2d=bext_psi)
-      
-      32 format(3x,77('-'))
-      33 format(3x,a,i8)
-      34 format(3x,a,1x,a)
-      35 format(3x,a,es20.12)
-      write(*,*)
-      write(*,32)
-      write(*,33) 'EXTERNAL FIELD INFORMATION:'
-      write(*,32)
-      write(*,34) 'filename    =', trim(filename)
-      write(*,33) 'n_coils     =', n_coils
-      write(*,33) 'n_bnd_nodes =', n_bnd_nodes
-      write(*,33) 'n_bnd_elems =', n_bnd_elems
-      if ( vacuum_debug ) then
-        write(*,35) 'sum(bext_tan) =', sum(bext_tan)
-        write(*,35) 'sum(bext_nor) =', sum(bext_nor)
-        write(*,35) 'sum(bext_psi) =', sum(bext_psi)
-      end if
-      write(*,32)
-      write(*,*)
-      
-      if ( n_coils /= n_coils_nml ) then
-        write(*,*) 'WARNING: namelist coils number n_coils_nml does not match with external coils number n_coils from coil_field.txt!'
-        stop
-      end if
-      
-      if ( .not. allocated(I_coils) ) then
-        allocate( I_coils(n_coils) )
-        I_coils(1:n_coils) =  coils0(1:n_coils_nml)%current 
-        write(*,*) 'I_coils allocated '               
-      end if
-      
-    end if
+    ! --- Decide wheter the coils will be given with COIL_FIELD or STARWALL
+    if (.not. starwall_equil_coils) then
     
-    ! --- Broadcast to other MPI procs.
-    call MPI_bcast(n_coils,     1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(n_bnd_nodes, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(n_bnd_elems, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(dim,         2, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+      if ( my_id == 0 ) then
+        
+        write(*,*) ''            
+        write(*,*) '****************************************'
+        write(*,*) '* Using COIL_FIELD program for PF coils *'
+        write(*,*) '****************************************'
+        write(*,*) ''
+        write(*,*) 'WARNING: coil currents should be constant in time. If you want proper coil currents time evolution'
+        write(*,*) 'please use STARWALL PF coils'
+        write(*,*) ''
+        
+        ! --- Read data from coil field file (only mpi proc 0 reads the file)
+        open(filehandle, file=trim(filename), form='formatted', status='old', action='read', iostat=err)
+        if ( err /= 0 ) then
+          write(*,*) 'ERROR: Could not open external field file ',trim(filename),'.'
+          stop
+        end if
+        read(filehandle,'(a)') comment
+        
+        file_version = read_intparam(filehandle, 'file_version')
+        if ( file_version > 1 ) then
+          write(*,*) 'ERROR: COIL data file version ', file_version, ' is not supported.'
+          stop
+        end if
+        
+        n_coils     = read_intparam(filehandle, 'n_coils')
+        n_bnd_nodes = read_intparam(filehandle, 'n_bnd_nodes')
+        n_bnd_elems = read_intparam(filehandle, 'n_bnd_elems')
+        
+        dim         = (/ 2*n_bnd_nodes, n_coils /)
+        
+        call read_array(filehandle, 'B_t', dim, float2d=bext_tan)
+        call read_array(filehandle, 'B_n', dim, float2d=bext_nor)
+        call read_array(filehandle, 'Psi', dim, float2d=bext_psi)
+        
+        32 format(3x,77('-'))
+        33 format(3x,a,i8)
+        34 format(3x,a,1x,a)
+        35 format(3x,a,es20.12)
+        write(*,*)
+        write(*,32)
+        write(*,33) 'EXTERNAL FIELD INFORMATION:'
+        write(*,32)
+        write(*,34) 'filename    =', trim(filename)
+        write(*,33) 'n_coils     =', n_coils
+        write(*,33) 'n_bnd_nodes =', n_bnd_nodes
+        write(*,33) 'n_bnd_elems =', n_bnd_elems
+        if ( vacuum_debug ) then
+          write(*,35) 'sum(bext_tan) =', sum(bext_tan)
+          write(*,35) 'sum(bext_nor) =', sum(bext_nor)
+          write(*,35) 'sum(bext_psi) =', sum(bext_psi)
+        end if
+        write(*,32)
+        write(*,*)
+        
+        if ( n_coils /= n_coils_nml ) then
+          write(*,*) 'WARNING: namelist coils number n_coils_nml does not match with external coils number n_coils from coil_field.txt!'
+          stop
+        end if
+        
+        if ( .not. allocated(I_coils) ) then
+          allocate( I_coils(n_coils) )
+          I_coils(1:n_coils) =  coils0(1:n_coils_nml)%current 
+          write(*,*) 'I_coils allocated '               
+        end if
+        
+      end if
+      
+      ! --- Broadcast to other MPI procs.
+      call MPI_bcast(n_coils,     1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+      call MPI_bcast(n_bnd_nodes, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+      call MPI_bcast(n_bnd_elems, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+      call MPI_bcast(dim,         2, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+      
+      if ( my_id /= 0 ) then
+        if ( allocated(bext_tan) ) deallocate(bext_tan)
+        allocate( bext_tan(dim(1),dim(2)) )
+        
+        if ( allocated(bext_nor) ) deallocate(bext_nor)
+        allocate( bext_nor(dim(1),dim(2)) )
+        
+        if ( allocated(bext_psi) ) deallocate(bext_psi)
+        allocate( bext_psi(dim(1),dim(2)) )        
+      end if
+      
+      call MPI_bcast(bext_tan,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+      call MPI_bcast(bext_nor,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+      call MPI_bcast(bext_psi,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     
-    if ( my_id /= 0 ) then
-      if ( allocated(bext_tan) ) deallocate(bext_tan)
-      allocate( bext_tan(dim(1),dim(2)) )
+    else    !STARWALL coils
       
-      if ( allocated(bext_nor) ) deallocate(bext_nor)
-      allocate( bext_nor(dim(1),dim(2)) )
+      if ( my_id == 0 ) then
       
-      if ( allocated(bext_psi) ) deallocate(bext_psi)
-      allocate( bext_psi(dim(1),dim(2)) )
+        if ( sr%ncoil /= n_coils_nml ) then
+          write(*,*) 'WARNING: number of namelist coils "n_coils_nml" does not match the STARWALL number of coils'
+          stop
+        end if
       
+        if ( .not. resistive_wall ) then
+          write(*,*) 'WARNING: ideal wall with equilibrium with starwall_coils is not ready to use yet'
+          stop
+        end if
+      
+        write(*,*) ''            
+        write(*,*) '***************************************'
+        write(*,*) '* Using STARWALL equilibrium PF coils *'
+        write(*,*) '***************************************'
+        write(*,*) ''
+      
+        if ( .not. allocated(I_coils) ) then
+          allocate( I_coils(sr%ncoil) )
+          I_coils(1:sr%ncoil) =  coils0(1:n_coils_nml)%current
+          n_coils             =  n_coils_nml
+          write(*,*) 'I_coils allocated '               
+        endif
+      endif
+  
+    endif   !End choice of STARWALL or COIL_FIELD coils
+    
+    if ( my_id /= 0 ) then        
       if ( allocated(I_coils) ) deallocate(I_coils)
-      allocate( I_coils(n_coils) )
+      allocate( I_coils(n_coils_nml) )
     end if
     
-    call MPI_bcast(bext_tan,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(bext_nor,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(bext_psi,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(I_coils,               n_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(n_coils,                              1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(I_coils,           n_coils_nml, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(coils0%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(coils0%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     
@@ -131,6 +178,7 @@ module vacuum_equilibrium
     use basis_at_gaussian
     use mumps_module
     use vacuum_response
+    use constants
     
     implicit none
     
@@ -146,11 +194,28 @@ module vacuum_equilibrium
     integer :: m_bndelem, l_vertex, l_dof, l_node, l_dir, l_node_bnd, l_index, ms
     integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
+    integer :: i, j
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
     real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, psi_0_j
+    real*8, allocatable :: potentials_real(:)
 
-    call equilibrium_VFB
+    call equilibrium_VFB 
+    
+    if (starwall_equil_coils) then      
+      
+      if ( .not. allocated(wall_curr) )       allocate( wall_curr(n_wall_curr) ) 
+      if ( .not. allocated (potentials_real)) allocate(potentials_real(n_wall_curr))      
+      wall_curr       = 0.d0
+      potentials_real = 0.d0
+      
+      potentials_real(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
+      
+      do i = 1, n_wall_curr
+        wall_curr(i) = sum(sr%s_ww_inv(i,:) * potentials_real(:))    
+      end do    
+    
+    endif
     
     ilarge = mumps_par%nz
     
@@ -184,11 +249,17 @@ module vacuum_equilibrium
                 i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
                 i_index    = node_list%node(i_node)%index(i_dir)
                 size_i     = bndelem_m%size(i_vertex,i_dof)
-                i_resp = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
+                i_resp     = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
                 basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
                 
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
-                B_tan_coil_i           = sum ( I_coils(:) * bext_tan(i_resp,:) )
+                
+                if (starwall_equil_coils) then
+                  B_tan_coil_i         = - sum (sr%a_ey(i_resp,:) * wall_curr(:) )
+                else
+                  B_tan_coil_i         =   sum ( I_coils(:) * bext_tan(i_resp,:) )  
+                endif
+                
                 mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i
                 
                 ! --- Sum over boundary dofs contributing to the response
@@ -198,15 +269,21 @@ module vacuum_equilibrium
                     j_dir      = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
                     j_index    = node_list%node(j_node)%index(j_dir)
                     j_resp     = bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)
-                    psi_coil_j = sum( I_coils(:) * bext_psi(j_resp,:) )
+                   
+                    if (.not. starwall_equil_coils) then 
+                      psi_coil_j = sum( I_coils(:) * bext_psi(j_resp,:) )
+                    else
+                      psi_coil_j = 0.d0
+                    endif
+                   
                     psi_0_j    = node_list%node(j_node)%values(1,j_dir,1)
                     
                     ilarge                 = ilarge + 1
                     mumps_par%irn(ilarge)  = l_index
                     mumps_par%jcn(ilarge)  = j_index
                     mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
-                    mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                                &
-                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j               &
+                    mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                               &
+                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j              &
                       - common_prefactor * response_m_eq(i_resp,j_resp) * psi_0_j
                   end do
                 end do
@@ -235,7 +312,7 @@ module vacuum_equilibrium
    
    write(*,*) ' vertical_FB = ', vertical_FB
    
-   do i=1, n_coils
+   do i=1, n_coils_nml
      if( abs(coils0(i)%FB_amp) .gt. 1.d-6 ) then
        I_coils(i) =  coils0(i)%current * (1 + coils0(i)%FB_amp * vertical_FB ) 
        write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)

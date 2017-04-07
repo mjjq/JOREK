@@ -64,7 +64,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, rot_file,           &
                 normalized_velocity_profile,                        &
                 freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   &
+                resistive_wall,                                     &
+                wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 murge_with_starpu, murge_cuda_nbr,                  &
@@ -105,7 +106,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_coils_nml, coils0,                  &
-                Zaxis_find_limit, PF_pert_start_time
+                Zaxis_find_limit, PF_pert_start_time,               &
+                starwall_equil_coils
 
 if (my_id .eq. 0) then
 

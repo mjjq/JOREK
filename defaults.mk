@@ -37,17 +37,18 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Wno-unused-variable
   FFLAGS += -Wintrinsics-std
   FFLAGS += -Wcharacter-truncation
-  FFLAGS += -Wsurprising -Wno-tabs
+  FFLAGS += -Wsurprising
   FFLAGS += -ffree-line-length-none
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
     FLAGS  += -fcheck=all
-    FLAGS  += -Wunused-variable
     FLAGS  += -ffpe-trap=invalid,zero,overflow -ftrapv
-    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
+  endif
+  ifeq ($(DEBUG), 2)
+    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
   endif
 
   FFLAGS +=-J$(MODDIR)

@@ -1,7 +1,7 @@
 # Makefile.inc file for compiling JOREK on the Marconi-Fusion Supercomputer
 #
 # Make sure to set environment variables and load modules as described in 
-#   http://jorek.eu/wiki/doku.php?id=marconi-fusion_with_intelmpi_i17&do=
+#   http://jorek.eu/wiki/doku.php?id=marconi-fusion_compile_knl_intelmpi_i17&do=
 
 # --- Select physics model
 MODEL             = model303

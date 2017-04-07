@@ -511,8 +511,8 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'RMP_growth_rate       ', RMP_growth_rate
      write(*,REAL_FMT) 'RMP_ramp_up_time      ', RMP_ramp_up_time
      write(*,INTG_FMT) 'Number_RMP_harmonics  ', Number_RMP_harmonics 
-     write(*,REAL_FMT) 'RMP_har_cos_spectrum ',  RMP_har_cos_spectrum
-     write(*,REAL_FMT) 'RMP_har_sin_spectrum ',  RMP_har_sin_spectrum
+     write(*,INTG_FMT) 'RMP_har_cos_spectrum  ', RMP_har_cos_spectrum(1:Number_RMP_harmonics)
+     write(*,INTG_FMT) 'RMP_har_sin_spectrum  ', RMP_har_sin_spectrum(1:Number_RMP_harmonics)
   endif
   write(*,LOGI_FMT) 'output_bnd_elements   ', output_bnd_elements
   write(*,LOGI_FMT) 'bootstrap             ', bootstrap

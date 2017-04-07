@@ -241,11 +241,7 @@ contains
 
           !$omp parallel default(none) shared(pastix_nthrd)    
           !$omp master
-#ifdef HYPER_THREADS
-              pastix_nthrd = omp_get_num_threads()/2
-#else
               pastix_nthrd = omp_get_num_threads()
-#endif
           !$omp end master
           !$omp end parallel
           
@@ -328,11 +324,7 @@ contains
 
               !$omp parallel default(none) shared(pastix_nthrd)    
               !$omp master
-#ifdef HYPER_THREADS
-              pastix_nthrd = omp_get_num_threads()/2
-#else
               pastix_nthrd = omp_get_num_threads()
-#endif
               !$omp end master
               !$omp end parallel
               if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd

@@ -790,19 +790,14 @@ do i=1,size(particles)
 #else
   background_kbT = P(3)/(2.d0*MU_ZERO*central_density*1.d20) ! P(1) contains the total plasma temperature in J/kB = T = Te + Ti
 #endif
-  V_thermal = sqrt(background_kbT / (2.d0*mass*ATOMIC_MASS_UNIT))      ! [m/s]
+  V_thermal = sqrt(background_kbT / (mass*ATOMIC_MASS_UNIT))      ! variance in each of the velocity dimensions [m/s]
 
   ! Only an implementation for particle_kinetic_leapfrog now
   select type (pa => particles(i))
   type is (particle_kinetic_leapfrog)
     ! v_out now contains parallel and perpendicular velocities and the gyrophase
     v_out(1:2) = boxmueller_transform(pa%v(1:2))*V_thermal ! 2 gaussian distributed random numbers
-    v_out(2)   = v_out(2)*sqrt(2.d0) ! equipartition of energy in parallel and 2 perpendicular directions
-    v_out(3)   = pa%v(3)*TWOPI ! gyrophase, between 0 and 2PI
-    if (present(v_par) .and. v_par) then
-      v_out(1) = v_out(1) + P(4)/t_norm
-    end if
-
+    v_out(3)   = sample_gaussian(pa%v(3))*V_thermal ! very slow, don't use in production
     if (present(cor)) then
       background_kelvin  = background_kbT / K_BOLTZ              ! electron temperature [K]
       if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
@@ -824,9 +819,12 @@ do i=1,size(particles)
     ! use the vector triple product to simplify.
     ! I'm not sure if this formula is the same in a right-handed coordinate system...
     ! this might change the direction of the rotation, but that is not important.
-    pa%v = v_out(1) * B_hat + v_out(2) * &
-      ((cos(v_out(3)) * [0.d0, B_hat(3), -B_hat(2)]) + &
-        sin(v_out(3)) * (B_hat(1) * B_hat - r_hat))
+    if (present(v_par) .and. v_par) then
+      pa%v = v_out(1) + (P(4)/t_norm) * B_hat
+    else
+      pa%v = v_out
+    end if
+
     if (present(cor)) pa%q = nint(Z_coronal,1)                   !< charge
   class default
     write(*,*) "set_velocity_from_T not implemented for this particle type"

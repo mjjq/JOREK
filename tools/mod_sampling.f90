@@ -8,6 +8,7 @@ module mod_sampling
   public :: transform_uniform_cylindrical
   public :: boxmueller_transform
   public :: sample_chi_squared_3
+  public :: sample_gaussian
 contains
   !> Transform three uniform random numbers in [0,1] to 
   !> Uniform random numbers in cylindrical coordinates (R,Z,Phi)
@@ -38,6 +39,29 @@ contains
           (/cos(TWOPI*ran(i+1)), sin(TWOPI*ran(i+1))/)
     end do
   end function boxmueller_transform
+
+
+  !> Transform a uniformly distributed number u on [0,1] into a normally distributed
+  !> number by inverse transform sampling (slow!)
+  !> It is much better to use box-muller or something else
+  pure function sample_gaussian(u) result(x)
+    use mod_rootfinding, only: halleys_method
+    real*8, intent(in)   :: u !< Uniformly distributed number in [0,1]
+    real*8               :: x !< Normally distributed number
+    real*8               :: x0 !< Initial guess
+    integer              :: ierr
+    real*8, parameter    :: guess_a = 1.20278251
+
+    ! Generate a guess by inverting a nearby distribution:
+    ! u = tanh(a*x)
+    x0 = sqrt(2.d0)*(atanh(2.d0*u-1.d0)/guess_a)
+    
+    call halleys_method(f=CDF_gaussian, &
+                       df=PDF_gaussian, &
+                      ddf=PDF_prime_gaussian, &
+                       y0=u, x0=x0, x=x, ierr=ierr)
+    ! Dangerous: ignore ierr for now
+  end function sample_gaussian
 
   !> Transform a uniformly distributed number u on [0,1] into a chi^2(3)-distributed
   !> number by inverse transform sampling.
@@ -88,4 +112,27 @@ contains
     ! Workaround if we go out of domain
     P = sign((1-abs(x))*exp(-abs(x)*0.5d0)/(2.d0*sqrt(2.d0*PI*abs(x))), x)
   end function PDF_prime_chi_squared_3
+
+  !> PDF of a gaussian (normal) distribution with sigma = 1 and mu = 0
+  pure function PDF_gaussian(x) result(P)
+    use constants, only: PI
+    real*8, intent(in) :: x
+    real*8             :: P
+    P = 1.d0/sqrt(2.d0*PI) * exp(-x**2/2.d0)
+  end function PDF_gaussian
+
+  !> Second derivative of a CDF of a gaussian (normal) distribution with sigma = 1 and mu = 0
+  pure function PDF_prime_gaussian(x) result(P)
+    use constants, only: PI
+    real*8, intent(in) :: x
+    real*8             :: P
+    P = 1.d0/sqrt(2.d0*PI) * exp(-x**2/2.d0) * (-x)
+  end function PDF_prime_gaussian
+
+  !> CDF of a gaussian (normal) distribution with sigma = 1 and mu = 0
+  pure function CDF_gaussian(x) result(P)
+    real*8, intent(in) :: x
+    real*8             :: P
+    P = 0.5d0*(1.d0 + erf(x/sqrt(2.d0)))
+  end function CDF_gaussian
 end module mod_sampling

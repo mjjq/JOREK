@@ -94,7 +94,7 @@ module equil_info
     
     ! --- Local variables.
     integer :: my_id, i_out, ifail, i
-    real*8  :: R_out, Z_out, s_out, t_out, corr_fact, R1, R2, dR
+    real*8  :: R_out, Z_out, s_out, t_out, R1, R2, dR
     
     my_id  = 9999
     
@@ -115,22 +115,17 @@ module equil_info
     call find_RZ(node_list, element_list, ES%R_lim, ES%Z_lim, R_out, Z_out, ES%i_elm_lim, ES%s_lim,&
       ES%t_lim, ES%ifail_lim)
     
-    ! --- corr_fact such that: psi_axis * corr_fact < psi_bnd * corr_fact
-    !    (to account for cases where Psi takes minimum/maximum value at the axis)
-    corr_fact = 1.d0
-    if ( ES%psi_axis > ES%psi_lim ) corr_fact = -1.d0
-    
     if ( xpoint ) then ! (X-point plasma)
       
       if ( (xcase==LOWER_XPOINT) ) then
         
-        ES%psi_bnd        = corr_fact * ES%psi_xpoint(1)
+        ES%psi_bnd        = ES%psi_xpoint(1)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = LOWER_XPOINT
         
       else if ( (xcase==UPPER_XPOINT) ) then
         
-        ES%psi_bnd        = corr_fact * ES%psi_xpoint(2)
+        ES%psi_bnd        = ES%psi_xpoint(2)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = UPPER_XPOINT
         
@@ -138,11 +133,11 @@ module equil_info
         
         ES%limiter_plasma = .false.
         
-        if ( corr_fact*ES%psi_xpoint(1) < corr_fact*ES%psi_xpoint(2) ) then
-          ES%psi_bnd       = corr_fact * ES%psi_xpoint(1)
+        if ( abs(ES%psi_axis-ES%psi_xpoint(1)) < abs(ES%psi_axis-ES%psi_xpoint(2)) ) then
+          ES%psi_bnd       = ES%psi_xpoint(1)
           ES%active_xpoint = LOWER_XPOINT
         else
-          ES%psi_bnd       = corr_fact * ES%psi_xpoint(2)
+          ES%psi_bnd       = ES%psi_xpoint(2)
           ES%active_xpoint = UPPER_XPOINT
         end if
         
@@ -156,13 +151,11 @@ module equil_info
       
     else ! (limiter plasma)
       
-      ES%psi_bnd        = corr_fact * ES%psi_lim
+      ES%psi_bnd        = ES%psi_lim
       ES%limiter_plasma = .true.
       ES%active_xpoint  = 0
       
     end if
-    
-    ES%psi_bnd = ES%psi_bnd * corr_fact ! Undo corr_fact
     
     ! --- psi_axis < psi_bnd or > psi_bnd?
     ES%axis_is_psi_minimum = ( ES%psi_axis < ES%psi_bnd )

@@ -9,6 +9,7 @@ MODEL = model303
 # Fortran compiler 
 FC     = mpif90 -mt_mpi -openmp
 CC     = mpicc  -mt_mpi -openmp
+CXX    = mpicxx -mt_mpi -openmp
 
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4

@@ -6,6 +6,7 @@ MODEL = model302
 # Fortran compiler 
 FC     = mpif90 -f90=ifort
 CC     = mpicc
+CXX    = mpicxx -f90=icpc
 
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4

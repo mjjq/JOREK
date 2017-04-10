@@ -7,6 +7,7 @@ MODEL = model500
 FC     = mpif90 
 # C compiler
 CC     = mpicc -Wall
+CXX    = mpicxx
 
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4

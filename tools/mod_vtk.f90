@@ -22,9 +22,9 @@ integer :: nnos, nel, nnoel
 lf = char(10) ! line feed character
 
 #ifdef IBM_MACHINE
-open(unit=ivtk,file=filename,form='unformatted',access='stream')
+open(unit=ivtk,file=filename,form='unformatted',status="replace",access='stream')
 #else
-open(unit=ivtk,file=filename,form='unformatted',access='stream',convert='BIG_ENDIAN')
+open(unit=ivtk,file=filename,form='unformatted',status="replace",access='stream',convert='BIG_ENDIAN')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)

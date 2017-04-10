@@ -42,9 +42,10 @@ ifeq ($(COMPILER_FAMILY), gnu)
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
-    FLAGS  += -fcheck=all
     FLAGS  += -Wunused-variable
-    FLAGS  += -ffpe-trap=invalid,zero,overflow -ftrapv
+    FFLAGS += -fcheck=all
+    FFLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv
+    FFLAGS += -finit-real=snan
     FFLAGS += -Wimplicit-interface -Wimplicit-procedure
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none

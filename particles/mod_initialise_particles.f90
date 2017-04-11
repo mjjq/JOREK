@@ -203,7 +203,8 @@ end subroutine initialise_particles
 !> Set Psi_transform to transform from [0,1] to your desired range
 subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         Theta_transform, Psi_transform, alpha, E_max, include_vpar, uniform_space, &
-        uniform_space_rej_f, uniform_space_rej_vars, cor, charge)
+        uniform_space_rej_f, uniform_space_rej_vars, uniform_space_rej_include_gradients, &
+        cor, charge)
   use mod_rng
   use mod_fields
   use mod_random_seed
@@ -230,6 +231,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*4, external, optional                        :: uniform_space_rej_f !< Merge variables into a single criterium between 0 and 1 for rej.  sampling
   !< Special values: 0 = 1, -1 = R, -2 = Z, -3 = Phi. Must be in ascending order!
   integer, dimension(:), intent(in), optional       :: uniform_space_rej_vars !< Variables to use for uniform_space_rej_f
+  logical, intent(in), optional                     :: uniform_space_rej_include_gradients !< Calculate gradient vectors of vars (default false)
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
   integer, intent(in), optional                     :: charge !< Use this if cor is not present
 
@@ -242,7 +244,8 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3)
   real*8, dimension(1) :: P, P_s, P_t, P_phi
   real*8, dimension(:), allocatable :: P2
-  real*8  :: R_s, R_t, Z_s, Z_t
+  real*8, dimension(:,:), allocatable :: grad_P2
+  real*8  :: R_s, R_t, Z_s, Z_t, R_i, Z_i, xjac
   real*8  :: s, t, u_init_max, temp
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis
   integer :: i_elm, i, j, k, ifail, my_id, n_cpu, ierr, n_mhd, n_geom
@@ -280,6 +283,9 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     allocate(P2(size(uniform_space_rej_vars,1)))
     n_mhd = count(uniform_space_rej_vars .gt. 0)
     n_geom = size(uniform_space_rej_vars, 1) - n_mhd
+    if (present(uniform_space_rej_include_gradients) .and. uniform_space_rej_include_gradients) then
+      allocate(grad_P2(3,size(uniform_space_rej_vars,1)))
+    end if
   else
     n_mhd = 0
     n_geom = 0
@@ -359,9 +365,11 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
     !$omp parallel do default(none) &
     !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, &
+    !$omp           R_i, Z_i, xjac, grad_P2, &
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp, ifail, DUMMY_REAL) &
     !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, &
     !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, &
+    !$omp          uniform_space_rej_include_gradients, &
     !$omp          my_include_vpar, central_density, init_uniform_space, Rbox, Zbox, uniform_space_rej_vars, n_geom, n_mhd)
     do i=1,blocksize
       ran(:) = rans(:,i)
@@ -371,20 +379,48 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         call find_RZ(fields%node_list,fields%element_list,R,Z,DUMMY_REAL,DUMMY_REAL,i_elm,s,t,ifail)
         
         if (present(uniform_space_rej_f) .and. i_elm .ne. 0) then
-          if (n_mhd .ge. 1) then
-            call interp4(fields%node_list,fields%element_list,i_elm, &
-              uniform_space_rej_vars(n_geom+1:n_geom+n_mhd),n_mhd,s,t,phi,P2(n_geom+1:n_geom+n_mhd))
-          end if
           do k=1,n_geom
             select case (uniform_space_rej_vars(k))
-            case (0);  P2(k) = 1.d0
-            case (-1); P2(k) = R
-            case (-2); P2(k) = Z
-            case (-3); P2(k) = phi
+            case (0);  P2(k) = 1.d0;
+            case (-1); P2(k) = R;
+            case (-2); P2(k) = Z;
+            case (-3); P2(k) = phi;
             end select
           end do
 
-          if (uniform_space_rej_f(P2) .lt. ran(7)) i_elm = 0
+          if (present(uniform_space_rej_include_gradients) .and. uniform_space_rej_include_gradients) then
+            do k=1,n_geom
+              select case (uniform_space_rej_vars(k))
+              case (0);  grad_P2(:,k) = 0.d0; ! 0
+              case (-1); grad_P2(:,k) = [1.d0,0.d0,0.d0]; ! R
+              case (-2); grad_P2(:,k) = [0.d0,1.d0,0.d0]; ! Z
+              case (-3); grad_P2(:,k) = [0.d0,0.d0,1.d0]; ! phi
+              end select
+            end do
+
+            if (n_mhd .ge. 1) then
+              call interp_PRZ(fields%node_list,fields%element_list,i_elm, &
+                uniform_space_rej_vars(n_geom+1:n_geom+n_mhd),n_mhd,s,t,phi,P2(n_geom+1:n_geom+n_mhd), & ! P
+                grad_P2(1,n_geom+1:n_geom+n_mhd), grad_P2(2,n_geom+1:n_geom+n_mhd), grad_P2(3,n_geom+1:n_geom+n_mhd), & ! P_s, P_t, P_phi
+                R_i, R_s, R_t, Z_i, Z_s, Z_t)
+              xjac = R_s*Z_t - R_t*Z_s
+              do k=1,n_mhd
+                grad_P2(1:2,n_geom+k) = [Z_t * grad_P2(1,n_geom+k) - Z_s * grad_P2(2,n_geom+k), &
+                                        -R_t * grad_P2(1,n_geom+k) + R_s * grad_P2(2,n_geom+k)]/xjac
+              end do
+            end if
+          else
+            if (n_mhd .ge. 1) then
+              call interp4(fields%node_list,fields%element_list,i_elm, &
+                uniform_space_rej_vars(n_geom+1:n_geom+n_mhd),n_mhd,s,t,phi,P2(n_geom+1:n_geom+n_mhd))
+            end if
+          end if
+
+          if (present(uniform_space_rej_include_gradients) .and. uniform_space_rej_include_gradients) then
+            if (uniform_space_rej_f(P2, grad_P2) .lt. ran(7)) i_elm = 0
+          else
+            if (uniform_space_rej_f(P2) .lt. ran(7)) i_elm = 0
+          end if
         end if
       else
         if (present(Psi_transform)) then

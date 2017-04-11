@@ -14,7 +14,7 @@ type, extends(io_action), abstract :: project_particles_base
   type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
   type(type_element_list), allocatable :: element_list
   real*8 :: smoothing !< Smoothing factor used for this projection
-  type (DMUMPS_STRUC), private :: projection_matrix
+  type (DMUMPS_STRUC), private :: mumps_par
   !< is factored by mumps
 end type project_particles_base
 
@@ -66,7 +66,7 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
   new%name = "ProjectToVtk"
   new%log = .true.
 
-  call prepare_projection_matrix(new%node_list, new%element_list, new%projection_matrix, new%smoothing)
+  call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
 
   ! Precalculate the node positions in the vtk file and the connectivity
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
@@ -98,7 +98,7 @@ function new_project_to_h5(node_list, element_list, smoothing, filename, basenam
   new%name = "ProjectToH5"
   new%log = .true.
 
-  call prepare_projection_matrix(new%node_list, new%element_list, new%projection_matrix, new%smoothing)
+  call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
 end function new_project_to_h5
 
 !> Action for projecting all particles and writing output to vtk
@@ -121,7 +121,7 @@ subroutine project_and_save_to_vtk(this, sim, ev)
 
   do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
     if (.not. allocated(sim%groups(i)%particles)) cycle
-    call project_particles(this%node_list, this%element_list, this%projection_matrix, &
+    call project_particles(this%node_list, this%element_list, this%mumps_par, &
         sim%groups(i)%particles, i)
     ! results are saved only on mpi process 0
   end do
@@ -174,7 +174,7 @@ subroutine project_and_save_to_h5(this, sim, ev)
 
   do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
     if (.not. allocated(sim%groups(i)%particles)) cycle
-    call project_particles(this%node_list, this%element_list, this%projection_matrix, &
+    call project_particles(this%node_list, this%element_list, this%mumps_par, &
         sim%groups(i)%particles, i)
     ! results are saved only on mpi process 0
   end do
@@ -220,7 +220,7 @@ end subroutine project_and_save_to_h5
 !> divide by 1 or 2pi on both sides (LHS gets 2pi for n=0 mode, 1pi for other modes)
 !>
 !> See also [project_particles]
-subroutine prepare_projection_matrix(node_list, element_list, projection_matrix, smoothing)
+subroutine prepare_mumps_par(node_list, element_list, mumps_par, smoothing)
 use phys_module
 use data_structure
 use basis_at_gaussian
@@ -230,7 +230,7 @@ implicit none
 
 type (type_node_list), intent(inout) :: node_list !< A copy of the node list which will be used to save variables
 type (type_element_list), intent(in) :: element_list
-type (DMUMPS_STRUC), intent(inout)   :: projection_matrix
+type (DMUMPS_STRUC), intent(inout)   :: mumps_par
 real*8, intent(in)                   :: smoothing
 
 type (type_element)      :: element
@@ -246,11 +246,11 @@ integer    :: nz_AA, n_AA, i_elm, index_ij, index_kl
 integer    :: ms, mt, n_p, my_id, ierr
 
 ! Initialise MUMPS
-projection_matrix%COMM = MPI_COMM_WORLD
-projection_matrix%JOB  = -1
-projection_matrix%SYM  = 0
-projection_matrix%PAR  = 1
-call DMUMPS(projection_matrix)
+mumps_par%COMM = MPI_COMM_WORLD
+mumps_par%JOB  = -1
+mumps_par%SYM  = 0
+mumps_par%PAR  = 1
+call DMUMPS(mumps_par)
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
@@ -262,19 +262,19 @@ write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
 write(*,*) ' nz_AA                   : ',nz_AA
 
 ! Allocate space for elements
-allocate(projection_matrix%A(nz_AA),projection_matrix%irn(nz_AA),projection_matrix%jcn(nz_AA))
-allocate(projection_matrix%rhs(n_AA))
-projection_matrix%irn = 0
-projection_matrix%jcn = 0
-projection_matrix%A   = 0.d0
-projection_matrix%RHS = 0.d0
+allocate(mumps_par%A(nz_AA),mumps_par%irn(nz_AA),mumps_par%jcn(nz_AA))
+allocate(mumps_par%rhs(n_AA))
+mumps_par%irn = 0
+mumps_par%jcn = 0
+mumps_par%A   = 0.d0
+mumps_par%RHS = 0.d0
 
 area = 0.
 volume = 0.
 
 write(*,*) 'constructing particle projection matrix'
 !$omp parallel do default(shared) & ! instead of none, bugfix for gfortran: https://groups.google.com/forum/#!topic/comp.lang.fortran/VKhoAm8m9KE
-!$omp shared(element_list, node_list, H, H_s, H_t, projection_matrix) &
+!$omp shared(element_list, node_list, H, H_s, H_t, mumps_par) &
 !$omp private(ELM, i_elm, element, nodes, i, j, ms, mt, &
 !$omp         x_g, y_g, x_s, x_t, y_s, y_t, wst, xjac, &
 !$omp         index_ij, index_kl, psi, psi_x, psi_y, ilarge, &
@@ -358,9 +358,9 @@ do i_elm=1,element_list%n_elements
           ilarge = l + (k-1)*(n_order+1) + (j-1)*(n_vertex_max*(n_order+1)) + (i-1)*(n_vertex_max*(n_order+1)**2) &
                      + (i_elm-1)*(n_vertex_max*(n_order+1))**2
 
-          projection_matrix%irn(ilarge) = index_large_i
-          projection_matrix%jcn(ilarge) = index_large_k
-          projection_matrix%A(ilarge)   = ELM(index_ij,index_kl)
+          mumps_par%irn(ilarge) = index_large_i
+          mumps_par%jcn(ilarge) = index_large_k
+          mumps_par%A(ilarge)   = ELM(index_ij,index_kl)
         enddo
       enddo
     enddo
@@ -373,21 +373,21 @@ write(*,'(A,e14.6)') ' Volume      : ',volume
 end if
 
 ! Perform the analysis and factorisation with all nodes
-projection_matrix%JOB       = 4
-projection_matrix%n         = n_AA
-projection_matrix%nz        = nz_AA
-projection_matrix%icntl(5)  = 0 ! assembled form
-projection_matrix%icntl(18) = 0 ! centralized (i.e. only on cpu 0)
-projection_matrix%icntl(7)  = 4 ! compute symmetric perturbation? (if 1)
-projection_matrix%icntl(8)  = 7 ! scaling
-projection_matrix%icntl(14) = 80 ! memory relaxation parameter
-projection_matrix%icntl(4)  = 2 ! Print errors, warnings and main statistics
-call DMUMPS(projection_matrix)
-end subroutine prepare_projection_matrix
+mumps_par%JOB       = 4
+mumps_par%n         = n_AA
+mumps_par%nz        = nz_AA
+mumps_par%icntl(5)  = 0 ! assembled form
+mumps_par%icntl(18) = 0 ! centralized (i.e. only on cpu 0)
+mumps_par%icntl(7)  = 4 ! compute symmetric perturbation? (if 1)
+mumps_par%icntl(8)  = 7 ! scaling
+mumps_par%icntl(14) = 80 ! memory relaxation parameter
+mumps_par%icntl(4)  = 2 ! Print errors, warnings and main statistics
+call DMUMPS(mumps_par)
+end subroutine prepare_mumps_par
 
 
 !> Perform the actual projection of a set of particles on variable ivar_out in node_list.
-subroutine project_particles(node_list, element_list, projection_matrix, particles, ivar_out)
+subroutine project_particles(node_list, element_list, mumps_par, particles, ivar_out)
 use phys_module
 use data_structure
 use mod_basisfunctions
@@ -397,7 +397,7 @@ implicit none
 
 type (type_node_list), intent(inout) :: node_list !< A copy of the node list which will be used to save variables
 type (type_element_list), intent(in) :: element_list
-type (DMUMPS_STRUC), intent(inout)   :: projection_matrix
+type (DMUMPS_STRUC), intent(inout)   :: mumps_par
 class (particle_base), intent(in), dimension(:)    :: particles
 integer, intent(in) :: ivar_out
 
@@ -408,7 +408,7 @@ integer    :: i_elm, index, index_ij, my_id, ierr
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
-allocate(RHS(n_vertex_max*(n_order+1),element_list%n_elements),my_rhs(projection_matrix%n), sum_rhs(projection_matrix%n))
+allocate(RHS(n_vertex_max*(n_order+1),element_list%n_elements),my_rhs(mumps_par%n), sum_rhs(mumps_par%n))
 ! Create the RHS and calculate the projection
 do i_tor=1, n_tor
   RHS = 0.d0
@@ -465,22 +465,22 @@ do i_tor=1, n_tor
 
   ! Gather the RHS's to the root process
   ! but ifort complains otherwise
-  call MPI_Reduce(my_rhs,sum_rhs,projection_matrix%n, &
+  call MPI_Reduce(my_rhs,sum_rhs,mumps_par%n, &
       MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   ! Compute the solution of Ax=b (b = RHS)
-  projection_matrix%JOB = 3
-  projection_matrix%icntl(21) = 0 ! solution is available only on host
-  projection_matrix%icntl(4)  = 1 ! print only errors
+  mumps_par%JOB = 3
+  mumps_par%icntl(21) = 0 ! solution is available only on host
+  mumps_par%icntl(4)  = 1 ! print only errors
   if (my_id .eq. 0) then
-    projection_matrix%rhs = sum_rhs
+    mumps_par%rhs = sum_rhs
   end if
-  call DMUMPS(projection_matrix)
+  call DMUMPS(mumps_par)
 
   if (my_id .eq. 0) then
     do i=1,node_list%n_nodes
       do k=1,n_order+1
         index = node_list%node(i)%index(k)
-        node_list%node(i)%values(i_tor,k,ivar_out) = projection_matrix%rhs(index)
+        node_list%node(i)%values(i_tor,k,ivar_out) = mumps_par%rhs(index)
       enddo    ! order
     enddo      ! nodes
   end if

@@ -538,7 +538,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
   character*50         :: version_control, version_control_tmp
   logical              :: kept
-  integer              :: my_id, ierr
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -582,11 +581,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   error = 0
 #ifdef USE_HDF5
   
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-  if (my_id .eq. 0) then
-    ! ->  Reading HDF5 file
-    write(*,*) 'Importing HDF5 restart file "', trim(filename), '".' 
-  end if
+  ! ->  Reading HDF5 file
+  write(*,*) 'Importing HDF5 restart file "', trim(filename), '".' 
   
   ! -> Open HDF5 file
   call HDF5_open(trim(filename),file_id,error)
@@ -993,12 +989,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_close(file_id)
  
-  if (my_id .eq. 0) then
-    write(*,*) '************* restart ******************'
-    write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
-    write(*,'(A19,I4,A)') ' *  HDF5 files read : ',h5_nbsave_all,' *'
-    write(*,*) '****************************************'
-  end if
+  write(*,*) '************* restart ******************'
+  write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
+  write(*,'(A19,I4,A)') ' *  HDF5 files read : ',h5_nbsave_all,' *'
+  write(*,*) '****************************************'
   
   do i=2,index_start
     if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
@@ -1020,7 +1014,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   ! --- initialise new harmonics (only density and temperature, to be improved)
   n_new_modes = sum(new_mode(1:n_tor))
-  if (my_id .eq. 0 .and. n_new_modes .gt. 0) then
+  if (n_new_modes .gt. 0) then
     write(*,*), 'Warning:', n_new_modes, ' new modes initialized to noise level' 
   end if
   if ( n_new_modes .gt. 0 ) then

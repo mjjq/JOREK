@@ -7,24 +7,35 @@ implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 private
 public project_particles, write_particle_distribution_to_vtk
-public project_to_vtk
+public project_to_vtk, project_to_h5
 
 !> Action to project all particle distributions and save them to vtk
-type, extends(io_action) :: project_to_vtk
+type, extends(io_action), abstract :: project_particles_base
   type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
   type(type_element_list), allocatable :: element_list
   real*8 :: smoothing !< Smoothing factor used for this projection
-  integer :: nsub !< Number of subdivisions to make
   type (DMUMPS_STRUC), private :: projection_matrix
+  !< is factored by mumps
+end type project_particles_base
+
+type, extends(project_particles_base) :: project_to_vtk
+  integer :: nsub !< Number of subdivisions to make
   real*4,allocatable, private  :: xyz (:,:) !< positions of points in vtk file
   integer,allocatable, private :: ien (:,:) !< connectivity in vtk file
-  !< is factored by mumps
 contains
   procedure :: do => project_and_save_to_vtk
 end type project_to_vtk
 interface project_to_vtk
   module procedure new_project_to_vtk
 end interface project_to_vtk
+
+type, extends(project_particles_base) :: project_to_h5
+contains
+  procedure :: do => project_and_save_to_h5
+end type project_to_h5
+interface project_to_h5
+  module procedure new_project_to_h5
+end interface project_to_h5
 
 contains
 !> Constructor for project_to_vtk
@@ -45,6 +56,7 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
   allocate(new%element_list, source=element_list)
   new%smoothing = smoothing
   new%nsub = 4
+  new%basename = "proj"
   if (present(nsub)) new%nsub = nsub
   if (present(filename)) new%filename = filename
   if (present(basename)) new%basename = basename
@@ -60,6 +72,34 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   if (my_id .eq. 0) call prepare_write_particle_distribution_to_vtk(new%node_list, new%element_list,new%nsub,new%xyz,new%ien)
 end function new_project_to_vtk
+
+!> Constructor for project_to_h5
+!> Be sure to use keyword arguments when initializing, to avoid confusion
+function new_project_to_h5(node_list, element_list, smoothing, filename, basename, decimal_digits, fractional_digits) result(new)
+  use mpi
+  type(project_to_h5) :: new
+  type(type_node_list), intent(in)       :: node_list
+  type(type_element_list), intent(in)    :: element_list
+  real*8, intent(in)                     :: smoothing
+  character(len=*), intent(in), optional :: filename
+  character(len=*), intent(in), optional :: basename
+  integer, intent(in), optional          :: decimal_digits
+  integer, intent(in), optional          :: fractional_digits
+  integer :: my_id, ierr
+  allocate(new%node_list,    source=node_list)
+  allocate(new%element_list, source=element_list)
+  new%smoothing = smoothing
+  new%basename = "proj"
+  if (present(filename)) new%filename = filename
+  if (present(basename)) new%basename = basename
+  if (present(decimal_digits)) new%decimal_digits = decimal_digits
+  if (present(fractional_digits)) new%fractional_digits = fractional_digits
+  new%extension ='.h5'
+  new%name = "ProjectToH5"
+  new%log = .true.
+
+  call prepare_projection_matrix(new%node_list, new%element_list, new%projection_matrix, new%smoothing)
+end function new_project_to_h5
 
 !> Action for projecting all particles and writing output to vtk
 subroutine project_and_save_to_vtk(this, sim, ev)
@@ -112,6 +152,61 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   !$ oend = omp_get_wtime()
   write(*,*) "writing wall/cpu", oend-ostart, t1-t0
 end subroutine project_and_save_to_vtk
+
+
+!> Action for projecting all particles and writing output to vtk
+subroutine project_and_save_to_h5(this, sim, ev)
+  use mpi
+  use mod_event
+  !$ use omp_lib
+  class(project_to_h5), intent(inout)  :: this
+  type(particle_sim), intent(inout)    :: sim
+  type(event), intent(inout), optional :: ev
+  integer :: i, my_id, ierr
+  character(len=120) :: filename
+  real*8 :: t0, t1, ostart, oend
+
+  call cpu_time(t0)
+  !$ ostart = omp_get_wtime()
+  ! Safety checks
+  if (.not. allocated(sim%groups)) return
+
+
+  do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
+    if (.not. allocated(sim%groups(i)%particles)) cycle
+    call project_particles(this%node_list, this%element_list, this%projection_matrix, &
+        sim%groups(i)%particles, i)
+    ! results are saved only on mpi process 0
+  end do
+  call cpu_time(t1)
+  !$ oend = omp_get_wtime()
+  write(*,*) "projection wall/cpu", oend-ostart, t1-t0
+
+  if (len_trim(this%filename) .eq. 0) then
+    filename = this%get_filename(sim%time)
+  else
+    filename = this%filename
+  end if
+
+  call cpu_time(t0)
+  !$ ostart = omp_get_wtime()
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  if (my_id .eq. 0) then
+    ! write only on the host
+    call write_particle_distribution_to_h5(this%node_list, this%element_list, &
+      trim(filename), min(size(sim%groups),n_var), sim%time)
+
+    write(*,*) "Written projection to ", trim(filename)
+  end if
+  ! Communicate these to all processors
+  call broadcast_elements(my_id, this%element_list)
+  call broadcast_nodes(my_id, this%node_list)
+  call cpu_time(t1)
+  !$ oend = omp_get_wtime()
+  write(*,*) "writing wall/cpu", oend-ostart, t1-t0
+end subroutine project_and_save_to_h5
+
+
 
 !> Project particles by weight onto the elements
 !> Saves output in node_list%values(1)
@@ -445,6 +540,111 @@ do i=1,element_list%n_elements
   enddo
 enddo  ! n_elements
 end subroutine prepare_write_particle_distribution_to_vtk
+
+
+
+!> Save a particle distribution in a sort of minimized JOREK restart format.
+!> This contains only: n_tor, n_period, n_fields->n_var, n_vertex_max, vertex, x, size, n_elements, values
+!> neighbours, RCS_version
+!> model=-1 to signify that the variables have not the expected meaning
+subroutine write_particle_distribution_to_h5(node_list,element_list,filename,n_fields,time)
+use data_structure
+use hdf5
+use hdf5_io_module
+use tr_module
+!$ use omp_lib
+implicit none
+
+!> Input parameters
+type(type_node_list), intent(in)    :: node_list
+type(type_element_list), intent(in) :: element_list
+character*(*), intent(in)           :: filename
+integer, intent(in) :: n_fields !< number of different particle groups to output
+real*8, intent(in) :: time
+
+ 
+#include "version.h"
+! --- Local variables
+integer :: i
+character*50             :: version_control
+
+integer(HID_T)     :: file_id
+integer            :: ind, ierr
+
+! type_node, node_list%n_nodes
+real(RKIND), allocatable :: t_x(:,:,:)                   ! n_order+1, n_dim
+real(RKIND), allocatable :: t_values(:,:,:,:)            ! n_tor, n_order+1, n_fields
+
+! element, element_list%n_elements
+integer,     allocatable :: t_vertex(:,:)                ! n_vertex_max
+integer,     allocatable :: t_neighbours(:,:)            ! n_vertex_max
+real(RKIND), allocatable :: t_size(:,:,:)                ! n_vertex_max,n_order+1
+
+! type_node, node_list%n_nodes
+call tr_allocate(t_x,1,node_list%n_nodes,1,n_order+1,1,n_dim, &
+     "node_list%x",CAT_UNKNOWN)
+call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_fields, &
+     "node_list%values",CAT_UNKNOWN)
+
+! element_list%n_elements
+call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max,"vertex",CAT_UNKNOWN)
+call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max,"neighbours",CAT_UNKNOWN)
+call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1,"size",CAT_UNKNOWN)
+
+do i=1,node_list%n_nodes
+   t_x(i,:,:)        = node_list%node(i)%x
+   t_values(i,:,:,:) = node_list%node(i)%values(:,:,1:n_fields)
+end do
+
+do i=1,element_list%n_elements
+  t_vertex(i,:)       = element_list%element(i)%vertex
+  t_neighbours(i,:)   = element_list%element(i)%neighbours
+  t_size(i,:,:)       = element_list%element(i)%size
+end do
+
+! -> Create and open HDF5 file
+call HDF5_create(trim(filename),file_id,ierr)
+if (ierr.ne.0) then
+  write(*,*) ' ==> error for opening of HDF5 file',filename
+end if
+  
+! -> Save version of revision control system
+write(version_control,'(A)') trim(adjustl(RCS_VERSION))
+version_control = trim(adjustl(version_control))
+call HDF5_char_saving(file_id,version_control,"RCS_version"//char(0))
+
+! -> Save parameters
+call HDF5_integer_saving(file_id,-1,'jorek_model'//char(0)) ! Indicate that this is not a normal JOREK model
+call HDF5_integer_saving(file_id,n_fields,'n_var'//char(0))
+call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
+call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
+call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
+call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
+call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))
+call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0))
+call HDF5_integer_saving(file_id,n_elements_max,'n_elements_max'//char(0))
+
+! -> 
+call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
+call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
+call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
+
+call HDF5_array3D_saving(file_id,t_x, &
+     node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+call HDF5_array4D_saving(file_id,t_values, &
+     node_list%n_nodes,n_tor,n_order+1,n_fields,'values'//char(0))
+
+call HDF5_array2D_saving_int(file_id,t_vertex, &
+     element_list%n_elements,n_vertex_max,'vertex'//char(0))
+call HDF5_array2D_saving_int(file_id,t_neighbours, &
+     element_list%n_elements,n_vertex_max,'neighbours'//char(0))
+call HDF5_array3D_saving(file_id,t_size, &
+     element_list%n_elements,n_vertex_max,n_order+1,'size'//char(0))
+call HDF5_real_saving(file_id,time,'t_now'//char(0))
+
+! -> close file
+call HDF5_close(file_id)
+end subroutine write_particle_distribution_to_h5
 
 
 !> Helper subroutine to write a particle distribution, saved in variables 1:n,

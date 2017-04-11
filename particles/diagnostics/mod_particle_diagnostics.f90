@@ -18,9 +18,9 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2
-integer, parameter :: n_var = 8
-character(len=10)  :: var_names(n_var) = ["E      ", "mu     ", "P_phi  ", "Psi_bar", "Psi    ", "weight ", "lost   ", "q      "]
-integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4]
+integer, parameter :: n_var = 9
+character(len=10)  :: var_names(n_var) = ["E      ", "mu     ", "P_phi  ", "Psi_bar", "Psi    ", "weight ", "lost   ", "q      ", "region "]
+integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4]
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
 ! HDF5 does not support booleans, use INT4
@@ -292,31 +292,56 @@ end subroutine create_constants_time_dataset
 !> mask is .f. if a particle is lost. Those values in out are set to 0.d0
 subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_stats, int_stats, mask)
   use mod_particle_types
-  use phys_module, only: F0
+  use phys_module, only: F0, xpoint, xcase
   use constants
   use mod_boris
   use mod_fields_linear
+  use domains
   class(fields_base), intent(in)                               :: fields
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
   real*8, intent(in)                                           :: mass
   real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Psi_bar, Psi, weight)
-  integer, dimension(:,:), intent(out)                         :: int_stats !< List of values (q, lost)
+  integer, dimension(:,:), intent(out)                         :: int_stats !< List of values (q, lost, region)
   logical, dimension(:), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
   real*8               :: inv_st_jac, psi_R, psi_Z, B(3), v_par
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
   type(particle_gc)    :: particle
 
-  integer :: i
+  integer :: i, ifail
+  integer :: domain, i_elm_axis, i_elm_xpoint(2)
+  real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_limit
+  real*8, dimension(2) :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
+
+  !! Preparation (force my_id to 1 to suppress message)
+  call find_axis(1,fields%node_list,fields%element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
+  if (xpoint) then
+    call find_xpoint(1,fields%node_list,fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+    psi_limit  = psi_xpoint(1)
+    if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+      psi_limit = psi_xpoint(2)
+    endif
+  else
+    psi_limit = 0.d0
+  endif
+
+  ! Call which_domain once to setup saved values
+  domain = which_domain(fields%node_list, fields%element_list, &
+      0.d0, 0.d0, &
+      0.d0, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
+      R_axis, Z_axis, psi_axis)
+
 
   if (present(mask)) mask = .true.
   real_stats = 0.d0
   int_stats  = 0
   !$omp parallel do default(none) &
-  !$omp shared(particles, fields, int_stats, real_stats, mask, time, f0, mass) &
+  !$omp shared(particles, fields, int_stats, real_stats, mask, time, f0, mass, &
+  !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
   !$omp private(P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t, &
-  !$omp inv_st_jac, psi_R, psi_Z, B, particle, v_par)
+  !$omp inv_st_jac, psi_R, psi_Z, B, particle, v_par, domain)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
@@ -381,6 +406,13 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       int_stats(i,2) = particle%q
       ! 2. lost (boolean)
       int_stats(i,1) = 0
+      ! 3. region (enum)
+      domain = which_domain(fields%node_list, fields%element_list, &
+          particle%x(1), particle%x(2), &
+          P(1), xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
+          R_axis, Z_axis, psi_axis)
+      int_stats(i,3) = domain
+
     endif
   enddo
   !$omp end parallel do

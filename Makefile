@@ -91,6 +91,25 @@ endif
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 # To compile all programs found in $(DIRS)
 all: $(basename $(notdir $(PROGRAM_SOURCES)))
+# A list of supported diagnostics, that should compile properly for regression
+# testing to pass
+most: jorek2_connection2 \
+      jorek2_connection_stan \
+      jorek2_diagno \
+      jorek2_fieldlines_vtk \
+      jorek2_four \
+      jorek2_poincare \
+      jorek2_powers \
+      jorek2_target2vtk \
+      jorek2vtk_3d \
+      jorek2vtk \
+      jorek2vtk_GaussVortTerms \
+      jorek_to_helena \
+      new_diag_demo \
+      jorek2_postproc \
+      rst_bin2hdf5 \
+      rst_hdf52bin \
+      jorek2_main
 
 # Special cases
 # Add here: Global includes (as the line below)
@@ -101,7 +120,7 @@ CXXFLAGS += -pedantic -Wall
 
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
-eqdsk2jorek: LIBS+=-ldierckx
+eqdsk2jorek: LIBS+=$(LIBDIERCKX)
 
 # Is this used by anyone? Otherwise we could remove it
 # It is not updated to this format yet.

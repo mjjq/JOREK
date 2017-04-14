@@ -21,7 +21,8 @@ type(type_element_list), intent(inout) :: element_list   !< list of finite eleme
 integer                  :: m, n, i, j, k, iv, inode_0, inode_p, inode, n_elements, i_element, ip, iuv
 integer                  :: n_element_start, n_node_start, n_index_start
 real*8                   :: xx_0(n_dim),xx_p(n_dim),uv_0(n_dim),uv_p(n_dim)
-real*8, external         :: dlength, ddot
+real*8, external         :: dlength
+real*8, external         :: ddot
 
 write(*,*) '*************************************'
 write(*,*) '*       grid_bezier_square          *'

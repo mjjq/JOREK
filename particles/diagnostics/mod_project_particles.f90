@@ -7,6 +7,7 @@ implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 private
 public project_particles, write_particle_distribution_to_vtk
+public prepare_mumps_par, write_particle_distribution_to_h5
 public project_to_vtk, project_to_h5
 
 !> Action to project all particle distributions and save them to vtk
@@ -24,6 +25,7 @@ type, extends(project_particles_base) :: project_to_vtk
   integer,allocatable, private :: ien (:,:) !< connectivity in vtk file
 contains
   procedure :: do => project_and_save_to_vtk
+  final :: close_mumps_vtk
 end type project_to_vtk
 interface project_to_vtk
   module procedure new_project_to_vtk
@@ -32,6 +34,7 @@ end interface project_to_vtk
 type, extends(project_particles_base) :: project_to_h5
 contains
   procedure :: do => project_and_save_to_h5
+  final :: close_mumps_h5
 end type project_to_h5
 interface project_to_h5
   module procedure new_project_to_h5
@@ -100,6 +103,21 @@ function new_project_to_h5(node_list, element_list, smoothing, filename, basenam
 
   call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
 end function new_project_to_h5
+
+!> Destructor to cleanly deallocate mumps memory
+!> This might go wrong if mumps was never started (with job=-1)
+!> if people use the constructors in this file that will not happen
+!> we need two different destructors for some reason
+subroutine close_mumps_h5(this)
+  type(project_to_h5) :: this
+  this%mumps_par%JOB = -2
+  call DMUMPS(this%mumps_par)
+end subroutine close_mumps_h5
+subroutine close_mumps_vtk(this)
+  type(project_to_vtk) :: this
+  this%mumps_par%JOB = -2
+  call DMUMPS(this%mumps_par)
+end subroutine close_mumps_vtk
 
 !> Action for projecting all particles and writing output to vtk
 subroutine project_and_save_to_vtk(this, sim, ev)
@@ -220,7 +238,7 @@ end subroutine project_and_save_to_h5
 !> divide by 1 or 2pi on both sides (LHS gets 2pi for n=0 mode, 1pi for other modes)
 !>
 !> See also [project_particles]
-subroutine prepare_mumps_par(node_list, element_list, mumps_par, smoothing)
+subroutine prepare_mumps_par(node_list, element_list, mumps_par, smoothing, skip_factorisation)
 use phys_module
 use data_structure
 use basis_at_gaussian
@@ -232,6 +250,7 @@ type (type_node_list), intent(inout) :: node_list !< A copy of the node list whi
 type (type_element_list), intent(in) :: element_list
 type (DMUMPS_STRUC), intent(inout)   :: mumps_par
 real*8, intent(in)                   :: smoothing
+logical, intent(in), optional        :: skip_factorisation
 
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
@@ -254,7 +273,7 @@ call DMUMPS(mumps_par)
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
-n_AA = maxval(node_list%node(:)%index(4))
+n_AA = maxval(node_list%node(1:node_list%n_nodes)%index(4))
 
 ! Only perform the construction of the matrix on the host
 if (my_id .eq. 0) then
@@ -272,7 +291,9 @@ mumps_par%RHS = 0.d0
 area = 0.
 volume = 0.
 
-write(*,*) 'constructing particle projection matrix'
+write(*,*) '*******************************************'
+write(*,*) '* constructing particle projection matrix *'
+write(*,*) '*******************************************'
 !$omp parallel do default(shared) & ! instead of none, bugfix for gfortran: https://groups.google.com/forum/#!topic/comp.lang.fortran/VKhoAm8m9KE
 !$omp shared(element_list, node_list, H, H_s, H_t, mumps_par) &
 !$omp private(ELM, i_elm, element, nodes, i, j, ms, mt, &
@@ -382,7 +403,10 @@ mumps_par%icntl(7)  = 4 ! compute symmetric perturbation? (if 1)
 mumps_par%icntl(8)  = 7 ! scaling
 mumps_par%icntl(14) = 80 ! memory relaxation parameter
 mumps_par%icntl(4)  = 2 ! Print errors, warnings and main statistics
-call DMUMPS(mumps_par)
+if (present(skip_factorisation) .and. skip_factorisation) then
+else
+  call DMUMPS(mumps_par)
+endif
 end subroutine prepare_mumps_par
 
 
@@ -410,13 +434,15 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 allocate(RHS(n_vertex_max*(n_order+1),element_list%n_elements),my_rhs(mumps_par%n), sum_rhs(mumps_par%n))
 ! Create the RHS and calculate the projection
+! faster if we use mumps with multiple right-hand sides? TODO
 do i_tor=1, n_tor
   RHS = 0.d0
   my_rhs = 0.d0
   !$omp parallel do default(none) &
-  !$omp shared(particles, element_list, node_list, mode, i_tor, RHS) &
+  !$omp shared(particles, element_list, node_list, mode, i_tor) &
   !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
-  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode)
+  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode) &
+  !$omp reduction(+:RHS)
   do m=1,size(particles,1)
     if (particles(m)%i_elm .eq. 0) cycle
 
@@ -443,7 +469,7 @@ do i_tor=1, n_tor
           v = v / TWOPI ! int 1 from 0 to 2pi = 2pi
         endif
 
-        RHS(index_ij,particle%i_elm) = RHS(index_ij,particle%i_elm) + v * particle%weight ! very small chance of overwriting same memory area
+        RHS(index_ij,particle%i_elm) = RHS(index_ij,particle%i_elm) + v * particle%weight
       enddo
     enddo
     end associate
@@ -464,7 +490,7 @@ do i_tor=1, n_tor
   enddo
 
   ! Gather the RHS's to the root process
-  ! but ifort complains otherwise
+  ! cannot do it directly into mumps_par%rhs because this is not allocated in every process
   call MPI_Reduce(my_rhs,sum_rhs,mumps_par%n, &
       MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   ! Compute the solution of Ax=b (b = RHS)
@@ -474,7 +500,13 @@ do i_tor=1, n_tor
   if (my_id .eq. 0) then
     mumps_par%rhs = sum_rhs
   end if
-  call DMUMPS(mumps_par)
+  if (i_tor .eq. 1) then
+    write(*,*) "real proj rhs", i_tor
+    write(*,*) mumps_par%rhs(1:30)
+    call DMUMPS(mumps_par)
+    write(*,*) "solved rhs"
+    write(*,*) mumps_par%rhs(1:30)
+  end if
 
   if (my_id .eq. 0) then
     do i=1,node_list%n_nodes

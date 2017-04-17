@@ -567,6 +567,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'spi_radiusref       ',  spi_radiusref
      write(*,REAL_FMT) 'spi_angle           ',  spi_angle
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
+     write(*,REAL_FMT) 'spi_Vel_diff        ',  spi_Vel_diff
 
 
 #endif

@@ -117,7 +117,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_Vel_RxZref, spi_radiusref, flag_spi,            &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
-                t_mgi, JET_MGI, ASDEX_MGI,                          &
+                spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
                 delta_n_convection, nimp_bg,                        &
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
@@ -280,7 +280,7 @@ if (using_spi == .true.) then
         deallocate(rnd)
       end if
 
-      allocate (rnd(2*n_spi),stat=err_alloc_rnd)  !< Dynamically allocate memeries for randoms
+      allocate (rnd(3*n_spi),stat=err_alloc_rnd)  !< Dynamically allocate memeries for randoms
 
       if (err_alloc_rnd /= 0) then
         write(*,*) "Error when trying to dynamically allocate memeries for randoms."
@@ -324,14 +324,16 @@ if (using_spi == .true.) then
 
       do i=1, n_spi
 
-        spi_gd_angle_01 = rnd(2 * i - 1) * spi_angle / 2.0
-        spi_gd_angle_02 = rnd(2 * i) * 2. * PI
+        spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
+        spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
+        spi_Vel_i       = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref
+
 
         !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
 
-        spi_Vel_x       = spi_Vel_totref * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
-        spi_Vel_y       = spi_Vel_totref * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
-        spi_Vel_z       = spi_Vel_totref * cos(spi_gd_angle_01) 
+        spi_Vel_x       = spi_Vel_i * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
+        spi_Vel_y       = spi_Vel_i * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
+        spi_Vel_z       = spi_Vel_i * cos(spi_gd_angle_01) 
 
         spi_Vel_R_tmp   = spi_Vel_x * cos(spi_rotation_02)                          &
                           - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &

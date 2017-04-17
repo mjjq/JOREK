@@ -244,6 +244,7 @@ module phys_module
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
                                 !< and that of shattered pellets
 
+  real*8  :: spi_Vel_diff       !< The reference veolocity difference from the reference velocity
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
   real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
 

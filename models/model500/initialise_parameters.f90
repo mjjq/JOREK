@@ -34,7 +34,7 @@ real*8  :: s_out,t_out,R_out,Z_out
 real*8  :: n_SI, T_eV, n_corr, T_corr
 real*8  :: spi_gd_angle_01, spi_gd_angle_02        !The dispersion angles for each spi
 real*8  :: spi_rotation_01, spi_rotation_02        !The rotation angle from spi coordinate to real coordinate
-real*8  :: spi_Vel_totref, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
+real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
 real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
 real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Injection position of SPI
 real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp
@@ -321,6 +321,12 @@ if (using_spi == .true.) then
       CALL random_number(rnd)
 
       !write(*,*) "Random number array:", rnd
+
+      if (spi_Vel_diff < 0) then
+        write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
+        write(*,*) "Using the absolute value of spi_Vel_diff"
+        spi_Vel_diff = abs(spi_Vel_diff)
+      end if
 
       do i=1, n_spi
 

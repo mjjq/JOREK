@@ -64,11 +64,7 @@ call h5gclose_f(group_id, hdferr)
 
 
 ! Write the time
-call h5screate_simple_f(1, [1_HSIZE_T], time_space_id, hdferr)
-call h5dcreate_f(file, '/time', H5T_NATIVE_REAL, time_space_id, time_set_id, hdferr)
-call h5dwrite_f(time_set_id, H5T_NATIVE_REAL, sim%time, [1_HSIZE_T], hdferr)
-call h5dclose_f(time_set_id, hdferr)
-call h5sclose_f(time_space_id, hdferr)
+call HDF5_real_saving(file,sim%time,'/time')
 
 
 if (allocated(sim%groups)) then
@@ -205,7 +201,7 @@ end subroutine write_simulation_hdf5
 
 
 
-!> Import all particles using MPI File this
+!> Import all particles.
 !> Reads the number of particles from a file, determines a
 !> particle distribution over all processors and read this many
 !> particles per processor.
@@ -250,9 +246,7 @@ call h5fopen_f(filename, H5F_ACC_RDONLY_F, file, hdferr, access_prp=plist)
 call h5pclose_f(plist, hdferr)
 
 ! read the time
-call h5dopen_f(file, '/time', time_set_id, hdferr)
-call h5dread_f(time_set_id, H5T_NATIVE_REAL, sim%time, [1_HSIZE_T], hdferr)
-call h5dclose_f(time_set_id, hdferr)
+call HDF5_real_reading(file,sim%time,'/time')
 
 ! Get the number of groups
 call h5gopen_f(file, '/groups/', group_id, hdferr)

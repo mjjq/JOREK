@@ -30,6 +30,7 @@ subroutine test_known_gc_kinetic
   gc%E  = 1d3 ! [eV]
   gc%mu = 1d2 ! [eV/T]
   gc%q  = 1
+  gc%i_elm = 0
 
   ! gyroradius calculation
   v_perp = sqrt(2d0*gc%mu*EL_CHG*norm2(B)/(mass*ATOMIC_MASS_UNIT))
@@ -82,6 +83,7 @@ subroutine test_known_kinetic_gc
     kinetic%v = cos(chi)*v_perp*e1 + sin(chi)*v_perp*e2 + v_par*B/norm2(B) ! [m/s]
     r         = mass*ATOMIC_MASS_UNIT*norm2(kinetic%v(1:2))/(norm2(B)*kinetic%q*EL_CHG) ! m v_perp / qB
     kinetic%x = [1.d0, 2.d0, 3.d0] + r * (cos(chi)*e2-sin(chi)*e1)
+    kinetic%i_elm = 0
 
     gc = kinetic_leapfrog_to_gc(node_list, element_list, kinetic, B, mass)
     ! this uses the value of B being in the z-direction!
@@ -108,6 +110,7 @@ subroutine test_kinetic_gc_kinetic
   kinetic1%x  = [1d0, 2d0, 3d0]
   kinetic1%v  = [1d3, 1d2, 2d2]
   kinetic1%q  = 1
+  kinetic1%i_elm = 0
   ! angle of velocity vector with r-axis + pi to get angle of gyration with r-axis
   call get_orthonormals(B, e1, e2)
   chi = atan2(dot_product(kinetic1%v,e2),dot_product(kinetic1%v,e1))
@@ -138,6 +141,7 @@ subroutine test_gc_kinetic_gc
   gc1%E  = 1d3
   gc1%mu = 1d2
   gc1%q  = 1
+  gc1%i_elm = 0
 
   kinetic = gc_to_kinetic_leapfrog(node_list, element_list, gc1, chi, B, mass)
   gc2 = kinetic_leapfrog_to_gc(node_list, element_list, kinetic, B, mass)
@@ -164,6 +168,7 @@ subroutine test_gc_kinetic_gc_negative_mu
   gc1%E  = 1d3
   gc1%mu = -1d2
   gc1%q  = 1
+  gc1%i_elm = 0
 
   kinetic = gc_to_kinetic_leapfrog(node_list, element_list, gc1, chi, B, mass)
   gc2 = kinetic_leapfrog_to_gc(node_list, element_list, kinetic, B, mass)

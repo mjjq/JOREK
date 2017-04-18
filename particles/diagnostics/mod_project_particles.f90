@@ -501,11 +501,7 @@ do i_tor=1, n_tor
     mumps_par%rhs = sum_rhs
   end if
   if (i_tor .eq. 1) then
-    write(*,*) "real proj rhs", i_tor
-    write(*,*) mumps_par%rhs(1:30)
     call DMUMPS(mumps_par)
-    write(*,*) "solved rhs"
-    write(*,*) mumps_par%rhs(1:30)
   end if
 
   if (my_id .eq. 0) then

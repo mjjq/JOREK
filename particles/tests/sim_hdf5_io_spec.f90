@@ -36,7 +36,7 @@ subroutine test_write_read_sim_time
   class(write_action), allocatable :: writer
   class(read_action), allocatable  :: reader
   logical :: file_exists
-  integer :: i, u, stat
+  integer :: u, stat
   allocate(writer, reader)
 
   sim_to_write%time = 21.19d0

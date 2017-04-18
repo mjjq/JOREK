@@ -402,7 +402,7 @@ mumps_par%icntl(18) = 0 ! centralized (i.e. only on cpu 0)
 mumps_par%icntl(7)  = 4 ! compute symmetric perturbation? (if 1)
 mumps_par%icntl(8)  = 7 ! scaling
 mumps_par%icntl(14) = 80 ! memory relaxation parameter
-mumps_par%icntl(4)  = 2 ! Print errors, warnings and main statistics
+mumps_par%icntl(4)  = 1 ! Print errors, warnings and main statistics
 if (present(skip_factorisation) .and. skip_factorisation) then
 else
   call DMUMPS(mumps_par)

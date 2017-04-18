@@ -23,12 +23,12 @@ end subroutine setup_projection_spec
 function f_0(R, Z)
   real*8, intent(in) :: R, Z
   real*8 :: f_0
-  f_0 = 0
+  f_0 = 0.d0
 end function f_0
 function f_1(R, Z)
   real*8, intent(in) :: R, Z
   real*8 :: f_1
-  f_1 = 1
+  f_1 = 1.d0
 end function f_1
 function f_R(R, Z)
   real*8, intent(in) :: R, Z
@@ -200,7 +200,6 @@ subroutine test_projection_matrix_square_2_2
   call prepare_mumps_par(node_list, element_list, p, smoothing=0d0, skip_factorisation=.true.)
   do i=1,size(p%irn)
     if (p%irn(i) == 1) call assert_equals(ref(p%jcn(i)), p%A(i), tol, 'matrix element must match reference')
-    if (p%irn(i) == 1) write(*,*) p%jcn(i), p%A(i)
   end do
 end subroutine test_projection_matrix_square_2_2
 
@@ -224,7 +223,7 @@ subroutine project_f(node_list, element_list, f)
   type(type_node) :: nodes(4)
   type(type_element) :: element
 
-  call prepare_mumps_par(node_list, element_list, p, smoothing=0d-3)
+  call prepare_mumps_par(node_list, element_list, p, smoothing=0d0)
 
   ! Project manually
   p%JOB = 3
@@ -281,6 +280,7 @@ subroutine project_f(node_list, element_list, f)
     do k=1,n_order+1
       index = node_list%node(i)%index(k)
       node_list%node(i)%values(1,k,1) = p%rhs(index)
+      write(*,*) index, node_list%node(i)%values(1,k,1), p%rhs(index)
     enddo
   enddo
 
@@ -303,7 +303,8 @@ subroutine elements_mean_rms(node_list, element_list, f, mean, rms)
   type(type_element) :: element
   type(type_node) :: nodes(4)
   real*8, dimension(n_gauss,n_gauss) :: x_g, x_s, x_t, y_g, y_s, y_t
-  real*8 :: my_ref, wst, volume, xjac, P(1)
+  real*8 :: my_ref, wst, volume, xjac
+  real*8, dimension(1) :: P, P_s, P_t, P_st, P_ss, P_tt
 
   call initialise_basis
 
@@ -345,7 +346,7 @@ subroutine elements_mean_rms(node_list, element_list, f, mean, rms)
         volume = volume + TWOPI * x_g(ms,mt) * xjac * wst
 
         ! calculate contribution to integral of this point
-        call interp4(node_list, element_list, i_elm, [1], 1, Xgauss(ms), Xgauss(mt), 0.d0, P)
+        call interp(node_list, element_list, i_elm, 1, 1, Xgauss(ms), Xgauss(mt), P, P_s, P_t, P_st, P_ss, P_tt)
         rms = rms + (P(1)-f(x_g(ms,mt),y_g(ms,mt)))**2 * xjac * TWOPI * x_g(ms,mt) * wst
         mean = mean + P(1) * xjac * TWOPI * x_g(ms,mt) * wst
       enddo

@@ -2,8 +2,8 @@ module setup_mpi
 contains
 subroutine setup
   use mpi
-  integer :: ierr
-  call MPI_init(ierr)
+  integer :: ierr, provided
+  call MPI_init_thread(MPI_THREAD_SINGLE, provided, ierr)
 end subroutine setup
 
 subroutine teardown

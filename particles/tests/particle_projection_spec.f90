@@ -24,7 +24,6 @@ subroutine test_square_10_10_pcg
   call project_n_square_10_10(1000, pcg32_rng())
   call project_n_square_10_10(10000, pcg32_rng())
   call project_n_square_10_10(100000, pcg32_rng())
-  call project_n_square_10_10(1000000, pcg32_rng())
 end subroutine test_square_10_10_pcg
 
 subroutine test_square_10_10_sob
@@ -33,7 +32,6 @@ subroutine test_square_10_10_sob
   call project_n_square_10_10(1000, sobseq_rng())
   call project_n_square_10_10(10000, sobseq_rng())
   call project_n_square_10_10(100000, sobseq_rng())
-  call project_n_square_10_10(1000000, sobseq_rng())
 end subroutine test_square_10_10_sob
 
 

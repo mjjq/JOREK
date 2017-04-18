@@ -1,14 +1,15 @@
 !> This module contains some testcases for projecting particles, ensuring
 !> that the projection matrix, RHS and MUMPS work for these cases.
 !>
-!> It contains tests of projecting zero, 1, x, xy onto a square or circular grid
-!> After that we test the projection of a set of particles
+!> we test the projection of a set of particles
+!> Note that now the projection seems to converge to the wrong mean, 1% higher than the particle density
 module particle_projection_spec
 use mod_project_particles
 use data_structure
 use mod_particle_types
 use mod_pcg32_rng
-use projection_spec, only: elements_mean, elements_rms, elements_mean_rms
+use mod_sobseq_rng
+use projection_spec, only: elements_mean_rms, f_1
 use fruit
 implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
@@ -17,24 +18,23 @@ logical, parameter :: write_proj_output = .true.
 
 contains
 
-subroutine test_10_square_10_10_pcg
+subroutine test_square_10_10_pcg
   call project_n_square_10_10(10, pcg32_rng())
-end subroutine test_10_square_10_10_pcg
-subroutine test_100_square_10_10_pcg
   call project_n_square_10_10(100, pcg32_rng())
-end subroutine test_100_square_10_10_pcg
-subroutine test_1000_square_10_10_pcg
   call project_n_square_10_10(1000, pcg32_rng())
-end subroutine test_1000_square_10_10_pcg
-subroutine test_10000_square_10_10_pcg
   call project_n_square_10_10(10000, pcg32_rng())
-end subroutine test_10000_square_10_10_pcg
-subroutine test_100000_square_10_10_pcg
   call project_n_square_10_10(100000, pcg32_rng())
-end subroutine test_100000_square_10_10_pcg
-subroutine test_1000000_square_10_10_pcg
   call project_n_square_10_10(1000000, pcg32_rng())
-end subroutine test_1000000_square_10_10_pcg
+end subroutine test_square_10_10_pcg
+
+subroutine test_square_10_10_sob
+  call project_n_square_10_10(10, sobseq_rng())
+  call project_n_square_10_10(100, sobseq_rng())
+  call project_n_square_10_10(1000, sobseq_rng())
+  call project_n_square_10_10(10000, sobseq_rng())
+  call project_n_square_10_10(100000, sobseq_rng())
+  call project_n_square_10_10(1000000, sobseq_rng())
+end subroutine test_square_10_10_sob
 
 
 
@@ -52,6 +52,7 @@ subroutine project_n_square_10_10(n, rng)
   integer :: i, ifail
   real*8, parameter :: R_geo = 1.d0, Z_geo = 0.d0, amin = 0.5d0
   real*8 :: x(3), R, Z, R_out, Z_out, Phi, tol
+  real*8 :: m, e !< mean, rms error
   character*8 :: n_s, tol_s
   class(type_rng), allocatable :: my_rng
 
@@ -83,13 +84,10 @@ subroutine project_n_square_10_10(n, rng)
   ! calculate tolerance based on number of points (to verify scaling)
   tol = 0.d0
   write(tol_s, '(g8.2)') tol
-  ! test a few points along the boundary
-  do i=1,10
-    call assert_equals(1.d0, node_list%node(i)%values(1,1,1), tol, 'value must be 1 ['//trim(adjustl(n_s))//' -> '//trim(tol_s)//']')
-  end do
   ! test rms
-  call assert_equals(0.d0, elements_rms(node_list, element_list, 1.d0), tol, 'rms value 0 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']')
-  call assert_equals(1.d0, elements_mean(node_list, element_list), tol, 'mean value 1 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']')
+  call elements_mean_rms(node_list, element_list, f_1, m, e)
+  call assert_equals(0.d0, m, tol, 'rms value 0 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']')
+  call assert_equals(1.d0, e, tol, 'mean value 1 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']')
   if (write_proj_output) then
     call write_particle_distribution_to_h5(node_list, element_list, &
       filename='test_'//trim(adjustl(n_s))//'_square_10_10.h5', n_fields=1, time=0.d0)

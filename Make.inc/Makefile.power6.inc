@@ -7,6 +7,7 @@ MODEL = model199
 # Fortran compiler 
 FC  = mpxlf_r
 CC  = mpxlc_r
+CXX = mpxlc++_r
 
 IBMFC = 1
 CPP = /bin/cpp

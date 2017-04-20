@@ -405,7 +405,6 @@ required = 0
     end if
     
   end if
-  if ( restart .and. freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -637,6 +636,7 @@ required = 0
   call broadcast_nodes(my_id, node_list)                      ! nodes
 
   call broadcast_phys(my_id)                                  ! physics parameters
+  if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   n_AA = 0  
   do inode = 1, node_list%n_nodes  
     n_AA = max(n_AA,node_list%node(inode)%index(4))  

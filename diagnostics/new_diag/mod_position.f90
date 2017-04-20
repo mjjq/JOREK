@@ -225,7 +225,7 @@ module mod_position
       pos   => pos_list%pos(1,1)
       pos%R = R
       pos%Z = Z
-      call find_RZ2(node_list, element_list, R, Z, R_out, Z_out, pos%ielm, pos%s, pos%t, ierr)
+      call find_RZ(node_list, element_list, R, Z, R_out, Z_out, pos%ielm, pos%s, pos%t, ierr)
       pos%outside = ( ierr /= 0 )
       call fill_pol_pos(pos, node_list, element_list)
       
@@ -253,7 +253,7 @@ module mod_position
           pos%R = Rmin + (Rmax-Rmin) * real(i-1)/real(nR-1)
           pos%Z = Zmin + (Zmax-Zmin) * real(j-1)/real(nZ-1)
           ierr = 0
-          call find_RZ2(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
+          call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           pos%outside = ( ierr /= 0 )
           call fill_pol_pos(pos, node_list, element_list)
@@ -272,7 +272,7 @@ module mod_position
         pos%R = Rstart + (Rend-Rstart) * real(i-1)/real(n-1)
         pos%Z = Zstart + (Zend-Zstart) * real(i-1)/real(n-1)
         pos%length = full_length * real(i-1)/real(n-1)
-        call find_RZ2(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,  &
+        call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,  &
           ierr)
         pos%outside = ( ierr /= 0 )
         call fill_pol_pos(pos, node_list, element_list)
@@ -320,7 +320,7 @@ module mod_position
           pos%R = mapping%rre(i,j-1)
           pos%Z = mapping%zze(i,j-1)
           pos%theta_star = 2.d0 * PI * real(j-1) / real(nTht-1) !######### check if nTht or nTht-1
-          call find_RZ2(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
+          call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           pos%outside = ( ierr /= 0 )
           call fill_pol_pos(pos, node_list, element_list)

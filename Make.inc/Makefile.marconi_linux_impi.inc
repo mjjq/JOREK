@@ -9,8 +9,9 @@ MODEL             = model199
 # --- Compiler and options
 FC                = mpif90 -mt_mpi
 CC                = mpicc -mt_mpi
-FFLAGS            = -i4 -DUSE_BLOCK #-DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
-FFLAGS           += -xHost -O2 -fp-model fast=2
+CXX               = mpicxx -mt_mpi
+FFLAGS            = -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
+FFLAGS           += -xHost -O2
 
 # --- Various switches
 USE_PASTIX        = 1

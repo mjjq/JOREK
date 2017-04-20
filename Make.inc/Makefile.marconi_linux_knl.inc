@@ -9,8 +9,9 @@ MODEL             = model303
 # --- Compiler and options
 FC                = mpif90 -mt_mpi
 CC                = mpicc -mt_mpi
-FFLAGS            = -i4 -DUSE_BLOCK #-DFUNNELED #RECENT_PASTIX#-DWORLDWAR2 
-FFLAGS           += -xmic-avx512 -O2 -fp-model fast=2
+CXX               = mpicxx -mt_mpi
+FFLAGS            = -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
+FFLAGS           += -axmic-avx512 -qopt-prefetch=5 -O2
 
 # --- Various switches
 USE_PASTIX        = 1

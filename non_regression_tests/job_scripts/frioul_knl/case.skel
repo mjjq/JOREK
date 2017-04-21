@@ -1,0 +1,39 @@
+#!/bin/bash
+#SBATCH -J _CASE_
+#SBATCH --nodes=1
+#SBATCH -C quad,flat
+#SBATCH --ntasks-per-node=2
+#SBATCH --cpus-per-task=68
+#SBATCH -t 00:30:00            # execute time (hh:mm:ss - max 08:00:00)
+#SBATCH --mem=60GB
+#SBATCH --exclusive
+#SBATCH -o _CASE_%j.out      # strout filename (%j is jobid)
+#SBATCH -e _CASE_%j.out      # stderr filename (%j is jobid)
+
+########################################################################
+# Look to non_regression_tests/testcases/_CASE_/settings.sh
+# to determine nb of nodes, MPI processes, and nb of threads
+########################################################################
+
+ulimit -l unlimited
+ulimit -s unlimited
+
+CASE=_CASE_
+JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
+echo " jorek_home = " ${JOREK_HOME}
+
+export OMP_NUM_THREADS=34
+
+#export NPROC=`qstat -f $PBS_JOBID | awk '/Resource_List.mpiprocs/ {print $3}'`
+
+cd ${JOREK_HOME}
+source /home/glatu/jorek_env.sh
+source non_regression_tests/job_scripts/frioul_knl/env.sh
+echo $MPIRUN
+## Compile with:       
+# non_regression_tests/run_test.sh -p $CASE
+## Initial Long run: 
+#non_regression_tests/run_test.sh -i -k -n $CASE 
+## Restart run: 
+non_regression_tests/run_test.sh -k -n $CASE 
+

@@ -114,6 +114,10 @@ most: jorek2_connection2 \
 # Special cases
 # Add here: Global includes (as the line below)
 INCLUDES += -Itools # for r3_info.h
+# C++ support
+LIBS += -lstdc++
+CXXFLAGS += -pedantic -Wall
+
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)

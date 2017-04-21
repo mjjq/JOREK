@@ -36,7 +36,9 @@ contains
   subroutine clck_time_barrier(p_time)
     TYPE(clcktype), intent(out) :: p_time
     integer ierr
+#ifdef TIMER_BARRIER
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+#endif
     call system_clock(count=p_time%bip)
   end subroutine clck_time_barrier
 

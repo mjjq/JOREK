@@ -36,11 +36,16 @@ subroutine populate_element_rtree(node_list, element_list)
   type(type_node_list), intent(in)    :: node_list
   type(type_element_list), intent(in) :: element_list
   real(C_DOUBLE), dimension(:), allocatable :: minx, miny, maxx, maxy
-  integer :: i, n, vertices(n_vertex_max)
+  real*8 :: rmin, rmax, zmin, zmax
+  integer :: i, n
   n = element_list%n_elements
   allocate(minx(n), miny(n), maxx(n), maxy(n))
   do i=1,n
-    call RZ_minmax(node_list, element_list, i, minx(i), maxx(i), miny(i), maxy(i))
+    call RZ_minmax(node_list, element_list, i, rmin, rmax, zmin, zmax)
+    minx(i) = real(rmin, kind=C_DOUBLE)
+    maxx(i) = real(rmax, kind=C_DOUBLE)
+    miny(i) = real(zmin, kind=C_DOUBLE)
+    maxy(i) = real(zmax, kind=C_DOUBLE)
   end do
   call element_rtree(int(n,C_INT), minx, miny, maxx, maxy)
 end subroutine populate_element_rtree
@@ -61,10 +66,10 @@ subroutine nearby_elements(node_list, element_list, i_elm, i_nearby)
   integer(C_INT) :: num_elements
 
   vertices = element_list%element(i_elm)%vertex(:)
-  minx = minval(node_list%node(vertices)%x(1,1)) - 1d-6
-  maxx = maxval(node_list%node(vertices)%x(1,1)) + 1d-6
-  miny = minval(node_list%node(vertices)%x(1,2)) - 1d-6
-  maxy = maxval(node_list%node(vertices)%x(1,2)) + 1d-6
+  minx = real(minval(node_list%node(vertices)%x(1,1)) - 1d-6, kind=C_DOUBLE)
+  maxx = real(maxval(node_list%node(vertices)%x(1,1)) + 1d-6, kind=C_DOUBLE)
+  miny = real(minval(node_list%node(vertices)%x(1,2)) - 1d-6, kind=C_DOUBLE)
+  maxy = real(maxval(node_list%node(vertices)%x(1,2)) + 1d-6, kind=C_DOUBLE)
 
   ! This calls the search routine twice! To get around that either pass a large enough array alway
   ! or implement it as a mask/bitfield of the total number of elements.
@@ -77,20 +82,17 @@ end subroutine nearby_elements
 !> Find elements that could probably contain this point.
 !> Do this by maxing a small box of 10^-6 around this point and finding all elements of which the RZ boundingbox overlaps.
 !> This could be a few, but not more than n_pol (if exactly on axis)
-subroutine elements_containing_point(node_list, element_list, R, Z, i_elms)
-  type(type_node_list), intent(in)    :: node_list
-  type(type_element_list), intent(in) :: element_list
+subroutine elements_containing_point(R, Z, i_elms)
   real*8, intent(in)                  :: R, Z
   integer(C_INT), dimension(:), allocatable, intent(out) :: i_elms
 
-  integer :: i
   real(C_DOUBLE) :: minx, miny, maxx, maxy
   integer(C_INT) :: num_elements
 
-  minx = R - 1d-6
-  maxx = R + 1d-6
-  miny = Z - 1d-6
-  maxy = Z + 1d-6
+  minx = real(R - 1d-6, kind=C_DOUBLE)
+  maxx = real(R + 1d-6, kind=C_double)
+  miny = real(Z - 1d-6, kind=C_double)
+  maxy = real(Z + 1d-6, kind=C_double)
 
   ! This calls the search routine twice! To get around that either pass a large enough array alway
   ! or implement it as a mask/bitfield of the total number of elements.

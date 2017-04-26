@@ -9,6 +9,7 @@ MODEL             = model303
 # --- Compiler and options
 FC                = mpif90 -mt_mpi
 CC                = mpicc -mt_mpi
+CXX               = mpicxx -mt_mpi
 FFLAGS            = -i4 -DUSE_BLOCK #-DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
 FFLAGS           += -xmic-avx512 -O2 -fp-model fast=2
 

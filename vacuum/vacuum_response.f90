@@ -486,12 +486,12 @@ module vacuum_response
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     if ( sr%ncoil > 0 ) then
       call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     end if
     
     if ( vacuum_debug ) then

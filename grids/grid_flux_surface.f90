@@ -362,7 +362,7 @@ enddo
 
 !----------------------------- empty old nodes/elements
 
-do i=1,node_list%n_nodes
+do i=1,n_nodes_max
   node_list%node(i)%x        = 0.d0
   node_list%node(i)%values   = 0.d0
   node_list%node(i)%index    = 0
@@ -370,7 +370,7 @@ do i=1,node_list%n_nodes
 enddo
 node_list%n_nodes = 0
 
-do i=1,element_list%n_elements
+do i=1,n_elements_max
   element_list%element(i)%vertex     = 0
   element_list%element(i)%size       = 0.d0
   element_list%element(i)%neighbours = 0

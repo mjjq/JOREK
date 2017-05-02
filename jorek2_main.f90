@@ -1354,14 +1354,18 @@ required = 0
     endif
     iplot = 0
 
+    psi_bnd = 0.d0
     if (xpoint) then
-       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
+    	i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+      psi_bnd  = psi_xpoint(1)
+      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    	psi_bnd = psi_xpoint(2)
+      endif
     else
-       psi_bnd = psi_xpoint(1)
-       if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    	 psi_bnd = psi_xpoint(2)
-       endif
-    endif
+      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+      psi_bnd = psi_lim
+    end if
 
     Rp_start = R_axis - amin*2.d0
     Rp_end   = R_axis + amin*2.d0

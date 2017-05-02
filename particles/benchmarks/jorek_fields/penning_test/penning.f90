@@ -93,6 +93,8 @@ write(*,*) 'Initializing fields'
 ! Set the fields in the first two parameters
 do i=1,fields%node_list%n_nodes
   ! Get value and derivatives
+  ! XXX we make a mistake here I think. Perhaps it is better to use the projection matrix approach here.
+  ! at least node%size needs to be in here somewhere.
   R    = fields%node_list%node(i)%x(1,1)
   R_s  = fields%node_list%node(i)%x(2,1)
   R_t  = fields%node_list%node(i)%x(3,1)

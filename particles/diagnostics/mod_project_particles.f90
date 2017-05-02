@@ -411,7 +411,7 @@ end subroutine prepare_mumps_par
 
 
 !> Perform the actual projection of a set of particles on variable ivar_out in node_list.
-subroutine project_particles(node_list, element_list, mumps_par, particles, ivar_out)
+subroutine project_particles(node_list, element_list, mumps_par, particles, ivar_out, skip_proj)
 use phys_module
 use data_structure
 use mod_basisfunctions
@@ -424,6 +424,7 @@ type (type_element_list), intent(in) :: element_list
 type (DMUMPS_STRUC), intent(inout)   :: mumps_par
 class (particle_base), intent(in), dimension(:)    :: particles
 integer, intent(in) :: ivar_out
+logical, optional :: skip_proj !< Do not project but write the RHS to the nodes
 
 real*8, allocatable :: RHS(:,:), sum_rhs(:), my_rhs(:)
 real*8     :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
@@ -500,7 +501,8 @@ do i_tor=1, n_tor
   if (my_id .eq. 0) then
     mumps_par%rhs = sum_rhs
   end if
-  if (i_tor .eq. 1) then
+  if (present(skip_proj) .and. skip_proj) then
+  else
     call DMUMPS(mumps_par)
   end if
 

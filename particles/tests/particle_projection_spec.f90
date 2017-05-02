@@ -29,14 +29,14 @@ subroutine test_square_10_10_pcg
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call project_n_square_10_10(node_list, element_list, [100,1000,10000,100000], pcg32_rng())
+  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], pcg32_rng())
 end subroutine test_square_10_10_pcg
 
 subroutine test_square_10_10_sob
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call project_n_square_10_10(node_list, element_list, [100,1000,10000,100000], sobseq_rng())
+  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], sobseq_rng())
 end subroutine test_square_10_10_sob
 
 
@@ -44,13 +44,13 @@ subroutine test_polar_30_22_sob
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_polar_grid(node_list, element_list, 22)
-  call project_n_polar_30_npol(node_list, element_list, [100,1000,10000,100000], sobseq_rng())
+  call project_n_polar_30_npol(node_list, element_list, [1000,10000,100000], sobseq_rng())
 end subroutine test_polar_30_22_sob
 subroutine test_polar_30_21_sob
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_polar_grid(node_list, element_list, 21)
-  call project_n_polar_30_npol(node_list, element_list, [100,1000,10000,100000], sobseq_rng())
+  call project_n_polar_30_npol(node_list, element_list, [1000,10000,100000], sobseq_rng())
 end subroutine test_polar_30_21_sob
 
 subroutine test_flux_40_31_pcg
@@ -61,7 +61,7 @@ subroutine test_flux_40_31_pcg
   if (.not. EXTRATEST) return
   call default_flux_grid_31(node_list, element_list)
   w=TWOPI**2*R_geo*amin**2/2.d0
-  call project_n(node_list, element_list, [100,1000,10000,100000], pcg32_rng(), 'flux_40_31', volume=w)
+  call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_31', volume=w)
 end subroutine test_flux_40_31_pcg
 subroutine test_flux_40_32_pcg
   use phys_module
@@ -71,7 +71,7 @@ subroutine test_flux_40_32_pcg
   if (.not. EXTRATEST) return
   call default_flux_grid_32(node_list, element_list)
   w=TWOPI**2*R_geo*amin**2/2.d0
-  call project_n(node_list, element_list, [100,1000,10000,100000], pcg32_rng(), 'flux_40_32', volume=w)
+  call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_32', volume=w)
 end subroutine test_flux_40_32_pcg
 
 

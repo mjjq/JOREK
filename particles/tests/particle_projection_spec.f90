@@ -1,8 +1,6 @@
-!> This module contains some testcases for projecting particles, ensuring
-!> that the projection matrix, RHS and MUMPS work for these cases.
-!>
-!> we test the projection of a set of particles
-!> Note that now the projection seems to converge to the wrong mean, 1% higher than the particle density
+!> This module contains some testcases for projecting particles.
+!> First we test the projection and scaling with n.
+!> Then we look into the effect of the smoothing parameter s.
 module particle_projection_spec
 use mod_project_particles
 use data_structure
@@ -16,8 +14,8 @@ use fruit
 implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 
-logical, parameter :: write_proj_output = .true.
-logical, parameter :: EXTRATEST = .false.
+logical, parameter :: write_proj_output = .false. !< Set to true to write restart files with the projected density
+logical, parameter :: EXTRATEST = .false. !< Set to .true. to do flux-aligned grid projection tests
 
 contains
 
@@ -25,34 +23,39 @@ subroutine setup_particle_projection_spec
   call initialise_basis
 end subroutine setup_particle_projection_spec
 
+!> Project 10^3-10^5 particles generated with pcg onto square grid
 subroutine test_square_10_10_pcg
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], pcg32_rng())
+  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], pcg32_rng(), mean_tol=3d-8*[1,1,1], rms_tol=23d0/sqrt([1d3,1d4,1d5]))
 end subroutine test_square_10_10_pcg
 
+!> Project 10^3-10^5 particles generated with sobseq onto square grid
 subroutine test_square_10_10_sob
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], sobseq_rng())
+  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], sobseq_rng(), mean_tol=3d-8*[1,1,1], rms_tol=401d0/[1d3,1d4,1d5])
 end subroutine test_square_10_10_sob
 
 
+!> Project 10^3-10^5 particles generated with sobseq onto polar grid
 subroutine test_polar_30_22_sob
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_polar_grid(node_list, element_list, 22)
-  call project_n_polar_30_npol(node_list, element_list, [1000,10000,100000], sobseq_rng())
+  call project_n_polar_30_npol(node_list, element_list, [1000,10000,100000], sobseq_rng(), mean_tol=3d-5*[1,1,1], rms_tol=5d4/[1d3,1d4,1d5])
 end subroutine test_polar_30_22_sob
+!> Project 10^3-10^5 particles generated with sobseq onto polar grid
 subroutine test_polar_30_21_sob
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_polar_grid(node_list, element_list, 21)
-  call project_n_polar_30_npol(node_list, element_list, [1000,10000,100000], sobseq_rng())
+  call project_n_polar_30_npol(node_list, element_list, [1000,10000,100000], sobseq_rng(), mean_tol=3d-5*[1,1,1], rms_tol=5d4/[1d3,1d4,1d5])
 end subroutine test_polar_30_21_sob
 
+!> Project 10^3-10^5 particles generated with sobseq onto flux grid (odd)
 subroutine test_flux_40_31_pcg
   use phys_module
   type(type_node_list) :: node_list
@@ -61,8 +64,9 @@ subroutine test_flux_40_31_pcg
   if (.not. EXTRATEST) return
   call default_flux_grid_31(node_list, element_list)
   w=TWOPI**2*R_geo*amin**2/2.d0
-  call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_31', volume=w)
+  call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_31', volume=w, mean_tol=2d-5*[1,1,1], rms_tol=45d0/sqrt([1d3,1d4,1d5]))
 end subroutine test_flux_40_31_pcg
+!> Project 10^3-10^5 particles generated with sobseq onto flux grid (even)
 subroutine test_flux_40_32_pcg
   use phys_module
   type(type_node_list) :: node_list
@@ -71,7 +75,7 @@ subroutine test_flux_40_32_pcg
   if (.not. EXTRATEST) return
   call default_flux_grid_32(node_list, element_list)
   w=TWOPI**2*R_geo*amin**2/2.d0
-  call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_32', volume=w)
+  call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_32', volume=w, mean_tol=2d-5*[1,1,1], rms_tol=45d0/sqrt([1d3,1d4,1d5]))
 end subroutine test_flux_40_32_pcg
 
 
@@ -86,7 +90,7 @@ subroutine rhs_convergence_square_10_10(node_list, element_list, n, p, rng)
   class(type_rng), intent(in) :: rng
 
   integer :: n_AA, ielm_out, ifail, i
-  real*8 :: R_out, Z_out, s_out, t_out
+  real*8 :: R_out, Z_out, s_out, t_out, tol
   real*8, allocatable, dimension(:) :: rhs_f
   type(particle_fieldline), dimension(:), allocatable :: particles
   character*8 :: n_s
@@ -104,10 +108,17 @@ subroutine rhs_convergence_square_10_10(node_list, element_list, n, p, rng)
   call calc_rhs_f(node_list,element_list,f_1,rhs_f)
   call assert_false(isnan(sum(rhs_f)), 'sum integrated rhs is not nan[n='//trim(adjustl(n_s))//']')
   call assert_false(isnan(sum(p%rhs)), 'sum MC rhs is not nan[n='//trim(adjustl(n_s))//']')
-  call assert_equals(0.d0, sum(abs(rhs_f-p%rhs)), 'sum abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
-  call assert_equals(0.d0, maxval(abs(rhs_f-p%rhs)), 'max abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
+  select type (rng)
+  type is (pcg32_rng)
+    tol = 7d0/sqrt(real(n))
+  type is (sobseq_rng)
+    tol = 65d0/real(n)
+  end select
+  call assert_equals(0.d0, sum(abs(rhs_f-p%rhs)), tol, 'sum abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
+  call assert_equals(0.d0, maxval(abs(rhs_f-p%rhs)), tol, 'max abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
 end subroutine rhs_convergence_square_10_10
 
+!> Test convergence of RHS for n particles
 subroutine test_rhs_square_10_10_pcg
   type(DMUMPS_STRUC) :: p
   type(type_node_list) :: node_list
@@ -121,6 +132,7 @@ subroutine test_rhs_square_10_10_pcg
   p%JOB=-2
   call DMUMPS(p)
 end subroutine test_rhs_square_10_10_pcg
+!> Test convergence of RHS for n particles
 subroutine test_rhs_square_10_10_sob
   type(DMUMPS_STRUC) :: p
   type(type_node_list) :: node_list
@@ -136,47 +148,57 @@ subroutine test_rhs_square_10_10_sob
 end subroutine test_rhs_square_10_10_sob
 
 
+!*************************
+! Smoothing parameter test
+!*************************
 
+!> Test convergence of RHS for 10000 particles with varying smoothing factor
 subroutine test_polar_30_22_10000_sob_smoothing
   use phys_module
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
-  real*8 :: w
+  real*8 :: w, s
+  integer :: i
+  character(len=8) :: ss
   call default_polar_grid(node_list, element_list, 22)
   w=TWOPI**2*R_geo*amin**2/2.d0
-  call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s1d-7', volume=w, smoothing=1d-7)
-  call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s1d-6', volume=w, smoothing=1d-6)
-  call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s1d-5', volume=w, smoothing=1d-5)
-  call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s1d-4', volume=w, smoothing=1d-4)
-  call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s1d-3', volume=w, smoothing=1d-3)
-  call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s1d-2', volume=w, smoothing=1d-2)
-  call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s1d-1', volume=w, smoothing=1d-1)
+  do i=1,7
+    s = 10d0**(real(i-8))
+    write(ss,'(g8.2)') s
+    call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s'//ss, volume=w, smoothing=s, &
+        rms_tol=[0.d0], mean_tol=[2d-5])
+  end do
 end subroutine test_polar_30_22_10000_sob_smoothing
 
 
 
-subroutine project_n_square_10_10(node_list, element_list, n, rng)
+!> Helper function to project n particles onto a 10x10 square grid
+subroutine project_n_square_10_10(node_list, element_list, n, rng, rms_tol, mean_tol)
   use mod_rng
   class(type_rng), intent(in) :: rng
   integer, intent(in), dimension(:) :: n
   type(type_node_list), intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
+  real*8, intent(in), dimension(:) :: rms_tol, mean_tol
 
-  call project_n(node_list, element_list, n, rng, 'square_10_10', volume=TWOPI)
+  call project_n(node_list, element_list, n, rng, 'square_10_10', volume=TWOPI, rms_tol=rms_tol, mean_tol=mean_tol)
 end subroutine project_n_square_10_10
 
-subroutine project_n_polar_30_npol(node_list, element_list, n, rng)
+!> Helper function to project n particles onto a 30_npol polar grid
+subroutine project_n_polar_30_npol(node_list, element_list, n, rng, rms_tol, mean_tol)
   use phys_module
   use mod_rng
   class(type_rng), intent(in) :: rng
   integer, intent(in), dimension(:) :: n
   type(type_node_list), intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
+  real*8, intent(in), dimension(:) :: rms_tol, mean_tol
 
-  call project_n(node_list, element_list, n, rng, 'polar_30_32', volume=TWOPI**2*R_geo*amin**2/2.d0)
+  call project_n(node_list, element_list, n, rng, 'polar_30_32', volume=TWOPI**2*R_geo*amin**2/2.d0, rms_tol=rms_tol, mean_tol=mean_tol)
 end subroutine project_n_polar_30_npol
 
-subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing)
+!> Helper function to project n particles onto a grid in node_list, element_list with optional smoothing
+subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, rms_tol, mean_tol)
   use mod_initialise_particles
   type(type_node_list), intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
@@ -184,6 +206,7 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing)
   class(type_rng), intent(in) :: rng
   character(len=*), intent(in) :: name
   real*8, intent(in) :: volume !< total volume
+  real*8, intent(in), dimension(:) :: rms_tol, mean_tol
   real*8, optional, intent(in) :: smoothing
   type(particle_kinetic), dimension(:), allocatable :: particles
   type(DMUMPS_STRUC) :: p
@@ -191,11 +214,16 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing)
   integer :: i, j, ifail, ielm_out
   real*8 :: x(3), R, Z, R_out, Z_out, Phi, tol, s, s_out, t_out
   real*8 :: m, e !< mean, rms error
-  character*8 :: n_s, tol_s
+  character*8 :: n_s, tol_s, ss
 
   s = 0.d0
-  if (present(smoothing)) s = smoothing
+  ss = ''
+  if (present(smoothing)) then
+    s = smoothing
+    write(ss,'(g8.2)') s
+  end if
   call prepare_mumps_par(node_list, element_list, p, smoothing=s)
+
 
   do j=1,size(n)
     write(n_s, '(i8)') n(j)
@@ -207,13 +235,12 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing)
 
     call project_particles(node_list, element_list, p, particles, 1)
 
-    ! calculate tolerance based on number of points (to verify scaling)
-    tol = 0.d0
-    write(tol_s, '(g8.2)') tol
     ! test rms
     call elements_mean_rms(node_list, element_list, f_1, m, e)
-    call assert_equals(1.d0, m, tol, 'mean value 1 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']')
-    call assert_equals(0.d0, e, tol, 'rms value 0 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']')
+    write(tol_s, '(g8.2)') mean_tol(j)
+    call assert_equals(1.d0, m, mean_tol(j), 'mean value 1 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']'//trim(ss))
+    write(tol_s, '(g8.2)') rms_tol(j)
+    call assert_equals(0.d0, e, rms_tol(j), 'rms value 0 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']'//trim(ss))
     if (write_proj_output) then
       call write_particle_distribution_to_h5(node_list, element_list, &
         filename='part_'//trim(adjustl(n_s))//'_'//trim(name)//'.h5', n_fields=1, time=0.d0)

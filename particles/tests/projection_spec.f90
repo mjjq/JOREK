@@ -1,7 +1,7 @@
-!> This module contains some testcases for projecting particles, ensuring
+!> This module contains some testcases for projections, ensuring
 !> that the projection matrix, RHS and MUMPS work for these cases.
 !>
-!> It contains tests of projecting zero, 1, x, xy onto a square or circular grid
+!> It contains tests of projecting zero, 1, x, xy, x^4 onto a square, flux-aligned or circular grid
 module projection_spec
 use mod_project_particles
 use data_structure
@@ -10,18 +10,18 @@ use projection_helpers
 use fruit
 implicit none
 
-logical, parameter :: write_proj_output = .true.
-logical, parameter :: EXTRATEST = .false.
+logical, parameter :: write_proj_output = .false. !< Set to true to write restart files with the projected density
+logical, parameter :: EXTRATEST = .false. !< Set to .true. to do flux-aligned projection tests
 
 contains
 
 !> Actions to perform before any of these tests
 subroutine setup_projection_spec
-  call initialise_basis
+    call initialise_basis !< Calculate the basis functions at the gaussian points
 end subroutine setup_projection_spec
 
 
-!> Project zeros onto a square grid
+!> Project zero onto a square grid
 subroutine test_project_0_square_10_10
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
@@ -50,6 +50,8 @@ subroutine test_project_1_square_10_10
   call project_f_with_assert_and_write(node_list, element_list, f_1, 1.d0, 0.d0, '1_square_10_10')
 end subroutine test_project_1_square_10_10
 
+!> Project one onto two polar grids. One with an even number of elements in the poloidal direction
+!> and one with an odd number of elements. For the polar grid this should not matter much.
 subroutine test_project_1_polar_30_32
   use phys_module
   type(type_node_list) :: node_list
@@ -57,7 +59,6 @@ subroutine test_project_1_polar_30_32
   call default_polar_grid(node_list, element_list, 32)
   call project_f_with_assert_and_write(node_list, element_list, f_1, 1.d0, 0.d0, '1_polar_30_32')
 end subroutine test_project_1_polar_30_32
-!> Test projection onto a tricky grid
 subroutine test_project_1_polar_30_31
   use phys_module
   type(type_node_list) :: node_list
@@ -76,6 +77,8 @@ subroutine test_project_1_flux_40_31
   call project_f_with_assert_and_write(node_list, element_list, f_1, 1.d0, 0.d0, '1_flux_40_31')
 end subroutine test_project_1_flux_40_31
 !> Test projection onto a flux-aligned grid with even number of nodes
+!> The flux-aligned grid has some tricks to have continuity on axis, which only work for an even
+!> number of elements.
 subroutine test_project_1_flux_40_32
   use phys_module
   type(type_node_list) :: node_list
@@ -102,13 +105,15 @@ subroutine test_project_RZ_square_10_10
   call project_f_with_assert_and_write(node_list, element_list, f_RZ, 0.d0, 0.d0, 'RZ_square_10_10')
 end subroutine test_project_RZ_square_10_10
 
+!> Project R^4 onto a square grid
 subroutine test_project_R4_square_10_10
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call project_f_with_assert_and_write(node_list, element_list, f_R4, 1.89583333333333, 0.d0, 'R4_square_10_10', rms_tol=3d-6)
+  call project_f_with_assert_and_write(node_list, element_list, f_R4, 1.89583333333333d0, 0.d0, 'R4_square_10_10', rms_tol=3d-6)
 end subroutine test_project_R4_square_10_10
 
+!> Project R^4 onto a few square grids and verify convergence with n
 subroutine test_project_R4_square_n
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
@@ -131,6 +136,7 @@ end subroutine test_project_R4_square_n
 
 
 
+!> Helper function:
 !> Project a function f onto grid in node_list and element_list
 !> and test for mean and RMS value. Optionally write to file for visual inspection.
 subroutine project_f_with_assert_and_write(node_list, element_list, f, mean, RMS, name, rms_tol)
@@ -157,6 +163,8 @@ end subroutine project_f_with_assert_and_write
 
 
 
+!> Test the exact form of the projection matrix for a simple square grid.
+!> Reference integrals calculated with Mathematica.
 subroutine test_projection_matrix_square_2_2
   use basis_at_gaussian
   type(type_node_list) :: node_list
@@ -172,7 +180,6 @@ subroutine test_projection_matrix_square_2_2
       0.034898,0.0055102,-0.00840136,-0.00132653,& ! index 3 (but node 4, because index is switched with matrix order)
       0.0165306,-0.00382653,-0.00397959,0.000921202] ! index 4 (but node 3)
   real*8, parameter :: tol = 1d-6
-  call initialise_basis
   node_list%n_nodes = 0
   element_list%n_elements = 0
   call grid_bezier_square(n_R, n_Z, R_geo-amin,R_geo+amin, Z_geo-amin, Z_geo+amin, .true., node_list, element_list)

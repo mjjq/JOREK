@@ -1,4 +1,8 @@
 !> This module contains some helper functions for particle projection
+!> These are a few reference functions f_*, a function to project one of these,
+!> functions to generate a square, polar and flux-aligned grid,
+!> functions to calculate the projection RHS and a function to calculate the mean
+!> and RMS error of a projected function.
 module projection_helpers
 use mod_project_particles
 use data_structure

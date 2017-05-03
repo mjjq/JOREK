@@ -59,8 +59,8 @@ integer, intent(out)   :: ielm_out
 integer, intent(out)   :: ifail
 
 integer :: i, ntrial, istart
-real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8  :: RRg1,dRRg1_dr,dRRg1_ds
+real*8  :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8  :: tolx, tolf, errx, errf, temp, dis
 real*8  :: x(2), FVEC(2), FJAC(2,2), p(2)
 
@@ -91,8 +91,8 @@ do istart = 1,5
 
   do i=1,ntrial
 
-    call interp_RZ(node_list,element_list,i_elm,x(1),x(2),RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ2(node_list,element_list,i_elm,x(1),x(2),RRg1,dRRg1_dr,dRRg1_ds, &
+                                                    ZZg1,dZZg1_dr,dZZg1_ds)
 
     FVEC(1)   = RRg1 - R_find
     FVEC(2)   = ZZg1 - Z_find

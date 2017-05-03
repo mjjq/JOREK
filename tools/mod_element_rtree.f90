@@ -30,7 +30,7 @@ end interface
 
 contains
 
-!> Populate the RTree with the squares containing nodes of elements.
+!> Populate the RTree with the squares containing elements
 !> x=R, y=Z
 subroutine populate_element_rtree(node_list, element_list)
   type(type_node_list), intent(in)    :: node_list
@@ -42,6 +42,7 @@ subroutine populate_element_rtree(node_list, element_list)
   do i=1,n
     call RZ_minmax(node_list, element_list, i, minx(i), maxx(i), miny(i), maxy(i))
   end do
+  ! this cleans out the tree before insertion
   call element_rtree(int(n,C_INT), minx, miny, maxx, maxy)
 end subroutine populate_element_rtree
 

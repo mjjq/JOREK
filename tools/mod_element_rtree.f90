@@ -6,7 +6,7 @@ implicit none
 public
 
 interface
-  !> Name is element_tree to match filename `element_rtree.cpp`.
+  !> Name is element_rtree to match filename `element_rtree.cpp`.
   !> `void PopulateTree(int nelm, double minx[], double miny[], double maxx[], double maxy[])`
   subroutine element_rtree(n, minx, miny, maxx, maxy) bind(C,name="PopulateTree")
     import C_DOUBLE, C_INT
@@ -40,11 +40,7 @@ subroutine populate_element_rtree(node_list, element_list)
   n = element_list%n_elements
   allocate(minx(n), miny(n), maxx(n), maxy(n))
   do i=1,n
-    vertices = element_list%element(i)%vertex(:)
-    minx(i) = minval(node_list%node(vertices)%x(1,1))
-    maxx(i) = maxval(node_list%node(vertices)%x(1,1))
-    miny(i) = minval(node_list%node(vertices)%x(1,2))
-    maxy(i) = maxval(node_list%node(vertices)%x(1,2))
+    call RZ_minmax(node_list, element_list, i, minx(i), maxx(i), miny(i), maxy(i))
   end do
   call element_rtree(int(n,C_INT), minx, miny, maxx, maxy)
 end subroutine populate_element_rtree
@@ -77,4 +73,30 @@ subroutine nearby_elements(node_list, element_list, i_elm, i_nearby)
   allocate(i_nearby(num_elements))
   call elements_in_rect(minx, miny, maxx, maxy, i_nearby)
 end subroutine nearby_elements
+
+!> Find elements that could probably contain this point.
+!> Do this by maxing a small box of 10^-6 around this point and finding all elements of which the RZ boundingbox overlaps.
+!> This could be a few, but not more than n_pol (if exactly on axis)
+subroutine elements_containing_point(node_list, element_list, R, Z, i_elms)
+  type(type_node_list), intent(in)    :: node_list
+  type(type_element_list), intent(in) :: element_list
+  real*8, intent(in)                  :: R, Z
+  integer(C_INT), dimension(:), allocatable, intent(out) :: i_elms
+
+  integer :: i
+  real(C_DOUBLE) :: minx, miny, maxx, maxy
+  integer(C_INT) :: num_elements
+
+  minx = R - 1d-6
+  maxx = R + 1d-6
+  miny = Z - 1d-6
+  maxy = Z + 1d-6
+
+  ! This calls the search routine twice! To get around that either pass a large enough array alway
+  ! or implement it as a mask/bitfield of the total number of elements.
+  ! I expect this to be unnecessary, as the speed improvement here is dramatic enough.
+  num_elements = num_elements_in_rect(minx, miny, maxx, maxy)
+  allocate(i_elms(num_elements))
+  call elements_in_rect(minx, miny, maxx, maxy, i_elms)
+end subroutine elements_containing_point
 end module mod_element_rtree

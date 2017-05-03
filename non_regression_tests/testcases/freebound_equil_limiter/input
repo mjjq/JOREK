@@ -22,30 +22,32 @@
 
  freeboundary = .f.
  freeboundary_equil = .t.
+ starwall_equil_coils = .f.
+ resistive_wall      = .t.
  
  amix                 = 0.d0
  amix_freeb           = 0.85d0
  FB_Ip_position       = 0.5d0
  FB_Ip_integral       = 0.1d0
  current_ref          = 0.13d6
- FB_Zaxis_position    = 1.d0
+ FB_Zaxis_position    = 13.d0
  FB_Zaxis_integral    = 0.d0
  FB_Zaxis_derivative  = 0.d0
  Z_axis_ref           = 0.d0
  start_VFB            = 7
  n_feedback_current   = 4
  n_feedback_vertical  = 2
- n_iter_freeb         = 140 
+ n_iter_freeb         = 500 
  
- n_coils_nml          = 4
+ n_pf_coils          = 4
 
- coils0(1)%current    = 0.0100d+6  ! pf1
- coils0(2)%current    = 0.0100d+6  ! pf2
- coils0(3)%current    = -0.0900d+6 ! pf3
- coils0(4)%current    = -0.0900d+6 ! pf4
+ pf_coils(1)%current    = 0.0100d+6  ! pf1
+ pf_coils(2)%current    = 0.0100d+6  ! pf2
+ pf_coils(3)%current    = -0.0900d+6 ! pf3
+ pf_coils(4)%current    = -0.0900d+6 ! pf4
  
- coils0(1)%FB_amp     = -1.d0      ! pf1
- coils0(2)%FB_amp     =  1.d0      ! pf2
+ pf_coils(1)%FB_amp     = -1.d0      ! pf1
+ pf_coils(2)%FB_amp     =  1.d0      ! pf2
 
  xpoint = .f.
 

@@ -13,6 +13,7 @@ FFLAGS          := $(FFLAGS) -O2 -mcmodel=medium -DUSE_BLOCK
 #FFLAGS          := $(FFLAGS) -O2 -mcmodel=medium -DUSE_BLOCK -Dfullmhd 
 
 CC = mpicc
+CXX = mpicxx
 
 # --- DEBUGGING
 #   --- Debug symbols for debuggers

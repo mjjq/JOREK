@@ -237,11 +237,11 @@ if (my_id .eq. 0) then
   call MPI_PACK (n_feedback_current,    1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (n_feedback_vertical,   1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (n_iter_freeb,          1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK (n_coils_nml,           1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (n_pf_coils,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   
-  call MPI_PACK (coils0%current,       30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK (coils0%FB_amp,        30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK (coils0%pert,          30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (pf_coils%current,     30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (pf_coils%FB_amp,      30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (pf_coils%pert,        30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -598,11 +598,11 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,n_feedback_current,     1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_feedback_vertical,    1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_iter_freeb,           1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,n_coils_nml,            1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,n_pf_coils,             1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   
-  call MPI_UNPACK(buffer,bufsize,position,coils0%current,        30,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,coils0%FB_amp,         30,MPI_REAL8,MPI_COMM_WORLD,ierr) 
-  call MPI_UNPACK(buffer,bufsize,position,coils0%pert,           30,MPI_REAL8,MPI_COMM_WORLD,ierr) 
+  call MPI_UNPACK(buffer,bufsize,position,pf_coils%current,      30,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,pf_coils%FB_amp,       30,MPI_REAL8,MPI_COMM_WORLD,ierr) 
+  call MPI_UNPACK(buffer,bufsize,position,pf_coils%pert,         30,MPI_REAL8,MPI_COMM_WORLD,ierr) 
 
   call MPI_UNPACK(buffer,bufsize,position,nstep,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,               10,MPI_INTEGER,MPI_COMM_WORLD,ierr)

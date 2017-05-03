@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N _CASE_
-#PBS -q xfuaprod
+#PBS -q xfuadebug
 #PBS -A FUA11_AUGJOR
 #PBS -l select=1:ncpus=36:mpiprocs=2
 #PBS -l place=excl
@@ -8,8 +8,6 @@
 #PBS -V
 #PBS -l walltime=0:15:00
 #PBS -m e
-#PBS -o _CASE_.log
-#PBS -e _CASE_.err
 
 ########################################################################
 # Look to non_regression_tests/testcases/_CASE_/settings.sh
@@ -20,7 +18,6 @@ cd $PBS_O_WORKDIR
 
 ulimit -l unlimited
 ulimit -s unlimited
-cat $PBS_NODEFILE > hosts.txt
 
 
 CASE=_CASE_

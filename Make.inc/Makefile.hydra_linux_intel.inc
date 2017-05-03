@@ -9,6 +9,7 @@ MODEL = model199
 # Fortran compiler 
 FC     = mpif90 -f90=ifort -mt_mpi
 CC     = mpicc
+CXX    = mpicxx
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp

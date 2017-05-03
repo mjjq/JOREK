@@ -5,6 +5,7 @@ MODEL = model303
 # Fortran compiler 
 FC     = mpif90 -f90=gfortran
 CC     = mpicc
+CXX    = mpicxx -cxx=g++
 
 FFLAGS          += -malign-double -g  
 FFLAGS          += -fdefault-real-8 -fdefault-double-8 

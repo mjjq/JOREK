@@ -4,17 +4,8 @@ subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_o
 !< Return the first result.
 !-------------------------------------------------------------------------
 use data_structure
+use mod_element_rtree
 implicit none
-
-interface
-  subroutine RZ_minmax(node_list,element_list,i_elm,Rmin,Rmax,Zmin,Zmax)
-    use data_structure
-    type (type_node_list), intent(in)    :: node_list
-    type (type_element_list), intent(in) :: element_list
-    integer, intent(in) :: i_elm
-    real*8, intent(out) :: Rmin, Rmax, Zmin, Zmax
-  end subroutine RZ_minmax
-end interface
 
 type (type_node_list), intent(in)    :: node_list
 type (type_element_list), intent(in) :: element_list
@@ -23,63 +14,23 @@ real*8, intent(out)    :: R_out,Z_out,s_out,t_out
 integer, intent(inout) :: ielm_out
 integer, intent(out)   :: ifail
 
-real*8  :: Rmin, Rmax, Zmin, Zmax
-logical              :: minmax_initialised
-real*8, allocatable  :: elements_minmax(:,:)
-integer :: k
+logical, save        :: rtree_initialised = .false.
 
-save minmax_initialised, elements_minmax
+integer :: k
+integer, dimension(:), allocatable :: i_elms
 
 ielm_out = 0
+if (.not. rtree_initialised) then
+  call populate_element_rtree(node_list, element_list) ! not OMP safe, call once outside of openmp
+  rtree_initialised = .true.
+end if
 
-if (.not. allocated(elements_minmax)) then
+call elements_containing_point(node_list, element_list, R_find, Z_find, i_elms)
 
-  allocate(elements_minmax(4,element_list%n_elements))
-  minmax_initialised = .false.
-!  write(*,*) ' *** FIND_RZ : initialising ***'
-
-elseif (size(elements_minmax,2) .ne. element_list%n_elements) then
-
-  deallocate(elements_minmax)
-  allocate(elements_minmax(4,element_list%n_elements))
-  minmax_initialised = .false.
-!  write(*,*) ' *** FIND_RZ : re-initialising ***'
-
-endif
-
-if (.not. minmax_initialised) then
-  do k=1,element_list%n_elements
-    call RZ_minmax(node_list,element_list,k,Rmin,Rmax,Zmin,Zmax)
-    elements_minmax(:,k) = [Rmin, Rmax, Zmin, Zmax]
-  enddo
-  minmax_initialised = .true.
-endif
-
-
-! Test the given element first if it is in range
-if (ielm_out .ge. 1 .and. ielm_out .le. element_list%n_elements) then
-  k = ielm_out
-  Rmin =  elements_minmax(1,k)
-  Rmax =  elements_minmax(2,k)
-  Zmin =  elements_minmax(3,k)
-  Zmax =  elements_minmax(4,k)
-  if ((R_find .ge. Rmin) .and. (R_find .le. Rmax) .and. &
-      (Z_find .ge. Zmin) .and. (Z_find .le. Zmax) ) then
-    call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-    if (ifail .eq. 0) return
-  endif
-endif
 ! then loop through all
-do k=1,element_list%n_elements
-  Rmin =  elements_minmax(1,k)
-  Rmax =  elements_minmax(2,k)
-  Zmin =  elements_minmax(3,k)
-  Zmax =  elements_minmax(4,k)
-  if ((R_find .ge. Rmin) .and. (R_find .le. Rmax) .and. &
-      (Z_find .ge. Zmin) .and. (Z_find .le. Zmax) ) then
-    call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-    if (ifail .eq. 0) return
-  endif
+do k=1,size(i_elms)
+  call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  if (ifail .eq. 0) return
 enddo
 
 if (ielm_out .eq. 0) ifail = 99
@@ -207,96 +158,3 @@ do istart = 1,5
   enddo
 enddo
 end subroutine find_RZ_single
-
-
-
-
-
-recursive subroutine find_RZ2(node_list, element_list, R_find, Z_find, R_out, Z_out, ielm_out,      &
-  s_out, t_out, ifail)
-
-use data_structure
-
-implicit none
-
-! --- Constants
-integer, parameter :: niter     = 20                   !< Maximum number of Newton iterations
-real*8,  parameter :: tolf      = 1.d-6                !< Tolerance for spatial distance
-real*8,  parameter :: tolx      = 1.d-15               !< Tolerance for iteration step width
-real*8,  parameter :: delta     = 0.05d0               !< Maximum number of Newton iterations
-
-! --- Routine parameters
-type (type_node_list),    intent(in)    :: node_list
-type (type_element_list), intent(in)    :: element_list
-real*8,                   intent(in)    :: R_find, Z_find
-real*8,                   intent(out)   :: R_out, Z_out, s_out, t_out
-integer,                  intent(out)   :: ielm_out, ifail
-
-integer :: i, j, k, iv, istart
-real*8  :: Rmin, Rmax, Zmin, Zmax, temp, dis, RR, RR_s, RR_t, ZZ, ZZ_s, ZZ_t, x(2), fvec(2), p(2)
-
-ielm_out = 0
-ifail    = 99
-
-L_EL: do k = 1, element_list%n_elements
-
-  call RZ_minmax(node_list, element_list, k, Rmin, Rmax, Zmin, Zmax) ! <<< most expensive call!!!
-  
-  if ( (R_find > Rmin - delta) .and. (R_find < Rmax + delta) .and. (Z_find > Zmin - delta) .and.   &
-     (Z_find < Zmax + delta) ) then ! (If the element could be relevant, proceed:)
-    
-    L_ST: do istart = 1, 5
-      
-      ! Try up to five different starting positions inside the element:
-      if (istart == 1) then
-        x(:) = (/ 0.50d0, 0.50d0 /)
-      else if (istart == 2) then
-        x(:) = (/ 0.23d0, 0.23d0 /)
-      else if (istart == 3) then
-        x(:) = (/ 0.77d0, 0.77d0 /)
-      else if (istart == 4) then
-        x(:) = (/ 0.77d0, 0.23d0 /)
-      else if (istart == 5) then
-        x(:) = (/ 0.23d0, 0.77d0 /)
-      end if
-      
-      do i = 1, niter
-        
-        call interp_RZ2(node_list, element_list, k, x(1), x(2), RR, RR_s, RR_t, ZZ, ZZ_s, ZZ_t)
-        
-        fvec(:) = (/ RR - R_find, ZZ - Z_find /)
-        
-        if (sqrt(sum(fvec**2)) <= tolf) then
-          ielm_out = k
-          exit L_EL
-        endif
-        
-        dis  = ZZ_t * RR_s - RR_t * ZZ_s
-        if (dis == 0.d0) exit L_ST
-        
-        p(:) = (/ RR_t * fvec(2) - ZZ_t * fvec(1), ZZ_s * fvec(1) - RR_s * fvec(2) /) / dis
-        
-        p(:) = max( min(p(:),     +0.25d0), -0.25d0 ) ! (limit iteration step size)
-        x(:) = max( min(x(:)+p(:),+1.00d0), -0.00d0 ) ! (restict s and t to valid range)
-        
-        if (sqrt(sum(p**2)) <= tolx) then
-          ielm_out  = k
-          exit L_EL
-        end if
-        
-      end do
-    end do L_ST
-    
-  end if
-  
-end do L_EL
-
-if ( ielm_out /= 0 ) then
-  s_out     = x(1)
-  t_out     = x(2)
-  R_out     = RR
-  Z_out     = ZZ
-  ifail     = 0
-end if
-
-end subroutine find_RZ2

@@ -124,10 +124,10 @@ do iter = 1, n_iter
   write(*,'(A,I4,A,ES10.3)') ' Iteration ', iter, ': diff=', diff
   
   if ( (iter > 1) .and. (diff < equil_accuracy) ) then
-    write(*,'(A,I4,A)') ' Equilibrium converged: after', iter, ' iterations'
+    write(*,'(A,I4,A)') ' Fixed boundary equilibrium converged: after', iter, ' iterations'
     exit
   else if ( iter == n_iter) then
-    write(*,'(A,ES10.3)') ' Equilibrium not fully converged: diff=', diff
+    write(*,'(A,ES10.3)') ' WARNING: Fixed boundary equilibrium not fully converged: diff=', diff
     exit
   end if
 
@@ -224,8 +224,11 @@ if (freeboundary_equil) then
     !Vertical feedback - needed for vertically unstable plasmas    
     
     Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
-    dZ_axis = Z_axis - Z_axis_old
-    if (iter .eq. 1) dZ_axis = 0.d0
+    if (iter .eq. 1) then
+      dZ_axis = 0.d0
+    else
+      dZ_axis = Z_axis - Z_axis_old
+    end if
     
     if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
       vertical_FB = FB_Zaxis_position   * (Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current
@@ -248,7 +251,13 @@ if (freeboundary_equil) then
   
     write(*,'(A,i5,e14.6)') ' iteration, diff : ',iter,diff
   
-    if ((iter .gt. 1) .and. (diff .lt. equil_accuracy_freeb)) exit
+    if ( (iter > 1) .and. (diff < equil_accuracy_freeb) ) then
+      write(*,'(A,I4,A)') ' Free boundary equilibrium converged: after', iter, ' iterations'
+      exit
+    else if ( iter == n_iter_freeb) then
+      write(*,'(A,ES10.3)') ' WARNING: Free boundary equilibrium not fully converged: diff=', diff
+      exit
+    end if
 
   enddo
 

@@ -18,7 +18,7 @@ jorek_model$(MODEL_NUMBER): jorek2_main
 # Some defaults and parsing logic for makefile.inc
 include defaults.mk
 
-.PHONY: .mod/version.h clean cleanall cleandep duplicates test particle_test doc docs
+.PHONY: .mod/version.h clean cleanall cleandep duplicates
 cleanall: clean cleandep
 clean:
 	@echo ">> Deleting Object Files <<"
@@ -107,6 +107,25 @@ endif
 $(foreach prog,$(PROGRAM_SOURCES),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 # To compile all programs found in $(DIRS)
 all: $(basename $(notdir $(PROGRAM_SOURCES)))
+# A list of supported diagnostics, that should compile properly for regression
+# testing to pass
+most: jorek2_connection2 \
+      jorek2_connection_stan \
+      jorek2_diagno \
+      jorek2_fieldlines_vtk \
+      jorek2_four \
+      jorek2_poincare \
+      jorek2_powers \
+      jorek2_target2vtk \
+      jorek2vtk_3d \
+      jorek2vtk \
+      jorek2vtk_GaussVortTerms \
+      jorek_to_helena \
+      new_diag_demo \
+      jorek2_postproc \
+      rst_bin2hdf5 \
+      rst_hdf52bin \
+      jorek2_main
 
 # Special cases
 # Add here: Global includes (as the line below)
@@ -114,10 +133,6 @@ INCLUDES += -Itools # for r3_info.h
 # C++ support
 LIBS += -lstdc++
 CXXFLAGS += -pedantic -Wall
-# non-standard object files (extra include options, target-specific variable)
-# Rule-specific includes: an example
-particle_test_driver: INCLUDES += -I$(INC_FRUIT)
-particle_test_driver: LIBS += -L$(LIB_FRUIT) -lfruit -Wl,-rpath=$(LIB_FRUIT)
 
 
 # Benchmarks and other output used in the documentation

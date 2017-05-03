@@ -15,14 +15,20 @@ integer, intent(inout) :: ielm_out
 integer, intent(out)   :: ifail
 
 logical, save        :: rtree_initialised = .false.
+integer, save        :: n_elements = 0 !< Number of elements in the existing rtree. Used to check if the grid has changed.
+real*8, save         :: r_median = 0.d0 !< Position of the median node. Used to check if the grid has changed.
 
 integer :: k
 integer, dimension(:), allocatable :: i_elms
 
 ielm_out = 0
+if (element_list%n_elements .ne. n_elements) rtree_initialised = .false.
+if (node_list%n_nodes .gt. 0 .and. abs(node_list%node((node_list%n_nodes+1)/2)%x(1,1) - r_median) .gt. 1d-80) rtree_initialised = .false.
 if (.not. rtree_initialised) then
   call populate_element_rtree(node_list, element_list) ! not OMP safe, call once outside of openmp
   rtree_initialised = .true.
+  n_elements = element_list%n_elements
+  if (node_list%n_nodes .gt. 0) r_median = node_list%node((node_list%n_nodes+1)/2)%x(1,1)
 end if
 
 call elements_containing_point(node_list, element_list, R_find, Z_find, i_elms)
@@ -35,6 +41,7 @@ enddo
 
 if (ielm_out .eq. 0) ifail = 99
 end subroutine find_RZ
+
 
 subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 !-------------------------------------------------------------------------

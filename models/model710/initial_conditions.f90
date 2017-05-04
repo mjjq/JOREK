@@ -129,12 +129,15 @@ if (my_id .eq. 0) then
 
     ! Fprof_eq was aleady initialised in equilibrium.f90. 
     ! Not sure if the above small change in psi on the grid axis of flux aligned grids matters, therefore Fprof_eq is reinitilised here. 
+
+write(*,*) df_dz
+
     node_list%node(i)%Fprof_eq(1) =   F_prof
-    node_list%node(i)%Fprof_eq(2) =   dF_dpsi  * node_list%node(i)%values(1,2,var_A3) + dF_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%Fprof_eq(3) =   dF_dpsi  * node_list%node(i)%values(1,3,var_A3) + dF_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%Fprof_eq(4) =   dF_dpsi  * node_list%node(i)%values(1,4,var_A3) + dF_dz * node_list%node(i)%x(4,2)      &
-                                    + dF_dpsi2 * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
-                                    + dF_dz2   * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
+    node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3) ! + dF_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3) ! + dF_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3) & ! + dF_dz * node_list%node(i)%x(4,2)      &
+                                    + dF_dpsi2* node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3) ! &
+                                   ! + dF_dz2  * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
 
 #endif
 

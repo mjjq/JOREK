@@ -7,7 +7,6 @@ module projection_helpers
 use mod_project_particles
 use data_structure
 use mod_particle_types
-use fruit
 implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 

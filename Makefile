@@ -25,7 +25,7 @@ clean:
 	-@rm -r $(OBJDIR)
 	@echo ">> Deleting Module Files <<"
 	-@rm -r $(MODDIR)
-	-@find . -name '*.mod' -delete -or -name '*.o' -delete
+	-@find . -name '*.mod' -delete -or -name '*.o' -delete -or -name '*.i90' -delete
 	-@rm -f particle_test_driver.f90
 cleandep:
 	@echo ">> Deleting Dependency Files <<"

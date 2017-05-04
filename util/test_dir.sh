@@ -6,7 +6,10 @@
 # If the second argument is -x or --xml output results to result.xml
 
 outfile=`sed 's|/|_|g' <<< $1`
-rm -f $outfile $outfile.*
+if [ -z "$outfile" ]; then
+  exit 1
+fi
+rm -f "$outfile" "$outfile.{f90,mods,tests}"
 has_setup=0
 has_teardown=0
 xml=""
@@ -62,11 +65,11 @@ if [ $has_teardown -eq 1 ]; then
 fi
 echo "end program $outfile" >> $outfile.f90
 
-rm $outfile.tests
-rm $outfile.mods
+rm "$outfile.tests"
+rm "$outfile.mods"
 
 # build the test with a new invokation of make to get the dependencies right
-make -j8 $outfile
+make $outfile
 if [ $? -eq 0 ]; then
   if [ "$junit" -eq 1 ]; then
     util/fruit2junit.sh $outfile

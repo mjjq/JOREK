@@ -303,10 +303,14 @@ do i=1,node_list%n_nodes
                                                                 dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
 
     node_list%node(i)%Fprof_eq(1) =   F_prof
-    node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3) + dF_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3) + dF_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3) + dF_dz * node_list%node(i)%x(4,2)      &
+    node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3)  + dF_dz * node_list%node(i)%x(2,2)
+
+    node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3)  + dF_dz * node_list%node(i)%x(3,2)
+
+    node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3)  + dF_dz * node_list%node(i)%x(4,2)     &
+
                                     + dF_dpsi2* node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+
                                     + dF_dz2  * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
 
 #else

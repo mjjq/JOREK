@@ -62,6 +62,8 @@ DIRS := diagnostics			\
 	diagnostics/new_diag		\
 	diagnostics/postproc		\
 	tools				\
+	tools/fruit                     \
+	non_regression_tests/unit_tests \
 	datatypes			\
 	.				\
 	vacuum

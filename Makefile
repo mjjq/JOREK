@@ -31,9 +31,11 @@ cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
 	-@find . -name '*.d' -delete 2>/dev/null
-test: particle_test
+test: particle_test nrt_unit
 particle_test:
-	PYTHONPATH=$(FRUITPYDIR) python particles/tests/particle_test.py
+	+./util/test_dir.sh particles/tests
+nrt_unit:
+	+./util/test_dir.sh non_regression_tests/unit_tests
 doc docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
 	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search

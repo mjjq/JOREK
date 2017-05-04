@@ -8,7 +8,6 @@ use mod_project_particles
 use data_structure
 use mod_particle_types
 implicit none
-include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 
 interface
   subroutine grid_flux_surface(xpoint,xcase,node_list,element_list,surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2,refinement)

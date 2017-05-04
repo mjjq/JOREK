@@ -76,7 +76,6 @@ subroutine test_sobseq_known_values
   known_values(7,:) = real([5,3,1,1,3,5,5,5,7,5,1,5],8)/8.d0
   known_values(8,:) = real([5,15,7,9,5,7,15,15,5,11,1,15],8)/16.d0
   known_values(9,:) = real([13,7,15,1,13,15,7,7,13,3,9,7],8)/16.d0
-  known_values(10,:) = real([1,11,3,5,9,3,3,3,9,7,13,11],8)/16.d0
   call rng%initialize(n_dims=8, seed=0, n_streams=1, i_stream=1, ierr=ifail)
   call assert_equals(0, ifail, "must seed normal without error")
   call rng_strided(1)%initialize(n_dims=8, seed=0, n_streams=2, i_stream=1, ierr=ifail)
@@ -84,22 +83,22 @@ subroutine test_sobseq_known_values
   call rng_strided(2)%initialize(n_dims=8, seed=0, n_streams=2, i_stream=2, ierr=ifail)
   call assert_equals(0, ifail, "must seed strided 2 without error")
   ! rng actually starts at position 1
-  do i=2,10
+  do i=2,9
     call rng%next(x)
     do j=1,8
-      write(s,"(a1,i1,a1,i1,a1)") "(", i, ",", j, ")"
+      write(s,"(A1,I1,A1,I1,A1)") "(", i, ",", j, ")"
       call assert_equals(known_values(i,j), x(j), s)
     end do
   end do
-  do i=3,10,2
+  do i=3,8,2
     call rng_strided(1)%next(x)
     do j=1,8
-      write(s,"(a1,i1,a1,i1,a1)") "(", i, ",", j, ")"
+      write(s,"(A1,I1,A1,I1,A1)") "(", i, ",", j, ")"
       call assert_equals(known_values(i,j), x(j), s)
     end do
     call rng_strided(2)%next(x)
     do j=1,8
-      write(s,"(a1,i1,a1,i1,a1)") "(", i+1, ",", j, ")"
+      write(s,"(A1,I1,A1,I1,A1)") "(", i+1, ",", j, ")"
       call assert_equals(known_values(i+1,j), x(j), s)
     end do
   end do

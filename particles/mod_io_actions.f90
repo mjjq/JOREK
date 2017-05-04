@@ -47,12 +47,12 @@ function get_filename(this, time) result(filename)
   if (this%decimal_digits .eq. 0 .and. this%fractional_digits .eq. 0) then
     write(filename,'(A,A)') trim(this%basename), this%extension
   else if (this%fractional_digits .eq. 0) then
-    write(format,'(A,I0,A)') '(a,i', this%decimal_digits, 'a)'
+    write(format,'(A,I0,A)') '(A,I', this%decimal_digits, ',A)'
     write(filename,trim(format)) trim(this%basename), int(time), this%extension
   else
-    write(format,'(A,I0,A,I0,A,I0,A)') '(a,i', this%decimal_digits, '.', this%decimal_digits, &
-        ',f0.', this%fractional_digits, ',a)'
-    write(filename,trim(format)) trim(this%basename), int(time), time-int(time), this%extension
+    write(format,'(A,I0,A,I0,A,I0,A)') '(A,I', this%decimal_digits, '.', this%decimal_digits, &
+        ',f0.', this%fractional_digits, ',A)'
+    write(filename,trim(format)) trim(this%basename), int(time), time-real(int(time)), this%extension
   end if
 end function get_filename
 

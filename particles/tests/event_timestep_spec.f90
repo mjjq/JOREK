@@ -141,7 +141,6 @@ subroutine test_two_pushers_two_events_of_which_one_constrained
   real*8, dimension(2) :: event_step  = [1.0d0, 2.0d0]
   logical, dimension(2,2) :: constraints = .true.
   integer :: ierr
-  constraints(1,:) = .false.
   call fix_event_timestep(pusher_timestep, event_start, event_step, constraints, ierr)
   call assert_equals(0, ierr, "must run without error")
   call assert_equals(2*909d0, event_step(2)/pusher_timestep(1), division_tol, "timestep 1 should divide event 2")

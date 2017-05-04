@@ -12,7 +12,6 @@ use projection_spec, only: elements_mean_rms, f_1, default_square_grid, default_
 use constants, only: TWOPI
 use fruit
 implicit none
-include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 
 logical, parameter :: write_proj_output = .false. !< Set to true to write restart files with the projected density
 logical, parameter :: EXTRATEST = .false. !< Set to .true. to do flux-aligned grid projection tests
@@ -36,7 +35,7 @@ subroutine test_square_10_10_sob
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], sobseq_rng(), mean_tol=3d-8*[1,1,1], rms_tol=401d0/[1d3,1d4,1d5])
+  call project_n_square_10_10(node_list, element_list, [1000,10000,100000], sobseq_rng(), mean_tol=3d-8*[1,1,1], rms_tol=405d0/[1d3,1d4,1d5])
 end subroutine test_square_10_10_sob
 
 
@@ -164,7 +163,7 @@ subroutine test_polar_30_22_10000_sob_smoothing
   w=TWOPI**2*R_geo*amin**2/2.d0
   do i=1,7
     s = 10d0**(real(i-8))
-    write(ss,'(g8.2)') s
+    write(ss,'(g8.1)') s
     call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s'//ss, volume=w, smoothing=s, &
         rms_tol=[0.d0], mean_tol=[2d-5])
   end do
@@ -220,7 +219,7 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, r
   ss = ''
   if (present(smoothing)) then
     s = smoothing
-    write(ss,'(g8.2)') s
+    write(ss,'(g8.1)') s
   end if
   call prepare_mumps_par(node_list, element_list, p, smoothing=s)
 
@@ -237,9 +236,9 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, r
 
     ! test rms
     call elements_mean_rms(node_list, element_list, f_1, m, e)
-    write(tol_s, '(g8.2)') mean_tol(j)
+    write(tol_s, '(g8.1)') mean_tol(j)
     call assert_equals(1.d0, m, mean_tol(j), 'mean value 1 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']'//trim(ss))
-    write(tol_s, '(g8.2)') rms_tol(j)
+    write(tol_s, '(g8.1)') rms_tol(j)
     call assert_equals(0.d0, e, rms_tol(j), 'rms value 0 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']'//trim(ss))
     if (write_proj_output) then
       call write_particle_distribution_to_h5(node_list, element_list, &

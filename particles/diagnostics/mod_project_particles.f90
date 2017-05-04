@@ -5,7 +5,6 @@ use data_structure
 use mod_particle_sim
 implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
-private
 public project_particles, write_particle_distribution_to_vtk
 public prepare_mumps_par, write_particle_distribution_to_h5
 public project_to_vtk, project_to_h5
@@ -256,6 +255,7 @@ type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
 real*8     :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1),element_list%n_elements)
+real*8     :: wgauss2(n_gauss)
 real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 real*8     :: R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3)
@@ -288,16 +288,20 @@ mumps_par%jcn = 0
 mumps_par%A   = 0.d0
 mumps_par%RHS = 0.d0
 
+! Copy wgauss into wgauss2 to get around gfortran not recognizing it as a shared
+! thing https://groups.google.com/forum/#!topic/comp.lang.fortran/VKhoAm8m9KE
+wgauss2 = wgauss
+
 area = 0.
 volume = 0.
 
 write(*,*) '*******************************************'
 write(*,*) '* constructing particle projection matrix *'
 write(*,*) '*******************************************'
-!$omp parallel do default(shared) & ! instead of none, bugfix for gfortran: https://groups.google.com/forum/#!topic/comp.lang.fortran/VKhoAm8m9KE
-!$omp shared(element_list, node_list, H, H_s, H_t, mumps_par) &
-!$omp private(ELM, i_elm, element, nodes, i, j, ms, mt, &
-!$omp         x_g, y_g, x_s, x_t, y_s, y_t, wst, xjac, &
+!$omp parallel do default(none) & ! instead of none, bugfix for gfortran: 
+!$omp shared(element_list, node_list, H, H_s, H_t, mumps_par, wgauss2, smoothing) &
+!$omp private(ELM, i_elm, element, nodes, i, j, k, l, ms, mt, &
+!$omp         x_g, y_g, x_s, x_t, y_s, y_t, wst, xjac, v, v_x, v_y, &
 !$omp         index_ij, index_kl, psi, psi_x, psi_y, ilarge, &
 !$omp         inode, index_large_i, knode, index_large_k) &
 !$omp reduction(+:area,volume)
@@ -331,7 +335,7 @@ do i_elm=1,element_list%n_elements
   ! Perform gauss integration of LHS
   do ms=1, n_gauss
     do mt=1, n_gauss
-      wst = wgauss(ms)*wgauss(mt)
+      wst = wgauss2(ms)*wgauss2(mt)
       xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
 
       area   = area   + xjac * wst

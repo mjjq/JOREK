@@ -601,12 +601,12 @@ endif
 !                               + v * visco * (  uR0_RR + uR0_R / BigR + uR0_ZZ + uR0_pp / BigR**2    &  ! laplacian part viscous term
 !                                               - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2            )
 
-                                + v * visco * ( - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2            ) &
+                                + v * visco_T * ( - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2            ) &
 
-                                - visco * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)        ! laplacian part viscous term
+                                - visco_T * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)        ! laplacian part viscous term
 
 
-             Qvec(var_uR) = Q_uR_primitive - ( visco + visco2 ) * divu * ( v_R + v / BigR )  &                   ! primitive + nonprimitive viscous part
+             Qvec(var_uR) = Q_uR_primitive - ( visco_T + visco2 ) * divu * ( v_R + v / BigR )  &                   ! primitive + nonprimitive viscous part
                            
                           - ( BR0 * B0grad_vstar + Bp0**2 * v / BigR ) + ( v_R + v / BigR ) * ( 0.5d0 * BB2 )  !           + nonprimitive Lorentz force
 
@@ -638,9 +638,9 @@ endif
 
 !                                + v * visco * (  uZ0_RR + uZ0_R / BigR + uZ0_ZZ + uZ0_pp / BigR**2 )
 
-                                - visco * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)        ! laplacian part viscous term
+                                - visco_T * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)        ! laplacian part viscous term
 
-             Qvec(var_uZ) = Q_uZ_primitive - ( visco + visco2 ) * divu * v_Z   &
+             Qvec(var_uZ) = Q_uZ_primitive - ( visco_T + visco2 ) * divu * v_Z   &
 
                           - BZ0 * B0grad_vstar + v_Z * ( 0.5d0 * BB2 )
 
@@ -672,9 +672,9 @@ endif
 !                                + v * visco * (  up0_RR + up0_R / BigR + up0_ZZ + up0_pp / BigR**2              &
 !                                               - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2            )       
 
-                              + v * visco * ( - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2            )  &     
+                              + v * visco_T * ( - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2            )  &     
 
-                              - visco * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
+                              - visco_T * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
 
              if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
 
@@ -682,10 +682,10 @@ endif
                                    + v * r0 * ( BR0 * delta_g(mp,var_uR,ms,mt) + BZ0 * delta_g(mp,var_uZ,ms,mt) + Bp0 * delta_g(mp,var_up,ms,mt) )
 
                Qvec(var_up)      = BR0 * Q_uR_primitive + BZ0 * Q_uZ_primitive + Bp0 * Q_up_primitive &  ! The Lorentz force dissapears under a parallel projection
-                                   - ( visco + visco2 ) * divu * B0grad_vstar                            ! the non-primitive viscous terms, using div-B = 0
+                                   - ( visco_T + visco2 ) * divu * B0grad_vstar                            ! the non-primitive viscous terms, using div-B = 0
 
              else
-               Qvec(var_up) = Q_up_primitive - ( visco + visco2 ) * divu * ( v_p / BigR )  & 
+               Qvec(var_up) = Q_up_primitive - ( visco_T + visco2 ) * divu * ( v_p / BigR )  & 
                               - ( Bp0 * B0grad_vstar - BR0 * Bp0 * v / BigR ) + ( v_p / BigR ) * ( 0.5d0 * BB2 )
              endif
 
@@ -988,21 +988,27 @@ endif
 
 !                                       + v * visco * (  uR_RR + uR_R / BigR + uR_ZZ + uR_pp / BigR**2 - uR / BigR**2 ) &
  
-                                        + v * visco * ( - uR / BigR**2 ) &
+                                        + v * visco_T * ( - uR / BigR**2 ) &
 
-                                       - visco * (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)  &      ! laplacian part viscous term
+                                       - visco_T * (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)  &      ! laplacian part viscous term
 
-                                       - ( visco + visco2 ) * divu_uR * ( v_R + v / BigR )
+                                       - ( visco_T + visco2 ) * divu_uR * ( v_R + v / BigR )
 
                  Qjac(var_uR,var_uZ) =   v * ( - r0  * uZ * uR0_Z - uR0 * divru_uZ )       &
-                                       - ( visco + visco2 ) * divu_uZ * ( v_R + v / BigR )
+                                       - ( visco_T + visco2 ) * divu_uZ * ( v_R + v / BigR )
 
                  Qjac(var_uR,var_up) =   v * ( - r0  * ( up * uR0_p / BigR - 2.d0 * up0 * up / BigR ) - uR0 * divru_up ) &
-                                       + v * visco * ( - 2.d0 * up_p / BigR**2 ) - ( visco + visco2 ) * divu_up * ( v_R + v / BigR )
+                                       + v * visco_T * ( - 2.d0 * up_p / BigR**2 ) - ( visco_T + visco2 ) * divu_up * ( v_R + v / BigR )
 
                  Qjac(var_uR,var_r)  =   v * ( - r  * ( u0grad_uR0 - up0**2 / BigR ) - uR0 * divru_r - ( r * T0_R + r_R * T0 ) )
 
-                 Qjac(var_uR,var_T)  =   v * ( - ( r0 * T_R + r0_R * T ) ) 
+                 Qjac(var_uR,var_T)  =   v * ( - ( r0 * T_R + r0_R * T ) ) &
+
+                                     +   v * dvisco_dT * T * ( - uR0 / BigR**2 ) &
+
+                                       - dvisco_dT * T * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)  &      ! laplacian part viscous term
+
+                                       - dvisco_dT * T * divu * ( v_R + v / BigR )
 
                  else
                  Qjac(var_uR,var_uR) =   r0 * ( uR * u0grad_vstar + uR0 * uR * v_R )                                  &
@@ -1043,22 +1049,26 @@ endif
                  if (primitive) then
 
                  Qjac(var_uZ,var_uR) =   v * ( - r0  * uR * uZ0_R - uZ0 * divru_uR )                              & 
-                                       - ( visco + visco2 ) * divu_uR * v_Z 
+                                       - ( visco_T + visco2 ) * divu_uR * v_Z 
   
                  Qjac(var_uZ,var_uZ) =   v * ( - r0  * ( uZ * uZ0_Z + u0grad_bf ) - uZ * divru - uZ0 * divru_uZ ) &
 
 !                                       + v * visco * (  uZ_RR + uZ_R / BigR + uZ_ZZ + uZ_pp / BigR**2 )           &
 
-                                       - visco * (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2)   &     ! laplacian part viscous term
+                                       - visco_T * (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2)   &     ! laplacian part viscous term
 
-                                       - ( visco + visco2 ) * divu_uZ * v_Z 
+                                       - ( visco_T + visco2 ) * divu_uZ * v_Z 
 
                  Qjac(var_uZ,var_up) =   v * ( - r0  * up * uZ0_p / BigR - uZ0 * divru_up )                       &
-                                       - ( visco + visco2 ) * divu_up * v_Z 
+                                       - ( visco_T + visco2 ) * divu_up * v_Z 
 
                  Qjac(var_uZ,var_r)  =   v * ( - r  * u0grad_uZ0 - uZ0 * divru_r - ( r * T0_Z + r_Z * T0 ) )
 
-                 Qjac(var_uZ,var_T)  =   v * ( - ( r0 * T_Z + r0_Z * T ) )
+                 Qjac(var_uZ,var_T)  =   v * ( - ( r0 * T_Z + r0_Z * T ) ) &
+
+                                       - dvisco_dT * T * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)   &     ! laplacian part viscous term
+
+                                       - dvisco_dT * T * divu * v_Z
 
                  else
                  Qjac(var_uZ,var_uR) =   r0 * uZ0 * uR * v_R                                                   &
@@ -1103,7 +1113,7 @@ endif
                  if (primitive) then
 
                    Qjac(var_up,var_uR) =   v * ( - r0  * ( uR * up0_R + uR * up0 / BigR ) - up0 * divru_uR ) &
-                                         + v * visco * (  2.d0 * uR_p / BigR**2  )
+                                         + v * visco_T * (  2.d0 * uR_p / BigR**2  )
 
                    Qjac(var_up,var_uZ) =   v * ( - r0  * uZ * up0_Z - up0 * divru_uZ )
  
@@ -1112,14 +1122,19 @@ endif
 
 !                                         + v * visco * (  up_RR + up_R / BigR + up_ZZ + up_pp / BigR**2 - up / BigR**2  )
 
-                                         + v * visco * ( - up / BigR**2  ) &
+                                         + v * visco_T * ( - up / BigR**2  ) &
 
-                                         - visco * (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        ! laplacian part viscous term
+                                         - visco_T * (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        ! laplacian part viscous term
 
                    Qjac(var_up,var_r)  =   v * ( - r  * ( u0grad_up0 + uR0 * up0 / BigR ) - up0 * divru_r         &
                                              - ( r * T0_p + r_p * T0 ) / BigR )
 
-                   Qjac(var_up,var_T)  =   v * ( - ( r0 * T_p + r0_p * T ) / BigR )
+                   Qjac(var_up,var_T)  =   v * ( - ( r0 * T_p + r0_p * T ) / BigR ) &
+                                                            
+                                         + v * dvisco_dT * T * ( - up0 / BigR**2  ) &
+
+                                         - dvisco_dT * T * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
+
 
                    if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
 
@@ -1130,19 +1145,24 @@ endif
 
 
                      Qjac(var_up,var_uR) =   BR0 * Qjac(var_uR,var_uR) + BZ0 * Qjac(var_uZ,var_uR) + Bp0 * Qjac(var_up,var_uR) &
-                                           - ( visco + visco2 ) * divu_uR * B0grad_vstar                      ! nonprimitive viscous terms
+                                           - ( visco_T + visco2 ) * divu_uR * B0grad_vstar                      ! nonprimitive viscous terms
+
                      Qjac(var_up,var_uZ) =   BR0 * Qjac(var_uR,var_uZ) + BZ0 * Qjac(var_uZ,var_uZ) + Bp0 * Qjac(var_up,var_uZ) &
-                                           - ( visco + visco2 ) * divu_uZ * B0grad_vstar
+                                           - ( visco_T + visco2 ) * divu_uZ * B0grad_vstar
+
                      Qjac(var_up,var_up) =   BR0 * Qjac(var_uR,var_up) + BZ0 * Qjac(var_uZ,var_up) + Bp0 * Qjac(var_up,var_up) &
-                                           - ( visco + visco2 ) * divu_up * B0grad_vstar
+                                           - ( visco_T + visco2 ) * divu_up * B0grad_vstar
 
                      Qjac(var_up,var_r)  =  BR0 * Qjac(var_uR,var_r)  + BZ0 * Qjac(var_uZ,var_r)  + Bp0 * Qjac(var_up,var_r)
-                     Qjac(var_up,var_T)  =  BR0 * Qjac(var_uR,var_T)  + BZ0 * Qjac(var_uZ,var_T)  + Bp0 * Qjac(var_up,var_T)
+
+                     Qjac(var_up,var_T)  =  BR0 * Qjac(var_uR,var_T)  + BZ0 * Qjac(var_uZ,var_T)  + Bp0 * Qjac(var_up,var_T) &
+
+                                         - dvisco_dT * T * divu * B0grad_vstar                      ! nonprimitive viscous terms
 
                    else
-                     Qjac(var_up,var_uR) = Qjac(var_up,var_uR) - ( visco + visco2 ) * divu_uR * ( v_p / BigR ) ! nonprimitive viscous terms
-                     Qjac(var_up,var_uZ) = Qjac(var_up,var_uZ) - ( visco + visco2 ) * divu_uZ * ( v_p / BigR ) 
-                     Qjac(var_up,var_up) = Qjac(var_up,var_up) - ( visco + visco2 ) * divu_up * ( v_p / BigR ) 
+                     Qjac(var_up,var_uR) = Qjac(var_up,var_uR) - ( visco_T + visco2 ) * divu_uR * ( v_p / BigR ) ! nonprimitive viscous terms
+                     Qjac(var_up,var_uZ) = Qjac(var_up,var_uZ) - ( visco_T + visco2 ) * divu_uZ * ( v_p / BigR ) 
+                     Qjac(var_up,var_up) = Qjac(var_up,var_up) - ( visco_T + visco2 ) * divu_up * ( v_p / BigR ) 
                    endif
 
                  else

@@ -603,7 +603,7 @@ endif
 
                                 + v * visco * ( - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2            ) &
 
-                                - v * visco * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)        ! laplacian part viscous term
+                                - visco * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)        ! laplacian part viscous term
 
 
              Qvec(var_uR) = Q_uR_primitive - ( visco + visco2 ) * divu * ( v_R + v / BigR )  &                   ! primitive + nonprimitive viscous part
@@ -638,7 +638,7 @@ endif
 
 !                                + v * visco * (  uZ0_RR + uZ0_R / BigR + uZ0_ZZ + uZ0_pp / BigR**2 )
 
-                                - v * visco * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)        ! laplacian part viscous term
+                                - visco * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)        ! laplacian part viscous term
 
              Qvec(var_uZ) = Q_uZ_primitive - ( visco + visco2 ) * divu * v_Z   &
 
@@ -674,7 +674,7 @@ endif
 
                               + v * visco * ( - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2            )  &     
 
-                              - v * visco * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
+                              - visco * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
 
              if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
 
@@ -990,7 +990,7 @@ endif
  
                                         + v * visco * ( - uR / BigR**2 ) &
 
-                                       - v * visco * (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)  &      ! laplacian part viscous term
+                                       - visco * (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)  &      ! laplacian part viscous term
 
                                        - ( visco + visco2 ) * divu_uR * ( v_R + v / BigR )
 
@@ -1049,7 +1049,7 @@ endif
 
 !                                       + v * visco * (  uZ_RR + uZ_R / BigR + uZ_ZZ + uZ_pp / BigR**2 )           &
 
-                                       - v * visco * (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2)   &     ! laplacian part viscous term
+                                       - visco * (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2)   &     ! laplacian part viscous term
 
                                        - ( visco + visco2 ) * divu_uZ * v_Z 
 
@@ -1114,7 +1114,7 @@ endif
 
                                          + v * visco * ( - up / BigR**2  ) &
 
-                                         - v * visco * (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        ! laplacian part viscous term
+                                         - visco * (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        ! laplacian part viscous term
 
                    Qjac(var_up,var_r)  =   v * ( - r  * ( u0grad_up0 + uR0 * up0 / BigR ) - up0 * divru_r         &
                                              - ( r * T0_p + r_p * T0 ) / BigR )

@@ -199,7 +199,9 @@ if (freeboundary_equil) then
       call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
       write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
     endif
-     
+    
+    psi_bnd = 0.d0
+ 
     if (xpoint2) then
       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
       if (ifail .ne. 1) then      

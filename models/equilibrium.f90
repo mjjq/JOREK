@@ -8,6 +8,7 @@ use mod_parameters
 use data_structure
 use phys_module
 use mod_poiss
+use mod_iterate2area
 use vacuum
 implicit none
 
@@ -40,7 +41,7 @@ real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
-real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old
+real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old, area_ref
 integer    :: n_grids(10)
 logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
@@ -99,15 +100,15 @@ do iter = 1, n_iter
     psi_bnd = 0.d0
   endif
 
-!  if ( xpoint == .false. ) then
-!    call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-!    if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
-!      if (psi_lim .lt. psi_bnd) then
-!        psi_bnd = psi_lim
-!        write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
-!      endif
-!    endif
-!  endif
+ if ( xpoint == .false. ) then
+   call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+   if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
+     if ((psi_lim .lt. psi_bnd) .and. (n_limiter /= 0)) then
+       psi_bnd = psi_lim
+       write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
+     endif
+   endif
+ endif
 
   if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
   if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
@@ -157,6 +158,13 @@ if (freeboundary_equil) then
   if (Z_axis_ref .gt. 1.d20) then     !choose fix bnd equilibrium final Zaxis in case of non specification of target Zaxis
     Z_axis_ref = Z_axis
   endif
+  
+  ! Target poloidal cross section area for limiter plasmas
+  if (equil_iterate_area .and. (.not. xpoint2)) then
+    n_limiter = 0    ! Use the full domain to search psibnd enclosing given area
+    call area_inside_flux_contour(node_list,element_list, xpoint2, xcase2, psi_bnd, area_ref, R_lim, Z_lim)
+    write(*,*) ' The reference area from fixed boundaray is = ', area_ref
+  endif
 
   do iter=1, n_iter_freeb
     
@@ -191,9 +199,7 @@ if (freeboundary_equil) then
       call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
       write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
     endif
-    
-    psi_bnd = 0.d0
-  
+     
     if (xpoint2) then
       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
       if (ifail .ne. 1) then      
@@ -209,20 +215,20 @@ if (freeboundary_equil) then
       endif
     endif
 
-! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
-!if (iter .lt. 30) then
     call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
     if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
       psi_bnd = min(psi_lim,psi_bnd)
       write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
     endif
-!endif
+    
+    if (equil_iterate_area .and. (.not. xpoint2)) then
+      call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
+    endif
        
     if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
     if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
 
-    !Vertical feedback - needed for vertically unstable plasmas    
-    
+    !Vertical feedback - needed for vertically unstable plasmas        
     Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
     if (iter .eq. 1) then
       dZ_axis = 0.d0
@@ -238,6 +244,7 @@ if (freeboundary_equil) then
     
     Z_axis_old = Z_axis
 
+    ! --- Iterate equation
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
 
@@ -262,6 +269,9 @@ if (freeboundary_equil) then
   enddo
 
   if (my_id == 0) call boundary_check()
+  if (equil_iterate_area .and. (.not. xpoint2)) then
+    n_limiter = 1  ! set found limiter (defined inside iterate2area)
+  endif
 
 endif
 

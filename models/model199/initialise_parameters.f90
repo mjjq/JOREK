@@ -107,7 +107,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
                 Zaxis_find_limit, PF_pert_start_time,               &
-                starwall_equil_coils
+                starwall_equil_coils, equil_iterate_area
 
 if (my_id .eq. 0) then
 

@@ -427,6 +427,7 @@ if (my_id == 0) then
   
   if (freeboundary_equil) then
     write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils
+    write(*,LOGI_FMT) 'equil_iterate_area    ', equil_iterate_area
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
     write(*,REAL_FMT) 'current_ref           ', current_ref

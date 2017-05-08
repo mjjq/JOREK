@@ -323,7 +323,7 @@ module vacuum
 #ifdef USE_HDF5
     ! --- Local variables
     logical   :: freeboundary_rst, resistive_wall_rst
-    integer   :: n_diag_coil
+    integer   :: n_diag_coil = 0
     character :: t_freeboundary, t_resistive_wall
     real*8, allocatable :: t_diag_coil_curr(:,:)
     
@@ -552,7 +552,7 @@ module vacuum
       if ( n_wall_curr == 0 ) return
       
       if ( my_id == 0 ) sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
-      call MPI_BCAST(sz,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(sz,2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       
       if ( my_id /= 0 ) then
         if ( allocated(wall_curr) ) deallocate(wall_curr)

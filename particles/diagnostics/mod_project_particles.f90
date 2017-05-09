@@ -24,7 +24,6 @@ type, extends(project_particles_base) :: project_to_vtk
   integer,allocatable, private :: ien (:,:) !< connectivity in vtk file
 contains
   procedure :: do => project_and_save_to_vtk
-  final :: close_mumps_vtk
 end type project_to_vtk
 interface project_to_vtk
   module procedure new_project_to_vtk
@@ -33,7 +32,6 @@ end interface project_to_vtk
 type, extends(project_particles_base) :: project_to_h5
 contains
   procedure :: do => project_and_save_to_h5
-  final :: close_mumps_h5
 end type project_to_h5
 interface project_to_h5
   module procedure new_project_to_h5
@@ -102,21 +100,6 @@ function new_project_to_h5(node_list, element_list, smoothing, filename, basenam
 
   call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
 end function new_project_to_h5
-
-!> Destructor to cleanly deallocate mumps memory
-!> This might go wrong if mumps was never started (with job=-1)
-!> if people use the constructors in this file that will not happen
-!> we need two different destructors for some reason
-subroutine close_mumps_h5(this)
-  type(project_to_h5) :: this
-  this%mumps_par%JOB = -2
-  call DMUMPS(this%mumps_par)
-end subroutine close_mumps_h5
-subroutine close_mumps_vtk(this)
-  type(project_to_vtk) :: this
-  this%mumps_par%JOB = -2
-  call DMUMPS(this%mumps_par)
-end subroutine close_mumps_vtk
 
 !> Action for projecting all particles and writing output to vtk
 subroutine project_and_save_to_vtk(this, sim, ev)

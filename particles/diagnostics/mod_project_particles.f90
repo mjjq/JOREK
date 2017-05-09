@@ -427,10 +427,9 @@ do i_tor=1, n_tor
   RHS = 0.d0
   my_rhs = 0.d0
   !$omp parallel do default(none) &
-  !$omp shared(particles, element_list, node_list, mode, i_tor) &
+  !$omp shared(particles, element_list, node_list, mode, i_tor, RHS) &
   !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
-  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode) &
-  !$omp reduction(+:RHS)
+  !$omp         i, j, index_ij, v, m, i_elm, index_large_i, inode)
   do m=1,size(particles,1)
     if (particles(m)%i_elm .eq. 0) cycle
 
@@ -457,6 +456,7 @@ do i_tor=1, n_tor
           v = v / TWOPI ! int 1 from 0 to 2pi = 2pi
         endif
 
+        !$omp atomic
         RHS(index_ij,particle%i_elm) = RHS(index_ij,particle%i_elm) + v * particle%weight
       enddo
     enddo

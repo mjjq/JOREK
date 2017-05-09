@@ -462,13 +462,13 @@ module vacuum_response
       if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
       if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
       if ( sr%ncoil > 0 ) then
-        if (allocated(sr%jtri_c(:))       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
-        if (allocated(sr%x_coil(:,:))     ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
-        if (allocated(sr%y_coil(:,:))     ) deallocate(sr%y_coil);        allocate(sr%y_coil(sr%ntri_c,3))
-        if (allocated(sr%z_coil(:,:))     ) deallocate(sr%z_coil);        allocate(sr%z_coil(sr%ntri_c,3))
-        if (allocated(sr%phi_coil(:,:))   ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
-        if (allocated(sr%eta_thin_coil(:))) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
-        if (allocated(sr%coil_resist(:))  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+        if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
+        if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
+        if (allocated(sr%y_coil)       ) deallocate(sr%y_coil);        allocate(sr%y_coil(sr%ntri_c,3))
+        if (allocated(sr%z_coil)       ) deallocate(sr%z_coil);        allocate(sr%z_coil(sr%ntri_c,3))
+        if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
+        if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
+        if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
       end if
     end if
     

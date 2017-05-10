@@ -14,12 +14,12 @@ typedef RTree<ValueType, double, 2, double> MyTree;
 // Persistent tree
 static MyTree ElementTree;
 
-void PopulateTree(int nelm, double minx[], double miny[], double maxx[], double maxy[])
+void PopulateTree(int n, double minx[], double miny[], double maxx[], double maxy[])
 {
   int i;
   double min[2], max[2];
   ElementTree.RemoveAll();
-  for(i=0; i<nelm; i++)
+  for(i=0; i<n; i++)
   {
     min[0] = minx[i];
     min[1] = miny[i];

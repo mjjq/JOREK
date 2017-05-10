@@ -24,7 +24,7 @@ interface
   function elements_in_rect(minx, miny, maxx, maxy, ielm) bind(C,name='ElementsInRect')
     import C_DOUBLE, C_INT
     real(C_DOUBLE), intent(in), value           :: minx, miny, maxx, maxy
-    integer(C_INT), intent(inout), dimension(*) :: ielm
+    integer(C_INT), intent(out), dimension(*) :: ielm
     integer(C_INT) :: elements_in_rect
   end function elements_in_rect
 end interface

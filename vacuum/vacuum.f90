@@ -565,7 +565,7 @@ module vacuum
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         
         if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
-        allocate( diag_coil_curr(sz(1),sz(2)) )
+        if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
       else
       end if
       
@@ -573,7 +573,7 @@ module vacuum
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
       call MPI_BCAST(wall_curr_initialized,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
-      call MPI_BCAST(diag_coil_curr,sz(1)*sz(2),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      if ( minval(sz) > 0 ) call MPI_BCAST(diag_coil_curr,sz(1)*sz(2),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       
     end if
     

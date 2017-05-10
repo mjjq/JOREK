@@ -270,7 +270,6 @@ if (freeboundary_equil) then
 
   enddo
 
-  if (my_id == 0) call boundary_check()
   if (equil_iterate_area .and. (.not. xpoint2)) then
     n_limiter = 1  ! set found limiter (defined inside iterate2area)
   endif
@@ -278,9 +277,12 @@ if (freeboundary_equil) then
 endif
 
 !------------------------------- end of equilibrium, start filling data
+psi_axis = psi_axis - psi_offset_freeb
+psi_bnd  = psi_bnd  - psi_offset_freeb
 
 do i=1,node_list%n_nodes
 
+  node_list%node(i)%values(1,1,1) = node_list%node(i)%values(1,1,1) - psi_offset_freeb
   psi = node_list%node(i)%values(1,1,1)
   R   = node_list%node(i)%x(1,1)
   Z   = node_list%node(i)%x(1,2)
@@ -505,6 +507,8 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 
 if (allocated(T_profile)) call tr_deallocate(T_profile,"T_profile",CAT_GRID)
 if (allocated(density_profile)) call tr_deallocate(density_profile,"density_profile",CAT_GRID)
+
+if (my_id == 0) call boundary_check()
 
 return
 end subroutine equilibrium

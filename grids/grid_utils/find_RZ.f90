@@ -28,7 +28,7 @@ if (.not. rtree_initialised) then
   n_elements = element_list%n_elements
 end if
 
-call elements_containing_point(node_list, element_list, R_find, Z_find, i_elms)
+call elements_containing_point(R_find, Z_find, i_elms)
 
 ! then loop through all
 do k=1,size(i_elms)

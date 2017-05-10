@@ -49,7 +49,8 @@ module vacuum
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
-  real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
+  real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux      
+  real*8              :: psi_offset_freeb                !< Allows to shift the value of psi by a global constant for freeb_equil (improves convergence)
   
   !> @name Equilibrium parameters for feedback
   real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB)
@@ -144,6 +145,7 @@ module vacuum
     pf_coils(:)%pert     = 0.d0
     
     PF_pert_start_time   = 1.d99
+    psi_offset_freeb     = 0.d0
     
   end subroutine vacuum_preset
   

@@ -431,6 +431,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
     write(*,REAL_FMT) 'current_ref           ', current_ref
+    write(*,REAL_FMT) 'psi_offset_freeb      ', psi_offset_freeb
     write(*,REAL_FMT) 'FB_Ip_position        ', FB_Ip_position
     write(*,REAL_FMT) 'FB_Ip_integral        ', FB_Ip_integral
     write(*,REAL_FMT) 'Z_axis_ref            ', Z_axis_ref

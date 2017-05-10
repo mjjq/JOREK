@@ -279,6 +279,10 @@ module vacuum_equilibrium
                    
                     psi_0_j    = node_list%node(j_node)%values(1,j_dir,1)
                     
+                    if (j_dir == 1) then   ! shift the flux calue by a global constant, if chosen wisely, it helps a lot with convergence
+                      psi_0_j = psi_0_j - psi_offset_freeb 
+                    endif
+                    
                     ilarge                 = ilarge + 1
                     mumps_par%irn(ilarge)  = l_index
                     mumps_par%jcn(ilarge)  = j_index

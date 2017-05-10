@@ -9,6 +9,7 @@ implicit none
 private
 public action, stop_action
 public event, with, next_event_at, check_and_fix_timesteps
+public mpi_minmeanmax
 
 
 !> Action abstract type, representing anything that can be done to a simulation
@@ -208,12 +209,14 @@ end function next_event_at
 !> Calculate whether we need to change any of the fixed timesteps or events to match
 !> For each of the pushers with a fixed timestep
 subroutine check_and_fix_timesteps(pusher_timestep, events)
+  use mpi
   real*8,      intent(inout), dimension(:) :: pusher_timestep
   type(event), intent(inout), dimension(:) :: events
 
   real*8, dimension(:), allocatable    :: event_start, event_step, pusher_timestep_work
   logical, dimension(:,:), allocatable :: constraints
-  integer :: i, j, ierr
+  integer :: i, j, ierr, my_id
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
   ! select start and step times of all events
   event_start = [(events(i)%start, i=1, size(events))]
@@ -248,19 +251,19 @@ subroutine check_and_fix_timesteps(pusher_timestep, events)
   ! show changes in timesteps and set them
   do i=1,size(pusher_timestep)
     if (abs(pusher_timestep_work(i) - pusher_timestep(i)) .gt. TICK) then
-      write(*,*) "INFO: changing timestep of pusher", i, " from ", pusher_timestep(i), " to ", pusher_timestep_work(i)
+      if (my_id .eq. 0) write(*,*) "INFO: changing timestep of pusher", i, " from ", pusher_timestep(i), " to ", pusher_timestep_work(i)
     end if
     ! always update, but notify only for significant changes
     pusher_timestep(i) = pusher_timestep_work(i)
   end do
   do i=1,size(events)
     if (abs(event_start(i) - events(i)%start) .gt. TICK) then
-      write(*,"(A,i3,A,A,A,g16.8,A,g16.8,A,g14.6,A)") "INFO: changing start time of event ", i, &
+      if (my_id .eq. 0) write(*,"(A,i3,A,A,A,g16.8,A,g16.8,A,g14.6,A)") "INFO: changing start time of event ", i, &
           "(", trim(events(i)%action%name), ") from ", events(i)%start, " to ", event_start(i), ' by ', event_start(i)-events(i)%start
       events(i)%start = event_start(i)
     end if
     if (abs(event_step(i) - events(i)%step) .gt. TICK) then
-      write(*,"(A,i3,A,A,A,g16.8,A,g16.8,A,g14.6,A)") "INFO: changing timestep of event ", i, &
+      if (my_id .eq. 0) write(*,"(A,i3,A,A,A,g16.8,A,g16.8,A,g14.6,A)") "INFO: changing timestep of event ", i, &
           "(", trim(events(i)%action%name), ") from ", events(i)%step, " to ", event_step(i), ' by ', event_step(i)-events(i)%step
       events(i)%step = event_step(i)
     end if
@@ -296,8 +299,7 @@ subroutine run(this, sim, ev)
   class(action), intent(inout)      :: this
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), optional :: ev !< If run from an event, get a pointer to it here
-  real*8 :: t1, min_cputime, mean_cputime, max_cputime
-  !$ real*8 :: w1, min_walltime, mean_walltime, max_walltime
+  real*8 :: t1, w1, mmm(3), mmm2(3)
   logical :: has_omp
   integer :: ierr
   has_omp = .false.
@@ -313,30 +315,39 @@ subroutine run(this, sim, ev)
   call cpu_time(t1)
   !$ w1 = omp_get_wtime()
 
-  ! Gather times
-  call MPI_Reduce(t1-this%t0, mean_cputime, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  call MPI_Reduce(t1-this%t0, max_cputime, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
-  call MPI_Reduce(t1-this%t0, min_cputime, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
-  !$ call MPI_Reduce(w1-this%w0, mean_walltime, 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  !$ call MPI_Reduce(w1-this%w0, max_walltime, 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
-  !$ call MPI_Reduce(w1-this%w0, min_walltime, 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
-
-  if (this%log .and. sim%my_id .eq. 0) then
+  if (this%log) then
     if (sim%n_cpu .gt. 1) then
-      mean_cputime = mean_cputime / real(sim%n_cpu) ! because it is only defined on node 0
-      !$ mean_walltime = mean_walltime / real(sim%n_cpu)
-      if (.not. has_omp) write(*,"(A,A,3f7.4,A)") trim(this%name), " finished in (min/mean/max): ", &
-          min_cputime, mean_cputime, max_cputime, "s"
-      !$ write(*,"(A,A,3f7.4,A,3f8.4,A)") trim(this%name), " finished in (min/mean/max): ", &
-      !$   min_walltime, mean_walltime, max_walltime, &
-      !$ "s (cpu time: ", min_cputime, mean_cputime, max_cputime, ")"
+      mmm = mpi_minmeanmax(t1-this%t0)
+      !$ mmm2 = mpi_minmeanmax(w1-this%w0)
+      if (sim%my_id .eq. 0) then
+        if (.not. has_omp) write(*,"(A,A,3f8.4,A)") trim(this%name), " finished in (min/mean/max): ", &
+            mmm, "s"
+        !$ write(*,"(A,A,3f8.4,A,3f8.4,A)") trim(this%name), " finished in (min/mean/max): ", &
+        !$   mmm2, &
+        !$ "s (cpu time: ", mmm, ")"
+      end if
     else
-      if (.not. has_omp) write(*,"(A,A,f7.4,A)") trim(this%name), " finished in: ", &
-          mean_cputime, "s"
-      !$ write(*,"(A,A,f7.4,A,f8.4,A)") trim(this%name), " finished in: ", &
-      !$   mean_walltime, &
-      !$ "s (cpu time: ", mean_cputime, ")"
+      if (.not. has_omp) write(*,"(A,A,f8.4,A)") trim(this%name), " finished in: ", &
+         t1-this%t0, "s"
+      !$ write(*,"(A,A,f8.4,A,f8.4,A)") trim(this%name), " finished in: ", &
+      !$   w1-this%w0, &
+      !$ "s (cpu time: ", t1-this%t0, ")"
     end if
   end if
 end subroutine run
+
+!> Calculate min, mean and max values over all nodes
+!> returns something only on root process.
+function mpi_minmeanmax(in) result(out)
+  use mpi
+  real*8 :: in
+  real*8 :: out(3)
+  integer :: n_cpu, ierr
+  out = 0.d0
+  call MPI_Reduce(in, out(1), 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Reduce(in, out(2), 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Reduce(in, out(3), 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
+  out(2) = out(2)/real(n_cpu)
+end function mpi_minmeanmax
 end module mod_event

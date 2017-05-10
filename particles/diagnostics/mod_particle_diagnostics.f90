@@ -76,6 +76,8 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   integer, dimension(:), allocatable           :: particles_per_proc
   real*4,  dimension(:,:), allocatable, target :: real4_var ! Data storage order: particle index, var
   integer, dimension(:,:), allocatable, target :: int4_var ! Data storage order: particle index, var
+  real*4 :: tmpreal4
+  integer :: tmpint4
 
   call h5open_f(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
@@ -152,7 +154,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     call h5lexists_f(this%file_id, trim(timeset_name), link_exists, ierr)
 
     if (link_exists) then
-      write(*,*) "DEBUG: link to ", trim(timeset_name), " exists, trying to open"
+      if (my_id .eq. 0) write(*,*) "DEBUG: link to ", trim(timeset_name), " exists, trying to open"
       call h5dopen_f(this%file_id, trim(timeset_name), tset, ierr)
       if (ierr .ne. 0) then
         write(*,*) "Error opening timeset", i
@@ -249,7 +251,9 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
       call h5sclose_f(dspace, ierr)
       call h5dclose_f(dset, ierr)
     end do
-    write(*,*) "Done writing, sums=", sum(real4_var), sum(int4_var) ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
+    call MPI_REDUCE(sum(real4_var), tmpreal4, 1, MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+    call MPI_REDUCE(sum(int4_var), tmpint4, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) write(*,*) i, "Done writing, sums=", tmpreal4, tmpint4 ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
 
     ! Add the current time to the timeset
     call h5dget_space_f(tset, tspace, ierr)

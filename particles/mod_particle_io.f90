@@ -195,7 +195,7 @@ end if
 call h5fclose_f(file, hdferr)
 call h5close_f(hdferr)
 
-write(*,*) "Writing particle output file to ", filename, " succeeded"
+if (my_id .eq. 0) write(*,*) "Writing particle output file to ", filename, " succeeded"
 end subroutine write_simulation_hdf5
 
 

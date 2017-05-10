@@ -92,15 +92,18 @@ end function new_read_jorek_fields_interp_linear
 subroutine do_read(this, sim, ev)
   use mod_import_restart
   use phys_module
+  use mpi
   class(read_jorek_fields_interp_linear), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), optional :: ev
   character(len=80) :: restart_file
-  integer :: i, ierr
+  integer :: i, ierr, my_id
   logical :: file_exists
 
   real*8 :: t_norm
   t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
+
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
   ! Check that the right fields are allocated in sim and allocate if needed
   if (allocated(sim%fields)) then
@@ -124,10 +127,10 @@ subroutine do_read(this, sim, ev)
       write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
       inquire(file=trim(restart_file), exist=file_exists)
       if (file_exists) then
-        call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
+        call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,my_id,ierr)
         f%static = .true.
       else
-        write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
+        if (my_id .eq. 0) write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
         call exit(1)
       end if
     else ! Linearly interpolating case
@@ -136,18 +139,18 @@ subroutine do_read(this, sim, ev)
         write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
         inquire(file=trim(restart_file), exist=file_exists)
         if (file_exists) then
-          call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
+          call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
           if (ierr .ne. 0) then
-            write(*,*) "ERROR: cannot open restart file"
+            if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
             call exit(1)
           else
             f%time_prev = t_start*t_norm ! set by import_hdf5_restart
             ! Set sim%time to this time also, to start at the right point
             sim%time = f%time_prev
-            write(*,"(A,f9.8,A)") "Read initial restart file, values at t=", f%time_prev, " [s]"
+            if (my_id .eq. 0) write(*,"(A,f9.8,A)") "Read initial restart file, values at t=", f%time_prev, " [s]"
           end if
         else
-          write(*,*) "ERROR: cannot read initial file ", trim(restart_file)
+          if (my_id .eq. 0) write(*,*) "ERROR: cannot read initial file ", trim(restart_file)
           call exit(1)
         end if
       end if
@@ -157,29 +160,29 @@ subroutine do_read(this, sim, ev)
         write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
         inquire(file=trim(restart_file), exist=file_exists)
         if (file_exists) then
-          call merge_restart(f%node_list, f%element_list, trim(restart_file), this%rst_format, ierr)
+          call merge_restart(f%node_list, f%element_list, trim(restart_file), this%rst_format,my_id, ierr)
           if (ierr .ne. 0) then
-            write(*,*) "ERROR: cannot open restart file"
+            if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
             call exit(1)
           else
             f%time_now = t_start*t_norm ! Set by import_merge_restart
             this%i=i
             ! set the time to run this event at next
-            write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%time_now, " [s]"
+            if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%time_now, " [s]"
             if (present(ev)) then
               ev%start = f%time_now
-              write(*,*) "Set time for next restart file read to ", ev%start
+              if (my_id .eq. 0) write(*,*) "Set time for next restart file read to ", ev%start
             end if
             exit ! the file-finding loop
           end if
         endif
       enddo
       if (i .gt. this%i+10 .and. this%stop_at_end) then
-        write(*,*) "WARNING: cannot find any next restart files. Stopping."
+        if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
         call exit(1)
       end if
       if (i .gt. this%i+10 .and. .not. this%stop_at_end) then
-        write(*,*) "WARNING: cannot find any next restart files. Continuing with &
+        if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Continuing with &
         the last values without time-dependence"
         f%static = .true.
       end if
@@ -187,7 +190,7 @@ subroutine do_read(this, sim, ev)
 
     call update_neighbours(f%element_list, f%node_list)
   class default
-    write(*,*) "ERROR, do_read called with wrong sim%fields"
+    if (my_id .eq. 0) write(*,*) "ERROR, do_read called with wrong sim%fields"
   end select
 end subroutine do_read
 
@@ -195,7 +198,7 @@ end subroutine do_read
 
 !> Import a binary restart file and merges it with the values currently known
 !> This can then be used to interpolate linearly between any two restart files
-subroutine merge_restart(node_list,element_list, restart_file, format_rst, ierr)
+subroutine merge_restart(node_list,element_list, restart_file, format_rst,my_id, ierr)
   use data_structure
   use phys_module
   use mod_import_restart
@@ -207,6 +210,7 @@ subroutine merge_restart(node_list,element_list, restart_file, format_rst, ierr)
   character(len=*),        intent(in)    :: restart_file !< Filename of new restart file to import
   integer,                 intent(out)   :: ierr
   integer,                 intent(in)    :: format_rst !< Restart file format
+  integer,                 intent(in)    :: my_id
 
   ! --- Internal variables
   real*8, allocatable, dimension(:,:,:,:) :: values
@@ -223,7 +227,7 @@ subroutine merge_restart(node_list,element_list, restart_file, format_rst, ierr)
   tstart_old = t_start
 
   ! Import new values
-  call import_hdf5_restart(node_list,element_list, restart_file, format_rst, ierr)
+  call import_hdf5_restart(node_list,element_list, restart_file, format_rst, my_id, ierr)
 
   ! Calculate deltas as values_new - values_old
   !$omp parallel do default(shared) private(inode)

@@ -308,7 +308,8 @@ module vacuum
     logical   :: freeboundary_rst, resistive_wall_rst
     character :: t_freeboundary, t_resistive_wall
     
-    call HDF5_char_reading(file_id,t_freeboundary,"freeboundary")
+    t_freeboundary = "F"
+    if (.false.) call HDF5_char_reading(file_id,t_freeboundary,"freeboundary") ! WARNING disable reading, remove again
     freeboundary_rst = (t_freeboundary == "T")
     
     if ( freeboundary ) then

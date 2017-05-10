@@ -111,8 +111,9 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   type(event), intent(inout), optional :: ev
   integer :: i, my_id, ierr
   character(len=120) :: filename
-  real*8 :: t0, t1, ostart, oend
+  real*8 :: t0, t1, ostart, oend, mmm(3), mmm2(3)
 
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   call cpu_time(t0)
   !$ ostart = omp_get_wtime()
   ! Safety checks
@@ -127,7 +128,12 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   end do
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-  write(*,*) "projection wall/cpu", oend-ostart, t1-t0
+  !$ mmm = mpi_minmeanmax(t1-t0)
+  !$ mmm2 = mpi_minmeanmax(oend-ostart)
+  if (my_id .eq. 0) then
+    write(*,"(A,3g12.5)") "projection cpu time", mmm
+    !$ write(*,"(A,3g12.5)") "projection wall time", mmm2
+  end if
 
   if (len_trim(this%filename) .eq. 0) then
     filename = this%get_filename(sim%time)
@@ -137,7 +143,6 @@ subroutine project_and_save_to_vtk(this, sim, ev)
 
   call cpu_time(t0)
   !$ ostart = omp_get_wtime()
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   if (my_id .eq. 0) then
     ! write only on the host
     call write_particle_distribution_to_vtk(this%node_list, this%element_list, &
@@ -150,7 +155,12 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   call broadcast_nodes(my_id, this%node_list)
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-  write(*,*) "writing wall/cpu", oend-ostart, t1-t0
+  mmm = mpi_minmeanmax(t1-t0)
+  !$ mmm2 = mpi_minmeanmax(oend-ostart)
+  if (my_id .eq. 0) then
+    write(*,"(A,3g12.5)") "writing cpu time", mmm
+    !$ write(*,"(A,3g12.5)") "writing wall time", mmm2
+  end if
 end subroutine project_and_save_to_vtk
 
 
@@ -164,8 +174,9 @@ subroutine project_and_save_to_h5(this, sim, ev)
   type(event), intent(inout), optional :: ev
   integer :: i, my_id, ierr
   character(len=120) :: filename
-  real*8 :: t0, t1, ostart, oend
+  real*8 :: t0, t1, ostart, oend, mmm(3), mmm2(3)
 
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   call cpu_time(t0)
   !$ ostart = omp_get_wtime()
   ! Safety checks
@@ -180,7 +191,12 @@ subroutine project_and_save_to_h5(this, sim, ev)
   end do
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-  write(*,*) "projection wall/cpu", oend-ostart, t1-t0
+  !$ mmm = mpi_minmeanmax(t1-t0)
+  !$ mmm2 = mpi_minmeanmax(oend-ostart)
+  if (my_id .eq. 0) then
+    write(*,"(A,3g12.5)") "projection cpu time", mmm
+    !$ write(*,"(A,3g12.5)") "projection wall time", mmm2
+  end if
 
   if (len_trim(this%filename) .eq. 0) then
     filename = this%get_filename(sim%time)
@@ -203,7 +219,12 @@ subroutine project_and_save_to_h5(this, sim, ev)
   call broadcast_nodes(my_id, this%node_list)
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-  write(*,*) "writing wall/cpu", oend-ostart, t1-t0
+  mmm = mpi_minmeanmax(t1-t0)
+  !$ mmm2 = mpi_minmeanmax(oend-ostart)
+  if (my_id .eq. 0) then
+    write(*,"(A,3g12.5)") "writing cpu time", mmm
+    !$ write(*,"(A,3g12.5)") "writing wall time", mmm2
+  end if
 end subroutine project_and_save_to_h5
 
 

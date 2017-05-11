@@ -322,7 +322,7 @@ module vacuum_response
         write(*,*) 'ERROR: voltage_coils not yet implemented.'
         stop
       end if
-      if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr_n_diag_coils) then
+      if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils) then
         write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
         stop
       end if
@@ -1081,7 +1081,7 @@ module vacuum_response
     
     ! --- Calculate current source term for PF coil currents imposition
     if ( (sr%ncoil /= 0) ) then    !avoid it when using COIL_FIELD
-      call coil_current_source(my_id, freeboundary_equil)
+      call coil_current_source(my_id)
     else
       if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
       Y_coils0(:) = 0.d0  
@@ -1481,7 +1481,7 @@ module vacuum_response
   
   
   !> Imposing PF coil currents as a current source term
-  subroutine coil_current_source(my_id, freeboundary_equil)
+  subroutine coil_current_source(my_id)
     
     use constants
     
@@ -1489,8 +1489,7 @@ module vacuum_response
    
     ! --- Routine parameters
     integer, intent(in) :: my_id  
-    logical, intent(in) :: freeboundary_equil
-    integer             :: k, i_start_pf, i_end_pf
+    integer             :: k
     real*8, allocatable :: potentials_real_0(:)
    
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '

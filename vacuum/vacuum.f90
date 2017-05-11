@@ -359,7 +359,8 @@ module vacuum
         
         if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
-        old_dpsibnd_vec = 0.d0 !###
+        old_dpsibnd_vec(:) = 0.d0
+        call HDF5_array1D_reading(file_id,old_dpsibnd_vec,"old_dpsibnd_vec")
         
         if ( index_start > 1 ) then
           if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
@@ -509,6 +510,8 @@ module vacuum
           deallocate(t_diag_coil_curr)
         end if
       end if
+
+      call HDF5_array1D_saving(file_id,old_dpsibnd_vec,n_dof_starwall,"old_dpsibnd_vec"//char(0))
       
       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
       if ( (n_coils/=0) .and. (.not. allocated(I_coils)) )  then

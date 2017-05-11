@@ -1093,6 +1093,9 @@ module vacuum_response
     ! --- Perform the time-stepping for the wall currents.
     if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
+    ! --- Update old_dpsibnd_vec  (used for updating the wall currents in the next iteration)
+    old_dpsibnd_vec(:) = dpsibnd_vec(:)
+    
     if ( vacuum_debug ) then
       write(*,*) my_id, 'psibnd_vec:  ', sum(abs(psibnd_vec)), sum(psibnd_vec)
       write(*,*) my_id, 'dpsibnd_vec: ', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
@@ -1466,7 +1469,7 @@ module vacuum_response
     ! --- Also initialize the old_dpsibnd_vec
     if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
     allocate( old_dpsibnd_vec(n_dof_starwall) )
-    old_dpsibnd_vec(:) = dpsibnd_vec(:)
+    old_dpsibnd_vec(:) = 0.d0
     
     if ( my_id == 0 ) call write_wall_vtk(0, resistive_wall)
     deallocate( psibnd_vec, dpsibnd_vec )

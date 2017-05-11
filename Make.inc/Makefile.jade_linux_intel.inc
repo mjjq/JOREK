@@ -5,6 +5,7 @@ MODEL = model199
 # Fortran compiler 
 FC     = ifort
 CC     = icc
+CXX    = icpc
 
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -O2 -DUSE_R3_INFO_MPI -DUSE_R3_INFO

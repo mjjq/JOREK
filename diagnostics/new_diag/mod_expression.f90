@@ -878,21 +878,21 @@ module mod_expression
             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
             
             Vtheta   = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
             
             Vperp_i  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z )
+              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
             
             Vperp_e  = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z - tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z )
+              ( u0_Z - tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
             
             V_ExB    = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
             
             Vstar_i  = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
             
             Vstar_e  = +1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
             ! ### Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
           

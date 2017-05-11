@@ -94,7 +94,7 @@ module equil_info
     
     ! --- Local variables.
     integer :: my_id, i_out, ifail, i
-    real*8  :: R_out, Z_out, s_out, t_out, corr_fact, R1, R2, dR
+    real*8  :: R_out, Z_out, s_out, t_out, R1, R2, dR
     
     my_id  = 9999
     
@@ -115,53 +115,47 @@ module equil_info
     call find_RZ(node_list, element_list, ES%R_lim, ES%Z_lim, R_out, Z_out, ES%i_elm_lim, ES%s_lim,&
       ES%t_lim, ES%ifail_lim)
     
-    ! --- Calculate psi_bnd value (corr_fact: to account for cases Psi_axis positive and negative).
-    corr_fact = 1.d0
-    if ( ES%psi_axis > ES%psi_lim ) corr_fact = -1.d0
+    if ( xpoint ) then ! (X-point plasma)
       
-    ES%psi_bnd = corr_fact * ES%psi_lim
-    
-    ES%limiter_plasma = .true.
-    
-    ES%active_xpoint  = 0
-    
-    if ( xpoint ) then
-      
-      if ( (xcase==LOWER_XPOINT) .and.                                                             &
-        (corr_fact*ES%psi_xpoint(1) > ES%psi_bnd) ) then
+      if ( (xcase==LOWER_XPOINT) ) then
         
-        ES%psi_bnd        = corr_fact * ES%psi_xpoint(1)
+        ES%psi_bnd        = ES%psi_xpoint(1)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = LOWER_XPOINT
         
-      else if ( (xcase==UPPER_XPOINT) .and.                                                        &
-        (corr_fact*ES%psi_xpoint(2) > ES%psi_bnd) ) then
+      else if ( (xcase==UPPER_XPOINT) ) then
         
-        ES%psi_bnd        = corr_fact * ES%psi_xpoint(2)
+        ES%psi_bnd        = ES%psi_xpoint(2)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = UPPER_XPOINT
         
-      else if ( (xcase==DOUBLE_NULL) .and.                                                         &
-        (maxval(corr_fact*ES%psi_xpoint) > ES%psi_bnd) ) then
+      else if ( (xcase==DOUBLE_NULL) ) then
         
-        ES%psi_bnd        = corr_fact * maxval(corr_fact*ES%psi_xpoint)
         ES%limiter_plasma = .false.
         
-        if ( corr_fact*ES%psi_xpoint(1) > corr_fact*ES%psi_xpoint(2) ) then
+        if ( abs(ES%psi_axis-ES%psi_xpoint(1)) < abs(ES%psi_axis-ES%psi_xpoint(2)) ) then
+          ES%psi_bnd       = ES%psi_xpoint(1)
           ES%active_xpoint = LOWER_XPOINT
         else
+          ES%psi_bnd       = ES%psi_xpoint(2)
           ES%active_xpoint = UPPER_XPOINT
         end if
         
-      else if ( (xcase/=LOWER_XPOINT) .and. (xcase/=UPPER_XPOINT) .and. (xcase/=DOUBLE_NULL) ) then
-        ! This should never happen.
+      else ! This should never happen.
         write(*,*) 'ERROR: ILLEGAL VALUE FOR XCASE:', xcase
         stop
       end if
       
+      ! ### We need to take into account the possibility of a limiter plasma here although
+      !     we have an X-point, e.g., during a VDE
+      
+    else ! (limiter plasma)
+      
+      ES%psi_bnd        = ES%psi_lim
+      ES%limiter_plasma = .true.
+      ES%active_xpoint  = 0
+      
     end if
-    
-    ES%psi_bnd = ES%psi_bnd * corr_fact
     
     ! --- psi_axis < psi_bnd or > psi_bnd?
     ES%axis_is_psi_minimum = ( ES%psi_axis < ES%psi_bnd )

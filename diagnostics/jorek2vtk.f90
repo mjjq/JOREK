@@ -312,7 +312,7 @@ call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
-nnos = nsub*nsub*node_list%n_nodes
+nnos = nsub*nsub*element_list%n_elements
 allocate(xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
 
 nnoel = 4

@@ -502,7 +502,7 @@ module vacuum
         call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
         call HDF5_integer_saving(file_id,sr%n_diag_coils,"n_diag_coil"//char(0))
         
-        if ( index_now > 0 ) then
+        if ( (index_now > 0) .and. (sr%n_diag_coils > 0) ) then
           allocate(t_diag_coil_curr(index_now,sr%n_diag_coils))
           t_diag_coil_curr(1:index_now,:) = diag_coil_curr(1:index_now,:)
           call HDF5_array2D_saving(file_id,t_diag_coil_curr,index_now,sr%n_diag_coils,"diag_coil_curr"//char(0))

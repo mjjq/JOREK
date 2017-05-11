@@ -508,7 +508,7 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 if (allocated(T_profile)) call tr_deallocate(T_profile,"T_profile",CAT_GRID)
 if (allocated(density_profile)) call tr_deallocate(density_profile,"density_profile",CAT_GRID)
 
-if (my_id == 0) call boundary_check()
+if ((my_id == 0) .and. freeboundary_equil) call boundary_check()
 
 return
 end subroutine equilibrium

@@ -46,7 +46,7 @@ subroutine preset_parameters
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
-  equil_iterate_area = .false.
+  freeb_equil_iterate_area = .false.
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
   bc_natural_open    = .false.! use sheath (Bohm) boundary conditions

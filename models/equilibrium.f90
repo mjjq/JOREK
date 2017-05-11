@@ -160,7 +160,7 @@ if (freeboundary_equil) then
   endif
   
   ! Target poloidal cross section area for limiter plasmas
-  if (equil_iterate_area .and. (.not. xpoint2)) then
+  if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
     n_limiter = 0    ! Use the full domain to search psibnd enclosing given area
     call area_inside_flux_contour(node_list,element_list, xpoint2, xcase2, psi_bnd, area_ref, R_lim, Z_lim)
     write(*,*) ' The reference area from fixed boundaray is = ', area_ref
@@ -223,7 +223,7 @@ if (freeboundary_equil) then
       write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
     endif
     
-    if (equil_iterate_area .and. (.not. xpoint2)) then
+    if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
       call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
     endif
        
@@ -270,7 +270,7 @@ if (freeboundary_equil) then
 
   enddo
 
-  if (equil_iterate_area .and. (.not. xpoint2)) then
+  if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
     n_limiter = 1  ! set found limiter (defined inside iterate2area)
   endif
 

@@ -429,15 +429,15 @@ module vacuum_response
     if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
     
     ! --- Broadcast parameters.
-    call MPI_bcast(sr%file_version, 1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_bnd,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%nd_bez,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ncoil,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%npot_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor0,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%file_version,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_bnd,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nd_bez,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ncoil,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%npot_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_w,                     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor0,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ntri_c,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_pol_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_rmp_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -477,17 +477,17 @@ module vacuum_response
     end if
     
     ! --- Broadcast matrices.
-    call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ye,     sr%n_w*sr%nd_bez,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ey,     sr%nd_bez*sr%n_w,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ee,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_id,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_nw,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww,     sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%i_tor,    sr%n_tor,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%d_yy,     sr%n_w,                MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ye,     sr%n_w*sr%nd_bez,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ey,     sr%nd_bez*sr%n_w,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ee,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_id,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_nw,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww,     sr%n_w*sr%n_w,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,           MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     if ( sr%ncoil > 0 ) then
       call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
       call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
@@ -535,15 +535,15 @@ module vacuum_response
     write(*,32)
     write(*,33) 'STARWALL RESPONSE INFORMATION:'
     write(*,32)
-    write(*,33) 'file_version =', sr%file_version
-    write(*,33) 'n_bnd        =', sr%n_bnd
-    write(*,33) 'nd_bez       =', sr%nd_bez
-    write(*,33) 'ncoil        =', sr%ncoil
-    write(*,33) 'npot_w       =', sr%npot_w
-    write(*,33) 'n_w          =', sr%n_w
-    write(*,33) 'ntri_w       =', sr%ntri_w
-    write(*,33) 'n_tor        =', sr%n_tor
-    write(*,33) 'n_tor0       =', sr%n_tor0
+    write(*,33) 'file_version            =', sr%file_version
+    write(*,33) 'n_bnd                   =', sr%n_bnd
+    write(*,33) 'nd_bez                  =', sr%nd_bez
+    write(*,33) 'ncoil                   =', sr%ncoil
+    write(*,33) 'npot_w                  =', sr%npot_w
+    write(*,33) 'n_w                     =', sr%n_w
+    write(*,33) 'ntri_w                  =', sr%ntri_w
+    write(*,33) 'n_tor                   =', sr%n_tor
+    write(*,33) 'n_tor0                  =', sr%n_tor0
     write(*,33) 'n_pol_coils             =', sr%n_pol_coils
     write(*,33) 'n_rmp_coils             =', sr%n_rmp_coils
     write(*,33) 'n_voltage_coils         =', sr%n_voltage_coils
@@ -552,8 +552,8 @@ module vacuum_response
     write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
     write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
     write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
-    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
-    if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
+    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w              =', sr%eta_thin_w
+    if (allocated(sr%i_tor)) write(*,33) 'i_tor                   = '//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
       write(*,32)
       if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ', sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if

@@ -1496,14 +1496,7 @@ module vacuum_response
     
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
-    if (.not. freeboundary_equil) then
-      potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
-    else
-      potentials_real_0(1:sr%ncoil) = 0.d0
-      i_start_pf                     = sr%ind_start_pol_coils
-      i_end_pf                       = sr%ind_start_pol_coils+sr%n_pol_coils-1
-      potentials_real_0(i_start_pf:i_end_pf)  = I_coils(i_start_pf:i_end_pf) * mu_zero
-   end if
+    potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
     do k = 1, n_wall_curr
       Y_coils0(k) = sum(sr%s_ww_inv(k,:) * potentials_real_0(:))    
     end do

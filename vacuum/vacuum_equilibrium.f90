@@ -33,7 +33,7 @@ module vacuum_equilibrium
     if ( sr%n_tor == 0 ) return
     if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
     
-    if (sr%n_pol_coils /= 0 ) starwall_equil_coils = .true.  ! Use STARWALL PF coils if provided
+    if (sr%ncoil /= 0 ) starwall_equil_coils = .true.  ! Use STARWALL PF coils if provided
     
     ! --- Decide wheter the coils will be given with COIL_FIELD or STARWALL
     if (.not. starwall_equil_coils) then

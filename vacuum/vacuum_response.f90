@@ -322,6 +322,10 @@ module vacuum_response
         write(*,*) 'ERROR: voltage_coils not yet implemented.'
         stop
       end if
+      if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr_n_diag_coils) then
+        write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
+        stop
+      end if
       sr%n_diag_coils            = read_intparam(filehandle, 'n_diag_coils')
       sr%ind_start_pol_coils     = read_intparam(filehandle, 'ind_start_pol_coils')
       sr%ind_start_rmp_coils     = read_intparam(filehandle, 'ind_start_rmp_coils')

@@ -1715,7 +1715,7 @@ module vacuum_response
         write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
         write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
         write(*,*) 'm_v:', sum(abs(response_m_v)), sum(response_m_v)
-        write(*,*) 'm_eq:', sum(abs(response_m_eq(1:128,1:128))), sum(response_m_eq(1:128,1:128))
+        write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
         write(*,*) 'END: Checksums'
       end if
       

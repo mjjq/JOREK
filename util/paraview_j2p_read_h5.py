@@ -25,7 +25,7 @@ def RequestData(self):
     import vtk
     from vtk.util import numpy_support as npvtk
     import re
-    time_re = r"\d+\.?\d*"
+    time_re = r"(\d*\.?\d*)\.h5$"
 
     def GetUpdateTimestep(algorithm):
         """Returns the requested time value, or None if not present"""
@@ -37,7 +37,7 @@ def RequestData(self):
     req_time = GetUpdateTimestep(self)
 
     # Find the closest two files
-    times = np.asarray([float(re.search(time_re, f).group()) for f in FileNames])
+    times = np.asarray([float(re.search(time_re, f).group(1)) for f in FileNames])
     # 4 possibilities here:
     # After last step: return last file
     # Before first step: return first file
@@ -105,7 +105,7 @@ See paraview guide 13.2.2
 """
 def RequestInformation(self):
     import re
-    time_re = r"\d+\.?\d*"
+    time_re = r"(\d*\.?\d*)\.h5$"
     def setOutputTimesteps(algorithm):
         executive = algorithm.GetExecutive()
         outInfo = executive.GetOutputInformation(0)
@@ -113,12 +113,12 @@ def RequestInformation(self):
         outInfo.Remove(executive.TIME_STEPS())
         for filename in FileNames:
             # keep only the numbers and dots and remove the last dot
-            timestep = float(re.search(time_re, filename).group())
+            timestep = float(re.search(time_re, filename).group(1))
             outInfo.Append(executive.TIME_STEPS(), timestep)
 
         # Remove time range info
         outInfo.Remove(executive.TIME_RANGE())
-        outInfo.Append(executive.TIME_RANGE(), float(re.search(time_re, FileNames[0]).group()))
-        outInfo.Append(executive.TIME_RANGE(), float(re.search(time_re, FileNames[-1]).group()))
+        outInfo.Append(executive.TIME_RANGE(), float(re.search(time_re, FileNames[0]).group(1)))
+        outInfo.Append(executive.TIME_RANGE(), float(re.search(time_re, FileNames[-1]).group(1)))
 
     setOutputTimesteps(self)

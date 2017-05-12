@@ -23,6 +23,12 @@ interface
     integer, intent(inout) :: ielm_out
     integer, intent(out)   :: ifail
   end subroutine find_RZ
+  function rej_f(n, P, gradP)
+    integer, intent(in) :: n
+    real*8, dimension(n), intent(in) :: P
+    real*8, dimension(3,n), intent(in) :: gradP
+    real*4 :: rej_f
+  end function rej_f
 end interface
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
@@ -245,14 +251,6 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   integer, dimension(:), intent(in), optional       :: uniform_space_rej_vars !< Variables to use for uniform_space_rej_f
   type(coronal), intent(in), optional               :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
   integer, intent(in), optional                     :: charge !< Use this if cor is not present
-  interface
-    function rej_f(n, P, gradP)
-      integer, intent(in) :: n
-      real*8, dimension(n), intent(in) :: P
-      real*8, dimension(3,n), intent(in) :: gradP
-      real*4 :: rej_f
-    end function rej_f
-  end interface
 
   ! Internal variables
   type(particle_gc) :: particle

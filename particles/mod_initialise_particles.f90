@@ -381,7 +381,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     type is (particle_gc)
       allocate(particle_gc::particles_tmp(blocksize))
     end select
-    !allocate(particles_tmp(blocksize), mold=particles)
+    !allocate(particles_tmp(blocksize), mold=particles) ! this does not work in ifort 17
     allocate(found(blocksize))
 
     !$omp parallel do default(none) &

@@ -18,9 +18,11 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2
-integer, parameter :: n_var = 9
-character(len=10)  :: var_names(n_var) = ["E      ", "mu     ", "P_phi  ", "Psi_bar", "Psi    ", "weight ", "lost   ", "q      ", "region "]
-integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4]
+integer, parameter :: n_var = 11
+character(len=12)  :: var_names(n_var) = ["E      ", "mu     ", "P_phi  ", &
+  "Psi_bar", "Psi    ", "weight ", "lost   ", "q      ", "region ", &
+  "Theta  ", "Phi    "]
+integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4, REAL4, REAL4]
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
 ! HDF5 does not support booleans, use INT4
@@ -305,7 +307,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
   real*8, intent(in)                                           :: mass
-  real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Psi_bar, Psi, weight)
+  real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Psi_bar, Psi, weight, theta, phi)
   integer, dimension(:,:), intent(out)                         :: int_stats !< List of values (q, lost, region)
   logical, dimension(:), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
@@ -405,11 +407,15 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       real_stats(i,5) = real(P(1), 4)
       ! 6. weight
       real_stats(i,6) = particle%weight
+      ! 7. theta
+      real_stats(i,7) = atan2(Z-Z_axis, R-R_axis)
+      ! 8. phi
+      real_stats(i,8) = particle%x(3)
 
-      ! 1. q (charge)
-      int_stats(i,2) = particle%q
-      ! 2. lost (boolean)
+      ! 1. lost (boolean)
       int_stats(i,1) = 0
+      ! 2. q (charge)
+      int_stats(i,2) = particle%q
       ! 3. region (enum)
       domain = which_domain(fields%node_list, fields%element_list, &
           particle%x(1), particle%x(2), &

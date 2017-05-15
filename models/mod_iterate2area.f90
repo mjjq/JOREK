@@ -107,7 +107,7 @@ module mod_iterate2area
     if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"sep_list%psi_values",CAT_GRID)
     call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
     surface_list%psi_values(1) = psi
-    call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,surface_list)  
+    call find_flux_surfaces(999,xpoint2,xcase2,node_list,element_list,surface_list)  
     
     n_pieces = surface_list%flux_surfaces(1)%n_pieces
     

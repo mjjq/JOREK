@@ -54,7 +54,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
     surface_list%psi_values(i) = (float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis)    &
       + psi_axis
   enddo
-  call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+  call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,surface_list)
   
   ! --- Determine the q-profile.
   call tr_allocate(q,1,surface_list%n_psi,"q",CAT_GRID)

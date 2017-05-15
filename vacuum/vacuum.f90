@@ -119,15 +119,15 @@ module vacuum
   
   !> Coil current specification.
   type :: t_coil_curr_input
-    real*8             :: current = 0.d0   !< Current of the coil in Ampere*Turns
-    real*8             :: pert    = 0.d0   !< Pert. of coil current in Ampere*Turns to speed-up VDE.
-    character(len=256) :: curr_file        = 'none'!< Ascii file with coil current time trace.
-    real*8             :: curr_file_xshift = 0.d0  !< Shift time of curr_file time trace.
-    real*8             :: curr_file_xscale = 1.d0  !< Scale time of curr_file time trace.
-    real*8             :: curr_file_yscale = 1.d0  !< Scale amplitude of curr_file time trace.
-    character(len=512) :: curr_expr        = 'none'!< Analyt. expression for time trace (Python).
-    real*8             :: max_time = 1.d4 !< Evaluate analytical expression up to this time.
-    integer            :: len      = 1000 !< Evaluate analytical expression on this number of time points.
+    real*8             :: current   = 0.d0  !< Current of the coil in Ampere*Turns
+    real*8             :: pert      = 0.d0  !< Pert. of coil current in Ampere*Turns to speed-up VDE.
+    character(len=256) :: curr_file = 'none'!< Ascii file with coil current time trace.
+    real*8             :: xshift    = 0.d0  !< Shift time of time trace.
+    real*8             :: xscale    = 1.d0  !< Scale time of time trace.
+    real*8             :: yscale    = 1.d0  !< Scale amplitude of time trace.
+    character(len=512) :: curr_expr = 'none'!< Analyt. expression for time trace (Python).
+    real*8             :: max_time  = 1.d4  !< Evaluate analytical expression up to this time.
+    integer            :: len       = 1000  !< Evaluate analytical expression on this number of time points.
   end type t_coil_curr_input
   type, extends(t_coil_curr_input) :: t_pf_coil_curr_input
     real*8             :: FB_amp  = 0.d0   !< Allows to tune direction and magnitude of feedback.
@@ -181,9 +181,6 @@ module vacuum
         
         call readProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, &
           coil_curr_time_trace(i)%len, coil_curr_input%curr_file)
-        coil_curr_time_trace(i)%x = (coil_curr_time_trace(i)%x * coil_curr_input%curr_file_xscale) &
-          + coil_curr_input%curr_file_xshift
-        coil_curr_time_trace(i)%y = coil_curr_time_trace(i)%y * coil_curr_input%curr_file_yscale
         
       else if ( coil_curr_input%curr_expr /= 'none' ) then ! ... analytical Python expression
         
@@ -221,17 +218,22 @@ module vacuum
         
       else ! ... just a value plus a perturbation
         
-        allocate(coil_curr_time_trace(i)%x(coil_curr_input%len) )
-        allocate(coil_curr_time_trace(i)%y(coil_curr_input%len) )
-        coil_curr_time_trace(i)%len = coil_curr_input%len
+        allocate(coil_curr_time_trace(i)%x(3) )
+        allocate(coil_curr_time_trace(i)%y(3) )
+        coil_curr_time_trace(i)%len = 3
         
-        do k = 1, coil_curr_input%len
-          coil_curr_time_trace(i)%x(k) = coil_curr_input%max_time*real(k-1)/real(coil_curr_input%len-1)
-        end do
-        coil_curr_time_trace(i)%y(1)     = coil_curr_input%current
-        coil_curr_time_trace(i)%y(2:)    = coil_curr_input%current + coil_curr_input%pert
+        coil_curr_time_trace(i)%x(1)   = 0.d0
+        coil_curr_time_trace(i)%x(2)   = PF_pert_start_time
+        coil_curr_time_trace(i)%x(3)   = 1.d12
+        
+        coil_curr_time_trace(i)%y(1  ) = coil_curr_input%current
+        coil_curr_time_trace(i)%y(2:3) = coil_curr_input%current + coil_curr_input%pert
         
       end if
+      
+      coil_curr_time_trace(i)%x = (coil_curr_time_trace(i)%x * coil_curr_input%xscale) &
+        + coil_curr_input%xshift
+      coil_curr_time_trace(i)%y = coil_curr_time_trace(i)%y * coil_curr_input%yscale
       
     end do
     

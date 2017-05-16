@@ -42,7 +42,7 @@ module vacuum
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
-  integer             :: n_pf_coils                      !< specified number of poloidal field coils in namelist
+  integer             :: n_pf_coils                      !< number of poloidal field coils
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
   real*8, allocatable :: I_coils(:)                      !< coil currents
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source
@@ -241,38 +241,41 @@ module vacuum
   
   
   !> Check whether the user has supplied the right coil current time trace input.
-!   subroutine check_coil_curr_time_trace_input()
-!   
-!     integer :: i, j
-!     class(t_coil_curr_input), pointer :: coil_curr_input
-!     
-!     do i = 1, 4
-!       do j = 1, MAX_COILS
-!         
-!         if ( i == 1 ) then
-!           coil_curr_input => pf_coils(j)
-!         else if ( i == 2 ) then
-!           coil_curr_input => rmp_coils(j)
-!         else if ( i == 3 ) then
-!           coil_curr_input => diag_coils(j)
-!         else if ( i == 4 ) then
-!           coil_curr_input => voltage_coils(j)
-!         end if
-!         
-!         changed_by_user = ( (coil_curr_input%current /= 0.d0) .or. (coil_curr_input%pert /= 0.d0) &
-!           .or. (coil_curr_input%file /= 'none') .or. #######complete###### )
-!         
-!         if ( (i<=sr%ncoil) .and. (.not. changed_by_user) ) then
-!           write(*,*) 'WARNING: Coil current input has not been provided for an existing coil.', i, j
-!           stop
-!         else if ( (i > sr%ncoil) .and. changed_by_user ) then
-!           write(*,*) 'WARNING: Coil current input has been provided for a coil not existing.', i, j
-!           stop
-!         end if
-!         
-!       end do
-!     end do
-!   end subroutine check_coil_curr_time_trace_input
+  subroutine check_coil_curr_time_trace_input(coils_number)
+  
+    integer, intent(in) :: coils_number
+    
+    integer :: i, j
+    logical :: changed_by_user
+    class(t_coil_curr_input), pointer :: coil_curr_input
+    
+    do i = 1, 4
+      do j = 1, MAX_COILS
+        
+        if ( i == 1 ) then
+          coil_curr_input => pf_coils(j)
+        else if ( i == 2 ) then
+          coil_curr_input => rmp_coils(j)
+        else if ( i == 3 ) then
+          coil_curr_input => diag_coils(j)
+        else if ( i == 4 ) then
+          coil_curr_input => voltage_coils(j)
+        end if
+        
+        changed_by_user = ( (coil_curr_input%current    /= 0.d0  ) .or. (coil_curr_input%pert     /= 0.d0)  &
+                       .or. (coil_curr_input%curr_file  /= 'none') .or. (coil_curr_input%xshift   /= 0.d0)  &
+                       .or. (coil_curr_input%xscale     /= 1.d0  ) .or. (coil_curr_input%yscale   /= 1.d0)  &
+                       .or. (coil_curr_input%curr_expr  /= 'none') .or. (coil_curr_input%max_time /= 1.d4)  &
+                       .or. (coil_curr_input%len        /= 1000  ) .or. (vert_FB_amp(j)           /= 0.d0)  )
+
+        if ( (j > coils_number) .and. changed_by_user ) then
+          write(*,*) 'WARNING: Coil current input has been provided for a coil not existing.', i, j
+          stop
+        end if
+        
+      end do
+    end do
+  end subroutine check_coil_curr_time_trace_input
   
   
   

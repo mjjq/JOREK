@@ -93,14 +93,11 @@ module vacuum_equilibrium
         write(*,32)
         write(*,*)
         
-        if ( n_coils /= n_pf_coils ) then
-          write(*,*) 'WARNING: namelist coils number n_pf_coils does not match with external coils number n_coils from coil_field.txt!'
-          stop
-        end if
+        call check_coil_curr_time_trace_input(n_coils) ! check if the user has introduced non existing coils 
         
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(n_coils) )
-          I_coils(1:n_coils) =  pf_coils(1:n_pf_coils)%current 
+          I_coils(1:n_coils) =  pf_coils(1:n_coils)%current 
           write(*,*) 'I_coils allocated '               
         end if
         
@@ -126,15 +123,14 @@ module vacuum_equilibrium
       call MPI_bcast(bext_tan,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
       call MPI_bcast(bext_nor,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
       call MPI_bcast(bext_psi,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+      
+      n_pf_coils = n_coils
     
     else    !STARWALL coils
       
       if ( my_id == 0 ) then
       
-        if ( sr%n_pol_coils /= n_pf_coils ) then
-          write(*,*) 'WARNING: number of namelist coils "n_pf_coils" does not match the STARWALL number of PF coils'
-          stop
-        end if
+        call check_coil_curr_time_trace_input(sr%ncoil)   ! check if the user has introduced non existing coils
       
         if ( .not. resistive_wall ) then
           write(*,*) 'WARNING: ideal wall with equilibrium with starwall_coils is not ready to use yet'
@@ -147,17 +143,19 @@ module vacuum_equilibrium
         write(*,*) '***************************************'
         write(*,*) ''
        
-		i_start_pf = sr%ind_start_pol_coils
+		    i_start_pf = sr%ind_start_pol_coils
         i_end_pf   = i_start_pf + sr%n_pol_coils - 1
       
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(sr%ncoil) )
           I_coils(:)                =  0.d0 
-          I_coils(i_start_pf:i_end_pf) =  pf_coils(1:n_pf_coils)%current 
+          I_coils(i_start_pf:i_end_pf) =  pf_coils(1:sr%n_pol_coils)%current 
           n_coils                   =  sr%ncoil
           write(*,*) 'I_coils allocated '            
         endif
       endif
+      
+      n_pf_coils = sr%n_pol_coils
   
     endif   !End choice of STARWALL or COIL_FIELD coils
     

@@ -129,20 +129,19 @@ module vacuum
     real*8             :: max_time  = 1.d4  !< Evaluate analytical expression up to this time.
     integer            :: len       = 1000  !< Evaluate analytical expression on this number of time points.
   end type t_coil_curr_input
-  type, extends(t_coil_curr_input) :: t_pf_coil_curr_input
-    real*8             :: FB_amp  = 0.d0   !< Allows to tune direction and magnitude of feedback.
-  end type t_pf_coil_curr_input
   type :: t_coil_curr_time_trace
     integer            :: len                      !< Number of points in numerical time trace.
     real*8, allocatable:: x(:)                     !< X-values of numerical time trace.
     real*8, allocatable:: y(:)                     !< Y-values of numerical time trace.
   end type t_coil_curr_time_trace
-  integer, parameter :: MAX_COILS = 299  
-  type(t_coil_curr_input),    target :: diag_coils(MAX_COILS)
-  type(t_coil_curr_input),    target :: rmp_coils(MAX_COILS)
-  type(t_coil_curr_input),    target :: voltage_coils(MAX_COILS) !### not yet ready
-  type(t_pf_coil_curr_input), target :: pf_coils(MAX_COILS)
+  integer, parameter :: MAX_COILS = 299
+  type(t_coil_curr_input), target :: diag_coils(MAX_COILS)
+  type(t_coil_curr_input), target :: rmp_coils(MAX_COILS)
+  type(t_coil_curr_input), target :: voltage_coils(MAX_COILS) !### not yet ready
+  type(t_coil_curr_input), target :: pf_coils(MAX_COILS)
   type(t_coil_curr_time_trace)       :: coil_curr_time_trace(4*MAX_COILS)
+  
+  real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Allows to tune direction and magnitude of vertical feedback for each poloidal field coil.
   
   
   

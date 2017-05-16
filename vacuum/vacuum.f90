@@ -217,6 +217,9 @@ module vacuum
         
       else ! ... just a value plus a perturbation
         
+        if (allocated(coil_curr_time_trace(i)%x)) deallocate(coil_curr_time_trace(i)%x)
+        if (allocated(coil_curr_time_trace(i)%y)) deallocate(coil_curr_time_trace(i)%y)
+        
         allocate(coil_curr_time_trace(i)%x(3) )
         allocate(coil_curr_time_trace(i)%y(3) )
         coil_curr_time_trace(i)%len = 3

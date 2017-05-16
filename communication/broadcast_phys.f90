@@ -248,7 +248,7 @@ if (my_id .eq. 0) then
     call MPI_PACK (pf_coils(i)%curr_expr,    512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK (pf_coils(i)%max_time,       1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK (pf_coils(i)%len,            1,  MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK (pf_coils(i)%FB_amp,         1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (vert_FB_amp(i),             1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
       
     call MPI_PACK (diag_coils(i)%current,      1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK (diag_coils(i)%pert,         1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -647,7 +647,7 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%curr_expr,       512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%max_time,          1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%len,               1,  MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%FB_amp,            1,    MPI_REAL8,MPI_COMM_WORLD,ierr) 
+    call MPI_UNPACK(buffer,bufsize,position,vert_FB_amp(i),                1,    MPI_REAL8,MPI_COMM_WORLD,ierr) 
     
     call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%current,         1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%pert,            1,    MPI_REAL8,MPI_COMM_WORLD,ierr)

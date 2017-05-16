@@ -167,8 +167,6 @@ module vacuum_equilibrium
       allocate( I_coils(n_coils) )
     end if 
     call MPI_bcast(I_coils,                 n_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(pf_coils%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(pf_coils%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
     call MPI_bcast(starwall_equil_coils,          1,          MPI_LOGICAL, 0, MPI_COMM_WORLD, err)
     
   end subroutine import_external_fields
@@ -322,8 +320,8 @@ module vacuum_equilibrium
    write(*,*) ' vertical_FB = ', vertical_FB
    
    do i=1, n_pf_coils
-     if( abs(pf_coils(i)%FB_amp) .gt. 1.d-6 ) then
-       I_coils(i) =  pf_coils(i)%current * (1 + pf_coils(i)%FB_amp * vertical_FB ) 
+     if( abs(vert_FB_amp(i)) .gt. 1.d-6 ) then
+       I_coils(i) =  pf_coils(i)%current * (1 + vert_FB_amp(i) * vertical_FB ) 
        write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo

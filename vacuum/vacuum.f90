@@ -136,7 +136,7 @@ module vacuum
   end type t_coil_curr_time_trace
   integer, parameter :: MAX_COILS = 299
   type(t_coil_curr_input), target :: diag_coils(MAX_COILS)
-  type(t_coil_curr_input), target :: rmp_coils(MAX_COILS)git 
+  type(t_coil_curr_input), target :: rmp_coils(MAX_COILS) 
   type(t_coil_curr_input), target :: voltage_coils(MAX_COILS) !### not yet ready
   type(t_coil_curr_input), target :: pf_coils(MAX_COILS)
   type(t_coil_curr_time_trace)       :: coil_curr_time_trace(4*MAX_COILS)
@@ -241,38 +241,38 @@ module vacuum
   
   
   !> Check whether the user has supplied the right coil current time trace input.
-  subroutine check_coil_curr_time_trace_input()
-  
-    integer :: i, j
-    class(t_coil_curr_input), pointer :: coil_curr_input
-    
-    do i = 1, 4
-      do j = 1, MAX_COILS
-        
-        if ( i == 1 ) then
-          coil_curr_input => pf_coils(j)
-        else if ( i == 2 ) then
-          coil_curr_input => rmp_coils(j)
-        else if ( i == 3 ) then
-          coil_curr_input => diag_coils(j)
-        else if ( i == 4 ) then
-          coil_curr_input => voltage_coils(j)
-        end if
-        
-        changed_by_user = ( (coil_curr_input%current /= 0.d0) .or. (coil_curr_input%pert /= 0.d0) &
-          .or. (coil_curr_input%file /= 'none') .or. #######complete###### )
-        
-        if ( (i<=sr%ncoil) .and. (.not. changed_by_user) ) then
-          write(*,*) 'WARNING: Coil current input has not been provided for an existing coil.', i, j
-          stop
-        else if ( (i > sr%ncoil) .and. changed_by_user ) then
-          write(*,*) 'WARNING: Coil current input has been provided for a coil not existing.', i, j
-          stop
-        end if
-        
-      end do
-    end do
-  endsubroutine check_coil_curr_time_trace_input
+!   subroutine check_coil_curr_time_trace_input()
+!   
+!     integer :: i, j
+!     class(t_coil_curr_input), pointer :: coil_curr_input
+!     
+!     do i = 1, 4
+!       do j = 1, MAX_COILS
+!         
+!         if ( i == 1 ) then
+!           coil_curr_input => pf_coils(j)
+!         else if ( i == 2 ) then
+!           coil_curr_input => rmp_coils(j)
+!         else if ( i == 3 ) then
+!           coil_curr_input => diag_coils(j)
+!         else if ( i == 4 ) then
+!           coil_curr_input => voltage_coils(j)
+!         end if
+!         
+!         changed_by_user = ( (coil_curr_input%current /= 0.d0) .or. (coil_curr_input%pert /= 0.d0) &
+!           .or. (coil_curr_input%file /= 'none') .or. #######complete###### )
+!         
+!         if ( (i<=sr%ncoil) .and. (.not. changed_by_user) ) then
+!           write(*,*) 'WARNING: Coil current input has not been provided for an existing coil.', i, j
+!           stop
+!         else if ( (i > sr%ncoil) .and. changed_by_user ) then
+!           write(*,*) 'WARNING: Coil current input has been provided for a coil not existing.', i, j
+!           stop
+!         end if
+!         
+!       end do
+!     end do
+!   end subroutine check_coil_curr_time_trace_input
   
   
   

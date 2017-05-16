@@ -47,8 +47,8 @@
  pf_coils(12)%current    =  1.67137802d+6     ! IHO2ud 
  pf_coils(13)%current    = -8.31900024d+6     ! IOH    
                          
- pf_coils(3)%FB_amp      =  1.d0              ! IV2o 
- pf_coils(4)%FB_amp      = -1.d0              ! IV2u
+ vert_FB_amp(3)          =  1.d0              ! IV2o 
+ vert_FB_amp(4)          = -1.d0              ! IV2u
 
  tokamak_device   = 'AUG'
  F0              = 3.03592621927

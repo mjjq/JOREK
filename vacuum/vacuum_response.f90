@@ -1479,18 +1479,34 @@ module vacuum_response
     implicit none
    
     ! --- Routine parameters
-    integer, intent(in) :: my_id  
-    integer             :: i
-    real*8, allocatable :: potentials_real_0(:)
+    integer, intent(in)       :: my_id  
+    integer                   :: i
+    real*8, allocatable       :: potentials_real_0(:)
+    real*8, save, allocatable :: delta_Icoils_0(:)
+    logical, save             :: initialized=.false.
    
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
-       
+    
+    ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
+    ! This is used below to avoid violent jumps in I_coils that can happen when restarting from a freeboudary_equil with feedback
+    if(.not. initialized) then
+      if (allocated(delta_Icoils_0)) deallocate(delta_Icoils_0)
+      allocate(delta_Icoils_0(n_coils))
+      delta_Icoils_0 = 0.d0
+      do i=1, n_coils
+        if (vert_FB_amp(i) /= 0.d0) then
+          delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, coil_curr_time_trace(i)%len, t_now)
+        endif
+      enddo
+      initialized = .true.
+    endif
+
     if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
     if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
     
     ! --- Calculate the specified coil currents at present time 
     do i=1, n_coils
-      I_coils(i) = interpolProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, coil_curr_time_trace(i)%len, t_now)
+      I_coils(i) = interpolProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
     enddo
     
     ! --- Transform real currents into starwall currents

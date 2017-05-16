@@ -157,9 +157,9 @@ module vacuum
     character(len=30) :: s
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
-    
-    do i = 1, n_coils
-      
+        
+    do i = 1, sr%ncoil
+            
       ! --- Which coil are we processing?
       if ( (i>=sr%ind_start_pol_coils) .and. (i<sr%ind_start_pol_coils+sr%n_pol_coils) ) then
         j = i - sr%ind_start_pol_coils + 1

@@ -33,7 +33,7 @@ err_buff_too_small = .false.
 
 ! --- Allocate the buffer with a fixed size which needs to be increased only
 !     if many new input parameters are added.
-bufsize = 65536
+bufsize = 1500000
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastp_buffer")
 

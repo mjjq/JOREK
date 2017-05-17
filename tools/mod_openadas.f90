@@ -13,15 +13,15 @@ type ADF11
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
   real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: d, T, z). Units:
-  !< ACD, SCD: cm3s-1 (for *CD ?)
-  !< PLT, PRB: Wcm3 (for P* ?)
+  !< ACD, SCD: m3s-1 (for *CD ?) (converted from cm3s-1)
+  !< PLT, PRB: Wm3 (for P* ?) (converted from Wcm3)
 contains
   procedure :: interp => GRC
 end type ADF11
 
 !> Compound datatype containing many type_ADF11
 type ADF11_all
-  integer          :: n_Z !< Atomic number
+  integer     :: n_Z !< Atomic number
   type(ADF11) :: ACD !< Effective recombination coefficients
   type(ADF11) :: SCD !< Effective ionisation coefficients
   type(ADF11) :: CCD !< Charge exchange effective recombination coefficients
@@ -104,6 +104,9 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
     read(10,*) a%GRC(:,:,i)
   enddo
   close(10)
+
+  ! Convert GRC coefficients from cm to m
+  a%GRC = a%GRC - 6.d0 ! because it is a logarithm. Conversion: /100.d0**3 (cm3s-1 => m3s-1)
 
   if (my_id .eq. 0) write(*,"(A)") " succeeded"
 enddo

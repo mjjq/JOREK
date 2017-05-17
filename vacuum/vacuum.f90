@@ -134,12 +134,12 @@ module vacuum
     real*8, allocatable:: x(:)                     !< X-values of numerical time trace.
     real*8, allocatable:: y(:)                     !< Y-values of numerical time trace.
   end type t_coil_curr_time_trace
-  integer, parameter :: MAX_COILS = 299
+  integer, parameter              :: MAX_COILS = 299
   type(t_coil_curr_input), target :: diag_coils(MAX_COILS)
   type(t_coil_curr_input), target :: rmp_coils(MAX_COILS) 
-  type(t_coil_curr_input), target :: voltage_coils(MAX_COILS) !### not yet ready
+  type(t_coil_curr_input), target :: voltage_coils(MAX_COILS)
   type(t_coil_curr_input), target :: pf_coils(MAX_COILS)
-  type(t_coil_curr_time_trace)       :: coil_curr_time_trace(4*MAX_COILS)
+  type(t_coil_curr_time_trace)    :: coil_curr_time_trace(4*MAX_COILS)
   
   real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Allows to tune direction and magnitude of vertical feedback for each poloidal field coil.
   
@@ -153,8 +153,8 @@ module vacuum
   subroutine set_coil_curr_time_trace()
     use profiles, only: readProf
     
-    integer :: i, j, k, l
-    character(len=30) :: s
+    integer :: i, j, k, l, err
+    character(len=60) :: s, filename
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
         
@@ -185,11 +185,14 @@ module vacuum
         
         ! --- Python script
         call random_seed()
-        call random_number(r)
-        l = r * 100000
-        write(s,*) l
-        s = adjustl(s)
-        open(42, file='./jorek_curr_expr_'//trim(s)//'.py', status='replace')
+        err = 1
+        do while ( err /= 0 )
+          call random_number(r)
+          l = r * 99999999
+          write(s,*) l
+          filename='./jorek_curr_expr_'//trim(adjustl(s))//'.py'
+          open(42, file=trim(filename), status='new', iostat=err)
+        end do
         111 format(2a)
         112 format(a,i16)
         113 format(a,es25.16)
@@ -206,14 +209,14 @@ module vacuum
         close(42)
         
         ! --- Call Python
-        call system('python ./jorek_curr_expr_'//trim(s)//'.py > ./jorek_curr_expr_'//trim(s)//'.dat')
+        call system('python ./jorek_curr_expr_'//trim(adjustl(s))//'.py > ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
         
         ! --- Read the result
         call readProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, &
           coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(s)//'.dat')
         
         ! --- Delete temporary files
-        call system('rm ./jorek_curr_expr_'//trim(s)//'.py ./jorek_curr_expr_'//trim(s)//'.dat')
+        call system('rm ./jorek_curr_expr_'//trim(adjustl(s))//'.py ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
         
       else ! ... just a value plus a perturbation
         
@@ -236,6 +239,11 @@ module vacuum
       coil_curr_time_trace(i)%x = (coil_curr_time_trace(i)%x * coil_curr_input%xscale) &
         + coil_curr_input%xshift
       coil_curr_time_trace(i)%y = coil_curr_time_trace(i)%y * coil_curr_input%yscale
+      
+      if ( coil_curr_time_trace(i)%x(1) > 0.d0 ) then
+        write(*,*) 'ERROR: A coil current time trace does not start at time 0. Maybe you have xshift wrong?', i
+        stop
+      end if
       
     end do
     

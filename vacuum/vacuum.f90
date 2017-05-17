@@ -210,7 +210,7 @@ module vacuum
         
         ! --- Read the result
         call readProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, &
-          coil_curr_time_trace(i)%len, './jorek_curr_expr'//trim(s)//'.dat')
+          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(s)//'.dat')
         
         ! --- Delete temporary files
         call system('rm ./jorek_curr_expr_'//trim(s)//'.py ./jorek_curr_expr_'//trim(s)//'.dat')

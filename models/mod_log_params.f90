@@ -445,7 +445,7 @@ if (my_id == 0) then
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'vert_FB_amp       '
+    write(*,REAL_FMT,advance='no') 'vert_FB_amp           '
     do i = 1, n_pf_coils
       write(*,'(10ES12.4)',advance='no') vert_FB_amp(i)
     end do

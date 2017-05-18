@@ -3,8 +3,6 @@
 !>
 !> TODO: * Turn this into a diagnostic type and enable as a default step for simulations
 !>       * Verify the accuracy and required timestep of the tracer
-!>         * Implement a higher-order method if necessary
-!>       * Write into existing diag.h5 file instead of separate file
 program calc_phi_zero
 use constants
 use mod_particle_sim
@@ -20,7 +18,7 @@ use hdf5_io_module
 implicit none
 
 type(particle_sim) :: sim
-real*8, parameter :: dt = 5d-9
+real*8, parameter :: dt = 1d-8
 real*8, parameter :: v = 1d6
 type(event) :: fieldreader, partreader
 integer :: i, j, k, i_elm_old, ifail, ierr, i_elm, dir
@@ -99,6 +97,18 @@ do i=1,size(sim%groups,1)
     !$omp shared(sim, dir, i, phi_zero, phi_zero_dist, R_axis, Z_axis, particles)
     do j=1,size(particles,1)
       if (particles(j)%i_elm .eq. 0) cycle
+      ! Do a single euler step forward to setup the adams-bashforth method
+      call sim%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
+        particles(j)%st, particles(j)%x(3), E, B, psi, U)
+      rz_old    = particles(j)%x(1:2)
+      st_old    = particles(j)%st
+      i_elm_old = particles(j)%i_elm
+      call fieldline_euler_push_cylindrical(particles(j), B, dt)
+      call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, particles(j)%x(1:2), rz_old, &
+        st_old, particles(j)%st, i_elm_old, particles(j)%i_elm, ifail)
+      if (particles(j)%i_elm .eq. 0) cycle
+      particles(j)%B_hat_prev = B/norm2(B)
+
       do k=1,200*nint(1.d0/(v*dt)) ! maximum number of steps from maximum length = q*circumference/v/dt \approx 100/vdt
         call sim%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
           particles(j)%st, particles(j)%x(3), E, B, psi, U)
@@ -108,7 +118,7 @@ do i=1,size(sim%groups,1)
         i_elm_old = particles(j)%i_elm
         theta_old = atan2(particles(j)%x(2)-Z_axis, particles(j)%x(1)-R_axis)
 
-        call fieldline_euler_push_cylindrical(particles(j), B, dt)
+        call fieldline_adams_bashforth_push_cylindrical(particles(j), B, dt)
         call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, particles(j)%x(1:2), rz_old, &
           st_old, particles(j)%st, i_elm_old, particles(j)%i_elm, ifail)
         if (particles(j)%i_elm .eq. 0) exit

@@ -17,9 +17,10 @@ module mod_particle_types
     integer*4 :: i_elm            !< index in element_list
   end type particle_base
 
-  !> A simple type just for fieldline tracing
+  !> A simple type just for fieldline tracing in two-step methods (Adams Bashforth) or for forward euler
   type, extends(particle_base) :: particle_fieldline
-    real*8    :: v
+    real*8    :: B_hat_prev(3) !< Field direction at previous timestep
+    real*8    :: v !< Parallel velocity along the fieldline
   end type particle_fieldline
 
   !> A simple guiding-center particle type.

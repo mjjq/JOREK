@@ -10,6 +10,7 @@ module mod_fieldline_euler
   private
 
   public fieldline_euler_push_cylindrical, fieldline_euler_push_cartesian
+  public fieldline_adams_bashforth_push_cylindrical, fieldline_adams_bashforth_push_cartesian
   public gc_to_fieldline
 contains
 
@@ -20,7 +21,6 @@ pure subroutine fieldline_euler_push_cylindrical(particle, B, dt)
   real*8, dimension(3), intent(in) :: B
   real*8, intent(in) :: dt
   real*8 :: R, Rphi
-  real*8 :: fE, fB, eom
   real*8 :: B_hat(3)
   B_hat = B / norm2(B)
   R    = particle%x(1) + B_hat(1)*particle%v * dt
@@ -32,18 +32,47 @@ pure subroutine fieldline_euler_push_cylindrical(particle, B, dt)
   particle%x(3) = particle%x(3) + asin(RPhi / particle%x(1))
 end subroutine fieldline_euler_push_cylindrical
 
+!> Follow a fieldline for a single timestep with a Two-step Adams-Bashfort method
+!> This routine works in RZPhi coordinates.
+!> B_hat_prev must be set in the particle or the first step will be inaccurate
+pure subroutine fieldline_adams_bashforth_push_cylindrical(particle, B, dt)
+  type(particle_fieldline), intent(inout) :: particle
+  real*8, dimension(3), intent(in) :: B
+  real*8, intent(in) :: dt
+  real*8 :: R, Rphi
+  real*8 :: B_hat(3)
+  B_hat = B / norm2(B)
+
+  ! No cylindrical correction! works better because adams-bashforth needs linear steps
+  particle%x(3) = (particle%x(3)*particle%x(1)  + (B_hat(3)*1.5d0 - particle%B_hat_prev(3)*0.5d0) * particle%v * dt)/particle%x(1)
+  particle%x(1) = particle%x(1)                 + (B_hat(1)*1.5d0 - particle%B_hat_prev(1)*0.5d0) * particle%v * dt
+  particle%x(2) = particle%x(2) + dt * particle%v*(B_hat(2)*1.5d0 - particle%B_hat_prev(2)*0.5d0)
+  particle%B_hat_prev = B_hat
+end subroutine fieldline_adams_bashforth_push_cylindrical
+
 !> Follow a fieldline for a single timestep with forward euler
 !> This routine works in RZPhi coordinates
 pure subroutine fieldline_euler_push_cartesian(particle, B, dt)
   type(particle_fieldline), intent(inout) :: particle
   real*8, dimension(3), intent(in) :: B
   real*8, intent(in) :: dt
-  real*8 :: R, Rphi
-  real*8 :: fE, fB, eom
   real*8 :: B_hat(3)
   B_hat = B / norm2(B)
   particle%x = particle%x + particle%v*B_hat*dt
 end subroutine fieldline_euler_push_cartesian
+
+!> Follow a fieldline for a single timestep with a Two-step Adams-Bashfort method
+!> This routine works in RZPhi coordinates.
+!> B_hat_prev must be set in the particle or the first step will be inaccurate
+pure subroutine fieldline_adams_bashforth_push_cartesian(particle, B, dt)
+  type(particle_fieldline), intent(inout) :: particle
+  real*8, dimension(3), intent(in) :: B
+  real*8, intent(in) :: dt
+  real*8 :: B_hat(3)
+  B_hat = B / norm2(B)
+  particle%x = particle%x + particle%v*dt*(B_hat*1.5d0-particle%B_hat_prev*0.5d0)
+  particle%B_hat_prev = B_hat
+end subroutine fieldline_adams_bashforth_push_cartesian
 
 !> Take a particle_gc and get the fieldline particle.
 function gc_to_fieldline(in) result(out)

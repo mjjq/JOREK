@@ -2,7 +2,6 @@
 !> Command-line arguments: part_restart.h5 < inputfile
 !>
 !> TODO: * Turn this into a diagnostic type and enable as a default step for simulations
-!>       * Verify the accuracy and required timestep of the tracer
 program calc_phi_zero
 use constants
 use mod_particle_sim

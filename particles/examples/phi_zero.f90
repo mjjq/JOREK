@@ -140,7 +140,7 @@ do i=1,size(sim%groups,1)
   ! Select the shortest distance to the outer midplane
   ! Do this by copying into phi_zero(:,1) values from phi_zero(:,2) where phi_zero_dist(:,1) > phi_zero_dist(:,2)
   where (phi_zero_dist(:,1) .gt. phi_zero_dist(:,2)) phi_zero(:,1) = phi_zero(:,2)
-  where (phi_zero_dist(:,1) .gt. phi_zero_dist(:,2)) phi_zero_dist(:,1) = phi_zero_dist(:,2)
+  where (phi_zero_dist(:,1) .gt. phi_zero_dist(:,2)) phi_zero_dist(:,1) = -phi_zero_dist(:,2)
   call HDF5_array1D_saving(file_id, phi_zero(:,1), size(phi_zero,1),trim(group_name)//"Phi_zero")
   call HDF5_array1D_saving(file_id, phi_zero_dist(:,1), size(phi_zero_dist,1),trim(group_name)//"L")
   deallocate(phi_zero,phi_zero_dist,particles)

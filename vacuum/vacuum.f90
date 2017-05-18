@@ -121,18 +121,20 @@ module vacuum
   type :: t_coil_curr_input
     real*8             :: current   = 0.d0  !< Current of the coil in Ampere*Turns
     real*8             :: pert      = 0.d0  !< Pert. of coil current in Ampere*Turns to speed-up VDE.
+    real*8             :: pert_start_time  = 0.d0  !< Starting time of pert. of coil current in JOREK_time.
+    real*8             :: pert_growth_time = 0.d0  !< Ramp-up time of pert. of coil current in JOREK_time.
     character(len=256) :: curr_file = 'none'!< Ascii file with coil current time trace.
-    real*8             :: xshift    = 0.d0  !< Shift time of time trace.
-    real*8             :: xscale    = 1.d0  !< Scale time of time trace.
-    real*8             :: yscale    = 1.d0  !< Scale amplitude of time trace.
+    real*8             :: time_shift    = 0.d0  !< Shift time of time trace.
+    real*8             :: time_scale    = 1.d0  !< Scale time of time trace.
+    real*8             :: curr_scale    = 1.d0  !< Scale amplitude of time trace.
     character(len=512) :: curr_expr = 'none'!< Analyt. expression for time trace (Python).
     real*8             :: max_time  = 1.d4  !< Evaluate analytical expression up to this time.
     integer            :: len       = 1000  !< Evaluate analytical expression on this number of time points.
   end type t_coil_curr_input
   type :: t_coil_curr_time_trace
     integer            :: len                      !< Number of points in numerical time trace.
-    real*8, allocatable:: x(:)                     !< X-values of numerical time trace.
-    real*8, allocatable:: y(:)                     !< Y-values of numerical time trace.
+    real*8, allocatable:: time(:)                     !< X-values of numerical time trace (=time).
+    real*8, allocatable:: curr(:)                     !< Y-values of numerical time trace (=currents).
   end type t_coil_curr_time_trace
   integer, parameter              :: MAX_COILS = 299
   type(t_coil_curr_input), target :: diag_coils(MAX_COILS)
@@ -178,7 +180,7 @@ module vacuum
       ! --- Set up numerical coil current time trace based on the input type...
       if ( coil_curr_input%curr_file /= 'none' ) then ! ... numerical input by ascii file
         
-        call readProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, &
+        call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
           coil_curr_time_trace(i)%len, coil_curr_input%curr_file)
         
       else if ( coil_curr_input%curr_expr /= 'none' ) then ! ... analytical Python expression
@@ -212,7 +214,7 @@ module vacuum
         call system('python ./jorek_curr_expr_'//trim(adjustl(s))//'.py > ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
         
         ! --- Read the result
-        call readProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, &
+        call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
           coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(s)//'.dat')
         
         ! --- Delete temporary files
@@ -220,28 +222,29 @@ module vacuum
         
       else ! ... just a value plus a perturbation
         
-        if (allocated(coil_curr_time_trace(i)%x)) deallocate(coil_curr_time_trace(i)%x)
-        if (allocated(coil_curr_time_trace(i)%y)) deallocate(coil_curr_time_trace(i)%y)
+        if (allocated(coil_curr_time_trace(i)%time)) deallocate(coil_curr_time_trace(i)%time)
+        if (allocated(coil_curr_time_trace(i)%curr)) deallocate(coil_curr_time_trace(i)%curr)
         
-        allocate(coil_curr_time_trace(i)%x(3) )
-        allocate(coil_curr_time_trace(i)%y(3) )
+        allocate(coil_curr_time_trace(i)%time(3) )
+        allocate(coil_curr_time_trace(i)%curr(3) )
         coil_curr_time_trace(i)%len = 3
         
-        coil_curr_time_trace(i)%x(1)   = 0.d0
-        coil_curr_time_trace(i)%x(2)   = PF_pert_start_time
-        coil_curr_time_trace(i)%x(3)   = 1.d12
+        coil_curr_time_trace(i)%time(1)   = 0.d0
+        coil_curr_time_trace(i)%time(2)   = coil_curr_input%pert_start_time
+        coil_curr_time_trace(i)%time(3)   = coil_curr_input%pert_start_time + coil_curr_input%pert_growth_time
+        coil_curr_time_trace(i)%time(4)   = 1.d12
         
-        coil_curr_time_trace(i)%y(1  ) = coil_curr_input%current
-        coil_curr_time_trace(i)%y(2:3) = coil_curr_input%current + coil_curr_input%pert
+        coil_curr_time_trace(i)%curr(1:2) = coil_curr_input%current
+        coil_curr_time_trace(i)%curr(3:4) = coil_curr_input%current + coil_curr_input%pert
         
       end if
       
-      coil_curr_time_trace(i)%x = (coil_curr_time_trace(i)%x * coil_curr_input%xscale) &
-        + coil_curr_input%xshift
-      coil_curr_time_trace(i)%y = coil_curr_time_trace(i)%y * coil_curr_input%yscale
+      coil_curr_time_trace(i)%time = (coil_curr_time_trace(i)%time * coil_curr_input%time_scale) &
+        + coil_curr_input%time_shift
+      coil_curr_time_trace(i)%curr = coil_curr_time_trace(i)%curr * coil_curr_input%curr_scale
       
-      if ( coil_curr_time_trace(i)%x(1) > 0.d0 ) then
-        write(*,*) 'ERROR: A coil current time trace does not start at time 0. Maybe you have xshift wrong?', i
+      if ( coil_curr_time_trace(i)%time(1) > 0.d0 ) then
+        write(*,*) 'ERROR: A coil current time trace does not start at time 0. Maybe you have time_shift wrong?', i
         stop
       end if
       
@@ -274,8 +277,8 @@ module vacuum
         end if
         
         changed_by_user = ( (coil_curr_input%current    /= 0.d0  ) .or. (coil_curr_input%pert     /= 0.d0)  &
-                       .or. (coil_curr_input%curr_file  /= 'none') .or. (coil_curr_input%xshift   /= 0.d0)  &
-                       .or. (coil_curr_input%xscale     /= 1.d0  ) .or. (coil_curr_input%yscale   /= 1.d0)  &
+                       .or. (coil_curr_input%curr_file  /= 'none') .or. (coil_curr_input%time_shift   /= 0.d0)  &
+                       .or. (coil_curr_input%time_scale     /= 1.d0  ) .or. (coil_curr_input%curr_scale   /= 1.d0)  &
                        .or. (coil_curr_input%curr_expr  /= 'none') .or. (coil_curr_input%max_time /= 1.d4)  &
                        .or. (coil_curr_input%len        /= 1000  ) .or. (vert_FB_amp(j)           /= 0.d0)  )
 

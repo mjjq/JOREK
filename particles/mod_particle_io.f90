@@ -182,6 +182,15 @@ if (allocated(sim%groups)) then
       end do
       call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"q",start=[i_here])
       deallocate(int4_1D)
+    type is (particle_fieldline)
+      particle_type_name = 'particle_fieldline'
+      ! v
+      allocate(real8_1D(n_here))
+      do j=1,n_here
+        real8_1D(j) = p(j)%v
+      end do
+      call HDF5_array1D_saving(file,real8_1D,n_total,group_name//"v",start=[i_here])
+      deallocate(real8_1D)
     class default
       write(*,*) "error: missing type name declaration for write"
       call exit(1)
@@ -286,6 +295,8 @@ do i=1,n
     allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(n_here), stat=ierr)
   case ('particle_gc')
     allocate(particle_gc::sim%groups(i)%particles(n_here), stat=ierr)
+  case ('particle_fieldline')
+    allocate(particle_fieldline::sim%groups(i)%particles(n_here), stat=ierr)
   case default
     write(*,*) "error: missing type name declaration for read"
     call exit(1)
@@ -380,6 +391,14 @@ do i=1,n
       p(j)%q = int4_1D(j)
     end do
     deallocate(int4_1D)
+  type is (particle_fieldline)
+    ! v
+    allocate(real8_1D(n_here))
+    call HDF5_array1D_reading(file, real8_1D, group_name//"v",start=[i_here])
+    do j=1,n_here
+      p(j)%v = real8_1D(j)
+    end do
+    deallocate(real8_1D)
   end select
 
 end do

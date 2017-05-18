@@ -18,11 +18,11 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2
-integer, parameter :: n_var = 11
-character(len=12)  :: var_names(n_var) = ["E      ", "mu     ", "P_phi  ", &
-  "Psi_bar", "Psi    ", "weight ", "lost   ", "q      ", "region ", &
-  "Theta  ", "Phi    "]
-integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4, REAL4, REAL4]
+integer, parameter :: n_var = 10
+character(len=12)  :: var_names(n_var) = ["e      ", "mu     ", &
+  "psi_bar", "rho    ", "weight ", "lost   ", "q      ", "region ", &
+  "theta  ", "phi    "]
+integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4, REAL4, REAL4]
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
 ! HDF5 does not support booleans, use INT4
@@ -68,8 +68,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   integer(HSIZE_T), parameter :: n_time = 1_HSIZE_T
 
   integer(HSIZE_T)  :: data_dims(2), time_dims(1), data_maxdims(2), time_maxdims(1)
-  integer(HSIZE_T)  :: npoints_mem, npoints_file
-  integer           :: i, j, n, my_id, n_cpu, ierr, rank, dot_index, var_index
+  integer           :: i, j, n, my_id, n_cpu, ierr, dot_index, var_index
   integer(HID_T)    :: dspace, dset, mem_space
   integer(HID_T)    :: tspace, t_mem_space, tset, group_id, plist
   logical           :: link_exists, file_exists
@@ -80,6 +79,10 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   integer, dimension(:,:), allocatable, target :: int4_var ! Data storage order: particle index, var
   real*4 :: tmpreal4
   integer :: tmpint4
+
+  ! For psi_Axis, psi_sep
+  real*8 :: psi_val, R, Z, s, t, psi_axis, psi_xpoint
+  integer :: i_elm, ifail, xcase
 
   call h5open_f(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
@@ -126,11 +129,14 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   end if
   ! assume that if it exists it's a group
 
+
   ! Safety checks
   if (.not. allocated(sim%groups)) return
 
   ! Preparation
   allocate(particles_per_proc(0:n_cpu-1))
+  psi_axis = -1.d0
+  psi_xpoint = 0.d0
 
   ! For each of the groups
   do i=lbound(sim%groups,1),ubound(sim%groups,1)
@@ -138,8 +144,8 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     n = size(sim%groups(i)%particles,1)
     call MPI_AllGather(n,1,MPI_INTEGER,&
         particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    allocate(real4_var(   n,n_real4_var))
-    allocate(int4_var(    n,n_int4_var))
+    allocate(real4_var(n,n_real4_var))
+    allocate(int4_var( n,n_int4_var))
 
     ! Create group to write particles in if it does not exist yet
     write(group_name,'(A,i0.3)') 'groups/', i
@@ -156,7 +162,6 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     call h5lexists_f(this%file_id, trim(timeset_name), link_exists, ierr)
 
     if (link_exists) then
-      if (my_id .eq. 0) write(*,*) "DEBUG: link to ", trim(timeset_name), " exists, trying to open"
       call h5dopen_f(this%file_id, trim(timeset_name), tset, ierr)
       if (ierr .ne. 0) then
         write(*,*) "Error opening timeset", i
@@ -180,7 +185,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
     ! Generate data
     call calculate_particle_diagnostics(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, &
-        real4_var(:,:), int4_var(:,:))
+        real4_var(:,:), int4_var(:,:), psi_axis, psi_xpoint)
 
     ! Loop over real4 variables, write
     do j=1,n_var
@@ -270,6 +275,48 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     call h5dclose_f(tset, ierr)
     deallocate(real4_var,int4_var)
   end do
+
+
+  ! Write psi_axis and psi_sep into the file
+  do i=1,2
+    if (i .eq. 1) then
+      timeset_name = 'psi_axis'
+      psi_val = psi_axis
+    else
+      timeset_name = 'psi_sep'
+      psi_val = psi_xpoint
+    end if
+    call h5lexists_f(this%file_id, trim(timeset_name), link_exists, ierr)
+    if (link_exists) then
+      call h5dopen_f(this%file_id, trim(timeset_name), tset, ierr)
+      if (ierr .ne. 0) then
+        write(*,*) "Error opening ", trim(timeset_name), i
+        call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
+      else
+        call h5dget_space_f(tset, tspace, ierr)
+      end if
+    else
+      call create_constants_time_dataset(this%file_id, trim(timeset_name), &
+          tset, tspace)
+    end if
+    call h5sget_simple_extent_dims_f(tspace, time_dims, time_maxdims, ierr)
+    ! Extend the dataset by 1 in the time-dimension
+    ! After extending, tspace is invalid. Close here already
+    call h5sclose_f(tspace, ierr)
+    time_dims(1) = time_dims(1) + 1_HSIZE_T
+    call h5dset_extent_f(tset, time_dims, ierr)
+    ! Add the current value to the timeset
+    call h5dget_space_f(tset, tspace, ierr)
+    call h5sselect_hyperslab_f(tspace, H5S_SELECT_SET_F, &
+        start=[time_dims(1)-1_HSIZE_T], count=[n_time], hdferr=ierr)
+    call h5screate_f(H5S_SCALAR_F, t_mem_space, ierr)
+    call h5dwrite_f(tset, H5T_NATIVE_REAL, real(psi_val,4), [n_time], ierr, file_space_id=tspace, mem_space_id=t_mem_space)
+    call h5dclose_f(tset, ierr)
+    call h5sclose_f(t_mem_space, ierr)
+    call h5sclose_f(tspace, ierr)
+  end do
+
+
   call h5fclose_f(this%file_id, ierr)
   call h5close_f(ierr)
 end subroutine do_write_particle_diagnostics
@@ -296,7 +343,7 @@ end subroutine create_constants_time_dataset
 
 !> Calculate H, mu, P_phi, Psi_bar, Psi, q, weight for a list of particles.
 !> mask is .f. if a particle is lost. Those values in out are set to 0.d0
-subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_stats, int_stats, mask)
+subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_stats, int_stats, psi_axis, psi_limit, mask)
   use mod_particle_types
   use phys_module, only: F0, xpoint, xcase
   use constants
@@ -307,8 +354,9 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
   real*8, intent(in)                                           :: mass
-  real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Psi_bar, Psi, weight, theta, phi)
+  real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Rho, weight, theta, phi)
   integer, dimension(:,:), intent(out)                         :: int_stats !< List of values (q, lost, region)
+  real*8, intent(out)                                          :: psi_axis, psi_limit
   logical, dimension(:), intent(out), optional :: mask !< Mask containing .f. if particle is lost
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
   real*8               :: inv_st_jac, psi_R, psi_Z, B(3), v_par
@@ -317,7 +365,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
 
   integer :: i, ifail
   integer :: domain, i_elm_axis, i_elm_xpoint(2)
-  real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_limit
+  real*8  :: R_axis, Z_axis, s_axis, t_axis
   real*8, dimension(2) :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
 
   !! Preparation (force my_id to 1 to suppress message)
@@ -326,7 +374,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   if (xpoint) then
     call find_xpoint(1,fields%node_list,fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
     psi_limit  = psi_xpoint(1)
-    if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    if((xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)))) then
       psi_limit = psi_xpoint(2)
     endif
   else
@@ -399,18 +447,16 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       real_stats(i,1) = real(particle%E, 4)
       ! 2. Magnetic moment
       real_stats(i,2) = real(particle%mu, 4)
-      ! 3. P_phi (generalized toroidal momentum)
-      real_stats(i,3) = real(real_stats(i,3) / EL_CHG, 4) ! normalize to ZPsi
-      ! 4. Psi_bar (P_phi/q)
-      real_stats(i,4) = real_stats(i,3) / max(real(particle%q),1.0)
-      ! 5. Psi (at GC position)
-      real_stats(i,5) = real(P(1), 4)
-      ! 6. weight
-      real_stats(i,6) = particle%weight
-      ! 7. theta
-      real_stats(i,7) = atan2(Z-Z_axis, R-R_axis)
-      ! 8. phi
-      real_stats(i,8) = particle%x(3)
+      ! 3. Psi_bar (P_phi/q)
+      real_stats(i,3) = real_stats(i,3) / real(EL_CHG / max(real(particle%q),1.0),4)
+      ! 4. Rho (at GC position)
+      real_stats(i,4) = real((P(1)-psi_axis)/(psi_limit-psi_axis), 4)
+      ! 5. weight
+      real_stats(i,5) = particle%weight
+      ! 6. theta
+      real_stats(i,6) = real(atan2(Z-Z_axis, R-R_axis),4)
+      ! 7. phi
+      real_stats(i,7) = real(particle%x(3),4)
 
       ! 1. lost (boolean)
       int_stats(i,1) = 0

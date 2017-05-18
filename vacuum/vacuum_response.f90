@@ -265,7 +265,7 @@ module vacuum_response
     !   --- Try to open as unformatted file
     write(*,*) 'Trying to open response as unformatted file...'
     open(filehandle, file=trim(filename), form='unformatted', status='old', action='read', &
-      iostat=err)
+      access='stream', iostat=err)
     if ( err == 0 ) then
       read(filehandle,iostat=err) i_tmp, r_tmp
       if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) then
@@ -279,7 +279,7 @@ module vacuum_response
       write(*,*) '  ... failed.'
       write(*,*) 'Trying to open response as formatted file...'
       open(filehandle, file=trim(filename), form='formatted', status='old', action='read', &
-        iostat=err)
+        access='stream', iostat=err)
     end if
     
     if ( err /= 0 ) then

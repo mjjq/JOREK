@@ -50,7 +50,7 @@ real*8, intent(in)  :: st(2) !< element-local coordinates
 real*8, intent(in)  :: phi !< toroidal angle
 real*8, intent(out) :: E(3) !< Electric field [V/m]
 real*8, intent(out) :: B(3) !< Magnetic field [T]
-real*8, intent(out) :: psi !< psi in JOREK units (~-0.9 at axis, -0.2 at edge)
+real*8, intent(out) :: psi !< psi in JOREK units
 real*8, intent(out) :: u !< velocity stream function in m/s
 
 ! Internal parameters

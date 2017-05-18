@@ -43,6 +43,8 @@ contains
 !> Interpolate a variable at a specific position (with phi), with first derivatives only
 pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
   use mod_interp_PRZ
+  use constants, only: mu_zero, mass_proton
+  use phys_module, only: tstep, central_mass, central_density
   class(jorek_fields_interp_linear),  intent(in)  :: this
   real*8,                   intent(in)  :: time !< Time at which to calculate this variable
   integer,                  intent(in)  :: i_elm
@@ -53,6 +55,8 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
 
   real*8 :: f, df, dt !< result = (1-df)*values_now - df*deltas, df = 1-f
   real*8, dimension(n_v) :: Pd, Pd_s, Pd_t, Pd_phi
+  real*8 :: t_norm
+  t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
   call       interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
   if (abs(this%time_prev-this%time_now) .gt. 1d-10 .and. .not. this%static) then
@@ -65,7 +69,8 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
     P_phi  = P_phi - df*Pd_phi
     P_time = Pd*dt
   else
-    P_time = 0.d0
+    call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
+    P_time = Pd/(tstep*t_norm)
   end if
 
 end subroutine do_interp_PRZ

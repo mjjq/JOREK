@@ -225,9 +225,9 @@ module vacuum
         if (allocated(coil_curr_time_trace(i)%time)) deallocate(coil_curr_time_trace(i)%time)
         if (allocated(coil_curr_time_trace(i)%curr)) deallocate(coil_curr_time_trace(i)%curr)
         
-        allocate(coil_curr_time_trace(i)%time(3) )
-        allocate(coil_curr_time_trace(i)%curr(3) )
-        coil_curr_time_trace(i)%len = 3
+        allocate(coil_curr_time_trace(i)%time(4) )
+        allocate(coil_curr_time_trace(i)%curr(4) )
+        coil_curr_time_trace(i)%len = 4
         
         coil_curr_time_trace(i)%time(1)   = 0.d0
         coil_curr_time_trace(i)%time(2)   = coil_curr_input%pert_start_time

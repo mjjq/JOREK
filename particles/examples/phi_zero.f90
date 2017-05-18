@@ -20,7 +20,7 @@ use hdf5_io_module
 implicit none
 
 type(particle_sim) :: sim
-real*8, parameter :: dt = 1d-8
+real*8, parameter :: dt = 5d-9
 real*8, parameter :: v = 1d6
 type(event) :: fieldreader, partreader
 integer :: i, j, k, i_elm_old, ifail, ierr, i_elm, dir
@@ -99,7 +99,7 @@ do i=1,size(sim%groups,1)
     !$omp shared(sim, dir, i, phi_zero, phi_zero_dist, R_axis, Z_axis, particles)
     do j=1,size(particles,1)
       if (particles(j)%i_elm .eq. 0) cycle
-      do k=1,100*nint(1.d0/(v*dt)) ! maximum number of steps from maximum length = q*circumference/v/dt \approx 100/vdt
+      do k=1,200*nint(1.d0/(v*dt)) ! maximum number of steps from maximum length = q*circumference/v/dt \approx 100/vdt
         call sim%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
           particles(j)%st, particles(j)%x(3), E, B, psi, U)
         rz_old    = particles(j)%x(1:2)

@@ -1495,7 +1495,7 @@ module vacuum_response
       delta_Icoils_0 = 0.d0
       do i=1, n_coils
         if (vert_FB_amp(i) /= 0.d0) then
-          delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, coil_curr_time_trace(i)%len, t_now)
+          delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now)
         endif
       enddo
       initialized = .true.
@@ -1506,7 +1506,7 @@ module vacuum_response
     
     ! --- Calculate the specified coil currents at present time 
     do i=1, n_coils
-      I_coils(i) = interpolProf(coil_curr_time_trace(i)%x, coil_curr_time_trace(i)%y, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
+      I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
     enddo
     
     ! --- Transform real currents into starwall currents

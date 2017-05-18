@@ -121,8 +121,8 @@ module vacuum
   type :: t_coil_curr_input
     real*8             :: current   = 0.d0  !< Current of the coil in Ampere*Turns
     real*8             :: pert      = 0.d0  !< Pert. of coil current in Ampere*Turns to speed-up VDE.
-    real*8             :: pert_start_time  = 0.d0  !< Starting time of pert. of coil current in JOREK_time.
-    real*8             :: pert_growth_time = 0.d0  !< Ramp-up time of pert. of coil current in JOREK_time.
+    real*8             :: pert_start_time  = 0.d0   !< Starting time of pert. of coil current in JOREK_time.
+    real*8             :: pert_growth_time = 1.d-12 !< Ramp-up time of pert. of coil current in JOREK_time.
     character(len=256) :: curr_file = 'none'!< Ascii file with coil current time trace.
     real*8             :: time_shift    = 0.d0  !< Shift time of time trace.
     real*8             :: time_scale    = 1.d0  !< Scale time of time trace.
@@ -132,9 +132,9 @@ module vacuum
     integer            :: len       = 1000  !< Evaluate analytical expression on this number of time points.
   end type t_coil_curr_input
   type :: t_coil_curr_time_trace
-    integer            :: len                      !< Number of points in numerical time trace.
-    real*8, allocatable:: time(:)                     !< X-values of numerical time trace (=time).
-    real*8, allocatable:: curr(:)                     !< Y-values of numerical time trace (=currents).
+    integer            :: len      !< Number of points in numerical time trace.
+    real*8, allocatable:: time(:)  !< time-values of numerical time trace
+    real*8, allocatable:: curr(:)  !< current-values of numerical time trace
   end type t_coil_curr_time_trace
   integer, parameter              :: MAX_COILS = 299
   type(t_coil_curr_input), target :: diag_coils(MAX_COILS)

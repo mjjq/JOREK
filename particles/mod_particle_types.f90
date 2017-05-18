@@ -19,6 +19,7 @@ module mod_particle_types
 
   !> A simple type just for fieldline tracing
   type, extends(particle_base) :: particle_fieldline
+    real*8    :: v
   end type particle_fieldline
 
   !> A simple guiding-center particle type.

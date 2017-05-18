@@ -59,6 +59,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+  logical              :: modes_changed
  
   ! --- Perturbation-Import variables
   type (type_node_list)   , pointer	:: node_list_perturbation
@@ -108,12 +109,14 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
     write(*,*) ' mode : ',mode
+    modes_changed = .false.
     if (n_tor .eq. n_tor_tmp) then 
        mode_tmp = mode
     else
        mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
+       modes_changed = .true.
     endif
-    if (n_tor_tmp .ne. n_tor .or. sum(abs(mode_tmp-mode)) .gt. 0) then
+    if (modes_changed) then
       write(*,*) 'OLD format (0) : '
       write(*,'(A,999i4)') '  previous modenumbers : ',mode_tmp
       write(*,'(A,999i4)') '  new mode numbers     : ',mode
@@ -544,7 +547,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, my
   integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
   character*50         :: version_control, version_control_tmp
-  logical              :: kept
+  logical              :: kept, modes_changed
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -629,13 +632,17 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, my
     do i=1, n_tor_tmp
        mode_tmp(i) = int(i / 2) * n_period_tmp
     end do
+    modes_changed = .false.
+    if (n_tor_tmp .ne. n_tor) then
+      modes_changed = .true.
+    elseif (sum(abs(mode_tmp-mode)) .gt. 0) then
+      modes_changed = .true.
+    end if
     
-    if (n_tor_tmp .ne. n_tor .or. sum(abs(mode_tmp-mode)) .gt. 0) then
-      if (my_id .eq. 0) then
-        write(*,*) 'OLD format (0) : '
-        write(*,'(A,999i4)') '  previous modenumbers : ',mode_tmp
-        write(*,'(A,999i4)') '  new mode numbers     : ',mode
-      endif
+    if (modes_changed .and. my_id .eq. 0) then
+      write(*,*) 'OLD format (0) : '
+      write(*,'(A,999i4)') '  previous modenumbers : ',mode_tmp
+      write(*,'(A,999i4)') '  new mode numbers     : ',mode
     else
       if (my_id .eq. 0) write(*,*) 'OLD format (0)'
     endif

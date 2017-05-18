@@ -69,14 +69,20 @@ def RequestData(self):
 
     # Read the h5 file(s)
     with h5py.File(FileNames[index]) as hf:
-        x      = hf.get('groups/%03d/x'%gid)[sel,:]
-        weight = hf.get('groups/%03d/weight'%gid)[sel]
-        q      = hf.get('groups/%03d/q'%gid)[sel]
+        gname = 'groups/%03d/'%gid
+        x      = hf.get(gname+'x')[sel,:]
+        weight = hf.get(gname+'weight')[sel]
+        has_q = False
+        if gname+'q' in hf:
+            has_q  = True
+            q      = hf.get(gname+'q')[sel]
     if (interp):
         with h5py.File(FileNames[index-1]) as hf2:
+            gname = 'groups/%03d/'%gid
             x      = f*x      + (1.0-f)*hf2.get('groups/%03d/x'%gid)[sel,:]
             weight = f*weight + (1.0-f)*hf2.get('groups/%03d/weight'%gid)[sel]
-            q      = f*q      + (1.0-f)*hf2.get('groups/%03d/q'%gid)[sel]
+            if has_q:
+                q      = f*q      + (1.0-f)*hf2.get('groups/%03d/q'%gid)[sel]
 
     if (not toroidal):
         pcoords = npvtk.numpy_to_vtk(x, deep=True, array_type=vtk.VTK_FLOAT)
@@ -94,9 +100,10 @@ def RequestData(self):
     val.SetName("weight")
     output.GetPointData().AddArray(val)
 
-    val = npvtk.numpy_to_vtk(q, deep=True, array_type=vtk.VTK_FLOAT)
-    val.SetName("q")
-    output.GetPointData().AddArray(val)
+    if has_q:
+        val = npvtk.numpy_to_vtk(q, deep=True, array_type=vtk.VTK_FLOAT)
+        val.SetName("q")
+        output.GetPointData().AddArray(val)
 
     return output
 

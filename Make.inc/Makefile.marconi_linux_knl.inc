@@ -4,11 +4,12 @@
 #   http://jorek.eu/wiki/doku.php?id=marconi-fusion_compile_knl_intelmpi_i17&do=
 
 # --- Select physics model
-MODEL             = model199
+MODEL             = model303
 
 # --- Compiler and options
 FC                = mpif90 -mt_mpi
 CC                = mpicc -mt_mpi
+CXX               = mpicxx -mt_mpi
 FFLAGS            = -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
 FFLAGS           += -axmic-avx512 -qopt-prefetch=5 -O2
 
@@ -21,13 +22,13 @@ USE_MUMPS         = 1
 
 # --- PaStiX solver
 PASTIX_LIB ?= "<<<<path-to-pastix-library-directory>>>>"
-LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` -L${MKL_LIB}
+LIB_PASTIX        = `$(PASTIX_LIB)/pastix-conf --libs` 
 LIB_PASTIX_MURGE  = `$(PASTIX_LIB)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS   = `$(PASTIX_LIB)/pastix-conf --blas`
 INC_PASTIX        = `$(PASTIX_LIB)/pastix-conf --incs`
 
 # --- FFTW Library
-LIBFFTW           = -L$(FFTW_LIB) -lfftw3
+LIBFFTW           = $(FFTW_LIB)/libfftw3.a
 INC_FFTW          = -I$(FFTW_INC)
 
 # --- Usually not to be changed

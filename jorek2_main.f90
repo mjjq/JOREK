@@ -211,7 +211,7 @@ required = 0
   
   CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
   write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', rank, ': ', name
-    
+
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
 
@@ -408,7 +408,6 @@ required = 0
     end if
     
   end if
-  if ( restart .and. freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -640,6 +639,7 @@ required = 0
   call broadcast_nodes(my_id, node_list)                      ! nodes
 
   call broadcast_phys(my_id)                                  ! physics parameters
+  if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   n_AA = 0  
   do inode = 1, node_list%n_nodes  
     n_AA = max(n_AA,node_list%node(inode)%index(4))  
@@ -844,10 +844,9 @@ required = 0
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)
-    call clck_time(t_itstart)
+    call clck_time_barrier(t_itstart)
     t0 = t_itstart
 
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
     flush stdout
     call tr_debug_write("JMAIN:Index_now",index_now)
 
@@ -903,7 +902,7 @@ required = 0
 !    end if
 
     ! Build the matrix 
-    call clck_time(t0)
+    call clck_time_barrier(t0)
     if (gmres) then
        solve_only = .false.
        if ((gmres) .and. (istep .gt. 1)) then
@@ -1003,7 +1002,7 @@ required = 0
        end if
     endif
 
-    call clck_time_barrier(t0)
+    call clck_time(t0)
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
@@ -1015,7 +1014,7 @@ required = 0
        write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
 
-    call clck_time_barrier(t0)
+    call clck_time(t0)
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
        if (use_pellet) then
@@ -1095,6 +1094,11 @@ required = 0
           index_now = index_now - 1 ! Undo the time step
           exit jstep_loop
        end if
+    call clck_time_barrier(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    if (my_id .eq. 0) then
+       write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
+    end if
 
     !-------------------------------------------------------- adapt time step (in progress...)
     mindelta = minval(deltas); maxdelta = maxval(deltas);
@@ -1189,7 +1193,7 @@ required = 0
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
-       write(*,FMT_TIMING)  my_id, '# Diagnostics :',tsecond
+       write(*,FMT_TIMING)  my_id, '#  Elapsed time Diagnostics :',tsecond
     end if
     !---------------------------------------------------------timing
     if ( istep == 1 ) then
@@ -1371,14 +1375,18 @@ required = 0
     endif
     iplot = 0
 
+    psi_bnd = 0.d0
     if (xpoint) then
-       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
+    	i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+      psi_bnd  = psi_xpoint(1)
+      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    	psi_bnd = psi_xpoint(2)
+      endif
     else
-       psi_bnd = psi_xpoint(1)
-       if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    	 psi_bnd = psi_xpoint(2)
-       endif
-    endif
+      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+      psi_bnd = psi_lim
+    end if
 
     Rp_start = R_axis - amin*2.d0
     Rp_end   = R_axis + amin*2.d0

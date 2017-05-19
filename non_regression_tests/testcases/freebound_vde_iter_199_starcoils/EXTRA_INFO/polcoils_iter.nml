@@ -1,0 +1,115 @@
+&polcoil_input
+  
+  polcoil_set          = 'ITER poloidal field coil set for STARWALL_J (produced by M. Hoelzl 2017-02-08)'
+  n_polcoils           = 12
+  polcoils_torpts      = 40 
+  
+  polcoil( 1)%name     = 'PF1'
+  polcoil( 1)%R        = 3.954
+  polcoil( 1)%Z        = 7.557
+  polcoil( 1)%dR       = 0.726
+  polcoil( 1)%dZ       = 0.81334
+  polcoil( 1)%nbands_R = 2
+  polcoil( 1)%nbands_Z = 2
+  polcoil( 1)%resist   = 1.d-3
+  
+  polcoil( 2)%name     = 'PF2'
+  polcoil( 2)%R        = 8.309
+  polcoil( 2)%Z        = 6.530
+  polcoil( 2)%dR       = 0.433
+  polcoil( 2)%dZ       = 0.397
+  polcoil( 2)%nbands_R = 3
+  polcoil( 2)%nbands_Z = 1
+  polcoil( 2)%resist   = 1.d-3
+  
+  polcoil( 3)%name     = 'PF3'
+  polcoil( 3)%R        = 11.935
+  polcoil( 3)%Z        = 3.265
+  polcoil( 3)%dR       = 0.472
+  polcoil( 3)%dZ       = 0.938
+  polcoil( 3)%nbands_R = 2
+  polcoil( 3)%nbands_Z = 2
+  polcoil( 3)%resist   = 1.d-3
+  
+  polcoil( 4)%name     = 'PF4'
+  polcoil( 4)%R        = 11.905
+  polcoil( 4)%Z        = -2.243
+  polcoil( 4)%dR       = 0.433
+  polcoil( 4)%dZ       = 0.900
+  polcoil( 4)%nbands_R = 2
+  polcoil( 4)%nbands_Z = 2
+  polcoil( 4)%resist   = 1.d-3
+  
+  polcoil( 5)%name     = 'PF5'
+  polcoil( 5)%R        = 8.395
+  polcoil( 5)%Z        = -6.730
+  polcoil( 5)%dR       = 0.615
+  polcoil( 5)%dZ       = 0.756
+  polcoil( 5)%nbands_R = 4
+  polcoil( 5)%nbands_Z = 2
+  polcoil( 5)%resist   = 1.d-3
+  
+  polcoil( 6)%name     = 'PF6'
+  polcoil( 6)%R        = 4.287
+  polcoil( 6)%Z        = -7.557
+  polcoil( 6)%dR       = 1.429
+  polcoil( 6)%dZ       = 0.781
+  polcoil( 6)%nbands_R = 7
+  polcoil( 6)%nbands_Z = 2
+  polcoil( 6)%resist   = 1.d-3
+  
+  polcoil( 7)%name     = 'CS3U'
+  polcoil( 7)%R        = 1.688
+  polcoil( 7)%Z        = 5.071
+  polcoil( 7)%dR       = 0.562
+  polcoil( 7)%dZ       = 1.827
+  polcoil( 7)%nbands_R = 4
+  polcoil( 7)%nbands_Z = 4
+  polcoil( 7)%resist   = 1.d-3
+  
+  polcoil( 8)%name     = 'CS2U'
+  polcoil( 8)%R        = 1.688
+  polcoil( 8)%Z        = 3.043
+  polcoil( 8)%dR       = 0.562
+  polcoil( 8)%dZ       = 1.827
+  polcoil( 8)%nbands_R = 4
+  polcoil( 8)%nbands_Z = 4
+  polcoil( 8)%resist   = 1.d-3
+  
+  polcoil( 9)%name     = 'CS1U'
+  polcoil( 9)%R        = 1.688
+  polcoil( 9)%Z        = 1.014
+  polcoil( 9)%dR       = 0.562
+  polcoil( 9)%dZ       = 1.827
+  polcoil( 9)%nbands_R = 4
+  polcoil( 9)%nbands_Z = 4
+  polcoil( 9)%resist   = 1.d-3
+  
+  polcoil(10)%name     = 'CS1L'
+  polcoil(10)%R        = 1.688
+  polcoil(10)%Z        = -1.014
+  polcoil(10)%dR       = 0.562
+  polcoil(10)%dZ       = 1.827
+  polcoil(10)%nbands_R = 4
+  polcoil(10)%nbands_Z = 4
+  polcoil(10)%resist   = 1.d-3
+  
+  polcoil(11)%name     = 'CS2L'
+  polcoil(11)%R        = 1.688
+  polcoil(11)%Z        = -3.043
+  polcoil(11)%dR       = 0.562
+  polcoil(11)%dZ       = 1.827
+  polcoil(11)%nbands_R = 4
+  polcoil(11)%nbands_Z = 4
+  polcoil(11)%resist   = 1.d-3
+  
+  polcoil(12)%name     = 'CS3L'
+  polcoil(12)%R        = 1.688
+  polcoil(12)%Z        = -5.071
+  polcoil(12)%dR       = 0.562
+  polcoil(12)%dZ       = 1.827
+  polcoil(12)%nbands_R = 4
+  polcoil(12)%nbands_Z = 4
+  polcoil(12)%resist   = 1.d-3
+  
+/

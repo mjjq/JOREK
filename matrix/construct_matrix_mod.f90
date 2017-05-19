@@ -320,7 +320,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 
   ! --- Loop over local elements
-  !$omp do 
+  !$omp do schedule(runtime)
   do ife =1, n_local_elms
     
     ! --- Get element

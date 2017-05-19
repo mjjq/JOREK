@@ -224,8 +224,11 @@ if (freeboundary_equil) then
     !Vertical feedback - needed for vertically unstable plasmas    
     
     Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
-    dZ_axis = Z_axis - Z_axis_old
-    if (iter .eq. 1) dZ_axis = 0.d0
+    if (iter .eq. 1) then
+      dZ_axis = 0.d0
+    else
+      dZ_axis = Z_axis - Z_axis_old
+    end if
     
     if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
       vertical_FB = FB_Zaxis_position   * (Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current

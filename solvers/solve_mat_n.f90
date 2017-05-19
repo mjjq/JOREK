@@ -1,7 +1,25 @@
 module solve_mat_n
 
 contains
- 
+  subroutine pastix_bind_threads(my_id)
+
+    use pastix_module
+
+    integer, intent(in) :: my_id
+    integer*4, dimension(1:pastix_nthrd) :: thread_map
+    integer*4 k, packsize, procpernode
+    
+#if defined(WORLDWAR2) && defined(CORES_PER_NODE)
+    procpernode = CORES_PER_NODE/pastix_nthrd
+    packsize = CORES_PER_NODE/procpernode 
+!    if (my_id .eq. 0) print *, "packsize", packsize, "procpernode", procpernode
+    Do k = 1, pastix_nthrd
+      thread_map(k) = mod(my_id * packsize,CORES_PER_NODE) + k-1
+    end do
+    call pastix_fortran_bindthreads(pastix_data, pastix_nthrd, thread_map(1:))
+#endif
+  end subroutine pastix_bind_threads
+
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
@@ -30,7 +48,7 @@ contains
 #endif
          &                  IPARM_THREAD_COMM_MODE,                            &
          &                  IPARM_END_TASK, API_TASK_INIT, IPARM_START_TASK,   &
-         &                  IPARM_BINDTHRD
+         &                  IPARM_BINDTHRD, API_BIND_TAB
 #ifdef USE_MURGE
     use murge_module, only : MURGE_MatrixReset
     USE murge_module, only : MURGE_Initialize
@@ -222,10 +240,12 @@ contains
         if ((.not. use_wsmp).and.(.not. pastix_smp_only)) then
 
           !$omp parallel default(none) shared(pastix_nthrd)    
-          pastix_nthrd = omp_get_num_threads()
+          !$omp master
+              pastix_nthrd = omp_get_num_threads()
+          !$omp end master
           !$omp end parallel
-
-          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
+          
+          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
 
           call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -303,8 +323,11 @@ contains
               !          if (pastix_smp_only) pastix_nthrd = n_cpu_n                ! use the size of the MPIgroup for the number of threads
 
               !$omp parallel default(none) shared(pastix_nthrd)    
+              !$omp master
               pastix_nthrd = omp_get_num_threads()
+              !$omp end master
               !$omp end parallel
+              if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
               pastix_iparm(IPARM_MODIFY_PARAMETER+increment) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+increment)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+increment)         = API_TASK_INIT
@@ -454,14 +477,17 @@ contains
 
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
-!          pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO
+#if defined(WORLDWAR2) && defined(CORES_PER_NODE)
+          pastix_iparm(IPARM_BINDTHRD+increment)   = API_BIND_TAB
+#endif
 #ifdef USE_BLOCK
-
+          call pastix_bind_threads(my_id)
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
-            mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
+            mumps_par%jcn, mumps_par%irn, mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-#else	  
+#else	   
+          call pastix_bind_threads(my_id)
           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif

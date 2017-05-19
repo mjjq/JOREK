@@ -853,8 +853,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       end do
     end do
 
-    call HDF5_array3D_reading(file_id,energies,'energies')
-    
     if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
     call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
     R_axis_t = 0.d0

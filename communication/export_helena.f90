@@ -243,6 +243,12 @@ do i=2, surface_list%n_psi
 
       call interp_RZ(node_list,element_list,i_elm,ri,si,RRgi,dRRgi_dr,dRRgi_ds,dRRgi_drs,dRRgi_drr,dRRgi_dss, &
                                                         ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss)
+      
+      ! --- Make sure that for flux surfaces at Psi_N < 1, the surface integral is carried out only
+      !     over the flux surface segments of the plasma region.
+      !     I.e., ignore flux surface segments in the private flux region below the x-point.
+      if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (ZZgi < z_xpoint(1)) .and. (xcase .ne. 2)) cycle
+      if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (ZZgi > z_xpoint(2)) .and. (xcase .ne. 1)) cycle
 
       dRRgi_dt = dRRgi_dr * dri + dRRgi_ds * dsi
       dZZgi_dt = dZZgi_dr * dri + dZZgi_ds * dsi

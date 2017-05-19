@@ -1102,21 +1102,7 @@ module vacuum_response
     end if
 
     if ( my_id == 0 ) call boundary_check()
-    
-    !-- Add perturbation in PF coils currents to speed-up VDEs
-    if (t_start .gt. PF_pert_start_time)  PF_perturbation = .false.
-    if (PF_perturbation .and. (t_now .ge. PF_pert_start_time) ) then
-      if ( my_id == 0 ) write(*,*) 'Perturbing PF coil currents'
-      if (starwall_equil_coils)  then
-        i_start_pf    = sr%ind_start_pol_coils
-        i_end_pf      = i_start_pf + sr%n_pol_coils -1
-        I_coils(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) + pf_coils(1:n_pf_coils)%pert
-      else         
-        I_coils(1:n_pf_coils) = I_coils(1:n_pf_coils) + pf_coils(1:n_pf_coils)%pert
-      end if
-      PF_perturbation    = .false.
-    endif  
-    
+        
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
 #endif
@@ -1487,24 +1473,48 @@ module vacuum_response
   subroutine coil_current_source(my_id)
     
     use constants
+    use phys_module, only: t_now
+    use profiles
     
     implicit none
    
     ! --- Routine parameters
-    integer, intent(in) :: my_id  
-    integer             :: k
-    real*8, allocatable :: potentials_real_0(:)
+    integer, intent(in)       :: my_id  
+    integer                   :: i
+    real*8, allocatable       :: potentials_real_0(:)
+    real*8, save, allocatable :: delta_Icoils_0(:)
+    logical, save             :: initialized=.false.
    
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
-       
+    
+    ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
+    ! This is used below to avoid violent jumps in I_coils that can happen when restarting from a freeboudary_equil with feedback
+    if(.not. initialized) then
+      if (allocated(delta_Icoils_0)) deallocate(delta_Icoils_0)
+      allocate(delta_Icoils_0(n_coils))
+      delta_Icoils_0 = 0.d0
+      do i=1, n_coils
+        if (vert_FB_amp(i) /= 0.d0) then
+          delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now)
+        endif
+      enddo
+      initialized = .true.
+    endif
+
     if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
     if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
     
+    ! --- Calculate the specified coil currents at present time 
+    do i=1, n_coils
+      I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
+    enddo
+    
+    ! --- Transform real currents into starwall currents
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
-    potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
-    do k = 1, n_wall_curr
-      Y_coils0(k) = sum(sr%s_ww_inv(k,:) * potentials_real_0(:))    
+    potentials_real_0(1:n_coils) = I_coils(1:n_coils) * mu_zero
+    do i = 1, n_wall_curr
+      Y_coils0(i) = sum(sr%s_ww_inv(i,:) * potentials_real_0(:))    
     end do
     
   end subroutine coil_current_source

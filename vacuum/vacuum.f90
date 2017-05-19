@@ -42,7 +42,7 @@ module vacuum
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
-  integer             :: n_pf_coils                      !< specified number of poloidal field coils in namelist
+  integer             :: n_pf_coils                      !< number of poloidal field coils
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
   real*8, allocatable :: I_coils(:)                      !< coil currents
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source
@@ -115,17 +115,181 @@ module vacuum
     integer, allocatable :: jpot_w(:,:)
   end type t_starwall_response
   
-  type :: initial_pf_coil
-    real*8  :: FB_amp          !< If different than 0, define a FB coil. Value used to tune the direction and magnitud of the feedback
-    real*8  :: current         !< Current of the coil in Amperes
-    real*8  :: pert            !< Perturbation of the current of the coil in Amperes, this is useful to speed-up VDEs
-  end type initial_pf_coil
+  type(t_starwall_response) :: sr              !< STARWALL response
   
-  type(t_starwall_response) :: sr             !< STARWALL response
-  type(initial_pf_coil)     :: pf_coils(30)   !< Initial coil currents, given in namelist file
+  !> Coil current specification.
+  type :: t_coil_curr_input
+    real*8             :: current   = 0.d0  !< Current of the coil in Ampere*Turns
+    real*8             :: pert      = 0.d0  !< Pert. of coil current in Ampere*Turns to speed-up VDE.
+    real*8             :: pert_start_time  = 0.d0   !< Starting time of pert. of coil current in JOREK_time.
+    real*8             :: pert_growth_time = 1.d-12 !< Ramp-up time of pert. of coil current in JOREK_time.
+    character(len=256) :: curr_file = 'none'!< Ascii file with coil current time trace.
+    real*8             :: time_shift    = 0.d0  !< Shift time of time trace.
+    real*8             :: time_scale    = 1.d0  !< Scale time of time trace.
+    real*8             :: curr_scale    = 1.d0  !< Scale amplitude of time trace.
+    character(len=512) :: curr_expr = 'none'!< Analyt. expression for time trace (Python).
+    real*8             :: max_time  = 1.d4  !< Evaluate analytical expression up to this time.
+    integer            :: len       = 1000  !< Evaluate analytical expression on this number of time points.
+  end type t_coil_curr_input
+  type :: t_coil_curr_time_trace
+    integer            :: len      !< Number of points in numerical time trace.
+    real*8, allocatable:: time(:)  !< time-values of numerical time trace
+    real*8, allocatable:: curr(:)  !< current-values of numerical time trace
+  end type t_coil_curr_time_trace
+  integer, parameter              :: MAX_COILS = 299
+  type(t_coil_curr_input), target :: diag_coils(MAX_COILS)
+  type(t_coil_curr_input), target :: rmp_coils(MAX_COILS) 
+  type(t_coil_curr_input), target :: voltage_coils(MAX_COILS)
+  type(t_coil_curr_input), target :: pf_coils(MAX_COILS)
+  type(t_coil_curr_time_trace)    :: coil_curr_time_trace(4*MAX_COILS)
+  
+  real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Allows to tune direction and magnitude of vertical feedback for each poloidal field coil.
+  
   
   
   contains
+  
+  
+  
+  !> Set coil_curr_time_trace based on user input.
+  subroutine set_coil_curr_time_trace()
+    use profiles, only: readProf
+    
+    integer :: i, j, k, l, err
+    character(len=60) :: s, filename
+    real*8 :: r
+    class(t_coil_curr_input), pointer :: coil_curr_input
+        
+    do i = 1, sr%ncoil
+            
+      ! --- Which coil are we processing?
+      if ( (i>=sr%ind_start_pol_coils) .and. (i<sr%ind_start_pol_coils+sr%n_pol_coils) ) then
+        j = i - sr%ind_start_pol_coils + 1
+        coil_curr_input => pf_coils(j)
+      else if ( (i>=sr%ind_start_rmp_coils) .and. (i<sr%ind_start_rmp_coils+sr%n_rmp_coils) ) then
+        j = i - sr%ind_start_rmp_coils + 1
+        coil_curr_input => rmp_coils(j)
+      else if ( (i>=sr%ind_start_diag_coils) .and. (i<sr%ind_start_diag_coils+sr%n_diag_coils) ) then
+        j = i - sr%ind_start_diag_coils + 1
+        coil_curr_input => diag_coils(j)
+      else if ( (i>=sr%ind_start_voltage_coils) .and. (i<sr%ind_start_voltage_coils+sr%n_voltage_coils) ) then
+        j = i - sr%ind_start_voltage_coils + 1
+        coil_curr_input => voltage_coils(j)
+      end if
+      
+      ! --- Set up numerical coil current time trace based on the input type...
+      if ( coil_curr_input%curr_file /= 'none' ) then ! ... numerical input by ascii file
+        
+        call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
+          coil_curr_time_trace(i)%len, coil_curr_input%curr_file)
+        
+      else if ( coil_curr_input%curr_expr /= 'none' ) then ! ... analytical Python expression
+        
+        ! --- Python script
+        call random_seed()
+        err = 1
+        do while ( err /= 0 )
+          call random_number(r)
+          l = r * 99999999
+          write(s,*) l
+          filename='./jorek_curr_expr_'//trim(adjustl(s))//'.py'
+          open(42, file=trim(filename), status='new', iostat=err)
+        end do
+        111 format(2a)
+        112 format(a,i16)
+        113 format(a,es25.16)
+        write(42,111) 'from math import *'
+        write(42,111) 'def f(t):'
+        write(42,111) '  return ', trim(coil_curr_input%curr_expr)
+        write(42,112) 'len=', coil_curr_input%len
+        write(42,113) 'tmax=', coil_curr_input%max_time
+        write(42,111) 'for x in range(1,len):'
+        write(42,111) '  t=(x-1)/float(len-1)*tmax'
+        write(42,111) '  s = "%25.16e"%t'
+        write(42,111) '  s += "%25.16e"%f(t)'
+        write(42,111) '  print(s)'
+        close(42)
+        
+        ! --- Call Python
+        call system('python ./jorek_curr_expr_'//trim(adjustl(s))//'.py > ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
+        
+        ! --- Read the result
+        call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
+          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(s)//'.dat')
+        
+        ! --- Delete temporary files
+        call system('rm ./jorek_curr_expr_'//trim(adjustl(s))//'.py ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
+        
+      else ! ... just a value plus a perturbation
+        
+        if (allocated(coil_curr_time_trace(i)%time)) deallocate(coil_curr_time_trace(i)%time)
+        if (allocated(coil_curr_time_trace(i)%curr)) deallocate(coil_curr_time_trace(i)%curr)
+        
+        allocate(coil_curr_time_trace(i)%time(4) )
+        allocate(coil_curr_time_trace(i)%curr(4) )
+        coil_curr_time_trace(i)%len = 4
+        
+        coil_curr_time_trace(i)%time(1)   = 0.d0
+        coil_curr_time_trace(i)%time(2)   = coil_curr_input%pert_start_time
+        coil_curr_time_trace(i)%time(3)   = coil_curr_input%pert_start_time + coil_curr_input%pert_growth_time
+        coil_curr_time_trace(i)%time(4)   = 1.d12
+        
+        coil_curr_time_trace(i)%curr(1:2) = coil_curr_input%current
+        coil_curr_time_trace(i)%curr(3:4) = coil_curr_input%current + coil_curr_input%pert
+        
+      end if
+      
+      coil_curr_time_trace(i)%time = (coil_curr_time_trace(i)%time * coil_curr_input%time_scale) &
+        + coil_curr_input%time_shift
+      coil_curr_time_trace(i)%curr = coil_curr_time_trace(i)%curr * coil_curr_input%curr_scale
+      
+      if ( coil_curr_time_trace(i)%time(1) > 0.d0 ) then
+        write(*,*) 'ERROR: A coil current time trace does not start at time 0. Maybe you have time_shift wrong?', i
+        stop
+      end if
+      
+    end do
+    
+  end subroutine set_coil_curr_time_trace
+  
+  
+  
+  !> Check whether the user has supplied the right coil current time trace input.
+  subroutine check_coil_curr_time_trace_input(coils_number)
+  
+    integer, intent(in) :: coils_number
+    
+    integer :: i, j
+    logical :: changed_by_user
+    class(t_coil_curr_input), pointer :: coil_curr_input
+    
+    do i = 1, 4
+      do j = 1, MAX_COILS
+        
+        if ( i == 1 ) then
+          coil_curr_input => pf_coils(j)
+        else if ( i == 2 ) then
+          coil_curr_input => rmp_coils(j)
+        else if ( i == 3 ) then
+          coil_curr_input => diag_coils(j)
+        else if ( i == 4 ) then
+          coil_curr_input => voltage_coils(j)
+        end if
+        
+        changed_by_user = ( (coil_curr_input%current    /= 0.d0  ) .or. (coil_curr_input%pert     /= 0.d0)  &
+                       .or. (coil_curr_input%curr_file  /= 'none') .or. (coil_curr_input%time_shift   /= 0.d0)  &
+                       .or. (coil_curr_input%time_scale     /= 1.d0  ) .or. (coil_curr_input%curr_scale   /= 1.d0)  &
+                       .or. (coil_curr_input%curr_expr  /= 'none') .or. (coil_curr_input%max_time /= 1.d4)  &
+                       .or. (coil_curr_input%len        /= 1000  ) .or. (vert_FB_amp(j)           /= 0.d0)  )
+
+        if ( (j > coils_number) .and. changed_by_user ) then
+          write(*,*) 'WARNING: Coil current input has been provided for a coil not existing.', i, j
+          stop
+        end if
+        
+      end do
+    end do
+  end subroutine check_coil_curr_time_trace_input
   
   
   
@@ -156,9 +320,6 @@ module vacuum
     start_VFB            = 10
     
     n_iter_freeb         = 900
-    pf_coils(:)%current  = 0.d0
-    pf_coils(:)%FB_amp   = 0.d0
-    pf_coils(:)%pert     = 0.d0
     
     PF_pert_start_time   = 1.d99
     

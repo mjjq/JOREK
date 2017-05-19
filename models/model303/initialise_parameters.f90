@@ -108,7 +108,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
-                Zaxis_find_limit, PF_pert_start_time
+                Zaxis_find_limit, PF_pert_start_time,               &
+                diag_coils, rmp_coils, voltage_coils, vert_FB_amp
 
 if (my_id .eq. 0) then
 

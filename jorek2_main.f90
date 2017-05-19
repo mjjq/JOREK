@@ -487,6 +487,7 @@ required = 0
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)
       call import_external_fields('coil_field.dat', my_id)
+      call set_coil_curr_time_trace()
       if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
     else
       freeb_equil2        = freeboundary_equil
@@ -565,6 +566,7 @@ required = 0
           resistive_wall)
           call update_response(tstep, freeboundary_equil, resistive_wall)
           call import_external_fields('coil_field.dat', my_id)
+          call set_coil_curr_time_trace()
           if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
         end if
         
@@ -609,12 +611,12 @@ required = 0
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
-!   if ( freeboundary_equil ) call import_external_fields('coil_field.dat')
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
       resistive_wall)
     call update_response(tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
+    call set_coil_curr_time_trace()
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   

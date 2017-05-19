@@ -37,13 +37,7 @@ def RequestData(self):
     req_time = GetUpdateTimestep(self)
 
     # Read the timestep info from the files
-    MU_ZERO       = 4e-7*np.pi
-    MASS_PROTON   = 1.67262178e-27
-    if (central_mass > 0 and central_density > 0):
-        t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
-    else:
-        t_norm = 1
-    xtime = [h5py.File(fname).get("t_now")[0]*t_norm for fname in FileNames]
+    xtime = [h5py.File(fname).get("t_now")[0] for fname in FileNames]
 
     # 4 possibilities here:
     # After last step: return last file
@@ -93,13 +87,7 @@ def RequestInformation(self):
         outInfo = executive.GetOutputInformation(0)
 
         # Read the timestep info from the files
-        MU_ZERO       = 4e-7*np.pi
-        MASS_PROTON   = 1.67262178e-27
-        if (central_mass > 0 and central_density > 0):
-            t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
-        else:
-            t_norm = 1
-        xtime = [h5py.File(fname).get("t_now")[0]*t_norm for fname in FileNames]
+        xtime = [h5py.File(fname).get("t_now")[0] for fname in FileNames]
 
         outInfo.Remove(executive.TIME_STEPS())
         for i in range(len(FileNames)):

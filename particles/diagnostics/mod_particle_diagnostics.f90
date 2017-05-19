@@ -448,7 +448,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       ! 2. Magnetic moment
       real_stats(i,2) = real(particle%mu, 4)
       ! 3. Psi_bar (P_phi/q)
-      real_stats(i,3) = real_stats(i,3) / real(EL_CHG / max(real(particle%q),1.0),4)
+      real_stats(i,3) = real_stats(i,3) / real(EL_CHG * max(real(particle%q),1.0),4)
       ! 4. Rho (at GC position)
       real_stats(i,4) = real((P(1)-psi_axis)/(psi_limit-psi_axis), 4)
       ! 5. weight

@@ -229,7 +229,7 @@ module vacuum
         allocate(coil_curr_time_trace(i)%curr(4) )
         coil_curr_time_trace(i)%len = 4
         
-        coil_curr_time_trace(i)%time(1)   = 0.d0
+        coil_curr_time_trace(i)%time(1)   = -1.d-12
         coil_curr_time_trace(i)%time(2)   = coil_curr_input%pert_start_time
         coil_curr_time_trace(i)%time(3)   = coil_curr_input%pert_start_time + coil_curr_input%pert_growth_time
         coil_curr_time_trace(i)%time(4)   = 1.d12

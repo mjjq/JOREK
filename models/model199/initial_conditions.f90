@@ -77,14 +77,22 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,3,5) = dn_dpsi  * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(3,2)
     node_list%node(i)%values(1,4,5) = dn_dpsi  * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(4,2) &
                                     + dn_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dn_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+                                    + dn_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) &
+                                    + dn_dpsi_dz * ( &
+                                      + node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2) &
+                                      + node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2) &
+                                      )
 
     node_list%node(i)%values(1,1,6) = zT
     node_list%node(i)%values(1,2,6) = dT_dpsi  * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(2,2)
     node_list%node(i)%values(1,3,6) = dT_dpsi  * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(3,2)
     node_list%node(i)%values(1,4,6) = dT_dpsi  * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(4,2) &
                                     + dT_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dT_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+                                    + dT_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) &
+                                    + dT_dpsi_dz * ( &
+                                      + node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2) &
+                                      + node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2) &
+                                      )
 
   enddo
 

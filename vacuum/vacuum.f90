@@ -128,8 +128,8 @@ module vacuum
     real*8             :: time_scale    = 1.d0  !< Scale time of time trace.
     real*8             :: curr_scale    = 1.d0  !< Scale amplitude of time trace.
     character(len=512) :: curr_expr = 'none'!< Analyt. expression for time trace (Python).
-    real*8             :: max_time  = 1.d4  !< Evaluate analytical expression up to this time.
-    integer            :: len       = 1000  !< Evaluate analytical expression on this number of time points.
+    real*8             :: max_time  = 0.d0  !< Evaluate analytical expression up to this time.
+    integer            :: len       = 0     !< Evaluate analytical expression on this number of time points.
   end type t_coil_curr_input
   type :: t_coil_curr_time_trace
     integer            :: len      !< Number of points in numerical time trace.
@@ -202,9 +202,10 @@ module vacuum
         write(42,111) 'def f(t):'
         write(42,111) '  return ', trim(coil_curr_input%curr_expr)
         write(42,112) 'len=', coil_curr_input%len
-        write(42,113) 'tmax=', coil_curr_input%max_time
+        write(42,113) 'tmin=', - coil_curr_input%time_shift / coil_curr_input%time_scale - 1.d-12
+        write(42,113) 'tmax=', ( coil_curr_input%max_time - coil_curr_input%time_shift ) / coil_curr_input%time_scale + 1.d-12
         write(42,111) 'for x in range(1,len):'
-        write(42,111) '  t=(x-1)/float(len-1)*tmax'
+        write(42,111) '  t=tmin+(x-1)/float(len-1)*(tmax-tmin)'
         write(42,111) '  s = "%25.16e"%t'
         write(42,111) '  s += "%25.16e"%f(t)'
         write(42,111) '  print(s)'
@@ -229,7 +230,7 @@ module vacuum
         allocate(coil_curr_time_trace(i)%curr(4) )
         coil_curr_time_trace(i)%len = 4
         
-        coil_curr_time_trace(i)%time(1)   = -1.d-12
+        coil_curr_time_trace(i)%time(1)   = -1.d12
         coil_curr_time_trace(i)%time(2)   = coil_curr_input%pert_start_time
         coil_curr_time_trace(i)%time(3)   = coil_curr_input%pert_start_time + coil_curr_input%pert_growth_time
         coil_curr_time_trace(i)%time(4)   = 1.d12
@@ -276,14 +277,19 @@ module vacuum
           coil_curr_input => voltage_coils(j)
         end if
         
-        changed_by_user = ( (coil_curr_input%current    /= 0.d0  ) .or. (coil_curr_input%pert     /= 0.d0)  &
-                       .or. (coil_curr_input%curr_file  /= 'none') .or. (coil_curr_input%time_shift   /= 0.d0)  &
-                       .or. (coil_curr_input%time_scale     /= 1.d0  ) .or. (coil_curr_input%curr_scale   /= 1.d0)  &
-                       .or. (coil_curr_input%curr_expr  /= 'none') .or. (coil_curr_input%max_time /= 1.d4)  &
-                       .or. (coil_curr_input%len        /= 1000  ) .or. (vert_FB_amp(j)           /= 0.d0)  )
+        changed_by_user = ( (coil_curr_input%current    /= 0.d0  ) .or. (coil_curr_input%pert       /= 0.d0)  &
+                       .or. (coil_curr_input%curr_file  /= 'none') .or. (coil_curr_input%time_shift /= 0.d0)  &
+                       .or. (coil_curr_input%time_scale /= 1.d0  ) .or. (coil_curr_input%curr_scale /= 1.d0)  &
+                       .or. (coil_curr_input%curr_expr  /= 'none') .or. (coil_curr_input%max_time   /= 0.d0)  &
+                       .or. (coil_curr_input%len        /= 0     ) .or. (vert_FB_amp(j)             /= 0.d0)  )
 
         if ( (j > coils_number) .and. changed_by_user ) then
-          write(*,*) 'WARNING: Coil current input has been provided for a coil not existing.', i, j
+          write(*,*) 'ERROR: Coil current input has been provided for a coil not existing.', i, j
+          stop
+        end if
+        
+        if ( (coil_curr_input%curr_expr /= 'none') .and. ( (coil_curr_input%len <= 0) .or. (coil_curr_input%max_time <= 0.d0) ) ) then
+          write(*,*) 'ERROR: When prescribing a coil current via %curr_expr, you need to specify also %len and %max_time.'
           stop
         end if
         

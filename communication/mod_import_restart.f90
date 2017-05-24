@@ -1,10 +1,25 @@
 !> Routines to import a restart file written out by a routine in [[export_restart]].
 module mod_import_restart
 implicit none
+interface import_restart
+  module procedure import_restart_with_id
+  module procedure import_restart_without_id
+end interface
 contains
+subroutine import_restart_without_id(node_list, element_list, filename, format_rst, ierr)
+  use data_structure
+  type(type_node_list),    intent(inout) :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  character*(*)          , intent(in)    :: filename
+  integer,                 intent(out)   :: ierr
+  integer,                 intent(in)    :: format_rst  ! format of restart file 
+  call import_restart_with_id(node_list, element_list, filename, format_rst, 0, ierr)
+end subroutine import_restart_without_id
+
+
 !> Imports a restart file written out by the routine export_restart.
 
-subroutine import_restart(node_list, element_list, filename, format_rst, my_id, ierr)
+subroutine import_restart_with_id(node_list, element_list, filename, format_rst, my_id, ierr)
 
   use tr_module
   use data_structure
@@ -31,7 +46,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, my_id, 
             format_rst, my_id, ierr)
   end if
 
-end subroutine import_restart
+end subroutine import_restart_with_id
 
 
 !

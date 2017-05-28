@@ -263,14 +263,26 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
       ! Now, P(1) represents mass density and P(2) represents temperature
       ! Correct any possible negative values!
 
-      n_corr         = corr_neg_dens(P(1))
-      T_corr         = corr_neg_temp(P(2))
+      !n_corr         = corr_neg_dens(P(1))
+      !T_corr         = corr_neg_temp(P(2))
 
       ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i
-      n_SI           = n_corr * 1.d20 * central_density
-      T_eV           = T_corr / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
+      !n_SI           = n_corr * 1.d20 * central_density
+      !T_eV           = T_corr / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
       t_norm         = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
       
+      n_SI           = P(1) * 1.d20 * central_density
+      if (n_SI < 0.) then
+        n_SI = 0.
+      end if
+
+
+      T_eV           = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
+      if (T_eV < 0.) then
+        T_eV = 0.
+      end if
+
+
       if (my_id == 0) then
         write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
       end if
@@ -300,7 +312,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
 
     close(20)
 
-    do i=1, 1 !n_spi
+    do i=1, 5 !n_spi
       write(*,*) "Pellet number: ", i
       write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
       write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_RxZ

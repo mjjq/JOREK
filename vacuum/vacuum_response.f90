@@ -80,7 +80,7 @@ module vacuum_response
     
     if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
     
-    if ( my_id == 0 ) call read_starwall_response(sr, 'starwall-response.dat')
+    if ( my_id == 0 ) call read_starwall_response(sr, 'starwall-response.dat', bnd_elm_list%n_bnd_elements)
 
     call broadcast_starwall_response(my_id, sr)
     
@@ -243,7 +243,7 @@ module vacuum_response
   !! file_version 1: Original
   !! file_version 2: Includes eta_thin_w
   !! file_version 3: Includes additional coil information
-  subroutine read_starwall_response(sr, filename)
+  subroutine read_starwall_response(sr, filename, n_bnd)
     
     use constants
     use mod_parameters, only: n_tor, n_period
@@ -253,6 +253,7 @@ module vacuum_response
     ! --- Routine parameters
     type(t_starwall_response), intent(inout) :: sr
     character(len=*),          intent(in)    :: filename
+    integer,                   intent(in)    :: n_bnd !< Number of boundary elements for consistency check
     
     ! --- Local variables
     integer, parameter :: filehandle = 60
@@ -303,6 +304,11 @@ module vacuum_response
     end if
 
     sr%n_bnd  = read_intparam(filehandle, 'n_bnd')
+    if ( n_bnd /= n_bnd ) then
+      write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
+      stop
+    end if
+    
     sr%nd_bez = read_intparam(filehandle, 'nd_bez')
     sr%ncoil  = read_intparam(filehandle, 'ncoil')
     sr%npot_w = read_intparam(filehandle, 'npot_w')

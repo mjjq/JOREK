@@ -304,7 +304,7 @@ module vacuum_response
     end if
 
     sr%n_bnd  = read_intparam(filehandle, 'n_bnd')
-    if ( n_bnd /= n_bnd ) then
+    if ( n_bnd /= sr%n_bnd ) then
       write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
       stop
     end if

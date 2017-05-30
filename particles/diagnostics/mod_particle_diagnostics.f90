@@ -391,7 +391,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   if (present(mask)) mask = .true.
   real_stats = 0.d0
   int_stats  = 0
-  !$omp parallel do default(none) &
+  !$omp parallel do default(shared) & ! for gcc particle types are not in the omp region. reset to none to debug
   !$omp shared(particles, fields, int_stats, real_stats, mask, time, f0, mass, &
   !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
   !$omp private(P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t, &
@@ -436,6 +436,9 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particle_in
         real_stats(i,3) = real(real(particle_in%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B),4)
+      type is (particle_fieldline)
+        call copy_particle_base(particle_in, particle)
+        real_stats(i,3) = real(P(1),4) ! Since there is no momentum defined for this we just use psi
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration
@@ -449,7 +452,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       real_stats(i,2) = real(particle%mu, 4)
       ! 3. Psi_bar (P_phi/q)
       real_stats(i,3) = real_stats(i,3) / real(EL_CHG * max(real(particle%q),1.0),4)
-      ! 4. Rho (at GC position)
+      ! 4. Psi_N (at GC position)
       real_stats(i,4) = real((P(1)-psi_axis)/(psi_limit-psi_axis), 4)
       ! 5. weight
       real_stats(i,5) = particle%weight

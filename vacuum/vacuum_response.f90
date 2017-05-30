@@ -1676,8 +1676,7 @@ module vacuum_response
     zeta  = time_evol_zeta
     
     ! --- Update response matrices only, if parameter values changed or matrices not allocated
-    update_required = ( old_thick   /= wall_thickness      ) &
-                 .or. ( old_res     /= wall_resistivity    ) &
+    update_required = ( old_res     /= wall_resistivity    ) &
                  .or. ( old_tstep   /= tstep               ) &
                  .or. ( old_theta   /= theta               ) &
                  .or. ( old_zeta    /= zeta                ) &
@@ -1698,7 +1697,6 @@ module vacuum_response
     
     if ( update_required ) then
       ! --- Remember parameter values.
-      old_thick   = wall_thickness
       old_res     = wall_resistivity
       old_tstep   = tstep
       old_theta   = theta
@@ -1750,13 +1748,13 @@ module vacuum_response
         
         allocate( tmp_d_s(n_wall_curr) )
         
-        tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity / wall_thickness * sr%d_yy(:)
+        tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
         
         do j = 1, n_dof_starwall
           response_m_a(:,j) = -(1.d0+zeta) * sr%a_ye(:,j) / tmp_d_s(:)
         end do
         
-        response_d_b(:) = - tstep * wall_resistivity / wall_thickness * sr%d_yy(:) / tmp_d_s(:)
+        response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
         
         response_d_c(:) = zeta / tmp_d_s(:)
         

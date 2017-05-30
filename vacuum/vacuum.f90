@@ -6,7 +6,7 @@ module vacuum
   implicit none
   
   !> @name General parameters
-  logical, parameter  :: vacuum_debug          = .true.  !< Enable additional output and tests
+  logical, parameter  :: vacuum_debug          = .false. !< Enable additional output and tests
   logical, parameter  :: vacuum_decouple_modes = .false. !< Option to switch off 3D wall mode coupling
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
@@ -17,7 +17,6 @@ module vacuum
   !> @name Resistive wall only
   real*8              :: wall_resistivity_fact           !< Scaling factor for the wall resistivity specified in STARWALL
   real*8              :: wall_resistivity                !< Resistivity of the external wall
-  real*8              :: wall_thickness        = 1.d0    !< Thickness of the external wall
   logical             :: wall_curr_initialized = .false. !< Have the wall currents been initialized?
   integer             :: n_wall_curr                     !< Number of wall current potentials.
   real*8, allocatable :: wall_curr(:)                    !< Wall current potentials (\f$Y_k\f$).
@@ -309,7 +308,7 @@ module vacuum
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
     freeboundary         = .false.
-    resistive_wall       = .false.
+    resistive_wall       = .true.
     wall_resistivity     = 0.d0
     wall_resistivity_fact= 1.d0
         

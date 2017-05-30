@@ -49,6 +49,7 @@ real*8     :: w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_st, w0_tt, w0_xx, w0_x
 real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy
 real*8     :: r0_hat, r0_x_hat, r0_y_hat, r0_corr, rn0_corr
 real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T_corr
+real*8     :: dT_corr_dT
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_yy, psi_xy
 real*8     :: zj, zj_x, zj_y, zj_p, zj_s, zj_t, zj_ss, zj_st, zj_tt
 real*8     :: u, u_x, u_y, u_p, u_s, u_t, u_ss, u_st, u_tt, u_xx, u_xy, u_yy
@@ -418,6 +419,7 @@ do ms=1, n_gauss
      T0_st = eq_st(mp,6,ms,mt)
 
      T_corr = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
+     dT_corr_dT = dcorr_neg_temp_dT(T0) ! Improve the correction
 
      Vpar0    = eq_g(mp,7,ms,mt)
      Vpar0_x  = (   y_t(ms,mt) * eq_s(mp,7,ms,mt) - y_s(ms,mt) * eq_t(mp,7,ms,mt) ) / xjac
@@ -546,8 +548,8 @@ do ms=1, n_gauss
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
        eta_T     = eta   * (T_corr/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0)
+       deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
+       d2eta_d2T =   eta   * (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0) * (dT_corr_dT**2.0) !Incomplete yet
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -558,12 +560,12 @@ do ms=1, n_gauss
                                *sqrt(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO) 
      
      detaSp_dT = - 1.65d-9*17 * (1.5d0) * T_corr**(-2.5d0) * (1.d-3/(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(-1.5d0) &
-                                        * sqrt(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)
+                        * sqrt(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO) * dT_corr_dT
 
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then       
        visco_T   = visco * (T_corr/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0)
+       dvisco_dT = - visco * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
      else
        visco_T   = visco
        dvisco_dT = 0.d0
@@ -572,7 +574,7 @@ do ms=1, n_gauss
      ! --- Temperature dependent parallel heat diffusivity
      if ( ZKpar_T_dependent ) then
        ZKpar_T   = ZK_par * (T_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-       dZKpar_dT = ZK_par * (2.5d0)  * T_corr**(+1.5d0) * T_0**(-2.5d0)
+       dZKpar_dT = ZK_par * (2.5d0)  * T_corr**(+1.5d0) * T_0**(-2.5d0) * dT_corr_dT
        if (ZKpar_T .gt. ZK_par_max) then
          ZKpar_T   = Zk_par_max
          dZKpar_dT = 0.d0
@@ -658,7 +660,7 @@ do ms=1, n_gauss
 
    LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
 
-   dLradDcont_dT = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*(8*EL_CHG*MU_ZERO*central_density*1.d20*sqrt(T_rad))**(-1.d0)
+   dLradDcont_dT = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*(8*EL_CHG*MU_ZERO*central_density*1.d20*sqrt(T_rad))**(-1.d0) * dT_corr_dT
 
 
    LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
@@ -669,8 +671,8 @@ do ms=1, n_gauss
                                 -60.947d0*(0.9048d0)**(-2.d0)*(log10(T_rad)+2.0835d0)/T_corr*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
                                 -24.067d0*(2.1700d0)**(-2.d0)*(log10(T_rad)+0.7363d0)/T_corr*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))&
                                 *(1.d1)**(-29.440d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                       -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                       -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+                                -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0))) * dT_corr_dT
 
    else
 
@@ -690,7 +692,7 @@ do ms=1, n_gauss
  
     Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0) 
      
-    dSrec_dT  = - 0.5d0 * (1.d0/2.d0) * coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-1.5d0)
+    dSrec_dT  = - 0.5d0 * (1.d0/2.d0) * coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-1.5d0) * dT_corr_dT
 
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)

@@ -170,9 +170,6 @@ contains
              !---------------------------------------------------------------------------------------------
 
 
-
-
-
              if (node_list%node(inode)%boundary .ne. 0) then
 
                 do in=1, n_tor
@@ -188,7 +185,9 @@ contains
                        if ((k .eq. var_AR) .or. (k .eq. var_AZ) .or. (k .eq. var_A3)) then
 
                          index_node = node_list%node(inode)%index(1)
+
                          if (use_murge .and. use_murge_element) then
+
                             call vertex_is_local(index_node, is_local)
                             if (is_local) then
                                call murge_add_one_entry( & 
@@ -198,6 +197,7 @@ contains
                                     & solve_only, gmres, &
                                     & cnt, cnt_prod, only_count)
                             end if
+
                          else
 
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -213,12 +213,15 @@ contains
                                A_glob(ilarge2)   = zbig
 
                             endif
+
                          end if
 
                          index_node = node_list%node(inode)%index(2)
 
                          if (use_murge .and. use_murge_element) then
+
                             call vertex_is_local(index_node, is_local)
+
                             if (is_local) then
                                call murge_add_one_entry( & 
                                     & index_node, k, in, &
@@ -227,7 +230,9 @@ contains
                                     & solve_only, gmres, &
                                     & cnt, cnt_prod, only_count)
                             end if
+
                          else
+
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
@@ -241,6 +246,7 @@ contains
                                A_glob(ilarge2)    = zbig
 
                             endif
+
                          end if
 
                         endif

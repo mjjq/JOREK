@@ -54,6 +54,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, time_evol_scheme,                            &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
+                bc_natural_open, bc_natural_flux,                   &
                 freeboundary, resistive_wall,                       &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 pastix_smp_only, refinement, grid_to_wall,          &

@@ -42,7 +42,7 @@ contains
     TYPE (type_node_list),            intent(in)     :: node_list
     
     ! -- internal parameters
-    integer iv, iv2, inode1, inode2, i, j
+    integer iv, iv2, iv3, iv4, inode1, inode2, i, j
     integer vertex(2), direction(2)
 
     ! --- Call element_matrix
@@ -71,6 +71,12 @@ contains
     	  vertex    = (/ iv, iv2 /)
     	  direction = (/  1, 2   /)
 
+          iv3 = mod(iv2, n_vertex_max) + 1
+          iv4 = mod(iv3, n_vertex_max) + 1
+
+          nodes(3) = node_list%node(element%vertex(iv3))
+          nodes(4) = node_list%node(element%vertex(iv4))
+
           ! --- Build matrix elements for boundary
     	  call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
     	endif
@@ -96,6 +102,14 @@ contains
     	  
     	  vertex    = (/ iv, iv2 /)
     	  direction = (/  1, 2   /)
+
+          iv3 = mod(iv2, n_vertex_max) + 1
+          iv4 = mod(iv3, n_vertex_max) + 1
+
+          nodes(3) = node_list%node(element%vertex(iv3))
+          nodes(4) = node_list%node(element%vertex(iv4))
+
+
 
           ! --- Build matrix elements for boundary
     	  !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)

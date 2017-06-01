@@ -129,7 +129,6 @@ contains
 
 
              ! A crude way of imposing partial regularity at the grid axis
-             ! May be improved upon in the future ( see forthcoming paper on full MHD JOREK )
              !---------------------------------------------------------------------------------------------
              do in=1, n_tor      
                 do k=1, n_var
@@ -182,8 +181,11 @@ contains
 
                       !------------------------------------ the open field lines (in case of x-point grid)
                       !
-                      ! open field line conditions not yet implemented
+                      ! open field line conditions 
+
                       if ((node_list%node(inode)%boundary == 1) .or. (node_list%node(inode)%boundary == 3)) then
+
+                         if ((k .eq. var_uR) .or. (k .eq. var_uZ) .or. (k .eq. var_up) .or. (k .eq. var_r) .or. (k .eq. var_T)) cycle
 
                          index_node = node_list%node(inode)%index(1)
                          if (use_murge .and. use_murge_element) then

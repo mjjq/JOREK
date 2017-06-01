@@ -59,7 +59,7 @@ real*8     :: BR0,          BR0_AR,          BR0_AZ,          BR0_A3
 real*8     :: BZ0,          BZ0_AR,          BZ0_AZ,          BZ0_A3
 real*8     :: Bp0,          Bp0_AR,          Bp0_AZ,          Bp0_A3
 
-real*8     :: Fprof, B_dot_n
+real*8     :: B_dot_n
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
 real*8     :: element_size_ij, element_size_kl, element_size_perp
@@ -80,6 +80,9 @@ Z_g  = 0.d0; Z_s  = 0.d0;  Z_t = 0.d0;
 eq_g = 0.d0; eq_s = 0.d0;  eq_t = 0.d0; eq_p = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0;
+
+Fprofile = 0.d0
+
 
 R_mid = sum(nodes(1:2)%x(1,1)) / 2.d0     ! mid point on boundary (approx.)
 Z_mid = sum(nodes(1:2)%x(1,2)) / 2.d0
@@ -112,6 +115,10 @@ do i=1,2
       Z_s(ms)  = Z_s(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1_s(i,j,ms)
       Z_t(ms)  = Z_t(ms)  + nodes(i)%x(j3,2) * element_size_ij * H1(i,j,ms)   * element_size_perp
 
+#ifdef fullmhd
+            Fprofile(ms)   = Fprofile(ms)   + nodes(i)%Fprof_eq(j2)    * element_size_ij * H1(i,j,ms)
+            write(*,*) Fprofile(ms)
+#endif
 
       do mp=1,n_plane
 
@@ -125,10 +132,6 @@ do i=1,2
             eq_t(mp,k,ms)  = eq_t(mp,k,ms)  + nodes(i)%values(in,j3,k) * element_size_ij * H1(i,j,ms)   * HZ(in,mp) * element_size_perp
 
             eq_p(mp,k,ms)  = eq_p(mp,k,ms)  + nodes(i)%values(in,j2,k) * element_size_ij * H1(i,j,ms)   * HZ_p(in,mp)
-
-#ifdef fullmhd
-            Fprofile(ms)   = Fprofile(ms)   + nodes(i)%Fprof_eq(j)     * element_size_ij * H1(i,j,ms)
-#endif
 
             delta_g(mp,k,ms) = delta_g(mp,k,ms) + nodes(i)%deltas(in,j2,k) * element_size_ij * H1(i,j,ms)   * HZ(in,mp)
             delta_s(mp,k,ms) = delta_s(mp,k,ms) + nodes(i)%deltas(in,j2,k) * element_size_ij * H1_s(i,j,ms) * HZ(in,mp)
@@ -153,9 +156,6 @@ do ms=1, n_gauss
    grad_t = (/ - Z_s(ms),   R_s(ms) /) / xjac
 
    normal = dot_product(grad_t,normal_direction) * grad_t
-
-   write(*,*) 'grad_t : ',grad_t
-   write(*,*) 'normal : ',normal
 
    normal = normal / norm2(normal)
 
@@ -196,7 +196,7 @@ do ms=1, n_gauss
 
      BR0 = ( A30_Z - AZ0_p )/ BigR
      BZ0 = ( AR0_p - A30_R )/ BigR
-     Bp0 = ( AZ0_R - AR0_Z )       +   Fprof / BigR
+     Bp0 = ( AZ0_R - AR0_Z )       +   Fprofile(ms) / BigR
 
      BB2 = BR0*BR0 + BZ0*BZ0 + Bp0*Bp0
 
@@ -219,8 +219,6 @@ do ms=1, n_gauss
 
                                      - sqrt(BB2) * sqrt(gamma * T0) * B_dot_n / abs(B_dot_n) )
 
-                                    write(*,'(2i3,12e12.4)') i,j, Qbnd(var_up),B_dot_n,normal
-
            do ivar= 1,n_var
              
              ij = index_ij + (ivar-1)*n_tor
@@ -237,7 +235,7 @@ do ms=1, n_gauss
 
                element_size_kl   = element%size(vertex(k),l2)
 
-               element_size_perp = - element%size(vertex(i),direction_perp(1)) * 3.d0
+               element_size_perp = - element%size(vertex(k),direction_perp(1)) * 3.d0
 
 
                do in = 1, n_tor                                              ! loop over toroidal harmonics
@@ -277,15 +275,20 @@ do ms=1, n_gauss
                  Qjac(var_up,var_A3) = - zbig * v * ( BR0_A3 * UR0 + BZ0_A3 * UZ0 + Bp0_A3 * Up0) 
 
 
-                index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix 
-
+                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix 
 
                  do ivar= 1,n_var
                    
+                   Qjac(ivar,ivar) = Zbig
+
                    do kvar= 1,n_var
 
                      ij = index_ij + (ivar-1)*n_tor
                      kl = index_kl + (kvar-1)*n_tor
+
+!                     if (ij .eq. kl) then
+!                        ELM(ij,kl) = zbig
+!                     endif
 
                      ELM(ij,kl) =  ELM(ij,kl) + ws * theta * Qjac(ivar,kvar) * BigR * DL
 

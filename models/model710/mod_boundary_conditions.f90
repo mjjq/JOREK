@@ -185,7 +185,7 @@ contains
 
                       if ((node_list%node(inode)%boundary == 1) .or. (node_list%node(inode)%boundary == 3)) then
 
-                         if ((k .eq. var_uR) .or. (k .eq. var_uZ) .or. (k .eq. var_up) .or. (k .eq. var_r) .or. (k .eq. var_T)) cycle
+                       if ((k .eq. var_AR) .or. (k .eq. var_AZ) .or. (k .eq. var_A3)) then
 
                          index_node = node_list%node(inode)%index(1)
                          if (use_murge .and. use_murge_element) then
@@ -243,7 +243,7 @@ contains
                             endif
                          end if
 
-
+                        endif
                       endif
 
                       !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)

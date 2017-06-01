@@ -71,6 +71,8 @@ contains
     	  vertex    = (/ iv, iv2 /)
     	  direction = (/  1, 2   /)
 
+          write(*,*) 'bc_natural_open : ',inode1,inode2
+
           iv3 = mod(iv2, n_vertex_max) + 1
           iv4 = mod(iv3, n_vertex_max) + 1
 

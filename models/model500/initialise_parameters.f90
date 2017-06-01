@@ -111,7 +111,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
 
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion,                     &
+                mgi_sig, mgi_deltaphi, ksi_ion, abl_history,        &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
                 spi_Vel_RxZref, spi_radiusref, flag_spi,            &
@@ -365,7 +365,7 @@ if (using_spi == .true.) then
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_tmp
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
         pellets(i)%spi_radius  = spi_radiusref
-        pellets(i)%spi_abl     = mgi_amplitude
+        pellets(i)%spi_abl     = 0.0
 
         write(*,'(A,I,5f10.5)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                               pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_RxZ
@@ -386,6 +386,15 @@ if (using_spi == .true.) then
       write(*,*) "SPI initialized successfully."
 
       deallocate(rnd)
+
+      if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_GRID)
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")
+
+      if (allocated(xtime_spi_ablation_rate)) &
+      call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_GRID)
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
+
+
     else
       write(*,*) "...... Seriously!? Reverting to non-SPI case."
       using_spi = .false.

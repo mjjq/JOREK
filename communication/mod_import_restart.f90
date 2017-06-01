@@ -308,6 +308,18 @@ endif
 
   if (using_spi) then
     if (n_spi >= 1) then
+      if (allocated(xtime_spi_ablation)) &
+        call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)  
+      if (allocated(xtime_spi_ablation_rate)) &
+        call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+
+      if (abl_history == .true.) then
+        read(21)  xtime_spi_ablation(1:n_spi,1:index_start)
+        read(21)  xtime_spi_ablation_rate(1:n_spi,1:index_start)
+      end if
+
       allocate (spi_R_arr(n_spi),stat=err_alloc)
       allocate (spi_Z_arr(n_spi),stat=err_alloc)
       allocate (spi_phi_arr(n_spi),stat=err_alloc)
@@ -1021,6 +1033,19 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   if (using_spi) then
     if (n_spi >= 1) then
+
+      if (allocated(xtime_spi_ablation)) &
+        call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
+      if (allocated(xtime_spi_ablation_rate)) &
+        call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+
+      if (abl_history == .true.) then
+        call HDF5_array2D_reading(file_id,xtime_spi_ablation,"xtime_spi_ablation")
+        call HDF5_array2D_reading(file_id,xtime_spi_ablation_rate,"xtime_spi_ablation_rate")
+      end if
+
       allocate (spi_R_arr(n_spi),stat=err_alloc)
       allocate (spi_Z_arr(n_spi),stat=err_alloc)
       allocate (spi_phi_arr(n_spi),stat=err_alloc)

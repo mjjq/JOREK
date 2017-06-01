@@ -929,7 +929,9 @@ required = 0
     !end do
 
     ! --- End of parallel debugging section 
-    
+   
+    !write(*,*) "Check Point 01"
+ 
     ! --- construct the matrix from elemental matrices
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
@@ -1038,6 +1040,8 @@ required = 0
          call update_spi(my_id,node_list,element_list)
        end if
 #endif
+
+       !write(*,*) "Check Point 02"
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)

@@ -221,6 +221,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
   spi_Vel_phi_tmp = 0.
 
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
+  t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
   if (my_id == 0) then
     open(20,file="pellets_parameters.dat",position="APPEND",status="OLD")
@@ -251,6 +252,24 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
     pellets(i)%spi_Vel_RxZ = pellets(i)%spi_Vel_RxZ
     !pellets(i)%spi_radius  = spi_radiusref
 
+    if (pellets(i)%spi_radius > 0.0) then
+      pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
+                              (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
+                              pellet_density * 1.d20))
+
+      if (pellets(i)%spi_radius < 0.d0) then
+        pellets(i)%spi_radius = 0.d0
+      end if
+    end if
+
+    if (my_id == 0.) then
+      if (index_now > 1) then
+        xtime_spi_ablation(i,index_now) = xtime_spi_ablation(i,index_now-1) + t_norm * tstep * pellets(i)%spi_abl
+      else
+        xtime_spi_ablation(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
+      end if
+    end if
+
     if (flag_spi == 0) then
       pellets(i)%spi_abl   = mgi_amplitude
     elseif (flag_spi == 1) then
@@ -269,13 +288,11 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
       ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i
       !n_SI           = n_corr * 1.d20 * central_density
       !T_eV           = T_corr / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
-      t_norm         = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
       
       n_SI           = P(1) * 1.d20 * central_density
       if (n_SI < 0.) then
         n_SI = 0.
       end if
-
 
       T_eV           = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
       if (T_eV < 0.) then
@@ -288,20 +305,14 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
       end if
       ! NGS model
       
-      if (pellets(i)%spi_radius > 0.0) then 
-        pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep *                            &
-                                (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
-                                pellet_density * 1.d20))
-
-        if (pellets(i)%spi_radius < 0.d0) then
-          pellets(i)%spi_radius = 0.d0
-        end if
-      end if
-
       pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                              (T_eV**1.64)
     else
       pellets(i)%spi_abl    = 0.d0
+    end if
+   
+    if (my_id == 0.) then
+      xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
     end if
 
   end do

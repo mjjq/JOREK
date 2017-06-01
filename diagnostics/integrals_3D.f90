@@ -162,7 +162,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
-!$omp          central_mass, pellets,                                                          &
+!$omp          central_mass, pellets, abl_history,                                             &
 !$omp          n_spi, using_spi, flag_spi, spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp,     &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius,                                      &
 #endif

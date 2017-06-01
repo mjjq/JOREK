@@ -251,10 +251,14 @@ module phys_module
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
                                 !< with regard to the simulation resolution
 
+  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
+
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: flag_spi           !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model
 
+  logical :: abl_history        !< Whether or not ablation history is available from previous restart files
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet 

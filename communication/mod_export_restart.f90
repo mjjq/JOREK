@@ -133,6 +133,12 @@ subroutine export_binary_restart(node_list,element_list,filename)
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi) then
+
+    if (index_now .gt. 0) then
+      write(21) xtime_spi_ablation(:,1:index_now)
+      write(21) xtime_spi_ablation_rate(:,1:index_now)
+    endif
+
     allocate (spi_R_arr(n_spi),stat=err_alloc)  
     allocate (spi_Z_arr(n_spi),stat=err_alloc)     
     allocate (spi_phi_arr(n_spi),stat=err_alloc) 
@@ -545,6 +551,15 @@ end if
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi) then
+
+    if (index_now .gt. 0) then
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation, &
+             n_spi,index_now,'xtime_spi_ablation'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_rate, &
+             n_spi,index_now,'xtime_spi_ablation_rate'//char(0))
+    end if
+
+
     allocate (spi_R_arr(n_spi),stat=err_alloc)
     allocate (spi_Z_arr(n_spi),stat=err_alloc)
     allocate (spi_phi_arr(n_spi),stat=err_alloc)

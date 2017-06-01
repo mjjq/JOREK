@@ -354,6 +354,7 @@ subroutine preset_parameters
      
      n_spi           = 1
      flag_spi        = 0
+     abl_history     = .false.
      using_spi       = .false.
     !=========== End of SPI parameters ===========
 

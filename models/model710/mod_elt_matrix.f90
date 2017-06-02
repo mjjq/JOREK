@@ -181,7 +181,7 @@ Fprofile        = 0.d0 ; Fprofile_s        = 0.d0 ;  Fprofile_t        = 0.d0
 !     the same foeficient for parallel and perp
 !     and also for all variables
 ! ----------------------------------------------
-TG_NUM=0.25*tstep
+TG_NUM = 0.25*tstep
 
 
 
@@ -793,7 +793,7 @@ endif
                 &         + r0 * ( VbGradup0 + Vbp0 * uR0 / BigR  ) * VbGradVi
            
            if (parallel_projection) then 
-              Qvec(var_up) = Qvec(var_up)  - TG_NUM(var_up) * Vms(var_up) * Fprof / BigR
+              Qvec(var_up) = Qvec(var_up)  - TG_NUM(var_up) * (Vms(var_ur) * BR0 + Vms(var_uz) * BZ0 +Vms(var_up) * BP0)
            else
               Qvec(var_up) = Qvec(var_up)  - TG_NUM(var_up) * Vms(var_up)
            END if
@@ -1010,10 +1010,10 @@ endif
 
                 ! Stabilization
                 ! ---------------
-                Qjac(var_AR,var_AR) = Qjac(var_AR,var_AR) + TG_NUM(var_AR) * (   &
+                Qjac(var_AR,var_AR) = Qjac(var_AR,var_AR) - TG_NUM(var_AR) * (   &
                      &   CvGradVj * CvGradVi  + Cvp0 * AR  * Cvp0 * v / BigR2    )
                 
-                Qjac(var_AR,var_A3) = Qjac(var_AR,var_A3) + TG_NUM(var_AR) * (   &
+                Qjac(var_AR,var_A3) = Qjac(var_AR,var_A3) - TG_NUM(var_AR) * (   &
                      &  Cvp0 * A3 / BigR2  * CvGradVi                            &
                      &  + ( - CvGradA3 + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2     )
                 
@@ -1047,7 +1047,7 @@ endif
                 
                 ! Stabilization
                 ! ---------------
-                Qjac(var_AZ,var_AZ) = Qjac(var_AZ,var_AZ) + TG_NUM(var_AZ) * ( CvGradVj * CvGradVi )
+                Qjac(var_AZ,var_AZ) = Qjac(var_AZ,var_AZ) - TG_NUM(var_AZ) * ( CvGradVj * CvGradVi )
 !###################################################################################################
 !#  equation 3   (Phi component induction equation)                                                #
 !###################################################################################################
@@ -1078,12 +1078,12 @@ endif
 
                 ! Stabilization
                 ! ---------------
-                Qjac(var_A3,var_A3) = Qjac(var_A3,var_A3) + TG_NUM(var_A3) * (             &
+                Qjac(var_A3,var_A3) = Qjac(var_A3,var_A3) - TG_NUM(var_A3) * (             &
                      &                 (Cvp0 * A3 / BigR2 ) * Cvp0 * v                     &
                      &  - ( - CvGradVj + CvR0 * A3 / BigR ) * (CvGradVi + CvR0 * v / BigR) &
                      &                                                                     )
                 
-                Qjac(var_A3,var_AR) = Qjac(var_A3,var_AR) + TG_NUM(var_A3) * (  &
+                Qjac(var_A3,var_AR) = Qjac(var_A3,var_AR) - TG_NUM(var_A3) * (  &
                      &                  CvGradVj * Cvp0 * v                     &
                      &          - (  Cvp0 * AR ) * (CvGradVi + CvR0 * v / BigR) &
                      &                                                          )
@@ -1148,14 +1148,14 @@ endif
 
               ! Stabilization
               ! ---------------
-              Qjac(var_uR,var_uR) =  Qjac(var_uR,var_uR)  + TG_NUM(var_uR) * (  &
+              Qjac(var_uR,var_uR) =  Qjac(var_uR,var_uR)  - TG_NUM(var_uR) * (  &
                    &           r0 * ( CvGradVj           ) * CvGradVi           &
                    &         + r0 * (  Cvp0 * uR / BigR  ) * Cvp0 * v / BigR    &
                    &         + r0 * ( VbGradVj           ) * VbGradVi           &
                    &         + r0 * ( Vbp0 * uR / BigR   ) * Vbp0 * v / BigR    &
                    &                                                            ) 
 
-              Qjac(var_uR,var_up) =  Qjac(var_uR,var_up)  + TG_NUM(var_uR) * (   &
+              Qjac(var_uR,var_up) =  Qjac(var_uR,var_up)  - TG_NUM(var_uR) * (   &
                    &           r0 * ( - Cvp0 * up / BigR   ) * CvGradVi          &
                    &         + r0 * ( CvGradVj             ) * Cvp0 * v / BigR   &
                    &         + r0 * ( - Vbp0 * up / BigR   ) * VbGradVi          &
@@ -1219,7 +1219,7 @@ endif
 
                 ! Stabilization
                 ! ---------------
-                 Qjac(var_uZ,var_uZ) = Qjac(var_uZ,var_uZ) + TG_NUM(var_uZ) * r0* (   &
+                 Qjac(var_uZ,var_uZ) = Qjac(var_uZ,var_uZ) - TG_NUM(var_uZ) * r0* (   &
                       &     CvGradVj * CvGradVi + VbGradVj * VbGradVi                 )
 !###################################################################################################
 !#  equation 6   (Phi component momentum equation)                                                 #
@@ -1319,14 +1319,14 @@ endif
                 ! Stabilization
                 ! ---------------
            if (parallel_projection) then 
-              Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  + TG_NUM(var_uR) * (  &
+              Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &
                    &         - r0 * ( CvGradVj           ) * Cvp0 * v / BigR    &
                    &         + r0 * (  Cvp0 * uR / BigR  ) * CvGradVi           &
                    &         - r0 * ( VbGradVj           ) * Vbp0 * v / BigR    &
                    &         + r0 * ( Vbp0 * uR / BigR   ) * VbGradVi           &
                    &                                                            )* Fprof / BigR 
                  
-              Qjac(var_up,var_up) =  Qjac(var_up,var_up)  + TG_NUM(var_uR) * (   &
+              Qjac(var_up,var_up) =  Qjac(var_up,var_up)  - TG_NUM(var_up) * (   &
                    &         - r0 * ( - Cvp0 * up / BigR   ) * Cvp0 * v / BigR   &
                    &         + r0 * ( CvGradVj             ) * CvGradVi          &
                    &         + r0 * ( - Vbp0 * up / BigR   ) * Vbp0 * v / BigR   &
@@ -1334,14 +1334,14 @@ endif
                    &                                                             )* Fprof / BigR 
 
            else
-              Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  + TG_NUM(var_uR) * (  &
+              Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &
                    &         - r0 * ( CvGradVj           ) * Cvp0 * v / BigR    &
                    &         + r0 * (  Cvp0 * uR / BigR  ) * CvGradVi           &
                    &         - r0 * ( VbGradVj           ) * Vbp0 * v / BigR    &
                    &         + r0 * ( Vbp0 * uR / BigR   ) * VbGradVi           &
                    &                                                            ) 
               
-              Qjac(var_up,var_up) =  Qjac(var_up,var_up)  + TG_NUM(var_uR) * (   &
+              Qjac(var_up,var_up) =  Qjac(var_up,var_up)  - TG_NUM(var_up) * (   &
                    &         - r0 * ( - Cvp0 * up / BigR   ) * Cvp0 * v / BigR   &
                    &         + r0 * ( CvGradVj             ) * CvGradVi          &
                    &         + r0 * ( - Vbp0 * up / BigR   ) * Vbp0 * v / BigR   &
@@ -1403,7 +1403,7 @@ endif
                  
                 ! Stabilization
                 ! ---------------
-                 Qjac(var_r,var_r)  =  Qjac(var_r,var_r)  + TG_NUM(var_r) * (        &
+                 Qjac(var_r,var_r)  =  Qjac(var_r,var_r)  - TG_NUM(var_r) * (        &
                       &                CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
 
 !###################################################################################################
@@ -1500,7 +1500,7 @@ endif
                
                 ! Stabilization
                 ! ---------------
-               Qjac(var_T,var_T)  =  Qjac(var_T,var_T) + TG_NUM(var_T) * r0 * (   &
+               Qjac(var_T,var_T)  =  Qjac(var_T,var_T) - TG_NUM(var_T) * r0 * (   &
                       &                CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
 
 

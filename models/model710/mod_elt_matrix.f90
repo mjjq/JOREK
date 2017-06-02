@@ -116,7 +116,7 @@ integer    :: my_id, ierr
 real*8 :: VdotB, BigR2
 real*8 :: CvR0, CvZ0, Cvp0, CvGradAR0, CvGradAZ0, CvGradA30, CvGradr0, CvGradT0, CvGradVi, CvGradVj
 real*8 :: VbR0, VbZ0, Vbp0, VbGradAR0, VbGradAZ0, VbGradA30, VbGradr0, VbGradT0, VbGradVi, VbGradVj
-real*8 :: CvGraduR0, CvGraduZ0, CvGradup0, VbGraduR0, VbGraduZ0, VbGradup0, CvGradA3
+real*8 :: CvGraduR0, CvGraduZ0, CvGradup0, VbGraduR0, VbGraduZ0, VbGradup0
 
 ! -------------------------------------------------------------------------------------------------
 ! -------------------------------------------------------------------------------------------------
@@ -1009,13 +1009,14 @@ endif
                                       - v * ( d2eta_d2T * T0_p * T + deta_dT * T_p ) * BZ0 / BigR
 
                 ! Stabilization
+                ! -----------------------------------------------------------------------------
                 ! ---------------
                 Qjac(var_AR,var_AR) = Qjac(var_AR,var_AR) - TG_NUM(var_AR) * (   &
                      &   CvGradVj * CvGradVi  + Cvp0 * AR  * Cvp0 * v / BigR2    )
                 
                 Qjac(var_AR,var_A3) = Qjac(var_AR,var_A3) - TG_NUM(var_AR) * (   &
                      &  Cvp0 * A3 / BigR2  * CvGradVi                            &
-                     &  + ( - CvGradA3 + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2     )
+                     &  + ( - CvGradVj + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2     )
                 
 !###################################################################################################
 !#  equation 2   (Z component induction equation)                                                  #
@@ -1046,6 +1047,7 @@ endif
                                      - v * ( d2eta_d2T * T0_R * T + deta_dT * T_R ) * Bp0
                 
                 ! Stabilization
+                ! -----------------------------------------------------------------------------
                 ! ---------------
                 Qjac(var_AZ,var_AZ) = Qjac(var_AZ,var_AZ) - TG_NUM(var_AZ) * ( CvGradVj * CvGradVi )
 !###################################################################################################
@@ -1077,6 +1079,7 @@ endif
                                       - BigR * v * ( d2eta_d2T * T0_Z * T + deta_dT * T_Z ) * BR0                                       
 
                 ! Stabilization
+                ! -----------------------------------------------------------------------------
                 ! ---------------
                 Qjac(var_A3,var_A3) = Qjac(var_A3,var_A3) - TG_NUM(var_A3) * (             &
                      &                 (Cvp0 * A3 / BigR2 ) * Cvp0 * v                     &
@@ -1147,6 +1150,7 @@ endif
               endif
 
               ! Stabilization
+              ! -----------------------------------------------------------------------------
               ! ---------------
               Qjac(var_uR,var_uR) =  Qjac(var_uR,var_uR)  - TG_NUM(var_uR) * (  &
                    &           r0 * ( CvGradVj           ) * CvGradVi           &
@@ -1217,8 +1221,9 @@ endif
                  Qjac(var_uZ,var_T)  =   v_Z * r0 * T - dvisco_dT * T * Qvisc_uZ   
                  endif                      
 
-                ! Stabilization
-                ! ---------------
+                 ! Stabilization
+                 ! -----------------------------------------------------------------------------
+                 ! ---------------
                  Qjac(var_uZ,var_uZ) = Qjac(var_uZ,var_uZ) - TG_NUM(var_uZ) * r0* (   &
                       &     CvGradVj * CvGradVi + VbGradVj * VbGradVi                 )
 !###################################################################################################
@@ -1264,6 +1269,23 @@ endif
 
                    Qjac(var_up,var_T)  =   v * ( - ( r0 * T_p + r0_p * T ) / BigR )
 
+                   ! Stabilization
+                   ! -----------------------------------------------------------------------------
+                   Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &
+                        &         - r0 * ( CvGradVj           ) * Cvp0 * v / BigR    &
+                        &         + r0 * (  Cvp0 * uR / BigR  ) * CvGradVi           &
+                        &         - r0 * ( VbGradVj           ) * Vbp0 * v / BigR    &
+                        &         + r0 * ( Vbp0 * uR / BigR   ) * VbGradVi           &
+                        &                                                            ) 
+                   
+                   Qjac(var_up,var_up) =  Qjac(var_up,var_up)  - TG_NUM(var_up) * (   &
+                        &         - r0 * ( - Cvp0 * up / BigR   ) * Cvp0 * v / BigR   &
+                        &         + r0 * ( CvGradVj             ) * CvGradVi          &
+                        &         + r0 * ( - Vbp0 * up / BigR   ) * Vbp0 * v / BigR   &
+                        &         + r0 * ( VbGradVj             ) * VbGradVi          &
+                        &                                                             ) 
+                   
+
                    if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
 
                      Pjac(var_up,var_uR)      =   v * r0 * BR0 * uR
@@ -1282,13 +1304,15 @@ endif
                      Qjac(var_up,var_r)  =  BR0 * Qjac(var_uR,var_r)  + BZ0 * Qjac(var_uZ,var_r)  + Bp0 * Qjac(var_up,var_r)
                      Qjac(var_up,var_T)  =  BR0 * Qjac(var_uR,var_T)  + BZ0 * Qjac(var_uZ,var_T)  + Bp0 * Qjac(var_up,var_T)
 
-                   else
+                  else
+                     
                      Qjac(var_up,var_uR) = Qjac(var_up,var_uR) - ( visco + visco2 ) * divu_uR * ( v_p / BigR ) ! nonprimitive viscous terms
                      Qjac(var_up,var_uZ) = Qjac(var_up,var_uZ) - ( visco + visco2 ) * divu_uZ * ( v_p / BigR ) 
-                     Qjac(var_up,var_up) = Qjac(var_up,var_up) - ( visco + visco2 ) * divu_up * ( v_p / BigR ) 
-                   endif
-
-                 else
+                     Qjac(var_up,var_up) = Qjac(var_up,var_up) - ( visco + visco2 ) * divu_up * ( v_p / BigR )
+                     
+                  endif
+                  
+                else ! non Primitive_formulation
 
                    Qjac(var_up,var_uR) =   r0 * ( up0 * uR * v_R - uR * up0 * v / BigR )                        &
                                          - ( v_p / BigR ) * visco2 * divu_uR                                    &
@@ -1314,42 +1338,24 @@ endif
 
                    Qjac(var_up,var_T)  =   ( v_p / BigR ) * r0 * T - dvisco_dT * T * Qvisc_up
 
-                 endif
+                   ! Stabilization
+                   ! -----------------------------------------------------------------------------
+                   Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &
+                        &         - r0 * ( CvGradVj           ) * Cvp0 * v / BigR    &
+                        &         + r0 * (  Cvp0 * uR / BigR  ) * CvGradVi           &
+                        &         - r0 * ( VbGradVj           ) * Vbp0 * v / BigR    &
+                        &         + r0 * ( Vbp0 * uR / BigR   ) * VbGradVi           &
+                        &                                                            ) 
+                   
+                   Qjac(var_up,var_up) =  Qjac(var_up,var_up)  - TG_NUM(var_up) * (   &
+                        &         - r0 * ( - Cvp0 * up / BigR   ) * Cvp0 * v / BigR   &
+                        &         + r0 * ( CvGradVj             ) * CvGradVi          &
+                        &         + r0 * ( - Vbp0 * up / BigR   ) * Vbp0 * v / BigR   &
+                        &         + r0 * ( VbGradVj             ) * VbGradVi          &
+                        &                                                             ) 
+                   
+                endif
 
-                ! Stabilization
-                ! ---------------
-           if (parallel_projection) then 
-              Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &
-                   &         - r0 * ( CvGradVj           ) * Cvp0 * v / BigR    &
-                   &         + r0 * (  Cvp0 * uR / BigR  ) * CvGradVi           &
-                   &         - r0 * ( VbGradVj           ) * Vbp0 * v / BigR    &
-                   &         + r0 * ( Vbp0 * uR / BigR   ) * VbGradVi           &
-                   &                                                            )* Fprof / BigR 
-                 
-              Qjac(var_up,var_up) =  Qjac(var_up,var_up)  - TG_NUM(var_up) * (   &
-                   &         - r0 * ( - Cvp0 * up / BigR   ) * Cvp0 * v / BigR   &
-                   &         + r0 * ( CvGradVj             ) * CvGradVi          &
-                   &         + r0 * ( - Vbp0 * up / BigR   ) * Vbp0 * v / BigR   &
-                   &         + r0 * ( VbGradVj             ) * VbGradVi          &
-                   &                                                             )* Fprof / BigR 
-
-           else
-              Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &
-                   &         - r0 * ( CvGradVj           ) * Cvp0 * v / BigR    &
-                   &         + r0 * (  Cvp0 * uR / BigR  ) * CvGradVi           &
-                   &         - r0 * ( VbGradVj           ) * Vbp0 * v / BigR    &
-                   &         + r0 * ( Vbp0 * uR / BigR   ) * VbGradVi           &
-                   &                                                            ) 
-              
-              Qjac(var_up,var_up) =  Qjac(var_up,var_up)  - TG_NUM(var_up) * (   &
-                   &         - r0 * ( - Cvp0 * up / BigR   ) * Cvp0 * v / BigR   &
-                   &         + r0 * ( CvGradVj             ) * CvGradVi          &
-                   &         + r0 * ( - Vbp0 * up / BigR   ) * Vbp0 * v / BigR   &
-                   &         + r0 * ( VbGradVj             ) * VbGradVi          &
-                   &                                                             ) 
-           END if
-
- 
 !###################################################################################################
 !#  equation 7   (Density equation)                                                                #
 !###################################################################################################
@@ -1401,8 +1407,9 @@ endif
                  Qjac(var_r,var_T)  =   0.
 
                  
-                ! Stabilization
-                ! ---------------
+                 ! Stabilization
+                 ! -----------------------------------------------------------------------------
+                 ! ---------------
                  Qjac(var_r,var_r)  =  Qjac(var_r,var_r)  - TG_NUM(var_r) * (        &
                       &                CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
 
@@ -1498,8 +1505,9 @@ endif
 
                endif
                
-                ! Stabilization
-                ! ---------------
+               ! Stabilization
+               ! -----------------------------------------------------------------------------
+               ! ---------------
                Qjac(var_T,var_T)  =  Qjac(var_T,var_T) - TG_NUM(var_T) * r0 * (   &
                       &                CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
 

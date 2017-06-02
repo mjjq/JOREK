@@ -996,7 +996,8 @@ endif
                  divru_r  = r * divu + u0grad_bf
 
                  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                 
+                 ! Variables for stabilization
+                 ! ---------------------------
                  CvGradVj       = CvR0 * bf_R + CvZ0 * bf_Z + Cvp0 * bf_p / BigR
                  VbGradVj       = VbR0 * bf_R + VbZ0 * bf_Z + Vbp0 * bf_p / BigR
 

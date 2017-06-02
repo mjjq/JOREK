@@ -631,6 +631,8 @@ endif
            Qvec(var_AR) = - eta_T * ( v_p * BZ0 / BigR - v_Z * Bp0 )                         &
                             +   v * ( (uZ0 +  eta_Z) * Bp0 - (up0 + eta_p / BigR ) * BZ0 )
 
+           ! adding the stabilization contribution
+           ! --------------------------------------------------------------------------------------
            Vms(var_AR)  =   (   CvGradAr0 + Cvp0 * A30 / BigR2             ) * CvGradVi        &
                 &         + ( - CvGradA30 + CvR0 * A30 / BigR + Cvp0 * AR0 ) * Cvp0 * v / BigR2
 
@@ -646,6 +648,8 @@ endif
            Qvec(var_AZ) = - eta_T * ( - v_p * BR0 / BigR + v_R * Bp0 )                         &
                             +   v * ( (up0 + eta_p / BigR) * BR0 - (uR0 + eta_R) * Bp0 )           
 
+           ! adding the stabilization contribution
+           ! --------------------------------------------------------------------------------------
            Vms(var_AZ)  =  CvGradAZ0 * CvGradVi 
 
            Qvec(var_AZ)  =   Qvec(var_AZ) - TG_NUM(var_AZ) * Vms(var_AZ)  
@@ -658,6 +662,8 @@ endif
            Qvec(var_A3) = - eta_T * ( BigR * v_Z * BR0 - ( 2.d0 * v + BigR * v_R ) * BZ0 + v * current_source(ms,mt) )     &
                             + BigR * v * ( (uR0 + eta_R ) * BZ0 - (uZ0 + eta_Z) * BR0 )
 
+           ! adding the stabilization contribution
+           ! --------------------------------------------------------------------------------------
            Vms(var_A3)  =   (   CvGradAr0 + Cvp0 * A30 / BigR2             ) * Cvp0 * v                   &
                 &         - ( - CvGradA30 + CvR0 * A30 / BigR + Cvp0 * AR0 ) * (CvGradVi + CvR0 * v / BigR)
 
@@ -684,6 +690,8 @@ endif
                                 - visco * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)        ! laplacian part viscous term
 
              
+             ! adding the stabilization contribution
+             ! --------------------------------------------------------------------------------------
              Vms(var_uR)    = r0 * ( CvGraduR0 * CvGradVi + VbGraduR0 * VbGradVi  ) 
            
              Q_uR_primitive =  Q_uR_primitive - TG_NUM(var_uR) * Vms(var_uR)  
@@ -726,6 +734,8 @@ endif
 
                                 - BZ0 * B0grad_vstar + v_Z * ( 0.5d0 * BB2 )
              
+             ! adding the stabilization contribution
+             ! --------------------------------------------------------------------------------------
              Vms(var_uZ)    =  r0 * ( CvGraduZ0  * CvGradVi + VbGraduZ0  * VbGradVi   )    
          
              Q_uZ_primitive  = Q_uZ_primitive  - TG_NUM(var_uZ) * Vms(var_uZ)  
@@ -762,7 +772,9 @@ endif
 
                               - visco * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
 
-
+             ! adding the stabilization contribution
+             ! --------------------------------------------------------------------------------------
+             
              Vms(var_up)  = - r0 * ( CvGraduR0 - Cvp0 * up0 / BigR  ) * Cvp0 * v / BigR &
                   &         + r0 * ( CvGradup0 + Cvp0 * uR0 / BigR  ) * CvGradVi        &
                   &         - r0 * ( VbGraduR0 - Vbp0 * up0 / BigR  ) * Vbp0 * v / BigR &
@@ -818,6 +830,8 @@ endif
              Qvec(var_r) =  Qvec(var_r) + r0 * u0grad_vstar
            endif
 
+           ! adding the stabilization contribution
+           ! --------------------------------------------------------------------------------------
            Vms(var_r)  =  CvGradr0 * CvGradVi    +  VbGradr0 * VbGradVi
 
            Qvec(var_r) =  Qvec(var_r)  - TG_NUM(var_r) * Vms(var_r)
@@ -862,6 +876,8 @@ endif
 
            endif
 
+           ! adding the stabilization contribution
+           ! --------------------------------------------------------------------------------------
            Vms(var_T)  =  r0 *( CvGradT0 * CvGradVi    +  VbGradT0 * VbGradVi )
            
            Qvec(var_T) = Qvec(var_T) - TG_NUM(var_T) * Vms(var_T)
@@ -1355,8 +1371,8 @@ endif
 
                    ! Stabilization
                    ! -----------------------------------------------------------------------------
-                   Qjac(var_uR,var_uR) =  Qjac(var_uR,var_uR)  &
-                        &   - TG_NUM(var_uR) * r0 * ( CvGradVj * CvGradVi + VbGradVj * VbGradVi )
+                   Qjac(var_up,var_up) =  Qjac(var_up,var_up)  &
+                        &   - TG_NUM(var_up) * r0 * ( CvGradVj * CvGradVi + VbGradVj * VbGradVi )
 
 
 !!$                   Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &

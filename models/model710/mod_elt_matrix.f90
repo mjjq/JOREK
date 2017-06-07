@@ -118,6 +118,8 @@ real*8 :: CvR0, CvZ0, Cvp0, CvGradAR0, CvGradAZ0, CvGradA30, CvGradr0, CvGradT0,
 real*8 :: VbR0, VbZ0, Vbp0, VbGradAR0, VbGradAZ0, VbGradA30, VbGradr0, VbGradT0, VbGradVi, VbGradVj
 real*8 :: CvGraduR0, CvGraduZ0, CvGradup0, VbGraduR0, VbGraduZ0, VbGradup0
 
+real*8 :: TG_NUM_Eq = 0.0
+
 ! -------------------------------------------------------------------------------------------------
 ! -------------------------------------------------------------------------------------------------
 ! -------------------------------------------------------------------------------------------------
@@ -638,7 +640,7 @@ endif
 
            Vms(var_AR)   = CvGradAr0 * CvGradVi
 
-           Qvec(var_AR)  =  Qvec(var_AR) - TG_NUM(var_AR) * Vms(var_AR)  
+           Qvec(var_AR)  =  Qvec(var_AR) - TG_NUM_Eq*TG_NUM(var_AR) * Vms(var_AR)  
 !###################################################################################################
 !#  equation 2 (Z component induction equation)                                                    #
 !###################################################################################################
@@ -652,7 +654,7 @@ endif
            ! --------------------------------------------------------------------------------------
            Vms(var_AZ)  =  CvGradAZ0 * CvGradVi 
 
-           Qvec(var_AZ)  =   Qvec(var_AZ) - TG_NUM(var_AZ) * Vms(var_AZ)  
+           Qvec(var_AZ)  =   Qvec(var_AZ) - TG_NUM_Eq*TG_NUM(var_AZ) * Vms(var_AZ)  
 !###################################################################################################
 !#  equation 3 (PHI component induction equation)                                                  #
 !###################################################################################################
@@ -670,7 +672,7 @@ endif
            
            Vms(var_A3)   =  CvGradA30 * CvGradVi
            
-           Qvec(var_A3)  =  Qvec(var_A3) - TG_NUM(var_A3) * Vms(var_A3)  
+           Qvec(var_A3)  =  Qvec(var_A3) - TG_NUM_Eq*TG_NUM(var_A3) * Vms(var_A3)  
 !###################################################################################################
 !#  equation 4   (R component momentum equation)                                                   #
 !###################################################################################################
@@ -694,7 +696,7 @@ endif
              ! --------------------------------------------------------------------------------------
              Vms(var_uR)    = r0 * ( CvGraduR0 * CvGradVi + VbGraduR0 * VbGradVi  ) 
            
-             Q_uR_primitive =  Q_uR_primitive - TG_NUM(var_uR) * Vms(var_uR)  
+             Q_uR_primitive =  Q_uR_primitive - TG_NUM_Eq*TG_NUM(var_uR) * Vms(var_uR)  
 
 
              Qvec(var_uR) = Q_uR_primitive - ( visco + visco2 ) * divu * ( v_R + v / BigR )  &                   ! primitive + nonprimitive viscous part
@@ -738,7 +740,7 @@ endif
              ! --------------------------------------------------------------------------------------
              Vms(var_uZ)    =  r0 * ( CvGraduZ0  * CvGradVi + VbGraduZ0  * VbGradVi   )    
          
-             Q_uZ_primitive  = Q_uZ_primitive  - TG_NUM(var_uZ) * Vms(var_uZ)  
+             Q_uZ_primitive  = Q_uZ_primitive  - TG_NUM_Eq*TG_NUM(var_uZ) * Vms(var_uZ)  
 
 
            else
@@ -782,7 +784,7 @@ endif
              
              Vms(var_up)      = r0 * ( CvGradup0 * CvGradVi  + VbGradup0 * VbGradVi )
              
-             Q_up_primitive   =  Q_up_primitive   - TG_NUM(var_up) * Vms(var_up)
+             Q_up_primitive   =  Q_up_primitive   - TG_NUM_Eq*TG_NUM(var_up) * Vms(var_up)
              
 
              if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
@@ -834,7 +836,7 @@ endif
            ! --------------------------------------------------------------------------------------
            Vms(var_r)  =  CvGradr0 * CvGradVi    +  VbGradr0 * VbGradVi
 
-           Qvec(var_r) =  Qvec(var_r)  - TG_NUM(var_r) * Vms(var_r)
+           Qvec(var_r) =  Qvec(var_r)  - TG_NUM_Eq*TG_NUM(var_r) * Vms(var_r)
 
 !###################################################################################################
 !#  equation 8 (Pressure equation)                                                                 #
@@ -880,7 +882,7 @@ endif
            ! --------------------------------------------------------------------------------------
            Vms(var_T)  =  r0 *( CvGradT0 * CvGradVi    +  VbGradT0 * VbGradVi )
            
-           Qvec(var_T) = Qvec(var_T) - TG_NUM(var_T) * Vms(var_T)
+           Qvec(var_T) = Qvec(var_T) - TG_NUM_Eq*TG_NUM(var_T) * Vms(var_T)
 
 !###################################################################################################
 !#  equations end                                                                                  #
@@ -1300,7 +1302,7 @@ endif
                    ! -----------------------------------------------------------------------------
 
                    Qjac(var_up,var_up) =  Qjac(var_up,var_up)  &
-                        &   - TG_NUM(var_up) * r0 * ( CvGradVj * CvGradVi + VbGradVj * VbGradVi )
+                        &                - TG_NUM(var_up) * r0 * ( CvGradVj * CvGradVi + VbGradVj * VbGradVi )
               
 
 !!$                   Qjac(var_up,var_uR) =  Qjac(var_up,var_uR)  - TG_NUM(var_up) * (  &
@@ -1447,7 +1449,7 @@ endif
                  ! -----------------------------------------------------------------------------
                  ! ---------------
                  Qjac(var_r,var_r)  =  Qjac(var_r,var_r)  &
-                      &    - TG_NUM(var_r) * ( CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
+                      &                - TG_NUM(var_r) * ( CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
 
 !###################################################################################################
 !#  equation 8   (Temperature  equation)                                                           #
@@ -1545,7 +1547,7 @@ endif
                ! -----------------------------------------------------------------------------
 
                Qjac(var_T,var_T)  =  Qjac(var_T,var_T) &
-                    &    - TG_NUM(var_T) * r0 * ( CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
+                    &                 - TG_NUM(var_T) * r0 * ( CvGradVj * CvGradVi    +  VbGradVj * VbGradVi )
 
 
 !###################################################################################################

@@ -31,10 +31,11 @@ contains
        R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
 
     use data_structure
+    use vacuum, ONLY: is_freebound
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary, tstep, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_start_time, RMP_har_cos,RMP_har_sin,             &
-       RMP_growth_rate, RMP_ramp_up_time, T_min
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_start_time, RMP_har_cos, RMP_har_sin,            &
+       RMP_growth_rate, RMP_ramp_up_time, Number_RMP_harmonics, RMP_har_cos_spectrum, RMP_har_sin_spectrum, T_min
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -79,6 +80,7 @@ contains
     integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
     logical :: is_local, only_count
+    logical :: apply_psi_BC, apply_current_BC
 
 !=============== RMP ==============
   real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
@@ -174,7 +176,27 @@ contains
                 do in=1, n_tor
 
                    do k=1, n_var
+                                                                                         !-----(General for all bnd types)
+                      !------------ Decide when Psi or Current need BCs --------------------------------------------------                      
+                      !----Psi
+                      apply_psi_BC = .false.
+                      if (k == 1) then                        
+                        if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
+                        if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
+                        if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
+                        if (              in .eq. 1                        )                         apply_psi_BC = .true.
+                        if (           is_freebound(in,k)                  )                         apply_psi_BC = .false.                     
+                      endif
+                      
+                      !----Current
+                      apply_current_BC = .false.
+                      if (k == 3) then
+                        if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
+                      endif
+                      !---------------------------------------------------------------------------------------------------
 
+
+    
                       !========================================================================
                       ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
                       ! apply fixed bc for variables k=1,2,3,4
@@ -256,19 +278,14 @@ contains
 !======================================= end RMPs ==================================
 
 
-                         if (                  &
-                              ((k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))      &
-                              .or.((k .eq. 1) .and. (RMP_on) .and. ( in .lt. RMP_har_cos))&
-                              .or. ((k .eq. 1) .and. (in .eq. 1))  & 
-                              .or. ((k .eq. 1) .and. (RMP_on) .and.(in .gt. RMP_har_sin))  &
-                              .or. ((k .eq. 1) .and. (in .ge. 4))  & 
-                              .or. (k .eq. 2)  &
-                              .or. (k .eq. 3)  &
-                              .or. (k .eq. 4)  &
-                                !.or. (k .eq. 5) &
-                                !.or. (k .eq. 6) &
-                                !.or. (k .eq. 7) &
-                              .or. (k .eq. 8)  &
+                         if (      apply_psi_BC      &
+                              .or. apply_current_BC  &
+                              .or. (k .eq. 2)        &
+                              .or. (k .eq. 4)        &
+                             !.or. (k .eq. 5)        &
+                             !.or. (k .eq. 6)        &
+                             !.or. (k .eq. 7)        &
+                              .or. (k .eq. 8)        &
                               ) then
 
 
@@ -573,15 +590,14 @@ contains
                            .or. (node_list%node(inode)%boundary .eq. 9)) then
 
 
-                         if (                  &
-                              (k .eq. 1)  &
-                              .or. (k .eq. 2)  &
-                              .or. (k .eq. 3)  &
-                              .or. (k .eq. 4)  &
-                                !.or. (k .eq. 5) &
-                                !.or. (k .eq. 6) &
-                                !.or. (k .eq. 7) &
-                              .or. (k .eq. 8)  &
+                         if (      apply_psi_BC      &
+                              .or. apply_current_BC  &
+                              .or. (k .eq. 2)        &
+                              .or. (k .eq. 4)        &
+                             !.or. (k .eq. 5)        &
+                             !.or. (k .eq. 6)        &
+                             !.or. (k .eq. 7)        &
+                              .or. (k .eq. 8)        &
                               ) then
 
 
@@ -934,21 +950,9 @@ contains
 !======================================= end RMPs ==================================
 
 
-                         if (                                                      &
-                              ((freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))  &               ! exclude condition on psi (freeboundary) except n=0
-                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))   &
-                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos ))   &
-                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))   &
-                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. (in .gt. RMP_har_sin))  &
-                              .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .ge. 4))  & 
-                              .or. (k .eq. 2)    &
-                              .or. (k .eq. 3)    &
-                              .or. (k .eq. 4)    &
-                              .or. (k .eq. 5)    &
-                              .or. (k .eq. 6)    &
-                              .or. (k .eq. 7)    &
-                              .or. (k .eq. 8)    &
-                              ) then
+                         if (      apply_psi_BC      &
+                              .or. apply_current_BC  &
+                              .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
 
                             index_node = node_list%node(inode)%index(1)
                             if (use_murge .and. use_murge_element) then

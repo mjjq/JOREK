@@ -82,6 +82,7 @@ contains
   integer :: loop_nbr, loop, cnt, cnt_prod
   integer :: ierr
   logical :: is_local, only_count
+  logical :: apply_psi_BC, apply_current_BC
   real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
   real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
@@ -181,13 +182,32 @@ contains
 !              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
                  do k=1, n_var ! ================================do variables
+                 
+                                                                                      !-----(General for all bnd types)
+                   !------------ Decide when Psi or Current need BCs --------------------------------------------------                      
+                   !----Psi
+                   apply_psi_BC = .false.
+                   if (k == 1) then                        
+                     if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
+                     if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
+                     if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
+                     if (              in .eq. 1                        )                         apply_psi_BC = .true.
+                     if (           is_freebound(in,k)                  )                         apply_psi_BC = .false.                     
+                   endif
+                      
+                   !----Current
+                   apply_current_BC = .false.
+                   if (k == 3) then
+                     if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
+                   endif
+                   !---------------------------------------------------------------------------------------------------
 
 !========================================================================
 ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
 ! apply fixed bc for variables k=1,2,3,4
 ! apply v_par = cs for k=7
 !========================================================================
-                    if    ((node_list%node(inode)%boundary .eq. 1) &
+                   if     ((node_list%node(inode)%boundary .eq. 1) &
                       .or. (node_list%node(inode)%boundary .eq. 4) &
                       .or. (node_list%node(inode)%boundary .eq. 9) &
                       .or. (node_list%node(inode)%boundary .eq. 3)) then
@@ -267,18 +287,14 @@ contains
 !======================================= end RMPs ==================================
 
                       
-                       if (                  &
-                            ((k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))      &
-                            .or.((k .eq. 1) .and. (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1)))&
-                            .or. ((k .eq. 1) .and. (in .eq. 1))  & 
-                            .or. ((k .eq. 1) .and. ( RMP_on) .and.(in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)))  & 
-                            .or. (k .eq. 2)  &
-                            .or. (k .eq. 3)  &
-                            .or. (k .eq. 4)  &
-                                !.or. (k .eq. 5) &
-                                !.or. (k .eq. 6) &
-                                !.or. (k .eq. 7) &
-                              ) then
+                       if (        apply_psi_BC      &
+                              .or. apply_current_BC  &
+                              .or. (k .eq. 2)        &
+                              .or. (k .eq. 4)        &
+                             !.or. (k .eq. 5)        &
+                             !.or. (k .eq. 6)        &
+                             !.or. (k .eq. 7)        &
+                           ) then
 
 
                             index_node = node_list%node(inode)%index(1)
@@ -487,14 +503,13 @@ contains
                            .or. (node_list%node(inode)%boundary .eq. 9)) then
 
 
-                         if (                  &
-                              (k .eq. 1)  &
-                              .or. (k .eq. 2)  &
-                              .or. (k .eq. 3)  &
-                              .or. (k .eq. 4)  &
-                                !.or. (k .eq. 5) &
-                                !.or. (k .eq. 6) &
-                                !.or. (k .eq. 7) &
+                         if (      apply_psi_BC      &
+                              .or. apply_current_BC  &
+                              .or. (k .eq. 2)        &
+                              .or. (k .eq. 4)        &
+                             !.or. (k .eq. 5)        &
+                             !.or. (k .eq. 6)        &
+                             !.or. (k .eq. 7)        &
                               ) then
 
 
@@ -765,12 +780,9 @@ contains
                         endif        !(end RMPs on)  ==================================
 
                        ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
-                       if (      (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))        &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos_spectrum(1) ))   &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))                               &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics) )) & 
-                            .or. (.not. is_freebound(in,k))                                                               &
-                          ) then
+                        if (       apply_psi_BC                   &
+                              .or. apply_current_BC               &
+                              .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
 
                           index_node = node_list%node(inode)%index(1)
 

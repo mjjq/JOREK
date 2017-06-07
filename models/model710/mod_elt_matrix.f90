@@ -1026,7 +1026,7 @@ endif
 
                 Qjac(var_AR,var_r ) =   0.d0
 
-                Qjac(var_AR,var_T ) = - deta_dT * T * ( v_p * BZ0 / BigR + v_Z * Bp0 )               &
+                Qjac(var_AR,var_T ) = - deta_dT * T * ( v_p * BZ0 / BigR - v_Z * Bp0 )               &
                                       + v * ( d2eta_d2T * T0_Z * T + deta_dT * T_Z ) * Bp0           &
                                       - v * ( d2eta_d2T * T0_p * T + deta_dT * T_p ) * BZ0 / BigR
 

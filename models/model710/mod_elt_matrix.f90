@@ -184,8 +184,11 @@ Fprofile        = 0.d0 ; Fprofile_s        = 0.d0 ;  Fprofile_t        = 0.d0
 !     and also for all variables
 ! ----------------------------------------------
 TG_NUM = 0.25*tstep
+TG_NUM(var_AR) = 0.d0
+TG_NUM(var_AZ) = 0.d0
+TG_NUM(var_A3) = 0.d0
 
-
+TG_NUM = 0.d0
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
 my_id = rank
@@ -454,7 +457,7 @@ endif
 
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
-       eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
+       eta_T     =   eta   * (abs(T0)/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
        d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
      else
@@ -462,6 +465,9 @@ endif
        deta_dT   = 0.d0
        d2eta_d2T = 0.d0
      end if
+
+!deta_dT = 0.d0
+!d2eta_d2T = 0.d0
 
      eta_R = deta_dT * T0_R
      eta_Z = deta_dT * T0_Z
@@ -1066,7 +1072,7 @@ endif
                 
                 Qjac(var_AZ,var_r) =    0.d0
 
-                Qjac(var_AZ,var_T) = - deta_dT * T * ( - v_p * BR0 / BigR - v_R * Bp0 )               &
+                Qjac(var_AZ,var_T) = - deta_dT * T * ( - v_p * BR0 / BigR + v_R * Bp0 )               &
                                      + v * ( d2eta_d2T * T0_p * T + deta_dT * T_p ) * BR0 / BigR      &
                                      - v * ( d2eta_d2T * T0_R * T + deta_dT * T_R ) * Bp0
                 
@@ -1099,8 +1105,9 @@ endif
 
                 Qjac(var_A3,var_r ) =   0.d0
 
-                Qjac(var_A3,var_T ) = - deta_dT * T * ( BigR * v_Z * BR0 - ( 2.d0 * v + BigR * v_R ) * BZ0 ) &
-                                      + BigR * v * ( d2eta_d2T * T0_R * T + deta_dT * T_R ) * BZ0            &                                   
+                Qjac(var_A3,var_T ) = - deta_dT * T * ( BigR * v_Z * BR0 - ( 2.d0 * v + BigR * v_R ) * BZ0 &
+                                                        + v * current_source(ms,mt) )                      &
+                                      + BigR * v * ( d2eta_d2T * T0_R * T + deta_dT * T_R ) * BZ0          &                                   
                                       - BigR * v * ( d2eta_d2T * T0_Z * T + deta_dT * T_Z ) * BR0                                       
 
                 ! Stabilization

@@ -353,6 +353,14 @@ subroutine preset_parameters
      spi_L_inj       = 0.25
      
      n_spi           = 1
+     psi_surfaces(:) = 0.0
+     rho_surfaces(:) = 0.0
+     id_surfaces(:)  = -1
+     id_surfaces(1)  = 5
+     id_surfaces(2)  = 6
+     id_surfaces(3)  = 7
+     id_surfaces(4)  = 8
+
      flag_spi        = 0
      abl_history     = .false.
      using_spi       = .false.

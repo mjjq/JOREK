@@ -12,18 +12,24 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
+
+use mod_element_rtree
+
 implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
-integer :: i, in, i_tor, i_spi
+integer :: i, in, i_tor, i_spi, resultlength
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
 real*8  :: spi_abl_rate_tot, spi_abl_tot
 integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
+integer :: rank, comm_size, n_cpu
+integer :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
 
+character(len=MPI_MAX_PROCESSOR_NAME) :: name
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
@@ -36,10 +42,37 @@ my_id=0
 #else
   required = MPI_THREAD_MULTIPLE
 #endif
-call MPI_Init_thread(required, provided, StatInfo)
+  call MPI_Init_thread(required, provided, StatInfo)
+
+  call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
+
+  ! --- Determine number of MPI procs
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
+  n_cpu = comm_size
+
+  ! --- Determine ID of each MPI proc
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+  my_id = rank
+
+  ! --- Process command line arguments
+  if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)
+
+  CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
+  write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', rank, ': ', name
+
+  ! --- Initialize mode and mode_type arrays
+  call det_modes()
+
+  ! --- Remove file STOP_NOW if it exists
+  if ( my_id == 0 ) then
+    open(42, file='STOP_NOW', iostat=ierr)
+    if ( ierr == 0 ) close(42, status='delete')
+  end if
 
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
+
+
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -48,7 +81,7 @@ enddo
 
 call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
-call initialise_basis                              ! define the basis functions at the Gaussian points
+call initialise_basis()                              ! define the basis functions at the Gaussian points
 
 open(20,file='energies.txt')
 
@@ -103,15 +136,15 @@ if (using_spi .and. abl_history) then
 
 endif
 
+!call populate_element_rtree(node_list, element_list)
 
+!call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
+!if (use_pellet) then
+!   pellet_volume = total_pellet_volume
+!   call update_pellet(my_id,node_list,element_list)
+!end if
 
-call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
-
-if (use_pellet) then
-   pellet_volume = total_pellet_volume
-   call update_pellet(my_id,node_list,element_list)
-end if
 !------------------lowshape3bis outside
 !Rplot(1) = 3.0
 !Rplot(2) = 3.676
@@ -138,12 +171,12 @@ end if
 
 !call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-Rplot(1) = 1.0
-Rplot(2) = 3.5
-Zplot(1) = Z_axis
-Zplot(2) = Z_axis 
+!Rplot(1) = 1.0
+!Rplot(2) = 3.5
+!Zplot(1) = Z_axis
+!Zplot(2) = Z_axis 
 
-call plot_profiles(node_list,element_list,Rplot,Zplot)
+!call plot_profiles(node_list,element_list,Rplot,Zplot)
 
 
 !call export_helena(node_list,element_list)

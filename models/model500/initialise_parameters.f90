@@ -24,7 +24,7 @@ real*8 :: vacuum_fraction, b_over_a, a_over_b
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
-integer :: ierr,err,i,ifail,i_elm
+integer :: ierr,err,i,ifail,i_elm,i_surface
 integer :: err_alloc=0, err_alloc_rnd=0
 
 real*8, dimension(2) :: P, P_s, P_t, P_phi
@@ -38,6 +38,7 @@ real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_
 real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
 real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Injection position of SPI
 real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp
+real*8  :: sign_corr
 real*8, allocatable :: rnd(:)                      !The random number array 
 
 ! --- Namelist with input parameters.
@@ -118,7 +119,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
-                delta_n_convection, nimp_bg,                        &
+                delta_n_convection, nimp_bg, psi_surfaces,          &
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -258,6 +259,14 @@ if (my_id /= 0 .and. using_spi == .true.) then
 end if
 
 if (using_spi == .true.) then
+
+  do i_surface = 2, 4
+    if (abs(psi_surfaces(i_surface))<abs(psi_surfaces(i_surface-1))) then
+       psi_surfaces(i_surface) = 0.0
+       write(*,*) "WARNING! Please adjust the order of tracked surfaces"
+    end if
+
+  end do
 
   if (allocated(pellets)) then
     deallocate(pellets)

@@ -331,6 +331,8 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
     end do
   end if
 
+  call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+
 return 
  
 end subroutine update_spi

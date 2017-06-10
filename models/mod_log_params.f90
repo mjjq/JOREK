@@ -563,6 +563,7 @@ if (my_id == 0) then
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
      write(*,LOGI_FMT) 'abl_history         ',  abl_history
      write(*,INTG_FMT) 'n_spi               ',  n_spi
+     write(*,REAL_FMT) 'psi_surfaces        ',  psi_surfaces
      write(*,INTG_FMT) 'flag_spi            ',  flag_spi
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref

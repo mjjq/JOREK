@@ -45,7 +45,7 @@ type (type_node)         :: nodes(n_vertex_max)
 real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 real*8     :: eq_g(n_var,n_gauss,n_gauss), eq_s(n_var,n_gauss,n_gauss), eq_t(n_var,n_gauss,n_gauss)
-integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
+integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements, i_surface, sur_domain
 real*8     :: xjac, BigR, wst, P_int, C_intern, ZJ_0, PS_0, Volume, Area
 real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
@@ -71,6 +71,8 @@ heat_src_in  = 0.d0
 heat_src_out = 0.d0
 part_src_in  = 0.d0
 part_src_out = 0.d0
+
+rho_surfaces = 0.0
 
 Bgeo = F0 / R_geo
 
@@ -145,7 +147,7 @@ do ife =1, element_list%n_elements
       PS_0  = eq_g(1,ms,mt)
       
       pressure = pressure + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
-      density  = density  + rho_00       * xjac * 2.d0 * PI * BigR * wst
+      density  = density  + rho_00        * xjac * 2.d0 * PI * BigR * wst
       
       if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
@@ -158,9 +160,22 @@ do ife =1, element_list%n_elements
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
           psi_limit, part_src, heat_src)
 #endif
+
+        ! --- 3D integrals to get particles deposited within a given flux surfaces
         
+        do i_surface = 1, 4
+          if (psi_surfaces(i_surface)/=0.0) then
+            sur_domain = which_surface(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
+                         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) 
+            
+            if (sur_domain <= id_surfaces(i_surface) .and. sur_domain >= id_surfaces(1)) then
+              rho_surfaces(i_surface) = rho_surfaces(i_surface) +rho_00 * xjac * 2.d0 * PI * BigR * wst
+            end if
+          end if 
+        end do  
+
         ! --- 3D integrals
-        D_int = D_int + rho_00       * xjac * 2.d0 * PI * BigR * wst
+        D_int = D_int + rho_00        * xjac * 2.d0 * PI * BigR * wst
         P_int = P_int + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
         C_intern = C_intern + ZJ_0 /BigR  * xjac * 2.d0 * PI * BigR * wst
         Volume = Volume + 2.d0 * PI * BigR * xjac * wst

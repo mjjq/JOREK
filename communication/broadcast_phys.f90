@@ -199,6 +199,8 @@ if (my_id .eq. 0) then
 if (using_spi == .true.) then
   call MPI_PACK(pellets,                n_spi,dtype,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   write(*,*) "packing pellets: ", ierr
+
+  call MPI_PACK(psi_surfaces,           4,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
 end if
 !===============================End of SPI model===============================================
 
@@ -588,8 +590,10 @@ if (using_spi == .true.) then
     end if
   end if
 
-  call MPI_UNPACK(buffer,bufsize,position,pellets,                n_spi,dtype,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,pellets,           n_spi,dtype,MPI_COMM_WORLD,ierr)
   write(*,*) "unpacking pellets: ",ierr
+
+  call MPI_UNPACK(buffer,bufsize,position,psi_surfaces,          4,MPI_REAL8,MPI_COMM_WORLD,ierr)
 end if
 
 !===============================End of SPI model===============================================

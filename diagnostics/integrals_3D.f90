@@ -51,7 +51,7 @@ real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
-real*8  :: local_rho_surfaces(4)
+real*8  :: local_rho_surfaces(4), local_count_surfaces(4)
 
 ! Temporary variables serving the SPI module
 integer    :: spi_i, i_surface, sur_domain
@@ -123,6 +123,7 @@ endif
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 local_rho_surfaces    = 0.d0
+local_count_surfaces  = 0.d0
 #endif
 
 Bgeo = F0 / R_geo
@@ -165,7 +166,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
 !$omp          central_mass, pellets, abl_history, psi_surfaces, id_surfaces,                  &
-!$omp          n_spi, using_spi, flag_spi,                                                     &
+!$omp          n_spi, using_spi, flag_spi, local_count_surfaces,                               &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, local_rho_surfaces,                  &
 #endif
 !$omp          wgauss_copy)                                                                    &
@@ -195,7 +196,7 @@ omp_tid      = 0
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
-!$omp                local_rho_surfaces,                                                      &
+!$omp                local_rho_surfaces,  local_count_surfaces,                               &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -395,7 +396,9 @@ do ife = ife_min, ife_max
                         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)
 
            if (sur_domain <= id_surfaces(i_surface) .and. sur_domain >= id_surfaces(1)) then
+
              local_rho_surfaces(i_surface) = local_rho_surfaces(i_surface) + r0 * xjac * BigR * wst * delta_phi
+             local_count_surfaces(i_surface) = local_count_surfaces(i_surface) + 1
            end if
          end if
        end do
@@ -491,6 +494,9 @@ endif
     do i_surface = 1, 4
       call MPI_AllReduce(local_rho_surfaces(i_surface), rho_surfaces(i_surface),1,&
                          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+      call MPI_AllReduce(local_count_surfaces(i_surface), count_surfaces(i_surface),1,&
+                         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     end do
   end if
 #endif
@@ -565,9 +571,11 @@ if (my_id .eq. 0) then
   do i_surface = 1 , 4
     if (psi_surfaces(i_surface)/= 0.0) then
       write(*,'(A,I,4e14.6)')   ' Particles within flux sufaces : ', i_surface, &
-                                psi_surfaces(i_surface), rho_surfaces(i_surface)
+                                psi_surfaces(i_surface), rho_surfaces(i_surface), count_surfaces(i_surface)
     end if
   end do
+
+  write(*,'(A,4e14.6)')   ' CHECK POINT : ', psi_xpoint, psi_axis
 
 #endif
 

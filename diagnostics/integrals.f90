@@ -72,8 +72,6 @@ heat_src_out = 0.d0
 part_src_in  = 0.d0
 part_src_out = 0.d0
 
-rho_surfaces = 0.0
-
 Bgeo = F0 / R_geo
 
 do ife =1, element_list%n_elements
@@ -161,18 +159,6 @@ do ife =1, element_list%n_elements
           psi_limit, part_src, heat_src)
 #endif
 
-        ! --- 3D integrals to get particles deposited within a given flux surfaces
-        
-        do i_surface = 1, 4
-          if (psi_surfaces(i_surface)/=0.0) then
-            sur_domain = which_surface(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
-                         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) 
-            
-            if (sur_domain <= id_surfaces(i_surface) .and. sur_domain >= id_surfaces(1)) then
-              rho_surfaces(i_surface) = rho_surfaces(i_surface) +rho_00 * xjac * 2.d0 * PI * BigR * wst
-            end if
-          end if 
-        end do  
 
         ! --- 3D integrals
         D_int = D_int + rho_00        * xjac * 2.d0 * PI * BigR * wst

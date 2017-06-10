@@ -140,6 +140,9 @@ module domains
     real*8,  intent(in) :: psi_axis      !< psi-value at axis
     
     real*8 :: sign_corr
+    real*8 :: real_psi_surfaces(4)
+
+    real_psi_surfaces = 0.0;
 
     if ( .not. axis_is_min_initialized ) then
       axis_is_min = axis_is_psi_minimum(node_list, element_list, R_axis, Z_axis, psi_axis)
@@ -156,15 +159,20 @@ module domains
       
       if ( xcase == LOWER_XPOINT ) then
         
+        real_psi_surfaces(1) = psi_surfaces(1)*(psi_xpoint(1)-psi_axis) + psi_axis
+        real_psi_surfaces(2) = psi_surfaces(2)*(psi_xpoint(1)-psi_axis) + psi_axis
+        real_psi_surfaces(3) = psi_surfaces(3)*(psi_xpoint(1)-psi_axis) + psi_axis
+        real_psi_surfaces(4) = psi_surfaces(4)*(psi_xpoint(1)-psi_axis) + psi_axis
+
         if ( ( sign_corr*psi < sign_corr*psi_xpoint(1) ) .and. ( Z < Z_xpoint(1) ) ) then
           which_surface = DOMAIN_LOWER_PRIVATE
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(1) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(1) ) then
           which_surface = id_surfaces(1)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(2) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(2) ) then
           which_surface = id_surfaces(2)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(3) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(3) ) then
           which_surface = id_surfaces(3)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(4) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(4) ) then
           which_surface = id_surfaces(4)
         else if ( sign_corr*psi < sign_corr*psi_xpoint(1) ) then
           which_surface = DOMAIN_PLASMA
@@ -173,16 +181,22 @@ module domains
         end if
         
       else if ( xcase == UPPER_XPOINT ) then
+
+        real_psi_surfaces(1) = psi_surfaces(1)*(psi_xpoint(1)-psi_axis) + psi_axis
+        real_psi_surfaces(2) = psi_surfaces(2)*(psi_xpoint(1)-psi_axis) + psi_axis
+        real_psi_surfaces(3) = psi_surfaces(3)*(psi_xpoint(1)-psi_axis) + psi_axis
+        real_psi_surfaces(4) = psi_surfaces(4)*(psi_xpoint(1)-psi_axis) + psi_axis
+
         
         if ( ( sign_corr*psi < sign_corr*psi_xpoint(1) ) .and. ( Z > Z_xpoint(1) ) ) then
           which_surface = DOMAIN_UPPER_PRIVATE
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(1) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(1) ) then
           which_surface = id_surfaces(1)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(2) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(2) ) then
           which_surface = id_surfaces(2)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(3) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(3) ) then
           which_surface = id_surfaces(3)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(4) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(4) ) then
           which_surface = id_surfaces(4)
         else if ( sign_corr*psi < sign_corr*psi_xpoint(1) ) then
           which_surface = DOMAIN_PLASMA
@@ -191,18 +205,24 @@ module domains
         end if
         
       else if ( xcase == DOUBLE_NULL ) then
+
+        real_psi_surfaces(1) = psi_surfaces(1)*(sign_corr*minval(sign_corr*psi_xpoint)-psi_axis) + psi_axis
+        real_psi_surfaces(2) = psi_surfaces(2)*(sign_corr*minval(sign_corr*psi_xpoint)-psi_axis) + psi_axis
+        real_psi_surfaces(3) = psi_surfaces(3)*(sign_corr*minval(sign_corr*psi_xpoint)-psi_axis) + psi_axis
+        real_psi_surfaces(4) = psi_surfaces(4)*(sign_corr*minval(sign_corr*psi_xpoint)-psi_axis) + psi_axis
+
         
         if ( ( sign_corr*psi < sign_corr*psi_xpoint(1) ) .and. ( Z < Z_xpoint(1) ) ) then
           which_surface = DOMAIN_LOWER_PRIVATE
         else if ( ( sign_corr*psi < sign_corr*psi_xpoint(2) ) .and. ( Z > Z_xpoint(2) ) ) then
           which_surface = DOMAIN_UPPER_PRIVATE
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(1) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(1) ) then
           which_surface = id_surfaces(1)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(2) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(2) ) then
           which_surface = id_surfaces(2)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(3) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(3) ) then
           which_surface = id_surfaces(3)
-        else if ( sign_corr*psi < sign_corr*psi_surfaces(4) ) then
+        else if ( sign_corr*psi < sign_corr*real_psi_surfaces(4) ) then
           which_surface = id_surfaces(4)
         else if ( sign_corr*psi < minval(sign_corr*psi_xpoint) ) then
           which_surface = DOMAIN_PLASMA
@@ -215,14 +235,19 @@ module domains
       end if
       
     else
+
+        real_psi_surfaces(1) = psi_surfaces(1)*(psi_limit-psi_axis) + psi_axis
+        real_psi_surfaces(2) = psi_surfaces(2)*(psi_limit-psi_axis) + psi_axis
+        real_psi_surfaces(3) = psi_surfaces(3)*(psi_limit-psi_axis) + psi_axis
+        real_psi_surfaces(4) = psi_surfaces(4)*(psi_limit-psi_axis) + psi_axis
       
-      if ( sign_corr*psi < sign_corr*psi_surfaces(1) ) then
+      if ( sign_corr*psi < sign_corr*real_psi_surfaces(1) ) then
         which_surface = id_surfaces(1)
-      else if ( sign_corr*psi < sign_corr*psi_surfaces(2) ) then
+      else if ( sign_corr*psi < sign_corr*real_psi_surfaces(2) ) then
         which_surface = id_surfaces(2)
-      else if ( sign_corr*psi < sign_corr*psi_surfaces(3) ) then
+      else if ( sign_corr*psi < sign_corr*real_psi_surfaces(3) ) then
         which_surface = id_surfaces(3)
-      else if ( sign_corr*psi < sign_corr*psi_surfaces(4) ) then
+      else if ( sign_corr*psi < sign_corr*real_psi_surfaces(4) ) then
         which_surface = id_surfaces(4)
       else if ( sign_corr*psi < sign_corr*psi_limit ) then
         which_surface = DOMAIN_PLASMA

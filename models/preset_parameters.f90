@@ -355,6 +355,7 @@ subroutine preset_parameters
      n_spi           = 1
      psi_surfaces(:) = 0.0
      rho_surfaces(:) = 0.0
+     vol_surfaces(:) = 0.0
      count_surfaces(:) = 0.0
      id_surfaces(:)  = -1
      id_surfaces(1)  = 5

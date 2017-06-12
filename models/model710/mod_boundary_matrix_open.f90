@@ -40,7 +40,7 @@ real*8     :: ws, xjac,  BigR, phi, DL, Zbig
 real*8     :: R_mid, Z_mid, R_cnt, Z_cnt
 real*8     :: theta, zeta
 
-real*8     :: T0, T
+real*8     :: T0, T, r0, rho
 real*8     :: AR0, AR0_p, AR0_s, AR0_t, AR0_R, AR0_Z
 real*8     :: AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_R, AZ0_Z     
 real*8     :: A30, A30_p, A30_s, A30_t, A30_R, A30_Z
@@ -168,6 +168,7 @@ do ms=1, n_gauss
 
    do mp = 1, n_plane
 
+     r0    = eq_g(mp,var_r,ms)
      T0    = eq_g(mp,var_T,ms)
      uR0   = eq_g(mp,var_uR,ms)
      uZ0   = eq_g(mp,var_uZ,ms)
@@ -223,6 +224,8 @@ do ms=1, n_gauss
 
                                      - sqrt(BB2) * sqrt(gamma * T0) * B_dot_n / abs(B_dot_n) )
 
+           Qbnd(var_T) = - v * (gamma_sheath-1.d0) * r0 * T0 * (BR0*UR0 + BZ0*UZ0 + Bp0*Up0) * B_dot_n / BB2 * tstep
+
            do ivar= 1,n_var
              
              ij = index_ij + (ivar-1)*n_tor
@@ -252,6 +255,7 @@ do ms=1, n_gauss
                  bf_Z = ( - R_t(ms) * bf_s + R_s(ms) * bf_t ) / xjac
 
                  T     = bf
+                 rho   = bf
                  uR    = bf    ;  uZ    = bf    ;  up    = bf
                  AR    = bf    ;  AZ    = bf    ;  A3    = bf   
                  AR_R  = bf_R  ;  AZ_R  = bf_R  ;  A3_R  = bf_R 
@@ -268,7 +272,6 @@ do ms=1, n_gauss
                  BB2_AZ = 2.d0*(BR0_AZ * BR0 + BZ0_AZ * BZ0 + Bp0_AZ * Bp0 )
                  BB2_A3 = 2.d0*(BR0_A3 * BR0 + BZ0_A3 * BZ0 + Bp0_A3 * Bp0 )
 
-          !   Qbnd(var_uR) = zbig * v * ( UR0  - BR0 /sqrt(BB2) * sqrt(gamma * T0) * B_dot_n / abs(B_dot_n) )
 
                  Qjac(var_uR,var_T)  =   zbig * v * BR0 /sqrt(BB2) * T / (2.d0 * sqrt(gamma * T0)) * B_dot_n / abs(B_dot_n) 
 
@@ -281,7 +284,7 @@ do ms=1, n_gauss
                  Qjac(var_uR,var_A3) =   zbig * v * BR0_A3 /sqrt(BB2) * sqrt(gamma * T0) * B_dot_n / abs(B_dot_n) 
 
 
-                 Qjac(var_uZ,var_T)  =   zbig * v * BR0 /sqrt(BB2) * T / (2.d0 * sqrt(gamma * T0)) * B_dot_n / abs(B_dot_n) 
+                 Qjac(var_uZ,var_T)  =   zbig * v * BZ0 /sqrt(BB2) * T / (2.d0 * sqrt(gamma * T0)) * B_dot_n / abs(B_dot_n) 
 
                  Qjac(var_uZ,var_uR) =   0.d0
                  Qjac(var_uZ,var_uZ) = - zbig * v * uZ
@@ -301,6 +304,14 @@ do ms=1, n_gauss
                  Qjac(var_up,var_AR) = - zbig * v * ( BR0_AR * UR0 + BZ0_AR * UZ0 + Bp0_AR * Up0) 
                  Qjac(var_up,var_AZ) = - zbig * v * ( BR0_AZ * UR0 + BZ0_AZ * UZ0 + Bp0_AZ * Up0) 
                  Qjac(var_up,var_A3) = - zbig * v * ( BR0_A3 * UR0 + BZ0_A3 * UZ0 + Bp0_A3 * Up0) 
+
+
+                 Qjac(var_T,var_r)  = + v * (gamma_sheath-1.d0) * rho* T0 * (BR0*UR0 + BZ0*UZ0 + Bp0*Up0) * B_dot_n / BB2 * tstep
+                 Qjac(var_T,var_T)  = + v * (gamma_sheath-1.d0) * r0 * T  * (BR0*UR0 + BZ0*UZ0 + Bp0*Up0) * B_dot_n / BB2 * tstep
+
+                 Qjac(var_T,var_uR) = + v * (gamma_sheath-1.d0) * r0 * T0 * (BR0*UR                     ) * B_dot_n / BB2 * tstep
+                 Qjac(var_T,var_uZ) = + v * (gamma_sheath-1.d0) * r0 * T0 * (        + BZ0*UZ           ) * B_dot_n / BB2 * tstep
+                 Qjac(var_T,var_up) = + v * (gamma_sheath-1.d0) * r0 * T0 * (                  + Bp0*Up ) * B_dot_n / BB2 * tstep
 
                  index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix 
 

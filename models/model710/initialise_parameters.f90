@@ -54,7 +54,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, time_evol_scheme,                            &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, resistive_wall,                       &
+                freeboundary, resistive_wall, freeb_change_indices, &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
@@ -77,7 +77,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
                 Zaxis_find_limit, PF_pert_start_time,               &
-                starwall_equil_coils
+                diag_coils, rmp_coils, voltage_coils, vert_FB_amp
+                
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.

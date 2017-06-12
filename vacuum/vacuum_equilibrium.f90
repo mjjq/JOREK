@@ -26,11 +26,14 @@ module vacuum_equilibrium
     integer,          intent(in) :: my_id
     ! --- Local variables
     integer, parameter   :: filehandle = 60
-    integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2), err !n_coils already defined in vacuum module
-    character(len=512)   :: comment
+    integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2), err  !n_coils already defined in vacuum module
+    integer              :: i_start_pf, i_end_pf                                 !Indices for SW coils 
+  character(len=512)   :: comment
     
     if ( sr%n_tor == 0 ) return
     if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
+    
+    if (sr%ncoil /= 0 ) starwall_equil_coils = .true.  ! Use STARWALL PF coils if provided
     
     ! --- Decide wheter the coils will be given with COIL_FIELD or STARWALL
     if (.not. starwall_equil_coils) then
@@ -90,14 +93,11 @@ module vacuum_equilibrium
         write(*,32)
         write(*,*)
         
-        if ( n_coils /= n_pf_coils ) then
-          write(*,*) 'WARNING: namelist coils number n_pf_coils does not match with external coils number n_coils from coil_field.txt!'
-          stop
-        end if
+        call check_coil_curr_time_trace_input(n_coils) ! check if the user has introduced non existing coils 
         
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(n_coils) )
-          I_coils(1:n_coils) =  pf_coils(1:n_pf_coils)%current 
+          I_coils(1:n_coils) =  pf_coils(1:n_coils)%current 
           write(*,*) 'I_coils allocated '               
         end if
         
@@ -123,15 +123,14 @@ module vacuum_equilibrium
       call MPI_bcast(bext_tan,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
       call MPI_bcast(bext_nor,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
       call MPI_bcast(bext_psi,        dim(1)*dim(2), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+      
+      n_pf_coils = n_coils
     
     else    !STARWALL coils
       
       if ( my_id == 0 ) then
       
-        if ( sr%ncoil /= n_pf_coils ) then
-          write(*,*) 'WARNING: number of namelist coils "n_pf_coils" does not match the STARWALL number of coils'
-          stop
-        end if
+        call check_coil_curr_time_trace_input(sr%ncoil)   ! check if the user has introduced non existing coils
       
         if ( .not. resistive_wall ) then
           write(*,*) 'WARNING: ideal wall with equilibrium with starwall_coils is not ready to use yet'
@@ -143,26 +142,30 @@ module vacuum_equilibrium
         write(*,*) '* Using STARWALL equilibrium PF coils *'
         write(*,*) '***************************************'
         write(*,*) ''
+       
+		    i_start_pf = sr%ind_start_pol_coils
+        i_end_pf   = i_start_pf + sr%n_pol_coils - 1
       
         if ( .not. allocated(I_coils) ) then
           allocate( I_coils(sr%ncoil) )
-          I_coils(1:sr%ncoil) =  pf_coils(1:n_pf_coils)%current
-          n_coils             =  n_pf_coils
-          write(*,*) 'I_coils allocated '               
+          I_coils(:)                =  0.d0 
+          I_coils(i_start_pf:i_end_pf) =  pf_coils(1:sr%n_pol_coils)%current 
+          n_coils                   =  sr%ncoil
+          write(*,*) 'I_coils allocated '            
         endif
       endif
+      
+      n_pf_coils = sr%n_pol_coils
   
     endif   !End choice of STARWALL or COIL_FIELD coils
     
+    call MPI_bcast(n_coils,                       1, MPI_INTEGER,          0, MPI_COMM_WORLD, err)
     if ( my_id /= 0 ) then        
       if ( allocated(I_coils) ) deallocate(I_coils)
-      allocate( I_coils(n_pf_coils) )
-    end if
-    
-    call MPI_bcast(n_coils,                       1, MPI_INTEGER,          0, MPI_COMM_WORLD, err)
-    call MPI_bcast(I_coils,              n_pf_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(pf_coils%current,             30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
-    call MPI_bcast(pf_coils%FB_amp,              30, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+      allocate( I_coils(n_coils) )
+    end if 
+    call MPI_bcast(I_coils,                 n_coils, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(starwall_equil_coils,          1,          MPI_LOGICAL, 0, MPI_COMM_WORLD, err)
     
   end subroutine import_external_fields
   
@@ -195,7 +198,7 @@ module vacuum_equilibrium
     integer :: m_bndelem, l_vertex, l_dof, l_node, l_dir, l_node_bnd, l_index, ms
     integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
-    integer :: i, j
+    integer :: i, j, i_start_pf, i_end_pf
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
     real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, psi_0_j
@@ -204,13 +207,14 @@ module vacuum_equilibrium
     call equilibrium_VFB 
     
     if (starwall_equil_coils) then      
-      
+      i_start_pf = sr%ind_start_pol_coils
+      i_end_pf   = i_start_pf + sr%n_pol_coils -1
       if ( .not. allocated(wall_curr) )       allocate( wall_curr(n_wall_curr) ) 
       if ( .not. allocated (potentials_real)) allocate(potentials_real(n_wall_curr))      
       wall_curr       = 0.d0
       potentials_real = 0.d0
-      
-      potentials_real(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
+      potentials_real(1:sr%ncoil) = 0.d0
+      potentials_real(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) * mu_zero
       
       do i = 1, n_wall_curr
         wall_curr(i) = sum(sr%s_ww_inv(i,:) * potentials_real(:))    
@@ -314,8 +318,8 @@ module vacuum_equilibrium
    write(*,*) ' vertical_FB = ', vertical_FB
    
    do i=1, n_pf_coils
-     if( abs(pf_coils(i)%FB_amp) .gt. 1.d-6 ) then
-       I_coils(i) =  pf_coils(i)%current * (1 + pf_coils(i)%FB_amp * vertical_FB ) 
+     if( abs(vert_FB_amp(i)) .gt. 1.d-6 ) then
+       I_coils(i) =  pf_coils(i)%current * (1 + vert_FB_amp(i) * vertical_FB ) 
        write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo

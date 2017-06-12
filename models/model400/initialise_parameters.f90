@@ -63,7 +63,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
                 D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
-                freeboundary, resistive_wall,                       &
+                freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &

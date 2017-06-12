@@ -243,6 +243,7 @@ module phys_module
   logical :: resistive_wall          !< use a resistive or ideal wall?    (free boundary only)
   real*8  :: amix_freeb              !< choose amix for freeboundary equilibriums
   real*8  :: equil_accuracy_freeb    !< Tolerance of the convergence for the free-boundary equilibrium
+  logical :: freeb_change_indices    !< Exchange grid node indices to parallelize boundary integral
   
   !> @name Rectangular Grid
   !! Parameters defining a rectangular grid in R- and Z-directions in the poloidal plane.

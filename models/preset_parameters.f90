@@ -161,7 +161,7 @@ subroutine preset_parameters
   
   D_prof_neg  = 1.d-5
   ZK_prof_neg = 1.d-5
-  T_min       = 0.0
+  T_min       = 1.d-5
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)

@@ -29,7 +29,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-
+use diffusivities, only: get_dperp, get_zkperp
 
 implicit none
 
@@ -44,30 +44,30 @@ integer, intent(in) :: tid
 
 integer    :: i, j, k, l, index_ij, index_kl, index, xcase2, inode
 integer    :: in, im, ij, kl, ivar, kvar, ms, mt, mp
-real*8     :: wst, xjac, xjac_s, xjac_t, xjac_R, xjac_Z, xjac3, BigR, phi
+real*8     :: wst, xjac, xjac3, BigR, phi
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss), source_pellet
 real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 
-real*8     :: uR0, uR0_R, uR0_Z, uR0_p, uR0_s, uR0_t, uR0_ss, uR0_st, uR0_tt, uR0_RR, uR0_ZZ, uR0_RZ, uR0_pp
-real*8     :: uZ0, uZ0_R, uZ0_Z, uZ0_p, uZ0_s, uZ0_t, uZ0_ss, uZ0_st, uZ0_tt, uZ0_RR, uZ0_ZZ, uZ0_RZ, uZ0_pp
-real*8     :: up0, up0_R, up0_Z, up0_p, up0_s, up0_t, up0_ss, up0_st, up0_tt, up0_RR, up0_ZZ, up0_RZ, up0_pp, up0_Rp, up0_Zp
-real*8     :: AR0, AR0_R, AR0_Z, AR0_p, AR0_s, AR0_t, AR0_ss, AR0_st, AR0_tt
-real*8     :: AZ0, AZ0_R, AZ0_Z, AZ0_p, AZ0_s, AZ0_t, AZ0_ss, AZ0_st, AZ0_tt
-real*8     :: A30, A30_R, A30_Z, A30_p, A30_s, A30_t, A30_ss, A30_st, A30_tt
-real*8     :: r0, r0_R, r0_Z, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_RR, r0_ZZ
-real*8     :: T0, T0_R, T0_Z, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt
-real*8     :: p0, p0_R, p0_Z, p0_p, p0_s, p0_t, p0_ss, p0_st, p0_tt
-real*8     :: uR, uR_R, uR_Z, uR_p, uR_s, uR_t, uR_RR, uR_ZZ, uR_pp
-real*8     :: uZ, uZ_R, uZ_Z, uZ_p, uZ_s, uZ_t, uZ_RR, uZ_ZZ, uZ_pp
-real*8     :: up, up_R, up_Z, up_p, up_s, up_t, up_RR, up_ZZ, up_pp
+real*8     :: uR0, uR0_R, uR0_Z, uR0_p, uR0_s, uR0_t 
+real*8     :: uZ0, uZ0_R, uZ0_Z, uZ0_p, uZ0_s, uZ0_t 
+real*8     :: up0, up0_R, up0_Z, up0_p, up0_s, up0_t
+real*8     :: AR0, AR0_R, AR0_Z, AR0_p, AR0_s, AR0_t
+real*8     :: AZ0, AZ0_R, AZ0_Z, AZ0_p, AZ0_s, AZ0_t
+real*8     :: A30, A30_R, A30_Z, A30_p, A30_s, A30_t
+real*8     :: r0, r0_R, r0_Z, r0_p, r0_s, r0_t
+real*8     :: T0, T0_R, T0_Z, T0_p, T0_s, T0_t
+real*8     :: p0, p0_R, p0_Z, p0_p, p0_s, p0_t
+real*8     :: uR, uR_R, uR_Z, uR_p, uR_s, uR_t
+real*8     :: uZ, uZ_R, uZ_Z, uZ_p, uZ_s, uZ_t
+real*8     :: up, up_R, up_Z, up_p, up_s, up_t
 real*8     :: AR, AR_R, AR_Z, AR_p, AR_s, AR_t
 real*8     :: AZ, AZ_R, AZ_Z, AZ_p, AZ_s, AZ_t
 real*8     :: A3, A3_R, A3_Z, A3_p, A3_s, A3_t
 real*8     :: T, T_R, T_Z, T_p, T_s, T_t
 real*8     :: r, r_R, r_Z, r_p, r_s, r_t
 
-real*8     :: v, v_R, v_Z, v_s, v_t, v_p, v_ss, v_st, v_tt, v_RR, v_ZZ, v_RZ
-real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ, bf_RZ, bf_pp
+real*8     :: v, v_R, v_Z, v_s, v_t, v_p
+real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p
    
 real*8     :: B0grad_T0,    B0grad_T0_AR,    B0grad_T0_AZ,    B0grad_T0_A3
 real*8     :: B0grad_r0,    B0grad_r0_AR,    B0grad_r0_AZ,    B0grad_r0_A3
@@ -86,7 +86,7 @@ real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht
 
 real*8     :: Fprof, Fprof_R, Fprof_Z, psieq_R, psieq_Z
 
-real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_R, eta_Z, eta_p
+real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt
 
 real*8     :: Qvisc_uR, Qvisc_uZ, Qvisc_up, Qvisc_T, Q_uR_primitive, Q_uZ_primitive, Q_up_primitive
 
@@ -98,16 +98,10 @@ real*8, dimension(n_var,n_var)        :: amat, Pjac, Qjac
 real*8, dimension(n_gauss,n_gauss)    :: Fprofile,Fprofile_s,Fprofile_t, psieq, psieq_s, psieq_t
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
-real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t
-real*8, dimension(n_gauss,n_gauss)    :: y_ss, y_st, y_tt
 
-real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
-real*8, dimension(:,:,:,:) , pointer :: eq_p, eq_pp
-real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt   
+real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t,eq_p
 real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
-
-
 
 integer*4  :: rank
 integer    :: my_id, ierr
@@ -132,10 +126,6 @@ eq_g    => thread_struct(tid)%eq_g
 eq_s    => thread_struct(tid)%eq_s   
 eq_t    => thread_struct(tid)%eq_t   
 eq_p    => thread_struct(tid)%eq_p   
-eq_ss   => thread_struct(tid)%eq_ss  
-eq_st   => thread_struct(tid)%eq_st  
-eq_tt   => thread_struct(tid)%eq_tt 
-eq_pp   => thread_struct(tid)%eq_pp 
 delta_g => thread_struct(tid)%delta_g
 delta_s => thread_struct(tid)%delta_s
 delta_t => thread_struct(tid)%delta_t
@@ -173,9 +163,9 @@ if( parallel_projection ) primitive = .true.
 
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
-x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
-y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_st  = 0.d0; y_ss  = 0.d0; y_tt  = 0.d0;
-eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_st = 0.d0; eq_ss = 0.d0; eq_tt = 0.d0; eq_p = 0.d0; eq_pp = 0.d0
+x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; 
+y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; 
+eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0
 
 psieq   = 0.d0; psieq_s = 0.d0; psieq_t = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
@@ -209,17 +199,9 @@ do i=1,n_vertex_max
        x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
        x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
-       x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
-       x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
-
        y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
        y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
        y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
-
-       y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
-       y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
-       y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
 
 #ifdef fullmhd
            Fprofile(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H(i,j,ms,mt)
@@ -242,12 +224,6 @@ do i=1,n_vertex_max
              eq_s(mp,k,ms,mt)    = eq_s(mp,k,ms,mt)    + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt) * HZ(in,mp)
              eq_t(mp,k,ms,mt)    = eq_t(mp,k,ms,mt)    + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt) * HZ(in,mp)
              eq_p(mp,k,ms,mt)    = eq_p(mp,k,ms,mt)    + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)   * HZ_p(in,mp)
-
-             eq_ss(mp,k,ms,mt)   = eq_ss(mp,k,ms,mt)   + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt) * HZ(in,mp)
-             eq_st(mp,k,ms,mt)   = eq_st(mp,k,ms,mt)   + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt) * HZ(in,mp)
-             eq_tt(mp,k,ms,mt)   = eq_tt(mp,k,ms,mt)   + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt) * HZ(in,mp)
-
-             eq_pp(mp,k,ms,mt)   = eq_pp(mp,k,ms,mt)   + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt) * HZ_pp(in,mp)
 
              delta_g(mp,k,ms,mt) = delta_g(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H(i,j,ms,mt)   * HZ(in,mp)
              delta_s(mp,k,ms,mt) = delta_s(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt) * HZ(in,mp)
@@ -281,17 +257,6 @@ do ms=1, n_gauss
 
    xjac    = x_s(ms,mt)*y_t(ms,mt)  - x_t(ms,mt)*y_s(ms,mt)
    
-   ! with s_x = y_t/xjac ;   s_y = -x_t/xjac ;   t_x = -y_s/xjac ;  t_y = x_s/xjac 
-   xjac_R   = ( x_ss(ms,mt) * y_t(ms,mt)**2 - 2.d0*x_st(ms,mt) * y_s(ms,mt)*y_t(ms,mt)      &
-               + x_tt(ms,mt) * y_s(ms,mt)**2                                                &      
-               + x_s(ms,mt) * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )            &   
-               + x_t(ms,mt) * (y_st(ms,mt)*y_s(ms,mt)  - y_ss(ms,mt)*y_t(ms,mt) )   )/xjac
-
-   xjac_Z  = ( y_ss(ms,mt) * x_t(ms,mt)**2 - 2.d0*y_st(ms,mt) * x_s(ms,mt)*x_t(ms,mt)      &
-             + y_tt(ms,mt) * x_s(ms,mt)**2                                                 &     
-             + y_s(ms,mt) * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )             &  
-             + y_t(ms,mt) * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac
-
    BigR    = x_g(ms,mt)
    BigR2   = BigR*BigR
 
@@ -357,33 +322,12 @@ do ms=1, n_gauss
      r0_R  = (   y_t(ms,mt) * r0_s  - y_s(ms,mt) * r0_t ) / xjac
      r0_Z  = ( - x_t(ms,mt) * r0_s  + x_s(ms,mt) * r0_t ) / xjac
 
-     r0_ss = eq_ss(mp,var_r,ms,mt)
-     r0_tt = eq_tt(mp,var_r,ms,mt)
-     r0_st = eq_st(mp,var_r,ms,mt)
-
-
-     r0_RR =  (   r0_ss * y_t(ms,mt)**2 - 2.d0*r0_st * y_s(ms,mt)*y_t(ms,mt)              &
-               + r0_tt * y_s(ms,mt)**2                                                    &      
-               + r0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &   
-               + r0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) )           )/ xjac**2   &
-               - r0_R * xjac_R / xjac
-
-     r0_ZZ =  (   r0_ss * x_t(ms,mt)**2 - 2.d0*r0_st * x_s(ms,mt)*x_t(ms,mt)              &
-               + r0_tt * x_s(ms,mt)**2                                                    &     
-               + r0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &  
-               + r0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
-               - r0_Z * xjac_Z / xjac
-
-
      T0    = eq_g(mp,var_T,ms,mt)
      T0_p  = eq_p(mp,var_T,ms,mt)
      T0_s  = eq_s(mp,var_T,ms,mt)
      T0_t  = eq_t(mp,var_T,ms,mt)
      T0_R  = (   y_t(ms,mt) * T0_s  - y_s(ms,mt) * T0_t ) / xjac
      T0_Z  = ( - x_t(ms,mt) * T0_s  + x_s(ms,mt) * T0_t ) / xjac
-!     T0_ss = eq_ss(mp,var_T,ms,mt)
-!     T0_tt = eq_tt(mp,var_T,ms,mt)
-!     T0_st = eq_st(mp,var_T,ms,mt)
 
      p0    = r0 * T0
      p0_R  = r0_R * T0 + r0 * T0_R
@@ -391,89 +335,40 @@ do ms=1, n_gauss
      p0_s  = r0_s * T0 + r0 * T0_s
      p0_t  = r0_t * T0 + r0 * T0_t
      p0_p  = r0_p * T0 + r0 * T0_p
-!     p0_ss = r0_ss * T0 + 2.d0 * r0_s * T0_s + r0 * T0_ss
-!     p0_tt = r0_tt * T0 + 2.d0 * r0_t * T0_t + r0 * T0_tt
-!     p0_st = r0_st * T0 + r0_s * T0_t + r0_t * T0_s + r0 * T0_st
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! second derivatives of velocity components
-if ( primitive .and. visco /= 0.d0 ) then
-
-     uR0_ss = eq_ss(mp,var_uR,ms,mt) ; uR0_tt = eq_tt(mp,var_uR,ms,mt) ; uR0_st = eq_st(mp,var_uR,ms,mt) ; uR0_pp = eq_pp(mp,var_uR,ms,mt) 
-     uZ0_ss = eq_ss(mp,var_uZ,ms,mt) ; uZ0_tt = eq_tt(mp,var_uZ,ms,mt) ; uZ0_st = eq_st(mp,var_uZ,ms,mt) ; uZ0_pp = eq_pp(mp,var_uZ,ms,mt)
-     up0_ss = eq_ss(mp,var_up,ms,mt) ; up0_tt = eq_tt(mp,var_up,ms,mt) ; up0_st = eq_st(mp,var_up,ms,mt) ; up0_pp = eq_pp(mp,var_up,ms,mt)
-
-     uR0_RR =  (   uR0_ss * y_t(ms,mt)**2 - 2.d0*uR0_st * y_s(ms,mt)*y_t(ms,mt)              &
-                 + uR0_tt * y_s(ms,mt)**2                                                    &      
-                 + uR0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &   
-                 + uR0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) )   )/ xjac**2   &
-                 - uR0_R * xjac_R / xjac
-
-     uR0_ZZ =  (   uR0_ss * x_t(ms,mt)**2 - 2.d0*uR0_st * x_s(ms,mt)*x_t(ms,mt)              &
-                 + uR0_tt * x_s(ms,mt)**2                                                    &     
-                 + uR0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &  
-                 + uR0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
-                 - uR0_Z * xjac_Z / xjac
-
-!     uR0_RZ =  ( - uR0_ss * y_t(ms,mt)*x_t(ms,mt) - uR0_tt * x_s(ms,mt)*y_s(ms,mt)           &
-!                 + uR0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )               &        
-!                 + uR0_s  * (x_tt(ms,mt)*y_s(ms,mt) - x_st(ms,mt)*y_t(ms,mt)  )              &   
-!                 + uR0_t  * (x_ss(ms,mt)*y_t(ms,mt) - x_st(ms,mt)*y_s(ms,mt)  )  )/ xjac**2
-
-     uZ0_RR =  (   uZ0_ss * y_t(ms,mt)**2 - 2.d0*uZ0_st * y_s(ms,mt)*y_t(ms,mt)              &
-                 + uZ0_tt * y_s(ms,mt)**2                                                    &      
-                 + uZ0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &   
-                 + uZ0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) )   )/ xjac**2   &
-                 - uZ0_R * xjac_R / xjac
-
-     uZ0_ZZ =  (   uZ0_ss * x_t(ms,mt)**2 - 2.d0*uZ0_st * x_s(ms,mt)*x_t(ms,mt)              &
-                 + uZ0_tt * x_s(ms,mt)**2                                                    &     
-                 + uZ0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &  
-                 + uZ0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
-                 - uZ0_Z * xjac_Z / xjac
-
-     up0_RR =  (   up0_ss * y_t(ms,mt)**2 - 2.d0*up0_st * y_s(ms,mt)*y_t(ms,mt)              &
-                 + up0_tt * y_s(ms,mt)**2                                                    &      
-                 + up0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &   
-                 + up0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) )   )/ xjac**2   &
-                 - up0_R * xjac_R / xjac
-
-     up0_ZZ =  (   up0_ss * x_t(ms,mt)**2 - 2.d0*up0_st * x_s(ms,mt)*x_t(ms,mt)              &
-                 + up0_tt * x_s(ms,mt)**2                                                    &     
-                 + up0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &  
-                 + up0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
-                 - up0_Z * xjac_Z / xjac
-
-else
-     uR0_ss = 0.d0; uR0_tt = 0.d0; uR0_st = 0.d0; uR0_pp = 0.d0; uR0_RR = 0.d0; uR0_ZZ = 0.d0
-     uZ0_ss = 0.d0; uZ0_tt = 0.d0; uZ0_st = 0.d0; uZ0_pp = 0.d0; uZ0_RR = 0.d0; uZ0_ZZ = 0.d0
-     up0_ss = 0.d0; up0_tt = 0.d0; up0_st = 0.d0; up0_pp = 0.d0; up0_RR = 0.d0; up0_ZZ = 0.d0
-endif
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Diffusivities
 
      psi_norm = (A30 - psi_axis) / (psi_bnd - psi_axis)
-     D_prof  = D_perp(1)  * ((1.d0- D_perp(2)) + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4) )))
-     ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
+
+     if (xpoint2) then
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
+         psi_norm = 2.d0 - psi_norm
+       endif
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
+         psi_norm = 2.d0 - psi_norm
+       endif
+     endif
+
+     D_prof  = get_dperp (psi_norm)
+     ZK_prof = get_zkperp(psi_norm)
 
 
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
+
        eta_T     =   eta   * (abs(T0)/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
        d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+
+       if (T0 .lt. T_min) then
+         eta_T     = eta * (T_min/T_0)**(+2.5d0)
+         deta_dT   = 0.d0
+         d2eta_d2T = 0.d0
+       endif
+
      else
        eta_T     = eta
        deta_dT   = 0.d0
        d2eta_d2T = 0.d0
      end if
-
-!deta_dT = 0.d0
-!d2eta_d2T = 0.d0
 
      eta_R = deta_dT * T0_R
      eta_Z = deta_dT * T0_Z
@@ -481,15 +376,40 @@ endif
 
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
+
        visco_T   = visco * (abs(T0)/T_0)**(-1.5d0)
        dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+
+       if (T0 .lt. T_min) then
+         visco_T     = visco * (T_min/T_0)**(+2.5d0)
+         dvisco_dT   = 0.d0
+       endif
+
      else
        visco_T   = visco
        dvisco_dT = 0.d0
      end if
-     if ( primitive .and. visco_T_dependent ) then
-!       write(*,*) 'warning: visco_T_dependent not yet implemented for primitive formulation'
+
+     if ( ZKpar_T_dependent ) then
+
+       ZKpar_T   = ZK_par * (abs(T0)/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+       dZKpar_dT = ZK_par * (2.5d0)  * abs(T0)**(+1.5d0) * T_0**(-2.5d0)
+
+!       if (ZKpar_T .gt. ZK_par_max) then
+!         ZKpar_T   = Zk_par_max
+!         dZKpar_dT = 0.d0
+!       endif
+
+       if (T0 .lt. T_min) then
+         ZKpar_T   = ZK_par * (T_min/T_0)**(+2.5d0)
+         dZKpar_dT = 0.d0
+       endif
+
+     else
+       ZKpar_T   = ZK_par                                            ! parallel conductivity
+       dZKpar_dT = 0.d0
      endif
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -590,39 +510,6 @@ endif
            v_R = (  y_t(ms,mt) * v_s - y_s(ms,mt) * v_t ) / xjac
            v_Z = (- x_t(ms,mt) * v_s + x_s(ms,mt) * v_t ) / xjac 
 
-           v_ss = H_ss(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
-           v_tt = H_tt(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
-           v_st = H_st(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
-
-        
-           ! Writing s(R,Z), t(R,Z), using the chain rule, the above first derivatives, and:
-           ! s_x = y_t/xjac ;   s_y = -x_t/xjac ;   t_x = -y_s/xjac ;  t_y = x_s/xjac 
-
-           v_RR =  (   v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt)                &
-                     + v_tt * y_s(ms,mt)**2                                                    &      
-                     + v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &   
-                     + v_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) )           )/ xjac**2   &
-                     - v_R * xjac_R / xjac
-
-           v_ZZ =  (   v_ss * x_t(ms,mt)**2 - 2.d0*v_st * x_s(ms,mt)*x_t(ms,mt)                &
-                     + v_tt * x_s(ms,mt)**2                                                    &     
-                     + v_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &  
-                     + v_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
-                     - v_Z * xjac_Z / xjac
-
-!           v_RZ =  ( - v_ss * y_t(ms,mt)*x_t(ms,mt) - v_tt * x_s(ms,mt)*y_s(ms,mt)             &
-!                     + v_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )               &        
-!!                     + v_s  * (y_tt(ms,mt)*x_s(ms,mt) - y_st(ms,mt)*x_t(ms,mt)  )              &
-!!                     + v_t  * (y_ss(ms,mt)*x_t(ms,mt) - y_st(ms,mt)*x_s(ms,mt)  )  )/ xjac**2  &
-!!                     - v_R * xjac_Z / xjac
-!! or, equivalently
-!                     + v_s  * (x_tt(ms,mt)*y_s(ms,mt) - x_st(ms,mt)*y_t(ms,mt)  )              &
-!                     + v_t  * (x_ss(ms,mt)*y_t(ms,mt) - x_st(ms,mt)*y_s(ms,mt)  )  )/ xjac**2
-
-
-
-
-
 
            ! Some more auxiliary quantities, involving the test functions 
            B0grad_vstar     = BR0  * v_R  + BZ0  * v_Z  + Bp0 * v_p  / BigR
@@ -706,12 +593,9 @@ endif
 
              Q_uR_primitive   =   v * ( - r0  * ( u0grad_uR0 - up0**2 / BigR ) - uR0 * divru - p0_R ) &  ! advection + pressure
 
-!                               + v * visco * (  uR0_RR + uR0_R / BigR + uR0_ZZ + uR0_pp / BigR**2    &  ! laplacian part viscous term
-!                                               - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2            )
+                                + v * visco_T * ( - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2            ) &
 
-                                + v * visco * ( - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2            ) &
-
-                                - visco * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)        ! laplacian part viscous term
+                                - visco_T * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)        ! laplacian part viscous term
 
              
              ! adding the stabilization contribution
@@ -721,7 +605,7 @@ endif
              Q_uR_primitive =  Q_uR_primitive - TG_NUM_Eq*TG_NUM(var_uR) * Vms(var_uR)  
 
 
-             Qvec(var_uR) = Q_uR_primitive - ( visco + visco2 ) * divu * ( v_R + v / BigR )  &                   ! primitive + nonprimitive viscous part
+             Qvec(var_uR) = Q_uR_primitive - ( visco_T + visco2 ) * divu * ( v_R + v / BigR )  &                   ! primitive + nonprimitive viscous part
                            
                           - ( BR0 * B0grad_vstar + Bp0**2 * v / BigR ) + ( v_R + v / BigR ) * ( 0.5d0 * BB2 )  !           + nonprimitive Lorentz force
 
@@ -750,11 +634,9 @@ endif
 
              Q_uZ_primitive   =   v * ( - r0  * u0grad_uZ0 - uZ0 * divru - p0_Z )                     &
 
-!                                + v * visco * (  uZ0_RR + uZ0_R / BigR + uZ0_ZZ + uZ0_pp / BigR**2 )
+                                - visco_T * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)        ! laplacian part viscous term
 
-                                - visco * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)        ! laplacian part viscous term
-
-             Qvec(var_uZ) = Q_uZ_primitive - ( visco + visco2 ) * divu * v_Z   &
+             Qvec(var_uZ) = Q_uZ_primitive - ( visco_T + visco2 ) * divu * v_Z   &
 
                                 - BZ0 * B0grad_vstar + v_Z * ( 0.5d0 * BB2 )
              
@@ -789,12 +671,9 @@ endif
 
              Q_up_primitive   = v * ( - r0  * ( u0grad_up0 + uR0 * up0 / BigR ) - up0 * divru - p0_p / BigR )   & 
 
-!                                + v * visco * (  up0_RR + up0_R / BigR + up0_ZZ + up0_pp / BigR**2              &
-!                                               - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2            )       
+                              + v * visco_T * ( - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2            )  &     
 
-                              + v * visco * ( - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2            )  &     
-
-                              - visco * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
+                              - visco_T * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)        ! laplacian part viscous term
 
              ! adding the stabilization contribution
              ! --------------------------------------------------------------------------------------
@@ -815,10 +694,10 @@ endif
                                    + v * r0 * ( BR0 * delta_g(mp,var_uR,ms,mt) + BZ0 * delta_g(mp,var_uZ,ms,mt) + Bp0 * delta_g(mp,var_up,ms,mt) )
 
                Qvec(var_up)      = BR0 * Q_uR_primitive + BZ0 * Q_uZ_primitive + Bp0 * Q_up_primitive &  ! The Lorentz force dissapears under a parallel projection
-                                   - ( visco + visco2 ) * divu * B0grad_vstar                            ! the non-primitive viscous terms, using div-B = 0
+                                   - ( visco_T + visco2 ) * divu * B0grad_vstar                            ! the non-primitive viscous terms, using div-B = 0
 
              else
-               Qvec(var_up) = Q_up_primitive - ( visco + visco2 ) * divu * ( v_p / BigR )  & 
+               Qvec(var_up) = Q_up_primitive - ( visco_T + visco2 ) * divu * ( v_p / BigR )  & 
                               - ( Bp0 * B0grad_vstar - BR0 * Bp0 * v / BigR ) + ( v_p / BigR ) * ( 0.5d0 * BB2 )
              endif
 
@@ -871,10 +750,10 @@ endif
 
            if (primitive) then 
              Qvec(var_T) =   v * ( - r0 * u0grad_T0 - T0 * u0grad_r0 - gamma * p0 * divu ) + heat_source(ms,mt)  &
-                           + (gamma-1.d0)*( - ZK_prof * gradT0grad_vstar - (ZK_par-ZK_prof) * B0grad_T0 * B0grad_vstar / BB2 )
+                           + (gamma-1.d0)*( - ZK_prof * gradT0grad_vstar - (ZKpar_T-ZK_prof) * B0grad_T0 * B0grad_vstar / BB2 )
            else
              Qvec(var_T) =    gamma * p0 * u0grad_vstar                                    &
-             + (gamma-1.d0)*( - ZK_prof * gradT0grad_vstar - (ZK_par-ZK_prof) * B0grad_T0 * B0grad_vstar / BB2               & 
+             + (gamma-1.d0)*( - ZK_prof * gradT0grad_vstar - (ZKpar_T-ZK_prof) * B0grad_T0 * B0grad_vstar / BB2               & 
                               + v * ( r0 * u0grad_T0 + T0 * u0grad_r0 + heat_source(ms,mt) ) )
            endif
 
@@ -937,43 +816,12 @@ endif
                  bf_R = (   y_t(ms,mt) * bf_s - y_s(ms,mt) * bf_t ) / xjac
                  bf_Z = ( - x_t(ms,mt) * bf_s + x_s(ms,mt) * bf_t ) / xjac
 
-                 bf_ss = H_ss(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
-                 bf_tt = H_tt(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
-                 bf_st = H_st(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
-                 bf_pp = H(k,l,ms,mt)    * element%size(k,l) * HZ_pp(in,mp)
-
-
-                 bf_RR =  (   bf_ss * y_t(ms,mt)**2 - 2.d0*bf_st * y_s(ms,mt)*y_t(ms,mt)                &
-                           + bf_tt * y_s(ms,mt)**2                                                    &      
-                           + bf_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &   
-                           + bf_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) )           )/ xjac**2   &
-                           - bf_R * xjac_R / xjac
-
-                 bf_ZZ =  (   bf_ss * x_t(ms,mt)**2 - 2.d0*bf_st * x_s(ms,mt)*x_t(ms,mt)                &
-                           + bf_tt * x_s(ms,mt)**2                                                    &     
-                           + bf_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &  
-                           + bf_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
-                           - bf_Z * xjac_Z / xjac
-
-!                bf_RZ =  ( - bf_ss * y_t(ms,mt)*x_t(ms,mt) - bf_tt * x_s(ms,mt)*y_s(ms,mt)             &
-!                           + bf_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )               &        
-!      !                     + bf_s  * (y_tt(ms,mt)*x_s(ms,mt) - y_st(ms,mt)*x_t(ms,mt)  )              &
-!      !                     + bf_t  * (y_ss(ms,mt)*x_t(ms,mt) - y_st(ms,mt)*x_s(ms,mt)  )  )/ xjac**2  &
-!      !                     - bf_R * xjac_Z / xjac
-!      ! or, equivalently
-!                           + bf_s  * (x_tt(ms,mt)*y_s(ms,mt) - x_st(ms,mt)*y_t(ms,mt)  )              &   
-!                           + bf_t  * (x_ss(ms,mt)*y_t(ms,mt) - x_st(ms,mt)*y_s(ms,mt)  )  )/ xjac**2
-
                  uR    = bf    ;  uZ    = bf    ;  up    = bf
                  uR_R  = bf_R  ;  uZ_R  = bf_R  ;  up_R  = bf_R
                  uR_Z  = bf_Z  ;  uZ_Z  = bf_Z  ;  up_Z  = bf_Z
                  uR_p  = bf_p  ;  uZ_p  = bf_p  ;  up_p  = bf_p
                  uR_s  = bf_s  ;  uZ_s  = bf_s  ;  up_s  = bf_s
                  uR_t  = bf_t  ;  uZ_t  = bf_t  ;  up_t  = bf_t
-                 uR_RR = bf_RR ;  uZ_RR = bf_RR ;  up_RR = bf_RR
-                 uR_ZZ = bf_ZZ ;  uZ_ZZ = bf_ZZ ;  up_ZZ = bf_ZZ
-                 uR_pp = bf_pp ;  uZ_pp = bf_pp ;  up_pp = bf_pp
-
 
                  AR    = bf    ;  AZ    = bf    ;  A3    = bf    ; T    = bf    ; r    = bf
                  AR_R  = bf_R  ;  AZ_R  = bf_R  ;  A3_R  = bf_R  ; T_R  = bf_R  ; r_R  = bf_R 
@@ -1060,7 +908,7 @@ endif
                 ! -----------------------------------------------------------------------------
                 QvmsAd(var_AR,var_AR) =  CvGradVj * CvGradVi + Cvp0 * AR  * Cvp0 * v / BigR2
                 QvmsAd(var_AR,var_A3) =  Cvp0 * A3 / BigR2  * CvGradVi                            &
-                     &                + ( - CvGradVj + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2     )
+                                      + ( - CvGradVj + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2
                 
                 Qjac(var_AR, :) = Qjac(var_AR,:) - TG_NUM(var_AR) *  QvmsAd(var_AR, :)
                 
@@ -1157,26 +1005,32 @@ endif
 
 
                  Qjac(var_uR,var_uR) =   v * ( - r0 * ( uR * uR0_R + u0grad_bf ) - uR * divru - uR0 * divru_uR )       & 
-
-!                                       + v * visco * (  uR_RR + uR_R / BigR + uR_ZZ + uR_pp / BigR**2 - uR / BigR**2 ) &
  
-                                        + v * visco * ( - uR / BigR**2 ) &
+                                        + v * visco_T * ( - uR / BigR**2 ) &
 
-                                       - visco * (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)  &      ! laplacian part viscous term
+                                       - visco_T * (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)  &      ! laplacian part viscous term
 
-                                       - ( visco + visco2 ) * divu_uR * ( v_R + v / BigR )
+                                       - ( visco_T + visco2 ) * divu_uR * ( v_R + v / BigR )
 
                  Qjac(var_uR,var_uZ) =   v * ( - r0  * uZ * uR0_Z - uR0 * divru_uZ )       &
-                                       - ( visco + visco2 ) * divu_uZ * ( v_R + v / BigR )
+                                       - ( visco_T + visco2 ) * divu_uZ * ( v_R + v / BigR )
 
                  Qjac(var_uR,var_up) =   v * ( - r0  * ( up * uR0_p / BigR - 2.d0 * up0 * up / BigR ) - uR0 * divru_up ) &
-                                       + v * visco * ( - 2.d0 * up_p / BigR**2 ) - ( visco + visco2 ) * divu_up * ( v_R + v / BigR )
+                                       + v * visco_T * ( - 2.d0 * up_p / BigR**2 ) - ( visco + visco2 ) * divu_up * ( v_R + v / BigR )
 
                  Qjac(var_uR,var_r)  =   v * ( - r  * ( u0grad_uR0 - up0**2 / BigR ) - uR0 * divru_r - ( r * T0_R + r_R * T0 ) )
 
-                 Qjac(var_uR,var_T)  =   v * ( - ( r0 * T_R + r0_R * T ) ) 
+                 Qjac(var_uR,var_T)  =   v * ( - ( r0 * T_R + r0_R * T ) )  &
+
+                                       + v * dvisco_dT * T * ( - uR0 / BigR**2 - 2.d0 * up0_p / BigR**2          ) &
+
+                                       - dvisco_dT * T * (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)       &
+
+                                       - dvisco_dT * T * divu * ( v_R + v / BigR ) 
+
 
                  else
+
                  Qjac(var_uR,var_uR) =   r0 * ( uR * u0grad_vstar + uR0 * uR * v_R )                                  &
                                        - ( v_R + v / BigR ) * visco2 * divu_uR                                        &
                                        - visco_T * ( 2.d0 * uR_R * v_R + uR_Z * v_Z + uR_p * v_p / BigR**2 )
@@ -1239,24 +1093,27 @@ endif
                  if (primitive) then
 
                  Qjac(var_uZ,var_uR) =   v * ( - r0  * uR * uZ0_R - uZ0 * divru_uR )                              & 
-                                       - ( visco + visco2 ) * divu_uR * v_Z 
+                                       - ( visco_T + visco2 ) * divu_uR * v_Z 
   
                  Qjac(var_uZ,var_uZ) =   v * ( - r0  * ( uZ * uZ0_Z + u0grad_bf ) - uZ * divru - uZ0 * divru_uZ ) &
 
-!                                       + v * visco * (  uZ_RR + uZ_R / BigR + uZ_ZZ + uZ_pp / BigR**2 )           &
+                                       - visco_T * (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2)   &     ! laplacian part viscous term
 
-                                       - visco * (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2)   &     ! laplacian part viscous term
+                                       - ( visco_T + visco2 ) * divu_uZ * v_Z 
 
-                                       - ( visco + visco2 ) * divu_uZ * v_Z 
-
-                 Qjac(var_uZ,var_up) =   v * ( - r0  * up * uZ0_p / BigR - uZ0 * divru_up )                       &
-                                       - ( visco + visco2 ) * divu_up * v_Z 
+                 Qjac(var_uZ,var_up) =   v * ( - r0  * up * uZ0_p / BigR - uZ0 * divru_up )                    &
+                                       - ( visco_T + visco2 ) * divu_up * v_Z 
 
                  Qjac(var_uZ,var_r)  =   v * ( - r  * u0grad_uZ0 - uZ0 * divru_r - ( r * T0_Z + r_Z * T0 ) )
 
-                 Qjac(var_uZ,var_T)  =   v * ( - ( r0 * T_Z + r0_Z * T ) )
+                 Qjac(var_uZ,var_T)  =   v * ( - ( r0 * T_Z + r0_Z * T ) )                                     &
+
+                                      - dvisco_dT * T * (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2)    &
+                                       
+                                      - dvisco_dT * T * divu * v_Z
 
                  else
+
                  Qjac(var_uZ,var_uR) =   r0 * uZ0 * uR * v_R                                                   &
                                        - v_Z* visco2 * divu_uR                                                 &
                                        - visco_T * uR_Z * v_R
@@ -1319,23 +1176,28 @@ endif
                  if (primitive) then
 
                    Qjac(var_up,var_uR) =   v * ( - r0  * ( uR * up0_R + uR * up0 / BigR ) - up0 * divru_uR ) &
-                                         + v * visco * (  2.d0 * uR_p / BigR**2  )
+                                         + v * visco_T * (  2.d0 * uR_p / BigR**2  )
 
                    Qjac(var_up,var_uZ) =   v * ( - r0  * uZ * up0_Z - up0 * divru_uZ )
  
                    Qjac(var_up,var_up) =   v * ( - r0  * ( up * up0_p / BigR + u0grad_bf + uR0 * up / BigR )              &  
                                                - up * divru - up0 * divru_up )                                            &
 
-!                                         + v * visco * (  up_RR + up_R / BigR + up_ZZ + up_pp / BigR**2 - up / BigR**2  )
+!                                         + v * visco_T * (  up_RR + up_R / BigR + up_ZZ + up_pp / BigR**2 - up / BigR**2  )
 
-                                         + v * visco * ( - up / BigR**2  ) &
+                                         + v * visco_T * ( - up / BigR**2  ) &
 
-                                         - visco * (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        ! laplacian part viscous term
+                                         - visco_T * (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        ! laplacian part viscous term
 
                    Qjac(var_up,var_r)  =   v * ( - r  * ( u0grad_up0 + uR0 * up0 / BigR ) - up0 * divru_r         &
                                              - ( r * T0_p + r_p * T0 ) / BigR )
 
-                   Qjac(var_up,var_T)  =   v * ( - ( r0 * T_p + r0_p * T ) / BigR )
+                   Qjac(var_up,var_T)  =   v * ( - ( r0 * T_p + r0_p * T ) / BigR ) &
+                                         
+                                         + v * dvisco_dT * T * ( - up0 / BigR**2 + 2.d0 * uR0_p / BigR**2      )  &     
+
+                                         - dvisco_dT * T * (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)         ! laplacian part viscous term
+
 
                    ! Stabilization
                    ! -----------------------------------------------------------------------------
@@ -1372,20 +1234,21 @@ endif
 
 
                      Qjac(var_up,var_uR) =   BR0 * Qjac(var_uR,var_uR) + BZ0 * Qjac(var_uZ,var_uR) + Bp0 * Qjac(var_up,var_uR) &
-                                           - ( visco + visco2 ) * divu_uR * B0grad_vstar                      ! nonprimitive viscous terms
+                                           - ( visco_T + visco2 ) * divu_uR * B0grad_vstar                      ! nonprimitive viscous terms
                      Qjac(var_up,var_uZ) =   BR0 * Qjac(var_uR,var_uZ) + BZ0 * Qjac(var_uZ,var_uZ) + Bp0 * Qjac(var_up,var_uZ) &
-                                           - ( visco + visco2 ) * divu_uZ * B0grad_vstar
+                                           - ( visco_T + visco2 ) * divu_uZ * B0grad_vstar
                      Qjac(var_up,var_up) =   BR0 * Qjac(var_uR,var_up) + BZ0 * Qjac(var_uZ,var_up) + Bp0 * Qjac(var_up,var_up) &
-                                           - ( visco + visco2 ) * divu_up * B0grad_vstar
+                                           - ( visco_T + visco2 ) * divu_up * B0grad_vstar
 
                      Qjac(var_up,var_r)  =  BR0 * Qjac(var_uR,var_r)  + BZ0 * Qjac(var_uZ,var_r)  + Bp0 * Qjac(var_up,var_r)
-                     Qjac(var_up,var_T)  =  BR0 * Qjac(var_uR,var_T)  + BZ0 * Qjac(var_uZ,var_T)  + Bp0 * Qjac(var_up,var_T)
+                     Qjac(var_up,var_T)  =  BR0 * Qjac(var_uR,var_T)  + BZ0 * Qjac(var_uZ,var_T)  + Bp0 * Qjac(var_up,var_T) &
+                                          - dvisco_dT * T * divu * B0grad_vstar 
 
                   else
                      
-                     Qjac(var_up,var_uR) = Qjac(var_up,var_uR) - ( visco + visco2 ) * divu_uR * ( v_p / BigR ) ! nonprimitive viscous terms
-                     Qjac(var_up,var_uZ) = Qjac(var_up,var_uZ) - ( visco + visco2 ) * divu_uZ * ( v_p / BigR ) 
-                     Qjac(var_up,var_up) = Qjac(var_up,var_up) - ( visco + visco2 ) * divu_up * ( v_p / BigR )
+                     Qjac(var_up,var_uR) = Qjac(var_up,var_uR) - ( visco_T + visco2 ) * divu_uR * ( v_p / BigR ) ! nonprimitive viscous terms
+                     Qjac(var_up,var_uZ) = Qjac(var_up,var_uZ) - ( visco_T + visco2 ) * divu_uZ * ( v_p / BigR ) 
+                     Qjac(var_up,var_up) = Qjac(var_up,var_up) - ( visco_T + visco2 ) * divu_up * ( v_p / BigR )
                      
                   endif
                   
@@ -1491,15 +1354,15 @@ endif
                 Pjac(var_T,var_r)      =   v * r  * T0
 
                 
-                Qjac(var_T,var_AR) = - (gamma - 1.d0 ) * ((ZK_par - ZK_prof) / BB2) *               & 
+                Qjac(var_T,var_AR) = - (gamma - 1.d0 ) * ((ZKpar_T - ZK_prof) / BB2) *               & 
                                        ( B0grad_vstar_AR * B0grad_T0  + B0grad_vstar * B0grad_T0_AR &
                                      -   BB2_AR * B0grad_T0 * B0grad_vstar / BB2 )
                 
-                Qjac(var_T,var_AZ) = - (gamma - 1.d0 ) * ((ZK_par - ZK_prof) / BB2) *               & 
+                Qjac(var_T,var_AZ) = - (gamma - 1.d0 ) * ((ZKpar_T - ZK_prof) / BB2) *               & 
                                        ( B0grad_vstar_AZ * B0grad_T0  + B0grad_vstar * B0grad_T0_AZ &
                                      -   BB2_AZ * B0grad_T0 * B0grad_vstar / BB2 )   
                 
-                Qjac(var_T,var_A3) = - (gamma - 1.d0 ) * ((ZK_par - ZK_prof) / BB2) *               & 
+                Qjac(var_T,var_A3) = - (gamma - 1.d0 ) * ((ZKpar_T - ZK_prof) / BB2) *               & 
                                        ( B0grad_vstar_A3 * B0grad_T0  + B0grad_vstar * B0grad_T0_A3 &
                                      -   BB2_A3 * B0grad_T0 * B0grad_vstar / BB2 )
 
@@ -1516,7 +1379,9 @@ endif
                   Qjac(var_T,var_r)  = v * ( -  r * u0grad_T0 - T0 * u0grad_bf - gamma * r * T0 * divu ) 
 
                   Qjac(var_T,var_T)  = v * ( -  r0 * u0grad_bf - T * u0grad_r0 - gamma * r0 * T * divu )  & 
-                                       + (gamma-1.d0)*( - ZK_prof * gradbfgrad_vstar - (ZK_par-ZK_prof) * B0grad_bf * B0grad_vstar / BB2 )
+                                       + (gamma-1.d0)*( - ZK_prof * gradbfgrad_vstar - (ZKpar_T-ZK_prof) * B0grad_bf * B0grad_vstar / BB2 ) &
+                                       + (gamma-1.d0)*(                              - (dZKpar_dT * T)   * B0grad_T0 * B0grad_vstar / BB2 )
+ 
 
                 else
 
@@ -1532,12 +1397,12 @@ endif
                   Qjac(var_T,var_r)  =  gamma * r * T0 * u0grad_vstar                       &
                                        + (gamma-1.d0) * v * ( r * u0grad_T0 + T0 * u0grad_bf )  
 
-                  Qjac(var_T,var_T)  =    gamma * r0 * T * u0grad_vstar                     & 
-                       + (gamma-1.d0)*( - ZK_prof * gradbfgrad_vstar                        & 
-                                        - (ZK_par-ZK_prof) * B0grad_bf * B0grad_vstar / BB2 & 
+                  Qjac(var_T,var_T)  =    gamma * r0 * T * u0grad_vstar                       & 
+                                        + (gamma-1.d0)*( - ZK_prof * gradbfgrad_vstar         & 
+                                                         - (ZKpar_T-ZK_prof) * B0grad_bf * B0grad_vstar / BB2 & 
+                                                         -  dZKpar_dT * T    * B0grad_T0 * B0grad_vstar / BB2 & 
                                         + v * ( r0 * u0grad_bf + T * u0grad_r0 + dvisco_dT * T * Qvisc_T ) )
                 endif
-
 
 
                 if (viscores_heating ) then
@@ -1577,7 +1442,7 @@ endif
                ! Stabilization
                ! -----------------------------------------------------------------------------
                QvmsAd(var_T,var_r) =   ( T0 * CvGradVj  + r * CvGradT0 ) * CvGradVi   &
-                    &                + ( T0 * VbGradVj  + r * VbGradT0 ) * VbGradVi   &
+                    &                + ( T0 * VbGradVj  + r * VbGradT0 ) * VbGradVi   
                
                
                QvmsAd(var_T,var_T) =   ( r0 * CvGradVj  + T * CvGradr0 ) * CvGradVi   &

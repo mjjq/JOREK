@@ -40,7 +40,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 F0, gamma,                                          &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
-                T_0,   T_1,   T_coef,                               &
+                T_0,   T_1,   T_coef, T_min,                        &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
@@ -60,7 +60,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
-                eta_T_dependent, visco_T_dependent,                 &
+                eta_T_dependent, visco_T_dependent,ZKpar_T_dependent,&
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &

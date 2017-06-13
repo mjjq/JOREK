@@ -115,7 +115,7 @@ real*8 :: CvGraduR0, CvGraduZ0, CvGradup0, VbGraduR0, VbGraduZ0, VbGradup0
 real*8 :: CvGradVi, VbGradVi, DiveRMVi, DiveZMVi, DivePMVi
 real*8 :: CvGradVj, VbGradVj, DiveRMVj, DiveZMVj, DivePMVj
 
-real*8 :: TG_NUM_Eq = 0.0, VmsCoefF, VmsCoefF_T
+real*8 :: TG_NUM_Eq = 0.0, VmsCoefF, VmsCoefF_T, CoefAdv=0.0
 
 real*8, dimension(n_var,n_var)        :: QvmsAd, QvmsF
 
@@ -545,7 +545,7 @@ do ms=1, n_gauss
 
            Vms(var_AR)   = CvGradAr0 * CvGradVi
 
-           Qvec(var_AR)  =  Qvec(var_AR) - TG_NUM_Eq*TG_NUM(var_AR) * Vms(var_AR)  
+           Qvec(var_AR)  =  Qvec(var_AR) - TG_NUM_Eq*TG_NUM(var_AR) * CoefAdv * Vms(var_AR)  
 !###################################################################################################
 !#  equation 2 (Z component induction equation)                                                    #
 !###################################################################################################
@@ -559,7 +559,7 @@ do ms=1, n_gauss
            ! --------------------------------------------------------------------------------------
            Vms(var_AZ)  =  CvGradAZ0 * CvGradVi 
 
-           Qvec(var_AZ)  =   Qvec(var_AZ) - TG_NUM_Eq*TG_NUM(var_AZ) * Vms(var_AZ)  
+           Qvec(var_AZ)  =   Qvec(var_AZ) - TG_NUM_Eq*TG_NUM(var_AZ) * CoefAdv * Vms(var_AZ)  
 !###################################################################################################
 !#  equation 3 (PHI component induction equation)                                                  #
 !###################################################################################################
@@ -577,7 +577,7 @@ do ms=1, n_gauss
            
            Vms(var_A3)   =  CvGradA30 * CvGradVi
            
-           Qvec(var_A3)  =  Qvec(var_A3) - TG_NUM_Eq*TG_NUM(var_A3) * Vms(var_A3)  
+           Qvec(var_A3)  =  Qvec(var_A3) - TG_NUM_Eq*TG_NUM(var_A3) * CoefAdv * Vms(var_A3)  
 !###################################################################################################
 !#  equation 4   (R component momentum equation)                                                   #
 !###################################################################################################
@@ -598,7 +598,7 @@ do ms=1, n_gauss
              ! --------------------------------------------------------------------------------------
              Vms(var_uR)    = r0 * ( CvGraduR0 * CvGradVi + VbGraduR0 * VbGradVi  ) 
            
-             Q_uR_primitive =  Q_uR_primitive - TG_NUM_Eq*TG_NUM(var_uR) * Vms(var_uR)  
+             Q_uR_primitive =  Q_uR_primitive - TG_NUM_Eq*TG_NUM(var_uR) * CoefAdv * Vms(var_uR)  
 
 
              Qvec(var_uR) = Q_uR_primitive - ( visco_T + visco2 ) * divu * ( v_R + v / BigR )  &                   ! primitive + nonprimitive viscous part
@@ -640,7 +640,7 @@ do ms=1, n_gauss
              ! --------------------------------------------------------------------------------------
              Vms(var_uZ)    =  r0 * ( CvGraduZ0  * CvGradVi + VbGraduZ0  * VbGradVi   )    
          
-             Q_uZ_primitive  = Q_uZ_primitive  - TG_NUM_Eq*TG_NUM(var_uZ) * Vms(var_uZ)  
+             Q_uZ_primitive  = Q_uZ_primitive  - TG_NUM_Eq*TG_NUM(var_uZ) * CoefAdv * Vms(var_uZ)  
 
 
            else
@@ -681,7 +681,7 @@ do ms=1, n_gauss
              
              Vms(var_up)      = r0 * ( CvGradup0 * CvGradVi  + VbGradup0 * VbGradVi )
              
-             Q_up_primitive   =  Q_up_primitive   - TG_NUM_Eq*TG_NUM(var_up) * Vms(var_up)
+             Q_up_primitive   =  Q_up_primitive   - TG_NUM_Eq * TG_NUM(var_up) * CoefAdv * Vms(var_up)
              
 
              if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
@@ -733,7 +733,7 @@ do ms=1, n_gauss
            ! --------------------------------------------------------------------------------------
            Vms(var_r)  =  CvGradr0 * CvGradVi    +  VbGradr0 * VbGradVi
 
-           Qvec(var_r) =  Qvec(var_r)  - TG_NUM_Eq*TG_NUM(var_r) * Vms(var_r)
+           Qvec(var_r) =  Qvec(var_r)  - TG_NUM_Eq*TG_NUM(var_r) * CoefAdv * Vms(var_r)
 
 !###################################################################################################
 !#  equation 8 (Pressure equation)                                                                 #
@@ -779,7 +779,7 @@ do ms=1, n_gauss
            ! --------------------------------------------------------------------------------------
            Vms(var_T)  =  r0 *( CvGradT0 * CvGradVi    +  VbGradT0 * VbGradVi )
            
-           Qvec(var_T) = Qvec(var_T) - TG_NUM_Eq*TG_NUM(var_T) * Vms(var_T)
+           Qvec(var_T) = Qvec(var_T) - TG_NUM_Eq * TG_NUM(var_T) * CoefAdv * Vms(var_T)
 
 !###################################################################################################
 !#  equations end                                                                                  #
@@ -906,7 +906,7 @@ do ms=1, n_gauss
                 QvmsAd(var_AR,var_A3) =  Cvp0 * A3 / BigR2  * CvGradVi                            &
                                       + ( - CvGradVj + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2
                 
-                Qjac(var_AR, :) = Qjac(var_AR,:) - TG_NUM(var_AR) *  QvmsAd(var_AR, :)
+                Qjac(var_AR, :) = Qjac(var_AR,:) - TG_NUM(var_AR) * CoefAdv *  QvmsAd(var_AR, :)
                 
 !###################################################################################################
 !#  equation 2   (Z component induction equation)                                                  #
@@ -940,7 +940,7 @@ do ms=1, n_gauss
                 ! -----------------------------------------------------------------------------
                 QvmsAd(var_AZ,var_AZ) = CvGradVj * CvGradVi
 
-                Qjac(var_AZ,:) = Qjac(var_AZ,:) - TG_NUM(var_AZ) *  QvmsAd(var_AZ,:)
+                Qjac(var_AZ,:) = Qjac(var_AZ,:) - TG_NUM(var_AZ) * CoefAdv * QvmsAd(var_AZ,:)
                 
 !###################################################################################################
 !#  equation 3   (Phi component induction equation)                                                #
@@ -979,7 +979,7 @@ do ms=1, n_gauss
                 QvmsAd(var_A3,var_AR) =    CvGradVj * Cvp0 * v                                              &
                      &                 - (  Cvp0 * AR ) * (CvGradVi + CvR0 * v / BigR) 
 
-                Qjac(var_A3,:)      = Qjac(var_A3,:) - TG_NUM(var_A3) *  QvmsAd(var_A3,:)
+                Qjac(var_A3,:)      = Qjac(var_A3,:) - TG_NUM(var_A3) * CoefAdv * QvmsAd(var_A3,:)
 
 !###################################################################################################
 !#  equation 4   (R component momentum equation)                                                   #
@@ -1067,7 +1067,7 @@ do ms=1, n_gauss
               QvmsF(var_uR,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DiveRMVi
               
               
-              Qjac(var_uR, :) = Qjac(var_uR, :) - TG_NUM(var_uR) * ( QvmsAd(var_uR, :) + QvmsF(var_uR, :)  )
+              Qjac(var_uR, :) = Qjac(var_uR, :) - TG_NUM(var_uR) * ( CoefAdv * QvmsAd(var_uR, :) + QvmsF(var_uR, :)  )
               
 !###################################################################################################
 !#  equation 5   (Z component momentum equation)                                                   #
@@ -1144,7 +1144,7 @@ do ms=1, n_gauss
                  QvmsF(var_uZ,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DiveZMVi
                  
                  
-                 Qjac(var_uZ, :) = Qjac(var_uZ, :) - TG_NUM(var_uZ) * ( QvmsAd(var_uZ, :) + QvmsF(var_uZ, :) )
+                 Qjac(var_uZ, :) = Qjac(var_uZ, :) - TG_NUM(var_uZ) * ( CoefAdv * QvmsAd(var_uZ, :) + QvmsF(var_uZ, :) )
 
 
 !###################################################################################################
@@ -1219,7 +1219,7 @@ do ms=1, n_gauss
                    
                    
                    
-                   Qjac(var_up, :) = Qjac(var_up, :) - TG_NUM(var_up) * ( QvmsAd(var_up, :) + QvmsF(var_up, :) )
+                   Qjac(var_up, :) = Qjac(var_up, :) - TG_NUM(var_up) * ( CoefAdv * QvmsAd(var_up, :) + QvmsF(var_up, :) )
 
                    if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
 
@@ -1339,7 +1339,7 @@ do ms=1, n_gauss
                  ! ---------------
                  QvmsAd(var_r,var_r) =  CvGradVj * CvGradVi  + VbGradVi * VbGradVj
                  
-                 Qjac(var_r, :)      =  Qjac(var_r, :)  - TG_NUM(var_r) *  QvmsAd(var_r, :)
+                 Qjac(var_r, :)      =  Qjac(var_r, :)  - TG_NUM(var_r) *  CoefAdv * QvmsAd(var_r, :)
 
 !###################################################################################################
 !#  equation 8   (Temperature  equation)                                                           #
@@ -1451,7 +1451,7 @@ do ms=1, n_gauss
                QvmsF(var_T,var_T  )  =  VmsCoefF_T * ( r0*gradbfgrad_vstar + gradT0grad_vstar * r )
 
                
-               Qjac(var_T, :) =  Qjac(var_T, :) - TG_NUM(var_T) *( QvmsAd(var_T, :) + QvmsF(var_T, :) )
+               Qjac(var_T, :) =  Qjac(var_T, :) - TG_NUM(var_T) *( CoefAdv * QvmsAd(var_T, :) + QvmsF(var_T, :) )
 
 
 !###################################################################################################

@@ -1448,7 +1448,7 @@ do ms=1, n_gauss
                ! acoustic  waves
                ! ------------------------------
                QvmsF(var_T,var_r  )  =  VmsCoefF_T * ( T0*gradbfgrad_vstar + gradT0grad_vstar * r )
-               QvmsF(var_T,var_T  )  =  VmsCoefF_T * ( r0*gradbfgrad_vstar + gradT0grad_vstar * r )
+               QvmsF(var_T,var_T  )  =  VmsCoefF_T * ( r0*gradbfgrad_vstar + gradR0grad_vstar * T )
 
                
                Qjac(var_T, :) =  Qjac(var_T, :) - TG_NUM(var_T) *( CoefAdv * QvmsAd(var_T, :) + QvmsF(var_T, :) )

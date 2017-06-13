@@ -84,7 +84,7 @@ real*8     :: divu, divu_uR, divu_uZ, divu_up, divru, divru_uR, divru_uZ, divru_
 
 real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht
 
-real*8     :: Fprof, Fprof_R, Fprof_Z, psieq_R, psieq_Z
+real*8     :: Fprof, psieq_R, psieq_Z
 
 real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt
 
@@ -263,10 +263,6 @@ do ms=1, n_gauss
    xjac3 = BigR * xjac 
 
    Fprof = Fprofile(ms,mt)
-   Fprof_R = (   y_t(ms,mt) * Fprofile_s(ms,mt)  - y_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
-   Fprof_Z = ( - x_t(ms,mt) * Fprofile_s(ms,mt)  + x_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
-
-
 
    do mp = 1, n_plane
 
@@ -359,7 +355,7 @@ do ms=1, n_gauss
        d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
 
        if (T0 .lt. T_min) then
-         eta_T     = eta * (T_min/T_0)**(+2.5d0)
+         eta_T     = eta * (T_min/T_0)**(-1.5d0)
          deta_dT   = 0.d0
          d2eta_d2T = 0.d0
        endif
@@ -381,7 +377,7 @@ do ms=1, n_gauss
        dvisco_dT = - visco * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
 
        if (T0 .lt. T_min) then
-         visco_T     = visco * (T_min/T_0)**(+2.5d0)
+         visco_T     = visco * (T_min/T_0)**(-1.5d0)
          dvisco_dT   = 0.d0
        endif
 

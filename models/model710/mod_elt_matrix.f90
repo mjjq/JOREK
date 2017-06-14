@@ -118,6 +118,7 @@ real*8 :: CvGradVj, VbGradVj, DiveRMVj, DiveZMVj, DivePMVj
 real*8 :: TG_NUM_Eq = 0.0, VmsCoefF, VmsCoefF_T, CoefAdv=0.0
 
 real*8, dimension(n_var,n_var)        :: QvmsAd, QvmsF
+integer :: VmsType=0
 
 ! -------------------------------------------------------------------------------------------------
 ! -------------------------------------------------------------------------------------------------
@@ -902,11 +903,15 @@ do ms=1, n_gauss
 
                 ! Stabilization
                 ! -----------------------------------------------------------------------------
-                QvmsAd(var_AR,var_AR) =  CvGradVj * CvGradVi + Cvp0 * AR  * Cvp0 * v / BigR2
-                QvmsAd(var_AR,var_A3) =  Cvp0 * A3 / BigR2  * CvGradVi                            &
-                                      + ( - CvGradVj + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2
-                
-                Qjac(var_AR, :) = Qjac(var_AR,:) - TG_NUM(var_AR) * CoefAdv *  QvmsAd(var_AR, :)
+                SELECT CASE(VmsType}
+                   
+                CASE(10)
+                   QvmsAd(var_AR,var_AR) =  CvGradVj * CvGradVi + Cvp0 * AR  * Cvp0 * v / BigR2
+                   QvmsAd(var_AR,var_A3) =  Cvp0 * A3 / BigR2  * CvGradVi                            &
+                        &                   + ( - CvGradVj + CvR0 * A3 / BigR ) * Cvp0 * v / BigR2
+                   
+                   Qjac(var_AR, :) = Qjac(var_AR,:) - TG_NUM(var_AR) * CoefAdv *  QvmsAd(var_AR, :)
+                END SELECT
                 
 !###################################################################################################
 !#  equation 2   (Z component induction equation)                                                  #
@@ -938,9 +943,13 @@ do ms=1, n_gauss
                 
                 ! Stabilization
                 ! -----------------------------------------------------------------------------
-                QvmsAd(var_AZ,var_AZ) = CvGradVj * CvGradVi
-
-                Qjac(var_AZ,:) = Qjac(var_AZ,:) - TG_NUM(var_AZ) * CoefAdv * QvmsAd(var_AZ,:)
+                SELECT CASE(VmsType}
+                   
+                CASE(10)
+                   QvmsAd(var_AZ,var_AZ) = CvGradVj * CvGradVi
+                   
+                   Qjac(var_AZ,:) = Qjac(var_AZ,:) - TG_NUM(var_AZ) * CoefAdv * QvmsAd(var_AZ,:)
+                END SELECT
                 
 !###################################################################################################
 !#  equation 3   (Phi component induction equation)                                                #
@@ -973,14 +982,17 @@ do ms=1, n_gauss
 
                 ! Stabilization
                 ! -----------------------------------------------------------------------------
-                QvmsAd(var_A3,var_A3) =   (Cvp0 * A3 / BigR2 ) * Cvp0 * v                                   &
-                     &                - ( - CvGradVj + CvR0 * A3 / BigR ) * (CvGradVi + CvR0 * v / BigR)
-                
-                QvmsAd(var_A3,var_AR) =    CvGradVj * Cvp0 * v                                              &
-                     &                 - (  Cvp0 * AR ) * (CvGradVi + CvR0 * v / BigR) 
-
-                Qjac(var_A3,:)      = Qjac(var_A3,:) - TG_NUM(var_A3) * CoefAdv * QvmsAd(var_A3,:)
-
+                SELECT CASE(VmsType}
+                   
+                CASE(10)
+                   QvmsAd(var_A3,var_A3) =   (Cvp0 * A3 / BigR2 ) * Cvp0 * v                                   &
+                        &                - ( - CvGradVj + CvR0 * A3 / BigR ) * (CvGradVi + CvR0 * v / BigR)
+                   
+                   QvmsAd(var_A3,var_AR) =    CvGradVj * Cvp0 * v                                              &
+                        &                 - (  Cvp0 * AR ) * (CvGradVi + CvR0 * v / BigR) 
+                   
+                   Qjac(var_A3,:)      = Qjac(var_A3,:) - TG_NUM(var_A3) * CoefAdv * QvmsAd(var_A3,:)
+                END SELECT
 !###################################################################################################
 !#  equation 4   (R component momentum equation)                                                   #
 !###################################################################################################
@@ -1047,28 +1059,39 @@ do ms=1, n_gauss
 
               ! Stabilization
               ! -----------------------------------------------------------------------------
-              QvmsAd(var_uR,var_r ) =  0.0  ! to be completed  !$BNK
-              
-              QvmsAd(var_uR,var_uR) =   ( r0 * CvGradVj + CvGradr0 * uR  ) *   CvGradVi         &
-                   &                  + ( r0 * Cvp0 * uR / BigR          ) * ( Cvp0 * v /BigR ) &
-                   &                  + ( r0 * CvGradVj + CvGradr0 * uR  ) *   CvGradVi         &
-                   &                  + ( r0 * Cvp0 * uR / BigR          ) * ( Cvp0 * v /BigR )
-              
-              QvmsAd(var_uR,var_up) =   ( - r0 * Cvp0 * up / BigR          ) *   CvGradVi         &
-                   &                  + (   r0 * CvGradVj + CvGradr0 * up  ) * ( Cvp0 * v /BigR ) &
-                   &                  + ( - r0 * Vbp0 * up / BigR          ) *   VbGradVi         &
-                   &                  + (   r0 * VbGradVj + VbGradr0 * up  ) * ( Vbp0 * v /BigR )
-              ! acoustic  waves
-              ! ------------------------------
-              QvmsF(var_uR,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveRMVi
-              
-              QvmsF(var_uR,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DiveRMVi
-              QvmsF(var_uR,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DiveRMVi
-              QvmsF(var_uR,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DiveRMVi
-              
-              
-              Qjac(var_uR, :) = Qjac(var_uR, :) - TG_NUM(var_uR) * ( CoefAdv * QvmsAd(var_uR, :) + QvmsF(var_uR, :)  )
-              
+              SELECT CASE(VmsType}
+                 
+              CASE(10)
+                 QvmsAd(var_uR,var_r ) =  0.0  ! to be completed  !$BNK
+                 
+                 QvmsAd(var_uR,var_uR) =   ( r0 * CvGradVj + CvGradr0 * uR  ) *   CvGradVi         &
+                      &                  + ( r0 * Cvp0 * uR / BigR          ) * ( Cvp0 * v /BigR ) &
+                      &                  + ( r0 * CvGradVj + CvGradr0 * uR  ) *   CvGradVi         &
+                      &                  + ( r0 * Cvp0 * uR / BigR          ) * ( Cvp0 * v /BigR )
+                 
+                 QvmsAd(var_uR,var_up) =   ( - r0 * Cvp0 * up / BigR          ) *   CvGradVi         &
+                      &                  + (   r0 * CvGradVj + CvGradr0 * up  ) * ( Cvp0 * v /BigR ) &
+                      &                  + ( - r0 * Vbp0 * up / BigR          ) *   VbGradVi         &
+                      &                  + (   r0 * VbGradVj + VbGradr0 * up  ) * ( Vbp0 * v /BigR )
+                 ! acoustic  waves
+                 ! ------------------------------
+                 QvmsF(var_uR,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveRMVi
+                 
+                 QvmsF(var_uR,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DiveRMVi
+                 QvmsF(var_uR,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DiveRMVi
+                 QvmsF(var_uR,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DiveRMVi
+
+                 Qjac(var_uR, :) = Qjac(var_uR, :) - TG_NUM(var_uR) * ( CoefAdv * QvmsAd(var_uR, :) + QvmsF(var_uR, :)  )
+
+              CASE DEFAULT
+                 ! acoustic  waves, stationnary  density
+                 ! --------------------------------------
+                 QvmsF(var_uR,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj  ) * DiveRMVi
+                 QvmsF(var_uR,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj  ) * DiveRMVi
+                 QvmsF(var_uR,var_up )  =  VmsCoefF * ( r0 * DivePMVj  ) * DiveRMVi
+                 
+                 Qjac(var_uR, :)        = Qjac(var_uR, :) - TG_NUM(var_uR) * QvmsF(var_uR, :)  
+              END SELECT
 !###################################################################################################
 !#  equation 5   (Z component momentum equation)                                                   #
 !###################################################################################################
@@ -1129,23 +1152,35 @@ do ms=1, n_gauss
 
                  ! Stabilization
                  ! -----------------------------------------------------------------------------
+                 SELECT CASE(VmsType}
+                    
+                 CASE(10)
+                    QvmsAd(var_uZ,var_r ) =  0.0 ! to be completed  !$BNK
+                    
+                    QvmsAd(var_uZ,var_uZ) =   ( r0 * CvGradVj + CvGradr0 * uZ )  * CvGradVi  &
+                         &                  + ( r0 * VbGradVj + VbGradr0 * uZ )  * VbGradVi
+                    
+                    ! acoustic  waves
+                    ! ------------------------------
+                    QvmsF(var_uZ,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveZMVi
+                    
+                    QvmsF(var_uZ,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DiveZMVi
+                    QvmsF(var_uZ,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DiveZMVi
+                    QvmsF(var_uZ,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DiveZMVi
+                    
+                    
+                    Qjac(var_uZ, :) = Qjac(var_uZ, :) - TG_NUM(var_uZ) * ( CoefAdv * QvmsAd(var_uZ, :) + QvmsF(var_uZ, :) )
 
-                 QvmsAd(var_uZ,var_r ) =  0.0 ! to be completed  !$BNK
-                 
-                 QvmsAd(var_uZ,var_uZ) =   ( r0 * CvGradVj + CvGradr0 * uZ )  * CvGradVi  &
-                      &                  + ( r0 * VbGradVj + VbGradr0 * uZ )  * VbGradVi
-                 
-                 ! acoustic  waves
-                 ! ------------------------------
-                 QvmsF(var_uZ,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveZMVi
-                 
-                 QvmsF(var_uZ,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DiveZMVi
-                 QvmsF(var_uZ,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DiveZMVi
-                 QvmsF(var_uZ,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DiveZMVi
-                 
-                 
-                 Qjac(var_uZ, :) = Qjac(var_uZ, :) - TG_NUM(var_uZ) * ( CoefAdv * QvmsAd(var_uZ, :) + QvmsF(var_uZ, :) )
-
+                 CASE DEFAULT
+                    ! acoustic  waves, stationnary  density
+                    ! --------------------------------------
+                    QvmsF(var_uZ,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj   ) * DiveZMVi
+                    QvmsF(var_uZ,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj   ) * DiveZMVi
+                    QvmsF(var_uZ,var_up )  =  VmsCoefF * ( r0 * DivePMVj   ) * DiveZMVi
+                    
+                    
+                    Qjac(var_uZ, :) = Qjac(var_uZ, :) - TG_NUM(var_uZ) * QvmsF(var_uZ, :) 
+                 END SELECT
 
 !###################################################################################################
 !#  equation 6   (Phi component momentum equation)                                                 #
@@ -1197,30 +1232,42 @@ do ms=1, n_gauss
 
                    ! Stabilization
                    ! -----------------------------------------------------------------------------
-                   QvmsAd(var_up,var_r ) = 0.0  ! to be completed  !$BNK
-                   
-                   QvmsAd(var_up,var_uR) =  -  ( r0 * CvGradVj + CvGradr0 * uR ) *   Cvp0 * v / BigR              &
-                        &                   +  ( r0 * Cvp0 * uR / BigR         ) * ( CvGradVi + CvR0 * v /BigR )  &
-                        &                   -  ( r0 * VbGradVj + VbGradr0 * uR ) *   Vbp0 * v / BigR              &
-                        &                   +  ( r0 * Vbp0 * uR / BigR         ) * ( VbGradVi + VbR0 * v /BigR )  
-                   
-                   QvmsAd(var_up,var_up) =  - ( - r0 * Cvp0 * up / BigR        ) *   Cvp0 * v / BigR              &
-                        &                   + ( r0 * CvGradVj + up * CvGradr0  ) * ( CvGradVi + CvR0 * v /BigR )  &
-                        &                   - ( - r0 * Vbp0 * up / BigR        ) *   Vbp0 * v / BigR              &
-                        &                   + ( r0 * VbGradVj + up * VbGradr0  ) * ( VbGradVi + VbR0 * v /BigR )
-                   
-                   ! acoustic  waves
-                   ! ------------------------------
-                   QvmsF(var_up,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DivePMVi
-                   
-                   QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DivePMVi
-                   QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DivePMVi
-                   QvmsF(var_up,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DivePMVi
-                   
-                   
-                   
-                   Qjac(var_up, :) = Qjac(var_up, :) - TG_NUM(var_up) * ( CoefAdv * QvmsAd(var_up, :) + QvmsF(var_up, :) )
+                   SELECT CASE(VmsType}
+                      
+                   CASE(10)
+                      QvmsAd(var_up,var_r ) = 0.0  ! to be completed  !$BNK
+                      
+                      QvmsAd(var_up,var_uR) =  -  ( r0 * CvGradVj + CvGradr0 * uR ) *   Cvp0 * v / BigR              &
+                           &                   +  ( r0 * Cvp0 * uR / BigR         ) * ( CvGradVi + CvR0 * v /BigR )  &
+                           &                   -  ( r0 * VbGradVj + VbGradr0 * uR ) *   Vbp0 * v / BigR              &
+                           &                   +  ( r0 * Vbp0 * uR / BigR         ) * ( VbGradVi + VbR0 * v /BigR )  
+                      
+                      QvmsAd(var_up,var_up) =  - ( - r0 * Cvp0 * up / BigR        ) *   Cvp0 * v / BigR              &
+                           &                   + ( r0 * CvGradVj + up * CvGradr0  ) * ( CvGradVi + CvR0 * v /BigR )  &
+                           &                   - ( - r0 * Vbp0 * up / BigR        ) *   Vbp0 * v / BigR              &
+                           &                   + ( r0 * VbGradVj + up * VbGradr0  ) * ( VbGradVi + VbR0 * v /BigR )
+                      
+                      ! acoustic  waves
+                      ! ------------------------------
+                      QvmsF(var_up,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DivePMVi
+                      
+                      QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DivePMVi
+                      QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DivePMVi
+                      QvmsF(var_up,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DivePMVi
+                      
+                      Qjac(var_up, :) = Qjac(var_up, :) - TG_NUM(var_up) * ( CoefAdv * QvmsAd(var_up, :) + QvmsF(var_up, :) )
+                      
+                   CASE DEFAULT
+                      ! acoustic  waves, stationnary  density
+                      ! --------------------------------------
+                      QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj   ) * DivePMVi
+                      QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj   ) * DivePMVi
+                      QvmsF(var_up,var_up )  =  VmsCoefF * ( r0 * DivePMVj   ) * DivePMVi
+                      
+                      Qjac(var_up, :) = Qjac(var_up, :) - TG_NUM(var_up) * QvmsF(var_up, :) 
 
+                   END SELECT
+                      
                    if (parallel_projection) then ! A parallel projection includes R,Z, and phi components
 
                      Pjac(var_up,var_uR)      =   v * r0 * BR0 * uR
@@ -1336,11 +1383,13 @@ do ms=1, n_gauss
                  
                  ! Stabilization
                  ! -----------------------------------------------------------------------------
-                 ! ---------------
-                 QvmsAd(var_r,var_r) =  CvGradVj * CvGradVi  + VbGradVi * VbGradVj
-                 
-                 Qjac(var_r, :)      =  Qjac(var_r, :)  - TG_NUM(var_r) *  CoefAdv * QvmsAd(var_r, :)
-
+                 SELECT CASE(VmsType}
+                    
+                 CASE(10)
+                    QvmsAd(var_r,var_r) =  CvGradVj * CvGradVi  + VbGradVi * VbGradVj
+                    
+                    Qjac(var_r, :)      =  Qjac(var_r, :)  - TG_NUM(var_r) *  CoefAdv * QvmsAd(var_r, :)
+                 END SELECT
 !###################################################################################################
 !#  equation 8   (Temperature  equation)                                                           #
 !###################################################################################################
@@ -1437,22 +1486,25 @@ do ms=1, n_gauss
                
                ! Stabilization
                ! -----------------------------------------------------------------------------
-               QvmsAd(var_T,var_r) =   ( T0 * CvGradVj  + r * CvGradT0 ) * CvGradVi   &
-                    &                + ( T0 * VbGradVj  + r * VbGradT0 ) * VbGradVi   
-               
-               
-               QvmsAd(var_T,var_T) =   ( r0 * CvGradVj  + T * CvGradr0 ) * CvGradVi   &
-                    &                + ( r0 * VbGradVj  + T * VbGradr0 ) * VbGradVi   
-               
-                   
-               ! acoustic  waves
-               ! ------------------------------
-               QvmsF(var_T,var_r  )  =  VmsCoefF_T * ( T0*gradbfgrad_vstar + gradT0grad_vstar * r )
-               QvmsF(var_T,var_T  )  =  VmsCoefF_T * ( r0*gradbfgrad_vstar + gradR0grad_vstar * T )
-
-               
-               Qjac(var_T, :) =  Qjac(var_T, :) - TG_NUM(var_T) *( CoefAdv * QvmsAd(var_T, :) + QvmsF(var_T, :) )
-
+               SELECT CASE(VmsType}
+                  
+               CASE(10)
+                  QvmsAd(var_T,var_r) =   ( T0 * CvGradVj  + r * CvGradT0 ) * CvGradVi   &
+                       &                + ( T0 * VbGradVj  + r * VbGradT0 ) * VbGradVi   
+                  
+                  
+                  QvmsAd(var_T,var_T) =   ( r0 * CvGradVj  + T * CvGradr0 ) * CvGradVi   &
+                       &                + ( r0 * VbGradVj  + T * VbGradr0 ) * VbGradVi   
+                  
+                  
+                  ! acoustic  waves
+                  ! ------------------------------
+                  QvmsF(var_T,var_r  )  =  VmsCoefF_T * ( T0*gradbfgrad_vstar + gradT0grad_vstar * r )
+                  QvmsF(var_T,var_T  )  =  VmsCoefF_T * ( r0*gradbfgrad_vstar + gradR0grad_vstar * T )
+                  
+                  
+                  Qjac(var_T, :) =  Qjac(var_T, :) - TG_NUM(var_T) *( CoefAdv * QvmsAd(var_T, :) + QvmsF(var_T, :) )
+               END SELECT
 
 !###################################################################################################
 !#  equations end                                                                                  #

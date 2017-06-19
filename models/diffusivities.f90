@@ -10,7 +10,7 @@ module diffusivities
   implicit none
   
   private
-  public get_dperp, get_zkperp
+  public get_dperp, get_zkperp, get_dzkperp
   
   
   interface get_dperp
@@ -24,6 +24,9 @@ module diffusivities
     module procedure get_zkperp2
   end interface get_zkperp
   
+  interface get_dzkperp
+    module procedure get_dzkperp1
+  end interface get_dzkperp
   
   
   contains
@@ -86,7 +89,36 @@ module diffusivities
     
   end function get_zkperp1
   
-  
+  real*8 function get_dzkperp1(psin)
+    
+    implicit none
+    
+    real*8, intent(in) :: psin
+    
+    if ( num_zk_perp ) then
+      
+      get_dzkperp1 = 0.d0
+      
+    else
+      
+!      get_zkperp1 = ZK_perp(1) * ( (1.d0-ZK_perp(2)) +                                              &
+!        ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psin-ZK_perp(5))/ZK_perp(4))) )
+
+      get_dzkPerp1 = - ZK_perp(1) * ZK_perp(2) / (cosh(2.d0*((psin-ZK_perp(5))/ZK_perp(4))) + 1.d0) / ZK_perp(4)
+      
+      if ( jorek_model >= 300 ) then
+
+!      get_zkperp1 = get_zkperp1 + ZK_perp(6)*ZK_perp(2) *                                          &
+!          ((0.5d0 - 0.5d0*tanh((-psin+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
+
+        get_dzkperp1 = get_dzkperp1 + ZK_perp(6)*ZK_perp(2) / (cosh(2.d0*((-psin+ZK_perp(5)+ZK_perp(3))/ZK_perp(4))) + 1.d0) / ZK_perp(4)
+        
+      end if
+      
+    end if
+    
+  end function get_dzkperp1
+
   
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
   real*8 function get_dperp2(psi, psi_norm, psi_axis, psi_bnd, Z, Z_xpoint)

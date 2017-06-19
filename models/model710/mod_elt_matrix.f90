@@ -29,7 +29,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use diffusivities, only: get_dperp, get_zkperp
+use diffusivities, only: get_dperp, get_zkperp, get_dzkperp
 
 implicit none
 
@@ -82,11 +82,11 @@ real*8     :: u0grad_uR0, u0grad_uZ0, u0grad_up0
 
 real*8     :: divu, divu_uR, divu_uZ, divu_up, divru, divru_uR, divru_uZ, divru_up, divru_r
 
-real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht
+real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht, factor
 
 real*8     :: Fprof, psieq_R, psieq_Z
 
-real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt
+real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt, dzk_prof
 
 real*8     :: Qvisc_uR, Qvisc_uZ, Qvisc_up, Qvisc_T, Q_uR_primitive, Q_uZ_primitive, Q_up_primitive
 
@@ -181,9 +181,9 @@ Fprofile        = 0.d0 ; Fprofile_s        = 0.d0 ;  Fprofile_t        = 0.d0
 !     and also for all variables
 ! ----------------------------------------------
 TG_NUM = 0.25*tstep
-TG_NUM(var_AR) = 0.d0
-TG_NUM(var_AZ) = 0.d0
-TG_NUM(var_A3) = 0.d0
+!TG_NUM(var_AR) = 0.d0
+!TG_NUM(var_AZ) = 0.d0
+!TG_NUM(var_A3) = 0.d0
 
 TG_NUM = 0.d0
 
@@ -335,25 +335,31 @@ do ms=1, n_gauss
 
      psi_norm = (A30 - psi_axis) / (psi_bnd - psi_axis)
 
+     factor = 1.d0
+
      if (xpoint2) then
        if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
          psi_norm = 2.d0 - psi_norm
+         factor = -1.d0
        endif
        if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
          psi_norm = 2.d0 - psi_norm
+         factor = -1.d0
        endif
      endif
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
+     dZK_prof = 0.d0 !get_dzkperp(psi_norm) * factor / (psi_bnd - psi_axis)
+
 
      ! --- Temperature dependent resistivity
      if ( eta_T_dependent ) then
 
        eta_T     =   eta   * (abs(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
+       deta_dT   = - eta   * 1.5d0  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * 3.75d0 * abs(T0)**(-3.5d0) * T_0**(1.5d0)
 
        if (T0 .lt. T_min) then
          eta_T     = eta * (T_min/T_0)**(-1.5d0)
@@ -537,7 +543,7 @@ do ms=1, n_gauss
            Pvec_prev(var_AR) =   v * delta_g(mp,var_AR,ms,mt)
 
            Qvec(var_AR) = - eta_T * ( v_p * BZ0 / BigR - v_Z * Bp0 )                         &
-                            +   v * ( (uZ0 +  eta_Z) * Bp0 - (up0 + eta_p / BigR ) * BZ0 )
+                            +   v * ( (uZ0 + eta_Z) * Bp0 - (up0 + eta_p / BigR ) * BZ0 )
 
            ! adding the stabilization contribution
            ! --------------------------------------------------------------------------------------
@@ -903,7 +909,7 @@ do ms=1, n_gauss
 
                 ! Stabilization
                 ! -----------------------------------------------------------------------------
-                SELECT CASE(VmsType}
+                SELECT CASE(VmsType)
                    
                 CASE(10)
                    QvmsAd(var_AR,var_AR) =  CvGradVj * CvGradVi + Cvp0 * AR  * Cvp0 * v / BigR2
@@ -921,13 +927,13 @@ do ms=1, n_gauss
               
      
                 Qjac(var_AZ,var_AR) = - eta_T * ( - v_p * BR0_AR / BigR + v_R * Bp0_AR )              &
-                                      + v * ( (up0 +  eta_p / BigR) * BR0_AR - (uR0 + eta_R) * Bp0_AR )
+                                      + v * ( (up0 + eta_p / BigR) * BR0_AR - (uR0 + eta_R) * Bp0_AR )
 
                 Qjac(var_AZ,var_AZ) = - eta_T * ( - v_p * BR0_AZ / BigR + v_R * Bp0_AZ )              &
-                                      + v * ( (up0 +  eta_p / BigR) * BR0_AZ - (uR0 + eta_R) * Bp0_AZ )                                            
+                                      + v * ( (up0 + eta_p / BigR) * BR0_AZ - (uR0 + eta_R) * Bp0_AZ )                                            
            
                 Qjac(var_AZ,var_A3) = - eta_T * ( - v_p * BR0_A3 / BigR + v_R * Bp0_A3 )              &
-                                      + v * ( (up0 +  eta_p / BigR) * BR0_A3 - (uR0 + eta_R) * Bp0_A3 )                                           
+                                      + v * ( (up0 + eta_p / BigR) * BR0_A3 - (uR0 + eta_R) * Bp0_A3 )                                           
 
                 Qjac(var_AZ,var_uR) = - uR * Bp0 * v
 
@@ -943,7 +949,7 @@ do ms=1, n_gauss
                 
                 ! Stabilization
                 ! -----------------------------------------------------------------------------
-                SELECT CASE(VmsType}
+                SELECT CASE(VmsType)
                    
                 CASE(10)
                    QvmsAd(var_AZ,var_AZ) = CvGradVj * CvGradVi
@@ -959,13 +965,13 @@ do ms=1, n_gauss
                    
     
                 Qjac(var_A3,var_AR) = - eta_T * ( BigR * v_Z * BR0_AR - ( 2.d0 * v + BigR * v_R ) * BZ0_AR ) &
-                                      + BigR * v * ( (uR0 +  eta_R ) * BZ0_AR - (uZ0 + eta_Z) * BR0_AR )                       
+                                      + BigR * v * ( (uR0 + eta_R ) * BZ0_AR - (uZ0 + eta_Z) * BR0_AR )                       
 
                 Qjac(var_A3,var_AZ) = - eta_T * ( BigR * v_Z * BR0_AZ - ( 2.d0 * v + BigR * v_R ) * BZ0_AZ ) &
-                                      + BigR * v * ( (uR0 +  eta_R ) * BZ0_AZ - (uZ0 + eta_Z) * BR0_AZ )                                           
+                                      + BigR * v * ( (uR0 + eta_R ) * BZ0_AZ - (uZ0 + eta_Z) * BR0_AZ )                                           
            
                 Qjac(var_A3,var_A3) = - eta_T * ( BigR * v_Z * BR0_A3 - ( 2.d0 * v + BigR * v_R ) * BZ0_A3 ) &
-                                      + BigR * v * ( (uR0 +  eta_R ) * BZ0_A3 - (uZ0 + eta_Z) * BR0_A3 )                                             
+                                      + BigR * v * ( (uR0 + eta_R ) * BZ0_A3 - (uZ0 + eta_Z) * BR0_A3 )                                             
 
                 Qjac(var_A3,var_uR) =   uR * BZ0 * BigR * v
 
@@ -982,7 +988,7 @@ do ms=1, n_gauss
 
                 ! Stabilization
                 ! -----------------------------------------------------------------------------
-                SELECT CASE(VmsType}
+                SELECT CASE(VmsType)
                    
                 CASE(10)
                    QvmsAd(var_A3,var_A3) =   (Cvp0 * A3 / BigR2 ) * Cvp0 * v                                   &
@@ -1059,7 +1065,7 @@ do ms=1, n_gauss
 
               ! Stabilization
               ! -----------------------------------------------------------------------------
-              SELECT CASE(VmsType}
+              SELECT CASE(VmsType)
                  
               CASE(10)
                  QvmsAd(var_uR,var_r ) =  0.0  ! to be completed  !$BNK
@@ -1152,7 +1158,7 @@ do ms=1, n_gauss
 
                  ! Stabilization
                  ! -----------------------------------------------------------------------------
-                 SELECT CASE(VmsType}
+                 SELECT CASE(VmsType)
                     
                  CASE(10)
                     QvmsAd(var_uZ,var_r ) =  0.0 ! to be completed  !$BNK
@@ -1232,7 +1238,7 @@ do ms=1, n_gauss
 
                    ! Stabilization
                    ! -----------------------------------------------------------------------------
-                   SELECT CASE(VmsType}
+                   SELECT CASE(VmsType)
                       
                    CASE(10)
                       QvmsAd(var_up,var_r ) = 0.0  ! to be completed  !$BNK
@@ -1383,7 +1389,7 @@ do ms=1, n_gauss
                  
                  ! Stabilization
                  ! -----------------------------------------------------------------------------
-                 SELECT CASE(VmsType}
+                 SELECT CASE(VmsType)
                     
                  CASE(10)
                     QvmsAd(var_r,var_r) =  CvGradVj * CvGradVi  + VbGradVi * VbGradVj
@@ -1408,9 +1414,10 @@ do ms=1, n_gauss
                                      -   BB2_AZ * B0grad_T0 * B0grad_vstar / BB2 )   
                 
                 Qjac(var_T,var_A3) = - (gamma - 1.d0 ) * ((ZKpar_T - ZK_prof) / BB2) *               & 
-                                       ( B0grad_vstar_A3 * B0grad_T0  + B0grad_vstar * B0grad_T0_A3 &
-                                     -   BB2_A3 * B0grad_T0 * B0grad_vstar / BB2 )
+                                       ( B0grad_vstar_A3 * B0grad_T0  + B0grad_vstar * B0grad_T0_A3  &
+                                     -   BB2_A3 * B0grad_T0 * B0grad_vstar / BB2 )                   &
 
+                                     + (gamma-1.d0)*( - dZK_prof * A3 * gradT0grad_vstar + dZK_prof * A3 * B0grad_T0 * B0grad_vstar / BB2 )
 
 
                 if (primitive) then
@@ -1486,7 +1493,7 @@ do ms=1, n_gauss
                
                ! Stabilization
                ! -----------------------------------------------------------------------------
-               SELECT CASE(VmsType}
+               SELECT CASE(VmsType)
                   
                CASE(10)
                   QvmsAd(var_T,var_r) =   ( T0 * CvGradVj  + r * CvGradT0 ) * CvGradVi   &

@@ -58,6 +58,7 @@ module vacuum_response
 
     integer :: i,j, ierr, dim
     logical :: exists
+    real*8  :: time(10)
  
     ! --- Determine total number of boundary degrees of freedom per harmonic (skipping duplicates).
     do i=1, bnd_node_list%n_bnd_nodes
@@ -78,29 +79,54 @@ module vacuum_response
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
     
-    if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
-    
-    if ( my_id == 0 ) call read_starwall_response(sr, 'starwall-response.dat', bnd_elm_list%n_bnd_elements)
+    !if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
+    !if ( my_id == 0 ) call read_starwall_response(sr, 'starwall-response.dat')
+    !call broadcast_starwall_response(my_id, sr)
 
-    call broadcast_starwall_response(my_id, sr)
-    
+    time(1)=MPI_WTIME()
+    if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
+    time(2)=MPI_WTIME()
+
+    call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
+    time(3)=MPI_WTIME()
+ 
+   call broadcast_starwall_response_parallel(my_id, sr)    
+       time(4)=MPI_WTIME()
+
+   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+   if(my_id==0) write(6,*) "Vacuum Log=",time(2)-time(1) 
+   if(my_id==0) write(6,*) "Vacuum Read=",time(3)-time(2)
+   if(my_id==0) write(6,*) "Vacuum Broadcast=",time(4)-time(3)
+   if(my_id==0) write(6,*) "Vacuum Total=",time(4)-time(1)
+ 
+  
+
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
-    if ( sr%file_version == 1 ) then
+    if ( sr%file_version == 1  .AND. my_id==0) then
       write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
       write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
     else
-      write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
-      write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
-      write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
+      if(my_id ==0) then
+          write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
+          write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
+          write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
+      endif
       wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
     end if
     
-    if ( my_id == 0 ) then
-      call log_starwall_response(sr)
-      if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
-    end if
+   ! if ( my_id == 0 ) then
+   !   call log_starwall_response(sr)
+   !   if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
+   ! end if
+   
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    call log_starwall_response_parallel(my_id, sr)
+    if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
     
+
+
+  stop 
   end subroutine get_vacuum_response
   
   
@@ -139,8 +165,49 @@ module vacuum_response
   end function read_intparam
   
   
-  
-  
+  !========================================================================================================= 
+    !> Read an integer parameter from a the STARWALL response file.
+  integer function read_intparam_parallel(filehandle, parameter_name,disp)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer,          intent(in) :: filehandle
+    character(len=*), intent(in) :: parameter_name
+    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
+    !integer,          intent(inout) :: disp
+    integer, dimension (MPI_STATUS_SIZE) :: status
+
+
+
+    ! --- Local variables
+    character(len=12) :: marker
+    character(len=24) :: name
+    integer           :: err
+
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A12,A24,I12)',iostat=err) marker, name,read_intparam_parallel
+    else
+
+      call MPI_FILE_READ(filehandle, marker,sizeof(marker),MPI_CHARACTER,status,err)
+      call MPI_FILE_READ(filehandle, name,  sizeof(name)  ,MPI_CHARACTER,status,err)
+      call MPI_FILE_READ(filehandle, read_intparam_parallel, 1,MPI_INTEGER,status,err)
+      disp=disp+sizeof(marker)+sizeof(name)+sizeof(10)! any integer 
+
+    end if
+
+    if ( (err /= 0) .or. (trim(adjustl(marker)) /= '#@intparam') .or. (trim(adjustl(name)) /= trim(parameter_name)) ) then
+      write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'"from STARWALL response.'
+      stop
+    end if
+
+    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=err) name,read_intparam_parallel
+
+  end function read_intparam_parallel  
+  !========================================================================================================= 
+
+
   
   
   !> Read an array from the STARWALL respone file
@@ -233,11 +300,363 @@ module vacuum_response
     
   end subroutine read_array
   
+ !===========================================================================================================
+  !> Read an array from the STARWALL respone file
+  subroutine read_array_sequential(filehandle, array_name, dim, disp, int1d, int2d, float1d,float2d)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer, intent(in) :: filehandle
+    character(len=*), intent(in) :: array_name
+    integer, intent(in) :: dim(2)
+    !integer,                        intent(inout)   :: disp
+    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
+    integer, allocatable, optional, intent(inout)   :: int1d(:)
+    integer, allocatable, optional, intent(inout)   :: int2d(:,:)
+    real*8,  allocatable, optional, intent(inout)   :: float1d(:)
+    real*8,  allocatable, optional, intent(inout)   :: float2d(:,:)
+
+
+    integer, dimension (MPI_STATUS_SIZE) :: status
+    ! --- Local variables
+    character(len=12) :: marker
+    integer           :: nd, d(2), ierr,err
+    character(len=24) :: name, datatype, requested_type
+    logical           :: error
+
+    if ( present(int1d) .or. present(int2d) ) then
+      requested_type = 'int'
+    else
+      requested_type = 'float'
+    end if
+
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name, nd,datatype, d
+    else
+      call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),    MPI_CHARACTER,status,ierr)
+      call MPI_FILE_READ(filehandle,  name,     sizeof(name),      MPI_CHARACTER,status,ierr)
+      call MPI_FILE_READ(filehandle,  nd,       1,                 MPI_INTEGER  ,status,ierr)
+      call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),  MPI_CHARACTER,status,ierr)
+      call MPI_FILE_READ(filehandle,  d,        2,                 MPI_INTEGER  ,status,ierr)
+
+      disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d) 
+
+    end if
+
+ 
+    marker   = adjustl(marker)
+    name     = adjustl(name)
+    datatype = adjustl(datatype)
+
+    error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name)/= trim(array_name) ) &
+      .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /=trim(requested_type) )
+
+    if ( error ) then
+      write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
+      stop
+    end if
+ 
+   if ( present(int1d) ) then
+
+      if ( allocated(int1d) ) deallocate( int1d )
+      allocate( int1d(dim(1)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) int1d(:)
+      else
+
+        call MPI_FILE_READ(filehandle,  int1d,       dim(1), MPI_INTEGER  ,status,ierr)
+        disp=disp+sizeof(int1d)
   
+      end if
+
+    else if ( present(int2d) ) then
+
+      if ( allocated(int2d) ) deallocate( int2d )
+      allocate( int2d(dim(1),dim(2)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) int2d(:,:)
+      else
+         call MPI_FILE_READ(filehandle,  int2d,       dim(1)*dim(2), MPI_INTEGER  ,status,ierr)
+         disp=disp+sizeof(int2d)
+
+      end if
+
+    else if ( present(float1d) ) then
+
+      if ( allocated(float1d) ) deallocate( float1d )
+      allocate( float1d(dim(1)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) float1d(:)
+      else
+
+         call MPI_FILE_READ(filehandle,  float1d,       dim(1), MPI_DOUBLE_PRECISION  ,status,ierr)
+         disp=disp+sizeof(float1d)
+
+      end if
+
+    else if ( present(float2d) ) then
+
+      if ( allocated(float2d) ) deallocate( float2d )
+      allocate( float2d(dim(1),dim(2)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,'(4ES24.16)') float2d(:,:)
+      else
+
+         call MPI_FILE_READ(filehandle,  float2d,       dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
+         disp=disp+sizeof(float2d)
+
+      end if
+
+    end if
+
+
+    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)')name, trim(datatype), d(1:nd)
+
+
+  end subroutine read_array_sequential
+  !===========================================================================================================
+
   
+   !===========================================================================================================
+  !> Read an array from the STARWALL respone file
+  subroutine read_array_parallel_rowwise(filehandle, array_name, dim, disp, my_id, float2d)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer, intent(in) :: filehandle
+    character(len=*), intent(in) :: array_name
+    integer, intent(in) :: dim(2)
+    !integer,                        intent(inout)   :: disp
+    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
+    integer,                        intent(in)      :: my_id
+    real*8,  allocatable,           intent(inout)   :: float2d(:,:)
+
+    integer, dimension (MPI_STATUS_SIZE) :: status
+    ! --- Local variables
+    character(len=12) :: marker
+    integer           :: nd, d(2),loc_sizes(2),loc_starts(2),ierr,err,step,ntasks
+    character(len=24) :: name, datatype, requested_type
+    logical           :: error
+    integer           :: my_subarray
+
+    requested_type = 'float'
+
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name,nd,datatype, d
+    else
+     
+      if(my_id ==0) then
+
+           call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),   MPI_CHARACTER,status,ierr)
+           call MPI_FILE_READ(filehandle,  name,     sizeof(name),     MPI_CHARACTER,status,ierr)
+           call MPI_FILE_READ(filehandle,  nd,       1,                MPI_INTEGER  ,status,ierr)
+           call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype), MPI_CHARACTER,status,ierr)
+           call MPI_FILE_READ(filehandle,  d,        2,                MPI_INTEGER  ,status,ierr)
+
+           disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d)
+
+
+           marker   = adjustl(marker)
+           name     = adjustl(name)
+           datatype = adjustl(datatype)
+
+           
+           error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name)/=trim(array_name) ) &
+                    .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype)/=trim(requested_type) )
+
+          if ( error ) then
+              write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
+              stop
+          end if
+
+      endif
+    end if
+
+
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
+
+     ! if ( allocated(float2d) ) deallocate( float2d )
+     ! write(6,*) my_id,dim(1),dim(2), dble(dim(1))*dble(dim(2))*8.0/1024.0/1024.0/1024.0
+     ! call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+      if ( is_formatted(filehandle) ) then
+        if (allocated(float2d) ) deallocate( float2d )
+        allocate( float2d(dim(1),dim(2)) )
+        read(filehandle,'(4ES24.16)') float2d(:,:)
+      else
+
+          call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+
+          step=dim(1)/ntasks
+          loc_sizes(1) = step
+          if(my_id==ntasks-1) loc_sizes(1) = step+dim(1)-ntasks*step
   
+          loc_sizes(2) = dim(2)
+
+           if ( allocated(float2d) ) deallocate( float2d )
+           allocate( float2d(loc_sizes(1),loc_sizes(2)) )
+
+
+          ! 2 - how many dimentions
+          ! dim - int array with each global dimension sizes
+          loc_starts(1)=my_id*step
+          loc_starts(2)=0         
+
+
+          call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION, my_subarray,ierr)
+          call MPI_Type_commit(my_subarray,ierr)
+          
+
+          call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION,my_subarray, &
+                         "native",MPI_INFO_NULL, ierr)
+
+          call MPI_File_read_all(filehandle, float2d, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
+          disp=disp+sizeof(float2d(1,1))*dim(1)*dim(2)
+
+         ! Return to ordinary file view
+          call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE, "native",MPI_INFO_NULL, ierr);
+ 
+        end if
+
+
+    if ( vacuum_debug  .AND. my_id ==0) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, trim(datatype), d(1:nd)
+
+
+  end subroutine read_array_parallel_rowwise
+  !===========================================================================================================
+
+
+
+
+
+
+  !===========================================================================================================
+  !> Read an array from the STARWALL respone file
+  subroutine read_array_parallel_columnwise(filehandle, array_name, dim, disp, my_id,float2d)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer, intent(in) :: filehandle
+    character(len=*), intent(in) :: array_name
+    integer, intent(in) :: dim(2)
+    !integer,                        intent(inout)   :: disp
+    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
+    integer,                        intent(in)      :: my_id
+    real*8,  allocatable,           intent(inout)   :: float2d(:,:)
   
-  
+
+    integer, dimension (MPI_STATUS_SIZE) :: status
+    ! --- Local variables
+    character(len=12) :: marker
+    integer           :: nd,d(2),loc_sizes(2),loc_starts(2),ierr,err,step,ntasks
+    character(len=24) :: name, datatype, requested_type
+    logical           :: error
+
+    integer           :: my_subarray
+
+   
+    requested_type = 'float'
+
+
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker,name,nd,datatype, d
+    else
+
+
+      if(my_id ==0) then
+
+           call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),MPI_CHARACTER,status,ierr)
+           call MPI_FILE_READ(filehandle,  name,     sizeof(name),MPI_CHARACTER,status,ierr)
+           call MPI_FILE_READ(filehandle,  nd,       1,MPI_INTEGER  ,status,ierr)
+           call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),MPI_CHARACTER,status,ierr)
+           call MPI_FILE_READ(filehandle,  d,        2,MPI_INTEGER  ,status,ierr)
+
+           disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d)
+
+           marker   = adjustl(marker)
+           name     = adjustl(name)
+           datatype = adjustl(datatype)
+
+           error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name)/=trim(array_name) ) &
+                    .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype)/=trim(requested_type) )
+
+          if ( error ) then
+              write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
+              stop
+          end if
+
+       endif 
+    end if !if ( is_formatted(filehandle) )
+
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
+
+      if ( is_formatted(filehandle) ) then
+        if ( allocated(float2d) ) deallocate( float2d )
+        allocate( float2d(dim(1),dim(2)) )
+
+        read(filehandle,'(4ES24.16)') float2d(:,:)
+      else
+
+          call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+
+          step=dim(2)/ntasks
+          loc_sizes(2) = step
+          if(my_id==ntasks-1) loc_sizes(2) = step+dim(2)-ntasks*step
+
+          loc_sizes(1) = dim(1)
+
+           if ( allocated(float2d) ) deallocate( float2d )
+           allocate( float2d(loc_sizes(1),loc_sizes(2)) )
+
+
+          ! 2 - how many dimentions
+          ! dim - int array with each global dimension sizes
+          loc_starts(2)=my_id*step
+          loc_starts(1)=0
+
+
+          call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
+          call MPI_Type_commit(my_subarray,ierr)
+
+
+          call MPI_File_set_view(filehandle, disp,MPI_DOUBLE_PRECISION,my_subarray, &
+                         "native",MPI_INFO_NULL, ierr)
+
+          call MPI_File_read_all(filehandle, float2d, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
+          disp=disp+sizeof(float2d(1,1))*dim(1)*dim(2)
+
+         ! Return to ordinary file view
+          call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr);
+
+         ! write(6,*) "cplumn",my_id, disp
+
+
+      end if
+
+
+
+    if ( vacuum_debug  .AND. my_id ==0) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, trim(datatype), d(1:nd)
+
+
+  end subroutine read_array_parallel_columnwise
+  !===========================================================================================================
+
+ 
+
+
+
+
+
+
+!=============================================================================================== 
   !> Read the STARWALL response matrices from a single file.
   !!
   !! file_version 1: Original
@@ -254,7 +673,7 @@ module vacuum_response
     type(t_starwall_response), intent(inout) :: sr
     character(len=*),          intent(in)    :: filename
     integer,                   intent(in)    :: n_bnd !< Number of boundary elements for consistency check
-    
+
     ! --- Local variables
     integer, parameter :: filehandle = 60
     character(len=512) :: comment
@@ -265,8 +684,8 @@ module vacuum_response
     ! --- Open file
     !   --- Try to open as unformatted file
     write(*,*) 'Trying to open response as unformatted file...'
-    open(filehandle, file=trim(filename), form='unformatted', status='old', action='read', &
-      access='stream', iostat=err)
+    open(filehandle, file=trim(filename),access='stream', form='unformatted', status='old', action='read', &
+      iostat=err)
     if ( err == 0 ) then
       read(filehandle,iostat=err) i_tmp, r_tmp
       if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) then
@@ -279,8 +698,8 @@ module vacuum_response
     if ( err /= 0 ) then
       write(*,*) '  ... failed.'
       write(*,*) 'Trying to open response as formatted file...'
-      open(filehandle, file=trim(filename), form='formatted', status='old', action='read', &
-        access='stream', iostat=err)
+      open(filehandle, file=trim(filename),access='stream',  form='formatted', status='old', action='read', &
+        iostat=err)
     end if
     
     if ( err /= 0 ) then
@@ -304,11 +723,10 @@ module vacuum_response
     end if
 
     sr%n_bnd  = read_intparam(filehandle, 'n_bnd')
-    if ( n_bnd /= sr%n_bnd ) then
+    if ( n_bnd /= sr%n_bnd ) then 
       write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
       stop
     end if
-    
     sr%nd_bez = read_intparam(filehandle, 'nd_bez')
     sr%ncoil  = read_intparam(filehandle, 'ncoil')
     sr%npot_w = read_intparam(filehandle, 'npot_w')
@@ -412,13 +830,267 @@ module vacuum_response
 
   end subroutine read_starwall_response
   
+  !==========================================================================================
+
+
+  !> Read the STARWALL response matrices from a single file.
+  !!
+  !! file_version 1: Original
+  !! file_version 2: Includes eta_thin_w
+  !! file_version 3: Includes additional coil information
+  subroutine read_starwall_response_parallel(my_id, sr, filename, n_bnd)
+
+    use constants
+    use mod_parameters, only: n_tor, n_period
+    use mpi_mod
+
+
+    implicit none
+
+    ! --- Routine parameters
+    integer,                   intent(in)    :: my_id !< MPI proc ID
+    type(t_starwall_response), intent(inout) :: sr
+    character(len=*),          intent(in)    :: filename
+    integer,                   intent(in)    :: n_bnd !< Number of boundary elements for consistency check
+
+    ! --- Local variables
+    integer            :: filehandle
+    character(len=512) :: comment
+    integer            :: i, j, i_starw, n, is_sin, err, i_tmp, ier
+    real*8             :: r_tmp
+    real*8, allocatable:: tmp(:)
+
+    ! MPI wariable to real parallel IO file
+    integer, dimension (MPI_STATUS_SIZE) :: status
+    integer(kind=MPI_OFFSET_KIND)        :: disp=0
+    !integer            :: disp=0
+    real*8             :: test_sum
+
+    integer            :: loc_sizes(2),step,ntasks
+ 
+
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
+
+
+    ! --- Open file
+    !   --- Try to open as unformatted file
+    if (my_id ==0 )  write(*,*) 'Trying to open response as unformatted file...'
+
+    call MPI_FILE_OPEN(MPI_COMM_WORLD, 'starwall-response.dat', &
+                       MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, err)
+
+    if ( err == 0 .AND. my_id ==0) then
+       call MPI_FILE_READ(filehandle, i_tmp, 1, MPI_INTEGER,status,err)
+       call MPI_FILE_READ(filehandle, r_tmp, 1, MPI_DOUBLE_PRECISION,status,err)
+       disp=disp+sizeof(42)+sizeof(42.d0)
+
+       if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) err=-42         
+      
+    end if
+    call MPI_BCAST(err, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ier )
+
+    if (err/=0) call MPI_FILE_CLOSE(filehandle, err)
+
+
+
+    !   --- Try to open as formatted file
+    if ( err /= 0 .AND. my_id ==0 ) then
+      write(*,*) '  ... failed.'
+      write(*,*) 'Trying to open response as formatted file...'
+      open(filehandle, file=trim(filename), form='formatted', status='old', action='read', &
+        iostat=err)
+    end if
+
+    if ( err /= 0 .AND. my_id ==0) then
+      write(*,*) '  ... failed.'
+      write(*,*) 'ERROR: STARWALL response file (',trim(filename),') could not be opened.'
+      stop
+    end if
+    if(my_id ==0 ) write(*,*) '  ... succeeded.'
+
+    ! --- Read data from STARWALL response file
+
+    if(my_id == 0) then
+
+       if ( is_formatted(filehandle) ) then
+           read(filehandle,'(A)') comment
+       else
+           call MPI_FILE_READ(filehandle, comment,sizeof(comment),MPI_CHARACTER,status,err)
+           disp=disp+sizeof(comment)
+       end if
+
+       sr%file_version = read_intparam_parallel(filehandle, 'file_version',disp)
+       if ( sr%file_version > 3 ) then
+           write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
+           stop
+       end if
+
+
+       sr%n_bnd  = read_intparam_parallel(filehandle, 'n_bnd' ,disp)
+       if ( n_bnd /= sr%n_bnd ) then
+          write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
+          stop
+       end if
+        
+       sr%nd_bez = read_intparam_parallel(filehandle, 'nd_bez',disp)
+       sr%ncoil  = read_intparam_parallel(filehandle, 'ncoil' ,disp)
+       sr%npot_w = read_intparam_parallel(filehandle, 'npot_w',disp)
+       sr%n_w    = read_intparam_parallel(filehandle, 'n_w'   ,disp)
+       sr%ntri_w = read_intparam_parallel(filehandle, 'ntri_w',disp)
+       sr%n_tor  = read_intparam_parallel(filehandle, 'n_tor' ,disp)
+
+       call read_array_sequential(filehandle, 'i_tor',         (/sr%n_tor,0/), disp, int1d=sr%i_tor)
+
+       if ( sr%file_version >= 3 ) then
+           
+            sr%ntri_c                  = read_intparam_parallel(filehandle, 'ntri_c',         disp)
+            sr%n_pol_coils             = read_intparam_parallel(filehandle, 'n_pol_coils',    disp)
+            sr%n_rmp_coils             = read_intparam_parallel(filehandle, 'n_rmp_coils',    disp)
+            sr%n_voltage_coils         = read_intparam_parallel(filehandle, 'n_voltage_coils',disp)
+            sr%n_diag_coils            = read_intparam_parallel(filehandle, 'n_diag_coils',   disp)
+         
+            if (sr%n_voltage_coils > 0 ) then
+                write(*,*) 'ERROR: voltage_coils not yet implemented.'
+                stop
+            end if
+      
+            if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils) then
+                write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
+                stop
+            end if
+ 
+
+            sr%ind_start_pol_coils     = read_intparam_parallel(filehandle, 'ind_start_pol_coils',    disp)
+            sr%ind_start_rmp_coils     = read_intparam_parallel(filehandle, 'ind_start_rmp_coils',    disp)
+            sr%ind_start_voltage_coils = read_intparam_parallel(filehandle, 'ind_start_voltage_coils',disp)
+            sr%ind_start_diag_coils    = read_intparam_parallel(filehandle, 'ind_start_diag_coils',   disp)
+
+            if ( sr%ncoil > 0 ) then
+                 
+                 call read_array_sequential(filehandle, 'jtri_c',        (/sr%ncoil,0/), disp,  int1d=sr%jtri_c)
+                 call read_array_sequential(filehandle, 'x_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%x_coil)
+                 call read_array_sequential(filehandle, 'y_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%y_coil)
+                 call read_array_sequential(filehandle, 'z_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%z_coil)
+                 call read_array_sequential(filehandle, 'phi_coil',      (/sr%ntri_c,3/),disp,  float2d=sr%phi_coil)
+                 call read_array_sequential(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/),disp,  float1d=sr%eta_thin_coil)
+                 call read_array_sequential(filehandle, 'coil_resist',   (/sr%ncoil,0/), disp,  float1d=sr%coil_resist)
+
+            end if
+        end if
+
+
+       ! --- eta_thin_w is only part of the STARWALL response file since
+       ! file_version 2
+       if ( sr%file_version >= 2 ) then
+           allocate(tmp(1))
+           call read_array_sequential(filehandle, 'eta_thin_w', (/1,0/), disp,            float1d=tmp)
+           
+           sr%eta_thin_w = tmp(1)
+           deallocate(tmp)
+       else
+          sr%eta_thin_w = 0.
+       end if
+
+       call read_array_sequential(filehandle, 'yy',       (/sr%n_w,0/), disp, float1d=sr%d_yy)
+   
+    endif
+
+
+    call MPI_BCAST(sr%n_w, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
+    call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
+
+    call read_array_parallel_rowwise    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,    sr%a_ye)    
+    call read_array_parallel_rowwise    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,    sr%a_ey)
+    call read_array_parallel_rowwise    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,    sr%a_ee)
+    call read_array_parallel_rowwise    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,    sr%s_ww)
+    call read_array_parallel_rowwise    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,    sr%s_ww_inv)
+ 
+    if(my_id == 0) then
+ 
+      call read_array_sequential(filehandle, 'xyzpot_w',(/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
+      call read_array_sequential(filehandle, 'jpot_w',(/sr%ntri_w,3/),disp, int2d=sr%jpot_w)
+
+    endif
+
+    call MPI_BARRIER(MPI_COMM_WORLD, err)
+    call MPI_FILE_CLOSE(filehandle, err)
+
+    if ( vacuum_debug .AND. my_id==0) write(*,*) 'Finished reading vacuum response.'
+
+    ! --- Import normalization
+    sr%a_ee(:,:) = sr%a_ee(:,:) * 2.d0*PI
+    sr%a_ye(:,:) = sr%a_ye(:,:) * 2.d0*PI
+    if ( vacuum_debug .AND. my_id==0) write(*,*) 'Applied import normalization.'
+
+    ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates replace  y <-> z)
+
+    if(my_id==0) then
+
+      allocate( tmp(sr%npot_w) )
+      tmp(:)           = sr%xyzpot_w(:,2)
+      sr%xyzpot_w(:,2) = sr%xyzpot_w(:,3)
+      sr%xyzpot_w(:,3) = tmp(:)
+      deallocate( tmp )
+
+    endif
+
+
+    ! --- Compute ideal-wall and no-wall response matrices.
+    if ( allocated(sr%a_id) ) deallocate(sr%a_id)
+    if ( allocated(sr%a_nw) ) deallocate(sr%a_nw)
+
+
+    ! matrices a_id and a_nw should be distriuted in the same way as a_ee
+    step=sr%nd_bez/ntasks
+    loc_sizes(1) = step
+    if(my_id==ntasks-1) loc_sizes(1) = step+sr%nd_bez-ntasks*step
+    loc_sizes(2) = sr%nd_bez
+
+    allocate( sr%a_id(loc_sizes(1),loc_sizes(2)),sr%a_nw(loc_sizes(1),loc_sizes(2) ))
+
+    sr%a_nw(:,:) = sr%a_ee(:,:)
+
+
+    ! TO be DONE
+    !sr%a_id(:,:) = sr%a_ee(:,:) - matmul( sr%a_ey(:,:), sr%a_ye(:,:) )
+
+    
+    if(my_id==0) then
+
+      ! --- Transform STARWALL harmonics to account for periodicity
+      j = 0
+      do i = 1, sr%n_tor
+         i_starw = sr%i_tor(i)
+         n       = i_starw / 2
+         is_sin  = i_starw - 2 * n
+         i_starw = 2 * n/n_period + is_sin
+         if ( (mod(n, n_period) /= 0) .or. (i_starw < 1) .or. (i_starw > n_tor) ) then
+             write(*,*) 'WARNING: STARWALL harmonic has no JOREK equivalent!'
+             write(*,*) 'i_starw    =', sr%i_tor(i)
+             write(*,*) 'n_period   =', n_period
+             write(*,*) 'n_tor      =', n_tor
+         else
+             j = j + 1
+             sr%i_tor(j) = i_starw
+         end if
+       end do
+     
+       sr%n_tor = j
+       if ( vacuum_debug) write(*,*) 'End of routine read_starwall_response.'
+
+
+    endif
+
+    call MPI_BARRIER(MPI_COMM_WORLD, err)
+    
+
+  end subroutine read_starwall_response_parallel
+
   
-  
-  
-  
+!===========================================================================================  
   
   !> Broadcast the STARWALL response matrices to the other MPI procs.
-  subroutine broadcast_starwall_response(my_id, sr)
+  subroutine broadcast_starwall_response_parallel(my_id, sr)
     
     use mpi_mod
     
@@ -431,8 +1103,9 @@ module vacuum_response
     
     ! --- Local parameters
     integer :: ierr
-    
-    if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
+    real*8    :: test_sum, loc_sum    
+
+    if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response_parallel.'
     
     ! --- Broadcast parameters.
     call MPI_bcast(sr%file_version,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -453,7 +1126,7 @@ module vacuum_response
     call MPI_bcast(sr%ind_start_rmp_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_voltage_coils, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_diag_coils,    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%eta_thin_w,              1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     
     n_dof_starwall = sr%nd_bez
     n_wall_curr    = sr%n_w
@@ -462,13 +1135,6 @@ module vacuum_response
     if ( my_id /= 0 ) then
       if (allocated(sr%i_tor)   ) deallocate(sr%i_tor);    allocate(sr%i_tor(sr%n_tor))
       if (allocated(sr%d_yy)    ) deallocate(sr%d_yy);     allocate(sr%d_yy(sr%n_w))
-      if (allocated(sr%a_ye)    ) deallocate(sr%a_ye);     allocate(sr%a_ye(sr%n_w,sr%nd_bez))
-      if (allocated(sr%a_ey)    ) deallocate(sr%a_ey);     allocate(sr%a_ey(sr%nd_bez,sr%n_w))
-      if (allocated(sr%a_ee)    ) deallocate(sr%a_ee);     allocate(sr%a_ee(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%a_id)    ) deallocate(sr%a_id);     allocate(sr%a_id(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%a_nw)    ) deallocate(sr%a_nw);     allocate(sr%a_nw(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%s_ww)    ) deallocate(sr%s_ww);     allocate(sr%s_ww(sr%n_w,sr%n_w))
-      if (allocated(sr%s_ww_inv)) deallocate(sr%s_ww_inv); allocate(sr%s_ww_inv(sr%n_w,sr%n_w))
       if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
       if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
       if ( sr%ncoil > 0 ) then
@@ -483,17 +1149,10 @@ module vacuum_response
     end if
     
     ! --- Broadcast matrices.
-    call MPI_bcast(sr%i_tor,    sr%n_tor,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%d_yy,     sr%n_w,                MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ye,     sr%n_w*sr%nd_bez,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ey,     sr%nd_bez*sr%n_w,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ee,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_id,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_nw,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww,     sr%n_w*sr%n_w,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,           MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     if ( sr%ncoil > 0 ) then
       call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
       call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
@@ -505,7 +1164,126 @@ module vacuum_response
     end if
     
     if ( vacuum_debug ) then
-      write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
+
+        loc_sum = sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee)  + sum(sr%a_nw) + sum(sr%s_ww)+ sum(sr%s_ww_inv )   
+
+        if(my_id==0) then
+
+           loc_sum =   loc_sum + sum(sr%i_tor) + sum(sr%d_yy)+ sum(sr%xyzpot_w)     &
+                     + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil + sr%npot_w & 
+                     + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w                &
+                     + sr%file_version + sr%ntri_c + sr%n_pol_coils                 &  
+                     + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils        &    
+                     + sr%ind_start_pol_coils + sr%ind_start_rmp_coils              &
+                     + sr%ind_start_voltage_coils + sr%ind_start_diag_coils
+        endif
+  
+        test_sum=0.0
+        call MPI_Reduce(loc_sum, test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+ 
+        if(my_id==0)  write(*,'("Checksum",I4,ES24.16)') my_id, test_sum
+      
+        write(*,*) my_id, 'Exiting broadcast_starwall_response_parallel.'
+   
+   endif  
+   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+   
+  end subroutine broadcast_starwall_response_parallel
+  
+  
+  !===========================================================================================  
+
+  !> Broadcast the STARWALL response matrices to the other MPI procs.
+  subroutine broadcast_starwall_response(my_id, sr)
+
+    use mpi_mod
+
+    implicit none
+
+
+    ! --- Routine parameters
+    integer,                   intent(in)    :: my_id
+    type(t_starwall_response), intent(inout) :: sr
+
+    ! --- Local parameters
+    integer :: ierr
+
+    if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
+
+    ! --- Broadcast parameters.
+    call MPI_bcast(sr%file_version, 1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_bnd,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nd_bez,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ncoil,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%npot_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor0,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_c,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_pol_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_rmp_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_voltage_coils,         1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_diag_coils,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_pol_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_rmp_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_voltage_coils, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_diag_coils,    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+
+    n_dof_starwall = sr%nd_bez
+    n_wall_curr    = sr%n_w
+  
+    ! --- Allocate matrics.
+    if ( my_id /= 0 ) then
+      if (allocated(sr%i_tor)   ) deallocate(sr%i_tor); allocate(sr%i_tor(sr%n_tor))
+      if (allocated(sr%d_yy)    ) deallocate(sr%d_yy);  allocate(sr%d_yy(sr%n_w))
+      if (allocated(sr%a_ye)    ) deallocate(sr%a_ye);  allocate(sr%a_ye(sr%n_w,sr%nd_bez))
+      if (allocated(sr%a_ey)    ) deallocate(sr%a_ey);  allocate(sr%a_ey(sr%nd_bez,sr%n_w))
+      if (allocated(sr%a_ee)    ) deallocate(sr%a_ee);  allocate(sr%a_ee(sr%nd_bez,sr%nd_bez))
+      if (allocated(sr%a_id)    ) deallocate(sr%a_id);  allocate(sr%a_id(sr%nd_bez,sr%nd_bez))
+      if (allocated(sr%a_nw)    ) deallocate(sr%a_nw);  allocate(sr%a_nw(sr%nd_bez,sr%nd_bez))
+      if (allocated(sr%s_ww)    ) deallocate(sr%s_ww);  allocate(sr%s_ww(sr%n_w,sr%n_w))
+      if (allocated(sr%s_ww_inv)) deallocate(sr%s_ww_inv);  allocate(sr%s_ww_inv(sr%n_w,sr%n_w))
+      if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w);  allocate(sr%xyzpot_w(sr%npot_w,3))
+      if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);    allocate(sr%jpot_w(sr%ntri_w,3))
+      if ( sr%ncoil > 0 ) then
+        if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);  allocate(sr%jtri_c(sr%ncoil))
+        if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);  allocate(sr%x_coil(sr%ntri_c,3))
+        if (allocated(sr%y_coil)       ) deallocate(sr%y_coil);  allocate(sr%y_coil(sr%ntri_c,3))
+        if (allocated(sr%z_coil)       ) deallocate(sr%z_coil);  allocate(sr%z_coil(sr%ntri_c,3))
+        if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);allocate(sr%phi_coil(sr%ntri_c,3))
+        if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
+        if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+      end if
+    end if
+
+    ! --- Broadcast matrices.
+    call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ye,     sr%n_w*sr%nd_bez,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ey,     sr%nd_bez*sr%n_w,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ee,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_id,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_nw,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww,     sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    if ( sr%ncoil > 0 ) then
+      call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    end if
+
+    if ( vacuum_debug ) then
+      write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)                       &
         + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)  &
         + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
         + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version + sr%ntri_c  &
@@ -514,12 +1292,13 @@ module vacuum_response
         + sr%ind_start_diag_coils
       write(*,*) my_id, 'Exiting broadcast_starwall_response.'
     end if
-    
+
   end subroutine broadcast_starwall_response
-  
-  
-  
-  
+
+
+
+
+
   
   
   !> Write out information about the STARWALL response matrices.
@@ -528,7 +1307,7 @@ module vacuum_response
     use mod_parameters, only: n_period
     
     implicit none
-    
+   
     type(t_starwall_response), intent(in) :: sr
     
     32 format(3x,77('-'))
@@ -558,8 +1337,8 @@ module vacuum_response
     write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
     write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
     write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
-    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w              =', sr%eta_thin_w
-    if (allocated(sr%i_tor)) write(*,33) 'i_tor                   = '//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
+    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
+    if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
       write(*,32)
       if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ', sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
@@ -586,6 +1365,149 @@ module vacuum_response
     
   end subroutine log_starwall_response
   
+!> Write out information about the STARWALL response matrices.
+  subroutine log_starwall_response_parallel(my_id, sr)
+
+    use mod_parameters, only: n_period
+    use mpi_mod
+
+    implicit none
+
+    integer,                   intent(in) :: my_id
+    type(t_starwall_response), intent(in) :: sr
+
+    real*8  :: test_sum
+    integer :: ierr
+
+
+    32 format(3x,77('-'))
+    33 format(3x,a,i8)
+    34 format(3x,'sum(',a,')=',es24.16)
+    35 format(3x,'sum(',a,')=',i24)
+    36 format(3x,'sum(',a,')= ---not allocated---')
+    37 format(3x,a,es25.15)
+  
+    if(my_id == 0) then
+  
+        write(*,*)
+        write(*,32)
+        write(*,33) 'STARWALL RESPONSE INFORMATION:'
+        write(*,32)
+        write(*,33) 'file_version            =', sr%file_version
+        write(*,33) 'n_bnd                   =', sr%n_bnd
+        write(*,33) 'nd_bez                  =', sr%nd_bez
+        write(*,33) 'ncoil                   =', sr%ncoil
+        write(*,33) 'npot_w                  =', sr%npot_w
+        write(*,33) 'n_w                     =', sr%n_w
+        write(*,33) 'ntri_w                  =', sr%ntri_w
+        write(*,33) 'n_tor                   =', sr%n_tor
+        write(*,33) 'n_tor0                  =', sr%n_tor0
+        write(*,33) 'n_pol_coils             =', sr%n_pol_coils
+        write(*,33) 'n_rmp_coils             =', sr%n_rmp_coils
+        write(*,33) 'n_voltage_coils         =', sr%n_voltage_coils
+        write(*,33) 'n_diag_coils            =', sr%n_diag_coils
+        write(*,33) 'ind_start_pol_coils     =', sr%ind_start_pol_coils
+        write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
+        write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
+        write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
+      
+       if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
+       if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
+
+    endif 
+
+
+    if ( vacuum_debug ) then
+       
+          if(my_id == 0 ) then
+             write(*,32)
+             if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ',sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
+             if (allocated(sr%d_yy         )) then; write(*,34) 'd_yy         ',sum(sr%d_yy          ); else; write(*,36) 'd_yy         '; end if
+          endif 
+
+
+          test_sum=0.0
+          if (allocated(sr%a_ye)) then
+              call MPI_Reduce(sum(sr%a_ye), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+              if(my_id == 0) write(*,34) 'a_ye         ', test_sum 
+          else
+              if(my_id == 0)  write(*,36) 'a_ye         '
+          end if            
+ 
+          test_sum=0.0
+          if (allocated(sr%a_ye)) then 
+              call MPI_Reduce(sum(sr%a_ey), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+              if(my_id == 0) write(*,34) 'a_ey         ', test_sum 
+          else
+             if(my_id == 0)  write(*,36) 'a_ey         ' 
+          end if
+
+          test_sum=0.0
+          if (allocated(sr%a_ye)) then
+              call MPI_Reduce(sum(sr%a_ee), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+              if(my_id == 0) write(*,34) 'a_ee         ', test_sum
+          else
+              if(my_id == 0) write(*,36) 'a_ee         '
+          end if
+
+
+          test_sum=0.0
+          if (allocated(sr%a_id)) then
+              call MPI_Reduce(sum(sr%a_id), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+              if(my_id == 0) write(*,34) 'a_id         ', test_sum
+          else
+              if(my_id == 0) write(*,36) 'a_id         '
+          end if
+
+
+          test_sum=0.0
+          if (allocated(sr%a_id)) then
+              call MPI_Reduce(sum(sr%a_nw), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+              if(my_id == 0) write(*,34) 'a_nw         ', test_sum
+          else
+              if(my_id == 0) write(*,36) 'a_nw         '
+          end if
+
+        
+          test_sum=0.0
+          if (allocated(sr%a_id)) then
+              call MPI_Reduce(sum(sr%s_ww), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+              if(my_id == 0) write(*,34) 's_ww         ', test_sum
+          else
+              if(my_id == 0) write(*,36) 's_nw         '
+          end if
+
+
+          test_sum=0.0
+          if (allocated(sr%a_id)) then
+              call MPI_Reduce(sum(sr%s_ww_inv), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+              if(my_id == 0) write(*,34) 's_ww_inv     ', test_sum
+          else
+              if(my_id == 0) write(*,36) 's_nw_inv         '
+          end if
+
+            
+          if(my_id == 0) then
+           if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ',sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
+           if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ',sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
+           if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ',sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
+           if (allocated(sr%x_coil       )) then; write(*,34) 'x_coil       ',sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
+           if (allocated(sr%y_coil       )) then; write(*,34) 'y_coil       ',sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
+           if (allocated(sr%z_coil       )) then; write(*,34) 'z_coil       ',sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
+           if (allocated(sr%phi_coil     )) then; write(*,34) 'phi_coil     ',sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
+           if (allocated(sr%eta_thin_coil)) then; write(*,34) 'eta_thin_coil',sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
+           if (allocated(sr%coil_resist  )) then; write(*,34) 'coil_resist  ',sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
+          endif
+    end if
+  
+
+    if(my_id==0)  then
+       write(*,32)
+       write(*,*)
+    endif
+   
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  end subroutine log_starwall_response_parallel
   
   
   
@@ -1098,8 +2020,8 @@ module vacuum_response
     
     ! --- Perform the time-stepping for the wall currents.
     if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
-    
-    ! --- Update old_dpsibnd_vec  (used for updating the wall currents in the next iteration)
+
+    ! --- Update old_dpsibnd_vec  (used for updating the wall currents in  the next iteration)
     old_dpsibnd_vec(:) = dpsibnd_vec(:)
     
     if ( vacuum_debug ) then
@@ -1108,7 +2030,7 @@ module vacuum_response
     end if
 
     if ( my_id == 0 ) call boundary_check()
-        
+       
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
 #endif
@@ -1491,9 +2413,9 @@ module vacuum_response
     real*8, allocatable       :: potentials_real_0(:)
     real*8, save, allocatable :: delta_Icoils_0(:)
     logical, save             :: initialized=.false.
-   
+
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
-    
+
     ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
     ! This is used below to avoid violent jumps in I_coils that can happen when restarting from a freeboudary_equil with feedback
     if(.not. initialized) then
@@ -1510,20 +2432,20 @@ module vacuum_response
 
     if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
     if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
-    
+
     ! --- Calculate the specified coil currents at present time 
     do i=1, n_coils
       I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
     enddo
-    
+
     ! --- Transform real currents into starwall currents
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
     potentials_real_0(1:n_coils) = I_coils(1:n_coils) * mu_zero
     do i = 1, n_wall_curr
-      Y_coils0(i) = sum(sr%s_ww_inv(i,:) * potentials_real_0(:))    
+      Y_coils0(i) = sum(sr%s_ww_inv(i,:) * potentials_real_0(:))
     end do
-    
+   
   end subroutine coil_current_source
   
   

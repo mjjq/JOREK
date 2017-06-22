@@ -1065,7 +1065,7 @@ module vacuum_response
     integer  :: i_vertex, i_dof, i_dir, i_node, i_node_bnd, i_index, i_starwall, i_tor, i_resp, i_resp_0
     real*8   :: i_size
     !   --- Quantities related to the boundary dof contributing to the response
-    integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_resp
+    integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_col_psi, j_resp
     
     integer  :: i_resp_old
 
@@ -1127,7 +1127,7 @@ module vacuum_response
     !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, dA, m_plane, common_prefactor,         &
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,   &
     !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir,      &
-    !$omp   j_index, j_starwall, j_tor, j_resp, sparsepos_jp, sparsepos_pp,                        &
+    !$omp   j_index, j_starwall, j_tor, j_resp, j_col_psi, sparsepos_jp, sparsepos_pp,                        &
     !$omp   amat_contrib, rhs_contrib, blockpos_jp, blockpos_pp)                                   &
     !$omp schedule(dynamic,1)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements

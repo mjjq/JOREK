@@ -38,7 +38,7 @@ nrt_unit:
 	+./util/test_dir.sh non_regression_tests/unit_tests
 doc docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
 	-@rm -r doc/ # workaround for FORD bug
-	ford jorek.md --no-search
+	ford jorek.md --no-search $(INCLUDES)
 
 
 

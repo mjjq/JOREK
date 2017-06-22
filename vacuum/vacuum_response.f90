@@ -85,18 +85,17 @@ module vacuum_response
     call broadcast_starwall_response(my_id, sr)
     
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
-    if ( sr%file_version == 1 ) then
-      write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
-      write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
-    else
-      write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
-      write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
-      write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
-      wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
-        sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
-    end if
-    
     if ( my_id == 0 ) then
+      if ( sr%file_version == 1 ) then
+        write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
+        write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
+      else
+        write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
+        write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
+        write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
+        wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
+          sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
+      end if
       call log_starwall_response(sr)
       if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
     end if
@@ -1024,7 +1023,8 @@ module vacuum_response
     use data_structure, only: type_node_list, type_bnd_node_list, type_bnd_element_list, type_bnd_element
     use mod_parameters,     only: n_plane, n_var, n_tor
     use gauss,          only: n_gauss, xgauss, wgauss
-    use global_distributed_matrix, only: irn_glob, jcn_glob, a_glob, ndof_glob, det_row_col, det_sparse_pos
+    use global_distributed_matrix, only: irn_glob, jcn_glob, a_glob, ndof_glob, det_row_col,       &
+      det_sparse_pos, det_sparse_pos_block, n_matrix_block_size
     use basis_at_gaussian, only: H1, H1_s, HZ
     use phys_module, only: t_now, t_start
     
@@ -1057,6 +1057,7 @@ module vacuum_response
     integer  :: ms                          ! Gauss point index
     integer  :: m_plane                     ! Toroidal plane index
     integer  :: sparsepos_jp, sparsepos_pp  ! Position of lhs contribution in the sparse matrix
+    integer  :: blockpos_jp, blockpos_pp    ! Position of respective block in sparse matrix
     !   --- Test function related quantities
     integer  :: l_vertex, l_dof, l_dir, l_node, l_node_bnd, l_index, l_tor, l_row_j, l_row_psi
     real*8   :: l_size
@@ -1064,9 +1065,9 @@ module vacuum_response
     integer  :: i_vertex, i_dof, i_dir, i_node, i_node_bnd, i_index, i_starwall, i_tor, i_resp, i_resp_0
     real*8   :: i_size
     !   --- Quantities related to the boundary dof contributing to the response
-    integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_col_psi, j_resp
+    integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_resp
     
-    integer  :: i_resp_old, j_resp_old
+    integer  :: i_resp_old
 
     integer  :: i_start_pf, i_end_pf     ! Indices for PF coils
 #ifdef __GFORTRAN__
@@ -1107,7 +1108,7 @@ module vacuum_response
       write(*,*) my_id, 'dpsibnd_vec: ', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
     end if
 
-    if ( my_id == 0 ) call boundary_check()
+!    if ( my_id == 0 ) call boundary_check()
         
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
@@ -1118,17 +1119,16 @@ module vacuum_response
     !$omp shared(a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,    &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,      &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec, psibnd_coils,       &
-    !$omp   starwall_equil_coils, response_m_v, Y_coils0,                                          &
 #ifdef __GFORTRAN__
-    !$omp   wgauss_copy,                                                                                &
+    !$omp   wgauss_copy,                                                                           &
 #endif
-    !$omp   resistive_wall)     &
+    !$omp   starwall_equil_coils, response_m_v, Y_coils0, n_matrix_block_size, resistive_wall)     &
     !$omp private(m_bndelem, bndelem_m, x_s, y_s, l_vertex, l_dof, l_node, l_dir, l_node_bnd,      &
     !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, dA, m_plane, common_prefactor,         &
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,   &
-    !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir, j_index,         &
-    !$omp   j_starwall, j_tor, j_resp, j_resp_old,j_col_psi, sparsepos_jp, sparsepos_pp, amat_contrib,        &
-    !$omp   rhs_contrib) &
+    !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir,      &
+    !$omp   j_index, j_starwall, j_tor, j_resp, sparsepos_jp, sparsepos_pp,                        &
+    !$omp   amat_contrib, rhs_contrib, blockpos_jp, blockpos_pp)                                   &
     !$omp schedule(dynamic,1)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
@@ -1156,19 +1156,6 @@ module vacuum_response
             l_row_psi = det_row_col(l_index, ivar_psi, l_tor)
             l_row_j   = det_row_col(l_index, ivar_j,   l_tor)
 
-            ! --- Loop over Gaussian points -- integration in s-direction
-            L_MS: do ms = 1, n_gauss
-
-              ! --- Integration factor from the definition of dA:
-              !     int dA = sum_{m_bndelem} int ds int dphi sqrt{(R,s)^2 + (Z,s)^2}
-              dA = sqrt(x_s(ms)**2 + y_s(ms)**2)
-
-              ! --- Loop over toroidal planes -- integration in phi-direction
-              L_MP: do m_plane = 1, n_plane
-
-                ! --- Evaluate test function at current position
-                testfunc_l = H1(l_vertex,l_dof,ms) * l_size * HZ(l_tor,m_plane)
-
                 ! --- Sum over boundary dofs at which response is calculated
                 L_IV: do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
 
@@ -1195,14 +1182,32 @@ module vacuum_response
  
                       i_resp_0 = response_index_eq(i_node_bnd,i_dof)
 
-                      ! --- Determine basis function
-                      basfunc_i = H1(i_vertex,i_dof,ms) * i_size * HZ(i_tor,m_plane)
+                      ! --- Loop over Gaussian points -- integration in s-direction
+                      common_prefactor = 0.
+                      L_MS: do ms = 1, n_gauss
+
+                        ! --- Integration factor from the definition of dA:
+                        !     int dA = sum_{m_bndelem} int ds int dphi sqrt{(R,s)^2 + (Z,s)^2}
+                        dA = sqrt(x_s(ms)**2 + y_s(ms)**2)
+
+                        ! --- Loop over toroidal planes -- integration in phi-direction
+                        L_MP: do m_plane = 1, n_plane
+
+                          ! --- Evaluate test function at current position
+                          testfunc_l = H1(l_vertex,l_dof,ms) * l_size * HZ(l_tor,m_plane)
+
+                          ! --- Determine basis function
+                          basfunc_i = H1(i_vertex,i_dof,ms) * i_size * HZ(i_tor,m_plane)
 
 #ifdef __GFORTRAN__
-                      common_prefactor = wgauss_copy(ms) * dA * testfunc_l * basfunc_i
+                          common_prefactor = common_prefactor + wgauss_copy(ms) * dA * testfunc_l * basfunc_i
 #else
-                      common_prefactor = wgauss(ms) * dA * testfunc_l * basfunc_i
+                          common_prefactor = common_prefactor + wgauss(ms) * dA * testfunc_l * basfunc_i
 #endif
+                        end do L_MP
+
+                      end do L_MS
+
                       ! --- Sum over boundary dofs contributing to the response
                       L_JB: do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
 
@@ -1212,34 +1217,29 @@ module vacuum_response
 
                           j_dir       = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
                           j_index     = node_list%node(j_node)%index(j_dir)
+                          
+                          !DIR$ FORCEINLINE
+                          blockpos_jp = det_sparse_pos_block(l_row_j,   n_tor * n_var * (j_index-1) + 1, index_min)
+                          !DIR$ FORCEINLINE
+                          blockpos_pp = det_sparse_pos_block(l_row_psi, n_tor * n_var * (j_index-1) + 1, index_min)
 
                           L_JS: do j_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
 
                             j_tor  = sr%i_tor(j_starwall)
 
-                            j_resp_old = response_index(j_node_bnd,j_starwall,j_dof)
+                            ! --- Option to switch off mode coupling due to a 3D wall
+                            if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
 
                             j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1) &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)-bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
 
-!                      if (j_resp_old .ne. j_resp) write(*,'(A,8i5)') 'PANIC! : ',j_node, j_starwall, j_dof,bnd_node_list%bnd_node(j_node_bnd)%index_starwall,j_resp_old, j_resp
-
-                            ! --- Option to switch off mode coupling due to a 3D wall
-                            if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
-
-                            ! --- Determine the column in the main matrix
-                            j_col_psi = det_row_col(j_index, ivar_psi, j_tor)
-
                             ! --- Determine the position in the sparse matrix data structure
-                            !     which corresponds to the matrix entry at l_row_j, j_col_psi.
-                            sparsepos_jp = det_sparse_pos(l_row_j,   j_col_psi, index_min)
-                            sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min)
+                            sparsepos_jp = blockpos_jp + n_tor * (ivar_psi-1) + j_tor-1
+                            sparsepos_pp = blockpos_pp + n_tor * (ivar_psi-1) + j_tor-1
 
                             ! --- Vacuum response contribution to the lhs of the current equation
-                            amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
-                            !$omp atomic
-                            A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
+                            A_glob(sparsepos_jp) = A_glob(sparsepos_jp) - common_prefactor * response_m_e(i_resp, j_resp)
 
                           end do L_JS
                         end do L_JD
@@ -1260,17 +1260,12 @@ module vacuum_response
                                                   - sum( response_m_v(i_resp, :) *   Y_coils0(:) ) 
 
 
-                      rhs_contrib = rhs_contrib * common_prefactor
-                      !$omp atomic
-                      rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
+                      rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib * common_prefactor
 
                     end do L_IS
                   end do L_ID
                 end do L_IV
 
-              end do L_MP
-
-            end do L_MS
 
           end do L_LS
         end do L_LD
@@ -1360,7 +1355,7 @@ module vacuum_response
     real*8, allocatable, optional, intent(out) :: psibnd_coils(:)!< Vector of Psi_coil boundary values
 
     ! --- Local variables
-    integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp, j_resp_0, j_resp_old
+    integer :: jnode, jnode_glob, j_starwall, jtor, jbas, jdir, j_resp, j_resp_0
 
     if ( allocated(psibnd_vec) ) deallocate(psibnd_vec)
     allocate( psibnd_vec(n_dof_starwall) )
@@ -1388,15 +1383,11 @@ module vacuum_response
         do jbas = 1, 2                ! loop over basis functions
 
           jdir         = bnd_node_list%bnd_node(jnode)%direction(jbas)
-          j_resp_old   = response_index(jnode,j_starwall,jbas)
           j_resp_0     = response_index_eq(jnode,jbas)
 
           j_resp = (bnd_node_list%bnd_node(jnode)%index_starwall(1) - 1)*sr%n_tor0 &
                  +  bnd_node_list%bnd_node(jnode)%n_dof*(j_starwall-1) &
                  + (bnd_node_list%bnd_node(jnode)%index_starwall(jbas)-bnd_node_list%bnd_node(jnode)%index_starwall(1)) + 1
-
-!          if (j_resp_old .ne. j_resp) write(*,'(A4i5)') 'PANIC jresp: ',j_resp_old,j_resp, &
-!           bnd_node_list%bnd_node(jnode)%index_starwall(1), bnd_node_list%bnd_node(jnode)%index_starwall(jbas)
 
           psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, ivar_psi)
           dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, ivar_psi)

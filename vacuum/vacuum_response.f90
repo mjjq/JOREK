@@ -1222,13 +1222,9 @@ module vacuum_response
 
                             j_tor  = sr%i_tor(j_starwall)
 
-                            j_resp_old = response_index(j_node_bnd,j_starwall,j_dof)
-
                             j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1) &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)-bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
-
-!                      if (j_resp_old .ne. j_resp) write(*,'(A,8i5)') 'PANIC! : ',j_node, j_starwall, j_dof,bnd_node_list%bnd_node(j_node_bnd)%index_starwall,j_resp_old, j_resp
 
                             ! --- Option to switch off mode coupling due to a 3D wall
                             if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle

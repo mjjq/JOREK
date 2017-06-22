@@ -1218,28 +1218,33 @@ module vacuum_response
                           j_dir       = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
                           j_index     = node_list%node(j_node)%index(j_dir)
                           
-                          !DIR$ FORCEINLINE
-                          blockpos_jp = det_sparse_pos_block(l_row_j,   n_tor * n_var * (j_index-1) + 1, index_min)
-                          !DIR$ FORCEINLINE
-                          blockpos_pp = det_sparse_pos_block(l_row_psi, n_tor * n_var * (j_index-1) + 1, index_min)
-
                           L_JS: do j_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
 
                             j_tor  = sr%i_tor(j_starwall)
 
-                            ! --- Option to switch off mode coupling due to a 3D wall
-                            if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
+                            j_resp_old = response_index(j_node_bnd,j_starwall,j_dof)
 
                             j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1) &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)-bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
 
+!                      if (j_resp_old .ne. j_resp) write(*,'(A,8i5)') 'PANIC! : ',j_node, j_starwall, j_dof,bnd_node_list%bnd_node(j_node_bnd)%index_starwall,j_resp_old, j_resp
+
+                            ! --- Option to switch off mode coupling due to a 3D wall
+                            if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
+
+                            ! --- Determine the column in the main matrix
+                            j_col_psi = det_row_col(j_index, ivar_psi, j_tor)
+
                             ! --- Determine the position in the sparse matrix data structure
-                            sparsepos_jp = blockpos_jp + n_tor * (ivar_psi-1) + j_tor-1
-                            sparsepos_pp = blockpos_pp + n_tor * (ivar_psi-1) + j_tor-1
+                            !     which corresponds to the matrix entry at l_row_j, j_col_psi.
+                            sparsepos_jp = det_sparse_pos(l_row_j,   j_col_psi, index_min)
+                            sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min)
 
                             ! --- Vacuum response contribution to the lhs of the current equation
-                            A_glob(sparsepos_jp) = A_glob(sparsepos_jp) - common_prefactor * response_m_e(i_resp, j_resp)
+                            amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
+                            !$omp atomic
+                            A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
 
                           end do L_JS
                         end do L_JD
@@ -1260,7 +1265,9 @@ module vacuum_response
                                                   - sum( response_m_v(i_resp, :) *   Y_coils0(:) ) 
 
 
-                      rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib * common_prefactor
+                      rhs_contrib = rhs_contrib * common_prefactor
+                      !$omp atomic
+                      rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
 
                     end do L_IS
                   end do L_ID

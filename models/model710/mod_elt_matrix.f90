@@ -204,15 +204,13 @@ do i=1,n_vertex_max
        y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
        y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
-#ifdef fullmhd
            Fprofile(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H(i,j,ms,mt)
 !           Fprofile_s(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_s(i,j,ms,mt)
 !           Fprofile_t(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_t(i,j,ms,mt)
 
-           psieq(ms,mt)    = psieq(ms,mt)    + nodes(i)%psi_eq(j)   * element%size(i,j) * H(i,j,ms,mt)
-           psieq_s(ms,mt)  = psieq_s(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_s(i,j,ms,mt)
-           psieq_t(ms,mt)  = psieq_t(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_t(i,j,ms,mt)
-#endif
+       psieq(ms,mt)    = psieq(ms,mt)    + nodes(i)%psi_eq(j)   * element%size(i,j) * H(i,j,ms,mt)
+       psieq_s(ms,mt)  = psieq_s(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_s(i,j,ms,mt)
+       psieq_t(ms,mt)  = psieq_t(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_t(i,j,ms,mt)
 
 
        do mp=1,n_plane
@@ -243,8 +241,8 @@ enddo
 
 do ms=1, n_gauss
   do mt=1, n_gauss
-       call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
-       call sources(xpoint2, xcase2, y_g(ms,mt)           , Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call sources(xpoint2, xcase2, y_g(ms,mt)           , Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
   enddo
 enddo
 
@@ -753,10 +751,14 @@ do ms=1, n_gauss
 
            if (primitive) then 
              Qvec(var_T) =   v * ( - r0 * u0grad_T0 - T0 * u0grad_r0 - gamma * p0 * divu ) + heat_source(ms,mt)  &
+
                            + (gamma-1.d0)*( - ZK_prof * gradT0grad_vstar - (ZKpar_T-ZK_prof) * B0grad_T0 * B0grad_vstar / BB2 )
            else
+
              Qvec(var_T) =    gamma * p0 * u0grad_vstar                                    &
-             + (gamma-1.d0)*( - ZK_prof * gradT0grad_vstar - (ZKpar_T-ZK_prof) * B0grad_T0 * B0grad_vstar / BB2               & 
+
+                           + (gamma-1.d0)*( - ZK_prof * gradT0grad_vstar - (ZKpar_T-ZK_prof) * B0grad_T0 * B0grad_vstar / BB2 & 
+
                               + v * ( r0 * u0grad_T0 + T0 * u0grad_r0 + heat_source(ms,mt) ) )
            endif
 

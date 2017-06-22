@@ -241,6 +241,7 @@ module phys_module
   logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium?
   logical :: freeboundary            !< use free or fixed boundary conditions in time-evolution?
   logical :: resistive_wall          !< use a resistive or ideal wall?    (free boundary only)
+  logical :: freeb_equil_iterate_area      !< iterate to a target area during freeboundary equilibrium limiter cases?
   real*8  :: amix_freeb              !< choose amix for freeboundary equilibriums
   real*8  :: equil_accuracy_freeb    !< Tolerance of the convergence for the free-boundary equilibrium
   logical :: freeb_change_indices    !< Exchange grid node indices to parallelize boundary integral

@@ -196,7 +196,7 @@ module vacuum_equilibrium
     ! --- Local variables
     type (type_bnd_element) :: bndelem_m
     integer :: m_bndelem, l_vertex, l_dof, l_node, l_dir, l_node_bnd, l_index, ms
-    integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp
+    integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp, i_resp_st
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
     integer :: i, j, i_start_pf, i_end_pf
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
@@ -256,11 +256,13 @@ module vacuum_equilibrium
                 size_i     = bndelem_m%size(i_vertex,i_dof)
                 i_resp     = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
                 basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
+                i_resp_st  = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
+                             + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)-bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
                 
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
                 
                 if (starwall_equil_coils) then
-                  B_tan_coil_i         = - sum (sr%a_ey(i_resp,:) * wall_curr(:) )
+                  B_tan_coil_i         = - sum (sr%a_ey(i_resp_st,:) * wall_curr(:) )
                 else
                   B_tan_coil_i         =   sum ( I_coils(:) * bext_tan(i_resp,:) )  
                 endif
@@ -282,6 +284,10 @@ module vacuum_equilibrium
                     endif
                    
                     psi_0_j    = node_list%node(j_node)%values(1,j_dir,1)
+                    
+                    if (j_dir == 1) then   ! shift the flux calue by a global constant, if chosen wisely, it helps a lot with convergence
+                      psi_0_j = psi_0_j - psi_offset_freeb 
+                    endif
                     
                     ilarge                 = ilarge + 1
                     mumps_par%irn(ilarge)  = l_index

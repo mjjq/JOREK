@@ -793,7 +793,7 @@ required = 0
 
     ! TODO : ne pas appeler avec MURGE si pas utile
     if (.not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres )) then
-       call global_matrix_structure(my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
+       call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
             local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
     end if
 

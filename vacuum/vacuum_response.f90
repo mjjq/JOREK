@@ -86,16 +86,18 @@ module vacuum_response
     
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
     if ( my_id == 0 ) then
+      write(*,*)
       if ( sr%file_version == 1 ) then
-        write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
-        write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
+        write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the'
+        write(*,*) '  JOREK namelist file. Thus, input parameter wall_resistivity_fact is ignored (WARNING).'
       else
-        write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
-        write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
-        write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
+        write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the'
+        write(*,*) '  STARWALL input. The JOREK variable wall_resistivity is calculated from it.'
+        write(*,*) '  Thus, the input parameter wall_resistivity is ignored (WARNING).'
         wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
           sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
       end if
+      write(*,*)
       call log_starwall_response(sr)
       if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
     end if
@@ -263,6 +265,7 @@ module vacuum_response
     
     ! --- Open file
     !   --- Try to open as unformatted file
+    write(*,*)
     write(*,*) 'Trying to open response as unformatted file...'
     open(filehandle, file=trim(filename), form='unformatted', status='old', action='read', &
       access='stream', iostat=err)

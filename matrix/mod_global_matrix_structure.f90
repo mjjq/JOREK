@@ -1,6 +1,6 @@
 module mod_global_matrix_structure
 contains
-subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max)
+subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
@@ -20,7 +20,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   type (type_element)          :: element
   type (type_node)             :: nodes(n_vertex_max)
 
-  integer :: local_elms(*), index_min, index_max, my_id, n_local_elms
+  integer :: local_elms(*), index_min, index_max, my_id, my_id_n, n_local_elms
   integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
   integer :: j_larger, j, ibase, n_max
   integer :: inode,i_father
@@ -252,7 +252,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   nz_glob = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + (n_tor*n_var)**2 - 1
 
-  write(*,*) my_id,' size matrices : n, nz = ',n_glob, nz_glob
+  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n_glob, nz_glob
 
   return
 end subroutine global_matrix_structure

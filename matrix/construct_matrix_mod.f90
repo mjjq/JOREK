@@ -15,6 +15,7 @@ contains
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
     USE data_structure,           only : type_element, type_node, type_node_list
     use mod_boundary_matrix_open, only : boundary_matrix_open
+    use mod_boundary_matrix,      only : boundary_matrix
     use mod_elt_matrix,           only : element_matrix
     use mod_elt_matrix_fft,       only : element_matrix_fft
     use mod_locate_irn_jcn
@@ -110,9 +111,8 @@ contains
           nodes(4) = node_list%node(element%vertex(iv4))
 
 
-
           ! --- Build matrix elements for boundary
-    	  !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+    	  call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
     	endif
        
       enddo

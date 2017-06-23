@@ -255,6 +255,8 @@ contains
                       !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
                       if ((node_list%node(inode)%boundary == 2) .or. (node_list%node(inode)%boundary == 3)) then
 
+ !                       if ((k .ne. var_uR) .and. (k .ne. var_uZ)) then
+
                          if ( (.not. is_freebound(in,k)) ) then ! apply fixed boundary conditions where necessary
 
                             index_node = node_list%node(inode)%index(1)
@@ -313,6 +315,8 @@ contains
                             endif
 
                          endif
+
+!                        endif
 
                       endif
 

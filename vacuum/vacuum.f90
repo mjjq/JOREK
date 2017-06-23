@@ -6,7 +6,7 @@ module vacuum
   implicit none
   
   !> @name General parameters
-  logical, parameter  :: vacuum_debug          = .false. !< Enable additional output and tests
+  logical, parameter  :: vacuum_debug          = .true. !< Enable additional output and tests
   logical, parameter  :: vacuum_decouple_modes = .false. !< Option to switch off 3D wall mode coupling
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
@@ -73,7 +73,13 @@ module vacuum
   real*8, allocatable :: coil_voltages(:)                !< Coil voltages
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   real*8, allocatable :: diag_coil_curr(:,:)
-  
+
+  type :: t_distrib_mat
+    real*8, allocatable :: loc_mat(:,:)
+    logical             :: row_wise
+    integer             :: ind_start, ind_end
+  end type t_distrib_mat  
+
   type :: t_starwall_response
     integer :: file_version           = 9999
     integer :: n_bnd                  = -1
@@ -103,13 +109,20 @@ module vacuum
     real*8  :: eta_thin_w             = 1. !< Thin wall resistivity of wall triangles
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
-    real*8,  allocatable :: a_ye(:,:)
-    real*8,  allocatable :: a_ey(:,:)
-    real*8,  allocatable :: a_ee(:,:)
-    real*8,  allocatable :: a_id(:,:)
-    real*8,  allocatable :: a_nw(:,:)
-    real*8,  allocatable :: s_ww(:,:)
-    real*8,  allocatable :: s_ww_inv(:,:)
+    type(t_distrib_mat)  :: a_ye
+    type(t_distrib_mat)  :: a_ey
+    type(t_distrib_mat)  :: a_ee
+    type(t_distrib_mat)  :: a_id
+    type(t_distrib_mat)  :: a_nw
+    type(t_distrib_mat)  :: s_ww
+    type(t_distrib_mat)  :: s_ww_inv
+    !real*8,  allocatable :: a_ye(:,:)
+    !real*8,  allocatable :: a_ey(:,:)
+    !real*8,  allocatable :: a_ee(:,:)
+    !real*8,  allocatable :: a_id(:,:)
+    !real*8,  allocatable :: a_nw(:,:)
+    !real*8,  allocatable :: s_ww(:,:)
+    !real*8,  allocatable :: s_ww_inv(:,:)
     real*8,  allocatable :: xyzpot_w(:,:)
     integer, allocatable :: jpot_w(:,:)
   end type t_starwall_response

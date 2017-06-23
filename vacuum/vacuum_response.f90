@@ -59,7 +59,9 @@ module vacuum_response
     integer :: i,j, ierr, dim
     logical :: exists
     real*8  :: time(10)
+    CHARACTER(len=255) :: homedir
  
+
     ! --- Determine total number of boundary degrees of freedom per harmonic (skipping duplicates).
     do i=1, bnd_node_list%n_bnd_nodes
       exists = .false.
@@ -80,8 +82,10 @@ module vacuum_response
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
     
     !if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
-    !if ( my_id == 0 ) call read_starwall_response(sr, 'starwall-response.dat')
+    !if ( my_id == 0 ) call read_starwall_response(sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
     !call broadcast_starwall_response(my_id, sr)
+
+
 
     time(1)=MPI_WTIME()
     if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
@@ -90,8 +94,8 @@ module vacuum_response
     call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
     time(3)=MPI_WTIME()
  
-   call broadcast_starwall_response_parallel(my_id, sr)    
-       time(4)=MPI_WTIME()
+    call broadcast_starwall_response_parallel(my_id, sr)    
+    time(4)=MPI_WTIME()
 
    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
    if(my_id==0) write(6,*) "Vacuum Log=",time(2)-time(1) 
@@ -427,13 +431,12 @@ module vacuum_response
     implicit none
 
     ! --- Routine parameters
-    integer, intent(in) :: filehandle
-    character(len=*), intent(in) :: array_name
-    integer, intent(in) :: dim(2)
-    !integer,                        intent(inout)   :: disp
-    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
+    integer,                        intent(in)      :: filehandle
+    character(len=*),               intent(in)      :: array_name
+    integer,                        intent(in)      :: dim(2)
+    integer(kind=MPI_OFFSET_KIND),  intent(inout)   :: disp
     integer,                        intent(in)      :: my_id
-    real*8,  allocatable,           intent(inout)   :: float2d(:,:)
+    type(t_distrib_mat),            intent(inout)   :: float2d
 
     integer, dimension (MPI_STATUS_SIZE) :: status
     ! --- Local variables
@@ -480,14 +483,10 @@ module vacuum_response
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
 
 
-     ! if ( allocated(float2d) ) deallocate( float2d )
-     ! write(6,*) my_id,dim(1),dim(2), dble(dim(1))*dble(dim(2))*8.0/1024.0/1024.0/1024.0
-     ! call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-
       if ( is_formatted(filehandle) ) then
-        if (allocated(float2d) ) deallocate( float2d )
-        allocate( float2d(dim(1),dim(2)) )
-        read(filehandle,'(4ES24.16)') float2d(:,:)
+        if (allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
+        allocate( float2d%loc_mat(dim(1),dim(2)) )
+        read(filehandle,'(4ES24.16)') float2d%loc_mat(:,:)
       else
 
           call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
@@ -498,8 +497,8 @@ module vacuum_response
   
           loc_sizes(2) = dim(2)
 
-           if ( allocated(float2d) ) deallocate( float2d )
-           allocate( float2d(loc_sizes(1),loc_sizes(2)) )
+           if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
+           allocate( float2d%loc_mat(loc_sizes(1),loc_sizes(2)) )
 
 
           ! 2 - how many dimentions
@@ -507,6 +506,9 @@ module vacuum_response
           loc_starts(1)=my_id*step
           loc_starts(2)=0         
 
+          float2d%row_wise  = .true.
+          float2d%ind_start = my_id*step+1
+          float2d%ind_end   = my_id*step+loc_sizes(1)
 
           call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION, my_subarray,ierr)
           call MPI_Type_commit(my_subarray,ierr)
@@ -515,8 +517,8 @@ module vacuum_response
           call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION,my_subarray, &
                          "native",MPI_INFO_NULL, ierr)
 
-          call MPI_File_read_all(filehandle, float2d, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
-          disp=disp+sizeof(float2d(1,1))*dim(1)*dim(2)
+          call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
+          disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
 
          ! Return to ordinary file view
           call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE, "native",MPI_INFO_NULL, ierr);
@@ -543,13 +545,12 @@ module vacuum_response
     implicit none
 
     ! --- Routine parameters
-    integer, intent(in) :: filehandle
-    character(len=*), intent(in) :: array_name
-    integer, intent(in) :: dim(2)
-    !integer,                        intent(inout)   :: disp
-    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
+    integer,                        intent(in)      :: filehandle
+    character(len=*),               intent(in)      :: array_name
+    integer,                        intent(in)      :: dim(2)
+    integer(kind=MPI_OFFSET_KIND),  intent(inout)   :: disp
     integer,                        intent(in)      :: my_id
-    real*8,  allocatable,           intent(inout)   :: float2d(:,:)
+    type(t_distrib_mat),            intent(inout)   :: float2d
   
 
     integer, dimension (MPI_STATUS_SIZE) :: status
@@ -599,10 +600,10 @@ module vacuum_response
 
 
       if ( is_formatted(filehandle) ) then
-        if ( allocated(float2d) ) deallocate( float2d )
-        allocate( float2d(dim(1),dim(2)) )
+        if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
+        allocate( float2d%loc_mat (dim(1),dim(2)) )
 
-        read(filehandle,'(4ES24.16)') float2d(:,:)
+        read(filehandle,'(4ES24.16)') float2d%loc_mat (:,:)
       else
 
           call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
@@ -613,15 +614,18 @@ module vacuum_response
 
           loc_sizes(1) = dim(1)
 
-           if ( allocated(float2d) ) deallocate( float2d )
-           allocate( float2d(loc_sizes(1),loc_sizes(2)) )
+           if ( allocated(float2d%loc_mat ) ) deallocate( float2d%loc_mat  )
+           allocate( float2d%loc_mat (loc_sizes(1),loc_sizes(2)) )
 
 
           ! 2 - how many dimentions
           ! dim - int array with each global dimension sizes
           loc_starts(2)=my_id*step
           loc_starts(1)=0
-
+          
+          float2d%row_wise  = .false.
+          float2d%ind_start = my_id*step+1
+          float2d%ind_end   = my_id*step+loc_sizes(2)
 
           call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
           call MPI_Type_commit(my_subarray,ierr)
@@ -630,8 +634,8 @@ module vacuum_response
           call MPI_File_set_view(filehandle, disp,MPI_DOUBLE_PRECISION,my_subarray, &
                          "native",MPI_INFO_NULL, ierr)
 
-          call MPI_File_read_all(filehandle, float2d, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
-          disp=disp+sizeof(float2d(1,1))*dim(1)*dim(2)
+          call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
+          disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
 
          ! Return to ordinary file view
           call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr);
@@ -778,11 +782,11 @@ module vacuum_response
     end if
     
     call read_array(filehandle, 'yy',       (/sr%n_w,0/),            float1d=sr%d_yy)
-    call read_array(filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    float2d=sr%a_ye)
-    call read_array(filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    float2d=sr%a_ey)
-    call read_array(filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), float2d=sr%a_ee)
-    call read_array(filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       float2d=sr%s_ww)
-    call read_array(filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       float2d=sr%s_ww_inv)
+    call read_array(filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    float2d=sr%a_ye%loc_mat)
+    call read_array(filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    float2d=sr%a_ey%loc_mat)
+    call read_array(filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), float2d=sr%a_ee%loc_mat)
+    call read_array(filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       float2d=sr%s_ww%loc_mat)
+    call read_array(filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       float2d=sr%s_ww_inv%loc_mat)
     call read_array(filehandle, 'xyzpot_w', (/sr%npot_w,3/),         float2d=sr%xyzpot_w)
     call read_array(filehandle, 'jpot_w',   (/sr%ntri_w,3/),         int2d=sr%jpot_w)
 
@@ -790,8 +794,8 @@ module vacuum_response
     if ( vacuum_debug) write(*,*) 'Finished reading vacuum response.'
 
     ! --- Import normalization
-    sr%a_ee(:,:) = sr%a_ee(:,:) * 2.d0*PI
-    sr%a_ye(:,:) = sr%a_ye(:,:) * 2.d0*PI
+    sr%a_ee%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) * 2.d0*PI
+    sr%a_ye%loc_mat(:,:) = sr%a_ye%loc_mat(:,:) * 2.d0*PI
     if ( vacuum_debug) write(*,*) 'Applied import normalization.'
 
     ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates (replace y <-> z)
@@ -802,11 +806,11 @@ module vacuum_response
     deallocate( tmp )
     
     ! --- Compute ideal-wall and no-wall response matrices.
-    if ( allocated(sr%a_id) ) deallocate(sr%a_id)
-    if ( allocated(sr%a_nw) ) deallocate(sr%a_nw)
-    allocate( sr%a_id(sr%nd_bez,sr%nd_bez), sr%a_nw(sr%nd_bez,sr%nd_bez) )
-    sr%a_nw(:,:) = sr%a_ee(:,:)
-    sr%a_id(:,:) = sr%a_ee(:,:) - matmul( sr%a_ey(:,:), sr%a_ye(:,:) )
+    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
+    if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
+    allocate( sr%a_id%loc_mat(sr%nd_bez,sr%nd_bez), sr%a_nw%loc_mat(sr%nd_bez,sr%nd_bez) )
+    sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
+    sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - matmul( sr%a_ey%loc_mat(:,:), sr%a_ye%loc_mat(:,:) )
     
     ! --- Transform STARWALL harmonics to account for periodicity
     j = 0
@@ -863,7 +867,6 @@ module vacuum_response
     ! MPI wariable to real parallel IO file
     integer, dimension (MPI_STATUS_SIZE) :: status
     integer(kind=MPI_OFFSET_KIND)        :: disp=0
-    !integer            :: disp=0
     real*8             :: test_sum
 
     integer            :: loc_sizes(2),step,ntasks
@@ -999,11 +1002,11 @@ module vacuum_response
     call MPI_BCAST(sr%n_w, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
     call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
 
-    call read_array_parallel_rowwise    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,    sr%a_ye)    
-    call read_array_parallel_rowwise    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,    sr%a_ey)
-    call read_array_parallel_rowwise    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,    sr%a_ee)
-    call read_array_parallel_rowwise    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,    sr%s_ww)
-    call read_array_parallel_rowwise    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,    sr%s_ww_inv)
+    call read_array_parallel_rowwise    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye)    
+    call read_array_parallel_rowwise    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey)
+    call read_array_parallel_rowwise    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee)
+    call read_array_parallel_columnwise    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww)
+    call read_array_parallel_columnwise    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv)
  
     if(my_id == 0) then
  
@@ -1018,8 +1021,8 @@ module vacuum_response
     if ( vacuum_debug .AND. my_id==0) write(*,*) 'Finished reading vacuum response.'
 
     ! --- Import normalization
-    sr%a_ee(:,:) = sr%a_ee(:,:) * 2.d0*PI
-    sr%a_ye(:,:) = sr%a_ye(:,:) * 2.d0*PI
+    sr%a_ee%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) * 2.d0*PI
+    sr%a_ye%loc_mat(:,:) = sr%a_ye%loc_mat(:,:) * 2.d0*PI
     if ( vacuum_debug .AND. my_id==0) write(*,*) 'Applied import normalization.'
 
     ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates replace  y <-> z)
@@ -1036,8 +1039,8 @@ module vacuum_response
 
 
     ! --- Compute ideal-wall and no-wall response matrices.
-    if ( allocated(sr%a_id) ) deallocate(sr%a_id)
-    if ( allocated(sr%a_nw) ) deallocate(sr%a_nw)
+    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
+    if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
 
 
     ! matrices a_id and a_nw should be distriuted in the same way as a_ee
@@ -1046,9 +1049,9 @@ module vacuum_response
     if(my_id==ntasks-1) loc_sizes(1) = step+sr%nd_bez-ntasks*step
     loc_sizes(2) = sr%nd_bez
 
-    allocate( sr%a_id(loc_sizes(1),loc_sizes(2)),sr%a_nw(loc_sizes(1),loc_sizes(2) ))
+    allocate( sr%a_id%loc_mat(loc_sizes(1),loc_sizes(2)),sr%a_nw%loc_mat(loc_sizes(1),loc_sizes(2) ))
 
-    sr%a_nw(:,:) = sr%a_ee(:,:)
+    sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
 
 
     ! TO be DONE
@@ -1165,7 +1168,8 @@ module vacuum_response
     
     if ( vacuum_debug ) then
 
-        loc_sum = sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee)  + sum(sr%a_nw) + sum(sr%s_ww)+ sum(sr%s_ww_inv )   
+        loc_sum = sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + &
+                  sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat) + sum(sr%s_ww_inv%loc_mat)   
 
         if(my_id==0) then
 
@@ -1240,13 +1244,13 @@ module vacuum_response
     if ( my_id /= 0 ) then
       if (allocated(sr%i_tor)   ) deallocate(sr%i_tor); allocate(sr%i_tor(sr%n_tor))
       if (allocated(sr%d_yy)    ) deallocate(sr%d_yy);  allocate(sr%d_yy(sr%n_w))
-      if (allocated(sr%a_ye)    ) deallocate(sr%a_ye);  allocate(sr%a_ye(sr%n_w,sr%nd_bez))
-      if (allocated(sr%a_ey)    ) deallocate(sr%a_ey);  allocate(sr%a_ey(sr%nd_bez,sr%n_w))
-      if (allocated(sr%a_ee)    ) deallocate(sr%a_ee);  allocate(sr%a_ee(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%a_id)    ) deallocate(sr%a_id);  allocate(sr%a_id(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%a_nw)    ) deallocate(sr%a_nw);  allocate(sr%a_nw(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%s_ww)    ) deallocate(sr%s_ww);  allocate(sr%s_ww(sr%n_w,sr%n_w))
-      if (allocated(sr%s_ww_inv)) deallocate(sr%s_ww_inv);  allocate(sr%s_ww_inv(sr%n_w,sr%n_w))
+      if (allocated(sr%a_ye%loc_mat)    ) deallocate(sr%a_ye%loc_mat);  allocate(sr%a_ye%loc_mat(sr%n_w,sr%nd_bez))
+      if (allocated(sr%a_ey%loc_mat)    ) deallocate(sr%a_ey%loc_mat);  allocate(sr%a_ey%loc_mat(sr%nd_bez,sr%n_w))
+      if (allocated(sr%a_ee%loc_mat)    ) deallocate(sr%a_ee%loc_mat);  allocate(sr%a_ee%loc_mat(sr%nd_bez,sr%nd_bez))
+      if (allocated(sr%a_id%loc_mat)    ) deallocate(sr%a_id%loc_mat);  allocate(sr%a_id%loc_mat(sr%nd_bez,sr%nd_bez))
+      if (allocated(sr%a_nw%loc_mat)    ) deallocate(sr%a_nw%loc_mat);  allocate(sr%a_nw%loc_mat(sr%nd_bez,sr%nd_bez))
+      if (allocated(sr%s_ww%loc_mat)    ) deallocate(sr%s_ww%loc_mat);  allocate(sr%s_ww%loc_mat(sr%n_w,sr%n_w))
+      if (allocated(sr%s_ww_inv%loc_mat)) deallocate(sr%s_ww_inv%loc_mat);  allocate(sr%s_ww_inv%loc_mat(sr%n_w,sr%n_w))
       if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w);  allocate(sr%xyzpot_w(sr%npot_w,3))
       if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);    allocate(sr%jpot_w(sr%ntri_w,3))
       if ( sr%ncoil > 0 ) then
@@ -1263,13 +1267,13 @@ module vacuum_response
     ! --- Broadcast matrices.
     call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ye,     sr%n_w*sr%nd_bez,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ey,     sr%nd_bez*sr%n_w,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ee,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_id,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_nw,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww,     sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ye%loc_mat,     sr%n_w*sr%nd_bez,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ey%loc_mat,     sr%nd_bez*sr%n_w,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ee%loc_mat,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_id%loc_mat,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_nw%loc_mat,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww%loc_mat,     sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww_inv%loc_mat, sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     if ( sr%ncoil > 0 ) then
@@ -1284,8 +1288,8 @@ module vacuum_response
 
     if ( vacuum_debug ) then
       write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)                       &
-        + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)  &
-        + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
+        + sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + sum(sr%a_id%loc_mat) + sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat)  &
+        + sum(sr%s_ww_inv%loc_mat ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
         + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version + sr%ntri_c  &
         + sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils                   &
         + sr%ind_start_pol_coils + sr%ind_start_rmp_coils + sr%ind_start_voltage_coils             &
@@ -1343,13 +1347,13 @@ module vacuum_response
       write(*,32)
       if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ', sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
       if (allocated(sr%d_yy         )) then; write(*,34) 'd_yy         ', sum(sr%d_yy          ); else; write(*,36) 'd_yy         '; end if
-      if (allocated(sr%a_ye         )) then; write(*,34) 'a_ye         ', sum(sr%a_ye          ); else; write(*,36) 'a_ye         '; end if
-      if (allocated(sr%a_ey         )) then; write(*,34) 'a_ey         ', sum(sr%a_ey          ); else; write(*,36) 'a_ey         '; end if
-      if (allocated(sr%a_ee         )) then; write(*,34) 'a_ee         ', sum(sr%a_ee          ); else; write(*,36) 'a_ee         '; end if
-      if (allocated(sr%a_id         )) then; write(*,34) 'a_id         ', sum(sr%a_id          ); else; write(*,36) 'a_id         '; end if
-      if (allocated(sr%a_nw         )) then; write(*,34) 'a_nw         ', sum(sr%a_nw          ); else; write(*,36) 'a_nw         '; end if
-      if (allocated(sr%s_ww         )) then; write(*,34) 's_ww         ', sum(sr%s_ww          ); else; write(*,36) 's_ww         '; end if
-      if (allocated(sr%s_ww_inv     )) then; write(*,34) 's_ww_inv     ', sum(sr%s_ww_inv      ); else; write(*,36) 's_ww_inv     '; end if
+      if (allocated(sr%a_ye%loc_mat         )) then; write(*,34) 'a_ye         ', sum(sr%a_ye%loc_mat          ); else; write(*,36) 'a_ye         '; end if
+      if (allocated(sr%a_ey%loc_mat         )) then; write(*,34) 'a_ey         ', sum(sr%a_ey%loc_mat          ); else; write(*,36) 'a_ey         '; end if
+      if (allocated(sr%a_ee%loc_mat         )) then; write(*,34) 'a_ee         ', sum(sr%a_ee%loc_mat          ); else; write(*,36) 'a_ee         '; end if
+      if (allocated(sr%a_id%loc_mat         )) then; write(*,34) 'a_id         ', sum(sr%a_id%loc_mat          ); else; write(*,36) 'a_id         '; end if
+      if (allocated(sr%a_nw%loc_mat         )) then; write(*,34) 'a_nw         ', sum(sr%a_nw%loc_mat          ); else; write(*,36) 'a_nw         '; end if
+      if (allocated(sr%s_ww%loc_mat         )) then; write(*,34) 's_ww         ', sum(sr%s_ww%loc_mat          ); else; write(*,36) 's_ww         '; end if
+      if (allocated(sr%s_ww_inv%loc_mat     )) then; write(*,34) 's_ww_inv     ', sum(sr%s_ww_inv%loc_mat      ); else; write(*,36) 's_ww_inv     '; end if
       if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ', sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
       if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ', sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
       if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ', sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
@@ -1427,24 +1431,24 @@ module vacuum_response
 
 
           test_sum=0.0
-          if (allocated(sr%a_ye)) then
-              call MPI_Reduce(sum(sr%a_ye), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (allocated(sr%a_ye%loc_mat)) then
+              call MPI_Reduce(sum(sr%a_ye%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
               if(my_id == 0) write(*,34) 'a_ye         ', test_sum 
           else
               if(my_id == 0)  write(*,36) 'a_ye         '
           end if            
  
           test_sum=0.0
-          if (allocated(sr%a_ye)) then 
-              call MPI_Reduce(sum(sr%a_ey), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (allocated(sr%a_ey%loc_mat)) then 
+              call MPI_Reduce(sum(sr%a_ey%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
               if(my_id == 0) write(*,34) 'a_ey         ', test_sum 
           else
              if(my_id == 0)  write(*,36) 'a_ey         ' 
           end if
 
           test_sum=0.0
-          if (allocated(sr%a_ye)) then
-              call MPI_Reduce(sum(sr%a_ee), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (allocated(sr%a_ee%loc_mat)) then
+              call MPI_Reduce(sum(sr%a_ee%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
               if(my_id == 0) write(*,34) 'a_ee         ', test_sum
           else
               if(my_id == 0) write(*,36) 'a_ee         '
@@ -1452,8 +1456,8 @@ module vacuum_response
 
 
           test_sum=0.0
-          if (allocated(sr%a_id)) then
-              call MPI_Reduce(sum(sr%a_id), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (allocated(sr%a_id%loc_mat)) then
+              call MPI_Reduce(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
               if(my_id == 0) write(*,34) 'a_id         ', test_sum
           else
               if(my_id == 0) write(*,36) 'a_id         '
@@ -1461,8 +1465,8 @@ module vacuum_response
 
 
           test_sum=0.0
-          if (allocated(sr%a_id)) then
-              call MPI_Reduce(sum(sr%a_nw), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (allocated(sr%a_nw%loc_mat)) then
+              call MPI_Reduce(sum(sr%a_nw%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
               if(my_id == 0) write(*,34) 'a_nw         ', test_sum
           else
               if(my_id == 0) write(*,36) 'a_nw         '
@@ -1470,8 +1474,8 @@ module vacuum_response
 
         
           test_sum=0.0
-          if (allocated(sr%a_id)) then
-              call MPI_Reduce(sum(sr%s_ww), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (allocated(sr%s_ww%loc_mat)) then
+              call MPI_Reduce(sum(sr%s_ww%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
               if(my_id == 0) write(*,34) 's_ww         ', test_sum
           else
               if(my_id == 0) write(*,36) 's_nw         '
@@ -1479,8 +1483,8 @@ module vacuum_response
 
 
           test_sum=0.0
-          if (allocated(sr%a_id)) then
-              call MPI_Reduce(sum(sr%s_ww_inv), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (allocated(sr%s_ww_inv%loc_mat)) then
+              call MPI_Reduce(sum(sr%s_ww_inv%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
               if(my_id == 0) write(*,34) 's_ww_inv     ', test_sum
           else
               if(my_id == 0) write(*,36) 's_nw_inv         '
@@ -2443,7 +2447,7 @@ module vacuum_response
     potentials_real_0 = 0.d0
     potentials_real_0(1:n_coils) = I_coils(1:n_coils) * mu_zero
     do i = 1, n_wall_curr
-      Y_coils0(i) = sum(sr%s_ww_inv(i,:) * potentials_real_0(:))
+      Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i,:) * potentials_real_0(:))
     end do
    
   end subroutine coil_current_source
@@ -2502,7 +2506,7 @@ module vacuum_response
       end if
       do k = 1, sr%n_diag_coils
         k2 = k + sr%ind_start_diag_coils - 1
-        diag_coil_curr(index_now,k) = sum(sr%s_ww(k2,:) * wall_curr(:))
+        diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(:))
       end do
     end if
     
@@ -2532,7 +2536,7 @@ module vacuum_response
     if ( allocated(wall_curr) ) then
       do i = 1, sr%npot_w
         j = i + sr%ncoil
-        tripot_w(i) = sum(sr%s_ww(j,:) * wall_curr(:))
+        tripot_w(i) = sum(sr%s_ww%loc_mat(j,:) * wall_curr(:))
       end do
       tripot_w(1) = 0.d0
     else
@@ -2668,7 +2672,7 @@ module vacuum_response
         j2 = (j-1)*sr%n_tor0 + 1
         do k = 1, sr%nd_bez/sr%n_tor0, 2
           k2 = (k-1)*sr%n_tor0 + 1
-          response_m_eq(j:j+1,k:k+1) = sr%a_ee(j2:j2+1,k2:k2+1)
+          response_m_eq(j:j+1,k:k+1) = sr%a_ee%loc_mat(j2:j2+1,k2:k2+1)
         end do
       end do
       
@@ -2680,7 +2684,7 @@ module vacuum_response
         tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
         
         do j = 1, n_dof_starwall
-          response_m_a(:,j) = -(1.d0+zeta) * sr%a_ye(:,j) / tmp_d_s(:)
+          response_m_a(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
         response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
@@ -2688,31 +2692,31 @@ module vacuum_response
         response_d_c(:) = zeta / tmp_d_s(:)
         
         do j = 1, n_dof_starwall
-          response_m_d(:,j) = zeta * sr%a_ye(:,j) / tmp_d_s(:)
+          response_m_d(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
-        response_m_e(:,:) = sr%a_ee(:,:) + matmul( sr%a_ey(:,:), response_m_a(:,:) )
+        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:), response_m_a(:,:) )
         
         do k = 1, n_wall_curr
-          response_m_f(:,k) = sr%a_ey(:,k) * ( 1.d0 + response_d_b(k) )
+          response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
         end do
         
         do k = 1, n_wall_curr
-          response_m_g(:,k) = sr%a_ey(:,k) * response_d_c(k)
+          response_m_g(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
         end do
         
-        response_m_h(:,:) = sr%a_ee(:,:)
+        response_m_h(:,:) = sr%a_ee%loc_mat(:,:)
         
-        response_m_j(:,:) = matmul( sr%a_ey(:,:), response_m_d(:,:) )
+        response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d(:,:) )
         
         do k = 1, n_wall_curr
-          response_m_k(k,:) = -tstep * sr%d_yy(k) * sr%s_ww(:,k)
+          response_m_k(k,:) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(:,k)
         end do
         
-        response_m_l(:,:) = matmul( sr%a_ey(:,:), response_m_k(:,:) )
+        response_m_l(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_k(:,:) )
         
         do k = 1, n_wall_curr
-          response_m_v(:,k) = sr%a_ey(:,k) * ( response_d_b(k) )
+          response_m_v(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
         end do
         
         deallocate( tmp_d_s )
@@ -2723,10 +2727,10 @@ module vacuum_response
         response_d_b(:)   = 0.d0
         response_d_c(:)   = 0.d0
         response_m_d(:,:) = 0.d0
-        response_m_e(:,:) = sr%a_id(:,:)
+        response_m_e(:,:) = sr%a_id%loc_mat(:,:)
         response_m_f(:,:) = 0.d0
         response_m_g(:,:) = 0.d0
-        response_m_h(:,:) = sr%a_id(:,:)
+        response_m_h(:,:) = sr%a_id%loc_mat(:,:)
         response_m_j(:,:) = 0.d0
         response_m_k(:,:) = 0.d0 !####
         response_m_l(:,:) = 0.d0 !####

@@ -141,20 +141,20 @@ subroutine boundary_check()
             if ( resistive_wall ) then
               if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
                 B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
-                  + sum( sr%a_ee(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:)))                 &
-                  + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) - sum( bext_tan(i_resp_0, :) * I_coils(:) )  )
+                  + sum( sr%a_ee%loc_mat(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:)))                 &
+                  + sum( sr%a_ey%loc_mat(i_resp, :) * wall_curr(:)  ) - sum( bext_tan(i_resp_0, :) * I_coils(:) )  )
               else
                 B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
-                  + sum( sr%a_ee(i_resp, :) * psibnd_vec(:) )                 &
-                  + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) )
+                  + sum( sr%a_ee%loc_mat(i_resp, :) * psibnd_vec(:) )                 &
+                  + sum( sr%a_ey%loc_mat(i_resp, :) * wall_curr(:)  ) )
               end if
             else
               if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
                 B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
-                  * (sum( sr%a_id(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:))) - sum( bext_tan(i_resp_0, :) * I_coils(:) ))
+                  * (sum( sr%a_id%loc_mat(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:))) - sum( bext_tan(i_resp_0, :) * I_coils(:) ))
               else
                 B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
-                  * sum( sr%a_id(i_resp, :) * psibnd_vec(:) )
+                  * sum( sr%a_id%loc_mat(i_resp, :) * psibnd_vec(:) )
               end if
             end if
 

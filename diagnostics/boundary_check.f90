@@ -52,14 +52,14 @@ subroutine boundary_check()
   err_integral(:) = 0.d0
 
   ! --- For every boundary element, do...
-  !$OMP PARALLEL DO DEFAULT(NONE)                                                                  &
-  !$OMP SHARED(bnd_elm_list, sr, resistive_wall, node_list, element_list, bnd_node_list,           &
-  !$OMP   starwall_equil_coils, psibnd_vec, psibnd_coils, wall_curr, bext_tan, I_coils)            &
-  !$OMP PRIVATE(m_bndelem, bndelem_m, m_elm, mv1, R1, Z1, R2, Z2, m_pt, B_par_v, s_or_t, H1, H1_s, &
-  !$OMP   H1_ss, s_pt, t_pt, s_const, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt,&
-  !$OMP   xjac, e_par, l_starwall, P, P_s, P_t, P_st, P_ss, P_tt, P_R, P_Z, B_pol, B_par, i_vertex,&
-  !$OMP   i_node, i_node_bnd, i_dof, i_size, i_resp_old, i_resp, i_resp_0, basfunc_i, val_integral,&
-  !$OMP   err_integral, l_tor )
+  !$omp parallel do default(none)                                                                  &
+  !$omp shared(bnd_elm_list, sr, resistive_wall, node_list, element_list, bnd_node_list,           &
+  !$omp   starwall_equil_coils, psibnd_vec, psibnd_coils, wall_curr, bext_tan, I_coils,            &
+  !$omp   val_integral, err_integral)                                                              &
+  !$omp private(m_bndelem, bndelem_m, m_elm, mv1, R1, Z1, R2, Z2, m_pt, B_par_v, s_or_t, H1, H1_s, &
+  !$omp   H1_ss, s_pt, t_pt, s_const, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt,&
+  !$omp   xjac, e_par, l_starwall, P, P_s, P_t, P_st, P_ss, P_tt, P_R, P_Z, B_pol, B_par, i_vertex,&
+  !$omp   i_node, i_node_bnd, i_dof, i_size, i_resp_old, i_resp, i_resp_0, basfunc_i, l_tor )
   L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
     bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
@@ -182,13 +182,15 @@ subroutine boundary_check()
 !      write(*,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:), B_par_v(:),R,Z,e_par
 
       ! --- Integration of B_par_v values and differences between B_par and B_par_v.
+      !$omp critical
       val_integral(:) = val_integral(:) + abs( B_par_v(:) )
       err_integral(:) = err_integral(:) + abs( B_par(:) - B_par_v(:) )
+      !$omp end critical
 
     end do L_MP
 
   end do L_MB
-  !$OMP END PARALLEL DO
+  !$omp END PARALLEL DO
 
   if ( minval(abs(val_integral)) /= 0.d0 ) then
     write(*,'(1x,A,20ES15.5)') 'Relative errors in harmonics:', err_integral(:) / val_integral(:), err_integral(:), val_integral(:)

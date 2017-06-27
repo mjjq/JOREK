@@ -112,6 +112,8 @@ subroutine boundary_check()
       else
         e_par = (/ R_s, Z_s /) / sqrt( R_s**2 + Z_s**2 ) * (R_s * (R2-R1) + Z_s * (Z2-Z1))/abs(R_s * (R2-R1) + Z_s * (Z2-Z1))
       end if
+      
+      B_par(:) = 0.d0
 
       ! --- Select one STARWALL harmonic
       L_LS: do l_starwall = 1, sr%n_tor

@@ -17,13 +17,13 @@ CXX = mpicxx
 
 # --- DEBUGGING
 #   --- Debug symbols for debuggers
-#DEBUGFLAGS  = -g
+DEBUGFLAGS  = -g
 #   --- Check array boundaries
-#DEBUGFLAGS += -check bounds -traceback -fpe-all=0 -ftrapuv
+DEBUGFLAGS += -check bounds -traceback -fpe-all=0 -ftrapuv
 #   --- Generate and check interfaces (__genmod files)
 #DEBUGFLAGS += -gen-interfaces -warn interfaces
 #   --- Check many other things
-#DEBUGFLAGS += -warn all,nounused -check all,noarg_temp_created -debug all -debug-parameters -fstack-security-check -ftrapuv
+DEBUGFLAGS += -warn all,nounused -check all,noarg_temp_created -debug all -debug-parameters -fstack-security-check -ftrapuv
 #   --- Even more checks and warnings
 #DEBUGFLAGS += -warn all -check all
 

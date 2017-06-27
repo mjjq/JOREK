@@ -282,6 +282,11 @@ do i=2, surface_list%n_psi
 
   enddo
 
+  if ( sum_dl == 0.d0 ) then
+    sum_dl = 1.d99
+    write(*,*) 'WARNING: Something went wrong in export_helena. sum_dl==0.'
+  end if
+  
   write(11,'(8e16.8)') surface_list%psi_values(i),dp_int/sum_dl,zjz_int/sum_dl,F0 * q / (2.d0 * PI)
 
 enddo

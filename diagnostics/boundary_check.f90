@@ -41,11 +41,6 @@ subroutine boundary_check()
   ! --- Determine vectors with the Psi and deltaPsi values at the boundary.
   call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
 
-  val_integral(:) = 0.d0
-  err_integral(:) = 0.d0
-  B_par(:)        = 0.d0
-  B_par_v(:)      = 0.d0
-
   ! --- For every boundary element, do...
   !$omp parallel                                                                                   &
   !$omp default(none)                                                                              &
@@ -66,6 +61,11 @@ subroutine boundary_check()
   call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
   !$omp end critical
   
+  val_integral(:) = 0.d0
+  err_integral(:) = 0.d0
+  B_par(:)        = 0.d0
+  B_par_v(:)      = 0.d0
+
   !$omp do schedule(dynamic)
   L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 

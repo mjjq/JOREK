@@ -17,10 +17,10 @@ subroutine boundary_check()
   type(type_bnd_element) :: bndelem_m
   real*8, allocatable    :: B_par(:), B_par_v(:)
   real*8, allocatable    :: val_integral(:), err_integral(:)
-  real*8, allocatable    :: psibnd_vec(:), dpsibnd_vec(:)
+  real*8, allocatable    :: psibnd_vec(:), dpsibnd_vec(:), psibnd_coils(:)
   integer  :: l_starwall, l_tor
   integer  :: m_bndelem, m_pt, m_elm, mv1
-  integer  :: i_vertex, i_dof, i_node, i_node_bnd, i_resp, i_resp_old
+  integer  :: i_vertex, i_dof, i_node, i_node_bnd, i_resp, i_resp_old, i_resp_0
   real*8   :: i_size, basfunc_i
   real*8   :: H1(2,2), H1_s(2,2), H1_ss(2,2)
   real*8   :: P, P_s, P_t, P_st, P_ss, P_tt
@@ -46,7 +46,7 @@ subroutine boundary_check()
   call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
 
   ! --- Determine vectors with the Psi and deltaPsi values at the boundary.
-  call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
+  call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
 
   val_integral(:) = 0.d0
   err_integral(:) = 0.d0
@@ -130,6 +130,8 @@ subroutine boundary_check()
             i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor &
                      + bnd_node_list%bnd_node(i_node_bnd)%n_dof*(l_starwall-1) &
                      + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)-bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
+                     
+            i_resp_0 = response_index_eq(i_node_bnd,i_dof)
 
 
             ! --- Determine basis function
@@ -137,12 +139,23 @@ subroutine boundary_check()
 
             ! --- Determine B_{||,v} as prescribed by the vacuum.
             if ( resistive_wall ) then
-              B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
-                + sum( sr%a_ee(i_resp, :) * psibnd_vec(:) )                 &
-                + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) )
+              if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
+                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
+                  + sum( sr%a_ee(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:)))                 &
+                  + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) - sum( bext_tan(i_resp_0, :) * I_coils(:) )  )
+              else
+                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
+                  + sum( sr%a_ee(i_resp, :) * psibnd_vec(:) )                 &
+                  + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) )
+              end if
             else
-              B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
-                * sum( sr%a_id(i_resp, :) * psibnd_vec(:) )
+              if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
+                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
+                  * (sum( sr%a_id(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:))) - sum( bext_tan(i_resp_0, :) * I_coils(:) ))
+              else
+                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
+                  * sum( sr%a_id(i_resp, :) * psibnd_vec(:) )
+              end if
             end if
 
 !            write(*,'(6i5,8e12.4)') l_starwall,i_vertex,i_dof,i_node,i_node_bnd,i_resp,i_size,basfunc_i

@@ -1,0 +1,18 @@
+#!/bin/bash
+ulimit -d unlimited
+ulimit -s unlimited
+ulimit -Sa
+ulimit -Ha
+
+CASE=freebound_vde_iter_199
+JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
+
+cd ${JOREK_HOME}
+source non_regression_tests/job_scripts/iter-hpc/env.sh
+## Compile with:       
+# non_regression_tests/run_test.sh -p $CASE
+## Initial Long run: 
+#non_regression_tests/run_test.sh -i -k -n $CASE 
+## Restart run: 
+non_regression_tests/run_test.sh -k -n $CASE 
+

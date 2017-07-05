@@ -5,7 +5,7 @@ module mod_new_diag
   
   
   
-  use parameters
+  use mod_parameters
   use mod_position
   use mod_straight_field_line
   use mod_expression
@@ -363,7 +363,7 @@ module mod_new_diag
   
   !> Perform a 2D Fourier analysis of the given expressions in straight field line coordinates.
   subroutine fourier_analysis(node_list, element_list, eq, units, expr_list, cp, nPsiN, ierr,      &
-    filename_start, output_type2, nsmallsteps)
+    filename_start, output_type2, nsmallsteps, nmaxsteps, deltaphi, rad_range, nTht)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':fourier_analysis'
     
@@ -378,9 +378,13 @@ module mod_new_diag
     character(len=*), optional,     intent(in)    :: filename_start !< Start of filename [optional]
     integer,          optional,     intent(in)    :: output_type2 !< Output what? [optional]
     integer,          optional,     intent(in)    :: nsmallsteps  !< Parameter for pol_pos [opt.]
+    integer,          optional,     intent(in)    :: nmaxsteps    !< Parameter for pol_pos [opt.]
+    real*8,           optional,     intent(in)    :: deltaphi     !< Parameter for pol_pos [opt.]
+    real*8,           optional,     intent(in)    :: rad_range(2) !< Parameter for pol_pos [opt.]
+    integer,          optional,     intent(in)    :: nTht         !< Parameter for pol_pos [opt.]
     
     ! --- Local variables
-    integer :: nn(4), output_type, m, n, m_max, n_max, i, j
+    integer :: nn(4), output_type, m, n, m_max, n_max, i, j, nTht2
     real*8, allocatable  :: result(:,:,:,:), outp(:,:,:,:), out1d(:,:)
     character(len=256)   :: comment, filename
     type(t_pol_pos_list) :: pol_pos_list
@@ -389,8 +393,27 @@ module mod_new_diag
     
     ierr = 0
     
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=nPsiN, nTht=6*4*n_tor,               &
-      nsmallsteps=nsmallsteps) !########
+    !if ( (mod(nTht, 4) .ne. 0) .or. (nTht .lt. 32) ) then
+    !  write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': nTht must be a factor of 4, minimum acceptable value=32'
+    !  ierr=300
+    !  stop
+    !end if
+    nTht2 = max(nTht, 6*4*n_tor)
+    
+    111 format(1x,a,2i6)
+    112 format(1x,a,2es12.4)
+    113 format(1x,a,2l6)
+
+    write(*,112) 'rad_range (PsiNmin:PsiNmax) =', rad_range 
+    write(*,111) 'nstpts (NPsiN) =', nPsiN
+    write(*,111) 'nTht corrected =', nTht2
+    write(*,111) 'nsmallsteps    =', nsmallsteps
+    write(*,112) 'deltaphi       =', deltaphi
+    write(*,111) 'nmaxsteps      =', nmaxsteps
+
+
+    pol_pos_list = pol_pos(node_list, element_list, eq, PsiNmin=rad_range(1), PsiNmax=rad_range(2), nPsiN=nPsiN, nTht=nTht2,               &
+      nsmallsteps=nsmallsteps, nmaxsteps=nmaxsteps, deltaphi=deltaphi) !########
     tor_pos_list = tor_pos(nphi=4*n_tor) !########
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)

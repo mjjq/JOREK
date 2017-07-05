@@ -1,8 +1,10 @@
 !> Fill the mode and mode_type arrays.
 subroutine det_modes()
   
-  use parameters,  only: n_tor, n_period
+  use mod_parameters,  only: n_tor, n_period
   use phys_module, only: mode, mode_type
+  
+  implicit none
   
   integer :: itor
   

@@ -7,7 +7,7 @@ use pellet_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
-use vacuum,        only: vacuum_preset, wall_resistivity
+use vacuum
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -21,6 +21,7 @@ integer :: ierr,err,i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
+                rst_hdf5,                                           &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap,             &
                 force_horizontal_Xline,                             &
@@ -48,6 +49,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
                 particlesource, heatsource, tauIC, Wdia,            &
+		U_sheath, renormalise,                              &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num,                                        &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
@@ -62,8 +64,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file, rot_file,           &
                 normalized_velocity_profile,                        &
-                freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   &
+                freeboundary_equil, freeboundary,  freeb_change_indices, &
+                resistive_wall,                                     &
+                wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &
@@ -74,6 +77,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
@@ -81,7 +89,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-                RMP_on, lambda, tset, RMP_har_cos,RMP_har_sin,      &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 wall_file,                                          &
@@ -90,7 +99,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme,                                   &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
-                D_prof_neg, ZK_prof_neg, T_min
+                D_prof_neg, ZK_prof_neg, T_min,                     &
+                amix, amix_freeb, equil_accuracy,                   &
+                equil_accuracy_freeb, current_ref, FB_Ip_position,  &
+                FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
+                FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
+                n_feedback_current, n_feedback_vertical,            &
+                n_iter_freeb, n_pf_coils, pf_coils,                 &
+                Zaxis_find_limit, PF_pert_start_time,               &
+                starwall_equil_coils, freeb_equil_iterate_area,     &
+                psi_offset_freeb, diag_coils, rmp_coils,            &
+                voltage_coils, vert_FB_amp
 
 if (my_id .eq. 0) then
 
@@ -180,14 +199,65 @@ if (my_id .eq. 0) then
   if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_GRID)
   if (nstep .gt. 0) call tr_allocate(xtime,1,nstep,"xtime",CAT_GRID)
 
-  if (allocated(xtime_pellet_R)) call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_GRID)
-  if (nstep .gt. 0)              call tr_allocate(xtime_pellet_R,1,nstep,"xtime_pellet_R")
-  if (allocated(xtime_pellet_Z)) call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_GRID)
-  if (nstep .gt. 0)              call tr_allocate(xtime_pellet_Z,1,nstep,"xtime_pellet_Z")
+  if (allocated(xtime_pellet_R))         call tr_deallocate(xtime_pellet_R,"xtime_pellet_R",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_R,1,nstep,"xtime_pellet_R")
+  if (allocated(xtime_pellet_Z))         call tr_deallocate(xtime_pellet_Z,"xtime_pellet_Z",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_Z,1,nstep,"xtime_pellet_Z")
+  if (allocated(xtime_pellet_psi))       call tr_deallocate(xtime_pellet_psi,"xtime_pellet_psi",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_psi,1,nstep,"xtime_pellet_psi")
   if (allocated(xtime_pellet_particles)) call tr_deallocate(xtime_pellet_particles,"xtime_pellet_particles",CAT_GRID)
   if (nstep .gt. 0)                      call tr_allocate(xtime_pellet_particles,1,nstep,"xtime_pellet_particles")
+  
   if (allocated(xtime_phys_ablation)) call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_GRID)
   if (nstep .gt. 0)                   call tr_allocate(xtime_phys_ablation,1,nstep,"xtime_phys_ablation")
+  
+  if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
+  
+  if (allocated(Z_axis_t)) call tr_deallocate(Z_axis_t,"Z_axis_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(Z_axis_t,1,index_start+nstep,"Z_axis_t",CAT_UNKNOWN)
+  
+  if (allocated(psi_axis_t)) call tr_deallocate(psi_axis_t,"psi_axis_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
+  
+  if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)
+  
+  if (allocated(beta_p_t)) call tr_deallocate(beta_p_t,"beta_p_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(beta_p_t,1,index_start+nstep,"beta_p_t",CAT_UNKNOWN)
+  
+  if (allocated(beta_t_t)) call tr_deallocate(beta_t_t,"beta_t_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(beta_t_t,1,index_start+nstep,"beta_t_t",CAT_UNKNOWN)
+  
+  if (allocated(beta_n_t)) call tr_deallocate(beta_n_t,"beta_n_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(beta_n_t,1,index_start+nstep,"beta_n_t",CAT_UNKNOWN)
+  
+  if (allocated(density_in_t)) call tr_deallocate(density_in_t,"density_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(density_in_t,1,index_start+nstep,"density_in_t",CAT_UNKNOWN)
+  
+  if (allocated(density_out_t)) call tr_deallocate(density_out_t,"density_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(density_out_t,1,index_start+nstep,"density_out_t",CAT_UNKNOWN)
+  
+  if (allocated(pressure_in_t)) call tr_deallocate(pressure_in_t,"pressure_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(pressure_in_t,1,index_start+nstep,"pressure_in_t",CAT_UNKNOWN)
+  
+  if (allocated(pressure_out_t)) call tr_deallocate(pressure_out_t,"pressure_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(pressure_out_t,1,index_start+nstep,"pressure_out_t",CAT_UNKNOWN)
+  
+  if (allocated(heat_src_in_t)) call tr_deallocate(heat_src_in_t,"heat_src_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(heat_src_in_t,1,index_start+nstep,"heat_src_in_t",CAT_UNKNOWN)
+  
+  if (allocated(heat_src_out_t)) call tr_deallocate(heat_src_out_t,"heat_src_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(heat_src_out_t,1,index_start+nstep,"heat_src_out_t",CAT_UNKNOWN)
+  
+  if (allocated(part_src_in_t)) call tr_deallocate(part_src_in_t,"part_src_in_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_src_in_t,1,index_start+nstep,"part_src_in_t",CAT_UNKNOWN)
+  
+  if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"part_src_out_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+  
+  if (allocated(xtime_phys_ablation))    call tr_deallocate(xtime_phys_ablation,"xtime_phys_ablation",CAT_GRID)
+  if (nstep .gt. 0)                      call tr_allocate(xtime_phys_ablation,1,nstep,"xtime_phys_ablation")
 
 endif
 

@@ -7,7 +7,7 @@ module mod_straight_field_line
   
   use constants
   use tr_module 
-  use parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
+  use mod_parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
   use phys_module,     only: F0, xpoint, xcase
   use equil_info
   
@@ -36,7 +36,7 @@ module mod_straight_field_line
   
   ! --- Constants
   character(len=23), parameter, private :: THIS_MOD_NAME = 'mod_straight_field_line'
-  logical,           parameter, private :: DEBUG         = .false. !< Switch on/off debugging output
+  logical,           parameter, private :: DEBUG         = .true. !< Switch on/off debugging output
   
   
   
@@ -98,7 +98,7 @@ module mod_straight_field_line
       surface_list%psi_values(i) = eq%psi_axis + ( eq%psi_bnd - eq%psi_axis ) * psi_n
     end do
     
-    call find_flux_surfaces(eq%xpoint, eq%xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,eq%xpoint, eq%xcase, node_list, element_list, surface_list)
     
     !###
     ! --- Loop over all flux surfaces
@@ -253,6 +253,8 @@ module mod_straight_field_line
       write(*,*) 'nmaxsteps   =', nmaxsteps
       write(*,*) 'deltaphi    =', deltaphi
       write(*,*) 'nsmallsteps =', nsmallsteps
+      write(*,*) 'psiNrange   =', psiNrange
+
     end if
     
     call alloc_mapping(mapping, nPsiN, nmaxsteps, nTht)
@@ -405,7 +407,7 @@ module mod_straight_field_line
           exit
         end if
         
-        call find_RZ2(node_list, element_list, Rmid, equil_state%Z_axis, R_out, Z_out, i_elm_out,   &
+        call find_RZ(node_list, element_list, Rmid, equil_state%Z_axis, R_out, Z_out, i_elm_out,   &
           s_out, t_out, ifail)
         call interp0(node_list, element_list, i_elm_out, 1, 1, s_out, t_out, P, P_s, P_t)
         if ( get_psi_n(equil_state,P) < mapping%psin(k) ) then
@@ -429,7 +431,7 @@ module mod_straight_field_line
           
           ! --- Predictor step
           ! - Determine element number and s and t coordinates for given (R, Z) position.
-          call find_RZ2(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
+          call find_RZ(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
             write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (1).'
             ierr = 100
@@ -449,7 +451,7 @@ module mod_straight_field_line
           
           ! --- Corrector step
           ! - Determine element number and s and t coordinates for given (R, Z) position.
-          call find_RZ2(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
+          call find_RZ(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
             write(*,*) 'Error in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (2).'
             ierr = 100

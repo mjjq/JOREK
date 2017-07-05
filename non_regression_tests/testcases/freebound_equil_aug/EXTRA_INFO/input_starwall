@@ -1,0 +1,69 @@
+&PARAMS
+  ! Calculate response matrix for:
+  !   0=no wall, 1=ideal wall, 2=resistive wall
+  i_response = 2,
+
+  ! Number of toroidal modes
+  n_harm     = 1,
+
+  ! Toroidal mode numbers n_tor(i) for i=1...n_harm
+  n_tor      = 0,
+
+  ! Number of toroidal grid points for real space representation
+  nv         = 32,
+
+  ! B_par is computed on a surface shifted by delta into the vacuum domain
+  ! (numerical parameter: leave unchanged)
+  delta      = 0.001,
+
+  ! Number of grid points per boundary element
+  n_points   = 10,
+
+  ! Number of unconnected wall components
+  ! (CURRENTLY UNUSED)
+  nwall      = 1,
+
+  ! Representation of the wall:
+  !   1=Fourier series, 2=triangles, 3=triangles+index fu.
+  iwall      = 1,
+
+  ! Are there external coils? 0=no, 1=yes
+  ! (CURRENTLY UNUSED)
+  nu_coil    = 0,
+/
+
+
+
+&PARAMS_WALL
+
+ eta_thin_w = 1.
+ 
+! name of the file with wall description
+! wall_filename = 'wall_simple.txt'
+
+! Wall grid points in poloidal direction
+  nwu        = 5,
+
+! Wall grid points in toroidal direction
+  nwv        = 5,
+
+! Number of Fourier harmonics
+  mn_w       = 6,
+
+! Modes characterizing the wall shape
+n_w(  1)=  0, m_w(  1)=  0, rc_w(  1)= 1.5148E+00, rs_w(  1)=  0.0000E+00, zc_w(  1)= -9.5387E-02, zs_w(  1)=  0.0000E+00,
+n_w(  2)=  0, m_w(  2)=  1, rc_w(  2)= 6.2312E-01, rs_w(  2)=  3.1730E-02, zc_w(  2)=  3.1730E-02, zs_w(  2)=  1.3188E+00,
+n_w(  3)=  0, m_w(  3)=  2, rc_w(  3)= 7.9411E-02, rs_w(  3)=  5.3726E-02, zc_w(  3)=  1.6776E-02, zs_w(  3)= -5.3306E-02,
+n_w(  4)=  0, m_w(  4)=  3, rc_w(  4)= 1.8812E-02, rs_w(  4)=  1.4343E-03, zc_w(  4)=  1.3911E-04, zs_w(  4)= -1.0979E-02,
+n_w(  5)=  0, m_w(  5)=  4, rc_w(  5)= 3.7053E-03, rs_w(  5)=  4.0909E-03, zc_w(  5)= -1.9181E-03, zs_w(  5)=  3.3247E-03,
+n_w(  6)=  0, m_w(  6)=  5, rc_w(  6)= 3.3658E-03, rs_w(  6)= -6.9335E-04, zc_w(  6)= -1.1966E-03, zs_w(  6)=  1.5843E-03,
+
+
+/
+
+! rbc(0,0)    =  1.5148E+00, rbs(0,0)    =  0.0000E+00, zbc(0,0)    = -9.5387E-02, zbs(0,0)    =  0.0000E+00,
+! rbc(0,1)    =  6.2312E-01, rbs(0,1)    =  3.1730E-02, zbc(0,1)    =  3.1730E-02, zbs(0,1)    =  1.3188E+00,
+! rbc(0,2)    =  7.9411E-02, rbs(0,2)    =  5.3726E-02, zbc(0,2)    =  1.6776E-02, zbs(0,2)    = -5.3306E-02,
+! rbc(0,3)    =  1.8812E-02, rbs(0,3)    =  1.4343E-03, zbc(0,3)    =  1.3911E-04, zbs(0,3)    = -1.0979E-02,
+! rbc(0,4)    =  3.7053E-03, rbs(0,4)    =  4.0909E-03, zbc(0,4)    = -1.9181E-03, zbs(0,4)    =  3.3247E-03,
+! rbc(0,5)    =  3.3658E-03, rbs(0,5)    = -6.9335E-04, zbc(0,5)    = -1.1966E-03, zbs(0,5)    =  1.5843E-03,

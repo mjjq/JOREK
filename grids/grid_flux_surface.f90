@@ -97,7 +97,7 @@ RRnew(1:4,1:nrnew*npnew)  = 0.d0
 ZZnew(1:4,1:nrnew*npnew)  = 0.d0
 PSInew(1:4,1:nrnew*npnew) = 0.d0
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 
 !call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
@@ -362,7 +362,7 @@ enddo
 
 !----------------------------- empty old nodes/elements
 
-do i=1,node_list%n_nodes
+do i=1,n_nodes_max
   node_list%node(i)%x        = 0.d0
   node_list%node(i)%values   = 0.d0
   node_list%node(i)%index    = 0
@@ -370,7 +370,7 @@ do i=1,node_list%n_nodes
 enddo
 node_list%n_nodes = 0
 
-do i=1,element_list%n_elements
+do i=1,n_elements_max
   element_list%element(i)%vertex     = 0
   element_list%element(i)%size       = 0.d0
   element_list%element(i)%neighbours = 0

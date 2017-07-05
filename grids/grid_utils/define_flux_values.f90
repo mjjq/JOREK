@@ -173,8 +173,8 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, &
     sep_list%psi_values(6) = flux_list%psi_values(n_flux+n_open+n_outer+n_inner+n_private+n_up_priv)
   endif
   
-  call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
-  call find_flux_surfaces(xpoint,xcase,node_list,element_list,sep_list)  
+  call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
+  call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)  
   if(xcase .eq. 3) then
     do i=1,6
       nPieces = sep_list%flux_surfaces(i)%n_pieces
@@ -302,6 +302,7 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
   use tr_module 
   use data_structure
   use phys_module, only : n_limiter, R_limiter, Z_limiter
+  use py_plots_grids
   
   implicit none
   
@@ -1101,7 +1102,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   surface_list_single%n_psi = 1
   allocate(surface_list_single%psi_values(1))
   surface_list_single%psi_values(1) = psi
-  call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list_single)
+  call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,surface_list_single)
   
   ! --- Record psi-values of temporary flux-surfaces individually
   surface_list_single%flux_surfaces(1)%psi = psi

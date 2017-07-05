@@ -15,13 +15,15 @@ module load mumps/4.10.0
 module load pastix/5.2.2.16
 module load fftw/3.3.4
 module load hdf5
+module unload GCC
 
 export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
 
 export LANG=C
 export JOREK_HOST=iter-hpc
-export compilethreads=1
-export PRERUN="export OMP_NUM_THREADS=2"
+export compilethreads=4
+export MAKEFLAGS="-j$compilethreads"
+export PRERUN="export OMP_NUM_THREADS=4"
 export MPIRUN="mpirun -np "
 export BATCHCOMMAND="qsub"
 

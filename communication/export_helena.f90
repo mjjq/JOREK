@@ -3,7 +3,7 @@ subroutine export_helena(node_list,element_list,bnd_elm_list)
 
 use constants
 use tr_module 
-use parameters
+use mod_parameters
 use data_structure
 use phys_module
 
@@ -32,7 +32,7 @@ real*8 :: ZJgi,dZJgi_dr,dZJgi_ds,dZJgi_drs,dZJgi_drr,dZJgi_dss
 real*8 :: RRgi,dRRgi_dr,dRRgi_ds,dRRgi_drs,dRRgi_drr,dRRgi_dss
 real*8 :: ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss
 real*8 :: dRRgi_dt, dZZgi_dt, RZjac, PSI_R, PSI_Z, grad_psi, B_tot2, P0gi, dP0gi_dr,dP0gi_ds, P0_R, P0_Z 
-real*8 :: density, density_in, density_out, pressure, pressure_in, pressure_out
+real*8 :: density, density_in, density_out, pressure, pressure_in, pressure_out, heat_src_in, heat_src_out, part_src_in, part_src_out
 integer :: i_elm_axis, i_elm_xpoint(2), nplot, i, j, n_bnd, i_elm, k, ip, ig
 integer :: node1, node2, node3, node4, ifail, my_id
 
@@ -99,7 +99,7 @@ else
   surface_list%psi_values(3) =  psi_axis + 0.999 * (psi_bnd - psi_axis)
 endif
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 nplot = 3
 
@@ -180,7 +180,7 @@ write(*,'(A,f8.5,A)') ' Bgeo : ',Bgeo,' T'
 
 call Integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_lim, aminor, &
   Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure, pressure_in,  &
-  pressure_out)
+  pressure_out, heat_src_in, heat_src_out, part_src_in, part_src_out)
   
 write(11,*) aminor, Rgeo, Bgeo
 write(11,*) current,beta_p,beta_t,beta_n
@@ -196,7 +196,7 @@ do i=1,n_flux
   surface_list%psi_values(i) =  psi_axis + s_value**2 * (psi_bnd - psi_axis)
 enddo
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 write(11,*) n_flux-1
 
@@ -243,6 +243,12 @@ do i=2, surface_list%n_psi
 
       call interp_RZ(node_list,element_list,i_elm,ri,si,RRgi,dRRgi_dr,dRRgi_ds,dRRgi_drs,dRRgi_drr,dRRgi_dss, &
                                                         ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss)
+      
+      ! --- Make sure that for flux surfaces at Psi_N < 1, the surface integral is carried out only
+      !     over the flux surface segments of the plasma region.
+      !     I.e., ignore flux surface segments in the private flux region below the x-point.
+      if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (ZZgi < z_xpoint(1)) .and. (xcase .ne. 2)) cycle
+      if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (ZZgi > z_xpoint(2)) .and. (xcase .ne. 1)) cycle
 
       dRRgi_dt = dRRgi_dr * dri + dRRgi_ds * dsi
       dZZgi_dt = dZZgi_dr * dri + dZZgi_ds * dsi

@@ -1,0 +1,42 @@
+#!/bin/bash
+#PBS -N _CASE_
+#PBS -q knl
+#PBS -A FUA21_<project-id>
+# #PBS -l mcdram=cache:numa=snc2
+#PBS -l place=excl
+#PBS -l walltime=0:15:00
+#PBS -l select=1:mpiprocs=2
+#PBS -j oe
+#PBS -V
+#PBS -m e
+
+########################################################################
+# Look to non_regression_tests/testcases/_CASE_/settings.sh
+# to determine nb of nodes, MPI processes, and nb of threads
+########################################################################
+
+cd $PBS_O_WORKDIR
+
+ulimit -l unlimited
+ulimit -s unlimited
+echo $PBS_O_WORKDIR
+
+CASE=_CASE_
+JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
+echo " jorek_home = " ${JOREK_HOME}
+
+export OMP_NUM_THREADS=34
+export mpitasks=`wc -l < $PBS_NODEFILE`
+
+#export NPROC=`qstat -f $PBS_JOBID | awk '/Resource_List.mpiprocs/ {print $3}'`
+
+cd ${JOREK_HOME}
+source non_regression_tests/job_scripts/marconi_knl/env.sh
+echo $MPIRUN
+## Compile with:       
+# non_regression_tests/run_test.sh -p $CASE
+## Initial Long run: 
+#non_regression_tests/run_test.sh -i -k -n $CASE 
+## Restart run: 
+non_regression_tests/run_test.sh -k -n $CASE 
+

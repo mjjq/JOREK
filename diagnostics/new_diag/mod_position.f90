@@ -8,7 +8,7 @@ module mod_position
   
   
   use constants
-  use parameters
+  use mod_parameters
   use equil_info
   use data_structure
   use mod_straight_field_line
@@ -176,7 +176,8 @@ module mod_position
     integer :: ierr
     
     call create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s, t, Rmin, Rmax, &
-      nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN)
+      nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax, nPsiN,      &
+      nmaxsteps, deltaphi, nsmallsteps)
     
   end function pol_pos
   
@@ -224,7 +225,7 @@ module mod_position
       pos   => pos_list%pos(1,1)
       pos%R = R
       pos%Z = Z
-      call find_RZ2(node_list, element_list, R, Z, R_out, Z_out, pos%ielm, pos%s, pos%t, ierr)
+      call find_RZ(node_list, element_list, R, Z, R_out, Z_out, pos%ielm, pos%s, pos%t, ierr)
       pos%outside = ( ierr /= 0 )
       call fill_pol_pos(pos, node_list, element_list)
       
@@ -244,7 +245,7 @@ module mod_position
       
       call alloc_pol_pos(pos_list, (/nR,nZ/))
       
-      !$OMP parallel do default(none) firstprivate(pos,R_out,Z_out,ierr) private(i,j)              & 
+      !$OMP parallel do default(none) firstprivate(R_out,Z_out,ierr) private(pos,i,j)              & 
       !$OMP shared(nR,nZ,node_list,element_list,pos_list,Rmin,Rmax,Zmin,Zmax) schedule(static)
       do i = 1, nR
         do j = 1, nZ
@@ -252,7 +253,7 @@ module mod_position
           pos%R = Rmin + (Rmax-Rmin) * real(i-1)/real(nR-1)
           pos%Z = Zmin + (Zmax-Zmin) * real(j-1)/real(nZ-1)
           ierr = 0
-          call find_RZ2(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
+          call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           pos%outside = ( ierr /= 0 )
           call fill_pol_pos(pos, node_list, element_list)
@@ -271,7 +272,7 @@ module mod_position
         pos%R = Rstart + (Rend-Rstart) * real(i-1)/real(n-1)
         pos%Z = Zstart + (Zend-Zstart) * real(i-1)/real(n-1)
         pos%length = full_length * real(i-1)/real(n-1)
-        call find_RZ2(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,  &
+        call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,  &
           ierr)
         pos%outside = ( ierr /= 0 )
         call fill_pol_pos(pos, node_list, element_list)
@@ -319,7 +320,7 @@ module mod_position
           pos%R = mapping%rre(i,j-1)
           pos%Z = mapping%zze(i,j-1)
           pos%theta_star = 2.d0 * PI * real(j-1) / real(nTht-1) !######### check if nTht or nTht-1
-          call find_RZ2(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
+          call find_RZ(node_list, element_list, pos%R, pos%Z, R_out, Z_out, pos%ielm, pos%s, pos%t,&
             ierr)
           pos%outside = ( ierr /= 0 )
           call fill_pol_pos(pos, node_list, element_list)

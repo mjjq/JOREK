@@ -2,7 +2,7 @@ subroutine export_grid(node_list,element_list)
 !**************************************************************************
 ! export the grid and values of the nodes/elements                        *
 !**************************************************************************
-use parameters
+use mod_parameters
 use data_structure
 
 implicit none

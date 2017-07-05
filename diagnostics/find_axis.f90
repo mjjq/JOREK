@@ -5,7 +5,7 @@ subroutine find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: R_geo, tokamak_device
+use phys_module, only: R_geo, tokamak_device, Zaxis_find_limit  
 
 implicit none
 
@@ -51,6 +51,8 @@ ij_axis    = 1
 psi_axis   = 1.d20
 grad_psi_min = 1.d20
 
+if( Zaxis_find_limit .gt. 50.d0)  Zaxis_find_limit = 0.1d0 * R_geo
+
 do i=1,element_list%n_elements
 
   do ms = 1, 4           ! 4 Gaussian points
@@ -91,7 +93,7 @@ do i=1,element_list%n_elements
       grad_psi = sqrt(ps_x*ps_x + ps_y*ps_y)
 
       if (grad_psi .lt. grad_psi_min) then
-        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (abs(Z) .lt. 0.1 * R_geo)) &
+        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (abs(Z) .lt. Zaxis_find_limit)) &
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. ((abs(Z) .lt. 0.2d0) .and. (R .lt. 1.d0))) ) then
           grad_psi_min = grad_psi
           i_elm_axis = i

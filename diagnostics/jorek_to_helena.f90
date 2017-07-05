@@ -1,15 +1,15 @@
 
 module helena_boundary
   integer             :: mf, n_bnd
-  real, allocatable   :: fr(:), R_bnd(:), Z_bnd(:)
-  real                :: Bgeo, Rgeo, Zgeo, amin, eps, ellip, tria_u, tria_l, quad_u, quad_l
-  real                :: Reast, Rwest
+  real*8, allocatable :: fr(:), R_bnd(:), Z_bnd(:)
+  real*8              :: Bgeo, Rgeo, Zgeo, amin, eps, ellip, tria_u, tria_l, quad_u, quad_l
+  real*8              :: Reast, Rwest
 end
 
 module helena_profiles
   integer             :: n_prof
-  real,allocatable    :: psi(:),dp_dpsi(:),fdf_dpsi(:),p_psi(:),f_psi(:),zjz_psi(:),q(:)
-  real                :: p_bnd
+  real*8,allocatable  :: psi(:),dp_dpsi(:),fdf_dpsi(:),p_psi(:),f_psi(:),zjz_psi(:),q(:)
+  real*8              :: p_bnd
 endmodule
 
 program jorek_to_helena
@@ -24,7 +24,7 @@ real*8  :: current, beta_p, beta_t, beta_n
 integer :: i
 
 read(5,*) R_axis,Z_axis,F0
-read(5,*) psi_bnd,psi_axis,psi_xpoint
+read(5,*) psi_bnd,psi_axis  !,psi_xpoint
 read(5,*) n_bnd
 
 allocate(r_bnd(n_bnd),z_bnd(n_bnd))
@@ -125,19 +125,20 @@ subroutine fshape
 use tr_module
 use helena_boundary
 use constants
+
 implicit none
 
-real              :: xj, yj, ga
-real, allocatable :: THETA(:), GAMMA(:), XV(:),YV(:)
-real              :: angle, error, gamm
-real, allocatable :: tht_tmp(:),  fr_tmp(:), work(:)
-real, allocatable :: tht_sort(:), fr_sort(:), dfr_sort(:)
+real*8              :: xj, yj, ga
+real*8, allocatable :: THETA(:), GAMMA(:), XV(:),YV(:)
+real*8              :: angle, error, gamm
+real*8, allocatable :: tht_tmp(:),  fr_tmp(:), work(:)
+real*8, allocatable :: tht_sort(:), fr_sort(:), dfr_sort(:)
 integer, allocatable :: index_order(:)
-real              :: tht, Rbnd_av, ORbnd_av, values(4)
-integer           :: m, igrinv, i, j, ishape, ieast(1), iwest(1), n_bnd_short
-parameter (error = 1.e-8)
+real*8              :: tht, Rbnd_av, ORbnd_av, values(4)
+integer             :: m, igrinv, i, j, ishape, ieast(1), iwest(1), n_bnd_short
+parameter (error = 1.d-8)
 
-call tr_allocate(fr,1,mf+2,"fr",CAT_GRID)
+allocate(fr(mf+2))
 allocate(theta(mf),gamma(mf),xv(mf),yv(mf))
 
   write(*,*) ' fshape : (R,Z) set given on ',n_bnd,' points'
@@ -152,13 +153,13 @@ allocate(theta(mf),gamma(mf),xv(mf),yv(mf))
 
   write(*,'(A,3f12.8)') ' Rgeo, Zgeo : ',Rgeo,Zgeo,amin
 
-  call tr_allocate(tht_tmp,1,n_bnd,"tht_tmp",CAT_GRID)
-  call tr_allocate(fr_tmp,1,n_bnd,"fr_tmp",CAT_GRID)
-  call tr_allocate(work,1,3*n_bnd+6,"work",CAT_GRID)
-  call tr_allocate(tht_sort,1,n_bnd+2,"tht_sort",CAT_GRID)
-  call tr_allocate(fr_sort,1,n_bnd+2,"fr_sort",CAT_GRID)
-  call tr_allocate(dfr_sort,1,n_bnd+2,"dfr_sort",CAT_GRID)
-  call tr_allocate(index_order,1,n_bnd+2,"index_order",CAT_GRID)
+  allocate(tht_tmp(n_bnd))
+  allocate(fr_tmp(n_bnd))
+  allocate(work(3*n_bnd+6))
+  allocate(tht_sort(n_bnd+2))
+  allocate(fr_sort(n_bnd+2))
+  allocate(dfr_sort(n_bnd+2))
+  allocate(index_order(n_bnd+2))
 
   do i=1,n_bnd
 
@@ -252,8 +253,8 @@ SUBROUTINE QSORT2 (ORD,N,A)
 !     respectively  similarly for X,XX,Z,ZZ,Y. L is the
 !     character length of the elements of A.
 !
-      REAL A(N)
-      REAL X,XX,Z,ZZ,Y
+      REAL*8 A(N)
+      REAL*8 X,XX,Z,ZZ,Y
 !
       NDEEP=0
       U1=N
@@ -365,311 +366,4 @@ SUBROUTINE QSORT2 (ORD,N,A)
       GO TO 18
 !
 ! END QSORT
-END
-
-SUBROUTINE RFT2(DATA,NR,KR)
-!*****************************************************************
-! REAL FOURIER TRANSFORM.                                        *
-! INPUT:  NR REAL COEFFICIENTS                                   *
-!             DATA(1),DATA(1+KR),....,DATA(1+(NR-1)*KR).         *
-! OUTPUT: NR/2+1 COMPLEX COEFFICIENTS                            *
-!            (DATA(1),      DATA(1+KR))                          *
-!            (DATA(1+2*KR), DATA(1+3*KR))                        *
-!             .............................                      *
-!            (DATA(1+NR*KR),DATA(1+(NR+1)*KR).                   *
-! THE CALLING PROGRAM SHOULD HAVE DATA DIMENSIONED WITH AT LEAST *
-! (NR+1)*KR+1 ELEMENTS. (I.E., NR+2 IF INCREMENT KR=1).          *
-! LASL ROUTINE MAY 75, CALLING FFT2 AND RTRAN2.                  *
-!*****************************************************************
-implicit none
-real    :: DATA(*)
-integer :: kr,nr, ktran
-
-CALL FFT2(DATA(1),DATA(KR+1),NR/2,-(KR+KR))
-CALL RTRAN2(DATA,NR,KR,1)
-RETURN
-END
-
-SUBROUTINE RTRAN2(DATA,NR,KR,KTRAN)
-!*****************************************************************
-! INTERFACE BETWEEN RFT2, RFI2, AND FFT2.                        *
-! THE CALLING PROGRAM SHOULD HAVE DATA DIMENSIONED WITH AT LEAST *
-! (NR+1)*KR+1 ELEMENTS.                                          *
-! LASL ROUTINE MAY 75, CALLED FROM RFT2 AND RFI2.                *
-!*****************************************************************
-implicit none
-real    :: data(*), theta, dc, ds, ws, wc, sumr, difr, sumi, difi
-real    :: tr, ti, wca
-integer :: nr, kr, ktran, ks, n, nmax, kmax, k, nk
-
-KS=2*KR
-N=NR/2
-NMAX=N*KS+2
-KMAX=NMAX/2
-THETA=1.5707963267949/FLOAT(N)
-DC=2.*SIN(THETA)**2
-DS=SIN(2.*THETA)
-WS=0.
-
-IF (KTRAN .LE. 0) THEN
-   WC=-1.0
-   DS=-DS
-ELSE
-   WC=1.0
-   DATA(NMAX-1)=DATA(1)
-   DATA(NMAX-1+KR)=DATA(KR+1)
-ENDIF
-DO K=1,KMAX,KS
-   NK=NMAX-K
-   SUMR=.5*(DATA(K)+DATA(NK))
-   DIFR=.5*(DATA(K)-DATA(NK))
-   SUMI=.5*(DATA(K+KR)+DATA(NK+KR))
-   DIFI=.5*(DATA(K+KR)-DATA(NK+KR))
-   TR=WC*SUMI-WS*DIFR
-   TI=WS*SUMI+WC*DIFR
-   DATA(K)=SUMR+TR
-   DATA(K+KR)=DIFI-TI
-   DATA(NK)=SUMR-TR
-   DATA(NK+KR)=-DIFI-TI
-   WCA=WC-DC*WC-DS*WS
-   WS=WS+DS*WC-DC*WS
-   WC=WCA
-enddo
-return
-end
-
-SUBROUTINE FFT2 (DATAR,DATAI,N,INC)
-!*****************************************************************
-! FFT2 FORTRAN VERSION CLAIR NIELSON MAY 75.                     *
-!*****************************************************************
-real    :: DATAR(*), DATAI(*)
-integer :: n, ninc
-
-KTRAN=ISIGN(-1,INC)
-KS=IABS(INC)
-IP0=KS
-IP3=IP0*N
-IREV=1
-
-      DO I=1,IP3,IP0
-         IF(I.LT.IREV) THEN
-            TEMPR=DATAR(I)
-            TEMPI=DATAI(I)
-            DATAR(I)=DATAR(IREV)
-            DATAI(I)=DATAI(IREV)
-            DATAR(IREV)=TEMPR
-            DATAI(IREV)=TEMPI
-         ENDIF
-         IBIT=IP3/2
-   10    IF(IREV.GT.IBIT) THEN
-            IREV=IREV-IBIT
-            IBIT=IBIT/2
-            IF(IBIT.GE.IP0) GOTO 10
-         ENDIF
-         IREV=IREV+IBIT
-      enddo
-      IP1=IP0
-      THETA=REAL(KTRAN)*3.1415926535898
-   30 IF(IP1.GE.IP3) return
-      IP2=IP1+IP1
-      SINTH=SIN(.5*THETA)
-      WSTPR=-2.*SINTH*SINTH
-      WSTPI=SIN(THETA)
-      WR=1.
-      WI=0.
-      DO I1=1,IP1,IP0
-         DO I3=I1,IP3,IP2
-            J0=I3
-            J1=J0+IP1
-            TEMPR=WR*DATAR(J1)-WI*DATAI(J1)
-            TEMPI=WR*DATAI(J1)+WI*DATAR(J1)
-            DATAR(J1)=DATAR(J0)-TEMPR
-            DATAI(J1)=DATAI(J0)-TEMPI
-            DATAR(J0)=DATAR(J0)+TEMPR
-            DATAI(J0)=DATAI(J0)+TEMPI
-         enddo
-         TEMPR=WR
-         WR=WR*WSTPR-WI*WSTPI+WR
-         WI=WI*WSTPR+TEMPR*WSTPI+WI
-      enddo
-      IP1=IP2
-      THETA=.5*THETA
-      GOTO 30
-RETURN
-END
-
-
-SUBROUTINE FSUM2(F,T,FFNUL,FFCOS,FFSIN,MHARM)
-!-----------------------------------------------------------------------
-! FOURIER SYNTHESIS OF GENERAL  FUNCTION F(T) AT SINGLE POINT T.
-!-----------------------------------------------------------------------
-implicit none
-integer :: mharm, m
-real    :: ffnul, ffcos(*), ffsin(*), f, t, s, c, co, ca, si, sum
-
-CO=COS(T)
-SI=SIN(T)
-C=1.
-S=0.
-SUM=.5*FFNUL
-do m=1,mharm
-  CA=C*CO-S*SI
-  S=S*CO+C*SI
-  C=CA
-  SUM=SUM+FFCOS(M)*C + FFSIN(M)*S
-enddo
-F=SUM
-RETURN
-END
-
-
-SUBROUTINE TB15A(N,X,F,D,W,LP)
-!------------------------------------------------------------------
-! HSL routine for cubic spline with periodic boundary conditions
-! first point must be the same as last : f(1)=f(n)
-!    N : number of points
-!    X : coordinate (input)
-!    F : the function values to be splined (input)
-!    D : the derivatives at the points (output)
-!    W : workspace (dimension 3N)
-!   LP : unit number for output
-!------------------------------------------------------------------
-REAL ZERO,ONE,TWO,THREE
-PARAMETER (ZERO=0.0E0,ONE=1.0E0,TWO=2.0E0,THREE=3.0E0)
-INTEGER LP,N
-REAL D(N),F(N),W(*),X(N)
-REAL A3N1,F1,F2,H1,H2,P
-INTEGER I,J,K,N2
-
-WRITE(*,*) F(1),F(N)
-IF (N.LT.4) THEN
-  WRITE (LP,'(A39)')  'RETURN FROM TB15AD BECAUSE N TOO SMALL'
-  W(1) = ONE
-  RETURN
-END IF
-DO I = 2,N
-  IF (X(I).LE.X(I-1)) THEN
-    WRITE (LP,'(A29,I3,A13)') ' RETURN FROM TB15AD BECAUSE  ',I,' OUT OF ORDER'
-    W(1) = TWO
-    RETURN
-  END IF
-ENDDO
-IF (F(1).NE.F(N)) THEN
-  WRITE (LP,'(A40)')  'RETURN FROM TB15AD BECAUSE F(1).NE.F(N)'
-  W(1) = THREE
-  RETURN
-END IF
-DO I = 2,N
-  H1 = ONE/ (X(I)-X(I-1))
-  F1 = F(I-1)
-  IF (I.EQ.N) THEN
-    H2 = ONE/ (X(2)-X(1))
-    F2 = F(2)
-  ELSE
-    H2 = ONE/ (X(I+1)-X(I))
-    F2 = F(I+1)
-  END IF
-  W(3*I-2) = H1
-  W(3*I-1) = TWO* (H1+H2)
-  W(3*I) = H2
-  D(I) = 3.0* (F2*H2*H2+F(I)* (H1*H1-H2*H2)-F1*H1*H1)
-ENDDO
-N2 = N - 2
-K = 5
-A3N1 = W(3*N-1)
-DO I = 2,N2
-  P = W(K+2)/W(K)
-  W(K+3) = W(K+3) - P*W(K+1)
-  D(I+1) = D(I+1) - P*D(I)
-  W(K+2) = -P*W(K-1)
-  P = W(K-1)/W(K)
-  A3N1 = -P*W(K-1) + A3N1
-  D(N) = D(N) - P*D(I)
-  K = K + 3
-ENDDO
-P = (W(K+2)+W(K-1))/W(K)
-A3N1 = A3N1 - P* (W(K+1)+W(K-1))
-D(N) = (D(N)-P*D(N-1))/A3N1
-DO I = 3,N
-  J = N + 2 - I
-  D(J) = (D(J)-W(3*J)*D(J+1)-W(3*J-2)*D(N))/W(3*J-1)
-ENDDO
-D(1) = D(N)
-W(1) = ZERO
-RETURN
-END
-
-
-
-SUBROUTINE TG02A(IX,N,U,S,D,X,V)
-!------------------------------------------------------------------
-! HSL subroutine to calculate splined values
-!    N  : number of points
-!    IX : negative 0 -> no initial guess for where xi is
-!        positive -> gues for index close to value X
-!   U   : the coordinates of the spline points
-!   S   : the function values of the spline points
-!   D   : the derivatives on the spline points
-!   X   : the coordinate where the output is wanted
-!   V(1-4) : value and derivatives of the spline interpolation
-!------------------------------------------------------------------
-REAL X
-INTEGER IX,N
-REAL D(*),S(*),U(*),V(*)
-REAL A,B,C,C3,D0,D1,EPS,GAMA,H,HR,HRR,PHI,S0,S1,T,THETA
-INTEGER I,IFLG,J
-
-EPS = 1.E-33
-K = 0
-IFLG = 0
-IF (X.LT.U(1)) GO TO 990
-IF (X.GT.U(N)) GO TO 991
-IF (IX.LT.0 .OR. IFLG.EQ.0) GO TO 12
-IF (X.GT.U(J+1)) GO TO 1
-IF (X.GE.U(J)) GO TO 18
-GO TO 2
-
-    1 J = J + 1
-   11 IF (X.GT.U(J+1)) GO TO 1
-      GO TO 7
-   12 J = ABS(X-U(1))/ (U(N)-U(1))* (N-1) + 1
-      J = MIN(J,N-1)
-      IFLG = 1
-      IF (X.GE.U(J)) GO TO 11
-    2 J = J - 1
-      IF (X.LT.U(J)) GO TO 2
-    7 K = J
-      H = U(J+1) - U(J)
-      HR = 1./H
-      HRR = (HR+HR)*HR
-      S0 = S(J)
-      S1 = S(J+1)
-      D0 = D(J)
-      D1 = D(J+1)
-      A = S1 - S0
-      B = A - H*D1
-      A = A - H*D0
-      C = A + B
-      C3 = C*3.
-   18 THETA = (X-U(J))*HR
-      PHI = 1. - THETA
-      T = THETA*PHI
-      GAMA = THETA*B - PHI*A
-      V(1) = THETA*S1 + PHI*S0 + T*GAMA
-      V(2) = THETA*D1 + PHI*D0 + T*C3*HR
-      V(3) = (C* (PHI-THETA)-GAMA)*HRR
-      V(4) = -C3*HRR*HR
-      RETURN
-  990 IF (X.LE.U(1)-EPS*MAX(ABS(U(1)),ABS(U(N)))) GO TO 99
-      J = 1
-      GO TO 7
-  991 IF (X.GE.U(N)+EPS*MAX(ABS(U(1)),ABS(U(N)))) GO TO 995
-      J = N - 1
-      GO TO 7
-  995 K = N
-   99 IFLG = 0
-      DO I = 1,4
-        V(I) = 0.
-      ENDDO
-RETURN
 END

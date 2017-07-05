@@ -1,3 +1,7 @@
+module py_plots_grids
+  implicit none
+contains
+
 !> This plots fluxsurface not using the fact that they are ordered (ie. plotting piece after piece)
 subroutine print_py_plot_prepare_plot(filename)
 
@@ -306,5 +310,4 @@ subroutine print_py_plot_points(filename, n_points, R_points, Z_points)
 end subroutine print_py_plot_points
 
 
-
-
+end module py_plots_grids

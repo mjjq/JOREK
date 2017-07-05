@@ -5,28 +5,35 @@ program RST_convert_hdf52bin
   use phys_module
   ! Argument parsing
   use cla
+  use mod_import_restart
+  use mod_export_restart
+  use mod_boundary, only: boundary_from_grid
+  use vacuum
+  use vacuum_response
+  use vacuum_equilibrium
+  use nodes_elements
+  use mpi_mod
 
   implicit none
 
-  type (type_node_list)   , pointer :: node_list
-  type (type_element_list), pointer :: element_list
-
-  integer :: ierr, i
-
+  integer :: ierr, i, provided, StatInfo
   character(len=80) :: filein, fileout
   logical :: verbose, file_exists
-
-  allocate(node_list)
-  allocate(element_list)
 
 #ifndef USE_HDF5
 #error " Should be compiled with -DUSE_HDF5"
 #endif
 
+  call MPI_Init_thread(MPI_THREAD_FUNNELED, provided, StatInfo)
+  call init_threads()
+
+  call initialise_parameters(0, '__NO_FILENAME__')
+  call vacuum_init(0, freeboundary_equil, freeboundary, resistive_wall)
+
   ! Parse command line arguments
   call cla_init
   call pcla_register('filename', 'name of the restart hdf5 file to convert',  cla_char, 'jorek_restart.h5')    
-  call cla_register('-v','--verbose','enable verbose output', cla_flag,'v')
+  call cla_register('-v','--verbose','enable verbose output', cla_flag,'n')
   call cla_validate("rst_hdf52bin")
   call cla_get('filename',filein)
   verbose = cla_key_present('--verbose')
@@ -44,7 +51,6 @@ program RST_convert_hdf52bin
 
   ! --- Initialize mode and mode_type arrays
   call det_modes()
-  
   rst_format = 0
 
   ! --- Read the restart HDF5 file
@@ -53,11 +59,19 @@ program RST_convert_hdf52bin
 
   index_now = index_start
   t_now     = t_start
-  
   visco     = visco_rst
   visco_par = visco_par_rst
-
   eta       = eta_rst
+
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+  
+  if ( freeboundary ) then
+    call get_vacuum_response(0, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
+      resistive_wall)
+    call update_response(tstep, freeboundary_equil, resistive_wall)
+    call import_external_fields('coil_field.dat', 0)
+    if ( .not. wall_curr_initialized ) call init_wall_currents(0, resistive_wall)
+  end if
 
   ! -- Write the BINARY restart file
   if (verbose) write (6,*) " =============> rst_hdf52bin, write BIN file = ",fileout

@@ -13,6 +13,7 @@ program jorek2_povray
   use phys_module
   use diagnostics
   use profiles
+  use mod_import_restart
   
   implicit none
   
@@ -66,7 +67,7 @@ program jorek2_povray
     x_cart2(nplot,nplot,n_phi), y_cart2(nplot,nplot,n_phi), z_cart2(nplot,nplot,n_phi),            &
     value2(nplot,nplot,n_phi) )
   open(FH, file='jorek_data.pov', status='replace', action='write', form='formatted')
-  call import_binary_restart(node_list, element_list, 'jorek_restart.rst', rst_format, ierr)
+  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
   call initialise_basis()
   
   ! --- Locate magnetic axis and X-point.
@@ -190,7 +191,7 @@ program jorek2_povray
     surface_list%n_psi = 1
     allocate(surface_list%psi_values(surface_list%n_psi))
     surface_list%psi_values(1) = psi_axis + psi_surf*(psi_bnd-psi_axis)
-    call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,surface_list)
     
     ! --- Loop over all segments of the flux surface
     do i_piece = 1, surface_list%flux_surfaces(1)%n_pieces

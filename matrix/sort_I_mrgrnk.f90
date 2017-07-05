@@ -1,4 +1,7 @@
+module sort_I_mrgrnk
+contains
 Subroutine I_mrgrnk (XDONT, IRNGT, NVAL)
+  implicit none
 ! __________________________________________________________
 !   MRGRNK = Merge-sort ranking of an array
 !   For performance reasons, the first 2 passes are taken
@@ -196,3 +199,4 @@ Subroutine I_mrgrnk (XDONT, IRNGT, NVAL)
       Return
 !
 End Subroutine I_mrgrnk
+end module sort_I_mrgrnk

@@ -1,7 +1,6 @@
 &four_params
-  nstpts      = 400
+  nstpts      = 100
   deltaphi    = 0.3,
-  m_pol_range = 0, 40,
+  ntht        = 32
   rad_range   = 0.001, 0.999,
-  debug       = .true.,
 /

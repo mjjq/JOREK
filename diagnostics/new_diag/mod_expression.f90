@@ -14,7 +14,7 @@ module mod_expression
   
   
   
-  use parameters
+  use mod_parameters
   use mod_position
   use phys_module
   use diffusivities
@@ -113,7 +113,7 @@ module mod_expression
     call add(exprs_all, 'u           ', 'Velocity Stream Function                              ')
     call add(exprs_all, 'Phi         ', 'Electric Potential Phi                                ')
     call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
-    call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj*R)           ')
+    call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj/R)           ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
@@ -878,21 +878,21 @@ module mod_expression
             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
             
             Vtheta   = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
             
             Vperp_i  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z )
+              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
             
             Vperp_e  = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z - tauIC/r0 * (T0_R*r0 + r0_Z*T0) ) * ps0_Z )
+              ( u0_Z - tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
             
             V_ExB    = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
             
             Vstar_i  = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
             
             Vstar_e  = +1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_R*r0 + r0_Z*T0) * ps0_Z )
+              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
             ! ### Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
           
@@ -1078,7 +1078,7 @@ module mod_expression
                 res = Btheta
                 
               case ( 'currdens' )
-                res = zj0 * R / fact_mu_zero
+                res = zj0 / R / fact_mu_zero
                 
               case ( 'Er' )
                 res = Er * fact_Er

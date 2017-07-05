@@ -222,8 +222,8 @@ curie*)
 # mpi procs per nodes
 MPIPROCS=1
 NTHREAD=16
-NNODES=24
-WALLTIME=72000
+NNODES=1 #6 #3 #
+WALLTIME=600 #86000  
 ((NLIM=MPIPROCS*NTHREAD))
 if [ "${NLIM}" -gt "16" ]; then
    echo "${NLIM} = ", ${NLIM}
@@ -244,7 +244,7 @@ DIR=$(basename $(dirname $PWD))
 echo " DIR      = " $DIR
 #HOMEDIR=$SCRATCHDIR/${DIR}
 #HOMEDIR=$WORKDIR/${DIR}
-HOMEDIR=$HOME/trunk
+HOMEDIR=$HOME/JOREK_git_model501/
 echo " HOMEDIR = " $HOMEDIR
 SRCDIR=$HOMEDIR
 UTILDIR=${SRCDIR}/util
@@ -466,72 +466,75 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
   # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
   sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make
+  make -j 8
 
   if [ -e jorek_model${MODELNUMBER} ]; then mv jorek_model${MODELNUMBER} ${EXECNAME}; fi
 fi
 
-if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
-  echo "==================================================================================="
-  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
-  echo " =============>> compiling the jorek2vtk executable" ${VTKEXECNAME}
-  echo "==================================================================================="
-  echo " "
-  cd ${SRCDIR}
-
-  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
-
-  if [ -e jorek2vtk ]; then rm -f jorek2vtk; fi
-  make cleanall
-  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
-  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
-  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make jorek2vtk
-
-  if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
-fi
-
-if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
-  echo "==================================================================================="
-  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
-  echo " =============>> compiling the jorek2_target2vtk executable" ${TARGET_VTKEXECNAME}
-  echo "==================================================================================="
-  echo " "
-  cd ${SRCDIR}
-
-  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
-
-  if [ -e jorek2_target2vtk ]; then rm -f jorek2_target2vtk; fi
+# Eric NARDON 09/07/15: commented lines below which compile jorek2_target2vtk etc.
+#if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
+#  echo "==================================================================================="
+#  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+#  echo " =============>> compiling the jorek2vtk executable" ${VTKEXECNAME}
+#  echo "==================================================================================="
+#  echo " "
+#  cd ${SRCDIR}
+#
+#  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+#
+#
+#
+#  if [ -e jorek2vtk ]; then rm -f jorek2vtk; fi
 #  make cleanall
-  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
-  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
-  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make jorek2_target2vtk
-
-  if [ -e jorek2_target2vtk ]; then mv jorek2_target2vtk ${TARGET_VTKEXECNAME}; fi
-fi
-
-if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
-  echo "==================================================================================="
-  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
-  echo " =============>> compiling the jorek2_powers executable" ${POWERSEXECNAME}
-  echo "==================================================================================="
-  echo " "
-  cd ${SRCDIR}
-
-  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
-
-  if [ -e jorek2_powers ]; then rm -f jorek2_powers; fi
-#  make cleanall
-  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
-  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
-  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-  make jorek2_powers
-
-  if [ -e jorek2_powers ]; then mv jorek2_powers ${POWERSEXECNAME}; fi
-fi
-cd ${WKDIR}
-
+#  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+#  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+#  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+#  make jorek2vtk
+#
+#  if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
+#fi
+#
+#if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+#  echo "==================================================================================="
+#  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+#  echo " =============>> compiling the jorek2_target2vtk executable" ${TARGET_VTKEXECNAME}
+#  echo "==================================================================================="
+#  echo " "
+#  cd ${SRCDIR}
+#
+#  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+#
+#  if [ -e jorek2_target2vtk ]; then rm -f jorek2_target2vtk; fi
+##  make cleanall
+#  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+#  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+#  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+#  make jorek2_target2vtk
+#
+#  if [ -e jorek2_target2vtk ]; then mv jorek2_target2vtk ${TARGET_VTKEXECNAME}; fi
+#fi
+#
+#if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+#  echo "==================================================================================="
+#  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+#  echo " =============>> compiling the jorek2_powers executable" ${POWERSEXECNAME}
+#  echo "==================================================================================="
+#  echo " "
+#  cd ${SRCDIR}
+#
+#  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+#
+#  if [ -e jorek2_powers ]; then rm -f jorek2_powers; fi
+##  make cleanall
+#  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+#  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+#  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+#  make jorek2_powers
+#
+#  if [ -e jorek2_powers ]; then mv jorek2_powers ${POWERSEXECNAME}; fi
+#fi
+#cd ${WKDIR}
+#
 # copy exec files and data file in result directory
 # ------------------------------------------------
 if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
@@ -540,24 +543,24 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
 else
     cp ${SRCDIR}/${EXECNAME} ${RESDIR}/.
 fi
-if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
-   echo " Executable ${VTKEXECNAME} does not exist, so exit ";
-   exit
-else
-    cp ${SRCDIR}/${VTKEXECNAME} ${RESDIR}/.
-fi
-if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
-   echo " Executable ${TARGET_VTKEXECNAME} does not exist, so exit ";
-   exit
-else
-    cp ${SRCDIR}/${TARGET_VTKEXECNAME} ${RESDIR}/.
-fi
-if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
-   echo " Executable ${POWERSEXECNAME} does not exist, so exit ";
-   exit
-else
-    cp ${SRCDIR}/${POWERSEXECNAME} ${RESDIR}/.
-fi
+#if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
+#   echo " Executable ${VTKEXECNAME} does not exist, so exit ";
+#   exit
+#else
+#    cp ${SRCDIR}/${VTKEXECNAME} ${RESDIR}/.
+#fi
+#if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+#   echo " Executable ${TARGET_VTKEXECNAME} does not exist, so exit ";
+#   exit
+#else
+#    cp ${SRCDIR}/${TARGET_VTKEXECNAME} ${RESDIR}/.
+#fi
+#if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+#   echo " Executable ${POWERSEXECNAME} does not exist, so exit ";
+#   exit
+#else
+#    cp ${SRCDIR}/${POWERSEXECNAME} ${RESDIR}/.
+#fi
 
 if [ ! -e ${WKDIR}/${DATANAME} ]; then
     echo " Datafile ${DATAFILE} does no exist, so exit ";
@@ -569,14 +572,14 @@ fi
 # Names of the profile files for
 # rho, T, ffprime
 # --------------------------
-rho_file=`grep rho_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
-T_file=`grep T_file                     $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
-ffprime_file=`grep ffprime_file         $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+rho_file=`grep rho_file 		$DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+T_file=`grep T_file			$DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+ffprime_file=`grep ffprime_file 	$DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 R_Z_psi_bnd_file=`grep R_Z_psi_bnd_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
-wall_file=`grep wall_file               $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+wall_file=`grep wall_file		$DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 RMP_psi_cos_file=`grep RMP_psi_cos_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 RMP_psi_sin_file=`grep RMP_psi_sin_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
-neo_file=`grep neo_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+neo_file=`grep neo_file 		$DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
 
 # copy of the profiles files
 # if they exist 
@@ -587,7 +590,7 @@ if [ "$rho_file" != 'none' ] && [ "$rho_file" != '' ]; then
    rho_file=$(basename $rho_file)
    echo " ===> reading of the profile file: " ${rho_dir}/${rho_file}
    if [ -e ${rho_dir}/${rho_file} ]; then
-      echo "    ----- storing it to ${RESDIR}/${rho_dir}"
+      echo "	----- storing it to ${RESDIR}/${rho_dir}"
       if [ ! -e ${RESDIR}/${rho_dir} ]; then
          if [ "${rho_dir}" != "." ]; then
 	    # echo " creation of ${RESDIR}/${rho_dir} "
@@ -908,7 +911,6 @@ export OMP_NUM_THREADS=${NTHREAD}
 EOF
 ;;
 
-
 # -----------------------------------------------------------------
 # curie (TGCC)
 # -----------------------------------------------------------------
@@ -1076,7 +1078,9 @@ cd ${RESDIR}
 # Test if restart files exist
 # ---------------------------
 file_list=${RESDIR}/NUM_RST
-if [ ! -e "jorek_restart.rst" ]; then
+#if [ ! -e "jorek_restart.rst" ]; then
+#Bugfix Eric 07/06/17
+if [ ! -e "jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " The restart file does not exist, so INIT"
    echo " nb_restart = " \$nb_restart
@@ -1238,5 +1242,4 @@ EOF
 chmod +x go_$DATANAME.cmd
 cd ${WKDIR}
 ${CMD_SUB}
-
 

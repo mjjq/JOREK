@@ -6,7 +6,7 @@ use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
-use vacuum,        only: vacuum_preset, wall_resistivity
+use vacuum
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -19,10 +19,11 @@ real*8 :: vacuum_fraction, b_over_a, a_over_b
 ! --- Local variables
 integer :: ierr,err,i
 
-! --- Namelist with input parameters.
+! --- Namelist with input parameters.                                                                                                                        
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
+                rst_hdf5,                                           &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap,             &                                                                                                                         
+                restart, rst_format, regrid, bootstrap,             &                
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -57,8 +58,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
-                freeboundary_equil, freeboundary,                   &
-                resistive_wall, wall_resistivity,                   &
+                freeboundary_equil, freeboundary,  freeb_change_indices, &
+                resistive_wall,                                     &
+                wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp, n_tor_fft_thresh,                         &
@@ -69,6 +71,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
@@ -76,18 +83,30 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 #ifdef USE_HDF5
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
-
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
 
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion, RMP_on,             &  
+                mgi_sig, mgi_deltaphi, ksi_ion,                     &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
-                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi, JET_MGI, ASDEX_MGI, &
-                gas_type, delta_n_convection, nimp_bg,                         &
-                RMP_on, RMP_psi_cos_file, RMP_psi_sin_file
+                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi,          &
+                JET_MGI, ASDEX_MGI,                                 &
+                gas_type, delta_n_convection, nimp_bg,              &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_growth_rate, RMP_ramp_up_time,                  &
+                RMP_psi_cos_file, RMP_psi_sin_file,                 &
+                amix, amix_freeb, equil_accuracy,                   &
+                equil_accuracy_freeb, current_ref, FB_Ip_position,  &
+                FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
+                FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
+                n_feedback_current, n_feedback_vertical,            &
+                n_iter_freeb, n_pf_coils, pf_coils,                 &
+                Zaxis_find_limit, PF_pert_start_time,               &
+                starwall_equil_coils, freeb_equil_iterate_area,     &
+                psi_offset_freeb, diag_coils, rmp_coils,            &
+                voltage_coils, vert_FB_amp
 
  if (my_id .eq. 0) then
 

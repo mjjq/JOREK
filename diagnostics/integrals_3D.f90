@@ -390,24 +390,6 @@ do ife = ife_min, ife_max
        end do
 
 
-        ! --- 3D integrals to get particles deposited within a given flux
-        ! surfaces
-
-       do i_surface = 1, 4
-         if (psi_surfaces(i_surface)/=0.0) then
-           sur_domain = which_surface(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,&
-                        xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)
-
-           if (sur_domain <= id_surfaces(i_surface) .and. sur_domain >= id_surfaces(1)) then
-
-             local_rho_surfaces(i_surface) = local_rho_surfaces(i_surface) + r0 * xjac * BigR * wst * delta_phi
-             local_vol_surfaces(i_surface) = local_vol_surfaces(i_surface) +      xjac * BigR * wst * delta_phi 
-             local_count_surfaces(i_surface) = local_count_surfaces(i_surface) + 1
-           end if
-         end if
-       end do
-
-
      else
 
        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
@@ -424,6 +406,24 @@ do ife = ife_min, ife_max
 #endif
 
         if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
+
+        ! --- 3D integrals to get particles deposited within a given flux
+        ! surfaces
+
+          do i_surface = 1, 4
+            if (psi_surfaces(i_surface)/=0.0) then
+              sur_domain = which_surface(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,&
+                          xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)
+
+              if (sur_domain <= id_surfaces(i_surface) .and. sur_domain >= id_surfaces(1)) then
+
+                local_rho_surfaces(i_surface) = local_rho_surfaces(i_surface) + r0 * xjac * BigR * wst * delta_phi
+                local_vol_surfaces(i_surface) = local_vol_surfaces(i_surface) + xjac * BigR * wst * delta_phi
+                local_count_surfaces(i_surface) = local_count_surfaces(i_surface) + 1
+              end if
+            end if
+          end do
+
 
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
@@ -494,18 +494,17 @@ endif
   call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-  if (using_spi) then
-    do i_surface = 1, 4
-      call MPI_AllReduce(local_rho_surfaces(i_surface), rho_surfaces(i_surface),1,&
+  do i_surface = 1, 4
+    call MPI_AllReduce(local_rho_surfaces(i_surface), rho_surfaces(i_surface),1,&
                          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call MPI_AllReduce(local_vol_surfaces(i_surface), vol_surfaces(i_surface),1,&
+    call MPI_AllReduce(local_vol_surfaces(i_surface), vol_surfaces(i_surface),1,&
                          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 
-      call MPI_AllReduce(local_count_surfaces(i_surface), count_surfaces(i_surface),1,&
+    call MPI_AllReduce(local_count_surfaces(i_surface), count_surfaces(i_surface),1,&
                          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    end do
-  end if
+  end do
+
 #endif
 
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27

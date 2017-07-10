@@ -12,6 +12,9 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
+use domains
+use mod_log_params
+use diagnostics, only: axis_is_psi_minimum
 
 use mod_element_rtree
 
@@ -22,14 +25,57 @@ type (type_element_list) :: element_list
 integer :: i, in, i_tor, i_spi, resultlength
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
-real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
+real*8  :: psi_bnd, psi_axis,R_axis,Z_axis,s_axis,t_axis
 real*8  :: spi_abl_rate_tot, spi_abl_tot
 integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 integer :: rank, comm_size, n_cpu
 integer :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
 
+  interface
+    subroutine distribute_vector(my_id,rhs,rhs_dis,again)
+      real*8               :: rhs(:), rhs_dis(:)
+      integer              :: my_id
+      logical              :: again
+    end subroutine distribute_vector
+
+    subroutine distribute_harmonics(my_id,my_id_n,n_cpu)
+      integer              :: my_id, my_id_n,n_cpu
+    end subroutine distribute_harmonics
+
+    subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+      integer :: i_tor(:), my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
+      integer :: iter_gmres, n_tor
+    end subroutine gmres_driver
+
+
+    subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2, nice_q)
+      use data_structure
+      integer(kind=4),             intent(in)    :: my_id
+      integer(kind=4),             intent(in)    :: xcase2
+      type (type_node_list),       intent(inout) :: node_list
+      type (type_element_list),    intent(inout) :: element_list
+      type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list
+      type (type_bnd_element_list),intent(inout) :: bnd_elm_list
+      logical(kind=4),             intent(in)    :: xpoint2
+      logical(kind=4),             intent(in)    :: nice_q
+    end subroutine equilibrium
+
+    subroutine set_trap_sigterm() bind(C)
+    end subroutine set_trap_sigterm
+    logical function sigterm_called() bind(C)
+    end function sigterm_called
+  end interface
+
+
+real*8  :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
+real*8  :: psi_lim, R_lim, Z_lim
+integer :: i_elm_xpoint(2) 
+
+
 character(len=MPI_MAX_PROCESSOR_NAME) :: name
+
+logical, save :: axis_is_min
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
@@ -70,9 +116,12 @@ my_id=0
   end if
 
 
-call initialise_parameters(my_id, "__NO_FILENAME__")
+!call initialise_parameters(my_id, "__NO_FILENAME__")
+call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
 
 
+! --- Write out all parameters defined in parameters and the namelist input file.
+call log_parameters(my_id)
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -82,6 +131,9 @@ enddo
 call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis()                              ! define the basis functions at the Gaussian points
+
+axis_is_min = axis_is_psi_minimum(node_list, element_list, R_axis, Z_axis, psi_axis) !Dump call to initialize
+
 
 open(20,file='energies.txt')
 
@@ -138,7 +190,7 @@ endif
 
 !call populate_element_rtree(node_list, element_list)
 
-!call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume

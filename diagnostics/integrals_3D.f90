@@ -148,6 +148,8 @@ else
 endif
 psi_limit = psi_bnd
 
+write(*,*) "CHECK POINT 00:", psi_axis, psi_xpoint
+
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)

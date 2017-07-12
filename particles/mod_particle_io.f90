@@ -215,7 +215,7 @@ end subroutine write_simulation_hdf5
 !> particle distribution over all processors and read this many
 !> particles per processor.
 subroutine read_simulation_hdf5(sim, filename)
-type(particle_sim) , intent(out) :: sim
+type(particle_sim) , intent(inout) :: sim
 character*(*)      , intent(in)  :: filename
 
 integer                            :: my_id, n_cpu, ierr, rank, n_particles
@@ -262,6 +262,8 @@ call h5gopen_f(file, '/groups/', group_id, hdferr)
 call h5gget_info_f(group_id, storage_type, n, max_corder, hdferr)
 call h5gclose_f(group_id, hdferr)
 
+! Reallocate groups if necessary
+if (allocated(sim%groups)) deallocate(sim%groups)
 allocate(sim%groups(n))
 do i=1,n
   ! Open the dataset for x

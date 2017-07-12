@@ -8,7 +8,7 @@ use mod_particle_types
 use mod_particle_sim
 implicit none
 private
-public write_simulation_hdf5, read_simulation_hdf5
+public write_simulation_hdf5, read_simulation_hdf5, get_simulation_hdf5_time
 
 integer(HSIZE_T), parameter :: particle_type_name_length = 40 !< length of the string used to identify a specific type of particle
 character(len=*), parameter :: particle_type_name_field_name = 'particle_type' !< Name of the field containing the particle_type_name
@@ -410,4 +410,20 @@ call h5fclose_f(file, hdferr)
 call h5close_f(hdferr)
 
 end subroutine read_simulation_hdf5
+
+
+!> Get '/time' from a file. Does not alter the units in any way
+!> code works for jorek and particle restart files, and returns values in
+!> different units for both
+function get_simulation_hdf5_time(filename) result(time)
+  character*(*)      , intent(in)  :: filename
+  real*8 :: time
+  integer(HID_T) :: file
+  integer :: hdferr
+  call h5open_f(hdferr)
+  call h5fopen_f(filename, H5F_ACC_RDONLY_F, file, hdferr)
+  call HDF5_real_reading(file,time,'/time')
+  call h5fclose_f(file,hdferr)
+  call h5close_f(hdferr)
+end function get_simulation_hdf5_time
 end module mod_particle_io

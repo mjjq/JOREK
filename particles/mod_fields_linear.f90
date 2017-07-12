@@ -9,7 +9,7 @@ use mod_interp4
 use mod_interp_PRZ
 implicit none
 private
-public jorek_fields_interp_linear, read_jorek_fields_interp_linear
+public jorek_fields_interp_linear, read_jorek_fields_interp_linear, last_file_before_time
 
 !> Action to read in the fields into sim%fields
 type, extends(action) :: read_jorek_fields_interp_linear
@@ -92,8 +92,101 @@ function new_read_jorek_fields_interp_linear(basename, i, rst_format, stop_at_en
 end function new_read_jorek_fields_interp_linear
 
 
+!> Find the number of the latest restart file < time (SI units)
+!> Perform a bisection method of all the jorek$num.h5 files in the directory
+!> Perhaps better to use xtime if this is always present, combined with a filter
+!> for all step numbers that are in the current directory
+function last_file_before_time(time) result(file_number)
+  use phys_module
+  use mpi
+  real*8, intent(in) :: time
+  integer :: file_number
+  integer :: i, ierr, my_id, u
+  character(len=5) :: my_id_s, num_s
+  integer, dimension(:), allocatable :: filenums_tmp, filenums
+  integer :: n, i_lower, i_guess, i_upper, io
+  real*8 :: t_norm, t_lower, t_guess, t_upper
 
-!> Read jorek fields from the next restart file (regardless of when the file number)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
+  if (my_id .eq. 0) write(*,*) "Looking for jorek restart file just before time ", time
+
+  ! Get list of filenumbers
+  write(my_id_s,"(i0.5)") my_id
+  call execute_command_line("ls jorek[0-9]*.h5 | grep -o '[0-9]\{5\}' > .jorek_filenums."//my_id_s)
+  open(newunit=u,file=".jorek_filenums."//my_id_s)
+  allocate(filenums_tmp(100000)) ! assumes 5-digit numbers
+  n=0
+  do i=1,100000
+    read(u,*,iostat=io) filenums_tmp(i)
+    if (io/=0) exit
+    n = n + 1
+  end do
+  allocate(filenums(n))
+  filenums(:) = filenums_tmp(1:n)
+  deallocate(filenums_tmp)
+  close(u, status='delete')
+
+  if (n .le. 0) then
+    write(*,*) "No files found!"
+    file_number = 0
+    return
+  end if
+
+  ! Calculate upper and lower bounds
+  i_lower = 1 ! index into filenumber array
+  write(num_s,'(i0.5)') filenums(i_lower)
+  t_lower = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
+  i_upper = n
+  write(num_s,'(i0.5)') filenums(i_upper)
+  t_upper = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
+  i_guess = nint((time-t_lower)/(t_upper-t_lower)*real(i_upper - i_lower)) + i_lower
+
+  do i=1,20
+    if (i_guess .le. 1 .or. i_guess .gt. n) then
+      if (my_id .eq. 0) write(*,*) "ERROR: requested time out of range"
+      exit
+    end if
+    if (i_guess .eq. i_lower .or. i_guess .eq. i_upper) then
+      file_number = filenums(i_lower)
+      return
+    end if
+
+    write(num_s,'(i0.5)') filenums(i_guess)
+    t_guess = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
+    if (my_id .eq. 0) write(*,"(i5,A,g11.4,A,i5,A,g11.4,A,i5,A,g11.4,A)") i_lower, " (", t_lower, &
+      ")    ", i_guess, " (", t_guess, &
+      ")    ", i_upper, " (", t_upper, ")    "
+    ! Based on the value of t_guess, replace either the lower or upper bound
+    if (t_guess .le. time) then
+      t_lower = t_guess
+      i_lower = i_guess
+    else
+      t_upper = t_guess
+      i_upper = i_guess
+    end if
+    i_guess = i_lower + (i_upper-i_lower)/2
+  end do
+end function last_file_before_time
+
+!> Get '/t_now' from a file. Does not alter the units in any way
+function get_jorek_hdf5_time(filename) result(time)
+  use hdf5
+  use hdf5_io_module
+  character*(*)      , intent(in)  :: filename
+  real*8 :: time
+  integer(HID_T) :: file
+  integer :: hdferr
+  call h5open_f(hdferr)
+  call h5fopen_f(filename, H5F_ACC_RDONLY_F, file, hdferr)
+  call HDF5_real_reading(file,time,'/t_now')
+  call h5fclose_f(file,hdferr)
+  call h5close_f(hdferr)
+end function get_jorek_hdf5_time
+
+
+
+!> Read jorek fields from the next restart file
 subroutine do_read(this, sim, ev)
   use mod_import_restart
   use phys_module
@@ -151,8 +244,14 @@ subroutine do_read(this, sim, ev)
           else
             f%time_prev = t_start*t_norm ! set by import_hdf5_restart
             ! Set sim%time to this time also, to start at the right point
-            sim%time = f%time_prev
-            if (my_id .eq. 0) write(*,"(A,f9.8,A)") "Read initial restart file, values at t=", f%time_prev, " [s]"
+            if (sim%time .gt. 1d-16) then ! check if this is the right file if we have already set a time
+              if (sim%time .le. f%time_prev) then
+                if (my_id .eq. 0) write(*,*) "ERROR: restart file read that is too far in the future"
+              end if
+            else ! otherwise set the time to the time of this file
+              sim%time = f%time_prev
+            end if
+            if (my_id .eq. 0) write(*,"(A,f9.8,A)") "Read initial restart file, set t=", f%time_prev, " [s]"
           end if
         else
           if (my_id .eq. 0) write(*,*) "ERROR: cannot read initial file ", trim(restart_file)

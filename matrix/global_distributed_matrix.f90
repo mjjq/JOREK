@@ -144,6 +144,13 @@ module global_distributed_matrix
     
     !write(*,*) LOG_BEGIN_MARKER//' global_matrix_structure_vacuum'
     
+    !$omp parallel do                                                                    &
+    !$omp default(none)                                                                  &
+    !$omp shared(bnd_node_list, node_list, index_min, index_max, irn_glob, jcn_glob)     &
+    !$omp private(l_node_bnd, l_dof, l_tor, l_var, j_node_bnd, j_dof,  j_tor,            &
+    !$omp         j_var, l_node, l_dir, l_index, l_row, j_node, j_dir, j_index,          &
+    !$omp         j_col, sparsepos)                                                      &
+    !$omp schedule(dynamic,1)
     ! --- Select a matrix row
     do l_node_bnd = 1, bnd_node_list%n_bnd_nodes
       do l_dof = 1, 2
@@ -182,6 +189,7 @@ module global_distributed_matrix
         end do
       end do
     end do
+    !$omp end parallel do
     
     !write(*,*) LOG_END_MARKER//' global_matrix_structure_vacuum'
     

@@ -119,14 +119,14 @@ module vacuum_response
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
     end if
     
-   ! if ( my_id == 0 ) then
-   !   call log_starwall_response(sr)
-   !   if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
-   ! end if
+    if ( my_id == 0 ) then
+      call log_starwall_response(sr)
+      if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
+    end if
    
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     call log_starwall_response_parallel(my_id, sr)
-    if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
+    !if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
     
 
 
@@ -810,8 +810,12 @@ module vacuum_response
     if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
     allocate( sr%a_id%loc_mat(sr%nd_bez,sr%nd_bez), sr%a_nw%loc_mat(sr%nd_bez,sr%nd_bez) )
     sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
+   
     sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - matmul( sr%a_ey%loc_mat(:,:), sr%a_ye%loc_mat(:,:) )
-    
+  
+     write(300,*) sr%a_id%loc_mat
+        
+
     ! --- Transform STARWALL harmonics to account for periodicity
     j = 0
     do i = 1, sr%n_tor
@@ -870,6 +874,7 @@ module vacuum_response
     real*8             :: test_sum
 
     integer            :: loc_sizes(2),step,ntasks
+    real*8  :: time(10)
  
 
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
@@ -1002,7 +1007,7 @@ module vacuum_response
     call MPI_BCAST(sr%n_w, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
     call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
 
-    call read_array_parallel_rowwise    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye)    
+    call read_array_parallel_columnwise    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye)    
     call read_array_parallel_rowwise    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey)
     call read_array_parallel_rowwise    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee)
     call read_array_parallel_columnwise    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww)
@@ -1039,25 +1044,40 @@ module vacuum_response
 
 
     ! --- Compute ideal-wall and no-wall response matrices.
-    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
-    if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
-
 
     ! matrices a_id and a_nw should be distriuted in the same way as a_ee
-    step=sr%nd_bez/ntasks
-    loc_sizes(1) = step
-    if(my_id==ntasks-1) loc_sizes(1) = step+sr%nd_bez-ntasks*step
-    loc_sizes(2) = sr%nd_bez
+    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
+    allocate(sr%a_id%loc_mat(size(sr%a_ee%loc_mat,1),size(sr%a_ee%loc_mat,2)))
+    sr%a_id%row_wise   =  .true.
+    sr%a_id%ind_start  =  sr%a_ee%ind_start
+    sr%a_id%ind_end    =  sr%a_ee%ind_end
 
-    allocate( sr%a_id%loc_mat(loc_sizes(1),loc_sizes(2)),sr%a_nw%loc_mat(loc_sizes(1),loc_sizes(2) ))
+
+    if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
+    allocate(sr%a_nw%loc_mat(size(sr%a_ee%loc_mat,1),size(sr%a_ee%loc_mat,2)))
+    sr%a_nw%row_wise   =  .true.
+    sr%a_nw%ind_start  =  sr%a_ee%ind_start
+    sr%a_nw%ind_end    =  sr%a_ee%ind_end
+
 
     sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
 
 
-    ! TO be DONE
-    !sr%a_id(:,:) = sr%a_ee(:,:) - matmul( sr%a_ey(:,:), sr%a_ye(:,:) )
+    time(5)=MPI_WTIME()
+    call matrix_multiplication(my_id,sr%a_id,sr%a_ey,sr%a_ye)
+    time(6)=MPI_WTIME()
+ 
+   
+    if(my_id == 0) write(745,*) time(6)-time(5), (time(6)-time(5))/60.0
 
-    
+    sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:) 
+
+
+
+    !test_sum = 0.0
+    !call MPI_ALLREDUCE(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD, err)   
+    !write(6,*) my_id,"BBB",sum(sr%a_id%loc_mat),test_sum
+
     if(my_id==0) then
 
       ! --- Transform STARWALL harmonics to account for periodicity
@@ -1090,6 +1110,86 @@ module vacuum_response
   end subroutine read_starwall_response_parallel
 
   
+
+  subroutine matrix_multiplication(my_id,res_mat, mat1, mat2)
+  
+  use mpi_mod
+
+  implicit none
+
+  ! --- Routine parameters
+  integer,                        intent(in)      :: my_id
+  type(t_distrib_mat),            intent(out)   :: res_mat
+  type(t_distrib_mat),            intent(in)      :: mat1
+  type(t_distrib_mat),            intent(in)      :: mat2
+
+  !local variables
+  integer             :: ntasks, ierr, i, k, j, z, length,step
+  real*8, allocatable :: tmp(:,:),sum_element
+  real*8  :: time(10)
+
+
+
+  res_mat%loc_mat=0.0
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
+  if(my_id == 0) step = size(mat2%loc_mat,2) 
+  call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+
+
+  ! check distribution. Result matrix rowwise, first matrix row wise, second
+  ! matrix column wise
+  if(res_mat%row_wise == .true. .AND. mat1%row_wise == .true. .AND. mat2%row_wise == .false.) then
+
+     ! loop over all tasks
+     do i = 1, ntasks
+
+        time(1)=MPI_WTIME()
+
+        ! Broadcasting size of the distributed column
+        if(my_id == i-1 ) length = size(mat2%loc_mat,2)      
+        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr )
+
+
+        ! temporal matrix for receiving part of the distributed matrix and
+        ! multiply it
+        if ( allocated(tmp) ) deallocate(tmp)
+        allocate( tmp(size(mat2%loc_mat,1),length) )
+
+
+        ! part of second matrix broadcasted to all tasks
+        if(my_id == i-1)  tmp    = mat2%loc_mat  
+        if(my_id == i-1 ) length = size(tmp)
+        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
+        call MPI_BCAST( tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD, ierr)
+   
+
+        ! Matrix -matrix multiplications
+        do z = 1, size(mat1%loc_mat,1)
+           do k = 1, size(tmp,2)
+
+
+             sum_element=0.0 
+             ! OpenMP paralelization can be done in this place            
+             do j = 1, size(mat1%loc_mat,2)
+                   sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)         
+             enddo
+             
+             res_mat%loc_mat(z,k+(i-1)*step) = sum_element  
+     
+          enddo
+        enddo
+
+        time(2)=MPI_WTIME()
+        if(my_id ==0) write(456,*) i, time(2)-time(1)
+      
+
+     enddo     
+
+  endif 
+
+  end subroutine matrix_multiplication
+
 !===========================================================================================  
   
   !> Broadcast the STARWALL response matrices to the other MPI procs.
@@ -2565,11 +2665,8 @@ module vacuum_response
   end subroutine log_wall_curr
   
   
-  
-  
-  
-  
-  !> Update the derived response matrices.
+
+
   !!
   !! This is necessary
   !! - right after the start or restart of the code
@@ -2581,7 +2678,7 @@ module vacuum_response
     implicit none
     
     ! --- Routine parameters
-    real*8,                      intent(in) :: tstep              !< delta t, timestep
+    real*8,                      intent(in) :: tstep              !< delta t,timestep
     logical,                     intent(in) :: freeboundary_equil !< Use free boundary equilibrium?
     logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
     
@@ -2608,7 +2705,8 @@ module vacuum_response
     theta = time_evol_theta
     zeta  = time_evol_zeta
     
-    ! --- Update response matrices only, if parameter values changed or matrices not allocated
+    ! --- Update response matrices only, if parameter values changed or matrices
+    ! not allocated
     update_required = ( old_res     /= wall_resistivity    ) &
                  .or. ( old_tstep   /= tstep               ) &
                  .or. ( old_theta   /= theta               ) &
@@ -2664,7 +2762,8 @@ module vacuum_response
       if ( .not. allocated(response_m_v) ) &
         allocate( response_m_v(n_dof_starwall, n_wall_curr) )
       
-      ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
+      ! --- Derived response matrix for equilibrium (extract n=0 part from
+      ! STARWALL EE matrix)
       
       response_m_eq = 0.d0
 
@@ -2695,7 +2794,7 @@ module vacuum_response
           response_m_d(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
-        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:), response_m_a(:,:) )
+        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:),response_m_a(:,:) )
         
         do k = 1, n_wall_curr
           response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
@@ -2760,6 +2859,8 @@ module vacuum_response
     end if
     
   end subroutine update_response
+
+  
   
   
   

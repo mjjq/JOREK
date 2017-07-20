@@ -24,6 +24,13 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), r_av, 
 
 real*8  :: RRg(4),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  :: ZZg(4),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8  :: distance, distance_max
+integer :: kp1, k_keep
+real*8  :: Rmin, Rmax, Zmin, Zmax
+integer :: k_topleft, k_topright
+integer :: k_botleft, k_botright
+real*8  :: dpsi_dr_copy(4),dpsi_ds_copy(4)
+real*8  :: r_psi_copy(4), s_psi_copy(4), tht_copy(4)
 integer :: l, i_neigh, Xneigh, icount
 integer :: i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2)
@@ -97,7 +104,7 @@ do i=1, element_list%n_elements
 
           ifound = ifound + 1
 
-!         write(*,*) ' first solution : ',s
+!         write(*,*) ' first solution : ',s,iv,i
 
           call flux_surface_add_point(node_list,element_list,surface_list,s,i,iv,ifound,r_psi,s_psi,dpsi_dr,dpsi_ds)
 
@@ -107,16 +114,59 @@ do i=1, element_list%n_elements
 
           ifound = ifound + 1
 
-!         write(*,*) ' second solution : ',s2
+!         write(*,*) ' second solution : ',s2,iv,i
 
           call flux_surface_add_point(node_list,element_list,surface_list,s2,i,iv,ifound,r_psi,s_psi,dpsi_dr,dpsi_ds)
 
-          if (abs(s3) .le. 1.d0)         write(*,*) ' WARNING another solution : ',s3
+          if (abs(s3) .le. 1.d0)         write(*,*) ' WARNING another solution : ',s3,i
+
+        endif
+
+        if ((s3 .ge. 0.d0) .and. (s3 .le. 1.d0)) then
+
+          ifound = ifound + 1
+
+!         write(*,*) ' third solution : ',s3,iv,i
+
+          call flux_surface_add_point(node_list,element_list,surface_list,s3,i,iv,ifound,r_psi,s_psi,dpsi_dr,dpsi_ds)
 
         endif
 
       enddo ! end of 4 edges
   
+      
+      ! --- Normally this should not really happen, but it does, ie. one of the end points is on a corner...
+      ! --- Or the surface is tangential to the edge of the element
+      if (ifound .eq. 3) then
+	do k=1,3
+	  call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),&
+			 RRg(k),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
+			 ZZg(k),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+          dpsi_dr_copy(k) = dpsi_dr(k)
+	  dpsi_ds_copy(k) = dpsi_ds(k)
+          r_psi_copy(k)   = r_psi(k)  
+	  s_psi_copy(k)   = s_psi(k)  
+	  tht_copy(k)     = tht(k)    
+	enddo
+	distance_max = 0.d0
+	do k=1,3
+	  kp1 = mod(k,3)+1
+	  distance = sqrt( (RRg(k)-RRg(kp1))**2 + (ZZg(k)-ZZg(kp1))**2 )
+	  if (distance .gt. distance_max) then
+	    distance_max = distance
+	    k_keep = k
+	  endif
+	enddo
+	k = k_keep
+	kp1 = mod(k,3)+1
+        dpsi_dr(1) = dpsi_dr_copy(k) ; dpsi_dr(2) = dpsi_dr_copy(kp1) 
+	dpsi_ds(1) = dpsi_ds_copy(k) ; dpsi_ds(2) = dpsi_ds_copy(kp1) 
+        r_psi(1)   = r_psi_copy(k)   ; r_psi(2)   = r_psi_copy(kp1)   
+	s_psi(1)   = s_psi_copy(k)   ; s_psi(2)   = s_psi_copy(kp1)   
+	tht(1)     = tht_copy(k)     ; tht(2)	  = tht_copy(kp1)     
+	ifound = 2
+      endif
+      
       if (ifound .eq. 2) then
 
         call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(1:2),s_psi(1:2),dpsi_dr(1:2),dpsi_ds(1:2))
@@ -164,7 +214,7 @@ do i=1, element_list%n_elements
 
         else
 
-          ! This is a little tricky, we look if the element is a neighboor of one of the Xpoints
+          ! This is a little tricky, we look if the element is a neighbour of one of the Xpoints
 	  Xneigh = 0
 	  do k=1,4
 	    i_neigh = element_list%element(i)%neighbours(k)
@@ -177,7 +227,7 @@ do i=1, element_list%n_elements
 	      exit
 	    endif
 	  enddo
-          ! If it is a neighboor, then record all four intersections (also do that for cases where
+          ! If it is a neighbour, then record all four intersections (also do that for cases where
 	  ! the element is i_elm_xpoint, but the flux surface is not the LCFS)
 	  if( (Xneigh .gt. 0) &
 	    .or. ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) & 

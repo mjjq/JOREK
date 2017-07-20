@@ -14,7 +14,7 @@ module mod_parameters
   integer, parameter :: n_vertex_max   = 4  	       !< maximum number of corners of an element
   integer, parameter :: n_nodes_max    = 100001        !< maximum number of nodes
   integer, parameter :: n_elements_max = 100001        !< maximum number of elements
-  integer, parameter :: n_boundary_max = 1001          !< maximum number of boundary elements
+  integer, parameter :: n_boundary_max = 10001         !< maximum number of boundary elements
   integer, parameter :: n_pieces_max   = 100001        !< maximum number of line pieces describing a flux surface
   integer, parameter :: n_degrees      = n_order+1     !< degrees of freedom per variable per node
   integer, parameter :: nref_max       = 10000         !< (refinement)

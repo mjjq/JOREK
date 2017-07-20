@@ -60,7 +60,81 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   ntrial = 20
   tolx = 1.d-6
   tolf = 1.d-12
+
+  ! --- First check end points
+  if ( sqrt( (RRg1-R_c(1))**2 + (ZZg1-Z_c(1))**2) .lt. tolx )  then
+    t_flux = -1.d0
+    t_tht  = -1.d0
   
+    call CUB1D(rr1, drr1, rr2, drr2, t_flux, r_flux, dr_flux)
+    call CUB1D(ss1, dss1, ss2, dss2, t_flux, s_flux, ds_flux)
+    call CUB1D(RRg1, dRRg1_dt, RRg2, dRRg2_dt, t_flux, RR_flux, dRR_flux)
+    call CUB1D(ZZg1, dZZg1_dt, ZZg2, dZZg2_dt, t_flux, ZZ_flux, dZZ_flux)
+    call CUB1D(R_c(1), R_c(2), R_c(3), R_c(4), t_tht, RR_tht, dRR_tht)
+    call CUB1D(Z_c(1), Z_c(2), Z_c(3), Z_c(4), t_tht, ZZ_tht, dZZ_tht)
+  
+    R_out     = 0.5d0*(RR_tht + RR_flux)
+    Z_out     = 0.5d0*(ZZ_tht + ZZ_flux)
+
+    ifail = 0
+    return
+  endif
+  ! --- First check end points
+  if ( sqrt( (RRg1-R_c(3))**2 + (ZZg1-Z_c(3))**2) .lt. tolx )  then
+    t_flux = -1.d0
+    t_tht  = +1.d0
+  
+    call CUB1D(rr1, drr1, rr2, drr2, t_flux, r_flux, dr_flux)
+    call CUB1D(ss1, dss1, ss2, dss2, t_flux, s_flux, ds_flux)
+    call CUB1D(RRg1, dRRg1_dt, RRg2, dRRg2_dt, t_flux, RR_flux, dRR_flux)
+    call CUB1D(ZZg1, dZZg1_dt, ZZg2, dZZg2_dt, t_flux, ZZ_flux, dZZ_flux)
+    call CUB1D(R_c(1), R_c(2), R_c(3), R_c(4), t_tht, RR_tht, dRR_tht)
+    call CUB1D(Z_c(1), Z_c(2), Z_c(3), Z_c(4), t_tht, ZZ_tht, dZZ_tht)
+  
+    R_out     = 0.5d0*(RR_tht + RR_flux)
+    Z_out     = 0.5d0*(ZZ_tht + ZZ_flux)
+
+    ifail = 0
+    return
+  endif
+  ! --- First check end points
+  if ( sqrt( (RRg2-R_c(1))**2 + (ZZg2-Z_c(1))**2) .lt. tolx )  then
+    t_flux = +1.d0
+    t_tht  = -1.d0
+  
+    call CUB1D(rr1, drr1, rr2, drr2, t_flux, r_flux, dr_flux)
+    call CUB1D(ss1, dss1, ss2, dss2, t_flux, s_flux, ds_flux)
+    call CUB1D(RRg1, dRRg1_dt, RRg2, dRRg2_dt, t_flux, RR_flux, dRR_flux)
+    call CUB1D(ZZg1, dZZg1_dt, ZZg2, dZZg2_dt, t_flux, ZZ_flux, dZZ_flux)
+    call CUB1D(R_c(1), R_c(2), R_c(3), R_c(4), t_tht, RR_tht, dRR_tht)
+    call CUB1D(Z_c(1), Z_c(2), Z_c(3), Z_c(4), t_tht, ZZ_tht, dZZ_tht)
+  
+    R_out     = 0.5d0*(RR_tht + RR_flux)
+    Z_out     = 0.5d0*(ZZ_tht + ZZ_flux)
+
+    ifail = 0
+    return
+  endif
+  ! --- First check end points
+  if ( sqrt( (RRg2-R_c(3))**2 + (ZZg2-Z_c(3))**2) .lt. tolx )  then
+    t_flux = +1.d0
+    t_tht  = +1.d0
+  
+    call CUB1D(rr1, drr1, rr2, drr2, t_flux, r_flux, dr_flux)
+    call CUB1D(ss1, dss1, ss2, dss2, t_flux, s_flux, ds_flux)
+    call CUB1D(RRg1, dRRg1_dt, RRg2, dRRg2_dt, t_flux, RR_flux, dRR_flux)
+    call CUB1D(ZZg1, dZZg1_dt, ZZg2, dZZg2_dt, t_flux, ZZ_flux, dZZ_flux)
+    call CUB1D(R_c(1), R_c(2), R_c(3), R_c(4), t_tht, RR_tht, dRR_tht)
+    call CUB1D(Z_c(1), Z_c(2), Z_c(3), Z_c(4), t_tht, ZZ_tht, dZZ_tht)
+  
+    R_out     = 0.5d0*(RR_tht + RR_flux)
+    Z_out     = 0.5d0*(ZZ_tht + ZZ_flux)
+
+    ifail = 0
+    return
+  endif
+
+  ! --- Then try by steps
   do istart = 1,5
 
     if (istart .eq. 1) then

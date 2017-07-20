@@ -1178,6 +1178,11 @@ do i=1,newnode_list%n_nodes
 
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
+  if (ifail .ne. 0) then
+    write(*,'(A,2f)')'Warning! did not find node one previous grid!',R1,Z1
+    write(*,*)'Unable to extract psi information, the grid might be flawed.'
+  endif
+  
   call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
                  RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)

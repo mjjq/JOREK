@@ -305,6 +305,12 @@ do j=1,n_tht
       call find_theta_surface(node_list,element_list,flux_list,i_max,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)    
     endif
 
+    ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
+    if (s_find(1) .lt. 0.d0) s_find(1) = 0.d0
+    if (s_find(1) .gt. 1.d0) s_find(1) = 1.d0
+    if (t_find(1) .lt. 0.d0) t_find(1) = 0.d0
+    if (t_find(1) .gt. 1.d0) t_find(1) = 1.d0
+      
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1), &
         	   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
         	   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -329,6 +335,12 @@ do j=1,n_tht
       
     else
 
+      ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
+      if (s_find(2) .lt. 0.d0) s_find(2) = 0.d0
+      if (s_find(2) .gt. 1.d0) s_find(2) = 1.d0
+      if (t_find(2) .lt. 0.d0) t_find(2) = 0.d0
+      if (t_find(2) .gt. 1.d0) t_find(2) = 1.d0
+      
       call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
     		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -387,6 +399,12 @@ do j=1,n_tht
       call find_theta_surface(node_list,element_list,flux_list,i_max,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
     endif
 
+    ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
+    if (s_find(1) .lt. 0.d0) s_find(1) = 0.d0
+    if (s_find(1) .gt. 1.d0) s_find(1) = 1.d0
+    if (t_find(1) .lt. 0.d0) t_find(1) = 0.d0
+    if (t_find(1) .gt. 1.d0) t_find(1) = 1.d0
+      
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
     		   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
     		   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -412,6 +430,12 @@ do j=1,n_tht
       
     else
 
+      ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
+      if (s_find(2) .lt. 0.d0) s_find(2) = 0.d0
+      if (s_find(2) .gt. 1.d0) s_find(2) = 1.d0
+      if (t_find(2) .lt. 0.d0) t_find(2) = 0.d0
+      if (t_find(2) .gt. 1.d0) t_find(2) = 1.d0
+      
       call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
     		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -544,6 +568,12 @@ do i=1,4
 
     do k=1,i_find
 
+      ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
+      if (s_find(k) .lt. 0.d0) s_find(k) = 0.d0
+      if (s_find(k) .gt. 1.d0) s_find(k) = 1.d0
+      if (t_find(k) .lt. 0.d0) t_find(k) = 0.d0
+      if (t_find(k) .gt. 1.d0) t_find(k) = 1.d0
+      
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
     		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -714,6 +744,12 @@ do i=1,4
 
     do k=1,i_find
 
+      ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
+      if (s_find(k) .lt. 0.d0) s_find(k) = 0.d0
+      if (s_find(k) .gt. 1.d0) s_find(k) = 1.d0
+      if (t_find(k) .lt. 0.d0) t_find(k) = 0.d0
+      if (t_find(k) .gt. 1.d0) t_find(k) = 1.d0
+      
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
     		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -842,6 +878,12 @@ do i=1,4
 
     do k=1,i_find
 
+      ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
+      if (s_find(k) .lt. 0.d0) s_find(k) = 0.d0
+      if (s_find(k) .gt. 1.d0) s_find(k) = 1.d0
+      if (t_find(k) .lt. 0.d0) t_find(k) = 0.d0
+      if (t_find(k) .gt. 1.d0) t_find(k) = 1.d0
+      
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
     		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
     		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -1174,7 +1216,19 @@ do i=1,n_flux+n_open
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
         	      nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
-
+      ! --- Readjust to make sure we are inside element.
+      if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
+        if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
+        if (nwpts%s_flux(i+1,j) .gt. 1.d0) nwpts%s_flux(i+1,j) = 1.d0
+        if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
+        if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
+        call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
+                       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        nwpts%RR_new(i+1,j) = RRg1
+	nwpts%ZZ_new(i+1,j) = ZZg1
+      endif
+      
       if (ifail .eq. 0) then
         nwpts%k_cross(i+1,j) = k
         exit
@@ -1219,6 +1273,18 @@ if (xcase .eq. 3) then
 
   	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
   			nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        ! --- Readjust to make sure we are inside element.
+        if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
+          if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
+          if (nwpts%s_flux(i+1,j) .gt. 1.d0) nwpts%s_flux(i+1,j) = 1.d0
+          if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
+          if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
+          call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
+        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+          nwpts%RR_new(i+1,j) = RRg1
+      	  nwpts%ZZ_new(i+1,j) = ZZg1
+        endif
 
   	if (ifail .eq. 0) then
   	  nwpts%k_cross(i+1,j) = k
@@ -1256,6 +1322,18 @@ if(xcase .ne. 3) then
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
     			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        ! --- Readjust to make sure we are inside element.
+        if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
+          if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
+          if (nwpts%s_flux(i+1,j) .gt. 1.d0) nwpts%s_flux(i+1,j) = 1.d0
+          if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
+          if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
+          call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
+        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+          nwpts%RR_new(i+1,j) = RRg1
+      	  nwpts%ZZ_new(i+1,j) = ZZg1
+        endif
 
     	if (ifail .eq. 0) then
     	  nwpts%k_cross(i+1,j) = k
@@ -1298,6 +1376,18 @@ else
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
     			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        ! --- Readjust to make sure we are inside element.
+        if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
+          if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
+          if (nwpts%s_flux(i+1,j) .gt. 1.d0) nwpts%s_flux(i+1,j) = 1.d0
+          if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
+          if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
+          call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
+        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+          nwpts%RR_new(i+1,j) = RRg1
+      	  nwpts%ZZ_new(i+1,j) = ZZg1
+        endif
 
     	if (ifail .eq. 0) then
     	  nwpts%k_cross(i+1,j) = k
@@ -1325,6 +1415,18 @@ else
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
     			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        ! --- Readjust to make sure we are inside element.
+        if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
+          if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
+          if (nwpts%s_flux(i+1,j) .gt. 1.d0) nwpts%s_flux(i+1,j) = 1.d0
+          if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
+          if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
+          call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
+        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+          nwpts%RR_new(i+1,j) = RRg1
+      	  nwpts%ZZ_new(i+1,j) = ZZg1
+        endif
 
     	if (ifail .eq. 0) then
     	  nwpts%k_cross(i+1,j) = k
@@ -1358,6 +1460,18 @@ else
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
     			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        ! --- Readjust to make sure we are inside element.
+        if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
+          if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
+          if (nwpts%s_flux(i+1,j) .gt. 1.d0) nwpts%s_flux(i+1,j) = 1.d0
+          if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
+          if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
+          call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
+        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+          nwpts%RR_new(i+1,j) = RRg1
+      	  nwpts%ZZ_new(i+1,j) = ZZg1
+        endif
 
     	if (ifail .eq. 0) then
     	  nwpts%k_cross(i+1,j) = k
@@ -1391,6 +1505,18 @@ else
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
     			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        ! --- Readjust to make sure we are inside element.
+        if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
+          if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
+          if (nwpts%s_flux(i+1,j) .gt. 1.d0) nwpts%s_flux(i+1,j) = 1.d0
+          if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
+          if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
+          call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
+        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+          nwpts%RR_new(i+1,j) = RRg1
+      	  nwpts%ZZ_new(i+1,j) = ZZg1
+        endif
 
     	if (ifail .eq. 0) then
     	  nwpts%k_cross(i+1,j) = k

@@ -196,7 +196,7 @@ subroutine do_read(this, sim, ev)
   type(event), intent(inout), optional :: ev
   character(len=80) :: restart_file
   integer :: i, ierr, my_id
-  logical :: file_exists
+  logical :: file_exists, next_file_found
 
   real*8 :: t_norm
   t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
@@ -260,16 +260,19 @@ subroutine do_read(this, sim, ev)
       end if
       
       ! Find the following file (next timestep number)
-      do i=this%i+1,this%i+10
+      next_file_found=.false.
+      do i=this%i+1,this%i+20 ! check 20 files ahead
         write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
         inquire(file=trim(restart_file), exist=file_exists)
         if (file_exists) then
+          next_file_found=.true.
           call merge_restart(f%node_list, f%element_list, trim(restart_file), this%rst_format,my_id, ierr)
           if (ierr .ne. 0) then
             if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
             call exit(1)
           else
             f%time_now = t_start*t_norm ! Set by import_merge_restart
+            if (my_id .eq. 0 .and. i-this%i .gt. 1) write(*,"(i2,A)") i-this%i, " JOREK steps between restarts"
             this%i=i
             ! set the time to run this event at next
             if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%time_now, " [s]"
@@ -281,11 +284,11 @@ subroutine do_read(this, sim, ev)
           end if
         endif
       enddo
-      if (i .gt. this%i+10 .and. this%stop_at_end) then
+      if (.not. next_file_found .and. this%stop_at_end) then
         if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
-        call exit(1)
+        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
       end if
-      if (i .gt. this%i+10 .and. .not. this%stop_at_end) then
+      if (.not. next_file_found .and. .not. this%stop_at_end) then
         if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Continuing with &
         the last values without time-dependence"
         f%static = .true.

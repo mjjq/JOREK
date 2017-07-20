@@ -393,7 +393,11 @@ required = 0
     if (regrid) then
       if (xpoint)  then
         if (xcase .ge. 2) then
-	  call grid_double_xpoint(node_list, element_list)
+	  if (n_radial .lt. 0) then
+	    call grid_double_xpoint_inside_wall(node_list, element_list)
+	  else
+	    call grid_double_xpoint(node_list, element_list)
+	  endif
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
         		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
@@ -451,15 +455,19 @@ required = 0
         call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo,   &
           Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
         
-      else if ((n_R > 0) .and. (n_Z > 0) ) then
+      else if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0) ) then
         
         call grid_bezier_square(n_R, n_Z, R_begin, R_end, Z_begin, Z_end, .true., node_list,       &
           element_list)
         
-      else if ((n_radial > 0) .and. (n_pol > 0) ) then
+      else if ((n_radial > 0) .and. (n_pol .eq. 0) ) then
         
         call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
           node_list, element_list)
+        
+      else if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial < 0)) then
+        
+        call grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,fbnd,node_list,element_list)
         
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'

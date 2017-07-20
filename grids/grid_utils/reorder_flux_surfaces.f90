@@ -121,7 +121,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
               parts_index(n_parts) = nStart
       	      exit
             else
-      	      write(*,'(A,1i4)') 'Warning! Failed to find parts of the surface',i_surf
+      	      write(*,'(A,1i4,1e)') 'Warning! Failed to find parts of the surface',i_surf,distance
       	      ier = 1
 	    endif
       	  endif
@@ -225,7 +225,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
           	  parts_index(n_parts) = nStart
           	  exit
           	else
-          	  write(*,'(A,1i4)') 'Warning! Failed to find parts of the surface',i_surf
+          	  write(*,'(A,1i4,1e)') 'Warning! Failed to find parts of the surface',i_surf,distance
           	  ier = 1
       	  	endif
               endif
@@ -288,7 +288,7 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
   integer,                  intent(inout)	:: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
   
   ! --- Internal parameters
-  integer	:: i, j
+  integer	:: i, j, k
   integer	:: index1, index2
   logical	:: invert
   integer	:: i_elm
@@ -336,6 +336,18 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
       invert = .false.
       if (found .eq. 3) invert = .true.
       call swap_surface_pieces(surface, index1, index2, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
+      ! --- We should not invert any edge pieces! If we did, reswap it with itself to invert again
+      if (invert) then
+        if(n_edge_pieces .gt. 0) then
+          do k=1,n_edge_pieces
+            if (index_edge_pieces(k) .eq. i) then
+              call swap_surface_pieces(surface, index2, index2, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
+              exit
+      	    endif
+          enddo
+        endif
+      endif
+  
       exit
     endif
 
@@ -421,11 +433,11 @@ subroutine swap_surface_pieces(surface, index1, index2, invert, n_edge_pieces, i
     do i=1,n_edge_pieces
       if (index_edge_pieces(i) .eq. index1) then
         index_edge_pieces(i) = index2
-        continue
+	cycle
       endif
       if (index_edge_pieces(i) .eq. index2) then
         index_edge_pieces(i) = index1
-        continue
+        cycle
       endif
     enddo
   endif
@@ -435,11 +447,11 @@ subroutine swap_surface_pieces(surface, index1, index2, invert, n_edge_pieces, i
     do i=1,n_isolated_pieces
       if (index_isolated_pieces(i) .eq. index1) then
         index_isolated_pieces(i) = index2
-        continue
+        cycle
       endif
       if (index_isolated_pieces(i) .eq. index2) then
         index_isolated_pieces(i) = index1
-        continue
+        cycle
       endif
     enddo
   endif

@@ -197,6 +197,8 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
     	write(101,'(A,i6,A,f15.4)')					' r[',surface_list%flux_surfaces(i)%parts_index(j+1)-surface_list%flux_surfaces(i)%parts_index(j),'] = ',R
     	write(101,'(A,i6,A,f15.4)')					' z[',surface_list%flux_surfaces(i)%parts_index(j+1)-surface_list%flux_surfaces(i)%parts_index(j),'] = ',Z
         write(101,'(A)')						' pylab.plot(r[0:n_points],z[0:n_points], "r")'
+        write(101,'(A)')						' pylab.plot(r[0],z[0], "rx")'
+        write(101,'(A)')						' pylab.plot(r[n_points-1],z[n_points-1], "rx")'
       enddo
     enddo
   close(101)

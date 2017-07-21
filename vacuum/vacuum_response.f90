@@ -39,7 +39,7 @@ module vacuum_response
   
   !> Get the vacuum response for an ideal or resistive wall.
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
-    freeboundary_equil, resistive_wall)
+    freeboundary_equil, resistive_wall, parallel)
   
     use mpi_mod
     use constants
@@ -55,12 +55,13 @@ module vacuum_response
     type(type_bnd_node_list),    intent(in) :: bnd_node_list      !< List of boundary nodes
     logical,                     intent(in) :: freeboundary_equil !< Use free boundary equilibrium?
     logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
+    logical,                     intent(in) :: parallel 
 
     integer :: i,j, ierr, dim
     logical :: exists
     real*8  :: time(10)
     CHARACTER(len=255) :: homedir
- 
+    
 
     ! --- Determine total number of boundary degrees of freedom per harmonic (skipping duplicates).
     do i=1, bnd_node_list%n_bnd_nodes
@@ -81,28 +82,27 @@ module vacuum_response
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
     
-    !if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
-    !if ( my_id == 0 ) call read_starwall_response(sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
-    !call broadcast_starwall_response(my_id, sr)
+    if (parallel == .false.) then
+       if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
+       if ( my_id == 0 ) call read_starwall_response(sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
+       call broadcast_starwall_response(my_id, sr)
+    else
+       time(1)=MPI_WTIME()
+       if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
+       time(2)=MPI_WTIME()
 
-
-
-    time(1)=MPI_WTIME()
-    if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
-    time(2)=MPI_WTIME()
-
-    call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
-    time(3)=MPI_WTIME()
+       call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
+       time(3)=MPI_WTIME()
  
-    call broadcast_starwall_response_parallel(my_id, sr)    
-    time(4)=MPI_WTIME()
+       call broadcast_starwall_response_parallel(my_id, sr)    
+       time(4)=MPI_WTIME()
 
-   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-   if(my_id==0) write(6,*) "Vacuum Log=",time(2)-time(1) 
-   if(my_id==0) write(6,*) "Vacuum Read=",time(3)-time(2)
-   if(my_id==0) write(6,*) "Vacuum Broadcast=",time(4)-time(3)
-   if(my_id==0) write(6,*) "Vacuum Total=",time(4)-time(1)
- 
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       if(my_id==0) write(6,*) "Vacuum Log=",time(2)-time(1) 
+       if(my_id==0) write(6,*) "Vacuum Read=",time(3)-time(2)
+       if(my_id==0) write(6,*) "Vacuum Broadcast=",time(4)-time(3)
+       if(my_id==0) write(6,*) "Vacuum Total=",time(4)-time(1)
+    endif
   
 
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
@@ -119,18 +119,18 @@ module vacuum_response
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
     end if
     
-    if ( my_id == 0 ) then
+    if ( my_id == 0 .AND. parallel == .false.) then
       call log_starwall_response(sr)
       if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
-    end if
+    else
    
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    call log_starwall_response_parallel(my_id, sr)
-    !if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
-    
+        call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+        call log_starwall_response_parallel(my_id, sr)
+   endif 
+        if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
+       
 
-
-  stop 
+  
   end subroutine get_vacuum_response
   
   
@@ -946,6 +946,7 @@ module vacuum_response
        sr%n_w    = read_intparam_parallel(filehandle, 'n_w'   ,disp)
        sr%ntri_w = read_intparam_parallel(filehandle, 'ntri_w',disp)
        sr%n_tor  = read_intparam_parallel(filehandle, 'n_tor' ,disp)
+       sr%n_tor0 = sr%n_tor
 
        call read_array_sequential(filehandle, 'i_tor',         (/sr%n_tor,0/), disp, int1d=sr%i_tor)
 
@@ -1119,7 +1120,7 @@ module vacuum_response
 
   ! --- Routine parameters
   integer,                        intent(in)      :: my_id
-  type(t_distrib_mat),            intent(out)   :: res_mat
+  type(t_distrib_mat),            intent(inout)   :: res_mat
   type(t_distrib_mat),            intent(in)      :: mat1
   type(t_distrib_mat),            intent(in)      :: mat2
 
@@ -1147,7 +1148,7 @@ module vacuum_response
         time(1)=MPI_WTIME()
 
         ! Broadcasting size of the distributed column
-        if(my_id == i-1 ) length = size(mat2%loc_mat,2)      
+        length = size(mat2%loc_mat,2)      
         call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr )
 
 
@@ -1163,6 +1164,7 @@ module vacuum_response
         call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
         call MPI_BCAST( tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD, ierr)
    
+        time(4)=MPI_WTIME()
 
         ! Matrix -matrix multiplications
         do z = 1, size(mat1%loc_mat,1)
@@ -1179,9 +1181,11 @@ module vacuum_response
      
           enddo
         enddo
+        time(5)=MPI_WTIME()
+
 
         time(2)=MPI_WTIME()
-        if(my_id ==0) write(456,*) i, time(2)-time(1)
+        if(my_id ==0) write(456,*) i, time(2)-time(1), time(5)-time(4)
       
 
      enddo     
@@ -2664,7 +2668,235 @@ module vacuum_response
     
   end subroutine log_wall_curr
   
-  
+!======================================================================  
+
+  !!
+  !! This is necessary
+  !! - right after the start or restart of the code
+  !! - when wall resistivity, tstep, or some other parameters have changed.
+  subroutine update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
+
+    use phys_module, only: time_evol_theta, time_evol_zeta
+    use mpi_mod
+
+    implicit none
+
+    ! --- Routine parameters
+    integer,                     intent(in) :: my_id              !< MPI task ID
+    real*8,                      intent(in) :: tstep              !< delta t,timestep
+    logical,                     intent(in) :: freeboundary_equil !< Use free boundary equilibrium?
+    logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
+
+    ! --- Local variables
+    integer :: i, j, k, j2, k2
+    real*8  :: a, b
+    real*8, allocatable :: tmp_d_s(:)
+    real*8  :: theta, zeta
+    logical :: update_required
+    integer :: ierr,step
+
+
+! --- Local variables to store the previous values of some parameters.
+    real*8,  save :: old_thick
+    real*8,  save :: old_res
+    real*8,  save :: old_tstep
+    real*8,  save :: old_theta
+    real*8,  save :: old_zeta
+    logical, save :: old_reswall
+
+    if ( sr%n_tor == 0 ) then
+      write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'
+      return
+    end if
+
+    theta = time_evol_theta
+    zeta  = time_evol_zeta
+
+! --- Update response matrices only, if parameter values changed or matrices
+    ! not allocated
+    update_required = ( old_res     /= wall_resistivity    ) &
+                 .or. ( old_tstep   /= tstep               ) &
+                 .or. ( old_theta   /= theta               ) &
+                 .or. ( old_zeta    /= zeta                ) &
+                 .or. ( old_reswall .neqv. resistive_wall  ) &
+                 .or. ( .not. allocated(response_m_a)      ) &
+                 .or. ( .not. allocated(response_d_b)      ) &
+                 .or. ( .not. allocated(response_d_c)      ) &
+                 .or. ( .not. allocated(response_m_d)      ) &
+                 .or. ( .not. allocated(response_m_e)      ) &
+                 .or. ( .not. allocated(response_m_f)      ) &
+                 .or. ( .not. allocated(response_m_g)      ) &
+                 .or. ( .not. allocated(response_m_h)      ) &
+                 .or. ( .not. allocated(response_m_j)      ) &
+                 .or. ( .not. allocated(response_m_k)      ) &
+                 .or. ( .not. allocated(response_m_l)      ) &
+                 .or. ( .not. allocated(response_m_v)      ) &
+                 .or. ( .not. allocated(response_m_eq)     )
+
+    if ( update_required ) then
+      ! --- Remember parameter values.
+      old_res     = wall_resistivity
+      old_tstep   = tstep
+      old_theta   = theta
+      old_zeta    = zeta
+      old_reswall = resistive_wall
+
+      ! --- Allocate matrices if required
+      if ( .not. allocated(response_m_eq) ) &
+        allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
+      if ( .not. allocated(response_m_a) ) &
+        allocate( response_m_a(n_wall_curr, n_dof_starwall) )
+      if ( .not. allocated(response_d_b) ) &
+        allocate( response_d_b(n_wall_curr) )
+      if ( .not. allocated(response_d_c) ) &
+        allocate( response_d_c(n_wall_curr) )
+      if ( .not. allocated(response_m_d) ) &
+        allocate( response_m_d(n_wall_curr, n_dof_starwall) )
+      if ( .not. allocated(response_m_e) ) &
+        allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_f) ) &
+        allocate( response_m_f(n_dof_starwall, n_wall_curr) )
+      if ( .not. allocated(response_m_g) ) &
+        allocate( response_m_g(n_dof_starwall, n_wall_curr) )
+      if ( .not. allocated(response_m_h) ) &
+        allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_j) ) &
+        allocate( response_m_j(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_k) ) &
+        allocate( response_m_k(n_wall_curr, sr%ncoil) )
+      if ( .not. allocated(response_m_l) ) &
+        allocate( response_m_l(n_dof_starwall, sr%ncoil) )
+      if ( .not. allocated(response_m_v) ) &
+        allocate( response_m_v(n_dof_starwall, n_wall_curr) )
+
+      ! --- Derived response matrix for equilibrium (extract n=0 part from
+      ! STARWALL EE matrix)
+      response_m_eq = 0.d0
+
+
+     if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
+     call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+
+      do j = 1, sr%nd_bez/sr%n_tor0, 2
+        j2 = (j-1)*sr%n_tor0 + 1
+        do k = 1, sr%nd_bez/sr%n_tor0, 2
+          k2 = (k-1)*sr%n_tor0 + 1
+
+           if(sr%a_ee%row_wise == .true. ) then
+
+
+             if(j2>=sr%a_ee%ind_start .AND. j2<=sr%a_ee%ind_end) then
+                    response_m_eq(j,k:k+1) = sr%a_ee%loc_mat(j2-step*my_id,k2:k2+1)
+             endif
+
+
+             if((j2+1)>=sr%a_ee%ind_start .AND. (j2+1)<=sr%a_ee%ind_end) then
+                    response_m_eq(j+1,k:k+1) = sr%a_ee%loc_mat((j2+1)-step*my_id,k2:k2+1)
+             endif
+
+           endif
+        
+        end do
+      end do
+
+      call MPI_AllREDUCE(MPI_IN_PLACE,response_m_eq,size(response_m_eq),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+
+      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+      stop
+      
+      ! --- Derived response matrices for time-evolution
+      if ( resistive_wall ) then
+
+        allocate( tmp_d_s(n_wall_curr) )
+
+        tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
+
+        do j = 1, n_dof_starwall
+          response_m_a(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
+        end do
+
+        response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
+
+        response_d_c(:) = zeta / tmp_d_s(:)
+
+        do j = 1, n_dof_starwall
+          response_m_d(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
+        end do
+
+        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul(sr%a_ey%loc_mat(:,:),response_m_a(:,:) )
+
+        do k = 1, n_wall_curr
+          response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
+        end do
+
+        do k = 1, n_wall_curr
+          response_m_g(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
+        end do
+
+        response_m_h(:,:) = sr%a_ee%loc_mat(:,:)
+
+        response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d(:,:) )
+
+        do k = 1, n_wall_curr
+          response_m_k(k,:) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(:,k)
+        end do
+
+        response_m_l(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_k(:,:) )
+
+        do k = 1, n_wall_curr
+          response_m_v(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
+        end do
+
+        deallocate( tmp_d_s )
+
+      else ! (Ideal wall)
+
+        response_m_a(:,:) = 0.d0
+        response_d_b(:)   = 0.d0
+        response_d_c(:)   = 0.d0
+        response_m_d(:,:) = 0.d0
+        response_m_e(:,:) = sr%a_id%loc_mat(:,:)
+        response_m_f(:,:) = 0.d0
+        response_m_g(:,:) = 0.d0
+        response_m_h(:,:) = sr%a_id%loc_mat(:,:)
+        response_m_j(:,:) = 0.d0
+        response_m_k(:,:) = 0.d0 !####
+        response_m_l(:,:) = 0.d0 !####
+        response_m_v(:,:) = 0.d0 !####
+
+      end if
+
+      if ( vacuum_debug ) then
+        write(*,*) 'DEBUG: Checksums'
+        write(*,*) 'm_a:', sum(abs(response_m_a)), sum(response_m_a)
+        write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
+        write(*,*) '1+d_b:', sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
+        write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
+        write(*,*) 'm_d:', sum(abs(response_m_d)), sum(response_m_d)
+        write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
+        write(*,*) 'm_f:', sum(abs(response_m_f)), sum(response_m_f)
+        write(*,*) 'm_g:', sum(abs(response_m_g)), sum(response_m_g)
+        write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
+        write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
+        write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
+        write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
+        write(*,*) 'm_v:', sum(abs(response_m_v)), sum(response_m_v)
+        write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
+        write(*,*) 'END: Checksums'
+      end if
+
+    end if
+
+  end subroutine update_response_parallel 
+
+
+
+
+
+
+!======================================================================  
+
 
 
   !!
@@ -2774,10 +3006,18 @@ module vacuum_response
           response_m_eq(j:j+1,k:k+1) = sr%a_ee%loc_mat(j2:j2+1,k2:k2+1)
         end do
       end do
+
       
+      
+      write(600,*) sr%n_tor0, sum(response_m_eq),sum(sr%a_ee%loc_mat)
+
+
+
+
+      stop
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall ) then
-        
+       
         allocate( tmp_d_s(n_wall_curr) )
         
         tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
@@ -2793,6 +3033,7 @@ module vacuum_response
         do j = 1, n_dof_starwall
           response_m_d(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
+        
         
         response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:),response_m_a(:,:) )
         

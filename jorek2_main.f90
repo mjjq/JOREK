@@ -39,7 +39,7 @@ program JOREK2
   use equil_info
   use mod_boundary,            only: boundary_from_grid
   use vacuum
-  use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
+  use vacuum_response,     only: get_vacuum_response, update_response,update_response_parallel, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data
   use mod_bootstrap_functions
@@ -175,7 +175,8 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-  
+  logical :: parallel = .true.  
+
   !***********************************************************************
   !*                  intialisation                                      *
   !***********************************************************************
@@ -479,16 +480,21 @@ required = 0
     
     ! --- Synchronizing MPI processes avoid deadlock issues on some machine
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
-    
+   
     ! --- Send boundary elements and nodes to other MPI procs
     call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
     
     ! --- Fill the vacuum response matrices for freeboundary computations
     if ( freeboundary_equil .and. (n_flux .eq. 0)) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-        resistive_wall)
-      call update_response(tstep, freeboundary_equil, resistive_wall)
-      call import_external_fields('coil_field.dat', my_id)
+        resistive_wall,parallel)
+    if (parallel == .true.) then
+         call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
+    else
+        call update_response(tstep, freeboundary_equil,resistive_wall)
+    endif 
+
+     call import_external_fields('coil_field.dat', my_id)
       call set_coil_curr_time_trace()
       if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
     else
@@ -566,8 +572,16 @@ required = 0
         if ( freeb_equil2) then
           freeboundary_equil = .true.
           call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-          resistive_wall)
-          call update_response(tstep, freeboundary_equil, resistive_wall)
+          resistive_wall,parallel)
+
+        if (parallel == .true.) then
+            call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
+        else
+            call update_response(tstep, freeboundary_equil,resistive_wall)
+         endif
+ 
+
+
           call import_external_fields('coil_field.dat', my_id)
           call set_coil_curr_time_trace()
           if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -616,8 +630,15 @@ required = 0
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
-      resistive_wall)
-    call update_response(tstep, freeboundary_equil, resistive_wall)
+      resistive_wall,parallel)
+
+    if (parallel == .true.) then
+         call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
+    else
+         call update_response(tstep, freeboundary_equil,resistive_wall)
+    endif
+
+
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -856,8 +877,15 @@ required = 0
     
     tstep = tstep_n(jstep)
     
-    if ( freeboundary ) call update_response(tstep, freeboundary_equil, resistive_wall)
+    if ( freeboundary ) then
+         if (parallel == .true.) then
+              call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
+         else
+              call update_response(tstep, freeboundary_equil,resistive_wall)
+         endif
     
+    endif
+
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'
       write(*,'(A17,3i7,f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,'  *'

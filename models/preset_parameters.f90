@@ -60,24 +60,26 @@ subroutine preset_parameters
   equil_accuracy_freeb = 1.d-6
   Zaxis_find_limit     = 99.d0
   
-  n_R       = 0
-  n_Z       = 0
+  n_R          = 0
+  n_Z          = 0
 
-  n_radial  = 11
-  n_pol     = 16
+  n_radial     = 11
+  n_pol        = 16
 
-  n_flux    = 11
-  n_tht     = 16
+  n_flux       = 11
+  n_tht        = 16
 
-  n_open    = 5
-  n_outer   = 0
-  n_inner   = 0
-  n_leg     = 5
-  n_private = 5
-  n_up_leg  = 0
-  n_up_priv = 0
+  n_open       = 5
+  n_outer      = 0
+  n_inner      = 0
+  n_leg        = 5
+  n_leg_out    = 0
+  n_private    = 5
+  n_up_leg     = 0
+  n_up_leg_out = 0
+  n_up_priv    = 0
   
-  n_ext = 0
+  n_ext        = 0
 
   psi_axis_init = -0.1d0
   XR_r(:)       = 999.d0

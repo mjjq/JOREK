@@ -285,8 +285,10 @@ module phys_module
   integer :: n_inner           !< Number of 'radial' grid points in the open flux region on the inner side (HFS) in case of double-null
   integer :: n_private         !< Number of 'radial' grid points in the private flux region on the lower side
   integer :: n_leg             !< Number of 'poloidal' grid points along the divertor legs on the lower side
+  integer :: n_leg_out         !< Number of 'poloidal' grid points along the divertor legs on the lower side
   integer :: n_up_priv         !< Number of 'radial' grid points in the private flux region on the upper side (upper Xpoint or double-null)
   integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs on the upper side (upper Xpoint or double-null)
+  integer :: n_up_leg_out      !< Number of 'poloidal' grid points along the divertor legs on the upper side (upper Xpoint or double-null)
   integer :: n_ext             !< Number of 'radial' grid points from the outermost flux surface to wall)
   real*8  :: SIG_closed        !< Width with grid accumulation
   real*8  :: SIG_open          !< Width with grid accumulation

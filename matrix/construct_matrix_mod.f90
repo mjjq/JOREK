@@ -268,16 +268,12 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory allocation
   if (.not. allocated(A_glob))    call tr_allocate(A_glob,  1,nz_glob,"A_glob",  CAT_DMATRIX)
-  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
-  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob",CAT_DMATRIX)
 
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocate (rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocatep(rhs_loc, 1,ndof_glob,"rhs_loc", CAT_DMATRIX)
 
   ! --- Initialise internal variables
-  irn_glob = 0
-  jcn_glob = 0
   A_glob   = 0.d0
   RHS_glob = 0.d0
   RHS_loc  = 0.d0

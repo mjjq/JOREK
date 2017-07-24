@@ -251,6 +251,12 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   n_glob  = (index_max-index_min+1) * n_tor * n_var
 
   nz_glob = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + (n_tor*n_var)**2 - 1
+  
+  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
+  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob",CAT_DMATRIX)
+  
+  irn_glob = 0
+  jcn_glob = 0
 
   write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n_glob, nz_glob
 

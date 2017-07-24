@@ -812,8 +812,6 @@ module vacuum_response
     sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
    
     sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - matmul( sr%a_ey%loc_mat(:,:), sr%a_ye%loc_mat(:,:) )
-  
-     write(300,*) sr%a_id%loc_mat
         
 
     ! --- Transform STARWALL harmonics to account for periodicity
@@ -2586,10 +2584,10 @@ module vacuum_response
 
     
     do k = 1, n_wall_curr
-      dwall_curr(k) = sum( response_m_a(k,:) * dpsibnd_vec(:) )  &
+      dwall_curr(k) = sum( response_m_a%loc_mat(k,:) * dpsibnd_vec(:) )  &
         + response_d_b(k) * (wall_curr(k) - Y_coils0(k))       &
         + response_d_c(k) * dwall_curr(k)                        &
-        + sum( response_m_d(k,:) * old_dpsibnd_vec(:) ) !&
+        + sum( response_m_d%loc_mat(k,:) * old_dpsibnd_vec(:) ) !&
         !+ sum( response_m_k(k,:) * coil_voltages(:) )
     end do
     wall_curr(:) = wall_curr(:) + dwall_curr(:)
@@ -2693,8 +2691,9 @@ module vacuum_response
     real*8, allocatable :: tmp_d_s(:)
     real*8  :: theta, zeta
     logical :: update_required
-    integer :: ierr,step
-
+    integer :: ierr,step,loc_size,ntasks,loc_to_glob
+    real*8  :: test_sum
+   
 
 ! --- Local variables to store the previous values of some parameters.
     real*8,  save :: old_thick
@@ -2704,6 +2703,7 @@ module vacuum_response
     real*8,  save :: old_zeta
     logical, save :: old_reswall
 
+
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'
       return
@@ -2712,6 +2712,10 @@ module vacuum_response
     theta = time_evol_theta
     zeta  = time_evol_zeta
 
+
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
+
 ! --- Update response matrices only, if parameter values changed or matrices
     ! not allocated
     update_required = ( old_res     /= wall_resistivity    ) &
@@ -2719,10 +2723,10 @@ module vacuum_response
                  .or. ( old_theta   /= theta               ) &
                  .or. ( old_zeta    /= zeta                ) &
                  .or. ( old_reswall .neqv. resistive_wall  ) &
-                 .or. ( .not. allocated(response_m_a)      ) &
+                 .or. ( .not. allocated(response_m_a%loc_mat)      ) &
                  .or. ( .not. allocated(response_d_b)      ) &
                  .or. ( .not. allocated(response_d_c)      ) &
-                 .or. ( .not. allocated(response_m_d)      ) &
+                 .or. ( .not. allocated(response_m_d%loc_mat)      ) &
                  .or. ( .not. allocated(response_m_e)      ) &
                  .or. ( .not. allocated(response_m_f)      ) &
                  .or. ( .not. allocated(response_m_g)      ) &
@@ -2741,17 +2745,51 @@ module vacuum_response
       old_zeta    = zeta
       old_reswall = resistive_wall
 
+
+
       ! --- Allocate matrices if required
       if ( .not. allocated(response_m_eq) ) &
         allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
-      if ( .not. allocated(response_m_a) ) &
-        allocate( response_m_a(n_wall_curr, n_dof_starwall) )
+      if ( .not. allocated(response_m_a%loc_mat) ) then
+
+          step=n_dof_starwall/ntasks
+          loc_size = step
+          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+
+          response_m_a%row_wise  = .false.
+          response_m_a%distrib   = .true.          
+
+          response_m_a%ind_start = my_id*step+1
+          response_m_a%ind_end   = my_id*step+loc_size
+
+          allocate( response_m_a%loc_mat(n_wall_curr, loc_size) )
+
+      endif
+
+
       if ( .not. allocated(response_d_b) ) &
         allocate( response_d_b(n_wall_curr) )
       if ( .not. allocated(response_d_c) ) &
         allocate( response_d_c(n_wall_curr) )
-      if ( .not. allocated(response_m_d) ) &
-        allocate( response_m_d(n_wall_curr, n_dof_starwall) )
+
+
+      if ( .not. allocated(response_m_d%loc_mat) ) then
+
+          step=n_dof_starwall/ntasks
+          loc_size = step
+          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+
+          response_m_a%row_wise  = .false.
+          response_m_a%distrib   = .true.
+
+          response_m_a%ind_start = my_id*step+1
+          response_m_a%ind_end   = my_id*step+loc_size
+
+          allocate( response_m_d%loc_mat(n_wall_curr, loc_size) )
+
+      endif
+
+
       if ( .not. allocated(response_m_e) ) &
         allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_f) ) &
@@ -2801,9 +2839,6 @@ module vacuum_response
 
       call MPI_AllREDUCE(MPI_IN_PLACE,response_m_eq,size(response_m_eq),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-
-      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-      stop
       
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall ) then
@@ -2812,19 +2847,34 @@ module vacuum_response
 
         tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
 
-        do j = 1, n_dof_starwall
-          response_m_a(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
+        do j = 1, size(response_m_a%loc_mat,2) 
+            response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
+
+
+       !call MPI_AllREDUCE(sum(response_m_a%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+       !write(540+my_id,*) sum(response_m_a%loc_mat), test_sum
+ 
+       !call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+       !stop
+
 
         response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
-
         response_d_c(:) = zeta / tmp_d_s(:)
 
-        do j = 1, n_dof_starwall
-          response_m_d(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
+
+        do j = 1, size(response_m_d%loc_mat,2)
+          response_m_d%loc_mat(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
 
-        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul(sr%a_ey%loc_mat(:,:),response_m_a(:,:) )
+
+
+        call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+        stop 
+
+
+
+        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul(sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
 
         do k = 1, n_wall_curr
           response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
@@ -2836,7 +2886,7 @@ module vacuum_response
 
         response_m_h(:,:) = sr%a_ee%loc_mat(:,:)
 
-        response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d(:,:) )
+        response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d%loc_mat(:,:) )
 
         do k = 1, n_wall_curr
           response_m_k(k,:) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(:,k)
@@ -2852,10 +2902,10 @@ module vacuum_response
 
       else ! (Ideal wall)
 
-        response_m_a(:,:) = 0.d0
+        response_m_a%loc_mat(:,:) = 0.d0
         response_d_b(:)   = 0.d0
         response_d_c(:)   = 0.d0
-        response_m_d(:,:) = 0.d0
+        response_m_d%loc_mat(:,:) = 0.d0
         response_m_e(:,:) = sr%a_id%loc_mat(:,:)
         response_m_f(:,:) = 0.d0
         response_m_g(:,:) = 0.d0
@@ -2869,11 +2919,11 @@ module vacuum_response
 
       if ( vacuum_debug ) then
         write(*,*) 'DEBUG: Checksums'
-        write(*,*) 'm_a:', sum(abs(response_m_a)), sum(response_m_a)
+        write(*,*) 'm_a:', sum(abs(response_m_a%loc_mat)),sum(response_m_a%loc_mat)
         write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
         write(*,*) '1+d_b:', sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
         write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
-        write(*,*) 'm_d:', sum(abs(response_m_d)), sum(response_m_d)
+        write(*,*) 'm_d:', sum(abs(response_m_d%loc_mat)),sum(response_m_d%loc_mat)
         write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
         write(*,*) 'm_f:', sum(abs(response_m_f)), sum(response_m_f)
         write(*,*) 'm_g:', sum(abs(response_m_g)), sum(response_m_g)
@@ -2944,10 +2994,10 @@ module vacuum_response
                  .or. ( old_theta   /= theta               ) &
                  .or. ( old_zeta    /= zeta                ) &
                  .or. ( old_reswall .neqv. resistive_wall  ) &
-                 .or. ( .not. allocated(response_m_a)      ) &
+                 .or. ( .not. allocated(response_m_a%loc_mat)      ) &
                  .or. ( .not. allocated(response_d_b)      ) &
                  .or. ( .not. allocated(response_d_c)      ) &
-                 .or. ( .not. allocated(response_m_d)      ) &
+                 .or. ( .not. allocated(response_m_d%loc_mat)      ) &
                  .or. ( .not. allocated(response_m_e)      ) &
                  .or. ( .not. allocated(response_m_f)      ) &
                  .or. ( .not. allocated(response_m_g)      ) &
@@ -2969,14 +3019,14 @@ module vacuum_response
       ! --- Allocate matrices if required
       if ( .not. allocated(response_m_eq) ) &
         allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
-      if ( .not. allocated(response_m_a) ) &
-        allocate( response_m_a(n_wall_curr, n_dof_starwall) )
+      if ( .not. allocated(response_m_a%loc_mat) ) &
+        allocate( response_m_a%loc_mat(n_wall_curr, n_dof_starwall) )
       if ( .not. allocated(response_d_b) ) &
         allocate( response_d_b(n_wall_curr) )
       if ( .not. allocated(response_d_c) ) &
         allocate( response_d_c(n_wall_curr) )
-      if ( .not. allocated(response_m_d) ) &
-        allocate( response_m_d(n_wall_curr, n_dof_starwall) )
+      if ( .not. allocated(response_m_d%loc_mat) ) &
+        allocate( response_m_d%loc_mat(n_wall_curr, n_dof_starwall) )
       if ( .not. allocated(response_m_e) ) &
         allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_f) ) &
@@ -3009,12 +3059,8 @@ module vacuum_response
 
       
       
-      write(600,*) sr%n_tor0, sum(response_m_eq),sum(sr%a_ee%loc_mat)
 
 
-
-
-      stop
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall ) then
        
@@ -3023,19 +3069,24 @@ module vacuum_response
         tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
         
         do j = 1, n_dof_starwall
-          response_m_a(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
+          response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
+       ! write(840,*) sum(response_m_a%loc_mat), sum(sr%a_ye%loc_mat), sum(tmp_d_s)
+        !stop
+
+
         response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
         
         response_d_c(:) = zeta / tmp_d_s(:)
-        
+       
         do j = 1, n_dof_starwall
-          response_m_d(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
+          response_m_d%loc_mat(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
         
-        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:),response_m_a(:,:) )
+
+        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
         
         do k = 1, n_wall_curr
           response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
@@ -3047,7 +3098,7 @@ module vacuum_response
         
         response_m_h(:,:) = sr%a_ee%loc_mat(:,:)
         
-        response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d(:,:) )
+        response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d%loc_mat(:,:) )
         
         do k = 1, n_wall_curr
           response_m_k(k,:) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(:,k)
@@ -3063,10 +3114,10 @@ module vacuum_response
         
       else ! (Ideal wall)
         
-        response_m_a(:,:) = 0.d0
+        response_m_a%loc_mat(:,:) = 0.d0
         response_d_b(:)   = 0.d0
         response_d_c(:)   = 0.d0
-        response_m_d(:,:) = 0.d0
+        response_m_d%loc_mat(:,:) = 0.d0
         response_m_e(:,:) = sr%a_id%loc_mat(:,:)
         response_m_f(:,:) = 0.d0
         response_m_g(:,:) = 0.d0
@@ -3080,11 +3131,11 @@ module vacuum_response
       
       if ( vacuum_debug ) then
         write(*,*) 'DEBUG: Checksums'
-        write(*,*) 'm_a:', sum(abs(response_m_a)), sum(response_m_a)
+        write(*,*) 'm_a:', sum(abs(response_m_a%loc_mat)),sum(response_m_a%loc_mat)
         write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
         write(*,*) '1+d_b:', sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
         write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
-        write(*,*) 'm_d:', sum(abs(response_m_d)), sum(response_m_d)
+        write(*,*) 'm_d:', sum(abs(response_m_d%loc_mat)),sum(response_m_d%loc_mat)
         write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
         write(*,*) 'm_f:', sum(abs(response_m_f)), sum(response_m_f)
         write(*,*) 'm_g:', sum(abs(response_m_g)), sum(response_m_g)

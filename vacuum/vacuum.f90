@@ -23,12 +23,27 @@ module vacuum
   real*8, allocatable :: dwall_curr(:)                   !< Change of wall current potentials (\f$\delta Y_k\f$).
   real*8, allocatable :: old_dpsibnd_vec(:)              !< Previous delta Psi values required for time-stepping with zeta/=0
 
+  type :: t_distrib_mat
+    real*8, allocatable :: loc_mat(:,:)
+    logical             :: distrib
+    logical             :: row_wise
+    integer             :: ind_start, ind_end
+  end type t_distrib_mat
+
   !> @name JOREK vacuum response matrices
   !! Response matrices derived from STARWALL response (w=wall, p=plasma)
-  real*8, allocatable :: response_m_a(:,:)               !< \f$\hat{A}\f$ in the documentation
+
+ ! real*8, allocatable :: response_m_a(:,:)               !< \f$\hat{A}\f$ in the documentation
+  type(t_distrib_mat)  :: response_m_a                   !< \f$\hat{A}\f$ in the documentation
+
+
+
   real*8, allocatable :: response_d_b(:)                 !< \f$\hat{B}\f$ in the documentation
   real*8, allocatable :: response_d_c(:)                 !< \f$\hat{C}\f$ in the documentation
-  real*8, allocatable :: response_m_d(:,:)               !< \f$\hat{D}\f$ in the documentation
+
+ ! real*8, allocatable :: response_m_d(:,:)               !< \f$\hat{D}\f$ in the documentation
+  type(t_distrib_mat)  :: response_m_d
+
   real*8, allocatable :: response_m_e(:,:)               !< \f$\hat{E}\f$ in the documentation
   real*8, allocatable :: response_m_f(:,:)               !< \f$\hat{F}\f$ in the documentation
   real*8, allocatable :: response_m_g(:,:)               !< \f$\hat{G}\f$ in the documentation
@@ -74,11 +89,6 @@ module vacuum
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   real*8, allocatable :: diag_coil_curr(:,:)
 
-  type :: t_distrib_mat
-    real*8, allocatable :: loc_mat(:,:)
-    logical             :: row_wise
-    integer             :: ind_start, ind_end
-  end type t_distrib_mat  
 
   type :: t_starwall_response
     integer :: file_version           = 9999

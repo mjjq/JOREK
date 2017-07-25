@@ -129,8 +129,6 @@ module vacuum_response
    endif 
         if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
        
-
-  
   end subroutine get_vacuum_response
   
   
@@ -1063,7 +1061,7 @@ module vacuum_response
 
 
     time(5)=MPI_WTIME()
-    call matrix_multiplication(my_id,sr%a_id,sr%a_ey,sr%a_ye)
+    call matrix_multiplication(my_id,sr%a_ey,sr%a_ye, res_mat=sr%a_id )
     time(6)=MPI_WTIME()
  
    
@@ -1110,7 +1108,7 @@ module vacuum_response
 
   
 
-  subroutine matrix_multiplication(my_id,res_mat, mat1, mat2)
+  subroutine matrix_multiplication(my_id, mat1, mat2,res_mat,res_mat_not_distr)
   
   use mpi_mod
 
@@ -1118,19 +1116,24 @@ module vacuum_response
 
   ! --- Routine parameters
   integer,                        intent(in)      :: my_id
-  type(t_distrib_mat),            intent(inout)   :: res_mat
   type(t_distrib_mat),            intent(in)      :: mat1
   type(t_distrib_mat),            intent(in)      :: mat2
+  type(t_distrib_mat), optional,  intent(inout)   :: res_mat
+  real*8, allocatable ,optional,  intent(inout)   :: res_mat_not_distr(:,:)
+
+
 
   !local variables
-  integer             :: ntasks, ierr, i, k, j, z, length,step
+  integer             :: ntasks, ierr, i, k, j, z, length, step, glob_index_i, glob_index_j 
   real*8, allocatable :: tmp(:,:),sum_element
   real*8  :: time(10)
 
 
+call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
+if(present(res_mat)) then
 
   res_mat%loc_mat=0.0
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
 
   if(my_id == 0) step = size(mat2%loc_mat,2) 
   call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
@@ -1143,7 +1146,7 @@ module vacuum_response
      ! loop over all tasks
      do i = 1, ntasks
 
-        time(1)=MPI_WTIME()
+        !time(1)=MPI_WTIME()
 
         ! Broadcasting size of the distributed column
         length = size(mat2%loc_mat,2)      
@@ -1162,9 +1165,11 @@ module vacuum_response
         call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
         call MPI_BCAST( tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD, ierr)
    
-        time(4)=MPI_WTIME()
+        !time(4)=MPI_WTIME()
 
         ! Matrix -matrix multiplications
+
+        glob_index_j=(i-1)*step
         do z = 1, size(mat1%loc_mat,1)
            do k = 1, size(tmp,2)
 
@@ -1175,20 +1180,73 @@ module vacuum_response
                    sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)         
              enddo
              
-             res_mat%loc_mat(z,k+(i-1)*step) = sum_element  
+             res_mat%loc_mat(z,k+glob_index_j) = sum_element  
      
           enddo
         enddo
-        time(5)=MPI_WTIME()
+        !time(5)=MPI_WTIME()
 
 
-        time(2)=MPI_WTIME()
-        if(my_id ==0) write(456,*) i, time(2)-time(1), time(5)-time(4)
+        !time(2)=MPI_WTIME()
+        !if(my_id ==0) write(456,*) i, time(2)-time(1), time(5)-time(4)
       
 
      enddo     
 
   endif 
+else
+  ! check distribution. Result matrix not distributed, first matrix row wise, second
+  ! matrix column wise
+  if(mat1%row_wise == .true. .AND. mat2%row_wise == .false.) then
+
+      res_mat_not_distr=0.0   
+      if(my_id == 0) step = size(mat2%loc_mat,2)
+      call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+
+     ! loop over all tasks
+     do i = 1, ntasks
+
+       ! time(1)=MPI_WTIME()
+
+        ! Broadcasting size of the distributed column
+        length = size(mat2%loc_mat,2)
+     
+        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr )
+
+        ! temporal matrix for receiving part of the distributed matrix and
+        ! multiply it
+        if ( allocated(tmp) ) deallocate(tmp)
+        allocate( tmp(size(mat2%loc_mat,1),length) )
+
+
+        ! part of second matrix broadcasted to all tasks
+        if(my_id == i-1)  tmp    = mat2%loc_mat
+        if(my_id == i-1 ) length = size(tmp)
+        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
+        call MPI_BCAST(tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD,ierr)
+
+
+        ! Matrix -matrix multiplications
+
+        glob_index_j = (i-1)*step
+        glob_index_i = my_id*step
+        do z = 1, size(mat1%loc_mat,1)
+           do k = 1, size(tmp,2)
+
+             sum_element=0.0
+             ! OpenMP paralelization can be done in this place            
+             do j = 1, size(mat1%loc_mat,2)
+                   sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)
+             enddo
+             res_mat_not_distr(z + glob_index_i, k + glob_index_j) = sum_element
+
+          enddo
+        enddo
+
+     enddo
+
+  endif
+endif
 
   end subroutine matrix_multiplication
 
@@ -2792,6 +2850,9 @@ module vacuum_response
 
       if ( .not. allocated(response_m_e) ) &
         allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
+
+
+
       if ( .not. allocated(response_m_f) ) &
         allocate( response_m_f(n_dof_starwall, n_wall_curr) )
       if ( .not. allocated(response_m_g) ) &
@@ -2814,6 +2875,8 @@ module vacuum_response
 
      if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
      call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+
+
 
       do j = 1, sr%nd_bez/sr%n_tor0, 2
         j2 = (j-1)*sr%n_tor0 + 1
@@ -2839,7 +2902,7 @@ module vacuum_response
 
       call MPI_AllREDUCE(MPI_IN_PLACE,response_m_eq,size(response_m_eq),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-      
+
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall ) then
 
@@ -2867,18 +2930,36 @@ module vacuum_response
           response_m_d%loc_mat(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
 
+        
+        ! m_e = a_ee - matmul(a_ey, m_a)
+        call matrix_multiplication(my_id,sr%a_ey,response_m_a, res_mat_not_distr=response_m_e)
+         
+        if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
+        call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+
+
+        do j = 1, size(sr%a_ee%loc_mat,1)
+              response_m_e(j+my_id*step,:) = response_m_e(j+my_id*step,:) + sr%a_ee%loc_mat(j,:)
+        enddo
+        call MPI_AllREDUCE(MPI_IN_PLACE,response_m_e,size(response_m_e),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+ 
 
 
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-        stop 
+        stop
 
 
+        
+ 
+         
+!        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul(sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
 
-        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul(sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
 
+        ! Need to distribute that second index will be full 
         do k = 1, n_wall_curr
           response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
         end do
+
 
         do k = 1, n_wall_curr
           response_m_g(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
@@ -3084,14 +3165,17 @@ module vacuum_response
           response_m_d%loc_mat(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
-        
-
         response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
-        
+      
+  
         do k = 1, n_wall_curr
           response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
         end do
         
+
+        write(234,*) n_wall_curr, sum(sr%a_ey%loc_mat), sum(response_d_b), sum(response_m_f) 
+        stop
+
         do k = 1, n_wall_curr
           response_m_g(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
         end do

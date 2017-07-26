@@ -175,7 +175,7 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-  logical :: parallel = .parallel.  
+  logical :: parallel = .true.  
 
   !***********************************************************************
   !*                  intialisation                                      *

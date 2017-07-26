@@ -2341,8 +2341,8 @@ endif
                                     - sum( response_m_h(i_resp,:) * psibnd_coils(:) )               
 
                       if ( resistive_wall ) &
-                        rhs_contrib = rhs_contrib + sum( response_m_f(i_resp, :) *  wall_curr(:) )  &
-                                                  + sum( response_m_g(i_resp, :) * dwall_curr(:) )  &
+                        rhs_contrib = rhs_contrib + sum( response_m_f%loc_mat(i_resp, :) *  wall_curr(:) )  &
+                                                  + sum( response_m_g%loc_mat(i_resp, :) * dwall_curr(:) )  &
                                                   - sum( response_m_v(i_resp, :) *   Y_coils0(:) ) 
 
 
@@ -2786,8 +2786,8 @@ endif
                  .or. ( .not. allocated(response_d_c)      ) &
                  .or. ( .not. allocated(response_m_d%loc_mat)      ) &
                  .or. ( .not. allocated(response_m_e)      ) &
-                 .or. ( .not. allocated(response_m_f)      ) &
-                 .or. ( .not. allocated(response_m_g)      ) &
+                 .or. ( .not. allocated(response_m_f%loc_mat )      ) &
+                 .or. ( .not. allocated(response_m_g%loc_mat )      ) &
                  .or. ( .not. allocated(response_m_h)      ) &
                  .or. ( .not. allocated(response_m_j)      ) &
                  .or. ( .not. allocated(response_m_k)      ) &
@@ -2837,11 +2837,11 @@ endif
           loc_size = step
           if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
-          response_m_a%row_wise  = .false.
-          response_m_a%distrib   = .true.
+          response_m_d%row_wise  = .false.
+          response_m_d%distrib   = .true.
 
-          response_m_a%ind_start = my_id*step+1
-          response_m_a%ind_end   = my_id*step+loc_size
+          response_m_d%ind_start = my_id*step+1
+          response_m_d%ind_end   = my_id*step+loc_size
 
           allocate( response_m_d%loc_mat(n_wall_curr, loc_size) )
 
@@ -2853,10 +2853,41 @@ endif
 
 
 
-      if ( .not. allocated(response_m_f) ) &
-        allocate( response_m_f(n_dof_starwall, n_wall_curr) )
-      if ( .not. allocated(response_m_g) ) &
-        allocate( response_m_g(n_dof_starwall, n_wall_curr) )
+      if ( .not. allocated(response_m_f%loc_mat) ) then
+
+          step=n_dof_starwall/ntasks
+          loc_size = step
+          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+
+          response_m_f%row_wise  = .true.
+          response_m_f%distrib   = .true.
+
+          response_m_f%ind_start = my_id*step+1
+          response_m_f%ind_end   = my_id*step+loc_size
+
+          allocate( response_m_f%loc_mat(loc_size, n_wall_curr) )
+
+      endif
+
+
+
+      if ( .not. allocated(response_m_g%loc_mat) ) then
+
+          step=n_dof_starwall/ntasks
+          loc_size = step
+          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+
+          response_m_g%row_wise  = .true.
+          response_m_g%distrib   = .true.
+
+          response_m_g%ind_start = my_id*step+1
+          response_m_g%ind_end   = my_id*step+loc_size
+
+          allocate( response_m_g%loc_mat(loc_size, n_wall_curr) )
+
+      endif
+
+
       if ( .not. allocated(response_m_h) ) &
         allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_j) ) &
@@ -2870,7 +2901,8 @@ endif
 
       ! --- Derived response matrix for equilibrium (extract n=0 part from
       ! STARWALL EE matrix)
-      response_m_eq = 0.d0
+
+     response_m_eq = 0.d0
 
 
      if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
@@ -2914,17 +2946,8 @@ endif
             response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
 
-
-       !call MPI_AllREDUCE(sum(response_m_a%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-       !write(540+my_id,*) sum(response_m_a%loc_mat), test_sum
- 
-       !call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-       !stop
-
-
         response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
         response_d_c(:) = zeta / tmp_d_s(:)
-
 
         do j = 1, size(response_m_d%loc_mat,2)
           response_m_d%loc_mat(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
@@ -2944,28 +2967,25 @@ endif
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_e,size(response_m_e),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
  
 
+        do k = 1, n_wall_curr
+          response_m_f%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
+        end do
+
+
+        do k = 1, n_wall_curr
+          response_m_g%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
+        end do
+
+
+        response_m_h =0.0
+        response_m_h(sr%a_ee%ind_start:sr%a_ee%ind_end,:) = sr%a_ee%loc_mat(:,:)
+
+        call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+
 
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
         stop
 
-
-        
- 
-         
-!        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul(sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
-
-
-        ! Need to distribute that second index will be full 
-        do k = 1, n_wall_curr
-          response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
-        end do
-
-
-        do k = 1, n_wall_curr
-          response_m_g(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
-        end do
-
-        response_m_h(:,:) = sr%a_ee%loc_mat(:,:)
 
         response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d%loc_mat(:,:) )
 
@@ -2988,8 +3008,8 @@ endif
         response_d_c(:)   = 0.d0
         response_m_d%loc_mat(:,:) = 0.d0
         response_m_e(:,:) = sr%a_id%loc_mat(:,:)
-        response_m_f(:,:) = 0.d0
-        response_m_g(:,:) = 0.d0
+        response_m_f%loc_mat(:,:) = 0.d0
+        response_m_g%loc_mat(:,:) = 0.d0
         response_m_h(:,:) = sr%a_id%loc_mat(:,:)
         response_m_j(:,:) = 0.d0
         response_m_k(:,:) = 0.d0 !####
@@ -3006,8 +3026,8 @@ endif
         write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
         write(*,*) 'm_d:', sum(abs(response_m_d%loc_mat)),sum(response_m_d%loc_mat)
         write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
-        write(*,*) 'm_f:', sum(abs(response_m_f)), sum(response_m_f)
-        write(*,*) 'm_g:', sum(abs(response_m_g)), sum(response_m_g)
+        write(*,*) 'm_f:', sum(abs(response_m_f%loc_mat)),sum(response_m_f%loc_mat)
+        write(*,*) 'm_g:', sum(abs(response_m_g%loc_mat)),sum(response_m_g%loc_mat)
         write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
         write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
         write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
@@ -3080,8 +3100,8 @@ endif
                  .or. ( .not. allocated(response_d_c)      ) &
                  .or. ( .not. allocated(response_m_d%loc_mat)      ) &
                  .or. ( .not. allocated(response_m_e)      ) &
-                 .or. ( .not. allocated(response_m_f)      ) &
-                 .or. ( .not. allocated(response_m_g)      ) &
+                 .or. ( .not. allocated(response_m_f%loc_mat)      ) &
+                 .or. ( .not. allocated(response_m_g%loc_mat)      ) &
                  .or. ( .not. allocated(response_m_h)      ) &
                  .or. ( .not. allocated(response_m_j)      ) &
                  .or. ( .not. allocated(response_m_k)      ) &
@@ -3110,10 +3130,10 @@ endif
         allocate( response_m_d%loc_mat(n_wall_curr, n_dof_starwall) )
       if ( .not. allocated(response_m_e) ) &
         allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_f) ) &
-        allocate( response_m_f(n_dof_starwall, n_wall_curr) )
-      if ( .not. allocated(response_m_g) ) &
-        allocate( response_m_g(n_dof_starwall, n_wall_curr) )
+      if ( .not. allocated(response_m_f%loc_mat) ) &
+        allocate( response_m_f%loc_mat(n_dof_starwall, n_wall_curr) )
+      if ( .not. allocated(response_m_g%loc_mat) ) &
+        allocate( response_m_g%loc_mat(n_dof_starwall, n_wall_curr) )
       if ( .not. allocated(response_m_h) ) &
         allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_j) ) &
@@ -3128,6 +3148,7 @@ endif
       ! --- Derived response matrix for equilibrium (extract n=0 part from
       ! STARWALL EE matrix)
       
+      zeta=1.0
       response_m_eq = 0.d0
 
       do j = 1, sr%nd_bez/sr%n_tor0, 2
@@ -3138,7 +3159,6 @@ endif
         end do
       end do
 
-      
       
 
 
@@ -3153,12 +3173,8 @@ endif
           response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
-       ! write(840,*) sum(response_m_a%loc_mat), sum(sr%a_ye%loc_mat), sum(tmp_d_s)
-        !stop
-
 
         response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
-        
         response_d_c(:) = zeta / tmp_d_s(:)
        
         do j = 1, n_dof_starwall
@@ -3169,19 +3185,24 @@ endif
       
   
         do k = 1, n_wall_curr
-          response_m_f(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
+          response_m_f%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
         end do
         
 
-        write(234,*) n_wall_curr, sum(sr%a_ey%loc_mat), sum(response_d_b), sum(response_m_f) 
-        stop
-
         do k = 1, n_wall_curr
-          response_m_g(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
+          response_m_g%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
         end do
         
         response_m_h(:,:) = sr%a_ee%loc_mat(:,:)
-        
+       
+
+
+        write(234,*)  sum(sr%a_ee%loc_mat),sum(response_m_h)
+        stop
+
+
+
+ 
         response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d%loc_mat(:,:) )
         
         do k = 1, n_wall_curr
@@ -3203,8 +3224,8 @@ endif
         response_d_c(:)   = 0.d0
         response_m_d%loc_mat(:,:) = 0.d0
         response_m_e(:,:) = sr%a_id%loc_mat(:,:)
-        response_m_f(:,:) = 0.d0
-        response_m_g(:,:) = 0.d0
+        response_m_f%loc_mat(:,:) = 0.d0
+        response_m_g%loc_mat(:,:) = 0.d0
         response_m_h(:,:) = sr%a_id%loc_mat(:,:)
         response_m_j(:,:) = 0.d0
         response_m_k(:,:) = 0.d0 !####
@@ -3221,8 +3242,8 @@ endif
         write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
         write(*,*) 'm_d:', sum(abs(response_m_d%loc_mat)),sum(response_m_d%loc_mat)
         write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
-        write(*,*) 'm_f:', sum(abs(response_m_f)), sum(response_m_f)
-        write(*,*) 'm_g:', sum(abs(response_m_g)), sum(response_m_g)
+        write(*,*) 'm_f:', sum(abs(response_m_f%loc_mat)),sum(response_m_f%loc_mat)
+        write(*,*) 'm_g:', sum(abs(response_m_g%loc_mat)),sum(response_m_g%loc_mat)
         write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
         write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
         write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)

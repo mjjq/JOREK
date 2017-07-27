@@ -60,8 +60,11 @@ module vacuum
   real*8, allocatable :: response_m_j(:,:)               !< \f$\hat{J}\f$ in the documentation
   real*8, allocatable :: response_m_k(:,:)               !< \f$\hat{K}\f$ in the documentation
   real*8, allocatable :: response_m_l(:,:)               !< \f$\hat{L}\f$ in the documentation
-  real*8, allocatable :: response_m_v(:,:)               !< \f$\hat{V}\f$ in the documentation
-  real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
+  !real*8, allocatable :: response_m_v(:,:)               !< \f$\hat{V}\f$ in the documentation
+  type(t_distrib_mat)  :: response_m_v
+
+
+   real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat

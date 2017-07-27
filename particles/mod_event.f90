@@ -306,6 +306,17 @@ subroutine run(this, sim, ev)
   !$ has_omp = .true.
 
   call cpu_time(this%t0)
+  !$ this%t0 = omp_get_wtime()
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  call cpu_time(t1)
+  !$ t1 = omp_get_wtime()
+  mmm = mpi_minmeanmax(t1-this%t0)
+  if (mmm(3) .gt. 0.2) then ! only write if there is a significant imbalance
+    if (sim%my_id .eq. 0) write(*,"(A,A,3f8.3,A)") trim(this%name), " MPI inbalance (min/mean/max): ", mmm, "s"
+  end if
+
+
+  call cpu_time(this%t0)
   !$ this%w0 = omp_get_wtime()
   if (present(ev)) then
     call this%do(sim, ev)
@@ -320,16 +331,16 @@ subroutine run(this, sim, ev)
       mmm = mpi_minmeanmax(t1-this%t0)
       !$ mmm2 = mpi_minmeanmax(w1-this%w0)
       if (sim%my_id .eq. 0) then
-        if (.not. has_omp) write(*,"(A,A,3f8.4,A)") trim(this%name), " finished in (min/mean/max): ", &
+        if (.not. has_omp) write(*,"(A,A,3f8.3,A)") trim(this%name), " finished in (min/mean/max): ", &
             mmm, "s"
-        !$ write(*,"(A,A,3f8.4,A,3f8.4,A)") trim(this%name), " finished in (min/mean/max): ", &
+        !$ write(*,"(A,A,3f8.3,A,3f8.3,A)") trim(this%name), " finished in (min/mean/max): ", &
         !$   mmm2, &
         !$ "s (cpu time: ", mmm, ")"
       end if
     else
-      if (.not. has_omp) write(*,"(A,A,f8.4,A)") trim(this%name), " finished in: ", &
+      if (.not. has_omp) write(*,"(A,A,f8.3,A)") trim(this%name), " finished in: ", &
          t1-this%t0, "s"
-      !$ write(*,"(A,A,f8.4,A,f8.4,A)") trim(this%name), " finished in: ", &
+      !$ write(*,"(A,A,f8.3,A,f8.3,A)") trim(this%name), " finished in: ", &
       !$   w1-this%w0, &
       !$ "s (cpu time: ", t1-this%t0, ")"
     end if

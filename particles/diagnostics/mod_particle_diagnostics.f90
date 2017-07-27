@@ -77,7 +77,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   integer, dimension(:), allocatable           :: particles_per_proc
   real*4,  dimension(:,:), allocatable, target :: real4_var ! Data storage order: particle index, var
   integer, dimension(:,:), allocatable, target :: int4_var ! Data storage order: particle index, var
-  real*4 :: tmpreal4
+  real*4 :: tmpreal4, times(1)
   integer :: tmpint4
 
   ! For psi_Axis, psi_sep
@@ -172,6 +172,13 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     else
       call create_constants_time_dataset(this%file_id, trim(timeset_name), &
           tset, tspace)
+    end if
+
+    ! Check that the current time is > the last stored time
+    call HDF5_array1D_reading_r4(this%file_id,times,trim(timeset_name),time_dims(0)-1)
+    if (times(1) .gt. sim%time) then
+      write(*,*) "Current time smaller than last stored diagnostic time, aborting."
+      call MPI_ABORT(MPI_COMM_WORLD, 1, ierr)
     end if
 
     ! Get the current time dimensions

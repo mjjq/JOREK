@@ -37,7 +37,7 @@ real*8              :: tht_x1, tht_x2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
-real*8              :: s_find(8), t_find(8)
+real*8              :: s_find(8), t_find(8), st_find(8)
 real*8              :: R_beg, R_end
 real*8              :: Z_beg, Z_end
 real*8              :: SIG_theta
@@ -290,7 +290,7 @@ do j=1,n_tht
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
 	i_max = n_flux + n_open + n_outer
       endif      
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,i_find)    
+      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
     elseif ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then      
       if (j .gt. n_tht_mid) then
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
@@ -299,7 +299,7 @@ do j=1,n_tht
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
 	i_max = n_flux + n_open + n_outer + n_inner
       endif      
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,i_find)    
+      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
     else    
       i_max = n_flux + n_open
       call find_theta_surface(node_list,element_list,flux_list,i_max,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)    
@@ -386,14 +386,14 @@ do j=1,n_tht
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. 2) )                                          ) then
       nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperInnerLeg - Z_xpoint(2)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(2) - Z_axis))**2
       i_max = n_flux + n_open + n_outer + n_inner
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,i_find)
+      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
     endif 
     if (    ( (j .le. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) &
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) & 
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. 2) )                                          ) then
       nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperOuterLeg - Z_xpoint(2)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(2) - Z_axis))**2
       i_max = n_flux + n_open + n_outer
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,i_find)
+      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
     endif
     if (xcase .eq. 1) then
       call find_theta_surface(node_list,element_list,flux_list,i_max,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
@@ -564,7 +564,7 @@ do i=1,4
 
     nwpts%R_min(n_start + j) = R_beg + (R_end-R_beg) * s_tmp(j)
 
-    call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_min(n_start+j),i_elm_find,s_find,t_find,i_find)
+    call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_min(n_start+j),i_elm_find,s_find,t_find,st_find,i_find)
 
     do k=1,i_find
 
@@ -627,7 +627,7 @@ if(tokamak_device(1:4) .eq. 'MAST') then
 
       nwpts%Z_wall(n_start + j) = Z_beg + (Z_end-Z_beg) * s_tmp(j)
 
-      call find_Z_surface(node_list,element_list,flux_list,i_surf,nwpts%Z_wall(n_start + j),i_elm_find,s_find,t_find,i_find)
+      call find_Z_surface(node_list,element_list,flux_list,i_surf,nwpts%Z_wall(n_start + j),i_elm_find,s_find,t_find,st_find,i_find)
 
       do k=1,i_find
 
@@ -735,10 +735,10 @@ do i=1,4
 
     if ((i .eq. 1) .or. (i .eq. 3) .or. (tokamak_device(1:4) .ne. 'MAST')) then
       nwpts%Z_max(n_start + j) = Z_beg + (Z_end-Z_beg) * s_tmp(j)
-      call find_Z_surface(node_list,element_list,flux_list,i_surf,nwpts%Z_max(n_start+j),i_elm_find,s_find,t_find,i_find)
+      call find_Z_surface(node_list,element_list,flux_list,i_surf,nwpts%Z_max(n_start+j),i_elm_find,s_find,t_find,st_find,i_find)
     else
       nwpts%R_max(n_start + j) = R_beg + (R_end-R_beg) * s_tmp(j)
-      call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_max(n_start+j),i_elm_find,s_find,t_find,i_find)
+      call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_max(n_start+j),i_elm_find,s_find,t_find,st_find,i_find)
     endif
 
 
@@ -874,7 +874,7 @@ do i=1,4
 
     nwpts%R_sep(n_start + j) = R_beg + (R_end-R_beg) * s_tmp(j)
 
-    call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_sep(n_start+j),i_elm_find,s_find,t_find,i_find)
+    call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_sep(n_start+j),i_elm_find,s_find,t_find,st_find,i_find)
 
     do k=1,i_find
 

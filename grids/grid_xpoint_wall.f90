@@ -33,7 +33,7 @@ real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), 
 real*8, allocatable :: R_wall_max(:), Z_wall_max(:), T_wall_par(:), R_wall_min(:), Z_wall_min(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
 real*8              :: R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
-real*8              :: PI, s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2, tan_max, tht_bnd, tht_ext
+real*8              :: PI, s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2, tan_max, tht_bnd, tht_ext
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
@@ -399,7 +399,7 @@ do j=1,n_leg
 
   R_min(n_tht + j) = R_strike(n_open+n_private+1,1) + (RL5-R_strike(n_open+n_private+1,1)) * s_tmp(j)
 
-  call find_R_surface(node_list,element_list,flux_list,n_psi-1,R_min(n_tht+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,n_psi-1,R_min(n_tht+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -420,7 +420,7 @@ do j=1,n_leg
 
   R_min(n_tht + n_leg + j) = R_strike(n_open+n_private+1,2) + (RL5-R_strike(n_open+n_private+1,2)) * s_tmp(j)
 
-  call find_R_surface(node_list,element_list,flux_list,n_psi-1,R_min(n_tht+n_leg+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,n_psi-1,R_min(n_tht+n_leg+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -443,7 +443,7 @@ do j=1,n_leg
 
   Z_max(n_tht + j) = Z_strike(n_open+1,1) + (ZL11 - Z_strike(n_open+1,1)) * s_tmp(j)
 
-  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht+j),i_elm_find,s_find,t_find,i_find)
+  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -464,7 +464,7 @@ do j=1,n_leg
 
   Z_max(n_tht + n_leg + j) = Z_strike(n_open+1,2) + (ZL10 - Z_strike(n_open+1,2)) * s_tmp(j)
 
-  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht+n_leg+j),i_elm_find,s_find,t_find,i_find)
+  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht+n_leg+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -485,7 +485,7 @@ do j=1,n_leg
 
   R_sep(n_tht + j) =  R_strike(1,1) + (R_xpoint(1) - R_strike(1,1)) * s_tmp(j)
 
-  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -506,7 +506,7 @@ Z_sep(n_tht+n_leg) = Z_xpoint(1) ! this one is known
 do j=1,n_leg
 
   R_sep(n_tht + n_leg + j) = R_strike(1,2) + (R_xpoint(1) - R_strike(1,2)) * s_tmp(j)
-  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht+n_leg+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht+n_leg+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 

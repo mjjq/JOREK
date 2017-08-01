@@ -1,4 +1,4 @@
-subroutine find_R_surface(node_list,element_list,surface_list,j_surf,R_find,i_elm_find,s_find,t_find,i_find)
+subroutine find_R_surface(node_list,element_list,surface_list,j_surf,R_find,i_elm_find,s_find,t_find,st_find,i_find)
 !---------------------------------------------------------------------------
 ! subroutine finds a R value on a specific surface
 !---------------------------------------------------------------------------
@@ -16,6 +16,7 @@ real*8,                   intent(in)    :: R_find
 integer,                  intent(out)   :: i_elm_find(*)
 real*8,                   intent(out)   :: s_find(*)
 real*8,                   intent(out)   :: t_find(*)
+real*8,                   intent(out)   :: st_find(*)
 integer,                  intent(out)   :: i_find
 
 ! --- local variables
@@ -78,7 +79,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 !    write(*,'(A,2i8,4e16.8)') ' find_R check 1 : ',i_find+1,i_elm,ZZg1,t,RRg1,RRg1 - R_find
 
 !------------------------------------------------------ one step to improve quality of solution
-    iterMax =5
+    iterMax =2
     do i=1,iterMax
       dRRg1_dt = dRRg1_dr * dri + dRRg1_ds * dsi
 
@@ -101,6 +102,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
           s_find(i_find+1) = ri
           t_find(i_find+1) = si
           i_elm_find(i_find+1) = i_elm
+          st_find(i_find+1) = t
           i_find = i_find + 1
 	  exit
 	endif

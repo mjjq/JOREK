@@ -3,9 +3,9 @@
 module grid_xpoint_data
   implicit none
   real*8,  parameter :: symmetric_threshold = 1.d-4
-  integer, parameter :: n_flux_max = 1024
-  integer, parameter :: n_tht_max  = 2048
-  integer, parameter :: n_pieces   = 4
+  integer, parameter :: n_flux_max          = 1024
+  integer, parameter :: n_tht_max           = 2048
+  integer, parameter :: n_pieces_polar      = 5
   
   ! --- Regions
   integer, parameter	:: core			= 1
@@ -57,10 +57,11 @@ module grid_xpoint_data
     real*8 	      :: R_sep(n_tht_max), Z_sep(n_tht_max)
     real*8 	      :: R_max(n_tht_max), Z_max(n_tht_max)
     real*8 	      :: R_min(n_tht_max), Z_min(n_tht_max)
+    real*8 	      :: R_mid(n_tht_max), Z_mid(n_tht_max)
     real*8 	      :: R_wall(n_tht_max),Z_wall(n_tht_max)
     real*8 	      :: RR_new(n_flux_max,n_tht_max),ZZ_new(n_flux_max,n_tht_max)
     real*8 	      :: s_flux(n_flux_max,n_tht_max),t_flux(n_flux_max,n_tht_max),t_tht(n_flux_max,n_tht_max)
-    real*8 	      :: R_polar(n_pieces,4,n_tht_max),Z_polar(n_pieces,4,n_tht_max)
+    real*8 	      :: R_polar(n_pieces_polar,4,n_tht_max),Z_polar(n_pieces_polar,4,n_tht_max)
     integer           :: ielm_flux(n_flux_max,n_tht_max), k_cross(n_flux_max,n_tht_max)
   end type type_new_points
   

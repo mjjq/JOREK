@@ -1207,7 +1207,7 @@ nwpts%k_cross(1,:) = 1
 do i=1,n_flux+n_open
   do j=1, n_tht
     
-    do k=1,n_pieces	 ! 3 line pieces per coordinate line
+    do k=1,3	 ! 3 line pieces per coordinate line
 
       R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
         	   nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
@@ -1264,7 +1264,7 @@ if (xcase .eq. 3) then
     endif
     do j=n_start, n_loop
       
-      do k=1,n_pieces	   ! 3 line pieces per coordinate line
+      do k=1,3	   ! 3 line pieces per coordinate line
 
   	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
   		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
@@ -1313,7 +1313,7 @@ endif
 if(xcase .ne. 3) then
   do i=n_flux,n_psi-1          ! With the private parts
     do j=n_tht+1, n_tht_2
-      do k=1,n_pieces	    ! 3 line pieces per coordinate line
+      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
 
     	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
     		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
@@ -1367,7 +1367,7 @@ else
       n_loop  = n_tht_2-2*n_up_leg
     endif
     do j=n_start,n_loop
-      do k=1,n_pieces	    ! 3 line pieces per coordinate line
+      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
 
     	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
     		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
@@ -1406,7 +1406,7 @@ else
           .and. ( (j .gt. n_tht+2*n_leg+n_up_leg) .or. ( (j .gt. n_tht+n_leg)   .and. (j .le. n_tht+2*n_leg) )	        ) ) cycle
       if (       (i .le. n_flux+n_open+n_outer) .and. (i .gt. n_flux+n_open)                                            &
           .and. ( (j .le. n_tht+n_leg)	          .or. ( (j .gt. n_tht+2*n_leg) .and. (j .le. n_tht+2*n_leg+n_up_leg) ) ) ) cycle
-      do k=1,n_pieces	    ! 3 line pieces per coordinate line
+      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
 
     	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
     		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
@@ -1451,7 +1451,7 @@ else
   enddo
   do i=n_psi-n_private-n_up_priv,n_psi-n_up_priv-1          ! Lower private
     do j=n_tht+1, n_tht_2-2*n_up_leg
-      do k=1,n_pieces	    ! 3 line pieces per coordinate line
+      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
 
     	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
     		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
@@ -1496,7 +1496,7 @@ else
   enddo
   do i=n_psi-n_up_priv,n_psi-1          !Upper private 
     do j=n_tht+2*n_leg+1, n_tht_2
-      do k=1,n_pieces	    ! 3 line pieces per coordinate line
+      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
 
     	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
     		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)

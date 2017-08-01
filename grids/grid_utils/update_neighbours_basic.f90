@@ -33,13 +33,13 @@ subroutine update_neighbours_basic(element_list,node_list)
       i_node2 = element_list%element(i_elm)%vertex(mod(i_side,4)+1)
       ! --- Loop on all other element
       do j_elm = 1, element_list%n_elements
-    	if (j_elm .eq. i_elm) cycle
-    	call are_elements_neighbours(element_list%element(i_elm), i_side, &
-	                             element_list%element(j_elm), node_list, j_side)
+        if (j_elm .eq. i_elm) cycle
+        call are_elements_neighbours(element_list%element(i_elm), i_side, &
+                                     element_list%element(j_elm), node_list, j_side)
         if (j_side .gt. 0) then
-	  element_list%element(i_elm)%neighbours(i_side) = j_elm
-	  element_list%element(j_elm)%neighbours(j_side) = i_elm
-	endif
+          element_list%element(i_elm)%neighbours(i_side) = j_elm
+          element_list%element(j_elm)%neighbours(j_side) = i_elm
+        endif
       enddo
     enddo
   

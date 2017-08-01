@@ -1,4 +1,4 @@
-subroutine find_Z_surface(node_list,element_list,surface_list,j_surf,Z_find,i_elm_find,s_find,t_find,st_find,i_find,quiet)
+subroutine find_Z_surface(node_list,element_list,surface_list,j_surf,Z_find,i_elm_find,s_find,t_find,st_find,i_find)
 !---------------------------------------------------------------------------
 ! subroutine finds a Z value on a specific surface
 !---------------------------------------------------------------------------
@@ -18,7 +18,6 @@ real*8,                   intent(out)   :: s_find(*)
 real*8,                   intent(out)   :: t_find(*)
 real*8,                   intent(out)   :: st_find(*)
 integer,                  intent(out)   :: i_find
-logical, optional,        intent(out)   :: quiet
 
 ! --- local variables
 integer :: i, k, i_elm, ifail, iterMax
@@ -29,13 +28,7 @@ real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8  :: RRg2,dRRg2_dr,dRRg2_ds,dRRg2_drs,dRRg2_drr,dRRg2_dss
 real*8  :: ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss
 real*8  :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt, RZ1, RZ2, dRZ1, dRZ2, RZ0, A0, A1, A2, A3
-logical :: printout
 
-if (present(quiet)) then
-  printout = quiet
-else
-  printout = .true.
-endif
 
 !write(*,*) ' finding Z on surface : ',surface_list%psi_values(j_surf),Z_find
 
@@ -122,7 +115,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 enddo
 
-if ( (i_find .eq. 0) .and. (printout) ) write(*,*) ' WARNING : no Z surface found'
+if (i_find .eq. 0) write(*,*) ' WARNING : no Z surface found'
 
 return
 end subroutine find_Z_surface

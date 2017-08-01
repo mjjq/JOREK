@@ -211,6 +211,21 @@ do i=1, element_list%n_elements
           	   s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(2:4:2)), &
                                 s_psi(itht(2:4:2)),dpsi_dr(itht(2:4:2)),dpsi_ds(itht(2:4:2)))
+          ! --- Because of the saddle, near the Xpoint, the derivatives of the spline can be very noisy
+          ! --- Sometimes (usually) it leads to surface pieces going back on themselves, clearly incoherent
+          ! --- The safest is to set the derivatives to zero
+          ! --- The only problem is that we cannot ensure the two pieces will cross at the Xpoint
+          ! --- However, with the derivatives taken from flux_surface_add_line, this is not ensured either, so...
+          k = surface_list%flux_surfaces(j)%n_pieces-1
+          surface_list%flux_surfaces(j)%s(2,k) = 0.d0
+          surface_list%flux_surfaces(j)%s(4,k) = 0.d0
+          surface_list%flux_surfaces(j)%t(2,k) = 0.d0
+          surface_list%flux_surfaces(j)%t(4,k) = 0.d0
+          k = surface_list%flux_surfaces(j)%n_pieces
+          surface_list%flux_surfaces(j)%s(2,k) = 0.d0
+          surface_list%flux_surfaces(j)%s(4,k) = 0.d0
+          surface_list%flux_surfaces(j)%t(2,k) = 0.d0
+          surface_list%flux_surfaces(j)%t(4,k) = 0.d0
 
         else
 

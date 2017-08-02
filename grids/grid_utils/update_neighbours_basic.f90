@@ -45,6 +45,9 @@ subroutine update_neighbours_basic(element_list,node_list)
   
   enddo
 
+  write(*,*) 'Processing  ... 100'
+  write(*,*) 'finished updating neighbours'
+  
   return
 
 end subroutine update_neighbours_basic

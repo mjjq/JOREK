@@ -57,6 +57,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   real*8  :: PSI_R, PSI_Z
   real*8  :: psi_right, psi_left
   real*8  :: deriv_right, deriv_left
+  integer :: count
   integer, allocatable :: nR_grid(:), node_index(:,:)
   real*8,  allocatable :: R_grid(:,:), Z_grid(:,:), Zlines(:)
   
@@ -389,49 +390,73 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
       enddo
       
       ! --- psi values
-      if (ier .ne. 0) then
+      if (ier .eq. 0) then
         call bispev(tx,nx,ty,ny,c,kx,ky,R_grid(j,i),1,Z_grid(j,i),1,psi_tmp,wrk,lwrk,iwrk,kwrk,ier)
       else
+        i_save = 0
+        j_save = 0
         do ii = 2,nr_eqdsk
-	  if ( (R_grid(j,i) .ge. xx(ii-1)) .and. (R_grid(j,i) .le. xx(ii)) ) then
-	    i_save = ii
-	    exit
-	  endif
-	enddo
+          if ( (R_grid(j,i) .ge. xx(ii-1)) .and. (R_grid(j,i) .le. xx(ii)) ) then
+            i_save = ii
+            exit
+          endif
+        enddo
         do jj = 2,nz_eqdsk
-	  if ( (Z_grid(j,i) .ge. yy(jj-1)) .and. (Z_grid(j,i) .le. yy(jj)) ) then
-	    j_save = jj
-	    exit
-	  endif
-	enddo
-	! --- Extrapolate value from 4 nodes
-	psi1 = psirz(i_save-1,j_save-1)
-	psi2 = psirz(i_save  ,j_save-1)
-	psi3 = psirz(i_save  ,j_save  )
-	psi4 = psirz(i_save-1,j_save  )
-	R_elm = (R_grid(j,i)-xx(i_save-1)) / (xx(i_save)-xx(i_save-1))
-	Z_elm = (Z_grid(j,i)-yy(j_save-1)) / (yy(j_save)-yy(j_save-1))
-	psi_tmp = psi1 + R_elm*(psi2-psi1) + Z_elm*(psi4-psi1) + R_elm*Z_elm*(psi3+psi1-psi2-psi4)
-	! --- The R derivative
-	psi_left    = psi1 + Z_elm*(psi4-psi1)
-	psi_right   = psi2 + Z_elm*(psi3-psi2)
-	deriv_left  = (psi_tmp   - psi_left)/(R_grid(j,i)-xx(i_save-1))
-	deriv_right = (psi_right - psi_tmp )/(xx(i_save)-R_grid(j,i))
-	psi_R = 0.5 * (deriv_left+deriv_right)
-	! --- The Z derivative
-	psi_left    = psi1 + R_elm*(psi2-psi1)
-	psi_right   = psi4 + R_elm*(psi3-psi4)
-	deriv_left  = (psi_tmp   - psi_left)/(Z_grid(j,i)-yy(j_save-1))
-	deriv_right = (psi_right - psi_tmp )/(yy(j_save)-Z_grid(j,i))
-	psi_Z = 0.5 * (deriv_left+deriv_right)
+          if ( (Z_grid(j,i) .ge. yy(jj-1)) .and. (Z_grid(j,i) .le. yy(jj)) ) then
+            j_save = jj
+            exit
+          endif
+        enddo
+        ! --- Extrapolate value from 4 nodes
+        psi1 = psirz(i_save-1,j_save-1)
+        psi2 = psirz(i_save  ,j_save-1)
+        psi3 = psirz(i_save  ,j_save  )
+        psi4 = psirz(i_save-1,j_save  )
+        R_elm = (R_grid(j,i)-xx(i_save-1)) / (xx(i_save)-xx(i_save-1))
+        Z_elm = (Z_grid(j,i)-yy(j_save-1)) / (yy(j_save)-yy(j_save-1))
+        psi_tmp = psi1 + R_elm*(psi2-psi1) + Z_elm*(psi4-psi1) + R_elm*Z_elm*(psi3+psi1-psi2-psi4)
+        ! --- The R derivative
+        psi_R = 0.d0
+        count = 0
+        psi_left    = psi1 + Z_elm*(psi4-psi1)
+        psi_right   = psi2 + Z_elm*(psi3-psi2)
+        if (abs(R_grid(j,i)-xx(i_save-1)) .gt. 1.d-10) then
+          count = count + 1
+          deriv_left  = (psi_tmp   - psi_left)/(R_grid(j,i)-xx(i_save-1))
+          psi_R = psi_R + deriv_left
+        endif
+        if (abs(xx(i_save)-R_grid(j,i)) .gt. 1.d-10) then
+          count = count + 1
+          deriv_right = (psi_right - psi_tmp )/(xx(i_save)-R_grid(j,i))
+          psi_R = psi_R + deriv_right
+        endif
+        if (count .gt. 0) psi_R = - psi_R / real(count) ! min sign because of JOREK definition of psi
+        ! --- The Z derivative
+        psi_Z = 0.d0
+        count = 0
+        psi_left    = psi1 + R_elm*(psi2-psi1)
+        psi_right   = psi4 + R_elm*(psi3-psi4)
+        if (abs(Z_grid(j,i)-yy(j_save-1)) .gt. 1.d-10) then
+          count = count + 1
+          deriv_left  = (psi_tmp   - psi_left)/(Z_grid(j,i)-yy(j_save-1))
+          psi_Z = psi_Z + deriv_left
+        endif
+        if (abs(yy(j_save)-Z_grid(j,i)) .gt. 1.d-10) then
+          count = count + 1
+          deriv_right = (psi_right - psi_tmp )/(yy(j_save)-Z_grid(j,i))
+          psi_Z = psi_Z + deriv_right
+        endif
+        if (count .gt. 0) psi_Z = - psi_Z / real(count) ! min sign because of JOREK definition of psi
       endif
-      node_list%node(node_list%n_nodes)%values(1,1,1) = -psi_tmp      
-      !node_list%node(node_list%n_nodes)%values(1,2,1) = &
-      !  psi_R * node_list%node(node_list%n_nodes)%x(2,1) + psi_Z * node_list%node(node_list%n_nodes)%x(2,2)
-      !node_list%node(node_list%n_nodes)%values(1,3,1) = &
-      !  psi_R * node_list%node(node_list%n_nodes)%x(3,1) + psi_Z * node_list%node(node_list%n_nodes)%x(3,2)
-      !node_list%node(node_list%n_nodes)%values(1,4,1) = &
-      !  psi_R * node_list%node(node_list%n_nodes)%x(4,1) + psi_Z * node_list%node(node_list%n_nodes)%x(4,2)
+      node_list%node(node_list%n_nodes)%values(1,1,1) = -psi_tmp ! min sign because of JOREK definition of psi
+      ! --- Derivatives?
+      node_list%node(node_list%n_nodes)%values(1,2,1) = &
+        psi_R * node_list%node(node_list%n_nodes)%x(2,1) + psi_Z * node_list%node(node_list%n_nodes)%x(2,2)
+      node_list%node(node_list%n_nodes)%values(1,3,1) = &
+        psi_R * node_list%node(node_list%n_nodes)%x(3,1) + psi_Z * node_list%node(node_list%n_nodes)%x(3,2)
+      node_list%node(node_list%n_nodes)%values(1,4,1) = &
+        psi_R * node_list%node(node_list%n_nodes)%x(4,1) + psi_Z * node_list%node(node_list%n_nodes)%x(4,2)
+                         
       
     enddo
   enddo
@@ -475,7 +500,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
     enddo
   enddo
   
-  call check_my_boundary(element_list,node_list)
+  call update_boundary_types(element_list,node_list, .false., .false.)
   
   ! --- MAST-U specific (due to stupid equilibria with nonsense p and ffp profiles...)
   ! --- Shift plasma away from solenoid
@@ -521,201 +546,6 @@ end subroutine grid_inside_wall
 
 
 
-
-
-subroutine adjacent_elements(element_list,node_list,i_elm,i_vertex,side_max, elm_sum)
-
-  use mod_parameters
-  use data_structure
-  
-  implicit none
-  
-  ! --- Routine variables
-  type(type_node_list),    intent(in)  :: node_list	   !< list of grid nodes
-  type(type_element_list), intent(in)  :: element_list   !< list of finite elements
-  integer,                 intent(in)  :: i_elm,i_vertex,side_max
-  integer,                 intent(out) :: elm_sum
-  
-  ! --- Internal variables
-  integer :: i_elm2, i_vertex2, i_node, i_node2
-  
-  elm_sum = 0
-  i_node = element_list%element(i_elm)%vertex(i_vertex)
-  do i_elm2=1,element_list%n_elements
-    if (i_elm2 .eq. i_elm) cycle
-    do i_vertex2=1,4
-      i_node2 = element_list%element(i_elm2)%vertex(i_vertex2)
-      if (i_node2 .eq. i_node) then
-    	elm_sum = elm_sum + 1
-    	exit
-      endif
-    enddo
-    if (elm_sum .eq. side_max) exit
-  enddo
-  
-  return
-end subroutine adjacent_elements
-
-
-
-subroutine check_my_boundary(element_list,node_list)
-  
-  use mod_parameters
-  use data_structure
-  
-  implicit none
-  
-  ! --- Routine variables
-  type(type_node_list),    intent(inout) :: node_list	   !< list of grid nodes
-  type(type_element_list), intent(inout) :: element_list   !< list of finite elements
-  
-  ! --- Internal variables
-  integer :: i_elm,       i_vertex,  i_node
-  integer :: i_elm2,      i_vertex2, i_node2
-  integer :: elm_sum
-  integer :: i_elm_first, i_vertex_first
-  integer :: i_elm_now,   i_vertex_now, i_vertex_next
-  integer :: iter
-  logical :: found_first, found_next
-  
-  ! --- Some printouts?
-  write(*,*)'finding boundary elements...',element_list%n_elements,node_list%n_nodes
-  
-  ! --- Boundary check
-  ! --- Find first element with a boundary
-  write(*,*)'Looking for first boundary element...'
-  i_elm_first = 0
-  found_first = .false.
-  do i_elm=1,element_list%n_elements
-    do i_vertex=1,4
-      call adjacent_elements(element_list,node_list,i_elm,i_vertex,3,elm_sum)
-      ! --- There should be 3 other elements touching a node that's not a boundary
-      if (elm_sum .ne. 3) then
-	i_elm_first    = i_elm
-	i_vertex_first = i_vertex
-        found_first = .true.
-        exit
-      endif
-    enddo
-    if (found_first) exit
-  enddo
-  if (found_first) then
-    write(*,*)'Found first boundary element:',i_elm_first,elm_sum
-  else
-    write(*,*)'Could not first boundary element. Aborting...'
-    return
-  endif
-  
-  ! --- When building the grid like this, the first element has to be a corner, ie. a type-3
-  ! --- Make sure of it, and use one of the adjacent nodes to start from
-  if (elm_sum .eq. 0) then
-    i_vertex_next = mod(i_vertex_first+2,4) + 1
-    call adjacent_elements(element_list,node_list,i_elm_first,i_vertex_next,3,elm_sum)
-    if (elm_sum .ne. 1) then
-      write(*,*)'We have something strange on first element',elm_sum
-      return
-    else
-      i_vertex_first = i_vertex_next
-      write(*,*)'Found first boundary node:',i_elm_first,i_vertex_next,elm_sum
-    endif  
-  endif
-    
-  ! --- Make sure our boundary is coherent (should not last longer than the number of elements)
-  found_first  = .false.
-  i_elm_now    = i_elm_first
-  i_vertex_now = i_vertex_first
-  write(*,*)'Going around boundary...'
-  do iter=1,element_list%n_elements
-    !write(*,*)'iter...',iter
-    
-    ! --- What type is this boundary?
-    call adjacent_elements(element_list,node_list,i_elm_now,i_vertex_now,2,elm_sum)
-    if (elm_sum .eq. 0) then
-      write(*,*)'Impossible, we should always start on a non-corner node. Aborting...'
-      return
-    endif
-    i_node = element_list%element(i_elm_now)%vertex(i_vertex_now)
-    if (elm_sum .eq. 1) node_list%node(i_node)%boundary = 1
-    if (elm_sum .eq. 2) node_list%node(i_node)%boundary = 3
-    
-    ! --- Find the next boundary node on this element
-    i_vertex_next = mod(i_vertex_now,4) + 1 ! it should always be the same direction (ie. +1, not -1)
-    call adjacent_elements(element_list,node_list,i_elm_now,i_vertex_next,2,elm_sum)
-    i_node = element_list%element(i_elm_now)%vertex(i_vertex_next)
-    if (elm_sum .eq. 1) node_list%node(i_node)%boundary = 1
-    if (elm_sum .eq. 2) node_list%node(i_node)%boundary = 3
-    ! --- On a corner, we need to repeat
-    if (elm_sum .eq. 0) then
-      node_list%node(i_node)%boundary = 3
-      i_vertex_next = mod(i_vertex_next,4) + 1 ! it should always be the same direction (ie. +1, not -1)
-      call adjacent_elements(element_list,node_list,i_elm_now,i_vertex_next,2,elm_sum)
-      i_node = element_list%element(i_elm_now)%vertex(i_vertex_next)
-      if (elm_sum .eq. 1) node_list%node(i_node)%boundary = 1
-      if (elm_sum .eq. 2) node_list%node(i_node)%boundary = 3
-      if (elm_sum .eq. 0) then
-        write(*,*)'Impossible, you cannot have two corner nodes on the same element. Aborting...'
-	return
-      endif
-    endif
-    i_vertex_now = i_vertex_next
-  
-    ! --- Find the next element (it should have at least 2 boundary nodes!)
-    found_next = .false.
-    i_node = element_list%element(i_elm_now)%vertex(i_vertex_now)
-    do i_elm2=1,element_list%n_elements
-      if (i_elm2 .eq. i_elm_now) cycle
-      do i_vertex2=1,4
-    	i_node2 = element_list%element(i_elm2)%vertex(i_vertex2)
-        if (i_node2 .eq. i_node) then
-	  ! --- If this is one, check that the next node is also a boundary
-          i_vertex_next = mod(i_vertex2,4) + 1 ! it should always be the same direction (ie. +1, not -1)
-          call adjacent_elements(element_list,node_list,i_elm2,i_vertex_next,3,elm_sum)
-	  if (elm_sum .le. 2) then
-	    found_next   = .true.
-	    i_elm_now    = i_elm2
-	    i_vertex_now = i_vertex2
-	  endif
-	  exit
-        endif
-      enddo
-      if (found_next) exit
-    enddo
-    if (.not. found_next) then
-      write(*,*)'Could not find next element. Aborting...'
-      return
-    else
-      !write(*,*)'Found next element:',i_elm_now,i_vertex_now
-    endif
-    
-    ! --- Check if we looped all around
-    if (i_elm_now .eq. i_elm_first) then
-      write(*,*)'Finished boundary'
-      if (i_vertex_now .ne. i_vertex_first) write(*,*)'But finished on wrong node!!!'
-      exit
-    endif
-    
-  enddo
-  
-  ! --- Now, we need to check non-corner boundaries to see if they are on the s-side or the t-side
-  do i_elm=1,element_list%n_elements
-    do i_vertex=1,4
-      i_node = element_list%element(i_elm)%vertex(i_vertex)
-      if (node_list%node(i_node)%boundary .eq. 1) then
-        do i_vertex2=1,4
-          if (i_vertex2 .eq. i_vertex) cycle
-          i_node2 = element_list%element(i_elm)%vertex(i_vertex2)
-          if (node_list%node(i_node)%boundary .gt. 0) then
-	    if (i_vertex+i_vertex2 .ne. 5) node_list%node(i_node)%boundary = 2
-	    exit
-	  endif
-        enddo
-      endif
-    enddo
-  enddo
-  
-  return
-  
-end subroutine check_my_boundary
 
 
 

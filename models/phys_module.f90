@@ -81,6 +81,15 @@ module phys_module
   integer :: first_target_point		   !< index of the first target point on the limiter (for xpoint_grid_wall)
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
+  !> Points used as blocks to extend grid into complex wall structures
+  integer :: n_wall_blocks                 !< Number of blocks (max 20)
+  integer :: n_block_points_left(20)       !< Number of points on left side of block (5 max)
+  real*8  :: R_block_points_left(20,5)     !< R-positions of points on left side of block
+  real*8  :: Z_block_points_left(20,5)     !< Z-positions of points on left side of block
+  integer :: n_block_points_right(20)      !< Number of points on left side of block (5 max)
+  real*8  :: R_block_points_right(20,5)    !< R-positions of points on left side of block
+  real*8  :: Z_block_points_right(20,5)    !< Z-positions of points on left side of block
+  
   !> @name Define X-point geometry by geometrical properties
   !!
   !! \f[

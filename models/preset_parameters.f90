@@ -308,7 +308,15 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
- !======================MB rotation profile
+  n_wall_blocks        = 0
+  n_block_points_left  = 0
+  R_block_points_left  = 0.d0
+  Z_block_points_left  = 0.d0
+  n_block_points_right = 0
+  R_block_points_right = 0.d0
+  Z_block_points_right = 0.d0
+ 
+!======================MB rotation profile
   V_0=0.d0   
   V_1=0.d0    
   V_coef=0.d0

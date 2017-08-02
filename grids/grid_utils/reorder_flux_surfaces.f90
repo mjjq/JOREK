@@ -10,6 +10,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   use data_structure
   use reorder_surfaces_parameters
   use py_plots_grids
+  use grid_xpoint_data
   
   implicit none
   
@@ -27,7 +28,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   integer	:: n_parts, parts_index(n_parts_max)
   integer	:: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
   integer	:: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
-  logical	:: invert, debug, finished
+  logical	:: invert, debug, finished, respline
   integer	:: i_elm
   integer	:: i_elm2
   real*8	:: rr,    ss
@@ -36,7 +37,10 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   real*8	:: R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss
   real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
   real*8	:: Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss
+  real*8	:: R1, Z1
+  real*8	:: R3, Z3
   real*8	:: distance
+  real*8        :: progress
   character*256	:: filename
   
   write(*,*) '***********************************'
@@ -45,19 +49,22 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   
 
   debug    = .true. ! --- Print python files for plots
+  respline = .false. ! --- Respline surfaces with stan's method before plotting?
   ier      = 0
   
   ! --- Get a plot?
   if (debug) then
     filename = 'plot_unordered_flux_surfaces.py'
-    call print_py_plot_prepare_plot(filename)
-    call print_py_plot_unordered_flux_surfaces(filename, node_list, element_list, surface_list)
-    call print_py_plot_wall(filename)
-    call print_py_plot_finish_plot(filename)
+    call py_plot_surface(filename,node_list,element_list,respline, .false., surface_list, -1)
   endif
   
   ! --- Loop over all surfaces
   do i_surf = 1, surface_list%n_psi
+    
+    progress = 1.d2 * float(i_surf) / float(surface_list%n_psi)
+    progress = max(0.d0,progress)
+    progress = min(1.d2,progress)
+    write(*,"(' Processing  ... ',I0,'%',A,$)") int(progress),CHAR(13)
     
     ! --- Make sure we don't do useless things...
     if (surface_list%flux_surfaces(i_surf)%n_pieces .eq. 0) cycle
@@ -248,14 +255,69 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
     ! --- Print the number of pieces of the last part
     surface_list%flux_surfaces(i_surf)%parts_index(n_parts+1) = surface_list%flux_surfaces(i_surf)%n_pieces + 1
     
+    ! --- Loop over ends of surfaces to make sure they are in the right order (first the beginnings)
+    do i=1,surface_list%flux_surfaces(i_surf)%n_parts
+      i_piece = surface_list%flux_surfaces(i_surf)%parts_index(i)
+      rr    = surface_list%flux_surfaces(i_surf)%s(1,i_piece)
+      ss    = surface_list%flux_surfaces(i_surf)%t(1,i_piece)
+      i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss,R1,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+                                                        Z1,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+      rr2    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
+      ss2    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
+      i_elm2 = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
+                                                           Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+      
+      i_piece = surface_list%flux_surfaces(i_surf)%parts_index(i) + 1
+      rr2    = surface_list%flux_surfaces(i_surf)%s(1,i_piece)
+      ss2    = surface_list%flux_surfaces(i_surf)%t(1,i_piece)
+      i_elm2 = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R3,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
+                                                           Z3,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+      
+      if ( sqrt( (R1-R3)**2 + (Z1-Z3)**2 ) .lt. sqrt( (R2-R3)**2 + (Z2-Z3)**2 ) ) then
+        index1 = surface_list%flux_surfaces(i_surf)%parts_index(i)
+        invert = .true.
+        call swap_surface_pieces(surface_list%flux_surfaces(i_surf), index1, index1, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
+      endif
+    enddo
+  
+    ! --- Loop over ends of surfaces to make sure they are in the right order (then the ends)
+    do i=1,surface_list%flux_surfaces(i_surf)%n_parts
+      i_piece = surface_list%flux_surfaces(i_surf)%parts_index(i+1) - 1
+      rr    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
+      ss    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
+      i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss,R1,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
+                                                        Z1,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+      rr2    = surface_list%flux_surfaces(i_surf)%s(1,i_piece)
+      ss2    = surface_list%flux_surfaces(i_surf)%t(1,i_piece)
+      i_elm2 = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
+                                                           Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+      
+      i_piece = surface_list%flux_surfaces(i_surf)%parts_index(i+1) - 2
+      rr2    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
+      ss2    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
+      i_elm2 = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R3,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
+                                                           Z3,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+      
+      if ( sqrt( (R1-R3)**2 + (Z1-Z3)**2 ) .lt. sqrt( (R2-R3)**2 + (Z2-Z3)**2 ) ) then
+        index1 = surface_list%flux_surfaces(i_surf)%parts_index(i+1) - 1
+        invert = .true.
+        call swap_surface_pieces(surface_list%flux_surfaces(i_surf), index1, index1, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
+      endif
+    enddo
+  
   enddo
   
+  write(*,*) 'Processing  ... 100'
+  write(*,*) 'finished reordering'
   if (debug) then
     filename = 'plot_ordered_flux_surfaces.py'
-    call print_py_plot_prepare_plot(filename)
-    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
-    call print_py_plot_wall(filename)
-    call print_py_plot_finish_plot(filename)
+    call py_plot_surface(filename,node_list,element_list,.false., .true., surface_list, -1)
   endif
   
   return
@@ -398,23 +460,23 @@ subroutine swap_surface_pieces(surface, index1, index2, invert, n_edge_pieces, i
     surface%elm(index1) = surface%elm(index2)
     surface%s(1,index1) = surface%s(3,index2)
     surface%t(1,index1) = surface%t(3,index2)
-    surface%s(2,index1) = surface%s(4,index2)
-    surface%t(2,index1) = surface%t(4,index2)
+    surface%s(2,index1) = -surface%s(4,index2)
+    surface%t(2,index1) = -surface%t(4,index2)
     surface%s(3,index1) = surface%s(1,index2)
     surface%t(3,index1) = surface%t(1,index2)
-    surface%s(4,index1) = surface%s(2,index2)
-    surface%t(4,index1) = surface%t(2,index2)
+    surface%s(4,index1) = -surface%s(2,index2)
+    surface%t(4,index1) = -surface%t(2,index2)
     
     ! --- Second piece
     surface%elm(index2) = elm_save
     surface%s(1,index2) = s_save(3)
     surface%t(1,index2) = t_save(3)
-    surface%s(2,index2) = s_save(4)
-    surface%t(2,index2) = t_save(4)
+    surface%s(2,index2) = -s_save(4)
+    surface%t(2,index2) = -t_save(4)
     surface%s(3,index2) = s_save(1)
     surface%t(3,index2) = t_save(1)
-    surface%s(4,index2) = s_save(2)
-    surface%t(4,index2) = t_save(2)
+    surface%s(4,index2) = -s_save(2)
+    surface%t(4,index2) = -t_save(2)
     
   else
     ! --- First piece
@@ -835,5 +897,14 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
   return
   
 end subroutine clean_single_surface
+
+
+
+
+
+
+
+
+
 
 

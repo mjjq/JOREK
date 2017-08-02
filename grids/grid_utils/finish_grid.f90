@@ -1,0 +1,302 @@
+subroutine finish_grid(node_list, element_list, newnode_list, newelement_list, n_grids)
+!------------------------------------------------------------------------------------------
+! subroutine defines the new nodes and elements of the final grid 
+!------------------------------------------------------------------------------------------
+
+use tr_module 
+use data_structure
+use grid_xpoint_data
+use phys_module, only: xcase
+
+implicit none
+
+! --- Routine parameters
+type (type_node_list)       , intent(inout) :: node_list
+type (type_element_list)    , intent(inout) :: element_list
+type (type_node_list)       , intent(inout) :: newnode_list
+type (type_element_list)    , intent(inout) :: newelement_list
+integer,                      intent(in)    :: n_grids(10)
+
+
+integer             :: i, j, j2, k, l, my_id, ifail, n_tmp
+integer             :: i_elm_xpoint(2), i_elm_axis
+integer             :: n_loop, n_loop2, n_start_connect
+integer             :: n_psi, n_tht_mid, n_tht_mid2
+integer	            :: n_flux, n_tht,   n_open,   n_outer,   n_inner    
+integer	            :: n_private,   n_up_priv,   n_leg,   n_up_leg
+integer	            :: index
+integer	            :: n_start_open, n_start_outer, n_start_inner
+integer	            :: n_start_private, n_start_up_priv
+integer	            :: n_xpoint_1, n_xpoint_2, n_xpoint_3, n_jump
+integer             :: iv, ivp, node_iv, node_ivp, ielm_out
+real*8, allocatable :: xp(:),yp(:)
+real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
+real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
+real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
+real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
+real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, PSI_R, PSI_Z
+real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
+character*4         :: label
+logical, parameter  :: plot_grid = .true.
+
+
+write(*,*) '*****************************************'
+write(*,*) '* X-point grid : Finalise grid          *'
+write(*,*) '*****************************************'
+
+
+
+n_tht = n_grids(2)
+
+
+
+!-------------------------------------------------------------------------------------------!
+!------------------- Adjust size of elements to get better match ---------------------------!
+!-------------------------------------------------------------------------------------------!
+write(*,*) '                 Definition of elements size '
+
+
+do k=1, newelement_list%n_elements   ! fill in the size of the elements
+  do iv = 1, 4                    ! over 4 sides of an element
+
+    ivp = mod(iv,4)   + 1         ! vertex with index one higher
+    node_iv  = newelement_list%element(k)%vertex(iv)
+    node_ivp = newelement_list%element(k)%vertex(ivp) 
+
+    if ((iv .eq. 1) .or. (iv .eq. 3)) then
+      R0 = newnode_list%node(node_iv )%X(1,1)  ; dR0 = newnode_list%node(node_iv )%X(2,1)
+      Z0 = newnode_list%node(node_iv )%X(1,2)  ; dZ0 = newnode_list%node(node_iv )%X(2,2)
+      RP = newnode_list%node(node_ivp)%X(1,1)  ; dRP = newnode_list%node(node_ivp)%X(2,1)
+      ZP = newnode_list%node(node_ivp)%X(1,2)  ; dZP = newnode_list%node(node_ivp)%X(2,2)
+    else
+      R0 = newnode_list%node(node_iv )%X(1,1)  ; dR0 = newnode_list%node(node_iv )%X(3,1)
+      Z0 = newnode_list%node(node_iv )%X(1,2)  ; dZ0 = newnode_list%node(node_iv )%X(3,2)
+      RP = newnode_list%node(node_ivp)%X(1,1)  ; dRP = newnode_list%node(node_ivp)%X(3,1)
+      ZP = newnode_list%node(node_ivp)%X(1,2)  ; dZP = newnode_list%node(node_ivp)%X(3,2)
+    endif
+
+    size_0 = 1.d0
+    size_p = 1.d0
+    denom = ( dRP * dZ0 - dR0 * dZP)
+    size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
+    size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dRP * (R0-RP) + dZP * (Z0-ZP) )
+
+    if ((R0-RP)**2 + (Z0-ZP)**2 .eq. 0.d0) then
+      size_0 = 1.d0
+      size_P = 1.d0
+    endif
+
+    if ((iv .eq. 1) .or. (iv .eq. 3)) then
+      newelement_list%element(k)%size(iv,2)  = size_0
+      newelement_list%element(k)%size(ivp,2) = size_p
+    else
+      newelement_list%element(k)%size(iv,3)  = size_0
+      newelement_list%element(k)%size(ivp,3) = size_p
+    endif
+
+  enddo
+
+  do iv=1,4
+    newelement_list%element(k)%size(iv,1) = 1.d0
+    newelement_list%element(k)%size(iv,4) = newelement_list%element(k)%size(iv,2) * newelement_list%element(k)%size(iv,3)
+  enddo
+
+  newelement_list%element(k)%father     = 0
+  newelement_list%element(k)%n_sons     = 0
+enddo
+
+
+
+
+!-------------------------------------------------------------------------------------------!
+!------------------------------ Define nodes index in the matrix ---------------------------!
+!-------------------------------------------------------------------------------------------!
+write(*,*) '                 Definition of nodes index '
+
+
+!-------------------------------- Combine multiple nodes at axis and Xpoints
+index = 0
+do i=1,newnode_list%n_nodes
+  do k=1,n_order+1
+
+    index = index + 1
+    newnode_list%node(i)%index(k) = index
+
+    ! Remove all but one node at axis
+    if (xcase .ne. 3) then
+      if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(1)
+        index = index - 1
+      endif
+    else
+      if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(9)%index(1)
+        index = index - 1
+      endif
+    endif
+    
+    ! Remove all but one node at first Xpoint
+    if ((i .eq. 2).and.(k.eq.1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 2).and.(k.eq.3)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 3).and.(k.eq.1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 3).and.(k.eq.2)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(2)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.2)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.3)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(3)%index(k)
+      index = index - 1
+    endif
+  
+    ! Remove all but one node at second Xpoint
+    if (xcase .eq. 3) then
+      if ((i .eq. 6).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 6).and.(k.eq.3)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 7).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 7).and.(k.eq.2)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(6)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.2)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.3)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(7)%index(k)
+        index = index - 1
+      endif
+    endif
+  
+  enddo  
+  newnode_list%node(i)%constrained = .false.
+enddo
+
+!-------------------------------------------------------------------------------------------!
+!--------------------------- Fill in the values into the new grid --------------------------!
+!-------------------------------------------------------------------------------------------!
+write(*,*) '                 Fill in psi-values '
+
+do i=1,newnode_list%n_nodes
+
+  R1 = newnode_list%node(i)%x(1,1)
+  Z1 = newnode_list%node(i)%x(1,2)
+
+  call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+
+  if (ifail .ne. 0) then
+    write(*,'(A,2f)')'Warning! did not find node one previous grid!',R1,Z1
+    write(*,*)'Unable to extract psi information, the grid might be flawed.'
+  endif
+  
+  call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
+                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+
+  call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
+
+  RZ_jac  = dRRg1_dr * dZZg1_ds - dRRg1_ds * dZZg1_dr
+  PSI_R  = (   dZZg1_ds * dPSg1_dr - dZZg1_dr * dPSg1_ds ) / RZ_jac
+  PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
+
+  newnode_list%node(i)%values(1,1,1) = PSg1
+  newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
+  newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
+  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
+
+  if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
+
+enddo
+
+!-------------------------------------------------------------------------------------------!
+!--------------------------- Fill in the values into the new grid --------------------------!
+!-------------------------------------------------------------------------------------------!
+write(*,*) '                 Copy new grid into old one '
+
+!-------------------------------- Empty Xpoints
+newnode_list%node(1)%values(1,2:4,1) = 0.d0
+newnode_list%node(2)%values(1,2:4,1) = 0.d0
+newnode_list%node(3)%values(1,2:4,1) = 0.d0
+newnode_list%node(4)%values(1,2:4,1) = 0.d0
+if (xcase .eq. 3) then
+  newnode_list%node(5)%values(1,2:4,1) = 0.d0
+  newnode_list%node(6)%values(1,2:4,1) = 0.d0
+  newnode_list%node(7)%values(1,2:4,1) = 0.d0
+  newnode_list%node(8)%values(1,2:4,1) = 0.d0
+endif
+
+!-------------------------------- Empty Axis
+if (xcase .ne. 3) then
+  do j=5,4+n_tht-1
+    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+  enddo
+else
+  do j=9,8+n_tht-2
+    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+  enddo
+endif
+
+
+!-------------------------------- Empty old nodes/elements
+do i=1,node_list%n_nodes
+  node_list%node(i)%x        = 0.d0
+  node_list%node(i)%values   = 0.d0
+  node_list%node(i)%index    = 0
+  node_list%node(i)%boundary = 0
+enddo
+node_list%n_nodes = 0
+
+do i=1,element_list%n_elements
+  element_list%element(i)%vertex     = 0
+  element_list%element(i)%size       = 0.d0
+  element_list%element(i)%neighbours = 0
+enddo
+
+!---------------------------- copy new grid into nodes/elements
+node_list%n_nodes = newnode_list%n_nodes
+node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+
+element_list%n_elements = newelement_list%n_elements
+element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+
+
+!----temporary, needs to be completed, neighbour and boundary information
+call update_neighbours_basic(element_list,node_list)
+call update_boundary_types(element_list,node_list, .true.)
+
+my_id = 0 !Now we want the output...
+call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+
+return
+end subroutine finish_grid

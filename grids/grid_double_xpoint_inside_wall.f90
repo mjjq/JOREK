@@ -8,9 +8,11 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
+use mod_export_restart
 
 ! --- Input parameters
 use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg, 	&
+                           n_leg_out, n_up_leg_out,	&
                            SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,	&
                            SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,                               	&
                            dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,                  	&
@@ -25,6 +27,12 @@ type (type_element_list), intent(inout) :: element_list
 ! --- local variables
 type (type_surface_list) :: flux_list, sep_list
 
+type (type_node_list),    pointer :: node_list_inner_leg,    node_list_outer_leg
+type (type_element_list), pointer :: element_list_inner_leg, element_list_outer_leg
+
+type (type_node_list),    pointer :: node_list_tmp,    node_list_tmp2,    node_list_new
+type (type_element_list), pointer :: element_list_tmp, element_list_tmp2, element_list_new
+
 type (type_strategic_points) , pointer     :: stpts
 type (type_new_points)       , pointer     :: nwpts
 
@@ -35,7 +43,7 @@ integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), ifail
 integer             :: my_id
 real*8              :: psi_bnd, psi_bnd2
 real*8              :: sigmas(16)
-integer             :: n_grids(10)
+integer             :: n_grids(12)
 
 my_id  = 1 ! Just don't want the printout...
 
@@ -94,7 +102,8 @@ n_grids(1) = n_flux   ; n_grids(2) = n_tht
 n_grids(3) = n_open   ; n_grids(4) = n_outer  ; n_grids(5) = n_inner
 n_grids(6) = n_private; n_grids(7) = n_up_priv
 n_grids(8) = n_leg    ; n_grids(9) = n_up_leg
-n_grids(10)= 0 ! keep for n_tht_outer, which determines the angle of second Xpoint
+n_grids(10)= n_leg_out; n_grids(11)= n_up_leg_out
+!n_grids(10)= 0 ! keep for n_tht_outer, which determines the angle of second Xpoint
 
 !-------------------------------------------------------------------------------------------!
 !----------------------------- Find MagAxis and Xpoint -------------------------------------!
@@ -154,8 +163,6 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 
 
 
-
-
 !-------------------------------------------------------------------------------------------!
 !-------- Find all strategic points (leg corners, strike points and private middles) -------!
 !-------------------------------------------------------------------------------------------!
@@ -169,19 +176,108 @@ call find_strategic_points_advanced(node_list, element_list, flux_list, xcase, f
 !-------------- Find new grid points by crossing polar and radial coordinates --------------!
 !-------------------------------------------------------------------------------------------!
 
-!-------------------------------- Call the routine
-call define_new_grid_points(node_list, element_list, flux_list, &
-                             xcase, R_xpoint, Z_xpoint, psi_xpoint, n_grids, stpts, sigmas, nwpts)
+! --- Allocate data structures for new nodes and initialize them
+allocate(node_list_inner_leg,node_list_outer_leg,node_list_tmp,node_list_tmp2,node_list_new)
+call tr_register_mem(sizeof(node_list_inner_leg),"node_list_inner_leg")
+call tr_register_mem(sizeof(node_list_outer_leg),"node_list_outer_leg")
+call tr_register_mem(sizeof(node_list_tmp),"node_list_tmp")
+call tr_register_mem(sizeof(node_list_tmp2),"node_list_tmp2")
+call tr_register_mem(sizeof(node_list_new),"node_list_new")
+
+! --- Allocate data structures for new elements and initialize them
+allocate(element_list_inner_leg,element_list_outer_leg,element_list_tmp,element_list_tmp2,element_list_new)
+call tr_register_mem(sizeof(element_list_inner_leg),"element_list_inner_leg")
+call tr_register_mem(sizeof(element_list_outer_leg),"element_list_outer_leg")
+call tr_register_mem(sizeof(element_list_tmp),"element_list_tmp")
+call tr_register_mem(sizeof(element_list_tmp2),"element_list_tmp2")
+call tr_register_mem(sizeof(element_list_new),"element_list_new")
 
 
+!-------------------------------- Respline flux surfaces
+call respline_flux_surfaces(node_list,element_list,flux_list)
 
-!-------------------------------------------------------------------------------------------!
-!---------------------- Define the final grid (new nodes and new elements) -----------------!
-!-------------------------------------------------------------------------------------------!
 
-!-------------------------------- Call the routine
-call define_final_grid(node_list, element_list, flux_list, &
-		       xcase, n_grids, stpts, nwpts)
+!-------------------------------- First the Central part
+call define_central_grid(node_list, element_list, flux_list, &
+                         xcase, n_grids, stpts, sigmas, nwpts, node_list_tmp,  element_list_tmp)
+call update_neighbours_basic(element_list_tmp,node_list_tmp)
+call update_boundary_types  (element_list_tmp,node_list_tmp, .true.)
+
+!-------------------------------- Then the lower inner leg
+call define_leg_grid(node_list, element_list, node_list_inner_leg, element_list_inner_leg, &
+                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 1)
+call update_neighbours_basic(element_list_inner_leg,node_list_inner_leg)
+call update_boundary_types  (element_list_inner_leg,node_list_inner_leg, .false.)
+
+!-------------------------------- Then the lower outer leg
+call define_leg_grid(node_list, element_list, node_list_outer_leg, element_list_outer_leg, &
+                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 2)
+call update_neighbours_basic(element_list_outer_leg,node_list_outer_leg)
+call update_boundary_types  (element_list_outer_leg,node_list_outer_leg, .false.)
+
+!-------------------------------- Join the lower legs together
+call join_grid_patches(node_list_inner_leg, element_list_inner_leg, &
+                       node_list_outer_leg, element_list_outer_leg, &
+                       node_list_tmp2,      element_list_tmp2, xcase)
+call update_neighbours_basic(element_list_tmp2,node_list_tmp2)
+call update_boundary_types  (element_list_tmp2,node_list_tmp2, .true.)
+
+!-------------------------------- Join lower legs with main part
+call join_grid_patches(node_list_tmp,  element_list_tmp,  &
+                       node_list_tmp2, element_list_tmp2, &
+                       node_list_new,  element_list_new, xcase)
+call update_neighbours_basic(element_list_new,node_list_new)
+call update_boundary_types  (element_list_new,node_list_new, .true.)
+
+!-------------------------------- Then the Upper inner leg
+call define_leg_grid(node_list, element_list, node_list_inner_leg, element_list_inner_leg, &
+                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 3)
+call update_neighbours_basic(element_list_inner_leg,node_list_inner_leg)
+call update_boundary_types  (element_list_inner_leg,node_list_inner_leg, .false.)
+
+!-------------------------------- Then the Upper outer leg
+call define_leg_grid(node_list, element_list, node_list_outer_leg, element_list_outer_leg, &
+                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 4)
+call update_neighbours_basic(element_list_outer_leg,node_list_outer_leg)
+call update_boundary_types  (element_list_outer_leg,node_list_outer_leg, .false.)
+
+!-------------------------------- Join the upper legs together
+call join_grid_patches(node_list_inner_leg, element_list_inner_leg, &
+                       node_list_outer_leg, element_list_outer_leg, &
+                       node_list_tmp,       element_list_tmp, xcase)
+call update_neighbours_basic(element_list_tmp,node_list_tmp)
+call update_boundary_types  (element_list_tmp,node_list_tmp, .true.)
+
+!-------------------------------- Join upper legs with rest of the grid
+call join_grid_patches(node_list_new,  element_list_new, &
+                       node_list_tmp,  element_list_tmp, &
+                       node_list_tmp2, element_list_tmp2, xcase)
+call update_neighbours_basic(element_list_tmp2,node_list_tmp2)
+call update_boundary_types  (element_list_tmp2,node_list_tmp2, .true.)
+
+
+!-------------------------------- Finalise grid (element size, nodes index etc.)
+call finish_grid(node_list, element_list, node_list_tmp2, element_list_tmp2, n_grids)
+!call export_restart(node_list, element_list, 'jorek_restart')
+stop
+
+
+! --- Deallocate data structures for new nodes and initialize them
+deallocate(node_list_inner_leg,node_list_outer_leg,node_list_tmp,node_list_tmp2,node_list_new)
+call tr_unregister_mem(sizeof(node_list_inner_leg),"node_list_inner_leg")
+call tr_unregister_mem(sizeof(node_list_outer_leg),"node_list_outer_leg")
+call tr_unregister_mem(sizeof(node_list_tmp),"node_list_tmp")
+call tr_unregister_mem(sizeof(node_list_tmp2),"node_list_tmp2")
+call tr_unregister_mem(sizeof(node_list_new),"node_list_new")
+
+! --- Deallocate data structures for new elements and initialize them
+deallocate(element_list_inner_leg,element_list_outer_leg,element_list_tmp,element_list_tmp2,element_list_new)
+call tr_register_mem(sizeof(element_list_inner_leg),"element_list_inner_leg")
+call tr_register_mem(sizeof(element_list_outer_leg),"element_list_outer_leg")
+call tr_register_mem(sizeof(element_list_tmp),"element_list_tmp")
+call tr_register_mem(sizeof(element_list_tmp2),"element_list_tmp2")
+call tr_register_mem(sizeof(element_list_new),"element_list_new")
+
 
 
 !-------------------------------- Deallocate data

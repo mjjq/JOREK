@@ -16,6 +16,7 @@ use mod_fieldline_euler
 ! Fields
 use mod_fields
 use mod_fields_linear
+use mod_fields_hermite_birkhoff
 
 ! ADAS
 use mod_openadas

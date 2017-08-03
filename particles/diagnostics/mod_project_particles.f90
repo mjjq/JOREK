@@ -249,7 +249,7 @@ use mod_basisfunctions
 use mpi
 implicit none
 
-type (type_node_list), intent(inout) :: node_list !< A copy of the node list which will be used to save variables
+type (type_node_list), intent(in)    :: node_list !< A copy of the node list which will be used to save variables
 type (type_element_list), intent(in) :: element_list
 type (DMUMPS_STRUC), intent(inout)   :: mumps_par
 real*8, intent(in)                   :: smoothing

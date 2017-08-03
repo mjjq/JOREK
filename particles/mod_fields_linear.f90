@@ -34,7 +34,7 @@ end interface read_jorek_fields_interp_linear
 type, extends(fields_base) :: jorek_fields_interp_linear
   real*8 :: time_now  = 0.d0 !< Time of current restart file (SI units)
   real*8 :: time_prev = 0.d0!< Time of previous restart file (SI units)
-  logical :: static = .false. !< If true do not due time interpolation
+  logical :: static = .false. !< If true do not do time interpolation
   contains
     procedure :: interp_PRZ => do_interp_PRZ
 end type jorek_fields_interp_linear
@@ -215,7 +215,9 @@ subroutine do_read(this, sim, ev)
   else
     allocate(jorek_fields_interp_linear::sim%fields)
   end if
-
+  if (.not. allocated(sim%fields%node_list)) allocate(sim%fields%node_list)
+  if (.not. allocated(sim%fields%element_list)) allocate(sim%fields%element_list)
+  
   ! Continue for jorek_fields_interp_linear
   select type (f => sim%fields)
   type is (jorek_fields_interp_linear)

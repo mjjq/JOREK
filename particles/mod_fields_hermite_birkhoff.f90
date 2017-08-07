@@ -2,15 +2,18 @@
 !> in JOREK restart files. Contains an action to read the fields.
 !>
 !> This module calculates a finite-difference approximation to the time-derivative
-!> and stores this in the deltas. We need 3 restart files to contain all the info.
+!> and stores this in the deltas.
 !>
-!> We have 3 different node lists (the one in fields_base and 2 others) and cycle
-!> through these. The reader does some preprocessing to calculate the derivatives
-!> and store these in deltas. If the number of steps between restart files is 1
-!> we only need to read every other file and can keep the same algorithm.
+!> We create a ring buffer https://en.wikipedia.org/wiki/Circular_buffer to
+!> store the node_lists we will interpolate from.
+!> This contains the values at 3 or 4 different timesteps, with derivatives
+!> calculated for all (i.e. 1 or 2) intermediate timesteps.
+!> We implement this as a starting index into the array for the oldest stored
+!> timestep, plus a length. We also store the times.
 !>
 !> WARNING: There is no guarantee that fields%node_list contains the values at the
-!> current timestep. The only use for this is to get the structure of the grid,
+!> current timestep. It will contain the most recently read node_list.
+!> The only use for this is to get the structure of the grid,
 !> which is assumed not to change. For all other uses please call the interp_PRZ
 !> function.
 module mod_fields_hermite_birkhoff
@@ -42,26 +45,42 @@ end interface read_jorek_fields_interp_hermite_birkhoff
 !> Store enough data for interpolation in time.
 !> This does not work for changing grids in time!
 !> Use at your own peril in that case. (e.g. i_elm and s,t for a specific spatial position might depend on time)
-!> {node,element}_list_{B,C} contain the other lists to interpolate with.
-!> The order is always cyclical, and can be described with the number describing
-!> the oldest file. (1=A, 2=B, 3=C)
+!>
+!> We use a kind of ring buffer to store the node lists
+integer, parameter :: NL = 4 !< number of node_lists
 type, extends(fields_base) :: jorek_fields_interp_hermite_birkhoff
-  real*8 :: t_A, t_B, t_C !< Time of restart files (SI).
-  real*8 :: dt_AB, dt_BC !< Time between restart files (SI)
-  integer*1 :: oldest = 2 !< B is the oldest file in the beginning, A is the newest
+  type(type_node_list), allocatable, dimension(:)    :: node_lists    !< Ring buffer of node lists
+  type(type_element_list), allocatable, dimension(:) :: element_lists !< Ring buffer of element lists
+  real*8, dimension(NL) :: t !< Time at each restart file (SI units)
 
-  type(type_node_list), allocatable    :: node_list_B, node_list_C
-  type(type_element_list), allocatable :: element_list_B, node_list_C
+  integer :: start = 1 !< Index in the ring buffer of the oldest file
+  integer :: len = 0
   contains
     procedure :: interp_PRZ => do_interp_PRZ
+    procedure, nopass :: mask !< Map number to 1..NL
+    procedure :: ind !< Return (array of) indices into 1..NL (start+i etc)
 end type jorek_fields_interp_hermite_birkhoff
 contains
+!> The correct indexing operation for our ring buffer
+pure function mask(i)
+  integer, intent(in) :: i
+  integer :: mask
+  mask = mod(i-1,NL)+1
+end function mask
+!> Convert an index in the ring buffer into an array index
+elemental function ind(f, j)
+  class(jorek_fields_interp_hermite_birkhoff), intent(in) :: f
+  integer, intent(in) :: j !< fortran-style index (1-based)
+  integer :: ind !< Array index for node_lists etc corresponding to element j
+  ind = mask(f%start+j-1)
+end function ind
+
 
 !> Interpolate a variable at a specific position (with phi), with first derivatives only
 pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
   use mod_interp_PRZ
   use constants, only: mu_zero, mass_proton
-  use phys_module, only: tstep, central_mass, central_density
+  use phys_module, only: central_mass, central_density
   class(jorek_fields_interp_hermite_birkhoff),  intent(in)  :: this
   real*8,                   intent(in)  :: time !< Time at which to calculate this variable
   integer,                  intent(in)  :: i_elm
@@ -72,34 +91,32 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
 
   real*8, dimension(n_v,4,4) :: V !< n_var, (P, P_s, P_t, P_phi), (interp, interp, delta, delta)
   real*8 :: t_norm
-  integer :: i, j
+  integer :: i1, i2, j
 
   t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
-  if (this%other_latest) then
-    i = 1
-    j = 2
-  else
-    i = 2
-    j = 1
-  end if
-  call       interp_PRZ(this%node_list,this%element_list,            i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,i),   V(:,2,i),   V(:,3,i),   V(:,4,i),   R,R_s,R_t,Z,Z_s,Z_t)
-  call       interp_PRZ(this%node_list_other,this%element_list_other,i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,j),   V(:,2,j),   V(:,3,j),   V(:,4,j),   R,R_s,R_t,Z,Z_s,Z_t)
-  call interp_PRZ_delta(this%node_list,this%element_list,            i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,i+2), V(:,2,i+2), V(:,3,i+2), V(:,4,i+2), R,R_s,R_t,Z,Z_s,Z_t)
-  call interp_PRZ_delta(this%node_list_other,this%element_list_other,i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,j+2), V(:,2,j+2), V(:,3,j+2), V(:,4,j+2), R,R_s,R_t,Z,Z_s,Z_t)
-  ! Transform to time-derivatives:
-  V(:,:,3) = V(:,:,3)/this%dt_prev
-  V(:,:,4) = V(:,:,4)/this%dt_next
+  ! Determine between which sets to interpolate by selecting
+  ! t_i <= t_now and taking the last true and first false value.
+  do j=1,this%len
+    if (this%t(this%ind(j)) .gt. time) exit ! the loop
+  end do
+  i1 = this%ind(j-1)
+  i2 = this%ind(j)
 
-  call HB_interp(this%time_prev, this%time_next, n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P)
-  call HB_interp(this%time_prev, this%time_next, n_v, V(:,2,1), V(:,2,2), V(:,2,3), V(:,2,4), time, P_s)
-  call HB_interp(this%time_prev, this%time_next, n_v, V(:,3,1), V(:,3,2), V(:,3,3), V(:,3,4), time, P_t)
-  call HB_interp(this%time_prev, this%time_next, n_v, V(:,4,1), V(:,4,2), V(:,4,3), V(:,4,4), time, P_phi)
-  call HB_interp_dt(this%time_prev, this%time_next, n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P_time)
+  call       interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,1), V(:,2,1), V(:,3,1), V(:,4,1),   R,R_s,R_t,Z,Z_s,Z_t)
+  call       interp_PRZ(this%node_lists(i2),  this%element_lists(i2),i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,2), V(:,2,2), V(:,3,2), V(:,4,2),   R,R_s,R_t,Z,Z_s,Z_t)
+  call interp_PRZ_delta(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t)
+  call interp_PRZ_delta(this%node_lists(i2),  this%element_lists(i2),i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t)
+
+  call HB_interp(this%t(i1), this%t(i2), n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P)
+  call HB_interp(this%t(i1), this%t(i2), n_v, V(:,2,1), V(:,2,2), V(:,2,3), V(:,2,4), time, P_s)
+  call HB_interp(this%t(i1), this%t(i2), n_v, V(:,3,1), V(:,3,2), V(:,3,3), V(:,3,4), time, P_t)
+  call HB_interp(this%t(i1), this%t(i2), n_v, V(:,4,1), V(:,4,2), V(:,4,3), V(:,4,4), time, P_phi)
+  call HB_interp_dt(this%t(i1), this%t(i2), n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P_time)
 end subroutine do_interp_PRZ
 
 
@@ -120,19 +137,38 @@ end function new_read_jorek_fields_interp_hermite_birkhoff
 
 
 
-!> Read jorek fields from the next restart file
+!> Read jorek fields from the next restart file.
+!>
+!> This routine needs to handle setting up the first two files and reading the
+!> next file in the sequence.
+!>
+!> For the initial read we read the first file, containing info about
+!> timestep i (values) and i-1 (deltas). This is transformed into two node
+!> lists in the ring buffer.
+
+!> Any subsequent read is simple. We read the next file i(jend)+N (try N=2,1,3+)
+!> containing i+N (values) and i+N-1 (deltas) (N>=1).
+!> If N == 1 we have overlap and only need to store the values in the third slot
+!> in the ring buffer. If N > 1 we can store two node lists and the buffer is
+!> full.
+!> Now we can calculate the derivatives of the middle one or two fields. These
+!> we store in the deltas (changing the meaning from delta to derivative!).
+!> The oldest element in the ring buffer can now be reclaimed and we can
+!> interpolate from the next oldest element onwards.
+!> The next read action is set for the time when we run out of derivatives, i.e.
+!> t(jend-1).
 subroutine do_read(this, sim, ev)
-  use mod_import_restart
-  use phys_module
+  use phys_module, only: central_mass, central_density, t_start, tstep
+  use constants, only: mu_zero, mass_proton
   use mpi
   class(read_jorek_fields_interp_hermite_birkhoff), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), optional :: ev
   character(len=80) :: restart_file
-  integer :: i, ierr, my_id
+  integer :: i, j, k, di, ierr, my_id, i1, is(3), dt(2)
   logical :: file_exists, next_file_found
 
-  real*8 :: t_norm
+  real*8 :: t_norm, invdet
   t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
@@ -155,82 +191,205 @@ subroutine do_read(this, sim, ev)
   ! Continue for jorek_fields_interp_hermite_birkhoff
   select type (f => sim%fields)
   type is (jorek_fields_interp_hermite_birkhoff)
-    if (.not. allocated(f%node_list_B)) allocate(f%node_list_B)
-    if (.not. allocated(f%element_list_B)) allocate(f%element_B)
-    if (.not. allocated(f%node_list_C)) allocate(f%node_list_C)
-    if (.not. allocated(f%element_list_C)) allocate(f%element_C)
+    if (.not. allocated(f%node_lists)) allocate(f%node_lists(NL))
+    if (.not. allocated(f%element_lists)) allocate(f%element_lists(NL))
 
-    ! If nothing has been loaded (i.e. fields%time_prev = 0.d0) load the initial file
-    if (abs(f%time_prev) .lt. 1.d-50) then
-      write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
-      inquire(file=trim(restart_file), exist=file_exists)
-      if (file_exists) then
-        call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
-        f%dt_next = tstep*t_norm
-        call update_neighbours(f%element_list, f%node_list)
-        if (ierr .ne. 0) then
-          if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
-          call exit(1)
-        else
-          f%time_prev = t_start*t_norm ! set by import_hdf5_restart
-          ! Set sim%time to this time also, to start at the right point
-          if (sim%time .gt. 1d-16) then ! check if this is the right file if we have already set a time
-            if (sim%time .le. f%time_prev) then
-              if (my_id .eq. 0) write(*,*) "ERROR: restart file read that is too far in the future"
-            end if
-          else ! otherwise set the time to the time of this file
-            sim%time = f%time_prev
+    ! If nothing has been loaded load the initial file
+    if (f%len .eq. 0) then
+      this%i = this%i-1 ! trick to reuse normal reading code
+      call read_next_file(this, f, i, prefer_plus_2=.false.)
+      this%i = i
+      call update_neighbours(f%element_list, f%node_list)
+      call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
+        tstep*t_norm, from_deltas=.true.)
+      ! Set sim%time to this time also, to start at the right point
+      if (sim%time .gt. 1d-16) then ! check if this is the right file if we have already set a time
+        if (sim%time .lt. f%t(f%ind(f%len))) then
+          if (my_id .eq. 0) then
+            write(*,*) "ERROR: restart file read that is too far in the future"
+            call exit(1)
           end if
-          if (my_id .eq. 0) write(*,"(A,f9.8,A)") "Read initial restart file, set t=", f%time_prev, " [s]"
         end if
-      else
-        if (my_id .eq. 0) write(*,*) "ERROR: cannot read initial file ", trim(restart_file)
-        call exit(1)
+      else ! otherwise set the time to the time of this file
+        sim%time = f%t(f%ind(f%len))
       end if
-    end if
-      
-    ! Find the following file (next timestep number)
-    next_file_found=.false.
-    do i=this%i+1,this%i+20 ! check 20 files ahead
-      write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
-      inquire(file=trim(restart_file), exist=file_exists)
-      if (file_exists) then
-        next_file_found=.true.
-        if (.not. f%other_latest) then ! if f%node_list contained the latest values
-          call import_hdf5_restart(f%node_list_other,f%element_list_other,trim(restart_file),this%rst_format,my_id,ierr)
-          call update_neighbours(f%element_list_other, f%node_list_other)
-        else
-          call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
-          call update_neighbours(f%element_list, f%node_list)
-        end if
-        f%dt_prev = f%dt_next
-        f%dt_next = tstep*t_norm
-        f%other_latest = .not. f%other_latest
-        if (ierr .ne. 0) then
-          if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
-          call exit(1)
-        else
-          f%time_next = t_start*t_norm ! Set by import_merge_restart
-          if (my_id .eq. 0 .and. i-this%i .gt. 1) write(*,"(i2,A)") i-this%i, " JOREK steps between restarts"
-          if (my_id .eq. 0 .and. i-this%i .le. 2) write(*,*) "WARNING: not enough JOREK steps between restart files for HB interpolation."
-          this%i=i
-          ! set the time to run this event at next
-          if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%time_next, " [s]"
-          if (present(ev)) then
-            ev%start = f%time_next
-            if (my_id .eq. 0) write(*,*) "Set time for next restart file read to ", ev%start
-          end if
-          exit ! the file-finding loop
-        end if
-      endif
-    enddo
-    if (.not. next_file_found) then
-      if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
-      call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+
+      ! Now read the next file
+      call read_next_file(this, f, i, prefer_plus_2=.true.)
+      call update_neighbours(f%element_list, f%node_list)
+      call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
+        tstep*t_norm, from_deltas=this%i - i .ge. 2)
+      ! note that t_start is set in import_hdf5_restart instead of t_now
+      this%i = i ! update index of latest file read
+      ! Now we have 3 or 4 time points in our list
+
+      ! Finally we need to calculate the derivatives of the middle points (1 or
+      ! 2 points)
+      do j=2,f%len-1
+        call interp_derivatives(f, j)
+      end do
+
+      ! Now we can remove the first element
+      f%start = f%ind(2)
+      f%len = f%len-1
+      ! And we finish with 2 or 3 timesteps in the buffer
+
+      if (my_id .eq. 0) write(*,"(A,f9.8,A)") "Read initial restart file, set t=", sim%time, " [s]"
+      if (present(ev)) then
+        ev%start = f%t(f%ind(f%len-1)) ! read again at next-to-last file
+        if (my_id .eq. 0) write(*,*) "Set time for next restart file read to ", ev%start
+      end if
+
+
+    else
+
+      ! Incremental read. We are now roughly at f%t(f%ind(f%len-1)) (i.e. time
+      ! of next-to-last step)
+
+      ! Drop old steps. All except the last 2
+      f%start = f%ind(f%len-1)
+      f%len = 2
+
+
+      ! Do an incremental read
+      call read_next_file(this, f, i, prefer_plus_2=.true.)
+      if (my_id .eq. 0) write(*,"(i2,A)") i-this%i, " JOREK steps between restarts"
+      call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
+        tstep*t_norm, from_deltas=this%i - i .ge. 2)
+        ! note that t_start is set in import_hdf5_restart instead of t_now
+      this%i=i ! set index of last-read file
+
+      do j=2,f%len-1
+        call interp_derivatives(f, j)
+      end do
+
+      ! set the time to run this event at next
+      if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%t(f%ind(f%len-1)), " [s]"
+      if (present(ev)) then
+        ev%start = f%t(f%ind(f%len-1)) ! read again at next-to-last file
+        if (my_id .eq. 0) write(*,*) "Set time for next restart file read to ", ev%start
+      end if
     end if
 
   class default
     if (my_id .eq. 0) write(*,*) "ERROR, do_read called with wrong sim%fields"
   end select
 end subroutine do_read
+
+
+!> Starting from i+2 (if prefer_plus_2=.true.), i+1, i+N search for a next file and read it into
+!> f%node_list, f%element_list
+subroutine read_next_file(this, f, i_found, prefer_plus_2)
+  use mod_import_restart
+  use phys_module
+  use mpi
+  class(read_jorek_fields_interp_hermite_birkhoff), intent(inout) :: this
+  class(jorek_fields_interp_hermite_birkhoff), intent(inout) :: f
+  integer, intent(out) :: i_found
+  logical, optional, intent(in) :: prefer_plus_2 !< Set to true if we need to
+  !< check for the presence of this%i+2 first
+
+  character(len=80) :: restart_file
+  integer :: i, j, k, di, ierr, my_id
+  logical :: file_exists, next_file_found, flip_i12 = .false.
+
+  real*8 :: t_norm, invdet
+  t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
+
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  if (present(prefer_plus_2)) then
+    if (prefer_plus_2) flip_i12 = .true.
+  end if
+
+  ! Find the following file (next timestep number)
+  next_file_found=.false.
+  do di=1,20
+    if (di .le. 2 .and. flip_i12) then ! flip first and second element to search to save effort reading
+      i = this%i + (3-di)
+    else
+      i = this%i + di
+    end if
+    write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
+    inquire(file=trim(restart_file), exist=file_exists)
+    if (file_exists) then
+      next_file_found=.true.
+
+      ! Read the next restart file
+      call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
+      if (ierr .ne. 0) then
+        if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
+        call exit(1)
+      else
+        exit ! the file-finding loop
+      end if
+    endif
+  enddo
+  if (.not. next_file_found) then
+    if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
+    call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+    i_found = 0
+  else
+    i_found = i
+  end if
+end subroutine read_next_file
+
+!> Interpolate derivatives at a time j by nonuniform finite differences
+!> j must be between 2 and f%len-1
+pure subroutine interp_derivatives(f, j)
+  class(jorek_fields_interp_hermite_birkhoff), intent(inout) :: f
+  integer, intent(in) :: j !< index of time to interpolate at. Must be between
+  !< 2 and f%len-1
+  integer :: k, is(3)
+  real*8 :: invdet, dt(2)
+
+  is = f%ind([j-1,j,j+1])
+  dt = [f%t(is(2))-f%t(is(1)), f%t(is(3))-f%t(is(2))]
+  invdet = 1.d0/(dt(1)*(dt(1)+dt(2))*dt(2))
+  do k=1,f%node_lists(is(2))%n_nodes
+    f%node_lists(is(2))%node(k)%deltas = (&
+        -dt(2)**2*f%node_lists(is(1))%node(k)%values &
+      + (dt(2)**2-dt(1)**2)*f%node_lists(is(2))%node(k)%values &
+      + dt(1)**2*f%node_lists(is(3))%node(k)%values) &
+      * invdet
+  end do
+end subroutine interp_derivatives
+
+!> Append a node and element list to the fields array
+pure subroutine append_to_fields(f, node_list, element_list, t, dt, from_deltas)
+  class(jorek_fields_interp_hermite_birkhoff), intent(inout) :: f
+  type(type_node_list), intent(in) :: node_list
+  type(type_element_list), intent(in) :: element_list
+  real*8, intent(in) :: t, dt !< Time and timestep in SI units
+  logical, intent(in) :: from_deltas
+  integer :: i1, i2
+
+  if (.not. from_deltas) then
+    i1 = f%ind(f%len+1)
+    f%node_lists(i1)    = node_list
+    f%element_lists(i1) = element_list
+    f%t(i1)             = t
+    f%len = f%len+1
+  else
+    i1 = f%ind(f%len+1)
+    i2 = f%ind(f%len+2)
+    f%node_lists(i1)         = node_list
+    f%element_lists(i1)      = element_list
+    call node_list_deltas_to_values(f%node_lists(i1))
+    f%node_lists(i2)    = node_list
+    f%element_lists(i2) = element_list
+    f%t(i1) = t - dt
+    f%t(i2) = t
+    f%len = f%len+2
+  end if
+end subroutine append_to_fields
+
+!> Subtract deltas from values to get the values at the previous timestep.
+!> Deltas = f(i) - f(i-1) => f(i-1) = f(i) - deltas
+pure subroutine node_list_deltas_to_values(node_list)
+  type(type_node_list), intent(inout) :: node_list
+  integer :: i
+  do i=1,node_list%n_nodes
+    node_list%node(i)%values = node_list%node(i)%values - node_list%node(i)%deltas
+  end do
+end subroutine node_list_deltas_to_values
 end module mod_fields_hermite_birkhoff

@@ -73,14 +73,21 @@ end interface
 contains
 !> Constructor for an event
 !> This is needed to allow changing default values
-function new_event(act, start, step, end)
+function new_event(act, start, step, end, sync_groups, sync_groups_none)
   type(event), target           :: new_event
   class(action), intent(in)     :: act
   real*8, intent(in), optional  :: start, step, end
+  integer, dimension(:), intent(in), optional :: sync_groups !< Groups to sync
+  logical, intent(in), optional :: sync_groups_none !< Sync no groups. If sync_groups is present that takes precedence
   if (present(start))    new_event%start    = start
   if (present(step))     new_event%step     = step
   if (present(end))      new_event%end      = end
   allocate(new_event%action, source=act) ! because assignment is not yet supported in gfortran 6.1.1
+  if (present(sync_groups)) then
+    new_event%sync_groups = sync_groups
+  else
+    if (present(sync_groups_none)) allocate(new_event%sync_groups(0))
+  end if
 end function new_event
 
 !> Should this event run at this time?

@@ -79,8 +79,6 @@ end function ind
 !> Interpolate a variable at a specific position (with phi), with first derivatives only
 pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
   use mod_interp_PRZ
-  use constants, only: mu_zero, mass_proton
-  use phys_module, only: central_mass, central_density
   class(jorek_fields_interp_hermite_birkhoff),  intent(in)  :: this
   real*8,                   intent(in)  :: time !< Time at which to calculate this variable
   integer,                  intent(in)  :: i_elm
@@ -90,10 +88,7 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
 
   real*8, dimension(n_v,4,4) :: V !< n_var, (P, P_s, P_t, P_phi), (interp, interp, delta, delta)
-  real*8 :: t_norm
   integer :: i1, i2, j
-
-  t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
   ! Determine between which sets to interpolate by selecting
   ! t_i <= t_now and taking the last true and first false value.
@@ -102,14 +97,17 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   end do
   i1 = this%ind(j-1)
   i2 = this%ind(j)
+#ifdef DEBUG
+  if (j .eq. this%len) i2 = 99999 ! intentional segfault for debugging
+#endif
 
   call       interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
     V(:,1,1), V(:,2,1), V(:,3,1), V(:,4,1),   R,R_s,R_t,Z,Z_s,Z_t)
-  call       interp_PRZ(this%node_lists(i2),  this%element_lists(i2),i_elm,i_v,n_v,s,t,phi, &
+  call       interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
     V(:,1,2), V(:,2,2), V(:,3,2), V(:,4,2),   R,R_s,R_t,Z,Z_s,Z_t)
   call interp_PRZ_delta(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
     V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t)
-  call interp_PRZ_delta(this%node_lists(i2),  this%element_lists(i2),i_elm,i_v,n_v,s,t,phi, &
+  call interp_PRZ_delta(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
     V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t)
 
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P)
@@ -218,7 +216,7 @@ subroutine do_read(this, sim, ev)
       call read_next_file(this, f, i, prefer_plus_2=.true.)
       call update_neighbours(f%element_list, f%node_list)
       call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
-        tstep*t_norm, from_deltas=this%i - i .ge. 2)
+        tstep*t_norm, from_deltas=i - this%i .ge. 2)
       ! note that t_start is set in import_hdf5_restart instead of t_now
       this%i = i ! update index of latest file read
       ! Now we have 3 or 4 time points in our list
@@ -253,9 +251,10 @@ subroutine do_read(this, sim, ev)
 
       ! Do an incremental read
       call read_next_file(this, f, i, prefer_plus_2=.true.)
+      call update_neighbours(f%element_list, f%node_list)
       if (my_id .eq. 0) write(*,"(i2,A)") i-this%i, " JOREK steps between restarts"
       call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
-        tstep*t_norm, from_deltas=this%i - i .ge. 2)
+        tstep*t_norm, from_deltas=i - this%i .ge. 2)
         ! note that t_start is set in import_hdf5_restart instead of t_now
       this%i=i ! set index of last-read file
 

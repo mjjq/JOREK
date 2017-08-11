@@ -148,8 +148,6 @@ else
 endif
 psi_limit = psi_bnd
 
-write(*,*) "CHECK POINT 00:", psi_axis, psi_xpoint
-
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
@@ -170,7 +168,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
 !$omp          central_mass, pellets, abl_history, psi_surfaces, id_surfaces,                  &
 !$omp          n_spi, using_spi, flag_spi, local_count_surfaces, local_vol_surfaces,           &
-!$omp          ng_radius_ratio, ng_radius_min, ng_radius, local_rho_surfaces,                  &
+!$omp          ng_radius_ratio, ng_radius_min, ng_radius, local_rho_surfaces, flag_spi_size,   &
 #endif
 !$omp          wgauss_copy)                                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i, i_surface,            &

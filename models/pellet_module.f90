@@ -250,7 +250,6 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
     pellets(i)%spi_Vel_R   = pellets(i)%spi_Vel_R
     pellets(i)%spi_Vel_Z   = pellets(i)%spi_Vel_Z
     pellets(i)%spi_Vel_RxZ = pellets(i)%spi_Vel_RxZ
-    !pellets(i)%spi_radius  = spi_radiusref
 
     if (pellets(i)%spi_radius > 0.0) then
       pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &

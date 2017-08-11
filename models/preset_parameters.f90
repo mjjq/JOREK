@@ -345,7 +345,7 @@ subroutine preset_parameters
      spi_Vel_Rref    = 0.0d0
      spi_Vel_Zref    = 0.0d0
      spi_Vel_RxZref  = 0.0d0
-     spi_radiusref   = 8.0d-2 
+     spi_quantity    = 0.0
      ng_radius_ratio = 1.4d0
      ng_radius_min   = 8.d-2
      spi_Vel_diff    = 0.0
@@ -364,6 +364,9 @@ subroutine preset_parameters
      id_surfaces(4)  = 8
 
      flag_spi        = 0
+     flag_spi_size   = 0
+     size_beta       = 3.d3
+
      abl_history     = .false.
      using_spi       = .false.
     !=========== End of SPI parameters ===========

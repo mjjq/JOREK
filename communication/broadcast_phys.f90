@@ -187,12 +187,13 @@ if (my_id .eq. 0) then
   call MPI_PACK(spi_Vel_Rref,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_Vel_Zref,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_Vel_RxZref,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(spi_radiusref,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(spi_quantity,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ng_radius_ratio,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ng_radius_min,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(n_spi,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(flag_spi,               1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(flag_spi_size,          1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(using_spi,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
@@ -573,12 +574,13 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_Rref,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_Zref,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_RxZref,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,spi_radiusref,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,spi_quantity,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ng_radius_ratio,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ng_radius_min,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,n_spi,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,flag_spi,               1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,flag_spi_size,          1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 

@@ -37,9 +37,10 @@ real*8  :: spi_rotation_01, spi_rotation_02        !The rotation angle from spi 
 real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
 real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
 real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Injection position of SPI
-real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp
+real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp
 real*8  :: sign_corr
 real*8, allocatable :: rnd(:)                      !The random number array 
+real*8, allocatable :: shard_size(:)               !The shard size array
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -115,12 +116,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_deltaphi, ksi_ion, abl_history,        &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
-                spi_Vel_RxZref, spi_radiusref, flag_spi,            &
+                spi_Vel_RxZref, spi_quantity, flag_spi,             &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
                 delta_n_convection, nimp_bg, psi_surfaces,          &
-                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_on, RMP_har_cos,RMP_har_sin, flag_spi_size,     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 amix, amix_freeb, equil_accuracy,                   &
@@ -280,6 +281,29 @@ if (using_spi == .true.) then
   else
     if (n_spi >= 1) then
 
+      if (flag_spi_size == 1) then
+        
+        if (allocated(shard_size)) then
+          deallocate(shard_size)
+        end if
+        allocate (shard_size(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for shard sizes
+        if (err_alloc /= 0) then
+          write(*,*) "Error when trying to dynamically allocate memeries for shard size, using uniform case."
+          flag_spi_size = 0
+        else
+          shard_size = 0.0
+        end if
+
+        size_beta = (spi_quantity/(pellet_density*1.d20*n_spi*6.*(PI**2)))**(-1./3.)
+        if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
+          open(42,file="shard_size.dat",status="OLD",action="READ")
+          read(42,'(g)')  shard_size(1:n_spi)
+          close(42)
+          write(*,*) " CHECK POINT shard size:", shard_size(1:10)
+        end if
+
+      end if
+
       if (my_id == 0 .and. restart == .false.) then
         open(20,file="pellets_parameters.dat",status="REPLACE")
         write(20,"(A,A11)",advance="no") "# t, "
@@ -365,6 +389,11 @@ if (using_spi == .true.) then
         spi_Z_tmp       = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
         spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/mgi_R
 
+        if (flag_spi_size == 0) then
+          spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
+        else if (flag_spi_size == 1) then
+          spi_radius_tmp = shard_size(i)/size_beta
+        end if
 
 
         pellets(i)%spi_R       = spi_R_tmp
@@ -373,11 +402,11 @@ if (using_spi == .true.) then
         pellets(i)%spi_Vel_R   = spi_Vel_R_tmp
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_tmp
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
-        pellets(i)%spi_radius  = spi_radiusref
+        pellets(i)%spi_radius  = spi_radius_tmp
         pellets(i)%spi_abl     = 0.0
 
-        write(*,'(A,I,5f10.5)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
-                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_RxZ
+        write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
 
 
         if (my_id == 0 .and. i < n_spi .and. restart == .false.) then

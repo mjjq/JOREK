@@ -240,7 +240,7 @@ module phys_module
   real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
   real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection
-  real*8  :: spi_radiusref      !< Reference radius of pellets
+  real*8  :: spi_quantity       !< Total injected atom number for SPI
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
                                 !< and that of shattered pellets
 
@@ -257,6 +257,10 @@ module phys_module
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: flag_spi           !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model
+  integer :: flag_spi_size      !< Determine which type of shard distribution is used,
+                                !< 0 for uniform shard size, 1 for modified BesselK distribution.
+
+  real*8  :: size_beta          !< Parameter for the modified BesselK distribution
 
   integer :: id_surfaces(4)     !< ID of each tracked flux surface, usded in determining domains
   real*8  :: psi_surfaces(4)    !< Psi of each tracked flux surfaces, do not track if the value is 0

@@ -565,10 +565,11 @@ if (my_id == 0) then
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,REAL_FMT) 'psi_surfaces        ',  psi_surfaces
      write(*,INTG_FMT) 'flag_spi            ',  flag_spi
+     write(*,INTG_FMT) 'flag_spi_size       ',  flag_spi_size
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
-     write(*,REAL_FMT) 'spi_radiusref       ',  spi_radiusref
+     write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
      write(*,REAL_FMT) 'spi_angle           ',  spi_angle
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
      write(*,REAL_FMT) 'spi_Vel_diff        ',  spi_Vel_diff

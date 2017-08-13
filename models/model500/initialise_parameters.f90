@@ -24,7 +24,7 @@ real*8 :: vacuum_fraction, b_over_a, a_over_b
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
-integer :: ierr,err,i,ifail,i_elm,i_surface
+integer :: ierr,err,ferr,i,ifail,i_elm,i_surface
 integer :: err_alloc=0, err_alloc_rnd=0
 
 real*8, dimension(2) :: P, P_s, P_t, P_phi
@@ -300,10 +300,16 @@ if (using_spi == .true.) then
         write(*,*) "Shard Size Beta:", size_beta
 
         if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
-          open(42,file="shard_size.dat",status="OLD",action="READ")
-          read(42,'(g)')  shard_size(1:n_spi)
-          close(42)
-          write(*,*) " CHECK POINT shard size:", shard_size(1:10)
+          inquire(file="shard_size.dat", exist=ferr) ! Check if the file exist
+          if (ferr == .true.) then
+            open(42,file="shard_size.dat",status="OLD",action="READ")
+            read(42,'(g)')  shard_size(1:n_spi)
+            close(42)
+            write(*,*) " CHECK POINT shard size:", shard_size(1:10)
+          else
+            write(*,*) "WARNING!!! Shard size file does not exist, reverting to uniform distribution"
+            flag_spi_size = 0
+          end if
         end if
 
       end if

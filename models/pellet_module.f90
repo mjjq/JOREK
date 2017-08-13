@@ -299,7 +299,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
       end if
 
 
-      if (my_id == 0) then
+      if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
         write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
       end if
       ! NGS model
@@ -318,11 +318,11 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
 
   !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
   
-  if (my_id == 0) then
+  if (my_id == 0 .and. mod(index_now,20) == 0) then
 
     close(20)
 
-    do i=1, 5 !n_spi
+    do i=1, 10 !n_spi
       write(*,*) "Pellet number: ", i
       write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
       write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_Vel_RxZ
@@ -330,7 +330,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
     end do
   end if
 
-  call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+  !call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
 return 
  

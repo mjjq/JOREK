@@ -38,7 +38,7 @@ real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_
 real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
 real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Injection position of SPI
 real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp
-real*8  :: sign_corr
+real*8  :: sign_corr, real_total_quantity
 real*8, allocatable :: rnd(:)                      !The random number array 
 real*8, allocatable :: shard_size(:)               !The shard size array
 
@@ -283,6 +283,8 @@ if (using_spi == .true.) then
 
       if (flag_spi_size == 1) then
         
+        real_total_quantity = 0.0
+      
         if (allocated(shard_size)) then
           deallocate(shard_size)
         end if
@@ -295,6 +297,8 @@ if (using_spi == .true.) then
         end if
 
         size_beta = (spi_quantity/(pellet_density*1.d20*n_spi*6.*(PI**2)))**(-1./3.)
+        write(*,*) "Shard Size Beta:", size_beta
+
         if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
           open(42,file="shard_size.dat",status="OLD",action="READ")
           read(42,'(g)')  shard_size(1:n_spi)
@@ -393,6 +397,7 @@ if (using_spi == .true.) then
           spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
         else if (flag_spi_size == 1) then
           spi_radius_tmp = shard_size(i)/size_beta
+          real_total_quantity = real_total_quantity + (4./3.) * PI * (spi_radius_tmp**3) * pellet_density
         end if
 
 
@@ -421,7 +426,7 @@ if (using_spi == .true.) then
         close(20)
       end if
 
-      write(*,*) "SPI initialized successfully."
+      write(*,*) "SPI initialized successfully, total amount of injection:", real_total_quantity
 
       deallocate(rnd)
 

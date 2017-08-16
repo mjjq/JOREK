@@ -28,6 +28,7 @@ use mod_hermite_birkhoff
 implicit none
 private
 public jorek_fields_interp_hermite_birkhoff, read_jorek_fields_interp_hermite_birkhoff
+public node_list_deltas_to_values
 
 !> Action to read in the fields into sim%fields
 type, extends(action) :: read_jorek_fields_interp_hermite_birkhoff

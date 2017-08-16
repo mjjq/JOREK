@@ -223,8 +223,12 @@ subroutine do_read(this, sim, ev)
   type is (jorek_fields_interp_linear)
 
     ! Read only one file
-    if (this%i .eq. -1) then
-      write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
+    if (this%i .eq. -1 .or. f%static) then
+      if (this%i .eq. -1) then
+        write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
+      else
+        write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
+      end if
       inquire(file=trim(restart_file), exist=file_exists)
       if (file_exists) then
         call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,my_id,ierr)

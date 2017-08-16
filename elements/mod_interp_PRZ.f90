@@ -23,21 +23,18 @@ integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
 ! --- Local variables
 real*8  :: H(4,4), H_s(4,4), H_t(4,4), xx1, xx2, ss, coss(n_mode), sins(n_mode)
 integer :: kv, iv, kf, i, i_harm, i_mode, mymodes(n_mode)
-real*8 :: harm(n_tor), dharm(n_tor)
 
 call basisfunctions3(s,t,H,H_s,H_t)
 
-P = 0.d0; P_s = 0.d0; P_t = 0.d0;
+P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_phi = 0.d0
 R = 0.d0; R_s = 0.d0; R_t = 0.d0;
 Z = 0.d0; Z_s = 0.d0; Z_t = 0.d0;
-P_phi = 0.d0
 
 mymodes = mode(3:n_tor:2)
 coss = cos(mymodes*phi)
 sins = sin(mymodes*phi)
 
 do kv = 1,n_vertex_max  ! 4 vertices
-  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   do kf = 1, n_order+1       ! 4 basis functions
 
     xx1 = node_list%node(iv)%x(kf,1)
@@ -93,21 +90,23 @@ real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
 real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
 real*8,                   intent(out) :: P_phi(n_v)
 
+integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
+
 ! --- Local variables
-real*8  :: H(4,4), H_s(4,4), H_t(4,4), xx1, xx2, ss
-integer :: kv, iv, kf, m, i, i_harm, i_tor
+real*8  :: H(4,4), H_s(4,4), H_t(4,4), xx1, xx2, ss, coss(n_mode), sins(n_mode)
+integer :: kv, iv, kf, i, i_harm, i_mode, mymodes(n_mode)
 
 call basisfunctions3(s,t,H,H_s,H_t)
 
-P = 0.d0; P_s = 0.d0; P_t = 0.d0;
+P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_phi = 0.d0
 R = 0.d0; R_s = 0.d0; R_t = 0.d0;
 Z = 0.d0; Z_s = 0.d0; Z_t = 0.d0;
-P_phi = 0.d0
+
+mymodes = mode(3:n_tor:2)
+coss = cos(mymodes*phi)
+sins = sin(mymodes*phi)
 
 do kv = 1,n_vertex_max  ! 4 vertices
-
-  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-
   do kf = 1, n_order+1       ! 4 basis functions
 
     xx1 = node_list%node(iv)%x(kf,1)
@@ -123,35 +122,24 @@ do kv = 1,n_vertex_max  ! 4 vertices
     Z_t  = Z_t  + xx2 * ss * H_t(kv,kf)
 
     do i = 1, n_v
+      P(i)     = P(i)     + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H(kv,kf)
+      P_s(i)   = P_s(i)   + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H_s(kv,kf)
+      P_t(i)   = P_t(i)   + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H_t(kv,kf)
+      do i_mode = 1, n_mode
+        i_harm = i_mode*2
+        P(i)     = P(i)     + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H(kv,kf)   * coss(i_mode)
+        P_s(i)   = P_s(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H_s(kv,kf) * coss(i_mode)
+        P_t(i)   = P_t(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H_t(kv,kf) * coss(i_mode)
+        P_phi(i) = P_phi(i) + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H(kv,kf)   * sins(i_mode)*(-mymodes(i_mode))
 
-      P(i)    = P(i)   + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H(kv,kf)
-      P_s(i)  = P_s(i) + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H_s(kv,kf)
-      P_t(i)  = P_t(i) + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H_t(kv,kf)
-
-      do i_tor = 1, (n_tor-1)/2
-
-        i_harm = 2*i_tor
-
-        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode(i_harm)*phi)
-        P_s(i)  = P_s(i) + node_list%node(iv)%deltas(i_harm,kf,i_v(i))   * ss * H_s(kv,kf) * cos(mode(i_harm)*phi)
-        P_t(i)  = P_t(i) + node_list%node(iv)%deltas(i_harm,kf,i_v(i))   * ss * H_t(kv,kf) * cos(mode(i_harm)*phi)
-        P_phi(i) = P_phi(i) + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) &
-              * ss * H(kv,kf) * sin(mode(i_harm)*phi) * (-mode(i_harm))
-
-	P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode(i_harm+1)*phi)
-        P_s(i)  = P_s(i) + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) * ss * H_s(kv,kf) * sin(mode(i_harm+1)*phi)
-        P_t(i)  = P_t(i) + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) * ss * H_t(kv,kf) * sin(mode(i_harm+1)*phi)
-        P_phi(i) = P_phi(i) + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) &
-            * ss * H(kv,kf) * cos(mode(i_harm+1)*phi) * (mode(i_harm+1))
-
+        i_harm = i_mode*2+1
+        P(i)     = P(i)     + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H(kv,kf)   * sins(i_mode)
+        P_s(i)   = P_s(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H_s(kv,kf) * sins(i_mode)
+        P_t(i)   = P_t(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H_t(kv,kf) * sins(i_mode)
+        P_phi(i) = P_phi(i) + node_list%node(iv)%deltas(i_harm,kf,i_v(i)) * ss * H(kv,kf)   * coss(i_mode)*mymodes(i_mode)
       enddo
-
     enddo
-
-  end do
-
-end do
-
-return
+  enddo
+enddo
 end subroutine interp_PRZ_delta
 end module mod_interp_PRZ

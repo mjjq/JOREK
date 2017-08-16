@@ -32,6 +32,7 @@ call project_f(node_list, element_list, f_R)
 do i=1,node_list%n_nodes
   do k=1,n_order+1
     node_list%node(i)%values(1,k,2:) = node_list%node(i)%values(1,k,1)
+    node_list%node(i)%deltas(1,k,2:) = node_list%node(i)%deltas(1,k,1)
   end do
 enddo
 

@@ -57,6 +57,7 @@ DIRS := diagnostics			\
 	particles/diagnostics 		\
 	particles/tests 		\
 	particles/benchmarks/pusher     \
+	particles/benchmarks/interp     \
 	particles/benchmarks/projection \
 	elements			\
 	grids				\

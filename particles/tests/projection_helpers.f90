@@ -83,6 +83,7 @@ subroutine default_polar_grid(node_list, element_list, npol)
   call preset_parameters()
   fbnd(1) = 2.d0
   fbnd(2:4) = 0.d0
+  fpsi = 0.d0
   mf = 0
   n_radial = 30
   R_geo = 1.5

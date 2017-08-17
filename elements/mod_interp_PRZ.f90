@@ -23,6 +23,7 @@ integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
 ! --- Local variables
 real*8  :: H(n_p,4,4), H_s(n_p,4,4), H_t(n_p,4,4), xx1(n_p), xx2(n_p), ss(n_p)
 real*8  :: e1r(n_p), e1i(n_p), enr(n_p), eni(n_p), enrtmp(n_p) !< complex and real parts
+real*8  :: coss(n_p,n_mode), sins(n_p, n_mode)
 integer :: kv, iv, kf, i, i_harm, i_mode, mymodes(n_mode)
 
 call basisfunctions5(n_p,s,t,H,H_s,H_t)
@@ -31,13 +32,22 @@ P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_phi = 0.d0
 R = 0.d0; R_s = 0.d0; R_t = 0.d0;
 Z = 0.d0; Z_s = 0.d0; Z_t = 0.d0;
 
+!XXXX
 mymodes = mode(3:n_tor:2)
-e1r = cos(mode(2)*phi(i))
-e1i = sin(mode(2)*phi(i))
+e1r = cos(mode(2)*phi)
+e1i = sin(mode(2)*phi)
 enr = 1.d0
 eni = 0.d0
+do i=1,n_mode
+  enrtmp = enr*e1r - eni*e1i
+  eni = eni*e1r + enr*e1i
+  enr = enrtmp
+  coss(:,i) = enr
+  sins(:,i) = eni
+end do
 
 do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)
   do kf = 1, n_order+1       ! 4 basis functions
 
     xx1 = node_list%node(iv)%x(kf,1)
@@ -57,21 +67,18 @@ do kv = 1,n_vertex_max  ! 4 vertices
       P_s(:,i)   = P_s(:,i)   + node_list%node(iv)%values(1,kf,i_v(i)) * ss * H_s(:,kv,kf)
       P_t(:,i)   = P_t(:,i)   + node_list%node(iv)%values(1,kf,i_v(i)) * ss * H_t(:,kv,kf)
       do i_mode = 1, n_mode
-        enrtmp = enr*e1r - eni*e1i
-        eni = eni*e1r + enr*e1i
-        enr = enrtmp
 
         i_harm = i_mode*2
-        P(:,i)     = P(:,i)     + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * enr
-        P_s(:,i)   = P_s(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_s(:,kv,kf) * enr
-        P_t(:,i)   = P_t(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_t(:,kv,kf) * enr
-        P_phi(:,i) = P_phi(:,i) + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * eni*(-mymodes(i_mode))
+        P(:,i)     = P(:,i)     + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * coss(:,i_mode)
+        P_s(:,i)   = P_s(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_s(:,kv,kf) * coss(:,i_mode)
+        P_t(:,i)   = P_t(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_t(:,kv,kf) * coss(:,i_mode)
+        P_phi(:,i) = P_phi(:,i) + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * sins(:,i_mode)*(-mymodes(i_mode))
 
         i_harm = i_mode*2+1
-        P(:,i)     = P(:,i)     + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * eni
-        P_s(:,i)   = P_s(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_s(:,kv,kf) * eni
-        P_t(:,i)   = P_t(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_t(:,kv,kf) * eni
-        P_phi(:,i) = P_phi(:,i) + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * enr*mymodes(i_mode)
+        P(:,i)     = P(:,i)     + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * sins(:,i_mode)
+        P_s(:,i)   = P_s(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_s(:,kv,kf) * sins(:,i_mode)
+        P_t(:,i)   = P_t(:,i)   + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H_t(:,kv,kf) * sins(:,i_mode)
+        P_phi(:,i) = P_phi(:,i) + node_list%node(iv)%values(i_harm,kf,i_v(i)) * ss * H(:,kv,kf)   * coss(:,i_mode)*mymodes(i_mode)
       enddo
     enddo
   enddo
@@ -101,6 +108,7 @@ integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
 ! --- Local variables
 real*8  :: H(4,4), H_s(4,4), H_t(4,4), xx1, xx2, ss, coss(n_mode), sins(n_mode)
 integer :: kv, iv, kf, i, i_harm, i_mode, mymodes(n_mode)
+real*8  :: e1r, e1i, enr, eni, enrtmp
 
 call basisfunctions3(s,t,H,H_s,H_t)
 
@@ -108,11 +116,28 @@ P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_phi = 0.d0
 R = 0.d0; R_s = 0.d0; R_t = 0.d0;
 Z = 0.d0; Z_s = 0.d0; Z_t = 0.d0;
 
+! Apply De Moivre formula to calculate the series of sines.
+! Assumes that mode is of the form [0 1 1 2 2 3 3 4 4] ([0 4 4 8 8 12 12])
+! This is roughly 3-4 times faster in my tests than just calculating the sines
+! and cosines (even when that is vectorized). Perhaps that changes for n_tor >> 10
+! I tested n_tor = 17.
 mymodes = mode(3:n_tor:2)
-coss = cos(mymodes*phi)
-sins = sin(mymodes*phi)
+e1r = cos(mode(2)*phi)
+e1i = sin(mode(2)*phi)
+enr = 1.d0
+eni = 0.d0
+do i=1,n_mode
+  enrtmp = enr*e1r - eni*e1i
+  eni = eni*e1r + enr*e1i
+  enr = enrtmp
+  coss(i) = enr
+  sins(i) = eni
+end do
+!coss = cos(mymodes*phi)
+!sins = sin(mymodes*phi)
 
 do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)
   do kf = 1, n_order+1       ! 4 basis functions
 
     xx1 = node_list%node(iv)%x(kf,1)
@@ -185,6 +210,7 @@ coss = cos(mymodes*phi)
 sins = sin(mymodes*phi)
 
 do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)
   do kf = 1, n_order+1       ! 4 basis functions
 
     xx1 = node_list%node(iv)%x(kf,1)

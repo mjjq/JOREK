@@ -12,8 +12,8 @@ implicit none
 
 integer, parameter :: n_switch = 100 !< Go to a new element every 100 steps (mimic jorek particle pattern)
 ! we go to a new position inside the element every step.
-integer, parameter :: N_loops = 100000
-integer, parameter :: N_vector = 16
+integer, parameter :: N_loops = 1000000
+integer, parameter :: N_vector = 128
 integer, parameter :: n_v = 1, i_var(n_v) = [1]
 
 integer :: ierr, provided, i, j, k, i_elm
@@ -40,7 +40,7 @@ do i=1,node_list%n_nodes
 enddo
 
 ! Wait after this omp part for a while
-call sleep(5)
+call sleep(3)
 
 call rng%initialize(n_vector, random_seed(), 1, 1)
 
@@ -55,14 +55,16 @@ do i=1,N_loops
   call rng%next(u); s = u
   call rng%next(u); t = u
   call rng%next(u); phi = u
-  !call interp_PRZ_vec(node_list, element_list, i_elm, i_var, n_v, n_vector, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
-  do j=1,n_vector
-    call interp_PRZ(node_list, element_list, i_elm, i_var, n_v, s(j), t(j), phi(j), &
-        P(j,:), P_s(j,:), P_t(j,:), P_phi(j,:), R(j), R_s(j), R_t(j), Z(j), Z_s(j), Z_t(j))
-  end do
+  call interp_PRZ_vec(node_list, element_list, i_elm, i_var, n_v, n_vector, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)
+  !do j=1,n_vector
+  !  call interp_PRZ(node_list, element_list, i_elm, i_var, n_v, s(j), t(j), phi(j), &
+  !    P(j,:), P_s(j,:), P_t(j,:), P_phi(j,:), R(j), R_s(j), R_t(j), Z(j), Z_s(j), Z_t(j))
+  !end do
   call rng%next(u)
   do j=1,n_vector
-    if (u(j) .gt. 0.999999) write(*,"(10g16.7)") P(j,1), P_s(j,1), P_t(j,1), P_phi(j,1), R(j), R_s(j), R_t(j), Z(j), Z_s(j), Z_t(j)
+    do k=1,n_v
+      if (u(j) .gt. 0.999999) write(*,"(10g16.7)") P(j,k), P_s(j,k), P_t(j,k), P_phi(j,k), R(j), R_s(j), R_t(j), Z(j), Z_s(j), Z_t(j)
+    end do
   end do
 end do
 call cpu_time(t1)

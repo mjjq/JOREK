@@ -109,64 +109,67 @@ function last_file_before_time(time) result(file_number)
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
-  if (my_id .eq. 0) write(*,*) "Looking for jorek restart file just before time ", time
+  if (my_id .eq. 0) then
+    write(*,*) "Looking for jorek restart file just before time ", time
 
-  ! Get list of filenumbers
-  write(my_id_s,"(i0.5)") my_id
-  call execute_command_line("ls jorek[0-9]*.h5 | grep -o '[0-9]\{5\}' > .jorek_filenums."//my_id_s)
-  open(newunit=u,file=".jorek_filenums."//my_id_s)
-  allocate(filenums_tmp(100000)) ! assumes 5-digit numbers
-  n=0
-  do i=1,100000
-    read(u,*,iostat=io) filenums_tmp(i)
-    if (io/=0) exit
-    n = n + 1
-  end do
-  allocate(filenums(n))
-  filenums(:) = filenums_tmp(1:n)
-  deallocate(filenums_tmp)
-  close(u, status='delete')
+    ! Get list of filenumbers
+    write(my_id_s,"(i0.5)") my_id
+    call execute_command_line("ls jorek[0-9]*.h5 | grep -o '[0-9]\{5\}' > .jorek_filenums."//my_id_s)
+    open(newunit=u,file=".jorek_filenums."//my_id_s)
+    allocate(filenums_tmp(100000)) ! assumes 5-digit numbers
+    n=0
+    do i=1,100000
+      read(u,*,iostat=io) filenums_tmp(i)
+      if (io/=0) exit
+      n = n + 1
+    end do
+    allocate(filenums(n))
+    filenums(:) = filenums_tmp(1:n)
+    deallocate(filenums_tmp)
+    close(u, status='delete')
 
-  if (n .le. 0) then
-    write(*,*) "No files found!"
-    file_number = 0
-    return
-  end if
-
-  ! Calculate upper and lower bounds
-  i_lower = 1 ! index into filenumber array
-  write(num_s,'(i0.5)') filenums(i_lower)
-  t_lower = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
-  i_upper = n
-  write(num_s,'(i0.5)') filenums(i_upper)
-  t_upper = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
-  i_guess = nint((time-t_lower)/(t_upper-t_lower)*real(i_upper - i_lower)) + i_lower
-
-  do i=1,20
-    if (i_guess .le. 1 .or. i_guess .gt. n) then
-      if (my_id .eq. 0) write(*,*) "ERROR: requested time out of range"
-      exit
-    end if
-    if (i_guess .eq. i_lower .or. i_guess .eq. i_upper) then
-      file_number = filenums(i_lower)
+    if (n .le. 0) then
+      write(*,*) "No files found!"
+      file_number = 0
       return
     end if
 
-    write(num_s,'(i0.5)') filenums(i_guess)
-    t_guess = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
-    if (my_id .eq. 0) write(*,"(i5,A,g11.4,A,i5,A,g11.4,A,i5,A,g11.4,A)") i_lower, " (", t_lower, &
-      ")    ", i_guess, " (", t_guess, &
-      ")    ", i_upper, " (", t_upper, ")    "
-    ! Based on the value of t_guess, replace either the lower or upper bound
-    if (t_guess .le. time) then
-      t_lower = t_guess
-      i_lower = i_guess
-    else
-      t_upper = t_guess
-      i_upper = i_guess
-    end if
-    i_guess = i_lower + (i_upper-i_lower)/2
-  end do
+    ! Calculate upper and lower bounds
+    i_lower = 1 ! index into filenumber array
+    write(num_s,'(i0.5)') filenums(i_lower)
+    t_lower = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
+    i_upper = n
+    write(num_s,'(i0.5)') filenums(i_upper)
+    t_upper = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
+    i_guess = nint((time-t_lower)/(t_upper-t_lower)*real(i_upper - i_lower)) + i_lower
+
+    do i=1,20
+      if (i_guess .le. 1 .or. i_guess .gt. n) then
+        if (my_id .eq. 0) write(*,*) "ERROR: requested time out of range"
+        exit
+      end if
+      if (i_guess .eq. i_lower .or. i_guess .eq. i_upper) then
+        file_number = filenums(i_lower)
+        return
+      end if
+
+      write(num_s,'(i0.5)') filenums(i_guess)
+      t_guess = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
+      if (my_id .eq. 0) write(*,"(i5,A,g11.4,A,i5,A,g11.4,A,i5,A,g11.4,A)") i_lower, " (", t_lower, &
+        ")    ", i_guess, " (", t_guess, &
+        ")    ", i_upper, " (", t_upper, ")    "
+      ! Based on the value of t_guess, replace either the lower or upper bound
+      if (t_guess .le. time) then
+        t_lower = t_guess
+        i_lower = i_guess
+      else
+        t_upper = t_guess
+        i_upper = i_guess
+      end if
+      i_guess = i_lower + (i_upper-i_lower)/2
+    end do
+  end if
+  call MPI_Bcast(file_number, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 end function last_file_before_time
 
 !> Get '/t_now' from a file. Does not alter the units in any way
@@ -222,87 +225,101 @@ subroutine do_read(this, sim, ev)
   select type (f => sim%fields)
   type is (jorek_fields_interp_linear)
 
-    ! Read only one file
-    if (this%i .eq. -1 .or. f%static) then
-      if (this%i .eq. -1) then
-        write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
-      else
-        write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
-      end if
-      inquire(file=trim(restart_file), exist=file_exists)
-      if (file_exists) then
-        call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,my_id,ierr)
-        f%static = .true.
-      else
-        if (my_id .eq. 0) write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
-        call exit(1)
-      end if
-    else ! Linearly interpolating case
-      ! If nothing has been loaded (i.e. fields%time_prev = 0.d0) load the initial file
-      if (abs(f%time_prev) .lt. 1.d-50) then
-        write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
+    if (my_id .eq. 0) then
+      ! Read only one file
+      if (this%i .eq. -1 .or. f%static) then
+        if (this%i .eq. -1) then
+          write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
+        else
+          write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
+        end if
         inquire(file=trim(restart_file), exist=file_exists)
         if (file_exists) then
-          call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
-          if (ierr .ne. 0) then
-            if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
-            call exit(1)
-          else
-            f%time_now = t_start*t_norm ! set by import_hdf5_restart
-            ! Set sim%time to this time also, to start at the right point
-            if (sim%time .gt. 1d-16) then ! check if this is the right file if we have already set a time
-              if (sim%time .le. f%time_now) then
-                if (my_id .eq. 0) write(*,*) "ERROR: restart file read that is too far in the future"
-              end if
-            else ! otherwise set the time to the time of this file
-              sim%time = f%time_now
-            end if
-            if (my_id .eq. 0) write(*,"(A,f9.8,A)") "Read initial restart file, set t=", f%time_now, " [s]"
-          end if
+          call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,my_id,ierr)
+          f%static = .true.
         else
-          if (my_id .eq. 0) write(*,*) "ERROR: cannot read initial file ", trim(restart_file)
+          if (my_id .eq. 0) write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
           call exit(1)
         end if
-      end if
-      
-      ! Find the following file (next timestep number)
-      next_file_found=.false.
-      do i=this%i+1,this%i+20 ! check 20 files ahead
-        write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
-        inquire(file=trim(restart_file), exist=file_exists)
-        if (file_exists) then
-          next_file_found=.true.
-          call merge_restart(f%node_list, f%element_list, trim(restart_file), this%rst_format,my_id, ierr)
-          if (ierr .ne. 0) then
-            if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
-            call exit(1)
-          else
-            f%time_prev = f%time_now
-            f%time_now = t_start*t_norm ! Set by import_merge_restart
-            if (my_id .eq. 0 .and. i-this%i .gt. 1) write(*,"(i2,A)") i-this%i, " JOREK steps between restarts"
-            this%i=i
-            ! set the time to run this event at next
-            if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%time_now, " [s]"
-            if (present(ev)) then
-              ev%start = f%time_now
-              if (my_id .eq. 0) write(*,*) "Set time for next restart file read to ", ev%start
+      else ! Linearly interpolating case
+        ! If nothing has been loaded (i.e. fields%time_prev = 0.d0) load the initial file
+        if (abs(f%time_prev) .lt. 1.d-50) then
+          write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
+          inquire(file=trim(restart_file), exist=file_exists)
+          if (file_exists) then
+            call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
+            if (ierr .ne. 0) then
+              if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
+              call exit(1)
+            else
+              f%time_now = t_start*t_norm ! set by import_hdf5_restart
+              ! Set sim%time to this time also, to start at the right point
+              if (sim%time .gt. 1d-16) then ! check if this is the right file if we have already set a time
+                if (sim%time .le. f%time_now) then
+                  if (my_id .eq. 0) write(*,*) "ERROR: restart file read that is too far in the future"
+                end if
+              else ! otherwise set the time to the time of this file
+                sim%time = f%time_now
+              end if
+              if (my_id .eq. 0) write(*,"(A,f9.8,A)") "Read initial restart file, set t=", sim%time, " [s]"
             end if
-            exit ! the file-finding loop
+          else
+            if (my_id .eq. 0) write(*,*) "ERROR: cannot read initial file ", trim(restart_file)
+            call exit(1)
           end if
-        endif
-      enddo
-      if (.not. next_file_found .and. this%stop_at_end) then
-        if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
-        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+        end if
+        
+        ! Find the following file (next timestep number)
+        next_file_found=.false.
+        do i=this%i+1,this%i+20 ! check 20 files ahead
+          write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
+          inquire(file=trim(restart_file), exist=file_exists)
+          if (file_exists) then
+            next_file_found=.true.
+            call merge_restart(f%node_list, f%element_list, trim(restart_file), this%rst_format,my_id, ierr)
+            if (ierr .ne. 0) then
+              if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
+              call exit(1)
+            else
+              f%time_prev = f%time_now
+              f%time_now = t_start*t_norm ! Set by merge_restart
+              if (my_id .eq. 0 .and. i-this%i .gt. 1) write(*,"(i2,A)") i-this%i, " JOREK steps between restarts"
+              this%i=i
+              ! set the time to run this event at next
+              if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%time_now, " [s]"
+              if (present(ev)) then
+                ev%start = f%time_now
+                if (my_id .eq. 0) write(*,*) "Set time for next restart file read to ", ev%start
+              end if
+              exit ! the file-finding loop
+            end if
+          endif
+        enddo
+        if (.not. next_file_found .and. this%stop_at_end) then
+          if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
+          call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+        end if
+        if (.not. next_file_found .and. .not. this%stop_at_end) then
+          if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Continuing with &
+          the last values without time-dependence"
+          f%static = .true.
+        end if
       end if
-      if (.not. next_file_found .and. .not. this%stop_at_end) then
-        if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Continuing with &
-        the last values without time-dependence"
-        f%static = .true.
-      end if
+
+      call update_neighbours(f%element_list, f%node_list)
     end if
 
-    call update_neighbours(f%element_list, f%node_list)
+    ! Communicate the new fields to all processes
+    call broadcast_elements(my_id, f%element_list)
+    call broadcast_nodes(my_id, f%node_list)
+    call MPI_Bcast(f%time_prev, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    call MPI_Bcast(f%time_now, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    call MPI_Bcast(sim%time, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    call MPI_Bcast(t_start, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr) ! might be needed in some cases (static with number)
+    call MPI_Bcast(f%static, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
+    if (present(ev)) then
+      call MPI_Bcast(ev%start, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    end if
   class default
     if (my_id .eq. 0) write(*,*) "ERROR, do_read called with wrong sim%fields"
   end select

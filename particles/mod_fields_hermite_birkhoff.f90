@@ -278,7 +278,9 @@ end subroutine do_read
 
 
 !> Starting from i+2 (if prefer_plus_2=.true.), i+1, i+N search for a next file and read it into
-!> f%node_list, f%element_list
+!> f%node_list, f%element_list.
+!> Performs MPI communication to get values from root process to every other process.
+!> Also broadcasted are tstep and t_start
 subroutine read_next_file(this, f, i_found, prefer_plus_2)
   use mod_import_restart
   use phys_module
@@ -301,35 +303,46 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
     if (prefer_plus_2) flip_i12 = .true.
   end if
 
-  ! Find the following file (next timestep number)
-  next_file_found=.false.
-  do di=1,20
-    if (di .le. 2 .and. flip_i12) then ! flip first and second element to search to save effort reading
-      i = this%i + (3-di)
-    else
-      i = this%i + di
-    end if
-    write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
-    inquire(file=trim(restart_file), exist=file_exists)
-    if (file_exists) then
-      next_file_found=.true.
-
-      ! Read the next restart file
-      call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
-      if (ierr .ne. 0) then
-        if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
-        call exit(1)
+  if (my_id .eq. 0) then
+    ! Find the following file (next timestep number)
+    next_file_found=.false.
+    do di=1,20
+      if (di .le. 2 .and. flip_i12) then ! flip first and second element to search to save effort reading
+        i = this%i + (3-di)
       else
-        exit ! the file-finding loop
+        i = this%i + di
       end if
-    endif
-  enddo
-  if (.not. next_file_found) then
-    if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
-    call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
-    i_found = 0
+      write(restart_file,'(A,i5.5,A)') trim(this%basename), i, '.h5'
+      inquire(file=trim(restart_file), exist=file_exists)
+      if (file_exists) then
+        next_file_found=.true.
+
+        ! Read the next restart file
+        call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
+        call broadcast_elements(my_id, f%element_list)
+        call broadcast_nodes(my_id, f%node_list)
+        call broadcast_phys(my_id) ! we only really use tstep and t_start but this is simpler to write
+        if (ierr .ne. 0) then
+          if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
+          call exit(1)
+        else
+          exit ! the file-finding loop
+        end if
+      endif
+    enddo
+    if (.not. next_file_found) then
+      if (my_id .eq. 0) write(*,*) "WARNING: cannot find any next restart files. Stopping."
+      call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+      i_found = 0
+    else
+      i_found = i
+    end if
+    call MPI_Bcast(i_found, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
   else
-    i_found = i
+    call broadcast_elements(my_id, f%element_list)
+    call broadcast_nodes(my_id, f%node_list)
+    call broadcast_phys(my_id) ! we only really use tstep and t_start but this is simpler to write
+    call MPI_Bcast(i_found, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
   end if
 end subroutine read_next_file
 

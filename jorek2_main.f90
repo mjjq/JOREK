@@ -48,6 +48,7 @@ program JOREK2
   use mod_global_matrix_structure
   use mod_import_restart
   use mod_export_restart
+  use mod_element_rtree, only: populate_element_rtree
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -634,6 +635,9 @@ required = 0
   endif
 
   call broadcast_nodes(my_id, node_list)                      ! nodes
+
+  ! Precalculate R-tree
+  call populate_element_rtree(node_list, element_list)
 
   call broadcast_phys(my_id)                                  ! physics parameters
   if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)

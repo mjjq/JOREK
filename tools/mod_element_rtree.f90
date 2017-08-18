@@ -3,7 +3,9 @@ module mod_element_rtree
 use iso_c_binding
 use data_structure
 implicit none
-public
+public populate_element_rtree, nearby_elements, elements_containing_point, initialized
+
+logical :: initialized = .false.
 
 interface
   !> Name is element_rtree to match filename `element_rtree.cpp`.
@@ -33,6 +35,9 @@ contains
 
 !> Populate the RTree with the squares containing elements
 !> x=R, y=Z
+!>
+!> Only one call to this routine can be made simultaneously! It uses a static
+!> data structure under the hood.
 subroutine populate_element_rtree(node_list, element_list)
   type(type_node_list), intent(in)    :: node_list
   type(type_element_list), intent(in) :: element_list
@@ -50,6 +55,7 @@ subroutine populate_element_rtree(node_list, element_list)
   end do
   ! this cleans out the tree before insertion
   call element_rtree(int(n,C_INT), minx, miny, maxx, maxy)
+  initialized = .true.
 end subroutine populate_element_rtree
 
 !> Find probable neighbours of element i and return their indices.
@@ -68,13 +74,18 @@ subroutine nearby_elements(node_list, element_list, i_elm, i_nearby)
   real(C_DOUBLE) :: minx, miny, maxx, maxy
   integer(C_INT) :: num_elements
 
-  vertices = element_list%element(i_elm)%vertex(:)
-  minx = real(minval(node_list%node(vertices)%x(1,1)) - 1d-6, kind=C_DOUBLE)
-  maxx = real(maxval(node_list%node(vertices)%x(1,1)) + 1d-6, kind=C_DOUBLE)
-  miny = real(minval(node_list%node(vertices)%x(1,2)) - 1d-6, kind=C_DOUBLE)
-  maxy = real(maxval(node_list%node(vertices)%x(1,2)) + 1d-6, kind=C_DOUBLE)
+  if (.not. initialized) then
+    write(*,*) "ERROR: trying to find nearby elements in uninitialized tree, returning nothing"
+    num_elements = 0
+  else
+    vertices = element_list%element(i_elm)%vertex(:)
+    minx = real(minval(node_list%node(vertices)%x(1,1)) - 1d-6, kind=C_DOUBLE)
+    maxx = real(maxval(node_list%node(vertices)%x(1,1)) + 1d-6, kind=C_DOUBLE)
+    miny = real(minval(node_list%node(vertices)%x(1,2)) - 1d-6, kind=C_DOUBLE)
+    maxy = real(maxval(node_list%node(vertices)%x(1,2)) + 1d-6, kind=C_DOUBLE)
 
-  num_elements = int(elements_in_rect(minx, miny, maxx, maxy, i_nearby_C))
+    num_elements = int(elements_in_rect(minx, miny, maxx, maxy, i_nearby_C))
+  end if
   allocate(i_nearby(num_elements))
   i_nearby = int(i_nearby_C(1:num_elements))
 end subroutine nearby_elements
@@ -88,15 +99,20 @@ subroutine elements_containing_point(R, Z, i_elms)
   integer(C_INT) :: num_elements
   integer(C_int), dimension(500) :: i_nearby_C ! large placeholder. Should be larger than n_tht (or n_pol)
 
-  minx = real(R, kind=C_DOUBLE)
-  maxx = real(R, kind=C_DOUBLE)
-  miny = real(Z, kind=C_DOUBLE)
-  maxy = real(Z, kind=C_DOUBLE)
+  if (.not. initialized) then
+    write(*,*) "ERROR: trying to find point in uninitialized tree, returning nothing"
+    num_elements = 0
+  else
+    minx = real(R, kind=C_DOUBLE)
+    maxx = real(R, kind=C_DOUBLE)
+    miny = real(Z, kind=C_DOUBLE)
+    maxy = real(Z, kind=C_DOUBLE)
 
-  ! This calls the search routine twice! To get around that either pass a large enough array alway
-  ! or implement it as a mask/bitfield of the total number of elements.
-  ! I expect this to be unnecessary, as the speed improvement here is dramatic enough.
-  num_elements = int(elements_in_rect(minx, miny, maxx, maxy, i_nearby_C))
+    ! This calls the search routine twice! To get around that either pass a large enough array alway
+    ! or implement it as a mask/bitfield of the total number of elements.
+    ! I expect this to be unnecessary, as the speed improvement here is dramatic enough.
+    num_elements = int(elements_in_rect(minx, miny, maxx, maxy, i_nearby_C))
+  end if
   allocate(i_elms(num_elements))
   i_elms = int(i_nearby_C(1:num_elements))
 end subroutine elements_containing_point

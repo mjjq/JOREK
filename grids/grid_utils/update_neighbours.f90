@@ -1,7 +1,7 @@
 subroutine update_neighbours(element_list,node_list)
 use data_structure
 use mod_neighbours
-use mod_element_rtree
+use mod_element_rtree, only: initialized, populate_element_rtree, nearby_elements
 implicit none
 
 type (type_element_list) :: element_list
@@ -13,11 +13,14 @@ real*8                   :: s_i, t_i, R_i, Rs_i, Rt_i, Rst_i, Rss_i, Rtt_i, Z_i,
 real*8                   :: s_j, t_j, R_j, Rs_j, Rt_j, Rst_j, Rss_j, Rtt_j, Z_j, Zs_j, Zt_j, Zst_j,Zss_j,Ztt_j
 integer, dimension(:), allocatable :: i_nearby
 
-call populate_element_rtree(node_list, element_list)
+! Be careful here. If the grid changes the information will be incorrect and you
+! need to manually call populate_element_rtree
+if (.not. initialized) call populate_element_rtree(node_list, element_list)
 
 !$omp parallel do default(private) &
 !$omp   shared(element_list,node_list)
 do i=1, element_list%n_elements
+  element_list%element(i)%transform = 0.d0 ! Start with 0 TODO fix
   call nearby_elements(node_list, element_list, i, i_nearby)
   do k=1,size(i_nearby,1)
     j = i_nearby(k)

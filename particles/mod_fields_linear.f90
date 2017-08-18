@@ -306,12 +306,12 @@ subroutine do_read(this, sim, ev)
         end if
       end if
 
-      call update_neighbours(f%element_list, f%node_list)
     end if
 
     ! Communicate the new fields to all processes
     call broadcast_elements(my_id, f%element_list)
     call broadcast_nodes(my_id, f%node_list)
+    call update_neighbours(f%element_list, f%node_list) ! needs to be done on every process to have an RTree everywhere
     call MPI_Bcast(f%time_prev, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     call MPI_Bcast(f%time_now, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     call MPI_Bcast(sim%time, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)

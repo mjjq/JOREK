@@ -126,6 +126,10 @@ subroutine project_and_save_to_vtk(this, sim, ev)
         sim%groups(i)%particles, i)
     ! results are saved only on mpi process 0
   end do
+  ! Communicate these to all processors
+  call broadcast_elements(my_id, this%element_list)
+  call broadcast_nodes(my_id, this%node_list)
+
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
   !$ mmm = mpi_minmeanmax(t1-t0)
@@ -150,16 +154,11 @@ subroutine project_and_save_to_vtk(this, sim, ev)
 
     write(*,*) "Written projection to ", trim(filename)
   end if
-  ! Communicate these to all processors
-  call broadcast_elements(my_id, this%element_list)
-  call broadcast_nodes(my_id, this%node_list)
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-  mmm = mpi_minmeanmax(t1-t0)
-  !$ mmm2 = mpi_minmeanmax(oend-ostart)
   if (my_id .eq. 0) then
-    write(*,"(A,3g12.5)") "writing cpu time", mmm
-    !$ write(*,"(A,3g12.5)") "writing wall time", mmm2
+    write(*,"(A,2g12.5)") "writing cpu time", t1-t0
+    !$ write(*,"(A,2g12.5)") "writing wall time", oend-ostart
   end if
 end subroutine project_and_save_to_vtk
 
@@ -189,6 +188,10 @@ subroutine project_and_save_to_h5(this, sim, ev)
         sim%groups(i)%particles, i)
     ! results are saved only on mpi process 0
   end do
+  ! Communicate these to all processors
+  call broadcast_elements(my_id, this%element_list)
+  call broadcast_nodes(my_id, this%node_list)
+
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
   !$ mmm = mpi_minmeanmax(t1-t0)
@@ -214,16 +217,11 @@ subroutine project_and_save_to_h5(this, sim, ev)
 
     write(*,*) "Written projection to ", trim(filename)
   end if
-  ! Communicate these to all processors
-  call broadcast_elements(my_id, this%element_list)
-  call broadcast_nodes(my_id, this%node_list)
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-  mmm = mpi_minmeanmax(t1-t0)
-  !$ mmm2 = mpi_minmeanmax(oend-ostart)
   if (my_id .eq. 0) then
-    write(*,"(A,3g12.5)") "writing cpu time", mmm
-    !$ write(*,"(A,3g12.5)") "writing wall time", mmm2
+    write(*,"(A,2g12.5)") "writing cpu time", t1-t0
+    !$ write(*,"(A,2g12.5)") "writing wall time", oend-ostart
   end if
 end subroutine project_and_save_to_h5
 

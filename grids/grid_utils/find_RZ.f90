@@ -4,7 +4,7 @@ subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_o
 !< Return the first result.
 !-------------------------------------------------------------------------
 use data_structure
-use mod_element_rtree
+use mod_element_rtree, only: elements_containing_point
 implicit none
 
 type (type_node_list), intent(in)    :: node_list
@@ -14,20 +14,10 @@ real*8, intent(out)    :: R_out,Z_out,s_out,t_out
 integer, intent(inout) :: ielm_out
 integer, intent(out)   :: ifail
 
-logical, save        :: rtree_initialised = .false.
-integer, save        :: n_elements = 0
-
 integer :: k
 integer, dimension(:), allocatable :: i_elms
 
 ielm_out = 0
-if (element_list%n_elements .ne. n_elements) rtree_initialised = .false.
-if (.not. rtree_initialised) then
-  call populate_element_rtree(node_list, element_list) ! not OMP safe, call once outside of openmp
-  rtree_initialised = .true.
-  n_elements = element_list%n_elements
-end if
-
 call elements_containing_point(R_find, Z_find, i_elms)
 
 ! then loop through all

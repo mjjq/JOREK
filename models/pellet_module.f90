@@ -213,12 +213,13 @@ real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out
 
 real*8  :: n_SI, T_eV, n_corr, T_corr
-real*8  :: t_norm
-real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
+real*8  :: t_norm, spi_Vel_totref
+real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
 
   spi_delta_phi   = 0.
   spi_Vel_R_tmp   = 0.
   spi_Vel_phi_tmp = 0.
+  spi_phi_inj     = mgi_phi
 
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
   t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
@@ -226,6 +227,19 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
   if (my_id == 0) then
     open(20,file="pellets_parameters.dat",position="APPEND",status="OLD")
     write(20,"(e12.3)",advance="no") t_now/V_normalisation
+  end if
+
+  if (toroidal_rotation == .true.) then
+    mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+
+    spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
+    spi_phi_inj     = mgi_phi + mgi_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
+
+    if (spi_phi_inj >= 2.*PI) then
+      spi_phi_inj   = mod(spi_phi_inj,2.*PI)
+    else if (spi_phi_inj < 0.) then
+      spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
+    end if
   end if
 
   do i=1, n_spi
@@ -236,7 +250,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
       write(20,"(e14.6)") pellets(i)%spi_abl
     end if
 
-    spi_delta_phi          = pellets(i)%spi_phi - mgi_phi
+    spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
     spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
                              + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
     spi_Vel_phi_tmp        = pellets(i)%spi_Vel_RxZ * cos(spi_delta_phi) &
@@ -247,9 +261,20 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp
     pellets(i)%spi_R       = pellets(i)%spi_R + spi_Vel_R_tmp * tstep / V_normalisation
     pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
     pellets(i)%spi_phi     = pellets(i)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
+
+    if (toroidal_rotation == .true.) then
+      pellets(i)%spi_phi     = pellets(i)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
+    end if
+
     pellets(i)%spi_Vel_R   = pellets(i)%spi_Vel_R
     pellets(i)%spi_Vel_Z   = pellets(i)%spi_Vel_Z
     pellets(i)%spi_Vel_RxZ = pellets(i)%spi_Vel_RxZ
+
+    if (pellets(i)%spi_phi >= 2.*PI) then
+      pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI)
+    else if (pellets(i)%spi_phi < 0.) then
+      pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI) + 2.*PI
+    end if
 
     if (pellets(i)%spi_radius > 0.0) then
       pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &

@@ -247,6 +247,8 @@ module phys_module
   real*8  :: spi_Vel_diff       !< The reference veolocity difference from the reference velocity
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
   real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
+  real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point
+  real*8  :: tor_frequency      !< The rigid body rotation frequency
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
                                 !< with regard to the simulation resolution
@@ -270,6 +272,7 @@ module phys_module
 
   logical :: abl_history        !< Whether or not ablation history is available from previous restart files
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
+  logical :: toroidal_rotation  !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet 
   

@@ -351,6 +351,8 @@ subroutine preset_parameters
      spi_Vel_diff    = 0.0
      spi_angle       = 0.0
      spi_L_inj       = 0.25
+     mgi_phi_rotate  = 0.0
+     tor_frequency   = 0.0
      
      n_spi           = 1
      psi_surfaces(:) = 0.0
@@ -367,6 +369,7 @@ subroutine preset_parameters
      flag_spi_size   = 0
      size_beta       = 3.d3
 
+     toroidal_rotation = .false.
      abl_history     = .false.
      using_spi       = .false.
     !=========== End of SPI parameters ===========

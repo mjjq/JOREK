@@ -132,7 +132,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
 
 
   ! Dynamically allocate memeries for temporary arrays in order to export
-  if (using_spi) then
+  if (using_spi .and. n_spi >= 1) then
 
     if (index_now .gt. 0) then
       write(21) xtime_spi_ablation(:,1:index_now)
@@ -176,6 +176,10 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_Vel_RxZ_arr)
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
+
+    if (toroidal_rotation == .true.) then
+      write(21) mgi_phi_rotate
+    end if
 
   end if
    
@@ -550,8 +554,7 @@ end if
 
 
   ! Dynamically allocate memeries for temporary arrays in order to export
-  if (using_spi) then
-
+  if (using_spi .and. n_spi>=1) then
     if (index_now .gt. 0) then
       call HDF5_array2D_saving(file_id,xtime_spi_ablation, &
              n_spi,index_now,'xtime_spi_ablation'//char(0))
@@ -605,6 +608,10 @@ end if
     deallocate (spi_Vel_RxZ_arr)
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
+
+    if (toroidal_rotation == .true.) then
+      call HDF5_real_saving(file_id,mgi_phi_rotate,"mgi_phi_rotate"//char(0))  
+    end if
 
   end if
 

@@ -111,7 +111,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 D_prof_neg, ZK_prof_neg, T_min,                     &
-
+                toroidal_rotation, tor_frequency,                   &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 mgi_sig, mgi_deltaphi, ksi_ion, abl_history,        &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &

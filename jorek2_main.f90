@@ -488,25 +488,28 @@ required = 0
     if ( freeboundary_equil .and. (n_flux .eq. 0)) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
         resistive_wall,parallel)
-    if (parallel == .true.) then
-         call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
-    else
-        call update_response(tstep, freeboundary_equil,resistive_wall)
-    endif 
+        if (parallel == .true.) then
+            call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
+        else
+            call update_response(tstep, freeboundary_equil,resistive_wall)
+        endif 
 
-     call import_external_fields('coil_field.dat', my_id)
-      call set_coil_curr_time_trace()
-      if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
-    else
-      freeb_equil2        = freeboundary_equil
-      freeboundary_equil  = .false.
-    end if
-    
+        call import_external_fields('coil_field.dat', my_id)
+        call set_coil_curr_time_trace()
+       
+  
+        if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
+        else
+          freeb_equil2        = freeboundary_equil
+          freeboundary_equil  = .false.
+        end if
+ 
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
       call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
     end if
     
+
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -515,14 +518,16 @@ required = 0
     if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
 #endif
 
+
     if (my_id == 0) then
-      
       ! --- Compute the plasma equilibrium
       if (equil) then
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
-        if (export_for_nemec) call export_nemec(node_list, element_list, xpoint, xcase)
-      end if
 
+        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
+        if (export_for_nemec) then
+             call export_nemec(node_list, element_list, xpoint, xcase)
+        endif
+      end if ! if (equil) then
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
         
@@ -541,7 +546,7 @@ required = 0
  !            write(*,*) 'ITER wall started'
               call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
                                     SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-	    endif
+	    endif 
 	           
           endif
                    
@@ -570,18 +575,17 @@ required = 0
 	      call export_boundary(node_list, bnd_elm_list, bnd_node_list)
         
         if ( freeb_equil2) then
+          write(6,*) "TTT"
           freeboundary_equil = .true.
           call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
           resistive_wall,parallel)
+            
 
         if (parallel == .true.) then
             call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
         else
             call update_response(tstep, freeboundary_equil,resistive_wall)
          endif
- 
-
-
           call import_external_fields('coil_field.dat', my_id)
           call set_coil_curr_time_trace()
           if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -589,9 +593,12 @@ required = 0
         
         ! --- Compute the plasma equilibrium
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
-        
+
       end if
-      
+ 
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+stop
+     
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
 
@@ -609,7 +616,9 @@ required = 0
       write(*,'(A,12e16.8)') ' initial energies4 : ',A_jec1,A_jec2
 #endif
 #endif
-    end if ! (my_id == 0)
+end if ! (my_id == 0)
+
+
     
 #ifdef USE_MUMPS
     ! --- Clean up this instance of mumps (used for equilibrium)

@@ -1045,6 +1045,7 @@ module vacuum_response
     ! matrices a_id and a_nw should be distriuted in the same way as a_ee
     if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
     allocate(sr%a_id%loc_mat(size(sr%a_ee%loc_mat,1),size(sr%a_ee%loc_mat,2)))
+    sr%a_id%distrib    =  .true.
     sr%a_id%row_wise   =  .true.
     sr%a_id%ind_start  =  sr%a_ee%ind_start
     sr%a_id%ind_end    =  sr%a_ee%ind_end
@@ -1069,11 +1070,6 @@ module vacuum_response
 
     sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:) 
 
-
-
-    !test_sum = 0.0
-    !call MPI_ALLREDUCE(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD, err)   
-    !write(6,*) my_id,"BBB",sum(sr%a_id%loc_mat),test_sum
 
     if(my_id==0) then
 
@@ -1196,6 +1192,7 @@ if(present(res_mat) .AND. present(mat2) ) then
 
      enddo     
 
+      
   endif 
 
 ! multiplication mat1(distributed)*mat2(distributed) =res_mat(not_distributed)
@@ -1249,22 +1246,20 @@ elseif(present(mat2) .AND. present(res_mat_not_distr)) then
         enddo
 
      enddo
-   endif 
+   endif
+
+ 
 ! multiplication mat1(distributed)*mat2(not_distributed) =res_mat(not_distributed)
 elseif(present(mat2_not_distr) .AND. present(res_mat_not_distr)) then
 
- ! check distribution. Result matrix not distributed, first matrix row wise, second matrix not distributed
- 
+ !Check distribution. Result matrix not distributed, first matrix row wise, second matrix not distributed
   if(mat1%row_wise == .true.) then
 
       res_mat_not_distr=0.0
       if(my_id == 0) step = size(mat1%loc_mat,1)
       call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
        
-
-        ! Matrix -matrix multiplications
-
-        
+       ! Matrix -matrix multiplications     
         glob_index_i = my_id*step
 
         do z = 1, size(mat1%loc_mat,1)
@@ -1721,7 +1716,7 @@ endif
   !!
   !! Vector quantities (at triangles):
   !! * jsurf_w: Surface currents on the wall
-  subroutine write_wall_vtk(index, resistive_wall)
+  subroutine write_wall_vtk(index, resistive_wall, my_id)
     
     use phys_module, only: nout
     use constants
@@ -1731,6 +1726,8 @@ endif
     ! --- Routine parameters
     integer, intent(in) :: index !< Time step index
     logical, intent(in) :: resistive_wall
+    integer, intent(in) :: my_id
+
     
     ! --- Local variables
     real*8              :: phi1, phi2, phi3, r1(3), r2(3), r3(3), r21(3), r32(3), r13(3), r21_cross_r32(3)
@@ -1743,6 +1740,9 @@ endif
     character(len=18)   :: filename
     real*8, allocatable :: tripot_w(:)
     
+
+if(my_id == 0) then
+
     if ( mod(index,nout) /= 0 ) return
     
     ! --- Preset values
@@ -1780,7 +1780,13 @@ endif
     write(filehandle,141) 'POINT_DATA', sr%npot_w
     write(filehandle,140) 'SCALARS pot_w float'
     write(filehandle,140) 'LOOKUP_TABLE default'
+endif
+    
+    ! should be done in parallel
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
+
+if(my_id == 0) then
+
     do i = 1, sr%npot_w
       write(filehandle,142) tripot_w(i)
     end do
@@ -1788,7 +1794,13 @@ endif
     ! --- Change of wall current potentials in previous time-step
     write(filehandle,140) 'SCALARS dpot_w float'
     write(filehandle,140) 'LOOKUP_TABLE default'
+
+endif
+
     call reconstruct_triangle_potentials(tripot_w, dwall_curr)
+
+if(my_id == 0) then
+
     do i = 1, sr%npot_w
       write(filehandle,142) tripot_w(i)
     end do
@@ -2103,7 +2115,13 @@ endif
       
     ! --- Total wall current vectors
     write(filehandle,140) 'VECTORS jsurf_w(MA/m) float'
+
+endif
+
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
+
+if (my_id == 0) then
+
     do i = 1, sr%ntri_w
       ! --- Wall potential at triangle nodes
       phi1   = tripot_w(sr%jpot_w(i,1))
@@ -2126,7 +2144,9 @@ endif
     ! --- Close file, clean up
     if ( allocated(tripot_w) ) deallocate( tripot_w )
     close(filehandle)
-    
+
+endif
+
   end subroutine write_wall_vtk
   
   
@@ -2586,10 +2606,11 @@ endif
     allocate( old_dpsibnd_vec(n_dof_starwall) )
     old_dpsibnd_vec(:) = 0.d0
     
-    if ( my_id == 0 ) call write_wall_vtk(0, resistive_wall)
+    !if ( my_id == 0 ) call write_wall_vtk(0, resistive_wall)
+    call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
     
-    if ( vacuum_debug ) write(*,*) 'Wall currents initialized.'
+    if ( vacuum_debug .AND. my_id == 0) write(*,*) 'Wall currents initialized.'
     wall_curr_initialized = .true.
     
   end subroutine init_wall_currents
@@ -2686,8 +2707,11 @@ endif
     end do
     wall_curr(:) = wall_curr(:) + dwall_curr(:)
     
+
+
+    call write_wall_vtk(index_now, resistive_wall, my_id)
     if ( my_id == 0 ) then
-      call write_wall_vtk(index_now, resistive_wall)
+
       if ( vacuum_debug .and. resistive_wall ) then
         call log_wall_curr()
         !call log_coil_curr()
@@ -2718,32 +2742,47 @@ endif
   !> Reconstruct the potential values at the wall triangle nodes.
   subroutine reconstruct_triangle_potentials(tripot_w, wall_curr)
     
+    use mpi_mod
+
     implicit none
     
     ! --- Routine parameters
     real*8, allocatable, intent(inout) :: tripot_w(:)
-    real*8, allocatable, intent(in)    :: wall_curr(:)
-    
+    !real*8, allocatable, intent(in)    :: wall_curr(:)
+    real*8, allocatable, intent(inout)    :: wall_curr(:)    
+
     ! --- Local variables
-    integer :: i, j
-    
-    if ( allocated(tripot_w) ) deallocate(tripot_w); allocate( tripot_w(sr%npot_w) )
-    
+    integer :: i, j, ierr, global_index, ntasks, step, my_id
+  
+    if ( allocated(tripot_w) ) deallocate(tripot_w); allocate( tripot_w(sr%npot_w) )    
     if ( allocated(wall_curr) ) then
+
+    call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+
+      if(my_id == 0 ) step = sr%s_ww%ind_end - sr%s_ww%ind_start + 1
+      call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+
+      wall_curr(:)=2.0
+
+      global_index = my_id*step
+      tripot_w=0.0
+
+
       do i = 1, sr%npot_w
         j = i + sr%ncoil
-        tripot_w(i) = sum(sr%s_ww%loc_mat(j,:) * wall_curr(:))
-      end do
-      tripot_w(1) = 0.d0
+        if(j>=sr%s_ww%ind_start    .AND. j<= sr%s_ww%ind_end ) then
+           tripot_w(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
+        endif  
+      enddo
+     
+       tripot_w(1) = 0.d0
     else
       !###
     end if
-    
+
+    call MPI_AllREDUCE(MPI_IN_PLACE,tripot_w,size(tripot_w),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
   end subroutine reconstruct_triangle_potentials
-  
-  
-  
-  
   
   
   !> Write wall current potentials to logfile.
@@ -2781,12 +2820,11 @@ endif
 
     ! --- Local variables
     integer :: i, j, k, j2, k2
-    real*8  :: a, b
     real*8, allocatable :: tmp_d_s(:)
     real*8  :: theta, zeta
     logical :: update_required
-    integer :: ierr,step,loc_size,ntasks,loc_to_glob
-    real*8  :: test_sum
+    integer :: ierr,step,loc_size,ntasks
+    real*8  :: test_sum,test_sum2
    
 
 ! --- Local variables to store the previous values of some parameters.
@@ -2942,10 +2980,9 @@ endif
 
       endif
 
-      ! --- Derived response matrix for equilibrium (extract n=0 part from
-      ! STARWALL EE matrix)
+      ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
 
-    ! zeta=1.0
+     !zeta=1.0
      response_m_eq = 0.d0
 
 
@@ -2978,7 +3015,7 @@ endif
 
 
       ! --- Derived response matrices for time-evolution
-      if ( resistive_wall ) then
+      if ( resistive_wall) then
 
         allocate( tmp_d_s(n_wall_curr) )
 
@@ -2994,14 +3031,12 @@ endif
         do j = 1, size(response_m_d%loc_mat,2)
           response_m_d%loc_mat(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
-
         
         ! m_e = a_ee - matmul(a_ey, m_a)
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_a, res_mat_not_distr=response_m_e)
          
         if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
         call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-
 
         do j = 1, size(sr%a_ee%loc_mat,1)
               response_m_e(j+my_id*step,:) = response_m_e(j+my_id*step,:) + sr%a_ee%loc_mat(j,:)
@@ -3055,16 +3090,6 @@ endif
           response_m_v%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
         end do
         
-
-
-       ! test_sum =0.0
-       ! call MPI_AllREDUCE(sum(response_m_v%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-       ! write(790+my_id,*) test_sum,sum(response_d_b),sr%ncoil
- 
-  
-        call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-        stop
-        
         deallocate( tmp_d_s )
 
       else ! (Ideal wall)
@@ -3073,10 +3098,18 @@ endif
         response_d_b(:)   = 0.d0
         response_d_c(:)   = 0.d0
         response_m_d%loc_mat(:,:) = 0.d0
-        response_m_e(:,:) = sr%a_id%loc_mat(:,:)
+
+        response_m_e=0.0
+        response_m_e(sr%a_id%ind_start:sr%a_id%ind_end,:) =sr%a_id%loc_mat(:,:)
+        call MPI_AllREDUCE(MPI_IN_PLACE,response_m_e,size(response_m_e),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+
         response_m_f%loc_mat(:,:) = 0.d0
         response_m_g%loc_mat(:,:) = 0.d0
-        response_m_h(:,:) = sr%a_id%loc_mat(:,:)
+
+        response_m_h =0.0
+        response_m_h(sr%a_id%ind_start:sr%a_id%ind_end,:) = sr%a_id%loc_mat(:,:)
+        call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+
         response_m_j(:,:) = 0.d0
         response_m_k(:,:) = 0.d0 !####
         response_m_l(:,:) = 0.d0 !####
@@ -3084,27 +3117,59 @@ endif
 
       end if
 
+
       if ( vacuum_debug ) then
-        write(*,*) 'DEBUG: Checksums'
-        write(*,*) 'm_a:', sum(abs(response_m_a%loc_mat)),sum(response_m_a%loc_mat)
-        write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
-        write(*,*) '1+d_b:', sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
-        write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
-        write(*,*) 'm_d:', sum(abs(response_m_d%loc_mat)),sum(response_m_d%loc_mat)
-        write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
-        write(*,*) 'm_f:', sum(abs(response_m_f%loc_mat)),sum(response_m_f%loc_mat)
-        write(*,*) 'm_g:', sum(abs(response_m_g%loc_mat)),sum(response_m_g%loc_mat)
-        write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
-        write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
-        write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
-        write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
-        write(*,*) 'm_v:', sum(abs(response_m_v%loc_mat)),sum(response_m_v%loc_mat)
-        write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
-        write(*,*) 'END: Checksums'
+        if(my_id == 0)   write(*,*) 'DEBUG: Checksums'
+
+        test_sum=0.0
+        test_sum2=0.0
+        call MPI_AllREDUCE(sum(abs(response_m_a%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call MPI_AllREDUCE(sum(response_m_a%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        if(my_id == 0)   write(*,*) 'm_a:', test_sum2, test_sum
+
+        if(my_id == 0)   write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
+        if(my_id == 0)   write(*,*) '1+d_b:',sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
+        if(my_id == 0)   write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
+       
+
+        test_sum=0.0
+        test_sum2=0.0
+        call MPI_AllREDUCE(sum(abs(response_m_d%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call MPI_AllREDUCE(sum(response_m_d%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        if(my_id == 0)   write(*,*) 'm_d:', test_sum2, test_sum
+        if(my_id == 0)   write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
+
+
+        test_sum=0.0
+        test_sum2=0.0
+        call MPI_AllREDUCE(sum(abs(response_m_f%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call MPI_AllREDUCE(sum(response_m_f%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        if(my_id == 0)   write(*,*) 'm_f:',test_sum2, test_sum
+
+
+        test_sum=0.0
+        test_sum2=0.0
+        call MPI_AllREDUCE(sum(abs(response_m_g%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call MPI_AllREDUCE(sum(response_m_g%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        if(my_id == 0)   write(*,*) 'm_g:',test_sum2, test_sum
+
+        if(my_id == 0)   write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
+        if(my_id == 0)   write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
+        if(my_id == 0)   write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
+        if(my_id == 0)   write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
+    
+        test_sum=0.0
+        test_sum=0.0
+        call MPI_AllREDUCE(sum(abs(response_m_v%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call MPI_AllREDUCE(sum(response_m_v%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        if(my_id == 0)   write(*,*) 'm_v:',test_sum2, test_sum
+        if(my_id == 0)   write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
+        if(my_id == 0)   write(*,*) 'END: Checksums'
       end if
 
     end if
 
+   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
   end subroutine update_response_parallel 
 
 
@@ -3271,18 +3336,11 @@ endif
        
  
         response_m_l(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_k(:,:) )
-        write(234,*)  sum(response_m_l),sum(sr%a_ey%loc_mat),  sum(response_m_k)
-       
-
 
  
         do k = 1, n_wall_curr
           response_m_v%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
         end do
-
-
-      !  write(234,*)n_wall_curr, sum(response_m_v),sum(sr%a_ey%loc_mat), sum(response_d_b),sr%ncoil
-        stop
 
         
         deallocate( tmp_d_s )
@@ -3324,7 +3382,7 @@ endif
       end if
       
     end if
-    
+ 
   end subroutine update_response
 
   

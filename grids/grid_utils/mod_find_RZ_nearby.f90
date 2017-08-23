@@ -95,7 +95,7 @@ do newton_iter_number = 1, newton_iter_max
 
   ! Limit this step if it goes outside of the element
   dist = merge(1-st_new,st_new,st_step .gt. 0) ! dist = 1-s if step > 0, s if step < 0 (distance to 0 or 1)
-  fact = maxval(abs(st_step)/dist) ! if fact>=1 we are on the boundary
+  fact = maxval(abs(st_step)/max(dist,1d-30)) ! if fact>=1 we are on the boundary
   ! (it is the overshoot: i.e. how many times we overshoot the boundary with one st_step)
 
   if (fact .ge. 1.d0-1d-12) then

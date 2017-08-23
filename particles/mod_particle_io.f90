@@ -14,7 +14,11 @@ integer(HSIZE_T), parameter :: particle_type_name_length = 40 !< length of the s
 character(len=*), parameter :: particle_type_name_field_name = 'particle_type' !< Name of the field containing the particle_type_name
 contains
 
-!> Export all particles using HDF5 Parallel File IO
+!> Export all particles using HDF5 IO
+!> This communicates the particles internally before writing since this gave
+!> better performance in our tests. A parallel version is in the git history.
+!> Note that reading is still performed in parallel as this is not considered
+!> time-critical and simpler to write.
 subroutine write_simulation_hdf5(sim, filename)
 type(particle_sim)   , intent(in) :: sim
 character*(*)        , intent(in) :: filename
@@ -33,38 +37,34 @@ character(len=12)             :: group_name
 character(len=particle_type_name_length) :: particle_type_name
 integer                       :: i, j, hdferr
 type(c_ptr) :: p_ptr
-real*8, dimension(:,:), allocatable :: real8_2D
-real*8, dimension(:), allocatable   :: real8_1D
-real*4, dimension(:), allocatable   :: real4_1D
-integer, dimension(:), allocatable  :: int4_1D
+real*8, dimension(:,:), allocatable :: real8_2D, real8_2D_all
+real*8, dimension(:), allocatable   :: real8_1D, real8_1D_all
+real*4, dimension(:), allocatable   :: real4_1D, real4_1D_all
+integer, dimension(:), allocatable  :: int4_1D, int4_1D_all
 
 ! Preparation
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 call h5open_f(hdferr)
 allocate(particles_per_proc(0:n_cpu-1))
-
-! Create file property list for parallel access
-call h5pcreate_f(H5P_FILE_ACCESS_F, plist, hdferr)
-call h5pset_fapl_mpio_f(plist, MPI_COMM_WORLD, MPI_INFO_NULL, hdferr)
+particles_per_proc = 0
 
 
-! Create file
-call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file, hdferr, access_prp=plist)
-if (hdferr .gt. 0) then
-  write(*,*) "file open failed:", hdferr
-  call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
-endif
-call h5pclose_f(plist, hdferr)
+if (my_id .eq. 0) then
+  ! Create file
+  call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file, hdferr)
+  if (hdferr .gt. 0) then
+    write(*,*) "file open failed:", hdferr
+    call MPI_Abort(MPI_COMM_WORLD, -1, ierr)
+  endif
 
+  ! Create group to write particle groups in
+  call h5gcreate_f(file, "/groups", group_id, hdferr)
+  call h5gclose_f(group_id, hdferr)
 
-! Create group to write particle groups in
-call h5gcreate_f(file, "/groups", group_id, hdferr)
-call h5gclose_f(group_id, hdferr)
-
-
-! Write the time
-call HDF5_real_saving(file,sim%time,'/time')
+  ! Write the time
+  call HDF5_real_saving(file,sim%time,'/time')
+end if
 
 
 if (allocated(sim%groups)) then
@@ -75,48 +75,62 @@ if (allocated(sim%groups)) then
     end if
     ! Find the number of particles on each node
     n_here = size(sim%groups(i)%particles,1)
-    call MPI_AllGather(n_here,1,MPI_INTEGER,&
-        particles_per_proc,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    n_total = sum(particles_per_proc)
-    i_here = sum(particles_per_proc(0:my_id-1))
+    call MPI_Gather(n_here,1,MPI_INTEGER,&
+        particles_per_proc,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    n_total = sum(particles_per_proc,1) ! set it on other processes as well (to
+    ! 0) so they can allocate the useless arrays
 
-    ! Create group to write in
-    write(group_name,"(A,i0.3,A)") "/groups/", i, "/"
-    call h5gcreate_f(file, group_name, group_id, hdferr)
-    call h5gclose_f(group_id, hdferr)
+    if (my_id .eq. 0) then
+      ! Create group to write in
+      write(group_name,"(A,i0.3,A)") "/groups/", i, "/"
+      call h5gcreate_f(file, group_name, group_id, hdferr)
+      call h5gclose_f(group_id, hdferr)
+    end if
 
     ! particle_base properties
     ! x
-    allocate(real8_2D(3,n_here))
+    allocate(real8_2D(3,n_here), real8_2D_all(3,n_total))
     do j=1,n_here
       real8_2D(:,j) = sim%groups(i)%particles(j)%x
     end do
-    call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"x",start=[0_HSIZE_T,i_here])
-    deallocate(real8_2D)
+    call MPI_Gatherv(real8_2D(:,:), 3*n_here, MPI_REAL8, &
+      real8_2D_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) call HDF5_array2D_saving(file,real8_2D_all,3,n_total,group_name//"x")
+    deallocate(real8_2D,real8_2D_all)
 
     ! st
-    allocate(real8_2D(2,n_here))
+    allocate(real8_2D(2,n_here), real8_2D_all(2,n_total))
     do j=1,n_here
       real8_2D(:,j) = sim%groups(i)%particles(j)%st
     end do
-    call HDF5_array2D_saving(file,real8_2D,2,n_total,group_name//"st",start=[0_HSIZE_T,i_here])
-    deallocate(real8_2D)
+    call MPI_Gatherv(real8_2D(:,:), 2*n_here, MPI_REAL8, &
+      real8_2D_all(:,:), particles_per_proc*2, [(sum(particles_per_proc(1:i),1)*2, i=0,n_cpu-1)], &
+      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) call HDF5_array2D_saving(file,real8_2D_all,3,n_total,group_name//"st")
+    deallocate(real8_2D,real8_2D_all)
 
     ! weight
-    allocate(real4_1D(n_here))
+    allocate(real4_1D(n_here), real4_1D_all(n_total))
     do j=1,n_here
       real4_1D(j) = sim%groups(i)%particles(j)%weight
     end do
-    call HDF5_array1D_saving_r4(file,real4_1D,n_total,group_name//"weight",start=[i_here])
-    deallocate(real4_1D)
+    call MPI_Gatherv(real4_1D(:), n_here, MPI_REAL4, &
+      real4_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+      MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) call HDF5_array1D_saving_r4(file,real4_1D_all,n_total,group_name//"weight")
+    deallocate(real4_1D, real4_1D_all)
 
     ! i_elm
-    allocate(int4_1D(n_here))
+    allocate(int4_1D(n_here), int4_1D_all(n_total))
     do j=1,n_here
       int4_1D(j) = sim%groups(i)%particles(j)%i_elm
     end do
-    call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"i_elm",start=[i_here])
-    deallocate(int4_1D)
+    call MPI_Gatherv(int4_1D(:), n_here, MPI_INTEGER, &
+      int4_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+      MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+    if (my_id .eq. 0) call HDF5_array1D_saving_int(file,int4_1D_all,n_total,group_name//"i_elm")
+    deallocate(int4_1D, int4_1D_all)
 
     ! Write out stuff depending on particle type
     select type (p => sim%groups(i)%particles)
@@ -124,87 +138,117 @@ if (allocated(sim%groups)) then
       particle_type_name = 'particle_kinetic'
 
       ! v
-      allocate(real8_2D(3,n_here))
+      allocate(real8_2D(3,n_here), real8_2D_all(3,n_total))
       do j=1,n_here
         real8_2D(:,j) = p(j)%v
       end do
-      call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"v",start=[0_HSIZE_T,i_here])
-      deallocate(real8_2D)
+      call MPI_Gatherv(real8_2D(:,:), 3*n_here, MPI_REAL8, &
+        real8_2D_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array2D_saving(file,real8_2D_all,3,n_total,group_name//"v")
+      deallocate(real8_2D, real8_2D_all)
 
       ! q
-      allocate(int4_1D(n_here))
+      allocate(int4_1D(n_here), int4_1D_all(n_total))
       do j=1,n_here
         int4_1D(j) = p(j)%q
       end do
-      call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"q",start=[i_here])
-      deallocate(int4_1D)
+      call MPI_Gatherv(int4_1D(:), n_here, MPI_INTEGER, &
+        int4_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array1D_saving_int(file,int4_1D_all,n_total,group_name//"q")
+      deallocate(int4_1D, int4_1D_all)
+
     type is (particle_kinetic_leapfrog)
       particle_type_name = 'particle_kinetic_leapfrog'
 
       ! v
-      allocate(real8_2D(3,n_here))
+      allocate(real8_2D(3,n_here), real8_2D_all(3,n_total))
       do j=1,n_here
         real8_2D(:,j) = p(j)%v
       end do
-      call HDF5_array2D_saving(file,real8_2D,3,n_total,group_name//"v",start=[0_HSIZE_T,i_here])
-      deallocate(real8_2D)
+      call MPI_Gatherv(real8_2D(:,:), 3*n_here, MPI_REAL8, &
+        real8_2D_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array2D_saving(file,real8_2D_all,3,n_total,group_name//"v")
+      deallocate(real8_2D, real8_2D_all)
 
       ! q
-      allocate(int4_1D(n_here))
+      allocate(int4_1D(n_here), int4_1D_all(n_total))
       do j=1,n_here
         int4_1D(j) = p(j)%q
       end do
-      call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"q",start=[i_here])
-      deallocate(int4_1D)
+      call MPI_Gatherv(int4_1D(:), n_here, MPI_INTEGER, &
+        int4_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array1D_saving_int(file,int4_1D_all,n_total,group_name//"q")
+      deallocate(int4_1D, int4_1D_all)
+
     type is (particle_gc)
       particle_type_name = 'particle_gc'
 
       ! E
-      allocate(real8_1D(n_here))
+      allocate(real8_1D(n_here), real8_1D_all(n_total))
       do j=1,n_here
         real8_1D(j) = p(j)%E
       end do
-      call HDF5_array1D_saving(file,real8_1D,n_total,group_name//"E",start=[i_here])
-      deallocate(real8_1D)
+      call MPI_Gatherv(real8_1D(:), n_here, MPI_REAL8, &
+        real8_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array1D_saving(file,real8_1D_all,n_total,group_name//"E")
+      deallocate(real8_1D, real8_1D_all)
 
       ! mu
-      allocate(real8_1D(n_here))
+      allocate(real8_1D(n_here), real8_1D_all(n_total))
       do j=1,n_here
         real8_1D(j) = p(j)%mu
       end do
-      call HDF5_array1D_saving(file,real8_1D,n_total,group_name//"mu",start=[i_here])
-      deallocate(real8_1D)
+      call MPI_Gatherv(real8_1D(:), n_here, MPI_REAL8, &
+        real8_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array1D_saving(file,real8_1D_all,n_total,group_name//"mu")
+      deallocate(real8_1D, real8_1D_all)
 
       ! q
-      allocate(int4_1D(n_here))
+      allocate(int4_1D(n_here), int4_1D_all(n_total))
+      if (my_id .eq. 0) allocate(int4_1D_all(n_total))
       do j=1,n_here
         int4_1D(j) = p(j)%q
       end do
-      call HDF5_array1D_saving_int(file,int4_1D,n_total,group_name//"q",start=[i_here])
-      deallocate(int4_1D)
+      call MPI_Gatherv(int4_1D(:), n_here, MPI_INTEGER, &
+        int4_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array1D_saving_int(file,int4_1D_all,n_total,group_name//"q")
+      deallocate(int4_1D, int4_1D_all)
+
     type is (particle_fieldline)
       particle_type_name = 'particle_fieldline'
       ! v
-      allocate(real8_1D(n_here))
+      allocate(real8_1D(n_here), real8_1D_all(n_total))
       do j=1,n_here
         real8_1D(j) = p(j)%v
       end do
-      call HDF5_array1D_saving(file,real8_1D,n_total,group_name//"v",start=[i_here])
-      deallocate(real8_1D)
+      call MPI_Gatherv(real8_1D(:), n_here, MPI_REAL8, &
+        real8_1D_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      if (my_id .eq. 0) call HDF5_array1D_saving(file,real8_1D_all,n_total,group_name//"v")
+      deallocate(real8_1D, real8_1D_all)
     class default
       write(*,*) "error: missing type name declaration for write"
       call exit(1)
     end select
 
-    call HDF5_char_saving(file,particle_type_name,group_name//"type")
+    if (my_id .eq. 0) call HDF5_char_saving(file,particle_type_name,group_name//"type")
   end do
 end if
 
 ! Close everything
-call h5fclose_f(file, hdferr)
-call h5close_f(hdferr)
+if (my_id .eq. 0) then
+  call h5fclose_f(file, hdferr)
+  call h5close_f(hdferr)
 
-if (my_id .eq. 0) write(*,*) "Writing particle output file to ", filename, " succeeded"
+  write(*,*) "Writing particle output file to ", filename, " succeeded"
+end if
 end subroutine write_simulation_hdf5
 
 

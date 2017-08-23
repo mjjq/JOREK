@@ -283,9 +283,6 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
         call h5sclose_f(dspace, ierr)
         call h5dclose_f(dset, ierr)
       end do
-      !call MPI_REDUCE(sum(real4_var), tmpreal4, 1, MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-      !call MPI_REDUCE(sum(int4_var), tmpint4, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-      !if (my_id .eq. 0) write(*,*) i, "Done writing, sums=", tmpreal4, tmpint4 ! output here is to stop gfortran (tried with 6.2.1) optimizing away the result
 
       ! Add the current time to the timeset
       call h5dget_space_f(tset, tspace, ierr)

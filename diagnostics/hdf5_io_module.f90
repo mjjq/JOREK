@@ -1103,30 +1103,15 @@ module hdf5_io_module
     integer, intent(in) :: rank
     integer(HSIZE_T), dimension(rank), intent(in) :: chunksize
     logical, intent(in) :: gzip
-    integer(HID_T) :: property
-
-    integer        :: error
-    integer(HSIZE_T), dimension(rank) :: chk
     integer, parameter :: cmpr = 6
-    integer :: i
-
-    ! Check chunksize, if too large make it smaller
-    chk = chunksize
-    i   = rank
-    do while (size(chk) .gt. 10000)
-      if (chk(i) .gt. 1) then
-        chk(i) = chk(i) / 2
-      else
-        i = i-1
-      end if
-    end do
+    integer        :: error
+    integer(HID_T) :: property
 
     !*** Creates a new property dataset ***
     call H5Pcreate_f(H5P_DATASET_CREATE_F,property,error)
 
-    ! If we are not doing parallel IO we can enable compression
     if (gzip) then
-      call H5Pset_chunk_f(property,rank,chk,error)
+      call H5Pset_chunk_f(property,rank,chunksize,error)
       call H5Pset_deflate_f(property,cmpr,error)
     end if
   end function get_HDF5_plist

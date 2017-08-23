@@ -229,17 +229,14 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
     write(20,"(e12.3)",advance="no") t_now/V_normalisation
   end if
 
-  if (toroidal_rotation == .true.) then
-    mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+  spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
+    
+  spi_phi_inj     = mgi_phi + mgi_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
 
-    spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
-    spi_phi_inj     = mgi_phi + mgi_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
-
-    if (spi_phi_inj >= 2.*PI) then
-      spi_phi_inj   = mod(spi_phi_inj,2.*PI)
-    else if (spi_phi_inj < 0.) then
-      spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
-    end if
+  if (spi_phi_inj >= 2.*PI) then
+    spi_phi_inj   = mod(spi_phi_inj,2.*PI)
+  else if (spi_phi_inj < 0.) then
+    spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
   end if
 
   do i=1, n_spi
@@ -340,6 +337,11 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
     end if
 
   end do
+
+  if (toroidal_rotation == .true.) then
+    mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+  end if
+
 
   !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
   

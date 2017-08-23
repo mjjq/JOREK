@@ -206,6 +206,7 @@ end subroutine get_orthonormals
 !> Which can easily be adjusted to obtain the gc position from a kinetic position and velocity.
 function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out)
   use data_structure
+  use mod_find_RZ_nearby
   type(type_node_list), intent(in)            :: node_list
   type(type_element_list), intent(in)         :: element_list
   type(particle_kinetic_leapfrog), intent(in) :: in
@@ -248,6 +249,7 @@ end function kinetic_leapfrog_to_gc
 function gc_to_kinetic_leapfrog(node_list, element_list, in, chi, B, mass) result(out)
   use constants
   use data_structure
+  use mod_find_RZ_nearby
   type(type_node_list), intent(in)    :: node_list
   type(type_element_list), intent(in) :: element_list
   type(particle_gc), intent(in)       :: in

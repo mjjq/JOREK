@@ -5,6 +5,7 @@ use data_structure
 use mod_particle_sim
 implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
+private
 public project_particles, write_particle_distribution_to_vtk
 public prepare_mumps_par, write_particle_distribution_to_h5
 public project_to_vtk, project_to_h5
@@ -422,6 +423,7 @@ use phys_module
 use data_structure
 use mod_basisfunctions
 use mpi
+use mod_interp_PRZ
 !$ use omp_lib
 implicit none
 
@@ -436,6 +438,7 @@ real*8, allocatable :: RHS(:,:), sum_rhs(:), my_rhs(:)
 real*8     :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
 integer    :: i, j, k, m, i_tor, index_large_i, inode, n_AA
 integer    :: i_elm, index, index_ij, my_id, ierr
+real*8, dimension(0) :: P, P_s, P_t, P_phi
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
@@ -456,7 +459,7 @@ do i_tor=1, n_tor
     x(1:2) = particle%st
     x(3)   = particle%x(3)
 
-    call interp3_RZ(node_list,element_list,particle%i_elm,x(1),x(2),R_g,R_s,R_t,Z_g,Z_s,Z_t)
+    call interp_RZ(node_list,element_list,particle%i_elm,x(1),x(2),R_g,R_s,R_t,Z_g,Z_s,Z_t)
     xjac = R_s*Z_t - R_t*Z_s
     call basisfunctions3(x(1), x(2), HH, HH_s, HH_t)
     do i=1,n_vertex_max

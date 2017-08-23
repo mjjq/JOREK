@@ -8,6 +8,7 @@ use mod_initialise_particles
 use mod_fields_linear
 use projection_helpers
 use mod_fieldline_euler
+use mod_neighbours
 implicit none
 
 contains
@@ -34,7 +35,7 @@ subroutine test_fieldline_backforth_euler
   ! Call this once to setup the rtree
   call find_RZ(f%node_list,f%element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
   ! Setup neighbour information for the run
-  call update_neighbours(f%element_list, f%node_list)
+  call update_neighbours(f%node_list, f%element_list)
   
   do i=-9,-7
     write(is,"(i2)") i
@@ -78,6 +79,7 @@ end subroutine test_fieldline_backforth_euler
 
 !> Test tracing a fieldline back and forth with Adams-Bashforth
 subroutine test_fieldline_backforth_adams_bashforth
+  use mod_find_RZ_nearby
   type(jorek_fields_interp_linear) :: f
   integer, parameter :: n_p = 2
   type(particle_fieldline) :: p(n_p)
@@ -93,7 +95,7 @@ subroutine test_fieldline_backforth_adams_bashforth
   ! Call this once to setup the rtree
   call find_RZ(f%node_list,f%element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
   ! Setup neighbour information for the run
-  call update_neighbours(f%element_list, f%node_list)
+  call update_neighbours(f%node_list, f%element_list)
   
   do i=-9,-6
     write(is,"(i2)") i

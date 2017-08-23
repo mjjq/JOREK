@@ -9,6 +9,7 @@ subroutine find_theta_psi(node_list,element_list,psi_minmax,theta,psi,phi,R_axis
 use constants
 use data_structure
 use mod_interp_PRZ
+use mod_find_RZ_nearby
 implicit none
 ! Allow using .cross. to mean a right-handed cross product
 interface operator(.cross.)

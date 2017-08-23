@@ -1,3 +1,8 @@
+module mod_find_RZ_nearby
+  implicit none
+  private
+  public :: find_RZ_nearby
+contains
 !> Optimized subroutine to find st coordinates corresponding to x_new=[R_new, Z_new] using
 !! The previous values x_old=[R_old, Z_old], st_old(2), i_elm_old and checking adjacent elements first
 !! It first checks the current element, using newton iteration to find st_try corresponding to x_new
@@ -35,6 +40,7 @@
 !! If ifail=-1 the particle is lost
 subroutine find_RZ_nearby(node_list, element_list, x_new, x_old, st_old, st_new, i_elm_old, i_elm_new, ifail)
 use data_structure
+use mod_neighbours
 implicit none
 !> Input parameters
 type (type_node_list),    intent(in)    :: node_list
@@ -50,17 +56,13 @@ integer,                  intent(out)   :: ifail !< if ifail = -1 the position c
 
 !> Accuracy defaults (tolerances are squared!, units of element size)
 real*8,  parameter :: element_tolerance   = 1.d-12 !< Tolerance for finding a position inside an element
-integer, parameter :: newton_iter_max     = 4 !< Number of iterations within an element to try
-integer, parameter :: element_try_max     = 2 !< Try newton iterations in at most this many elements
-integer, parameter :: num_backtrack_steps = 2 !< Try 0.5**this times the step at a minimum
+integer, parameter :: newton_iter_max     = 8 !< Number of iterations to try
 
 !> Internal variables
-integer :: newton_iter_number
-integer :: element_try_index
-integer :: backtrack_step
+integer :: newton_iter_number, i_elm_tmp
 real*8 :: inv_st_jac_det, R_s, R_t, Z_s, Z_t
-real*8 :: st_step(2), st_try(2), x_step(2) ! x_step = (R,Z) of trial position
-real*8 :: err2, err2_old
+real*8 :: st_step(2), st_try(2), x_step(2), x_tmp(2) ! x_step = (R,Z) of trial position
+real*8 :: err2, err2_old, dist(2), fact
 
 !> For output of check_element_boundary
 integer, parameter :: status_kind = KIND(1)
@@ -82,87 +84,75 @@ err2 = dot_product(x_step-x_new,x_step-x_new)
 ifail=0
 
 
-! Outer loop tries newton iteration, changes element if necessary
-do element_try_index = 1, element_try_max
-  ! Inner loop, newton iteration to find s and t in or out of this element
-  do newton_iter_number = 1, newton_iter_max
-    ! Perform newton iteration by calculating the inverse of the jacobian matrix explicitly
-    err2_old = err2
+! Newton iteration to find s and t in or out of this element
+do newton_iter_number = 1, newton_iter_max
+  ! Perform newton iteration by calculating the inverse of the jacobian matrix explicitly
+  err2_old = err2
 
-    ! Calculate the trial newton step
-    st_step(1) = ( Z_t * (x_new(1)-x_step(1)) - R_t * (x_new(2)-x_step(2))) * inv_st_jac_det
-    st_step(2) = (-Z_s * (x_new(1)-x_step(1)) + R_s * (x_new(2)-x_step(2))) * inv_st_jac_det
+  ! Calculate the trial newton step
+  st_step(1) = ( Z_t * (x_new(1)-x_step(1)) - R_t * (x_new(2)-x_step(2))) * inv_st_jac_det
+  st_step(2) = (-Z_s * (x_new(1)-x_step(1)) + R_s * (x_new(2)-x_step(2))) * inv_st_jac_det
 
+  ! Limit this step if it goes outside of the element
+  dist = merge(1-st_new,st_new,st_step .gt. 0) ! dist = 1-s if step > 0, s if step < 0 (distance to 0 or 1)
+  fact = maxval(abs(st_step)/dist) ! if fact>=1 we are on the boundary
+  ! (it is the overshoot: i.e. how many times we overshoot the boundary with one st_step)
 
-    ! Test different step sizes (backtracking)
-    do backtrack_step = 0, num_backtrack_steps
-      st_try = (st_new + 0.5**backtrack_step * st_step)
-
-      ! Stop if st_try becomes too large
-      if (maxval(abs(st_try)) .gt. 1d2) exit
-      ! Calculate the x_step corresponding to st_try with the coordinates of element i_elm_new
-      call try_interp(node_list,element_list,i_elm_new,st_try,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
-      err2 = dot_product(x_step-x_new,x_step-x_new)
-      if (err2 .lt. err2_old) exit
-    enddo
-    ! Save this trial value
-    st_new = st_try
-
-    if (err2 < element_tolerance) exit
-  enddo
-
-
-  if (isnan(err2)) then
-    !write(*,*) "WARNING: NaN encountered after newton iteration, using find_RZ"
-    call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    if (ifail .eq. 0) ifail=2
-    return
-  endif
-  if (newton_iter_number .gt. newton_iter_max) then
-    !write(*,"(A,i4,A,i5,A,2g14.6,A,3g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
-    !" using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
-      !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
-    call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    if (ifail .eq. 0) ifail=3
-    return
-  endif
-
-  ! Now check to see if we have left the current element
-  call check_element_boundary(element_list,i_elm_new,st_new,i_elm_new,st_new,stat)
-
-  select case (stat)
-  case (1) ! CHANGED
-    if (element_try_index .eq. element_try_max) then ! do not do this if it is the last round, we will try find_RZ below
-      !write(*,"(A,i5)") "WARNING: insufficient iterations for element change, trying brute force method. start at element", i_elm_new
-      !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
-      call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-      if (ifail .eq. 0) ifail=5
+  if (fact .ge. 1.d0-1d-12) then
+    st_new = st_new + st_step/fact
+    if (.true.) then ! DEBUG
+      call try_interp(node_list,element_list,i_elm_new,st_new,x_tmp,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
+    end if
+    i_elm_tmp = i_elm_new
+    call coord_in_neighbour(node_list,element_list,i_elm_tmp,i_elm_new,st_new)
+    if (i_elm_new .lt. 0) then
+      call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_tmp,st_new(1),st_new(2),ifail)
+      return ! Stop because find_RZ works always or the particle is lost. Passthrough ifail
+    end if
+    if (i_elm_new .eq. 0) then ! No element on that side, particle is lost
+      ifail = -1
       return
-    else
-      ! We have changed element, recalculate st_jac and err2
-      call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
-      !err2 = dot_product(x_step-x_new,x_step-x_new) ! XXX this should be set, logically, but performs better if not
-    endif
-  case (2) ! LOST
-    !write(*,*) "WARNING: position ", x_new, "not found in grid"
-    ifail = -1
-    return
-  case (3) ! SEARCH
-    call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
-    !write(*,"(A,i5,A,2g14.6)") "WARNING: check_element_boundary returned search, used find_RZ in element", i_elm_new, ", at position", x_new
-    if (ifail .eq. 0) ifail=4
-    return ! Stop because find_RZ works always
-  case default ! SAME == 0
-    return ! we are converged anyhow, no problem
-  end select
+    end if
 
+    call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
+    if (.true.) then ! DEBUG
+      if (norm2(x_step-x_tmp) .gt. 1d-8) then
+        write(*,*) "ERROR on element edge crossing", x_step, x_tmp, norm2(x_step-x_tmp), &
+        i_elm_new, i_elm_old
+        call exit(1)
+      end if
+    end if
+  else
+    st_new = st_new + st_step
+    call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
+  end if
+  err2 = dot_product(x_step-x_new,x_step-x_new)
+
+  if (err2 < element_tolerance) exit
 enddo
+
+
+if (isnan(err2)) then
+  !write(*,*) "WARNING: NaN encountered after newton iteration, using find_RZ"
+  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+  if (ifail .eq. 0) ifail=2
+  return
+endif
+if (newton_iter_number .gt. newton_iter_max) then
+  !write(*,"(A,i4,A,i5,A,2g14.6,A,3g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
+  !" using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
+    !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
+  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+  if (ifail .eq. 0) ifail=3
+  return
+endif
 end subroutine find_RZ_nearby
 
 
 !> Auxiliary subroutine for find_RZ_nearby
-subroutine try_interp(node_list,element_list,i_elm,st,x,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
+pure subroutine try_interp(node_list,element_list,i_elm,st,x,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 use data_structure
+use mod_interp_PRZ
 implicit none
 !> Input parameters
 type (type_node_list),    intent(in)    :: node_list
@@ -172,7 +162,7 @@ integer,                  intent(in)    :: i_elm
 real*8,                   intent(out)   :: x(2), R_s, R_t, Z_s, Z_t, inv_st_jac_det
 real*8 :: jac
 
-call interp3_RZ(node_list,element_list,i_elm,st(1),st(2),x(1),R_s,R_t,x(2),Z_s,Z_t)
+call interp_RZ(node_list,element_list,i_elm,st(1),st(2),x(1),R_s,R_t,x(2),Z_s,Z_t)
 ! Guard against the determinant being close to zero
 jac = R_s * Z_t - R_t * Z_s
 if (abs(jac) .lt. 1d-8) then
@@ -181,3 +171,4 @@ else
   inv_st_jac_det = 1.d0/(jac)
 end if
 end subroutine try_interp
+end module mod_find_RZ_nearby

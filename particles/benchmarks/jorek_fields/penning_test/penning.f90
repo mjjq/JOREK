@@ -19,6 +19,8 @@ use mod_parameters
 use constants
 use mod_fields_linear
 use mod_export_restart
+use mod_neighbours
+use mod_find_RZ_nearby
 
 implicit none
 
@@ -87,7 +89,7 @@ else
   write(*,*) 'FATAL : no valid combination of grid-sizes specified'
   stop
 end if
-call update_neighbours(fields%element_list,fields%node_list)
+call update_neighbours(fields%node_list, fields%element_list)
 
 write(*,*) 'Initializing fields'
 ! Set the fields in the first two parameters

@@ -194,6 +194,7 @@ subroutine do_read(this, sim, ev)
   use mod_import_restart
   use phys_module
   use mpi
+  use mod_neighbours
   class(read_jorek_fields_interp_linear), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), optional :: ev
@@ -311,7 +312,7 @@ subroutine do_read(this, sim, ev)
     ! Communicate the new fields to all processes
     call broadcast_elements(my_id, f%element_list)
     call broadcast_nodes(my_id, f%node_list)
-    call update_neighbours(f%element_list, f%node_list) ! needs to be done on every process to have an RTree everywhere
+    call update_neighbours(f%node_list, f%element_list) ! needs to be done on every process to have an RTree everywhere
     call MPI_Bcast(f%time_prev, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     call MPI_Bcast(f%time_now, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     call MPI_Bcast(sim%time, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)

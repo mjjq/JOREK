@@ -41,7 +41,6 @@ module data_structure
   type type_element                               !< type definition for one elements
     integer :: vertex(n_vertex_max)               !< nodes of the corners
     integer :: neighbours(n_vertex_max)           !< neighbouring elements
-    real*8  :: transform(n_vertex_max,n_dim,3)    !< transformation of coordinates from the element to the neighbours (s,t) -> (a+b*s+c*t,d+e*s+f*t)
     real*8  :: size(n_vertex_max,n_order+1)       !< size of vectors at each vertex of the element
     integer :: father                             !< index of father element (0 if no father)"refinement"
     integer :: n_sons                             !< Number of sons elements"refinement"

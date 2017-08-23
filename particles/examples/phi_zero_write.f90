@@ -11,6 +11,7 @@ use mpi
 use mod_event
 use mod_boris
 use mod_fieldline_euler
+use mod_find_RZ_nearby
 !$ use omp_lib
 implicit none
 

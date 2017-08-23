@@ -32,6 +32,7 @@ use mod_project_particles
 
 ! JOREK
 use data_structure
+use mod_find_RZ_nearby
 
 ! Default variables
 implicit none

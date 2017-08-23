@@ -16,6 +16,7 @@ use mod_parameters
 use constants
 use tr_module
 use mumps_module
+use mod_neighbours
 
 implicit none
 
@@ -100,7 +101,7 @@ call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial,
 
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-call update_neighbours(element_list,node_list)
+call update_neighbours(node_list, element_list)
 call broadcast_elements(my_id, element_list)       ! elements
 call broadcast_nodes(my_id, node_list)             ! nodes
 

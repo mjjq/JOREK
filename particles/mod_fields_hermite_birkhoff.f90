@@ -160,6 +160,7 @@ subroutine do_read(this, sim, ev)
   use phys_module, only: central_mass, central_density, t_start, tstep
   use constants, only: mu_zero, mass_proton
   use mpi
+  use mod_neighbours
   class(read_jorek_fields_interp_hermite_birkhoff), intent(inout) :: this
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), optional :: ev
@@ -198,7 +199,7 @@ subroutine do_read(this, sim, ev)
       this%i = this%i-1 ! trick to reuse normal reading code
       call read_next_file(this, f, i, prefer_plus_2=.false.)
       this%i = i
-      call update_neighbours(f%element_list, f%node_list)
+      call update_neighbours(f%node_list, f%element_list)
       call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
         tstep*t_norm, from_deltas=.true.)
       ! Set sim%time to this time also, to start at the right point
@@ -215,7 +216,7 @@ subroutine do_read(this, sim, ev)
 
       ! Now read the next file
       call read_next_file(this, f, i, prefer_plus_2=.true.)
-      call update_neighbours(f%element_list, f%node_list)
+      call update_neighbours(f%node_list, f%element_list)
       call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
         tstep*t_norm, from_deltas=i - this%i .ge. 2)
       ! note that t_start is set in import_hdf5_restart instead of t_now
@@ -252,7 +253,7 @@ subroutine do_read(this, sim, ev)
 
       ! Do an incremental read
       call read_next_file(this, f, i, prefer_plus_2=.true.)
-      call update_neighbours(f%element_list, f%node_list)
+      call update_neighbours(f%node_list, f%element_list)
       if (my_id .eq. 0) write(*,"(i2,A)") i-this%i, " JOREK steps between restarts"
       call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
         tstep*t_norm, from_deltas=i - this%i .ge. 2)

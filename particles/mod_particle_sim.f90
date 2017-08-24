@@ -24,6 +24,7 @@ type :: particle_sim
   !< MPI settings
   integer :: my_id
   integer :: n_cpu
+  real*8 :: wtime_start !< Clock time at the start of the program
 contains
   procedure :: finalize
   procedure :: initialize
@@ -45,10 +46,12 @@ subroutine initialize(sim, num_groups)
   if (ierr .ne. 0) write(*,*) "Error ", ierr, " in MPI_Init_thread"
   call MPI_COMM_RANK(MPI_COMM_WORLD, sim%my_id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, sim%n_cpu, ierr)
+  ! Synchronize clocks
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  sim%wtime_start = MPI_Wtime() ! accurate up to the network latency (fine for times measured in seconds)
 
   if (provided .ne. MPI_THREAD_MULTIPLE .and. sim%my_id .eq. 0) write(*,*) "WARNING: provided(", provided, ") != MPI_THREAD_MULTIPLE"
   allocate(sim%groups(num_groups))
-  write(*,*) 
   call MPI_GET_PROCESSOR_NAME(name,resultlength,ierr)
   write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', sim%my_id, ': ', name
 

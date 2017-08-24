@@ -7,7 +7,7 @@ use constants, only: tick
 use mod_event_timestep
 implicit none
 private
-public action, stop_action
+public action, stop_action, cycle_time_action
 public event, with, next_event_at, check_and_fix_timesteps
 public mpi_minmeanmax
 
@@ -31,6 +31,15 @@ contains
 end type stop_action
 interface stop_action
   module procedure new_stop_action
+end interface
+!> Timing output action (prints time since previous round)
+type, extends(action) :: cycle_time_action
+  real*8 :: last_t = 0.d0 !< Time at previous iteration
+contains
+  procedure :: do => do_cycle_time_action
+end type cycle_time_action
+interface cycle_time_action
+  module procedure new_cycle_time_action
 end interface
 
 
@@ -299,6 +308,31 @@ end subroutine do_stop_action
 
 
 
+!> Perform the cycle_time action
+subroutine do_cycle_time_action(this, sim, ev)
+  use mpi
+  class(cycle_time_action), intent(inout) :: this
+  type(particle_sim), intent(inout) :: sim
+  type(event), intent(inout), optional :: ev
+  real*8 :: t1, m4(4)
+  t1 = MPI_WTIME()
+
+  if (this%last_t .eq. 0.d0) then
+    this%last_t = t1
+  else
+    m4 = mpi_minmeanmedmax(t1 - this%last_t)
+    if (sim%my_id .eq. 0) write(*,"(A,4f8.3,A)") "Cycle time (min/mean/median/max): ", m4, "s"
+  end if
+end subroutine do_cycle_time_action
+!> Constructor for stop_action
+function new_cycle_time_action() result(new)
+  type(cycle_time_action) :: new
+  new%name = "CycleTime"
+  new%log  = .false.
+end function new_cycle_time_action
+
+
+
 !> Run an action
 subroutine run(this, sim, ev)
   !$ use omp_lib
@@ -306,20 +340,32 @@ subroutine run(this, sim, ev)
   class(action), intent(inout)      :: this
   type(particle_sim), intent(inout) :: sim
   type(event), intent(inout), optional :: ev !< If run from an event, get a pointer to it here
-  real*8 :: t1, w1, mmm(3), mmm2(3)
+  real*8 :: t1, w1, mmm(3), mmm2(3), m4(4)
   logical :: has_omp
   integer :: ierr
   has_omp = .false.
   !$ has_omp = .true.
 
-  call cpu_time(this%t0)
-  !$ this%t0 = omp_get_wtime()
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  call cpu_time(t1)
-  !$ t1 = omp_get_wtime()
-  mmm = mpi_minmeanmax(t1-this%t0)
-  if (mmm(3) .gt. 0.2) then ! only write if there is a significant imbalance
-    if (sim%my_id .eq. 0) write(*,"(A,A,3f8.3,A)") trim(this%name), " MPI inbalance (min/mean/max): ", mmm, "s"
+  if (this%log) then
+    ! Calculate imbalance between MPI processes
+    if (MPI_WTIME_IS_GLOBAL) then
+      t1 = MPI_WTIME()
+    else
+      ! Be aware that clock skew happens! That will distort the results over time
+      ! The load balancing action has an explicit mpi_barrier and could act as a
+      ! reset point for the clocks. Note that mpi_barrier only implies execution
+      ! synchronisation, not time synchronisation, which means that sim%wtime_start
+      ! is probably only accurate up to the network latency.
+      !
+      ! If MPI_WTIME_IS_GLOBAL is set the MPI implementation will attempt to
+      ! synchronise clocks and it is actually better not to use sim%wtime_start.
+      t1 = MPI_WTIME() - sim%wtime_start
+    end if
+    m4 = mpi_minmeanmedmax(t1)
+    m4 = m4 - m4(1) ! Measure times from first process to reach (i.e. min = 0)
+    if (m4(4) .gt. 0.1) then ! only write if there is a significant imbalance
+      if (sim%my_id .eq. 0) write(*,"(A,A,3f8.3,A)") trim(this%name), " MPI entry imbalance (mean/median/max): ", m4(2:4), "s"
+    end if
   end if
 
 
@@ -338,7 +384,7 @@ subroutine run(this, sim, ev)
       mmm = mpi_minmeanmax(t1-this%t0)
       !$ mmm2 = mpi_minmeanmax(w1-this%w0)
       if (sim%my_id .eq. 0) then
-        if (.not. has_omp) write(*,"(A,A,3f8.3,A)") trim(this%name), " finished in (min/mean/max): ", &
+        if (.not. has_omp) write(*,"(A,A,3f9.3,A)") trim(this%name), " finished in (min/mean/max): ", &
             mmm, "s"
         !$ write(*,"(A,A,3f8.3,A,3f8.3,A)") trim(this%name), " finished in (min/mean/max): ", &
         !$   mmm2, &
@@ -351,6 +397,18 @@ subroutine run(this, sim, ev)
       !$   w1-this%w0, &
       !$ "s (cpu time: ", t1-this%t0, ")"
     end if
+
+    ! Recalculate imbalance between MPI processes
+    if (MPI_WTIME_IS_GLOBAL) then
+      t1 = MPI_WTIME()
+    else
+      t1 = MPI_WTIME() - sim%wtime_start
+    end if
+    m4 = mpi_minmeanmedmax(t1)
+    m4 = m4 - m4(1) ! Measure times from first process to reach (i.e. min = 0)
+    if (m4(4) .gt. 0.1) then ! only write if there is a significant imbalance
+      if (sim%my_id .eq. 0) write(*,"(A,A,3f8.3,A)") trim(this%name), " MPI exit imbalance (mean/median/max): ", m4(2:4), "s"
+    end if
   end if
 end subroutine run
 
@@ -358,14 +416,44 @@ end subroutine run
 !> returns something only on root process.
 function mpi_minmeanmax(in) result(out)
   use mpi
-  real*8 :: in
+  real*8, intent(in) :: in
   real*8 :: out(3)
-  integer :: n_cpu, ierr
-  out = 0.d0
-  call MPI_Reduce(in, out(1), 1, MPI_REAL8, MPI_MIN, 0, MPI_COMM_WORLD, ierr)
-  call MPI_Reduce(in, out(2), 1, MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  call MPI_Reduce(in, out(3), 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierr)
+  integer :: n_cpu, my_id, ierr
+  real*8, allocatable :: in_all(:)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
-  out(2) = out(2)/real(n_cpu)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  allocate(in_all(n_cpu))
+  call MPI_Gather(in, 1, MPI_REAL8, in_all, 1, MPI_REAL8, 0, MPI_COMM_WORLd, ierr)
+  if (my_id .eq. 0) then
+    out(1) = minval(in_all,1)
+    out(2) = sum(in_all,1)/real(n_cpu)
+    out(3) = maxval(in_all,1)
+  else
+    out = 0.d0
+  end if
 end function mpi_minmeanmax
+
+!> Calculate min, mean and max values over all nodes
+!> returns something only on root process.
+function mpi_minmeanmedmax(in) result(out)
+  use mpi
+  use mod_quicksort
+  real*8, intent(in) :: in
+  real*8 :: out(4)
+  integer :: n_cpu, my_id, ierr
+  real*8, allocatable :: in_all(:)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  allocate(in_all(n_cpu))
+  call MPI_Gather(in, 1, MPI_REAL8, in_all, 1, MPI_REAL8, 0, MPI_COMM_WORLd, ierr)
+  if (my_id .eq. 0) then
+    call quicksort(in_all,1,n_cpu)
+    out(1) = in_all(1)
+    out(2) = sum(in_all,1)/real(n_cpu)
+    out(3) = in_all((n_cpu+1)/2)
+    out(4) = in_all(n_cpu)
+  else
+    out = 0.d0
+  end if
+end function mpi_minmeanmedmax
 end module mod_event

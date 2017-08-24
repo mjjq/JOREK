@@ -79,7 +79,6 @@ ifeq ($(COMPILER_FAMILY), intel)
     FLAGS += -ftrapuv
     FLAGS += -debug all -debug-parameters
     FLAGS += -fstack-security-check
-    FLAGS += -fpe0
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     FFLAGS += -check uninit

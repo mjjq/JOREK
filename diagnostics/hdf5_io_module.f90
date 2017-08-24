@@ -246,12 +246,13 @@ module hdf5_io_module
   !---------------------------------------- 
   ! HDF5 saving for a 1D array of integer
   !----------------------------------------
-  subroutine HDF5_array1D_saving_int(file_id,array1D,dim1,dsetname,start)
+  subroutine HDF5_array1D_saving_int(file_id,array1D,dim1,dsetname,start,compress_level)
     integer(HID_T)       , intent(in) :: file_id   ! file identifier
     integer, dimension(:), intent(in) :: array1D
     integer              , intent(in) :: dim1
     character(LEN=*)     , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T), dimension(1), intent(in), optional :: start !< Begin position of data
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer             :: error      ! error flag
     integer             :: rank       ! dataset rank
@@ -268,7 +269,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_INTEGER,&
@@ -296,12 +301,13 @@ module hdf5_io_module
   !---------------------------------------- 
   ! HDF5 saving for a 2D array of integer
   !----------------------------------------
-  subroutine HDF5_array2D_saving_int(file_id,array2D,dim1,dim2,dsetname,start)
+  subroutine HDF5_array2D_saving_int(file_id,array2D,dim1,dim2,dsetname,start,compress_level)
     integer(HID_T)           , intent(in) :: file_id   ! file identifier
     integer, dimension(:,:)  , intent(in) :: array2D
     integer                  , intent(in) :: dim1, dim2
     character(LEN=*)         , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T)         , intent(in), optional :: start(2) !< Begin position of data
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer             :: error      ! error flag
     integer             :: rank       ! dataset rank
@@ -319,7 +325,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_INTEGER,&
@@ -348,12 +358,13 @@ module hdf5_io_module
   !---------------------------------------- 
   ! gzip HDF5 saving for a 1D array of real*4
   !----------------------------------------
-  subroutine HDF5_array1D_saving_r4(file_id,array1D,dim1,dsetname,start)
+  subroutine HDF5_array1D_saving_r4(file_id,array1D,dim1,dsetname,start,compress_level)
     integer(HID_T)       , intent(in) :: file_id   ! file identifier
     real(4), dimension(:), intent(in) :: array1D
     integer              , intent(in) :: dim1
     character(LEN=*)     , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T)     , intent(in), optional :: start(1) !< Begin position of data
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer             :: error      ! error flag
     integer             :: rank       ! dataset rank
@@ -370,7 +381,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_REAL,&
@@ -399,12 +414,13 @@ module hdf5_io_module
   !-------------------------------------------- 
   ! gzip HDF5 saving for a 1D array of real*8
   !--------------------------------------------
-  subroutine HDF5_array1D_saving(file_id,array1D,dim1,dsetname,start)
+  subroutine HDF5_array1D_saving(file_id,array1D,dim1,dsetname,start,compress_level)
     integer(HID_T)      , intent(in) :: file_id   ! file identifier
     real*8, dimension(:), intent(in) :: array1D
     integer             , intent(in) :: dim1
     character(LEN=*)    , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T)     , intent(in), optional :: start(1) !< Begin position of data
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer             :: error      ! error flag
     integer             :: rank       ! dataset rank
@@ -421,7 +437,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_DOUBLE,&
@@ -450,12 +470,13 @@ module hdf5_io_module
   !---------------------------------------- 
   ! gzip HDF5 saving for a 2D array
   !----------------------------------------
-  subroutine HDF5_array2D_saving(file_id,array2D,dim1,dim2,dsetname,start)
+  subroutine HDF5_array2D_saving(file_id,array2D,dim1,dim2,dsetname,start,compress_level)
     integer(HID_T)        , intent(in) :: file_id   ! file identifier
     real*8, dimension(:,:), intent(in) :: array2D
     integer               , intent(in) :: dim1, dim2
     character(LEN=*)      , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T), dimension(2), intent(in), optional :: start !< Offset of array to write
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer              :: error      ! error flag
     integer              :: rank       ! dataset rank
@@ -473,7 +494,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_DOUBLE, &
@@ -503,12 +528,13 @@ module hdf5_io_module
   ! gzip HDF5 saving for a 3D array
   !----------------------------------------
   subroutine HDF5_array3D_saving(file_id,array3D, &
-    dim1,dim2,dim3,dsetname,start)
+    dim1,dim2,dim3,dsetname,start,compress_level)
     integer(HID_T)          , intent(in) :: file_id   ! file identifier
     real*8, dimension(:,:,:), intent(in) :: array3D
     integer                 , intent(in) :: dim1, dim2, dim3
     character(LEN=*)        , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T), dimension(3), intent(in), optional :: start !< Offset of array to write
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer             :: error      ! error flag
     integer             :: rank       ! dataset rank
@@ -527,7 +553,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_DOUBLE, &
@@ -557,12 +587,13 @@ module hdf5_io_module
   ! gzip HDF5 saving for a 4D array
   !----------------------------------------
   subroutine HDF5_array4D_saving(file_id,array4d, &
-    dim1,dim2,dim3,dim4,dsetname,start)
+    dim1,dim2,dim3,dim4,dsetname,start,compress_level)
     integer(HID_T)            , intent(in) :: file_id   ! file identifier
     real*8, dimension(:,:,:,:), intent(in) :: array4d
     integer                   , intent(in) :: dim1, dim2, dim3, dim4
     character(LEN=*)          , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T), dimension(4), intent(in), optional :: start !< Offset of array to write
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer             :: error      ! error flag
     integer             :: rank       ! dataset rank
@@ -582,7 +613,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_DOUBLE, &
@@ -612,13 +647,14 @@ module hdf5_io_module
   ! gzip HDF5 saving for a 5D array
   !----------------------------------------
   subroutine HDF5_array5D_saving(file_id,array5d, &
-    dim1,dim2,dim3,dim4,dim5,dsetname,start)
+    dim1,dim2,dim3,dim4,dim5,dsetname,start,compress_level)
     integer(HID_T)              , intent(in) :: file_id  ! file identifier
     real*8, dimension(:,:,:,:,:), intent(in) :: array5d
     integer                     , intent(in) :: dim1, dim2
     integer                     , intent(in) :: dim3, dim4, dim5
     character(LEN=*)            , intent(in) :: dsetname  ! dataset name
     integer(HSIZE_T), dimension(5), intent(in), optional :: start !< Offset of array to write
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
 
     integer             :: error      ! error flag
     integer             :: rank       ! dataset rank
@@ -639,7 +675,11 @@ module hdf5_io_module
     call H5Screate_simple_f(rank,dim,filespace,error)
 
     !*** Get compression property list ***
-    property = get_HDF5_plist(rank, dim, .not. present(start))
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
 
     !*** Create real dataset ***
     call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_DOUBLE, &
@@ -1099,20 +1139,44 @@ module hdf5_io_module
     call H5Dclose_f(dataset,error)
   end subroutine HDF5_array5D_reading
 
-  function get_HDF5_plist(rank, chunksize, gzip) result(property)
+  function get_HDF5_plist(rank, chunksize, gzip, level) result(property)
     integer, intent(in) :: rank
     integer(HSIZE_T), dimension(rank), intent(in) :: chunksize
     logical, intent(in) :: gzip
-    integer, parameter :: cmpr = 6
-    integer        :: error
+    integer, intent(in), optional :: level
     integer(HID_T) :: property
+
+    integer        :: error, i
+    integer(HSIZE_T), dimension(rank) :: chk
+    integer, parameter :: cmpr_default = 6
+    integer :: cmpr_level
+
+    ! Check chunksize, if too large make it smaller.
+    ! Aim for 10000 elements per chunk, by reducing the last dimension first
+    chk = chunksize
+    i   = rank
+    do while (product(chk) .gt. 10000)
+      if (chk(i) .gt. 1) then
+        chk(i) = chk(i) / 2
+      else
+        i = i-1
+      end if
+    end do
 
     !*** Creates a new property dataset ***
     call H5Pcreate_f(H5P_DATASET_CREATE_F,property,error)
 
+    ! If we are not doing parallel IO we can enable compression
     if (gzip) then
-      call H5Pset_chunk_f(property,rank,chunksize,error)
-      call H5Pset_deflate_f(property,cmpr,error)
+      if (present(level)) then
+        cmpr_level = level
+      else
+        cmpr_level = cmpr_default
+      end if
+      if (cmpr_level .gt. 0) then
+        call H5Pset_chunk_f(property,rank,chk,error)
+        call H5Pset_deflate_f(property,cmpr_level,error)
+      end if
     end if
   end function get_HDF5_plist
 

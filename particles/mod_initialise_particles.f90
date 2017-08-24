@@ -344,6 +344,9 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   ! Preparatory work: get R_axis, Z_axis
   call find_axis(my_id, fields%node_list, fields%element_list, psi_axis, R_axis, Z_axis, i_elm, s_axis, t_axis, ifail)
 
+  ! Preset i_elm to 0 so that by default particles are lost
+  particles(:)%i_elm = 0
+
   ! Assume equal number of particles everywhere
   particles_to_do_local  = size(particles)
   particles_done_local   = 0
@@ -521,6 +524,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     i=1
     do j=1,size(particles_tmp)
       if (found(j)) then
+        if (i .gt. to_find) exit
         select type(p1 => particles(particles_done_local+i))
         type is (particle_kinetic_leapfrog)
           select type (p2 => particles_tmp(j))
@@ -535,7 +539,6 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         end select
 
         i = i+1
-        if (i .gt. to_find) exit
       end if
     end do
     particles_done_local = particles_done_local + i-1
@@ -544,7 +547,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
     ! check if everyone is done
     call MPI_AllReduce(particles_to_do_local .eq. particles_done_local, all_done, &
-        1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, ierr)
+        1, MPI_LOGICAL, MPI_LAND, MPI_COMM_WORLD, ierr)
   end do
 end subroutine initialise_particles_H_mu_psi
 

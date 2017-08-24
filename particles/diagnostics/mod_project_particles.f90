@@ -9,6 +9,7 @@ private
 public project_particles, write_particle_distribution_to_vtk
 public prepare_mumps_par, write_particle_distribution_to_h5
 public project_to_vtk, project_to_h5
+public DMUMPS_STRUC
 
 !> Action to project all particle distributions and save them to vtk
 type, extends(io_action), abstract :: project_particles_base
@@ -405,11 +406,11 @@ mumps_par%JOB       = 4
 mumps_par%n         = n_AA
 mumps_par%nz        = nz_AA
 mumps_par%icntl(5)  = 0 ! assembled form
-mumps_par%icntl(18) = 0 ! centralized (i.e. only on cpu 0)
-mumps_par%icntl(7)  = 4 ! compute symmetric perturbation? (if 1)
+mumps_par%icntl(18) = 0 ! centralized input matrix (i.e. only on cpu 0)
+mumps_par%icntl(7)  = 7 ! compute symmetric permutation (PORD or SCOTCH autoselect)
 mumps_par%icntl(8)  = 7 ! scaling
 mumps_par%icntl(14) = 80 ! memory relaxation parameter
-mumps_par%icntl(4)  = 1 ! Print errors, warnings and main statistics
+mumps_par%icntl(4)  = 1 ! 2=Print errors, warnings and main statistics
 if (present(skip_factorisation) .and. skip_factorisation) then
 else
   call DMUMPS(mumps_par)

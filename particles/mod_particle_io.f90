@@ -239,7 +239,7 @@ if (allocated(sim%groups)) then
     ! It is important to do the gathering first, because that is the collective part
     if (my_id .eq. 0) then
       call HDF5_array2D_saving(file,x_all,3,n_total,group_name//"x")
-      call HDF5_array2D_saving(file,st_all,3,n_total,group_name//"st")
+      call HDF5_array2D_saving(file,st_all,2,n_total,group_name//"st")
       call HDF5_array1D_saving_r4(file,weight_all,n_total,group_name//"weight")
       call HDF5_array1D_saving_int(file,i_elm_all,n_total,group_name//"i_elm")
 

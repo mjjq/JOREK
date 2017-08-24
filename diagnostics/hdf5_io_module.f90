@@ -1155,7 +1155,7 @@ module hdf5_io_module
     ! Aim for 10000 elements per chunk, by reducing the last dimension first
     chk = chunksize
     i   = rank
-    do while (product(chk) .gt. 10000)
+    do while (product(chk) .gt. 100000)
       if (chk(i) .gt. 1) then
         chk(i) = chk(i) / 2
       else

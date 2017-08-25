@@ -9,6 +9,7 @@ use data_structure
 use phys_module
 use mod_poiss
 use mod_iterate2area
+use mod_plasma_response
 use vacuum
 implicit none
 
@@ -43,7 +44,7 @@ real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xj
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
 real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old, area_ref
 integer    :: n_grids(10)
-logical    :: freeboundary_equil2
+logical    :: freeboundary_equil2, find_pf_coil_currents =.true.
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
@@ -138,6 +139,8 @@ enddo
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
 
+if (find_pf_coil_currents) freeboundary_equil = .false.
+
 current_int = 0.d0; Z_axis_int = 0.d0
  
 T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
@@ -149,7 +152,7 @@ if (freeboundary_equil) then
   write(*,*) '--- Iterative solution of freeboundary equilibrium ---'
   write(*,*) '------------------------------------------------------'
   write(*,*)
-
+  
   ! Target current and axis
   if (current_ref .gt. 1.d20) then    !choose fix bnd equilibrium final current in case of non specification of target current
     call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_ref)
@@ -374,7 +377,20 @@ do i=1,node_list%n_nodes
                                                + node_list%node(i)%x(3,2) * node_list%node(i)%values(1,2,1) )
 
 
-enddo
+enddo     
+
+if (find_pf_coil_currents) then
+  if (starwall_equil_coils) then
+    write(*,*) 'The feature "find_pf_coil_currents" is not available yet with STARWALL coils'
+    write(*,*) 'Please use COIL_FIELD (in STARWALL repository) for the coil geometry instead'
+  else
+    call find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list)
+    write(*,*) ' '
+    write(*,*) ' Please re-do the equilibrium with the found currents and set find_pf_coil_currents=.false.'
+  endif
+  stop  
+endif
+
 
 ! --- Find flux surfaces and plot them; determine the q-profile.  
 if (xpoint2 .and. (n_flux .gt. 1)) then

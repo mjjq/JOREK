@@ -44,7 +44,7 @@ real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xj
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
 real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old, area_ref
 integer    :: n_grids(10)
-logical    :: freeboundary_equil2, find_pf_coil_currents =.true.
+logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof

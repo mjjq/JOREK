@@ -79,7 +79,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp
+                voltage_coils, vert_FB_amp, find_pf_coil_currents
 
 if (my_id .eq. 0) then
 

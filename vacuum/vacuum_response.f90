@@ -1066,7 +1066,7 @@ module vacuum_response
     time(6)=MPI_WTIME()
  
    
-    if(my_id == 0) write(745,*) time(6)-time(5), (time(6)-time(5))/60.0
+    !if(my_id == 0) write(745,*) time(6)-time(5), (time(6)-time(5))/60.0
 
     sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:) 
 

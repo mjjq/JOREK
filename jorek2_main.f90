@@ -175,7 +175,7 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-  logical :: parallel = .true.  
+  logical :: parallel = .false.  
 
   !***********************************************************************
   !*                  intialisation                                      *
@@ -519,15 +519,33 @@ required = 0
 #endif
 
 
-    if (my_id == 0) then
+   ! if (my_id == 0) then
+
+
       ! --- Compute the plasma equilibrium
       if (equil) then
 
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
-        if (export_for_nemec) then
+
+           write(100+my_id,*) "AAA", my_id
+
+
+          call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
+
+        write(1500+my_id,*) "BBB", my_id
+        call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+         write(1600+my_id,*) "CCC", my_id
+
+        stop
+
+       if (export_for_nemec) then
              call export_nemec(node_list, element_list, xpoint, xcase)
         endif
       end if ! if (equil) then
+
+
+
+    if (my_id == 0) then
+
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
         

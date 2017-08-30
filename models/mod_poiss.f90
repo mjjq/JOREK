@@ -58,19 +58,23 @@ integer:: nnz, ierr
 integer*8 :: check_data
 
 
-
-write(*,*) '**************************************'
-write(*,*) '*            Poisson                 *'
-write(*,*) '**************************************'
-if (iter .le. 1) then
-  write(*,*) ' i_type       : ',itype
-  write(*,*) ' n_elements   : ',element_list%n_elements
-  write(*,*) ' n_nodes      : ',node_list%n_nodes
-  write(*,*) ' freeboundary_equil : ',freeboundary_equil
-endif
+IF(my_id == 0) THEN
+  write(*,*) '**************************************'
+  write(*,*) '*            Poisson                 *'
+  write(*,*) '**************************************'
   
+  if (iter .le. 1) then
+    write(*,*) ' i_type       : ',itype
+    write(*,*) ' n_elements   : ',element_list%n_elements
+    write(*,*) ' n_nodes      : ',node_list%n_nodes
+    write(*,*) ' freeboundary_equil : ',freeboundary_equil
+  endif
+
+ 
+
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2 
 call tr_debug_write("Deb_poisson",nz_AA)
+
 
 n_border = 0
 do i=1,node_list%n_nodes
@@ -90,11 +94,13 @@ do inode = 1, node_list%n_nodes
   n_AA = max(n_AA,node_list%node(inode)%index(4))
 enddo
 
-if (iter .le. 1) then
+
+
+ if (iter .le. 1) then
   write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
   write(*,*) ' number of boundary nodes: ',n_border
   write(*,*) ' nz_AA                   : ',nz_AA
-endif
+ endif
   
 if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
 if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
@@ -113,7 +119,7 @@ amix_used = amix
 if (itype .eq. -1) then
   if (freeboundary_equil) amix_used = amix_freeb
 endif
-    
+
 do ife =1, element_list%n_elements
 
   element = element_list%element(ife)
@@ -207,14 +213,16 @@ mumps_par%nz = nz_AA
 
 zbig = 1.d10
 
+ENDIF
+
 !----------------------- boundary conditions
 
 if (freeboundary_equil .and. (itype .eq. -1)) then
-
-  call vacuum_equil(node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd)
-            
+  call vacuum_equil(my_id,node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd)
 else        ! apply fixed boundary conditions
 
+
+IF(my_id == 0 ) THEN
   do i=1,node_list%n_nodes
 
     if (node_list%node(i)%boundary .ne. 0) then
@@ -255,8 +263,13 @@ else        ! apply fixed boundary conditions
   mumps_par%n  = n_AA
   mumps_par%nz = nz_AA
 
-endif
+ENDIF ! IF(my_id == 0 ) THEN
 
+endif ! else        ! apply fixed boundary conditions
+
+
+
+IF (my_id == 0) THEN
 #ifdef USE_MUMPS
 
 mumps_par%n  = n_AA
@@ -312,13 +325,18 @@ pastix_iparm(3)  = 0
   pastix_iparm(52) = 2
 #endif
 pastix_nthrd     = nbthreads
-write(*,*) '***********************************'
-write(*,*) '* initialise PastiX               *'
-write(*,*) '***********************************'
+
+if(my_id == 0) then
+  write(*,*) '***********************************'
+  write(*,*) '* initialise PastiX               *'
+  write(*,*) '***********************************'
  
+
 pastix_data = 0
  call pastix_fortran(pastix_data,MPI_COMM_SELF,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+
+endif
 
 pastix_iparm(2) = 1
 pastix_iparm(3) = 7
@@ -344,14 +362,20 @@ pastix_iparm(14) = pastix_amalg
 pastix_dparm(6)  = pastix_epsilon    ! error level refinement
 pastix_dparm(11) = pastix_pivot      ! pivot threshold?
 
-write(*,*) '***********************************'
-write(*,*) '* call PastiX                     *'
-write(*,*) '***********************************'
+if(my_id == 0) then
+
+  write(*,*) '***********************************'
+  write(*,*) '* call PastiX                     *'
+  write(*,*) '***********************************'
 
  call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
-call tr_print_memsize("PASTIX_For_Poisson")
+ call tr_print_memsize("PASTIX_For_Poisson")
+
+endif
+
+
 #endif
 
 call tr_debug_write("mumps_par%N",int(mumps_par%N))
@@ -469,6 +493,8 @@ call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
 call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
 
 !deallocate(pastix_perm_vars,pastix_iperm_vars)
+
+ENDIF
   
 return
 end subroutine poisson

@@ -28,7 +28,7 @@ module vacuum_equilibrium
     integer, parameter   :: filehandle = 60
     integer              :: file_version, n_bnd_elems, n_bnd_nodes, dim(2), err  !n_coils already defined in vacuum module
     integer              :: i_start_pf, i_end_pf                                 !Indices for SW coils 
-  character(len=512)   :: comment
+    character(len=512)   :: comment
     
     if ( sr%n_tor == 0 ) return
     if ( sr%i_tor(1) /= 1 ) return ! external fields not necessary in this case
@@ -143,7 +143,7 @@ module vacuum_equilibrium
         write(*,*) '***************************************'
         write(*,*) ''
        
-		    i_start_pf = sr%ind_start_pol_coils
+        i_start_pf = sr%ind_start_pol_coils
         i_end_pf   = i_start_pf + sr%n_pol_coils - 1
       
         if ( .not. allocated(I_coils) ) then
@@ -174,7 +174,7 @@ module vacuum_equilibrium
   
   !> Calculates the matrix contribution of the boundary integral to the Grad-Shafranov equation
   !! using the vacuum response from STARWALL
-  subroutine vacuum_equil(node_list, bnd_node_list, bnd_elm_list, psi_axis, psi_bnd)
+  subroutine vacuum_equil(my_id,node_list, bnd_node_list, bnd_elm_list, psi_axis, psi_bnd)
     
     use mod_parameters
     use data_structure
@@ -183,10 +183,12 @@ module vacuum_equilibrium
     use mumps_module
     use vacuum_response
     use constants
+    use mpi_mod
     
     implicit none
     
     ! --- Routine parameters
+    integer,                      intent(in) :: my_id
     type (type_node_list),        intent(in) :: node_list
     type (type_bnd_node_list),    intent(in) :: bnd_node_list
     type (type_bnd_element_list), intent(in) :: bnd_elm_list
@@ -201,11 +203,17 @@ module vacuum_equilibrium
     integer :: i, j, i_start_pf, i_end_pf
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
-    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, psi_0_j
+    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i,B_tan_coil_i_loc, psi_0_j
     real*8, allocatable :: potentials_real(:)
+    integer :: ierr,step
 
-    call equilibrium_VFB 
-    
+    step = 0
+
+IF(my_id == 0) THEN
+    IF(my_id == 0) call equilibrium_VFB 
+ 
+   ! write(200+my_id,*) starwall_equil_coils
+
     if (starwall_equil_coils) then      
       i_start_pf = sr%ind_start_pol_coils
       i_end_pf   = i_start_pf + sr%n_pol_coils -1
@@ -216,39 +224,67 @@ module vacuum_equilibrium
       potentials_real(1:sr%ncoil) = 0.d0
       potentials_real(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) * mu_zero
       
+
+
+      write(300+my_id,*) starwall_equil_coils, sum(potentials_real),size(potentials_real),mu_zero, i_start_pf,i_end_pf,&
+         sum(I_coils), size(I_coils)
+
+
+    !  if(my_id == 0)   step = sr%s_ww_inv%ind_end-sr%s_ww_inv%ind_start+1
+    !  call MPI_bcast(step, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+
+
+      ! Here must to change on parallel version
       do i = 1, n_wall_curr
-        wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i,:) * potentials_real(:))    
+      !  if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
+           ! wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*step,:) * potentials_real(:))    
+            wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i,:) *potentials_real(:))
+
+         !  endif
       end do    
-    
+ 
+    !  call MPI_ALLReduce(MPI_IN_PLACE, wall_curr, size(wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+          write(400+my_id,*) sum(wall_curr),size(wall_curr)
+
     endif
     
     ilarge = mumps_par%nz
-    
+
+ENDIF
+  
     do m_bndelem = 1, bnd_elm_list%n_bnd_elements
+
+     IF(my_id == 0) THEN
       bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
       
       ! --- Determine the values of R,s and Z,s at the Gaussian points.
       call det_coord_bnd(bndelem_m, node_list, R=x, Z=y, R_S=x_s, Z_S=y_s)
-      
+     ENDIF      
+
       ! --- Select a test function (weak form equation must hold for every test function)
       do l_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
         do l_dof = 1, 2 ! (loop over node dofs)
+            
+         IF(my_id == 0) THEN
           l_node     = bndelem_m%vertex(l_vertex)
           l_dir      = bndelem_m%direction(l_vertex,l_dof)
           l_node_bnd = bndelem_m%bnd_vertex(l_vertex)
           l_index    = node_list%node(l_node)%index(l_dir)
           size_l     = bndelem_m%size(l_vertex,l_dof)
-          
+         ENDIF 
           ! --- Integration in s-direction is carried out as Gauss quadrature,
           !       int ds ... = sum_ms wgauss(ms) ...,
           !     where wgauss(ms) denotes the Gaussian weights.
           do ms = 1, n_gauss
+           IF(my_id == 0) THEN
             testfunc_l = H1(l_vertex,l_dof,ms) * size_l
             dA         = sqrt(x_s(ms)**2 + y_s(ms)**2) ! Integration factor from definition of dA
-            
+           ENDIF 
             ! --- Sum over boundary dofs at which response is calculated
             do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
               do i_dof = 1, 2 ! (loop over node dofs)
+               IF(my_id == 0 ) THEN
                 i_node     = bndelem_m%vertex(i_vertex)
                 i_dir      = bndelem_m%direction(i_vertex,i_dof)
                 i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
@@ -258,12 +294,29 @@ module vacuum_equilibrium
                 basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
                 
                 common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
-                
+               ENDIF
+ 
                 if (starwall_equil_coils) then
-                  B_tan_coil_i         = - sum (sr%a_ey%loc_mat(i_resp,:) * wall_curr(:) )
+                 
+                  call MPI_bcast(wall_curr, size(wall_curr), MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
+                  call MPI_bcast(i_resp, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+ 
+                  if(my_id == 0)   step = sr%a_ey%ind_end-sr%a_ey%ind_start+1
+                  call MPI_bcast(step, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+ 
+                  B_tan_coil_i=0.0
+                  B_tan_coil_i_loc=0.0
+
+                  if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
+                      B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp-my_id*step,:) * wall_curr(:) )
+                  endif
+
+                  call MPI_Reduce(B_tan_coil_i_loc, B_tan_coil_i, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
                 else
                   B_tan_coil_i         =   sum ( I_coils(:) * bext_tan(i_resp,:) )  
                 endif
+             IF(my_id == 0) THEN
                 
                 mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i
                 
@@ -292,7 +345,9 @@ module vacuum_equilibrium
                       - common_prefactor * response_m_eq(i_resp,j_resp) * psi_0_j
                   end do
                 end do
-                
+              ENDIF    
+            
+
               end do
             end do
             
@@ -303,7 +358,7 @@ module vacuum_equilibrium
       
     end do
     
-    mumps_par%nz = ilarge   ! update the size of the matrix
+  if(my_id ==0 )   mumps_par%nz = ilarge   ! update the size of the matrix
     
   end subroutine vacuum_equil
   

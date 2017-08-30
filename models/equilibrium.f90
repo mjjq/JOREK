@@ -9,6 +9,7 @@ use data_structure
 use phys_module
 use mod_poiss
 use vacuum
+use mpi_mod
 implicit none
 
           
@@ -48,6 +49,8 @@ real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
 real*8, allocatable     :: density_profile(:)
 
+
+
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '*           equilibrium               *'
@@ -55,7 +58,9 @@ if (my_id .eq. 0) then
   write(*,*) '   freeboundary_equil : ',freeboundary_equil
   write(*,*) '   X-point      : ',xpoint2
   write(*,*) '   Xcase        : ',xcase2
-endif
+
+endif ! if (my_id .eq. 0) then
+
 
 freeboundary_equil2 = freeboundary_equil
 freeboundary_equil  = .false.
@@ -65,6 +70,11 @@ n_iter      = 200
 psi_bnd     = 0.d0
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
+
+
+i_elm_xpoint=0 
+
+IF (my_id .eq. 0) then
 
 do iter = 1, n_iter
 
@@ -111,7 +121,8 @@ do iter = 1, n_iter
 
   if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
   if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
-  
+
+
   call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
 
@@ -133,6 +144,7 @@ do iter = 1, n_iter
 
 enddo
 
+ENDIF
 
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
@@ -143,11 +155,14 @@ T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
 
 if (freeboundary_equil) then
 
+IF(my_id == 0) THEN
+
   write(*,*)
   write(*,*) '------------------------------------------------------'
   write(*,*) '--- Iterative solution of freeboundary equilibrium ---'
   write(*,*) '------------------------------------------------------'
   write(*,*)
+
 
   ! Target current and axis
   if (current_ref .gt. 1.d20) then    !choose fix bnd equilibrium final current in case of non specification of target current
@@ -158,11 +173,16 @@ if (freeboundary_equil) then
     Z_axis_ref = Z_axis
   endif
 
+
+ENDIF
+
   do iter=1, n_iter_freeb
+
+   IF(my_id == 0) then
     
     write(*,*)
     write(*,'(1x,a,i5,a)') '>>> ITERATION', iter, ' <<<'
-        
+       
     call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_tot)
 
     current_int = current_int + (current_tot-current_ref)
@@ -182,7 +202,7 @@ if (freeboundary_equil) then
     
     write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact
                    
-    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+    if(my_id == 0) call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
     
     write(10,'(i6,9e20.12)') iter, current_tot, R_axis, Z_axis, psi_bnd-psi_axis
 
@@ -205,9 +225,10 @@ if (freeboundary_equil) then
         if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
       else
         Z_xpoint(1) = -99.d0 
-	      Z_xpoint(2) = +99.d0
+        Z_xpoint(2) = +99.d0
       endif
     endif
+
 
 ! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
 !if (iter .lt. 30) then
@@ -237,12 +258,15 @@ if (freeboundary_equil) then
     endif
     
     Z_axis_old = Z_axis
+   
+ENDIF
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
 
 !    call boundary_check
  
+IF(my_id == 0) THEN 
     diff = 0.d0
     do i=1, node_list%n_nodes
       diff = diff + abs(node_list%node(i)%deltas(1,1,1))
@@ -250,21 +274,25 @@ if (freeboundary_equil) then
     diff = diff / float(node_list%n_nodes)
   
     write(*,'(A,i5,e14.6)') ' iteration, diff : ',iter,diff
-  
+ENDIF
+
+    call MPI_bcast(diff, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
+
     if ( (iter > 1) .and. (diff < equil_accuracy_freeb) ) then
-      write(*,'(A,I4,A)') ' Free boundary equilibrium converged: after', iter, ' iterations'
+      IF(my_id == 0) write(*,'(A,I4,A)') ' Free boundary equilibrium converged: after', iter, ' iterations'
       exit
     else if ( iter == n_iter_freeb) then
-      write(*,'(A,ES10.3)') ' WARNING: Free boundary equilibrium not fully converged: diff=', diff
+      IF(my_id == 0) write(*,'(A,ES10.3)') ' WARNING: Free boundary equilibrium not fully converged: diff=', diff
       exit
     end if
 
   enddo
 
-  if (my_id == 0) call boundary_check()
+  call boundary_check(my_id)
+
 
 endif
-
+IF(my_id == 0) THEN
 !------------------------------- end of equilibrium, start filling data
 
 do i=1,node_list%n_nodes
@@ -425,14 +453,14 @@ else
     surface_list%psi_values(i) = 1.25d0*(float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis) + psi_axis
   enddo
   
-  call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,surface_list)
+  if(my_id ==0 ) call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,surface_list)
 
   sep_list%n_psi =1
   if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
   call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   sep_list%psi_values(1) = psi_bnd
 
-  call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,sep_list)  
+  if( my_id == 0) call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,sep_list)  
 endif
 
 if (freeboundary_equil) then
@@ -444,6 +472,7 @@ if (freeboundary_equil) then
   call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   !call plot_coils(.false.)
 else
+ if(my_id == 0 ) then  
   if (xpoint2 .and. (n_flux .gt. 1)) then
     call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
     call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
@@ -451,10 +480,11 @@ else
     call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.false.,0)
     call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
   endif
+ endif
 endif
 
 if (nice_q) then
-   call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
+  if(my_id == 0 )  call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
 endif
 
 !================ Temperature and density profiles =f(psi_norm) similar to q(psi_norm) needed to calculate neoclassical coef===========
@@ -494,5 +524,7 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 if (allocated(T_profile)) call tr_deallocate(T_profile,"T_profile",CAT_GRID)
 if (allocated(density_profile)) call tr_deallocate(density_profile,"density_profile",CAT_GRID)
 
+
+ENDIF
 return
 end subroutine equilibrium

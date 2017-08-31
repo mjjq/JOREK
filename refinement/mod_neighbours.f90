@@ -215,8 +215,7 @@ integer, dimension(:), allocatable :: i_nearby
 ! need to manually call populate_element_rtree
 if (.not. initialized) call populate_element_rtree(node_list, element_list)
 
-!$omp parallel default(none) private(i,k,j,i_node1,i_node2,inb_i,inb_j,i_nearby) &
-!$  shared(element_list,node_list)
+!$omp parallel default(none) private(i,k,j,i_node1,i_node2,inb_i,inb_j,i_nearby) shared(element_list,node_list)
 
 !$omp do
 do i=1, element_list%n_elements

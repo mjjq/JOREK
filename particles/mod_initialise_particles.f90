@@ -387,7 +387,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
     !allocate(particles_tmp(blocksize), mold=particles) ! this does not work in ifort 17
     allocate(found(blocksize))
 
-    !$omp parallel do default(none) &
+    !$omp parallel do default(shared) & ! for gfortran which cannot handle the derived types otherwise
     !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, &
     !$omp           R_i, Z_i, xjac, grad_P2, &
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp, ifail, DUMMY_R, DUMMY_Z) &

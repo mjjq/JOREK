@@ -156,16 +156,18 @@ subroutine test_polar_30_22_10000_sob_smoothing
   use phys_module
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
-  real*8 :: w, s
+  real*8 :: w, s, x
   integer :: i
   character(len=8) :: ss
   call default_polar_grid(node_list, element_list, 22)
   w=TWOPI**2*R_geo*amin**2/2.d0
   do i=1,7
-    s = 10d0**(real(i-8))
+    x = real(i-8)
+    s = 10d0**x
     write(ss,'(g8.1)') s
     call project_n(node_list, element_list, [10000], sobseq_rng(), 'polar_30_22_s'//ss, volume=w, smoothing=s, &
-        rms_tol=[0.d0], mean_tol=[2d-5])
+        ! Calculate error from fit (set rms_tol to 0 to get errors) * 1.2
+        rms_tol=[10.d0**(-0.0738*x**2 - 0.972*x - 3.71)*1.2], mean_tol=[2d-5])
   end do
 end subroutine test_polar_30_22_10000_sob_smoothing
 

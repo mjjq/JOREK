@@ -324,12 +324,10 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
         call create_constants_time_dataset(this%file_id, trim(timeset_name), &
             tset, tspace)
       end if
-      call h5sget_simple_extent_dims_f(tspace, time_dims, time_maxdims, ierr)
-      ! Extend the dataset by 1 in the time-dimension
-      ! After extending, tspace is invalid. Close here already
-      call h5sclose_f(tspace, ierr)
-      time_dims(1) = time_dims(1) + 1_HSIZE_T
+      ! Time_dims is set from earlier
       call h5dset_extent_f(tset, time_dims, ierr)
+      ! close the tspace and make a new one after setting extent above
+      call h5sclose_f(tspace, ierr)
       ! Add the current value to the timeset
       call h5dget_space_f(tset, tspace, ierr)
       call h5sselect_hyperslab_f(tspace, H5S_SELECT_SET_F, &

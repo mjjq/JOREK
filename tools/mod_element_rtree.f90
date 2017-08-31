@@ -89,7 +89,7 @@ subroutine nearby_elements(node_list, element_list, i_elm, i_nearby)
     num_elements = int(elements_in_rect(minx, miny, maxx, maxy, i_nearby_C))
   end if
   if (num_elements .gt. n_nearby_C) then
-    write(*,*) "ERROR: Too many elements returned by elements_in_rect, expect memory corruption"
+    write(*,*) "ERROR: Too many elements returned by elements_in_rect, expect memory corruption (rect=", minx,maxx, ',', miny,maxy, ") n=", num_elements
     return
   end if
   allocate(i_nearby(num_elements))
@@ -121,7 +121,7 @@ subroutine elements_containing_point(R, Z, i_elms)
     num_elements = int(elements_in_rect(minx, miny, maxx, maxy, i_nearby_C))
   end if
   if (num_elements .gt. n_nearby_C) then
-    write(*,*) "ERROR: Too many elements returned by elements_containing_point, expect memory corruption"
+    write(*,*) "ERROR: Too many elements returned by elements_containing_point, expect memory corruption, point=(", R, ',', Z, ") n=", num_elements
     return
   end if
   allocate(i_elms(num_elements))

@@ -384,7 +384,7 @@ if (find_pf_coil_currents) then
     write(*,*) 'The feature "find_pf_coil_currents" is not available yet with STARWALL coils'
     write(*,*) 'Please use COIL_FIELD (in STARWALL repository) for the coil geometry instead'
   else
-    call find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list)
+    call find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
     write(*,*) ' '
     write(*,*) ' Please re-do the equilibrium with the found currents and set find_pf_coil_currents=.false.'
   endif
@@ -524,7 +524,7 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 if (allocated(T_profile)) call tr_deallocate(T_profile,"T_profile",CAT_GRID)
 if (allocated(density_profile)) call tr_deallocate(density_profile,"density_profile",CAT_GRID)
 
-if ((my_id == 0) .and. freeboundary_equil) call boundary_check()
+if ((my_id == 0) .and. freeboundary_equil) call boundary_check()     
 
 return
 end subroutine equilibrium

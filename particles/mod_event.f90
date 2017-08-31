@@ -348,7 +348,7 @@ subroutine run(this, sim, ev)
 
   if (this%log) then
     ! Calculate imbalance between MPI processes
-    if (MPI_WTIME_IS_GLOBAL) then
+    if (MPI_WTIME_IS_GLOBAL .eq. 1) then
       t1 = MPI_WTIME()
     else
       ! Be aware that clock skew happens! That will distort the results over time
@@ -399,7 +399,7 @@ subroutine run(this, sim, ev)
     end if
 
     ! Recalculate imbalance between MPI processes
-    if (MPI_WTIME_IS_GLOBAL) then
+    if (MPI_WTIME_IS_GLOBAL .eq. 1) then
       t1 = MPI_WTIME()
     else
       t1 = MPI_WTIME() - sim%wtime_start

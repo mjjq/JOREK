@@ -144,9 +144,9 @@ if (allocated(sim%groups)) then
       do j=1,n_here
         q(j) = p(j)%q
       end do
-      call MPI_Gatherv(q(:), n_here, MPI_INTEGER1, &
+      call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
         q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
-        MPI_INTEGER1, 0, MPI_COMM_WORLD, ierr)
+        MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
         call HDF5_array2D_saving(file,v_all,3,n_total,group_name//"v")
@@ -170,9 +170,9 @@ if (allocated(sim%groups)) then
       do j=1,n_here
         q(j) = p(j)%q
       end do
-      call MPI_Gatherv(q(:), n_here, MPI_INTEGER1, &
+      call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
         q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
-        MPI_INTEGER1, 0, MPI_COMM_WORLD, ierr)
+        MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
         call HDF5_array2D_saving(file,v_all,3,n_total,group_name//"v")
@@ -205,9 +205,9 @@ if (allocated(sim%groups)) then
       do j=1,n_here
         q(j) = p(j)%q
       end do
-      call MPI_Gatherv(q(:), n_here, MPI_INTEGER1, &
+      call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
         q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
-        MPI_INTEGER1, 0, MPI_COMM_WORLD, ierr)
+        MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
         call HDF5_array1D_saving(file,E_all,n_total,group_name//"E")

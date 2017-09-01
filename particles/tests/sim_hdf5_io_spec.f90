@@ -201,19 +201,35 @@ function particles_same(p1, p2) result(same)
   same = .true.
 
   ! Base attributes testing
-  if (norm2(p1%x-p2%x)         .gt. tolerance) same = .false.
-  if (abs(p1%weight-p2%weight) .gt. tolerance) same = .false.
-  if (norm2(p1%st-p2%st)       .gt. tolerance) same = .false.
-  if (p1%i_elm .ne. p2%i_elm)  same = .false.
-  write(*,*) p1%i_elm, p2%i_elm
-  write(*,*) p1%weight, p2%weight
+  if (norm2(p1%x-p2%x)         .gt. tolerance) then
+    write(*,*) 'x different', p1%x, p2%x
+    same = .false.
+  end if
+  if (abs(p1%weight-p2%weight) .gt. tolerance) then
+    write(*,*) 'weight different', p1%weight, p2%weight
+    same = .false.
+  end if
+  if (norm2(p1%st-p2%st)       .gt. tolerance) then
+    write(*,*) 'st different', p1%st, p2%st
+    same = .false.
+  end if
+  if (p1%i_elm .ne. p2%i_elm) then
+    write(*,*) 'i_elm different', p1%i_elm, p2%i_elm
+    same = .false.
+  end if
 
   select type(p1 => p1)
     type is (particle_kinetic_leapfrog)
       select type (p2 => p2)
         type is (particle_kinetic_leapfrog)
-          if (norm2(p1%v-p2%v) .gt. tolerance) same = .false.
-          if (p1%q     .ne. p2%q)      same = .false.
+          if (norm2(p1%v-p2%v)         .gt. tolerance) then
+            write(*,*) 'v different', p1%v, p2%v
+            same = .false.
+          end if
+          if (p1%q .ne. p2%q) then
+            write(*,*) 'q different', p1%q, p2%q
+            same = .false.
+          end if
         class default
           same = .false.
       end select

@@ -102,7 +102,7 @@ do newton_iter_number = 1, newton_iter_max
     i_elm_tmp = i_elm_new
     call coord_in_neighbour(node_list,element_list,i_elm_tmp,i_elm_new,st_new)
     if (i_elm_new .lt. 0) then
-      call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_tmp,st_new(1),st_new(2),ifail)
+      call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
       return ! Stop because find_RZ works always or the particle is lost. Passthrough ifail
     end if
     if (i_elm_new .eq. 0) then ! No element on that side, particle is lost

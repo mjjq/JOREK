@@ -58,6 +58,8 @@ ntrial = 20
 tolx = 1.d-8
 tolf = 1.d-15
 
+ielm_out = i_elm ! Since we only test a single element
+
 do istart = 1,5
 
   if (istart .eq. 1) then

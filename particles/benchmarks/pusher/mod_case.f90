@@ -1,7 +1,10 @@
 !> Base module for a testcase, such as [[mod_penning_case]], [[mod_gradb_case]]
 module mod_case
-  use mod_particle_types
+  use mod_particle_types, only: particle_base
   implicit none
+
+  private
+  public :: case
 
   !> A case, defining an end time, a run function and requiring an
   !> initialization routine and error calculation routine
@@ -18,17 +21,16 @@ module mod_case
       real*8, intent(in) :: t
       real*8, dimension(3) :: field
     end function field
-    pure subroutine initialize(this, particle)
+    subroutine initialize(this, particle)
       import :: case, particle_base
       class(case), intent(in)             :: this
       class(particle_base), intent(inout) :: particle
     end subroutine initialize
-    pure function calc_error(this, particle)
+    function calc_error(this, particle)
       import :: case, particle_base
       class(case), intent(in)          :: this
       class(particle_base), intent(in) :: particle
       real*8 :: calc_error
     end function calc_error
   end interface
-contains
 end module mod_case

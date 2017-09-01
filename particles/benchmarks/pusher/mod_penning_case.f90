@@ -3,7 +3,14 @@ module mod_penning_case
   use constants, only: ATOMIC_MASS_UNIT, EL_CHG
   use mod_coordinate_transforms
   use mod_case
+  use mod_boris ! Is due to a gfortran bug with derived types and modules
+  ! See 
+  use mod_particle_types
   implicit none
+
+  private
+  public :: penning_trajectory
+  public :: case_penning_cartesian, case_penning_cylindrical
 
   ! Penning trap parameters (in SI units)
   real*8, parameter :: omega_e = 4.9d0 !< rad/s
@@ -23,39 +30,42 @@ module mod_penning_case
       procedure :: initialize => initialize_particle_penning
       procedure :: calc_error => calculate_error_norm
   end type
-  type, extends(case_penning), public :: case_penning_cartesian
+  type, extends(case_penning) :: case_penning_cartesian
     contains
       procedure, nopass :: E => E_cartesian
       procedure, nopass :: B => B_z
   end type
   !> See [[mod_penning_case]] for a description of the testcase.
-  type, extends(case_penning), public :: case_penning_cylindrical
+  type, extends(case_penning) :: case_penning_cylindrical
     contains
       procedure, nopass :: E => E_cylindrical
       procedure, nopass :: B => B_z_cyl
   end type
-
-  public :: penning_trajectory
-  private
 contains
 
-pure subroutine initialize_particle_penning(this, particle)
+subroutine initialize_particle_penning(this, particle)
+  use mod_particle_types
   class(case_penning), intent(in)   :: this
   class(particle_base), intent(inout) :: particle
   select type (this)
   type is (case_penning_cartesian)
     particle%x = x0
-    select type (particle)
+    select type (p => particle)
     type is (particle_kinetic_leapfrog)
-      particle%q = charge
-      particle%v = v0
+      p%q = charge
+      p%v = v0
+      write(*,*) "OK"
+    class default
+      write(*,*) "WARNING: Unknown type in initialize_particle_penning"
     end select
   type is (case_penning_cylindrical)
     particle%x = cartesian_to_cylindrical(x0)
-    select type (particle)
+    select type (p => particle)
     type is (particle_kinetic_leapfrog)
-      particle%q = charge
-      particle%v = vector_rotation(cartesian_to_cylindrical(v0), particle%x(3))
+      p%q = charge
+      p%v = vector_rotation(cartesian_to_cylindrical(v0), p%x(3))
+    class default
+      write(*,*) "WARNING: Unknown type in initialize_particle_penning"
     end select
   end select
 end subroutine

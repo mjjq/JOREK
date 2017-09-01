@@ -61,12 +61,8 @@ integer, parameter :: newton_iter_max     = 8 !< Number of iterations to try
 !> Internal variables
 integer :: newton_iter_number, i_elm_tmp
 real*8 :: inv_st_jac_det, R_s, R_t, Z_s, Z_t
-real*8 :: st_step(2), st_try(2), x_step(2), x_tmp(2) ! x_step = (R,Z) of trial position
+real*8 :: st_step(2), x_step(2), x_tmp(2) ! x_step = (R,Z) of trial position
 real*8 :: err2, err2_old, dist(2), fact
-
-!> For output of check_element_boundary
-integer, parameter :: status_kind = KIND(1)
-integer(status_kind) :: stat
 
 ! Check if element is valid
 if (i_elm_old .lt. 1 .or. i_elm_old .gt. element_list%n_elements) then

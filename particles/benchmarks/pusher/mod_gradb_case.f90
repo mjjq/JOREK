@@ -17,7 +17,11 @@ module mod_gradb_case
   use constants, only: ATOMIC_MASS_UNIT, EL_CHG
   use mod_case
   use mod_coordinate_transforms
+  use mod_particle_types
   implicit none
+
+  private
+  public :: gradB_solution, case_gradB_cartesian, case_gradB_cylindrical
 
   ! gradB parameters
   real*8, parameter :: B0 = 1d0 !< Tesla
@@ -48,9 +52,6 @@ module mod_gradb_case
     procedure, nopass :: E => E_zero
     procedure, nopass :: B => B_cylindrical
   end type
-
-  public :: gradB_solution, case_gradB_cartesian, case_gradB_cylindrical
-  private
 contains
 
 !> Initialize a particle for the gradB test case

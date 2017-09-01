@@ -65,8 +65,7 @@ real*8,                   intent(out) :: P_phi(n_v)
 
 ! --- Local variables
 real*8  :: H(4,4), H_s(4,4), H_t(4,4), HZ(n_tor), dHZ(n_tor)
-integer :: kv, iv, kf, i, i_tor
-real*8  :: e1r, e1i, enr, eni, enrtmp
+integer :: kv, iv, kf, i
 real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
@@ -172,12 +171,9 @@ real*8,                   intent(out) :: P(n_v), P_s(n_v), P_t(n_v)
 real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
 real*8,                   intent(out) :: P_phi(n_v)
 
-integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
-
 ! --- Local variables
 real*8  :: H(4,4), H_s(4,4), H_t(4,4), HZ(n_tor), dHZ(n_tor)
-integer :: kv, iv, kf, i, i_tor
-real*8  :: e1r, e1i, enr, eni, enrtmp
+integer :: kv, iv, kf, i
 real*8  :: deltas(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp

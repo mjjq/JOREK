@@ -18,7 +18,6 @@ end subroutine import_restart_without_id
 
 
 !> Imports a restart file written out by the routine export_restart.
-
 subroutine import_restart_with_id(node_list, element_list, filename, format_rst, my_id, ierr)
 
   use tr_module

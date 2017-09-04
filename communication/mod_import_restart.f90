@@ -84,26 +84,6 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8,  allocatable 			:: values_tmp_perturbation(:,:,:), deltas_tmp_perturbation(:,:,:)
   logical, parameter   			:: import_perturbation = .false.
 
-  ! --- Read in files created with versions of JOREK not having transform in elements
-  type type_element_OLD                               !< type definition for one elements
-    integer :: vertex(n_vertex_max)               !< nodes of the corners
-    integer :: neighbours(n_vertex_max)           !< neighbouring elements
-    real*8  :: size(n_vertex_max,n_order+1)       !< size of vectors at each vertex of the element
-    integer :: father                             !< index of father element (0 if no father)"refinement"
-    integer :: n_sons                             !< Number of sons elements"refinement"
-    integer :: n_gen                              !< Generation rank of the element"refinement"
-    integer :: sons(4)                            !< Sons of the element (=0 if no son)"refinement"
-    integer :: contain_node(5)                    !< nodes belonging to the element"refinement"
-    integer :: nref                               !< How the element has been refined (if so)"refinement"
-  end type type_element_OLD
-  type type_element_list_OLD                          !< type definition for a list of elements
-    integer :: n_elements                         !< number of elements in the list
-    type (type_element_OLD) :: element(n_elements_max)!< list of elements
-  end type type_element_list_OLD
-
-  type(type_element_list_OLD) :: element_list_OLD
-
-
   error = 0
 
   write(*,*) 'Importing restart file "', trim(filename), '".'
@@ -195,19 +175,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   enddo
 
   ! Try to read the old type
-  read(21) element_list_OLD%element(1:element_list%n_elements)
-  ! Save all values explicitly, for compatibility with the new transform parameter
-  do i=1,element_list%n_elements
-    element_list%element(i)%vertex = element_list_OLD%element(i)%vertex
-    element_list%element(i)%neighbours = element_list_OLD%element(i)%neighbours
-    element_list%element(i)%size = element_list_OLD%element(i)%size
-    element_list%element(i)%father = element_list_OLD%element(i)%father
-    element_list%element(i)%n_sons = element_list_OLD%element(i)%n_sons
-    element_list%element(i)%n_gen = element_list_OLD%element(i)%n_gen
-    element_list%element(i)%sons = element_list_OLD%element(i)%sons
-    element_list%element(i)%contain_node = element_list_OLD%element(i)%contain_node
-    element_list%element(i)%nref = element_list_OLD%element(i)%nref
-  enddo
+  read(21) element_list%element(1:element_list%n_elements)
   read(21) tstep,eta_rst,visco_rst,visco_par_rst
   read(21) index_start
   read(21) t_start

@@ -73,7 +73,7 @@ theta = time_evol_theta
 zeta  = time_evol_zeta
 
 
-zbig = 1.d12
+zbig = 1.d10
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 !!!! s is the coordinate along the boundary, t is the other direction

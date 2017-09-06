@@ -159,6 +159,8 @@ module vacuum
     character(len=60) :: s, filename
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
+    
+    if (sr%ncoil > 0) n_coils = sr%ncoil
         
     do i = 1, sr%ncoil
             

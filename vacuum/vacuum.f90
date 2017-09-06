@@ -160,7 +160,14 @@ module vacuum
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
     
-    if (sr%ncoil > 0) n_coils = sr%ncoil
+    !--- Make sure that the main coil current vector (I_coils) is properly allocated
+    if (sr%ncoil > 0) then
+      n_coils = sr%ncoil
+      if (.not. allocated(I_coils)) then 
+        allocate(I_coils(n_coils))
+        I_coils = 0.d0
+      endif
+    endif
         
     do i = 1, sr%ncoil
             

@@ -98,10 +98,10 @@ module vacuum_response
        time(4)=MPI_WTIME()
 
        call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-       if(my_id==0) write(6,*) "Vacuum Log=",time(2)-time(1) 
-       if(my_id==0) write(6,*) "Vacuum Read=",time(3)-time(2)
-       if(my_id==0) write(6,*) "Vacuum Broadcast=",time(4)-time(3)
-       if(my_id==0) write(6,*) "Vacuum Total=",time(4)-time(1)
+      ! if(my_id==0) write(6,*) "Vacuum Log=",time(2)-time(1) 
+      ! if(my_id==0) write(6,*) "Vacuum Read=",time(3)-time(2)
+      ! if(my_id==0) write(6,*) "Vacuum Broadcast=",time(4)-time(3)
+      ! if(my_id==0) write(6,*) "Vacuum Total=",time(4)-time(1)
     endif
   
 
@@ -119,15 +119,17 @@ module vacuum_response
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
     end if
     
-    if ( my_id == 0 .AND. parallel == .false.) then
-      call log_starwall_response(sr)
-      if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
+    if ( parallel == .false.) then
+       if(my_id ==0 ) then
+          call log_starwall_response(sr)
+          if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
+       endif
     else
    
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
         call log_starwall_response_parallel(my_id, sr)
    endif 
-        if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
+      !  if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
        
   end subroutine get_vacuum_response
   
@@ -491,6 +493,7 @@ module vacuum_response
 
           step=dim(1)/ntasks
           loc_sizes(1) = step
+          float2d%step=step
           if(my_id==ntasks-1) loc_sizes(1) = step+dim(1)-ntasks*step
   
           loc_sizes(2) = dim(2)
@@ -608,6 +611,8 @@ module vacuum_response
 
           step=dim(2)/ntasks
           loc_sizes(2) = step
+          float2d%step=step
+
           if(my_id==ntasks-1) loc_sizes(2) = step+dim(2)-ntasks*step
 
           loc_sizes(1) = dim(1)
@@ -1008,7 +1013,7 @@ module vacuum_response
     call read_array_parallel_rowwise       (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey)
     call read_array_parallel_rowwise       (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee)
     call read_array_parallel_rowwise       (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww)
-    call read_array_parallel_columnwise    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv)
+    call read_array_parallel_rowwise       (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv)
  
     if(my_id == 0) then
  
@@ -1782,7 +1787,6 @@ if(my_id == 0) then
     write(filehandle,140) 'LOOKUP_TABLE default'
 endif
     
-    ! should be done in parallel
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
 
 if(my_id == 0) then
@@ -2606,7 +2610,6 @@ endif
     allocate( old_dpsibnd_vec(n_dof_starwall) )
     old_dpsibnd_vec(:) = 0.d0
     
-    !if ( my_id == 0 ) call write_wall_vtk(0, resistive_wall)
     call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
     
@@ -2748,8 +2751,7 @@ endif
     
     ! --- Routine parameters
     real*8, allocatable, intent(inout) :: tripot_w(:)
-    !real*8, allocatable, intent(in)    :: wall_curr(:)
-    real*8, allocatable, intent(inout)    :: wall_curr(:)    
+    real*8, allocatable, intent(in)    :: wall_curr(:)
 
     ! --- Local variables
     integer :: i, j, ierr, global_index, ntasks, step, my_id
@@ -2762,8 +2764,7 @@ endif
       if(my_id == 0 ) step = sr%s_ww%ind_end - sr%s_ww%ind_start + 1
       call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
 
-      wall_curr(:)=2.0
-
+     
       global_index = my_id*step
       tripot_w=0.0
 

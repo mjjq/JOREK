@@ -207,12 +207,8 @@ module vacuum_equilibrium
     real*8, allocatable :: potentials_real(:)
     integer :: ierr,step
 
-    step = 0
 
-IF(my_id == 0) THEN
-    IF(my_id == 0) call equilibrium_VFB 
- 
-   ! write(200+my_id,*) starwall_equil_coils
+     call equilibrium_VFB(my_id) 
 
     if (starwall_equil_coils) then      
       i_start_pf = sr%ind_start_pol_coils
@@ -223,35 +219,16 @@ IF(my_id == 0) THEN
       potentials_real = 0.d0
       potentials_real(1:sr%ncoil) = 0.d0
       potentials_real(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) * mu_zero
-      
 
-
-      write(300+my_id,*) starwall_equil_coils, sum(potentials_real),size(potentials_real),mu_zero, i_start_pf,i_end_pf,&
-         sum(I_coils), size(I_coils)
-
-
-    !  if(my_id == 0)   step = sr%s_ww_inv%ind_end-sr%s_ww_inv%ind_start+1
-    !  call MPI_bcast(step, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-
-
-      ! Here must to change on parallel version
       do i = 1, n_wall_curr
-      !  if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
-           ! wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*step,:) * potentials_real(:))    
-            wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i,:) *potentials_real(:))
-
-         !  endif
+        if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
+            wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:) *potentials_real(:))
+           endif
       end do    
- 
-    !  call MPI_ALLReduce(MPI_IN_PLACE, wall_curr, size(wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-          write(400+my_id,*) sum(wall_curr),size(wall_curr)
-
+          call MPI_ALLReduce(MPI_IN_PLACE, wall_curr, size(wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     endif
     
     ilarge = mumps_par%nz
-
-ENDIF
   
     do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
@@ -301,14 +278,11 @@ ENDIF
                   call MPI_bcast(wall_curr, size(wall_curr), MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
                   call MPI_bcast(i_resp, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
  
-                  if(my_id == 0)   step = sr%a_ey%ind_end-sr%a_ey%ind_start+1
-                  call MPI_bcast(step, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
- 
                   B_tan_coil_i=0.0
                   B_tan_coil_i_loc=0.0
 
                   if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
-                      B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp-my_id*step,:) * wall_curr(:) )
+                      B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp-my_id*sr%a_ey%step,:) * wall_curr(:) )
                   endif
 
                   call MPI_Reduce(B_tan_coil_i_loc, B_tan_coil_i, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -364,18 +338,19 @@ ENDIF
   
   
   
-  subroutine equilibrium_VFB
+  subroutine equilibrium_VFB(my_id)
     
    implicit none
-  
+   integer,                      intent(in) :: my_id
+
    integer  :: i
    
-   write(*,*) ' vertical_FB = ', vertical_FB
+    if(my_id == 0) write(*,*) ' vertical_FB = ', vertical_FB
    
    do i=1, n_pf_coils
      if( abs(vert_FB_amp(i)) .gt. 1.d-6 ) then
        I_coils(i) =  pf_coils(i)%current * (1 + vert_FB_amp(i) * vertical_FB ) 
-       write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
+       if(my_id == 0) write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo
     

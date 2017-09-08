@@ -98,7 +98,7 @@ do ife =1,  element_list%n_elements
 
       xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
       BigR = x_g(ms,mt)
-           
+
       current = current + (zFFprime / x_g(ms,mt) - (zn * dT_dpsi + dn_dpsi * zT) * x_g(ms,mt)) * wst * xjac
 
     enddo

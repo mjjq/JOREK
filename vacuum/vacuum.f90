@@ -28,6 +28,7 @@ module vacuum
     logical             :: distrib
     logical             :: row_wise
     integer             :: ind_start, ind_end
+    integer             :: step
   end type t_distrib_mat
 
   !> @name JOREK vacuum response matrices

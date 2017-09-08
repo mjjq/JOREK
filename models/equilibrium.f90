@@ -260,6 +260,7 @@ ENDIF
     Z_axis_old = Z_axis
    
 ENDIF
+    call MPI_bcast(vertical_FB, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1

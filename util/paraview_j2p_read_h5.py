@@ -87,9 +87,10 @@ def RequestData(self):
     if (not toroidal):
         pcoords = npvtk.numpy_to_vtk(x, deep=True, array_type=vtk.VTK_FLOAT)
     else:
-        tmp = np.stack((x[:,0]*np.cos(x[:,2]),
-                        x[:,1],
-                        x[:,0]*np.sin(x[:,2])), axis=-1)
+        tmp = np.zeros((x.shape[0],3))
+        tmp[:,0] = x[:,0]*np.cos(x[:,2])
+        tmp[:,1] = x[:,1]
+        tmp[:,2] = x[:,0]*np.sin(x[:,2])
         pcoords = npvtk.numpy_to_vtk(tmp, deep=True, array_type=vtk.VTK_FLOAT)
 
     points = vtk.vtkPoints()

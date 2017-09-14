@@ -406,6 +406,7 @@ required = 0
     end if
     
   end if
+  call populate_element_rtree(node_list, element_list)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -469,6 +470,7 @@ required = 0
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+      call populate_element_rtree(node_list, element_list)
 
       call tr_debug_write("JMAIN:Def_grid elt_list",element_list%n_elements)
       call tr_debug_write("JMAIN:Def_grid node_list",node_list%n_nodes)
@@ -557,8 +559,8 @@ required = 0
         
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
-        
-	      call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+        call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+        call populate_element_rtree(node_list, element_list)
         
         if ( freeb_equil2) then
           freeboundary_equil = .true.
@@ -636,7 +638,7 @@ required = 0
 
   call broadcast_nodes(my_id, node_list)                      ! nodes
 
-  ! Precalculate R-tree
+  ! Let every mpi proc calculate this
   call populate_element_rtree(node_list, element_list)
 
   call broadcast_phys(my_id)                                  ! physics parameters
@@ -869,6 +871,8 @@ required = 0
 
     call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
+    ! Find the limiter anyways (since integrals => sources uses it)
+    call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
     psi_bnd = 0.d0
     if (xpoint) then
       call find_xpoint(99,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
@@ -878,7 +882,6 @@ required = 0
         psi_bnd = psi_xpoint(2)
       endif
     else
-      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
     

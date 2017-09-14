@@ -1112,7 +1112,7 @@ module exec_commands
     do k = 1, npts
       surface_list%psi_values(k) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * real(k-1)/real(npts-1)
     end do
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
       eq%Z_xpoint, q, rad)
     
@@ -1187,7 +1187,7 @@ module exec_commands
     do i = 1, npts
       surface_list%psi_values(i) = psi_min + (psi_max-psi_min) * real(i-1)/real(npts-1)
     end do
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
     nplot  = 5
@@ -1275,7 +1275,7 @@ module exec_commands
     surface_list%n_psi = 1
     allocate( surface_list%psi_values(1) )
     surface_list%psi_values(1) = eq%psi_bnd
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
     nplot  = 5

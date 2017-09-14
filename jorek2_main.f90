@@ -41,7 +41,7 @@ program JOREK2
   use vacuum
   use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
-  use live_data,           only: init_live_data, write_live_data, finalize_live_data
+  use live_data
   use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
   use construct_matrix_murge_mod, only : construct_matrix_murge
@@ -321,13 +321,12 @@ required = 0
   end if
   
   ! --- Initialize live data file which will be filled during the code run
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data()
+  if ( my_id == 0 ) call init_live_data()
 #ifdef JECCD
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data2()
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data3()
-  if (my_id == 0) write(6,*) "initializing live data"
+  if ( my_id == 0) ) call init_live_data2()
+  if ( my_id == 0) ) call init_live_data3()
 #ifdef JEC2DIAG
-   if ( (my_id == 0) .and. (.not. bench_without_plot) ) call init_live_data4()
+   if ( my_id == 0 ) call init_live_data4()
 #endif
 #endif
   
@@ -382,6 +381,7 @@ required = 0
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
+        call write_live_data_vacuum(index_now, diag_coil_curr)
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
@@ -405,6 +405,7 @@ required = 0
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
           sig1, xr2, sig2, refinement)
       end if
+      if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
     
   end if
@@ -468,6 +469,7 @@ required = 0
         call MPI_Abort(MPI_COMM_WORLD,ierr)
         stop
       end if 
+      if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
@@ -490,6 +492,7 @@ required = 0
         resistive_wall)
       call update_response(tstep, freeboundary_equil, resistive_wall)
       call import_external_fields('coil_field.dat', my_id)
+      call set_coil_curr_time_trace()
       if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
     else
       freeb_equil2        = freeboundary_equil
@@ -556,6 +559,7 @@ required = 0
           end if
              
         end if
+        if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
         
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
@@ -568,6 +572,7 @@ required = 0
           resistive_wall)
           call update_response(tstep, freeboundary_equil, resistive_wall)
           call import_external_fields('coil_field.dat', my_id)
+          call set_coil_curr_time_trace()
           if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
         end if
         
@@ -612,12 +617,12 @@ required = 0
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
-!   if ( freeboundary_equil ) call import_external_fields('coil_field.dat')
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
       resistive_wall)
     call update_response(tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
+    call set_coil_curr_time_trace()
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   
@@ -1184,12 +1189,13 @@ required = 0
        write(*,*)
 
        ! --- Output energies and growth_rates to text files during the code run
-       if ( .not. bench_without_plot ) call write_live_data(index_now)
+       call write_live_data(index_now)
+       call write_live_data_vacuum(index_now, diag_coil_curr)
 #ifdef JECCD
-       if ( .not. bench_without_plot ) call write_live_data2(index_now)
-       if ( .not. bench_without_plot ) call write_live_data3(index_now)
+       call write_live_data2(index_now)
+       call write_live_data3(index_now)
 #ifdef JEC2DIAG
-       if ( .not. bench_without_plot ) call write_live_data4(index_now)
+       call write_live_data4(index_now)
 #endif
 #endif
     endif
@@ -1298,12 +1304,12 @@ required = 0
   endif
   
   ! --- Close open files
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data()
+  if ( my_id == 0 ) call finalize_live_data()
 #ifdef JECCD
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data2()
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data3()
+  if ( my_id == 0 ) call finalize_live_data2()
+  if ( my_id == 0 ) call finalize_live_data3()
 #ifdef JEC2DIAG
-  if ( (my_id == 0) .and. (.not. bench_without_plot) ) call finalize_live_data4()
+  if ( my_id == 0 ) call finalize_live_data4()
 #endif
 #endif
 

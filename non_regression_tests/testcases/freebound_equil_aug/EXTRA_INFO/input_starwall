@@ -36,6 +36,8 @@
 
 &PARAMS_WALL
 
+ eta_thin_w = 1.
+ 
 ! name of the file with wall description
 ! wall_filename = 'wall_simple.txt'
 

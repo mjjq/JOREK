@@ -411,6 +411,7 @@ if (my_id == 0) then
 
   write(*,LOGI_FMT) 'freeboundary_equil    ', freeboundary_equil
   write(*,LOGI_FMT) 'freeboundary          ', freeboundary
+  write(*,LOGI_FMT) 'freeb_change_indices  ', freeb_change_indices
   if ( freeboundary ) then
     write(*,LOGI_FMT) 'resistive_wall        ', resistive_wall
     if ( resistive_wall ) then
@@ -428,9 +429,11 @@ if (my_id == 0) then
   
   if (freeboundary_equil) then
     write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils
+    write(*,LOGI_FMT) 'freeb_equil_iterate_area    ', freeb_equil_iterate_area
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
     write(*,REAL_FMT) 'current_ref           ', current_ref
+    write(*,REAL_FMT) 'psi_offset_freeb      ', psi_offset_freeb
     write(*,REAL_FMT) 'FB_Ip_position        ', FB_Ip_position
     write(*,REAL_FMT) 'FB_Ip_integral        ', FB_Ip_integral
     write(*,REAL_FMT) 'Z_axis_ref            ', Z_axis_ref
@@ -447,9 +450,9 @@ if (my_id == 0) then
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'pf_coils%FB_amp       '
+    write(*,REAL_FMT,advance='no') 'vert_FB_amp           '
     do i = 1, n_pf_coils
-      write(*,'(10ES12.4)',advance='no') pf_coils(i)%FB_amp
+      write(*,'(10ES12.4)',advance='no') vert_FB_amp(i)
     end do
     write(*,*)
     write(*,REAL_FMT,advance='no') 'pf_coils%pert         '

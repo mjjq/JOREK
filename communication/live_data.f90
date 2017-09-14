@@ -16,7 +16,7 @@ module live_data
   implicit none
   
   private
-  public init_live_data, write_live_data, finalize_live_data
+  public init_live_data, write_live_data, write_live_data_vacuum, finalize_live_data
   
   integer,           parameter :: LIVE_DATA_HANDLE = 43 !< File handle for live data file
   character(len=20), parameter :: LIVE_DATA_FILE   = 'macroscopic_vars.dat' !< Live data file
@@ -56,7 +56,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_period: ', n_period
-    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies growth_rates times input_profiles axis current betas particlecontent thermalenergy heatingpower particlesource'
+    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies growth_rates times input_profiles axis current betas particlecontent thermalenergy heatingpower particlesource diag_coil_curr'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
@@ -222,5 +222,34 @@ module live_data
     ! -nothing to be done currently-
     
   end subroutine finalize_live_data
-
+  
+  
+  
+  subroutine write_live_data_vacuum(index, diag_coil_curr)
+    
+    use phys_module, only: xtime
+    
+    integer,             intent(in) :: index
+    real*8, allocatable, intent(in) :: diag_coil_curr(:,:)
+    
+    logical, save :: header_written = .false.
+    
+    open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='OLD', position='APPEND', action='WRITE')
+    
+    if ( allocated(diag_coil_curr) ) then
+      if ( .not. header_written ) then
+        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_diag_coil_curr: ', size(diag_coil_curr,2)
+        write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_ylabel: Diagnostic coil current'
+        write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,*)
+        header_written = .true.
+      end if
+      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@diag_coil_curr: ', xtime(index), diag_coil_curr(index,:)
+    end if
+    
+    close(LIVE_DATA_HANDLE)
+    
+  end subroutine write_live_data_vacuum
+  
 end module live_data

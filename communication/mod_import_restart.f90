@@ -825,7 +825,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, my
       end do
     end do
 
-    if (.false.) then ! WARNING: temporary alteration of reading for my old dataset
     if (allocated(R_axis_t)) call tr_deallocate(R_axis_t,"R_axis_t",CAT_UNKNOWN)
     call tr_allocate(R_axis_t,1,index_start+nstep,"R_axis_t",CAT_UNKNOWN)
     R_axis_t = 0.d0
@@ -956,7 +955,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, my
 #endif
 
 #endif
-  end if
 
   ! Import restart Vacuum 
   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
@@ -1034,7 +1032,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, my
       do i=1,node_list%n_nodes
         do m=2,n_tor
           if ( new_mode(m) .eq. 1 ) then
-          node_list%node(i)%values(m,:,1:4) = 0.d0
+          node_list%node(i)%values(m,:,:) = 0.d0
           node_list%node(i)%values(m,:,5)   = amplitude * node_list%node(i)%values(1,:,5)
           node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
           end if

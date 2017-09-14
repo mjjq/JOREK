@@ -17,14 +17,14 @@ function usage() {
   echo "Compiles a jorek2_particles program with the settings from Makefile.inc"
   echo "  and optional extra flags and make commands."
   echo ""
-  echo "Usage: $0 [make-commands] program_name[.f90]"
+  echo "Usage: $0 [make-commands] program_name"
   echo "  where program_name is the basename of your source file (in the current dir)"
   echo ""
   echo "Examples:"
   echo "  $0 test_static_adas"
-  echo "  $0 test_static_adas.f90"
-  echo "  $0 clean test_static_adas.f90"
-  echo "  $0 DEBUG=1 test_static_adas.f90"
+  echo "  $0 test_static_adas"
+  echo "  $0 clean test_static_adas"
+  echo "  $0 DEBUG=1 test_static_adas"
   echo ""
 }
 
@@ -32,12 +32,5 @@ if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
   usage && exit
 fi
 
-# put all arguments in an array
-args=( $@ )
-len=${#args[@]}
-# Strip any .f90 extensions from the target
-target=$(echo ${args[$len-1]} | sed 's/[.]f90$//')
 target_dir=$(pwd)
-make_opts=${args[@]:0:$len-1}
-
-cd "$(dirname "${BASH_SOURCE[0]}")" && cd .. && make "EXTRA_DIRS=$target_dir" $make_opts "$target" && cp "$target" "$target_dir"
+cd "$(dirname "${BASH_SOURCE[0]}")/.." && make "EXTRA_DIRS=$target_dir" "$@" && cp "${!#}" "$target_dir"

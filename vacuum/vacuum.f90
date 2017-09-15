@@ -159,6 +159,15 @@ module vacuum
     character(len=60) :: s, filename
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
+    
+    !--- Make sure that the main coil current vector (I_coils) is properly allocated
+    if (sr%ncoil > 0) then
+      n_coils = sr%ncoil
+      if (.not. allocated(I_coils)) then 
+        allocate(I_coils(n_coils))
+        I_coils = 0.d0
+      endif
+    endif
         
     do i = 1, sr%ncoil
             
@@ -216,7 +225,7 @@ module vacuum
         
         ! --- Read the result
         call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
-          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(s)//'.dat')
+          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(adjustl(s))//'.dat')
         
         ! --- Delete temporary files
         call system('rm ./jorek_curr_expr_'//trim(adjustl(s))//'.py ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')

@@ -1111,7 +1111,7 @@ module vacuum_response
       write(*,*) my_id, 'dpsibnd_vec: ', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
     end if
 
-!    if ( my_id == 0 ) call boundary_check()
+    if ( my_id == 0 ) call boundary_check()
         
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)

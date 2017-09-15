@@ -43,31 +43,17 @@ subroutine boundary_check()
   val_integral(:) = 0.d0
   err_integral(:) = 0.d0
 
-  !$omp parallel                                                                                   &
-  !$omp default(none)                                                                              &
-  !$omp shared(bnd_elm_list, sr, resistive_wall, node_list, element_list, bnd_node_list,           &
-  !$omp   starwall_equil_coils, psibnd_coils, wall_curr, bext_tan, I_coils,                        &
-  !$omp   val_integral, err_integral, n_dof_starwall )                                             &
-  !$omp private(m_bndelem, bndelem_m, m_elm, mv1, R1, Z1, R2, Z2, m_pt, B_par_v, s_or_t, H1, H1_s, &
-  !$omp   H1_ss, s_pt, t_pt, s_const, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt,&
-  !$omp   xjac, e_par, l_starwall, P, P_s, P_t, P_st, P_ss, P_tt, P_R, P_Z, B_pol, B_par, i_vertex,&
-  !$omp   i_node, i_node_bnd, i_dof, i_size, i_resp_old, i_resp, i_resp_0, basfunc_i, l_tor,       &
-  !$omp   psibnd_vec, dpsibnd_vec )
-  
-  !$omp critical
   call tr_allocate(psibnd_vec,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
   call tr_allocate(psibnd_coils,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
   call tr_allocate(dpsibnd_vec,1,n_dof_starwall,"dpsibnd_vec",CAT_GRID)
   call tr_allocate(B_par,1,sr%n_tor,"B_par",CAT_GRID)
   call tr_allocate(B_par_v,1,sr%n_tor,"B_par_v",CAT_GRID)
   call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
-  !$omp end critical
   
   B_par(:)        = 0.d0
   B_par_v(:)      = 0.d0
 
   ! --- For every boundary element, do...
-  !$omp do schedule(dynamic)
   L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
     bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
@@ -88,9 +74,7 @@ subroutine boundary_check()
       ! --- Determine 1D basis function (and derivatives) at current point
       s_or_t = float(m_pt-1)/float(N_POINTS-1)
       
-      !$omp critical
       call basisfunctions1(s_or_t, H1, H1_s, H1_ss)
-      !$omp end critical
 
       ! --- Which s and t values correspond to the current point and is the
       !     boundary element an s=const or t=const side of the 2D element?
@@ -106,9 +90,7 @@ subroutine boundary_check()
       end select
 
       ! --- Determine coordinate values (plus derivatives)
-      !$omp critical
       call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
-      !$omp end critical
 
       ! --- 2D Jacobian
       xjac = R_s * Z_t - R_t * Z_s
@@ -126,9 +108,7 @@ subroutine boundary_check()
         l_tor = sr%i_tor(l_starwall)
 
         ! --- Psi value (plus derivatives) at current point (l_tor mode)
-        !$omp critical
         call interp(node_list, element_list, m_elm, 1, l_tor, s_pt, t_pt, P, P_s, P_t, P_st, P_ss, P_tt)
-        !$omp end critical
 
         ! --- Poloidal magnetic field at current point
         P_R   = (   P_s * Z_t - P_t * Z_s ) / xjac ! dPsi/dR
@@ -197,17 +177,13 @@ subroutine boundary_check()
 !      write(*,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:), B_par_v(:),R,Z,e_par
 
       ! --- Integration of B_par_v values and differences between B_par and B_par_v.
-      !$omp critical
       val_integral(:) = val_integral(:) + abs( B_par_v(:) )
       err_integral(:) = err_integral(:) + abs( B_par(:) - B_par_v(:) )
-      !$omp end critical
 
     end do L_MP
 
   end do L_MB
-  !$omp end do
   
-  !$omp single
   if ( minval(abs(val_integral)) /= 0.d0 ) then
     write(*,'(1x,A,20ES15.5)') 'Relative errors in harmonics:', err_integral(:) / val_integral(:), err_integral(:), val_integral(:)
   end if
@@ -222,18 +198,13 @@ subroutine boundary_check()
       write(87,'(20ES15.5)') err_integral(:) / val_integral(:)
     end if
   end if
-  !$omp end single
   
-  !$omp critical
   call tr_deallocate(psibnd_vec,"psibnd_vec",CAT_GRID)
   call tr_deallocate(dpsibnd_vec,"dpsibnd_vec",CAT_GRID)
   call tr_deallocate(B_par,"B_par",CAT_GRID)
   call tr_deallocate(B_par_v,"B_par_v",CAT_GRID)
   call tr_deallocate(val_integral,"val_integral",CAT_GRID)
   call tr_deallocate(err_integral,"err_integral",CAT_GRID)
-  !$omp end critical
-  
-  !$omp end parallel
 
 
 end subroutine boundary_check

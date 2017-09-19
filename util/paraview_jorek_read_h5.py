@@ -25,6 +25,7 @@ Properties = dict(
 
 # from paraview import vtk # is done automatically
 def RequestData(self):
+    import re
     #include 'jorek_read_h5.py' # Don't delete: include content of this file here
 
     def GetUpdateTimestep(algorithm):
@@ -43,7 +44,12 @@ def RequestData(self):
         t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
     else:
         t_norm = 1
-    xtime = [h5py.File(fname).get("t_now")[0]*t_norm for fname in FileNames]
+    # Read xtime from last file and correlate against file numbers
+    xtime_all = np.insert(h5py.File(FileNames[-1]).get("xtime")*t_norm, 0, 0.0)
+    if len(FileNames) > 1:
+        xtime = [xtime_all[int(re.findall(r'\d+', fname)[0])] for fname in FileNames]
+    else:
+        xtime = [xtime_all[-1]]
 
     # 4 possibilities here:
     # After last step: return last file
@@ -88,6 +94,7 @@ See paraview guide 13.2.2
 def RequestInformation(self):
     import numpy as np
     import h5py
+    import re
     def setOutputTimesteps(algorithm):
         executive = algorithm.GetExecutive()
         outInfo = executive.GetOutputInformation(0)
@@ -99,7 +106,13 @@ def RequestInformation(self):
             t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
         else:
             t_norm = 1
-        xtime = [h5py.File(fname).get("t_now")[0]*t_norm for fname in FileNames]
+
+        # Read xtime from last file and correlate against file numbers
+        xtime_all = np.insert(h5py.File(FileNames[-1]).get("xtime")*t_norm, 0, 0.0)
+        if len(FileNames) > 1:
+            xtime = [xtime_all[int(re.findall(r'\d+', fname)[0])] for fname in FileNames]
+        else:
+            xtime = [xtime_all[-1]]
 
         outInfo.Remove(executive.TIME_STEPS())
         for i in range(len(FileNames)):

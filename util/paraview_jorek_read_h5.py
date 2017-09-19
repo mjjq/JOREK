@@ -25,7 +25,7 @@ Properties = dict(
 
 # from paraview import vtk # is done automatically
 def RequestData(self):
-    import re
+    import re, os
     #include 'jorek_read_h5.py' # Don't delete: include content of this file here
 
     def GetUpdateTimestep(algorithm):
@@ -47,7 +47,7 @@ def RequestData(self):
     # Read xtime from last file and correlate against file numbers
     xtime_all = np.insert(h5py.File(FileNames[-1]).get("xtime")*t_norm, 0, 0.0)
     if len(FileNames) > 1:
-        xtime = [xtime_all[int(re.findall(r'\d+', fname)[0])] for fname in FileNames]
+        xtime = [xtime_all[int(re.findall(r'\d+', os.path.basename(fname))[0])] for fname in FileNames]
     else:
         xtime = [xtime_all[-1]]
 
@@ -92,9 +92,9 @@ def RequestData(self):
 See paraview guide 13.2.2
 """
 def RequestInformation(self):
+    import re, os
     import numpy as np
     import h5py
-    import re
     def setOutputTimesteps(algorithm):
         executive = algorithm.GetExecutive()
         outInfo = executive.GetOutputInformation(0)
@@ -110,7 +110,7 @@ def RequestInformation(self):
         # Read xtime from last file and correlate against file numbers
         xtime_all = np.insert(h5py.File(FileNames[-1]).get("xtime")*t_norm, 0, 0.0)
         if len(FileNames) > 1:
-            xtime = [xtime_all[int(re.findall(r'\d+', fname)[0])] for fname in FileNames]
+            xtime = [xtime_all[int(re.findall(r'\d+', os.path.basename(fname))[0])] for fname in FileNames]
         else:
             xtime = [xtime_all[-1]]
 

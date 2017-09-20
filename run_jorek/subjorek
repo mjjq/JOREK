@@ -285,14 +285,24 @@ if [ "${JOREK_HOST}" == "marconi_knl" ]; then
   PROJ=FUA21_JOREKED
   WALLTIME=00:30:00
 else
-  ((THPNODE=36))
-  MPIPROCS=2
-  NTHREAD=18
-  NNODES=2
-  ((NPES=NNODES*MPIPROCS))
-  PROJ=FUA11_JOREKED
-  WALLTIME=00:30:00
-fi 
+  if [ "${JOREK_HOST}" == "marconi_skl" ]; then    
+    ((THPNODE=48))
+    MPIPROCS=2
+    NTHREAD=24
+    NNODES=2
+    ((NPES=NNODES*MPIPROCS))
+    PROJ=FUA32_JOREK3D
+    WALLTIME=00:30:00
+  else
+    ((THPNODE=36))
+    MPIPROCS=2
+    NTHREAD=18
+    NNODES=2
+    ((NPES=NNODES*MPIPROCS))
+    PROJ=FUA11_JOREKED
+    WALLTIME=00:30:00
+  fi
+fi
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
 echo " NPES = $NNODES x $MPIPROCS = " $NPES
@@ -1056,7 +1066,29 @@ ulimit -s unlimited
 export OMP_NUM_THREADS=${NTHREAD}
 
 EOF
-else
+fi
+if [ "${JOREK_HOST}" == "marconi_skl" ]; then
+  cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -A ${PROJ}
+#PBS -q xfuasklprod
+#PBS -V
+#PBS -j oe
+#PBS -l place=excl
+#PBS -l walltime=${WALLTIME}
+#PBS -l select=${NNODES}:mpiprocs=${MPIPROCS}
+
+# environment
+#------------
+ulimit -l unlimited
+ulimit -s unlimited
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+fi
+if [ "${JOREK_HOST}" == "marconi" ]; then
   cat <<EOF > go_$DATANAME.cmd
 #!/bin/bash
 #PBS -N ${CASENAME}

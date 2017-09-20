@@ -46,7 +46,13 @@ real*8                :: zn0_x, zn0_y, zn_sum,  zn_x, zn_y, zn_p
 real*8                :: T0_x,  T0_y,  T_sum,   TT_x, TT_y, TT_p
 real*8                :: Ti0_x, Ti0_y, Ti_sum,  Ti_x, Ti_y, Ti_p
 real*8                :: Te0_x, Te0_y, Te_sum,  Te_x, Te_y, Te_p
-real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof
+real*8                :: AR,  AR_s,  AR_t,  AR_st,  AR_ss,  AR_tt
+real*8                :: AZ,  AZ_s,  AZ_t,  AZ_st,  AZ_ss,  AZ_tt
+real*8                :: A3,  A3_s,  A3_t,  A3_st,  A3_ss,  A3_tt
+real*8                :: VR,  VR_s,  VR_t,  VR_st,  VR_ss,  VR_tt
+real*8                :: VZ,  VZ_s,  VZ_t,  VZ_st,  VZ_ss,  VZ_tt
+real*8                :: VP,  VP_s,  VP_t,  VP_st,  VP_ss,  VP_tt
+real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof, T_R, T_Z, T_P, BR, BZ, BP
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
@@ -60,24 +66,21 @@ logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
 logical               :: include_bootstrap, include_psi_norm
 real*8                :: toroidal_angle
-!====================== --- add the diagnostics Er, Vtheta and Vneo
+
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
 real*8                :: amu_neo_node, aki_neo_node
 real*8                :: Vperp_e, Psi_tot
 
 real*8                :: angle, source_volume, local_density, local_temperature, local_pressure, local_psi, local_source
 
-!====================== --- Variables related to atomic physics terms (model 500 or 555)
 logical               :: include_radiation
 integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8
-#ifdef fullmhd
-!====================== --- Variables related to full mhd 
+
 integer               :: n_fullmhd,s_fullmhd
-#endif
 
 integer, parameter :: nplot = 200
 integer :: iplot, i_elm
@@ -219,7 +222,7 @@ endif
 #endif
 
 #if fullmhd
- n_fullmhd = 3
+ n_fullmhd = 5
  s_fullmhd = n_scalars
  n_scalars = n_scalars + n_fullmhd
 #endif /*fullmhd*/
@@ -298,7 +301,7 @@ endif
 #endif
 
 #ifdef fullmhd
-scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         '/)
+scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         ','K_par       ','V_par       '/)
 #endif /*fullmhd*/
 
 if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = (/ 'B_R     ','B_Z     ','B_phi   '/)
@@ -607,10 +610,16 @@ do i=1,element_list%n_elements
         w_sum   = 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
 
 #ifdef fullmhd
-        !reinitialize Bphi,BR,B_Z for loop over all modes
-        scalars(inode,s_fullmhd+1) = 0.  
-        scalars(inode,s_fullmhd+2) = 0.  
-        scalars(inode,s_fullmhd+3) = 0.  
+
+        scalars(inode,s_fullmhd+1:s_fullmhd+n_fullmhd) = 0.d0
+        
+        BR  = 0.d0
+        BZ  = 0.d0
+        BP  = 0.d0
+        T_R = 0.d0
+        T_Z = 0.d0
+        T_P = 0.d0
+
 #endif /*fullmhd*/
 
         do i_tor = 1, n_tor
@@ -652,20 +661,24 @@ do i=1,element_list%n_elements
           endif
 
 #ifdef fullmhd
-          ! Magnetic field components
-          call interp(node_list,element_list,i,var_AR,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
-          call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-          call interp(node_list,element_list,i,var_A3,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
 
-          AR_Z = ( - R_t * U_s + R_s * U_t ) / xjac
-          AZ_R = (   Z_t * V_s - Z_s * V_t ) / xjac
-          A3_R = (   Z_t * W_s - Z_s * W_t ) / xjac
-          A3_Z = ( - R_t * W_s + R_s * W_t ) / xjac
+          call interp(node_list,element_list,i,var_AR,i_tor,s,t,AR,AR_s,AR_t,AR_st,AR_ss,AR_tt)
+          call interp(node_list,element_list,i,var_AZ,i_tor,s,t,AZ,AZ_s,AZ_t,AZ_st,AZ_ss,AZ_tt)
+          call interp(node_list,element_list,i,var_A3,i_tor,s,t,A3,A3_s,A3_t,A3_st,A3_ss,A3_tt)
+          call interp(node_list,element_list,i,var_uR,i_tor,s,t,VR,VR_s,VR_t,VR_st,VR_ss,VR_tt)
+          call interp(node_list,element_list,i,var_uZ,i_tor,s,t,VZ,VZ_s,VZ_t,VZ_st,VZ_ss,VZ_tt)
+          call interp(node_list,element_list,i,var_uP,i_tor,s,t,VP,VP_s,VP_t,VP_st,VP_ss,VP_tt)
+          call interp(node_list,element_list,i,var_T,i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
+          call interp(node_list,element_list,i,var_r,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
 
-          call interp(node_list,element_list,i,var_AR,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
-          call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-          AR_p = U  * HZ_p(i_tor,i_plane)
-          AZ_p = V  * HZ_p(i_tor,i_plane)
+
+          AR_Z = ( - R_t * AR_s + R_s * AR_t ) / xjac
+          AZ_R = (   Z_t * AZ_s - Z_s * AZ_t ) / xjac
+          A3_R = (   Z_t * A3_s - Z_s * A3_t ) / xjac
+          A3_Z = ( - R_t * A3_s + R_s * A3_t ) / xjac
+
+          AR_p = AR * HZ_p(i_tor,i_plane)
+          AZ_p = AZ * HZ_p(i_tor,i_plane)
 
           if (i_tor == 1) then
             call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
@@ -676,6 +689,21 @@ do i=1,element_list%n_elements
 
           scalars(inode,s_fullmhd+2) = scalars(inode,n_var+2) + ( A3_Z - AZ_p )/ BigR * HZ(i_tor,i_plane)  ! B_R
           scalars(inode,s_fullmhd+3) = scalars(inode,n_var+3) + ( AR_p - A3_R )/ BigR * HZ(i_tor,i_plane)  ! B_Z
+          
+          ZKpar_T = ZK_par * ((max(TT, T_min ))/T_0)**2.5
+            
+          T_R  = T_R + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
+          T_Z  = T_Z + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
+          T_P  = TT * HZ_p(i_tor,i_plane)
+
+          BR = ( A3_Z - AZ_p )/ BigR
+          BZ = ( AR_p - A3_R )/ BigR 
+          BP = ( AZ_R - AR_Z )       + Fprof/ BigR
+
+          scalars(inode,s_fullmhd+4) = ZKpar_T * ( BR * T_R + BZ * T_Z + BP * T_P / BigR) 
+
+          scalars(inode,s_fullmhd+5) = rho * TT * (VR * BR + VZ * BZ + VP * BP / BigR)
+
 #endif /*fullmhd*/
 
           if ((xjac .gt. 1.d-6)) then  ! avoid the axis

@@ -520,25 +520,13 @@ required = 0
 
 
 
-   ! if (my_id == 0) then
-
-
       ! --- Compute the plasma equilibrium
       if (equil) then
-
-          call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
-
-
-if(my_id ==0 ) write(6,*)"FINISH PARALLELIZATION"
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-stop
-
-
-       if (export_for_nemec) then
-             call export_nemec(node_list, element_list, xpoint, xcase)
+        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
+        if (export_for_nemec) then
+          if(my_id ==0 ) call export_nemec(node_list, element_list, xpoint, xcase)
         endif
       end if ! if (equil) then
-
 
 
     if (my_id == 0) then
@@ -546,61 +534,59 @@ stop
       ! --- Determine a flux surface aligned grid
       if (n_flux > 1) then
         
-        if (xpoint)  then
+       if (xpoint)  then
 
 !          if (.not. grid_to_wall) then
           if (xcase .ge. 2) then
-	    call grid_double_xpoint(node_list, element_list)
+              call grid_double_xpoint(node_list, element_list)
           else
-	  
-	    if (.not. grid_to_wall) then
-	      call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+   
+            if (.not. grid_to_wall) then
+                call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
-	    else
+            else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
-              call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
+              if(my_id == 0 ) call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
                                     SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-	    endif 
-	           
-          endif
+            endif !  if (.not. grid_to_wall) then
+             
+          endif !if (xcase .ge. 2) then
                    
-          call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
+            call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
           
         else
           
-          call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
+           call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
                                  xr1, sig1, xr2, sig2,refinement)
           
-          call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
+            call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
           
           ! --- Refine elements (equilibrum)
           if (refinement) then
             n_to_be_refined=0
             call Refine_Elem_List(node_list, element_list, list_to_be_refined, n_to_be_refined)
-            call Ref_Update_Index(element_list, node_list)
+            call Ref_Update_Index(element_list, node_list)           
           end if
              
-        end if
-        if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
-        
+        end if ! if (xpoint)  then
+
+        if ( freeboundary .and. freeb_change_indices .AND. my_id == 0) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+
         ! --- Determine boundary information from the grid
-        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
-        
-	      call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)       
+        call export_boundary(node_list, bnd_elm_list, bnd_node_list)
         
         if ( freeb_equil2) then
-          write(6,*) "TTT"
           freeboundary_equil = .true.
           call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
           resistive_wall,parallel)
-            
 
-        if (parallel == .true.) then
+          if (parallel == .true.) then
             call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
-        else
+          else
             call update_response(tstep, freeboundary_equil,resistive_wall)
-         endif
+          endif
           call import_external_fields('coil_field.dat', my_id)
           call set_coil_curr_time_trace()
           if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -609,10 +595,7 @@ stop
         ! --- Compute the plasma equilibrium
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
 
-      end if
- 
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-stop
+      end if ! if (n_flux > 1) then
      
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
@@ -622,7 +605,7 @@ stop
       ! --- Determine initial energies
       call energy(node_list,element_list,W_mag,W_kin)
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
-
+      write(500+my_id,*)  "AAA", W_mag, W_kin
 #ifdef JECCD
       call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
       write(*,'(A,12e16.8)') ' initial energies2 : ',A_tem,A_den
@@ -631,10 +614,9 @@ stop
       write(*,'(A,12e16.8)') ' initial energies4 : ',A_jec1,A_jec2
 #endif
 #endif
+
 end if ! (my_id == 0)
 
-
-    
 #ifdef USE_MUMPS
     ! --- Clean up this instance of mumps (used for equilibrium)
     mumps_par%JOB = -2
@@ -644,12 +626,14 @@ end if ! (my_id == 0)
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
   
   end if if_not_restart
-  
+ 
+
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Determine boundary information from the grid
   if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
+
   
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary ) then
@@ -662,6 +646,10 @@ end if ! (my_id == 0)
          call update_response(tstep, freeboundary_equil,resistive_wall)
     endif
 
+
+    if(my_id==0) write(6,*) "PARALLELIZATION FINISH 2", freeboundary
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    stop
 
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()

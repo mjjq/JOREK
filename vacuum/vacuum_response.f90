@@ -643,15 +643,9 @@ module vacuum_response
          ! Return to ordinary file view
           call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr);
 
-         ! write(6,*) "cplumn",my_id, disp
-
-
       end if
 
-
-
     if ( vacuum_debug  .AND. my_id ==0) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, trim(datatype), d(1:nd)
-
 
   end subroutine read_array_parallel_columnwise
   !===========================================================================================================
@@ -871,15 +865,14 @@ module vacuum_response
 
     ! MPI wariable to real parallel IO file
     integer, dimension (MPI_STATUS_SIZE) :: status
-    integer(kind=MPI_OFFSET_KIND)        :: disp=0
+    integer(kind=MPI_OFFSET_KIND)        :: disp
     real*8             :: test_sum
 
     integer            :: loc_sizes(2),step,ntasks
     real*8  :: time(10)
  
-
+    disp=0
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
-
 
     ! --- Open file
     !   --- Try to open as unformatted file
@@ -940,7 +933,7 @@ module vacuum_response
           write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
           stop
        end if
-        
+       
        sr%nd_bez = read_intparam_parallel(filehandle, 'nd_bez',disp)
        sr%ncoil  = read_intparam_parallel(filehandle, 'ncoil' ,disp)
        sr%npot_w = read_intparam_parallel(filehandle, 'npot_w',disp)
@@ -988,7 +981,6 @@ module vacuum_response
             end if
         end if
 
-
        ! --- eta_thin_w is only part of the STARWALL response file since
        ! file_version 2
        if ( sr%file_version >= 2 ) then
@@ -1016,11 +1008,10 @@ module vacuum_response
     call read_array_parallel_rowwise       (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv)
  
     if(my_id == 0) then
- 
       call read_array_sequential(filehandle, 'xyzpot_w',(/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
       call read_array_sequential(filehandle, 'jpot_w',(/sr%ntri_w,3/),disp, int2d=sr%jpot_w)
-
     endif
+
 
     call MPI_BARRIER(MPI_COMM_WORLD, err)
     call MPI_FILE_CLOSE(filehandle, err)

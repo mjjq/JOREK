@@ -9,7 +9,7 @@ Before reading, set:
 Before interpolating, set:
     - Without_n0_mode (default false)
 
-Created by Daan van Vugt on 2017-01-18
+Created by Daan van Vugt <daanvanvugt@gmail.com>
 
 prec controls the precision of the calculation. Values: np.float32 or np.float64
 Calculation time is not really affected, render time maybe?
@@ -30,12 +30,8 @@ input arguments:
 """
 class fields(object):
     var_names = ["psi", "u", "j", "w", "rho", "T", "v_par"] # rest is ambiguous
-    def read(self, filename, variables='', file_prev=None, interp_fraction=None):
-        if (isinstance(variables, str)):
-            self.vars = [int(x)-1 for x in variables.split(',')]
-        else:
-            raise "Error: expected a string of variables"
-
+    def read(self, filename, variables=[], file_prev=None, interp_fraction=None):
+        self.vars = variables
         with h5py.File(filename, 'r') as hf:
             self.n_var        = hf.get('n_var')[0]
             self.n_period     = hf.get('n_period')[0]
@@ -70,7 +66,7 @@ class fields(object):
     returns:
         vtkUnstructuredGrid
     """
-    def to_vtk(self, n_sub=2, phi=[0,2*np.pi], n_plane=8, without_n0_mode=False, 
+    def to_vtk(self, n_sub=2, phi=[0,360], n_plane=8, without_n0_mode=False, 
                force_remake_grid=False, quadratic=True, output=None):
         import vtk
         from vtk.util import numpy_support as npvtk
@@ -85,8 +81,11 @@ class fields(object):
         else:
             if (quadratic):
                 n_plane = n_plane*2-1
-            periodic = (np.mod(phi[0]-phi[1],2*np.pi) < 1e-9)
+            periodic = (np.mod(phi[0]-phi[1],360) < 1e-9)
             phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=not periodic)
+        # Convert to radians
+        phis = phis*np.pi/180
+
 
         if (quadratic):
             n_sub = n_sub*2-1
@@ -340,7 +339,7 @@ def basis_functions(s,t):
         [ (-1 + s)**2*(1 + 2*s)*(-1 + t)**2*(1 + 2*t),
          -(s**2*(-3 + 2*s)*(-1 + t)**2*(1 + 2*t)),
           s**2*(-3 + 2*s)*t**2*(-3 + 2*t),
-         -((-1 + s)**2*(1 + 2*s)*t**2*(-3 + 2*t))],
+         -(-1 + s)**2*(1 + 2*s)*t**2*(-3 + 2*t)],
         [ 3*(-1 + s)**2*s*(-1 + t)**2*(1 + 2*t),
          -3*(-1 + s)*s**2*(-1 + t)**2*(1 + 2*t),
          3*(-1 + s)*s**2*t**2*(-3 + 2*t),
@@ -354,6 +353,58 @@ def basis_functions(s,t):
           9*(-1 + s)*s**2*(-1 + t)*t**2,
          -9*(-1 + s)**2*s*(-1 + t)*t**2]])
 
+"""
+Calculate values of the basis functions derived to s at positions s and t
+Optionally put many values of s and t at once as numpy arrays.
+Dimension 0: order
+Dimension 1: vertex
+optional dimension 2, 3: position s, t
+"""
+def basis_functions_s(s,t):
+    return np.asarray([
+        [ 6*(-1 + s)*s*(-1 + t)**2*(1 + 2*t),
+         -6*(-1 + s)*s*(-1 + t)**2*(1 + 2*t),
+          6*(-1 + s)*s*t**2*(-3 + 2*t),
+         -6*(-1 + s)**2*t**2*(-3 + 2*t)],
+        [ 3*(-1 + s)*(-1+3*s)*(-1 + t)**2*(1 + 2*t),
+         -3*s*(-2 + 3*s)*(-1 + t)**2*(1 + 2*t),
+          3*s*(-2 + 3*s)*t**2*(-3 + 2*t),
+         -3*(-1 + 3*s)*(-1 + s)*t**2*(-3 + 2*t)],
+        [ 18*(-1 + s)*s*(-1 + t)**2*t,
+         -18*(-1 + s)*s*(-1 + t)**2*t,
+          18*(-1 + s)*s*(-1 + t)*t**2,
+         -18*(-1 + s)*s*(-1 + t)*t**2],
+        [ 9*(-1 + s)*(-1+3*s)*(-1 + t)**2*t,
+         -9*s*(-2 + 3*s)*(-1 + t)**2*t,
+          9*s*(-2 + 3*s)*(-1 + t)*t**2,
+         -9*(-1 + 3*s)*(-1 + s)*(-1 + t)*t**2]])
+
+"""
+Calculate values of the basis functions derived to t at positions s and t
+Optionally put many values of s and t at once as numpy arrays.
+Dimension 0: order
+Dimension 1: vertex
+optional dimension 2, 3: position s, t
+"""
+def basis_functions_t(s,t):
+    return np.asarray([
+        [ 6*(-1 + s)**2*(1 + 2*s)*(-1 + t)*t,
+         -6*s**2*(-3 + 2*s)*(-1 + t)*t,
+          6*s**2*(-3 + 2*s)*(-1 + t)*t,
+         -6*(-1 + s)**2*(1 + 2*s)*(-1 + t)*t],
+        [ 18*(-1 + s)**2*s*(-1 + t)*t,
+         -18*(-1 + s)*s**2*(-1 + t)*t,
+          18*(-1 + s)*s**2*(-1 + t)*t,
+         -18*(-1 + s)**2*s*(-1 + t)*t],
+        [ 3*(-1 + s)**2*(1 + 2*s)*(-1 + t)*(-1 + 3*t),
+         -3*s**2*(-3 + 2*s)*(1 - 3*t)*(-1 + t),
+          3*s**2*(-3 + 2*s)*t*(-2 + 3*t),
+         -3*(-1 + s)**2*(1 + 2*s)*t*(-2 + 3*t)],
+        [ 9*(-1 + s)**2*s*(-1 + t)*(-1 + 3*t),
+         -9*(-1 + s)*s**2*(-1 + t)*(-1 + 3*t),
+          9*(-1 + s)*s**2*t*(-2 + 3*t),
+         -9*(-1 + s)**2*s*t*(-2 + 3*t)]])
+
 
 """
 Calculate basis functions at n_sub**2 points
@@ -364,3 +415,15 @@ def bf(n_sub):
     s  = np.tensordot(lin, [1]*n_sub, axes=0)
     t  = s.transpose()
     return basis_functions(s, t)
+def bf_s(n_sub):
+    # Get the basis functions at each of the points
+    lin = np.linspace(0.0, 1.0, n_sub)
+    s  = np.tensordot(lin, [1]*n_sub, axes=0)
+    t  = s.transpose()
+    return basis_functions_s(s, t)
+def bf_t(n_sub):
+    # Get the basis functions at each of the points
+    lin = np.linspace(0.0, 1.0, n_sub)
+    s  = np.tensordot(lin, [1]*n_sub, axes=0)
+    t  = s.transpose()
+    return basis_functions_t(s, t)

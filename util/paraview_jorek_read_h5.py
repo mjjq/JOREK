@@ -6,21 +6,44 @@ FileDescription = 'JOREK hdf5 files'
 
 import h5py
 import inspect
+import numpy as np
 from os.path import dirname
+from collections import OrderedDict
 PythonPaths = [dirname(dirname(inspect.getfile(h5py)))]
 
 NumberOfInputs = 0
 OutputDataType = 'vtkUnstructuredGrid'
-Properties = dict(
-    Variables = "1,2,3,4,5,6",
-    Number_of_planes = 1,
-    Number_of_subdivisions = 3,
-    phi_range_in_pi = [0.0, 1.0],
-    Quadratic = False,
-    Exclude_n0_mode = False,
-    central_mass = 2.0, # Convert times to SI units using this norm
-    central_density = 1.0 # [1d-20 m^-3]
-)
+# Top-level tuples are propertygroups. One level below is a list of dictionaries for the elements
+# Names are converted to labels by '_' > ' ' and uppercasing the first letter
+
+# Create a new class to distinguish the list to select
+# Keys = string names
+# Values = 1 or 0 (enabled by default or not)
+class ArraySelectionDomain(OrderedDict):
+    pass
+class PropertyGroup(OrderedDict):
+    pass
+
+Properties = OrderedDict([
+    ('variables', ArraySelectionDomain([
+        ('Psi', 1), ('u', 1), ('j', 1), ('w', 1), ('rho', 1), ('T', 1),
+        ('v_par', 0), ('T_e', 0), #model400
+        ('rho_n', 0), # model500
+    ])),
+    ('interpolation_options', PropertyGroup([
+        ('number_of_subdivisions', dict(value=3, min=2, max=6)),
+        ('quadratic', False),
+        ('exclude_n0_mode', False),
+    ])),
+    ('toroidal_direction', PropertyGroup([
+        ('number_of_planes', dict(value=1, min=1, max=360)),
+        ('phi_range', dict(value=[0.0, 90.0], widget='double_range', min=0.0, max=360)),
+    ])),
+    ('normalisation_options', PropertyGroup([ # Deprecated, can be removed after adoption of new restart file format
+        ('central_mass', 2.0),
+        ('central_density', 1.0),
+    ])),
+])
 
 
 # from paraview import vtk # is done automatically
@@ -74,18 +97,39 @@ def RequestData(self):
             f = (req_time - xtime[index-1])/(xtime[index] - xtime[index-1])
             # how much of second to take == 1-how much of first to take
 
+    # Make a list of variables to read (0-based) and a list of variables to interpret
+    # See https://www.jorek.eu/wiki/doku.php?id=models
+    assert self.model < 700, 'Model700 and above restart files are not supported, model=%s'%(self.model,)
+    to_read = []
+    # Model-agnostic variables first
+    if (Psi): to_read.append(0)
+    if (u): to_read.append(1)
+    if (j): to_read.append(2)
+    if (w): to_read.append(3)
+    if (rho): to_read.append(4)
+    if (T): to_read.append(5)
+    if self.model > 199:
+        if (v_par): to_read.append(6)
+    if self.model >= 400 and self.model < 500:
+        if (T_e): to_read.append(7)
+    if self.model >= 500 and self.model < 600:
+        if (rho_n): to_read.append(7)
+
+
+
+
     # Read the h5 file
     if (not hasattr(self, 'f')):
         self.f = fields()
     if (interp):
-        self.f.read(FileNames[index], variables=Variables, file_prev=FileNames[index-1],
+        self.f.read(FileNames[index], variables=to_read, file_prev=FileNames[index-1],
                interp_fraction=f)
     else:
-        self.f.read(FileNames[index], variables=Variables)
+        self.f.read(FileNames[index], variables=to_read)
 
-    output = self.f.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
-                      n_plane=Number_of_planes, without_n0_mode=Exclude_n0_mode,
-                      output=self.GetUnstructuredGridOutput(), quadratic=Quadratic)
+    output = self.f.to_vtk(n_sub=number_of_subdivisions, phi=phi_range,
+                      n_plane=number_of_planes, without_n0_mode=exclude_n0_mode,
+                      output=self.GetUnstructuredGridOutput(), quadratic=quadratic)
     return output
 
 """
@@ -108,7 +152,10 @@ def RequestInformation(self):
             t_norm = 1
 
         # Read xtime from last file and correlate against file numbers
-        xtime_all = np.insert(h5py.File(FileNames[-1]).get("xtime")*t_norm, 0, 0.0)
+        # Also read the model number and set this
+        with h5py.File(FileNames[-1], 'r') as f:
+            self.model = f['jorek_model'][0]
+            xtime_all = np.insert(f.get("xtime")*t_norm, 0, 0.0)
         if len(FileNames) > 1:
             xtime = [xtime_all[int(re.findall(r'\d+', os.path.basename(fname))[0])] for fname in FileNames]
         else:

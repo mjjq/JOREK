@@ -1295,7 +1295,7 @@ endif
     integer :: ierr
     real*8    :: test_sum, loc_sum    
 
-    if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response_parallel.'
+    if ( vacuum_debug .AND. my_id == 0) write(*,*) my_id, 'Entering broadcast_starwall_response_parallel.'
     
     ! --- Broadcast parameters.
     call MPI_bcast(sr%file_version,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -1373,9 +1373,9 @@ endif
         call MPI_Reduce(loc_sum, test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
  
-        if(my_id==0)  write(*,'("Checksum",I4,ES24.16)') my_id, test_sum
+        if(my_id == 0)  write(*,'("Checksum",I4,ES24.16)') my_id, test_sum
       
-        write(*,*) my_id, 'Exiting broadcast_starwall_response_parallel.'
+        if(my_id == 0)  write(*,*) my_id, 'Exiting broadcast_starwall_response_parallel.'
    
    endif  
    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
@@ -2164,7 +2164,8 @@ endif
     use global_distributed_matrix, only: irn_glob, jcn_glob, a_glob, ndof_glob, det_row_col, det_sparse_pos
     use basis_at_gaussian, only: H1, H1_s, HZ
     use phys_module, only: t_now, t_start
-    
+    use mpi_mod 
+   
     implicit none
     
     ! --- Routine parameters
@@ -2177,8 +2178,8 @@ endif
     integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     real*8,                      intent(inout) :: rhs_loc(ndof_glob)   !< Part of RHS of MPI proc
     real*8,                      intent(in)    :: tstep                !< delta t, timestep
-    integer,                     intent(in)    :: index_now            !< Current timestep index
-    
+    integer,                     intent(in)    :: index_now            !< Current timestep index    
+
     ! --- Local variables
     real*8, allocatable :: psibnd_vec(:)    ! Vector of the values of Psi at the boundary
     real*8, allocatable :: dpsibnd_vec(:)   ! Vector of the values of deltaPsi at the boundary
@@ -2211,13 +2212,16 @@ endif
 #endif
     !integer :: rate, t0, t1 !### timing ###
     logical, save  :: PF_perturbation = .true. 
-    
+    integer  :: ierr, send_rank, ntasks
+
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)    
+
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
       return
     end if
 
-    if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
+    if ( vacuum_debug .and. my_id == 0) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
     
     ! --- Determine vectors of the psi and deltapsi boundary values.
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
@@ -2231,9 +2235,10 @@ endif
     endif            
     
     ! --- Update the derived response matrices
-    call update_response(tstep, freeboundary_equil, resistive_wall)     
-    
+    call update_response_parallel(my_id, tstep, freeboundary_equil, resistive_wall)     
+
     ! --- Perform the time-stepping for the wall currents.
+
     if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
 
     ! --- Update old_dpsibnd_vec  (used for updating the wall currents in  the next iteration)
@@ -2244,7 +2249,10 @@ endif
       write(*,*) my_id, 'dpsibnd_vec: ', sum(abs(dpsibnd_vec)), sum(dpsibnd_vec)
     end if
 
-    if ( my_id == 0 ) call boundary_check()
+    call boundary_check(my_id)
+
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    write(5000+my_id,*) response_m_f%ind_start, response_m_f%ind_end,response_m_f%step
        
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
@@ -2255,9 +2263,9 @@ endif
     !$omp shared(a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,    &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,      &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec, psibnd_coils,       &
-    !$omp   starwall_equil_coils, response_m_v, Y_coils0,                                          &
+    !$omp   starwall_equil_coils, response_m_v, Y_coils0, ierr, ntasks, send_rank,                 &
 #ifdef __GFORTRAN__
-    !$omp   wgauss_copy,                                                                                &
+    !$omp   wgauss_copy,                                                                           &
 #endif
     !$omp   resistive_wall)     &
     !$omp private(m_bndelem, bndelem_m, x_s, y_s, l_vertex, l_dof, l_node, l_dir, l_node_bnd,      &
@@ -2265,9 +2273,12 @@ endif
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,   &
     !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir, j_index,         &
     !$omp   j_starwall, j_tor, j_resp, j_resp_old,j_col_psi, sparsepos_jp, sparsepos_pp, amat_contrib,        &
-    !$omp   rhs_contrib) &
+    !$omp   rhs_contrib, my_id) &
     !$omp schedule(dynamic,1)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
+
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    write(6000+my_id,*) response_m_f%ind_start,response_m_f%ind_end,response_m_f%step
 
       bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
 
@@ -2374,14 +2385,16 @@ endif
                             sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min)
 
                             ! --- Vacuum response contribution to the lhs of the current equation
-                            amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
+                            
+                             amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
+
                             !$omp atomic
                             A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
 
                           end do L_JS
                         end do L_JD
                       end do L_JB
-
+                     
                       ! --- Contribution of vacuum response to the rhs of the current equation
 
                       rhs_contrib = sum( response_m_h(i_resp,:) * psibnd_vec(:)   )                 &
@@ -2391,11 +2404,25 @@ endif
                         rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )       &
                                     - sum( response_m_h(i_resp,:) * psibnd_coils(:) )               
 
-                      if ( resistive_wall ) &
-                        rhs_contrib = rhs_contrib + sum( response_m_f%loc_mat(i_resp, :) *  wall_curr(:) )  &
-                                                  + sum( response_m_g%loc_mat(i_resp, :) * dwall_curr(:) )  &
-                                                  - sum( response_m_v%loc_mat(i_resp, :) *   Y_coils0(:) ) 
 
+
+                      if ( resistive_wall ) then
+                          if(i_resp>=response_m_f%ind_start .AND. i_resp<=response_m_f%ind_end) then
+
+                      !         rhs_contrib = rhs_contrib + sum( response_m_f%loc_mat(i_resp, :) *  wall_curr(:) )  &
+                      !                                   + sum( response_m_g%loc_mat(i_resp, :) * dwall_curr(:) )  &
+                      !                                   - sum( response_m_v%loc_mat(i_resp, :) *   Y_coils0(:) ) 
+                       
+
+                             write(2300+my_id,*) my_id, i_resp,response_m_f%ind_start,response_m_f%ind_end, (i_resp-1)/response_m_f%step
+                          endif
+                      endif
+
+                      send_rank=(i_resp-1)/response_m_f%step
+                      if(send_rank>=ntasks) send_rank=ntasks-1
+
+
+                      call MPI_BCAST(rhs_contrib, 1, MPI_DOUBLE_PRECISION, send_rank ,MPI_COMM_WORLD,ierr)
 
                       rhs_contrib = rhs_contrib * common_prefactor
                       !$omp atomic
@@ -2426,7 +2453,13 @@ endif
   
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
     if ( allocated(dpsibnd_vec) ) deallocate( dpsibnd_vec )
-    
+
+
+    write(7000+my_id,*) ntasks 
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    stop
+
+   
   end subroutine vacuum_boundary_integral
   
   
@@ -2619,12 +2652,13 @@ endif
     use constants
     use phys_module, only: t_now
     use profiles
-    
+    use mpi_mod    
+
     implicit none
    
     ! --- Routine parameters
     integer, intent(in)       :: my_id  
-    integer                   :: i
+    integer                   :: i, ierr
     real*8, allocatable       :: potentials_real_0(:)
     real*8, save, allocatable :: delta_Icoils_0(:)
     logical, save             :: initialized=.false.
@@ -2657,21 +2691,26 @@ endif
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
     potentials_real_0(1:n_coils) = I_coils(1:n_coils) * mu_zero
+   ! do i = 1, n_wall_curr
+   !   Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i,:) * potentials_real_0(:))
+   ! end do
+  
     do i = 1, n_wall_curr
-      Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i,:) * potentials_real_0(:))
+        if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
+            Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:)*potentials_real_0(:))
+        endif
     end do
-   
+    call MPI_ALLReduce(MPI_IN_PLACE, Y_coils0, size(Y_coils0),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
   end subroutine coil_current_source
   
-  
-  
-  
-  
+ 
   
   !> Perform the time-evolution of the wall currents (resistive wall).
   subroutine evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
     use phys_module, only: index_now, index_start, nstep, resistive_wall
+    use mpi_mod
     
     implicit none
     
@@ -2682,7 +2721,7 @@ endif
     
     ! --- Local variables
     integer             :: k, k2
-
+    integer             :: ierr
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
     
@@ -2691,17 +2730,17 @@ endif
       allocate( old_dpsibnd_vec(n_dof_starwall) )
     end if    
 
-    
-    do k = 1, n_wall_curr
-      dwall_curr(k) = sum( response_m_a%loc_mat(k,:) * dpsibnd_vec(:) )  &
-        + response_d_b(k) * (wall_curr(k) - Y_coils0(k))       &
-        + response_d_c(k) * dwall_curr(k)                        &
-        + sum( response_m_d%loc_mat(k,:) * old_dpsibnd_vec(:) ) !&
-        !+ sum( response_m_k(k,:) * coil_voltages(:) )
-    end do
-    wall_curr(:) = wall_curr(:) + dwall_curr(:)
-    
+      do k = 1, n_wall_curr
 
+             dwall_curr(k) = sum(response_m_a%loc_mat(k,:) * dpsibnd_vec(response_m_a%ind_start:response_m_a%ind_end))  &
+                           + response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
+                           + response_d_c(k) * dwall_curr(k)                &
+                           + sum(response_m_d%loc_mat(k,:) * old_dpsibnd_vec(response_m_d%ind_start:response_m_d%ind_end) ) !&
+                          !+ sum( response_m_k(k,:) * coil_voltages(:) )
+      end do
+
+    call MPI_ALLReduce(MPI_IN_PLACE, dwall_curr,size(dwall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    wall_curr(:) = wall_curr(:) + dwall_curr(:)
 
     call write_wall_vtk(index_now, resistive_wall, my_id)
     if ( my_id == 0 ) then
@@ -2724,7 +2763,7 @@ endif
       end do
     end if
     
-    if ( vacuum_debug ) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
+    if ( vacuum_debug .AND. my_id ==0) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
     
   end subroutine evolve_wall_currents
   
@@ -2827,7 +2866,6 @@ endif
     real*8,  save :: old_zeta
     logical, save :: old_reswall
 
-
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'
       return
@@ -2838,7 +2876,6 @@ endif
 
 
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
-
 
 ! --- Update response matrices only, if parameter values changed or matrices
     ! not allocated
@@ -2876,6 +2913,8 @@ endif
 
           step=n_dof_starwall/ntasks
           loc_size = step
+          response_m_a%step=step
+
           if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
           response_m_a%row_wise  = .false.
@@ -2888,7 +2927,6 @@ endif
 
       endif
 
-
       if ( .not. allocated(response_d_b) ) &
         allocate( response_d_b(n_wall_curr) )
       if ( .not. allocated(response_d_c) ) &
@@ -2899,6 +2937,8 @@ endif
 
           step=n_dof_starwall/ntasks
           loc_size = step
+          response_m_d%step=step
+
           if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
           response_m_d%row_wise  = .false.
@@ -2918,6 +2958,8 @@ endif
 
           step=n_dof_starwall/ntasks
           loc_size = step
+          response_m_f%step=step
+
           if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
           response_m_f%row_wise  = .true.
@@ -2934,6 +2976,8 @@ endif
 
           step=n_dof_starwall/ntasks
           loc_size = step
+          response_m_g%step=step
+
           if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
           response_m_g%row_wise  = .true.
@@ -2959,6 +3003,8 @@ endif
 
           step=n_dof_starwall/ntasks
           loc_size = step
+          response_m_v%step=step
+
           if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
           response_m_g%row_wise  = .true.
@@ -2976,7 +3022,6 @@ endif
 
      !zeta=1.0
      response_m_eq = 0.d0
-
 
      if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
      call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -3004,7 +3049,6 @@ endif
       end do
 
       call MPI_AllREDUCE(MPI_IN_PLACE,response_m_eq,size(response_m_eq),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-
 
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall) then
@@ -3055,7 +3099,6 @@ endif
         response_m_j =0.0
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-
 
         do k = 1, n_wall_curr
           response_m_k(k,1:sr%ncoil) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(1:sr%ncoil,k)
@@ -3109,7 +3152,6 @@ endif
 
       end if
 
-
       if ( vacuum_debug ) then
         if(my_id == 0)   write(*,*) 'DEBUG: Checksums'
 
@@ -3159,7 +3201,8 @@ endif
         if(my_id == 0)   write(*,*) 'END: Checksums'
       end if
 
-    end if
+    end if  
+
 
    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
   end subroutine update_response_parallel 

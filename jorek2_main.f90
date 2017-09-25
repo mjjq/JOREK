@@ -605,7 +605,6 @@ required = 0
       ! --- Determine initial energies
       call energy(node_list,element_list,W_mag,W_kin)
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
-      write(500+my_id,*)  "AAA", W_mag, W_kin
 #ifdef JECCD
       call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
       write(*,'(A,12e16.8)') ' initial energies2 : ',A_tem,A_den
@@ -646,16 +645,11 @@ end if ! (my_id == 0)
          call update_response(tstep, freeboundary_equil,resistive_wall)
     endif
 
-
-    if(my_id==0) write(6,*) "PARALLELIZATION FINISH 2", freeboundary
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    stop
-
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
-  
+
   call tr_print_memsize("AfterEquilibrium")
 
   if (RMP_on) then
@@ -685,6 +679,7 @@ end if ! (my_id == 0)
 #ifdef USE_FFTW
   call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
 #endif
+
 
 ! if (RMP_on) then
 !    print*, 'bnd_node_list%n_bnd_nodes', bnd_node_list%n_bnd_nodes
@@ -721,7 +716,7 @@ end if ! (my_id == 0)
   
   t_now     = t_start      ! t_now: current time in the simulation
   psi_bnd   = 0.d0
-  
+
   if (nstep > 0) then
 
     !### THINGS LIKE THIS SHOULD BE REPLACED BY update_equil_state in the future:
@@ -749,7 +744,6 @@ end if ! (my_id == 0)
     !*  		 (i.e id=0 from each MPI_COMM_N)   *
     !*******************************************************
     if (gmres) then
-
        N_masters = (n_tor+1)/2
        if (MOD(n_cpu, N_masters) == 0) then
     	  M_cpu = n_cpu / (N_masters)
@@ -853,7 +847,7 @@ end if ! (my_id == 0)
     endif
 
   endif ! (nstep >0)
-  
+
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
     fileout = 'jorek00000'
@@ -939,6 +933,8 @@ end if ! (my_id == 0)
     call tr_debug_write("JMAIN:Find_axis_T",T_axis)
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
+
+
 !    if (my_id .eq. 0) then
 !       write(*,FMT_TIMING)  my_id, '# Elapsed time init_time_step :',tsecond
 !    end if
@@ -975,6 +971,12 @@ end if ! (my_id == 0)
          Z_xpoint, psi_xpoint)
     endif
     
+    
+   if(my_id==0) write(6,*) "PARALLELIZATION FINISH 3"
+   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+   stop
+
+
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
@@ -986,6 +988,7 @@ end if ! (my_id == 0)
 
     ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
     call del_thread_buffers()
+
 
     if (.not. gmres) then
        if (use_mumps) then

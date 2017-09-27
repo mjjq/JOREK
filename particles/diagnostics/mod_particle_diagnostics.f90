@@ -171,7 +171,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
       ! Check that the current time is > the last stored time
       if (time_dims(1) .ge. 1) then
-        call HDF5_array1D_reading_r4(this%file_id,times,trim(timeset_name),time_dims(1)-1)
+        call HDF5_array1D_reading_r4(this%file_id,times,trim(timeset_name),[time_dims(1)-1])
         if (times(1) .gt. sim%time) then
           write(*,*) "Current time smaller than last stored diagnostic time, aborting."
           call MPI_ABORT(MPI_COMM_WORLD, 1, ierr)

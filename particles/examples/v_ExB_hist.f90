@@ -2,7 +2,7 @@
 !> Find the closest file to the time given on the commandline and output a histogram ordered by normalized psi.
 !>
 !> The histogram is calculated for radial bins of size 0.01.
-!> Velocity information is histogrammed from +- 10 km/s in 1000 bins
+!> Velocity information is histogrammed from +- 6000 psi_N/s in 2000 bins
 !>
 !> We need to read an input file to obtain F0 for the magnetic field.
 !>
@@ -21,9 +21,9 @@ use domains
 !$ use omp_lib
 implicit none
 
-integer, parameter :: n_points = 10000000, nx = 110, nv = 2000
+integer, parameter :: n_points = 1000000, nx = 110, nv = 2000
 real*8, parameter :: x_min = 0.d0, x_max = 1.1d0, dx = (x_max-x_min)/real(nx,8)
-real*8, parameter :: v_min = -1d4, v_max = 1d4, dv = (v_max-v_min)/real(nv,8)
+real*8, parameter :: v_min = -6d3, v_max = 6d3, dv = (v_max-v_min)/real(nv,8)
 
 integer :: counts(nv,nx)
 
@@ -32,7 +32,7 @@ type(pcg32_rng) :: rng
 type(read_jorek_fields_interp_hermite_birkhoff) :: fieldreader
 integer :: i_elm, ifail, i, seed, n_threads, i_thread, unit
 integer :: i_v, i_x
-real*8 :: s, t, x(3), psi_N, R, Z
+real*8 :: s, t, x(3), psi_N, R, Z, grad_Psi(2)
 real*8 :: Rmin, Rmax, Zmin, Zmax, Z_xpoint
 real*8 :: psi_axis, psi_xpoint(2)
 real*8 :: E(3), B(3), psi, U, v(3)
@@ -76,11 +76,13 @@ do i=1,n_points
   ! Calculate E and B fields
   call sim%fields%calc_EBpsiU(sim%time, i_elm, [s, t], TWOPI*x(3), E, B, psi, U)
 
-  v = left_handed_cross_product(E, B)/dot_product(B,B) ! in RZPhi coordinates
+  v = left_handed_cross_product(E, B)/dot_product(B,B) ! in RZPhi coordinates, m/s
 
   ! Calculate the normal vector to the flux surface, Grad Psi / |Grad Psi|
   ! Assume no variation of Psi in the toroidal direction
-  i_v = floor((dot_product(v(1:2), [-B(2),B(1)]/norm2(B(1:2))) - v_min)/dv)
+  grad_psi = ([-B(2),B(1)])/(psi_xpoint(1) - psi_axis) ! in poloidal plane, normalize to grad_psi_N
+  ! Convert v_r from m/s to psi/s by multiplying by |grad_psi|
+  i_v = floor((dot_product(v(1:2), grad_psi) - v_min)/dv)
   psi_N = (psi - psi_axis)/(psi_xpoint(1) - psi_axis)
   i_x = floor((psi_N - x_min)/dx)
   if (i_v .ge. lbound(counts,1) .and. i_x .ge. lbound(counts,2) .and. &

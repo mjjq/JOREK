@@ -40,8 +40,8 @@ subroutine plot_mc_coronal_equilibria(ad)
   character(len=80), parameter :: datafile_cor = "W_coronal_equilibria.txt"
   character(len=80), parameter :: plotfile = "plot_mc_coronal_equilibria.gp"
 
-  real*8, parameter  :: tstep = 1.d-12 !< [s]
-  integer, parameter :: nstep = 10000
+  real*8, parameter  :: tstep = 1.d-6 !< [s]
+  integer, parameter :: nstep = 4000
   integer, parameter :: n_particles = 1000
   real*8, parameter  :: density = 20.d0 !< log10 density in m^-3
   real*8, parameter  :: temperature = 7.677 !< log10 temperature in K: 7.677 = 4.1 keV
@@ -80,12 +80,12 @@ subroutine plot_mc_coronal_equilibria(ad)
       p_mc(z(it)) = p_mc(z(it)) + 1
     enddo
     do it=lbound(p_mc,1),ubound(p_mc,1)
-      write(u_mc,"(3g16.8)") i, it, real(p_mc(it),8)/real(sum(p_mc),8)
+      write(u_mc,"(3g16.8)") i*tstep, it, real(p_mc(it),8)/real(sum(p_mc),8)
     enddo
 
     call coronal_timestep(ad, p_cor, tstep, density, temperature)
     do it=lbound(p_cor,1),ubound(p_cor,1)
-      write(u_cor,"(3g16.8)") i, it, p_cor(it)/sum(p_cor)
+      write(u_cor,"(3g16.8)") i*tstep, it, p_cor(it)/sum(p_cor)
     enddo
   enddo
   close(u_mc)
@@ -95,7 +95,7 @@ subroutine plot_mc_coronal_equilibria(ad)
   open(newunit=u, file=plotfile, status='replace')
   write(u,"(A)") '&
       set xr [0:74]; &
-      set yr [0:10000]; &
+      set yr [0:4e-3]; &
       set cbrange [0:0.4]; &
       set terminal png; &
       set key top right; &

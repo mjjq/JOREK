@@ -23,10 +23,12 @@ call elements_containing_point(R_find, Z_find, i_elms)
 ! then loop through all
 do k=1,size(i_elms)
   call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-  if (ifail .eq. 0) return
+  if (ifail .eq. 0) exit
 enddo
 
 if (ielm_out .eq. 0) ifail = 99
+if (ifail .eq. 999) ielm_out = 0 ! Otherwise testing ielm=0 on output does not
+! work anymore (and we don't always check ifail)
 end subroutine find_RZ
 
 subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)

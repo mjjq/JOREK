@@ -1077,7 +1077,7 @@ if [ "${JOREK_HOST}" == "marconi_skl" ]; then
 #PBS -j oe
 #PBS -l place=excl
 #PBS -l walltime=${WALLTIME}
-#PBS -l select=${NNODES}:mpiprocs=${MPIPROCS}
+#PBS -l select=${NNODES}:ncpus=48:mpiprocs=${MPIPROCS}
 
 # environment
 #------------

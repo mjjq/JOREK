@@ -22,6 +22,7 @@ j302_1
 j302_3
 .fuse_hidden*
 jorek_model*
+jorek_*_model*
 jorek2_poincare
 jorek2_four
 jorek2_postproc

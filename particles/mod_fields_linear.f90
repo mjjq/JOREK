@@ -148,14 +148,11 @@ function last_file_before_time(time) result(file_number)
         if (my_id .eq. 0) write(*,*) "ERROR: requested time out of range"
         exit
       end if
-      if (i_guess .eq. i_lower .or. i_guess .eq. i_upper) then
-        file_number = filenums(i_lower)
-        return
-      end if
+      if (i_guess .eq. i_lower .or. i_guess .eq. i_upper) exit
 
       write(num_s,'(i0.5)') filenums(i_guess)
       t_guess = get_jorek_hdf5_time('jorek'//num_s//'.h5')*t_norm
-      if (my_id .eq. 0) write(*,"(i5,A,g11.4,A,i5,A,g11.4,A,i5,A,g11.4,A)") i_lower, " (", t_lower, &
+      if (my_id .eq. 0) write(*,"(i5,A,g14.7,A,i5,A,g14.7,A,i5,A,g14.7,A)") i_lower, " (", t_lower, &
         ")    ", i_guess, " (", t_guess, &
         ")    ", i_upper, " (", t_upper, ")    "
       ! Based on the value of t_guess, replace either the lower or upper bound
@@ -168,6 +165,8 @@ function last_file_before_time(time) result(file_number)
       end if
       i_guess = i_lower + (i_upper-i_lower)/2
     end do
+    file_number = filenums(i_lower)
+    write(*,"(A,i5,A,g14.7,A,g14.7,A)") 'Selected ', i_lower, " (", t_lower, ') as last file before (', time, ')'
   end if
   call MPI_Bcast(file_number, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 end function last_file_before_time

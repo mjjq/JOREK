@@ -2212,16 +2212,16 @@ endif
 #endif
     !integer :: rate, t0, t1 !### timing ###
     logical, save  :: PF_perturbation = .true. 
-    integer  :: ierr, send_rank, ntasks
-
-    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)    
+    integer  :: ierr,i
+    real*8, allocatable :: rhs_contrib_arr(:)
+    real*8 :: time(10)
 
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
       return
     end if
 
-    if ( vacuum_debug .and. my_id == 0) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
+    if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)), sum(abs(A_glob))
     
     ! --- Determine vectors of the psi and deltapsi boundary values.
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
@@ -2250,10 +2250,22 @@ endif
     end if
 
     call boundary_check(my_id)
+      
+    allocate(rhs_contrib_arr(n_dof_starwall))
+    rhs_contrib_arr=0.0
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    write(5000+my_id,*) response_m_f%ind_start, response_m_f%ind_end,response_m_f%step
-       
+    time(1)=MPI_WTIME()
+
+    do i=response_m_f%ind_start,response_m_f%ind_end  
+              rhs_contrib_arr(i) =   sum(response_m_f%loc_mat(i-my_id*response_m_f%step, :) *  wall_curr(:) )  &
+                                   + sum(response_m_g%loc_mat(i-my_id*response_m_g%step, :) * dwall_curr(:) )  &
+                                   - sum(response_m_v%loc_mat(i-my_id*response_m_v%step, :) *   Y_coils0(:) )
+    enddo
+    call MPI_ALLReduce(MPI_IN_PLACE, rhs_contrib_arr, size(rhs_contrib_arr), MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+
+ 
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
 #endif
@@ -2263,7 +2275,7 @@ endif
     !$omp shared(a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,    &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,      &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec, psibnd_coils,       &
-    !$omp   starwall_equil_coils, response_m_v, Y_coils0, ierr, ntasks, send_rank,                 &
+    !$omp   starwall_equil_coils, response_m_v, Y_coils0, my_id,rhs_contrib_arr,                   &
 #ifdef __GFORTRAN__
     !$omp   wgauss_copy,                                                                           &
 #endif
@@ -2273,13 +2285,9 @@ endif
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,   &
     !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir, j_index,         &
     !$omp   j_starwall, j_tor, j_resp, j_resp_old,j_col_psi, sparsepos_jp, sparsepos_pp, amat_contrib,        &
-    !$omp   rhs_contrib, my_id) &
+    !$omp   rhs_contrib,ierr ) &
     !$omp schedule(dynamic,1)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
-
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    write(6000+my_id,*) response_m_f%ind_start,response_m_f%ind_end,response_m_f%step
-
       bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
 
       ! --- Determine the values of R,s and Z,s at the Gaussian points.
@@ -2339,7 +2347,7 @@ endif
                                + bnd_node_list%bnd_node(i_node_bnd)%n_dof*(i_starwall-1) &
                                + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof) - bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
 
-!                      if (i_resp_old .ne. i_resp) write(*,'(A,8i5)') 'PANIC! : ',i_node, i_starwall, i_dof,bnd_node_list%bnd_node(i_node_bnd)%index_starwall,i_resp_old, i_resp
+!        ---              if (i_resp_old .ne. i_resp) write(*,'(A,8i5)') 'PANIC! : ',i_node, i_starwall, i_dof,bnd_node_list%bnd_node(i_node_bnd)%index_starwall,i_resp_old, i_resp
  
                       i_resp_0 = response_index_eq(i_node_bnd,i_dof)
 
@@ -2371,7 +2379,7 @@ endif
                                      +  bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1) &
                                      +  bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)-bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
 
-!                      if (j_resp_old .ne. j_resp) write(*,'(A,8i5)') 'PANIC! : ',j_node, j_starwall, j_dof,bnd_node_list%bnd_node(j_node_bnd)%index_starwall,j_resp_old, j_resp
+!                   --   if (j_resp_old .ne. j_resp) write(*,'(A,8i5)') 'PANIC! : ',j_node, j_starwall, j_dof,bnd_node_list%bnd_node(j_node_bnd)%index_starwall,j_resp_old, j_resp
 
                             ! --- Option to switch off mode coupling due to a 3D wall
                             if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
@@ -2405,41 +2413,22 @@ endif
                                     - sum( response_m_h(i_resp,:) * psibnd_coils(:) )               
 
 
-
-                      if ( resistive_wall ) then
-                          if(i_resp>=response_m_f%ind_start .AND. i_resp<=response_m_f%ind_end) then
-
-                      !         rhs_contrib = rhs_contrib + sum( response_m_f%loc_mat(i_resp, :) *  wall_curr(:) )  &
-                      !                                   + sum( response_m_g%loc_mat(i_resp, :) * dwall_curr(:) )  &
-                      !                                   - sum( response_m_v%loc_mat(i_resp, :) *   Y_coils0(:) ) 
-                       
-
-                             write(2300+my_id,*) my_id, i_resp,response_m_f%ind_start,response_m_f%ind_end, (i_resp-1)/response_m_f%step
-                          endif
-                      endif
-
-                      send_rank=(i_resp-1)/response_m_f%step
-                      if(send_rank>=ntasks) send_rank=ntasks-1
+                        if ( resistive_wall )  rhs_contrib=rhs_contrib+rhs_contrib_arr(i_resp) 
 
 
-                      call MPI_BCAST(rhs_contrib, 1, MPI_DOUBLE_PRECISION, send_rank ,MPI_COMM_WORLD,ierr)
+                        rhs_contrib = rhs_contrib * common_prefactor
+                        !$omp atomic
+                        rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
 
-                      rhs_contrib = rhs_contrib * common_prefactor
-                      !$omp atomic
-                      rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
 
                     end do L_IS
                   end do L_ID
                 end do L_IV
-
               end do L_MP
-
             end do L_MS
-
           end do L_LS
-        end do L_LD
+         end do L_LD
       end do L_LV
-
     end do L_MB
     !$omp end parallel do
     
@@ -2449,16 +2438,18 @@ endif
     !write(68+my_id,*) real(t1 - t0 ) / real(rate)
     !###
     
+
     if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)), sum(abs(A_glob))
   
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
     if ( allocated(dpsibnd_vec) ) deallocate( dpsibnd_vec )
+                                  deallocate(rhs_contrib_arr)
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    time(2)=MPI_WTIME()
+    write(800+my_id,*) time(2)-time(1), (time(2)-time(1))/60.0
 
-
-    write(7000+my_id,*) ntasks 
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     stop
-
    
   end subroutine vacuum_boundary_integral
   

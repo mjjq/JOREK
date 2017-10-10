@@ -522,7 +522,7 @@ required = 0
 
       ! --- Compute the plasma equilibrium
       if (equil) then
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
+       call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
         if (export_for_nemec) then
           if(my_id ==0 ) call export_nemec(node_list, element_list, xpoint, xcase)
         endif
@@ -956,7 +956,7 @@ end if ! (my_id == 0)
       call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
-    
+
     ! --- construct the matrix from elemental matrices
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
@@ -971,11 +971,6 @@ end if ! (my_id == 0)
          Z_xpoint, psi_xpoint)
     endif
     
-    
-   if(my_id==0) write(6,*) "PARALLELIZATION FINISH 3"
-   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-   stop
-
 
 
     call clck_time_barrier(t1)
@@ -989,24 +984,26 @@ end if ! (my_id == 0)
     ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
     call del_thread_buffers()
 
+     
 
     if (.not. gmres) then
        if (use_mumps) then
-
     	  call solve_mumps_all(my_id)
-
        else
-
     	  ! Recuperer la solution
     	  if (use_murge) then
+
     	     call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
-    	  else
+    	
+  else
     	     call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+
     	  endif
 
        endif
 
     else
+
        call clck_time(t0)
        if (.not. solve_only) then
     	  ! with murge elementary assembly harmonic distribution is already done.
@@ -1037,6 +1034,7 @@ end if ! (my_id == 0)
        end if
     endif
 
+
     call clck_time(t0)
     if (gmres) then
       iter_prev = iter_gmres
@@ -1048,6 +1046,7 @@ end if ! (my_id == 0)
     if (my_id .eq. 0) then
        write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
+   
 
     call clck_time(t0)
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
@@ -1072,7 +1071,8 @@ end if ! (my_id == 0)
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)
- 
+
+
        !***********************************************************************
        !*                          output saving for diagnostics              *
        !*                                                                     *
@@ -1117,14 +1117,18 @@ end if ! (my_id == 0)
           t_now = t_now + tstep
 
        else
+
           if ( my_id == 0 ) then
              write(*,*)
              write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
              write(*,*)
           end if
           index_now = index_now - 1 ! Undo the time step
+
           exit jstep_loop
        end if
+
+ 
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
@@ -1280,7 +1284,6 @@ end if ! (my_id == 0)
     if (my_id .eq. 0) then
        write(*,FMT_TIMING)  my_id, '# Elapsed time ITERATION :',tsecond
     end if
-
   enddo istep_loop
   enddo jstep_loop
   
@@ -1334,6 +1337,8 @@ end if ! (my_id == 0)
   if ( my_id == 0 ) call finalize_live_data4()
 #endif
 #endif
+
+
 
   !***********************************************************************
   !*                          plots etc.                                 *
@@ -1515,6 +1520,7 @@ end if ! (my_id == 0)
 #ifdef USE_FFTW
   call dfftw_destroy_plan(fftw_plan)
 #endif
+
 
   call r3_info_summary ()                                ! timing
   call MPI_FINALIZE(IERR)                                ! clean up MPI

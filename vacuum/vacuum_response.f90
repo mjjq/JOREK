@@ -1716,7 +1716,8 @@ endif
     
     use phys_module, only: nout
     use constants
-    
+    use mpi_mod    
+
     implicit none
     
     ! --- Routine parameters
@@ -1735,7 +1736,12 @@ endif
     logical             :: Iphi_max, Ipol_max, jphi_lin, jpol_lin
     character(len=18)   :: filename
     real*8, allocatable :: tripot_w(:)
-    
+    integer :: ierr
+
+    call MPI_BCAST(nout,1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+
+  if ( mod(index,nout) /= 0 ) return
+
 
 if(my_id == 0) then
 
@@ -1778,6 +1784,7 @@ if(my_id == 0) then
     write(filehandle,140) 'LOOKUP_TABLE default'
 endif
     
+
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
 
 if(my_id == 0) then
@@ -2214,7 +2221,6 @@ endif
     logical, save  :: PF_perturbation = .true. 
     integer  :: ierr,i
     real*8, allocatable :: rhs_contrib_arr(:)
-    real*8 :: time(10)
 
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
@@ -2241,6 +2247,7 @@ endif
 
     if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
 
+
     ! --- Update old_dpsibnd_vec  (used for updating the wall currents in  the next iteration)
     old_dpsibnd_vec(:) = dpsibnd_vec(:)
     
@@ -2253,9 +2260,6 @@ endif
       
     allocate(rhs_contrib_arr(n_dof_starwall))
     rhs_contrib_arr=0.0
-
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    time(1)=MPI_WTIME()
 
     do i=response_m_f%ind_start,response_m_f%ind_end  
               rhs_contrib_arr(i) =   sum(response_m_f%loc_mat(i-my_id*response_m_f%step, :) *  wall_curr(:) )  &
@@ -2443,13 +2447,7 @@ endif
   
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
     if ( allocated(dpsibnd_vec) ) deallocate( dpsibnd_vec )
-                                  deallocate(rhs_contrib_arr)
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    time(2)=MPI_WTIME()
-    write(800+my_id,*) time(2)-time(1), (time(2)-time(1))/60.0
-
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    stop
+    if ( allocated(rhs_contrib_arr) ) deallocate(rhs_contrib_arr)
    
   end subroutine vacuum_boundary_integral
   
@@ -2713,7 +2711,12 @@ endif
     ! --- Local variables
     integer             :: k, k2
     integer             :: ierr
-    
+     
+    !Additional variable for parallel version
+    real *8, allocatable :: dwall_curr_2(:)   
+
+
+    if  (.not. allocated(dwall_curr_2)) allocate (dwall_curr_2(n_wall_curr))
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
     
     if ( (.not. allocated(old_dpsibnd_vec)) .or. (size(old_dpsibnd_vec,1)/= n_dof_starwall) ) then
@@ -2723,25 +2726,27 @@ endif
 
       do k = 1, n_wall_curr
 
-             dwall_curr(k) = sum(response_m_a%loc_mat(k,:) * dpsibnd_vec(response_m_a%ind_start:response_m_a%ind_end))  &
-                           + response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
-                           + response_d_c(k) * dwall_curr(k)                &
-                           + sum(response_m_d%loc_mat(k,:) * old_dpsibnd_vec(response_m_d%ind_start:response_m_d%ind_end) ) !&
-                          !+ sum( response_m_k(k,:) * coil_voltages(:) )
+           dwall_curr_2(k)=response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
+                           +response_d_c(k) * dwall_curr(k)
+
+           dwall_curr(k) = sum(response_m_a%loc_mat(k,:) * dpsibnd_vec(response_m_a%ind_start:response_m_a%ind_end)) &
+                          +sum(response_m_d%loc_mat(k,:) * old_dpsibnd_vec(response_m_d%ind_start:response_m_d%ind_end) )
+
       end do
 
     call MPI_ALLReduce(MPI_IN_PLACE, dwall_curr,size(dwall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+    dwall_curr(:)= dwall_curr(:)+dwall_curr_2(:)
     wall_curr(:) = wall_curr(:) + dwall_curr(:)
 
     call write_wall_vtk(index_now, resistive_wall, my_id)
-    if ( my_id == 0 ) then
+
 
       if ( vacuum_debug .and. resistive_wall ) then
-        call log_wall_curr()
+        call log_wall_curr(my_id)
         !call log_coil_curr()
       end if
-    end if
-    
+ 
     ! --- Extract diagnostic coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if ( sr%n_diag_coils > 0 ) then
       if ( .not. allocated(diag_coil_curr) ) then
@@ -2755,6 +2760,8 @@ endif
     end if
     
     if ( vacuum_debug .AND. my_id ==0) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
+
+
     
   end subroutine evolve_wall_currents
   
@@ -2776,19 +2783,18 @@ endif
 
     ! --- Local variables
     integer :: i, j, ierr, global_index, ntasks, step, my_id
-  
+    integer :: count=1  
+
     if ( allocated(tripot_w) ) deallocate(tripot_w); allocate( tripot_w(sr%npot_w) )    
     if ( allocated(wall_curr) ) then
 
-    call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+     call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
       if(my_id == 0 ) step = sr%s_ww%ind_end - sr%s_ww%ind_start + 1
       call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
 
-     
       global_index = my_id*step
       tripot_w=0.0
-
 
       do i = 1, sr%npot_w
         j = i + sr%ncoil
@@ -2808,15 +2814,18 @@ endif
   
   
   !> Write wall current potentials to logfile.
-  subroutine log_wall_curr()
+  subroutine log_wall_curr(my_id)
     
     implicit none
     
+   integer,   intent(in) :: my_id !< MPItask ID
+
+
     ! --- Local variables
     real*8, allocatable :: tripot_w(:)
     
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
-    write(*,'(" Wall current potentials (min, max): ",ES16.8,"...",ES16.8)') minval(tripot_w), maxval(tripot_w)
+      if(my_id==0) write(*,'(" Wall current potentials (min, max): ",ES16.8,"...",ES16.8)') minval(tripot_w), maxval(tripot_w)
     deallocate( tripot_w )
     
   end subroutine log_wall_curr

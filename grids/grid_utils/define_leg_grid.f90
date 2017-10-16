@@ -1,4 +1,4 @@
-!> Subroutine defines the new grid_points from crossing of polar and radial coordinate lines
+!> Subroutine defines the new grid_points on a divertor leg from crossing of polar and radial coordinate lines
 subroutine define_leg_grid(node_list, element_list, newnode_list, newelement_list, flux_list, &
                            xcase, n_grids, stpts, sigmas, nwpts, which_leg)
 
@@ -27,7 +27,8 @@ integer,                      intent(in)    :: which_leg ! 1=LowerInner, 2=Outer
 ! --- local variables
 real*8, allocatable :: delta(:)
 real*8, allocatable :: R_polar(:,:,:),Z_polar(:,:,:)
-integer             :: i, j, k, index, i_sep, pieces
+real*8, allocatable :: R_polar_smooth(:,:,:),Z_polar_smooth(:,:,:)
+integer             :: i, j, k, index, i_sep, pieces, i_elm
 integer             :: n_surf_tot, i_surf_tmp
 integer,allocatable :: i_flux(:)
 integer             :: n_flux, n_tht,  n_open,   n_outer,   n_inner
@@ -45,14 +46,23 @@ real*8              :: Z1,dZ1_dr,dZ1_ds,dZ1_drs,dZ1_drr,dZ1_dss
 integer             :: i_surf(3)
 real*8              :: R_beg(3), Z_beg(3)
 real*8              :: R_end(3), Z_end(3)
+real*8              :: R_beg_tmp, Z_beg_tmp
+real*8              :: R_end_tmp, Z_end_tmp
 integer             :: i_elm_find(8), i_find
 real*8              :: s_find(8), t_find(8)
-real*8              :: SIG_theta
+real*8              :: SIG_theta, sig_tmp
 real*8              :: SIG_leg_0, SIG_leg_1
 real*8              :: SIG_up_leg_0, SIG_up_leg_1
 real*8              :: SIG_0, SIG_1
+real*8              :: distance_leg, leg_cut
+real*8              :: tht_x, rr1, ss1
+real*8              :: R_tmp(4), Z_tmp(4)
+integer             :: count, i_part
+integer             :: edge_piece(4), edge_side(4)
 integer             :: n_seg
-real*8, allocatable :: seg(:), R_seg(:), Z_seg(:), R_seg_surf(:,:), Z_seg_surf(:,:)
+real*8, allocatable :: seg(:), R_seg(:), Z_seg(:)
+real*8, allocatable :: R_seg_surf(:,:), Z_seg_surf(:,:)
+real*8, allocatable :: R_seg_smooth(:,:), Z_seg_smooth(:,:)
 logical             :: xpoint_surface
 character*256       :: plot_filename
 character*1         :: char_tmp
@@ -157,15 +167,18 @@ if (which_leg .le. 2) then
     R_end(3) = stpts%RLeftCorn_LowerInnerLeg;  Z_end(3) = stpts%ZLeftCorn_LowerInnerLeg
     i_surf(3) = n_flux + n_open + n_outer + n_inner
     n_seg = n_leg
-    n_surf_tot = n_inner + n_private + 1
+    n_surf_tot = n_inner + n_open + n_private + 1
     allocate(i_flux(n_surf_tot))
     do i=1,n_private
       i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
     enddo
     i_flux(n_private+1) = i_surf(2)
     i_sep = n_private+1
+    do i=1,n_open
+      i_flux(n_private+1+i) = n_flux + i
+    enddo
     do i=1,n_inner
-      i_flux(n_private+1+i) = n_flux + n_open + n_outer + i
+      i_flux(n_private+n_open+1+i) = n_flux + n_open + n_outer + i
     enddo
     n_xpoint_1 = 2 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 1
@@ -177,15 +190,19 @@ if (which_leg .le. 2) then
     i_surf(3) = n_flux + n_open + n_outer
     n_seg = n_leg
     if (n_leg_out .gt. 0) n_seg = n_leg_out
-    n_surf_tot = n_outer + n_private + 1
+    n_surf_tot = n_outer + n_open + n_private + 1
+    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .le. psi_xpoint(1)) ) n_surf_tot = n_outer + n_private + 1
     allocate(i_flux(n_surf_tot))
     do i=1,n_private
       i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
     enddo
     i_flux(n_private+1) = i_surf(2)
     i_sep = n_private+1
+    do i=1,n_open
+      i_flux(n_private+1+i) = n_flux + i
+    enddo
     do i=1,n_outer
-      i_flux(n_private+1+i) = n_flux + n_open + i
+      i_flux(n_private+n_open+1+i) = n_flux + n_open + i
     enddo
     n_xpoint_1 = 3 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 4
@@ -208,15 +225,18 @@ else
     R_end(3) = stpts%RLeftCorn_UpperInnerLeg;  Z_end(3) = stpts%ZLeftCorn_UpperInnerLeg
     i_surf(3) = n_flux + n_open + n_outer + n_inner
     n_seg = n_up_leg
-    n_surf_tot = n_inner + n_up_priv + 1
+    n_surf_tot = n_inner + n_open + n_up_priv + 1
     allocate(i_flux(n_surf_tot))
     do i=1,n_up_priv
       i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
     enddo
     i_flux(n_up_priv+1) = i_surf(2)
     i_sep = n_up_priv+1
+    do i=1,n_open
+      i_flux(n_up_priv+1+i) = n_flux + i
+    enddo
     do i=1,n_inner
-      i_flux(n_up_priv+1+i) = n_flux + n_open + n_outer +i
+      i_flux(n_up_priv+n_open+1+i) = n_flux + n_open + n_outer +i
     enddo
     n_xpoint_1 = 7 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 8
@@ -229,15 +249,18 @@ else
     i_surf(3) = n_flux + n_open + n_outer
     n_seg = n_up_leg
     if (n_up_leg_out .gt. 0) n_seg = n_up_leg_out
-    n_surf_tot = n_outer + n_up_priv + 1
+    n_surf_tot = n_outer + n_open + n_up_priv + 1
     allocate(i_flux(n_surf_tot))
     do i=1,n_up_priv
       i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
     enddo
     i_flux(n_up_priv+1) = i_surf(2)
     i_sep = n_up_priv+1
+    do i=1,n_open
+      i_flux(n_up_priv+1+i) = n_flux + i
+    enddo
     do i=1,n_outer
-      i_flux(n_up_priv+1+i) = n_flux + n_open + i
+      i_flux(n_up_priv+n_open+1+i) = n_flux + n_open + i
     enddo
     n_xpoint_1 = 6 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 5
@@ -247,17 +270,122 @@ else
 endif
 
 ! --- Define the segmentation array
-allocate(seg(n_seg), R_seg(n_seg), Z_seg(n_seg), R_seg_surf(3,n_seg), Z_seg_surf(3,n_seg))
-seg = 0
-call meshac2(n_seg,seg,0.d0,1.d0,SIG_0,SIG_1,0.6d0,1.0d0)
+allocate(seg(n_seg), R_seg(n_seg), Z_seg(n_seg))
+allocate(R_seg_surf(n_surf_tot,n_seg), Z_seg_surf(n_surf_tot,n_seg))
+allocate(R_seg_smooth(3,n_seg), Z_seg_smooth(3,n_seg))
+
+! --- We cut the end to ensure we remain inside the domain...
+distance_leg = sqrt( (R_end(2)-R_beg(2))**2 + (Z_end(2)-Z_beg(2))**2 )
+leg_cut = 1.d0 - 1.d-3 / distance_leg ! we cut by ~1mmm
 
 ! --- Segment the private, separatrix and SOL surfaces
-do i = 1,3
+do i = 1,n_surf_tot
+  seg = 0
+  ! --- Change sig near the Xpoint to avoid strong angles
+  if (i .lt. i_sep) then
+    sig_tmp = SIG_0 + (1.3d0*SIG_0 - SIG_0) * (real(i-1)/real(i_sep-1))**6 ! large exponent to have fast decay...
+  else if (i .gt. i_sep) then
+    sig_tmp = SIG_0 + (1.3d0*SIG_0 - SIG_0) * (real(n_surf_tot-i)/real(n_surf_tot-i_sep))**6
+  else if (i .eq. i_sep) then
+    sig_tmp = 1.3d0*SIG_0
+  endif
+  call meshac2(n_seg,seg,0.d0,1.d0,sig_tmp,SIG_1,0.6d0,1.0d0)
+  seg = leg_cut*seg ! we cut the end to ensure we remain inside the domain...
   xpoint_surface = .false.
-  if (i .eq. 2) xpoint_surface = .true.
+  if (i .eq. i_sep) xpoint_surface = .true.
+  ! --- The end points
+  if (i .eq. 1) then
+    R_beg_tmp = R_beg(1) ; R_end_tmp = R_end(1)
+    Z_beg_tmp = Z_beg(1) ; Z_end_tmp = Z_end(1)
+  elseif (i .eq. i_sep) then
+    R_beg_tmp = R_beg(2) ; R_end_tmp = R_end(2)
+    Z_beg_tmp = Z_beg(2) ; Z_end_tmp = Z_end(2)
+  elseif (i .eq. n_surf_tot) then
+    R_beg_tmp = R_beg(3) ; R_end_tmp = R_end(3)
+    Z_beg_tmp = Z_beg(3) ; Z_end_tmp = Z_end(3)
+  else
+    ! --- The Beg point
+    if (i .lt. i_sep) then
+      tht_x = atan2(Z_beg(1)-Z_beg(2),R_beg(1)-R_beg(2))
+    else
+      tht_x = atan2(Z_beg(3)-Z_beg(2),R_beg(3)-R_beg(2))
+    endif
+    if (tht_x .lt. 0.d0) tht_x = tht_x + 2.d0 * PI
+    call find_theta_surface(node_list,element_list,flux_list,i_flux(i),tht_x,R_beg(2),Z_beg(2),i_elm_find,s_find,t_find,i_find)
+    do k=1,i_find
+      call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),R1,dR1_dr,dR1_ds,dR1_drs,dR1_drr,dR1_dss, &
+                                                                              Z1,dZ1_dr,dZ1_ds,dZ1_drs,dZ1_drr,dZ1_dss)
+      R_beg_tmp = R1
+      Z_beg_tmp = Z1
+      if ( (Z_beg_tmp .le. Z_xpoint(1)) .and. (which_leg .le. 2) .and. (i .lt. i_sep) ) exit
+      if ( (Z_beg_tmp .ge. Z_xpoint(2)) .and. (which_leg .gt. 2) .and. (i .lt. i_sep) ) exit
+      if ( (R_beg_tmp .le. R_xpoint(1)) .and. (which_leg .eq. 1) .and. (i .gt. i_sep) ) exit
+      if ( (R_beg_tmp .ge. R_xpoint(1)) .and. (which_leg .eq. 2) .and. (i .gt. i_sep) ) exit
+      if ( (R_beg_tmp .le. R_xpoint(2)) .and. (which_leg .eq. 3) .and. (i .gt. i_sep) ) exit
+      if ( (R_beg_tmp .ge. R_xpoint(2)) .and. (which_leg .eq. 4) .and. (i .gt. i_sep) ) exit
+    enddo
+    ! --- The End point
+    count = 0
+    do i_part=1,flux_list%flux_surfaces(i_flux(i))%n_parts
+      edge_piece(1) = flux_list%flux_surfaces(i_flux(i))%parts_index(i_part)
+      edge_side(1)  = 1
+      edge_piece(2) = flux_list%flux_surfaces(i_flux(i))%parts_index(i_part+1)-1
+      edge_side(2)  = 3
+      do k=1,2
+        rr1   = flux_list%flux_surfaces(i_flux(i))%s(edge_side(k),edge_piece(k))
+        ss1   = flux_list%flux_surfaces(i_flux(i))%t(edge_side(k),edge_piece(k))
+        i_elm = flux_list%flux_surfaces(i_flux(i))%elm(edge_piece(k))
+        call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R1,dR1_dr,dR1_ds,dR1_drs,dR1_drr,dR1_dss, &
+                                                            Z1,dZ1_dr,dZ1_ds,dZ1_drs,dZ1_drr,dZ1_dss)
+        if ( ((which_leg .gt. 2) .and. (Z1 .gt. Z_axis)) .or. ((which_leg .le. 2) .and. (Z1 .lt. Z_axis)) ) then
+          count = count + 1
+          R_tmp(count) = R1
+          Z_tmp(count) = Z1
+        endif
+      enddo
+      if ( (abs(R_tmp(count)-R_tmp(count-1)) .lt. 1.d-7) .and. (abs(Z_tmp(count)-Z_tmp(count-1)) .lt. 1.d-7) ) then
+        count = count - 2
+      endif
+      if ( (count .eq. 2) .or. (count .eq. 4) ) then
+        if (which_leg .gt. 2) then
+          if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(2)) .and. (R_tmp(count-1) .gt. R_xpoint(2))) &
+                     .or. ((R_tmp(count-1) .lt. R_xpoint(2)) .and. (R_tmp(count  ) .gt. R_xpoint(2))) ) ) then
+            count = count - 2
+          endif
+        else
+          if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(1)) .and. (R_tmp(count-1) .gt. R_xpoint(1))) &
+                     .or. ((R_tmp(count-1) .lt. R_xpoint(1)) .and. (R_tmp(count  ) .gt. R_xpoint(1))) ) ) then
+            count = count - 2
+          endif
+        endif
+      endif
+    enddo
+    if (count .ne. 2) then
+      write(*,*)'Something wrong, we are supposed to find 2 surface intersections.',count
+      write(*,*)'Aborting...'
+      stop
+    endif
+    if ( (which_leg .eq. 1) .or. (which_leg .eq. 3) ) then
+      if (R_tmp(1) .lt. R_tmp(2)) then
+        R_end_tmp = R_tmp(1)
+        Z_end_tmp = Z_tmp(1)
+      else
+        R_end_tmp = R_tmp(2)
+        Z_end_tmp = Z_tmp(2)
+      endif
+    else
+      if (R_tmp(1) .lt. R_tmp(2)) then
+        R_end_tmp = R_tmp(2)
+        Z_end_tmp = Z_tmp(2)
+      else
+        R_end_tmp = R_tmp(1)
+        Z_end_tmp = Z_tmp(1)
+      endif
+    endif
+  endif
   ! --- Segment surface
-  call segment_surface_length(node_list,element_list,flux_list%flux_surfaces(i_surf(i)), &
-                              R_beg(i), Z_beg(i), R_end(i), Z_end(i), n_seg, seg, R_seg, Z_seg, xpoint_surface)
+  call segment_surface_length(node_list,element_list,flux_list%flux_surfaces(i_flux(i)), &
+                              R_beg_tmp, Z_beg_tmp, R_end_tmp, Z_end_tmp, n_seg, seg, R_seg, Z_seg, xpoint_surface)
   do j = 1,n_seg
     R_seg_surf(i,j) = R_seg(j)
     Z_seg_surf(i,j) = Z_seg(j)
@@ -265,25 +393,34 @@ do i = 1,3
 enddo
 
 ! --- We know where the X-point is, it's safer to use it directly
-if (which_leg .le. 2) then
-  R_seg_surf(2,1) = R_xpoint(1)
-  Z_seg_surf(2,1) = Z_xpoint(1)
-else
-  R_seg_surf(2,1) = R_xpoint(2)
-  Z_seg_surf(2,1) = Z_xpoint(2)
-endif
+R_seg_surf(1,1)          = R_beg(1)
+Z_seg_surf(1,1)          = Z_beg(1)
+R_seg_surf(i_sep,1)      = R_beg(2)
+Z_seg_surf(i_sep,1)      = Z_beg(2)
+R_seg_surf(n_surf_tot,1) = R_beg(3)
+Z_seg_surf(n_surf_tot,1) = Z_beg(3)
+
+! --- Using polar at every node is safer if target is uneven, but it looks nicer with simpler polar
+do i = 1,3
+  if (i .eq. 1) i_surf_tmp = 1
+  if (i .eq. 2) i_surf_tmp = i_sep
+  if (i .eq. 3) i_surf_tmp = n_surf_tot
+  do j = 1,n_seg
+    R_seg_smooth(i,j) = R_seg_surf(i_surf_tmp,j)
+    Z_seg_smooth(i,j) = Z_seg_surf(i_surf_tmp,j)
+  enddo
+enddo
 
 
 
 !----------------------------------- Print a python file that plots a cross with the 4 nodes of each element
 if (plot_grid) then
-  n_loop = newelement_list%n_elements
   open(101,file='plot_leg.py')
     write(101,'(A)')                '#!/usr/bin/env python'
     write(101,'(A)')                'import numpy as N'
     write(101,'(A)')                'import pylab'
     write(101,'(A)')                'def main():'
-    do k=1,3
+    do k=1,n_surf_tot
       write(101,'(A,i6,A)')         ' r = N.zeros(',n_seg,')'
       write(101,'(A,i6,A)')         ' z = N.zeros(',n_seg,')'
       do i=1,n_seg
@@ -302,7 +439,25 @@ endif
 
 
 
-
+if (plot_grid) then
+  plot_filename = 'plot_leg_surf.py'
+  call print_py_plot_prepare_plot(plot_filename)
+  open(101,file=plot_filename,position='append')
+  do k=1,n_surf_tot
+    write(101,'(A,i6,A)')         ' r = N.zeros(',n_seg,')'
+    write(101,'(A,i6,A)')         ' z = N.zeros(',n_seg,')'
+    do i=1,n_seg
+      write(101,'(A,i6,A,f15.4)') ' r[',i-1,'] = ',R_seg_surf(k,i)
+      write(101,'(A,i6,A,f15.4)') ' z[',i-1,'] = ',Z_seg_surf(k,i)
+    enddo
+    write(101,'(A)')              ' pylab.plot(r,z, "b-x")'
+    write(101,'(A)')              ' pylab.plot(r[0],z[0], "rx")'
+  enddo
+  close(101)
+  call print_py_plot_ordered_flux_surfaces(plot_filename, node_list, element_list, flux_list)
+  call print_py_plot_wall(plot_filename)
+  call print_py_plot_finish_plot(plot_filename)
+endif
 
 
 !------------------------------------------------------------------------------------------------------------------------!
@@ -323,32 +478,30 @@ write(*,*) '                 Find crossings between coordinate lines'
 !--------------------------------------------------------------------------!
 
 allocate (delta(n_seg))
-allocate (R_polar(3,4,n_seg),Z_polar(3,4,n_seg))
+allocate (R_polar_smooth(3,4,n_seg),Z_polar_smooth(3,4,n_seg))
+allocate (R_polar(n_surf_tot-1,4,n_seg),Z_polar(n_surf_tot-1,4,n_seg))
 
+! --- The safe polar coords
+do i=1,n_seg
+  call create_polar_lines_simple(n_surf_tot, R_seg_surf(1:n_surf_tot,i), Z_seg_surf(1:n_surf_tot,i), R_polar(1:n_surf_tot-1,1:4,i) , Z_polar(1:n_surf_tot-1,1:4,i) )
+enddo
+
+! --- The smooth polar coords
 delta = 0.1
 delta(1) = 0.d0  
 delta(2) = 0.05d0
-
-! --- Just force the end points, safer...
-do i=1,3
-  R_seg_surf(i,1) = R_beg(i) ; R_seg_surf(i,n_seg) = R_end(i)
-  Z_seg_surf(i,1) = Z_beg(i) ; Z_seg_surf(i,n_seg) = Z_end(i)
-enddo
-
-call create_polar_lines(n_seg, R_seg_surf(1,1:n_seg), Z_seg_surf(1,1:n_seg), &
-                               R_seg_surf(2,1:n_seg), Z_seg_surf(2,1:n_seg), &
-                               R_seg_surf(3,1:n_seg), Z_seg_surf(3,1:n_seg), &
-                               delta, R_polar, Z_polar)
+call create_polar_lines(n_seg, R_seg_smooth(1,1:n_seg), Z_seg_smooth(1,1:n_seg), &
+                               R_seg_smooth(2,1:n_seg), Z_seg_smooth(2,1:n_seg), &
+                               R_seg_smooth(3,1:n_seg), Z_seg_smooth(3,1:n_seg), &
+                               delta, R_polar_smooth, Z_polar_smooth)
+deallocate (delta)
 
 do i=1,3
   do j=1,n_seg
-    nwpts%R_polar(i,1:4,j) = R_polar(i,1:4,j)
-    nwpts%Z_polar(i,1:4,j) = Z_polar(i,1:4,j)
+    nwpts%R_polar(i,1:4,j) = R_polar_smooth(i,1:4,j)
+    nwpts%Z_polar(i,1:4,j) = Z_polar_smooth(i,1:4,j)
   enddo
 enddo
-
-deallocate (delta)
-
 
 
 !--------------------------------------------------------------------------!
@@ -361,10 +514,15 @@ do i=1,n_surf_tot
   i_surf_tmp = i_flux(i)
   do j=1, n_seg
     
+    ! --- First try with the smooth polar lines
+    do k=1,3
+      nwpts%R_polar(k,1:4,j) = R_polar_smooth(k,1:4,j)
+      nwpts%Z_polar(k,1:4,j) = Z_polar_smooth(k,1:4,j)
+    enddo
     do k=1,3	 ! 3 line pieces per coordinate line
 
-      call from_polar_to_cubic(R_polar(k,1:4,j),R_cub1d)
-      call from_polar_to_cubic(Z_polar(k,1:4,j),Z_cub1d)
+      call from_polar_to_cubic(R_polar_smooth(k,1:4,j),R_cub1d)
+      call from_polar_to_cubic(Z_polar_smooth(k,1:4,j),Z_cub1d)
       call find_crossing(node_list,element_list,flux_list,i_surf_tmp,R_cub1d,Z_cub1d, &
                          nwpts%RR_new(i,j),nwpts%ZZ_new(i,j),nwpts%ielm_flux(i,j),&
                          nwpts%s_flux(i,j),nwpts%t_flux(i,j),nwpts%t_tht(i,j),ifail)
@@ -388,14 +546,67 @@ do i=1,n_surf_tot
 
     enddo
 
+    ! --- If the smooth polar lines don't work, try the safe ones
     if (ifail .ne. 0) then
-      write(*,'(A,I6,I6,I6,F20.10)') ' WARNING node not found for leg grid : ',ifail,i,j
+      do k=1,n_surf_tot-1
+        nwpts%R_polar(k,1:4,j) = R_polar(k,1:4,j)
+        nwpts%Z_polar(k,1:4,j) = Z_polar(k,1:4,j)
+      enddo
+      do k=1,n_surf_tot-1  ! 3 line pieces per coordinate line
+
+        call from_polar_to_cubic(R_polar(k,1:4,j),R_cub1d)
+        call from_polar_to_cubic(Z_polar(k,1:4,j),Z_cub1d)
+        call find_crossing(node_list,element_list,flux_list,i_surf_tmp,R_cub1d,Z_cub1d, &
+                           nwpts%RR_new(i,j),nwpts%ZZ_new(i,j),nwpts%ielm_flux(i,j),&
+                           nwpts%s_flux(i,j),nwpts%t_flux(i,j),nwpts%t_tht(i,j),ifail)
+        ! --- Readjust to make sure we are inside element.
+        if ( (nwpts%s_flux(i,j) .lt. 0.d0) .or. (nwpts%s_flux(i,j) .gt. 1.d0) .or. (nwpts%t_flux(i,j) .lt. 0.d0) .or. (nwpts%t_flux(i,j) .gt. 1.d0) ) then
+          if (nwpts%s_flux(i,j) .lt. 0.d0) nwpts%s_flux(i,j) = 0.d0
+          if (nwpts%s_flux(i,j) .gt. 1.d0) nwpts%s_flux(i,j) = 1.d0
+          if (nwpts%t_flux(i,j) .lt. 0.d0) nwpts%t_flux(i,j) = 0.d0
+          if (nwpts%t_flux(i,j) .gt. 1.d0) nwpts%t_flux(i,j) = 1.d0
+          call interp_RZ(node_list,element_list,nwpts%ielm_flux(i,j),nwpts%s_flux(i,j),nwpts%t_flux(i,j),&
+                         R1,dR1_dr,dR1_ds,dR1_drs,dR1_drr,dR1_dss,    &
+                         Z1,dZ1_dr,dZ1_ds,dZ1_drs,dZ1_drr,dZ1_dss)
+          nwpts%RR_new(i,j) = R1
+          nwpts%ZZ_new(i,j) = Z1
+        endif
+        
+        if (ifail .eq. 0) then
+          nwpts%k_cross(i,j) = k
+          exit
+        endif
+
+      enddo
+
+      if (ifail .ne. 0) then
+        write(*,'(A,I6,I6,I6,F20.10)') ' WARNING node not found for leg grid : ',ifail,i,j
+      endif
     endif
       
   enddo
 enddo
 
 
+if (plot_grid) then
+  open(101,file='plot_leg_nodes.py')
+    write(101,'(A)')                '#!/usr/bin/env python'
+    write(101,'(A)')                'import numpy as N'
+    write(101,'(A)')                'import pylab'
+    write(101,'(A)')                'def main():'
+    do i=1,n_surf_tot
+      do j=1,n_seg
+        write(101,'(A,f15.4)') ' r = ',nwpts%RR_new(i,j)
+        write(101,'(A,f15.4)') ' z = ',nwpts%ZZ_new(i,j)
+        write(101,'(A)')            ' pylab.plot(r,z, "bx")'
+      enddo
+    enddo
+    write(101,'(A)')                ' pylab.axis("equal")'
+    write(101,'(A)')                ' pylab.show()'
+    write(101,'(A)')                ' '
+    write(101,'(A)')                'main()'
+  close(101)
+endif
 
 
 
@@ -487,7 +698,7 @@ do i=1,n_surf_tot-1
     index = index + 1
     newelement_list%element(index)%size = 1.d0
 
-    if ( (which_leg .eq. 1) .or. (which_leg .eq. 3) ) then
+    if (which_leg .eq. 1) then
       newelement_list%element(index)%vertex(1) = n_tmp + (i-1)*n_seg + j
       newelement_list%element(index)%vertex(2) = n_tmp + (i  )*n_seg + j
       newelement_list%element(index)%vertex(3) = n_tmp + (i  )*n_seg + j + 1
@@ -499,7 +710,8 @@ do i=1,n_surf_tot-1
       if ( (i .eq. i_sep) .and. (j .eq. 1) ) then
         newelement_list%element(index)%vertex(1) = n_xpoint_2
       endif  
-    else
+    endif  
+    if (which_leg .eq. 2) then
       newelement_list%element(index)%vertex(1) = n_tmp + (i-1)*n_seg + j + 1
       newelement_list%element(index)%vertex(2) = n_tmp + (i  )*n_seg + j + 1
       newelement_list%element(index)%vertex(3) = n_tmp + (i  )*n_seg + j
@@ -510,6 +722,32 @@ do i=1,n_surf_tot-1
       endif  
       if ( (i .eq. i_sep) .and. (j .eq. 1) ) then
         newelement_list%element(index)%vertex(4) = n_xpoint_2
+      endif  
+    endif
+    if (which_leg .eq. 3) then
+      newelement_list%element(index)%vertex(1) = n_tmp + (i-1)*n_seg + j + 1
+      newelement_list%element(index)%vertex(2) = n_tmp + (i  )*n_seg + j + 1
+      newelement_list%element(index)%vertex(3) = n_tmp + (i  )*n_seg + j
+      newelement_list%element(index)%vertex(4) = n_tmp + (i-1)*n_seg + j
+      ! Connect with Xpoint properly
+      if ( (i .eq. i_sep-1) .and. (j .eq. 1) ) then
+        newelement_list%element(index)%vertex(3) = n_xpoint_1
+      endif  
+      if ( (i .eq. i_sep) .and. (j .eq. 1) ) then
+        newelement_list%element(index)%vertex(4) = n_xpoint_2
+      endif  
+    endif  
+    if (which_leg .eq. 4) then
+      newelement_list%element(index)%vertex(1) = n_tmp + (i-1)*n_seg + j
+      newelement_list%element(index)%vertex(2) = n_tmp + (i  )*n_seg + j
+      newelement_list%element(index)%vertex(3) = n_tmp + (i  )*n_seg + j + 1
+      newelement_list%element(index)%vertex(4) = n_tmp + (i-1)*n_seg + j + 1
+      ! Connect with Xpoint properly
+      if ( (i .eq. i_sep-1) .and. (j .eq. 1) ) then
+        newelement_list%element(index)%vertex(2) = n_xpoint_1
+      endif  
+      if ( (i .eq. i_sep) .and. (j .eq. 1) ) then
+        newelement_list%element(index)%vertex(1) = n_xpoint_2
       endif  
     endif
       
@@ -561,7 +799,7 @@ endif
 
 
 
-deallocate(seg, R_seg, Z_seg, R_seg_surf, Z_seg_surf)
+deallocate(seg, R_seg, Z_seg, R_seg_surf, Z_seg_surf, R_seg_smooth, Z_seg_smooth)
 deallocate(R_polar,Z_polar)
 deallocate(i_flux)
 
@@ -598,6 +836,7 @@ end subroutine define_leg_grid
 subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, R_end, Z_end, n_seg, seg, R_seg, Z_seg, xpoint_surface)
 
   use data_structure
+  use phys_module, only: xcase
   
   implicit none
   
@@ -613,7 +852,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
   
   ! --- Internal variables
   type (type_surface_list) :: surface_list_tmp
-  integer :: i_part, i_piece, i_elm, i_find, j_find, i_seg
+  integer :: i_part, i_piece, i_elm, i_find, j_find, i_seg, diff_pieces_min, diff_pieces
   integer :: i_part_beg, i_piece_beg
   integer :: i_part_end, i_piece_end
   integer :: i_elm_find(10)
@@ -621,7 +860,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
   real*8  :: s_find(10),t_find(10), st_find(10)
   real*8  :: diff_min_beg, diff_beg
   real*8  :: diff_min_end, diff_end
-  real*8  :: st_beg, st_end
+  real*8  :: st_beg, st_end, st_prev
   real*8  :: st_start, st_stop
   real*8  :: st1, st2
   real*8  :: rr, ss, st, s_tmp, t_tmp
@@ -695,6 +934,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
   enddo
   ! --- Then beg point
   diff_min_beg = 1.d10
+  diff_pieces_min = 10000000
   do i_part = 1,surface%n_parts
   
     do i_piece = surface%parts_index(i_part), surface%parts_index(i_part+1)-1
@@ -732,13 +972,31 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
         i_elm = i_elm_find(j_find)
         call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
                                                             Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
-        diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
-        if (diff_beg .lt. diff_min_beg) then
-          if ( (.not. xpoint_surface) .or. (i_part .eq. i_part_end) ) then
+        if (.not. xpoint_surface) then
+          diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
+          if (diff_beg .lt. diff_min_beg) then
             diff_min_beg = diff_beg
             i_part_beg  = i_part
             i_piece_beg = i_piece
             st_beg      = st_find(j_find)
+          endif
+        else
+          if (i_part .eq. i_part_end) then
+            if (xcase .eq. 3) then
+              diff_min_beg = diff_beg
+              i_part_beg  = i_part
+              i_piece_beg = i_piece
+              st_beg      = st_find(j_find)
+            else
+              diff_pieces = abs(i_piece-i_piece_end)
+              if (diff_pieces .lt. diff_pieces_min) then
+                diff_pieces_min = diff_pieces
+                diff_min_beg = diff_beg
+                i_part_beg  = i_part
+                i_piece_beg = i_piece
+                st_beg      = st_find(j_find)
+              endif
+            endif
           endif
         endif
       enddo
@@ -841,6 +1099,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
         call CUB1D(Z1, dZ1_dt, Z2, dZ2_dt, st, Z3,dZ3_dr)
         R_seg(i_seg) = R3
         Z_seg(i_seg) = Z3
+        st_prev = st
         exit
       else
         length_sum = length_sum + length

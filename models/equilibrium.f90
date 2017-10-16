@@ -250,11 +250,14 @@ ENDIF
     else
       dZ_axis = Z_axis - Z_axis_old
     end if
-    
+   
     if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
+
       vertical_FB = FB_Zaxis_position   * (Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current
                   + FB_Zaxis_integral   * Z_axis_int          &   
-                  + FB_Zaxis_derivative * dZ_axis      
+                  + FB_Zaxis_derivative * dZ_axis
+    else
+      vertical_FB = 0.0      
     endif
     
     Z_axis_old = Z_axis

@@ -39,7 +39,7 @@ module vacuum_response
   
   !> Get the vacuum response for an ideal or resistive wall.
   subroutine get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list,                    &
-    freeboundary_equil, resistive_wall, parallel)
+    freeboundary_equil, resistive_wall)
   
     use mpi_mod
     use constants
@@ -55,7 +55,6 @@ module vacuum_response
     type(type_bnd_node_list),    intent(in) :: bnd_node_list      !< List of boundary nodes
     logical,                     intent(in) :: freeboundary_equil !< Use free boundary equilibrium?
     logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
-    logical,                     intent(in) :: parallel 
 
     integer :: i,j, ierr, dim
     logical :: exists
@@ -82,28 +81,9 @@ module vacuum_response
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
     
-    if (parallel == .false.) then
-       if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
-       if ( my_id == 0 ) call read_starwall_response(sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
-       call broadcast_starwall_response(my_id, sr)
-    else
-       time(1)=MPI_WTIME()
        if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
-       time(2)=MPI_WTIME()
-
        call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
-       time(3)=MPI_WTIME()
- 
        call broadcast_starwall_response_parallel(my_id, sr)    
-       time(4)=MPI_WTIME()
-
-       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-      ! if(my_id==0) write(6,*) "Vacuum Log=",time(2)-time(1) 
-      ! if(my_id==0) write(6,*) "Vacuum Read=",time(3)-time(2)
-      ! if(my_id==0) write(6,*) "Vacuum Broadcast=",time(4)-time(3)
-      ! if(my_id==0) write(6,*) "Vacuum Total=",time(4)-time(1)
-    endif
-  
 
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
     if ( sr%file_version == 1  .AND. my_id==0) then
@@ -118,17 +98,9 @@ module vacuum_response
       wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
     end if
-    
-    if ( parallel == .false.) then
-       if(my_id ==0 ) then
-          call log_starwall_response(sr)
-          if ( vacuum_debug ) write(*,'(a,es25.15)') '   wall_resistivity = ', wall_resistivity
-       endif
-    else
    
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
         call log_starwall_response_parallel(my_id, sr)
-   endif 
       !  if ( vacuum_debug .AND. my_id == 0  ) write(*,'(a,es25.15)') '   wall_resistivity = ',  wall_resistivity
        
   end subroutine get_vacuum_response
@@ -2859,12 +2831,12 @@ endif
    
 
 ! --- Local variables to store the previous values of some parameters.
-    real*8,  save :: old_thick
-    real*8,  save :: old_res
-    real*8,  save :: old_tstep
-    real*8,  save :: old_theta
-    real*8,  save :: old_zeta
-    logical, save :: old_reswall
+    real*8,  save :: old_thick=0.0
+    real*8,  save :: old_res=0.0
+    real*8,  save :: old_tstep=0.0
+    real*8,  save :: old_theta=0.0
+    real*8,  save :: old_zeta=0.0
+    logical, save :: old_reswall=.false.
 
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'

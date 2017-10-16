@@ -175,7 +175,6 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-  logical :: parallel = .true.  
 
   !***********************************************************************
   !*                  intialisation                                      *
@@ -323,23 +322,25 @@ required = 0
 #ifdef JECCD
   if ( my_id == 0) ) call init_live_data2()
   if ( my_id == 0) ) call init_live_data3()
+
 #ifdef JEC2DIAG
    if ( my_id == 0 ) call init_live_data4()
 #endif
 #endif
-  
+
   ! --- Initialise ppplib plotting library
   if (my_id == 0)  call begplt('jorek2.ps')
   
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
-  
+
   call tr_print_memsize("InitStep")
 
   !***********************************************************************
   !*                  read restart file                                  *
   !***********************************************************************
   
+
   if ( restart .and. (my_id == 0) ) then
     
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
@@ -390,6 +391,7 @@ required = 0
       end do
     end if
     
+
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
@@ -486,14 +488,10 @@ required = 0
     
     ! --- Fill the vacuum response matrices for freeboundary computations
     if ( freeboundary_equil .and. (n_flux .eq. 0)) then
-      call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-        resistive_wall,parallel)
-        if (parallel == .true.) then
-            call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
-        else
-            call update_response(tstep, freeboundary_equil,resistive_wall)
-        endif 
-
+        call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
+                                 resistive_wall)
+ 
+        call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
         call import_external_fields('coil_field.dat', my_id)
         call set_coil_curr_time_trace()
        
@@ -517,8 +515,6 @@ required = 0
     call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
     if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
 #endif
-
-
 
       ! --- Compute the plasma equilibrium
       if (equil) then
@@ -580,13 +576,8 @@ required = 0
         if ( freeb_equil2) then
           freeboundary_equil = .true.
           call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-          resistive_wall,parallel)
-
-          if (parallel == .true.) then
-            call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
-          else
-            call update_response(tstep, freeboundary_equil,resistive_wall)
-          endif
+                                   resistive_wall)
+          call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
           call import_external_fields('coil_field.dat', my_id)
           call set_coil_curr_time_trace()
           if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -637,14 +628,9 @@ end if ! (my_id == 0)
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
-      resistive_wall,parallel)
+                            resistive_wall)
 
-    if (parallel == .true.) then
-         call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
-    else
-         call update_response(tstep, freeboundary_equil,resistive_wall)
-    endif
-
+    call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -853,7 +839,7 @@ end if ! (my_id == 0)
     fileout = 'jorek00000'
     call export_restart(node_list, element_list, fileout)
   end if
-  
+
   !***********************************************************************
   !***********************************************************************
   !*                          time stepping                              *
@@ -884,12 +870,7 @@ end if ! (my_id == 0)
     tstep = tstep_n(jstep)
     
     if ( freeboundary ) then
-         if (parallel == .true.) then
-              call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)
-         else
-              call update_response(tstep, freeboundary_equil,resistive_wall)
-         endif
-    
+         call update_response_parallel(my_id,tstep, freeboundary_equil, resistive_wall)    
     endif
 
     if ( my_id == 0 ) then
@@ -933,7 +914,6 @@ end if ! (my_id == 0)
     call tr_debug_write("JMAIN:Find_axis_T",T_axis)
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
-
 
 !    if (my_id .eq. 0) then
 !       write(*,FMT_TIMING)  my_id, '# Elapsed time init_time_step :',tsecond
@@ -1155,6 +1135,7 @@ end if ! (my_id == 0)
 
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
+
        call energy(node_list,element_list,W_mag,W_kin)
        call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
          psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
@@ -1413,6 +1394,7 @@ end if ! (my_id == 0)
     iplot = 0
 
     psi_bnd = 0.d0
+
     if (xpoint) then
       call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
     	i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)

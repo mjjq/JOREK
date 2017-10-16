@@ -341,6 +341,7 @@ module vacuum_equilibrium
   subroutine equilibrium_VFB(my_id)
     
    implicit none
+
    integer,                      intent(in) :: my_id
 
    integer  :: i

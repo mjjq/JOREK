@@ -30,6 +30,13 @@ integer	            :: n_start_private, n_start_up_priv
 integer	            :: n_xpoint_1, n_xpoint_2, n_xpoint_3, n_jump
 integer             :: iv, ivp, node_iv, node_ivp, ielm_out
 real*8, allocatable :: xp(:),yp(:)
+integer             :: i_save, j_save, ii, jj, count
+integer             :: nR_eqdsk, nZ_eqdsk, ier
+real*8, allocatable :: R_eqdsk(:),Z_eqdsk(:),psi_eqdsk(:,:)
+real*8              :: psi1, psi2, psi3, psi4, psi_tmp, psi
+real*8              :: psi_left, psi_right
+real*8              :: deriv_left, deriv_right
+real*8              :: R_elm, Z_elm
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
@@ -38,7 +45,8 @@ real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, PSI_R, PSI_Z
 real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
-logical, parameter  :: plot_grid = .true.
+logical             :: normal_eqdsk, normal_eqdsk_wall
+logical, parameter  :: plot_grid = .false.
 
 
 write(*,*) '*****************************************'
@@ -207,6 +215,18 @@ enddo
 !-------------------------------------------------------------------------------------------!
 write(*,*) '                 Fill in psi-values '
 
+call get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
+if (ier .ne. 0) then
+  write(*,*)'Problem reading eqdsk file',eqdsk_filename
+  write(*,*)'Aborting...'
+  stop
+endif
+call get_eqdsk_dimensions(normal_eqdsk, nR_eqdsk, nZ_eqdsk, n_wall, ier)
+if (ier .eq. 0) then
+  allocate(R_eqdsk(nR_eqdsk), Z_eqdsk(nZ_eqdsk), psi_eqdsk(nR_eqdsk,nZ_eqdsk))
+  call get_data_from_eqdsk(normal_eqdsk, normal_eqdsk_wall, nR_eqdsk, nZ_eqdsk, R_eqdsk, Z_eqdsk, psi_eqdsk, n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), ier)
+endif
+
 do i=1,newnode_list%n_nodes
 
   R1 = newnode_list%node(i)%x(1,1)
@@ -215,26 +235,30 @@ do i=1,newnode_list%n_nodes
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
   if (ifail .ne. 0) then
-    write(*,'(A,2f)')'Warning! did not find node one previous grid!',R1,Z1
-    write(*,*)'Unable to extract psi information, the grid might be flawed.'
+    if (ier .eq. 0) then
+      ! --- psi values from eqdsk
+      call interpolate_psi_from_eqdsk_grid(nR_eqdsk, nZ_eqdsk, R_eqdsk, Z_eqdsk, psi_eqdsk, R1, Z1, psi, psi_R, psi_Z)
+    else
+      write(*,'(A,2f)')'Warning! did not find node one previous grid!',R1,Z1
+      write(*,*)'Unable to extract psi information, the grid might be flawed.'
+    endif
+  else
+    call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
+                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
+    RZ_jac  = dRRg1_dr * dZZg1_ds - dRRg1_ds * dZZg1_dr
+    psi    = PSg1
+    PSI_R  = (   dZZg1_ds * dPSg1_dr - dZZg1_dr * dPSg1_ds ) / RZ_jac
+    PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
   endif
-  
-  call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
-                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
-
-  RZ_jac  = dRRg1_dr * dZZg1_ds - dRRg1_ds * dZZg1_dr
-  PSI_R  = (   dZZg1_ds * dPSg1_dr - dZZg1_dr * dPSg1_ds ) / RZ_jac
-  PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
-
-  newnode_list%node(i)%values(1,1,1) = PSg1
+  newnode_list%node(i)%values(1,1,1) = psi
   newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
   newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
   newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
 
-  if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
+  !if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0 ! this is ok only if bnd 2 is aligned to surface!
 
 enddo
 
@@ -293,10 +317,63 @@ element_list%element(1:element_list%n_elements) = newelement_list%element(1:elem
 !----temporary, needs to be completed, neighbour and boundary information
 call update_neighbours_basic(element_list,node_list)
 call update_boundary_types(element_list,node_list, .true.)
+call update_boundary_types_final(element_list,node_list)
 
 my_id = 0 !Now we want the output...
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
+
+!----------------------------------- Print a python file that plots a cross with the 4 nodes of each element
+if (plot_grid) then
+  n_tmp = newelement_list%n_elements
+  open(101,file='plot_finished_grid.py')
+    write(101,'(A)')         '#!/usr/bin/env python'
+    write(101,'(A)')         'import numpy as N'
+    write(101,'(A)')         'import pylab'
+    write(101,'(A)')         'def main():'
+    write(101,'(A,i6,A)')    ' r = N.zeros(',4*n_tmp,')'
+    write(101,'(A,i6,A)')    ' z = N.zeros(',4*n_tmp,')'
+    do j=1,n_tmp
+      do i=1,2
+        index = newelement_list%element(j)%vertex(i)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,2)
+        index = newelement_list%element(j)%vertex(i+2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,2)
+      enddo
+    enddo
+    write(101,'(A,i6,A)')    ' for i in range (0,',n_tmp*2,'):'
+    write(101,'(A)')         '  if (i%2 == 0):'
+    write(101,'(A)')         '   pylab.plot(r[2*i:2*i+2],z[2*i:2*i+2], "r")'
+    write(101,'(A)')         '  else:'
+    write(101,'(A)')         '   pylab.plot(r[2*i:2*i+2],z[2*i:2*i+2], "g")'
+    do j=1,n_tmp
+      do i=1,4
+        index = newelement_list%element(j)%vertex(i)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,2)
+      enddo
+    enddo
+    write(101,'(A,i6,A)')    ' for i in range (0,',n_tmp,'):'
+    write(101,'(A)')         '  pylab.plot(r[4*i:4*i+4],z[4*i:4*i+4], "b")'
+    write(101,'(A)')         ' pylab.axis("equal")'
+    write(101,'(A)')         ' pylab.show()'
+    write(101,'(A)')         ' '
+    write(101,'(A)')         'main()'
+  close(101)
+endif
+
+deallocate(R_eqdsk, Z_eqdsk, psi_eqdsk)
+
+
+
 return
 end subroutine finish_grid
+
+
+
+
+
+

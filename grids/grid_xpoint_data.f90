@@ -2,10 +2,19 @@
 
 module grid_xpoint_data
   implicit none
+  
+  character*9, parameter :: eqdsk_filename = 'eqdsk.dat' ! this could become an input parameter, but that's really irrelevant detail at this point...
+  
   real*8,  parameter :: symmetric_threshold = 1.d-4
   integer, parameter :: n_flux_max          = 1024
   integer, parameter :: n_tht_max           = 2048
-  integer, parameter :: n_pieces_polar      = 5
+  integer, parameter :: n_pieces_polar      = 1000!5
+  integer, parameter :: n_seg_max           = 1000
+  
+  ! --- Wall
+  integer, parameter :: n_wall_max = 1000
+  integer :: n_wall
+  real*8  :: R_wall(n_wall_max), Z_wall(n_wall_max)
   
   ! --- Regions
   integer, parameter	:: core			= 1
@@ -58,7 +67,7 @@ module grid_xpoint_data
     real*8 	      :: R_max(n_tht_max), Z_max(n_tht_max)
     real*8 	      :: R_min(n_tht_max), Z_min(n_tht_max)
     real*8 	      :: R_mid(n_tht_max), Z_mid(n_tht_max)
-    real*8 	      :: R_wall(n_tht_max),Z_wall(n_tht_max)
+    real*8 	      :: R_wall(2000),Z_wall(2000)
     real*8 	      :: RR_new(n_flux_max,n_tht_max),ZZ_new(n_flux_max,n_tht_max)
     real*8 	      :: s_flux(n_flux_max,n_tht_max),t_flux(n_flux_max,n_tht_max),t_tht(n_flux_max,n_tht_max)
     real*8 	      :: R_polar(n_pieces_polar,4,n_tht_max),Z_polar(n_pieces_polar,4,n_tht_max)

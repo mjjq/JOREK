@@ -815,6 +815,18 @@ do i_part=1,flux_list%flux_surfaces(i_surf)%n_parts
       endif
     endif
   enddo
+  if ( (xcase .eq. 1) .and. ( (count .eq. 2) .or. (count .eq. 4) ) ) then
+    if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(1)) .and. (R_tmp(count-1) .gt. R_xpoint(1))) &
+               .or. ((R_tmp(count-1) .lt. R_xpoint(1)) .and. (R_tmp(count  ) .gt. R_xpoint(1))) ) ) then
+      count = count - 2
+    endif
+  endif
+  if ( (xcase .eq. 2) .and. ( (count .eq. 2) .or. (count .eq. 4) ) ) then
+    if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(2)) .and. (R_tmp(count-1) .gt. R_xpoint(2))) &
+               .or. ((R_tmp(count-1) .lt. R_xpoint(2)) .and. (R_tmp(count  ) .gt. R_xpoint(2))) ) ) then
+      count = count - 2
+    endif
+  endif
 enddo
 if (count+count_lower+count_upper .ne. 2) then
   if ( .not. ((count_lower+count_upper .eq. 4) .and. (psi_xpoint(2) .eq. psi_xpoint(1))) ) then
@@ -1042,6 +1054,18 @@ if (xcase .ne. 3) then
         Z_tmp(count) = ZZg1
       endif
     enddo
+    if ( (xcase .eq. 1) .and. ( (count .eq. 2) .or. (count .eq. 4) ) ) then
+      if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(1)) .and. (R_tmp(count-1) .gt. R_xpoint(1))) &
+                 .or. ((R_tmp(count-1) .lt. R_xpoint(1)) .and. (R_tmp(count  ) .gt. R_xpoint(1))) ) ) then
+        count = count - 2
+      endif
+    endif
+    if ( (xcase .eq. 2) .and. ( (count .eq. 2) .or. (count .eq. 4) ) ) then
+      if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(2)) .and. (R_tmp(count-1) .gt. R_xpoint(2))) &
+                 .or. ((R_tmp(count-1) .lt. R_xpoint(2)) .and. (R_tmp(count  ) .gt. R_xpoint(2))) ) ) then
+        count = count - 2
+      endif
+    endif
   enddo
   if (count .ne. 2) then
     write(*,*)'Something wrong, we are supposed to find 2 SOL boundaries in single null.',count
@@ -1104,8 +1128,13 @@ if (xcase .ne. 2) then
       endif
     enddo
     if ( (abs(R_tmp(count)-R_tmp(count-1)) .lt. 1.d-7) .and. (abs(Z_tmp(count)-Z_tmp(count-1)) .lt. 1.d-7) ) then
-      if (count .eq. 2) count = 0
-      if (count .eq. 4) count = 2
+      count = count - 2
+    endif
+    if ( (count .eq. 2) .or. (count .eq. 4) ) then
+      if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(1)) .and. (R_tmp(count-1) .gt. R_xpoint(1))) &
+                 .or. ((R_tmp(count-1) .lt. R_xpoint(1)) .and. (R_tmp(count  ) .gt. R_xpoint(1))) ) ) then
+        count = count - 2
+      endif
     endif
   enddo
   if (count .ne. 2) then
@@ -1152,8 +1181,13 @@ if (xcase .ne. 1) then
       endif
     enddo
     if ( (abs(R_tmp(count)-R_tmp(count-1)) .lt. 1.d-7) .and. (abs(Z_tmp(count)-Z_tmp(count-1)) .lt. 1.d-7) ) then
-      if (count .eq. 2) count = 0
-      if (count .eq. 4) count = 2
+      count = count - 2
+    endif
+    if ( (count .eq. 2) .or. (count .eq. 4) ) then
+      if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(2)) .and. (R_tmp(count-1) .gt. R_xpoint(2))) &
+                 .or. ((R_tmp(count-1) .lt. R_xpoint(2)) .and. (R_tmp(count  ) .gt. R_xpoint(2))) ) ) then
+        count = count - 2
+      endif
     endif
   enddo
   if (count .ne. 2) then
@@ -1318,88 +1352,6 @@ endif
 
 
 !--------------------------------------------------------------------------------------------
-!------------------- Now find points related to MAST equilibria -----------------------------
-!--------------------------------------------------------------------------------------------
-
-if( (tokamak_device(1:4) .eq. 'MAST') .and. (xcase .eq. 3) ) then
-
-  ! ---------------------------------- The last open flux surface on outer board that intersects MAST lower Wall
-  ifound = 0
-  R_wall_max = 1.73d0
-  do i=n_flux+n_open, n_flux+n_open+n_outer 
-    do k=1,flux_list%flux_surfaces(i)%n_pieces    
-      do l=1,3,2
-  	
-  	rr1   = flux_list%flux_surfaces(i)%s(l,k)
-  	ss1   = flux_list%flux_surfaces(i)%t(l,k)
-  	i_elm = flux_list%flux_surfaces(i)%elm(k)
-
-  	call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-  	if ((ZZg1 .lt. stpts%ZLimit_LowerMastWall) .and. (RRg1 .gt. R_wall_max)) then
-  	  stpts%RLimit_LowerMastWall = RRg1
-  	  stpts%ZLimit_LowerMastWall = ZZg1
-          ifound = 1
-  	endif
-  	
-      enddo
-    enddo
-    stpts%i_surf_wall_low = i 
-    if (ifound .eq. 1) exit
-  enddo
-
-  ! ---------------------------------- The last open flux surface on outer board that intersects MAST upper Wall
-  ifound = 0
-  R_wall_max = 1.723d0
-  do i=n_flux+n_open, n_flux+n_open+n_outer 
-    do k=1,flux_list%flux_surfaces(i)%n_pieces    
-      do l=1,3,2
-  	
-  	rr1   = flux_list%flux_surfaces(i)%s(l,k)
-  	ss1   = flux_list%flux_surfaces(i)%t(l,k)
-  	i_elm = flux_list%flux_surfaces(i)%elm(k)
-
-  	call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-  	if ((ZZg1 .gt. stpts%ZLimit_UpperMastWall) .and. (RRg1 .gt. R_wall_max)) then
-  	  stpts%RLimit_UpperMastWall = RRg1
-  	  stpts%ZLimit_UpperMastWall = ZZg1
-          ifound = 1
-  	endif
-  	
-      enddo
-    enddo
-    stpts%i_surf_wall_up = i 
-    if (ifound .eq. 1) exit
-  enddo
-
-  ! ---------------------------------- The last lower wall surface of MAST
-  call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_low,stpts%angle_LowerRight,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
-  if(i_find .eq. 0) return
-  call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-  		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-  		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-  stpts%RLimit_LowerMastWallBox = RRg1
-  stpts%ZLimit_LowerMastWallBox = ZZg1
-
-  ! ---------------------------------- The last upper wall surface of MAST
-  call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_up,stpts%angle_UpperRight,R_xpoint(2),Z_xpoint(2),i_elm_find,s_find,t_find,i_find)
-  if(i_find .eq. 0) return
-  call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-        	 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        	 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-
-  stpts%RLimit_UpperMastWallBox = RRg1
-  stpts%ZLimit_UpperMastWallBox = ZZg1
-
-endif
-
-
-
-!--------------------------------------------------------------------------------------------
 !------------------- And print the output ---------------------------------------------------
 !--------------------------------------------------------------------------------------------
 
@@ -1439,14 +1391,6 @@ if ( (xcase .eq. 3) .and. (psi_xpoint(1) .ne. psi_xpoint(2)) ) then
   write(*,'(A)')                '| Secondary Strike Points : ------------------------------|'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,   ', ', stpts%ZSecondStrike_InnerLeg,   ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,   ', ', stpts%ZSecondStrike_OuterLeg,   ') |'
-endif
-
-if(tokamak_device(1:4) .eq. 'MAST') then
-  write(*,'(A)')                '| Last Outer Surface Intersecting MAST Wall : ------------|'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower MAST wall    : (',stpts%RLimit_LowerMastWall,     ', ', stpts%ZLimit_LowerMastWall,     ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper MAST wall    : (',stpts%RLimit_UpperMastWall,     ', ', stpts%ZLimit_UpperMastWall,     ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with lower Xpoint line  : (',stpts%RLimit_LowerMastWallBox,  ', ', stpts%ZLimit_LowerMastWallBox,  ') |'
-  write(*,'(A,F5.2,A,F5.2,A)')  '|   Intersection with upper Xpoint line  : (',stpts%RLimit_UpperMastWallBox,  ', ', stpts%ZLimit_UpperMastWallBox,  ') |'
 endif
 
 write(*,'(A)')                  '|_________________________________________________________|'

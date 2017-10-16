@@ -9,6 +9,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_export_restart
+use phys_module, only: n_wall_blocks
 
 ! --- Input parameters
 use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg, 	&
@@ -40,10 +41,14 @@ real*8              :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_a
 real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 integer             :: n_psi
 integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), ifail
-integer             :: my_id
+integer             :: my_id, i_ext
 real*8              :: psi_bnd, psi_bnd2
 real*8              :: sigmas(16)
 integer             :: n_grids(12)
+integer             :: n_seg_prev
+real*8              :: seg_prev(n_seg_max)
+integer             :: n_loop, i, j, index
+logical, parameter  :: plot_grid = .true.
 
 my_id  = 1 ! Just don't want the printout...
 
@@ -67,6 +72,14 @@ call tr_register_mem(sizeof(nwpts),"nwpts",CAT_GRID)
 !-------------------------------------------------------------------------------------------!
 !---------------------------- Initialise some internal data --------------------------------!
 !-------------------------------------------------------------------------------------------!
+
+
+
+
+
+
+
+
 
 !-------------------------------- Redefine neighbours
 if (sum(element_list%element(1)%neighbours) .eq. 0) then
@@ -197,69 +210,135 @@ call tr_register_mem(sizeof(element_list_new),"element_list_new")
 call respline_flux_surfaces(node_list,element_list,flux_list)
 
 
+
 !-------------------------------- First the Central part
 call define_central_grid(node_list, element_list, flux_list, &
-                         xcase, n_grids, stpts, sigmas, nwpts, node_list_tmp,  element_list_tmp)
-call update_neighbours_basic(element_list_tmp,node_list_tmp)
-call update_boundary_types  (element_list_tmp,node_list_tmp, .true.)
-
-!-------------------------------- Then the lower inner leg
-call define_leg_grid(node_list, element_list, node_list_inner_leg, element_list_inner_leg, &
-                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 1)
-call update_neighbours_basic(element_list_inner_leg,node_list_inner_leg)
-call update_boundary_types  (element_list_inner_leg,node_list_inner_leg, .false.)
-
-!-------------------------------- Then the lower outer leg
-call define_leg_grid(node_list, element_list, node_list_outer_leg, element_list_outer_leg, &
-                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 2)
-call update_neighbours_basic(element_list_outer_leg,node_list_outer_leg)
-call update_boundary_types  (element_list_outer_leg,node_list_outer_leg, .false.)
-
-!-------------------------------- Join the lower legs together
-call join_grid_patches(node_list_inner_leg, element_list_inner_leg, &
-                       node_list_outer_leg, element_list_outer_leg, &
-                       node_list_tmp2,      element_list_tmp2, xcase)
-call update_neighbours_basic(element_list_tmp2,node_list_tmp2)
-call update_boundary_types  (element_list_tmp2,node_list_tmp2, .true.)
-
-!-------------------------------- Join lower legs with main part
-call join_grid_patches(node_list_tmp,  element_list_tmp,  &
-                       node_list_tmp2, element_list_tmp2, &
-                       node_list_new,  element_list_new, xcase)
+                         xcase, n_grids, stpts, sigmas, nwpts, node_list_new,  element_list_new)
 call update_neighbours_basic(element_list_new,node_list_new)
-call update_boundary_types  (element_list_new,node_list_new, .true.)
+call update_boundary_types  (element_list_new,node_list_new, 1)
 
-!-------------------------------- Then the Upper inner leg
-call define_leg_grid(node_list, element_list, node_list_inner_leg, element_list_inner_leg, &
-                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 3)
-call update_neighbours_basic(element_list_inner_leg,node_list_inner_leg)
-call update_boundary_types  (element_list_inner_leg,node_list_inner_leg, .false.)
+!-------------------------------- Then the lower legs
+if (xcase .ne. 2) then
+  !-------------------------------- The lower inner leg
+  call define_leg_grid(node_list, element_list, node_list_inner_leg, element_list_inner_leg, &
+                       flux_list, xcase, n_grids, stpts, sigmas, nwpts, 1)
+  call update_neighbours_basic(element_list_inner_leg,node_list_inner_leg)
+  call update_boundary_types  (element_list_inner_leg,node_list_inner_leg, 2)
 
-!-------------------------------- Then the Upper outer leg
-call define_leg_grid(node_list, element_list, node_list_outer_leg, element_list_outer_leg, &
-                     flux_list, xcase, n_grids, stpts, sigmas, nwpts, 4)
-call update_neighbours_basic(element_list_outer_leg,node_list_outer_leg)
-call update_boundary_types  (element_list_outer_leg,node_list_outer_leg, .false.)
+  !-------------------------------- The lower outer leg
+  call define_leg_grid(node_list, element_list, node_list_outer_leg, element_list_outer_leg, &
+                       flux_list, xcase, n_grids, stpts, sigmas, nwpts, 2)
+  call update_neighbours_basic(element_list_outer_leg,node_list_outer_leg)
+  call update_boundary_types  (element_list_outer_leg,node_list_outer_leg, 2)
 
-!-------------------------------- Join the upper legs together
-call join_grid_patches(node_list_inner_leg, element_list_inner_leg, &
-                       node_list_outer_leg, element_list_outer_leg, &
-                       node_list_tmp,       element_list_tmp, xcase)
-call update_neighbours_basic(element_list_tmp,node_list_tmp)
-call update_boundary_types  (element_list_tmp,node_list_tmp, .true.)
+  !-------------------------------- Join the lower legs together
+  call join_grid_patches(node_list_inner_leg, element_list_inner_leg, &
+                         node_list_outer_leg, element_list_outer_leg, &
+                         node_list_tmp,       element_list_tmp, xcase)
+  call update_neighbours_basic(element_list_tmp,node_list_tmp)
+  call update_boundary_types  (element_list_tmp,node_list_tmp, 1)
 
-!-------------------------------- Join upper legs with rest of the grid
-call join_grid_patches(node_list_new,  element_list_new, &
-                       node_list_tmp,  element_list_tmp, &
-                       node_list_tmp2, element_list_tmp2, xcase)
-call update_neighbours_basic(element_list_tmp2,node_list_tmp2)
-call update_boundary_types  (element_list_tmp2,node_list_tmp2, .true.)
+  !-------------------------------- Join lower legs with main part
+  call join_grid_patches(node_list_new,  element_list_new,  &
+                         node_list_tmp,  element_list_tmp,  &
+                         node_list_tmp2, element_list_tmp2, xcase)
+  call update_neighbours_basic(element_list_tmp2,node_list_tmp2)
+  call update_boundary_types  (element_list_tmp2,node_list_tmp2, 1)
+  call copy_node_structure(node_list_new, element_list_new, node_list_tmp2, element_list_tmp2)
+endif
+
+!-------------------------------- Then the Upper legs
+if (xcase .ne. 1) then
+  !-------------------------------- The Upper inner leg
+  call define_leg_grid(node_list, element_list, node_list_inner_leg, element_list_inner_leg, &
+                       flux_list, xcase, n_grids, stpts, sigmas, nwpts, 3)
+  call update_neighbours_basic(element_list_inner_leg,node_list_inner_leg)
+  call update_boundary_types  (element_list_inner_leg,node_list_inner_leg, 2)
+  
+  !-------------------------------- The Upper outer leg
+  call define_leg_grid(node_list, element_list, node_list_outer_leg, element_list_outer_leg, &
+                       flux_list, xcase, n_grids, stpts, sigmas, nwpts, 4)
+  call update_neighbours_basic(element_list_outer_leg,node_list_outer_leg)
+  call update_boundary_types  (element_list_outer_leg,node_list_outer_leg, 2)
+  
+  !-------------------------------- Join the upper legs together
+  call join_grid_patches(node_list_inner_leg, element_list_inner_leg, &
+                         node_list_outer_leg, element_list_outer_leg, &
+                         node_list_tmp,       element_list_tmp, xcase)
+  call update_neighbours_basic(element_list_tmp,node_list_tmp)
+  call update_boundary_types  (element_list_tmp,node_list_tmp, 1)
+  
+  !-------------------------------- Join upper legs with rest of the grid
+  call join_grid_patches(node_list_new,  element_list_new, &
+                         node_list_tmp,  element_list_tmp, &
+                         node_list_tmp2, element_list_tmp2, xcase)
+  call copy_node_structure(node_list_new, element_list_new, node_list_tmp2, element_list_tmp2)
+  call update_neighbours_basic(element_list_new,node_list_new)
+  call update_boundary_types  (element_list_new,node_list_new, 1)
+endif
+
+!-------------------------------- Now the wall extension
+do i_ext = 1,n_wall_blocks
+  call define_extension_patch(node_list_new, element_list_new, node_list_tmp, element_list_tmp, n_seg_prev, seg_prev, i_ext)
+  call update_neighbours_basic(element_list_tmp,node_list_tmp)
+  call update_boundary_types  (element_list_tmp,node_list_tmp, 0)
+  call join_grid_patches(node_list_new,  element_list_new, &
+                         node_list_tmp,  element_list_tmp, &
+                         node_list_tmp2, element_list_tmp2, xcase)
+  call copy_node_structure(node_list_new, element_list_new, node_list_tmp2, element_list_tmp2)
+  call update_neighbours_basic(element_list_new,node_list_new)
+  call update_boundary_types  (element_list_new,node_list_new, 0)
+enddo
+
 
 
 !-------------------------------- Finalise grid (element size, nodes index etc.)
-call finish_grid(node_list, element_list, node_list_tmp2, element_list_tmp2, n_grids)
-!call export_restart(node_list, element_list, 'jorek_restart')
-stop
+call finish_grid(node_list, element_list, node_list_new, element_list_new, n_grids)
+call export_restart(node_list, element_list, 'jorek_restart')
+
+
+
+
+!----------------------------------- Print a python file that plots a cross with the 4 nodes of each element
+if (plot_grid) then
+  n_loop = element_list%n_elements
+  open(101,file='plot_elements.py')
+    write(101,'(A)')         '#!/usr/bin/env python'
+    write(101,'(A)')         'import numpy as N'
+    write(101,'(A)')         'import pylab'
+    write(101,'(A)')         'def main():'
+    write(101,'(A,i6,A)')    ' r = N.zeros(',4*n_loop,')'
+    write(101,'(A,i6,A)')    ' z = N.zeros(',4*n_loop,')'
+    do j=1,n_loop
+      do i=1,2
+        index = element_list%element(j)%vertex(i)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',node_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',node_list%node(index)%x(1,2)
+        index = element_list%element(j)%vertex(i+2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',node_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',node_list%node(index)%x(1,2)
+      enddo
+    enddo
+    write(101,'(A,i6,A)')    ' for i in range (0,',n_loop,'):'
+    write(101,'(A)')         '  pylab.plot(r[4*i:4*i+2],z[4*i:4*i+2], "r")'
+    write(101,'(A)')         '  pylab.plot(r[4*i+2:4*i+4],z[4*i+2:4*i+4], "g")'
+    do j=1,n_loop
+      do i=1,4
+        index = element_list%element(j)%vertex(i)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',node_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',node_list%node(index)%x(1,2)
+      enddo
+    enddo
+    write(101,'(A,i6,A)')    ' for i in range (0,',n_loop,'):'
+    write(101,'(A)')         '  pylab.plot(r[4*i:4*i+4],z[4*i:4*i+4], "b")'
+    write(101,'(A)')         ' pylab.axis("equal")'
+    write(101,'(A)')         ' pylab.show()'
+    write(101,'(A)')         ' '
+    write(101,'(A)')         'main()'
+  close(101)
+endif
+
+
 
 
 ! --- Deallocate data structures for new nodes and initialize them
@@ -288,3 +367,37 @@ call tr_unregister_mem(sizeof(nwpts),"nwpts",CAT_GRID)
 
 return
 end subroutine grid_double_xpoint_inside_wall
+
+
+
+
+
+
+
+
+
+
+subroutine copy_node_structure(node_list, element_list, newnode_list, newelement_list)
+
+  use data_structure
+  
+  implicit none
+  
+  ! --- Routine variables
+  type (type_node_list)       , intent(inout) :: node_list
+  type (type_element_list)    , intent(inout) :: element_list
+  type (type_node_list)       , intent(in)    :: newnode_list
+  type (type_element_list)    , intent(in)    :: newelement_list
+  
+  ! --- copy new grid into nodes/elements
+  node_list%n_nodes = newnode_list%n_nodes
+  node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+  
+  element_list%n_elements = newelement_list%n_elements
+  element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+  
+  return
+
+end subroutine copy_node_structure
+
+

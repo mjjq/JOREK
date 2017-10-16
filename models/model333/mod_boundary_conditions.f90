@@ -218,11 +218,15 @@ contains
                 ! --------------------------------------------------------------------------------------------------------------
                 if    ((node_list%node(inode)%boundary .eq. 1) &
                   .or. (node_list%node(inode)%boundary .eq. 3) &
-                  .or. (node_list%node(inode)%boundary .eq. 4) &
-                  .or. (node_list%node(inode)%boundary .eq. 9)) then
+                  .or. (node_list%node(inode)%boundary .eq. 5) &
+                  .or. (node_list%node(inode)%boundary .eq. 8)) then
 		      
 		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
 		  side = 2
+
+                  direction = 1
+                  if (node_list%node(inode)%boundary .eq. 5) direction = -direction
+                  if (node_list%node(inode)%boundary .eq. 8) direction = -direction
 
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 's')
@@ -277,12 +281,20 @@ contains
                 ! --------------------------------------------------------------------------------------------------------------
                 ! ------------------------- the non-targets open field-lines (for grid_xpoint_wall) ----------------------------
                 ! --------------------------------------------------------------------------------------------------------------
-                if    ((node_list%node(inode)%boundary .eq. 5) &
-                  .or. (node_list%node(inode)%boundary .eq. 9)) then
+                !if    ((node_list%node(inode)%boundary .eq. 5) &
+                !  .or. (node_list%node(inode)%boundary .eq. 9)) then
+                if    ((node_list%node(inode)%boundary .eq. 3) &
+                  .or. (node_list%node(inode)%boundary .eq. 6) &
+                  .or. (node_list%node(inode)%boundary .eq. 7) &
+                  .or. (node_list%node(inode)%boundary .eq. 8)) then
 
 		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
 		  side = 3
                   
+                  direction = 1
+                  if (node_list%node(inode)%boundary .eq. 7) direction = -direction
+                  if (node_list%node(inode)%boundary .eq. 8) direction = -direction
+
 		  ! ---------------------------------------------
 		  ! --- Apply RMP on target (only depends on 's')
                   if (      RMP_on							&
@@ -336,10 +348,12 @@ contains
 		! ----------------------------------------------------------------------------------------------------
                 ! ------------------------------------ the flux-surface boundaries -----------------------------------
                 ! ----------------------------------------------------------------------------------------------------
-                if (   (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3) ) then
+                !if (   (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3) ) then
+                if ( (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 4) ) then
 
 		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
 		  side = 3
+                  if (node_list%node(inode)%boundary .eq. 4) side = 4
                   
 		  ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 't')

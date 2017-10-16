@@ -28,6 +28,7 @@ real*8              :: distance
 real*8, parameter   :: tolerance = 1.d-5 ! 0.01mm should be largely enough
 logical             :: avoid_this_one
 logical, parameter  :: plot_grid = .true.
+logical, parameter  :: debug = .false.
 
 write(*,*) '*****************************************'
 write(*,*) '* X-point grid inside wall :            *'
@@ -87,10 +88,12 @@ do i = 1,node_list1%n_nodes
     endif
   enddo
 enddo
-if (xcase .eq. 0) then
-  write(*,'(A,i4,A)')' Found ',n_zip_nodes,' zip nodes'
-else
-  write(*,'(A,i4,A)')' Found ',n_zip_nodes+1,' zip nodes'
+if (debug) then
+  if (xcase .eq. 0) then
+    write(*,'(A,i4,A)')' Found ',n_zip_nodes,' zip nodes'
+  else
+    write(*,'(A,i4,A)')' Found ',n_zip_nodes+1,' zip nodes'
+  endif
 endif
 
 ! --- Copy 1st patch into new grid

@@ -77,6 +77,12 @@ do i=1,node_list%n_nodes
   if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2
   if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
   if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
+  if (node_list%node(i)%boundary .eq. 4) n_border = n_border+2
+  if (node_list%node(i)%boundary .eq. 5) n_border = n_border+2
+  if (node_list%node(i)%boundary .eq. 6) n_border = n_border+2
+  if (node_list%node(i)%boundary .eq. 7) n_border = n_border+2
+  if (node_list%node(i)%boundary .eq. 8) n_border = n_border+3
+  if (node_list%node(i)%boundary .eq. 9) n_border = n_border+3
 enddo
 
 if ((.not. freeboundary_equil) .or. (itype .ne. -1)) then
@@ -226,7 +232,12 @@ else        ! apply fixed boundary conditions
       mumps_par%A(ilarge+1)   = zbig
       ilarge = ilarge + 1
          
-      if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
+      if (     (node_list%node(i)%boundary .eq. 1) &
+          .or. (node_list%node(i)%boundary .eq. 3) &
+          .or. (node_list%node(i)%boundary .eq. 4) &
+          .or. (node_list%node(i)%boundary .eq. 5) &
+          .or. (node_list%node(i)%boundary .eq. 8) &
+          .or. (node_list%node(i)%boundary .eq. 9)) then
 
         index_i = node_list%node(i)%index(2)  ! base index in the main matrix
 
@@ -236,7 +247,12 @@ else        ! apply fixed boundary conditions
         ilarge = ilarge + 1
       endif
 
-      if ((node_list%node(i)%boundary .eq. 2) .or. (node_list%node(i)%boundary .eq. 3)) then
+      if (     (node_list%node(i)%boundary .eq. 2) &
+          .or. (node_list%node(i)%boundary .eq. 3) &
+          .or. (node_list%node(i)%boundary .eq. 6) &
+          .or. (node_list%node(i)%boundary .eq. 7) &
+          .or. (node_list%node(i)%boundary .eq. 8) &
+          .or. (node_list%node(i)%boundary .eq. 9)) then
 
         index_i = node_list%node(i)%index(3)  ! base index in the main matrix
 

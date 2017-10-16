@@ -82,13 +82,14 @@ module phys_module
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
   !> Points used as blocks to extend grid into complex wall structures
-  integer :: n_wall_blocks                 !< Number of blocks (max 20)
-  integer :: n_block_points_left(20)       !< Number of points on left side of block (5 max)
-  real*8  :: R_block_points_left(20,5)     !< R-positions of points on left side of block
-  real*8  :: Z_block_points_left(20,5)     !< Z-positions of points on left side of block
-  integer :: n_block_points_right(20)      !< Number of points on left side of block (5 max)
-  real*8  :: R_block_points_right(20,5)    !< R-positions of points on left side of block
-  real*8  :: Z_block_points_right(20,5)    !< Z-positions of points on left side of block
+  integer :: n_wall_blocks                                       !< Number of blocks (max 20)
+  integer, parameter :: n_wall_block_points_max = 100            !< Max number of blocks points
+  integer :: n_block_points_left(20)                             !< Number of points on left side of block
+  real*8  :: R_block_points_left(20,n_wall_block_points_max)     !< R-positions of points on left side of block
+  real*8  :: Z_block_points_left(20,n_wall_block_points_max)     !< Z-positions of points on left side of block
+  integer :: n_block_points_right(20)                            !< Number of points on left side of block
+  real*8  :: R_block_points_right(20,n_wall_block_points_max)    !< R-positions of points on left side of block
+  real*8  :: Z_block_points_right(20,n_wall_block_points_max)    !< Z-positions of points on left side of block
   
   !> @name Define X-point geometry by geometrical properties
   !!
@@ -298,7 +299,7 @@ module phys_module
   integer :: n_up_priv         !< Number of 'radial' grid points in the private flux region on the upper side (upper Xpoint or double-null)
   integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs on the upper side (upper Xpoint or double-null)
   integer :: n_up_leg_out      !< Number of 'poloidal' grid points along the divertor legs on the upper side (upper Xpoint or double-null)
-  integer :: n_ext             !< Number of 'radial' grid points from the outermost flux surface to wall)
+  integer :: n_ext(20)         !< Number of 'radial' grid points from the outermost flux surface to wall)
   real*8  :: SIG_closed        !< Width with grid accumulation
   real*8  :: SIG_open          !< Width with grid accumulation
   real*8  :: SIG_outer         !< Width with grid accumulation

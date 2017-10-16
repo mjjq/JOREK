@@ -54,3 +54,70 @@ real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 
 return
 end subroutine create_new_node
+
+
+
+
+
+
+subroutine create_new_node_polar(newnode_list, index, n_seg, n_nodes, i1, i2, R_polar1, Z_polar1, R_polar2, Z_polar2, R_point, Z_point)
+!------------------------------------------------------------------------------------------
+! Same thing, but using two pairs of polar lines, instead of a polar line and a surface
+!------------------------------------------------------------------------------------------
+
+use tr_module 
+use data_structure
+use grid_xpoint_data
+
+implicit none
+
+! --- Routine parameters
+type (type_node_list)       , intent(inout) :: newnode_list
+integer,                      intent(in)    :: index, n_seg, n_nodes, i1, i2
+real*8,                       intent(in)    :: R_polar1(n_nodes-1,4,n_seg), Z_polar1(n_nodes-1,4,n_seg)
+real*8,                       intent(in)    :: R_polar2(n_seg-1,4,n_nodes), Z_polar2(n_seg-1,4,n_nodes)
+real*8,                       intent(in)    :: R_point, Z_point
+
+! --- local variables
+integer :: j1, j2
+real*8  :: R_cub1d1(4), Z_cub1d1(4)
+real*8  :: R_cub1d2(4), Z_cub1d2(4)
+real*8  :: ss1, ss2
+real*8  :: dR_dt1, dZ_dt1
+real*8  :: dR_dt2, dZ_dt2
+real*8  :: tmp1, tmp2
+
+
+  if (i1 .eq. 0) then
+    j1 = 1
+    ss1 = -1.d0
+  else
+    j1 = i1
+    ss1 = 1.d0
+  endif
+  if (i2 .eq. 0) then
+    j2 = 1
+    ss2 = -1.d0
+  else
+    j2 = i2
+    ss2 = 1.d0
+  endif
+  
+  call from_polar_to_cubic(R_polar1(j2,1:4,j1+1),R_cub1d1)
+  call from_polar_to_cubic(Z_polar1(j2,1:4,j1+1),Z_cub1d1)
+  call from_polar_to_cubic(R_polar2(j1,1:4,j2+1),R_cub1d2)
+  call from_polar_to_cubic(Z_polar2(j1,1:4,j2+1),Z_cub1d2)
+  
+  call CUB1D(R_cub1d1(1), R_cub1d1(2), R_cub1d1(3), R_cub1d1(4),ss1,tmp1, dR_dt1)
+  call CUB1D(Z_cub1d1(1), Z_cub1d1(2), Z_cub1d1(3), Z_cub1d1(4),ss1,tmp2, dZ_dt1)
+  call CUB1D(R_cub1d2(1), R_cub1d2(2), R_cub1d2(3), R_cub1d2(4),ss2,tmp1, dR_dt2)
+  call CUB1D(Z_cub1d2(1), Z_cub1d2(2), Z_cub1d2(3), Z_cub1d2(4),ss2,tmp2, dZ_dt2)
+
+  newnode_list%node(index)%x(1,:) = (/ R_point, Z_point /)
+  newnode_list%node(index)%x(2,:) = (/ dR_dt2, dZ_dt2 /)   / sqrt(dR_dt2**2 + dZ_dt2**2)
+  newnode_list%node(index)%x(3,:) = (/ dR_dt1, dZ_dt1 /)   / sqrt(dR_dt1**2 + dZ_dt1**2)
+  newnode_list%node(index)%x(4,:) = 0.d0
+  newnode_list%node(index)%boundary = 0
+
+return
+end subroutine create_new_node_polar

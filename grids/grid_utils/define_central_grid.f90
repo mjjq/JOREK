@@ -55,6 +55,8 @@ real*8              :: SIG_leg_0, SIG_leg_1
 real*8              :: SIG_up_leg_0, SIG_up_leg_1
 real*8              :: SIG_0, SIG_1
 real*8              :: bgf_tht
+real*8              :: Zbeg, Zend
+real*8              :: scale_out_points
 logical, parameter  :: plot_grid = .true.
 
 write(*,*) '*****************************************'
@@ -363,21 +365,26 @@ do j=1,n_tht
 
   if (nwpts%Z_sep(j) .le. Z_axis) then
   
+    Zbeg = Z_xpoint(1)
+    Zend = Z_xpoint(1) + 0.3 * (Z_axis - Z_xpoint(1))
+    scale_out_points = (nwpts%Z_sep(j) - Zend)/(Zbeg - Zend)
+    if (scale_out_points .lt. 0.d0) scale_out_points = 0.d0
+    if (scale_out_points .gt. 1.d0) scale_out_points = 1.d0
     if ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2))) ) then        
       if (j .gt. n_tht_mid) then
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
+        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * scale_out_points
 	i_max = n_flux + n_open + n_outer + n_inner
       else
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
+        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * scale_out_points
 	i_max = n_flux + n_open + n_outer
       endif      
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
     elseif ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then      
       if (j .gt. n_tht_mid) then
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
+        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * scale_out_points
 	i_max = n_flux + n_open + n_outer
       else
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
+        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * scale_out_points
 	i_max = n_flux + n_open + n_outer + n_inner
       endif      
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
@@ -443,17 +450,22 @@ do j=1,n_tht
 
   else
         
+    Zbeg = Z_xpoint(2)
+    Zend = Z_xpoint(2) + 0.3 * (Z_axis - Z_xpoint(2))
+    scale_out_points = (nwpts%Z_sep(j) - Zend)/(Zbeg - Zend)
+    if (scale_out_points .lt. 0.d0) scale_out_points = 0.d0
+    if (scale_out_points .gt. 1.d0) scale_out_points = 1.d0
     if (    ( (j .gt. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. 2) )                                          ) then
-      nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperInnerLeg - Z_xpoint(2)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(2) - Z_axis))**2
+      nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperInnerLeg - Z_xpoint(2)) * scale_out_points
       i_max = n_flux + n_open + n_outer + n_inner
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
     endif 
     if (    ( (j .le. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) &
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) & 
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. 2) )                                          ) then
-      nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperOuterLeg - Z_xpoint(2)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(2) - Z_axis))**2
+      nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperOuterLeg - Z_xpoint(2)) * scale_out_points
       i_max = n_flux + n_open + n_outer
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
     endif
@@ -1096,7 +1108,7 @@ newelement_list%n_elements = index
 !----------------------------------- Print a python file that plots a cross with the 4 nodes of each element
 if (plot_grid) then
   n_loop = newelement_list%n_elements
-  open(101,file='plot_elements.py')
+  open(101,file='plot_central_grid_elements.py')
     write(101,'(A)')         '#!/usr/bin/env python'
     write(101,'(A)')         'import numpy as N'
     write(101,'(A)')         'import pylab'

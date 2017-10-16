@@ -39,6 +39,7 @@ subroutine update_neighbours_basic(element_list,node_list)
         if (j_side .gt. 0) then
           element_list%element(i_elm)%neighbours(i_side) = j_elm
           element_list%element(j_elm)%neighbours(j_side) = i_elm
+          exit
         endif
       enddo
     enddo

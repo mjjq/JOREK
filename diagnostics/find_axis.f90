@@ -51,7 +51,7 @@ ij_axis    = 1
 psi_axis   = 1.d20
 grad_psi_min = 1.d20
 
-if( Zaxis_find_limit .gt. 50.d0)  Zaxis_find_limit = 0.1d0 * R_geo
+if( Zaxis_find_limit .gt. 50.d0)  Zaxis_find_limit = 0.2d0 * R_geo
 
 do i=1,element_list%n_elements
 

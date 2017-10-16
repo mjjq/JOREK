@@ -590,10 +590,12 @@ do ms=1, n_gauss
      sig2_rad = 150.          ! eV
 
 !     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.) + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
-     Lrad     = (1./2.)*coef_rad_1*5.d-32 * (tanh((T_rad-20.)/10.)-tanh(-20./10.))
+     !Lrad     = (1./2.)*coef_rad_1*5.d-32 * (tanh((T_rad-20.)/10.)-tanh(-20./10.))
+     Lrad      = 0. ! For Test
 
      ! Derivative wrt to T, with T in JOREK units
-     dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT * (1-tanh((T_rad-20.)/10.)**2)
+     !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT * (1-tanh((T_rad-20.)/10.)**2)
+     dLrad_dT = 0. ! For Test
 
 !   else
 !     Lrad = 0.d0

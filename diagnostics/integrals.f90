@@ -51,6 +51,8 @@ real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out
 real*8     :: C_hel, P_hel, D_int, D_ext, P_ext, C_ext
 real*8     :: part_src, heat_src, heat_src_i, heat_src_e
 
+write(*,*) "Check Point WTF"
+
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
 write(*,*) '***************************************'
@@ -60,6 +62,9 @@ pressure = 0.d0
 D_int    = 0.d0
 P_int    = 0.d0
 C_intern = 0.d0
+
+write(*,*) "Et tu Brute 00"
+
 D_ext    = 0.d0
 P_ext    = 0.d0
 C_ext    = 0.d0
@@ -67,12 +72,25 @@ P_hel    = 0.d0
 C_hel    = 0.d0
 Volume   = 0.d0
 Area     = 0.d0
+
+write(*,*) "Et tu Brute 01"
+
 heat_src_in  = 0.d0
+
+write(*,*) "Et tu Brute 02"
+
 heat_src_out = 0.d0
 part_src_in  = 0.d0
+
+write(*,*) "Et tu Brute 03"
+
 part_src_out = 0.d0
 
+write(*,*) "Et tu Brute"
+
 Bgeo = F0 / R_geo
+
+write(*,*) "Check Point 00"
 
 do ife =1, element_list%n_elements
 
@@ -86,6 +104,8 @@ do ife =1, element_list%n_elements
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;
   y_g(:,:)    = 0.d0; y_s(:,:)    = 0.d0; y_t(:,:)    = 0.d0;
   eq_g(:,:,:) = 0.d0; eq_s(:,:,:) = 0.d0; eq_t(:,:,:) = 0.d0;
+
+  write(*,*) "Check Point 0.5"
 
   do i=1,n_vertex_max
     do j=1,n_order+1
@@ -123,6 +143,8 @@ do ife =1, element_list%n_elements
     enddo
   enddo
 !--------------------------------------------------- sum over the Gaussian integration points
+
+  write(*,*) "Check Point 01"
 
   do ms=1, n_gauss
 
@@ -184,6 +206,9 @@ do ife =1, element_list%n_elements
       
     enddo
   enddo
+
+  write(*,*) "Check Point 02"
+
 enddo
 
 density_in   = D_int

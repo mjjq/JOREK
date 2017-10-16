@@ -241,7 +241,7 @@ required = 0
   
   ! --- MURGE with ntor=1 doesn't work up to now because i_tor is not allocated correctly
   if (n_tor == 1) then
-    gmres     = .false.
+    !gmres     = .false.
     use_murge = .false. 
   end if
   
@@ -1109,6 +1109,9 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
+
+       write(*,*) "Test Case", heat_src_in_t(index_now)
+
        call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
          psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
          beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &

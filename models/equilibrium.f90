@@ -472,14 +472,14 @@ if (my_id == 0) then
       surface_list%psi_values(i) = 1.25d0*(float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis) + psi_axis
     enddo
     
-    call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,surface_list)
+    call find_flux_surfaces(my_id,xpoint2,xcase2,node_list,element_list,surface_list)
   
     sep_list%n_psi =1
     if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
     call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
     sep_list%psi_values(1) = psi_bnd
   
-    call find_flux_surfaces(xpoint2,xcase2,node_list,element_list,sep_list)
+    call find_flux_surfaces(my_id,xpoint2,xcase2,node_list,element_list,sep_list)
   endif
   
   if (freeboundary_equil) then

@@ -3,8 +3,6 @@
 module grid_xpoint_data
   implicit none
   
-  character*9, parameter :: eqdsk_filename = 'eqdsk.dat' ! this could become an input parameter, but that's really irrelevant detail at this point...
-  
   real*8,  parameter :: symmetric_threshold = 1.d-4
   integer, parameter :: n_flux_max          = 1024
   integer, parameter :: n_tht_max           = 2048

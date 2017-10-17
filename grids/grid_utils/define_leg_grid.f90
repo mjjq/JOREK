@@ -43,6 +43,7 @@ real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_x
 real*8              :: length
 real*8              :: R1,dR1_dr,dR1_ds,dR1_drs,dR1_drr,dR1_dss
 real*8              :: Z1,dZ1_dr,dZ1_ds,dZ1_drs,dZ1_drr,dZ1_dss
+real*8              :: diff_min, diff
 integer             :: i_surf(3)
 real*8              :: R_beg(3), Z_beg(3)
 real*8              :: R_end(3), Z_end(3)
@@ -57,6 +58,7 @@ real*8              :: SIG_0, SIG_1
 real*8              :: distance_leg, leg_cut
 real*8              :: tht_x, rr1, ss1
 real*8              :: R_tmp(4), Z_tmp(4)
+real*8              :: R_min_tmp, Z_min_tmp
 integer             :: count, i_part
 integer             :: edge_piece(4), edge_side(4)
 integer             :: n_seg
@@ -337,51 +339,60 @@ do i = 1,n_surf_tot
         i_elm = flux_list%flux_surfaces(i_flux(i))%elm(edge_piece(k))
         call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R1,dR1_dr,dR1_ds,dR1_drs,dR1_drr,dR1_dss, &
                                                             Z1,dZ1_dr,dZ1_ds,dZ1_drs,dZ1_drr,dZ1_dss)
-        if ( ((which_leg .gt. 2) .and. (Z1 .gt. Z_axis)) .or. ((which_leg .le. 2) .and. (Z1 .lt. Z_axis)) ) then
-          count = count + 1
-          R_tmp(count) = R1
-          Z_tmp(count) = Z1
+        if (which_leg .eq. 1) then
+          if ( (R1 .lt. R_xpoint(1)) .and. (Z1 .lt. Z_xpoint(1)) ) then
+            count = count + 1
+            R_tmp(count) = R1
+            Z_tmp(count) = Z1
+          endif
+        endif
+        if (which_leg .eq. 2) then
+          if ( (R1 .gt. R_xpoint(1)) .and. (Z1 .lt. Z_xpoint(1)) ) then
+            count = count + 1
+            R_tmp(count) = R1
+            Z_tmp(count) = Z1
+          endif
+        endif
+        if (which_leg .eq. 3) then
+          if ( (R1 .lt. R_xpoint(2)) .and. (Z1 .gt. Z_xpoint(2)) ) then
+            count = count + 1
+            R_tmp(count) = R1
+            Z_tmp(count) = Z1
+          endif
+        endif
+        if (which_leg .eq. 4) then
+          if ( (R1 .gt. R_xpoint(2)) .and. (Z1 .gt. Z_xpoint(2)) ) then
+            count = count + 1
+            R_tmp(count) = R1
+            Z_tmp(count) = Z1
+          endif
         endif
       enddo
-      if ( (abs(R_tmp(count)-R_tmp(count-1)) .lt. 1.d-7) .and. (abs(Z_tmp(count)-Z_tmp(count-1)) .lt. 1.d-7) ) then
-        count = count - 2
-      endif
-      if ( (count .eq. 2) .or. (count .eq. 4) ) then
-        if (which_leg .gt. 2) then
-          if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(2)) .and. (R_tmp(count-1) .gt. R_xpoint(2))) &
-                     .or. ((R_tmp(count-1) .lt. R_xpoint(2)) .and. (R_tmp(count  ) .gt. R_xpoint(2))) ) ) then
-            count = count - 2
-          endif
-        else
-          if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(1)) .and. (R_tmp(count-1) .gt. R_xpoint(1))) &
-                     .or. ((R_tmp(count-1) .lt. R_xpoint(1)) .and. (R_tmp(count  ) .gt. R_xpoint(1))) ) ) then
-            count = count - 2
-          endif
+      if (count .ge. 2) then
+        if ( (abs(R_tmp(count)-R_tmp(count-1)) .lt. 1.d-7) .and. (abs(Z_tmp(count)-Z_tmp(count-1)) .lt. 1.d-7) ) then
+          count = count - 2
         endif
       endif
     enddo
-    if (count .ne. 2) then
-      write(*,*)'Something wrong, we are supposed to find 2 surface intersections.',count
-      write(*,*)'Aborting...'
-      stop
+    if (count .ne. 1) then
+      diff_min = 1.d10
+      do j=1,count
+        if (which_leg .le. 2) then
+          diff = sqrt( (R_tmp(j)-R_xpoint(1))**2 + (Z_tmp(j)-Z_xpoint(1))**2 )
+        else
+          diff = sqrt( (R_tmp(j)-R_xpoint(2))**2 + (Z_tmp(j)-Z_xpoint(2))**2 )
+        endif
+        if (diff .lt. diff_min) then
+          diff_min = diff
+          R_min_tmp = R_tmp(j)
+          Z_min_tmp = Z_tmp(j)
+        endif
+      enddo
+      R_tmp(1) = R_min_tmp
+      Z_tmp(1) = Z_min_tmp
     endif
-    if ( (which_leg .eq. 1) .or. (which_leg .eq. 3) ) then
-      if (R_tmp(1) .lt. R_tmp(2)) then
-        R_end_tmp = R_tmp(1)
-        Z_end_tmp = Z_tmp(1)
-      else
-        R_end_tmp = R_tmp(2)
-        Z_end_tmp = Z_tmp(2)
-      endif
-    else
-      if (R_tmp(1) .lt. R_tmp(2)) then
-        R_end_tmp = R_tmp(2)
-        Z_end_tmp = Z_tmp(2)
-      else
-        R_end_tmp = R_tmp(1)
-        Z_end_tmp = Z_tmp(1)
-      endif
-    endif
+    R_end_tmp = R_tmp(1)
+    Z_end_tmp = Z_tmp(1)
   endif
   ! --- Segment surface
   call segment_surface_length(node_list,element_list,flux_list%flux_surfaces(i_flux(i)), &
@@ -972,29 +983,29 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
         i_elm = i_elm_find(j_find)
         call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
                                                             Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
-        if (.not. xpoint_surface) then
-          diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
-          if (diff_beg .lt. diff_min_beg) then
+        diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
+        if (diff_beg .le. diff_min_beg) then
+          if (.not. xpoint_surface) then
             diff_min_beg = diff_beg
             i_part_beg  = i_part
             i_piece_beg = i_piece
             st_beg      = st_find(j_find)
-          endif
-        else
-          if (i_part .eq. i_part_end) then
-            if (xcase .eq. 3) then
-              diff_min_beg = diff_beg
-              i_part_beg  = i_part
-              i_piece_beg = i_piece
-              st_beg      = st_find(j_find)
-            else
-              diff_pieces = abs(i_piece-i_piece_end)
-              if (diff_pieces .lt. diff_pieces_min) then
-                diff_pieces_min = diff_pieces
+          else
+            if (i_part .eq. i_part_end) then
+              if (xcase .eq. 3) then
                 diff_min_beg = diff_beg
                 i_part_beg  = i_part
                 i_piece_beg = i_piece
                 st_beg      = st_find(j_find)
+              else
+                diff_pieces = abs(i_piece-i_piece_end)
+                if (diff_pieces .lt. diff_pieces_min) then
+                  diff_pieces_min = diff_pieces
+                  diff_min_beg = diff_beg
+                  i_part_beg  = i_part
+                  i_piece_beg = i_piece
+                  st_beg      = st_find(j_find)
+                endif
               endif
             endif
           endif

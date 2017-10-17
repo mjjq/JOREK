@@ -271,12 +271,6 @@ endif
 
 ! --- Second, find out which wall points are our starting/ending points
 if (n_wall .eq. 0) then
-  ! --- It's better to get the wall directly from the user, to allow him to remove pieces of the wall that are useless
-  !call get_wall_from_eqdsk(n_wall, R_wall, Z_wall, ier)
-  !if (ier .ne. 0) then
-  !  write(*,*)'Error opening eqdsk file?'
-  !  return
-  !endif
   n_wall = n_limiter
   R_wall(1:n_wall) = R_limiter(1:n_wall)
   Z_wall(1:n_wall) = Z_limiter(1:n_wall)
@@ -1166,7 +1160,7 @@ newelement_list%n_elements = index
 !----------------------------------- Print a python file that plots a cross with the 4 nodes of each element
 if (plot_grid) then
   n_tmp = newelement_list%n_elements
-  if (i_ext .ge. 2) then
+  if (i_ext .ge. 10) then
     write(char_tmp2,'(i2)')i_ext
     plot_filename = 'plot_extension_'//char_tmp2//'.py'
   else
@@ -1301,100 +1295,5 @@ end subroutine find_next_bnd_node
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-subroutine get_wall_from_eqdsk(n_wall, R_wall, Z_wall, ier)
-
-  use grid_xpoint_data, only: n_wall_max, eqdsk_filename
-  
-  implicit none
-  
-  ! --- Routine variables
-  integer, intent(inout) :: n_wall
-  real*8,  intent(inout) :: R_wall(n_wall_max), Z_wall(n_wall_max)
-  integer, intent(out)   :: ier
-  
-  ! --- eqdsk variables
-  integer          :: i, j, k
-  real,allocatable :: psi(:),p(:),f(:),q(:),rlim(:),zlim(:),rbnd(:), zbnd(:)
-  real,allocatable :: dpsi(:),dp(:),df(:)
-  real,allocatable :: dpr(:),df2(:),dg(:),work(:),psirz(:,:)
-  real             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
-  real             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag,ssibry,bcentr
-  integer          :: mod_lines, n_lines
-  integer          :: nr, nz, n_psi, nbbs, nlim
-  integer          :: nr_eqdsk, nz_eqdsk
-  character        :: AA*52
-  
-  ! --- Open eqdsk file
-  !write(*,*) 'Opening file eqdsk.dat'
-  open(unit=5,file=eqdsk_filename, ACTION = 'read', iostat=ier)
-  if (ier .ne. 0) return
-  
-  read(5,'(A52,2i4)') AA,nr,nz
-  read(5,'(5e16.9)') xdim,zdim,rzero,rgrid1,zmid
-  read(5,'(5e16.9)') rmaxis,zmaxis,ssimag,ssibry,bcentr
-  read(5,'(5e16.9)') xip,ssimag,xdum1,rmaxis,xdum2
-  read(5,'(5e16.9)') zmaxis,xdum3,ssibry,xdum4,xdum5
-  
-  ! --- reading profiles
-  n_psi=nr
-  mod_lines = mod(n_psi,5)
-  n_lines   = (n_psi-mod(n_psi,5))/5
-  
-  allocate(f(n_psi),p(n_psi),df2(n_psi),dpr(n_psi),psirz(nr,nz),q(n_psi))
-  
-  read(5,'(5e16.9)') (f(i),i=1,5*n_lines)
-  if (mod_lines .ne. 0) read(5,'(4e16.9)') (f(i),i=5*n_lines+1,n_psi)
-  
-  read(5,'(5e16.9)') (p(i),i=1,5*n_lines)
-  if (mod_lines .ne. 0) read(5,'(4e16.9)') (p(i),i=5*n_lines+1,n_psi)
-  
-  read(5,'(5e16.9)') (df2(i),i=1,5*n_lines)
-  if (mod_lines .ne. 0) read(5,'(4e16.9)') (df2(i),i=5*n_lines+1,n_psi)
-  
-  read(5,'(5e16.9)') (dpr(i),i=1,5*n_lines)
-  if (mod_lines .ne. 0) read(5,'(4e16.9)') (dpr(i),i=5*n_lines+1,n_psi)
-  
-  ! --- reading psi-map
-  do k=1,nz
-    do i=1,n_lines
-      j = 5*(i-1)
-      read(5,'(5e16.9)') psirz(j+1,k),psirz(j+2,k),psirz(j+3,k),psirz(j+4,k),psirz(j+5,k)
-    enddo
-    j = 5*n_lines
-    read(5,'(4e16.9)') psirz(j+1,k),psirz(j+2,k),psirz(j+3,k),psirz(j+4,k)
-  enddo
-  
-  ! --- reading q-profile
-  read(5,'(5e16.9)') (q(i),i=1,5*n_lines)
-  if (mod_lines .ne. 0) read(5,'(4e16.9)') (q(i),i=5*n_lines+1,n_psi)
-  
-  ! --- reading limiter
-  read(5,*)  nbbs,nlim
-  allocate(rbnd(nbbs),zbnd(nbbs))
-  read(5,'(2e16.9)') (rbnd(i),zbnd(i),i=1,nbbs)
-  allocate(rlim(nlim),zlim(nlim))
-  read(5,'(2e16.9)') (rlim(i),zlim(i),i=1,nlim)
-  
-  close(5)
-  
-  n_wall = nlim
-  R_wall(1:n_wall) = rlim(1:nlim)
-  Z_wall(1:n_wall) = zlim(1:nlim)
-  
-  return
-end subroutine get_wall_from_eqdsk
 
 

@@ -1090,8 +1090,8 @@ module vacuum_response
 
   !local variables
   integer             :: ntasks, ierr, i, k, j, z, length, step, glob_index_i, glob_index_j 
-  real*8, allocatable :: tmp(:,:),sum_element
-  real*8  :: time(10)
+  real*8, allocatable :: tmp(:,:)
+  real*8  :: time(10), sum_element
 
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)

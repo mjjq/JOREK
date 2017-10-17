@@ -190,12 +190,8 @@ subroutine get_data_from_eqdsk(normal_eqdsk, normal_eqdsk_wall, nR, nZ, R_grid, 
     enddo
   endif
   
-  write(*,*) 'reading q-profile'
-    
   read(5,'(5e16.9)') (q(i),i=1,5*n_lines)
   if (mod_lines .ne. 0) read(5,'(4e16.9)') (q(i),i=5*n_lines+1,n_psi)
-  
-  write(*,*) 'reading limiter'
   
   read(5,*)  nbbs,nlim
   allocate(rbnd(nbbs),zbnd(nbbs))

@@ -38,7 +38,6 @@ module live_data
     logical :: opened
     integer :: n, i
  
-    write(*,*) "CCC111", produce_live_data   
     if ( .not. produce_live_data ) return
     
     ! --- Check, that the file handle is not already in use.
@@ -143,13 +142,9 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource: %"time"   "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
     
-    write(*,*) "CCC222"
-
     ! --- Call the model-specific part of the init_live_data routine
     call init_live_data_model(LIVE_DATA_HANDLE) 
     
-      write(*,*) "CCC333"
-
     close(LIVE_DATA_HANDLE)
     
   end subroutine init_live_data

@@ -273,6 +273,7 @@ subroutine preset_parameters
   refinement         = .false.              ! enable mesh refinement
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
+  RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
   
   adaptive_time      = .false.              ! requires no_mpi for Pastix library
   

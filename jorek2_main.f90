@@ -1138,7 +1138,7 @@ end if ! (my_id == 0)
 
        call energy(node_list,element_list,W_mag,W_kin)
        call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
-         psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
+         psi_xpoint, psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
          beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
          density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
          pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &

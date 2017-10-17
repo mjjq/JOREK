@@ -64,6 +64,7 @@ endif ! if (my_id .eq. 0) then
 
 freeboundary_equil2 = freeboundary_equil
 freeboundary_equil  = .false.
+vertical_FB = 0.0
 
 !------------------------------------ fixed boundary equilibrium
 n_iter      = 200
@@ -256,8 +257,6 @@ ENDIF
       vertical_FB = FB_Zaxis_position   * (Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current
                   + FB_Zaxis_integral   * Z_axis_int          &   
                   + FB_Zaxis_derivative * dZ_axis
-    else
-      vertical_FB = 0.0      
     endif
     
     Z_axis_old = Z_axis

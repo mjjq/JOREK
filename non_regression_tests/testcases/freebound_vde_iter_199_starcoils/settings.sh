@@ -1,7 +1,7 @@
 # --- General settings
 jorekmodel="199"
 description="VDE test case for an ITER plasma with simplified wall geometry and STARWALL coils (JOREK-STARWALL, model199)."
-mpitasks=1
+mpitasks=2
 binaries="jorek_model${jorekmodel}_1 rst_bin2hdf5 rst_hdf52bin"
 binaries_initial=""
 requiredfiles="input starwall-response.dat"

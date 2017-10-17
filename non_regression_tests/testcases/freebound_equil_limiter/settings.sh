@@ -1,7 +1,7 @@
 # --- General settings
 jorekmodel="199"
 description="Free boundary equilibrium for limiter plasma (JOREK-STARWALL)."
-mpitasks=1
+mpitasks=2
 binaries="jorek_model${jorekmodel}_1 rst_bin2hdf5 rst_hdf52bin"
 binaries_initial=""
 requiredfiles="input starwall-response.dat coil_field.dat"

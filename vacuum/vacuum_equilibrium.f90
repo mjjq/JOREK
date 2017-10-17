@@ -198,7 +198,7 @@ module vacuum_equilibrium
     ! --- Local variables
     type (type_bnd_element) :: bndelem_m
     integer :: m_bndelem, l_vertex, l_dof, l_node, l_dir, l_node_bnd, l_index, ms
-    integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp
+    integer :: i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_resp, i_resp_st
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_resp, ilarge, n_c
     integer :: i, j, i_start_pf, i_end_pf
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
@@ -232,94 +232,102 @@ module vacuum_equilibrium
   
     do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
-     IF(my_id == 0) THEN
-      bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
-      
-      ! --- Determine the values of R,s and Z,s at the Gaussian points.
-      call det_coord_bnd(bndelem_m, node_list, R=x, Z=y, R_S=x_s, Z_S=y_s)
-     ENDIF      
+      if (my_id == 0) then
+        bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
+        
+        ! --- Determine the values of R,s and Z,s at the Gaussian points.
+        call det_coord_bnd(bndelem_m, node_list, R=x, Z=y, R_S=x_s, Z_S=y_s)
+      end if ! my_id == 0
 
       ! --- Select a test function (weak form equation must hold for every test function)
       do l_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
         do l_dof = 1, 2 ! (loop over node dofs)
             
-         IF(my_id == 0) THEN
-          l_node     = bndelem_m%vertex(l_vertex)
-          l_dir      = bndelem_m%direction(l_vertex,l_dof)
-          l_node_bnd = bndelem_m%bnd_vertex(l_vertex)
-          l_index    = node_list%node(l_node)%index(l_dir)
-          size_l     = bndelem_m%size(l_vertex,l_dof)
-         ENDIF 
+          if (my_id == 0) then
+            l_node     = bndelem_m%vertex(l_vertex)
+            l_dir      = bndelem_m%direction(l_vertex,l_dof)
+            l_node_bnd = bndelem_m%bnd_vertex(l_vertex)
+            l_index    = node_list%node(l_node)%index(l_dir)
+            size_l     = bndelem_m%size(l_vertex,l_dof)
+          end if ! my_id == 0
+          
           ! --- Integration in s-direction is carried out as Gauss quadrature,
           !       int ds ... = sum_ms wgauss(ms) ...,
           !     where wgauss(ms) denotes the Gaussian weights.
           do ms = 1, n_gauss
-           IF(my_id == 0) THEN
-            testfunc_l = H1(l_vertex,l_dof,ms) * size_l
-            dA         = sqrt(x_s(ms)**2 + y_s(ms)**2) ! Integration factor from definition of dA
-           ENDIF 
+            
+            if (my_id == 0) then
+              testfunc_l = H1(l_vertex,l_dof,ms) * size_l
+              dA         = sqrt(x_s(ms)**2 + y_s(ms)**2) ! Integration factor from definition of dA
+            end if ! my_id == 0
+            
             ! --- Sum over boundary dofs at which response is calculated
             do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
               do i_dof = 1, 2 ! (loop over node dofs)
-               IF(my_id == 0 ) THEN
-                i_node     = bndelem_m%vertex(i_vertex)
-                i_dir      = bndelem_m%direction(i_vertex,i_dof)
-                i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
-                i_index    = node_list%node(i_node)%index(i_dir)
-                size_i     = bndelem_m%size(i_vertex,i_dof)
-                i_resp     = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
-                basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
                 
-                common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
-               ENDIF
+                if (my_id == 0 ) then
+                  i_node     = bndelem_m%vertex(i_vertex)
+                  i_dir      = bndelem_m%direction(i_vertex,i_dof)
+                  i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
+                  i_index    = node_list%node(i_node)%index(i_dir)
+                  size_i     = bndelem_m%size(i_vertex,i_dof)
+                  i_resp     = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
+                  basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
+                  i_resp_st  = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
+                               + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)-bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
+                  
+                  common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
+                end if ! my_id == 0
  
                 if (starwall_equil_coils) then
-                 
                   call MPI_bcast(wall_curr, size(wall_curr), MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
-                  call MPI_bcast(i_resp, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+                  call MPI_bcast(i_resp_st, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
  
                   B_tan_coil_i=0.0
                   B_tan_coil_i_loc=0.0
 
-                  if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
-                      B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp-my_id*sr%a_ey%step,:) * wall_curr(:) )
+                  if (i_resp_st>=sr%a_ey%ind_start .AND. i_resp_st<=sr%a_ey%ind_end) then
+                      B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp_st-my_id*sr%a_ey%step,:) * wall_curr(:) )
                   endif
 
                   call MPI_Reduce(B_tan_coil_i_loc, B_tan_coil_i, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-
                 else
                   B_tan_coil_i         =   sum ( I_coils(:) * bext_tan(i_resp,:) )  
                 endif
-             IF(my_id == 0) THEN
                 
-                mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i
-                
-                ! --- Sum over boundary dofs contributing to the response
-                do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
-                  do j_dof = 1, 2 ! (loop over node dofs)
-                    j_node     = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
-                    j_dir      = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
-                    j_index    = node_list%node(j_node)%index(j_dir)
-                    j_resp     = bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)
-                   
-                    if (.not. starwall_equil_coils) then 
-                      psi_coil_j = sum( I_coils(:) * bext_psi(j_resp,:) )
-                    else
-                      psi_coil_j = 0.d0
-                    endif
-                   
-                    psi_0_j    = node_list%node(j_node)%values(1,j_dir,1)
-                    
-                    ilarge                 = ilarge + 1
-                    mumps_par%irn(ilarge)  = l_index
-                    mumps_par%jcn(ilarge)  = j_index
-                    mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
-                    mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                               &
-                      + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j              &
-                      - common_prefactor * response_m_eq(i_resp,j_resp) * psi_0_j
+                if (my_id == 0) then
+                  mumps_par%RHS(l_index) = mumps_par%RHS(l_index) + common_prefactor * B_tan_coil_i
+                  
+                  ! --- Sum over boundary dofs contributing to the response
+                  do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
+                    do j_dof = 1, 2 ! (loop over node dofs)
+                      j_node     = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
+                      j_dir      = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
+                      j_index    = node_list%node(j_node)%index(j_dir)
+                      j_resp     = bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)
+                     
+                      if (.not. starwall_equil_coils) then 
+                        psi_coil_j = sum( I_coils(:) * bext_psi(j_resp,:) )
+                      else
+                        psi_coil_j = 0.d0
+                      endif
+                     
+                      psi_0_j    = node_list%node(j_node)%values(1,j_dir,1)
+                      
+                      if (j_dir == 1) then   ! shift the flux calue by a global constant, if chosen wisely, it helps a lot with convergence
+                        psi_0_j = psi_0_j - psi_offset_freeb 
+                      endif
+                      
+                      ilarge                 = ilarge + 1
+                      mumps_par%irn(ilarge)  = l_index
+                      mumps_par%jcn(ilarge)  = j_index
+                      mumps_par%A(ilarge)    = common_prefactor * response_m_eq(i_resp,j_resp)
+                      mumps_par%RHS(l_index) = mumps_par%RHS(l_index)                               &
+                        + common_prefactor * response_m_eq(i_resp,j_resp) * psi_coil_j              &
+                        - common_prefactor * response_m_eq(i_resp,j_resp) * psi_0_j
+                    end do
                   end do
-                end do
-              ENDIF    
+                end if ! my_id == 0
             
 
               end do
@@ -351,7 +359,7 @@ module vacuum_equilibrium
    do i=1, n_pf_coils
      if( abs(vert_FB_amp(i)) .gt. 1.d-6 ) then
        I_coils(i) =  pf_coils(i)%current * (1 + vert_FB_amp(i) * vertical_FB ) 
-       if(my_id == 0) write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
+       if (my_id == 0) write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo
     

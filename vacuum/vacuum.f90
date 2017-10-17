@@ -76,7 +76,8 @@ module vacuum
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
-  real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux
+  real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux      
+  real*8              :: psi_offset_freeb                !< Allows to shift the value of psi by a global constant for freeb_equil (improves convergence)
   
   !> @name Equilibrium parameters for feedback
   real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB)
@@ -194,6 +195,15 @@ module vacuum
     character(len=60) :: s, filename
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
+    
+    !--- Make sure that the main coil current vector (I_coils) is properly allocated
+    if (sr%ncoil > 0) then
+      n_coils = sr%ncoil
+      if (.not. allocated(I_coils)) then 
+        allocate(I_coils(n_coils))
+        I_coils = 0.d0
+      endif
+    endif
         
     do i = 1, sr%ncoil
             
@@ -251,7 +261,7 @@ module vacuum
         
         ! --- Read the result
         call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
-          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(s)//'.dat')
+          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(adjustl(s))//'.dat')
         
         ! --- Delete temporary files
         call system('rm ./jorek_curr_expr_'//trim(adjustl(s))//'.py ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
@@ -363,6 +373,7 @@ module vacuum
     n_iter_freeb         = 900
     
     PF_pert_start_time   = 1.d99
+    psi_offset_freeb     = 0.d0
     
   end subroutine vacuum_preset
   

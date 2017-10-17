@@ -99,7 +99,7 @@ else
   surface_list%psi_values(3) =  psi_axis + 0.999 * (psi_bnd - psi_axis)
 endif
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 nplot = 3
 
@@ -196,7 +196,7 @@ do i=1,n_flux
   surface_list%psi_values(i) =  psi_axis + s_value**2 * (psi_bnd - psi_axis)
 enddo
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 write(11,*) n_flux-1
 

@@ -81,7 +81,9 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 first_target_point, last_target_point,	            &
                 n_limiter, R_limiter, Z_limiter,                    &
-                diag_coils, rmp_coils, voltage_coils, vert_FB_amp
+                starwall_equil_coils, freeb_equil_iterate_area,     &
+                psi_offset_freeb, diag_coils, rmp_coils,            &
+                voltage_coils, vert_FB_amp
 
 if (my_id .eq. 0) then
 

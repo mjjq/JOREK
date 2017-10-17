@@ -47,6 +47,7 @@ module phys_module
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
   logical :: grid_to_wall         !< extend the grid to a physical wall
+  logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
   logical :: adaptive_time        !< requires no_mpi for Pastix library
   logical :: equil                !< compute equilibrium
   logical :: bench_without_plot   !< .true. for benchmark (mesuring elapsed time without plot phases) 

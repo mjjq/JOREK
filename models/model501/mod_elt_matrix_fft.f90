@@ -178,6 +178,7 @@ amat_57_kn = 0.d0
 
 ! --- Taylor-Galerkin Stabilisation coefficients
 TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    = TGNUM(6); TG_num7    = TGNUM(7);
+TG_num8    = TGNUM(8)
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
@@ -723,7 +724,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
 
-           rhs_ij_1 =   v * (eta_T  * zj0 - eta_T_0 * current_source(ms,mt))/ BigR  * xjac * tstep &
+           rhs_ij_1 =   v * (eta_T  * zj0)/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &

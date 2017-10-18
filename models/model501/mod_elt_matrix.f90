@@ -142,6 +142,7 @@ zk_par_num = 0.d0
 ! --- Taylor-Galerkin Stabilisation coefficients
 TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    = TGNUM(6); TG_num7    = TGNUM(7);
 
+TG_num8    = TGNUM(8)
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
 zeta  = time_evol_zeta
@@ -686,7 +687,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
 
-           rhs_ij_1 =   v * (eta_T  * zj0 - eta_T_0 * current_source(ms,mt))/ BigR  * xjac * tstep &
+           rhs_ij_1 =   v * (eta_T  * zj0)/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
@@ -737,7 +738,7 @@ do ms=1, n_gauss
          rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * tstep
 
 !###################################################################################################
-!#  equation 5 (density equation)                                                                  #
+!#  equation 5 (total density equation)                                                                  #
 !###################################################################################################
 
          rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet + source_mgi)                                 * xjac * tstep &
@@ -846,7 +847,7 @@ do ms=1, n_gauss
                              * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep 
 
 !################################################################################################### 
-!#  equation 8 (neutral density equation)                                                          # 
+!#  equation 8 (impurity density equation)                                                          # 
 !################################################################################################### 
 
 
@@ -1078,7 +1079,7 @@ do ms=1, n_gauss
                  amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
 
 !###################################################################################################
-!#  equation 5    continuity equation (density)                                                    #
+!#  equation 5    continuity equation (total density)                                              #
 !###################################################################################################
 
                  Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
@@ -1410,7 +1411,7 @@ do ms=1, n_gauss
                                    * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep   
 
 !################################################################################################### 
-!#  equation 8   neutral density equation                                                          # 
+!#  equation 8   impurity density equation                                                          # 
 !################################################################################################### 
 
                 amat_81 =  + v * rn0 * (vpar0_s * psi_t - vpar0_t * psi_s)                                * theta * tstep &

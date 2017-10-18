@@ -29,6 +29,7 @@ program RST_convert_hdf52bin
 
   call initialise_parameters(0, '__NO_FILENAME__')
   call vacuum_init(0, freeboundary_equil, freeboundary, resistive_wall)
+  call update_time_evol_params()
 
   ! Parse command line arguments
   call cla_init

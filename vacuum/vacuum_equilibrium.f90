@@ -292,6 +292,7 @@ module vacuum_equilibrium
 
                   call MPI_Reduce(B_tan_coil_i_loc, B_tan_coil_i, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
                 else
+                  call MPI_bcast(i_resp, 1, MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
                   B_tan_coil_i         =   sum ( I_coils(:) * bext_tan(i_resp,:) )  
                 endif
                 

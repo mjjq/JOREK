@@ -365,7 +365,7 @@ contains
 
 		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
 		  side = 3
-                  if (node_list%node(inode)%boundary .eq. 4) side = 4
+                  if (node_list%node(inode)%boundary .eq. 4) side = 2
                   
 		  ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 't')

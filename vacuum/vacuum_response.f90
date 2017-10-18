@@ -3211,12 +3211,12 @@ endif
     logical :: update_required
     
     ! --- Local variables to store the previous values of some parameters.
-    real*8,  save :: old_thick
-    real*8,  save :: old_res
-    real*8,  save :: old_tstep
-    real*8,  save :: old_theta
-    real*8,  save :: old_zeta
-    logical, save :: old_reswall
+    real*8,  save :: old_thick=0.0
+    real*8,  save :: old_res=0.0
+    real*8,  save :: old_tstep=0.0
+    real*8,  save :: old_theta=0.0
+    real*8,  save :: old_zeta=0.0
+    logical, save :: old_reswall=.false.
     
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'

@@ -329,7 +329,6 @@ subroutine find_polar_intersection_slow(s_polar, s_find, st_find, found)
     st = -1.d0 + 2.d0 * real(step-1)/real(n_step-1)
     call CUB1D(s_polar(1), s_polar(2), s_polar(3), s_polar(4), st,  s_tmp,  ds_tmp)
     diff = abs(s_tmp-s_find)
-    write(*,*)'wtf!',st,s_tmp,diff
     if (diff .lt. diff_min) then
       diff_min = diff
       st_min   = st

@@ -409,6 +409,13 @@ required = 0
     end if
     
   end if
+
+  ! This is necessary for the parallel vacuum version during the code restart 
+  if(restart) then
+    call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
+    call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+  end if
+
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *

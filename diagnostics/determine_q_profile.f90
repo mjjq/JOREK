@@ -36,8 +36,9 @@ integer :: i,m, ig, ip
 
 !write(*,*) '   i     psi           q          sum_dl'
 
-  rad(:)   = 0.d0
+  rad(:) = 0.d0
   q(:)   = 0.d0
+  Fgi    = 0.d0
 
 do i=2, surface_list%n_psi
   rad(i)   = 0.d0

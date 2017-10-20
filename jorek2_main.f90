@@ -1491,9 +1491,13 @@ end if ! (my_id == 0)
     call finplt 					 ! close plot file
 
 !  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
-
+#ifdef fullmhd
+    write(*,*) ' '
+    write(*,*) 'Warning: Export to helena is not adapted for full MHD'
+    write(*,*) ' '
+#else
     call export_helena(node_list,element_list,bnd_elm_list)
-
+#endif
     if (allocated(energies))  call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     if (allocated(xtime))     call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
 

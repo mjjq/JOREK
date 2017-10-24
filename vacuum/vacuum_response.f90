@@ -417,6 +417,7 @@ module vacuum_response
     character(len=24) :: name, datatype, requested_type
     logical           :: error
     integer           :: my_subarray
+    integer           :: num_read_elements, num_read_elements_const, n_step_read, step_read, i , i_ind, j_ind
 
     requested_type = 'float'
 
@@ -490,17 +491,53 @@ module vacuum_response
           call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION,my_subarray, &
                          "native",MPI_INFO_NULL, ierr)
 
-          call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
+          ! This we need in order to overcome bag in Intel MPI library with
+          ! restriction of 2G file data read for 1 MPI task
+
+          ! This number correspond to max_4b_int/8 (bytes for double precision)
+          ! = 2147483647.0/8.0=268435455 -> 250000000 
+          num_read_elements_const=250000000
+
+          if(num_read_elements_const>loc_sizes(1)*loc_sizes(2)) then
+                 num_read_elements=loc_sizes(1)*loc_sizes(2)
+                 n_step_read=1
+          else
+                 n_step_read=loc_sizes(1)*loc_sizes(2)/num_read_elements_const + 1 
+                 num_read_elements=num_read_elements_const
+          endif
+
+          call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+
+          ! Next loop is developed in order to overcome the bug in intel MPI
+          ! library of 2G max read size per MPI task. 
+          ! It can be reaplaces in the future by only one line: 
+          ! call MPI_File_read_all(filehandle,float2d%loc_mat(1,1),loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
+
+          i_ind=1
+          j_ind=1
+
+          ! reading data from the file with about 2G step. (Intel MPI bag. )
+          do i=1, n_step_read
+              call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind), num_read_elements, MPI_DOUBLE_PRECISION, status, ierr)
+              
+              ! Calculation of starting indecies of each slice in local array     
+              j_ind=num_read_elements*i/loc_sizes(1) + 1
+              i_ind=num_read_elements*i-(j_ind-1)*loc_sizes(1) + 1
+
+              ! If number of reading step is not eaqual for each MPI task.              
+              if(num_read_elements_const*(i+1)>loc_sizes(1)*loc_sizes(2)) then
+                    num_read_elements=loc_sizes(1)*loc_sizes(2)-i*num_read_elements_const
+                    if(num_read_elements<0) num_read_elements=0
+              endif
+          enddo
+
           disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
 
-         ! Return to ordinary file view
+          ! Return to ordinary file view
           call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE, "native",MPI_INFO_NULL, ierr);
  
         end if
-
-
     if ( vacuum_debug  .AND. my_id ==0) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, trim(datatype), d(1:nd)
-
 
   end subroutine read_array_parallel_rowwise
   !===========================================================================================================
@@ -532,8 +569,8 @@ module vacuum_response
     integer           :: nd,d(2),loc_sizes(2),loc_starts(2),ierr,err,step,ntasks
     character(len=24) :: name, datatype, requested_type
     logical           :: error
-
     integer           :: my_subarray
+    integer           :: num_read_elements, num_read_elements_const, n_step_read, step_read, i , i_ind, j_ind
 
    
     requested_type = 'float'
@@ -609,10 +646,51 @@ module vacuum_response
           call MPI_File_set_view(filehandle, disp,MPI_DOUBLE_PRECISION,my_subarray, &
                          "native",MPI_INFO_NULL, ierr)
 
-          call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
+
+          ! This we need in order to overcome bag in Intel MPI library with
+          ! restriction of 2G file data read for 1 MPI task
+
+          ! This number correspond to max_4b_int/8 (bytes for double precision)
+          ! = 2147483647.0/8.0=268435455 -> 250000000 
+          num_read_elements_const=250000000
+
+          if(num_read_elements_const>loc_sizes(1)*loc_sizes(2)) then
+                 num_read_elements=loc_sizes(1)*loc_sizes(2)
+                 n_step_read=1
+          else
+                 n_step_read=loc_sizes(1)*loc_sizes(2)/num_read_elements_const + 1
+                 num_read_elements=num_read_elements_const
+          endif
+
+          call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+
+          ! Next loop is developed in order to overcome the bug in intel MPI
+          ! library of 2G max read size per MPI task. 
+          ! It can be reaplaces in the future by only one line: 
+          ! call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
+
+          i_ind=1
+          j_ind=1
+
+          ! reading data from the file with about 2G step. (Intel MPI bag. )
+          do i=1, n_step_read
+              call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, MPI_DOUBLE_PRECISION, status, ierr)
+
+              ! Calculation of starting indecies of each slice in local array     
+              j_ind=num_read_elements*i/loc_sizes(1) + 1
+              i_ind=num_read_elements*i-(j_ind-1)*loc_sizes(1) + 1
+
+              ! If number of reading step is not eaqual for each MPI task.              
+              if(num_read_elements_const*(i+1)>loc_sizes(1)*loc_sizes(2)) then
+                    num_read_elements=loc_sizes(1)*loc_sizes(2)-i*num_read_elements_const
+                    if(num_read_elements<0) num_read_elements=0
+              endif
+          enddo
+
+          !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
           disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
 
-         ! Return to ordinary file view
+          !Return to ordinary file view
           call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr);
 
       end if
@@ -621,12 +699,6 @@ module vacuum_response
 
   end subroutine read_array_parallel_columnwise
   !===========================================================================================================
-
- 
-
-
-
-
 
 
 !=============================================================================================== 

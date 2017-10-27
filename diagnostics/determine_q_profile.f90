@@ -40,6 +40,8 @@ integer :: i,m, ig, ip
   q(:)   = 0.d0
   Fgi    = 0.d0
 
+Fgi=0.
+
 do i=2, surface_list%n_psi
   rad(i)   = 0.d0
   q(i)   = 0.d0

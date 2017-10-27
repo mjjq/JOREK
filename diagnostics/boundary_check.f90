@@ -16,7 +16,7 @@ subroutine boundary_check(my_id)
   integer,                      intent(in)    :: my_id
 
   ! --- Local variables
-  integer, parameter     :: N_POINTS = 11 ! Number of evaluation points per element
+  integer, parameter     :: N_POINTS = 3 ! Number of evaluation points per element
   type(type_bnd_element) :: bndelem_m
   real*8, allocatable    :: B_par(:), B_par_v(:)
   real*8, allocatable    :: val_integral(:), err_integral(:)
@@ -45,19 +45,21 @@ IF(my_id == 0) THEN
 ENDIF
 
   i_resp_0 = 0 
-   
+  
+  call tr_allocate(val_integral,1,sr%n_tor,"val_integral",CAT_GRID)
+  call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
+  val_integral(:) = 0.d0
+  err_integral(:) = 0.d0
+
   call tr_allocate(psibnd_vec,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
+  call tr_allocate(psibnd_coils,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
   call tr_allocate(dpsibnd_vec,1,n_dof_starwall,"dpsibnd_vec",CAT_GRID)
   call tr_allocate(B_par,1,sr%n_tor,"B_par",CAT_GRID)
   call tr_allocate(B_par_v,1,sr%n_tor,"B_par_v",CAT_GRID)
-  call tr_allocate(val_integral,1,sr%n_tor,"val_integral",CAT_GRID)
-  call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
-
-  ! --- Determine vectors with the Psi and deltaPsi values at the boundary.
   call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
-
-  val_integral(:) = 0.d0
-  err_integral(:) = 0.d0
+  
+  B_par(:)        = 0.d0
+  B_par_v(:)      = 0.d0
 
   ! --- For every boundary element, do...
   L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
@@ -75,12 +77,13 @@ ENDIF
     ! --- For several points in the boundary element, do...
     L_MP: do m_pt = 1, N_POINTS
 
-     B_par_v(:) = 0.d0
+      B_par(:)   = 0.d0
+      B_par_v(:) = 0.d0
 
      IF(my_id == 0) THEN
       ! --- Determine 1D basis function (and derivatives) at current point
       s_or_t = float(m_pt-1)/float(N_POINTS-1)
-
+      
       call basisfunctions1(s_or_t, H1, H1_s, H1_ss)
 
       ! --- Which s and t values correspond to the current point and is the
@@ -109,6 +112,7 @@ ENDIF
         e_par = (/ R_s, Z_s /) / sqrt( R_s**2 + Z_s**2 ) * (R_s * (R2-R1) + Z_s * (Z2-Z1))/abs(R_s * (R2-R1) + Z_s * (Z2-Z1))
       end if
      ENDIF ! IF(my_id == 0)
+
       ! --- Select one STARWALL harmonic
       L_LS: do l_starwall = 1, sr%n_tor
        IF(my_id == 0 ) THEN
@@ -226,8 +230,6 @@ ENDIF
       ENDIF
       end if
 
-!      write(*,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:), B_par_v(:),R,Z,e_par
-
       ! --- Integration of B_par_v values and differences between B_par and B_par_v.
       val_integral(:) = val_integral(:) + abs( B_par_v(:) )
       err_integral(:) = err_integral(:) + abs( B_par(:) - B_par_v(:) )
@@ -252,12 +254,13 @@ ENDIF
     end if
    ENDIF
   end if
-
+  
   call tr_deallocate(psibnd_vec,"psibnd_vec",CAT_GRID)
   call tr_deallocate(dpsibnd_vec,"dpsibnd_vec",CAT_GRID)
   call tr_deallocate(B_par,"B_par",CAT_GRID)
   call tr_deallocate(B_par_v,"B_par_v",CAT_GRID)
   call tr_deallocate(val_integral,"val_integral",CAT_GRID)
   call tr_deallocate(err_integral,"err_integral",CAT_GRID)
+
 
 end subroutine boundary_check

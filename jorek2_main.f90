@@ -413,7 +413,6 @@ required = 0
     call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
     call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
   end if
-
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -532,7 +531,7 @@ required = 0
         
        if (xpoint)  then
 
-!          if (.not. grid_to_wall) then
+!         if (.not. grid_to_wall) then
           if (xcase .ge. 2) then
             call grid_double_xpoint(node_list, element_list)
           else

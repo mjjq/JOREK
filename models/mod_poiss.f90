@@ -70,11 +70,8 @@ if (my_id == 0) then
     write(*,*) ' freeboundary_equil : ',freeboundary_equil
   endif
   
-   
-  
   nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2 
   call tr_debug_write("Deb_poisson",nz_AA)
-  
   
   n_border = 0
   do i=1,node_list%n_nodes
@@ -93,8 +90,6 @@ if (my_id == 0) then
   do inode = 1, node_list%n_nodes
     n_AA = max(n_AA,node_list%node(inode)%index(4))
   enddo
-  
-  
   
    if (iter .le. 1) then
     write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
@@ -267,8 +262,6 @@ else        ! apply fixed boundary conditions
   end if ! my_id == 0
   
 endif
-
-
 
 if (my_id == 0) then
 #ifdef USE_MUMPS

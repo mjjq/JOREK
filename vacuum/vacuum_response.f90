@@ -60,9 +60,6 @@ module vacuum_response
 
     integer :: i,j, ierr, dim
     logical :: exists
-    real*8  :: time(10)
-    CHARACTER(len=255) :: homedir
-    
 
     ! --- Determine total number of boundary degrees of freedom per harmonic (skipping duplicates).
     do i=1, bnd_node_list%n_bnd_nodes
@@ -893,7 +890,6 @@ module vacuum_response
     real*8             :: test_sum
 
     integer            :: loc_sizes(2),step,ntasks
-    real*8  :: time(10)
  
     disp=0
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
@@ -1066,9 +1062,7 @@ module vacuum_response
 
     sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
 
-    time(5)=MPI_WTIME()
     call matrix_multiplication(my_id,sr%a_ey,mat2=sr%a_ye, res_mat=sr%a_id )
-    time(6)=MPI_WTIME()
    
     sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:) 
 
@@ -1121,7 +1115,7 @@ module vacuum_response
     ! --- Local variables
     integer             :: ntasks, ierr, i, k, j, z, length, step, glob_index_i, glob_index_j 
     real*8, allocatable :: tmp(:,:)
-    real*8  :: time(10), sum_element
+    real*8  :: sum_element
     
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
   
@@ -2378,7 +2372,7 @@ module vacuum_response
                         rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )       &
                                     - sum( response_m_h(i_resp,:) * psibnd_coils(:) )               
 
-                        if ( resistive_wall )  rhs_contrib=rhs_contrib+rhs_contrib_arr(i_resp) 
+                        if ( resistive_wall )  rhs_contrib = rhs_contrib + rhs_contrib_arr(i_resp)
 
                         rhs_contrib = rhs_contrib * common_prefactor
                         !$omp atomic
@@ -2569,7 +2563,7 @@ module vacuum_response
     call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
     
-    if ( vacuum_debug .AND. my_id == 0) write(*,*) 'Wall currents initialized.'
+    if ( vacuum_debug .and. (my_id == 0) ) write(*,*) 'Wall currents initialized.'
     wall_curr_initialized = .true.
     
   end subroutine init_wall_currents
@@ -2626,7 +2620,7 @@ module vacuum_response
    ! end do
   
     do i = 1, n_wall_curr
-      if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
+      if ( (i>=sr%s_ww_inv%ind_start) .and. (i<=sr%s_ww_inv%ind_end) ) then
         Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:)*potentials_real_0(:))
       end if
     end do

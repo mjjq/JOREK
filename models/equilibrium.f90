@@ -61,13 +61,13 @@ endif
 
 freeboundary_equil2 = freeboundary_equil
 freeboundary_equil  = .false.
-vertical_FB = 0.0
 
 !------------------------------------ fixed boundary equilibrium
 n_iter      = 200
 psi_bnd     = 0.d0
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
+vertical_FB = 0.0
 
 i_elm_xpoint=0 
 

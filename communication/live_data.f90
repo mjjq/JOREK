@@ -37,7 +37,7 @@ module live_data
     
     logical :: opened
     integer :: n, i
- 
+    
     if ( .not. produce_live_data ) return
     
     ! --- Check, that the file handle is not already in use.

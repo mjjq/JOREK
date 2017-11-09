@@ -207,9 +207,8 @@ module vacuum_equilibrium
     real*8, allocatable :: potentials_real(:)
     integer :: ierr,step
 
-
-     call equilibrium_VFB(my_id) 
-
+    call equilibrium_VFB(my_id) 
+    
     if (starwall_equil_coils) then      
       i_start_pf = sr%ind_start_pol_coils
       i_end_pf   = i_start_pf + sr%n_pol_coils -1
@@ -222,10 +221,10 @@ module vacuum_equilibrium
 
       do i = 1, n_wall_curr
         if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
-            wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:) *potentials_real(:))
-           endif
+          wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:) *potentials_real(:))
+        endif
       end do    
-          call MPI_ALLReduce(MPI_IN_PLACE, wall_curr, size(wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+        call MPI_ALLReduce(MPI_IN_PLACE, wall_curr, size(wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     endif
     
     ilarge = mumps_par%nz
@@ -275,7 +274,6 @@ module vacuum_equilibrium
                   basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
                   i_resp_st  = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)-bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
-                  
                   common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
                 end if ! my_id == 0
  
@@ -283,11 +281,11 @@ module vacuum_equilibrium
                   call MPI_bcast(wall_curr, size(wall_curr), MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
                   call MPI_bcast(i_resp_st, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
  
-                  B_tan_coil_i=0.0
-                  B_tan_coil_i_loc=0.0
+                  B_tan_coil_i     = 0.d0
+                  B_tan_coil_i_loc = 0.d0
 
                   if (i_resp_st>=sr%a_ey%ind_start .AND. i_resp_st<=sr%a_ey%ind_end) then
-                      B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp_st-my_id*sr%a_ey%step,:) * wall_curr(:) )
+                    B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp_st-my_id*sr%a_ey%step,:) * wall_curr(:) )
                   endif
 
                   call MPI_Reduce(B_tan_coil_i_loc, B_tan_coil_i, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -329,8 +327,7 @@ module vacuum_equilibrium
                     end do
                   end do
                 end if ! my_id == 0
-            
-
+                
               end do
             end do
             
@@ -350,7 +347,7 @@ module vacuum_equilibrium
   subroutine equilibrium_VFB(my_id)
     
    implicit none
-
+  
    integer,                      intent(in) :: my_id
 
    integer  :: i

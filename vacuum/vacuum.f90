@@ -6,7 +6,7 @@ module vacuum
   implicit none
   
   !> @name General parameters
-  logical, parameter  :: vacuum_debug          = .true. !< Enable additional output and tests
+  logical, parameter  :: vacuum_debug          = .false. !< Enable additional output and tests
   logical, parameter  :: vacuum_decouple_modes = .false. !< Option to switch off 3D wall mode coupling
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
@@ -84,7 +84,7 @@ module vacuum
   real*8, allocatable :: coil_voltages(:)                !< Coil voltages
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   real*8, allocatable :: diag_coil_curr(:,:)
-
+  
   type :: t_starwall_response
     integer :: file_version           = 9999
     integer :: n_bnd                  = -1

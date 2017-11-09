@@ -37,7 +37,6 @@ subroutine boundary_check(my_id)
   logical  :: s_const            ! Is the bound. elem. an s=const side of the 2D element?
   integer  :: ierr,step          ! variables for parallel version 
   
-
   if(my_id == 0) then
     write(*,*) '************************************'
     write(*,*) '*    check boundary conditions     *'
@@ -48,18 +47,17 @@ subroutine boundary_check(my_id)
   
   call tr_allocate(val_integral,1,sr%n_tor,"val_integral",CAT_GRID)
   call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
-  val_integral(:) = 0.d0
-  err_integral(:) = 0.d0
-
   call tr_allocate(psibnd_vec,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
   call tr_allocate(psibnd_coils,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
   call tr_allocate(dpsibnd_vec,1,n_dof_starwall,"dpsibnd_vec",CAT_GRID)
   call tr_allocate(B_par,1,sr%n_tor,"B_par",CAT_GRID)
   call tr_allocate(B_par_v,1,sr%n_tor,"B_par_v",CAT_GRID)
-  call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
-  
+  val_integral(:) = 0.d0
+  err_integral(:) = 0.d0
   B_par(:)        = 0.d0
   B_par_v(:)      = 0.d0
+
+  call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
 
   ! --- For every boundary element, do...
   L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
@@ -261,6 +259,5 @@ subroutine boundary_check(my_id)
   call tr_deallocate(B_par_v,"B_par_v",CAT_GRID)
   call tr_deallocate(val_integral,"val_integral",CAT_GRID)
   call tr_deallocate(err_integral,"err_integral",CAT_GRID)
-
 
 end subroutine boundary_check

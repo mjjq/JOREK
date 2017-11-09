@@ -10,6 +10,8 @@
 !!
 !! @note The variable s in a boundary element may correspond to s or t of the respective
 !! 2D element depending on element orientation.
+!!
+!! @note Many routines are implemented both for normal I/O and MPI I/O ("_parallel").
 #include "pastix_fortran.h"
 module vacuum_response
   
@@ -69,12 +71,12 @@ module vacuum_response
         if (bnd_node_list%bnd_node(i)%index_jorek .eq. bnd_node_list%bnd_node(j)%index_jorek) then
           exists  = .true.
           exit
-        endif
-      enddo
+        end if
+      end do
       if (.not. exists) then
         n_dof_bnd = n_dof_bnd + bnd_node_list%bnd_node(i)%n_dof ! Number of boundary degrees of freedom per harmonic
-      endif
-    enddo
+      end if
+    end do
 
     if (my_id == 0) write(*,'(A,i5)') '   total number of degrees of freedom on the boundary : ',n_dof_bnd
     
@@ -94,7 +96,7 @@ module vacuum_response
           write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
           write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
           write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
-      endif
+      end if
       wall_resistivity = wall_resistivity_fact * sr%eta_thin_w * &
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
     end if
@@ -107,11 +109,7 @@ module vacuum_response
   
   
   
-  
-  
-  
-  
-  !> Read an integer parameter from a the STARWALL response file.
+  !> Read an integer parameter from a STARWALL response file.
   integer function read_intparam(filehandle, parameter_name)
     
     implicit none
@@ -141,8 +139,8 @@ module vacuum_response
   end function read_intparam
   
   
-  !========================================================================================================= 
-    !> Read an integer parameter from a the STARWALL response file.
+  
+  !> Read an integer parameter from a STARWALL response file (MPI I/O).
   integer function read_intparam_parallel(filehandle, parameter_name,disp)
 
     use mpi_mod
@@ -154,8 +152,6 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
     !integer,          intent(inout) :: disp
     integer, dimension (MPI_STATUS_SIZE) :: status
-
-
 
     ! --- Local variables
     character(len=12) :: marker
@@ -181,9 +177,7 @@ module vacuum_response
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=err) name,read_intparam_parallel
 
   end function read_intparam_parallel  
-  !========================================================================================================= 
-
-
+  
   
   
   !> Read an array from the STARWALL respone file
@@ -272,13 +266,13 @@ module vacuum_response
     end if
     
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)') name, trim(datatype), d(1:nd)
-
     
   end subroutine read_array
   
- !===========================================================================================================
-  !> Read an array from the STARWALL respone file
-  subroutine read_array_sequential(filehandle, array_name, dim, disp, int1d, int2d, float1d,float2d)
+  
+  
+  !> Read an array from the STARWALL respone file (MPI I/O).
+  subroutine read_array_sequential(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d)
 
     use mpi_mod
     implicit none
@@ -287,16 +281,14 @@ module vacuum_response
     integer, intent(in) :: filehandle
     character(len=*), intent(in) :: array_name
     integer, intent(in) :: dim(2)
-    !integer,                        intent(inout)   :: disp
-    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
+    integer(kind=MPI_OFFSET_KIND),  intent(inout)   :: disp
     integer, allocatable, optional, intent(inout)   :: int1d(:)
     integer, allocatable, optional, intent(inout)   :: int2d(:,:)
     real*8,  allocatable, optional, intent(inout)   :: float1d(:)
     real*8,  allocatable, optional, intent(inout)   :: float2d(:,:)
 
-
-    integer, dimension (MPI_STATUS_SIZE) :: status
     ! --- Local variables
+    integer, dimension (MPI_STATUS_SIZE) :: status
     character(len=12) :: marker
     integer           :: nd, d(2), ierr,err
     character(len=24) :: name, datatype, requested_type
@@ -320,7 +312,6 @@ module vacuum_response
       disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d) 
 
     end if
-
  
     marker   = adjustl(marker)
     name     = adjustl(name)
@@ -338,64 +329,58 @@ module vacuum_response
 
       if ( allocated(int1d) ) deallocate( int1d )
       allocate( int1d(dim(1)) )
+      
       if ( is_formatted(filehandle) ) then
         read(filehandle,*) int1d(:)
       else
-
         call MPI_FILE_READ(filehandle,  int1d,       dim(1), MPI_INTEGER  ,status,ierr)
         disp=disp+sizeof(int1d)
-  
       end if
 
     else if ( present(int2d) ) then
 
       if ( allocated(int2d) ) deallocate( int2d )
       allocate( int2d(dim(1),dim(2)) )
+      
       if ( is_formatted(filehandle) ) then
         read(filehandle,*) int2d(:,:)
       else
          call MPI_FILE_READ(filehandle,  int2d,       dim(1)*dim(2), MPI_INTEGER  ,status,ierr)
          disp=disp+sizeof(int2d)
-
       end if
 
     else if ( present(float1d) ) then
 
       if ( allocated(float1d) ) deallocate( float1d )
       allocate( float1d(dim(1)) )
+      
       if ( is_formatted(filehandle) ) then
         read(filehandle,*) float1d(:)
       else
-
-         call MPI_FILE_READ(filehandle,  float1d,       dim(1), MPI_DOUBLE_PRECISION  ,status,ierr)
-         disp=disp+sizeof(float1d)
-
+        call MPI_FILE_READ(filehandle,  float1d,       dim(1), MPI_DOUBLE_PRECISION  ,status,ierr)
+        disp=disp+sizeof(float1d)
       end if
 
     else if ( present(float2d) ) then
 
       if ( allocated(float2d) ) deallocate( float2d )
       allocate( float2d(dim(1),dim(2)) )
+      
       if ( is_formatted(filehandle) ) then
         read(filehandle,'(4ES24.16)') float2d(:,:)
       else
-
-         call MPI_FILE_READ(filehandle,  float2d,       dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
-         disp=disp+sizeof(float2d)
-
+        call MPI_FILE_READ(filehandle,  float2d,       dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
+        disp=disp+sizeof(float2d)
       end if
 
     end if
 
-
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)')name, trim(datatype), d(1:nd)
 
-
   end subroutine read_array_sequential
-  !===========================================================================================================
-
   
-   !===========================================================================================================
+  
+  
   !> Read an array from the STARWALL respone file
   subroutine read_array_parallel_rowwise(filehandle, array_name, dim, disp, my_id, float2d)
 
@@ -422,132 +407,133 @@ module vacuum_response
     requested_type = 'float'
 
     if ( is_formatted(filehandle) ) then
+      
       read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name,nd,datatype, d
+      
     else
      
-      if(my_id ==0) then
+      if (my_id == 0) then
+        call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),   MPI_CHARACTER,status,ierr)
+        call MPI_FILE_READ(filehandle,  name,     sizeof(name),     MPI_CHARACTER,status,ierr)
+        call MPI_FILE_READ(filehandle,  nd,       1,                MPI_INTEGER  ,status,ierr)
+        call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype), MPI_CHARACTER,status,ierr)
+        call MPI_FILE_READ(filehandle,  d,        2,                MPI_INTEGER  ,status,ierr)
 
-           call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),   MPI_CHARACTER,status,ierr)
-           call MPI_FILE_READ(filehandle,  name,     sizeof(name),     MPI_CHARACTER,status,ierr)
-           call MPI_FILE_READ(filehandle,  nd,       1,                MPI_INTEGER  ,status,ierr)
-           call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype), MPI_CHARACTER,status,ierr)
-           call MPI_FILE_READ(filehandle,  d,        2,                MPI_INTEGER  ,status,ierr)
+        disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d)
 
-           disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d)
+        marker   = adjustl(marker)
+        name     = adjustl(name)
+        datatype = adjustl(datatype)
+        
+        error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name)/=trim(array_name) ) &
+                 .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype)/=trim(requested_type) )
 
-
-           marker   = adjustl(marker)
-           name     = adjustl(name)
-           datatype = adjustl(datatype)
-
-           
-           error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name)/=trim(array_name) ) &
-                    .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype)/=trim(requested_type) )
-
-          if ( error ) then
-              write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
-              stop
-          end if
-
-      endif
+        if ( error ) then
+          write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
+          stop
+        end if
+      end if
+      
     end if
-
 
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
 
+    if ( is_formatted(filehandle) ) then
+      
+      if (allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
+      allocate( float2d%loc_mat(dim(1),dim(2)) )
+      read(filehandle,'(4ES24.16)') float2d%loc_mat(:,:)
+      
+    else
 
-      if ( is_formatted(filehandle) ) then
-        if (allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
-        allocate( float2d%loc_mat(dim(1),dim(2)) )
-        read(filehandle,'(4ES24.16)') float2d%loc_mat(:,:)
-      else
+      call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
 
-          call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
-
-          step=dim(1)/ntasks
-          loc_sizes(1) = step
-          float2d%step=step
-          if(my_id==ntasks-1) loc_sizes(1) = step+dim(1)-ntasks*step
+      step=dim(1)/ntasks
+      loc_sizes(1) = step
+      float2d%step=step
+      if(my_id==ntasks-1) loc_sizes(1) = step+dim(1)-ntasks*step
   
-          loc_sizes(2) = dim(2)
+      loc_sizes(2) = dim(2)
 
-           if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
-           allocate( float2d%loc_mat(loc_sizes(1),loc_sizes(2)) )
+      if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
+      allocate( float2d%loc_mat(loc_sizes(1),loc_sizes(2)) )
 
 
-          ! 2 - how many dimentions
-          ! dim - int array with each global dimension sizes
-          loc_starts(1)=my_id*step
-          loc_starts(2)=0         
+      ! 2 - how many dimentions
+      ! dim - int array with each global dimension sizes
+      loc_starts(1)=my_id*step
+      loc_starts(2)=0         
 
-          float2d%row_wise  = .true.
-          float2d%ind_start = my_id*step+1
-          float2d%ind_end   = my_id*step+loc_sizes(1)
+      float2d%row_wise  = .true.
+      float2d%ind_start = my_id*step+1
+      float2d%ind_end   = my_id*step+loc_sizes(1)
 
-          call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION, my_subarray,ierr)
-          call MPI_Type_commit(my_subarray,ierr)
-          
+      call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN, &
+        MPI_DOUBLE_PRECISION, my_subarray,ierr)
+      call MPI_Type_commit(my_subarray,ierr)
+      
+      call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION,my_subarray, &
+        "native",MPI_INFO_NULL, ierr)
 
-          call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION,my_subarray, &
-                         "native",MPI_INFO_NULL, ierr)
+      ! This we need in order to overcome bag in Intel MPI library with
+      ! restriction of 2G file data read for 1 MPI task
 
-          ! This we need in order to overcome bag in Intel MPI library with
-          ! restriction of 2G file data read for 1 MPI task
+      ! This number correspond to max_4b_int/8 (bytes for double precision)
+      ! = 2147483647.0/8.0=268435455 -> 250000000 
+      num_read_elements_const=250000000
 
-          ! This number correspond to max_4b_int/8 (bytes for double precision)
-          ! = 2147483647.0/8.0=268435455 -> 250000000 
-          num_read_elements_const=250000000
+      if(num_read_elements_const>loc_sizes(1)*loc_sizes(2)) then
+        num_read_elements=loc_sizes(1)*loc_sizes(2)
+        n_step_read=1
+      else
+        n_step_read=loc_sizes(1)*loc_sizes(2)/num_read_elements_const + 1 
+        num_read_elements=num_read_elements_const
+      end if
 
-          if(num_read_elements_const>loc_sizes(1)*loc_sizes(2)) then
-                 num_read_elements=loc_sizes(1)*loc_sizes(2)
-                 n_step_read=1
-          else
-                 n_step_read=loc_sizes(1)*loc_sizes(2)/num_read_elements_const + 1 
-                 num_read_elements=num_read_elements_const
-          endif
+      call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
 
-          call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+      ! Next loop is developed in order to overcome the bug in intel MPI
+      ! library of 2G max read size per MPI task. 
+      ! It can be reaplaces in the future by only one line: 
+      ! call MPI_File_read_all(filehandle,float2d%loc_mat(1,1),loc_sizes(1)*loc_sizes(2),&
+      !   MPI_DOUBLE_PRECISION,status, ierr)
 
-          ! Next loop is developed in order to overcome the bug in intel MPI
-          ! library of 2G max read size per MPI task. 
-          ! It can be reaplaces in the future by only one line: 
-          ! call MPI_File_read_all(filehandle,float2d%loc_mat(1,1),loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
+      i_ind=1
+      j_ind=1
 
-          i_ind=1
-          j_ind=1
+      ! reading data from the file with about 2G step. (Intel MPI bag. )
+      do i=1, n_step_read
+        call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind), num_read_elements, &
+          MPI_DOUBLE_PRECISION, status, ierr)
+        
+        ! Calculation of starting indecies of each slice in local array     
+        j_ind=num_read_elements*i/loc_sizes(1) + 1
+        i_ind=num_read_elements*i-(j_ind-1)*loc_sizes(1) + 1
 
-          ! reading data from the file with about 2G step. (Intel MPI bag. )
-          do i=1, n_step_read
-              call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind), num_read_elements, MPI_DOUBLE_PRECISION, status, ierr)
-              
-              ! Calculation of starting indecies of each slice in local array     
-              j_ind=num_read_elements*i/loc_sizes(1) + 1
-              i_ind=num_read_elements*i-(j_ind-1)*loc_sizes(1) + 1
-
-              ! If number of reading step is not eaqual for each MPI task.              
-              if(num_read_elements_const*(i+1)>loc_sizes(1)*loc_sizes(2)) then
-                    num_read_elements=loc_sizes(1)*loc_sizes(2)-i*num_read_elements_const
-                    if(num_read_elements<0) num_read_elements=0
-              endif
-          enddo
-
-          disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
-
-          ! Return to ordinary file view
-          call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE, "native",MPI_INFO_NULL, ierr);
- 
+        ! If number of reading step is not eaqual for each MPI task.              
+        if(num_read_elements_const*(i+1)>loc_sizes(1)*loc_sizes(2)) then
+          num_read_elements=loc_sizes(1)*loc_sizes(2)-i*num_read_elements_const
+          if(num_read_elements<0) num_read_elements=0
         end if
-    if ( vacuum_debug  .AND. my_id ==0) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, trim(datatype), d(1:nd)
+      end do
+
+      disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
+
+      ! Return to ordinary file view
+      call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE, "native",MPI_INFO_NULL, ierr);
+ 
+    end if
+    
+    if ( vacuum_debug  .and. (my_id==0) ) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, &
+      trim(datatype), d(1:nd)
 
   end subroutine read_array_parallel_rowwise
-  !===========================================================================================================
-
-
-
-
-
-
-  !===========================================================================================================
+  
+  
+  
+  
+  
+  
   !> Read an array from the STARWALL respone file
   subroutine read_array_parallel_columnwise(filehandle, array_name, dim, disp, my_id,float2d)
 
@@ -561,147 +547,142 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND),  intent(inout)   :: disp
     integer,                        intent(in)      :: my_id
     type(t_distrib_mat),            intent(inout)   :: float2d
-  
 
-    integer, dimension (MPI_STATUS_SIZE) :: status
     ! --- Local variables
+    integer, dimension (MPI_STATUS_SIZE) :: status
     character(len=12) :: marker
     integer           :: nd,d(2),loc_sizes(2),loc_starts(2),ierr,err,step,ntasks
     character(len=24) :: name, datatype, requested_type
     logical           :: error
     integer           :: my_subarray
     integer           :: num_read_elements, num_read_elements_const, n_step_read, step_read, i , i_ind, j_ind
-
    
     requested_type = 'float'
 
-
     if ( is_formatted(filehandle) ) then
+      
       read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker,name,nd,datatype, d
+      
     else
 
+      if (my_id==0) then
+        call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),MPI_CHARACTER,status,ierr)
+        call MPI_FILE_READ(filehandle,  name,     sizeof(name),MPI_CHARACTER,status,ierr)
+        call MPI_FILE_READ(filehandle,  nd,       1,MPI_INTEGER  ,status,ierr)
+        call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),MPI_CHARACTER,status,ierr)
+        call MPI_FILE_READ(filehandle,  d,        2,MPI_INTEGER  ,status,ierr)
 
-      if(my_id ==0) then
+        disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d)
 
-           call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),MPI_CHARACTER,status,ierr)
-           call MPI_FILE_READ(filehandle,  name,     sizeof(name),MPI_CHARACTER,status,ierr)
-           call MPI_FILE_READ(filehandle,  nd,       1,MPI_INTEGER  ,status,ierr)
-           call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),MPI_CHARACTER,status,ierr)
-           call MPI_FILE_READ(filehandle,  d,        2,MPI_INTEGER  ,status,ierr)
+        marker   = adjustl(marker)
+        name     = adjustl(name)
+        datatype = adjustl(datatype)
 
-           disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d)
+        error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name)/=trim(array_name) ) &
+                 .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype)/=trim(requested_type) )
 
-           marker   = adjustl(marker)
-           name     = adjustl(name)
-           datatype = adjustl(datatype)
-
-           error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name)/=trim(array_name) ) &
-                    .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype)/=trim(requested_type) )
-
-          if ( error ) then
-              write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
-              stop
-          end if
-
-       endif 
-    end if !if ( is_formatted(filehandle) )
+        if ( error ) then
+          write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
+          stop
+        end if
+      end if 
+      
+    end if ! is_formatted(filehandle)
 
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
 
+    if ( is_formatted(filehandle) ) then
+      
+      if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
+      allocate( float2d%loc_mat (dim(1),dim(2)) )
+      read(filehandle,'(4ES24.16)') float2d%loc_mat (:,:)
+      
+    else
 
-      if ( is_formatted(filehandle) ) then
-        if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
-        allocate( float2d%loc_mat (dim(1),dim(2)) )
+      call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
 
-        read(filehandle,'(4ES24.16)') float2d%loc_mat (:,:)
+      step=dim(2)/ntasks
+      loc_sizes(2) = step
+      float2d%step=step
+
+      if(my_id==ntasks-1) loc_sizes(2) = step+dim(2)-ntasks*step
+
+      loc_sizes(1) = dim(1)
+
+      if ( allocated(float2d%loc_mat ) ) deallocate( float2d%loc_mat  )
+      allocate( float2d%loc_mat (loc_sizes(1),loc_sizes(2)) )
+
+      ! 2 - how many dimentions
+      ! dim - int array with each global dimension sizes
+      loc_starts(2)=my_id*step
+      loc_starts(1)=0
+      
+      float2d%row_wise  = .false.
+      float2d%ind_start = my_id*step+1
+      float2d%ind_end   = my_id*step+loc_sizes(2)
+
+      call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
+      call MPI_Type_commit(my_subarray,ierr)
+
+      call MPI_File_set_view(filehandle, disp,MPI_DOUBLE_PRECISION,my_subarray, &
+        "native",MPI_INFO_NULL, ierr)
+
+      ! The following avoids a bug in Intel MPI library with restriction of 2G file data read for per MPI task
+      ! This number correspond to max_4b_int/8 (bytes for double precision)
+      ! = 2147483647.0/8.0=268435455 -> 250000000 
+      num_read_elements_const=250000000
+
+      if (num_read_elements_const>loc_sizes(1)*loc_sizes(2)) then
+        num_read_elements=loc_sizes(1)*loc_sizes(2)
+        n_step_read=1
       else
-
-          call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
-
-          step=dim(2)/ntasks
-          loc_sizes(2) = step
-          float2d%step=step
-
-          if(my_id==ntasks-1) loc_sizes(2) = step+dim(2)-ntasks*step
-
-          loc_sizes(1) = dim(1)
-
-           if ( allocated(float2d%loc_mat ) ) deallocate( float2d%loc_mat  )
-           allocate( float2d%loc_mat (loc_sizes(1),loc_sizes(2)) )
-
-
-          ! 2 - how many dimentions
-          ! dim - int array with each global dimension sizes
-          loc_starts(2)=my_id*step
-          loc_starts(1)=0
-          
-          float2d%row_wise  = .false.
-          float2d%ind_start = my_id*step+1
-          float2d%ind_end   = my_id*step+loc_sizes(2)
-
-          call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
-          call MPI_Type_commit(my_subarray,ierr)
-
-
-          call MPI_File_set_view(filehandle, disp,MPI_DOUBLE_PRECISION,my_subarray, &
-                         "native",MPI_INFO_NULL, ierr)
-
-
-          ! This we need in order to overcome bag in Intel MPI library with
-          ! restriction of 2G file data read for 1 MPI task
-
-          ! This number correspond to max_4b_int/8 (bytes for double precision)
-          ! = 2147483647.0/8.0=268435455 -> 250000000 
-          num_read_elements_const=250000000
-
-          if(num_read_elements_const>loc_sizes(1)*loc_sizes(2)) then
-                 num_read_elements=loc_sizes(1)*loc_sizes(2)
-                 n_step_read=1
-          else
-                 n_step_read=loc_sizes(1)*loc_sizes(2)/num_read_elements_const + 1
-                 num_read_elements=num_read_elements_const
-          endif
-
-          call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
-
-          ! Next loop is developed in order to overcome the bug in intel MPI
-          ! library of 2G max read size per MPI task. 
-          ! It can be reaplaces in the future by only one line: 
-          ! call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
-
-          i_ind=1
-          j_ind=1
-
-          ! reading data from the file with about 2G step. (Intel MPI bag. )
-          do i=1, n_step_read
-              call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, MPI_DOUBLE_PRECISION, status, ierr)
-
-              ! Calculation of starting indecies of each slice in local array     
-              j_ind=num_read_elements*i/loc_sizes(1) + 1
-              i_ind=num_read_elements*i-(j_ind-1)*loc_sizes(1) + 1
-
-              ! If number of reading step is not eaqual for each MPI task.              
-              if(num_read_elements_const*(i+1)>loc_sizes(1)*loc_sizes(2)) then
-                    num_read_elements=loc_sizes(1)*loc_sizes(2)-i*num_read_elements_const
-                    if(num_read_elements<0) num_read_elements=0
-              endif
-          enddo
-
-          !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),MPI_DOUBLE_PRECISION,status, ierr)
-          disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
-
-          !Return to ordinary file view
-          call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr);
-
+        n_step_read=loc_sizes(1)*loc_sizes(2)/num_read_elements_const + 1
+        num_read_elements=num_read_elements_const
       end if
 
-    if ( vacuum_debug  .AND. my_id ==0) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, trim(datatype), d(1:nd)
+      call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+
+      ! Next loop is developed in order to overcome the bug in intel MPI
+      ! library of 2G max read size per MPI task. 
+      ! It can be reaplaces in the future by only one line: 
+      ! call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),&
+      !   MPI_DOUBLE_PRECISION,status, ierr)
+
+      i_ind=1
+      j_ind=1
+
+      ! reading data from the file with about 2G step. (Intel MPI bag. )
+      do i=1, n_step_read
+        call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, &
+          MPI_DOUBLE_PRECISION, status, ierr)
+
+        ! Calculation of starting indecies of each slice in local array     
+        j_ind=num_read_elements*i/loc_sizes(1) + 1
+        i_ind=num_read_elements*i-(j_ind-1)*loc_sizes(1) + 1
+
+        ! If number of reading step is not eaqual for each MPI task.              
+        if (num_read_elements_const*(i+1)>loc_sizes(1)*loc_sizes(2)) then
+          num_read_elements=loc_sizes(1)*loc_sizes(2)-i*num_read_elements_const
+          if(num_read_elements<0) num_read_elements=0
+        end if
+      end do
+
+      !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),&
+      !  MPI_DOUBLE_PRECISION,status, ierr)
+      disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
+
+      !Return to ordinary file view
+      call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr);
+
+    end if
+
+    if ( vacuum_debug  .and. (my_id==0) ) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name,&
+      trim(datatype), d(1:nd)
 
   end subroutine read_array_parallel_columnwise
-  !===========================================================================================================
-
-
-!=============================================================================================== 
+  
+  
+  
   !> Read the STARWALL response matrices from a single file.
   !!
   !! file_version 1: Original
@@ -877,9 +858,8 @@ module vacuum_response
 
   end subroutine read_starwall_response
   
-  !==========================================================================================
-
-
+  
+  
   !> Read the STARWALL response matrices from a single file.
   !!
   !! file_version 1: Original
@@ -923,21 +903,18 @@ module vacuum_response
     if (my_id ==0 )  write(*,*) 'Trying to open response as unformatted file...'
 
     call MPI_FILE_OPEN(MPI_COMM_WORLD, 'starwall-response.dat', &
-                       MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, err)
+      MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, err)
 
     if ( err == 0 .AND. my_id ==0) then
-       call MPI_FILE_READ(filehandle, i_tmp, 1, MPI_INTEGER,status,err)
-       call MPI_FILE_READ(filehandle, r_tmp, 1, MPI_DOUBLE_PRECISION,status,err)
-       disp=disp+sizeof(42)+sizeof(42.d0)
+      call MPI_FILE_READ(filehandle, i_tmp, 1, MPI_INTEGER,status,err)
+      call MPI_FILE_READ(filehandle, r_tmp, 1, MPI_DOUBLE_PRECISION,status,err)
+      disp=disp+sizeof(42)+sizeof(42.d0)
 
-       if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) err=-42         
-      
+      if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) err=-42         
     end if
     call MPI_BCAST(err, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ier )
 
     if (err/=0) call MPI_FILE_CLOSE(filehandle, err)
-
-
 
     !   --- Try to open as formatted file
     if ( err /= 0 .AND. my_id ==0 ) then
@@ -956,91 +933,87 @@ module vacuum_response
 
     ! --- Read data from STARWALL response file
 
-    if(my_id == 0) then
+    if (my_id == 0) then
 
-       if ( is_formatted(filehandle) ) then
-           read(filehandle,'(A)') comment
-       else
-           call MPI_FILE_READ(filehandle, comment,sizeof(comment),MPI_CHARACTER,status,err)
-           disp=disp+sizeof(comment)
-       end if
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,'(A)') comment
+      else
+        call MPI_FILE_READ(filehandle, comment,sizeof(comment),MPI_CHARACTER,status,err)
+        disp=disp+sizeof(comment)
+      end if
 
-       sr%file_version = read_intparam_parallel(filehandle, 'file_version',disp)
-       if ( sr%file_version > 3 ) then
-           write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
-           stop
-       end if
+      sr%file_version = read_intparam_parallel(filehandle, 'file_version',disp)
+      if ( sr%file_version > 3 ) then
+        write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
+        stop
+      end if
 
-
-       sr%n_bnd  = read_intparam_parallel(filehandle, 'n_bnd' ,disp)
-       if ( n_bnd /= sr%n_bnd ) then
-          write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
-          stop
-       end if
-       
-       sr%nd_bez = read_intparam_parallel(filehandle, 'nd_bez',disp)
-       sr%ncoil  = read_intparam_parallel(filehandle, 'ncoil' ,disp)
-       sr%npot_w = read_intparam_parallel(filehandle, 'npot_w',disp)
-       sr%n_w    = read_intparam_parallel(filehandle, 'n_w'   ,disp)
-       sr%ntri_w = read_intparam_parallel(filehandle, 'ntri_w',disp)
-       sr%n_tor  = read_intparam_parallel(filehandle, 'n_tor' ,disp)
-       sr%n_tor0 = sr%n_tor
-
-       call read_array_sequential(filehandle, 'i_tor',         (/sr%n_tor,0/), disp, int1d=sr%i_tor)
-
-       if ( sr%file_version >= 3 ) then
-           
-            sr%ntri_c                  = read_intparam_parallel(filehandle, 'ntri_c',         disp)
-            sr%n_pol_coils             = read_intparam_parallel(filehandle, 'n_pol_coils',    disp)
-            sr%n_rmp_coils             = read_intparam_parallel(filehandle, 'n_rmp_coils',    disp)
-            sr%n_voltage_coils         = read_intparam_parallel(filehandle, 'n_voltage_coils',disp)
-            sr%n_diag_coils            = read_intparam_parallel(filehandle, 'n_diag_coils',   disp)
-         
-            if (sr%n_voltage_coils > 0 ) then
-                write(*,*) 'ERROR: voltage_coils not yet implemented.'
-                stop
-            end if
+      sr%n_bnd  = read_intparam_parallel(filehandle, 'n_bnd' ,disp)
+      if ( n_bnd /= sr%n_bnd ) then
+        write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
+        stop
+      end if
       
-            if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils) then
-                write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
-                stop
-            end if
- 
+      sr%nd_bez = read_intparam_parallel(filehandle, 'nd_bez',disp)
+      sr%ncoil  = read_intparam_parallel(filehandle, 'ncoil' ,disp)
+      sr%npot_w = read_intparam_parallel(filehandle, 'npot_w',disp)
+      sr%n_w    = read_intparam_parallel(filehandle, 'n_w'   ,disp)
+      sr%ntri_w = read_intparam_parallel(filehandle, 'ntri_w',disp)
+      sr%n_tor  = read_intparam_parallel(filehandle, 'n_tor' ,disp)
+      sr%n_tor0 = sr%n_tor
 
-            sr%ind_start_pol_coils     = read_intparam_parallel(filehandle, 'ind_start_pol_coils',    disp)
-            sr%ind_start_rmp_coils     = read_intparam_parallel(filehandle, 'ind_start_rmp_coils',    disp)
-            sr%ind_start_voltage_coils = read_intparam_parallel(filehandle, 'ind_start_voltage_coils',disp)
-            sr%ind_start_diag_coils    = read_intparam_parallel(filehandle, 'ind_start_diag_coils',   disp)
+      call read_array_sequential(filehandle, 'i_tor',         (/sr%n_tor,0/), disp, int1d=sr%i_tor)
 
-            if ( sr%ncoil > 0 ) then
-                 
-                 call read_array_sequential(filehandle, 'jtri_c',        (/sr%ncoil,0/), disp,  int1d=sr%jtri_c)
-                 call read_array_sequential(filehandle, 'x_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%x_coil)
-                 call read_array_sequential(filehandle, 'y_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%y_coil)
-                 call read_array_sequential(filehandle, 'z_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%z_coil)
-                 call read_array_sequential(filehandle, 'phi_coil',      (/sr%ntri_c,3/),disp,  float2d=sr%phi_coil)
-                 call read_array_sequential(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/),disp,  float1d=sr%eta_thin_coil)
-                 call read_array_sequential(filehandle, 'coil_resist',   (/sr%ncoil,0/), disp,  float1d=sr%coil_resist)
-
-            end if
+      if ( sr%file_version >= 3 ) then
+        
+        sr%ntri_c                  = read_intparam_parallel(filehandle, 'ntri_c',         disp)
+        sr%n_pol_coils             = read_intparam_parallel(filehandle, 'n_pol_coils',    disp)
+        sr%n_rmp_coils             = read_intparam_parallel(filehandle, 'n_rmp_coils',    disp)
+        sr%n_voltage_coils         = read_intparam_parallel(filehandle, 'n_voltage_coils',disp)
+        sr%n_diag_coils            = read_intparam_parallel(filehandle, 'n_diag_coils',   disp)
+        
+        if (sr%n_voltage_coils > 0 ) then
+          write(*,*) 'ERROR: voltage_coils not yet implemented.'
+          stop
         end if
+      
+        if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils) then
+          write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
+          stop
+        end if
+ 
+        sr%ind_start_pol_coils     = read_intparam_parallel(filehandle, 'ind_start_pol_coils',    disp)
+        sr%ind_start_rmp_coils     = read_intparam_parallel(filehandle, 'ind_start_rmp_coils',    disp)
+        sr%ind_start_voltage_coils = read_intparam_parallel(filehandle, 'ind_start_voltage_coils',disp)
+        sr%ind_start_diag_coils    = read_intparam_parallel(filehandle, 'ind_start_diag_coils',   disp)
 
-       ! --- eta_thin_w is only part of the STARWALL response file since
-       ! file_version 2
-       if ( sr%file_version >= 2 ) then
-           allocate(tmp(1))
-           call read_array_sequential(filehandle, 'eta_thin_w', (/1,0/), disp,            float1d=tmp)
-           
-           sr%eta_thin_w = tmp(1)
-           deallocate(tmp)
-       else
-          sr%eta_thin_w = 0.
+        if ( sr%ncoil > 0 ) then
+          call read_array_sequential(filehandle, 'jtri_c',        (/sr%ncoil,0/), disp,  int1d=sr%jtri_c)
+          call read_array_sequential(filehandle, 'x_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%x_coil)
+          call read_array_sequential(filehandle, 'y_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%y_coil)
+          call read_array_sequential(filehandle, 'z_coil',        (/sr%ntri_c,3/),disp,  float2d=sr%z_coil)
+          call read_array_sequential(filehandle, 'phi_coil',      (/sr%ntri_c,3/),disp,  float2d=sr%phi_coil)
+          call read_array_sequential(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/),disp,  float1d=sr%eta_thin_coil)
+          call read_array_sequential(filehandle, 'coil_resist',   (/sr%ncoil,0/), disp,  float1d=sr%coil_resist)
+        end if
+        
        end if
 
-       call read_array_sequential(filehandle, 'yy',       (/sr%n_w,0/), disp, float1d=sr%d_yy)
-   
-    endif
+      ! --- eta_thin_w is only part of the STARWALL response file since
+      ! file_version 2
+      if ( sr%file_version >= 2 ) then
+        allocate(tmp(1))
+        call read_array_sequential(filehandle, 'eta_thin_w', (/1,0/), disp,            float1d=tmp)
+        
+        sr%eta_thin_w = tmp(1)
+        deallocate(tmp)
+      else
+        sr%eta_thin_w = 0.
+      end if
 
+      call read_array_sequential(filehandle, 'yy',       (/sr%n_w,0/), disp, float1d=sr%d_yy)
+   
+    end if
 
     call MPI_BCAST(sr%n_w, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
     call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err )
@@ -1054,8 +1027,7 @@ module vacuum_response
     if(my_id == 0) then
       call read_array_sequential(filehandle, 'xyzpot_w',(/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
       call read_array_sequential(filehandle, 'jpot_w',(/sr%ntri_w,3/),disp, int2d=sr%jpot_w)
-    endif
-
+    end if
 
     call MPI_BARRIER(MPI_COMM_WORLD, err)
     call MPI_FILE_CLOSE(filehandle, err)
@@ -1068,17 +1040,13 @@ module vacuum_response
     if ( vacuum_debug .AND. my_id==0) write(*,*) 'Applied import normalization.'
 
     ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates replace  y <-> z)
-
-    if(my_id==0) then
-
+    if (my_id==0) then
       allocate( tmp(sr%npot_w) )
       tmp(:)           = sr%xyzpot_w(:,2)
       sr%xyzpot_w(:,2) = sr%xyzpot_w(:,3)
       sr%xyzpot_w(:,3) = tmp(:)
       deallocate( tmp )
-
-    endif
-
+    end if
 
     ! --- Compute ideal-wall and no-wall response matrices.
 
@@ -1090,238 +1058,206 @@ module vacuum_response
     sr%a_id%ind_start  =  sr%a_ee%ind_start
     sr%a_id%ind_end    =  sr%a_ee%ind_end
 
-
     if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
     allocate(sr%a_nw%loc_mat(size(sr%a_ee%loc_mat,1),size(sr%a_ee%loc_mat,2)))
     sr%a_nw%row_wise   =  .true.
     sr%a_nw%ind_start  =  sr%a_ee%ind_start
     sr%a_nw%ind_end    =  sr%a_ee%ind_end
 
-
     sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
-
 
     time(5)=MPI_WTIME()
     call matrix_multiplication(my_id,sr%a_ey,mat2=sr%a_ye, res_mat=sr%a_id )
     time(6)=MPI_WTIME()
- 
    
-    !if(my_id == 0) write(745,*) time(6)-time(5), (time(6)-time(5))/60.0
-
     sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:) 
-
 
     if(my_id==0) then
 
       ! --- Transform STARWALL harmonics to account for periodicity
       j = 0
       do i = 1, sr%n_tor
-         i_starw = sr%i_tor(i)
-         n       = i_starw / 2
-         is_sin  = i_starw - 2 * n
-         i_starw = 2 * n/n_period + is_sin
-         if ( (mod(n, n_period) /= 0) .or. (i_starw < 1) .or. (i_starw > n_tor) ) then
-             write(*,*) 'WARNING: STARWALL harmonic has no JOREK equivalent!'
-             write(*,*) 'i_starw    =', sr%i_tor(i)
-             write(*,*) 'n_period   =', n_period
-             write(*,*) 'n_tor      =', n_tor
-         else
-             j = j + 1
-             sr%i_tor(j) = i_starw
-         end if
-       end do
+        i_starw = sr%i_tor(i)
+        n       = i_starw / 2
+        is_sin  = i_starw - 2 * n
+        i_starw = 2 * n/n_period + is_sin
+        if ( (mod(n, n_period) /= 0) .or. (i_starw < 1) .or. (i_starw > n_tor) ) then
+          write(*,*) 'WARNING: STARWALL harmonic has no JOREK equivalent!'
+          write(*,*) 'i_starw    =', sr%i_tor(i)
+          write(*,*) 'n_period   =', n_period
+          write(*,*) 'n_tor      =', n_tor
+        else
+          j = j + 1
+          sr%i_tor(j) = i_starw
+        end if
+      end do
      
-       sr%n_tor = j
-       if ( vacuum_debug) write(*,*) 'End of routine read_starwall_response.'
+      sr%n_tor = j
+      if ( vacuum_debug) write(*,*) 'End of routine read_starwall_response.'
 
-
-    endif
+    end if
 
     call MPI_BARRIER(MPI_COMM_WORLD, err)
-    
 
   end subroutine read_starwall_response_parallel
-
   
-
-  subroutine matrix_multiplication(my_id, mat1, mat2,mat2_not_distr,res_mat,res_mat_not_distr)
   
-  use mpi_mod
-
-  implicit none
-
-  ! --- Routine parameters
-  integer,                        intent(in)      :: my_id
-  type(t_distrib_mat),            intent(in)      :: mat1
-  type(t_distrib_mat), optional,  intent(in)      :: mat2
-  real*8, allocatable, optional,  intent(inout)   :: mat2_not_distr(:,:)
-  type(t_distrib_mat), optional,  intent(inout)   :: res_mat
-  real*8, allocatable, optional,  intent(inout)   :: res_mat_not_distr(:,:)
-
-
-
-  !local variables
-  integer             :: ntasks, ierr, i, k, j, z, length, step, glob_index_i, glob_index_j 
-  real*8, allocatable :: tmp(:,:)
-  real*8  :: time(10), sum_element
-
-
-call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
-
-
-! multiplication mat1(distributed)*mat2(distributed) =res_mat(distributed)
-if(present(res_mat) .AND. present(mat2) ) then
-
-  res_mat%loc_mat=0.0
-
-  if(my_id == 0) step = size(mat2%loc_mat,2) 
-  call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
-
-
-  ! check distribution. Result matrix rowwise, first matrix row wise, second
-  ! matrix column wise
-  if(res_mat%row_wise == .true. .AND. mat1%row_wise == .true. .AND. mat2%row_wise == .false.) then
-
-     ! loop over all tasks
-     do i = 1, ntasks
-
-        !time(1)=MPI_WTIME()
-
-        ! Broadcasting size of the distributed column
-        length = size(mat2%loc_mat,2)      
-        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr )
-
-
-        ! temporal matrix for receiving part of the distributed matrix and
-        ! multiply it
-        if ( allocated(tmp) ) deallocate(tmp)
-        allocate( tmp(size(mat2%loc_mat,1),length) )
-
-
-        ! part of second matrix broadcasted to all tasks
-        if(my_id == i-1)  tmp    = mat2%loc_mat  
-        if(my_id == i-1 ) length = size(tmp)
-        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
-        call MPI_BCAST( tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD, ierr)
-   
-        !time(4)=MPI_WTIME()
-
-        ! Matrix -matrix multiplications
-
-        glob_index_j=(i-1)*step
-        do z = 1, size(mat1%loc_mat,1)
-           do k = 1, size(tmp,2)
-
-
-             sum_element=0.0 
-             ! OpenMP paralelization can be done in this place            
-             do j = 1, size(mat1%loc_mat,2)
-                   sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)         
-             enddo
-             
-             res_mat%loc_mat(z,k+glob_index_j) = sum_element  
-     
-          enddo
-        enddo
-        !time(5)=MPI_WTIME()
-
-
-        !time(2)=MPI_WTIME()
-        !if(my_id ==0) write(456,*) i, time(2)-time(1), time(5)-time(4)
-      
-
-     enddo     
-
-      
-  endif 
-
-! multiplication mat1(distributed)*mat2(distributed) =res_mat(not_distributed)
-elseif(present(mat2) .AND. present(res_mat_not_distr)) then
-  ! check distribution. Result matrix not distributed, first matrix row wise, second
-  ! matrix column wise
-  if(mat1%row_wise == .true. .AND. mat2%row_wise == .false.) then
-
-      res_mat_not_distr=0.0   
-      if(my_id == 0) step = size(mat2%loc_mat,2)
+  
+  !> Routine for multiplying two (distributed) matrices.
+  subroutine matrix_multiplication(my_id, mat1, mat2, mat2_not_distr, res_mat, res_mat_not_distr)
+    
+    use mpi_mod
+  
+    implicit none
+  
+    ! --- Routine parameters
+    integer,                        intent(in)      :: my_id
+    type(t_distrib_mat),            intent(in)      :: mat1
+    type(t_distrib_mat), optional,  intent(in)      :: mat2
+    real*8, allocatable, optional,  intent(inout)   :: mat2_not_distr(:,:)
+    type(t_distrib_mat), optional,  intent(inout)   :: res_mat
+    real*8, allocatable, optional,  intent(inout)   :: res_mat_not_distr(:,:)
+  
+    ! --- Local variables
+    integer             :: ntasks, ierr, i, k, j, z, length, step, glob_index_i, glob_index_j 
+    real*8, allocatable :: tmp(:,:)
+    real*8  :: time(10), sum_element
+    
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+  
+    ! --- Multiplication mat1(distributed)*mat2(distributed) =res_mat(distributed)
+    if ( present(res_mat) .and. present(mat2) ) then
+    
+      res_mat%loc_mat=0.0
+    
+      if(my_id == 0) step = size(mat2%loc_mat,2) 
       call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
-
-     ! loop over all tasks
-     do i = 1, ntasks
-
-       ! time(1)=MPI_WTIME()
-
-        ! Broadcasting size of the distributed column
-        length = size(mat2%loc_mat,2)
-     
-        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr )
-
-        ! temporal matrix for receiving part of the distributed matrix and
-        ! multiply it
-        if ( allocated(tmp) ) deallocate(tmp)
-        allocate( tmp(size(mat2%loc_mat,1),length) )
-
-
-        ! part of second matrix broadcasted to all tasks
-        if(my_id == i-1)  tmp    = mat2%loc_mat
-        if(my_id == i-1 ) length = size(tmp)
-        call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
-        call MPI_BCAST(tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD,ierr)
-
-
-        ! Matrix -matrix multiplications
-
-        glob_index_j = (i-1)*step
-        glob_index_i = my_id*step
-        do z = 1, size(mat1%loc_mat,1)
-           do k = 1, size(tmp,2)
-
-             sum_element=0.0
-             ! OpenMP paralelization can be done in this place            
-             do j = 1, size(mat1%loc_mat,2)
-                   sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)
-             enddo
-             res_mat_not_distr(z + glob_index_i, k + glob_index_j) = sum_element
-
-          enddo
-        enddo
-
-     enddo
-   endif
-
- 
-! multiplication mat1(distributed)*mat2(not_distributed) =res_mat(not_distributed)
-elseif(present(mat2_not_distr) .AND. present(res_mat_not_distr)) then
-
- !Check distribution. Result matrix not distributed, first matrix row wise, second matrix not distributed
-  if(mat1%row_wise == .true.) then
-
-      res_mat_not_distr=0.0
-      if(my_id == 0) step = size(mat1%loc_mat,1)
-      call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+    
+    
+      ! check distribution. Result matrix rowwise, first matrix row wise, second
+      ! matrix column wise
+      if ( res_mat%row_wise .and. mat1%row_wise .and. (.not. mat2%row_wise) ) then
+    
+        ! loop over all tasks
+        do i = 1, ntasks
+    
+          ! Broadcasting size of the distributed column
+          length = size(mat2%loc_mat,2)      
+          call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr )
+    
+          ! temporal matrix for receiving part of the distributed matrix and
+          ! multiply it
+          if ( allocated(tmp) ) deallocate(tmp)
+          allocate( tmp(size(mat2%loc_mat,1),length) )
+    
+          ! part of second matrix broadcasted to all tasks
+          if(my_id == i-1)  tmp    = mat2%loc_mat  
+          if(my_id == i-1 ) length = size(tmp)
+          call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
+          call MPI_BCAST( tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD, ierr)
        
-       ! Matrix -matrix multiplications     
-        glob_index_i = my_id*step
-
-        do z = 1, size(mat1%loc_mat,1)
-           do k = 1, size(mat2_not_distr,2)
-
-             sum_element=0.0
-             ! OpenMP paralelization can be done in this place            
-             do j = 1, size(mat1%loc_mat,2)
-                   sum_element = sum_element + mat1%loc_mat(z,j) *mat2_not_distr(j,k)
-             enddo
-             res_mat_not_distr(z + glob_index_i, k) = sum_element
-
-          enddo
-        enddo
+          ! Matrix -matrix multiplications
+          glob_index_j=(i-1)*step
+          do z = 1, size(mat1%loc_mat,1)
+            do k = 1, size(tmp,2)
+    
+              sum_element=0.0 
+              ! OpenMP paralelization can be done in this place            
+              do j = 1, size(mat1%loc_mat,2)
+                sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)         
+              end do
+              
+              res_mat%loc_mat(z,k+glob_index_j) = sum_element  
+        
+            end do
+          end do
+    
+        end do     
+         
+      end if 
+    
+    ! --- Multiplication mat1(distributed)*mat2(distributed) =res_mat(not_distributed)
+    else if ( present(mat2) .and. present(res_mat_not_distr) ) then
+      ! check distribution. Result matrix not distributed, first matrix row wise, second
+      ! matrix column wise
+      if ( mat1%row_wise .and. (.not. mat2%row_wise) ) then
+    
+        res_mat_not_distr=0.0   
+        if(my_id == 0) step = size(mat2%loc_mat,2)
+        call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+    
+        ! loop over all tasks
+        do i = 1, ntasks
+    
+          ! Broadcasting size of the distributed column
+          length = size(mat2%loc_mat,2)
+        
+          call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr )
+    
+          ! temporal matrix for receiving part of the distributed matrix and
+          ! multiply it
+          if ( allocated(tmp) ) deallocate(tmp)
+          allocate( tmp(size(mat2%loc_mat,1),length) )
+    
+          ! part of second matrix broadcasted to all tasks
+          if(my_id == i-1)  tmp    = mat2%loc_mat
+          if(my_id == i-1 ) length = size(tmp)
+          call MPI_BCAST(length, 1, MPI_INTEGER, i-1, MPI_COMM_WORLD, ierr)
+          call MPI_BCAST(tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD,ierr)
+    
+          ! Matrix -matrix multiplications
+    
+          glob_index_j = (i-1)*step
+          glob_index_i = my_id*step
+          do z = 1, size(mat1%loc_mat,1)
+            do k = 1, size(tmp,2)
+    
+              sum_element=0.0
+              ! OpenMP paralelization can be done in this place
+              do j = 1, size(mat1%loc_mat,2)
+                sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)
+              end do
+              res_mat_not_distr(z + glob_index_i, k + glob_index_j) = sum_element
+    
+            end do
+          end do
+    
+        end do
+      end if
      
-   endif
-
-endif
-
+    ! --- Multiplication mat1(distributed)*mat2(not_distributed) =res_mat(not_distributed)
+    else if(present(mat2_not_distr) .AND. present(res_mat_not_distr)) then
+    
+      !Check distribution. Result matrix not distributed, first matrix row wise, second matrix not distributed
+      if (mat1%row_wise) then
+    
+        res_mat_not_distr=0.0
+        if(my_id == 0) step = size(mat1%loc_mat,1)
+        call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+        
+        ! Matrix -matrix multiplications     
+        glob_index_i = my_id*step
+    
+        do z = 1, size(mat1%loc_mat,1)
+          do k = 1, size(mat2_not_distr,2)
+    
+            sum_element=0.0
+            ! OpenMP paralelization can be done in this place            
+            do j = 1, size(mat1%loc_mat,2)
+              sum_element = sum_element + mat1%loc_mat(z,j) *mat2_not_distr(j,k)
+            end do
+            res_mat_not_distr(z + glob_index_i, k) = sum_element
+    
+          end do
+        end do
+        
+      end if
+    
+    end if
+  
   end subroutine matrix_multiplication
-
-!===========================================================================================  
+  
+  
   
   !> Broadcast the STARWALL response matrices to the other MPI procs.
   subroutine broadcast_starwall_response_parallel(my_id, sr)
@@ -1399,32 +1335,31 @@ endif
     
     if ( vacuum_debug ) then
 
-        loc_sum = sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + &
-                  sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat) + sum(sr%s_ww_inv%loc_mat)   
+      loc_sum = sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + &
+                sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat) + sum(sr%s_ww_inv%loc_mat)   
 
-        if(my_id==0) then
+      if (my_id==0) then
 
-           loc_sum =   loc_sum + sum(sr%i_tor) + sum(sr%d_yy)+ sum(sr%xyzpot_w)     &
-                     + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil + sr%npot_w & 
-                     + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w                &
-                     + sr%file_version + sr%ntri_c + sr%n_pol_coils                 &  
-                     + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils        &    
-                     + sr%ind_start_pol_coils + sr%ind_start_rmp_coils              &
-                     + sr%ind_start_voltage_coils + sr%ind_start_diag_coils
-        endif
+        loc_sum =   loc_sum + sum(sr%i_tor) + sum(sr%d_yy)+ sum(sr%xyzpot_w)     &
+                  + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil + sr%npot_w &
+                  + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w                &
+                  + sr%file_version + sr%ntri_c + sr%n_pol_coils                 &
+                  + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils        &
+                  + sr%ind_start_pol_coils + sr%ind_start_rmp_coils              &
+                  + sr%ind_start_voltage_coils + sr%ind_start_diag_coils
+      end if
   
-        test_sum=0.0
-        call MPI_Reduce(loc_sum, test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+      test_sum=0.0
+      call MPI_Reduce(loc_sum, test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
  
-        if(my_id == 0)  write(*,'("Checksum",I4,ES24.16)') my_id, test_sum
+      if(my_id == 0)  write(*,'("Checksum",I4,ES24.16)') my_id, test_sum
       
-        if(my_id == 0)  write(*,*) my_id, 'Exiting broadcast_starwall_response_parallel.'
+      if(my_id == 0)  write(*,*) my_id, 'Exiting broadcast_starwall_response_parallel.'
    
-   endif  
-   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    end if  
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
-   
   end subroutine broadcast_starwall_response_parallel
   
   
@@ -1519,8 +1454,9 @@ endif
 
     if ( vacuum_debug ) then
       write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)                       &
-        + sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + sum(sr%a_id%loc_mat) + sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat)  &
-        + sum(sr%s_ww_inv%loc_mat ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
+        + sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + sum(sr%a_id%loc_mat)&
+        + sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat) + sum(sr%s_ww_inv%loc_mat )                  &
+        + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil                      &
         + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version + sr%ntri_c  &
         + sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils                   &
         + sr%ind_start_pol_coils + sr%ind_start_rmp_coils + sr%ind_start_voltage_coils             &
@@ -1529,11 +1465,7 @@ endif
     end if
 
   end subroutine broadcast_starwall_response
-
-
-
-
-
+  
   
   
   !> Write out information about the STARWALL response matrices.
@@ -1600,7 +1532,9 @@ endif
     
   end subroutine log_starwall_response
   
-!> Write out information about the STARWALL response matrices.
+  
+  
+  !> Write out information about the STARWALL response matrices.
   subroutine log_starwall_response_parallel(my_id, sr)
 
     use mod_parameters, only: n_period
@@ -1622,129 +1556,120 @@ endif
     36 format(3x,'sum(',a,')= ---not allocated---')
     37 format(3x,a,es25.15)
   
-    if(my_id == 0) then
+    if (my_id == 0) then
   
-        write(*,*)
-        write(*,32)
-        write(*,33) 'STARWALL RESPONSE INFORMATION:'
-        write(*,32)
-        write(*,33) 'file_version            =', sr%file_version
-        write(*,33) 'n_bnd                   =', sr%n_bnd
-        write(*,33) 'nd_bez                  =', sr%nd_bez
-        write(*,33) 'ncoil                   =', sr%ncoil
-        write(*,33) 'npot_w                  =', sr%npot_w
-        write(*,33) 'n_w                     =', sr%n_w
-        write(*,33) 'ntri_w                  =', sr%ntri_w
-        write(*,33) 'n_tor                   =', sr%n_tor
-        write(*,33) 'n_tor0                  =', sr%n_tor0
-        write(*,33) 'n_pol_coils             =', sr%n_pol_coils
-        write(*,33) 'n_rmp_coils             =', sr%n_rmp_coils
-        write(*,33) 'n_voltage_coils         =', sr%n_voltage_coils
-        write(*,33) 'n_diag_coils            =', sr%n_diag_coils
-        write(*,33) 'ind_start_pol_coils     =', sr%ind_start_pol_coils
-        write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
-        write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
-        write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
+       write(*,*)
+       write(*,32)
+       write(*,33) 'STARWALL RESPONSE INFORMATION:'
+       write(*,32)
+       write(*,33) 'file_version            =', sr%file_version
+       write(*,33) 'n_bnd                   =', sr%n_bnd
+       write(*,33) 'nd_bez                  =', sr%nd_bez
+       write(*,33) 'ncoil                   =', sr%ncoil
+       write(*,33) 'npot_w                  =', sr%npot_w
+       write(*,33) 'n_w                     =', sr%n_w
+       write(*,33) 'ntri_w                  =', sr%ntri_w
+       write(*,33) 'n_tor                   =', sr%n_tor
+       write(*,33) 'n_tor0                  =', sr%n_tor0
+       write(*,33) 'n_pol_coils             =', sr%n_pol_coils
+       write(*,33) 'n_rmp_coils             =', sr%n_rmp_coils
+       write(*,33) 'n_voltage_coils         =', sr%n_voltage_coils
+       write(*,33) 'n_diag_coils            =', sr%n_diag_coils
+       write(*,33) 'ind_start_pol_coils     =', sr%ind_start_pol_coils
+       write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
+       write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
+       write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
       
-       if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
-       if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
+      if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
+      if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
 
-    endif 
-
+    end if 
 
     if ( vacuum_debug ) then
-       
-          if(my_id == 0 ) then
-             write(*,32)
-             if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ',sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
-             if (allocated(sr%d_yy         )) then; write(*,34) 'd_yy         ',sum(sr%d_yy          ); else; write(*,36) 'd_yy         '; end if
-          endif 
+      
+      if (my_id == 0) then
+        write(*,32)
+        if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ',sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
+        if (allocated(sr%d_yy         )) then; write(*,34) 'd_yy         ',sum(sr%d_yy          ); else; write(*,36) 'd_yy         '; end if
+      end if 
 
-
-          test_sum=0.0
-          if (allocated(sr%a_ye%loc_mat)) then
-              call MPI_Reduce(sum(sr%a_ye%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-              if(my_id == 0) write(*,34) 'a_ye         ', test_sum 
-          else
-              if(my_id == 0)  write(*,36) 'a_ye         '
-          end if            
+      test_sum=0.0
+      if (allocated(sr%a_ye%loc_mat)) then
+        call MPI_Reduce(sum(sr%a_ye%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        if(my_id == 0) write(*,34) 'a_ye         ', test_sum 
+      else
+        if(my_id == 0)  write(*,36) 'a_ye         '
+      end if            
  
-          test_sum=0.0
-          if (allocated(sr%a_ey%loc_mat)) then 
-              call MPI_Reduce(sum(sr%a_ey%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-              if(my_id == 0) write(*,34) 'a_ey         ', test_sum 
-          else
-             if(my_id == 0)  write(*,36) 'a_ey         ' 
-          end if
+      test_sum=0.0
+      if (allocated(sr%a_ey%loc_mat)) then 
+        call MPI_Reduce(sum(sr%a_ey%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        if(my_id == 0) write(*,34) 'a_ey         ', test_sum 
+      else
+        if(my_id == 0)  write(*,36) 'a_ey         ' 
+      end if
 
-          test_sum=0.0
-          if (allocated(sr%a_ee%loc_mat)) then
-              call MPI_Reduce(sum(sr%a_ee%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-              if(my_id == 0) write(*,34) 'a_ee         ', test_sum
-          else
-              if(my_id == 0) write(*,36) 'a_ee         '
-          end if
+      test_sum=0.0
+      if (allocated(sr%a_ee%loc_mat)) then
+        call MPI_Reduce(sum(sr%a_ee%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        if(my_id == 0) write(*,34) 'a_ee         ', test_sum
+      else
+        if(my_id == 0) write(*,36) 'a_ee         '
+      end if
 
+      test_sum=0.0
+      if (allocated(sr%a_id%loc_mat)) then
+        call MPI_Reduce(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        if(my_id == 0) write(*,34) 'a_id         ', test_sum
+      else
+        if(my_id == 0) write(*,36) 'a_id         '
+      end if
 
-          test_sum=0.0
-          if (allocated(sr%a_id%loc_mat)) then
-              call MPI_Reduce(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-              if(my_id == 0) write(*,34) 'a_id         ', test_sum
-          else
-              if(my_id == 0) write(*,36) 'a_id         '
-          end if
+      test_sum=0.0
+      if (allocated(sr%a_nw%loc_mat)) then
+        call MPI_Reduce(sum(sr%a_nw%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        if(my_id == 0) write(*,34) 'a_nw         ', test_sum
+      else
+        if(my_id == 0) write(*,36) 'a_nw         '
+      end if
+      
+      test_sum=0.0
+      if (allocated(sr%s_ww%loc_mat)) then
+        call MPI_Reduce(sum(sr%s_ww%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        if(my_id == 0) write(*,34) 's_ww         ', test_sum
+      else
+        if(my_id == 0) write(*,36) 's_nw         '
+      end if
 
-
-          test_sum=0.0
-          if (allocated(sr%a_nw%loc_mat)) then
-              call MPI_Reduce(sum(sr%a_nw%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-              if(my_id == 0) write(*,34) 'a_nw         ', test_sum
-          else
-              if(my_id == 0) write(*,36) 'a_nw         '
-          end if
-
+      test_sum=0.0
+      if (allocated(sr%s_ww_inv%loc_mat)) then
+        call MPI_Reduce(sum(sr%s_ww_inv%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        if(my_id == 0) write(*,34) 's_ww_inv     ', test_sum
+      else
+        if(my_id == 0) write(*,36) 's_nw_inv         '
+      end if
         
-          test_sum=0.0
-          if (allocated(sr%s_ww%loc_mat)) then
-              call MPI_Reduce(sum(sr%s_ww%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-              if(my_id == 0) write(*,34) 's_ww         ', test_sum
-          else
-              if(my_id == 0) write(*,36) 's_nw         '
-          end if
-
-
-          test_sum=0.0
-          if (allocated(sr%s_ww_inv%loc_mat)) then
-              call MPI_Reduce(sum(sr%s_ww_inv%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-              if(my_id == 0) write(*,34) 's_ww_inv     ', test_sum
-          else
-              if(my_id == 0) write(*,36) 's_nw_inv         '
-          end if
-
-            
-          if(my_id == 0) then
-           if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ',sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
-           if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ',sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
-           if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ',sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
-           if (allocated(sr%x_coil       )) then; write(*,34) 'x_coil       ',sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
-           if (allocated(sr%y_coil       )) then; write(*,34) 'y_coil       ',sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
-           if (allocated(sr%z_coil       )) then; write(*,34) 'z_coil       ',sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
-           if (allocated(sr%phi_coil     )) then; write(*,34) 'phi_coil     ',sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
-           if (allocated(sr%eta_thin_coil)) then; write(*,34) 'eta_thin_coil',sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
-           if (allocated(sr%coil_resist  )) then; write(*,34) 'coil_resist  ',sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
-          endif
+      if(my_id == 0) then
+        if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ',sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
+        if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ',sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
+        if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ',sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
+        if (allocated(sr%x_coil       )) then; write(*,34) 'x_coil       ',sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
+        if (allocated(sr%y_coil       )) then; write(*,34) 'y_coil       ',sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
+        if (allocated(sr%z_coil       )) then; write(*,34) 'z_coil       ',sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
+        if (allocated(sr%phi_coil     )) then; write(*,34) 'phi_coil     ',sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
+        if (allocated(sr%eta_thin_coil)) then; write(*,34) 'eta_thin_coil',sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
+        if (allocated(sr%coil_resist  )) then; write(*,34) 'coil_resist  ',sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
+      end if
     end if
-  
 
-    if(my_id==0)  then
-       write(*,32)
-       write(*,*)
-    endif
+    if (my_id==0) then
+      write(*,32)
+      write(*,*)
+    end if
    
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    
   end subroutine log_starwall_response_parallel
-  
-  
   
   
   
@@ -1784,419 +1709,412 @@ endif
 
     call MPI_BCAST(nout,1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
-  if ( mod(index,nout) /= 0 ) return
-
-
-if(my_id == 0) then
-
     if ( mod(index,nout) /= 0 ) return
-    
-    ! --- Preset values
-    Iphi_max = .false.
-    jphi_lin = .true.
-    Ipol_max = .false.
-    jpol_lin = .false.    
-    
-    ! --- VTK file header
-    write(filename,'(A,I5.5,A)') 'wallcurr.',index,'.vtk'
-    open(filehandle, file=filename, status='replace', action='write')
-    140 format(a)
-    141 format(a,i8,a)
-    142 format(3es16.8)
-    143 format(a,2i8)
-    144 format(4i8)
-    write(filehandle,140) '# vtk DataFile Version 2.0'
-    write(filehandle,140) 'testdata'
-    write(filehandle,140) 'ASCII'
-    write(filehandle,140) 'DATASET POLYDATA'
-    
-    ! --- Triangle node positions
-    write(filehandle,141) 'POINTS', sr%npot_w, ' float'
-    do i = 1, sr%npot_w
-      write(filehandle,142) sr%xyzpot_w(i,:)
-    end do
-    
-    ! --- Node indices corresponding to triangles
-    write(filehandle,143) 'POLYGONS', sr%ntri_w, sr%ntri_w * 4
-    do i = 1, sr%ntri_w
-      write(filehandle,144) 3, sr%jpot_w(i,:) - 1
-    end do
-    
-    ! --- Wall current potentials
-    write(filehandle,141) 'POINT_DATA', sr%npot_w
-    write(filehandle,140) 'SCALARS pot_w float'
-    write(filehandle,140) 'LOOKUP_TABLE default'
-endif
-    
 
+    if(my_id == 0) then
+
+      if ( mod(index,nout) /= 0 ) return
+      
+      ! --- Preset values
+      Iphi_max = .false.
+      jphi_lin = .true.
+      Ipol_max = .false.
+      jpol_lin = .false.    
+      
+      ! --- VTK file header
+      write(filename,'(A,I5.5,A)') 'wallcurr.',index,'.vtk'
+      open(filehandle, file=filename, status='replace', action='write')
+      140 format(a)
+      141 format(a,i8,a)
+      142 format(3es16.8)
+      143 format(a,2i8)
+      144 format(4i8)
+      write(filehandle,140) '# vtk DataFile Version 2.0'
+      write(filehandle,140) 'testdata'
+      write(filehandle,140) 'ASCII'
+      write(filehandle,140) 'DATASET POLYDATA'
+      
+      ! --- Triangle node positions
+      write(filehandle,141) 'POINTS', sr%npot_w, ' float'
+      do i = 1, sr%npot_w
+        write(filehandle,142) sr%xyzpot_w(i,:)
+      end do
+      
+      ! --- Node indices corresponding to triangles
+      write(filehandle,143) 'POLYGONS', sr%ntri_w, sr%ntri_w * 4
+      do i = 1, sr%ntri_w
+        write(filehandle,144) 3, sr%jpot_w(i,:) - 1
+      end do
+      
+      ! --- Wall current potentials
+      write(filehandle,141) 'POINT_DATA', sr%npot_w
+      write(filehandle,140) 'SCALARS pot_w float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+    end if
+    
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
 
-if(my_id == 0) then
-
-    do i = 1, sr%npot_w
-      write(filehandle,142) tripot_w(i)
-    end do
-    
-    ! --- Change of wall current potentials in previous time-step
-    write(filehandle,140) 'SCALARS dpot_w float'
-    write(filehandle,140) 'LOOKUP_TABLE default'
-
-endif
+    if(my_id == 0) then
+      do i = 1, sr%npot_w
+        write(filehandle,142) tripot_w(i)
+      end do
+      
+      ! --- Change of wall current potentials in previous time-step
+      write(filehandle,140) 'SCALARS dpot_w float'
+      write(filehandle,140) 'LOOKUP_TABLE default'
+    end if
 
     call reconstruct_triangle_potentials(tripot_w, dwall_curr)
 
-if(my_id == 0) then
-
-    do i = 1, sr%npot_w
-      write(filehandle,142) tripot_w(i)
-    end do
-    
-    ! --- Cell data variables
-    write(filehandle,141) 'CELL_DATA', sr%ntri_w
-   
-    ! --- Maximum toroidal current flwoing on a triangle (kA)
-    if (Iphi_max) then
-        
-      write(filehandle,140) 'SCALARS Iphi_max(kA) float'
-      write(filehandle,140) 'LOOKUP_TABLE default'
-       
-      do i = 1, sr%ntri_w
-       
-        ! --- Wall potentials at triangle nodes
-        phi1   = tripot_w(sr%jpot_w(i,1))
-        phi2   = tripot_w(sr%jpot_w(i,2))
-        phi3   = tripot_w(sr%jpot_w(i,3))
-        
-        ! --- Positions of triangle nodes
-        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-        
-        ! --- Middle points on triangle sides
-        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
-        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
-        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
-             
-        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
-        angle12 = atan2(-mid12(1),mid12(3))
-        angle13 = atan2(-mid13(1),mid13(3))
-        angle23 = atan2(-mid23(1),mid23(3))
-        
-        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
-       
-        ! --- Quantities needed to calculate the current density vector 
-        r21(:) = r1(:)-r2(:)
-        r32(:) = r2(:)-r3(:)
-        r13(:) = r3(:)-r1(:)
-       
-        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-          r21(1)*r32(2) - r21(2)*r32(1) /)
+    if(my_id == 0) then
+  
+      do i = 1, sr%npot_w
+        write(filehandle,142) tripot_w(i)
+      end do
+      
+      ! --- Cell data variables
+      write(filehandle,141) 'CELL_DATA', sr%ntri_w
+     
+      ! --- Maximum toroidal current flwoing on a triangle (kA)
+      if (Iphi_max) then
           
-        !--- current density vector in kA/m, Merkel 2015
-        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
-        j_lin = j_lin / mu_zero * 1.d-3  
+        write(filehandle,140) 'SCALARS Iphi_max(kA) float'
+        write(filehandle,140) 'LOOKUP_TABLE default'
+         
+        do i = 1, sr%ntri_w
+         
+          ! --- Wall potentials at triangle nodes
+          phi1   = tripot_w(sr%jpot_w(i,1))
+          phi2   = tripot_w(sr%jpot_w(i,2))
+          phi3   = tripot_w(sr%jpot_w(i,3))
           
-        !--- Vector normal to triangle surface
-        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
-        
-        !--- Normal vectors to triangle sides
-        n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
-          r13(1)*nm(2) - r13(2)*nm(1) /)
-        n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
-          r21(1)*nm(2) - r21(2)*nm(1) /)
-        n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
-          r32(1)*nm(2) - r32(2)*nm(1) /)
-        
-        !--- Normalized vectors normal to triangle sides
-        n13(:) = n13(:)/ sqrt(sum(n13**2))
-        n21(:) = n21(:)/ sqrt(sum(n21**2))
-        n32(:) = n32(:)/ sqrt(sum(n32**2))
-        
-        !--- Toroidal current flowing per side of the triangle 
-        j13    = abs(dot_product(n13,ephi13)) * sqrt(sum(r13**2)) * dot_product(ephi13,j_lin)
-        j21    = abs(dot_product(n21,ephi12)) * sqrt(sum(r21**2)) * dot_product(ephi12,j_lin)
-        j32    = abs(dot_product(n32,ephi23)) * sqrt(sum(r32**2)) * dot_product(ephi23,j_lin)
-        
-        jsides(:) = (/ j13, j21, j32 /)
+          ! --- Positions of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          
+          ! --- Middle points on triangle sides
+          mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+          mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+          mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+               
+          ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+          angle12 = atan2(-mid12(1),mid12(3))
+          angle13 = atan2(-mid13(1),mid13(3))
+          angle23 = atan2(-mid23(1),mid23(3))
+          
+          ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+         
+          ! --- Quantities needed to calculate the current density vector 
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r13(:) = r3(:)-r1(:)
+         
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
             
-        !--- Find the triangle side with maximum absolute current
-        maxcurr_pos   = maxloc(abs(jsides),1)
-        
-        !--- Maximum toroidal current flowing on a triangle side, in kA
-        write(filehandle,142) jsides(maxcurr_pos) 
-      
-      enddo
-    endif
-    
-    ! --- Maximum poloidal current flwoing on a triangle (kA)
-    if (Ipol_max) then
-   
-      write(filehandle,140) 'SCALARS Ipol_max(kA) float'
-      write(filehandle,140) 'LOOKUP_TABLE default'
-       
-      do i = 1, sr%ntri_w
-       
-        ! --- Wall potentials at triangle nodes
-        phi1   = tripot_w(sr%jpot_w(i,1))
-        phi2   = tripot_w(sr%jpot_w(i,2))
-        phi3   = tripot_w(sr%jpot_w(i,3))
-        
-        ! --- Positions of triangle nodes
-        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-        
-        ! --- Middle points on triangle sides
-        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
-        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
-        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
-             
-        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
-        angle12 = atan2(-mid12(1),mid12(3))
-        angle13 = atan2(-mid13(1),mid13(3))
-        angle23 = atan2(-mid23(1),mid23(3))
-        
-        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
-       
-        ! --- Quantities needed to calculate the current density vector 
-        r21(:) = r1(:)-r2(:)
-        r32(:) = r2(:)-r3(:)
-        r13(:) = r3(:)-r1(:)
-       
-        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-          r21(1)*r32(2) - r21(2)*r32(1) /)
-          
-        !--- current density vector in kA/m, Merkel 2015
-        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
-        j_lin = j_lin / mu_zero * 1.d-3  
-          
-        !--- Vector normal to triangle surface
-        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
-        
-        !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
-        pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
-          ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
-        pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
-          ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
-        pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
-          ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
-        
-        !--- Normalized poloidal vectors by triangle side
-        pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
-        pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
-        pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
-        
-        !--- Normal vectors to triangle sides
-        n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
-          r13(1)*nm(2) - r13(2)*nm(1) /)
-        n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
-          r21(1)*nm(2) - r21(2)*nm(1) /)
-        n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
-          r32(1)*nm(2) - r32(2)*nm(1) /)
-        
-        !--- Normalized vectors normal to triangle sides
-        n13(:) = n13(:)/ sqrt(sum(n13**2))
-        n21(:) = n21(:)/ sqrt(sum(n21**2))
-        n32(:) = n32(:)/ sqrt(sum(n32**2))
-        
-        !--- Poloidal current flowing per side of the triangle 
-        j13    = abs(dot_product(n13,pol13)) * sqrt(sum(r13**2)) * dot_product(pol13,j_lin)
-        j21    = abs(dot_product(n21,pol21)) * sqrt(sum(r21**2)) * dot_product(pol21,j_lin)
-        j32    = abs(dot_product(n32,pol32)) * sqrt(sum(r32**2)) * dot_product(pol32,j_lin)
-        
-        jsides(:) = (/ j13, j21, j32 /)
+          !--- current density vector in kA/m, Merkel 2015
+          j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+          j_lin = j_lin / mu_zero * 1.d-3  
             
-        !--- Find the triangle side with maximum absolute current
-        maxcurr_pos   = maxloc(abs(jsides),1)
-        
-        !--- Maximum poloidal current flowing on a triangle side, in kA
-        write(filehandle,142) jsides(maxcurr_pos) 
-      
-      enddo
-    endif
-    
-    ! --- Linear toroidal current density per triangle (kA/m)
-    if (jphi_lin) then
-   
-      write(filehandle,140) 'SCALARS jphi_lin(kA/m) float'
-      write(filehandle,140) 'LOOKUP_TABLE default'
-       
-      do i = 1, sr%ntri_w
-       
-        ! --- Wall potentials at triangle nodes
-        phi1   = tripot_w(sr%jpot_w(i,1))
-        phi2   = tripot_w(sr%jpot_w(i,2))
-        phi3   = tripot_w(sr%jpot_w(i,3))
-        
-        ! --- Positions of triangle nodes
-        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-        
-        ! --- Middle points on triangle sides
-        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
-        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
-        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
-             
-        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
-        angle12 = atan2(-mid12(1),mid12(3))
-        angle13 = atan2(-mid13(1),mid13(3))
-        angle23 = atan2(-mid23(1),mid23(3))
-        
-        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
-       
-        ! --- Quantities needed to calculate the current density vector 
-        r21(:) = r1(:)-r2(:)
-        r32(:) = r2(:)-r3(:)
-        r13(:) = r3(:)-r1(:)
-       
-        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-          r21(1)*r32(2) - r21(2)*r32(1) /)
+          !--- Vector normal to triangle surface
+          nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
           
-        !--- current density vector in kA/m, Merkel 2015
-        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
-        j_lin = j_lin / mu_zero * 1.d-3  
+          !--- Normal vectors to triangle sides
+          n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
+            r13(1)*nm(2) - r13(2)*nm(1) /)
+          n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
+            r21(1)*nm(2) - r21(2)*nm(1) /)
+          n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
+            r32(1)*nm(2) - r32(2)*nm(1) /)
+          
+          !--- Normalized vectors normal to triangle sides
+          n13(:) = n13(:)/ sqrt(sum(n13**2))
+          n21(:) = n21(:)/ sqrt(sum(n21**2))
+          n32(:) = n32(:)/ sqrt(sum(n32**2))
+          
+          !--- Toroidal current flowing per side of the triangle 
+          j13    = abs(dot_product(n13,ephi13)) * sqrt(sum(r13**2)) * dot_product(ephi13,j_lin)
+          j21    = abs(dot_product(n21,ephi12)) * sqrt(sum(r21**2)) * dot_product(ephi12,j_lin)
+          j32    = abs(dot_product(n32,ephi23)) * sqrt(sum(r32**2)) * dot_product(ephi23,j_lin)
+          
+          jsides(:) = (/ j13, j21, j32 /)
+              
+          !--- Find the triangle side with maximum absolute current
+          maxcurr_pos   = maxloc(abs(jsides),1)
+          
+          !--- Maximum toroidal current flowing on a triangle side, in kA
+          write(filehandle,142) jsides(maxcurr_pos) 
         
-        !--- Toroidal linear density current in each triangle side
-        j13    =  dot_product(ephi13,j_lin)
-        j21    =  dot_product(ephi12,j_lin)
-        j32    =  dot_product(ephi23,j_lin)
-        
-        jsides(:) = (/ j13, j21, j32 /)
+        end do
+      end if
+      
+      ! --- Maximum poloidal current flwoing on a triangle (kA)
+      if (Ipol_max) then
+     
+        write(filehandle,140) 'SCALARS Ipol_max(kA) float'
+        write(filehandle,140) 'LOOKUP_TABLE default'
+         
+        do i = 1, sr%ntri_w
+         
+          ! --- Wall potentials at triangle nodes
+          phi1   = tripot_w(sr%jpot_w(i,1))
+          phi2   = tripot_w(sr%jpot_w(i,2))
+          phi3   = tripot_w(sr%jpot_w(i,3))
+          
+          ! --- Positions of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          
+          ! --- Middle points on triangle sides
+          mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+          mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+          mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+               
+          ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+          angle12 = atan2(-mid12(1),mid12(3))
+          angle13 = atan2(-mid13(1),mid13(3))
+          angle23 = atan2(-mid23(1),mid23(3))
+          
+          ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+         
+          ! --- Quantities needed to calculate the current density vector 
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r13(:) = r3(:)-r1(:)
+         
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
             
-        !--- Find the triangle side with maximum current
-        maxcurr_pos   = maxloc(abs(jsides),1)
-        
-        !--- Maximum toroidal linear density current flowing on a triangle side, in kA/m
-        write(filehandle,142) jsides(maxcurr_pos) 
-      
-      enddo
-    endif
-    
-    ! --- Poloidal linear density current flowing on a triangle (kA/m)
-    if (jpol_lin) then
-   
-      write(filehandle,140) 'SCALARS jpol_lin(kA/m) float'
-      write(filehandle,140) 'LOOKUP_TABLE default'
-       
-      do i = 1, sr%ntri_w
-       
-        ! --- Wall potentials at triangle nodes
-        phi1   = tripot_w(sr%jpot_w(i,1))
-        phi2   = tripot_w(sr%jpot_w(i,2))
-        phi3   = tripot_w(sr%jpot_w(i,3))
-        
-        ! --- Positions of triangle nodes
-        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-        
-        ! --- Middle points on triangle sides
-        mid12(:) =   (r1(:) + r2(:)) * 0.5d0
-        mid13(:) =   (r1(:) + r3(:)) * 0.5d0
-        mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
-             
-        ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
-        angle12 = atan2(-mid12(1),mid12(3))
-        angle13 = atan2(-mid13(1),mid13(3))
-        angle23 = atan2(-mid23(1),mid23(3))
-        
-        ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-        ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-        ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-        ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
-       
-        ! --- Quantities needed to calculate the current density vector 
-        r21(:) = r1(:)-r2(:)
-        r32(:) = r2(:)-r3(:)
-        r13(:) = r3(:)-r1(:)
-       
-        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-          r21(1)*r32(2) - r21(2)*r32(1) /)
-          
-        !--- current density vector in kA/m, Merkel 2015
-        j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
-        j_lin = j_lin / mu_zero * 1.d-3  
-          
-        !--- Vector normal to triangle surface
-        nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
-        
-        !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
-        pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
-          ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
-        pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
-          ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
-        pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
-          ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
-        
-        !--- Normalized poloidal vectors by triangle side
-        pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
-        pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
-        pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
-        
-        !--- Poloidal current flowing per side of the triangle 
-        j13    =  dot_product(pol13,j_lin)
-        j21    =  dot_product(pol21,j_lin)
-        j32    =  dot_product(pol32,j_lin)
-        
-        jsides(:) = (/ j13, j21, j32 /)
+          !--- current density vector in kA/m, Merkel 2015
+          j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+          j_lin = j_lin / mu_zero * 1.d-3  
             
-        !--- Find the triangle side with maximum absolute current
-        maxcurr_pos   = maxloc(abs(jsides),1)
+          !--- Vector normal to triangle surface
+          nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+          
+          !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
+          pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
+            ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
+          pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
+            ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
+          pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
+            ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
+          
+          !--- Normalized poloidal vectors by triangle side
+          pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
+          pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
+          pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
+          
+          !--- Normal vectors to triangle sides
+          n13(:) = (/ r13(2)*nm(3) - r13(3)*nm(2), r13(3)*nm(1) - r13(1)*nm(3),          &
+            r13(1)*nm(2) - r13(2)*nm(1) /)
+          n21(:) = (/ r21(2)*nm(3) - r21(3)*nm(2), r21(3)*nm(1) - r21(1)*nm(3),          &
+            r21(1)*nm(2) - r21(2)*nm(1) /)
+          n32(:) = (/ r32(2)*nm(3) - r32(3)*nm(2), r32(3)*nm(1) - r32(1)*nm(3),          &
+            r32(1)*nm(2) - r32(2)*nm(1) /)
+          
+          !--- Normalized vectors normal to triangle sides
+          n13(:) = n13(:)/ sqrt(sum(n13**2))
+          n21(:) = n21(:)/ sqrt(sum(n21**2))
+          n32(:) = n32(:)/ sqrt(sum(n32**2))
+          
+          !--- Poloidal current flowing per side of the triangle 
+          j13    = abs(dot_product(n13,pol13)) * sqrt(sum(r13**2)) * dot_product(pol13,j_lin)
+          j21    = abs(dot_product(n21,pol21)) * sqrt(sum(r21**2)) * dot_product(pol21,j_lin)
+          j32    = abs(dot_product(n32,pol32)) * sqrt(sum(r32**2)) * dot_product(pol32,j_lin)
+          
+          jsides(:) = (/ j13, j21, j32 /)
+              
+          !--- Find the triangle side with maximum absolute current
+          maxcurr_pos   = maxloc(abs(jsides),1)
+          
+          !--- Maximum poloidal current flowing on a triangle side, in kA
+          write(filehandle,142) jsides(maxcurr_pos) 
         
-        !--- Maximum poloidal linear density current flowing on a triangle, in kA/m
-        write(filehandle,142) jsides(maxcurr_pos) 
+        end do
+      end if
       
-      enddo
-    endif
+      ! --- Linear toroidal current density per triangle (kA/m)
+      if (jphi_lin) then
+     
+        write(filehandle,140) 'SCALARS jphi_lin(kA/m) float'
+        write(filehandle,140) 'LOOKUP_TABLE default'
+         
+        do i = 1, sr%ntri_w
+         
+          ! --- Wall potentials at triangle nodes
+          phi1   = tripot_w(sr%jpot_w(i,1))
+          phi2   = tripot_w(sr%jpot_w(i,2))
+          phi3   = tripot_w(sr%jpot_w(i,3))
+          
+          ! --- Positions of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          
+          ! --- Middle points on triangle sides
+          mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+          mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+          mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+               
+          ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+          angle12 = atan2(-mid12(1),mid12(3))
+          angle13 = atan2(-mid13(1),mid13(3))
+          angle23 = atan2(-mid23(1),mid23(3))
+          
+          ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+         
+          ! --- Quantities needed to calculate the current density vector 
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r13(:) = r3(:)-r1(:)
+         
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
+            
+          !--- current density vector in kA/m, Merkel 2015
+          j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+          j_lin = j_lin / mu_zero * 1.d-3  
+          
+          !--- Toroidal linear density current in each triangle side
+          j13    =  dot_product(ephi13,j_lin)
+          j21    =  dot_product(ephi12,j_lin)
+          j32    =  dot_product(ephi23,j_lin)
+          
+          jsides(:) = (/ j13, j21, j32 /)
+              
+          !--- Find the triangle side with maximum current
+          maxcurr_pos   = maxloc(abs(jsides),1)
+          
+          !--- Maximum toroidal linear density current flowing on a triangle side, in kA/m
+          write(filehandle,142) jsides(maxcurr_pos) 
+        
+        end do
+      end if
       
-    ! --- Total wall current vectors
-    write(filehandle,140) 'VECTORS jsurf_w(MA/m) float'
-
-endif
+      ! --- Poloidal linear density current flowing on a triangle (kA/m)
+      if (jpol_lin) then
+     
+        write(filehandle,140) 'SCALARS jpol_lin(kA/m) float'
+        write(filehandle,140) 'LOOKUP_TABLE default'
+         
+        do i = 1, sr%ntri_w
+         
+          ! --- Wall potentials at triangle nodes
+          phi1   = tripot_w(sr%jpot_w(i,1))
+          phi2   = tripot_w(sr%jpot_w(i,2))
+          phi3   = tripot_w(sr%jpot_w(i,3))
+          
+          ! --- Positions of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          
+          ! --- Middle points on triangle sides
+          mid12(:) =   (r1(:) + r2(:)) * 0.5d0
+          mid13(:) =   (r1(:) + r3(:)) * 0.5d0
+          mid23(:) =   (r2(:) + r3(:)) * 0.5d0      
+               
+          ! --- Toroidal angles on middle points, JOREK coordinate system  y --> 1, x --> 3
+          angle12 = atan2(-mid12(1),mid12(3))
+          angle13 = atan2(-mid13(1),mid13(3))
+          angle23 = atan2(-mid23(1),mid23(3))
+          
+          ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
+          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+         
+          ! --- Quantities needed to calculate the current density vector 
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r13(:) = r3(:)-r1(:)
+         
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
+            
+          !--- current density vector in kA/m, Merkel 2015
+          j_lin = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2))
+          j_lin = j_lin / mu_zero * 1.d-3  
+            
+          !--- Vector normal to triangle surface
+          nm(:)  = r21_cross_r32(:) / sqrt(sum(r21_cross_r32**2))
+          
+          !--- Poloidal vectors by triangle side (e_phi x n), (at middle points)
+          pol13(:) = (/ ephi13(2)*nm(3) - ephi13(3)*nm(2), ephi13(3)*nm(1) - ephi13(1)*nm(3),          &
+            ephi13(1)*nm(2) - ephi13(2)*nm(1) /)
+          pol21(:) = (/ ephi12(2)*nm(3) - ephi12(3)*nm(2), ephi12(3)*nm(1) - ephi12(1)*nm(3),          &
+            ephi12(1)*nm(2) - ephi12(2)*nm(1) /)
+          pol32(:) = (/ ephi23(2)*nm(3) - ephi23(3)*nm(2), ephi23(3)*nm(1) - ephi23(1)*nm(3),          &
+            ephi23(1)*nm(2) - ephi23(2)*nm(1) /)
+          
+          !--- Normalized poloidal vectors by triangle side
+          pol13(:) = pol13(:)/ sqrt(sum(pol13**2))
+          pol21(:) = pol21(:)/ sqrt(sum(pol21**2))
+          pol32(:) = pol32(:)/ sqrt(sum(pol32**2))
+          
+          !--- Poloidal current flowing per side of the triangle 
+          j13    =  dot_product(pol13,j_lin)
+          j21    =  dot_product(pol21,j_lin)
+          j32    =  dot_product(pol32,j_lin)
+          
+          jsides(:) = (/ j13, j21, j32 /)
+              
+          !--- Find the triangle side with maximum absolute current
+          maxcurr_pos   = maxloc(abs(jsides),1)
+          
+          !--- Maximum poloidal linear density current flowing on a triangle, in kA/m
+          write(filehandle,142) jsides(maxcurr_pos) 
+        
+        end do
+      end if
+        
+      ! --- Total wall current vectors
+      write(filehandle,140) 'VECTORS jsurf_w(MA/m) float'
+  
+    end if
 
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
 
-if (my_id == 0) then
-
-    do i = 1, sr%ntri_w
-      ! --- Wall potential at triangle nodes
-      phi1   = tripot_w(sr%jpot_w(i,1))
-      phi2   = tripot_w(sr%jpot_w(i,2))
-      phi3   = tripot_w(sr%jpot_w(i,3))
-      ! --- Position of triangle nodes
-      r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-      r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-      r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-      r21(:) = r1(:)-r2(:)
-      r32(:) = r2(:)-r3(:)
-      r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-        r21(1)*r32(2) - r21(2)*r32(1) /)
-        
-      ! Exports the linear wall density current in MA/m  
-      write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
-                            / mu_zero * 1.d-6
-    end do
-    
-    ! --- Close file, clean up
-    if ( allocated(tripot_w) ) deallocate( tripot_w )
-    close(filehandle)
-
-endif
+    if (my_id == 0) then
+  
+      do i = 1, sr%ntri_w
+        ! --- Wall potential at triangle nodes
+        phi1   = tripot_w(sr%jpot_w(i,1))
+        phi2   = tripot_w(sr%jpot_w(i,2))
+        phi3   = tripot_w(sr%jpot_w(i,3))
+        ! --- Position of triangle nodes
+        r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+        r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+        r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+        r21(:) = r1(:)-r2(:)
+        r32(:) = r2(:)-r3(:)
+        r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+          r21(1)*r32(2) - r21(2)*r32(1) /)
+          
+        ! Exports the linear wall density current in MA/m  
+        write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
+                              / mu_zero * 1.d-6
+      end do
+      
+      ! --- Close file, clean up
+      if ( allocated(tripot_w) ) deallocate( tripot_w )
+      close(filehandle)
+  
+    end if
 
   end subroutine write_wall_vtk
-  
-  
-  
   
   
   
@@ -2282,14 +2200,15 @@ endif
     else
       if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
       Y_coils0(:) = 0.d0  
-    endif            
+    end if            
     
     ! --- Update the derived response matrices
     call update_response_parallel(my_id, tstep, freeboundary_equil, resistive_wall)     
 
     ! --- Perform the time-stepping for the wall currents.
 
-    if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
+    if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, &
+      psibnd_vec, dpsibnd_vec)
 
 
     ! --- Update old_dpsibnd_vec  (used for updating the wall currents in  the next iteration)
@@ -2305,14 +2224,13 @@ endif
     allocate(rhs_contrib_arr(n_dof_starwall))
     rhs_contrib_arr=0.0
 
-    do i=response_m_f%ind_start,response_m_f%ind_end  
-              rhs_contrib_arr(i) =   sum(response_m_f%loc_mat(i-my_id*response_m_f%step, :) *  wall_curr(:) )  &
-                                   + sum(response_m_g%loc_mat(i-my_id*response_m_g%step, :) * dwall_curr(:) )  &
-                                   - sum(response_m_v%loc_mat(i-my_id*response_m_v%step, :) *   Y_coils0(:) )
-    enddo
-    call MPI_ALLReduce(MPI_IN_PLACE, rhs_contrib_arr, size(rhs_contrib_arr), MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-
+    do i = response_m_f%ind_start, response_m_f%ind_end
+      rhs_contrib_arr(i) = sum(response_m_f%loc_mat(i-my_id*response_m_f%step, :) *  wall_curr(:)) &
+                         + sum(response_m_g%loc_mat(i-my_id*response_m_g%step, :) * dwall_curr(:)) &
+                         - sum(response_m_v%loc_mat(i-my_id*response_m_v%step, :) *   Y_coils0(:))
+    end do
+    call MPI_ALLReduce(MPI_IN_PLACE, rhs_contrib_arr, size(rhs_contrib_arr), MPI_DOUBLE_PRECISION, &
+      MPI_SUM,MPI_COMM_WORLD,ierr)
  
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
@@ -2331,9 +2249,9 @@ endif
     !$omp private(m_bndelem, bndelem_m, x_s, y_s, l_vertex, l_dof, l_node, l_dir, l_node_bnd,      &
     !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, dA, m_plane, common_prefactor,         &
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,   &
-    !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir, j_index,         &
-    !$omp   j_starwall, j_tor, j_resp, j_resp_old,j_col_psi, sparsepos_jp, sparsepos_pp, amat_contrib,        &
-    !$omp   rhs_contrib,ierr ) &
+    !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir,      &
+    !$omp   j_index, j_starwall, j_tor, j_resp, j_resp_old,j_col_psi, sparsepos_jp, sparsepos_pp,  &
+    !$omp   amat_contrib, rhs_contrib,ierr ) &
     !$omp schedule(dynamic,1)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
@@ -2442,7 +2360,7 @@ endif
 
                             ! --- Vacuum response contribution to the lhs of the current equation
                             
-                             amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
+                            amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
 
                             !$omp atomic
                             A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
@@ -2456,18 +2374,15 @@ endif
                       rhs_contrib = sum( response_m_h(i_resp,:) * psibnd_vec(:)   )                 &
                                   + sum( response_m_j(i_resp,:) * dpsibnd_vec(:)  )
 
-                      if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils)) &
+                      if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils))&
                         rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )       &
                                     - sum( response_m_h(i_resp,:) * psibnd_coils(:) )               
 
-
                         if ( resistive_wall )  rhs_contrib=rhs_contrib+rhs_contrib_arr(i_resp) 
-
 
                         rhs_contrib = rhs_contrib * common_prefactor
                         !$omp atomic
                         rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
-
 
                     end do L_IS
                   end do L_ID
@@ -2480,13 +2395,6 @@ endif
     end do L_MB
     !$omp end parallel do
     
-    !### timing ###
-    !call system_clock(count=t1)
-    !write(*,*) 'vacuum_boundary_integral main loop:', real(t1 - t0 ) / real(rate), 's'
-    !write(68+my_id,*) real(t1 - t0 ) / real(rate)
-    !###
-    
-
     if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)), sum(abs(A_glob))
   
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
@@ -2494,9 +2402,6 @@ endif
     if ( allocated(rhs_contrib_arr) ) deallocate(rhs_contrib_arr)
    
   end subroutine vacuum_boundary_integral
-  
-  
-  
   
   
   
@@ -2542,9 +2447,6 @@ endif
     end do
     
   end subroutine det_coord_bnd
-  
-  
-  
   
   
   
@@ -2617,9 +2519,6 @@ endif
   
   
   
-  
-  
-  
   !> Initialize the currents in the resistive wall and the external coil currents.
   subroutine init_wall_currents(my_id, resistive_wall)
     
@@ -2677,8 +2576,6 @@ endif
   
   
   
-  
-  
   !> Imposing PF coil currents as a current source term
   subroutine coil_current_source(my_id)
     
@@ -2707,10 +2604,10 @@ endif
       do i=1, n_coils
         if (vert_FB_amp(i) /= 0.d0) then
           delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now)
-        endif
-      enddo
+        end if
+      end do
       initialized = .true.
-    endif
+    end if
 
     if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
     if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
@@ -2718,7 +2615,7 @@ endif
     ! --- Calculate the specified coil currents at present time 
     do i=1, n_coils
       I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
-    enddo
+    end do
 
     ! --- Transform real currents into starwall currents
     Y_coils0          = 0.d0
@@ -2729,15 +2626,15 @@ endif
    ! end do
   
     do i = 1, n_wall_curr
-        if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
-            Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:)*potentials_real_0(:))
-        endif
+      if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
+        Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:)*potentials_real_0(:))
+      end if
     end do
     call MPI_ALLReduce(MPI_IN_PLACE, Y_coils0, size(Y_coils0),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
   end subroutine coil_current_source
   
- 
+  
   
   !> Perform the time-evolution of the wall currents (resistive wall).
   subroutine evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
@@ -2759,7 +2656,6 @@ endif
     !Additional variable for parallel version
     real *8, allocatable :: dwall_curr_2(:)   
 
-
     if  (.not. allocated(dwall_curr_2)) allocate (dwall_curr_2(n_wall_curr))
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
     
@@ -2768,15 +2664,15 @@ endif
       allocate( old_dpsibnd_vec(n_dof_starwall) )
     end if    
 
-      do k = 1, n_wall_curr
+     do k = 1, n_wall_curr
 
-           dwall_curr_2(k)=response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
-                           +response_d_c(k) * dwall_curr(k)
+       dwall_curr_2(k)=response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
+         + response_d_c(k) * dwall_curr(k)
 
-           dwall_curr(k) = sum(response_m_a%loc_mat(k,:) * dpsibnd_vec(response_m_a%ind_start:response_m_a%ind_end)) &
-                          +sum(response_m_d%loc_mat(k,:) * old_dpsibnd_vec(response_m_d%ind_start:response_m_d%ind_end) )
+       dwall_curr(k) = sum(response_m_a%loc_mat(k,:) * dpsibnd_vec(response_m_a%ind_start:response_m_a%ind_end)) &
+         + sum(response_m_d%loc_mat(k,:) * old_dpsibnd_vec(response_m_d%ind_start:response_m_d%ind_end) )
 
-      end do
+     end do
 
     call MPI_ALLReduce(MPI_IN_PLACE, dwall_curr,size(dwall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
@@ -2785,17 +2681,16 @@ endif
 
     call write_wall_vtk(index_now, resistive_wall, my_id)
 
-
-      if ( vacuum_debug .and. resistive_wall ) then
-        call log_wall_curr(my_id)
-        !call log_coil_curr()
-      end if
+     if ( vacuum_debug .and. resistive_wall ) then
+       call log_wall_curr(my_id)
+       !call log_coil_curr()
+     end if
  
     ! --- Extract diagnostic coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if ( sr%n_diag_coils > 0 ) then
       if ( .not. allocated(diag_coil_curr) ) then
-         allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
-         diag_coil_curr(:,:) = 0.d0
+        allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
+        diag_coil_curr(:,:) = 0.d0
       end if
       do k = 1, sr%n_diag_coils
         k2 = k + sr%ind_start_diag_coils - 1
@@ -2804,13 +2699,8 @@ endif
     end if
     
     if ( vacuum_debug .AND. my_id ==0) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
-
-
     
   end subroutine evolve_wall_currents
-  
-  
-  
   
   
   
@@ -2844,8 +2734,8 @@ endif
         j = i + sr%ncoil
         if(j>=sr%s_ww%ind_start    .AND. j<= sr%s_ww%ind_end ) then
            tripot_w(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
-        endif  
-      enddo
+        end if  
+      end do
      
        tripot_w(1) = 0.d0
     else
@@ -2857,26 +2747,27 @@ endif
   end subroutine reconstruct_triangle_potentials
   
   
+  
+  
   !> Write wall current potentials to logfile.
   subroutine log_wall_curr(my_id)
     
     implicit none
     
-   integer,   intent(in) :: my_id !< MPItask ID
-
+    integer,   intent(in) :: my_id
 
     ! --- Local variables
     real*8, allocatable :: tripot_w(:)
     
     call reconstruct_triangle_potentials(tripot_w, wall_curr)
-      if(my_id==0) write(*,'(" Wall current potentials (min, max): ",ES16.8,"...",ES16.8)') minval(tripot_w), maxval(tripot_w)
+    if(my_id==0) write(*,'(" Wall current potentials (min, max): ",ES16.8,"...",ES16.8)') minval(tripot_w), maxval(tripot_w)
     deallocate( tripot_w )
     
   end subroutine log_wall_curr
   
-!======================================================================  
-
-  !!
+  
+  
+  !> Update vacuum response
   !! This is necessary
   !! - right after the start or restart of the code
   !! - when wall resistivity, tstep, or some other parameters have changed.
@@ -2923,24 +2814,24 @@ endif
 
 ! --- Update response matrices only, if parameter values changed or matrices
     ! not allocated
-    update_required = ( old_res     /= wall_resistivity    ) &
-                 .or. ( old_tstep   /= tstep               ) &
-                 .or. ( old_theta   /= theta               ) &
-                 .or. ( old_zeta    /= zeta                ) &
-                 .or. ( old_reswall .neqv. resistive_wall  ) &
-                 .or. ( .not. allocated(response_m_a%loc_mat)      ) &
-                 .or. ( .not. allocated(response_d_b)      ) &
-                 .or. ( .not. allocated(response_d_c)      ) &
-                 .or. ( .not. allocated(response_m_d%loc_mat)      ) &
-                 .or. ( .not. allocated(response_m_e)      ) &
-                 .or. ( .not. allocated(response_m_f%loc_mat )      ) &
-                 .or. ( .not. allocated(response_m_g%loc_mat )      ) &
-                 .or. ( .not. allocated(response_m_h)      ) &
-                 .or. ( .not. allocated(response_m_j)      ) &
-                 .or. ( .not. allocated(response_m_k)      ) &
-                 .or. ( .not. allocated(response_m_l)      ) &
-                 .or. ( .not. allocated(response_m_v%loc_mat)      ) &
-                 .or. ( .not. allocated(response_m_eq)     )
+    update_required = ( old_res     /= wall_resistivity       ) &
+                 .or. ( old_tstep   /= tstep                  ) &
+                 .or. ( old_theta   /= theta                  ) &
+                 .or. ( old_zeta    /= zeta                   ) &
+                 .or. ( old_reswall .neqv. resistive_wall     ) &
+                 .or. ( .not. allocated(response_m_a%loc_mat) ) &
+                 .or. ( .not. allocated(response_d_b)         ) &
+                 .or. ( .not. allocated(response_d_c)         ) &
+                 .or. ( .not. allocated(response_m_d%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_e)         ) &
+                 .or. ( .not. allocated(response_m_f%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_g%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_h)         ) &
+                 .or. ( .not. allocated(response_m_j)         ) &
+                 .or. ( .not. allocated(response_m_k)         ) &
+                 .or. ( .not. allocated(response_m_l)         ) &
+                 .or. ( .not. allocated(response_m_v%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_eq)        )
 
     if ( update_required ) then
       ! --- Remember parameter values.
@@ -2953,114 +2844,96 @@ endif
       ! --- Allocate matrices if required
       if ( .not. allocated(response_m_eq) ) &
         allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
+      
       if ( .not. allocated(response_m_a%loc_mat) ) then
+        step=n_dof_starwall/ntasks
+        loc_size = step
+        response_m_a%step=step
 
-          step=n_dof_starwall/ntasks
-          loc_size = step
-          response_m_a%step=step
+        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
-          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_a%row_wise  = .false.
+        response_m_a%distrib   = .true.          
 
-          response_m_a%row_wise  = .false.
-          response_m_a%distrib   = .true.          
+        response_m_a%ind_start = my_id*step+1
+        response_m_a%ind_end   = my_id*step+loc_size
 
-          response_m_a%ind_start = my_id*step+1
-          response_m_a%ind_end   = my_id*step+loc_size
+        allocate( response_m_a%loc_mat(n_wall_curr, loc_size) )
+      end if
 
-          allocate( response_m_a%loc_mat(n_wall_curr, loc_size) )
-
-      endif
-
-      if ( .not. allocated(response_d_b) ) &
-        allocate( response_d_b(n_wall_curr) )
-      if ( .not. allocated(response_d_c) ) &
-        allocate( response_d_c(n_wall_curr) )
-
+      if ( .not. allocated(response_d_b) ) allocate( response_d_b(n_wall_curr) )
+      if ( .not. allocated(response_d_c) ) allocate( response_d_c(n_wall_curr) )
 
       if ( .not. allocated(response_m_d%loc_mat) ) then
+        step=n_dof_starwall/ntasks
+        loc_size = step
+        response_m_d%step=step
 
-          step=n_dof_starwall/ntasks
-          loc_size = step
-          response_m_d%step=step
+        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
-          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_d%row_wise  = .false.
+        response_m_d%distrib   = .true.
 
-          response_m_d%row_wise  = .false.
-          response_m_d%distrib   = .true.
+        response_m_d%ind_start = my_id*step+1
+        response_m_d%ind_end   = my_id*step+loc_size
 
-          response_m_d%ind_start = my_id*step+1
-          response_m_d%ind_end   = my_id*step+loc_size
+        allocate( response_m_d%loc_mat(n_wall_curr, loc_size) )
+      end if
 
-          allocate( response_m_d%loc_mat(n_wall_curr, loc_size) )
-
-      endif
-
-      if ( .not. allocated(response_m_e) ) &
-        allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_e) ) allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
 
       if ( .not. allocated(response_m_f%loc_mat) ) then
+        step=n_dof_starwall/ntasks
+        loc_size = step
+        response_m_f%step=step
 
-          step=n_dof_starwall/ntasks
-          loc_size = step
-          response_m_f%step=step
+        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
-          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_f%row_wise  = .true.
+        response_m_f%distrib   = .true.
 
-          response_m_f%row_wise  = .true.
-          response_m_f%distrib   = .true.
+        response_m_f%ind_start = my_id*step+1
+        response_m_f%ind_end   = my_id*step+loc_size
 
-          response_m_f%ind_start = my_id*step+1
-          response_m_f%ind_end   = my_id*step+loc_size
-
-          allocate( response_m_f%loc_mat(loc_size, n_wall_curr) )
-
-      endif
+        allocate( response_m_f%loc_mat(loc_size, n_wall_curr) )
+      end if
 
       if ( .not. allocated(response_m_g%loc_mat) ) then
+        step=n_dof_starwall/ntasks
+        loc_size = step
+        response_m_g%step=step
 
-          step=n_dof_starwall/ntasks
-          loc_size = step
-          response_m_g%step=step
+        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
-          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_g%row_wise  = .true.
+        response_m_g%distrib   = .true.
 
-          response_m_g%row_wise  = .true.
-          response_m_g%distrib   = .true.
+        response_m_g%ind_start = my_id*step+1
+        response_m_g%ind_end   = my_id*step+loc_size
 
-          response_m_g%ind_start = my_id*step+1
-          response_m_g%ind_end   = my_id*step+loc_size
+        allocate( response_m_g%loc_mat(loc_size, n_wall_curr) )
+      end if
 
-          allocate( response_m_g%loc_mat(loc_size, n_wall_curr) )
-
-      endif
-
-      if ( .not. allocated(response_m_h) ) &
-        allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_j) ) &
-        allocate( response_m_j(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_k) ) &
-        allocate( response_m_k(n_wall_curr, sr%ncoil) )   
-      if ( .not. allocated(response_m_l) ) &
-        allocate( response_m_l(n_dof_starwall, sr%ncoil) )
+      if ( .not. allocated(response_m_h) ) allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_j) ) allocate( response_m_j(n_dof_starwall, n_dof_starwall) )
+      if ( .not. allocated(response_m_k) ) allocate( response_m_k(n_wall_curr, sr%ncoil) )   
+      if ( .not. allocated(response_m_l) ) allocate( response_m_l(n_dof_starwall, sr%ncoil) )
 
       if ( .not. allocated(response_m_v%loc_mat) ) then
+        step=n_dof_starwall/ntasks
+        loc_size = step
+        response_m_v%step=step
 
-          step=n_dof_starwall/ntasks
-          loc_size = step
-          response_m_v%step=step
+        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
 
-          if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_g%row_wise  = .true.
+        response_m_g%distrib   = .true.
 
-          response_m_g%row_wise  = .true.
-          response_m_g%distrib   = .true.
+        response_m_g%ind_start = my_id*step+1
+        response_m_g%ind_end   = my_id*step+loc_size
 
-          response_m_g%ind_start = my_id*step+1
-          response_m_g%ind_end   = my_id*step+loc_size
-
-          allocate( response_m_v%loc_mat(loc_size, n_wall_curr) )
-
-
-      endif
+        allocate( response_m_v%loc_mat(loc_size, n_wall_curr) )
+      end if
 
       ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
 
@@ -3077,17 +2950,15 @@ endif
 
            if(sr%a_ee%row_wise == .true. ) then
 
-
              if(j2>=sr%a_ee%ind_start .AND. j2<=sr%a_ee%ind_end) then
-                    response_m_eq(j,k:k+1) = sr%a_ee%loc_mat(j2-step*my_id,k2:k2+1)
-             endif
-
+               response_m_eq(j,k:k+1) = sr%a_ee%loc_mat(j2-step*my_id,k2:k2+1)
+             end if
 
              if((j2+1)>=sr%a_ee%ind_start .AND. (j2+1)<=sr%a_ee%ind_end) then
-                    response_m_eq(j+1,k:k+1) = sr%a_ee%loc_mat((j2+1)-step*my_id,k2:k2+1)
-             endif
+               response_m_eq(j+1,k:k+1) = sr%a_ee%loc_mat((j2+1)-step*my_id,k2:k2+1)
+             end if
 
-           endif
+           end if
         
         end do
       end do
@@ -3102,7 +2973,7 @@ endif
         tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
 
         do j = 1, size(response_m_a%loc_mat,2) 
-            response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
+          response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
 
         response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
@@ -3119,20 +2990,17 @@ endif
         call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
         do j = 1, size(sr%a_ee%loc_mat,1)
-              response_m_e(j+my_id*step,:) = response_m_e(j+my_id*step,:) + sr%a_ee%loc_mat(j,:)
-        enddo
+          response_m_e(j+my_id*step,:) = response_m_e(j+my_id*step,:) + sr%a_ee%loc_mat(j,:)
+        end do
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_e,size(response_m_e),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
- 
 
         do k = 1, n_wall_curr
           response_m_f%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
         end do
 
-
         do k = 1, n_wall_curr
           response_m_g%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
         end do
-
 
         response_m_h =0.0
         response_m_h(sr%a_ee%ind_start:sr%a_ee%ind_end,:) = sr%a_ee%loc_mat(:,:)
@@ -3150,20 +3018,17 @@ endif
 
         response_m_k=0.0        
         do k = 1, n_wall_curr
-           do j = 1, sr%ncoil
-
-                if(sr%s_ww%ind_start<=j .AND. sr%s_ww%ind_end>=j) then   
-                    response_m_k(k,j) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(j,k)
-                endif
-         enddo
+          do j = 1, sr%ncoil
+            if(sr%s_ww%ind_start<=j .AND. sr%s_ww%ind_end>=j) then   
+              response_m_k(k,j) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(j,k)
+            end if
+          end do
         end do
         
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_k,size(response_m_k),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
- 
 
         call matrix_multiplication(my_id,sr%a_ey,mat2_not_distr=response_m_k,res_mat_not_distr=response_m_l)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_l,size(response_m_l),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-
 
         do k = 1, n_wall_curr
           response_m_v%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
@@ -3204,11 +3069,9 @@ endif
         call MPI_AllREDUCE(sum(abs(response_m_a%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
         call MPI_AllREDUCE(sum(response_m_a%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
         if(my_id == 0)   write(*,*) 'm_a:', test_sum2, test_sum
-
         if(my_id == 0)   write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
         if(my_id == 0)   write(*,*) '1+d_b:',sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
         if(my_id == 0)   write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
-       
 
         test_sum=0.0
         test_sum2=0.0
@@ -3217,13 +3080,11 @@ endif
         if(my_id == 0)   write(*,*) 'm_d:', test_sum2, test_sum
         if(my_id == 0)   write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
 
-
         test_sum=0.0
         test_sum2=0.0
         call MPI_AllREDUCE(sum(abs(response_m_f%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
         call MPI_AllREDUCE(sum(response_m_f%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
         if(my_id == 0)   write(*,*) 'm_f:',test_sum2, test_sum
-
 
         test_sum=0.0
         test_sum2=0.0
@@ -3237,7 +3098,7 @@ endif
         if(my_id == 0)   write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
     
         test_sum=0.0
-        test_sum=0.0
+        test_sum2=0.0
         call MPI_AllREDUCE(sum(abs(response_m_v%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
         call MPI_AllREDUCE(sum(response_m_v%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
         if(my_id == 0)   write(*,*) 'm_v:',test_sum2, test_sum
@@ -3247,20 +3108,12 @@ endif
 
     end if  
 
-
    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
   end subroutine update_response_parallel 
-
-
-
-
-
-
-!======================================================================  
-
-
-
-  !!
+  
+  
+  
+  !> Update vacuum response
   !! This is necessary
   !! - right after the start or restart of the code
   !! - when wall resistivity, tstep, or some other parameters have changed.
@@ -3300,24 +3153,24 @@ endif
     
     ! --- Update response matrices only, if parameter values changed or matrices
     ! not allocated
-    update_required = ( old_res     /= wall_resistivity    ) &
-                 .or. ( old_tstep   /= tstep               ) &
-                 .or. ( old_theta   /= theta               ) &
-                 .or. ( old_zeta    /= zeta                ) &
-                 .or. ( old_reswall .neqv. resistive_wall  ) &
-                 .or. ( .not. allocated(response_m_a%loc_mat)      ) &
-                 .or. ( .not. allocated(response_d_b)      ) &
-                 .or. ( .not. allocated(response_d_c)      ) &
-                 .or. ( .not. allocated(response_m_d%loc_mat)      ) &
-                 .or. ( .not. allocated(response_m_e)      ) &
-                 .or. ( .not. allocated(response_m_f%loc_mat)      ) &
-                 .or. ( .not. allocated(response_m_g%loc_mat)      ) &
-                 .or. ( .not. allocated(response_m_h)      ) &
-                 .or. ( .not. allocated(response_m_j)      ) &
-                 .or. ( .not. allocated(response_m_k)      ) &
-                 .or. ( .not. allocated(response_m_l)      ) &
-                 .or. ( .not. allocated(response_m_v%loc_mat)      ) &                 
-                 .or. ( .not. allocated(response_m_eq)     )
+    update_required = ( old_res     /= wall_resistivity       ) &
+                 .or. ( old_tstep   /= tstep                  ) &
+                 .or. ( old_theta   /= theta                  ) &
+                 .or. ( old_zeta    /= zeta                   ) &
+                 .or. ( old_reswall .neqv. resistive_wall     ) &
+                 .or. ( .not. allocated(response_m_a%loc_mat) ) &
+                 .or. ( .not. allocated(response_d_b)         ) &
+                 .or. ( .not. allocated(response_d_c)         ) &
+                 .or. ( .not. allocated(response_m_d%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_e)         ) &
+                 .or. ( .not. allocated(response_m_f%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_g%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_h)         ) &
+                 .or. ( .not. allocated(response_m_j)         ) &
+                 .or. ( .not. allocated(response_m_k)         ) &
+                 .or. ( .not. allocated(response_m_l)         ) &
+                 .or. ( .not. allocated(response_m_v%loc_mat) ) &
+                 .or. ( .not. allocated(response_m_eq)        )
     
     if ( update_required ) then
       ! --- Remember parameter values.
@@ -3369,9 +3222,6 @@ endif
         end do
       end do
 
-      
-
-
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall ) then
        
@@ -3383,7 +3233,6 @@ endif
           response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
         end do
         
-
         response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
         response_d_c(:) = zeta / tmp_d_s(:)
        
@@ -3392,13 +3241,11 @@ endif
         end do
         
         response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
-      
   
         do k = 1, n_wall_curr
           response_m_f%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
         end do
         
-
         do k = 1, n_wall_curr
           response_m_g%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
         end do
@@ -3407,21 +3254,16 @@ endif
        
         response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d%loc_mat(:,:) )
 
-
-        
         do k = 1, n_wall_curr
           response_m_k(k,:) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(:,k)
         end do
        
- 
         response_m_l(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_k(:,:) )
 
- 
         do k = 1, n_wall_curr
           response_m_v%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
         end do
 
-        
         deallocate( tmp_d_s )
         
       else ! (Ideal wall)
@@ -3463,11 +3305,6 @@ endif
     end if
  
   end subroutine update_response
-
-  
-  
-  
-  
   
   
   
@@ -3519,9 +3356,6 @@ endif
   
   
   
-  
-  
-  
   !> Read a diagonal STARWALL response matrix from a file.
   subroutine read_response_diagonal( diagonal, dim_expected, filename, err )
     
@@ -3565,9 +3399,6 @@ endif
   
   
   
-  
-  
-  
   !> Determine the index in the response matrix for a certain boundary degree of freedom.
   integer recursive function response_index(inode, i_starwall, ibas)
     
@@ -3591,9 +3422,6 @@ endif
   
   
   
-  
-  
-  
   !> Determine the index in the response matrix for a certain boundary degree of freedom.
   integer recursive function response_index_eq(inode, ibas)
     
@@ -3609,9 +3437,6 @@ endif
     end if
     
   end function response_index_eq
-  
-  
-  
   
   
   
@@ -3643,9 +3468,6 @@ endif
   
   
   
-  
-  
-  
   !> Return a description of several toroidal modes.
   character(len=1400) function modes_to_str(i_tors, n_tor, n_period)
   
@@ -3669,9 +3491,6 @@ endif
     modes_to_str = adjustl(modes_to_str)
     
   end function modes_to_str
-  
-  
-  
   
   
   
